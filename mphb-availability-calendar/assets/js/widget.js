@@ -27,6 +27,9 @@
         wireNav(root, config, state);
         wireRowToggle(root);
         wireSwipe(root, config, state);
+        if (config.popupEnabled) {
+            wirePopup(root, config, state);
+        }
     }
 
     function wireFilters(root, config, state) {
@@ -93,6 +96,11 @@
             if (!row) return;
             var expanded = row.classList.toggle('is-expanded');
             btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            var actions = row.nextElementSibling;
+            if (actions && actions.classList.contains('mphbac-row-actions')) {
+                actions.hidden = !expanded;
+                actions.classList.toggle('is-expanded', expanded);
+            }
             if (isNumberOnly) showTooltip(root, btn, btn.getAttribute('title') || '');
         });
     }
@@ -307,6 +315,180 @@
             return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         };
         label.textContent = fmt(f) + ' – ' + fmt(t) + ', ' + t.getFullYear();
+    }
+
+    function wirePopup(root, config, state) {
+        var sheet = root.querySelector('.mphbac-sheet');
+        var overlay = root.querySelector('.mphbac-sheet-overlay');
+        if (!sheet || !overlay) return;
+
+        var titleEl = sheet.querySelector('.mphbac-sheet-title');
+        var checkinEl = sheet.querySelector('.mphbac-sheet-checkin');
+        var checkoutEl = sheet.querySelector('.mphbac-sheet-checkout');
+        var errorEl = sheet.querySelector('.mphbac-sheet-error');
+        var confirmBtn = sheet.querySelector('.mphbac-sheet-confirm');
+        var cancelBtn = sheet.querySelector('.mphbac-sheet-cancel');
+        var closeBtn = sheet.querySelector('.mphbac-sheet-close');
+
+        var context = { roomTypeId: 0, lastTrigger: null };
+
+        root.addEventListener('click', function (e) {
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
+            if (cell) {
+                var row = cell.parentNode;
+                var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
+                var date = cell.getAttribute('data-date') || '';
+                openSheet(typeId, date, addDays(date, 1), cell);
+                return;
+            }
+            var bookBtn = e.target.closest && e.target.closest('.mphbac-btn-book');
+            if (bookBtn) {
+                var btnTypeId = parseInt(bookBtn.getAttribute('data-room-type-id'), 10);
+                var filterCheckin = root.querySelector('.mphbac-input-checkin');
+                var filterCheckout = root.querySelector('.mphbac-input-checkout');
+                var ci = (filterCheckin && filterCheckin.value) || config.today;
+                var co = (filterCheckout && filterCheckout.value) || addDays(ci, 1);
+                openSheet(btnTypeId, ci, co, bookBtn);
+            }
+        });
+
+        function openSheet(typeId, checkin, checkout, trigger) {
+            if (!typeId) return;
+            context.roomTypeId = typeId;
+            context.lastTrigger = trigger || null;
+            var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
+            var roomTitle = (config.roomTitles && config.roomTitles[typeId]) || '';
+            titleEl.textContent = roomTitle ? (title + ' ' + roomTitle) : title;
+            checkinEl.value = checkin || '';
+            checkoutEl.value = checkout || '';
+            errorEl.hidden = true;
+            errorEl.textContent = '';
+            sheet.hidden = false;
+            overlay.hidden = false;
+            requestAnimationFrame(function () {
+                sheet.classList.add('is-open');
+                overlay.classList.add('is-open');
+            });
+            setTimeout(function () { checkinEl.focus(); }, 50);
+            document.addEventListener('keydown', onKeydown);
+        }
+
+        function closeSheet() {
+            sheet.classList.remove('is-open');
+            overlay.classList.remove('is-open');
+            setTimeout(function () {
+                sheet.hidden = true;
+                overlay.hidden = true;
+            }, 200);
+            document.removeEventListener('keydown', onKeydown);
+            if (context.lastTrigger && context.lastTrigger.focus) {
+                try { context.lastTrigger.focus(); } catch (e) { /* ignore */ }
+            }
+        }
+
+        function onKeydown(e) {
+            if (e.key === 'Escape') closeSheet();
+            if (e.key === 'Tab') trapFocus(e);
+        }
+
+        function trapFocus(e) {
+            var focusable = sheet.querySelectorAll('input, button');
+            if (!focusable.length) return;
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
+        }
+
+        overlay.addEventListener('click', closeSheet);
+        cancelBtn.addEventListener('click', closeSheet);
+        closeBtn.addEventListener('click', closeSheet);
+
+        confirmBtn.addEventListener('click', function () {
+            errorEl.hidden = true;
+            var ci = checkinEl.value;
+            var co = checkoutEl.value;
+            if (!ci || !co || co <= ci) {
+                showError((config.strings && config.strings.bookInvalid) || 'Invalid date range.');
+                return;
+            }
+            confirmBtn.disabled = true;
+            verifyAndSubmit(ci, co);
+        });
+
+        function verifyAndSubmit(ci, co) {
+            var body = new URLSearchParams();
+            body.append('action', config.action || 'mphbac_query');
+            body.append('nonce', config.nonce || '');
+            body.append('from', ci);
+            body.append('to', addDays(co, -1));
+            body.append('only_available', '0');
+            body.append('room_type_ids[]', String(context.roomTypeId));
+
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: body,
+                headers: { 'Accept': 'application/json' }
+            }).then(function (r) {
+                return r.json();
+            }).then(function (json) {
+                confirmBtn.disabled = false;
+                if (!json || !json.success || !json.data) {
+                    showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
+                    return;
+                }
+                var availability = (json.data.availability || {})[context.roomTypeId] || {};
+                var ok = true;
+                var cursor = new Date(ci + 'T00:00:00');
+                var end = new Date(co + 'T00:00:00');
+                while (cursor < end) {
+                    var key = cursor.getFullYear() + '-' +
+                              String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                              String(cursor.getDate()).padStart(2, '0');
+                    if (availability[key] !== 'available') { ok = false; break; }
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                if (!ok) {
+                    showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
+                    return;
+                }
+                submitToMotoPress(context.roomTypeId, ci, co);
+            }).catch(function () {
+                confirmBtn.disabled = false;
+                showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
+            });
+        }
+
+        function submitToMotoPress(typeId, ci, co) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = config.checkoutUrl;
+            form.style.display = 'none';
+            appendInput(form, 'mphb_room_type_id', String(typeId));
+            appendInput(form, 'mphb_check_in_date', ci);
+            appendInput(form, 'mphb_check_out_date', co);
+            appendInput(form, 'mphb_rooms_details[' + typeId + ']', '1');
+            appendInput(form, 'mphb_is_direct_booking', '1');
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function appendInput(form, name, value) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        }
+
+        function showError(msg) {
+            errorEl.textContent = msg;
+            errorEl.hidden = false;
+        }
     }
 
     function boot() {

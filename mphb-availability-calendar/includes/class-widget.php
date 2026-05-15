@@ -169,6 +169,14 @@ final class Widget extends Widget_Base
             ],
         ]);
 
+        $this->add_control('enable_popup', [
+            'label'        => __('Enable Book Now popup', 'mphb-availability-calendar'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('When on, tapping an available day or the "Book this cottage" button opens a sheet that submits a booking to MotoPress checkout.', 'mphb-availability-calendar'),
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -192,6 +200,13 @@ final class Widget extends Widget_Base
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
             'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
+            'str_book_button'    => [__('"Book this cottage" button', 'mphb-availability-calendar'), __('Book this cottage', 'mphb-availability-calendar')],
+            'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
+            'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],
+            'str_book_cancel'    => [__('Popup cancel button', 'mphb-availability-calendar'), __('Cancel', 'mphb-availability-calendar')],
+            'str_book_close'     => [__('Popup close (aria-label)', 'mphb-availability-calendar'), __('Close booking dialog', 'mphb-availability-calendar')],
+            'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
+            'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -294,11 +309,19 @@ final class Widget extends Widget_Base
             $to
         );
 
+        $rooms_by_id = [];
+        foreach ($rooms as $r) {
+            $rooms_by_id[(int) $r['id']] = $r['title'];
+        }
+
+        $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
+
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
             'action'         => MPHBAC_AJAX_ACTION,
             'nonce'          => wp_create_nonce(Ajax::NONCE_ACTION),
             'roomTypeIds'    => array_map(static fn($r) => (int) $r['id'], $rooms),
+            'roomTitles'     => $rooms_by_id,
             'visibleDays'    => $days_setting,
             'labelStyle'     => (string) ($settings['label_style'] ?? 'abbrev_number'),
             'showPast'       => $settings['show_past'] === 'yes',
@@ -307,11 +330,21 @@ final class Widget extends Widget_Base
             'today'          => $today->format('Y-m-d'),
             'from'           => $from->format('Y-m-d'),
             'to'             => $to->format('Y-m-d'),
+            'popupEnabled'   => $popup_enabled,
+            'checkoutUrl'    => self::resolve_checkout_url(),
             'strings'        => [
-                'empty'    => (string) ($settings['str_empty'] ?? ''),
-                'reset'    => (string) ($settings['str_reset'] ?? ''),
-                'prev'     => (string) ($settings['str_prev_month'] ?? ''),
-                'next'     => (string) ($settings['str_next_month'] ?? ''),
+                'empty'         => (string) ($settings['str_empty'] ?? ''),
+                'reset'         => (string) ($settings['str_reset'] ?? ''),
+                'prev'          => (string) ($settings['str_prev_month'] ?? ''),
+                'next'          => (string) ($settings['str_next_month'] ?? ''),
+                'bookHeading'   => (string) ($settings['str_book_heading'] ?? ''),
+                'bookConfirm'   => (string) ($settings['str_book_confirm'] ?? ''),
+                'bookCancel'    => (string) ($settings['str_book_cancel'] ?? ''),
+                'bookClose'     => (string) ($settings['str_book_close'] ?? ''),
+                'bookUnavail'   => (string) ($settings['str_book_unavailable'] ?? ''),
+                'bookInvalid'   => (string) ($settings['str_book_invalid_range'] ?? ''),
+                'checkin'       => (string) ($settings['str_checkin'] ?? ''),
+                'checkout'      => (string) ($settings['str_checkout'] ?? ''),
             ],
         ];
 
@@ -321,6 +354,9 @@ final class Widget extends Widget_Base
         }
         if ($settings['show_past'] !== 'yes') {
             $root_classes[] = 'mphbac-hide-past';
+        }
+        if ($popup_enabled) {
+            $root_classes[] = 'mphbac-popup-enabled';
         }
         $root_classes[] = 'mphbac-label-' . ($settings['label_style'] === 'number_only' ? 'number' : 'abbrev');
 
@@ -372,22 +408,75 @@ final class Widget extends Widget_Base
             </div>
 
             <div class="mphbac-grid-wrap">
-                <?php $this->render_grid($rooms, $availability, $from, $to); ?>
+                <?php $this->render_grid($rooms, $availability, $from, $to, $popup_enabled, (string) ($settings['str_book_button'] ?? '')); ?>
             </div>
 
             <div class="mphbac-empty" hidden>
                 <p><?php echo esc_html($settings['str_empty']); ?></p>
                 <button type="button" class="mphbac-btn mphbac-btn-reset-empty"><?php echo esc_html($settings['str_reset']); ?></button>
             </div>
+
+            <?php if ($popup_enabled) : ?>
+                <div class="mphbac-sheet-overlay" hidden></div>
+                <div class="mphbac-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-sheet-title" hidden>
+                    <div class="mphbac-sheet-header">
+                        <h3 class="mphbac-sheet-title" id="mphbac-sheet-title"></h3>
+                        <button type="button" class="mphbac-sheet-close" aria-label="<?php echo esc_attr($settings['str_book_close']); ?>">&times;</button>
+                    </div>
+                    <div class="mphbac-sheet-body">
+                        <label class="mphbac-sheet-field">
+                            <span><?php echo esc_html($settings['str_checkin']); ?></span>
+                            <input type="date" class="mphbac-input mphbac-sheet-checkin"
+                                   min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
+                                   autocomplete="off">
+                        </label>
+                        <label class="mphbac-sheet-field">
+                            <span><?php echo esc_html($settings['str_checkout']); ?></span>
+                            <input type="date" class="mphbac-input mphbac-sheet-checkout"
+                                   min="<?php echo esc_attr($today->modify('+1 day')->format('Y-m-d')); ?>"
+                                   autocomplete="off">
+                        </label>
+                        <p class="mphbac-sheet-error" role="alert" hidden></p>
+                    </div>
+                    <div class="mphbac-sheet-actions">
+                        <button type="button" class="mphbac-btn mphbac-sheet-cancel"><?php echo esc_html($settings['str_book_cancel']); ?></button>
+                        <button type="button" class="mphbac-btn mphbac-btn-primary mphbac-sheet-confirm"><?php echo esc_html($settings['str_book_confirm']); ?></button>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
         <?php
+    }
+
+    public static function resolve_checkout_url(): string
+    {
+        try {
+            if (function_exists('MPHB')) {
+                $mphb = \MPHB();
+                if (is_object($mphb) && method_exists($mphb, 'settings')) {
+                    $s = $mphb->settings();
+                    if (is_object($s) && method_exists($s, 'pages')) {
+                        $p = $s->pages();
+                        if (is_object($p) && method_exists($p, 'getCheckoutPageUrl')) {
+                            $url = (string) $p->getCheckoutPageUrl();
+                            if ($url !== '') {
+                                return $url;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: resolve_checkout_url failed: ' . $e->getMessage());
+        }
+        return home_url('/submit-booking/');
     }
 
     /**
      * @param array<int,array{id:int,title:string,abbrev:string,number:string}> $rooms
      * @param array<int,array<string,string>>                                   $availability
      */
-    private function render_grid(array $rooms, array $availability, DateTimeImmutable $from, DateTimeImmutable $to): void
+    private function render_grid(array $rooms, array $availability, DateTimeImmutable $from, DateTimeImmutable $to, bool $popup_enabled, string $book_button_label): void
     {
         $days = [];
         $cursor = $from;
@@ -429,15 +518,27 @@ final class Widget extends Widget_Base
             foreach ($days as $day) {
                 $key    = $day->format('Y-m-d');
                 $status = $days_for_type[$key] ?? Data_Provider::ST_BOOKED;
+                $is_clickable = $status === Data_Provider::ST_AVAIL;
                 printf(
-                    '<div class="mphbac-cell mphbac-cell-status is-%s" role="cell" data-date="%s" data-status="%s" aria-label="%s"></div>',
+                    '<div class="mphbac-cell mphbac-cell-status is-%1$s%5$s" role="%6$s" data-date="%2$s" data-status="%1$s" aria-label="%4$s"%7$s></div>',
                     esc_attr($status),
                     esc_attr($key),
                     esc_attr($status),
-                    esc_attr(sprintf('%s — %s', $day->format('F j, Y'), $status))
+                    esc_attr(sprintf('%s — %s', $day->format('F j, Y'), $status)),
+                    $is_clickable ? ' is-clickable' : '',
+                    $is_clickable ? 'button' : 'cell',
+                    $is_clickable ? ' tabindex="0"' : ''
                 );
             }
             echo '</div>';
+
+            if ($popup_enabled) {
+                printf(
+                    '<div class="mphbac-row-actions" data-room-type-id="%1$d" hidden><button type="button" class="mphbac-btn mphbac-btn-book" data-room-type-id="%1$d">%2$s</button></div>',
+                    $type_id,
+                    esc_html($book_button_label)
+                );
+            }
         }
 
         echo '</div>';
