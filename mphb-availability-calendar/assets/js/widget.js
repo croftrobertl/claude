@@ -1,4 +1,3 @@
-/* global mphbacConfig */
 (function () {
     'use strict';
 
@@ -86,6 +85,7 @@
     }
 
     function wireRowToggle(root) {
+        var isNumberOnly = root.classList.contains('mphbac-label-number');
         root.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
@@ -93,7 +93,27 @@
             if (!row) return;
             var expanded = row.classList.toggle('is-expanded');
             btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            if (isNumberOnly) showTooltip(root, btn, btn.getAttribute('title') || '');
         });
+    }
+
+    function showTooltip(root, anchor, text) {
+        if (!text) return;
+        var tip = root.querySelector('.mphbac-tooltip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.className = 'mphbac-tooltip';
+            tip.setAttribute('role', 'tooltip');
+            root.appendChild(tip);
+        }
+        tip.textContent = text;
+        var rootRect = root.getBoundingClientRect();
+        var rect = anchor.getBoundingClientRect();
+        tip.style.left = (rect.left - rootRect.left) + 'px';
+        tip.style.top = (rect.bottom - rootRect.top + 4) + 'px';
+        tip.classList.add('is-visible');
+        clearTimeout(tip._mphbacHide);
+        tip._mphbacHide = setTimeout(function () { tip.classList.remove('is-visible'); }, 2200);
     }
 
     function wireSwipe(root, config, state) {

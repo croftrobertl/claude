@@ -64,19 +64,10 @@ final class Widget extends Widget_Base
         wp_register_script(
             'mphbac-widget',
             MPHBAC_URL . 'assets/js/widget.js',
-            [],
+            ['jquery-ui-datepicker'],
             MPHBAC_VERSION,
             true
         );
-        wp_localize_script('mphbac-widget', 'mphbacConfig', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'action'  => MPHBAC_AJAX_ACTION,
-            'nonce'   => wp_create_nonce(Ajax::NONCE_ACTION),
-            'i18n'    => [
-                'loading' => __('Loading…', 'mphb-availability-calendar'),
-                'error'   => __('Unable to load availability. Please try again.', 'mphb-availability-calendar'),
-            ],
-        ]);
     }
 
     protected function register_controls(): void

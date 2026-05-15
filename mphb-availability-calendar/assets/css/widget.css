@@ -13,6 +13,7 @@
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
 
+    position: relative;
     box-sizing: border-box;
     width: 100%;
     color: var(--mphbac-color-text);
@@ -28,11 +29,9 @@
 }
 
 .mphbac-inherit-theme {
-    --mphbac-color-available: var(--e-global-color-78732, #078732);
-    --mphbac-color-booked: var(--e-global-color-accent, #bc003e);
-    --mphbac-color-past: var(--e-global-color-text-light, #cccccc);
-    --mphbac-color-text: var(--e-global-color-text, #000000);
-    --mphbac-color-bg: var(--e-global-color-bg, #fdfdfd);
+    --mphbac-color-text: var(--e-global-color-text, currentColor);
+    --mphbac-color-bg: var(--e-global-color-bg, transparent);
+    --mphbac-color-today-outline: var(--e-global-color-primary, #0f6dbf);
     font-family: var(--e-global-typography-text-font-family, inherit);
 }
 
@@ -253,3 +252,43 @@
     opacity: 0.5;
     pointer-events: none;
 }
+
+/* Tooltip for "number only" label mode */
+.mphbac-tooltip {
+    position: absolute;
+    z-index: 30;
+    padding: 0.35em 0.6em;
+    background: #000;
+    color: #fff;
+    border-radius: var(--mphbac-radius);
+    font-size: 0.85em;
+    line-height: 1.2;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.mphbac-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Minimal jQuery UI Datepicker fallback (only loaded if browser lacks input[type=date]) */
+.ui-datepicker {
+    background: #fff;
+    color: #000;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.5em;
+    font-size: 13px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    display: none;
+}
+.ui-datepicker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4em; }
+.ui-datepicker-prev, .ui-datepicker-next { cursor: pointer; padding: 0.2em 0.5em; }
+.ui-datepicker-title { font-weight: 600; }
+.ui-datepicker table { border-collapse: collapse; width: 100%; }
+.ui-datepicker th, .ui-datepicker td { padding: 0.2em; text-align: center; }
+.ui-datepicker td a { display: block; padding: 0.25em; color: inherit; text-decoration: none; border-radius: 3px; }
+.ui-datepicker td a:hover { background: #0f6dbf; color: #fff; }
+.ui-datepicker .ui-state-active { background: #0f6dbf; color: #fff; border-radius: 3px; }

@@ -96,8 +96,16 @@ final class Data_Provider
             $number = $m[1];
             $abbrev = trim($m[2]);
         }
-        $first_word = preg_split('/\s+/', $abbrev)[0] ?? $abbrev;
-        $abbrev = mb_substr((string) $first_word, 0, 12);
+        $words = array_values(array_filter(preg_split('/\s+/', $abbrev) ?: []));
+        $articles = ['the', 'a', 'an'];
+        $picked = $abbrev;
+        foreach ($words as $word) {
+            if (!in_array(strtolower($word), $articles, true)) {
+                $picked = $word;
+                break;
+            }
+        }
+        $abbrev = mb_substr((string) $picked, 0, 12);
 
         return [
             'id'     => $id,
