@@ -229,10 +229,18 @@ final class Data_Provider
     }
 
     /**
-     * @return object|null
+     * @return object|null A repository/helper that exposes getAvailableRooms($checkin, $checkout, ['room_type_id' => int]).
      */
     private static function resolve_availability_helper(object $mphb)
     {
+        // Newer MotoPress (≥6.x): the method lives on getRoomRepository().
+        if (method_exists($mphb, 'getRoomRepository')) {
+            $repo = $mphb->getRoomRepository();
+            if (is_object($repo) && method_exists($repo, 'getAvailableRooms')) {
+                return $repo;
+            }
+        }
+        // Older MotoPress: the method was on a dedicated helper hung off MPHB().
         foreach (['getRoomAvailabilityHelper', 'getAvailabilityHelper'] as $method) {
             if (method_exists($mphb, $method)) {
                 $helper = $mphb->{$method}();
@@ -245,7 +253,11 @@ final class Data_Provider
     }
 
     /**
-     * Single batched query against MotoPress booking tables for the whole range.
+     * SQL fallback for when MotoPress's API path is unavailable.
+     * Combines two sources:
+     *   1. Manual / iCal-imported blocks in {$prefix}mphb_blocks
+     *   2. Actual reservations stored as mphb_reserved_room post types
+     * A day is "blocked" only when every room of the type is unavailable that day.
      *
      * @return array<string,bool>
      */
@@ -269,33 +281,82 @@ final class Data_Provider
         ]);
         $rooms_of_type = array_map('intval', (array) $rooms_of_type);
         if (empty($rooms_of_type)) {
-            // No physical rooms configured for this type — every day is "blocked".
             return self::date_range_as_blocked($from, $to);
         }
 
-        $booking_dates_table = $wpdb->prefix . 'mphb_booking_dates';
+        $blocks_table = $wpdb->prefix . 'mphb_blocks';
+        $from_str = $from->format('Y-m-d');
+        $to_str   = $to->format('Y-m-d');
+
+        $unavailable_per_room_per_day = [];
+        $type_wide_blocked_days       = [];
+
         $tables = $wpdb->get_col(
-            $wpdb->prepare(
-                "SHOW TABLES LIKE %s",
-                $wpdb->esc_like($wpdb->prefix . 'mphb_') . '%'
-            )
+            $wpdb->prepare("SHOW TABLES LIKE %s", $wpdb->esc_like($blocks_table))
         );
-        if (!in_array($booking_dates_table, (array) $tables, true)) {
-            // Can't determine — fail safe to "all blocked" rather than show false availability.
-            return self::date_range_as_blocked($from, $to);
+        if (in_array($blocks_table, (array) $tables, true)) {
+            $room_placeholders = implode(',', array_fill(0, count($rooms_of_type), '%d'));
+            $sql = "SELECT room_type_id, room_id, date_from, date_to, not_stay_in
+                    FROM $blocks_table
+                    WHERE (room_type_id = %d OR room_id IN ($room_placeholders))
+                      AND not_stay_in = 1
+                      AND date_to >= %s
+                      AND date_from <= %s";
+            $params = array_merge([$room_type_id], $rooms_of_type, [$from_str, $to_str]);
+            $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
+            foreach ((array) $rows as $row) {
+                $start = max($row->date_from, $from_str);
+                $end   = min($row->date_to, $to_str);
+                $cursor = new DateTimeImmutable($start, self::timezone());
+                $end_dt = new DateTimeImmutable($end, self::timezone());
+                while ($cursor <= $end_dt) {
+                    $d = $cursor->format('Y-m-d');
+                    if ((int) $row->room_id === 0) {
+                        $type_wide_blocked_days[$d] = true;
+                    } else {
+                        $unavailable_per_room_per_day[$d][(int) $row->room_id] = true;
+                    }
+                    $cursor = $cursor->modify('+1 day');
+                }
+            }
         }
 
-        $placeholders = implode(',', array_fill(0, count($rooms_of_type), '%d'));
-        $sql = "SELECT DISTINCT date FROM {$booking_dates_table}
-                WHERE room_id IN ($placeholders)
-                  AND date >= %s AND date <= %s";
-        $params = array_merge($rooms_of_type, [$from->format('Y-m-d'), $to->format('Y-m-d')]);
+        // mphb_reserved_room posts: actual reservations.
+        $reserved_posts = $wpdb->get_results($wpdb->prepare(
+            "SELECT p.ID, ci.meta_value AS checkin, co.meta_value AS checkout, rid.meta_value AS room_id
+             FROM {$wpdb->posts} p
+             INNER JOIN {$wpdb->postmeta} ci  ON ci.post_id = p.ID  AND ci.meta_key = 'mphb_check_in_date'
+             INNER JOIN {$wpdb->postmeta} co  ON co.post_id = p.ID  AND co.meta_key = 'mphb_check_out_date'
+             INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = p.ID AND rid.meta_key = 'mphb_room_id'
+             WHERE p.post_type = 'mphb_reserved_room'
+               AND p.post_status IN ('publish', 'mphbrr_reserved')
+               AND ci.meta_value <= %s
+               AND co.meta_value > %s",
+            $to_str,
+            $from_str
+        ));
+        foreach ((array) $reserved_posts as $row) {
+            $rid = (int) $row->room_id;
+            if (!in_array($rid, $rooms_of_type, true)) {
+                continue;
+            }
+            // Reservation occupies nights [check_in, check_out) — checkout day is free.
+            $start = max($row->checkin, $from_str);
+            $end_excl = min($row->checkout, $to->modify('+1 day')->format('Y-m-d'));
+            $cursor = new DateTimeImmutable($start, self::timezone());
+            $end_dt = new DateTimeImmutable($end_excl, self::timezone());
+            while ($cursor < $end_dt) {
+                $unavailable_per_room_per_day[$cursor->format('Y-m-d')][$rid] = true;
+                $cursor = $cursor->modify('+1 day');
+            }
+        }
 
-        $dates = $wpdb->get_col($wpdb->prepare($sql, $params));
-
-        $blocked = [];
-        foreach ((array) $dates as $d) {
-            $blocked[(string) $d] = true;
+        $room_count = count($rooms_of_type);
+        $blocked    = $type_wide_blocked_days;
+        foreach ($unavailable_per_room_per_day as $date => $room_map) {
+            if (count($room_map) >= $room_count) {
+                $blocked[$date] = true;
+            }
         }
         return $blocked;
     }
