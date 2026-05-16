@@ -30,9 +30,6 @@ final class Plugin
             return;
         }
 
-        // Safe to load now: Widget extends \Elementor\Widget_Base, which exists.
-        require_once MPHBAC_DIR . 'includes/class-widget.php';
-
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\MPHBAC\\Widget', 'register_assets']);

@@ -23,13 +23,21 @@ define('MPHBAC_DIR', plugin_dir_path(__FILE__));
 define('MPHBAC_URL', plugin_dir_url(__FILE__));
 define('MPHBAC_AJAX_ACTION', 'mphbac_query');
 
-require_once MPHBAC_DIR . 'includes/class-cache.php';
-require_once MPHBAC_DIR . 'includes/class-cache-integration.php';
-require_once MPHBAC_DIR . 'includes/class-data-provider.php';
-require_once MPHBAC_DIR . 'includes/class-ajax.php';
-require_once MPHBAC_DIR . 'includes/class-plugin.php';
-// class-widget.php is loaded lazily inside Plugin::boot() once Elementor is confirmed
-// loaded. It extends \Elementor\Widget_Base, which doesn't exist in wp-cron context.
+// Lazy autoloader for MPHBAC\ classes. We must not require class-widget.php
+// eagerly — its 'extends \Elementor\Widget_Base' parent reference is resolved at
+// parse time, and Elementor's class is only autoloadable AFTER Elementor's own
+// boot finishes (which happens later than plugins_loaded:20 for this contextual
+// reason). Lazy loading defers the parse to the moment a class is actually used.
+spl_autoload_register(static function (string $class): void {
+    if (strncmp($class, 'MPHBAC\\', 7) !== 0) {
+        return;
+    }
+    $short = substr($class, 7);
+    $file  = MPHBAC_DIR . 'includes/class-' . strtolower(str_replace('_', '-', $short)) . '.php';
+    if (is_readable($file)) {
+        require_once $file;
+    }
+});
 
 register_activation_hook(__FILE__, ['\\MPHBAC\\Cache_Integration', 'on_activate']);
 register_deactivation_hook(__FILE__, ['\\MPHBAC\\Cache_Integration', 'on_deactivate']);
