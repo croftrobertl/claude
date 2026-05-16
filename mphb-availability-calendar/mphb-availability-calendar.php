@@ -27,8 +27,9 @@ require_once MPHBAC_DIR . 'includes/class-cache.php';
 require_once MPHBAC_DIR . 'includes/class-cache-integration.php';
 require_once MPHBAC_DIR . 'includes/class-data-provider.php';
 require_once MPHBAC_DIR . 'includes/class-ajax.php';
-require_once MPHBAC_DIR . 'includes/class-widget.php';
 require_once MPHBAC_DIR . 'includes/class-plugin.php';
+// class-widget.php is loaded lazily inside Plugin::boot() once Elementor is confirmed
+// loaded. It extends \Elementor\Widget_Base, which doesn't exist in wp-cron context.
 
 register_activation_hook(__FILE__, ['\\MPHBAC\\Cache_Integration', 'on_activate']);
 register_deactivation_hook(__FILE__, ['\\MPHBAC\\Cache_Integration', 'on_deactivate']);
