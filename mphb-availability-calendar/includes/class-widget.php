@@ -369,24 +369,28 @@ final class Widget extends Widget_Base
             <?php endif; ?>
 
             <div class="mphbac-filters" role="search">
-                <label class="mphbac-filter">
+                <label class="mphbac-filter mphbac-filter-checkin">
                     <span class="mphbac-filter-label"><?php echo esc_html($settings['str_checkin']); ?></span>
                     <input type="date" class="mphbac-input mphbac-input-checkin"
+                           name="mphbac_checkin"
                            min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                            autocomplete="off">
                 </label>
-                <label class="mphbac-filter">
+                <label class="mphbac-filter mphbac-filter-checkout">
                     <span class="mphbac-filter-label"><?php echo esc_html($settings['str_checkout']); ?></span>
                     <input type="date" class="mphbac-input mphbac-input-checkout"
+                           name="mphbac_checkout"
                            min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                            autocomplete="off">
                 </label>
                 <label class="mphbac-filter mphbac-filter-toggle">
-                    <input type="checkbox" class="mphbac-input-only-available">
+                    <input type="checkbox" class="mphbac-input-only-available" name="mphbac_only_available">
                     <span><?php echo esc_html($settings['str_only_available']); ?></span>
                 </label>
-                <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
-                <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
+                <div class="mphbac-filter-actions">
+                    <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
+                    <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
+                </div>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
@@ -427,12 +431,14 @@ final class Widget extends Widget_Base
                         <label class="mphbac-sheet-field">
                             <span><?php echo esc_html($settings['str_checkin']); ?></span>
                             <input type="date" class="mphbac-input mphbac-sheet-checkin"
+                                   name="mphbac_sheet_checkin"
                                    min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                                    autocomplete="off">
                         </label>
                         <label class="mphbac-sheet-field">
                             <span><?php echo esc_html($settings['str_checkout']); ?></span>
                             <input type="date" class="mphbac-input mphbac-sheet-checkout"
+                                   name="mphbac_sheet_checkout"
                                    min="<?php echo esc_attr($today->modify('+1 day')->format('Y-m-d')); ?>"
                                    autocomplete="off">
                         </label>
