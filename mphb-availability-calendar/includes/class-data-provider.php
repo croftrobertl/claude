@@ -211,21 +211,76 @@ final class Data_Provider
             return null;
         }
 
-        // Walk the range one day at a time but only via the in-memory helper —
-        // MotoPress's helper reads from its own preloaded data, so this is O(n)
-        // in days but stays in PHP. Acceptable for n ≤ 95.
+        $rooms_of_type = self::room_ids_for_type($room_type_id);
+        if (empty($rooms_of_type)) {
+            return self::date_range_as_blocked($from, $to);
+        }
+
+        // MotoPress's getAvailableRooms can ignore or misinterpret the
+        // room_type_id filter argument across versions, so we always
+        // post-filter the result against our known set of room IDs.
         $blocked = [];
         $cursor  = $from;
         while ($cursor <= $to) {
             $checkin  = $cursor->format('Y-m-d');
             $checkout = $cursor->modify('+1 day')->format('Y-m-d');
             $rooms    = $helper->getAvailableRooms($checkin, $checkout, ['room_type_id' => $room_type_id]);
-            if (empty($rooms)) {
+
+            $available_in_type = 0;
+            foreach ((array) $rooms as $room) {
+                $rid = self::extract_room_id($room);
+                if ($rid > 0 && in_array($rid, $rooms_of_type, true)) {
+                    $available_in_type++;
+                }
+            }
+            if ($available_in_type === 0) {
                 $blocked[$checkin] = true;
             }
             $cursor = $cursor->modify('+1 day');
         }
         return $blocked;
+    }
+
+    /**
+     * @return int[]
+     */
+    private static function room_ids_for_type(int $room_type_id): array
+    {
+        static $cache = [];
+        if (isset($cache[$room_type_id])) {
+            return $cache[$room_type_id];
+        }
+        $ids = get_posts([
+            'post_type'      => 'mphb_room',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'meta_query'     => [
+                ['key' => 'mphb_room_type_id', 'value' => $room_type_id, 'compare' => '='],
+            ],
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ]);
+        return $cache[$room_type_id] = array_map('intval', (array) $ids);
+    }
+
+    /**
+     * Extract a room ID from whatever shape MotoPress returns (entity object,
+     * associative array, or bare int/string).
+     *
+     * @param mixed $room
+     */
+    private static function extract_room_id($room): int
+    {
+        if (is_object($room)) {
+            if (method_exists($room, 'getId'))     return (int) $room->getId();
+            if (method_exists($room, 'getRoomId')) return (int) $room->getRoomId();
+            if (isset($room->ID))                  return (int) $room->ID;
+            if (isset($room->id))                  return (int) $room->id;
+        }
+        if (is_array($room)) {
+            return (int) ($room['id'] ?? $room['ID'] ?? $room['room_id'] ?? 0);
+        }
+        return (int) $room;
     }
 
     /**
@@ -265,21 +320,7 @@ final class Data_Provider
     {
         global $wpdb;
 
-        $rooms_of_type = get_posts([
-            'post_type'      => 'mphb_room',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-            'meta_query'     => [
-                [
-                    'key'     => 'mphb_room_type_id',
-                    'value'   => $room_type_id,
-                    'compare' => '=',
-                ],
-            ],
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        ]);
-        $rooms_of_type = array_map('intval', (array) $rooms_of_type);
+        $rooms_of_type = self::room_ids_for_type($room_type_id);
         if (empty($rooms_of_type)) {
             return self::date_range_as_blocked($from, $to);
         }
