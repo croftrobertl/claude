@@ -383,14 +383,14 @@ final class Widget extends Widget_Base
                            min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                            autocomplete="off">
                 </label>
-                <label class="mphbac-filter mphbac-filter-toggle">
-                    <input type="checkbox" class="mphbac-input-only-available" name="mphbac_only_available">
-                    <span><?php echo esc_html($settings['str_only_available']); ?></span>
-                </label>
                 <div class="mphbac-filter-actions">
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
                 </div>
+                <label class="mphbac-filter mphbac-filter-toggle">
+                    <input type="checkbox" class="mphbac-input-only-available" name="mphbac_only_available">
+                    <span><?php echo esc_html($settings['str_only_available']); ?></span>
+                </label>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
