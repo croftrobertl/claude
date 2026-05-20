@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: PHP syntax + phpcs + ESLint + Stylelint
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+echo "pre-commit: checking PHP syntax..."
+ERRORS=0
+while IFS= read -r -d '' file; do
+    php -l "$file" > /dev/null 2>&1 || { echo "  SYNTAX ERROR: $file"; ERRORS=$((ERRORS + 1)); }
+done < <(find mphb-availability-calendar -name '*.php' -print0)
+[ "$ERRORS" -gt 0 ] && { echo "Fix PHP syntax errors before committing."; exit 1; }
+
+PHPCS=$(command -v phpcs 2>/dev/null || echo "/root/.config/composer/vendor/bin/phpcs")
+if [ -x "$PHPCS" ] && [ -f phpcs.xml ]; then
+    echo "pre-commit: phpcs..."
+    "$PHPCS" --standard=phpcs.xml mphb-availability-calendar || exit 1
+fi
+
+if [ -f node_modules/.bin/eslint ]; then
+    echo "pre-commit: ESLint..."
+    node_modules/.bin/eslint mphb-availability-calendar/assets/js/widget.js || exit 1
+fi
+
+if [ -f node_modules/.bin/stylelint ]; then
+    echo "pre-commit: Stylelint..."
+    node_modules/.bin/stylelint mphb-availability-calendar/assets/css/widget.css || exit 1
+fi
+
+echo "pre-commit: all checks passed."

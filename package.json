@@ -1,0 +1,16 @@
+{
+  "name": "mphb-availability-calendar",
+  "private": true,
+  "scripts": {
+    "lint:js":  "eslint mphb-availability-calendar/assets/js/widget.js",
+    "lint:css": "stylelint mphb-availability-calendar/assets/css/widget.css",
+    "lint":     "npm run lint:js && npm run lint:css"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "stylelint": "^16.0.0",
+    "stylelint-config-standard": "^36.0.0"
+  }
+}
