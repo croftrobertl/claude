@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<ruleset name="MPHB Availability Calendar">
+  <description>WordPress Coding Standards for the MPHB Availability Calendar plugin.</description>
+
+  <!-- Files to check -->
+  <file>mphb-availability-calendar</file>
+  <exclude-pattern>mphb-availability-calendar/languages/*</exclude-pattern>
+
+  <!-- PHP version target -->
+  <config name="testVersion" value="8.0-"/>
+
+  <!-- WordPress text domain -->
+  <config name="text_domain" value="mphb-availability-calendar"/>
+
+  <!-- Base standard -->
+  <rule ref="WordPress-Extra">
+    <!-- Allow short ternary and null-coalescing — fine in PHP 8 -->
+    <exclude name="Universal.Operators.DisallowShortTernary"/>
+    <!-- Allow array() syntax; short [] is fine in PHP 5.4+ -->
+    <exclude name="Generic.Arrays.DisallowLongArraySyntax"/>
+    <!-- Don't require docblocks on every method — too noisy for a single-plugin codebase -->
+    <exclude name="Squiz.Commenting.FunctionComment"/>
+    <exclude name="Squiz.Commenting.ClassComment"/>
+    <exclude name="Squiz.Commenting.FileComment"/>
+    <exclude name="Generic.Commenting.DocComment"/>
+    <!-- Allow class files without the Class_ prefix -->
+    <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+    <exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+  </rule>
+
+  <!-- Enforce PHP 8.0 compatibility -->
+  <rule ref="PHPCompatibility"/>
+
+</ruleset>

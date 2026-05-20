@@ -49,7 +49,7 @@ Yes. It only requires free Elementor core.
 
 = How do I add a "Book Now" popup? =
 
-The popup feature is intentionally deferred. It will be added in a follow-up release.
+The widget includes a built-in Book Now popup, enabled by default. It can be disabled globally via the **Enable Popup** toggle in the Elementor panel under the Content tab.
 
 == Changelog ==
 
