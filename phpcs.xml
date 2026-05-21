@@ -5,6 +5,7 @@
   <!-- Files to check -->
   <file>mphb-availability-calendar</file>
   <exclude-pattern>mphb-availability-calendar/languages/*</exclude-pattern>
+  <arg name="extensions" value="php"/>
 
   <!-- PHP version target -->
   <config name="testVersion" value="8.0-"/>
