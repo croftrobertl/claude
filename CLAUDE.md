@@ -54,8 +54,8 @@ Request flow when a visitor loads a page containing the widget:
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
 
 - **All "today" math runs in US/Eastern**, not WP's site timezone. The physical cottages are in Florida and cutoffs must match the property clock regardless of visitor locale. See `Data_Provider::TZ` and `Data_Provider::timezone()`.
-- **Never re-fetch iCal URLs.** MotoPress already syncs iCal feeds into its own DB tables every 15 minutes. The plugin reads from that data via `MPHB()->getRoomAvailabilityHelper()` (or a fallback). Direct iCal HTTP fetches would duplicate work and risk cron conflicts.
-- **All MotoPress calls are guarded** with `method_exists` / `is_object` / `try/catch (\Throwable)` because MotoPress's public PHP API surface is undocumented and shifts between versions. `Data_Provider::resolve_availability_helper()` and `query_blocked_via_sql()` are the documented escape hatches. If you add a new MotoPress call, follow the same pattern.
+- **Never re-fetch iCal URLs.** MotoPress already syncs iCal feeds every 15 minutes; imported reservations land as `mphb_booking` posts (same as direct bookings). Direct iCal HTTP fetches would duplicate work and risk cron conflicts.
+- **Availability is read directly from MotoPress's DB, not its PHP API.** `MPHB()->getRoomRepository()->getAvailableRooms()` proved unreliable (ignores the room-type filter in 6.x). `Data_Provider::query_occupied_room_days()` reads the real storage: `mphb_reserved_room` posts (`_mphb_room_id` meta) joined to their parent `mphb_booking` post (which carries `mphb_check_in_date` / `mphb_check_out_date` and a `post_status` in `Data_Provider::BLOCKING_STATUSES`), plus the `{prefix}mphb_blocks` table for manual host blocks. A cottage-day is "booked" only when every physical room of that type is occupied. All SQL is `$wpdb->prepare`'d; the two queries are wrapped in `try/catch (\Throwable)` with `MPHBAC:` error logging.
 - **Book Now flow uses a hidden form POST to MotoPress's checkout page** (`MPHB()->settings()->pages()->getCheckoutPageUrl()`, default `/submit-booking/`). The POST body matches MotoPress's own cottage-page form exactly: `mphb_room_type_id`, `mphb_check_in_date`, `mphb_check_out_date`, `mphb_rooms_details[ID]=1`, `mphb_is_direct_booking=1`. No nonce field — MotoPress doesn't CSRF-protect this submission. Don't switch to `MPHB()->reservationRequest()` PHP-side unless you have a specific reason; the form-POST path is documented behavior and identical to what MotoPress's own UI does. Popup can be disabled globally via the `enable_popup` Elementor toggle.
 - **Every visible string must be translatable.** Text domain is `mphb-availability-calendar`. The site uses Loco Translate. Use `__()`, `esc_html__()`, `esc_attr__()` etc. — never echo a raw user-facing string.
 - **The Elementor widget category is `claude-code`** ("Claude Code"). It's registered in `Plugin::register_category()`. Don't change the slug — existing widgets reference it.
@@ -70,18 +70,22 @@ These are deliberate decisions from the design conversation. Don't "fix" them wi
 
 ## Adding controls or settings
 
-Every Elementor control is registered inside one of four methods in `class-widget.php`:
+Every Elementor control is registered inside one of eight methods in `class-widget.php`, all called from `register_controls()`:
 
 - `register_content_controls()` — heading + cottage selector
-- `register_display_controls()` — visible-days, label style, legend/past toggles, font size
+- `register_display_controls()` — visible-days, label style, legend/past toggles, font size, popup toggle
 - `register_strings_controls()` — every editable label
 - `register_style_controls()` — theme inheritance + the three state color pickers
+- `register_heading_style_controls()` — heading typography + color
+- `register_field_style_controls()` — filter-input typography/border/colors
+- `register_button_style_controls()` — button typography/border/padding + Normal/Hover colors
+- `register_cell_style_controls()` — calendar cell radius + min-height
 
 When adding a setting:
 1. Add it in the appropriate method.
 2. If it changes server-rendered output, read it in `Widget::render()` and pass through `data-config`.
-3. If it only affects styles, prefer `'selectors' => ['{{WRAPPER}} .mphbac-root' => '--mphbac-xxx: {{VALUE}};']` so Elementor live-preview works.
-4. If the setting maps to a state color (Available/Booked/Past), wire it to the matching CSS custom property: `--mphbac-color-available`, `--mphbac-color-booked`, `--mphbac-color-past`.
+3. If it only affects styles, use a `selectors` argument so Elementor live-preview works.
+4. **Specificity:** Bravada's Elementor kit resets inputs/buttons with `(0,3,1)`-specific selectors. Style-control selectors must outrank that — use the `Widget::SEL` prefix (`{{WRAPPER}} .mphbac-root.mphbac-root `), whose doubled class reaches `(0,4,0)`. State colors still target the CSS custom properties (`--mphbac-color-available` / `-booked` / `-past`) on `.mphbac-root`.
 
 ## Brand palette (when theme inheritance is OFF)
 

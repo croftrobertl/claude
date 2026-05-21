@@ -76,6 +76,10 @@ final class Widget extends Widget_Base
         $this->register_display_controls();
         $this->register_strings_controls();
         $this->register_style_controls();
+        $this->register_heading_style_controls();
+        $this->register_field_style_controls();
+        $this->register_button_style_controls();
+        $this->register_cell_style_controls();
     }
 
     private function register_content_controls(): void
@@ -269,6 +273,205 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * Selector prefix that outranks aggressive theme resets (e.g. Bravada's
+     * Elementor kit). The doubled .mphbac-root adds a class' worth of
+     * specificity without changing what it matches.
+     */
+    private const SEL = '{{WRAPPER}} .mphbac-root.mphbac-root ';
+
+    private function register_heading_style_controls(): void
+    {
+        $this->start_controls_section('section_style_heading', [
+            'label'     => __('Heading', 'mphb-availability-calendar'),
+            'tab'       => Controls_Manager::TAB_STYLE,
+            'condition' => ['heading_show' => 'yes'],
+        ]);
+
+        $this->add_control('heading_color', [
+            'label'     => __('Heading color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.mphbac-heading' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'heading_typography',
+                'selector' => self::SEL . '.mphbac-heading',
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    private function register_field_style_controls(): void
+    {
+        $this->start_controls_section('section_style_fields', [
+            'label' => __('Filter Fields', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('field_text_color', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.mphbac-input' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_control('field_bg_color', [
+            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.mphbac-input' => 'background-color: {{VALUE}};'],
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'field_typography',
+                'selector' => self::SEL . '.mphbac-input',
+                // line-height is pinned in widget.css to defeat the theme's
+                // 1px reset, so don't expose a control that can't win.
+                'exclude'  => ['line_height'],
+            ]
+        );
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Border::get_type(),
+            [
+                'name'     => 'field_border',
+                'selector' => self::SEL . '.mphbac-input',
+            ]
+        );
+
+        $this->add_responsive_control('field_radius', [
+            'label'      => __('Border radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::SEL . '.mphbac-input' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_button_style_controls(): void
+    {
+        $this->start_controls_section('section_style_buttons', [
+            'label' => __('Buttons', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'button_typography',
+                'selector' => self::SEL . '.mphbac-btn',
+            ]
+        );
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Border::get_type(),
+            [
+                'name'     => 'button_border',
+                'selector' => self::SEL . '.mphbac-btn',
+            ]
+        );
+
+        $this->add_control('button_radius', [
+            'label'      => __('Border radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::SEL . '.mphbac-btn' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('button_padding', [
+            'label'      => __('Padding', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [
+                self::SEL . '.mphbac-btn' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->start_controls_tabs('button_color_tabs');
+
+        $this->start_controls_tab('button_tab_normal', [
+            'label' => __('Normal', 'mphb-availability-calendar'),
+        ]);
+        $this->add_control('button_text_color', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#ffffff',
+            'selectors' => [self::SEL . '.mphbac-btn' => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('button_bg_color', [
+            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#0f6dbf',
+            'selectors' => [self::SEL . '.mphbac-btn' => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('button_tab_hover', [
+            'label' => __('Hover', 'mphb-availability-calendar'),
+        ]);
+        $this->add_control('button_text_color_hover', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.mphbac-btn:hover'         => 'color: {{VALUE}};',
+                self::SEL . '.mphbac-btn:focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('button_bg_color_hover', [
+            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#0a4f8c',
+            'selectors' => [
+                self::SEL . '.mphbac-btn:hover'         => 'background-color: {{VALUE}};',
+                self::SEL . '.mphbac-btn:focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
+    private function register_cell_style_controls(): void
+    {
+        $this->start_controls_section('section_style_cells', [
+            'label' => __('Calendar Cells', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('cell_radius', [
+            'label'      => __('Cell corner radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 0, 'max' => 16, 'step' => 1]],
+            'selectors'  => [
+                self::SEL . '.mphbac-cell-status' => 'border-radius: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('cell_min_height', [
+            'label'      => __('Cell minimum height', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 16, 'max' => 56, 'step' => 2]],
+            'selectors'  => [
+                self::SEL => '--mphbac-cell-min: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    /**
      * @return array<int,string>
      */
     private function cottage_options(): array
@@ -412,7 +615,13 @@ final class Widget extends Widget_Base
             </div>
 
             <div class="mphbac-grid-wrap">
-                <?php $this->render_grid($rooms, $availability, $from, $to, $popup_enabled, (string) ($settings['str_book_button'] ?? '')); ?>
+                <?php
+                $book_label = trim((string) ($settings['str_book_button'] ?? ''));
+                if ($book_label === '') {
+                    $book_label = __('Book this cottage', 'mphb-availability-calendar');
+                }
+                $this->render_grid($rooms, $availability, $from, $to, $popup_enabled, $book_label);
+                ?>
             </div>
 
             <div class="mphbac-empty" hidden>

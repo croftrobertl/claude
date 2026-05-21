@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,11 @@ Yes. It only requires free Elementor core.
 The popup feature is intentionally deferred. It will be added in a follow-up release.
 
 == Changelog ==
+
+= 0.2.0 =
+* Availability now reads MotoPress bookings directly from the database (mphb_booking / mphb_reserved_room), fixing calendars that showed every day as available.
+* Added Elementor style controls for the heading, filter fields, buttons, and calendar cells (typography, border, colors, spacing).
+* Fixed collapsed date inputs under the Bravada theme, the clipped "today" outline, and the "Book this cottage" button label.
 
 = 0.1.0 =
 * Initial release.

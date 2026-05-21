@@ -145,100 +145,63 @@ final class Data_Provider
     }
 
     /**
+     * MotoPress booking post statuses that occupy a room. A "confirmed" booking
+     * is a real reservation (iCal imports also land as confirmed); "pending" is
+     * a checkout in progress that holds the room. Cancelled/abandoned do not.
+     */
+    private const BLOCKING_STATUSES = ['confirmed', 'pending', 'pending-payment'];
+
+    /**
      * @param int[]             $room_type_ids
      * @return array<int, array<string,string>>
      */
     private static function query_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
     {
-        $today  = self::today();
-        $result = [];
+        $today = self::today();
 
+        // Map every physical room of every requested cottage type.
+        $rooms_of_type = [];   // type_id => int[]
+        $type_of_room  = [];   // room_id => type_id
         foreach ($room_type_ids as $type_id) {
-            $blocked = self::get_blocked_dates_for_type($type_id, $from, $to);
+            $rooms_of_type[$type_id] = self::room_ids_for_type($type_id);
+            foreach ($rooms_of_type[$type_id] as $rid) {
+                $type_of_room[$rid] = $type_id;
+            }
+        }
+
+        // occupied[type_id][date] = [room_id => true]
+        $occupied = [];
+        $room_days = self::query_occupied_room_days(array_keys($type_of_room), $from, $to);
+        foreach ($room_days as $rid => $days) {
+            $type_id = $type_of_room[$rid] ?? 0;
+            if ($type_id === 0) {
+                continue;
+            }
+            foreach ($days as $date => $_) {
+                $occupied[$type_id][$date][$rid] = true;
+            }
+        }
+
+        $result = [];
+        foreach ($room_type_ids as $type_id) {
+            $room_count = count($rooms_of_type[$type_id]);
             $result[$type_id] = [];
             $cursor = $from;
             while ($cursor <= $to) {
-                $date_str = $cursor->format('Y-m-d');
+                $date = $cursor->format('Y-m-d');
                 if ($cursor < $today) {
-                    $result[$type_id][$date_str] = self::ST_PAST;
-                } elseif (isset($blocked[$date_str])) {
-                    $result[$type_id][$date_str] = self::ST_BOOKED;
+                    $result[$type_id][$date] = self::ST_PAST;
+                } elseif ($room_count === 0) {
+                    $result[$type_id][$date] = self::ST_BOOKED;
                 } else {
-                    $result[$type_id][$date_str] = self::ST_AVAIL;
+                    $occ = isset($occupied[$type_id][$date]) ? count($occupied[$type_id][$date]) : 0;
+                    $result[$type_id][$date] = ($occ >= $room_count) ? self::ST_BOOKED : self::ST_AVAIL;
                 }
                 $cursor = $cursor->modify('+1 day');
             }
         }
 
         return $result;
-    }
-
-    /**
-     * Returns the set of blocked dates (booked or host-blocked) for a room type
-     * across the given range. Keyed by 'YYYY-MM-DD' => true for O(1) lookup.
-     *
-     * @return array<string,bool>
-     */
-    private static function get_blocked_dates_for_type(int $room_type_id, DateTimeImmutable $from, DateTimeImmutable $to): array
-    {
-        try {
-            $api_result = self::query_blocked_via_mphb_api($room_type_id, $from, $to);
-            if ($api_result !== null) {
-                return $api_result;
-            }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: blocked-dates API path failed for type ' . $room_type_id . ': ' . $e->getMessage());
-        }
-
-        return self::query_blocked_via_sql($room_type_id, $from, $to);
-    }
-
-    /**
-     * @return array<string,bool>|null Null if MotoPress's API surface isn't available; caller should fall back.
-     */
-    private static function query_blocked_via_mphb_api(int $room_type_id, DateTimeImmutable $from, DateTimeImmutable $to): ?array
-    {
-        if (!function_exists('MPHB')) {
-            return null;
-        }
-        $mphb = \MPHB();
-        if (!is_object($mphb)) {
-            return null;
-        }
-
-        $helper = self::resolve_availability_helper($mphb);
-        if ($helper === null) {
-            return null;
-        }
-
-        $rooms_of_type = self::room_ids_for_type($room_type_id);
-        if (empty($rooms_of_type)) {
-            return self::date_range_as_blocked($from, $to);
-        }
-
-        // MotoPress's getAvailableRooms can ignore or misinterpret the
-        // room_type_id filter argument across versions, so we always
-        // post-filter the result against our known set of room IDs.
-        $blocked = [];
-        $cursor  = $from;
-        while ($cursor <= $to) {
-            $checkin  = $cursor->format('Y-m-d');
-            $checkout = $cursor->modify('+1 day')->format('Y-m-d');
-            $rooms    = $helper->getAvailableRooms($checkin, $checkout, ['room_type_id' => $room_type_id]);
-
-            $available_in_type = 0;
-            foreach ((array) $rooms as $room) {
-                $rid = self::extract_room_id($room);
-                if ($rid > 0 && in_array($rid, $rooms_of_type, true)) {
-                    $available_in_type++;
-                }
-            }
-            if ($available_in_type === 0) {
-                $blocked[$checkin] = true;
-            }
-            $cursor = $cursor->modify('+1 day');
-        }
-        return $blocked;
     }
 
     /**
@@ -264,155 +227,103 @@ final class Data_Provider
     }
 
     /**
-     * Extract a room ID from whatever shape MotoPress returns (entity object,
-     * associative array, or bare int/string).
+     * Which calendar days each physical room is occupied across the range.
+     * Reads MotoPress's real storage directly (verified against MotoPress 6.x):
+     *   - Reservations: mphb_reserved_room posts (_mphb_room_id meta) whose
+     *     parent mphb_booking post is in a blocking status. The check-in /
+     *     check-out dates live on the PARENT booking. Covers direct bookings
+     *     and iCal-imported bookings alike (both stored as mphb_booking).
+     *   - Manual host blocks: {$prefix}mphb_blocks rows with not_stay_in = 1.
      *
-     * @param mixed $room
+     * @param int[] $room_ids
+     * @return array<int, array<string,bool>> [ room_id => [ 'YYYY-MM-DD' => true ] ]
      */
-    private static function extract_room_id($room): int
-    {
-        if (is_object($room)) {
-            if (method_exists($room, 'getId'))     return (int) $room->getId();
-            if (method_exists($room, 'getRoomId')) return (int) $room->getRoomId();
-            if (isset($room->ID))                  return (int) $room->ID;
-            if (isset($room->id))                  return (int) $room->id;
-        }
-        if (is_array($room)) {
-            return (int) ($room['id'] ?? $room['ID'] ?? $room['room_id'] ?? 0);
-        }
-        return (int) $room;
-    }
-
-    /**
-     * @return object|null A repository/helper that exposes getAvailableRooms($checkin, $checkout, ['room_type_id' => int]).
-     */
-    private static function resolve_availability_helper(object $mphb)
-    {
-        // Newer MotoPress (≥6.x): the method lives on getRoomRepository().
-        if (method_exists($mphb, 'getRoomRepository')) {
-            $repo = $mphb->getRoomRepository();
-            if (is_object($repo) && method_exists($repo, 'getAvailableRooms')) {
-                return $repo;
-            }
-        }
-        // Older MotoPress: the method was on a dedicated helper hung off MPHB().
-        foreach (['getRoomAvailabilityHelper', 'getAvailabilityHelper'] as $method) {
-            if (method_exists($mphb, $method)) {
-                $helper = $mphb->{$method}();
-                if (is_object($helper) && method_exists($helper, 'getAvailableRooms')) {
-                    return $helper;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * SQL fallback for when MotoPress's API path is unavailable.
-     * Combines two sources:
-     *   1. Manual / iCal-imported blocks in {$prefix}mphb_blocks
-     *   2. Actual reservations stored as mphb_reserved_room post types
-     * A day is "blocked" only when every room of the type is unavailable that day.
-     *
-     * @return array<string,bool>
-     */
-    private static function query_blocked_via_sql(int $room_type_id, DateTimeImmutable $from, DateTimeImmutable $to): array
+    private static function query_occupied_room_days(array $room_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
     {
         global $wpdb;
 
-        $rooms_of_type = self::room_ids_for_type($room_type_id);
-        if (empty($rooms_of_type)) {
-            return self::date_range_as_blocked($from, $to);
+        $occupied = [];
+        $room_ids = array_values(array_unique(array_map('intval', $room_ids)));
+        if (empty($room_ids)) {
+            return $occupied;
         }
 
-        $blocks_table = $wpdb->prefix . 'mphb_blocks';
-        $from_str = $from->format('Y-m-d');
-        $to_str   = $to->format('Y-m-d');
+        $from_str   = $from->format('Y-m-d');
+        $to_str     = $to->format('Y-m-d');
+        $room_ph    = implode(',', array_fill(0, count($room_ids), '%d'));
 
-        $unavailable_per_room_per_day = [];
-        $type_wide_blocked_days       = [];
-
-        $tables = $wpdb->get_col(
-            $wpdb->prepare("SHOW TABLES LIKE %s", $wpdb->esc_like($blocks_table))
-        );
-        if (in_array($blocks_table, (array) $tables, true)) {
-            $room_placeholders = implode(',', array_fill(0, count($rooms_of_type), '%d'));
-            $sql = "SELECT room_type_id, room_id, date_from, date_to, not_stay_in
-                    FROM $blocks_table
-                    WHERE (room_type_id = %d OR room_id IN ($room_placeholders))
-                      AND not_stay_in = 1
-                      AND date_to >= %s
-                      AND date_from <= %s";
-            $params = array_merge([$room_type_id], $rooms_of_type, [$from_str, $to_str]);
+        try {
+            $status_ph = implode(',', array_fill(0, count(self::BLOCKING_STATUSES), '%s'));
+            $sql = "SELECT rid.meta_value AS room_id, ci.meta_value AS checkin, co.meta_value AS checkout
+                    FROM {$wpdb->posts} rr
+                    INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id'
+                    INNER JOIN {$wpdb->posts} bk ON bk.ID = rr.post_parent AND bk.post_type = 'mphb_booking'
+                    INNER JOIN {$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date'
+                    INNER JOIN {$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date'
+                    WHERE rr.post_type = 'mphb_reserved_room'
+                      AND bk.post_status IN ($status_ph)
+                      AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
+                      AND ci.meta_value <= %s
+                      AND co.meta_value > %s";
+            $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
             $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
             foreach ((array) $rows as $row) {
-                $start = max($row->date_from, $from_str);
-                $end   = min($row->date_to, $to_str);
-                $cursor = new DateTimeImmutable($start, self::timezone());
-                $end_dt = new DateTimeImmutable($end, self::timezone());
-                while ($cursor <= $end_dt) {
-                    $d = $cursor->format('Y-m-d');
-                    if ((int) $row->room_id === 0) {
-                        $type_wide_blocked_days[$d] = true;
-                    } else {
-                        $unavailable_per_room_per_day[$d][(int) $row->room_id] = true;
-                    }
-                    $cursor = $cursor->modify('+1 day');
+                // A reservation occupies nights [check_in, check_out); checkout day is free.
+                self::mark_days($occupied, (int) $row->room_id, (string) $row->checkin, (string) $row->checkout, false, $from, $to);
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: reservation query failed: ' . $e->getMessage());
+        }
+
+        try {
+            $blocks_table = $wpdb->prefix . 'mphb_blocks';
+            $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($blocks_table)));
+            if ($exists === $blocks_table) {
+                $sql2 = "SELECT room_id, date_from, date_to FROM $blocks_table
+                         WHERE not_stay_in = 1
+                           AND room_id IN ($room_ph)
+                           AND date_to >= %s AND date_from <= %s";
+                $params2 = array_merge($room_ids, [$from_str, $to_str]);
+                $rows2   = $wpdb->get_results($wpdb->prepare($sql2, $params2));
+                foreach ((array) $rows2 as $row) {
+                    // Host blocks span [date_from, date_to] inclusive on both ends.
+                    self::mark_days($occupied, (int) $row->room_id, (string) $row->date_from, (string) $row->date_to, true, $from, $to);
                 }
             }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: blocks query failed: ' . $e->getMessage());
         }
 
-        // mphb_reserved_room posts: actual reservations.
-        $reserved_posts = $wpdb->get_results($wpdb->prepare(
-            "SELECT p.ID, ci.meta_value AS checkin, co.meta_value AS checkout, rid.meta_value AS room_id
-             FROM {$wpdb->posts} p
-             INNER JOIN {$wpdb->postmeta} ci  ON ci.post_id = p.ID  AND ci.meta_key = 'mphb_check_in_date'
-             INNER JOIN {$wpdb->postmeta} co  ON co.post_id = p.ID  AND co.meta_key = 'mphb_check_out_date'
-             INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = p.ID AND rid.meta_key = 'mphb_room_id'
-             WHERE p.post_type = 'mphb_reserved_room'
-               AND p.post_status IN ('publish', 'mphbrr_reserved')
-               AND ci.meta_value <= %s
-               AND co.meta_value > %s",
-            $to_str,
-            $from_str
-        ));
-        foreach ((array) $reserved_posts as $row) {
-            $rid = (int) $row->room_id;
-            if (!in_array($rid, $rooms_of_type, true)) {
-                continue;
-            }
-            // Reservation occupies nights [check_in, check_out) — checkout day is free.
-            $start = max($row->checkin, $from_str);
-            $end_excl = min($row->checkout, $to->modify('+1 day')->format('Y-m-d'));
-            $cursor = new DateTimeImmutable($start, self::timezone());
-            $end_dt = new DateTimeImmutable($end_excl, self::timezone());
-            while ($cursor < $end_dt) {
-                $unavailable_per_room_per_day[$cursor->format('Y-m-d')][$rid] = true;
-                $cursor = $cursor->modify('+1 day');
-            }
-        }
-
-        $room_count = count($rooms_of_type);
-        $blocked    = $type_wide_blocked_days;
-        foreach ($unavailable_per_room_per_day as $date => $room_map) {
-            if (count($room_map) >= $room_count) {
-                $blocked[$date] = true;
-            }
-        }
-        return $blocked;
+        return $occupied;
     }
 
     /**
-     * @return array<string,bool>
+     * Mark a room occupied for each day a reservation/block covers, clamped to
+     * the visible range. $inclusive_end true => the end date itself is occupied
+     * (host blocks); false => end date is exclusive (reservation checkout day).
+     *
+     * @param array<int,array<string,bool>> $occupied
      */
-    private static function date_range_as_blocked(DateTimeImmutable $from, DateTimeImmutable $to): array
+    private static function mark_days(array &$occupied, int $room_id, string $start_str, string $end_str, bool $inclusive_end, DateTimeImmutable $from, DateTimeImmutable $to): void
     {
-        $blocked = [];
-        $cursor  = $from;
-        while ($cursor <= $to) {
-            $blocked[$cursor->format('Y-m-d')] = true;
+        if ($room_id <= 0 || $start_str === '' || $end_str === '') {
+            return;
+        }
+        try {
+            $tz    = self::timezone();
+            $start = new DateTimeImmutable(max($start_str, $from->format('Y-m-d')), $tz);
+            $end   = new DateTimeImmutable($end_str, $tz);
+            $range_end = $inclusive_end ? $to : $to->modify('+1 day');
+            if ($end > $range_end) {
+                $end = $range_end;
+            }
+        } catch (\Throwable $e) {
+            return;
+        }
+        $cursor = $start;
+        while ($inclusive_end ? $cursor <= $end : $cursor < $end) {
+            $occupied[$room_id][$cursor->format('Y-m-d')] = true;
             $cursor = $cursor->modify('+1 day');
         }
-        return $blocked;
     }
 }
