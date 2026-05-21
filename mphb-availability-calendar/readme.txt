@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ Yes. It only requires free Elementor core.
 The popup feature is intentionally deferred. It will be added in a follow-up release.
 
 == Changelog ==
+
+= 0.2.2 =
+* Added a "Minimum nights" setting (default 2). The booking popup now defaults the check-out date that many nights after the chosen check-in.
+* Bookings shorter than the minimum are rejected in the popup with a clear message instead of sending the guest to an empty Submit Booking page.
 
 = 0.2.1 =
 * Fixed: clicking Apply left the calendar unable to open the booking popup until Reset was clicked (AJAX re-render dropped the clickable cells and per-row Book buttons).

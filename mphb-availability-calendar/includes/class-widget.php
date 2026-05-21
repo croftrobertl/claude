@@ -181,6 +181,17 @@ final class Widget extends Widget_Base
             'description'  => __('When on, tapping an available day or the "Book this cottage" button opens a sheet that submits a booking to MotoPress checkout.', 'mphb-availability-calendar'),
         ]);
 
+        $this->add_control('min_nights', [
+            'label'       => __('Minimum nights', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::NUMBER,
+            'min'         => 1,
+            'max'         => 60,
+            'step'        => 1,
+            'default'     => 2,
+            'description' => __('The booking popup defaults the check-out date this many nights after the chosen check-in, and rejects shorter stays. Match this to your MotoPress minimum-stay rule.', 'mphb-availability-calendar'),
+            'condition'   => ['enable_popup' => 'yes'],
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -210,6 +221,7 @@ final class Widget extends Widget_Base
             'str_book_close'     => [__('Popup close (aria-label)', 'mphb-availability-calendar'), __('Close booking dialog', 'mphb-availability-calendar')],
             'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
+            'str_book_min_nights' => [__('Popup minimum-nights message', 'mphb-availability-calendar'), __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -517,6 +529,7 @@ final class Widget extends Widget_Base
         }
 
         $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
+        $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
 
         $book_label = trim((string) ($settings['str_book_button'] ?? ''));
         if ($book_label === '') {
@@ -538,6 +551,7 @@ final class Widget extends Widget_Base
             'from'           => $from->format('Y-m-d'),
             'to'             => $to->format('Y-m-d'),
             'popupEnabled'   => $popup_enabled,
+            'minNights'      => $min_nights,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'strings'        => [
                 'empty'         => (string) ($settings['str_empty'] ?? ''),
@@ -550,6 +564,7 @@ final class Widget extends Widget_Base
                 'bookClose'     => (string) ($settings['str_book_close'] ?? ''),
                 'bookUnavail'   => (string) ($settings['str_book_unavailable'] ?? ''),
                 'bookInvalid'   => (string) ($settings['str_book_invalid_range'] ?? ''),
+                'bookMinNights' => (string) ($settings['str_book_min_nights'] ?? ''),
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
                 'bookButton'    => $book_label,
@@ -643,7 +658,7 @@ final class Widget extends Widget_Base
                             <span><?php echo esc_html($settings['str_checkout']); ?></span>
                             <input type="date" class="mphbac-input mphbac-sheet-checkout"
                                    name="mphbac_sheet_checkout"
-                                   min="<?php echo esc_attr($today->modify('+1 day')->format('Y-m-d')); ?>"
+                                   min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
                                    autocomplete="off">
                         </label>
                         <p class="mphbac-sheet-error" role="alert" hidden></p>

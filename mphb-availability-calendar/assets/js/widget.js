@@ -340,6 +340,7 @@
         var closeBtn = sheet.querySelector('.mphbac-sheet-close');
 
         var context = { roomTypeId: 0, lastTrigger: null };
+        var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
         root.addEventListener('click', function (e) {
             var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
@@ -347,7 +348,7 @@
                 var row = cell.parentNode;
                 var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
                 var date = cell.getAttribute('data-date') || '';
-                openSheet(typeId, date, addDays(date, 1), cell);
+                openSheet(typeId, date, addDays(date, minNights), cell);
                 return;
             }
             var bookBtn = e.target.closest && e.target.closest('.mphbac-btn-book');
@@ -356,7 +357,7 @@
                 var filterCheckin = root.querySelector('.mphbac-input-checkin');
                 var filterCheckout = root.querySelector('.mphbac-input-checkout');
                 var ci = (filterCheckin && filterCheckin.value) || config.today;
-                var co = (filterCheckout && filterCheckout.value) || addDays(ci, 1);
+                var co = (filterCheckout && filterCheckout.value) || addDays(ci, minNights);
                 openSheet(btnTypeId, ci, co, bookBtn);
             }
         });
@@ -424,9 +425,20 @@
                 showError((config.strings && config.strings.bookInvalid) || 'Invalid date range.');
                 return;
             }
+            if (nightsBetween(ci, co) < minNights) {
+                showError((config.strings && config.strings.bookMinNights) ||
+                    'Must be a minimum of two nights. Please select new dates.');
+                return;
+            }
             confirmBtn.disabled = true;
             verifyAndSubmit(ci, co);
         });
+
+        function nightsBetween(ci, co) {
+            var a = new Date(ci + 'T00:00:00');
+            var b = new Date(co + 'T00:00:00');
+            return Math.round((b - a) / 86400000);
+        }
 
         function verifyAndSubmit(ci, co) {
             var body = new URLSearchParams();
