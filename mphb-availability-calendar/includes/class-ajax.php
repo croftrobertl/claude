@@ -37,8 +37,6 @@ final class Ajax
             $to = $from->modify('+' . self::MAX_RANGE_DAYS . ' days');
         }
 
-        $only_available = !empty($_POST['only_available']) && $_POST['only_available'] !== 'false' && $_POST['only_available'] !== '0';
-
         if (empty($room_type_ids)) {
             $all = Data_Provider::list_room_types();
             $room_type_ids = array_map(static fn($t) => (int) $t['id'], $all);
@@ -46,24 +44,6 @@ final class Ajax
 
         $availability = Data_Provider::get_availability($room_type_ids, $from, $to);
         $rooms        = Data_Provider::list_room_types();
-
-        if ($only_available) {
-            $available_ids = [];
-            foreach ($availability as $type_id => $days) {
-                $has_blocker = false;
-                foreach ($days as $status) {
-                    if ($status === Data_Provider::ST_BOOKED) {
-                        $has_blocker = true;
-                        break;
-                    }
-                }
-                if (!$has_blocker) {
-                    $available_ids[] = $type_id;
-                }
-            }
-            $availability = array_intersect_key($availability, array_flip($available_ids));
-            $rooms = array_values(array_filter($rooms, static fn($r) => in_array((int) $r['id'], $available_ids, true)));
-        }
 
         wp_send_json_success([
             'rooms'        => array_values($rooms),

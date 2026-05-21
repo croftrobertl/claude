@@ -18,7 +18,6 @@
         var state = {
             from: config.from,
             to: config.to,
-            onlyAvailable: false,
             lastRequest: 0,
             pending: null
         };
@@ -35,35 +34,27 @@
     function wireFilters(root, config, state) {
         var checkin = root.querySelector('.mphbac-input-checkin');
         var checkout = root.querySelector('.mphbac-input-checkout');
-        var onlyAvail = root.querySelector('.mphbac-input-only-available');
         var apply = root.querySelector('.mphbac-btn-apply');
         var reset = root.querySelector('.mphbac-btn-reset');
         var resetEmpty = root.querySelector('.mphbac-btn-reset-empty');
 
         function doApply() {
-            var from = checkin && checkin.value ? checkin.value : config.from;
-            var to = checkout && checkout.value ? checkout.value : config.to;
-            state.from = from;
-            state.to = to;
-            state.onlyAvailable = !!(onlyAvail && onlyAvail.checked);
+            state.from = checkin && checkin.value ? checkin.value : config.from;
+            state.to = checkout && checkout.value ? checkout.value : config.to;
             request(root, config, state);
         }
 
         function doReset() {
             if (checkin) checkin.value = '';
             if (checkout) checkout.value = '';
-            if (onlyAvail) onlyAvail.checked = false;
             state.from = config.from;
             state.to = config.to;
-            state.onlyAvailable = false;
             request(root, config, state);
         }
 
         if (apply) apply.addEventListener('click', doApply);
         if (reset) reset.addEventListener('click', doReset);
         if (resetEmpty) resetEmpty.addEventListener('click', doReset);
-
-        if (onlyAvail) onlyAvail.addEventListener('change', doApply);
 
         // Native date input fallback: if browser does not support type=date, use jQuery UI datepicker if available.
         var probe = document.createElement('input');
@@ -170,7 +161,6 @@
         body.append('nonce', config.nonce || '');
         body.append('from', state.from);
         body.append('to', state.to);
-        body.append('only_available', state.onlyAvailable ? '1' : '0');
         (config.roomTypeIds || []).forEach(function (id) {
             body.append('room_type_ids[]', String(id));
         });
@@ -188,7 +178,7 @@
                 showError(root);
                 return;
             }
-            renderGrid(root, json.data, state);
+            renderGrid(root, json.data, state, config);
         }).catch(function () {
             root.classList.remove('is-loading');
             showError(root);
@@ -200,7 +190,7 @@
         if (empty) empty.hidden = false;
     }
 
-    function renderGrid(root, data, state) {
+    function renderGrid(root, data, state, config) {
         var rooms = data.rooms || [];
         var availability = data.availability || {};
         var from = data.from || state.from;
@@ -233,6 +223,9 @@
         });
         grid.appendChild(header);
 
+        var bookLabel = (config && config.strings && config.strings.bookButton) || 'Book this cottage';
+        var popupEnabled = root.classList.contains('mphbac-popup-enabled');
+
         rooms.forEach(function (room) {
             var row = document.createElement('div');
             row.className = 'mphbac-row';
@@ -254,15 +247,31 @@
             var roomAvail = availability[room.id] || {};
             days.forEach(function (day) {
                 var status = roomAvail[day] || 'booked';
+                var clickable = status === 'available';
                 var cell = document.createElement('div');
-                cell.className = 'mphbac-cell mphbac-cell-status is-' + status;
-                cell.setAttribute('role', 'cell');
+                cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
+                cell.setAttribute('role', clickable ? 'button' : 'cell');
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
                 cell.setAttribute('aria-label', day + ' — ' + status);
+                if (clickable) cell.setAttribute('tabindex', '0');
                 row.appendChild(cell);
             });
             grid.appendChild(row);
+
+            if (popupEnabled) {
+                var actions = document.createElement('div');
+                actions.className = 'mphbac-row-actions';
+                actions.setAttribute('data-room-type-id', String(room.id));
+                actions.hidden = true;
+                var bookBtn = document.createElement('button');
+                bookBtn.type = 'button';
+                bookBtn.className = 'mphbac-btn mphbac-btn-book';
+                bookBtn.setAttribute('data-room-type-id', String(room.id));
+                bookBtn.textContent = bookLabel;
+                actions.appendChild(bookBtn);
+                grid.appendChild(actions);
+            }
         });
 
         wrap.innerHTML = '';
@@ -425,7 +434,6 @@
             body.append('nonce', config.nonce || '');
             body.append('from', ci);
             body.append('to', addDays(co, -1));
-            body.append('only_available', '0');
             body.append('room_type_ids[]', String(context.roomTypeId));
 
             fetch(config.ajaxUrl, {

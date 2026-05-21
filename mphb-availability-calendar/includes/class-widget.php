@@ -194,7 +194,6 @@ final class Widget extends Widget_Base
         $strings = [
             'str_checkin'       => [__('Check-in label', 'mphb-availability-calendar'), __('Check-in', 'mphb-availability-calendar')],
             'str_checkout'      => [__('Check-out label', 'mphb-availability-calendar'), __('Check-out', 'mphb-availability-calendar')],
-            'str_only_available'=> [__('"Only available" label', 'mphb-availability-calendar'), __('Show only available', 'mphb-availability-calendar')],
             'str_apply'         => [__('Apply button', 'mphb-availability-calendar'), __('Apply', 'mphb-availability-calendar')],
             'str_reset'         => [__('Reset button', 'mphb-availability-calendar'), __('Reset', 'mphb-availability-calendar')],
             'str_empty'         => [__('Empty-state message', 'mphb-availability-calendar'), __('No cottages available — try different dates.', 'mphb-availability-calendar')],
@@ -501,7 +500,7 @@ final class Widget extends Widget_Base
         $rooms = array_values(array_filter($all_types, static fn($t) => in_array((int) $t['id'], $selected_ids, true)));
 
         $today    = Data_Provider::today();
-        $from     = $settings['show_past'] === 'yes' ? $today->modify('-3 days') : $today;
+        $from     = $settings['show_past'] === 'yes' ? $today->modify('-1 day') : $today;
         $days_setting = (string) ($settings['visible_days'] ?? 'auto');
         $days_count   = $days_setting === 'auto' ? 31 : max(1, (int) $days_setting);
         $to       = $from->modify('+' . ($days_count - 1) . ' days');
@@ -518,6 +517,11 @@ final class Widget extends Widget_Base
         }
 
         $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
+
+        $book_label = trim((string) ($settings['str_book_button'] ?? ''));
+        if ($book_label === '') {
+            $book_label = __('Book this cottage', 'mphb-availability-calendar');
+        }
 
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
@@ -548,6 +552,7 @@ final class Widget extends Widget_Base
                 'bookInvalid'   => (string) ($settings['str_book_invalid_range'] ?? ''),
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
+                'bookButton'    => $book_label,
             ],
         ];
 
@@ -590,10 +595,6 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
                 </div>
-                <label class="mphbac-filter mphbac-filter-toggle">
-                    <input type="checkbox" class="mphbac-input-only-available" name="mphbac_only_available">
-                    <span><?php echo esc_html($settings['str_only_available']); ?></span>
-                </label>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
@@ -615,13 +616,7 @@ final class Widget extends Widget_Base
             </div>
 
             <div class="mphbac-grid-wrap">
-                <?php
-                $book_label = trim((string) ($settings['str_book_button'] ?? ''));
-                if ($book_label === '') {
-                    $book_label = __('Book this cottage', 'mphb-availability-calendar');
-                }
-                $this->render_grid($rooms, $availability, $from, $to, $popup_enabled, $book_label);
-                ?>
+                <?php $this->render_grid($rooms, $availability, $from, $to, $popup_enabled, $book_label); ?>
             </div>
 
             <div class="mphbac-empty" hidden>

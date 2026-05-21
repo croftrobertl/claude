@@ -57,13 +57,6 @@
     font-size: 0.9em;
 }
 
-.mphbac-filter-toggle {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.4em;
-    padding-top: 1.4em;
-}
-
 .mphbac-filter-actions {
     display: flex;
     gap: 0.5em;
@@ -78,9 +71,6 @@
     .mphbac-filter,
     .mphbac-filter-actions {
         width: 100%;
-    }
-    .mphbac-filter-toggle {
-        padding-top: 0;
     }
     .mphbac-filter-actions .mphbac-btn {
         flex: 1;

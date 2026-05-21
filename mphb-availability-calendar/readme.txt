@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,6 @@ This plugin adds a single Elementor widget â€” **MPHB Availability Calendar** â€
 * Responsive: 7 days on mobile (swipe left/right by week), 14 on tablet, 31 on desktop.
 * Tap or click any cottage row to expand a larger per-cottage availability strip.
 * Date-range filter (two date inputs that support snowbird-length ranges).
-* "Show only available" toggle hides any cottage with a blocker in the selected range.
 * Optional color legend above the grid (Available / Booked / Past), with per-state color pickers.
 * Every visible string is editable from the Elementor panel and translation-ready (text domain `mphb-availability-calendar`).
 * All "today" calculations use US Eastern Time so cutoffs match the physical property's clock.
@@ -52,6 +51,11 @@ Yes. It only requires free Elementor core.
 The popup feature is intentionally deferred. It will be added in a follow-up release.
 
 == Changelog ==
+
+= 0.2.1 =
+* Fixed: clicking Apply left the calendar unable to open the booking popup until Reset was clicked (AJAX re-render dropped the clickable cells and per-row Book buttons).
+* Removed the "Show only available" filter toggle.
+* Default past-days window reduced from 3 days to 1 day.
 
 = 0.2.0 =
 * Availability now reads MotoPress bookings directly from the database (mphb_booking / mphb_reserved_room), fixing calendars that showed every day as available.
