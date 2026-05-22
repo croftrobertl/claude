@@ -33,7 +33,10 @@ final class Plugin
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\MPHBAC\\Widget', 'register_assets']);
-        add_action('elementor/editor/after_enqueue_styles', ['\\MPHBAC\\Widget', 'register_assets']);
+        // The grid is client-rendered, so the script MUST run inside the
+        // Elementor editor preview iframe — get_script_depends() alone isn't
+        // reliable there, so force-enqueue it on the preview hook.
+        add_action('elementor/preview/enqueue_scripts', ['\\MPHBAC\\Widget', 'enqueue_for_preview']);
 
         add_action('wp_ajax_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
         add_action('wp_ajax_nopriv_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);

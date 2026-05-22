@@ -70,6 +70,17 @@ final class Widget extends Widget_Base
         );
     }
 
+    /**
+     * Force the widget's CSS/JS into the Elementor editor preview iframe so the
+     * client-rendered grid actually draws while editing.
+     */
+    public static function enqueue_for_preview(): void
+    {
+        self::register_assets();
+        wp_enqueue_style('mphbac-widget');
+        wp_enqueue_script('mphbac-widget');
+    }
+
     protected function register_controls(): void
     {
         $this->register_content_controls();

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.5.1 =
+* Fixed: the calendar stayed on "Loading availability…" inside the Elementor editor preview — its script is now force-loaded into the preview iframe.
 
 = 0.5.0 =
 * Replaced the broken "auto" visible-days option with a per-device day count (desktop / tablet / mobile). The calendar is now drawn client-side so each device shows the right number of days.
