@@ -1,15 +1,21 @@
 /* MPHB Availability Calendar — frontend styles */
 
 .mphbac-root {
-    --mphbac-color-available: #078732;
-    --mphbac-color-booked: #bc003e;
-    --mphbac-color-past: #cccccc;
-    --mphbac-color-today-outline: #0f6dbf;
+    --mphbac-color-available: #27ae60;
+    --mphbac-color-booked: #e74c3c;
+    --mphbac-color-past: #bdc3c7;
+    --mphbac-color-header: #2c3e50;
+    --mphbac-color-header-hover: #1a252f;
+    --mphbac-color-namecol: #f8f9fa;
+    --mphbac-color-namecol-alt: #f1f3f5;
+    --mphbac-color-frame: #e0e0e0;
+    --mphbac-color-today-outline: #f4da62;
     --mphbac-color-text: #000000;
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 14px;
     --mphbac-days: 7;
-    --mphbac-cell-min: 22px;
+    --mphbac-cell-min: 38px;
+    --mphbac-label-width: 7.5em;
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
 
@@ -142,22 +148,41 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5em;
-    margin-bottom: 0.4em;
-    font-size: 0.9em;
+    margin-bottom: 12px;
 }
 
 .mphbac-nav-btn {
-    padding: 0.3em 0.7em;
-    border: 1px solid currentColor;
-    border-radius: var(--mphbac-radius);
-    background: transparent;
-    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--mphbac-color-header);
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1;
     cursor: pointer;
-    font: inherit;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.mphbac-nav-btn:hover,
+.mphbac-nav-btn:focus-visible {
+    background-color: var(--mphbac-color-header-hover);
+    transform: scale(1.05);
+}
+
+.mphbac-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .mphbac-nav-range {
+    font-size: 15px;
     font-weight: 600;
+    color: var(--mphbac-color-header);
     text-align: center;
 }
 
@@ -166,14 +191,14 @@
     width: 100%;
     overflow: hidden;
     touch-action: pan-y;
-    /* Top breathing room so the "today" cell's inset outline isn't clipped
-       by overflow:hidden (which is needed for horizontal swipe). */
-    padding-top: 3px;
+    border: 1px solid var(--mphbac-color-frame);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .mphbac-grid {
     display: grid;
-    grid-template-columns: minmax(5em, 7em) repeat(var(--mphbac-days), minmax(var(--mphbac-cell-min), 1fr));
+    grid-template-columns: var(--mphbac-label-width) repeat(var(--mphbac-days), minmax(var(--mphbac-cell-min), 1fr));
     gap: var(--mphbac-gap);
     user-select: none;
 }
@@ -187,22 +212,28 @@
     align-items: center;
     justify-content: center;
     min-height: var(--mphbac-cell-min);
-    border-radius: var(--mphbac-radius);
 }
 
+/* Cottage-name column (data rows) */
 .mphbac-cell-label {
     justify-content: flex-start;
-    padding: 0.2em 0.5em;
-    background: transparent;
+    padding: 8px 12px;
+    background: var(--mphbac-color-namecol);
     border: 0;
-    color: inherit;
+    border-right: 2px solid var(--mphbac-color-frame);
+    color: var(--mphbac-color-header);
     cursor: pointer;
     font: inherit;
+    font-weight: 600;
     text-align: left;
-    line-height: 1.1;
-    gap: 0.25em;
+    line-height: 1.2;
+    gap: 0.1em;
     min-width: 0;
     overflow: hidden;
+}
+
+.mphbac-row-alt .mphbac-row-toggle {
+    background: var(--mphbac-color-namecol-alt);
 }
 
 .mphbac-row-toggle {
@@ -210,7 +241,8 @@
 }
 
 .mphbac-label-abbrev,
-.mphbac-label-num {
+.mphbac-label-num,
+.mphbac-label-custom {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -221,28 +253,44 @@
 .mphbac-label-num {
     opacity: 0.7;
     font-size: 0.85em;
+    font-weight: 400;
 }
 
 .mphbac-label-number .mphbac-label-abbrev { display: none; }
 .mphbac-label-number .mphbac-label-num    { font-size: 1em; opacity: 1; }
 
+/* Top row — day-of-week + date headers, and the corner "Property" cell */
 .mphbac-cell-day {
     flex-direction: column;
-    font-size: 0.7em;
-    line-height: 1;
-    padding: 0.2em 0;
-    opacity: 0.85;
+    background: var(--mphbac-color-header);
+    color: #ffffff;
+    padding: 6px 2px;
+    line-height: 1.3;
+    text-transform: uppercase;
 }
-.mphbac-d-dow { font-weight: 600; }
-.mphbac-d-num { opacity: 0.8; }
+.mphbac-d-dow { font-size: 9px; font-weight: 400; opacity: 0.8; }
+.mphbac-d-num { font-size: 13px; font-weight: 700; }
 
 .mphbac-cell-day.is-today {
-    box-shadow: inset 0 0 0 1px var(--mphbac-color-today-outline);
+    box-shadow: inset 0 -3px 0 0 var(--mphbac-color-today-outline);
+}
+
+.mphbac-row-header .mphbac-cell-label {
+    background: var(--mphbac-color-header);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: default;
+    border-right-color: rgba(255, 255, 255, 0.15);
 }
 
 .mphbac-cell-status {
     background: var(--mphbac-color-booked);
-    transition: filter 0.15s ease;
+    border-radius: var(--mphbac-radius);
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .mphbac-cell-status.is-available { background: var(--mphbac-color-available); }
 .mphbac-cell-status.is-booked    { background: var(--mphbac-color-booked); }
@@ -275,9 +323,9 @@
 }
 .mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable:hover,
 .mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable:focus-visible {
-    filter: brightness(1.1);
-    outline: 1px solid var(--mphbac-color-today-outline);
-    outline-offset: 1px;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 2;
 }
 
 /* Expanded-row actions strip */
@@ -408,7 +456,10 @@
 /* Responsive day count */
 @media (max-width: 600px) {
     .mphbac-root[data-responsive="auto"] { --mphbac-days: 7; }
-    .mphbac-cell-day { font-size: 0.65em; }
+    .mphbac-root { --mphbac-label-width: 5.5em; --mphbac-cell-min: 32px; }
+    .mphbac-d-dow { font-size: 8px; }
+    .mphbac-d-num { font-size: 11px; }
+    .mphbac-row-header .mphbac-cell-label { font-size: 10px; }
 }
 @media (min-width: 601px) and (max-width: 1024px) {
     .mphbac-root[data-responsive="auto"] { --mphbac-days: 14; }

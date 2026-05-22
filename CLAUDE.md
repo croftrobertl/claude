@@ -70,30 +70,37 @@ These are deliberate decisions from the design conversation. Don't "fix" them wi
 
 ## Adding controls or settings
 
-Every Elementor control is registered inside one of eight methods in `class-widget.php`, all called from `register_controls()`:
+Every Elementor control is registered inside one of twelve methods in `class-widget.php`, all called from `register_controls()`:
 
 - `register_content_controls()` — heading + cottage selector
-- `register_display_controls()` — visible-days, label style, legend/past toggles, font size, popup toggle
-- `register_strings_controls()` — every editable label
+- `register_display_controls()` — visible-days, label style, legend/past/nav toggles, font size, popup toggle, minimum nights
+- `register_labels_controls()` — the custom-cottage-label repeater (`cottage_labels`)
+- `register_strings_controls()` — every editable label (incl. `str_property` corner label)
 - `register_style_controls()` — theme inheritance + the three state color pickers
-- `register_heading_style_controls()` — heading typography + color
+- `register_heading_style_controls()` — widget-heading typography + color
 - `register_field_style_controls()` — filter-input typography/border/colors
+- `register_calheader_style_controls()` — calendar top-row background/text/typography
+- `register_namecol_style_controls()` — cottage-name column colors/typography/width
 - `register_button_style_controls()` — button typography/border/padding + Normal/Hover colors
-- `register_cell_style_controls()` — calendar cell radius + min-height
+- `register_nav_style_controls()` — nav-arrow button + range-label colors
+- `register_cell_style_controls()` — calendar cell radius / min-height / gap
 
 When adding a setting:
 1. Add it in the appropriate method.
-2. If it changes server-rendered output, read it in `Widget::render()` and pass through `data-config`.
+2. If it changes server-rendered output, read it in `Widget::render()` and pass through `data-config` (and into `render_grid()`'s `$opts` array if the grid markup needs it).
 3. If it only affects styles, use a `selectors` argument so Elementor live-preview works.
-4. **Specificity:** Bravada's Elementor kit resets inputs/buttons with `(0,3,1)`-specific selectors. Style-control selectors must outrank that — use the `Widget::SEL` prefix (`{{WRAPPER}} .mphbac-root.mphbac-root `), whose doubled class reaches `(0,4,0)`. State colors still target the CSS custom properties (`--mphbac-color-available` / `-booked` / `-past`) on `.mphbac-root`.
+4. **Specificity:** Bravada's Elementor kit resets inputs/buttons with `(0,3,1)`-specific selectors. Style-control selectors must outrank that — use the `Widget::SEL` prefix (`{{WRAPPER}} .mphbac-root.mphbac-root `), whose doubled class reaches `(0,4,0)`. Style controls carry no defaults; the baked-in look lives in `widget.css` (controls are override-only).
 
-## Brand palette (when theme inheritance is OFF)
+## Visual design / palette
 
-Used in `assets/css/widget.css` as defaults:
+`assets/css/widget.css` bakes in a design matched to the user's Angie-built reference widget — a navy data-table look. Key CSS custom properties on `.mphbac-root`:
 
-- Primary: `#0f6dbf` · Secondary: `#f08080` · Body bg: `#fdfdfd` · Text: `#000000`
-- Red: `#bc003e` · Orange: `#FFA000` · Yellow: `#F4DA62` · Green: `#078732`
-- Default state colors: Available `#078732`, Booked `#bc003e`, Past `#cccccc`
+- `--mphbac-color-available: #27ae60` · `--mphbac-color-booked: #e74c3c` · `--mphbac-color-past: #bdc3c7`
+- `--mphbac-color-header: #2c3e50` (navy top row + nav buttons) · `--mphbac-color-header-hover: #1a252f`
+- `--mphbac-color-namecol: #f8f9fa` · `--mphbac-color-namecol-alt: #f1f3f5` (zebra stripe) · `--mphbac-color-frame: #e0e0e0`
+- `--mphbac-color-today-outline: #f4da62` (the "today" header cell's bottom accent strip)
+
+Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080` · Body bg `#fdfdfd` · Text `#000000`. The filter row, legend, and both popups are deliberately NOT yet restyled to the Angie look — that extension is pending user sign-off.
 
 ## Git workflow
 

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.2
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,11 +14,12 @@ A mobile-friendly Elementor widget that shows multi-property availability for Mo
 
 This plugin adds a single Elementor widget — **MPHB Availability Calendar** — under a new "Claude Code" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
 
-* Reads MotoPress's already-synced data via its internal PHP API. No extra iCal HTTP fetches, no new cron jobs.
+* Reads MotoPress's already-synced bookings directly from the database. No extra iCal HTTP fetches, no new cron jobs.
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
 * Auto-registers its AJAX endpoint as a SpeedyCache Pro exclusion on activation.
 * Responsive: 7 days on mobile (swipe left/right by week), 14 on tablet, 31 on desktop.
 * Tap or click any cottage row to expand a larger per-cottage availability strip.
+* Tap an available day to open a booking popup that sends the guest to MotoPress checkout with the dates pre-filled.
 * Date-range filter (two date inputs that support snowbird-length ranges).
 * Optional color legend above the grid (Available / Booked / Past), with per-state color pickers.
 * Every visible string is editable from the Elementor panel and translation-ready (text domain `mphb-availability-calendar`).
@@ -36,7 +37,7 @@ Requires Elementor and MotoPress Hotel Booking to be active.
 
 = Why doesn't it re-fetch the iCal URLs? =
 
-MotoPress already syncs its iCal feeds every 15 minutes into its own database. Re-fetching them would waste bandwidth, add new cron jobs, and risk conflicts with MotoPress's sync schedule. Reading from MotoPress's internal PHP API is faster, more stable, and stays in sync automatically.
+MotoPress already syncs its iCal feeds every 15 minutes into its own database. Re-fetching them would waste bandwidth, add new cron jobs, and risk conflicts with MotoPress's sync schedule. Reading MotoPress's stored bookings directly is faster, more stable, and stays in sync automatically.
 
 = How do I clear the cache? =
 
@@ -46,11 +47,16 @@ Deactivating the plugin flushes all of its transients. To clear them manually wi
 
 Yes. It only requires free Elementor core.
 
-= How do I add a "Book Now" popup? =
+= How do I turn the booking popup on or off? =
 
-The popup feature is intentionally deferred. It will be added in a follow-up release.
+It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.3.0 =
+* Restyled the calendar grid, cottage-name column, top row, and navigation arrows to a navy data-table design.
+* Added a "Show navigation arrows" toggle and a Custom Cottage Labels repeater (override any cottage's displayed name).
+* Added Elementor style controls for the calendar header row, cottage-name column, and navigation.
 
 = 0.2.2 =
 * Added a "Minimum nights" setting (default 2). The booking popup now defaults the check-out date that many nights after the chosen check-in.

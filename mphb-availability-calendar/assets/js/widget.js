@@ -214,21 +214,30 @@
         grid.style.setProperty('--mphbac-days', String(days.length));
         grid.setAttribute('role', 'table');
 
+        var strings = (config && config.strings) || {};
+        var customLabels = (config && config.customLabels) || {};
+
         var header = document.createElement('div');
         header.className = 'mphbac-row mphbac-row-header';
         header.setAttribute('role', 'row');
-        header.appendChild(buildLabelCell('', '', true));
+        var corner = document.createElement('div');
+        corner.className = 'mphbac-cell mphbac-cell-label';
+        corner.setAttribute('role', 'columnheader');
+        corner.textContent = strings.property || '';
+        header.appendChild(corner);
         days.forEach(function (day) {
-            header.appendChild(buildDayHeader(day));
+            var dh = buildDayHeader(day);
+            if (config && config.today === day) dh.classList.add('is-today');
+            header.appendChild(dh);
         });
         grid.appendChild(header);
 
-        var bookLabel = (config && config.strings && config.strings.bookButton) || 'Book this cottage';
+        var bookLabel = strings.bookButton || 'Book this cottage';
         var popupEnabled = root.classList.contains('mphbac-popup-enabled');
 
-        rooms.forEach(function (room) {
+        rooms.forEach(function (room, index) {
             var row = document.createElement('div');
-            row.className = 'mphbac-row';
+            row.className = 'mphbac-row' + (index % 2 === 1 ? ' mphbac-row-alt' : '');
             row.setAttribute('role', 'row');
             row.setAttribute('data-room-type-id', String(room.id));
 
@@ -237,11 +246,18 @@
             labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle';
             labelBtn.setAttribute('aria-expanded', 'false');
             labelBtn.title = room.title || '';
-            labelBtn.innerHTML =
-                '<span class="mphbac-label-abbrev"></span>' +
-                '<span class="mphbac-label-num"></span>';
-            labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
-            labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
+            var custom = customLabels[room.id];
+            if (custom === undefined) custom = customLabels[String(room.id)];
+            if (typeof custom === 'string' && custom.trim() !== '') {
+                labelBtn.innerHTML = '<span class="mphbac-label-custom"></span>';
+                labelBtn.querySelector('.mphbac-label-custom').textContent = custom.trim();
+            } else {
+                labelBtn.innerHTML =
+                    '<span class="mphbac-label-abbrev"></span>' +
+                    '<span class="mphbac-label-num"></span>';
+                labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
+                labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
+            }
             row.appendChild(labelBtn);
 
             var roomAvail = availability[room.id] || {};
@@ -277,16 +293,6 @@
         wrap.innerHTML = '';
         wrap.appendChild(grid);
         updateRange(root, from, to);
-    }
-
-    function buildLabelCell(abbrev, num, isHeader) {
-        var el = document.createElement('div');
-        el.className = 'mphbac-cell mphbac-cell-label';
-        if (isHeader) {
-            el.setAttribute('role', 'columnheader');
-            el.innerHTML = '&nbsp;';
-        }
-        return el;
     }
 
     function buildDayHeader(day) {
