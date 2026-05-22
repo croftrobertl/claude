@@ -427,12 +427,15 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 0.5em;
-    margin-bottom: 0.75em;
+    margin-bottom: 0.85em;
+    padding-bottom: 0.7em;
+    border-bottom: 1px solid var(--mphbac-color-frame);
 }
 .mphbac-sheet-title {
     margin: 0;
-    font-size: 1.1em;
-    font-weight: 600;
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--mphbac-color-header);
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -452,7 +455,12 @@
     line-height: 1;
     padding: 0 0.3em;
     cursor: pointer;
-    color: inherit;
+    color: #888888;
+    transition: color 0.15s ease;
+}
+.mphbac-sheet-close:hover,
+.mphbac-sheet-close:focus-visible {
+    color: var(--mphbac-color-nav-bg);
 }
 
 .mphbac-sheet-body {
@@ -464,14 +472,18 @@
 .mphbac-sheet-field {
     display: flex;
     flex-direction: column;
-    gap: 0.25em;
+    gap: 0.3em;
     font-size: 0.95em;
+}
+.mphbac-sheet-field > span {
+    font-weight: 600;
+    color: #111111;
 }
 .mphbac-sheet-error {
     margin: 0;
     padding: 0.5em 0.7em;
-    background: rgba(188, 0, 62, 0.1);
-    color: var(--mphbac-color-booked, #bc003e);
+    background: rgba(196, 58, 58, 0.12);
+    color: var(--mphbac-color-nav-bg);
     border-radius: var(--mphbac-radius);
     font-size: 0.9em;
 }
