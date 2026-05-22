@@ -49,41 +49,42 @@
     margin: 0 0 0.75em;
     font-size: 1.4em;
     font-weight: 600;
+    text-align: center;
 }
 
-/* Filters */
+/* Filters — centered as a group */
 .mphbac-filters {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em 0.75em;
     align-items: flex-end;
+    justify-content: center;
     margin-bottom: 0.75em;
 }
 
 .mphbac-filter {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 0.25em;
     font-size: 0.9em;
 }
 
 .mphbac-filter-actions {
     display: flex;
+    justify-content: center;
     gap: 0.5em;
 }
 
-/* Mobile: stack each filter element on its own full-width row */
+/* Mobile: stack each filter element on its own full-width row, centered */
 @media (max-width: 600px) {
     .mphbac-filters {
         flex-direction: column;
-        align-items: stretch;
+        align-items: center;
     }
     .mphbac-filter,
     .mphbac-filter-actions {
         width: 100%;
-    }
-    .mphbac-filter-actions .mphbac-btn {
-        flex: 1;
     }
 }
 
@@ -107,6 +108,7 @@
 .mphbac-filter-label {
     font-weight: 600;
     color: #111111;
+    text-align: center;
 }
 
 /* Structural button base only. Visual styling (colors, border, radius,
@@ -124,7 +126,7 @@
     cursor: pointer;
 }
 
-/* Legend */
+/* Legend — centered */
 .mphbac-legend {
     display: flex;
     flex-wrap: wrap;
@@ -132,6 +134,7 @@
     margin-bottom: 0.5em;
     font-size: 0.85em;
     color: var(--mphbac-color-legend-text);
+    justify-content: center;
 }
 
 .mphbac-legend-item {
@@ -292,6 +295,11 @@
 }
 .mphbac-d-dow { font-size: 9px; font-weight: 400; opacity: 0.8; }
 .mphbac-d-num { font-size: 13px; font-weight: 700; }
+
+/* Day-of-week abbreviation length — toggled per device by the
+   "Day-of-week format" responsive control via the custom properties. */
+.mphbac-d-dow-long  { display: var(--mphbac-dow-long, inline); }
+.mphbac-d-dow-short { display: var(--mphbac-dow-short, none); }
 
 .mphbac-cell-day.is-today {
     box-shadow: inset 0 -3px 0 0 var(--mphbac-color-today-outline);
@@ -503,20 +511,14 @@
     cursor: not-allowed;
 }
 
-/* Responsive day count */
-@media (max-width: 600px) {
-    .mphbac-root[data-responsive="auto"] { --mphbac-days: 7; }
-    .mphbac-d-dow { font-size: 8px; }
-    .mphbac-d-num { font-size: 11px; }
-}
-@media (min-width: 601px) and (max-width: 1024px) {
-    .mphbac-root[data-responsive="auto"] { --mphbac-days: 14; }
-}
-@media (min-width: 1025px) {
-    .mphbac-root[data-responsive="auto"] { --mphbac-days: 31; }
+/* Loading state — the grid is rendered client-side */
+.mphbac-loading {
+    padding: 2.5em 1em;
+    text-align: center;
+    color: #666666;
+    font-size: 0.95em;
 }
 
-/* Loading state */
 .mphbac-root.is-loading .mphbac-grid {
     opacity: 0.5;
     pointer-events: none;

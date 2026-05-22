@@ -254,7 +254,34 @@ final class Widget extends Widget_Base
             \Elementor\Group_Control_Typography::get_type(),
             [
                 'name'     => 'calheader_typography',
+                'label'    => __('Header typography (overall)', 'mphb-availability-calendar'),
                 'selector' => self::SEL . '.mphbac-cell-day, ' . self::SEL . '.mphbac-row-header .mphbac-cell-label',
+            ]
+        );
+
+        $this->add_control('dow_heading', [
+            'type'      => Controls_Manager::HEADING,
+            'label'     => __('Day-of-week text', 'mphb-availability-calendar'),
+            'separator' => 'before',
+        ]);
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'dow_typography',
+                'selector' => self::SEL . '.mphbac-d-dow',
+            ]
+        );
+
+        $this->add_control('date_heading', [
+            'type'      => Controls_Manager::HEADING,
+            'label'     => __('Date-of-month text', 'mphb-availability-calendar'),
+            'separator' => 'before',
+        ]);
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'date_typography',
+                'selector' => self::SEL . '.mphbac-d-num',
             ]
         );
 
@@ -398,15 +425,34 @@ final class Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
-        $this->add_control('visible_days', [
-            'label'   => __('Visible days', 'mphb-availability-calendar'),
-            'type'    => Controls_Manager::SELECT,
-            'default' => 'auto',
-            'options' => [
-                'auto' => __('Auto (responsive: 7 mobile / 14 tablet / 31 desktop)', 'mphb-availability-calendar'),
-                '7'    => __('7 days', 'mphb-availability-calendar'),
-                '14'   => __('14 days', 'mphb-availability-calendar'),
-                '31'   => __('31 days', 'mphb-availability-calendar'),
+        $this->add_responsive_control('visible_days', [
+            'label'          => __('Days to show', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::NUMBER,
+            'min'            => 1,
+            'max'            => 62,
+            'step'           => 1,
+            'default'        => 31,
+            'tablet_default' => 14,
+            'mobile_default' => 7,
+            'description'    => __('How many days the calendar shows. Set a value per device with the desktop/tablet/mobile switcher.', 'mphb-availability-calendar'),
+        ]);
+
+        $this->add_responsive_control('dow_format', [
+            'label'          => __('Day-of-week format', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::SELECT,
+            'default'        => 'long',
+            'tablet_default' => 'long',
+            'mobile_default' => 'short',
+            'options'        => [
+                'long'  => __('Three letters (Mon)', 'mphb-availability-calendar'),
+                'short' => __('One letter (M)', 'mphb-availability-calendar'),
+            ],
+            'selectors_dictionary' => [
+                'long'  => '--mphbac-dow-long: inline; --mphbac-dow-short: none;',
+                'short' => '--mphbac-dow-long: none; --mphbac-dow-short: inline;',
+            ],
+            'selectors'      => [
+                '{{WRAPPER}} .mphbac-root' => '{{VALUE}}',
             ],
         ]);
 
@@ -806,17 +852,16 @@ final class Widget extends Widget_Base
         }
         $rooms = array_values(array_filter($all_types, static fn($t) => in_array((int) $t['id'], $selected_ids, true)));
 
-        $today    = Data_Provider::today();
-        $from     = $settings['show_past'] === 'yes' ? $today->modify('-1 day') : $today;
-        $days_setting = (string) ($settings['visible_days'] ?? 'auto');
-        $days_count   = $days_setting === 'auto' ? 31 : max(1, (int) $days_setting);
-        $to       = $from->modify('+' . ($days_count - 1) . ' days');
+        $today = Data_Provider::today();
 
-        $availability = Data_Provider::get_availability(
-            array_map(static fn($r) => (int) $r['id'], $rooms),
-            $from,
-            $to
-        );
+        // Per-device day counts. The grid is drawn client-side so it can show
+        // the right count for desktop / tablet / mobile. An unset tablet/mobile
+        // responsive value falls back to the next-larger device.
+        $days_desktop = max(1, (int) ($settings['visible_days'] ?? 31));
+        $dt           = (int) ($settings['visible_days_tablet'] ?? 0);
+        $days_tablet  = $dt > 0 ? $dt : $days_desktop;
+        $dm           = (int) ($settings['visible_days_mobile'] ?? 0);
+        $days_mobile  = $dm > 0 ? $dm : $days_tablet;
 
         $rooms_by_id = [];
         foreach ($rooms as $r) {
@@ -873,14 +918,14 @@ final class Widget extends Widget_Base
             'nonce'          => wp_create_nonce(Ajax::NONCE_ACTION),
             'roomTypeIds'    => array_map(static fn($r) => (int) $r['id'], $rooms),
             'roomTitles'     => $rooms_by_id,
-            'visibleDays'    => $days_setting,
+            'daysDesktop'    => $days_desktop,
+            'daysTablet'     => $days_tablet,
+            'daysMobile'     => $days_mobile,
             'labelStyle'     => (string) ($settings['label_style'] ?? 'abbrev_number'),
             'showPast'       => $settings['show_past'] === 'yes',
             'inheritTheme'   => $settings['inherit_theme'] === 'yes',
             'tooltipPrefix'  => (string) ($settings['str_tooltip_prefix'] ?? ''),
             'today'          => $today->format('Y-m-d'),
-            'from'           => $from->format('Y-m-d'),
-            'to'             => $to->format('Y-m-d'),
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
@@ -958,20 +1003,13 @@ final class Widget extends Widget_Base
             <?php if ($settings['show_nav'] === 'yes') : ?>
                 <div class="mphbac-nav">
                     <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
-                    <span class="mphbac-nav-range" aria-live="polite">
-                        <?php echo esc_html($from->format('M j') . ' – ' . $to->format('M j, Y')); ?>
-                    </span>
+                    <span class="mphbac-nav-range" aria-live="polite"></span>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>
 
             <div class="mphbac-grid-wrap">
-                <?php $this->render_grid($rooms, $availability, $from, $to, [
-                    'property_label' => $property_label,
-                    'custom_labels'  => $custom_labels,
-                    'info_cottages'  => array_keys($info_html),
-                    'status_labels'  => $status_labels,
-                ]); ?>
+                <div class="mphbac-loading"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></div>
             </div>
 
             <?php foreach ($info_html as $cid => $html) : ?>
@@ -1075,99 +1113,5 @@ final class Widget extends Widget_Base
             error_log('MPHBAC: render_template failed for ' . $template_id . ': ' . $e->getMessage());
         }
         return '';
-    }
-
-    /**
-     * @param array<int,array{id:int,title:string,abbrev:string,number:string}> $rooms
-     * @param array<int,array<string,string>>                                   $availability
-     * @param array{property_label:string,custom_labels:array<int,string>,info_cottages:int[],status_labels:array<string,string>} $opts
-     */
-    private function render_grid(array $rooms, array $availability, DateTimeImmutable $from, DateTimeImmutable $to, array $opts): void
-    {
-        $property_label = (string) ($opts['property_label'] ?? '');
-        $custom_labels  = (array) ($opts['custom_labels'] ?? []);
-        $info_cottages  = array_map('intval', (array) ($opts['info_cottages'] ?? []));
-        $status_labels  = (array) ($opts['status_labels'] ?? []);
-
-        $days = [];
-        $cursor = $from;
-        while ($cursor <= $to) {
-            $days[] = $cursor;
-            $cursor = $cursor->modify('+1 day');
-        }
-        $day_count = count($days);
-
-        echo '<div class="mphbac-grid" role="table" style="--mphbac-days:' . (int) $day_count . ';">';
-
-        echo '<div class="mphbac-row mphbac-row-header" role="row">';
-        printf(
-            '<div class="mphbac-cell mphbac-cell-label" role="columnheader">%s</div>',
-            esc_html($property_label)
-        );
-        foreach ($days as $day) {
-            $is_today = $day->format('Y-m-d') === Data_Provider::today()->format('Y-m-d');
-            $cls = 'mphbac-cell mphbac-cell-day' . ($is_today ? ' is-today' : '');
-            printf(
-                '<div class="%s" role="columnheader" title="%s"><span class="mphbac-d-dow">%s</span><span class="mphbac-d-num">%s</span></div>',
-                esc_attr($cls),
-                esc_attr($day->format('l, F j, Y')),
-                esc_html($day->format('D')),
-                esc_html($day->format('j'))
-            );
-        }
-        echo '</div>';
-
-        $index = 0;
-        foreach ($rooms as $room) {
-            $type_id = (int) $room['id'];
-            $days_for_type = $availability[$type_id] ?? [];
-            $has_info  = in_array($type_id, $info_cottages, true);
-            $row_class = 'mphbac-row'
-                . ($index % 2 === 1 ? ' mphbac-row-alt' : '')
-                . ($has_info ? ' mphbac-has-info' : '');
-            $index++;
-
-            echo '<div class="' . esc_attr($row_class) . '" role="row" data-room-type-id="' . esc_attr((string) $type_id) . '">';
-
-            $custom = isset($custom_labels[$type_id]) ? trim((string) $custom_labels[$type_id]) : '';
-            $toggle_class = 'mphbac-cell mphbac-cell-label mphbac-row-toggle' . ($has_info ? ' mphbac-row-toggle--info' : '');
-            if ($custom !== '') {
-                printf(
-                    '<button type="button" class="%s" role="rowheader" title="%s"><span class="mphbac-label-custom">%s</span></button>',
-                    esc_attr($toggle_class),
-                    esc_attr($room['title']),
-                    esc_html($custom)
-                );
-            } else {
-                printf(
-                    '<button type="button" class="%s" role="rowheader" title="%s"><span class="mphbac-label-abbrev">%s</span><span class="mphbac-label-num">%s</span></button>',
-                    esc_attr($toggle_class),
-                    esc_attr($room['title']),
-                    esc_html($room['abbrev']),
-                    esc_html($room['number'] !== '' ? '#' . $room['number'] : '')
-                );
-            }
-
-            foreach ($days as $day) {
-                $key    = $day->format('Y-m-d');
-                $status = $days_for_type[$key] ?? Data_Provider::ST_BOOKED;
-                $is_clickable = $status === Data_Provider::ST_AVAIL;
-                $tip = (string) ($status_labels[$status] ?? ucfirst($status));
-                printf(
-                    '<div class="mphbac-cell mphbac-cell-status is-%1$s%5$s" role="%6$s" data-date="%2$s" data-status="%1$s" aria-label="%4$s"%7$s><span class="mphbac-cell-tip">%8$s</span></div>',
-                    esc_attr($status),
-                    esc_attr($key),
-                    esc_attr($status),
-                    esc_attr(sprintf('%s — %s', $day->format('F j, Y'), $tip)),
-                    $is_clickable ? ' is-clickable' : '',
-                    $is_clickable ? 'button' : 'cell',
-                    $is_clickable ? ' tabindex="0"' : '',
-                    esc_html($tip)
-                );
-            }
-            echo '</div>';
-        }
-
-        echo '</div>';
     }
 }

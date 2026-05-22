@@ -11,16 +11,15 @@
         var config = {};
         try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { config = {}; }
 
-        if (config.visibleDays === 'auto') {
-            root.setAttribute('data-responsive', 'auto');
-        }
-
         var state = {
-            from: config.from,
-            to: config.to,
+            from: null,
+            to: null,
+            filtered: false,
+            bucket: deviceBucket(),
             lastRequest: 0,
             pending: null
         };
+        applyDefaultWindow(config, state);
 
         wireFilters(root, config, state);
         wireNav(root, config, state);
@@ -29,6 +28,49 @@
         if (config.popupEnabled) {
             wirePopup(root, config, state);
         }
+        wireResize(root, config, state);
+
+        request(root, config, state); // initial client-side render
+    }
+
+    function deviceBucket() {
+        var w = window.innerWidth;
+        if (w <= 600) return 'mobile';
+        if (w <= 1024) return 'tablet';
+        return 'desktop';
+    }
+
+    function deviceDays(config) {
+        var bucket = deviceBucket();
+        var n = bucket === 'mobile' ? config.daysMobile
+              : bucket === 'tablet' ? config.daysTablet
+              : config.daysDesktop;
+        return Math.max(1, parseInt(n, 10) || 31);
+    }
+
+    function baseFrom(config) {
+        return config.showPast ? addDays(config.today, -1) : config.today;
+    }
+
+    function applyDefaultWindow(config, state) {
+        state.filtered = false;
+        state.from = baseFrom(config);
+        state.to = addDays(state.from, deviceDays(config) - 1);
+    }
+
+    function wireResize(root, config, state) {
+        var timer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                var bucket = deviceBucket();
+                if (bucket === state.bucket) return;
+                state.bucket = bucket;
+                if (state.filtered) return; // keep an explicit filter range
+                applyDefaultWindow(config, state);
+                request(root, config, state);
+            }, 200);
+        });
     }
 
     function wireFilters(root, config, state) {
@@ -39,16 +81,18 @@
         var resetEmpty = root.querySelector('.mphbac-btn-reset-empty');
 
         function doApply() {
-            state.from = checkin && checkin.value ? checkin.value : config.from;
-            state.to = checkout && checkout.value ? checkout.value : config.to;
+            var hasCi = checkin && checkin.value;
+            var hasCo = checkout && checkout.value;
+            state.filtered = !!(hasCi || hasCo);
+            state.from = hasCi ? checkin.value : baseFrom(config);
+            state.to = hasCo ? checkout.value : addDays(state.from, deviceDays(config) - 1);
             request(root, config, state);
         }
 
         function doReset() {
             if (checkin) checkin.value = '';
             if (checkout) checkout.value = '';
-            state.from = config.from;
-            state.to = config.to;
+            applyDefaultWindow(config, state);
             request(root, config, state);
         }
 
@@ -86,9 +130,17 @@
     }
 
     function shiftMonth(root, config, state, direction) {
-        state.from = addDays(state.from, direction * 30);
-        state.to = addDays(state.to, direction * 30);
+        // Page by one screenful of days.
+        var span = daysBetween(state.from, state.to) + 1;
+        state.from = addDays(state.from, direction * span);
+        state.to = addDays(state.to, direction * span);
         request(root, config, state);
+    }
+
+    function daysBetween(a, b) {
+        return Math.round(
+            (new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000
+        );
     }
 
     function wireInfoPopup(root, config) {
@@ -325,12 +377,22 @@
 
     function buildDayHeader(day) {
         var d = new Date(day + 'T00:00:00');
-        var dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+        var di = d.getDay();
         var el = document.createElement('div');
         el.className = 'mphbac-cell mphbac-cell-day';
         el.setAttribute('role', 'columnheader');
-        el.innerHTML = '<span class="mphbac-d-dow"></span><span class="mphbac-d-num"></span>';
-        el.querySelector('.mphbac-d-dow').textContent = dow;
+        // Both abbreviations are rendered; CSS (driven by the responsive
+        // "Day-of-week format" control) shows the right one per device.
+        el.innerHTML =
+            '<span class="mphbac-d-dow">' +
+                '<span class="mphbac-d-dow-long"></span>' +
+                '<span class="mphbac-d-dow-short"></span>' +
+            '</span>' +
+            '<span class="mphbac-d-num"></span>';
+        el.querySelector('.mphbac-d-dow-long').textContent =
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][di];
+        el.querySelector('.mphbac-d-dow-short').textContent =
+            ['S', 'M', 'T', 'W', 'T', 'F', 'S'][di];
         el.querySelector('.mphbac-d-num').textContent = String(d.getDate());
         el.title = d.toDateString();
         return el;

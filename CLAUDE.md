@@ -38,16 +38,16 @@ includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL 
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
 includes/class-ajax.php              # Nonce-protected admin-ajax.php endpoint (action mphbac_query)
-assets/css/widget.css                # CSS custom-property–driven; responsive day count via media queries
+assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
 
 Request flow when a visitor loads a page containing the widget:
 
-1. `Widget::render()` server-renders the initial grid using `Data_Provider::get_availability()` (transient-cached).
-2. The full settings + cottage IDs are serialized into a `data-config` JSON attribute on `.mphbac-root`.
-3. `assets/js/widget.js` rehydrates that config and wires filters, nav, swipe, and row-expand.
-4. User interactions POST to `admin-ajax.php?action=mphbac_query`, which calls `Data_Provider::get_availability()` again — the transient layer hits on repeats.
+1. `Widget::render()` outputs only the shell — heading, filters, legend, nav, an empty `.mphbac-grid-wrap` with a `.mphbac-loading` placeholder, the popups, and hidden `.mphbac-info-content` divs. It does NOT render the grid.
+2. The full settings + cottage IDs (incl. per-device `daysDesktop/daysTablet/daysMobile`) are serialized into a `data-config` JSON attribute on `.mphbac-root`.
+3. On load, `assets/js/widget.js` picks the day count for the current device, POSTs to `admin-ajax.php?action=mphbac_query`, and **renders the grid client-side**. It re-renders on filter/nav/swipe and when the viewport crosses a device breakpoint.
+4. `Data_Provider::get_availability()` (transient-cached) backs the AJAX endpoint — the transient layer hits on repeats. The grid is intentionally client-rendered so each device shows its own day count.
 
 ## Invariants that must hold
 
@@ -73,14 +73,14 @@ These are deliberate decisions from the design conversation. Don't "fix" them wi
 Every Elementor control is registered inside one of twelve methods in `class-widget.php`, all called from `register_controls()`:
 
 - `register_content_controls()` — heading + cottage selector
-- `register_display_controls()` — visible-days, label style, legend/past/nav toggles, font size, popup toggle, minimum nights
+- `register_display_controls()` — per-device day count (`visible_days`, responsive), per-device day-of-week format (`dow_format`, responsive), label style, legend/past/nav toggles, font size, popup toggle, minimum nights
 - `register_labels_controls()` — the custom-cottage-label repeater (`cottage_labels`)
 - `register_info_controls()` — the cottage-info-popup repeater (`cottage_info`: per-cottage Elementor template or WYSIWYG text)
 - `register_strings_controls()` — every editable label (incl. `str_property` corner label)
 - `register_style_controls()` — theme inheritance + the three state color pickers
 - `register_heading_style_controls()` — widget-heading typography + color
 - `register_field_style_controls()` — filter-input typography/border/colors
-- `register_calheader_style_controls()` — calendar top-row background/text/typography
+- `register_calheader_style_controls()` — calendar top-row background/text + overall typography + separate day-of-week and date-of-month typography
 - `register_namecol_style_controls()` — cottage-name column colors/typography/width
 - `register_button_style_controls()` — button typography/border/padding + Normal/Hover colors
 - `register_nav_style_controls()` — nav-arrow button + range-label colors

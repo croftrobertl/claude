@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.1
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ This plugin adds a single Elementor widget — **MPHB Availability Calendar** �
 * Reads MotoPress's already-synced bookings directly from the database. No extra iCal HTTP fetches, no new cron jobs.
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
 * Auto-registers its AJAX endpoint as a SpeedyCache Pro exclusion on activation.
-* Responsive: 7 days on mobile (swipe left/right by week), 14 on tablet, 31 on desktop.
+* Per-device day counts — set how many days show on desktop, tablet, and mobile; swipe to page on touch devices.
 * Tap a cottage name to open an info popup (Elementor template or custom text per cottage).
 * Tap an available day to open a booking popup that sends the guest to MotoPress checkout with the dates pre-filled.
 * Date-range filter (two date inputs that support snowbird-length ranges).
@@ -52,6 +52,12 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.5.0 =
+* Replaced the broken "auto" visible-days option with a per-device day count (desktop / tablet / mobile). The calendar is now drawn client-side so each device shows the right number of days.
+* Added a per-device day-of-week format setting (one-letter vs three-letter abbreviation).
+* Added separate typography controls for the day-of-week and date-of-month header text.
+* The filter fields, buttons, legend, and heading are now centered.
 
 = 0.4.1 =
 * Booking and cottage-info popups restyled to match the calendar palette (blue title, divider, palette-coloured close button and error message).
