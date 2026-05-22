@@ -75,6 +75,7 @@ Every Elementor control is registered inside one of twelve methods in `class-wid
 - `register_content_controls()` — heading + cottage selector
 - `register_display_controls()` — visible-days, label style, legend/past/nav toggles, font size, popup toggle, minimum nights
 - `register_labels_controls()` — the custom-cottage-label repeater (`cottage_labels`)
+- `register_info_controls()` — the cottage-info-popup repeater (`cottage_info`: per-cottage Elementor template or WYSIWYG text)
 - `register_strings_controls()` — every editable label (incl. `str_property` corner label)
 - `register_style_controls()` — theme inheritance + the three state color pickers
 - `register_heading_style_controls()` — widget-heading typography + color
@@ -83,7 +84,10 @@ Every Elementor control is registered inside one of twelve methods in `class-wid
 - `register_namecol_style_controls()` — cottage-name column colors/typography/width
 - `register_button_style_controls()` — button typography/border/padding + Normal/Hover colors
 - `register_nav_style_controls()` — nav-arrow button + range-label colors
+- `register_legend_style_controls()` — legend text color + typography
 - `register_cell_style_controls()` — calendar cell radius / min-height / gap
+
+Interactions: tapping a cottage name opens the **info popup** (`.mphbac-info-sheet`) if that cottage has a `cottage_info` row; tapping an available day opens the **booking popup** (`.mphbac-sheet`). The two popups share CSS. Per-cottage info content is server-rendered into hidden `.mphbac-info-content` divs and copied into the popup by `widget.js`.
 
 When adding a setting:
 1. Add it in the appropriate method.
@@ -93,14 +97,16 @@ When adding a setting:
 
 ## Visual design / palette
 
-`assets/css/widget.css` bakes in a design matched to the user's Angie-built reference widget — a navy data-table look. Key CSS custom properties on `.mphbac-root`:
+`assets/css/widget.css` bakes in a design matched to the user's Angie-built reference widget — a data-table look. Most style controls also carry these same values as Elementor-control defaults (user request — they wanted the panel to show the values). Key CSS custom properties on `.mphbac-root`:
 
-- `--mphbac-color-available: #27ae60` · `--mphbac-color-booked: #e74c3c` · `--mphbac-color-past: #bdc3c7`
-- `--mphbac-color-header: #2c3e50` (navy top row + nav buttons) · `--mphbac-color-header-hover: #1a252f`
-- `--mphbac-color-namecol: #f8f9fa` · `--mphbac-color-namecol-alt: #f1f3f5` (zebra stripe) · `--mphbac-color-frame: #e0e0e0`
-- `--mphbac-color-today-outline: #f4da62` (the "today" header cell's bottom accent strip)
+- `--mphbac-color-available: #7BDCB5` · `--mphbac-color-booked: #FB6962` · `--mphbac-color-past: #bdc3c7`
+- `--mphbac-color-header: #0A50B2` (top row) · `--mphbac-color-nav-bg: #C43A3A` · `--mphbac-color-nav-hover: #078732` (nav buttons are decoupled from the header color)
+- `--mphbac-color-namecol: #F8F9FA` · `--mphbac-color-namecol-alt: #F1F3F5` (zebra stripe) · `--mphbac-color-namecol-text: #111111` · `--mphbac-color-frame: #e0e0e0`
+- `--mphbac-color-legend-text: #111111` · `--mphbac-color-today-outline: #f4da62` · `--mphbac-label-width: 180px`
 
-Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080` · Body bg `#fdfdfd` · Text `#000000`. The filter row, legend, and both popups are deliberately NOT yet restyled to the Angie look — that extension is pending user sign-off.
+Grid columns: the cottage column is a fixed `--mphbac-label-width`; day columns are `minmax(0, 1fr)` so they shrink to fit (no horizontal overflow). `--mphbac-cell-min` is cell **height** only.
+
+Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. The whole widget — filters, calendar, legend, popups — is now styled cohesively.
 
 ## Git workflow
 

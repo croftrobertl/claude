@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ This plugin adds a single Elementor widget â€” **MPHB Availability Calendar** â€
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
 * Auto-registers its AJAX endpoint as a SpeedyCache Pro exclusion on activation.
 * Responsive: 7 days on mobile (swipe left/right by week), 14 on tablet, 31 on desktop.
-* Tap or click any cottage row to expand a larger per-cottage availability strip.
+* Tap a cottage name to open an info popup (Elementor template or custom text per cottage).
 * Tap an available day to open a booking popup that sends the guest to MotoPress checkout with the dates pre-filled.
 * Date-range filter (two date inputs that support snowbird-length ranges).
 * Optional color legend above the grid (Available / Booked / Past), with per-state color pickers.
@@ -52,6 +52,14 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.4.0 =
+* Tapping a cottage name now opens an info popup (per-cottage Elementor template or custom text), set up in the new "Cottage Info Popups" section.
+* Day-of-week headers now show three-letter abbreviations.
+* Calendar cells show an Available/Booked hover tooltip; removed the cell hover zoom and the nav-arrow hover zoom.
+* Booking popup no longer overflows narrow mobile screens.
+* The filter check-out date now defaults to two nights after the chosen check-in.
+* Filters and legend restyled to match the calendar; new style defaults applied.
 
 = 0.3.0 =
 * Restyled the calendar grid, cottage-name column, top row, and navigation arrows to a navy data-table design.

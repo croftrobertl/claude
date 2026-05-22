@@ -75,6 +75,7 @@ final class Widget extends Widget_Base
         $this->register_content_controls();
         $this->register_display_controls();
         $this->register_labels_controls();
+        $this->register_info_controls();
         $this->register_strings_controls();
         $this->register_style_controls();
         $this->register_heading_style_controls();
@@ -83,7 +84,108 @@ final class Widget extends Widget_Base
         $this->register_namecol_style_controls();
         $this->register_button_style_controls();
         $this->register_nav_style_controls();
+        $this->register_legend_style_controls();
         $this->register_cell_style_controls();
+    }
+
+    private function register_info_controls(): void
+    {
+        $this->start_controls_section('section_info', [
+            'label' => __('Cottage Info Popups', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->add_control('info_intro', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => esc_html__('Tapping a cottage name opens an info popup. Add a row per cottage and choose either an Elementor template or custom text for that cottage. Cottages with no row here are not clickable.', 'mphb-availability-calendar'),
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $repeater = new \Elementor\Repeater();
+        $repeater->add_control('ci_cottage', [
+            'label'       => __('Cottage', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::SELECT,
+            'options'     => $this->cottage_options(),
+            'label_block' => true,
+        ]);
+        $repeater->add_control('ci_source', [
+            'label'   => __('Content source', 'mphb-availability-calendar'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => 'text',
+            'options' => [
+                'text'     => __('Custom text', 'mphb-availability-calendar'),
+                'template' => __('Elementor template', 'mphb-availability-calendar'),
+            ],
+        ]);
+        $repeater->add_control('ci_text', [
+            'label'     => __('Custom text', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::WYSIWYG,
+            'default'   => '',
+            'condition' => ['ci_source' => 'text'],
+        ]);
+        $repeater->add_control('ci_template', [
+            'label'       => __('Elementor template', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::SELECT,
+            'options'     => $this->template_options(),
+            'label_block' => true,
+            'condition'   => ['ci_source' => 'template'],
+        ]);
+
+        $this->add_control('cottage_info', [
+            'label'  => __('Info popups', 'mphb-availability-calendar'),
+            'type'   => Controls_Manager::REPEATER,
+            'fields' => $repeater->get_controls(),
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_legend_style_controls(): void
+    {
+        $this->start_controls_section('section_style_legend', [
+            'label'     => __('Legend', 'mphb-availability-calendar'),
+            'tab'       => Controls_Manager::TAB_STYLE,
+            'condition' => ['show_legend' => 'yes'],
+        ]);
+
+        $this->add_control('legend_text_color', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#111111',
+            'selectors' => [self::SEL . '.mphbac-legend' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'legend_typography',
+                'selector' => self::SEL . '.mphbac-legend',
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function template_options(): array
+    {
+        $options = ['' => __('— Select a template —', 'mphb-availability-calendar')];
+        $posts = get_posts([
+            'post_type'      => 'elementor_library',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+        ]);
+        foreach ($posts as $post) {
+            $options[(int) $post->ID] = $post->post_title !== ''
+                ? $post->post_title
+                : sprintf(__('Template #%d', 'mphb-availability-calendar'), $post->ID);
+        }
+        return $options;
     }
 
     private function register_labels_controls(): void
@@ -132,6 +234,7 @@ final class Widget extends Widget_Base
         $this->add_control('calheader_bg', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#0A50B2',
             'selectors' => [
                 self::SEL => '--mphbac-color-header: {{VALUE}};',
             ],
@@ -140,6 +243,7 @@ final class Widget extends Widget_Base
         $this->add_control('calheader_text', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFFFFF',
             'selectors' => [
                 self::SEL . '.mphbac-cell-day'                 => 'color: {{VALUE}};',
                 self::SEL . '.mphbac-row-header .mphbac-cell-label' => 'color: {{VALUE}};',
@@ -167,18 +271,21 @@ final class Widget extends Widget_Base
         $this->add_control('namecol_bg', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#F8F9FA',
             'selectors' => [self::SEL => '--mphbac-color-namecol: {{VALUE}};'],
         ]);
 
         $this->add_control('namecol_alt_bg', [
             'label'       => __('Alternating row color', 'mphb-availability-calendar'),
             'type'        => Controls_Manager::COLOR,
+            'default'     => '#F1F3F5',
             'selectors'   => [self::SEL => '--mphbac-color-namecol-alt: {{VALUE}};'],
         ]);
 
         $this->add_control('namecol_text', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#111111',
             'selectors' => [self::SEL . '.mphbac-row-toggle' => 'color: {{VALUE}};'],
         ]);
 
@@ -191,14 +298,17 @@ final class Widget extends Widget_Base
         );
 
         $this->add_responsive_control('namecol_width', [
-            'label'      => __('Column width', 'mphb-availability-calendar'),
-            'type'       => Controls_Manager::SLIDER,
-            'size_units' => ['px', 'em'],
-            'range'      => [
+            'label'         => __('Column width', 'mphb-availability-calendar'),
+            'type'          => Controls_Manager::SLIDER,
+            'size_units'    => ['px', 'em'],
+            'default'       => ['size' => 180, 'unit' => 'px'],
+            'tablet_default'=> ['size' => 140, 'unit' => 'px'],
+            'mobile_default'=> ['size' => 100, 'unit' => 'px'],
+            'range'         => [
                 'px' => ['min' => 70, 'max' => 320, 'step' => 2],
                 'em' => ['min' => 4, 'max' => 22, 'step' => 0.5],
             ],
-            'selectors'  => [self::SEL => '--mphbac-label-width: {{SIZE}}{{UNIT}};'],
+            'selectors'     => [self::SEL => '--mphbac-label-width: {{SIZE}}{{UNIT}};'],
         ]);
 
         $this->end_controls_section();
@@ -215,18 +325,21 @@ final class Widget extends Widget_Base
         $this->add_control('nav_btn_bg', [
             'label'     => __('Button background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#C43A3A',
             'selectors' => [self::SEL . '.mphbac-nav-btn' => 'background-color: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_text', [
             'label'     => __('Button arrow color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFFFFF',
             'selectors' => [self::SEL . '.mphbac-nav-btn' => 'color: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_hover_bg', [
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#078732',
             'selectors' => [
                 self::SEL . '.mphbac-nav-btn:hover'         => 'background-color: {{VALUE}};',
                 self::SEL . '.mphbac-nav-btn:focus-visible' => 'background-color: {{VALUE}};',
@@ -383,7 +496,7 @@ final class Widget extends Widget_Base
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
             'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
-            'str_book_button'    => [__('"Book this cottage" button', 'mphb-availability-calendar'), __('Book this cottage', 'mphb-availability-calendar')],
+            'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
             'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],
             'str_book_cancel'    => [__('Popup cancel button', 'mphb-availability-calendar'), __('Cancel', 'mphb-availability-calendar')],
@@ -422,7 +535,7 @@ final class Widget extends Widget_Base
         $this->add_control('color_available', [
             'label'     => __('Available color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#27ae60',
+            'default'   => '#7BDCB5',
             'condition' => ['inherit_theme!' => 'yes'],
             'selectors' => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-color-available: {{VALUE}};',
@@ -432,7 +545,7 @@ final class Widget extends Widget_Base
         $this->add_control('color_booked', [
             'label'     => __('Booked color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#e74c3c',
+            'default'   => '#FB6962',
             'condition' => ['inherit_theme!' => 'yes'],
             'selectors' => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-color-booked: {{VALUE}};',
@@ -632,6 +745,7 @@ final class Widget extends Widget_Base
             'label'      => __('Cell corner radius', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
+            'default'    => ['size' => 4, 'unit' => 'px'],
             'range'      => ['px' => ['min' => 0, 'max' => 16, 'step' => 1]],
             'selectors'  => [
                 self::SEL . '.mphbac-cell-status' => 'border-radius: {{SIZE}}{{UNIT}};',
@@ -639,10 +753,11 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('cell_min_height', [
-            'label'      => __('Cell minimum height', 'mphb-availability-calendar'),
+            'label'      => __('Cell size', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
-            'range'      => ['px' => ['min' => 16, 'max' => 56, 'step' => 2]],
+            'default'    => ['size' => 38, 'unit' => 'px'],
+            'range'      => ['px' => ['min' => 16, 'max' => 60, 'step' => 2]],
             'selectors'  => [
                 self::SEL => '--mphbac-cell-min: {{SIZE}}{{UNIT}};',
             ],
@@ -652,6 +767,7 @@ final class Widget extends Widget_Base
             'label'      => __('Gap between cells', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
+            'default'    => ['size' => 2, 'unit' => 'px'],
             'range'      => ['px' => ['min' => 0, 'max' => 10, 'step' => 1]],
             'selectors'  => [
                 self::SEL => '--mphbac-gap: {{SIZE}}{{UNIT}};',
@@ -710,11 +826,6 @@ final class Widget extends Widget_Base
         $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
         $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
 
-        $book_label = trim((string) ($settings['str_book_button'] ?? ''));
-        if ($book_label === '') {
-            $book_label = __('Book this cottage', 'mphb-availability-calendar');
-        }
-
         $property_label = (string) ($settings['str_property'] ?? '');
 
         $custom_labels = [];
@@ -725,6 +836,36 @@ final class Widget extends Widget_Base
                 $custom_labels[$cid] = $lbl;
             }
         }
+
+        // Per-cottage info-popup content (Elementor template or custom text).
+        $info_html = [];
+        foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
+            $cid = (int) ($row['ci_cottage'] ?? 0);
+            if ($cid <= 0) {
+                continue;
+            }
+            $source = (string) ($row['ci_source'] ?? 'text');
+            if ($source === 'template') {
+                $tpl_id = (int) ($row['ci_template'] ?? 0);
+                if ($tpl_id > 0) {
+                    $html = self::render_template($tpl_id);
+                    if ($html !== '') {
+                        $info_html[$cid] = $html;
+                    }
+                }
+            } else {
+                $text = (string) ($row['ci_text'] ?? '');
+                if (trim(wp_strip_all_tags($text)) !== '') {
+                    $info_html[$cid] = wpautop(wp_kses_post($text));
+                }
+            }
+        }
+
+        $status_labels = [
+            Data_Provider::ST_AVAIL  => (string) ($settings['str_legend_avail'] ?? ''),
+            Data_Provider::ST_BOOKED => (string) ($settings['str_legend_booked'] ?? ''),
+            Data_Provider::ST_PAST   => (string) ($settings['str_legend_past'] ?? ''),
+        ];
 
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
@@ -743,6 +884,7 @@ final class Widget extends Widget_Base
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
+            'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'strings'        => [
                 'empty'         => (string) ($settings['str_empty'] ?? ''),
@@ -758,7 +900,6 @@ final class Widget extends Widget_Base
                 'bookMinNights' => (string) ($settings['str_book_min_nights'] ?? ''),
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
-                'bookButton'    => $book_label,
                 'property'      => $property_label,
             ],
         ];
@@ -826,12 +967,31 @@ final class Widget extends Widget_Base
 
             <div class="mphbac-grid-wrap">
                 <?php $this->render_grid($rooms, $availability, $from, $to, [
-                    'popup_enabled'  => $popup_enabled,
-                    'book_label'     => $book_label,
                     'property_label' => $property_label,
                     'custom_labels'  => $custom_labels,
+                    'info_cottages'  => array_keys($info_html),
+                    'status_labels'  => $status_labels,
                 ]); ?>
             </div>
+
+            <?php foreach ($info_html as $cid => $html) : ?>
+                <?php // $html is already safe: custom text is wp_kses_post()'d when built,
+                      // template output is first-party Elementor render. ?>
+                <div class="mphbac-info-content" data-room-type-id="<?php echo esc_attr((string) $cid); ?>" hidden><?php
+                    echo $html; // phpcs:ignore WordPress.Security.EscapeOutput
+                ?></div>
+            <?php endforeach; ?>
+
+            <?php if (!empty($info_html)) : ?>
+                <div class="mphbac-info-overlay" hidden></div>
+                <div class="mphbac-info-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
+                    <div class="mphbac-sheet-header">
+                        <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
+                        <button type="button" class="mphbac-sheet-close mphbac-info-close" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
+                    </div>
+                    <div class="mphbac-info-body"></div>
+                </div>
+            <?php endif; ?>
 
             <div class="mphbac-empty" hidden>
                 <p><?php echo esc_html($settings['str_empty']); ?></p>
@@ -897,16 +1057,37 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * Render a saved Elementor template's HTML (for cottage info popups).
+     */
+    private static function render_template(int $template_id): string
+    {
+        if ($template_id <= 0) {
+            return '';
+        }
+        try {
+            if (class_exists('\\Elementor\\Plugin')) {
+                $elementor = \Elementor\Plugin::instance();
+                if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
+                    return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: render_template failed for ' . $template_id . ': ' . $e->getMessage());
+        }
+        return '';
+    }
+
+    /**
      * @param array<int,array{id:int,title:string,abbrev:string,number:string}> $rooms
      * @param array<int,array<string,string>>                                   $availability
-     * @param array{popup_enabled:bool,book_label:string,property_label:string,custom_labels:array<int,string>} $opts
+     * @param array{property_label:string,custom_labels:array<int,string>,info_cottages:int[],status_labels:array<string,string>} $opts
      */
     private function render_grid(array $rooms, array $availability, DateTimeImmutable $from, DateTimeImmutable $to, array $opts): void
     {
-        $popup_enabled  = (bool) ($opts['popup_enabled'] ?? false);
-        $book_label     = (string) ($opts['book_label'] ?? '');
         $property_label = (string) ($opts['property_label'] ?? '');
         $custom_labels  = (array) ($opts['custom_labels'] ?? []);
+        $info_cottages  = array_map('intval', (array) ($opts['info_cottages'] ?? []));
+        $status_labels  = (array) ($opts['status_labels'] ?? []);
 
         $days = [];
         $cursor = $from;
@@ -930,7 +1111,7 @@ final class Widget extends Widget_Base
                 '<div class="%s" role="columnheader" title="%s"><span class="mphbac-d-dow">%s</span><span class="mphbac-d-num">%s</span></div>',
                 esc_attr($cls),
                 esc_attr($day->format('l, F j, Y')),
-                esc_html($day->format('D')[0]),
+                esc_html($day->format('D')),
                 esc_html($day->format('j'))
             );
         }
@@ -940,21 +1121,27 @@ final class Widget extends Widget_Base
         foreach ($rooms as $room) {
             $type_id = (int) $room['id'];
             $days_for_type = $availability[$type_id] ?? [];
-            $row_class = 'mphbac-row' . ($index % 2 === 1 ? ' mphbac-row-alt' : '');
+            $has_info  = in_array($type_id, $info_cottages, true);
+            $row_class = 'mphbac-row'
+                . ($index % 2 === 1 ? ' mphbac-row-alt' : '')
+                . ($has_info ? ' mphbac-has-info' : '');
             $index++;
 
             echo '<div class="' . esc_attr($row_class) . '" role="row" data-room-type-id="' . esc_attr((string) $type_id) . '">';
 
             $custom = isset($custom_labels[$type_id]) ? trim((string) $custom_labels[$type_id]) : '';
+            $toggle_class = 'mphbac-cell mphbac-cell-label mphbac-row-toggle' . ($has_info ? ' mphbac-row-toggle--info' : '');
             if ($custom !== '') {
                 printf(
-                    '<button type="button" class="mphbac-cell mphbac-cell-label mphbac-row-toggle" role="rowheader" aria-expanded="false" title="%s"><span class="mphbac-label-custom">%s</span></button>',
+                    '<button type="button" class="%s" role="rowheader" title="%s"><span class="mphbac-label-custom">%s</span></button>',
+                    esc_attr($toggle_class),
                     esc_attr($room['title']),
                     esc_html($custom)
                 );
             } else {
                 printf(
-                    '<button type="button" class="mphbac-cell mphbac-cell-label mphbac-row-toggle" role="rowheader" aria-expanded="false" title="%s"><span class="mphbac-label-abbrev">%s</span><span class="mphbac-label-num">%s</span></button>',
+                    '<button type="button" class="%s" role="rowheader" title="%s"><span class="mphbac-label-abbrev">%s</span><span class="mphbac-label-num">%s</span></button>',
+                    esc_attr($toggle_class),
                     esc_attr($room['title']),
                     esc_html($room['abbrev']),
                     esc_html($room['number'] !== '' ? '#' . $room['number'] : '')
@@ -965,26 +1152,20 @@ final class Widget extends Widget_Base
                 $key    = $day->format('Y-m-d');
                 $status = $days_for_type[$key] ?? Data_Provider::ST_BOOKED;
                 $is_clickable = $status === Data_Provider::ST_AVAIL;
+                $tip = (string) ($status_labels[$status] ?? ucfirst($status));
                 printf(
-                    '<div class="mphbac-cell mphbac-cell-status is-%1$s%5$s" role="%6$s" data-date="%2$s" data-status="%1$s" aria-label="%4$s"%7$s></div>',
+                    '<div class="mphbac-cell mphbac-cell-status is-%1$s%5$s" role="%6$s" data-date="%2$s" data-status="%1$s" aria-label="%4$s"%7$s><span class="mphbac-cell-tip">%8$s</span></div>',
                     esc_attr($status),
                     esc_attr($key),
                     esc_attr($status),
-                    esc_attr(sprintf('%s — %s', $day->format('F j, Y'), $status)),
+                    esc_attr(sprintf('%s — %s', $day->format('F j, Y'), $tip)),
                     $is_clickable ? ' is-clickable' : '',
                     $is_clickable ? 'button' : 'cell',
-                    $is_clickable ? ' tabindex="0"' : ''
+                    $is_clickable ? ' tabindex="0"' : '',
+                    esc_html($tip)
                 );
             }
             echo '</div>';
-
-            if ($popup_enabled) {
-                printf(
-                    '<div class="mphbac-row-actions" data-room-type-id="%1$d" hidden><button type="button" class="mphbac-btn mphbac-btn-book" data-room-type-id="%1$d">%2$s</button></div>',
-                    $type_id,
-                    esc_html($book_label)
-                );
-            }
         }
 
         echo '</div>';

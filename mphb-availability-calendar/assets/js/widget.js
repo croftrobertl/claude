@@ -24,7 +24,7 @@
 
         wireFilters(root, config, state);
         wireNav(root, config, state);
-        wireRowToggle(root);
+        wireInfoPopup(root, config);
         wireSwipe(root, config, state);
         if (config.popupEnabled) {
             wirePopup(root, config, state);
@@ -56,6 +56,19 @@
         if (reset) reset.addEventListener('click', doReset);
         if (resetEmpty) resetEmpty.addEventListener('click', doReset);
 
+        // When a check-in is chosen, default the check-out to check-in + the
+        // minimum stay (two nights) unless the guest already picked a valid one.
+        if (checkin && checkout) {
+            checkin.addEventListener('change', function () {
+                if (!checkin.value) return;
+                var minN = Math.max(1, parseInt(config.minNights, 10) || 2);
+                checkout.min = addDays(checkin.value, minN);
+                if (!checkout.value || checkout.value <= checkin.value) {
+                    checkout.value = addDays(checkin.value, minN);
+                }
+            });
+        }
+
         // Native date input fallback: if browser does not support type=date, use jQuery UI datepicker if available.
         var probe = document.createElement('input');
         probe.type = 'date';
@@ -78,41 +91,59 @@
         request(root, config, state);
     }
 
-    function wireRowToggle(root) {
-        var isNumberOnly = root.classList.contains('mphbac-label-number');
+    function wireInfoPopup(root, config) {
+        var sheet = root.querySelector('.mphbac-info-sheet');
+        var overlay = root.querySelector('.mphbac-info-overlay');
+        if (!sheet || !overlay) return; // no cottage info popups configured
+
+        var titleEl = sheet.querySelector('.mphbac-sheet-title');
+        var bodyEl = sheet.querySelector('.mphbac-info-body');
+        var closeBtn = sheet.querySelector('.mphbac-info-close');
+        var lastTrigger = null;
+
         root.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
             var row = btn.parentNode;
-            if (!row) return;
-            var expanded = row.classList.toggle('is-expanded');
-            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            var actions = row.nextElementSibling;
-            if (actions && actions.classList.contains('mphbac-row-actions')) {
-                actions.hidden = !expanded;
-                actions.classList.toggle('is-expanded', expanded);
-            }
-            if (isNumberOnly) showTooltip(root, btn, btn.getAttribute('title') || '');
+            var typeId = row ? row.getAttribute('data-room-type-id') : '';
+            if (!typeId) return;
+            var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
+            if (!content) return; // this cottage has no info popup
+            openInfo(typeId, content, btn);
         });
-    }
 
-    function showTooltip(root, anchor, text) {
-        if (!text) return;
-        var tip = root.querySelector('.mphbac-tooltip');
-        if (!tip) {
-            tip = document.createElement('div');
-            tip.className = 'mphbac-tooltip';
-            tip.setAttribute('role', 'tooltip');
-            root.appendChild(tip);
+        function openInfo(typeId, content, trigger) {
+            lastTrigger = trigger || null;
+            titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
+            bodyEl.innerHTML = content.innerHTML;
+            sheet.hidden = false;
+            overlay.hidden = false;
+            requestAnimationFrame(function () {
+                sheet.classList.add('is-open');
+                overlay.classList.add('is-open');
+            });
+            document.addEventListener('keydown', onKeydown);
         }
-        tip.textContent = text;
-        var rootRect = root.getBoundingClientRect();
-        var rect = anchor.getBoundingClientRect();
-        tip.style.left = (rect.left - rootRect.left) + 'px';
-        tip.style.top = (rect.bottom - rootRect.top + 4) + 'px';
-        tip.classList.add('is-visible');
-        clearTimeout(tip._mphbacHide);
-        tip._mphbacHide = setTimeout(function () { tip.classList.remove('is-visible'); }, 2200);
+
+        function closeInfo() {
+            sheet.classList.remove('is-open');
+            overlay.classList.remove('is-open');
+            setTimeout(function () {
+                sheet.hidden = true;
+                overlay.hidden = true;
+            }, 200);
+            document.removeEventListener('keydown', onKeydown);
+            if (lastTrigger && lastTrigger.focus) {
+                try { lastTrigger.focus(); } catch (e) { /* ignore */ }
+            }
+        }
+
+        function onKeydown(e) {
+            if (e.key === 'Escape') closeInfo();
+        }
+
+        overlay.addEventListener('click', closeInfo);
+        if (closeBtn) closeBtn.addEventListener('click', closeInfo);
     }
 
     function wireSwipe(root, config, state) {
@@ -232,19 +263,25 @@
         });
         grid.appendChild(header);
 
-        var bookLabel = strings.bookButton || 'Book this cottage';
-        var popupEnabled = root.classList.contains('mphbac-popup-enabled');
+        var statusLabels = (config && config.statusLabels) || {};
+        var infoIds = {};
+        root.querySelectorAll('.mphbac-info-content').forEach(function (el) {
+            infoIds[el.getAttribute('data-room-type-id')] = true;
+        });
 
         rooms.forEach(function (room, index) {
+            var hasInfo = !!infoIds[String(room.id)];
             var row = document.createElement('div');
-            row.className = 'mphbac-row' + (index % 2 === 1 ? ' mphbac-row-alt' : '');
+            row.className = 'mphbac-row'
+                + (index % 2 === 1 ? ' mphbac-row-alt' : '')
+                + (hasInfo ? ' mphbac-has-info' : '');
             row.setAttribute('role', 'row');
             row.setAttribute('data-room-type-id', String(room.id));
 
             var labelBtn = document.createElement('button');
             labelBtn.type = 'button';
-            labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle';
-            labelBtn.setAttribute('aria-expanded', 'false');
+            labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle'
+                + (hasInfo ? ' mphbac-row-toggle--info' : '');
             labelBtn.title = room.title || '';
             var custom = customLabels[room.id];
             if (custom === undefined) custom = customLabels[String(room.id)];
@@ -264,30 +301,21 @@
             days.forEach(function (day) {
                 var status = roomAvail[day] || 'booked';
                 var clickable = status === 'available';
+                var tip = statusLabels[status] || status;
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
                 cell.setAttribute('role', clickable ? 'button' : 'cell');
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
-                cell.setAttribute('aria-label', day + ' — ' + status);
+                cell.setAttribute('aria-label', day + ' — ' + tip);
                 if (clickable) cell.setAttribute('tabindex', '0');
+                var tipEl = document.createElement('span');
+                tipEl.className = 'mphbac-cell-tip';
+                tipEl.textContent = tip;
+                cell.appendChild(tipEl);
                 row.appendChild(cell);
             });
             grid.appendChild(row);
-
-            if (popupEnabled) {
-                var actions = document.createElement('div');
-                actions.className = 'mphbac-row-actions';
-                actions.setAttribute('data-room-type-id', String(room.id));
-                actions.hidden = true;
-                var bookBtn = document.createElement('button');
-                bookBtn.type = 'button';
-                bookBtn.className = 'mphbac-btn mphbac-btn-book';
-                bookBtn.setAttribute('data-room-type-id', String(room.id));
-                bookBtn.textContent = bookLabel;
-                actions.appendChild(bookBtn);
-                grid.appendChild(actions);
-            }
         });
 
         wrap.innerHTML = '';
@@ -297,7 +325,7 @@
 
     function buildDayHeader(day) {
         var d = new Date(day + 'T00:00:00');
-        var dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()];
+        var dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
         var el = document.createElement('div');
         el.className = 'mphbac-cell mphbac-cell-day';
         el.setAttribute('role', 'columnheader');
@@ -350,22 +378,11 @@
 
         root.addEventListener('click', function (e) {
             var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
-            if (cell) {
-                var row = cell.parentNode;
-                var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
-                var date = cell.getAttribute('data-date') || '';
-                openSheet(typeId, date, addDays(date, minNights), cell);
-                return;
-            }
-            var bookBtn = e.target.closest && e.target.closest('.mphbac-btn-book');
-            if (bookBtn) {
-                var btnTypeId = parseInt(bookBtn.getAttribute('data-room-type-id'), 10);
-                var filterCheckin = root.querySelector('.mphbac-input-checkin');
-                var filterCheckout = root.querySelector('.mphbac-input-checkout');
-                var ci = (filterCheckin && filterCheckin.value) || config.today;
-                var co = (filterCheckout && filterCheckout.value) || addDays(ci, minNights);
-                openSheet(btnTypeId, ci, co, bookBtn);
-            }
+            if (!cell) return;
+            var row = cell.parentNode;
+            var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
+            var date = cell.getAttribute('data-date') || '';
+            openSheet(typeId, date, addDays(date, minNights), cell);
         });
 
         function openSheet(typeId, checkin, checkout, trigger) {
