@@ -1,15 +1,26 @@
 (function () {
     'use strict';
 
+    var DEBUG = true; // diagnostic logging — see [mphbac] entries in the Console.
+    function log() {
+        if (!DEBUG || !window.console) return;
+        var args = ['[mphbac]'];
+        for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+        console.log.apply(console, args);
+    }
+    log('widget.js loaded; roots in document:', document.querySelectorAll('.mphbac-root').length);
+
     var SWIPE_THRESHOLD = 40;
     var REQUEST_THROTTLE_MS = 250;
 
     function init(root) {
+        log('init called; root?', !!root, 'already inited?', root && root.dataset.mphbacInit === '1');
         if (!root || root.dataset.mphbacInit === '1') return;
         root.dataset.mphbacInit = '1';
 
         var config = {};
-        try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { config = {}; }
+        try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { config = {}; log('config parse error:', e); }
+        log('config keys:', Object.keys(config).join(','), 'today:', config.today, 'days D/T/M:', config.daysDesktop, config.daysTablet, config.daysMobile);
 
         var state = {
             from: null,
@@ -231,6 +242,7 @@
     function request(root, config, state) {
         var now = Date.now();
         if (now - state.lastRequest < REQUEST_THROTTLE_MS) {
+            log('request throttled; will retry in', REQUEST_THROTTLE_MS, 'ms');
             clearTimeout(state.pending);
             state.pending = setTimeout(function () { request(root, config, state); }, REQUEST_THROTTLE_MS);
             return;
@@ -248,21 +260,30 @@
             body.append('room_type_ids[]', String(id));
         });
 
+        log('request POST', config.ajaxUrl, 'from:', state.from, 'to:', state.to,
+            'rooms:', (config.roomTypeIds || []).length, 'nonce?', !!config.nonce);
+
         fetch(config.ajaxUrl, {
             method: 'POST',
             credentials: 'same-origin',
             body: body,
             headers: { 'Accept': 'application/json' }
         }).then(function (r) {
+            log('fetch resolved; status:', r.status, 'ok?', r.ok);
             return r.json();
         }).then(function (json) {
             root.classList.remove('is-loading');
+            log('json parsed; success?', !!(json && json.success),
+                'has data?', !!(json && json.data),
+                'rooms in data:', json && json.data && json.data.rooms ? json.data.rooms.length : 'n/a');
             if (!json || !json.success || !json.data) {
+                log('request failed; showing error. json:', json);
                 showError(root);
                 return;
             }
             renderGrid(root, json.data, state, config);
-        }).catch(function () {
+        }).catch(function (err) {
+            log('fetch threw:', err && err.message ? err.message : err);
             root.classList.remove('is-loading');
             showError(root);
         });
@@ -278,6 +299,7 @@
         var availability = data.availability || {};
         var from = data.from || state.from;
         var to = data.to || state.to;
+        log('renderGrid: rooms:', rooms.length, 'from:', from, 'to:', to);
 
         var empty = root.querySelector('.mphbac-empty');
         var wrap = root.querySelector('.mphbac-grid-wrap');
@@ -597,10 +619,14 @@
     }
 
     function boot() {
-        document.querySelectorAll('.mphbac-root').forEach(init);
+        var roots = document.querySelectorAll('.mphbac-root');
+        log('boot: found', roots.length, 'root(s); readyState:', document.readyState,
+            'elementorFrontend?', !!window.elementorFrontend);
+        roots.forEach(init);
     }
 
     if (document.readyState === 'loading') {
+        log('document still loading; deferring boot to DOMContentLoaded');
         document.addEventListener('DOMContentLoaded', boot);
     } else {
         boot();
@@ -608,7 +634,9 @@
 
     // Re-init when Elementor frontend rebuilds the DOM (e.g. preview, lazy-loaded sections).
     if (window.elementorFrontend && window.elementorFrontend.hooks) {
+        log('elementorFrontend hooks present; registering element_ready handler');
         window.elementorFrontend.hooks.addAction('frontend/element_ready/mphbac_calendar.default', function ($el) {
+            log('elementor element_ready fired; $el?', !!$el);
             if ($el && $el[0]) init($el[0].querySelector('.mphbac-root'));
         });
     }

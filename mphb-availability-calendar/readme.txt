@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.1
+Stable tag: 0.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.5.2 =
+* Diagnostic build: the widget now logs labeled `[mphbac]` entries to the browser Console at every step (script load, init, AJAX request, fetch result, grid render). Used to trace why the Elementor editor preview can show "Loading availability…" indefinitely. No behavior change for end visitors.
 
 = 0.5.1 =
 * Fixed: the calendar stayed on "Loading availability…" inside the Elementor editor preview — its script is now force-loaded into the preview iframe.
