@@ -623,6 +623,33 @@
         log('boot: found', roots.length, 'root(s); readyState:', document.readyState,
             'elementorFrontend?', !!window.elementorFrontend);
         roots.forEach(init);
+        // The Elementor editor preview iframe injects widget markup AFTER
+        // DOMContentLoaded and (in some versions) without firing the
+        // frontend/element_ready action our hook below listens to. A
+        // MutationObserver catches the .mphbac-root whenever it appears and
+        // also re-inits when the editor rebuilds the widget after a setting
+        // change. init() guards against double-initialization.
+        setupObserver();
+    }
+
+    function setupObserver() {
+        if (!document.body || !window.MutationObserver) {
+            log('setupObserver: skipped (no body or no MutationObserver)');
+            return;
+        }
+        var observer = new MutationObserver(function () {
+            var roots = document.querySelectorAll('.mphbac-root');
+            if (roots.length === 0) return;
+            var uninited = 0;
+            roots.forEach(function (r) { if (r.dataset.mphbacInit !== '1') uninited++; });
+            if (uninited > 0) {
+                log('MutationObserver: found', roots.length, 'root(s),',
+                    uninited, 'uninitialized; initializing');
+                roots.forEach(init);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        log('MutationObserver attached to document.body');
     }
 
     if (document.readyState === 'loading') {
