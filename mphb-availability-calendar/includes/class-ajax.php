@@ -10,11 +10,16 @@ if (!defined('ABSPATH')) {
 final class Ajax
 {
     public const MAX_RANGE_DAYS = 95;
-    public const NONCE_ACTION   = 'mphbac_nonce';
 
     public static function handle(): void
     {
-        check_ajax_referer(self::NONCE_ACTION, 'nonce');
+        // No nonce check: this endpoint returns public, read-only availability
+        // data and performs no state-changing actions, so there is no CSRF
+        // surface to protect. Requiring a nonce here breaks page caching —
+        // SpeedyCache (and any other full-page cache) stores the embedded
+        // nonce in the cached HTML, and the nonce expires after ~24h, after
+        // which every cached pageload returns 403/-1 and the calendar sits
+        // on "Loading availability…" until the cache is purged.
 
         $raw_ids = isset($_POST['room_type_ids']) ? (array) wp_unslash($_POST['room_type_ids']) : [];
         $room_type_ids = array_values(array_filter(array_map('absint', $raw_ids)));

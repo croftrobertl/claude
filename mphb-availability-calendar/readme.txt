@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.5
+Stable tag: 0.5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.5.6 =
+* Fixed: the calendar reverted to a permanent "Loading availability…" message a day or two after SpeedyCache rebuilt its page cache. Cause: the AJAX request carried a WordPress nonce embedded in the cached HTML; the nonce expired ~24h later, the request returned 403/-1, and the JS left the spinner in place. The endpoint no longer requires a nonce (it serves public, read-only availability data and performs no state-changing actions, so there is no CSRF surface). The JS also now clears the loading placeholder on any failed response so a stale-data state can never linger silently.
 
 = 0.5.5 =
 * Fixed: interactive Elementor widgets inside cottage-info popups (e.g. a pricing-table billing-period switcher) sat inert because cloning markup via innerHTML doesn't re-trigger Elementor's widget handlers. The popup now re-dispatches Elementor's `frontend/element_ready` action for every widget it shows, so each widget's handler (including third-party Angie Code snippets) wires up against the popup copy.

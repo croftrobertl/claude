@@ -926,7 +926,6 @@ final class Widget extends Widget_Base
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
             'action'         => MPHBAC_AJAX_ACTION,
-            'nonce'          => wp_create_nonce(Ajax::NONCE_ACTION),
             'roomTypeIds'    => array_map(static fn($r) => (int) $r['id'], $rooms),
             'roomTitles'     => $rooms_by_id,
             'daysDesktop'    => $days_desktop,

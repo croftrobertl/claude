@@ -274,7 +274,6 @@
 
         var body = new URLSearchParams();
         body.append('action', config.action || 'mphbac_query');
-        body.append('nonce', config.nonce || '');
         body.append('from', state.from);
         body.append('to', state.to);
         (config.roomTypeIds || []).forEach(function (id) {
@@ -302,6 +301,10 @@
     }
 
     function showError(root) {
+        // Clear the "Loading availability…" placeholder so it isn't left
+        // dangling above the empty-state message on a request failure.
+        var wrap = root.querySelector('.mphbac-grid-wrap');
+        if (wrap) wrap.innerHTML = '';
         var empty = root.querySelector('.mphbac-empty');
         if (empty) empty.hidden = false;
     }
@@ -561,7 +564,6 @@
         function verifyAndSubmit(ci, co) {
             var body = new URLSearchParams();
             body.append('action', config.action || 'mphbac_query');
-            body.append('nonce', config.nonce || '');
             body.append('from', ci);
             body.append('to', addDays(co, -1));
             body.append('room_type_ids[]', String(context.roomTypeId));
