@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.4
+Stable tag: 0.5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.5.5 =
+* Fixed: interactive Elementor widgets inside cottage-info popups (e.g. a pricing-table billing-period switcher) sat inert because cloning markup via innerHTML doesn't re-trigger Elementor's widget handlers. The popup now re-dispatches Elementor's `frontend/element_ready` action for every widget it shows, so each widget's handler (including third-party Angie Code snippets) wires up against the popup copy.
 
 = 0.5.4 =
 * Removed the temporary `[mphbac]` diagnostic Console logging shipped in 0.5.2 / 0.5.3. The editor-preview fix from 0.5.3 stays.

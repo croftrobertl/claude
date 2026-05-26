@@ -143,6 +143,33 @@
         );
     }
 
+    // When we copy a cottage's Elementor template into the popup via
+    // innerHTML, the cloned .elementor-widget nodes have no event handlers —
+    // innerHTML doesn't run scripts and Elementor only fires its
+    // frontend/element_ready action once, on the original (hidden) nodes.
+    // This walks the popup and dispatches that action for each widget so
+    // Elementor's handler system rebinds onto the copy.
+    function reinitElementorWidgets(container) {
+        if (!container || !window.elementorFrontend ||
+            !window.elementorFrontend.hooks || !window.jQuery) {
+            return;
+        }
+        var widgets = container.querySelectorAll('.elementor-widget[data-widget_type]');
+        widgets.forEach(function (widget) {
+            var widgetType = widget.getAttribute('data-widget_type');
+            if (!widgetType) return;
+            var $widget = window.jQuery(widget);
+            try {
+                window.elementorFrontend.hooks.doAction(
+                    'frontend/element_ready/global', $widget, window.jQuery
+                );
+                window.elementorFrontend.hooks.doAction(
+                    'frontend/element_ready/' + widgetType, $widget, window.jQuery
+                );
+            } catch (e) { /* third-party handler threw; keep going */ }
+        });
+    }
+
     function wireInfoPopup(root, config) {
         var sheet = root.querySelector('.mphbac-info-sheet');
         var overlay = root.querySelector('.mphbac-info-overlay');
@@ -173,6 +200,12 @@
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
+                // Re-fire Elementor's element_ready hooks for every widget we
+                // just cloned via innerHTML, so widget handlers (e.g. the
+                // pricing-table switcher) bind to the popup copy. We do this
+                // inside rAF so the popup is on-screen first — handlers like
+                // the pricing table's indicator measure element offsets.
+                reinitElementorWidgets(bodyEl);
             });
             document.addEventListener('keydown', onKeydown);
         }
