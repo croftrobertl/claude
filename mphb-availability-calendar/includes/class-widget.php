@@ -530,6 +530,16 @@ final class Widget extends Widget_Base
             'condition'   => ['enable_popup' => 'yes'],
         ]);
 
+        $this->add_control('info_popup_max_width', [
+            'label'       => __('Info popup max width (px)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::NUMBER,
+            'min'         => 320,
+            'max'         => 1400,
+            'step'        => 10,
+            'default'     => 800,
+            'description' => __('Maximum width of the cottage-info popup on desktop. Mobile is always full-width. Increase this if your popup contains image galleries or multi-column widgets that look cramped.', 'mphb-availability-calendar'),
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -554,6 +564,8 @@ final class Widget extends Widget_Base
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
             'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
+            'str_info_loading'   => [__('Info popup loading text', 'mphb-availability-calendar'), __('Loading…', 'mphb-availability-calendar')],
+            'str_info_unavail'   => [__('Info popup error text', 'mphb-availability-calendar'), __('Could not load this cottage’s info.', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
             'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],
             'str_book_cancel'    => [__('Popup cancel button', 'mphb-availability-calendar'), __('Cancel', 'mphb-availability-calendar')],
@@ -898,8 +910,14 @@ final class Widget extends Widget_Base
             }
         }
 
-        // Per-cottage info-popup content (Elementor template or custom text).
-        $info_html = [];
+        // Per-cottage info-popup content. Text rows are small, so we render
+        // them inline into hidden divs on the page. Template rows can pull in
+        // Elementor builder output (potentially many images, scripts, CSS);
+        // we lazy-load those over AJAX on first popup-open and cache them so
+        // the calendar page itself stays light even when many cottages have
+        // photo-rich templates configured.
+        $info_text = [];      // cottage_id => rendered HTML (text content)
+        $info_templates = []; // cottage_id => template_id (lazy-loaded)
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
             if ($cid <= 0) {
@@ -909,18 +927,16 @@ final class Widget extends Widget_Base
             if ($source === 'template') {
                 $tpl_id = (int) ($row['ci_template'] ?? 0);
                 if ($tpl_id > 0) {
-                    $html = self::render_template($tpl_id);
-                    if ($html !== '') {
-                        $info_html[$cid] = $html;
-                    }
+                    $info_templates[$cid] = $tpl_id;
                 }
             } else {
                 $text = (string) ($row['ci_text'] ?? '');
                 if (trim(wp_strip_all_tags($text)) !== '') {
-                    $info_html[$cid] = wpautop(wp_kses_post($text));
+                    $info_text[$cid] = wpautop(wp_kses_post($text));
                 }
             }
         }
+        $info_has_any = !empty($info_text) || !empty($info_templates);
 
         $status_labels = [
             Data_Provider::ST_AVAIL  => (string) ($settings['str_legend_avail'] ?? ''),
@@ -946,6 +962,8 @@ final class Widget extends Widget_Base
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
+            'infoTemplates'  => $info_templates, // cottage_id => template_id (lazy-loaded)
+            'infoPopupMaxWidth' => max(320, min(1400, (int) ($settings['info_popup_max_width'] ?? 800))),
             'strings'        => [
                 'empty'         => (string) ($settings['str_empty'] ?? ''),
                 'reset'         => (string) ($settings['str_reset'] ?? ''),
@@ -961,6 +979,8 @@ final class Widget extends Widget_Base
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
                 'property'      => $property_label,
+                'infoLoading'   => (string) ($settings['str_info_loading'] ?? ''),
+                'infoUnavailable' => (string) ($settings['str_info_unavail'] ?? ''),
             ],
         ];
 
@@ -1027,22 +1047,23 @@ final class Widget extends Widget_Base
                 <div class="mphbac-loading"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></div>
             </div>
 
-            <?php foreach ($info_html as $cid => $html) : ?>
-                <?php // $html is already safe: custom text is wp_kses_post()'d when built,
-                      // template output is first-party Elementor render. ?>
+            <?php foreach ($info_text as $cid => $html) : ?>
+                <?php // Text content is wp_kses_post()'d in the build step above. ?>
                 <div class="mphbac-info-content" data-room-type-id="<?php echo esc_attr((string) $cid); ?>" hidden><?php
                     echo $html; // phpcs:ignore WordPress.Security.EscapeOutput
                 ?></div>
             <?php endforeach; ?>
 
-            <?php if (!empty($info_html)) : ?>
+            <?php if ($info_has_any) : ?>
                 <div class="mphbac-info-overlay" hidden></div>
                 <div class="mphbac-info-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
                     <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
                     </div>
-                    <div class="mphbac-info-body"></div>
+                    <div class="mphbac-info-body">
+                        <div class="mphbac-info-loading" hidden><?php echo esc_html__('Loading…', 'mphb-availability-calendar'); ?></div>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -1107,26 +1128,5 @@ final class Widget extends Widget_Base
             error_log('MPHBAC: resolve_checkout_url failed: ' . $e->getMessage());
         }
         return home_url('/submit-booking/');
-    }
-
-    /**
-     * Render a saved Elementor template's HTML (for cottage info popups).
-     */
-    private static function render_template(int $template_id): string
-    {
-        if ($template_id <= 0) {
-            return '';
-        }
-        try {
-            if (class_exists('\\Elementor\\Plugin')) {
-                $elementor = \Elementor\Plugin::instance();
-                if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
-                    return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
-                }
-            }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: render_template failed for ' . $template_id . ': ' . $e->getMessage());
-        }
-        return '';
     }
 }

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.7
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,13 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.6.0 =
+* Cottage-info popups are now optimized for image-rich Elementor templates.
+* Added an "Info popup max width (px)" Display control (default 800px, was 440px) so multi-column galleries, hero photos, and pricing tables have room to breathe.
+* Elementor templates referenced by a cottage-info row are now lazy-loaded over AJAX on first popup-open (cached for 15 min server-side and for the rest of the session client-side). The calendar page itself no longer pre-renders every template, so initial page weight drops sharply when several cottages have photo-heavy templates configured.
+* Added CSS guards so arbitrary template content can never blow out the popup width: images/videos/iframes cap at 100% width and preserve aspect ratio; button labels stay on one line.
+* Two new translatable strings: the popup's "Loading…" and "Could not load…" messages.
 
 = 0.5.7 =
 * The cottage-info popup's close (X) button is now pinned to the top-right corner of the popup as a small floating circle, so it stays visible while you scroll long info content.

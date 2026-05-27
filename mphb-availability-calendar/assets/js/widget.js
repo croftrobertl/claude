@@ -179,6 +179,14 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var lastTrigger = null;
+        var templateCache = {}; // typeId → already-fetched HTML (per-page session)
+
+        // Apply the configured desktop max-width as a CSS variable on the
+        // popup itself. This honors the Elementor "Info popup max width"
+        // control without needing a server-rendered <style> block.
+        if (config.infoPopupMaxWidth) {
+            sheet.style.setProperty('--mphbac-info-max-width', config.infoPopupMaxWidth + 'px');
+        }
 
         root.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
@@ -186,15 +194,32 @@
             var row = btn.parentNode;
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
             if (!typeId) return;
+            // Prefer inline text content (lightweight, pre-rendered server-side);
+            // fall back to a template that we'll lazy-fetch over AJAX.
             var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
-            if (!content) return; // this cottage has no info popup
-            openInfo(typeId, content, btn);
+            var templateId = (config.infoTemplates && config.infoTemplates[typeId]) || 0;
+            if (!content && !templateId) return; // nothing configured for this cottage
+            openInfo(typeId, content, templateId, btn);
         });
 
-        function openInfo(typeId, content, trigger) {
+        function openInfo(typeId, content, templateId, trigger) {
             lastTrigger = trigger || null;
             titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
-            bodyEl.innerHTML = content.innerHTML;
+
+            if (content) {
+                // Inline text path — instant.
+                bodyEl.innerHTML = content.innerHTML;
+            } else if (templateCache[typeId]) {
+                // Already fetched this cottage's template earlier in this session.
+                bodyEl.innerHTML = templateCache[typeId];
+            } else {
+                // First open for this cottage — show a loading state and fetch.
+                bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
+                    ((config.strings && config.strings.infoLoading) || 'Loading…') +
+                    '</div>';
+                fetchTemplate(templateId, typeId);
+            }
+
             sheet.hidden = false;
             overlay.hidden = false;
             requestAnimationFrame(function () {
@@ -205,9 +230,40 @@
                 // pricing-table switcher) bind to the popup copy. We do this
                 // inside rAF so the popup is on-screen first — handlers like
                 // the pricing table's indicator measure element offsets.
-                reinitElementorWidgets(bodyEl);
+                // Skipped during the loading-state path; called again on
+                // successful fetch below.
+                if (content || templateCache[typeId]) {
+                    reinitElementorWidgets(bodyEl);
+                }
             });
             document.addEventListener('keydown', onKeydown);
+        }
+
+        function fetchTemplate(templateId, typeId) {
+            var body = new URLSearchParams();
+            body.append('action', config.action || 'mphbac_query');
+            body.append('type', 'info');
+            body.append('template_id', String(templateId));
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: body,
+                headers: { 'Accept': 'application/json' }
+            }).then(function (r) { return r.json(); }).then(function (json) {
+                if (!json || !json.success || !json.data || !json.data.html) {
+                    bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
+                        ((config.strings && config.strings.infoUnavailable) || 'Could not load this cottage’s info.') +
+                        '</div>';
+                    return;
+                }
+                templateCache[typeId] = json.data.html;
+                bodyEl.innerHTML = json.data.html;
+                reinitElementorWidgets(bodyEl);
+            }).catch(function () {
+                bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
+                    ((config.strings && config.strings.infoUnavailable) || 'Could not load this cottage’s info.') +
+                    '</div>';
+            });
         }
 
         function closeInfo() {

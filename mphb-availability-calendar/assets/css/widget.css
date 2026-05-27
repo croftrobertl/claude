@@ -452,11 +452,40 @@
         max-height: 80vh;
         border-radius: 12px;
     }
+    /* Cottage-info popup gets its own configurable width — defaults to 800px
+       but can be tuned via the "Info popup max width" Elementor control to
+       comfortably display image galleries / multi-column widgets. */
+    .mphbac-info-sheet {
+        width: min(var(--mphbac-info-max-width, 800px), 92vw);
+    }
     .mphbac-sheet.is-open,
     .mphbac-info-sheet.is-open {
         opacity: 1;
         transform: translate(-50%, -50%);
     }
+}
+
+/* Defensive rules for arbitrary Elementor / Angie-snippet content cloned
+   into the popup. Without these, an image set to width:1200px in a
+   template would force the popup to scroll horizontally. */
+.mphbac-info-body img,
+.mphbac-info-body video,
+.mphbac-info-body iframe {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+.mphbac-info-body .elementor-button,
+.mphbac-info-body button,
+.mphbac-info-body [class*="-btn"] {
+    /* Keep call-to-action labels (e.g. "Choose Plan") on a single line. */
+    white-space: nowrap;
+}
+.mphbac-info-loading {
+    padding: 1.5em 0;
+    text-align: center;
+    color: var(--mphbac-color-legend-text, #666);
+    font-style: italic;
 }
 
 .mphbac-sheet-header {
