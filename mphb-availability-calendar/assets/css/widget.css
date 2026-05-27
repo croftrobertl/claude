@@ -405,6 +405,35 @@
     overflow-y: auto;
     padding: 1em 1.25em 1.5em;
 }
+.mphbac-info-sheet {
+    /* Flex column so the sticky close button can align to flex-end (top-right)
+       and stay pinned at the top while the body content scrolls. */
+    display: flex;
+    flex-direction: column;
+}
+.mphbac-info-close--floating {
+    position: sticky;
+    top: 0;
+    align-self: flex-end;
+    z-index: 2;
+    width: 1.9em;
+    height: 1.9em;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    /* Reserve no extra vertical space — visually overlap the header below. */
+    margin-bottom: -1.9em;
+    margin-right: -0.25em;
+}
+.mphbac-sheet-header--info .mphbac-sheet-title {
+    /* The X is no longer a flex sibling; leave room so the title never
+       collides with the floating button. */
+    padding-right: 2.2em;
+}
 .mphbac-sheet.is-open,
 .mphbac-info-sheet.is-open {
     transform: translateY(0);

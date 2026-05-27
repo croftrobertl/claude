@@ -865,14 +865,19 @@ final class Widget extends Widget_Base
 
         $today = Data_Provider::today();
 
-        // Per-device day counts. The grid is drawn client-side so it can show
-        // the right count for desktop / tablet / mobile. An unset tablet/mobile
-        // responsive value falls back to the next-larger device.
-        $days_desktop = max(1, (int) ($settings['visible_days'] ?? 31));
-        $dt           = (int) ($settings['visible_days_tablet'] ?? 0);
-        $days_tablet  = $dt > 0 ? $dt : $days_desktop;
-        $dm           = (int) ($settings['visible_days_mobile'] ?? 0);
-        $days_mobile  = $dm > 0 ? $dm : $days_tablet;
+        // Per-device day counts (grid is drawn client-side, so each device
+        // can show its own count). Elementor only persists values the editor
+        // has explicitly touched, so untouched tablet/mobile slots arrive
+        // here as "" — fall back to the declared per-device defaults
+        // (31/14/7) directly. Cascading to the desktop value silently
+        // collapses every device to whatever desktop is set to whenever a
+        // user edits the widget without touching the per-device switcher.
+        $days_desktop = (int) ($settings['visible_days'] ?? 0);
+        $days_desktop = $days_desktop > 0 ? $days_desktop : 31;
+        $days_tablet  = (int) ($settings['visible_days_tablet'] ?? 0);
+        $days_tablet  = $days_tablet  > 0 ? $days_tablet  : 14;
+        $days_mobile  = (int) ($settings['visible_days_mobile'] ?? 0);
+        $days_mobile  = $days_mobile  > 0 ? $days_mobile  : 7;
 
         $rooms_by_id = [];
         foreach ($rooms as $r) {
@@ -1033,9 +1038,9 @@ final class Widget extends Widget_Base
             <?php if (!empty($info_html)) : ?>
                 <div class="mphbac-info-overlay" hidden></div>
                 <div class="mphbac-info-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
-                    <div class="mphbac-sheet-header">
+                    <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
+                    <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
-                        <button type="button" class="mphbac-sheet-close mphbac-info-close" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
                     </div>
                     <div class="mphbac-info-body"></div>
                 </div>
