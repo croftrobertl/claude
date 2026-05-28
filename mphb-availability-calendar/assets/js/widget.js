@@ -179,7 +179,6 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var lastTrigger = null;
-        var templateCache = {}; // typeId → already-fetched HTML (per-page session)
 
         // Apply the configured desktop max-width as a CSS variable on the
         // popup itself. This honors the Elementor "Info popup max width"
@@ -194,32 +193,15 @@
             var row = btn.parentNode;
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
             if (!typeId) return;
-            // Prefer inline text content (lightweight, pre-rendered server-side);
-            // fall back to a template that we'll lazy-fetch over AJAX.
             var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
-            var templateId = (config.infoTemplates && config.infoTemplates[typeId]) || 0;
-            if (!content && !templateId) return; // nothing configured for this cottage
-            openInfo(typeId, content, templateId, btn);
+            if (!content) return; // this cottage has no info popup
+            openInfo(typeId, content, btn);
         });
 
-        function openInfo(typeId, content, templateId, trigger) {
+        function openInfo(typeId, content, trigger) {
             lastTrigger = trigger || null;
             titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
-
-            if (content) {
-                // Inline text path — instant.
-                bodyEl.innerHTML = content.innerHTML;
-            } else if (templateCache[typeId]) {
-                // Already fetched this cottage's template earlier in this session.
-                bodyEl.innerHTML = templateCache[typeId];
-            } else {
-                // First open for this cottage — show a loading state and fetch.
-                bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
-                    ((config.strings && config.strings.infoLoading) || 'Loading…') +
-                    '</div>';
-                fetchTemplate(templateId, typeId);
-            }
-
+            bodyEl.innerHTML = content.innerHTML;
             sheet.hidden = false;
             overlay.hidden = false;
             requestAnimationFrame(function () {
@@ -230,40 +212,9 @@
                 // pricing-table switcher) bind to the popup copy. We do this
                 // inside rAF so the popup is on-screen first — handlers like
                 // the pricing table's indicator measure element offsets.
-                // Skipped during the loading-state path; called again on
-                // successful fetch below.
-                if (content || templateCache[typeId]) {
-                    reinitElementorWidgets(bodyEl);
-                }
+                reinitElementorWidgets(bodyEl);
             });
             document.addEventListener('keydown', onKeydown);
-        }
-
-        function fetchTemplate(templateId, typeId) {
-            var body = new URLSearchParams();
-            body.append('action', config.action || 'mphbac_query');
-            body.append('type', 'info');
-            body.append('template_id', String(templateId));
-            fetch(config.ajaxUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: body,
-                headers: { 'Accept': 'application/json' }
-            }).then(function (r) { return r.json(); }).then(function (json) {
-                if (!json || !json.success || !json.data || !json.data.html) {
-                    bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
-                        ((config.strings && config.strings.infoUnavailable) || 'Could not load this cottage’s info.') +
-                        '</div>';
-                    return;
-                }
-                templateCache[typeId] = json.data.html;
-                bodyEl.innerHTML = json.data.html;
-                reinitElementorWidgets(bodyEl);
-            }).catch(function () {
-                bodyEl.innerHTML = '<div class="mphbac-info-loading">' +
-                    ((config.strings && config.strings.infoUnavailable) || 'Could not load this cottage’s info.') +
-                    '</div>';
-            });
         }
 
         function closeInfo() {
@@ -272,6 +223,11 @@
             setTimeout(function () {
                 sheet.hidden = true;
                 overlay.hidden = true;
+                // Clear the popup body so any body-level overlays a
+                // third-party widget appended (carousel pagination, lightbox
+                // controls, etc.) get torn down with their DOM owner. On
+                // next open we re-clone the cottage's pristine source.
+                bodyEl.innerHTML = '';
             }, 200);
             document.removeEventListener('keydown', onKeydown);
             if (lastTrigger && lastTrigger.focus) {

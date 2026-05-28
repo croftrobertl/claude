@@ -481,12 +481,6 @@
     /* Keep call-to-action labels (e.g. "Choose Plan") on a single line. */
     white-space: nowrap;
 }
-.mphbac-info-loading {
-    padding: 1.5em 0;
-    text-align: center;
-    color: var(--mphbac-color-legend-text, #666);
-    font-style: italic;
-}
 
 .mphbac-sheet-header {
     display: flex;

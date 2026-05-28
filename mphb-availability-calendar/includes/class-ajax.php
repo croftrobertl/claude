@@ -21,12 +21,6 @@ final class Ajax
         // which every cached pageload returns 403/-1 and the calendar sits
         // on "Loading availability…" until the cache is purged.
 
-        $type = isset($_POST['type']) ? sanitize_key((string) wp_unslash($_POST['type'])) : 'availability';
-        if ($type === 'info') {
-            self::handle_info();
-            return;
-        }
-
         $raw_ids = isset($_POST['room_type_ids']) ? (array) wp_unslash($_POST['room_type_ids']) : [];
         $room_type_ids = array_values(array_filter(array_map('absint', $raw_ids)));
 
@@ -62,53 +56,6 @@ final class Ajax
             'from'         => $from->format('Y-m-d'),
             'to'           => $to->format('Y-m-d'),
         ]);
-    }
-
-    /**
-     * Lazy-render a saved Elementor template for a cottage-info popup. Keeps
-     * the calendar page light by deferring image-heavy templates until the
-     * user actually opens a popup, then caches via the same transient layer
-     * used for availability so re-opens are instant.
-     */
-    private static function handle_info(): void
-    {
-        $template_id = isset($_POST['template_id']) ? absint(wp_unslash($_POST['template_id'])) : 0;
-        if ($template_id <= 0) {
-            wp_send_json_error(['message' => __('Missing template id.', 'mphb-availability-calendar')], 400);
-        }
-
-        // Validate: the post must exist, be published, and be of a renderable
-        // type. Elementor templates are post_type elementor_library; we also
-        // allow generic public post types so any user-built page works.
-        $post = get_post($template_id);
-        if (!$post || $post->post_status !== 'publish') {
-            wp_send_json_error(['message' => __('Template not available.', 'mphb-availability-calendar')], 404);
-        }
-
-        $cache_key = Cache::key(['info', $template_id, get_locale()]);
-        $html = get_transient($cache_key);
-        if (!is_string($html) || $html === '') {
-            $html = '';
-            if (class_exists('\\Elementor\\Plugin')) {
-                try {
-                    $elementor = \Elementor\Plugin::instance();
-                    if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
-                        $html = (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
-                    }
-                } catch (\Throwable $e) {
-                    error_log('MPHBAC: handle_info render failed for ' . $template_id . ': ' . $e->getMessage());
-                }
-            }
-            if ($html !== '') {
-                set_transient($cache_key, $html, Cache::DEFAULT_TTL);
-            }
-        }
-
-        if ($html === '') {
-            wp_send_json_error(['message' => __('Template empty.', 'mphb-availability-calendar')], 500);
-        }
-
-        wp_send_json_success(['html' => $html]);
     }
 
     private static function parse_date(string $value): ?DateTimeImmutable
