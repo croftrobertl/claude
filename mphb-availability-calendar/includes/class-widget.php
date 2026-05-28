@@ -537,6 +537,14 @@ final class Widget extends Widget_Base
             'condition'   => ['enable_popup' => 'yes'],
         ]);
 
+        $this->add_control('info_popup_full_width', [
+            'label'        => __('Full viewport width', 'mphb-availability-calendar'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('When on, the cottage-info popup fills the entire viewport (recommended when the source is the MotoPress accommodation page, so its gallery/rates/attributes render at their natural width). When off, the popup is a centered modal capped by the Max width setting below.', 'mphb-availability-calendar'),
+        ]);
+
         $this->add_control('info_popup_max_width', [
             'label'       => __('Info popup max width (px)', 'mphb-availability-calendar'),
             'type'        => Controls_Manager::NUMBER,
@@ -544,7 +552,8 @@ final class Widget extends Widget_Base
             'max'         => 1400,
             'step'        => 10,
             'default'     => 800,
-            'description' => __('Maximum width of the cottage-info popup on desktop. Mobile is always full-width. Increase this if your popup contains image galleries or multi-column widgets that look cramped.', 'mphb-availability-calendar'),
+            'description' => __('Maximum width of the cottage-info popup on desktop when "Full viewport width" is off. Mobile is always full-width.', 'mphb-availability-calendar'),
+            'condition'   => ['info_popup_full_width!' => 'yes'],
         ]);
 
         $this->end_controls_section();
@@ -952,6 +961,7 @@ final class Widget extends Widget_Base
             }
         }
         $info_has_any = !empty($info_html);
+        $info_full_width = ($settings['info_popup_full_width'] ?? 'yes') === 'yes';
 
         $status_labels = [
             Data_Provider::ST_AVAIL  => (string) ($settings['str_legend_avail'] ?? ''),
@@ -1069,7 +1079,7 @@ final class Widget extends Widget_Base
 
             <?php if ($info_has_any) : ?>
                 <div class="mphbac-info-overlay" hidden></div>
-                <div class="mphbac-info-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
+                <div class="mphbac-info-sheet<?php echo $info_full_width ? ' mphbac-info-sheet--full' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
                     <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
