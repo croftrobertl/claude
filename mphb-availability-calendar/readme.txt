@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.1
+Stable tag: 0.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.6.2 =
+* Added a third "Content source" option to each Cottage Info Popup row: "MotoPress accommodation page (auto)". Renders the cottage's full MotoPress single-accommodation page (gallery + description + attributes + services + rates) inside the popup, with no extra setup — the cottage is taken from the row's existing Cottage field. Useful when you'd rather show MotoPress's built-in cottage page than maintain a parallel Elementor template.
 
 = 0.6.1 =
 * Reverted the v0.6.0 lazy AJAX template loading. Elementor never enqueues a template's per-widget CSS file on the parent page when the template is rendered over AJAX, which broke multi-column widgets (their accordion/switcher styles were missing, all sections showed at once, and event handlers bound to stale DOM on re-open). Templates are once again server-rendered into hidden divs on the page so their CSS is enqueued normally.

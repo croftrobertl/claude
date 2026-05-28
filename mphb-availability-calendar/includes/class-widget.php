@@ -108,7 +108,7 @@ final class Widget extends Widget_Base
 
         $this->add_control('info_intro', [
             'type'            => Controls_Manager::RAW_HTML,
-            'raw'             => esc_html__('Tapping a cottage name opens an info popup. Add a row per cottage and choose either an Elementor template or custom text for that cottage. Cottages with no row here are not clickable.', 'mphb-availability-calendar'),
+            'raw'             => esc_html__('Tapping a cottage name opens an info popup. Add a row per cottage and choose either custom text, an Elementor template, or the cottage\'s full MotoPress accommodation page (gallery, description, attributes, rates). Cottages with no row here are not clickable.', 'mphb-availability-calendar'),
             'content_classes' => 'elementor-descriptor',
         ]);
 
@@ -124,8 +124,9 @@ final class Widget extends Widget_Base
             'type'    => Controls_Manager::SELECT,
             'default' => 'text',
             'options' => [
-                'text'     => __('Custom text', 'mphb-availability-calendar'),
-                'template' => __('Elementor template', 'mphb-availability-calendar'),
+                'text'              => __('Custom text', 'mphb-availability-calendar'),
+                'template'          => __('Elementor template', 'mphb-availability-calendar'),
+                'mphb_accommodation'=> __('MotoPress accommodation page (auto)', 'mphb-availability-calendar'),
             ],
         ]);
         $repeater->add_control('ci_text', [
@@ -140,6 +141,12 @@ final class Widget extends Widget_Base
             'options'     => $this->template_options(),
             'label_block' => true,
             'condition'   => ['ci_source' => 'template'],
+        ]);
+        $repeater->add_control('ci_mphb_info', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => esc_html__('Renders the same content visitors see on the cottage\'s own /accommodation/ page — gallery, description, attributes, services, and rates. No extra setup needed; the cottage is taken from the "Cottage" field above.', 'mphb-availability-calendar'),
+            'content_classes' => 'elementor-descriptor',
+            'condition'       => ['ci_source' => 'mphb_accommodation'],
         ]);
 
         $this->add_control('cottage_info', [
@@ -930,6 +937,13 @@ final class Widget extends Widget_Base
                         $info_html[$cid] = $html;
                     }
                 }
+            } elseif ($source === 'mphb_accommodation') {
+                // The cottage IS the mphb_room_type post, so $cid is also the
+                // accommodation post ID — no extra select control needed.
+                $html = self::render_motopress_accommodation($cid);
+                if ($html !== '') {
+                    $info_html[$cid] = $html;
+                }
             } else {
                 $text = (string) ($row['ci_text'] ?? '');
                 if (trim(wp_strip_all_tags($text)) !== '') {
@@ -1125,6 +1139,61 @@ final class Widget extends Widget_Base
             error_log('MPHBAC: resolve_checkout_url failed: ' . $e->getMessage());
         }
         return home_url('/submit-booking/');
+    }
+
+    /**
+     * Render a cottage's full MotoPress single-accommodation page content
+     * (gallery + description + attributes + services + rates) for the info
+     * popup. MotoPress injects those sections via filter callbacks on
+     * 'the_content' that bail unless is_singular('mphb_room_type') returns
+     * true. To make that condition hold, we temporarily swap $wp_query with
+     * a one-post query targeting the cottage, render, then restore the
+     * original query so the surrounding page render is unaffected.
+     */
+    private static function render_motopress_accommodation(int $room_type_id): string
+    {
+        if ($room_type_id <= 0 || !function_exists('MPHB')) {
+            return '';
+        }
+        $post = get_post($room_type_id);
+        if (!$post || $post->post_type !== 'mphb_room_type' || $post->post_status !== 'publish') {
+            return '';
+        }
+
+        $saved_query = $GLOBALS['wp_query'] ?? null;
+        $saved_post  = $GLOBALS['post'] ?? null;
+        $html        = '';
+
+        try {
+            $query = new \WP_Query([
+                'p'         => $room_type_id,
+                'post_type' => 'mphb_room_type',
+            ]);
+            if (!$query->have_posts()) {
+                return '';
+            }
+            $GLOBALS['wp_query'] = $query;
+            $query->the_post();
+
+            ob_start();
+            echo '<div class="mphbac-mphb-accommodation">';
+            the_content();
+            echo '</div>';
+            $html = (string) ob_get_clean();
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: render_motopress_accommodation failed for ' . $room_type_id . ': ' . $e->getMessage());
+            $html = '';
+        } finally {
+            wp_reset_postdata();
+            if ($saved_query !== null) {
+                $GLOBALS['wp_query'] = $saved_query;
+            }
+            if ($saved_post !== null) {
+                $GLOBALS['post'] = $saved_post;
+            }
+        }
+
+        return $html;
     }
 
     /**
