@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.3
+Stable tag: 0.6.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.6.4 =
+* Fixed: in the full-viewport popup mode introduced in 0.6.3, the popup's own padding extended its visible width past the viewport so the right side of the content was clipped off-screen. The popup now uses border-box sizing so width:100vw includes the padding.
+* Fixed: the MotoPress accommodation popup source rendered nothing because MotoPress's the_content callbacks also check is_main_query() (which compares against $wp_the_query), not just is_singular(). Both queries are now swapped during render so the gallery, attributes, rates table, and services blocks all appear. Also logs a notice and falls back to skipping the cottage if the render produces nothing, so a misconfigured cottage never shows a blank popup.
 
 = 0.6.3 =
 * Added a "Full viewport width" toggle in Display settings (on by default). When on, the cottage-info popup fills the entire viewport instead of opening as a centered modal — recommended whenever the popup content is the MotoPress accommodation page, so the gallery/rates table/attributes render at their natural width. When off, the popup remains a centered modal capped by the Max width setting below the toggle.

@@ -388,6 +388,10 @@
 .mphbac-info-sheet {
     position: fixed;
     z-index: 1001;
+    /* border-box so width:100% / 100vw includes the popup's own padding —
+       otherwise the popup overflows the viewport by 2 × horizontal padding
+       and the right side of the content gets clipped off-screen. */
+    box-sizing: border-box;
     background: #fff;
     color: #000;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);

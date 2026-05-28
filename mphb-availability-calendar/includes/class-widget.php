@@ -1154,11 +1154,12 @@ final class Widget extends Widget_Base
     /**
      * Render a cottage's full MotoPress single-accommodation page content
      * (gallery + description + attributes + services + rates) for the info
-     * popup. MotoPress injects those sections via filter callbacks on
-     * 'the_content' that bail unless is_singular('mphb_room_type') returns
-     * true. To make that condition hold, we temporarily swap $wp_query with
-     * a one-post query targeting the cottage, render, then restore the
-     * original query so the surrounding page render is unaffected.
+     * popup. MotoPress's the_content filter callbacks inject those sections
+     * but bail unless BOTH is_singular('mphb_room_type') AND is_main_query()
+     * return true — the latter compares the active query identity against
+     * $GLOBALS['wp_the_query'], so swapping $wp_query alone isn't enough.
+     * We snapshot $wp_query, $wp_the_query, and $post, swap both queries
+     * to a one-post query targeting the cottage, render, then restore.
      */
     private static function render_motopress_accommodation(int $room_type_id): string
     {
@@ -1170,9 +1171,10 @@ final class Widget extends Widget_Base
             return '';
         }
 
-        $saved_query = $GLOBALS['wp_query'] ?? null;
-        $saved_post  = $GLOBALS['post'] ?? null;
-        $html        = '';
+        $saved_query     = $GLOBALS['wp_query']     ?? null;
+        $saved_the_query = $GLOBALS['wp_the_query'] ?? null;
+        $saved_post      = $GLOBALS['post']         ?? null;
+        $html            = '';
 
         try {
             $query = new \WP_Query([
@@ -1182,7 +1184,8 @@ final class Widget extends Widget_Base
             if (!$query->have_posts()) {
                 return '';
             }
-            $GLOBALS['wp_query'] = $query;
+            $GLOBALS['wp_query']     = $query;
+            $GLOBALS['wp_the_query'] = $query;
             $query->the_post();
 
             ob_start();
@@ -1190,6 +1193,16 @@ final class Widget extends Widget_Base
             the_content();
             echo '</div>';
             $html = (string) ob_get_clean();
+
+            // If the cottage post itself has no body content AND MotoPress's
+            // filter callbacks added nothing, the output is just our wrapper
+            // div. Treat that as "render failed" so the caller falls back to
+            // skipping this cottage rather than showing a blank popup.
+            $stripped = trim(wp_strip_all_tags($html));
+            if ($stripped === '') {
+                error_log('MPHBAC: render_motopress_accommodation produced empty output for ' . $room_type_id);
+                $html = '';
+            }
         } catch (\Throwable $e) {
             error_log('MPHBAC: render_motopress_accommodation failed for ' . $room_type_id . ': ' . $e->getMessage());
             $html = '';
@@ -1197,6 +1210,9 @@ final class Widget extends Widget_Base
             wp_reset_postdata();
             if ($saved_query !== null) {
                 $GLOBALS['wp_query'] = $saved_query;
+            }
+            if ($saved_the_query !== null) {
+                $GLOBALS['wp_the_query'] = $saved_the_query;
             }
             if ($saved_post !== null) {
                 $GLOBALS['post'] = $saved_post;
