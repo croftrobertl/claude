@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.5
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.7.0 =
+* Perceived-speed bundle. Three changes that together make the calendar feel instant on every device: (1) The "Loading availability…" text on first paint is replaced with a pulsing skeleton grid that mirrors the cottage rows, so visitors see structure immediately instead of a blank box. (2) The cottage info popup pre-fetches its images on hover (desktop) or touchstart (mobile) — by the time the visitor taps to open the popup, the cottage's photos are already in the browser cache. A 60ms hover debounce keeps mouse sweeps from triggering needless fetches. (3) Both popup-open animations and the form-POST to MotoPress checkout are wrapped in the View Transitions API on supported browsers (Chrome 111+, Safari 18+), producing smooth fade-morph transitions; older browsers see today's CSS transitions unchanged. All three pieces honor `prefers-reduced-motion: reduce`.
 
 = 0.6.5 =
 * Full-viewport cottage-info popup now anchors its top edge to the top of the calendar widget instead of the top of the screen. When you open a cottage popup, the popup appears to grow out of the calendar — the area above the calendar (page header, hero, breadcrumbs, etc.) stays visible. JS reads the widget's getBoundingClientRect().top at open time, so the popup always lines up wherever the calendar happens to be on screen.

@@ -3,6 +3,44 @@
 
     var SWIPE_THRESHOLD = 40;
     var REQUEST_THROTTLE_MS = 250;
+    var WARM_HOVER_DELAY_MS = 60;
+
+    // Run a DOM mutation inside a same-document View Transition when supported,
+    // falling back to the bare call so legacy browsers see today's behavior.
+    function withViewTransition(fn) {
+        if (typeof document !== 'undefined' && typeof document.startViewTransition === 'function') {
+            try {
+                document.startViewTransition(fn);
+                return;
+            } catch (e) { /* fall through to direct call */ }
+        }
+        fn();
+    }
+
+    // Track which cottages we've already warmed so rapid mouse-overs don't
+    // re-issue the same image fetches.
+    var warmedInfoIds = Object.create(null);
+
+    function warmInfoPopup(root, typeId) {
+        if (!typeId || warmedInfoIds[typeId]) return;
+        var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
+        if (!content) return;
+        warmedInfoIds[typeId] = true;
+        // Force fetch of every image referenced by the (hidden) popup content
+        // into the browser HTTP cache. By the time the visitor taps to open
+        // the popup, the cottage's photos are already on disk.
+        var imgs = content.querySelectorAll('img');
+        for (var i = 0; i < imgs.length; i++) {
+            var src = imgs[i].getAttribute('src');
+            var srcset = imgs[i].getAttribute('srcset');
+            if (src) { var w = new Image(); if (srcset) w.srcset = srcset; w.src = src; }
+        }
+        var sources = content.querySelectorAll('picture source');
+        for (var j = 0; j < sources.length; j++) {
+            var ss = sources[j].getAttribute('srcset');
+            if (ss) { var ws = new Image(); ws.srcset = ss; }
+        }
+    }
 
     function init(root) {
         if (!root || root.dataset.mphbacInit === '1') return;
@@ -198,6 +236,31 @@
             openInfo(typeId, content, btn);
         });
 
+        // Predictive prefetch: warm the cottage's popup images on hover (with a
+        // debounce so pointer sweeps don't fire) or instantly on touchstart so
+        // mobile taps still get the head start.
+        var hoverTimer = null;
+        root.addEventListener('pointerenter', function (e) {
+            if (e.pointerType === 'touch') return; // handled by touchstart below
+            var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
+            if (!btn) return;
+            var row = btn.parentNode;
+            var typeId = row ? row.getAttribute('data-room-type-id') : '';
+            if (!typeId) return;
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(function () { warmInfoPopup(root, typeId); }, WARM_HOVER_DELAY_MS);
+        }, true);
+        root.addEventListener('pointerleave', function () {
+            clearTimeout(hoverTimer);
+        }, true);
+        root.addEventListener('touchstart', function (e) {
+            var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
+            if (!btn) return;
+            var row = btn.parentNode;
+            var typeId = row ? row.getAttribute('data-room-type-id') : '';
+            if (typeId) warmInfoPopup(root, typeId);
+        }, { passive: true });
+
         function openInfo(typeId, content, trigger) {
             lastTrigger = trigger || null;
             titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
@@ -212,8 +275,10 @@
                 var topPx = Math.max(0, Math.round(rect.top));
                 sheet.style.setProperty('--mphbac-info-sheet-top', topPx + 'px');
             }
-            sheet.hidden = false;
-            overlay.hidden = false;
+            withViewTransition(function () {
+                sheet.hidden = false;
+                overlay.hidden = false;
+            });
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
@@ -516,8 +581,10 @@
             checkoutEl.value = checkout || '';
             errorEl.hidden = true;
             errorEl.textContent = '';
-            sheet.hidden = false;
-            overlay.hidden = false;
+            withViewTransition(function () {
+                sheet.hidden = false;
+                overlay.hidden = false;
+            });
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
@@ -636,7 +703,7 @@
             appendInput(form, 'mphb_rooms_details[' + typeId + ']', '1');
             appendInput(form, 'mphb_is_direct_booking', '1');
             document.body.appendChild(form);
-            form.submit();
+            withViewTransition(function () { form.submit(); });
         }
 
         function appendInput(form, name, value) {

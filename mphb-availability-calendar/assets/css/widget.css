@@ -622,6 +622,81 @@
     pointer-events: none;
 }
 
+/* Skeleton — first-paint placeholder that mirrors the cottage rows so the
+   visitor sees structure immediately instead of a blank box or "Loading…"
+   text. Disappears when renderGrid() replaces .mphbac-grid-wrap contents. */
+.mphbac-root .mphbac-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mphbac-cell-gap, 2px);
+    padding: 2px;
+}
+.mphbac-root .mphbac-skeleton-row {
+    display: grid;
+    grid-template-columns: var(--mphbac-label-width, 180px) 1fr;
+    gap: var(--mphbac-cell-gap, 2px);
+    min-height: var(--mphbac-cell-min, 42px);
+    background: var(--mphbac-color-namecol, #F8F9FA);
+    border-radius: var(--mphbac-cell-radius, 0);
+}
+.mphbac-root .mphbac-skeleton-row-alt {
+    background: var(--mphbac-color-namecol-alt, #F1F3F5);
+}
+.mphbac-root .mphbac-skeleton-name,
+.mphbac-root .mphbac-skeleton-cells {
+    display: block;
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.045) 0%,
+        rgba(0, 0, 0, 0.085) 50%,
+        rgba(0, 0, 0, 0.045) 100%
+    );
+    background-size: 200% 100%;
+    border-radius: var(--mphbac-cell-radius, 4px);
+}
+.mphbac-root .mphbac-skeleton-name { margin: 6px; }
+.mphbac-root .mphbac-skeleton-cells { margin: 6px; }
+@media (prefers-reduced-motion: no-preference) {
+    .mphbac-root .mphbac-skeleton-name,
+    .mphbac-root .mphbac-skeleton-cells {
+        animation: mphbac-skeleton-pulse 1.4s ease-in-out infinite;
+    }
+}
+@keyframes mphbac-skeleton-pulse {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Screen-reader-only utility (used by the loading status announcement). */
+.mphbac-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* View Transitions — when the browser supports document.startViewTransition()
+   the popup-open and the form-POST to checkout are wrapped in a transition,
+   producing a smooth fade-morph on Chrome 111+/Safari 18+. Older browsers
+   see today's CSS transitions and behave identically. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.25s;
+    animation-timing-function: ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+}
+
 /* Minimal jQuery UI Datepicker fallback (only loaded if browser lacks input[type=date]) */
 .ui-datepicker {
     background: #fff;

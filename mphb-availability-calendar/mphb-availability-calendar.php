@@ -3,7 +3,7 @@
  * Plugin Name:       MPHB Availability Calendar
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Elementor widget that displays a mobile-friendly multi-property availability calendar for MotoPress Hotel Booking accommodations. Reads MotoPress's already-synced bookings directly from the database (no extra HTTP fetches), caches via WordPress transients, and auto-excludes its AJAX endpoint from SpeedyCache Pro.
- * Version:           0.6.5
+ * Version:           0.7.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MPHBAC_VERSION', '0.6.5');
+define('MPHBAC_VERSION', '0.7.0');
 define('MPHBAC_FILE', __FILE__);
 define('MPHBAC_DIR', plugin_dir_path(__FILE__));
 define('MPHBAC_URL', plugin_dir_url(__FILE__));

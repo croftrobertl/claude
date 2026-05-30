@@ -1066,7 +1066,15 @@ final class Widget extends Widget_Base
             <?php endif; ?>
 
             <div class="mphbac-grid-wrap">
-                <div class="mphbac-loading"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></div>
+                <div class="mphbac-skeleton" aria-hidden="true">
+                    <?php foreach ($rooms as $i => $r) : ?>
+                        <div class="mphbac-skeleton-row<?php echo ($i % 2 === 1) ? ' mphbac-skeleton-row-alt' : ''; ?>">
+                            <span class="mphbac-skeleton-name"></span>
+                            <span class="mphbac-skeleton-cells"></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <span class="mphbac-sr-only" role="status"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></span>
             </div>
 
             <?php foreach ($info_html as $cid => $html) : ?>
