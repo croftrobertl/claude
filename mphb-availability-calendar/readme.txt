@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.4
+Stable tag: 0.6.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.6.5 =
+* Full-viewport cottage-info popup now anchors its top edge to the top of the calendar widget instead of the top of the screen. When you open a cottage popup, the popup appears to grow out of the calendar — the area above the calendar (page header, hero, breadcrumbs, etc.) stays visible. JS reads the widget's getBoundingClientRect().top at open time, so the popup always lines up wherever the calendar happens to be on screen.
 
 = 0.6.4 =
 * Fixed: in the full-viewport popup mode introduced in 0.6.3, the popup's own padding extended its visible width past the viewport so the right side of the content was clipped off-screen. The popup now uses border-box sizing so width:100vw includes the padding.

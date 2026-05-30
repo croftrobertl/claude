@@ -202,6 +202,16 @@
             lastTrigger = trigger || null;
             titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
             bodyEl.innerHTML = content.innerHTML;
+            // In full-viewport mode, anchor the popup's top to the widget's
+            // current top position so it grows out of the calendar rather
+            // than covering the page above. Clamp to >= 0 in case the user
+            // has scrolled past the widget — then the popup just covers the
+            // visible viewport, which is the sensible fallback.
+            if (sheet.classList.contains('mphbac-info-sheet--full')) {
+                var rect = root.getBoundingClientRect();
+                var topPx = Math.max(0, Math.round(rect.top));
+                sheet.style.setProperty('--mphbac-info-sheet-top', topPx + 'px');
+            }
             sheet.hidden = false;
             overlay.hidden = false;
             requestAnimationFrame(function () {
