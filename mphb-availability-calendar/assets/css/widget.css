@@ -511,6 +511,28 @@
     }
 }
 
+/* Booking popup is anchored to the top of the widget on every viewport
+   (the --mphbac-sheet-top variable is set by openSheet() to
+   root.getBoundingClientRect().top). Overrides the earlier combined
+   .mphbac-sheet / .mphbac-info-sheet rules that anchored the popup to
+   the viewport bottom on mobile and centered it on desktop — both put the
+   popup nowhere near the widget when the page is taller than one
+   viewport. Slides up from below to land flush with the widget top. */
+.mphbac-root .mphbac-sheet {
+    top: var(--mphbac-sheet-top, 0);
+    bottom: auto;
+    border-radius: 12px;
+}
+@media (min-width: 601px) {
+    .mphbac-root .mphbac-sheet {
+        top: var(--mphbac-sheet-top, 0);
+        transform: translateX(-50%) translateY(20px);
+    }
+    .mphbac-root .mphbac-sheet.is-open {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 /* Defensive rules for arbitrary Elementor / Angie-snippet content cloned
    into the popup. Without these, an image set to width:1200px in a
    template would force the popup to scroll horizontally. */

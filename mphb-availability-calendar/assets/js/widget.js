@@ -581,6 +581,12 @@
             checkoutEl.value = checkout || '';
             errorEl.hidden = true;
             errorEl.textContent = '';
+            // Anchor the popup's top edge to the widget's current top — so it
+            // opens out of the calendar rather than floating at viewport
+            // center / sticking to the page bottom. Clamp >= 0 in case the
+            // user has scrolled past the widget.
+            var rect = root.getBoundingClientRect();
+            sheet.style.setProperty('--mphbac-sheet-top', Math.max(0, Math.round(rect.top)) + 'px');
             withViewTransition(function () {
                 sheet.hidden = false;
                 overlay.hidden = false;

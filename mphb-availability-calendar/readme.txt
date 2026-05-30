@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.7.1 =
+* Booking popup (the one that opens when you tap an available calendar cell) now anchors its top edge to the top of the calendar widget on every viewport, matching the cottage-info popup behavior. Previously the popup stuck to the bottom of the viewport on mobile and floated centered on desktop, which on a page where the calendar wasn't fully in view meant the popup appeared nowhere near the calendar you'd just tapped. JS reads the widget's getBoundingClientRect().top at open time and sets it as --mphbac-sheet-top; CSS uses that variable instead of bottom: 0 / top: 50%.
 
 = 0.7.0 =
 * Perceived-speed bundle. Three changes that together make the calendar feel instant on every device: (1) The "Loading availability…" text on first paint is replaced with a pulsing skeleton grid that mirrors the cottage rows, so visitors see structure immediately instead of a blank box. (2) The cottage info popup pre-fetches its images on hover (desktop) or touchstart (mobile) — by the time the visitor taps to open the popup, the cottage's photos are already in the browser cache. A 60ms hover debounce keeps mouse sweeps from triggering needless fetches. (3) Both popup-open animations and the form-POST to MotoPress checkout are wrapped in the View Transitions API on supported browsers (Chrome 111+, Safari 18+), producing smooth fade-morph transitions; older browsers see today's CSS transitions unchanged. All three pieces honor `prefers-reduced-motion: reduce`.
