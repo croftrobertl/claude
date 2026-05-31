@@ -183,10 +183,6 @@
 }
 
 /* ---------- Detail panel ---------- */
-.gguide-stage {
-    /* By default the stage holds no visible panel; layering is transition-specific. */
-}
-
 .gguide-detail {
     background: var(--gguide-detail-bg);
     border: 1px solid var(--gguide-color-frame);
@@ -331,8 +327,29 @@
     line-height: 1;
 }
 
-.gguide-copy {
+.gguide-copy-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
     margin-top: 0.6em;
+}
+
+.gguide-copy-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.4em 0.7em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95em;
+    color: var(--gguide-item-title);
+    background: rgba(15, 109, 191, .08);
+    border: 1px solid var(--gguide-detail-divider);
+    border-radius: var(--gguide-btn-radius);
+    word-break: break-word;
+}
+
+.gguide-copy {
+    flex: 0 0 auto;
     font-size: 0.9em;
 }
 

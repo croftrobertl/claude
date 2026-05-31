@@ -64,6 +64,8 @@
             root.classList.add('is-detail');
             var back = target.querySelector('.gguide-back');
             if (back) { back.focus(); }
+            var heading = target.querySelector('.gguide-detail-title');
+            if (heading) { announce(root, (heading.textContent || '').trim()); }
         }
 
         function closeSection() {

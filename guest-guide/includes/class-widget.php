@@ -621,6 +621,10 @@ final class Widget extends Widget_Base
             return;
         }
 
+        // Make sure Elementor's icon fonts are present on the page — rendering
+        // an icon via Icons_Manager doesn't always trigger their enqueue.
+        self::enqueue_icon_assets();
+
         $enable_search = ($settings['enable_search'] ?? 'yes') === 'yes';
         $transition    = (string) ($settings['transition'] ?? 'slide');
         if (!in_array($transition, ['slide', 'flip', 'fade'], true)) {
@@ -644,6 +648,10 @@ final class Widget extends Widget_Base
         ?>
         <div class="<?php echo esc_attr(implode(' ', $root_classes)); ?>"
              data-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
+
+            <?php // Graceful fallback when JavaScript is unavailable: reveal every
+                  // section's content stacked, and hide the JS-only chrome. ?>
+            <noscript><style>.gguide-stage{position:static!important;opacity:1!important;transform:none!important;pointer-events:auto!important}.gguide-detail{display:block!important}.gguide-menu,.gguide-search,.gguide-empty,.gguide-back,.gguide-copy{display:none!important}</style></noscript>
 
             <?php if (($settings['heading_show'] ?? 'yes') === 'yes' && ($settings['heading_text'] ?? '') !== '') : ?>
                 <h2 class="gguide-heading"><?php echo esc_html((string) $settings['heading_text']); ?></h2>
@@ -719,10 +727,14 @@ final class Widget extends Widget_Base
                                             ?></div>
                                         <?php endif; ?>
                                         <?php if ($do_copy && $copy_v !== '') : ?>
-                                            <button type="button" class="gguide-btn gguide-copy"
-                                                    data-copy="<?php echo esc_attr($copy_v); ?>">
-                                                <?php echo esc_html((string) ($settings['str_copy'] ?? '')); ?>
-                                            </button>
+                                            <div class="gguide-copy-row">
+                                                <code class="gguide-copy-value"><?php echo esc_html($copy_v); ?></code>
+                                                <button type="button" class="gguide-btn gguide-copy"
+                                                        data-copy="<?php echo esc_attr($copy_v); ?>"
+                                                        aria-label="<?php echo esc_attr(sprintf(/* translators: %s: the value that will be copied */ __('Copy %s', 'guest-guide'), $copy_v)); ?>">
+                                                    <?php echo esc_html((string) ($settings['str_copy'] ?? '')); ?>
+                                                </button>
+                                            </div>
                                         <?php endif; ?>
                                     </article>
                                 <?php endforeach; ?>
@@ -746,5 +758,25 @@ final class Widget extends Widget_Base
             return;
         }
         Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+    }
+
+    /**
+     * Enqueue Elementor's registered icon-font stylesheets so Font Awesome /
+     * eicons glyphs render on the front end. Guarded by wp_style_is() so an
+     * unknown handle (e.g. a future Elementor rename) is simply skipped.
+     */
+    private static function enqueue_icon_assets(): void
+    {
+        $handles = [
+            'elementor-icons',
+            'elementor-icons-fa-solid',
+            'elementor-icons-fa-regular',
+            'elementor-icons-fa-brands',
+        ];
+        foreach ($handles as $handle) {
+            if (wp_style_is($handle, 'registered')) {
+                wp_enqueue_style($handle);
+            }
+        }
     }
 }
