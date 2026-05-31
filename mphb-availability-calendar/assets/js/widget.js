@@ -225,6 +225,19 @@
             sheet.style.setProperty('--mphbac-info-max-width', config.infoPopupMaxWidth + 'px');
         }
 
+        // Portal anchors. The popup is rendered inside .mphbac-root by PHP
+        // (so its hidden content and Elementor template CSS enqueue
+        // correctly), but Elementor / Bravada ancestors often have
+        // transform or overflow:hidden set, which would constrain a
+        // position:fixed popup to the widget container width and clip the
+        // close button off-screen. On open we move the sheet + overlay to
+        // document.body and remember the original slots; on close we
+        // restore. Markers preserve insertion order across multiple opens.
+        var sheetOrigParent = sheet.parentNode;
+        var sheetMarker = document.createComment('mphbac-info-sheet');
+        var overlayOrigParent = overlay.parentNode;
+        var overlayMarker = document.createComment('mphbac-info-overlay');
+
         root.addEventListener('click', function (e) {
             var btn = e.target.closest && e.target.closest('.mphbac-row-toggle');
             if (!btn) return;
@@ -275,6 +288,18 @@
                 var topPx = Math.max(0, Math.round(rect.top));
                 sheet.style.setProperty('--mphbac-info-sheet-top', topPx + 'px');
             }
+            // Portal out of the widget so transformed / overflow-hidden
+            // Elementor ancestors can't constrain the popup.
+            if (sheet.parentNode !== document.body) {
+                sheetOrigParent.insertBefore(sheetMarker, sheet);
+                document.body.appendChild(sheet);
+            }
+            if (overlay.parentNode !== document.body) {
+                overlayOrigParent.insertBefore(overlayMarker, overlay);
+                document.body.appendChild(overlay);
+            }
+            document.documentElement.classList.add('mphbac-info-open');
+            document.body.classList.add('mphbac-info-open');
             withViewTransition(function () {
                 sheet.hidden = false;
                 overlay.hidden = false;
@@ -295,6 +320,8 @@
         function closeInfo() {
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
+            document.documentElement.classList.remove('mphbac-info-open');
+            document.body.classList.remove('mphbac-info-open');
             setTimeout(function () {
                 sheet.hidden = true;
                 overlay.hidden = true;
@@ -303,6 +330,17 @@
                 // controls, etc.) get torn down with their DOM owner. On
                 // next open we re-clone the cottage's pristine source.
                 bodyEl.innerHTML = '';
+                // Restore the portaled elements to their original DOM slots
+                // so subsequent re-renders / re-inits work against the
+                // original tree.
+                if (sheetMarker.parentNode) {
+                    sheetMarker.parentNode.insertBefore(sheet, sheetMarker);
+                    sheetMarker.parentNode.removeChild(sheetMarker);
+                }
+                if (overlayMarker.parentNode) {
+                    overlayMarker.parentNode.insertBefore(overlay, overlayMarker);
+                    overlayMarker.parentNode.removeChild(overlayMarker);
+                }
             }, 200);
             document.removeEventListener('keydown', onKeydown);
             if (lastTrigger && lastTrigger.focus) {
