@@ -1,0 +1,452 @@
+/* Guest Guide — frontend styles */
+
+.gguide-root {
+    /* Layout */
+    --gguide-cols: 3;
+    --gguide-gap: 16px;
+    --gguide-radius: 12px;
+
+    /* Brand palette (matches the availability calendar for site cohesion) */
+    --gguide-color-primary: #0f6dbf;
+    --gguide-color-secondary: #f08080;
+    --gguide-color-text: #1a1a1a;
+    --gguide-color-bg: transparent;
+    --gguide-color-frame: #e3e6ea;
+
+    /* Tiles */
+    --gguide-tile-bg: #ffffff;
+    --gguide-tile-bg-hover: #0f6dbf;
+    --gguide-tile-text: #14233a;
+    --gguide-tile-text-hover: #ffffff;
+    --gguide-tile-icon: #0f6dbf;
+    --gguide-tile-icon-size: 34px;
+
+    /* Detail panel */
+    --gguide-detail-bg: #ffffff;
+    --gguide-detail-header: #0f6dbf;
+    --gguide-detail-divider: #eceff3;
+    --gguide-item-title: #14233a;
+    --gguide-item-body: #3a4452;
+
+    /* Search */
+    --gguide-search-bg: #ffffff;
+    --gguide-search-text: #1a1a1a;
+    --gguide-search-border: #cfd6df;
+
+    /* Buttons */
+    --gguide-btn-bg: #0f6dbf;
+    --gguide-btn-text: #ffffff;
+    --gguide-btn-radius: 8px;
+
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    color: var(--gguide-color-text);
+    background: var(--gguide-color-bg);
+    line-height: 1.45;
+}
+
+.gguide-root *,
+.gguide-root *::before,
+.gguide-root *::after {
+    box-sizing: inherit;
+}
+
+.gguide-inherit-theme {
+    --gguide-color-text: var(--e-global-color-text, currentColor);
+    --gguide-color-primary: var(--e-global-color-primary, #0f6dbf);
+    --gguide-color-secondary: var(--e-global-color-secondary, #f08080);
+    font-family: var(--e-global-typography-text-font-family, inherit);
+}
+
+.gguide-heading {
+    margin: 0 0 0.75em;
+    font-size: 1.5em;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* ---------- Search ---------- */
+.gguide-search {
+    margin: 0 auto 1em;
+    max-width: 520px;
+}
+
+.gguide-search-input {
+    width: 100%;
+    padding: 0.7em 1em;
+    color: var(--gguide-search-text);
+    background: var(--gguide-search-bg);
+    border: 1px solid var(--gguide-search-border);
+    border-radius: var(--gguide-btn-radius);
+    font: inherit;
+    line-height: 1.3;
+}
+
+.gguide-search-input:focus {
+    outline: 2px solid var(--gguide-color-primary);
+    outline-offset: 1px;
+}
+
+/* ---------- Stage (menu + detail share a flip context) ---------- */
+.gguide-stagewrap {
+    position: relative;
+}
+
+/* ---------- Menu (tile grid) ---------- */
+.gguide-menu {
+    display: grid;
+    grid-template-columns: repeat(var(--gguide-cols), minmax(0, 1fr));
+    gap: var(--gguide-gap);
+}
+
+.gguide-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5em;
+    min-height: 120px;
+    padding: 1.25em 1em;
+    text-align: center;
+    color: var(--gguide-tile-text);
+    background: var(--gguide-tile-bg);
+    border: 1px solid var(--gguide-color-frame);
+    border-radius: var(--gguide-radius);
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+    box-shadow: 0 1px 2px rgba(20, 35, 58, .06);
+}
+
+.gguide-tile:hover,
+.gguide-tile:focus-visible {
+    background: var(--gguide-tile-bg-hover);
+    color: var(--gguide-tile-text-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 109, 191, .22);
+    outline: none;
+}
+
+.gguide-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--gguide-tile-icon-size);
+    line-height: 1;
+    color: var(--gguide-tile-icon);
+}
+
+.gguide-tile:hover .gguide-tile-icon,
+.gguide-tile:focus-visible .gguide-tile-icon {
+    color: inherit;
+}
+
+.gguide-tile-icon svg,
+.gguide-tile-icon i {
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+}
+
+.gguide-tile-icon i {
+    color: currentColor;
+}
+
+.gguide-tile-icon:empty {
+    display: none;
+}
+
+.gguide-tile-title {
+    font-size: 1.05em;
+    font-weight: 600;
+}
+
+.gguide-tile-desc {
+    font-size: 0.85em;
+    opacity: .8;
+}
+
+.gguide-tile[hidden] {
+    display: none;
+}
+
+/* ---------- No-results ---------- */
+.gguide-empty {
+    padding: 1.5em;
+    text-align: center;
+    opacity: .8;
+}
+
+/* ---------- Detail panel ---------- */
+.gguide-stage {
+    /* By default the stage holds no visible panel; layering is transition-specific. */
+}
+
+.gguide-detail {
+    background: var(--gguide-detail-bg);
+    border: 1px solid var(--gguide-color-frame);
+    border-radius: var(--gguide-radius);
+    padding: 1.25em;
+}
+
+.gguide-detail[hidden] {
+    display: none;
+}
+
+.gguide-detail-head {
+    margin-bottom: 1em;
+    padding-bottom: 0.75em;
+    border-bottom: 1px solid var(--gguide-detail-divider);
+}
+
+.gguide-detail-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0.5em 0 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    color: var(--gguide-detail-header);
+}
+
+.gguide-detail-icon {
+    display: inline-flex;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.gguide-detail-icon:empty {
+    display: none;
+}
+
+.gguide-detail-icon svg,
+.gguide-detail-icon i {
+    width: 1em;
+    height: 1em;
+}
+
+/* ---------- Items ---------- */
+.gguide-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+}
+
+.gguide-item {
+    padding: 0.9em 0;
+    border-bottom: 1px solid var(--gguide-detail-divider);
+}
+
+.gguide-item:last-child {
+    border-bottom: 0;
+}
+
+.gguide-item[hidden] {
+    display: none;
+}
+
+.gguide-item-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.gguide-item-icon {
+    display: inline-flex;
+    font-size: 1.1em;
+    line-height: 1;
+    color: var(--gguide-color-primary);
+}
+
+.gguide-item-icon:empty {
+    display: none;
+}
+
+.gguide-item-icon svg,
+.gguide-item-icon i {
+    width: 1em;
+    height: 1em;
+}
+
+.gguide-item-title {
+    margin: 0;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: var(--gguide-item-title);
+}
+
+.gguide-item-body {
+    margin: 0.35em 0 0;
+    color: var(--gguide-item-body);
+}
+
+.gguide-item-body > :first-child { margin-top: 0; }
+.gguide-item-body > :last-child { margin-bottom: 0; }
+
+.gguide-item-body a {
+    color: var(--gguide-color-primary);
+}
+
+/* ---------- Buttons ---------- */
+.gguide-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.55em 1em;
+    color: var(--gguide-btn-text);
+    background: var(--gguide-btn-bg);
+    border: none;
+    border-radius: var(--gguide-btn-radius);
+    font: inherit;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: filter .15s ease;
+}
+
+.gguide-btn:hover,
+.gguide-btn:focus-visible {
+    filter: brightness(1.08);
+    outline: none;
+}
+
+.gguide-back {
+    background: transparent;
+    color: var(--gguide-color-primary);
+    padding-left: 0;
+}
+
+.gguide-back-arrow {
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+.gguide-copy {
+    margin-top: 0.6em;
+    font-size: 0.9em;
+}
+
+.gguide-copy.is-copied {
+    background: var(--gguide-color-secondary);
+}
+
+.gguide-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* =====================================================================
+ * TRANSITIONS — the menu and the active detail panel swap in-place.
+ * State is driven by JS toggling `.is-detail` on .gguide-root and
+ * `.is-active` on the open .gguide-detail. Each transition flavor
+ * positions/animates the two layers differently.
+ * ===================================================================== */
+
+/* Active detail is the one shown; others stay hidden. */
+.gguide-detail.is-active {
+    display: block;
+}
+
+/* ---- SLIDE ---- */
+.gguide-transition-slide .gguide-stage {
+    position: absolute;
+    inset: 0;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .28s ease, opacity .28s ease;
+}
+.gguide-transition-slide.is-detail .gguide-stage {
+    position: static;
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.gguide-transition-slide.is-detail .gguide-menu,
+.gguide-transition-slide.is-detail .gguide-empty {
+    display: none;
+}
+
+/* ---- FADE ---- */
+.gguide-transition-fade .gguide-stage {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+}
+.gguide-transition-fade.is-detail .gguide-stage {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+}
+.gguide-transition-fade.is-detail .gguide-menu,
+.gguide-transition-fade.is-detail .gguide-empty {
+    display: none;
+}
+
+/* ---- FLIP ----
+ * Exactly one layer stays in document flow (driving the wrap's height); the
+ * other is absolutely positioned and rotated 180deg behind it. Toggling
+ * `.is-detail` swaps which layer is in flow and rotates the pair 180deg. */
+.gguide-transition-flip .gguide-stagewrap {
+    perspective: 1600px;
+}
+.gguide-transition-flip .gguide-menu,
+.gguide-transition-flip .gguide-stage {
+    backface-visibility: hidden;
+    transition: transform .45s ease;
+    transform-style: preserve-3d;
+}
+.gguide-transition-flip .gguide-menu {
+    position: relative;
+}
+.gguide-transition-flip .gguide-stage {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    pointer-events: none;
+}
+.gguide-transition-flip.is-detail .gguide-menu {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    pointer-events: none;
+}
+.gguide-transition-flip.is-detail .gguide-stage {
+    position: relative;
+    transform: rotateY(360deg);
+    pointer-events: auto;
+}
+.gguide-transition-flip.is-detail .gguide-empty {
+    display: none;
+}
+
+/* Reduced motion — kill animations, keep instant swaps */
+@media (prefers-reduced-motion: reduce) {
+    .gguide-tile,
+    .gguide-stage,
+    .gguide-menu,
+    .gguide-btn {
+        transition: none !important;
+    }
+    .gguide-transition-flip .gguide-stage,
+    .gguide-transition-flip.is-detail .gguide-menu,
+    .gguide-transition-flip.is-detail .gguide-stage {
+        transform: none;
+    }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 600px) {
+    .gguide-tile {
+        min-height: 96px;
+        padding: 1em 0.75em;
+    }
+}
