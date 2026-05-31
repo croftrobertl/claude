@@ -124,7 +124,11 @@
     color: var(--gguide-tile-text-hover);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(15, 109, 191, .22);
-    outline: none;
+}
+
+.gguide-tile:focus-visible {
+    outline: 2px solid var(--gguide-color-primary);
+    outline-offset: 2px;
 }
 
 .gguide-tile-icon {
@@ -146,6 +150,7 @@
     width: 1em;
     height: 1em;
     font-size: inherit;
+    fill: currentColor;
 }
 
 .gguide-tile-icon i {
@@ -223,6 +228,7 @@
 .gguide-detail-icon i {
     width: 1em;
     height: 1em;
+    fill: currentColor;
 }
 
 /* ---------- Items ---------- */
@@ -266,6 +272,7 @@
 .gguide-item-icon i {
     width: 1em;
     height: 1em;
+    fill: currentColor;
 }
 
 .gguide-item-title {
@@ -306,7 +313,11 @@
 .gguide-btn:hover,
 .gguide-btn:focus-visible {
     filter: brightness(1.08);
-    outline: none;
+}
+
+.gguide-btn:focus-visible {
+    outline: 2px solid var(--gguide-color-primary);
+    outline-offset: 2px;
 }
 
 .gguide-back {
@@ -400,9 +411,11 @@
 }
 .gguide-transition-flip .gguide-menu,
 .gguide-transition-flip .gguide-stage {
+    /* Each layer is a flat plane whose backface hides when rotated past 90deg.
+       NOT preserve-3d — that would keep the menu's child tiles in 3-D space and
+       let them bleed through mirrored during the flip. */
     backface-visibility: hidden;
     transition: transform .45s ease;
-    transform-style: preserve-3d;
 }
 .gguide-transition-flip .gguide-menu {
     position: relative;

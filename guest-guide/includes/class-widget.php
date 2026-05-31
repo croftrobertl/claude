@@ -583,12 +583,19 @@ final class Widget extends Widget_Base
             if ($key === '') {
                 $key = sanitize_title($title);
             }
+            // Keep the first section for a given key; skip duplicates so one
+            // mistyped key can't silently erase another section.
+            if (isset($sections[$key])) {
+                continue;
+            }
+            $desc = trim((string) ($row['section_desc'] ?? ''));
             $sections[$key] = [
-                'key'   => $key,
-                'title' => $title !== '' ? $title : $key,
-                'icon'  => $row['section_icon'] ?? [],
-                'desc'  => trim((string) ($row['section_desc'] ?? '')),
-                'items' => [],
+                'key'    => $key,
+                'title'  => $title !== '' ? $title : $key,
+                'icon'   => $row['section_icon'] ?? [],
+                'desc'   => $desc,
+                'items'  => [],
+                'search' => trim($title . ' ' . $desc),
             ];
         }
 
@@ -597,7 +604,17 @@ final class Widget extends Widget_Base
             if ($skey === '' || !isset($sections[$skey])) {
                 continue; // orphan item — no matching section
             }
+            // Precompute the item's searchable plain text (title + body text +
+            // copy value) and attach it so both the item and its parent tile
+            // can carry a data-search attribute the JS filters on.
+            $item_search = trim(
+                (string) ($row['item_title'] ?? '') . ' ' .
+                wp_strip_all_tags((string) ($row['item_content'] ?? '')) . ' ' .
+                (string) ($row['item_copy_value'] ?? '')
+            );
+            $row['_search'] = $item_search;
             $sections[$skey]['items'][] = $row;
+            $sections[$skey]['search']  = trim($sections[$skey]['search'] . ' ' . $item_search);
         }
 
         if (empty($sections)) {
@@ -642,10 +659,11 @@ final class Widget extends Widget_Base
             <?php endif; ?>
 
             <div class="gguide-stagewrap">
-                <div class="gguide-menu" role="list">
+                <div class="gguide-menu" aria-label="<?php echo esc_attr(($settings['heading_text'] ?? '') !== '' ? (string) $settings['heading_text'] : __('Guest guide sections', 'guest-guide')); ?>">
                     <?php foreach ($sections as $section) : ?>
-                        <button type="button" class="gguide-tile" role="listitem"
-                                data-key="<?php echo esc_attr($section['key']); ?>">
+                        <button type="button" class="gguide-tile"
+                                data-key="<?php echo esc_attr($section['key']); ?>"
+                                data-search="<?php echo esc_attr($section['search']); ?>">
                             <span class="gguide-tile-icon" aria-hidden="true"><?php
                                 self::render_icon_safe($section['icon']);
                             ?></span>
@@ -686,7 +704,7 @@ final class Widget extends Widget_Base
                                     $do_copy = ($item['item_copy'] ?? '') === 'yes';
                                     $copy_v  = trim((string) ($item['item_copy_value'] ?? ''));
                                     ?>
-                                    <article class="gguide-item">
+                                    <article class="gguide-item" data-search="<?php echo esc_attr((string) ($item['_search'] ?? '')); ?>">
                                         <div class="gguide-item-head">
                                             <span class="gguide-item-icon" aria-hidden="true"><?php
                                                 self::render_icon_safe($item['item_icon'] ?? []);

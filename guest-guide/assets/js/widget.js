@@ -33,12 +33,16 @@
         var details  = Array.prototype.slice.call(root.querySelectorAll('.gguide-detail'));
         var emptyEl  = root.querySelector('.gguide-empty');
         var searchEl = root.querySelector('.gguide-search-input');
+        var items    = Array.prototype.slice.call(root.querySelectorAll('.gguide-item'));
         var lastTile = null;
 
-        // Build a per-key searchable text index (section title/desc + items).
-        var textByKey = {};
-        details.forEach(function (d) {
-            textByKey[d.getAttribute('data-key')] = (d.textContent || '').toLowerCase();
+        // Cache lowercased searchable text from server-rendered data-search
+        // attributes (section/item content only — never button chrome).
+        tiles.forEach(function (el) {
+            el.gguideSearch = (el.getAttribute('data-search') || el.textContent || '').toLowerCase();
+        });
+        items.forEach(function (el) {
+            el.gguideSearch = (el.getAttribute('data-search') || el.textContent || '').toLowerCase();
         });
 
         function detailFor(key) {
@@ -97,23 +101,16 @@
             var anyVisible = false;
 
             tiles.forEach(function (tile) {
-                var key = tile.getAttribute('data-key');
-                var hay = textByKey[key] || (tile.textContent || '').toLowerCase();
-                var match = q === '' || hay.indexOf(q) !== -1;
+                var match = q === '' || tile.gguideSearch.indexOf(q) !== -1;
                 tile.hidden = !match;
                 if (match) { anyVisible = true; }
             });
 
-            // Filter items inside the currently open detail too.
-            if (root.classList.contains('is-detail')) {
-                details.forEach(function (d) {
-                    if (d.hidden) { return; }
-                    d.querySelectorAll('.gguide-item').forEach(function (item) {
-                        var hay = (item.textContent || '').toLowerCase();
-                        item.hidden = !(q === '' || hay.indexOf(q) !== -1);
-                    });
-                });
-            }
+            // Filter items in every section up front, so opening a matched tile
+            // already shows just the matching items. Empty query restores all.
+            items.forEach(function (item) {
+                item.hidden = !(q === '' || item.gguideSearch.indexOf(q) !== -1);
+            });
 
             if (emptyEl) {
                 emptyEl.hidden = !(q !== '' && !anyVisible && !root.classList.contains('is-detail'));
