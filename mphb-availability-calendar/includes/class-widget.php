@@ -556,6 +556,20 @@ final class Widget extends Widget_Base
             'condition'   => ['info_popup_full_width!' => 'yes'],
         ]);
 
+        $this->add_responsive_control('info_popup_side_margin', [
+            'label'          => __('Info popup side margin', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::SLIDER,
+            'size_units'     => ['px'],
+            'default'        => ['size' => 32, 'unit' => 'px'],
+            'tablet_default' => ['size' => 20, 'unit' => 'px'],
+            'mobile_default' => ['size' => 12, 'unit' => 'px'],
+            'range'          => [
+                'px' => ['min' => 0, 'max' => 200, 'step' => 1],
+            ],
+            'description'    => __('Horizontal gutter between the cottage info popup and the viewport edges. Applies when "Full viewport width" is on. Set independent values per device using the icons next to the label.', 'mphb-availability-calendar'),
+            'condition'      => ['info_popup_full_width' => 'yes'],
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -988,6 +1002,11 @@ final class Widget extends Widget_Base
             'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => max(320, min(1400, (int) ($settings['info_popup_max_width'] ?? 800))),
+            'infoPopupSideMargin' => [
+                'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
+                'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),
+                'mobile'  => max(0, min(200, (int) ($settings['info_popup_side_margin_mobile']['size'] ?? 12))),
+            ],
             'strings'        => [
                 'empty'         => (string) ($settings['str_empty'] ?? ''),
                 'reset'         => (string) ($settings['str_reset'] ?? ''),

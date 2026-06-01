@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.2
+Stable tag: 0.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.7.3 =
+* New Elementor control: "Info popup side margin" under the Info section, a responsive slider with separate values for Desktop, Tablet, and Mobile (using the device-icon buttons next to the label). Defaults match the v0.7.2 hard-coded values exactly — 32px desktop / 20px tablet / 12px mobile — so installs that don't touch the new control look identical to today. The control only applies when "Full viewport width" is on. JS sets the resulting value as --mphbac-info-side on the sheet at popup-open time (since v0.7.2 portals the popup to document.body, the standard Elementor selector mechanism can't reach it).
 
 = 0.7.2 =
 * Cottage info popup fixes for both desktop and mobile. The popup is now portaled to document.body on open so it escapes Elementor and Bravada ancestor containers that were either clipping the right edge (hiding the close button on desktop) or making the right margin appear missing on mobile. Added symmetric horizontal gutters — 12px on mobile, 32px on desktop — so the popup is a proper panel with equal margins on both sides. Body scroll is locked while the popup is open and the popup has overscroll-behavior: contain, so touch-scroll on mobile reaches the bottom of the popup content instead of chaining into the page underneath.

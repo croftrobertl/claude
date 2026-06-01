@@ -287,6 +287,15 @@
                 var rect = root.getBoundingClientRect();
                 var topPx = Math.max(0, Math.round(rect.top));
                 sheet.style.setProperty('--mphbac-info-sheet-top', topPx + 'px');
+                // Per-device gutter from the Elementor responsive control.
+                // Falls back to the CSS media-query default if no value is
+                // configured (e.g. installs upgraded from < 0.7.3).
+                if (config.infoPopupSideMargin) {
+                    var side = config.infoPopupSideMargin[deviceBucket()];
+                    if (typeof side === 'number') {
+                        sheet.style.setProperty('--mphbac-info-side', side + 'px');
+                    }
+                }
             }
             // Portal out of the widget so transformed / overflow-hidden
             // Elementor ancestors can't constrain the popup.
