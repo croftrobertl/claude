@@ -4,14 +4,15 @@
     /* Layout */
     --gguide-cols: 3;
     --gguide-gap: 16px;
-    --gguide-radius: 12px;
+    --gguide-radius: 8px;
+    --gguide-font-size: 15px;
 
     /* Brand palette (matches the availability calendar for site cohesion) */
     --gguide-color-primary: #0f6dbf;
     --gguide-color-secondary: #f08080;
     --gguide-color-text: #1a1a1a;
     --gguide-color-bg: transparent;
-    --gguide-color-frame: #e3e6ea;
+    --gguide-color-frame: #e0e0e0;
 
     /* Tiles */
     --gguide-tile-bg: #ffffff;
@@ -35,14 +36,17 @@
 
     /* Buttons */
     --gguide-btn-bg: #0f6dbf;
+    --gguide-btn-bg-hover: #0c5aa0;
     --gguide-btn-text: #ffffff;
-    --gguide-btn-radius: 8px;
+    --gguide-btn-text-hover: #ffffff;
+    --gguide-btn-radius: 6px;
 
     position: relative;
     box-sizing: border-box;
     width: 100%;
     color: var(--gguide-color-text);
     background: var(--gguide-color-bg);
+    font-size: var(--gguide-font-size);
     line-height: 1.45;
 }
 
@@ -308,7 +312,8 @@
 
 .gguide-btn:hover,
 .gguide-btn:focus-visible {
-    filter: brightness(1.08);
+    background: var(--gguide-btn-bg-hover);
+    color: var(--gguide-btn-text-hover);
 }
 
 .gguide-btn:focus-visible {
@@ -316,10 +321,19 @@
     outline-offset: 2px;
 }
 
+/* The back control reads as a text link, not a filled button — keep it
+   transparent on hover and give it a subtle brightness cue instead. */
 .gguide-back {
     background: transparent;
     color: var(--gguide-color-primary);
     padding-left: 0;
+}
+
+.gguide-back:hover,
+.gguide-back:focus-visible {
+    background: transparent;
+    color: var(--gguide-color-primary);
+    filter: brightness(1.1);
 }
 
 .gguide-back-arrow {

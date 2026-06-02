@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, wifi, checkout
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,11 @@ Requires Elementor to be active.
 * Check mobile (1 column), tablet, and desktop; confirm style controls update the live preview.
 
 == Changelog ==
+
+= 1.1.0 =
+* New style controls, matching the MPHB Availability Calendar's panel vocabulary: Border (width/style/color) and Padding on tiles, the detail panel, the search box, and buttons; per-corner Border radius for the search box and buttons; Normal/Hover color tabs for buttons; and a base font-size slider under Layout that scales the whole widget.
+* Visual finish aligned with the calendar so the two widgets read as a set — shared frame color, tighter corner radii, and a consistent type scale.
+* Added uninstall.php for clean removal.
 
 = 1.0.0 =
 * Initial release.

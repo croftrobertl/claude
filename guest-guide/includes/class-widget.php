@@ -2,6 +2,7 @@
 namespace GuestGuide;
 
 use Elementor\Controls_Manager;
+use Elementor\Group_Control_Border;
 use Elementor\Group_Control_Typography;
 use Elementor\Icons_Manager;
 use Elementor\Repeater;
@@ -150,6 +151,15 @@ final class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'default'      => 'yes',
             'return_value' => 'yes',
+        ]);
+
+        $this->add_responsive_control('font_size', [
+            'label'      => __('Base font size', 'guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 12, 'max' => 22, 'step' => 1]],
+            'selectors'  => [self::SEL => '--gguide-font-size: {{SIZE}}{{UNIT}};'],
+            'description' => __('Overall text size; every element scales from this with em units.', 'guest-guide'),
         ]);
 
         $this->end_controls_section();
@@ -391,6 +401,23 @@ final class Widget extends Widget_Base
             'selectors'  => [self::SEL => '--gguide-tile-icon-size: {{SIZE}}{{UNIT}};'],
         ]);
 
+        $this->add_group_control(
+            Group_Control_Border::get_type(),
+            [
+                'name'     => 'tile_border',
+                'selector' => self::SEL . '.gguide-tile',
+            ]
+        );
+
+        $this->add_responsive_control('tile_padding', [
+            'label'      => __('Padding', 'guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em', 'rem'],
+            'selectors'  => [
+                self::SEL . '.gguide-tile' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
         $this->start_controls_tabs('tile_color_tabs');
 
         $this->start_controls_tab('tile_tab_normal', [
@@ -457,6 +484,23 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_group_control(
+            Group_Control_Border::get_type(),
+            [
+                'name'     => 'detail_border',
+                'selector' => self::SEL . '.gguide-detail',
+            ]
+        );
+
+        $this->add_responsive_control('detail_padding', [
+            'label'      => __('Padding', 'guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em', 'rem'],
+            'selectors'  => [
+                self::SEL . '.gguide-detail' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_group_control(
             Group_Control_Typography::get_type(),
             [
                 'name'     => 'item_title_typography',
@@ -500,6 +544,9 @@ final class Widget extends Widget_Base
             [
                 'name'     => 'search_typography',
                 'selector' => self::SEL . '.gguide-search-input',
+                // line-height is pinned in widget.css to keep the input height
+                // stable against theme resets, so don't expose a losing control.
+                'exclude'  => ['line_height'],
             ]
         );
         $this->add_control('search_text_color', [
@@ -512,10 +559,22 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL => '--gguide-search-bg: {{VALUE}};'],
         ]);
-        $this->add_control('search_border_color', [
-            'label'     => __('Border color', 'guest-guide'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL => '--gguide-search-border: {{VALUE}};'],
+
+        $this->add_group_control(
+            Group_Control_Border::get_type(),
+            [
+                'name'     => 'search_border',
+                'selector' => self::SEL . '.gguide-search-input',
+            ]
+        );
+
+        $this->add_responsive_control('search_radius', [
+            'label'      => __('Border radius', 'guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::SEL . '.gguide-search-input' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
         ]);
 
         $this->end_controls_section();
@@ -536,14 +595,37 @@ final class Widget extends Widget_Base
             ]
         );
 
+        $this->add_group_control(
+            Group_Control_Border::get_type(),
+            [
+                'name'     => 'button_border',
+                'selector' => self::SEL . '.gguide-btn',
+            ]
+        );
+
         $this->add_responsive_control('button_radius', [
-            'label'      => __('Radius', 'guest-guide'),
-            'type'       => Controls_Manager::SLIDER,
-            'size_units' => ['px', 'em', 'rem'],
-            'range'      => ['px' => ['min' => 0, 'max' => 40]],
-            'selectors'  => [self::SEL => '--gguide-btn-radius: {{SIZE}}{{UNIT}};'],
+            'label'      => __('Border radius', 'guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::SEL . '.gguide-btn' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
         ]);
 
+        $this->add_responsive_control('button_padding', [
+            'label'      => __('Padding', 'guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em', 'rem'],
+            'selectors'  => [
+                self::SEL . '.gguide-btn' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->start_controls_tabs('button_color_tabs');
+
+        $this->start_controls_tab('button_tab_normal', [
+            'label' => __('Normal', 'guest-guide'),
+        ]);
         $this->add_control('button_text_color', [
             'label'     => __('Text color', 'guest-guide'),
             'type'      => Controls_Manager::COLOR,
@@ -554,6 +636,24 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL => '--gguide-btn-bg: {{VALUE}};'],
         ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('button_tab_hover', [
+            'label' => __('Hover', 'guest-guide'),
+        ]);
+        $this->add_control('button_text_color_hover', [
+            'label'     => __('Text color', 'guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL => '--gguide-btn-text-hover: {{VALUE}};'],
+        ]);
+        $this->add_control('button_bg_color_hover', [
+            'label'     => __('Background', 'guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL => '--gguide-btn-bg-hover: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
 
         $this->end_controls_section();
     }
