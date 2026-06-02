@@ -49,6 +49,13 @@ final class Plugin
         add_action('mphb_booking_status_changed', ['\\MPHBAC\\Cache', 'flush_all']);
 
         add_action('admin_notices', ['\\MPHBAC\\Cache_Integration', 'admin_notice']);
+
+        // Structured-data (schema) manager.
+        add_action('wp_head', ['\\MPHBAC\\Schema', 'render'], 20);
+        add_action('elementor/documents/register_controls', ['\\MPHBAC\\Schema_Controls', 'register']);
+        add_action('admin_menu', ['\\MPHBAC\\Schema_Settings', 'register_menu']);
+        add_action('admin_menu', ['\\MPHBAC\\Schema_Importer', 'register_menu'], 11);
+        add_action('admin_init', ['\\MPHBAC\\Schema_Settings', 'register_settings']);
     }
 
     public function load_textdomain(): void

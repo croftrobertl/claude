@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+A single WordPress plugin — **MPHB Availability Calendar** — for doracanalcourt.com, with two features: (1) one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations, and (2) a per-page Schema.org JSON-LD manager (the `Schema*` classes). The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
 
 ## Target environment
 
@@ -38,9 +38,25 @@ includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL 
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
 includes/class-ajax.php              # Nonce-protected admin-ajax.php endpoint (action mphbac_query)
+includes/class-schema-types.php      # Schema registry: per-@type fields, validation rules, builder name (single source of truth)
+includes/class-schema.php            # Front-end wp_head JSON-LD emitter: merge layers, resolve tokens, build @graph
+includes/class-schema-controls.php   # Registers per-document schema controls in the Elementor Settings tab
+includes/class-schema-settings.php   # Admin "MPHB Schema" menu: site defaults + cottage-template defaults + Health screen
+includes/class-schema-importer.php   # Imports JSON-LD out of Custom HTML widgets into the structured editor
+includes/class-schema-validator.php  # Required-field linting, page JSON-LD detection, validator/RRT deep links
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
+
+### Schema (structured-data) module
+
+Independent of the calendar widget. `Schema::render()` runs on `wp_head` and emits one connected `@graph`. Three config layers merge with precedence **per-document override → accommodation-type template default → site default**:
+
+- **Site defaults** — WP option `mphbac_schema_defaults` (Organization/LodgingBusiness, WebSite). Edited at WP Admin → MPHB Schema → Defaults → Site-wide.
+- **Accommodation-type template default** — WP option `mphbac_schema_cottage_defaults` (the `VacationRental`+`Offer` shape every cottage inherits, token-driven). Edited under the Cottage-defaults tab.
+- **Per-document override** — Elementor document page-settings (`_elementor_page_settings`), control IDs `mphbac_s_{typeKey}_{field}`. Cottage types use a `mode` select (inherit/override/disable); document types use an `enable` switcher.
+
+`Schema_Types::all()` is the single registry every other Schema class reads (neutral field defs rendered both as Elementor controls and as admin settings fields). Dynamic tokens (`{{cottage_name}}`, `{{mphb_price}}`, `{{mphb_availability}}`, `{{permalink}}`, …) are resolved at render via `Data_Provider` — the same never-stale live price/availability the calendar uses. **No public API exists for Google's Rich Results Test or validator.schema.org**, so the Health screen detects on-page JSON-LD by parsing the rendered HTML and links out for the authoritative check.
 
 Request flow when a visitor loads a page containing the widget:
 
