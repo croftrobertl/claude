@@ -2,14 +2,13 @@
 /**
  * Front-end JSON-LD emitter.
  *
- * On wp_head, decides what structured data the current request should carry,
- * merges the three layers (site default -> accommodation-type template default
- * -> per-document override), resolves dynamic tokens (incl. live MotoPress price
- * / availability), links everything into one @graph, and prints a single
- * <script type="application/ld+json"> block.
+ * On wp_head, merges the three layers (site default -> accommodation-type
+ * template default -> per-document override), resolves dynamic tokens (incl.
+ * live MotoPress price / availability via {@see Data}), links everything into
+ * one @graph, and prints a single <script type="application/ld+json"> block.
  */
 
-namespace MPHBAC;
+namespace MPHBSchema;
 
 use DateTimeImmutable;
 
@@ -19,22 +18,19 @@ if (!defined('ABSPATH')) {
 
 final class Schema
 {
-    public const OPT_SITE    = 'mphbac_schema_defaults';
-    public const OPT_COTTAGE = 'mphbac_schema_cottage_defaults';
+    public const OPT_SITE    = 'mphbsch_schema_defaults';
+    public const OPT_COTTAGE = 'mphbsch_schema_cottage_defaults';
 
-    /** Window used to decide InStock/OutOfStock for a cottage. */
     private const AVAIL_DAYS = 90;
 
     public static function render(): void
     {
-        // Only on singular content and the front page — never in feeds, 404s, etc.
         if (is_feed() || is_404()) {
             return;
         }
-
         try {
-            $ctx    = self::context();
-            $graph  = self::collect_graph($ctx);
+            $ctx   = self::context();
+            $graph = self::collect_graph($ctx);
             if (empty($graph)) {
                 return;
             }
@@ -46,12 +42,10 @@ final class Schema
             if ($json === false) {
                 return;
             }
-            // The JSON is already safe for a <script> context; only guard the
-            // </script> sequence which a stray string value could contain.
             $json = str_replace('</', '<\/', $json);
             echo "\n<script type=\"application/ld+json\">{$json}</script>\n"; // phpcs:ignore WordPress.Security.EscapeOutput
         } catch (\Throwable $e) {
-            error_log('MPHBAC: schema render failed: ' . $e->getMessage());
+            error_log('MPHBSchema: schema render failed: ' . $e->getMessage());
         }
     }
 
@@ -62,7 +56,6 @@ final class Schema
     {
         $blocks = [];
 
-        // --- Site-level types (Organization/Lodging, WebSite) ---
         $site = (array) get_option(self::OPT_SITE, []);
         foreach (Schema_Types::by_scope(Schema_Types::SCOPE_SITE) as $key => $def) {
             $values = (array) ($site[$key] ?? []);
@@ -75,13 +68,12 @@ final class Schema
             }
         }
 
-        // --- Cottage (accommodation-type) types: template default + override ---
         if (!empty($ctx['cottage_id'])) {
             $tpl = (array) get_option(self::OPT_COTTAGE, []);
             foreach (Schema_Types::by_scope(Schema_Types::SCOPE_COTTAGE) as $key => $def) {
                 $merged = self::merge_cottage_values($key, $def, (array) ($tpl[$key] ?? []), $ctx['document']);
                 if ($merged === null) {
-                    continue; // disabled
+                    continue;
                 }
                 $block = self::build($def['builder'], self::resolve($merged, $ctx), $ctx);
                 if ($block !== null) {
@@ -90,7 +82,6 @@ final class Schema
             }
         }
 
-        // --- Document-scope types on the queried page/post ---
         if ($ctx['document'] !== null && !empty($ctx['post_type'])) {
             foreach (Schema_Types::by_scope(Schema_Types::SCOPE_DOCUMENT) as $key => $def) {
                 if (!Schema_Types::applies_to_post_type($def, (string) $ctx['post_type'])) {
@@ -100,8 +91,6 @@ final class Schema
                 if (($values['enable'] ?? '') !== 'yes') {
                     continue;
                 }
-                // Raw JSON-LD may hold several nodes (a @graph or a list) — expand
-                // each into its own graph entry rather than one nested block.
                 if ($key === 'custom_jsonld') {
                     foreach (self::custom_nodes(self::resolve($values, $ctx)) as $i => $node) {
                         $blocks['custom_' . $i] = $node;
@@ -118,18 +107,12 @@ final class Schema
         return self::link_graph($blocks, $ctx);
     }
 
-    /* --------------------------------------------------------------------- */
-    /* Value gathering                                                        */
-    /* --------------------------------------------------------------------- */
-
     /**
-     * Read a document-scope type's values from an Elementor document.
-     *
      * @return array<string,mixed>
      */
     private static function doc_values(string $key, array $def, $document): array
     {
-        $prefix = 'mphbac_s_' . $key . '_';
+        $prefix = 'mphbsch_s_' . $key . '_';
         $out    = ['enable' => self::doc_get($document, $prefix . 'enable')];
         foreach ((array) ($def['fields'] ?? []) as $field) {
             $out[$field['name']] = self::doc_get($document, $prefix . $field['name']);
@@ -138,14 +121,11 @@ final class Schema
     }
 
     /**
-     * Merge a cottage type's template default with the per-cottage override.
-     * Returns null when the cottage disables this type.
-     *
      * @return array<string,mixed>|null
      */
     private static function merge_cottage_values(string $key, array $def, array $template, $document): ?array
     {
-        $prefix = 'mphbac_s_' . $key . '_';
+        $prefix = 'mphbsch_s_' . $key . '_';
         $mode   = $document ? (string) self::doc_get($document, $prefix . 'mode') : '';
         if ($mode === '') {
             $mode = 'inherit';
@@ -181,10 +161,6 @@ final class Schema
             return '';
         }
     }
-
-    /* --------------------------------------------------------------------- */
-    /* Context + tokens                                                       */
-    /* --------------------------------------------------------------------- */
 
     /**
      * @return array<string,mixed>
@@ -222,12 +198,12 @@ final class Schema
 
         if ($post_type === 'mphb_room_type' && $post_id) {
             $ctx['cottage_id'] = $post_id;
-            $price             = self::cottage_price($post_id);
+            $price             = Data::cottage_price($post_id);
             $instock           = self::cottage_instock($post_id);
-            $ctx['tokens']['{{cottage_name}}']    = (string) get_the_title($post_id);
-            $ctx['tokens']['{{cottage_excerpt}}'] = self::plain_excerpt($post_id);
-            $ctx['tokens']['{{cottage_image}}']   = (string) get_the_post_thumbnail_url($post_id, 'large');
-            $ctx['tokens']['{{mphb_price}}']      = $price !== null ? (string) $price : '';
+            $ctx['tokens']['{{cottage_name}}']      = (string) get_the_title($post_id);
+            $ctx['tokens']['{{cottage_excerpt}}']   = self::plain_excerpt($post_id);
+            $ctx['tokens']['{{cottage_image}}']     = (string) get_the_post_thumbnail_url($post_id, 'large');
+            $ctx['tokens']['{{mphb_price}}']        = $price !== null ? (string) $price : '';
             $ctx['tokens']['{{mphb_availability}}'] = $instock ? 'InStock' : 'OutOfStock';
             $ctx['price']   = $price;
             $ctx['instock'] = $instock;
@@ -237,8 +213,6 @@ final class Schema
     }
 
     /**
-     * Replace {{token}} placeholders inside any string value (recursively).
-     *
      * @param mixed $values
      * @return mixed
      */
@@ -269,57 +243,20 @@ final class Schema
         return mb_substr($text, 0, 300);
     }
 
-    /* --------------------------------------------------------------------- */
-    /* MotoPress live data                                                    */
-    /* --------------------------------------------------------------------- */
-
-    private static function cottage_price(int $cottage_id): ?float
-    {
-        try {
-            if (function_exists('MPHB')) {
-                $mphb = \MPHB();
-                if (is_object($mphb) && method_exists($mphb, 'getRoomTypeRepository')) {
-                    $repo = $mphb->getRoomTypeRepository();
-                    if (is_object($repo) && method_exists($repo, 'findById')) {
-                        $rt = $repo->findById($cottage_id);
-                        foreach (['getDynamicPrice', 'getPrice', 'getBasePrice'] as $m) {
-                            if (is_object($rt) && method_exists($rt, $m)) {
-                                $p = $rt->{$m}();
-                                if (is_numeric($p) && (float) $p > 0) {
-                                    return (float) $p;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: cottage_price API failed: ' . $e->getMessage());
-        }
-
-        foreach (['mphb_price', 'mphb_regular_price', 'mphb_base_price'] as $meta_key) {
-            $val = get_post_meta($cottage_id, $meta_key, true);
-            if (is_numeric($val) && (float) $val > 0) {
-                return (float) $val;
-            }
-        }
-        return null;
-    }
-
     private static function cottage_instock(int $cottage_id): bool
     {
         try {
-            $from = Data_Provider::today();
-            $to   = $from->modify('+' . self::AVAIL_DAYS . ' days');
-            $avail = Data_Provider::get_availability([$cottage_id], $from, $to);
+            $from  = Data::today();
+            $to    = $from->modify('+' . self::AVAIL_DAYS . ' days');
+            $avail = Data::get_availability([$cottage_id], $from, $to);
             foreach ((array) ($avail[$cottage_id] ?? []) as $status) {
-                if ($status === Data_Provider::ST_AVAIL) {
+                if ($status === Data::ST_AVAIL) {
                     return true;
                 }
             }
         } catch (\Throwable $e) {
-            error_log('MPHBAC: cottage_instock failed: ' . $e->getMessage());
-            return true; // fail open — don't wrongly advertise OutOfStock
+            error_log('MPHBSchema: cottage_instock failed: ' . $e->getMessage());
+            return true; // fail open
         }
         return false;
     }
@@ -339,7 +276,7 @@ final class Schema
         try {
             return self::{$method}($values, $ctx);
         } catch (\Throwable $e) {
-            error_log("MPHBAC: schema builder {$method} failed: " . $e->getMessage());
+            error_log("MPHBSchema: schema builder {$method} failed: " . $e->getMessage());
             return null;
         }
     }
@@ -349,9 +286,8 @@ final class Schema
         if (($v['name'] ?? '') === '') {
             return null;
         }
-        $type = Schema_Types::get('organization')['type'];
         $node = [
-            '@type' => $type,
+            '@type' => Schema_Types::get('organization')['type'],
             '@id'   => self::id($ctx, 'organization'),
             'name'  => (string) $v['name'],
             'url'   => home_url('/'),
@@ -393,10 +329,7 @@ final class Schema
         if ($search !== '') {
             $node['potentialAction'] = [
                 '@type'       => 'SearchAction',
-                'target'      => [
-                    '@type'       => 'EntryPoint',
-                    'urlTemplate' => $search,
-                ],
+                'target'      => ['@type' => 'EntryPoint', 'urlTemplate' => $search],
                 'query-input' => 'required name=search_term_string',
             ];
         }
@@ -429,7 +362,6 @@ final class Schema
                 $amenities
             );
         }
-        // Address inherited from the business node.
         $site = (array) (get_option(self::OPT_SITE, [])['organization'] ?? []);
         $addr = self::postal_address($site);
         if ($addr !== null) {
@@ -463,16 +395,17 @@ final class Schema
             $availability = $ctx['instock'] ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock';
         }
 
+        $currency = (string) ($v['currency'] ?? 'USD');
         return [
-            '@type'        => 'Offer',
-            'availability' => $availability,
-            'price'        => $price,
-            'priceCurrency'=> (string) ($v['currency'] ?? 'USD'),
-            'url'          => $ctx['permalink'],
+            '@type'              => 'Offer',
+            'availability'       => $availability,
+            'price'              => $price,
+            'priceCurrency'      => $currency,
+            'url'                => $ctx['permalink'],
             'priceSpecification' => [
                 '@type'         => 'UnitPriceSpecification',
                 'price'         => $price,
-                'priceCurrency' => (string) ($v['currency'] ?? 'USD'),
+                'priceCurrency' => $currency,
                 'unitCode'      => 'DAY',
             ],
         ];
@@ -567,7 +500,7 @@ final class Schema
         }
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            return []; // invalid JSON — skip rather than emit broken markup
+            return [];
         }
         if (isset($decoded['@graph']) && is_array($decoded['@graph'])) {
             $decoded = $decoded['@graph'];
@@ -578,7 +511,7 @@ final class Schema
         $out = [];
         foreach ($nodes as $node) {
             if (is_array($node)) {
-                unset($node['@context']); // lives on the outer document
+                unset($node['@context']);
                 $out[] = $node;
             }
         }
@@ -598,16 +531,16 @@ final class Schema
         $org_id = self::id($ctx, 'organization');
         $web_id = self::id($ctx, 'website');
 
-        if (isset($blocks['website']) && isset($blocks['organization'])) {
+        if (isset($blocks['website'], $blocks['organization'])) {
             $blocks['website']['publisher'] = ['@id' => $org_id];
         }
-        if (isset($blocks['vacation_rental']) && isset($blocks['organization'])) {
+        if (isset($blocks['vacation_rental'], $blocks['organization'])) {
             $blocks['vacation_rental']['containedInPlace'] = ['@id' => $org_id];
             if (isset($blocks['vacation_rental']['makesOffer'])) {
                 $blocks['vacation_rental']['makesOffer']['offeredBy'] = ['@id' => $org_id];
             }
         }
-        if (isset($blocks['breadcrumb']) && isset($blocks['website'])) {
+        if (isset($blocks['breadcrumb'], $blocks['website'])) {
             $blocks['breadcrumb']['isPartOf'] = ['@id' => $web_id];
         }
         return array_values($blocks);

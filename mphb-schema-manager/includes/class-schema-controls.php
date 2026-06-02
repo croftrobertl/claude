@@ -1,17 +1,11 @@
 <?php
 /**
  * Registers per-document Schema controls in the Elementor Settings tab.
- *
- * One section per @type, built from the {@see Schema_Types} registry:
- *  - document-scope types get an Enable switcher;
- *  - cottage-scope types (mphb_room_type only) get an inherit/override/disable
- *    selector so the per-cottage layer can override the admin template default.
- *
- * Control IDs follow `mphbac_s_{typeKey}_{field}` so {@see Schema} can read them
- * back at render time.
+ * Control IDs follow `mphbsch_s_{typeKey}_{field}` so {@see Schema} can read
+ * them back at render time.
  */
 
-namespace MPHBAC;
+namespace MPHBSchema;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -35,13 +29,11 @@ final class Schema_Controls
                 self::add_cottage_section($document, $key, $def);
             }
         }
-
         foreach (Schema_Types::by_scope(Schema_Types::SCOPE_DOCUMENT) as $key => $def) {
             if (Schema_Types::applies_to_post_type($def, $post_type)) {
                 self::add_document_section($document, $key, $def);
             }
         }
-
         self::add_tools_section($document, $post_id);
     }
 
@@ -53,50 +45,45 @@ final class Schema_Controls
 
     private static function add_document_section($document, string $key, array $def): void
     {
-        $prefix = 'mphbac_s_' . $key . '_';
+        $prefix = 'mphbsch_s_' . $key . '_';
         $document->start_controls_section($prefix . 'section', [
-            'label' => sprintf(/* translators: %s: schema type label */ __('Schema: %s', 'mphb-availability-calendar'), $def['label']),
+            'label' => sprintf(/* translators: %s: schema type label */ __('Schema: %s', 'mphb-schema-manager'), $def['label']),
             'tab'   => \Elementor\Controls_Manager::TAB_SETTINGS,
         ]);
-
         $document->add_control($prefix . 'enable', [
-            'label'        => __('Enable', 'mphb-availability-calendar'),
+            'label'        => __('Enable', 'mphb-schema-manager'),
             'type'         => \Elementor\Controls_Manager::SWITCHER,
-            'label_on'     => __('On', 'mphb-availability-calendar'),
-            'label_off'    => __('Off', 'mphb-availability-calendar'),
+            'label_on'     => __('On', 'mphb-schema-manager'),
+            'label_off'    => __('Off', 'mphb-schema-manager'),
             'return_value' => 'yes',
             'default'      => '',
         ]);
-
         self::add_fields($document, $prefix, $def['fields'] ?? [], [$prefix . 'enable' => 'yes']);
         $document->end_controls_section();
     }
 
     private static function add_cottage_section($document, string $key, array $def): void
     {
-        $prefix = 'mphbac_s_' . $key . '_';
+        $prefix = 'mphbsch_s_' . $key . '_';
         $document->start_controls_section($prefix . 'section', [
-            'label' => sprintf(/* translators: %s: schema type label */ __('Schema: %s', 'mphb-availability-calendar'), $def['label']),
+            'label' => sprintf(/* translators: %s: schema type label */ __('Schema: %s', 'mphb-schema-manager'), $def['label']),
             'tab'   => \Elementor\Controls_Manager::TAB_SETTINGS,
         ]);
-
         $document->add_control($prefix . 'mode', [
-            'label'   => __('This cottage', 'mphb-availability-calendar'),
+            'label'   => __('This cottage', 'mphb-schema-manager'),
             'type'    => \Elementor\Controls_Manager::SELECT,
             'default' => 'inherit',
             'options' => [
-                'inherit'  => __('Inherit template default', 'mphb-availability-calendar'),
-                'override' => __('Override here', 'mphb-availability-calendar'),
-                'disable'  => __('Disable for this cottage', 'mphb-availability-calendar'),
+                'inherit'  => __('Inherit template default', 'mphb-schema-manager'),
+                'override' => __('Override here', 'mphb-schema-manager'),
+                'disable'  => __('Disable for this cottage', 'mphb-schema-manager'),
             ],
         ]);
-
         $document->add_control($prefix . 'mode_note', [
             'type'            => \Elementor\Controls_Manager::RAW_HTML,
-            'raw'             => esc_html__('Empty fields fall back to the accommodation-type template default set under MPHB Schema → Cottage defaults.', 'mphb-availability-calendar'),
+            'raw'             => esc_html__('Empty fields fall back to the accommodation-type template default set under MPHB Schema → Cottage defaults.', 'mphb-schema-manager'),
             'content_classes' => 'elementor-descriptor',
         ]);
-
         self::add_fields($document, $prefix, $def['fields'] ?? [], [$prefix . 'mode' => 'override']);
         $document->end_controls_section();
     }
@@ -123,21 +110,19 @@ final class Schema_Controls
                     'label'       => $field['label'] ?? $field['name'],
                     'type'        => \Elementor\Controls_Manager::REPEATER,
                     'fields'      => $repeater->get_controls(),
-                    'title_field' => '{{{ ' . ((($field['fields'][0]['name']) ?? 'question')) . ' }}}',
+                    'title_field' => '{{{ ' . (($field['fields'][0]['name']) ?? 'question') . ' }}}',
                     'condition'   => $condition,
                 ]);
                 continue;
             }
 
-            $args = self::control_args($field);
+            $args              = self::control_args($field);
             $args['condition'] = $condition;
             $document->add_control($id, $args);
         }
     }
 
     /**
-     * Map a neutral field definition to Elementor control args.
-     *
      * @param array<string,mixed> $field
      * @return array<string,mixed>
      */
@@ -184,11 +169,11 @@ final class Schema_Controls
         if ($permalink === '') {
             return;
         }
-        $document->start_controls_section('mphbac_schema_tools', [
-            'label' => __('Schema: Test & Validate', 'mphb-availability-calendar'),
+        $document->start_controls_section('mphbsch_schema_tools', [
+            'label' => __('Schema: Test & Validate', 'mphb-schema-manager'),
             'tab'   => \Elementor\Controls_Manager::TAB_SETTINGS,
         ]);
-        $document->add_control('mphbac_schema_tools_links', [
+        $document->add_control('mphbsch_schema_tools_links', [
             'type' => \Elementor\Controls_Manager::RAW_HTML,
             'raw'  => Schema_Validator::tools_html($permalink),
         ]);

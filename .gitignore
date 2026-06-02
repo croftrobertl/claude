@@ -1,2 +1,5 @@
 mphb-availability-calendar.zip
 .DS_Store
+
+# Build artifacts
+*.zip

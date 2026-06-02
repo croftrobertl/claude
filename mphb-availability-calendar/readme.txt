@@ -4,11 +4,11 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A mobile-friendly Elementor availability widget for MotoPress Hotel Booking, plus a per-page Schema.org JSON-LD manager.
+A mobile-friendly Elementor widget that shows multi-property availability for MotoPress Hotel Booking accommodations.
 
 == Description ==
 
@@ -53,14 +53,8 @@ It is on by default. Toggle it with the "Enable Book Now popup" switch in the wi
 
 == Changelog ==
 
-= 0.8.0 =
-* New: a per-page Structured Data (Schema.org JSON-LD) manager, built into the Elementor editor. The plugin is no longer only the availability calendar — it now also manages the structured data that Google rich results and AI answer engines read.
-* Settings are organized one section per schema type, each with its own enable toggle, in three inheritance layers: site-wide defaults and an accommodation-type "template" default (both under the new WP Admin → MPHB Schema menu), plus per-page / per-cottage overrides in each document's Elementor Settings tab. Precedence is per-page override → accommodation-type template default → site default.
-* Supported types: LodgingBusiness/VacationRentalsBusiness (site), WebSite + SearchAction (site), VacationRental + Offer (cottages, with live MotoPress price and InStock/OutOfStock availability via dynamic tokens like {{mphb_price}} and {{mphb_availability}}), FAQPage, BreadcrumbList, Article (posts), and a Custom JSON-LD raw field for anything else.
-* All emitted nodes are linked into a single connected @graph with @id references (publisher, offeredBy, containedInPlace, isPartOf), which Google and AI extractors prefer over scattered blocks.
-* Import: MPHB Schema → Import & Detect finds JSON-LD currently hand-placed inside Elementor "Custom HTML" widgets and one-click-imports it into the structured editor, so existing markup becomes managed and validated.
-* Health: MPHB Schema → Health parses the live HTML of the home page and each cottage page to show exactly which schema types are emitted (the same markup the external testers see), flags duplicate types that can fail validation, and links each page out to validator.schema.org and Google's Rich Results Test. The Elementor panel carries the same one-click test links per page. (Neither external tester exposes a public API, so detection is done by parsing the rendered page.)
-* Built-in validator lints each type against its required/recommended properties.
+= 0.8.1 =
+* The Schema.org structured-data manager that briefly shipped inside this plugin (0.8.0) has been split into its own standalone plugin, **MPHB Schema Manager**. This plugin is once again only the availability calendar. Install MPHB Schema Manager separately if you want the structured-data features; the two plugins are independent.
 
 = 0.7.1 =
 * Booking popup (the one that opens when you tap an available calendar cell) now anchors its top edge to the top of the calendar widget on every viewport, matching the cottage-info popup behavior. Previously the popup stuck to the bottom of the viewport on mobile and floated centered on desktop, which on a page where the calendar wasn't fully in view meant the popup appeared nowhere near the calendar you'd just tapped. JS reads the widget's getBoundingClientRect().top at open time and sets it as --mphbac-sheet-top; CSS uses that variable instead of bottom: 0 / top: 50%.

@@ -1,13 +1,11 @@
 <?php
 /**
  * Imports hand-placed JSON-LD out of Elementor "Custom HTML" widgets into the
- * structured per-document schema settings (the Custom JSON-LD field), and flags
- * duplicate types already present on the page.
- *
+ * structured per-document schema settings (the Custom JSON-LD field).
  * Admin screen: MPHB Schema -> Import & Detect.
  */
 
-namespace MPHBAC;
+namespace MPHBSchema;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -15,15 +13,15 @@ if (!defined('ABSPATH')) {
 
 final class Schema_Importer
 {
-    public const PARENT_SLUG = 'mphbac-schema';
-    public const PAGE_SLUG   = 'mphbac-schema-import';
+    public const PARENT_SLUG = 'mphbsch-schema';
+    public const PAGE_SLUG   = 'mphbsch-schema-import';
 
     public static function register_menu(): void
     {
         add_submenu_page(
             self::PARENT_SLUG,
-            __('Import & Detect', 'mphb-availability-calendar'),
-            __('Import & Detect', 'mphb-availability-calendar'),
+            __('Import & Detect', 'mphb-schema-manager'),
+            __('Import & Detect', 'mphb-schema-manager'),
             'manage_options',
             self::PAGE_SLUG,
             [self::class, 'render_page']
@@ -37,42 +35,42 @@ final class Schema_Importer
         }
 
         $notice = '';
-        if (isset($_POST['mphbac_import_post'])) {
-            check_admin_referer('mphbac_schema_import');
-            $pid    = absint($_POST['mphbac_import_post']);
+        if (isset($_POST['mphbsch_import_post'])) {
+            check_admin_referer('mphbsch_schema_import');
+            $pid    = absint($_POST['mphbsch_import_post']);
             $count  = self::import_post($pid);
             $notice = $count > 0
-                ? sprintf(/* translators: 1: count 2: post title */ __('Imported %1$d JSON-LD block(s) into "%2$s". Open it in Elementor to review under Schema: Custom JSON-LD, then delete the old Custom HTML widget.', 'mphb-availability-calendar'), $count, get_the_title($pid))
-                : __('Nothing imported (no valid JSON-LD found).', 'mphb-availability-calendar');
+                ? sprintf(/* translators: 1: count 2: post title */ __('Imported %1$d JSON-LD block(s) into "%2$s". Open it in Elementor to review under Schema: Custom JSON-LD, then delete the old Custom HTML widget.', 'mphb-schema-manager'), $count, get_the_title($pid))
+                : __('Nothing imported (no valid JSON-LD found).', 'mphb-schema-manager');
         }
 
-        echo '<div class="wrap"><h1>' . esc_html__('Schema: Import & Detect', 'mphb-availability-calendar') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('Schema: Import & Detect', 'mphb-schema-manager') . '</h1>';
         if ($notice !== '') {
             echo '<div class="notice notice-success"><p>' . esc_html($notice) . '</p></div>';
         }
-        echo '<p>' . esc_html__('Pages built with Elementor that contain JSON-LD inside a Custom HTML widget are listed below. Import moves that markup into the structured editor so it is managed, validated, and linked into the page graph.', 'mphb-availability-calendar') . '</p>';
+        echo '<p>' . esc_html__('Pages built with Elementor that contain JSON-LD inside a Custom HTML widget are listed below. Import moves that markup into the structured editor so it is managed, validated, and linked into the page graph.', 'mphb-schema-manager') . '</p>';
 
         $candidates = self::candidates();
         if (empty($candidates)) {
-            echo '<p><em>' . esc_html__('No Custom HTML JSON-LD found on any Elementor page.', 'mphb-availability-calendar') . '</em></p></div>';
+            echo '<p><em>' . esc_html__('No Custom HTML JSON-LD found on any Elementor page.', 'mphb-schema-manager') . '</em></p></div>';
             return;
         }
 
         echo '<table class="widefat striped"><thead><tr>'
-            . '<th>' . esc_html__('Page', 'mphb-availability-calendar') . '</th>'
-            . '<th>' . esc_html__('Blocks in Custom HTML', 'mphb-availability-calendar') . '</th>'
-            . '<th>' . esc_html__('Action', 'mphb-availability-calendar') . '</th>'
+            . '<th>' . esc_html__('Page', 'mphb-schema-manager') . '</th>'
+            . '<th>' . esc_html__('Blocks in Custom HTML', 'mphb-schema-manager') . '</th>'
+            . '<th>' . esc_html__('Action', 'mphb-schema-manager') . '</th>'
             . '</tr></thead><tbody>';
 
         foreach ($candidates as $pid => $blocks) {
             $title = get_the_title($pid) ?: ('#' . $pid);
             echo '<tr>';
-            echo '<td><strong>' . esc_html($title) . '</strong><br><a href="' . esc_url((string) get_permalink($pid)) . '" target="_blank" rel="noopener">' . esc_html__('View', 'mphb-availability-calendar') . '</a></td>';
+            echo '<td><strong>' . esc_html($title) . '</strong><br><a href="' . esc_url((string) get_permalink($pid)) . '" target="_blank" rel="noopener">' . esc_html__('View', 'mphb-schema-manager') . '</a></td>';
             echo '<td>' . esc_html((string) count($blocks)) . '</td>';
             echo '<td><form method="post">';
-            wp_nonce_field('mphbac_schema_import');
-            echo '<input type="hidden" name="mphbac_import_post" value="' . esc_attr((string) $pid) . '">';
-            submit_button(__('Import', 'mphb-availability-calendar'), 'secondary', 'submit', false);
+            wp_nonce_field('mphbsch_schema_import');
+            echo '<input type="hidden" name="mphbsch_import_post" value="' . esc_attr((string) $pid) . '">';
+            submit_button(__('Import', 'mphb-schema-manager'), 'secondary', 'submit', false);
             echo '</form></td>';
             echo '</tr>';
         }
@@ -80,9 +78,7 @@ final class Schema_Importer
     }
 
     /**
-     * Pages/posts whose Elementor data contains JSON-LD in a Custom HTML widget.
-     *
-     * @return array<int,string[]> [ post_id => raw json blocks ]
+     * @return array<int,string[]>
      */
     public static function candidates(): array
     {
@@ -100,14 +96,12 @@ final class Schema_Importer
                 }
             }
         } catch (\Throwable $e) {
-            error_log('MPHBAC: importer candidates failed: ' . $e->getMessage());
+            error_log('MPHBSchema: importer candidates failed: ' . $e->getMessage());
         }
         return $out;
     }
 
     /**
-     * Extract JSON-LD strings from a post's Custom HTML widgets.
-     *
      * @return string[]
      */
     public static function scan_post(int $post_id): array
@@ -153,7 +147,6 @@ final class Schema_Importer
                 self::collect_html_widgets($child, $html);
             }
         }
-        // Top-level lists of elements (the raw _elementor_data array).
         if ($node !== [] && array_keys($node) === range(0, count($node) - 1)) {
             foreach ($node as $child) {
                 self::collect_html_widgets($child, $html);
@@ -161,10 +154,6 @@ final class Schema_Importer
         }
     }
 
-    /**
-     * Combine the found blocks and store them into the document's Custom JSON-LD
-     * setting. Returns the number of blocks imported.
-     */
     public static function import_post(int $post_id): int
     {
         $blocks = self::scan_post($post_id);
@@ -198,8 +187,8 @@ final class Schema_Importer
         if (!is_array($settings)) {
             $settings = [];
         }
-        $settings['mphbac_s_custom_jsonld_enable'] = 'yes';
-        $settings['mphbac_s_custom_jsonld_raw']    = (string) $combined;
+        $settings['mphbsch_s_custom_jsonld_enable'] = 'yes';
+        $settings['mphbsch_s_custom_jsonld_raw']    = (string) $combined;
         update_post_meta($post_id, '_elementor_page_settings', $settings);
 
         return count($nodes);
