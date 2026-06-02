@@ -3,7 +3,7 @@
  * Plugin Name:       Guest Guide
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Elementor widget that displays an interactive, mobile-friendly Guest Guide. Sections (WiFi, rules, checkout, etc.) appear as a tile menu; tapping one drills into its items (rich text, icons, copy-to-clipboard). All content is authored in the Elementor panel — no code edits, no database, no AJAX.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('GGUIDE_VERSION', '1.1.0');
+define('GGUIDE_VERSION', '1.2.0');
 define('GGUIDE_FILE', __FILE__);
 define('GGUIDE_DIR', plugin_dir_path(__FILE__));
 define('GGUIDE_URL', plugin_dir_url(__FILE__));

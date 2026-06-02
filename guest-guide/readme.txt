@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, wifi, checkout
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,12 @@ Requires Elementor to be active.
 * Check mobile (1 column), tablet, and desktop; confirm style controls update the live preview.
 
 == Changelog ==
+
+= 1.2.0 =
+* Section tiles now use a "feature card" look: each icon sits inside a colored badge above its centered title, on a card that lifts on hover. Defaults reuse the existing palette — the badge fill is a translucent tint of the brand primary, so no new colors, fonts, or wording are introduced.
+* New global tile controls (one set styles every tile uniformly), under "Section tiles & icons": badge shape (Circle / Rounded square / No badge), badge size and corner radius, badge background (Normal + Hover), icon ↔ title spacing, icon placement (stacked above / beside the title), and hover effect (Lift / Zoom / Lift + zoom / None).
+* Per-section icons are still chosen per row, as before.
+* The opened section's header icon gets a matching badge and the detail card a subtle shadow, so the menu and the open card read as one family.
 
 = 1.1.0 =
 * New style controls, matching the MPHB Availability Calendar's panel vocabulary: Border (width/style/color) and Padding on tiles, the detail panel, the search box, and buttons; per-corner Border radius for the search box and buttons; Normal/Hover color tabs for buttons; and a base font-size slider under Layout that scales the whole widget.

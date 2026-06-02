@@ -21,6 +21,15 @@
     --gguide-tile-text-hover: #ffffff;
     --gguide-tile-icon: #0f6dbf;
     --gguide-tile-icon-size: 34px;
+    --gguide-icon-gap: 0.65em;
+
+    /* Icon badge (the "amenities card" disc behind each section icon).
+       The default background is a translucent tint of the brand primary, so it
+       harmonizes with the palette without introducing a new hue. */
+    --gguide-badge-size: 72px;
+    --gguide-badge-radius: 16px;
+    --gguide-badge-bg: rgba(15, 109, 191, .10);
+    --gguide-badge-bg-hover: rgba(255, 255, 255, .22);
 
     /* Detail panel */
     --gguide-detail-bg: #ffffff;
@@ -109,7 +118,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.5em;
+    gap: var(--gguide-icon-gap);
     min-height: 120px;
     padding: 1.25em 1em;
     text-align: center;
@@ -126,7 +135,6 @@
 .gguide-tile:focus-visible {
     background: var(--gguide-tile-bg-hover);
     color: var(--gguide-tile-text-hover);
-    transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(15, 109, 191, .22);
 }
 
@@ -135,18 +143,63 @@
     outline-offset: 2px;
 }
 
+/* ---- Hover effect (driven by .gguide-hover-* on the widget wrapper) ---- */
+.gguide-hover-lift .gguide-tile:hover,
+.gguide-hover-lift .gguide-tile:focus-visible {
+    transform: translateY(-2px);
+}
+.gguide-hover-scale .gguide-tile:hover,
+.gguide-hover-scale .gguide-tile:focus-visible {
+    transform: scale(1.03);
+}
+.gguide-hover-liftscale .gguide-tile:hover,
+.gguide-hover-liftscale .gguide-tile:focus-visible {
+    transform: translateY(-2px) scale(1.03);
+}
+.gguide-hover-none .gguide-tile:hover,
+.gguide-hover-none .gguide-tile:focus-visible {
+    transform: none;
+    box-shadow: 0 1px 2px rgba(20, 35, 58, .06);
+}
+
+/* ---- Icon badge ----
+   The icon span doubles as the badge: a fixed box filled with the badge
+   color, with the glyph centered inside at its own (smaller) font-size. */
 .gguide-tile-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
+    width: var(--gguide-badge-size);
+    height: var(--gguide-badge-size);
     font-size: var(--gguide-tile-icon-size);
     line-height: 1;
     color: var(--gguide-tile-icon);
+    background: var(--gguide-badge-bg);
+    border-radius: 50%;
+    transition: background-color .18s ease, color .18s ease;
 }
 
+/* Badge shape (driven by .gguide-badge-* on the widget wrapper). */
+.gguide-badge-circle .gguide-tile-icon  { border-radius: 50%; }
+.gguide-badge-rounded .gguide-tile-icon { border-radius: var(--gguide-badge-radius); }
+.gguide-badge-none .gguide-tile-icon {
+    width: auto;
+    height: auto;
+    background: none;
+    border-radius: 0;
+}
+
+/* On hover the whole tile changes color; swap the badge to its hover fill so
+   it stays visible (but not when there's no badge). */
 .gguide-tile:hover .gguide-tile-icon,
 .gguide-tile:focus-visible .gguide-tile-icon {
     color: inherit;
+    background: var(--gguide-badge-bg-hover);
+}
+.gguide-badge-none .gguide-tile:hover .gguide-tile-icon,
+.gguide-badge-none .gguide-tile:focus-visible .gguide-tile-icon {
+    background: none;
 }
 
 .gguide-tile-icon svg,
@@ -163,6 +216,24 @@
 
 .gguide-tile-icon:empty {
     display: none;
+}
+
+/* ---- Horizontal orientation: badge left, title/subtitle stacked right ---- */
+.gguide-orient-horizontal .gguide-tile {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: var(--gguide-icon-gap);
+    row-gap: 0.15em;
+    text-align: left;
+}
+.gguide-orient-horizontal .gguide-tile-icon {
+    grid-column: 1;
+    grid-row: 1 / -1;
+}
+.gguide-orient-horizontal .gguide-tile-title,
+.gguide-orient-horizontal .gguide-tile-desc {
+    grid-column: 2;
 }
 
 .gguide-tile-title {
@@ -192,6 +263,7 @@
     border: 1px solid var(--gguide-color-frame);
     border-radius: var(--gguide-radius);
     padding: 1.25em;
+    box-shadow: 0 1px 3px rgba(20, 35, 58, .08);
 }
 
 .gguide-detail[hidden] {
@@ -214,10 +286,27 @@
     color: var(--gguide-detail-header);
 }
 
+/* Matching (smaller) badge on the opened section header, for cohesion with
+   the tiles. Tracks the same shape choice as the tiles. */
 .gguide-detail-icon {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.9em;
+    height: 1.9em;
     font-size: 1.1em;
     line-height: 1;
+    background: var(--gguide-badge-bg);
+    border-radius: 50%;
+}
+
+.gguide-badge-rounded .gguide-detail-icon { border-radius: 0.4em; }
+.gguide-badge-none .gguide-detail-icon {
+    width: auto;
+    height: auto;
+    background: none;
+    border-radius: 0;
 }
 
 .gguide-detail-icon:empty {

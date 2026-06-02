@@ -381,8 +381,23 @@ final class Widget extends Widget_Base
     private function register_tile_style_controls(): void
     {
         $this->start_controls_section('section_style_tile', [
-            'label' => __('Tiles', 'guest-guide'),
+            'label' => __('Section tiles & icons', 'guest-guide'),
             'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        // ----- Layout -----
+        // Orientation is a "pick-a-look" control: its value is added as a class
+        // on the widget wrapper (prefix_class), so it live-previews in the editor
+        // and needs no render-side code. CSS keys off `.gguide-orient-*`.
+        $this->add_control('tile_orientation', [
+            'label'        => __('Icon placement', 'guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'stacked',
+            'options'      => [
+                'stacked'    => __('Above title (stacked)', 'guest-guide'),
+                'horizontal' => __('Beside title (horizontal)', 'guest-guide'),
+            ],
+            'prefix_class' => 'gguide-orient-',
         ]);
 
         $this->add_group_control(
@@ -393,6 +408,44 @@ final class Widget extends Widget_Base
             ]
         );
 
+        // ----- Icon badge -----
+        $this->add_control('badge_heading', [
+            'label'     => __('Icon badge', 'guest-guide'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+
+        $this->add_control('badge_shape', [
+            'label'        => __('Badge shape', 'guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'circle',
+            'options'      => [
+                'circle'  => __('Circle', 'guest-guide'),
+                'rounded' => __('Rounded square', 'guest-guide'),
+                'none'    => __('No badge (icon only)', 'guest-guide'),
+            ],
+            'prefix_class' => 'gguide-badge-',
+            'description'  => __('Draws a colored badge behind each section icon, like a feature/amenities card.', 'guest-guide'),
+        ]);
+
+        $this->add_responsive_control('badge_size', [
+            'label'      => __('Badge size', 'guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em', 'rem'],
+            'range'      => ['px' => ['min' => 32, 'max' => 140]],
+            'selectors'  => [self::SEL => '--gguide-badge-size: {{SIZE}}{{UNIT}};'],
+            'condition'  => ['badge_shape!' => 'none'],
+        ]);
+
+        $this->add_responsive_control('badge_radius', [
+            'label'      => __('Badge corner radius', 'guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em', 'rem', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 70]],
+            'selectors'  => [self::SEL => '--gguide-badge-radius: {{SIZE}}{{UNIT}};'],
+            'condition'  => ['badge_shape' => 'rounded'],
+        ]);
+
         $this->add_responsive_control('tile_icon_size', [
             'label'      => __('Icon size', 'guest-guide'),
             'type'       => Controls_Manager::SLIDER,
@@ -401,11 +454,21 @@ final class Widget extends Widget_Base
             'selectors'  => [self::SEL => '--gguide-tile-icon-size: {{SIZE}}{{UNIT}};'],
         ]);
 
+        $this->add_responsive_control('icon_gap', [
+            'label'      => __('Icon ↔ title spacing', 'guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em', 'rem'],
+            'range'      => ['px' => ['min' => 0, 'max' => 40], 'em' => ['min' => 0, 'max' => 3, 'step' => 0.1]],
+            'selectors'  => [self::SEL => '--gguide-icon-gap: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        // ----- Card box -----
         $this->add_group_control(
             Group_Control_Border::get_type(),
             [
-                'name'     => 'tile_border',
-                'selector' => self::SEL . '.gguide-tile',
+                'name'      => 'tile_border',
+                'selector'  => self::SEL . '.gguide-tile',
+                'separator' => 'before',
             ]
         );
 
@@ -416,6 +479,22 @@ final class Widget extends Widget_Base
             'selectors'  => [
                 self::SEL . '.gguide-tile' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
             ],
+        ]);
+
+        // Hover behaviour is also a prefix_class "pick-a-look" — CSS keys off
+        // `.gguide-hover-*`. The hover *colors* live in the tabs below.
+        $this->add_control('tile_hover_effect', [
+            'label'        => __('Hover effect', 'guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'lift',
+            'options'      => [
+                'lift'      => __('Lift', 'guest-guide'),
+                'scale'     => __('Zoom', 'guest-guide'),
+                'liftscale' => __('Lift + zoom', 'guest-guide'),
+                'none'      => __('None', 'guest-guide'),
+            ],
+            'prefix_class' => 'gguide-hover-',
+            'separator'    => 'before',
         ]);
 
         $this->start_controls_tabs('tile_color_tabs');
@@ -438,6 +517,12 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL => '--gguide-tile-icon: {{VALUE}};'],
         ]);
+        $this->add_control('badge_bg', [
+            'label'     => __('Badge background', 'guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL => '--gguide-badge-bg: {{VALUE}};'],
+            'condition' => ['badge_shape!' => 'none'],
+        ]);
         $this->end_controls_tab();
 
         $this->start_controls_tab('tile_tab_hover', [
@@ -452,6 +537,13 @@ final class Widget extends Widget_Base
             'label'     => __('Title color', 'guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL => '--gguide-tile-text-hover: {{VALUE}};'],
+        ]);
+        $this->add_control('badge_bg_hover', [
+            'label'       => __('Badge background', 'guest-guide'),
+            'type'        => Controls_Manager::COLOR,
+            'selectors'   => [self::SEL => '--gguide-badge-bg-hover: {{VALUE}};'],
+            'condition'   => ['badge_shape!' => 'none'],
+            'description' => __('Keeps the badge visible when the whole tile changes color on hover.', 'guest-guide'),
         ]);
         $this->end_controls_tab();
 
