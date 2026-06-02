@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+Two independent WordPress plugins for doracanalcourt.com, each in its own top-level folder. The repo has no build step.
+
+1. **MPHB Availability Calendar** (`mphb-availability-calendar/`, namespace `MPHBAC\`) — one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations.
+2. **MPHB Schema Manager** (`mphb-schema-manager/`, namespace `MPHBSchema\`) — a per-page Schema.org JSON-LD structured-data manager. Self-contained: ships its own MotoPress read layer (`MPHBSchema\Data`, ported from the calendar's `Data_Provider`) and transient cache (prefix `mphbsch_`), so it does not depend on the calendar plugin.
+
+The two were one plugin briefly (calendar v0.8.0); they were split so each can be installed independently. Both gate on Elementor + MotoPress being active.
 
 ## Target environment
 
@@ -17,32 +22,59 @@ A single WordPress plugin — **MPHB Availability Calendar** — that adds one E
 ## Common commands
 
 ```bash
-# Syntax-check every PHP file in the plugin
+# Syntax-check every PHP file (run per plugin folder)
 find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
+find mphb-schema-manager       -name '*.php' -print0 | xargs -0 -n1 php -l
 
-# Build the installable zip the user uploads via WP Admin → Plugins → Add New → Upload
+# Build the installable zips the user uploads via WP Admin → Plugins → Add New → Upload
 ( cd $(git rev-parse --show-toplevel) && zip -r mphb-availability-calendar.zip mphb-availability-calendar )
+( cd $(git rev-parse --show-toplevel) && zip -r mphb-schema-manager.zip       mphb-schema-manager )
 ```
 
 There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` and the plan in `/root/.claude/plans/` for the manual smoke-test checklist.
 
 ## Architecture
 
-Single-folder plugin, PSR-4-ish layout under a `MPHBAC\` namespace. Bootstrap → Plugin singleton → six collaborators.
+### Plugin 1 — MPHB Availability Calendar (`mphb-availability-calendar/`, `MPHBAC\`)
+
+Single-folder plugin, PSR-4-ish layout. Bootstrap → Plugin singleton → six collaborators.
 
 ```
-mphb-availability-calendar.php       # Headers + constants + require()s + activation hook
+mphb-availability-calendar.php       # Headers + constants + lazy autoloader + activation hook
 includes/class-plugin.php            # Singleton orchestrator; registers all WP hooks
 includes/class-widget.php            # Elementor_Widget_Base subclass; ~all Elementor controls live here
 includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL fallback)
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
-includes/class-ajax.php              # Nonce-protected admin-ajax.php endpoint (action mphbac_query)
+includes/class-ajax.php              # Nonce-free public-read admin-ajax.php endpoint (action mphbac_query)
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
 
-Request flow when a visitor loads a page containing the widget:
+### Plugin 2 — MPHB Schema Manager (`mphb-schema-manager/`, `MPHBSchema\`)
+
+`Schema::render()` runs on `wp_head` and emits one connected `@graph`. Three config layers merge with precedence **per-document override → accommodation-type template default → site default**:
+
+- **Site defaults** — WP option `mphbsch_schema_defaults` (Organization/LodgingBusiness, WebSite). Edited at WP Admin → MPHB Schema → Defaults → Site-wide.
+- **Accommodation-type template default** — WP option `mphbsch_schema_cottage_defaults` (the `VacationRental`+`Offer` shape every cottage inherits, token-driven). Edited under the Cottage-defaults tab.
+- **Per-document override** — Elementor document page-settings (`_elementor_page_settings`), control IDs `mphbsch_s_{typeKey}_{field}`. Cottage types use a `mode` select (inherit/override/disable); document types use an `enable` switcher.
+
+```
+mphb-schema-manager.php              # Headers + constants + lazy autoloader
+includes/class-plugin.php            # Singleton; gates on Elementor + MotoPress; registers hooks
+includes/class-cache.php             # Transient wrapper (prefix mphbsch_)
+includes/class-data.php              # MotoPress read layer (port of MPHBAC\Data_Provider); + cottage_price()
+includes/class-schema-types.php      # Registry: per-@type fields, validation rules, builder name (single source of truth)
+includes/class-schema.php            # wp_head JSON-LD emitter: merge layers, resolve tokens, build @graph
+includes/class-schema-controls.php   # Per-document schema controls in the Elementor Settings tab
+includes/class-schema-settings.php   # Admin "MPHB Schema" menu: site + cottage-template defaults + Health screen
+includes/class-schema-importer.php   # Imports JSON-LD out of Custom HTML widgets into the structured editor
+includes/class-schema-validator.php  # Required-field linting, page JSON-LD detection, validator/RRT deep links
+```
+
+`Schema_Types::all()` is the single registry every other Schema class reads (neutral field defs rendered both as Elementor controls and as admin settings fields). Dynamic tokens (`{{cottage_name}}`, `{{mphb_price}}`, `{{mphb_availability}}`, `{{permalink}}`, …) are resolved at render via `MPHBSchema\Data` — never-stale live price/availability read straight from MotoPress. **No public API exists for Google's Rich Results Test or validator.schema.org**, so the Health screen detects on-page JSON-LD by parsing the rendered HTML and links out for the authoritative check.
+
+### Calendar request flow when a visitor loads a page containing the widget:
 
 1. `Widget::render()` outputs only the shell — heading, filters, legend, nav, an empty `.mphbac-grid-wrap` with a `.mphbac-loading` placeholder, the popups, and hidden `.mphbac-info-content` divs. It does NOT render the grid.
 2. The full settings + cottage IDs (incl. per-device `daysDesktop/daysTablet/daysMobile`) are serialized into a `data-config` JSON attribute on `.mphbac-root`.
