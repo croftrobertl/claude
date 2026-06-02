@@ -150,9 +150,18 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('cottage_info', [
-            'label'  => __('Info popups', 'mphb-availability-calendar'),
-            'type'   => Controls_Manager::REPEATER,
-            'fields' => $repeater->get_controls(),
+            'label'         => __('Info popups', 'mphb-availability-calendar'),
+            'type'          => Controls_Manager::REPEATER,
+            'fields'        => $repeater->get_controls(),
+            // Without an explicit title_field, the last row's delete-X
+            // disappears in some Elementor versions because the only row
+            // is force-expanded and the collapsed-row tools (including X)
+            // never render. Matching the working `cottage_labels`
+            // pattern restores the X. prevent_empty=false is explicit
+            // for the same reason — defaults have changed across
+            // Elementor versions.
+            'title_field'   => '<# print( ci_cottage ? "Cottage " + ci_cottage : "Cottage info" ) #>',
+            'prevent_empty' => false,
         ]);
 
         $this->end_controls_section();

@@ -384,6 +384,22 @@
 .mphbac-sheet-overlay.is-open,
 .mphbac-info-overlay.is-open { opacity: 1; }
 
+/* The [hidden] attribute is the source of truth for popup visibility.
+   These elements have `display: flex` set further down for their
+   internal layout, which silently overrides the browser-default
+   `[hidden] { display: none }`. On most pages the closed-state
+   `transform: translateY(100%)` masks that by pushing the popup
+   off-screen — but a transformed Elementor ancestor can break the
+   containing block for the transform and leave the popup visible at
+   page bottom. !important keeps `hidden` authoritative regardless. */
+.mphbac-sheet[hidden],
+.mphbac-info-sheet[hidden],
+.mphbac-sheet-overlay[hidden],
+.mphbac-info-overlay[hidden],
+.mphbac-info-content[hidden] {
+    display: none !important;
+}
+
 .mphbac-sheet,
 .mphbac-info-sheet {
     position: fixed;

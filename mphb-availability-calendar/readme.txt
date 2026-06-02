@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.3
+Stable tag: 0.7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.7.4 =
+* Fixed: the cottage info popup could appear at the bottom of the page on Elementor sections whose stack includes a transformed ancestor (the same ancestor that broke clipping in v0.7.2). Root cause was a long-standing latent bug — the info sheet had `display: flex` set for its internal layout, which silently overrode the browser-default `[hidden] { display: none }`. The closed-state `transform: translateY(100%)` normally pushed it off-screen, but the transformed ancestor broke that transform's containing block. Added an explicit `[hidden] { display: none !important }` rule for popup elements so visibility is governed strictly by the attribute now.
+* Fixed: the delete-X disappeared on the last remaining cottage info popup row in the Elementor editor, because the only row was force-expanded and the collapsed-row tools (including X) never rendered. Added a `title_field` to the cottage_info repeater (matching the working pattern in the cottage_labels repeater) and an explicit `prevent_empty: false` so the X stays available all the way down to zero rows.
 
 = 0.7.3 =
 * New Elementor control: "Info popup side margin" under the Info section, a responsive slider with separate values for Desktop, Tablet, and Mobile (using the device-icon buttons next to the label). Defaults match the v0.7.2 hard-coded values exactly — 32px desktop / 20px tablet / 12px mobile — so installs that don't touch the new control look identical to today. The control only applies when "Full viewport width" is on. JS sets the resulting value as --mphbac-info-side on the sheet at popup-open time (since v0.7.2 portals the popup to document.body, the standard Elementor selector mechanism can't reach it).
