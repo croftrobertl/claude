@@ -476,18 +476,24 @@
    --mphbac-info-sheet-top CSS variable (set by JS to the widget's current
    getBoundingClientRect().top on each open), so the popup appears to grow
    out of the top of the calendar widget rather than covering the page
-   header area above it. Slides up from the bottom on every viewport. */
+   header area above it. Slides up from the bottom on every viewport.
+   Symmetric --mphbac-info-side gutters keep it from running edge-to-edge
+   (which on some Elementor pages would clip behind a transformed ancestor
+   and hide the close button). JS portals the sheet + overlay to
+   document.body on open so the ancestor containing block can't constrain
+   the popup at all. */
 .mphbac-info-sheet.mphbac-info-sheet--full {
-    left: 0;
-    right: 0;
+    left: var(--mphbac-info-side, 12px);
+    right: var(--mphbac-info-side, 12px);
     top: var(--mphbac-info-sheet-top, 0);
     bottom: 0;
-    width: 100vw;
-    max-width: 100vw;
+    width: auto;
+    max-width: none;
     max-height: none;
-    border-radius: 0;
+    border-radius: 16px 16px 0 0;
     transform: translateY(100%);
     opacity: 1;
+    overscroll-behavior: contain;
 }
 .mphbac-info-sheet.mphbac-info-sheet--full.is-open {
     transform: translateY(0);
@@ -495,20 +501,32 @@
 }
 @media (min-width: 601px) {
     /* Re-assert the full-viewport positioning at desktop sizes so the
-       (0,1,0) media-query rules above don't centered-modal it. */
+       (0,1,0) media-query rules above don't centered-modal it. Wider
+       gutters than mobile so the popup reads as a panel, not a bleed. */
     .mphbac-info-sheet.mphbac-info-sheet--full {
-        left: 0;
-        right: 0;
+        --mphbac-info-side: 32px;
+        left: var(--mphbac-info-side);
+        right: var(--mphbac-info-side);
         top: var(--mphbac-info-sheet-top, 0);
         bottom: 0;
-        width: 100vw;
-        max-width: 100vw;
+        width: auto;
+        max-width: none;
         max-height: none;
         transform: translateY(100%);
     }
     .mphbac-info-sheet.mphbac-info-sheet--full.is-open {
         transform: translateY(0);
     }
+}
+
+/* Lock body scroll while the info popup is open so touch-scroll gestures
+   land on the popup's own overflow-y: auto instead of chaining into the
+   page. Without this, mobile users can't reach the bottom of a popup that
+   is taller than the viewport — the page scrolls behind the popup until
+   the page hits its bottom, then nothing scrolls. */
+html.mphbac-info-open,
+body.mphbac-info-open {
+    overflow: hidden;
 }
 
 /* Booking popup is anchored to the top of the widget on every viewport
