@@ -1,11 +1,32 @@
-/* DCC Guest Guide — frontend */
+/* DCC Guest Guide — frontend (v0.2.0)
+ *
+ * Key v0.2 changes:
+ *   - Removed JS theme-preset injection (presets now in static CSS)
+ *   - Print button bound via JS (no inline onclick — CSP-friendly)
+ *   - Cmd-K bound once at document level, routed to the closest visible widget
+ *   - URL anchor validates the key exists in THIS widget before opening
+ *   - Tilt mousemove rAF-throttled (one DOM write per frame max)
+ *   - Clipboard fallback via document.execCommand for non-HTTPS / Safari < 13.4
+ *   - Read aloud (Speech Synthesis) per-item play/pause
+ *   - Speech-to-search mic in the search bar (Web Speech Recognition)
+ *   - Image lightbox using native <dialog> with pinch-zoom on touch
+ *   - Long-press peek tooltip on tile hold (touch + right-click)
+ *   - Mobile bottom-sheet for detail with drag-to-dismiss
+ *   - Welcome Pack admin injector hooked to the editor's panel button
+ *   - Sticky in-section TOC highlight via IntersectionObserver
+ *   - Reading-progress bar at top of detail
+ *   - Confetti on successful Copy interactions
+ *   - Respects prefers-reduced-motion (animations short-circuit)
+ */
 (function () {
     'use strict';
 
     const STORAGE_KEY = 'dccgg:theme';
+    const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // -- View Transitions wrapper -----------------------------------------
     function withViewTransition(fn) {
+        if (REDUCED_MOTION) { fn(); return; }
         if (typeof document.startViewTransition === 'function') {
             try { document.startViewTransition(fn); return; } catch (_) { /* fall through */ }
         }
@@ -15,6 +36,8 @@
     // -- Boot --------------------------------------------------------------
     function initAll() {
         document.querySelectorAll('.dccgg-root').forEach(init);
+        wireGlobalCmdK();
+        wireWelcomePackEditor();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initAll, { once: true });
@@ -29,8 +52,17 @@
         let config;
         try { config = JSON.parse(root.dataset.config || '{}'); } catch (_) { config = {}; }
 
-        applyThemePreset(root, config);
+        // Build a fast lookup of section keys this widget owns (used by
+        // URL-anchor validation so multi-widget pages don't cross-fire).
+        const ownedKeys = new Set();
+        root.querySelectorAll('.dccgg-tile-wrap[data-section-key]').forEach(w => {
+            const k = w.dataset.sectionKey;
+            if (k) ownedKeys.add(k);
+        });
+        root.__dccgg = { config, ownedKeys };
+
         wireDarkMode(root, config);
+        wirePrint(root);
         wireFab(root, config);
         wireMenu(root, config);
         wireBack(root, config);
@@ -39,19 +71,17 @@
         wireShare(root, config);
         wireQr(root, config);
         wireSearch(root, config);
+        wireSearchMic(root, config);
+        wireTts(root, config);
         wireTilt(root);
         wireClickFeedback(root, config);
         wireEntryAnimation(root);
         wireUrlAnchor(root, config);
-    }
-
-    // -- Theme presets ----------------------------------------------------
-    function applyThemePreset(root, config) {
-        const presets = config.themePresets || {};
-        const name = config.themePreset || 'custom';
-        const preset = presets[name];
-        if (!preset) return;
-        Object.keys(preset).forEach(k => root.style.setProperty(k, preset[k]));
+        wireLightbox(root);
+        wirePeek(root);
+        wireSheetDrag(root);
+        wireToc(root);
+        wireProgressBar(root);
     }
 
     // -- Dark mode --------------------------------------------------------
@@ -60,7 +90,7 @@
         if (mode === 'off') return;
 
         const toggle = root.querySelector('.dccgg-theme-toggle');
-        const stored = readStored(root);
+        const stored = readStored();
 
         const apply = (isDark) => {
             root.classList.toggle('dccgg-is-dark', isDark);
@@ -74,9 +104,8 @@
         else if (mode === 'auto') {
             const mq = window.matchMedia('(prefers-color-scheme: dark)');
             apply(mq.matches);
-            // Only follow system if no manual override
             if (mq.addEventListener) {
-                mq.addEventListener('change', e => { if (!readStored(root)) apply(e.matches); });
+                mq.addEventListener('change', e => { if (!readStored()) apply(e.matches); });
             }
         }
 
@@ -84,15 +113,18 @@
             toggle.addEventListener('click', () => {
                 const next = !root.classList.contains('dccgg-is-dark');
                 apply(next);
-                writeStored(root, next ? 'dark' : 'light');
+                writeStored(next ? 'dark' : 'light');
             });
         }
     }
-    function readStored(root) {
-        try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; }
-    }
-    function writeStored(root, v) {
-        try { localStorage.setItem(STORAGE_KEY, v); } catch (_) { /* noop */ }
+    function readStored()    { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } }
+    function writeStored(v)  { try { localStorage.setItem(STORAGE_KEY, v); } catch (_) {} }
+
+    // -- Print (CSP-safe binding, replaces v0.1 inline onclick) -----------
+    function wirePrint(root) {
+        const btn = root.querySelector('.dccgg-print');
+        if (!btn) return;
+        btn.addEventListener('click', () => window.print());
     }
 
     // -- FAB --------------------------------------------------------------
@@ -121,13 +153,11 @@
         const open = () => {
             lastTrigger = document.activeElement;
             overlay.hidden = false;
-            // next frame so the transition runs
             requestAnimationFrame(() => {
                 overlay.classList.add('is-open');
                 wrapper.classList.add('is-open');
             });
             document.addEventListener('keydown', trap);
-            // initial focus
             const target = wrapper.querySelector('.dccgg-search-input, .dccgg-tile, .dccgg-fab-close');
             if (target) target.focus();
         };
@@ -137,7 +167,6 @@
             overlay.classList.remove('is-open');
             document.removeEventListener('keydown', trap);
             setTimeout(() => { overlay.hidden = true; }, 320);
-            // Reset detail view when closing
             setTimeout(() => root.classList.remove('is-detail'), 320);
             if (lastTrigger && typeof lastTrigger.focus === 'function') lastTrigger.focus();
         };
@@ -156,34 +185,32 @@
             tile.addEventListener('click', (e) => {
                 const key = tile.dataset.key;
                 if (!key) return;
-
-                // Mark for ripple/feedback before opening so the animation runs
                 ripple(tile, e);
 
                 if (mode === 'flip') {
                     const card = tile.closest('.dccgg-flip-card');
                     if (card) {
-                        card.classList.toggle('is-flipped');
-                        // Move focus into the back face for keyboard users
+                        const next = !card.classList.contains('is-flipped');
+                        card.classList.toggle('is-flipped', next);
+                        tile.setAttribute('aria-expanded', String(next));
                         const back = card.querySelector('.dccgg-flip-close');
-                        if (card.classList.contains('is-flipped') && back) back.focus();
+                        if (next && back) back.focus();
                     }
                     return;
                 }
                 if (mode === 'accordion') {
                     const expanded = tile.getAttribute('aria-expanded') === 'true';
                     tile.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-                    const panel = tile.nextElementSibling;
+                    const panelId = tile.getAttribute('aria-controls');
+                    const panel = panelId ? document.getElementById(panelId) : tile.nextElementSibling;
                     if (panel) panel.hidden = expanded;
                     return;
                 }
 
-                // Stage swap
                 openDetail(root, key);
             });
         });
 
-        // Flip close
         root.querySelectorAll('.dccgg-flip-close').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -191,7 +218,7 @@
                 if (card) {
                     card.classList.remove('is-flipped');
                     const front = card.querySelector('.dccgg-flip-front');
-                    if (front) front.focus();
+                    if (front) { front.setAttribute('aria-expanded', 'false'); front.focus(); }
                 }
             });
         });
@@ -199,13 +226,18 @@
 
     function openDetail(root, key) {
         const details = root.querySelectorAll('.dccgg-detail');
+        let found = false;
         withViewTransition(() => {
-            details.forEach(d => { d.hidden = (d.dataset.key !== key); });
-            root.classList.add('is-detail');
+            details.forEach(d => {
+                const match = (d.dataset.key === key);
+                d.hidden = !match;
+                if (match) found = true;
+            });
+            if (found) root.classList.add('is-detail');
         });
-        // Scroll the widget into view so the detail panel is visible
+        if (!found) return;
         const top = root.getBoundingClientRect().top + window.scrollY - 20;
-        if (window.scrollY > top + 40) window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        if (window.scrollY > top + 40) window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
     }
 
     function wireBack(root, config) {
@@ -233,13 +265,31 @@
         });
     }
 
-    // -- Copy --------------------------------------------------------------
+    // -- Copy (with execCommand fallback + confetti) ----------------------
+    function copyText(value) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(value);
+        }
+        return new Promise((resolve, reject) => {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = value;
+                ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+                document.body.appendChild(ta);
+                ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                ok ? resolve() : reject(new Error('execCommand copy failed'));
+            } catch (e) { reject(e); }
+        });
+    }
+
     function wireCopy(root, config) {
         const handle = (btn, value, e) => {
             if (e) e.stopPropagation();
-            if (!navigator.clipboard) return;
-            navigator.clipboard.writeText(value).then(() => {
+            copyText(value).then(() => {
                 flashCopied(btn, config.strings && config.strings.copied);
+                spawnConfetti(btn);
             }).catch(() => {});
         };
         root.querySelectorAll('.dccgg-copy').forEach(btn => {
@@ -249,11 +299,43 @@
             btn.addEventListener('click', (e) => handle(btn, btn.dataset.copy || '', e));
         });
     }
-
     function flashCopied(btn, label) {
         const orig = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> ' + (label || 'Copied!');
         setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    }
+
+    function spawnConfetti(anchor) {
+        if (REDUCED_MOTION) return;
+        const r = anchor.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const colors = ['#f4da62', '#7BDCB5', '#5fa8e8', '#f08080', '#a94c66', '#0f6dbf', '#c19a4b'];
+        const N = 32;
+        for (let i = 0; i < N; i++) {
+            const p = document.createElement('span');
+            p.className = 'dccgg-confetti-piece';
+            const angle = (Math.random() - 0.5) * Math.PI; // mostly upward spread
+            const speed = 120 + Math.random() * 120;
+            const vx = Math.cos(angle - Math.PI / 2) * speed;
+            const vy = Math.sin(angle - Math.PI / 2) * speed;
+            const rot = Math.random() * 720 - 360;
+            const color = colors[i % colors.length];
+            p.style.cssText = 'left:' + cx + 'px;top:' + cy + 'px;background:' + color + ';transform:rotate(' + rot + 'deg);';
+            document.body.appendChild(p);
+            const start = performance.now();
+            const dur = 800 + Math.random() * 400;
+            const tick = (now) => {
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const x = vx * t;
+                const y = vy * t + 0.5 * 600 * t * t; // gravity
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot + t * 540).toFixed(0) + 'deg)';
+                p.style.opacity = String(1 - t);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
     }
 
     // -- Share -------------------------------------------------------------
@@ -276,11 +358,9 @@
                     navigator.share({ title: title || document.title, url: url.toString() }).catch(() => {});
                     return;
                 }
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(url.toString()).then(() => {
-                        flashCopied(btn, (config.strings && config.strings.shareCopied) || 'Link copied!');
-                    }).catch(() => {});
-                }
+                copyText(url.toString()).then(() => {
+                    flashCopied(btn, (config.strings && config.strings.shareCopied) || 'Link copied!');
+                }).catch(() => {});
             });
         });
     }
@@ -323,13 +403,6 @@
         if (close) close.addEventListener('click', closeDlg);
         if (overlay) overlay.addEventListener('click', closeDlg);
     }
-
-    /**
-     * Minimal QR encoder. To keep the bundle small we offload to a public
-     * QR endpoint as an <img> fallback. The endpoint receives only the
-     * value (which is text the guest already sees on screen), so there's
-     * no extra privacy exposure beyond what the page already shows.
-     */
     function renderQrSvg(value) {
         const img = document.createElement('img');
         img.alt = '';
@@ -340,7 +413,7 @@
         return img;
     }
 
-    // -- Search ------------------------------------------------------------
+    // -- Search (per-widget) ----------------------------------------------
     function wireSearch(root, config) {
         if (!config.enableSearch) return;
         const input = root.querySelector('.dccgg-search-input');
@@ -350,14 +423,15 @@
 
         const index = Array.isArray(config.searchIndex) ? config.searchIndex : [];
 
-        // Cmd-K / Ctrl-K
-        document.addEventListener('keydown', (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-                e.preventDefault();
-                input.focus();
-                input.select();
-            }
-            if (e.key === 'Escape' && document.activeElement === input) {
+        // Platform-aware kbd label (Mac vs everyone else).
+        const kbd = root.querySelector('.dccgg-search-kbd');
+        if (kbd && !/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')) {
+            kbd.textContent = 'Ctrl K';
+        }
+
+        // Per-widget Escape: clear and blur.
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 input.value = '';
                 hide();
                 input.blur();
@@ -432,16 +506,143 @@
         return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
     }
 
-    // -- Tilt (hover) -----------------------------------------------------
+    // -- Multi-widget-aware Cmd-K / Ctrl-K (single document binding) ------
+    function wireGlobalCmdK() {
+        if (document.dataset && document.dataset.dccggCmdK) return;
+        document.addEventListener('keydown', (e) => {
+            if (!((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === 'k')) return;
+            const target = findClosestVisibleWidgetSearchInput();
+            if (!target) return;
+            e.preventDefault();
+            target.focus();
+            target.select();
+        });
+        if (document.documentElement) document.documentElement.dataset.dccggCmdK = '1';
+    }
+    function findClosestVisibleWidgetSearchInput() {
+        const inputs = document.querySelectorAll('.dccgg-root .dccgg-search-input');
+        if (!inputs.length) return null;
+        // Prefer one inside an open FAB modal.
+        for (const inp of inputs) {
+            const wrap = inp.closest('.dccgg-wrapper');
+            if (wrap && wrap.classList.contains('is-open')) return inp;
+        }
+        // Otherwise the one whose root has the largest visible area in the viewport.
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let best = null, bestArea = -1;
+        inputs.forEach(inp => {
+            const root = inp.closest('.dccgg-root');
+            if (!root) return;
+            const r = root.getBoundingClientRect();
+            const w = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+            const h = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+            const area = w * h;
+            if (area > bestArea) { bestArea = area; best = inp; }
+        });
+        return best;
+    }
+
+    // -- Search mic (Web Speech Recognition) ------------------------------
+    function wireSearchMic(root, config) {
+        if (!config.enableSearch) return;
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) return;
+        const search = root.querySelector('.dccgg-search');
+        const input  = root.querySelector('.dccgg-search-input');
+        if (!search || !input) return;
+
+        const mic = document.createElement('button');
+        mic.type = 'button';
+        mic.className = 'dccgg-search-mic';
+        mic.setAttribute('aria-label', 'Voice search');
+        mic.innerHTML = '<i class="fas fa-microphone" aria-hidden="true"></i>';
+        // Insert before the kbd hint so layout flows: input | mic | kbd
+        const kbd = search.querySelector('.dccgg-search-kbd');
+        if (kbd) search.insertBefore(mic, kbd); else search.appendChild(mic);
+
+        let rec = null;
+        const stop = () => { if (rec) { try { rec.stop(); } catch (_) {} } mic.classList.remove('is-listening'); };
+
+        mic.addEventListener('click', () => {
+            if (mic.classList.contains('is-listening')) { stop(); return; }
+            try {
+                rec = new SR();
+                rec.continuous = false;
+                rec.interimResults = true;
+                rec.lang = document.documentElement.lang || 'en-US';
+                rec.onresult = (e) => {
+                    let txt = '';
+                    for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+                    input.value = txt;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                rec.onend = stop;
+                rec.onerror = stop;
+                rec.start();
+                mic.classList.add('is-listening');
+                input.focus();
+            } catch (_) { stop(); }
+        });
+    }
+
+    // -- TTS (Web Speech Synthesis) ---------------------------------------
+    function wireTts(root, config) {
+        if (!('speechSynthesis' in window)) return;
+        let currentBtn = null;
+        const buttons = root.querySelectorAll('.dccgg-item-tts');
+        buttons.forEach(btn => {
+            btn.hidden = false;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const article = btn.closest('.dccgg-item');
+                if (!article) return;
+                const text = (article.dataset.ttsText || '').trim();
+                if (!text) return;
+
+                // Toggle off if already speaking this one
+                if (currentBtn === btn && speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                    btn.classList.remove('is-speaking');
+                    currentBtn = null;
+                    return;
+                }
+                speechSynthesis.cancel();
+                if (currentBtn) currentBtn.classList.remove('is-speaking');
+
+                const u = new SpeechSynthesisUtterance(text);
+                const lang = document.documentElement.lang || 'en-US';
+                u.lang = lang;
+                // Prefer a same-language voice if voices list is loaded.
+                const voices = speechSynthesis.getVoices();
+                const langPrefix = lang.split('-')[0];
+                const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langPrefix.toLowerCase()));
+                if (match) u.voice = match;
+                u.onend = () => { btn.classList.remove('is-speaking'); if (currentBtn === btn) currentBtn = null; };
+                u.onerror = u.onend;
+                speechSynthesis.speak(u);
+                btn.classList.add('is-speaking');
+                currentBtn = btn;
+            });
+        });
+    }
+
+    // -- Tilt (rAF-throttled) ---------------------------------------------
     function wireTilt(root) {
         if (!root.classList.contains('dccgg-hover-tilt')) return;
         root.querySelectorAll('.dccgg-tile').forEach(tile => {
+            let pending = false;
+            let nextX = 0, nextY = 0;
             tile.addEventListener('mousemove', (e) => {
                 const r = tile.getBoundingClientRect();
-                const x = (e.clientX - r.left) / r.width - 0.5;
-                const y = (e.clientY - r.top) / r.height - 0.5;
-                tile.style.setProperty('--tx', (x * 12).toFixed(2) + 'deg');
-                tile.style.setProperty('--ty', (-y * 12).toFixed(2) + 'deg');
+                nextX = (e.clientX - r.left) / r.width - 0.5;
+                nextY = (e.clientY - r.top) / r.height - 0.5;
+                if (pending) return;
+                pending = true;
+                requestAnimationFrame(() => {
+                    tile.style.setProperty('--tx', (nextX * 12).toFixed(2) + 'deg');
+                    tile.style.setProperty('--ty', (-nextY * 12).toFixed(2) + 'deg');
+                    pending = false;
+                });
             });
             tile.addEventListener('mouseleave', () => {
                 tile.style.removeProperty('--tx');
@@ -450,30 +651,30 @@
         });
     }
 
-    // -- Click feedback (ripple position + particle burst) ----------------
+    // -- Click feedback ---------------------------------------------------
     function wireClickFeedback(root, config) {
         const burst = root.classList.contains('dccgg-click-burst');
+        if (!burst) return;
         root.addEventListener('click', (e) => {
             const tile = e.target.closest('.dccgg-tile');
             if (!tile) return;
-            if (burst) spawnBurst(tile, e);
+            spawnBurst(tile, e);
         }, true);
     }
-
     function ripple(tile, e) {
+        if (REDUCED_MOTION) return;
         const r = tile.getBoundingClientRect();
         const x = e.clientX ? (e.clientX - r.left) : r.width / 2;
         const y = e.clientY ? (e.clientY - r.top)  : r.height / 2;
         tile.style.setProperty('--ripple-x', x + 'px');
         tile.style.setProperty('--ripple-y', y + 'px');
         tile.classList.remove('is-pressed');
-        // force reflow so the animation restarts on each click
         void tile.offsetWidth;
         tile.classList.add('is-pressed');
         setTimeout(() => tile.classList.remove('is-pressed'), 600);
     }
-
     function spawnBurst(tile, e) {
+        if (REDUCED_MOTION) return;
         const r = tile.getBoundingClientRect();
         const cx = e.clientX || r.left + r.width / 2;
         const cy = e.clientY || r.top  + r.height / 2;
@@ -497,10 +698,10 @@
         setTimeout(() => container.remove(), 700);
     }
 
-    // -- Entry animation (stagger via IntersectionObserver) ---------------
+    // -- Entry animation --------------------------------------------------
     function wireEntryAnimation(root) {
         const isAnim = root.classList.contains('dccgg-entry-fade-up') || root.classList.contains('dccgg-entry-zoom');
-        if (!isAnim || !('IntersectionObserver' in window)) return;
+        if (!isAnim || REDUCED_MOTION || !('IntersectionObserver' in window)) return;
         const wraps = root.querySelectorAll('.dccgg-tile-wrap');
         wraps.forEach((w, i) => w.style.setProperty('--i', i));
         const io = new IntersectionObserver(entries => {
@@ -514,23 +715,296 @@
         wraps.forEach(w => io.observe(w));
     }
 
-    // -- URL anchor → auto-open ------------------------------------------
+    // -- URL anchor (per-widget validation) -------------------------------
     function wireUrlAnchor(root, config) {
         try {
             const url = new URL(window.location.href);
             const guide = url.searchParams.get('guide');
-            if (guide) {
-                if ((config.revealMode || 'stage') === 'stage') {
-                    openDetail(root, guide);
-                } else if ((config.revealMode || 'stage') === 'accordion') {
-                    const tile = root.querySelector('.dccgg-accordion-toggle[data-key="' + cssEsc(guide) + '"]');
-                    if (tile) tile.click();
-                } else if (config.revealMode === 'flip') {
-                    const card = root.querySelector('.dccgg-tile-wrap[data-section-key="' + cssEsc(guide) + '"] .dccgg-flip-card');
-                    if (card) card.classList.add('is-flipped');
-                }
+            if (!guide) return;
+            if (!root.__dccgg || !root.__dccgg.ownedKeys || !root.__dccgg.ownedKeys.has(guide)) return;
+
+            const mode = config.revealMode || 'stage';
+            if (mode === 'stage') {
+                openDetail(root, guide);
+            } else if (mode === 'accordion') {
+                const tile = root.querySelector('.dccgg-accordion-toggle[data-key="' + cssEsc(guide) + '"]');
+                if (tile) tile.click();
+            } else if (mode === 'flip') {
+                const card = root.querySelector('.dccgg-tile-wrap[data-section-key="' + cssEsc(guide) + '"] .dccgg-flip-card');
+                if (card) card.classList.add('is-flipped');
             }
-        } catch (_) { /* noop */ }
+        } catch (_) {}
+    }
+
+    // -- Image lightbox ---------------------------------------------------
+    function wireLightbox(root) {
+        const imgs = root.querySelectorAll('img.dccgg-media');
+        if (!imgs.length) return;
+        let dialog = null;
+        const ensure = () => {
+            if (dialog) return dialog;
+            dialog = document.createElement('dialog');
+            dialog.className = 'dccgg-lightbox';
+            dialog.innerHTML = '<div class="dccgg-lightbox-content"><img alt=""></div>' +
+                               '<button type="button" class="dccgg-lightbox-close" aria-label="Close">&times;</button>';
+            document.body.appendChild(dialog);
+            dialog.querySelector('.dccgg-lightbox-close').addEventListener('click', () => dialog.close());
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) dialog.close();
+            });
+            return dialog;
+        };
+        imgs.forEach(img => {
+            img.setAttribute('data-lightbox-clickable', '1');
+            img.addEventListener('click', () => {
+                const d = ensure();
+                if (typeof d.showModal !== 'function') return; // older browsers
+                d.querySelector('img').src = img.currentSrc || img.src;
+                d.showModal();
+            });
+        });
+    }
+
+    // -- Long-press peek tooltip -----------------------------------------
+    function wirePeek(root) {
+        let peekEl = null;
+        let timer = null;
+        let activeTile = null;
+        let startX = 0, startY = 0;
+
+        const closePeek = () => {
+            clearTimeout(timer); timer = null;
+            if (peekEl) { peekEl.remove(); peekEl = null; }
+            activeTile = null;
+        };
+
+        const openPeekFor = (tile, x, y) => {
+            const key = tile.dataset.key;
+            if (!key) return;
+            const detail = root.querySelector('.dccgg-detail[data-key="' + cssEsc(key) + '"]');
+            const firstItem = detail && detail.querySelector('.dccgg-item');
+            const titleEl = tile.querySelector('.dccgg-tile-title');
+            const descEl  = tile.querySelector('.dccgg-tile-desc');
+            const bodyText = (() => {
+                if (firstItem) {
+                    const body = firstItem.querySelector('.dccgg-item-body');
+                    if (body) return body.textContent.trim().slice(0, 160);
+                }
+                return (descEl && descEl.textContent.trim().slice(0, 160)) || '';
+            })();
+            if (!bodyText) return;
+            peekEl = document.createElement('div');
+            peekEl.className = 'dccgg-peek';
+            peekEl.innerHTML = '<strong></strong><div></div>';
+            peekEl.querySelector('strong').textContent = titleEl ? titleEl.textContent.trim() : '';
+            peekEl.querySelector('div').textContent = bodyText + (bodyText.length >= 160 ? '…' : '');
+            document.body.appendChild(peekEl);
+            const pw = Math.min(300, window.innerWidth - 32);
+            peekEl.style.maxWidth = pw + 'px';
+            peekEl.style.left = Math.max(16, Math.min(window.innerWidth - pw - 16, x + 12)) + 'px';
+            peekEl.style.top = Math.max(16, y + 16) + 'px';
+            requestAnimationFrame(() => peekEl.classList.add('is-open'));
+        };
+
+        root.querySelectorAll('.dccgg-tile').forEach(tile => {
+            tile.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'touch' && e.button !== 2) return;
+                startX = e.clientX; startY = e.clientY;
+                activeTile = tile;
+                timer = setTimeout(() => openPeekFor(tile, startX, startY), 500);
+            });
+            tile.addEventListener('pointermove', (e) => {
+                if (!activeTile) return;
+                if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) closePeek();
+            });
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+                tile.addEventListener(ev, closePeek));
+            tile.addEventListener('contextmenu', (e) => {
+                if (e.pointerType === 'touch') return;
+                e.preventDefault();
+                openPeekFor(tile, e.clientX, e.clientY);
+                setTimeout(closePeek, 3000);
+            });
+        });
+    }
+
+    // -- Mobile bottom-sheet drag-to-dismiss ------------------------------
+    function wireSheetDrag(root) {
+        const stage = root.querySelector('.dccgg-stage');
+        if (!stage) return;
+        const isMobileSheet = () => window.matchMedia('(max-width: 768px) and (pointer: coarse)').matches;
+
+        let startY = 0;
+        let currentY = 0;
+        let dragging = false;
+        let backdrop = null;
+
+        const ensureBackdrop = () => {
+            if (backdrop) return backdrop;
+            backdrop = document.createElement('div');
+            backdrop.className = 'dccgg-sheet-backdrop';
+            root.querySelector('.dccgg-wrapper').appendChild(backdrop);
+            backdrop.addEventListener('click', () => root.classList.remove('is-detail'));
+            return backdrop;
+        };
+        ensureBackdrop();
+
+        stage.addEventListener('pointerdown', (e) => {
+            if (!isMobileSheet() || !root.classList.contains('is-detail')) return;
+            // Only start drag from the top 60px (drag handle area)
+            const r = stage.getBoundingClientRect();
+            if (e.clientY - r.top > 60) return;
+            dragging = true;
+            startY = e.clientY;
+            currentY = e.clientY;
+            root.classList.add('is-sheet-dragging');
+        });
+        document.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            currentY = e.clientY;
+            const dy = Math.max(0, currentY - startY);
+            stage.style.transform = 'translateY(' + dy + 'px)';
+        });
+        document.addEventListener('pointerup', () => {
+            if (!dragging) return;
+            dragging = false;
+            root.classList.remove('is-sheet-dragging');
+            const dy = Math.max(0, currentY - startY);
+            const dismiss = dy > (stage.offsetHeight * 0.3);
+            stage.style.transform = '';
+            if (dismiss) {
+                root.classList.remove('is-detail');
+                setTimeout(() => {
+                    root.querySelectorAll('.dccgg-detail').forEach(d => { d.hidden = true; });
+                }, 320);
+            }
+        });
+    }
+
+    // -- Sticky TOC current-item highlight --------------------------------
+    function wireToc(root) {
+        if (!('IntersectionObserver' in window)) return;
+        root.querySelectorAll('.dccgg-detail--has-toc').forEach(detail => {
+            const tocLinks = detail.querySelectorAll('.dccgg-toc a[data-toc-item]');
+            const anchors  = detail.querySelectorAll('.dccgg-detail-item-anchor');
+            if (!tocLinks.length || !anchors.length) return;
+
+            tocLinks.forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const idx = parseInt(a.dataset.tocItem || '0', 10);
+                    const target = detail.querySelector('.dccgg-detail-item-anchor[data-item-idx="' + idx + '"]');
+                    if (target) target.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'start' });
+                });
+            });
+
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(en => {
+                    if (en.isIntersecting) {
+                        const idx = en.target.dataset.itemIdx;
+                        tocLinks.forEach(a => a.classList.toggle('is-current', a.dataset.tocItem === idx));
+                    }
+                });
+            }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+            anchors.forEach(a => io.observe(a));
+        });
+    }
+
+    // -- Reading progress bar --------------------------------------------
+    function wireProgressBar(root) {
+        const stage = root.querySelector('.dccgg-stage');
+        if (!stage) return;
+        const update = () => {
+            const detail = stage.querySelector('.dccgg-detail:not([hidden])');
+            if (!detail) return;
+            const bar = detail.querySelector('.dccgg-progress-bar');
+            if (!bar) return;
+            // Compute progress through the detail card vs the viewport.
+            const r = detail.getBoundingClientRect();
+            const vh = window.innerHeight;
+            const total = Math.max(1, r.height - vh);
+            const scrolled = Math.min(total, Math.max(0, -r.top));
+            const pct = (scrolled / total) * 100;
+            bar.style.width = pct.toFixed(1) + '%';
+        };
+        let pending = false;
+        const onScroll = () => {
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(() => { update(); pending = false; });
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+        // Update once on entering detail
+        const mo = new MutationObserver(update);
+        mo.observe(root, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // -- Welcome Pack editor hook -----------------------------------------
+    function wireWelcomePackEditor() {
+        // Single delegated listener; only fires in the Elementor editor panel.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-dccgg-welcome-pack]');
+            if (!btn) return;
+            e.preventDefault();
+            insertWelcomePack(btn);
+        });
+    }
+    function insertWelcomePack(btn) {
+        const pack = welcomePackPayload();
+        // Try Elementor editor model API; falls back to a console warning.
+        try {
+            if (!window.elementor || !window.elementor.getPanelView) {
+                console.warn('DCCGG: Welcome Pack requires the Elementor editor; nothing inserted.');
+                return;
+            }
+            const panel = window.elementor.getPanelView();
+            const view  = panel && panel.getCurrentPageView && panel.getCurrentPageView();
+            const model = view && view.model && view.model.get && view.model.get('editedElementView') && view.model.get('editedElementView').getEditModel();
+            const elementModel = model || (window.elementor.selection && window.elementor.selection.getElements && window.elementor.selection.getElements()[0]);
+            if (!elementModel || !elementModel.get) {
+                console.warn('DCCGG: could not resolve the active widget model.');
+                return;
+            }
+            const settings = elementModel.get('settings');
+            if (!settings) { console.warn('DCCGG: no settings model.'); return; }
+            const existingSections = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
+            const existingItems    = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
+            settings.set('guide_sections', existingSections.concat(pack.sections));
+            settings.set('guide_items',    existingItems.concat(pack.items));
+            if (window.elementor.saver && window.elementor.saver.update) {
+                window.elementor.saver.update();
+            }
+            btn.textContent = '✓ Inserted — save the page to keep.';
+            btn.disabled = true;
+        } catch (err) {
+            console.error('DCCGG: Welcome Pack injection failed:', err);
+        }
+    }
+    function welcomePackPayload() {
+        const sections = [
+            { section_key: 'wifi',      section_title: 'Wi-Fi',           section_desc: 'Network name & password.',             section_icon: { value: 'fas fa-wifi',             library: 'solid' } },
+            { section_key: 'hot-tub',   section_title: 'Hot Tub',         section_desc: 'How to use it & house rules.',         section_icon: { value: 'fas fa-hot-tub',          library: 'solid' } },
+            { section_key: 'trash',     section_title: 'Trash & Recycling', section_desc: 'Pickup days & sorting.',             section_icon: { value: 'fas fa-trash',            library: 'solid' } },
+            { section_key: 'checkout',  section_title: 'Checkout',        section_desc: 'Departure checklist & timing.',        section_icon: { value: 'fas fa-door-open',        library: 'solid' } },
+            { section_key: 'local',     section_title: 'Local Eats',      section_desc: 'Our favorite nearby spots.',           section_icon: { value: 'fas fa-utensils',         library: 'solid' } },
+            { section_key: 'emergency', section_title: 'Emergency',       section_desc: 'Numbers & nearest hospital.',          section_icon: { value: 'fas fa-phone-alt',        library: 'solid' } },
+        ];
+        const items = [
+            { item_section: 'wifi',     item_title: 'Network name',        item_icon: { value: 'fas fa-wifi', library: 'solid' }, content_source: 'wysiwyg', item_content: 'The Wi-Fi network is named below. Replace this with your SSID.', item_copy: 'yes', item_copy_value: 'CHANGE-ME-SSID' },
+            { item_section: 'wifi',     item_title: 'Password',            item_icon: { value: 'fas fa-key',  library: 'solid' }, content_source: 'wysiwyg', item_content: 'Tap Copy and paste it into your device.', item_copy: 'yes', item_copy_value: 'change-me-password' },
+            { item_section: 'hot-tub',  item_title: 'Before you get in',   item_icon: { value: 'fas fa-thermometer-half', library: 'solid' }, content_source: 'wysiwyg', item_content: 'Check the temperature reads about 100–102°F before stepping in.' },
+            { item_section: 'hot-tub',  item_title: 'House rules',         item_icon: { value: 'fas fa-list',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'No glass containers in the tub. Children under 12 must be supervised.' },
+            { item_section: 'trash',    item_title: 'Pickup days',         item_icon: { value: 'fas fa-calendar-day',      library: 'solid' }, content_source: 'wysiwyg', item_content: 'Tuesdays at 7am. Bins live in the side yard.' },
+            { item_section: 'checkout', item_title: 'Checkout time',       item_icon: { value: 'fas fa-clock',             library: 'solid' }, content_source: 'wysiwyg', item_content: 'Please be checked out by 11:00 AM so the cleaners can get in.' },
+            { item_section: 'checkout', item_title: 'Departure checklist', item_icon: { value: 'fas fa-clipboard-check',   library: 'solid' }, content_source: 'wysiwyg', item_content: 'Strip the beds, run the dishwasher, turn the AC up to 78°F, lock the doors.' },
+            { item_section: 'local',    item_title: 'Best breakfast',      item_icon: { value: 'fas fa-coffee',            library: 'solid' }, content_source: 'wysiwyg', item_content: 'The place down the street opens at 7am — try the pancakes.' },
+            { item_section: 'local',    item_title: 'Best seafood',        item_icon: { value: 'fas fa-fish',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'Quick drive away — reservations recommended on weekends.' },
+            { item_section: 'emergency',item_title: 'Owner contact',       item_icon: { value: 'fas fa-user',              library: 'solid' }, content_source: 'wysiwyg', item_content: 'Call 555-123-4567 for any urgent issue.', item_copy: 'yes', item_copy_value: '555-123-4567' },
+            { item_section: 'emergency',item_title: 'Nearest hospital',    item_icon: { value: 'fas fa-hospital',          library: 'solid' }, content_source: 'wysiwyg', item_content: 'A short drive away. See map below.', enable_map: 'yes', map_url: { url: 'https://maps.google.com/?q=hospital+near+me', is_external: 'on' } },
+            { item_section: 'emergency',item_title: '911',                 item_icon: { value: 'fas fa-phone-alt',         library: 'solid' }, content_source: 'wysiwyg', item_content: 'For any life-threatening emergency, call 911.', item_copy: 'yes', item_copy_value: '911' },
+        ];
+        return { sections, items };
     }
 
 })();

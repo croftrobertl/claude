@@ -32,7 +32,17 @@ final class Widget extends Widget_Base
 
     public static function register_assets(): void
     {
-        wp_register_style('dccgg-widget', DCCGG_URL . 'assets/css/widget.css', [], DCCGG_VERSION);
+        // Depend on Elementor's Font Awesome bundles so the hardcoded
+        // <i class="fas …"> icons (search, print, theme toggle, FAB close,
+        // copy-confirmation glyph) always have FA loaded, even on pages
+        // that don't otherwise trigger an Elementor icon-control enqueue.
+        $style_deps = [];
+        foreach (['elementor-icons-fa-solid', 'elementor-icons-fa-regular'] as $h) {
+            if (wp_style_is($h, 'registered') || wp_style_is($h, 'enqueued')) {
+                $style_deps[] = $h;
+            }
+        }
+        wp_register_style('dccgg-widget', DCCGG_URL . 'assets/css/widget.css', $style_deps, DCCGG_VERSION);
         wp_register_script('dccgg-widget', DCCGG_URL . 'assets/js/widget.js', [], DCCGG_VERSION, true);
     }
 
@@ -225,6 +235,133 @@ final class Widget extends Widget_Base
         ];
     }
 
+    /**
+     * Identify items that target a section_key no longer present in the
+     * sections repeater (e.g. the section was renamed or deleted). Used to
+     * surface an editor-only warning so authors can fix orphans.
+     *
+     * @return string[] item titles
+     */
+    private function find_orphan_items(): array
+    {
+        $sections = (array) $this->get_settings('guide_sections');
+        $items    = (array) $this->get_settings('guide_items');
+        if (empty($items)) {
+            return [];
+        }
+        $valid = [];
+        foreach ($sections as $sec) {
+            $k = trim((string) ($sec['section_key'] ?? ''));
+            if ($k !== '') {
+                $valid[$k] = true;
+            }
+        }
+        $orphans = [];
+        foreach ($items as $it) {
+            $k = trim((string) ($it['item_section'] ?? ''));
+            if ($k === '' || !isset($valid[$k])) {
+                $title = trim((string) ($it['item_title'] ?? ''));
+                $orphans[] = $title !== '' ? $title : __('(untitled item)', 'dcc-guest-guide');
+            }
+        }
+        return $orphans;
+    }
+
+    /**
+     * Compute a human read-time label from a chunk of HTML content. Uses the
+     * common 200 wpm estimate. Returns an empty string for very short content
+     * so we don't clutter every tile with a "less than 1 min" badge.
+     */
+    public static function read_time_text(string $html): string
+    {
+        $text = trim(wp_strip_all_tags($html));
+        if ($text === '') {
+            return '';
+        }
+        $words   = preg_split('/\s+/u', $text) ?: [];
+        $count   = count($words);
+        if ($count < 50) {
+            return '';
+        }
+        $minutes = max(1, (int) ceil($count / 200));
+        return sprintf(
+            /* translators: %d: estimated minutes */
+            _n('%d min read', '%d min read', $minutes, 'dcc-guest-guide'),
+            $minutes
+        );
+    }
+
+    /**
+     * Server-side auto-linker. Wraps unlinked phone numbers (US-style and
+     * E.164-ish), email addresses, and decimal lat/lng coordinate pairs in
+     * `tel:`, `mailto:`, and Google Maps links respectively. Skips text inside
+     * existing `<a>`, `<code>`, `<pre>`, and `<kbd>` to avoid mangling
+     * pre-formatted content or breaking nested anchors. Returns the modified
+     * HTML; the input is assumed to have already passed through `wp_kses_post`.
+     */
+    public static function auto_link_html(string $html): string
+    {
+        if ($html === '' || stripos($html, '<') === false && stripos($html, '@') === false && !preg_match('/\d/', $html)) {
+            return $html;
+        }
+
+        // Split on protected blocks so we don't recurse into them.
+        $parts = preg_split(
+            '#(<a\b[^>]*>.*?</a>|<code\b[^>]*>.*?</code>|<pre\b[^>]*>.*?</pre>|<kbd\b[^>]*>.*?</kbd>)#is',
+            $html,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE
+        );
+        if (!is_array($parts)) {
+            return $html;
+        }
+
+        $patterns = [
+            // emails
+            '~([\w.+\-]{1,64}@[\w\-]{1,255}(?:\.[\w\-]{2,})+)~i' =>
+                static fn(array $m): string => '<a href="mailto:' . esc_attr($m[1]) . '">' . esc_html($m[1]) . '</a>',
+            // US-style phone numbers (with optional + country code, parens, dashes, dots, spaces)
+            '~(?<![\w/])(\+?\d{1,3}[\s.\-]?)?(?:\(\d{3}\)|\d{3})[\s.\-]?\d{3}[\s.\-]?\d{4}(?![\w/])~' =>
+                static function (array $m): string {
+                    $tel = preg_replace('/[^\d+]/', '', $m[0]);
+                    return '<a href="tel:' . esc_attr($tel) . '">' . esc_html($m[0]) . '</a>';
+                },
+            // decimal lat,lng coordinate pairs
+            '~(?<![\w/])(-?\d{1,3}\.\d{3,8})\s*,\s*(-?\d{1,3}\.\d{3,8})(?![\w/])~' =>
+                static function (array $m): string {
+                    $url = 'https://www.google.com/maps?q=' . urlencode($m[1] . ',' . $m[2]);
+                    return '<a href="' . esc_attr($url) . '" target="_blank" rel="noopener">' . esc_html($m[1] . ', ' . $m[2]) . '</a>';
+                },
+        ];
+
+        foreach ($parts as $i => $chunk) {
+            // Skip protected blocks captured by the split.
+            if ($i % 2 === 1) {
+                continue;
+            }
+            // Tokenize HTML tags so we only touch text nodes.
+            $tokens = preg_split('/(<[^>]+>)/', $chunk, -1, PREG_SPLIT_DELIM_CAPTURE);
+            if (!is_array($tokens)) {
+                continue;
+            }
+            foreach ($tokens as $t => $tok) {
+                if ($t % 2 === 1) {
+                    continue; // tag
+                }
+                if ($tok === '') {
+                    continue;
+                }
+                foreach ($patterns as $pat => $cb) {
+                    $tok = preg_replace_callback($pat, $cb, $tok);
+                }
+                $tokens[$t] = $tok;
+            }
+            $parts[$i] = implode('', $tokens);
+        }
+
+        return implode('', $parts);
+    }
+
     // ----------------------------------------------------------------------
     // Content tab
     // ----------------------------------------------------------------------
@@ -284,6 +421,21 @@ final class Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
+        // Welcome Pack: inserts a typical hospitality starter set (Wi-Fi /
+        // Hot Tub / Trash / Checkout / Local Eats / Emergency) into the
+        // Sections and Items repeaters in one click. Wired through the
+        // [data-dccgg-welcome-pack] hook on the frontend script — which is
+        // also loaded into the editor preview iframe via the preview enqueue.
+        $this->add_control('welcome_pack_notice', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert elementor-panel-alert-info" style="margin-bottom:8px;">' .
+                                  esc_html__('First time? Insert a hospitality starter pack (6 sections + items) — Wi-Fi, Hot Tub, Trash, Checkout, Local Eats, Emergency.', 'dcc-guest-guide') .
+                                  '<br><button type="button" class="elementor-button elementor-button-default" data-dccgg-welcome-pack style="margin-top:6px;">' .
+                                  esc_html__('Insert Welcome Pack', 'dcc-guest-guide') .
+                                  '</button></div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
         $repeater = new Repeater();
         $repeater->add_control('section_key', [
             'label'       => __('Section key', 'dcc-guest-guide'),
@@ -303,6 +455,13 @@ final class Widget extends Widget_Base
             'label'   => __('Icon', 'dcc-guest-guide'),
             'type'    => Controls_Manager::ICONS,
             'default' => ['value' => 'fas fa-info', 'library' => 'solid'],
+        ]);
+
+        $repeater->add_control('procedure_mode', [
+            'label'        => __('Render items as a numbered procedure', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Items in this section render as Step 1, 2, 3… with a connecting progress line. Use for instruction-style sections like "How to start the hot tub".', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('enable_quick_action', [
@@ -350,13 +509,35 @@ final class Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
+        $this->add_control('items_reload_notice', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert elementor-panel-alert-info" style="margin-bottom:8px;">' .
+                                  esc_html__('The Section dropdown below is populated from the Sections panel. If you just added a new section, save the widget and reopen this panel for it to appear in the list.', 'dcc-guest-guide') .
+                                  '</div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $orphans = $this->find_orphan_items();
+        if (!empty($orphans)) {
+            $this->add_control('items_orphan_warning', [
+                'type'            => Controls_Manager::RAW_HTML,
+                'raw'             => '<div class="elementor-panel-alert elementor-panel-alert-warning" style="margin-bottom:8px;">' .
+                                      esc_html(sprintf(
+                                          /* translators: %s: comma-separated item titles */
+                                          __('These items point at a section that no longer exists and will not appear on the page: %s. Re-pick a Section for each in the list below.', 'dcc-guest-guide'),
+                                          implode(', ', $orphans)
+                                      )) .
+                                      '</div>',
+                'content_classes' => 'elementor-descriptor',
+            ]);
+        }
+
         $repeater = new Repeater();
         $repeater->add_control('item_section', [
             'label'       => __('Section', 'dcc-guest-guide'),
             'type'        => Controls_Manager::SELECT,
             'options'     => $this->sections_options(),
             'label_block' => true,
-            'description' => __('Choose which section this item appears in. Newly-added sections appear here after you save and reopen this panel.', 'dcc-guest-guide'),
         ]);
         $repeater->add_control('item_title', [
             'label'       => __('Item title', 'dcc-guest-guide'),
@@ -489,6 +670,15 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::TEXT,
             'default'   => __('No matches. Try a different keyword.', 'dcc-guest-guide'),
             'condition' => ['enable_search' => 'yes'],
+        ]);
+
+        $this->add_control('include_templates_in_search', [
+            'label'        => __('Include Elementor-template content in search', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'condition'    => ['enable_search' => 'yes'],
+            'description'  => __('Off by default — turning this on renders each referenced template once at page-load to index its text. Adds server cost; only enable if guests search for content that lives inside templates.', 'dcc-guest-guide'),
         ]);
 
         $this->end_controls_section();
@@ -763,14 +953,20 @@ final class Widget extends Widget_Base
             'selector' => self::SEL . '.dccgg-tile',
         ]);
 
-        $this->add_control('tile_backdrop_image', [
-            'label'     => __('Backdrop image overlay opacity', 'dcc-guest-guide'),
+        $this->add_control('tile_overlay_color', [
+            'label'     => __('Overlay color (for backdrop images)', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'description' => __('Painted on top of the tile background to keep foreground text readable. Leave blank for no overlay.', 'dcc-guest-guide'),
+            'selectors' => [self::SEL . '.dccgg-tile::after' => 'background: {{VALUE}};'],
+            'separator' => 'before',
+        ]);
+        $this->add_control('tile_overlay_opacity', [
+            'label'     => __('Overlay opacity', 'dcc-guest-guide'),
             'type'      => Controls_Manager::SLIDER,
             'range'     => ['px' => ['min' => 0, 'max' => 100, 'step' => 1]],
-            'default'   => ['size' => 50, 'unit' => 'px'],
+            'default'   => ['size' => 0, 'unit' => 'px'],
             'selectors' => [self::SEL . '.dccgg-tile::after' => 'opacity: calc({{SIZE}} / 100);'],
-            'separator' => 'before',
-            'description' => __('Tints the tile darker (set in CSS) so foreground text stays readable over the background.', 'dcc-guest-guide'),
+            'condition' => ['tile_overlay_color!' => ''],
         ]);
 
         $this->add_group_control(Group_Control_Border::get_type(), [
@@ -1164,6 +1360,9 @@ final class Widget extends Widget_Base
                 $valid_keys[$key] = true;
             }
         }
+        $enable_search       = ($s['enable_search'] ?? 'yes') === 'yes';
+        $include_tpl_search  = ($s['include_templates_in_search'] ?? '') === 'yes';
+
         $items_by_section = [];
         $search_index     = [];
         foreach ($items_raw as $i => $item) {
@@ -1172,12 +1371,14 @@ final class Widget extends Widget_Base
                 continue;
             }
             $items_by_section[$key][] = $item;
-            $search_index[] = [
-                'section'  => $key,
-                'item_idx' => count($items_by_section[$key]) - 1,
-                'title'    => (string) ($item['item_title'] ?? ''),
-                'text'     => self::extract_search_text($item),
-            ];
+            if ($enable_search) {
+                $search_index[] = [
+                    'section'  => $key,
+                    'item_idx' => count($items_by_section[$key]) - 1,
+                    'title'    => (string) ($item['item_title'] ?? ''),
+                    'text'     => self::extract_search_text($item, $include_tpl_search),
+                ];
+            }
         }
 
         $reveal_mode  = (string) ($s['reveal_mode'] ?? 'stage');
@@ -1188,7 +1389,6 @@ final class Widget extends Widget_Base
             $reveal_mode = 'stage';
         }
 
-        $enable_search  = ($s['enable_search'] ?? 'yes') === 'yes';
         $enable_fab     = ($s['enable_fab'] ?? '') === 'yes';
         $enable_print   = ($s['enable_print'] ?? '') === 'yes';
         $dark_mode      = (string) ($s['dark_mode'] ?? 'off');
@@ -1296,39 +1496,57 @@ final class Widget extends Widget_Base
     private function render_menu(array $sections, array $items_by_section, array $s, string $reveal_mode): void
     {
         $label_back   = (string) ($s['str_back'] ?? 'Back');
-        $label_share  = (string) ($s['str_share'] ?? 'Share');
+        $widget_uid   = $this->get_id();
         ?>
         <div class="dccgg-menu">
             <?php foreach ($sections as $sec) :
                 $key   = trim((string) ($sec['section_key'] ?? ''));
                 if ($key === '') { continue; }
                 $title = (string) ($sec['section_title'] ?? $key);
-                $desc  = (string) ($sec['section_desc'] ?? '');
                 $items = $items_by_section[$key] ?? [];
                 $qa_on = ($sec['enable_quick_action'] ?? '') === 'yes' && trim((string) ($sec['quick_action_val'] ?? '')) !== '';
+                $procedure = ($sec['procedure_mode'] ?? '') === 'yes';
+
+                // Stable IDs for a11y linkage. Hashed key so a quoted/odd
+                // section key still produces a valid attribute value.
+                $safe_key   = substr(sha1($widget_uid . '|' . $key), 0, 10);
+                $tile_id    = 'dccgg-tile-' . $safe_key;
+                $panel_id   = 'dccgg-panel-' . $safe_key;
                 ?>
-                <div class="dccgg-tile-wrap" data-section-key="<?php echo esc_attr($key); ?>">
+                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>">
                     <?php if ($reveal_mode === 'flip') : ?>
                         <div class="dccgg-flip-card">
                             <div class="dccgg-flip-inner">
-                                <button type="button" class="dccgg-tile dccgg-flip-front" data-key="<?php echo esc_attr($key); ?>">
+                                <button type="button" class="dccgg-tile dccgg-flip-front" data-key="<?php echo esc_attr($key); ?>" aria-expanded="false">
                                     <?php $this->render_tile_inner($sec, count($items)); ?>
                                 </button>
                                 <div class="dccgg-flip-back" role="region" aria-label="<?php echo esc_attr($title); ?>">
                                     <button type="button" class="dccgg-flip-close" aria-label="<?php echo esc_attr($label_back); ?>">&times;</button>
                                     <h3 class="dccgg-flip-title"><?php echo esc_html($title); ?></h3>
-                                    <div class="dccgg-flip-items">
-                                        <?php foreach ($items as $it) { $this->render_item($it, $s, true); } ?>
-                                    </div>
+                                    <?php if ($procedure) : ?>
+                                        <ol class="dccgg-flip-items dccgg-procedure">
+                                            <?php foreach ($items as $it) { echo '<li>'; $this->render_item($it, $s, true); echo '</li>'; } ?>
+                                        </ol>
+                                    <?php else : ?>
+                                        <div class="dccgg-flip-items">
+                                            <?php foreach ($items as $it) { $this->render_item($it, $s, true); } ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     <?php elseif ($reveal_mode === 'accordion') : ?>
-                        <button type="button" class="dccgg-tile dccgg-accordion-toggle" data-key="<?php echo esc_attr($key); ?>" aria-expanded="false">
+                        <button type="button" id="<?php echo esc_attr($tile_id); ?>" class="dccgg-tile dccgg-accordion-toggle" data-key="<?php echo esc_attr($key); ?>" aria-expanded="false" aria-controls="<?php echo esc_attr($panel_id); ?>">
                             <?php $this->render_tile_inner($sec, count($items)); ?>
                         </button>
-                        <div class="dccgg-accordion-panel" hidden>
-                            <?php foreach ($items as $it) { $this->render_item($it, $s, true); } ?>
+                        <div id="<?php echo esc_attr($panel_id); ?>" class="dccgg-accordion-panel" role="region" aria-labelledby="<?php echo esc_attr($tile_id); ?>" hidden>
+                            <?php if ($procedure) : ?>
+                                <ol class="dccgg-procedure">
+                                    <?php foreach ($items as $it) { echo '<li>'; $this->render_item($it, $s, true); echo '</li>'; } ?>
+                                </ol>
+                            <?php else : ?>
+                                <?php foreach ($items as $it) { $this->render_item($it, $s, true); } ?>
+                            <?php endif; ?>
                         </div>
                     <?php else : ?>
                         <button type="button" class="dccgg-tile" data-key="<?php echo esc_attr($key); ?>">
@@ -1402,8 +1620,11 @@ final class Widget extends Widget_Base
                 $title = (string) ($sec['section_title'] ?? $key);
                 $icon  = (array) ($sec['section_icon'] ?? ['value' => 'fas fa-info', 'library' => 'solid']);
                 $items = $items_by_section[$key] ?? [];
+                $procedure = ($sec['procedure_mode'] ?? '') === 'yes';
+                $show_toc  = count($items) >= 4 && !$procedure;
                 ?>
-                <div class="dccgg-detail" data-key="<?php echo esc_attr($key); ?>" hidden>
+                <div class="dccgg-detail<?php echo $show_toc ? ' dccgg-detail--has-toc' : ''; ?>" data-key="<?php echo esc_attr($key); ?>" hidden>
+                    <div class="dccgg-progress-bar" aria-hidden="true"></div>
                     <div class="dccgg-detail-header">
                         <button type="button" class="dccgg-btn dccgg-back">
                             <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
@@ -1413,8 +1634,31 @@ final class Widget extends Widget_Base
                             <span><?php echo esc_html($title); ?></span>
                         </h2>
                     </div>
-                    <div class="dccgg-detail-items">
-                        <?php foreach ($items as $it) { $this->render_item($it, $s, false); } ?>
+                    <div class="dccgg-detail-layout">
+                        <?php if ($show_toc) : ?>
+                            <nav class="dccgg-toc" aria-label="<?php echo esc_attr($title); ?>">
+                                <ul>
+                                    <?php foreach ($items as $it_idx => $it) :
+                                        $it_title = (string) ($it['item_title'] ?? '');
+                                        if ($it_title === '') { continue; } ?>
+                                        <li><a href="#" data-toc-item="<?php echo (int) $it_idx; ?>"><?php echo esc_html($it_title); ?></a></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </nav>
+                        <?php endif; ?>
+                        <?php if ($procedure) : ?>
+                            <ol class="dccgg-detail-items dccgg-procedure">
+                                <?php foreach ($items as $it) { echo '<li>'; $this->render_item($it, $s, false); echo '</li>'; } ?>
+                            </ol>
+                        <?php else : ?>
+                            <div class="dccgg-detail-items">
+                                <?php foreach ($items as $it_idx => $it) {
+                                    echo '<div class="dccgg-detail-item-anchor" data-item-idx="' . (int) $it_idx . '">';
+                                    $this->render_item($it, $s, false);
+                                    echo '</div>';
+                                } ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -1436,13 +1680,31 @@ final class Widget extends Widget_Base
         $map_on         = ($item['enable_map'] ?? '') === 'yes';
         $map_url        = (string) ($item['map_url']['url'] ?? '');
         $badge          = trim((string) ($item['item_badge'] ?? ''));
+
+        // Auto-link + read-time apply to WYSIWYG content only.
+        $body_html = '';
+        if ($source === 'wysiwyg') {
+            $body_html = wpautop(self::auto_link_html(wp_kses_post($content)));
+        }
+        $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
+        $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
-        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>">
+        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>">
             <h3 class="dccgg-item-title">
                 <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
                 <span><?php echo esc_html($title); ?></span>
                 <?php if ($badge !== '') : ?>
                     <span class="dccgg-item-badge"><?php echo esc_html($badge); ?></span>
+                <?php endif; ?>
+                <?php if ($read_time !== '') : ?>
+                    <span class="dccgg-read-time" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: read time string */ __('Estimated read time: %s', 'dcc-guest-guide'), $read_time)); ?>">
+                        <i class="fas fa-clock" aria-hidden="true"></i> <?php echo esc_html($read_time); ?>
+                    </span>
+                <?php endif; ?>
+                <?php if ($tts_supported_text !== '') : ?>
+                    <button type="button" class="dccgg-item-tts" aria-label="<?php echo esc_attr__('Read this item aloud', 'dcc-guest-guide'); ?>" hidden>
+                        <i class="fas fa-volume-up" aria-hidden="true"></i>
+                    </button>
                 <?php endif; ?>
                 <button type="button" class="dccgg-item-share" data-share-title="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_share']); ?>">
                     <i class="fas fa-link" aria-hidden="true"></i>
@@ -1453,7 +1715,7 @@ final class Widget extends Widget_Base
                 <?php if ($source === 'template' && $template_id > 0) :
                     echo self::render_template($template_id); // phpcs:ignore WordPress.Security.EscapeOutput
                 else : ?>
-                    <div class="dccgg-item-body"><?php echo wpautop(wp_kses_post($content)); ?></div>
+                    <div class="dccgg-item-body"><?php echo $body_html; // phpcs:ignore WordPress.Security.EscapeOutput — auto_link_html operates on already-kses'd content ?></div>
                 <?php endif; ?>
             </div>
 
@@ -1503,16 +1765,23 @@ final class Widget extends Widget_Base
 
     /**
      * Build a plaintext search-haystack for an item. WYSIWYG content is
-     * stripped of tags; templates contribute only their title (server-rendered
-     * template HTML is too expensive to materialize just for search).
+     * stripped of tags; template content is only included when
+     * $include_templates is true (server-renders each template — opt-in
+     * because it costs one extra render per template per pageload).
      */
-    private static function extract_search_text(array $item): string
+    private static function extract_search_text(array $item, bool $include_templates = false): string
     {
         $parts = [];
         $parts[] = (string) ($item['item_title'] ?? '');
         $parts[] = (string) ($item['item_badge'] ?? '');
-        if (($item['content_source'] ?? 'wysiwyg') === 'wysiwyg') {
+        $source = (string) ($item['content_source'] ?? 'wysiwyg');
+        if ($source === 'wysiwyg') {
             $parts[] = wp_strip_all_tags((string) ($item['item_content'] ?? ''));
+        } elseif ($source === 'template' && $include_templates) {
+            $tpl_id = (int) ($item['item_template'] ?? 0);
+            if ($tpl_id > 0) {
+                $parts[] = wp_strip_all_tags(self::render_template($tpl_id));
+            }
         }
         if (($item['item_copy'] ?? '') === 'yes') {
             $parts[] = (string) ($item['item_copy_value'] ?? '');

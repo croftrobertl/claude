@@ -318,7 +318,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.15);
+    background: transparent;
     pointer-events: none;
     opacity: 0;
 }
@@ -970,6 +970,447 @@ video.dccgg-media {
     font-size: 1em;
 }
 
+/* =============================================================
+ * v0.2 additions: presets · a11y · perf · novel features
+ * ============================================================= */
+
+/* ---- Static theme-preset palettes (replaces v0.1 JS injection) ---- */
+.dccgg-preset-coastal {
+    --dccgg-primary:      #0f6dbf;
+    --dccgg-btn-bg:       #0f6dbf;
+    --dccgg-btn-txt:      #ffffff;
+    --dccgg-tile-bg:      rgba(255,255,255,0.85);
+    --dccgg-tile-border:  rgba(15,109,191,0.15);
+    --dccgg-detail-bg:    #ffffff;
+    --dccgg-text:         #0a3a5c;
+    --dccgg-muted:        #5d7891;
+    --dccgg-accent:       #f08080;
+}
+.dccgg-preset-hotel {
+    --dccgg-primary:      #8a6d3b;
+    --dccgg-btn-bg:       #8a6d3b;
+    --dccgg-btn-txt:      #fdfaf3;
+    --dccgg-tile-bg:      #fdfaf3;
+    --dccgg-tile-border:  rgba(138,109,59,0.2);
+    --dccgg-detail-bg:    #fffdf7;
+    --dccgg-text:         #2c2418;
+    --dccgg-muted:        #7a6c52;
+    --dccgg-accent:       #c19a4b;
+}
+.dccgg-preset-bohemian {
+    --dccgg-primary:      #a94c66;
+    --dccgg-btn-bg:       #a94c66;
+    --dccgg-btn-txt:      #fef6f0;
+    --dccgg-tile-bg:      rgba(254,246,240,0.85);
+    --dccgg-tile-border:  rgba(169,76,102,0.25);
+    --dccgg-detail-bg:    #fef6f0;
+    --dccgg-text:         #3d2330;
+    --dccgg-muted:        #8a6470;
+    --dccgg-accent:       #d4a373;
+}
+.dccgg-preset-minimal {
+    --dccgg-primary:      #111111;
+    --dccgg-btn-bg:       #111111;
+    --dccgg-btn-txt:      #ffffff;
+    --dccgg-tile-bg:      #ffffff;
+    --dccgg-tile-border:  #e5e5e5;
+    --dccgg-detail-bg:    #ffffff;
+    --dccgg-text:         #111111;
+    --dccgg-muted:        #666666;
+    --dccgg-accent:       #0066ff;
+}
+.dccgg-preset-dark {
+    --dccgg-primary:      #5fa8e8;
+    --dccgg-btn-bg:       #5fa8e8;
+    --dccgg-btn-txt:      #0a1420;
+    --dccgg-tile-bg:      rgba(28,38,52,0.85);
+    --dccgg-tile-border:  rgba(95,168,232,0.2);
+    --dccgg-detail-bg:    #15202b;
+    --dccgg-text:         #e8eef5;
+    --dccgg-muted:        #8da3b8;
+    --dccgg-accent:       #f08080;
+}
+
+/* ---- Specificity defense for baseline interactive elements ---- */
+/* Mirror SEL prefix so theme resets (Bravada etc.) lose on inputs/buttons */
+.dccgg-root.dccgg-root .dccgg-tile,
+.dccgg-root.dccgg-root .dccgg-btn,
+.dccgg-root.dccgg-root .dccgg-search-input,
+.dccgg-root.dccgg-root .dccgg-quick-action,
+.dccgg-root.dccgg-root .dccgg-theme-toggle,
+.dccgg-root.dccgg-root .dccgg-item-share,
+.dccgg-root.dccgg-root .dccgg-item-tts,
+.dccgg-root.dccgg-root .dccgg-flip-close,
+.dccgg-root.dccgg-root .dccgg-fab-close,
+.dccgg-root.dccgg-root .dccgg-qr-close,
+.dccgg-root.dccgg-root .dccgg-btn-text {
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+/* ---- Visible focus rings ---- */
+.dccgg-root .dccgg-tile:focus-visible,
+.dccgg-root .dccgg-btn:focus-visible,
+.dccgg-root .dccgg-search-input:focus-visible,
+.dccgg-root .dccgg-quick-action:focus-visible,
+.dccgg-root .dccgg-theme-toggle:focus-visible,
+.dccgg-root .dccgg-item-share:focus-visible,
+.dccgg-root .dccgg-item-tts:focus-visible,
+.dccgg-root .dccgg-flip-close:focus-visible,
+.dccgg-root .dccgg-fab-close:focus-visible,
+.dccgg-root .dccgg-qr-close:focus-visible,
+.dccgg-root .dccgg-btn-text:focus-visible,
+.dccgg-fab:focus-visible {
+    outline: 2px solid var(--dccgg-primary);
+    outline-offset: 2px;
+}
+
+/* ---- Reduced-motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-root *,
+    .dccgg-root *::before,
+    .dccgg-root *::after,
+    .dccgg-fab,
+    .dccgg-overlay,
+    .dccgg-qr-dialog,
+    .dccgg-qr-overlay,
+    .dccgg-lightbox,
+    .dccgg-sheet {
+        animation: none !important;
+        transition-duration: 1ms !important;
+    }
+    .dccgg-flip-inner { transform: none !important; }
+    .dccgg-tile-wrap.is-in-view { animation: none !important; }
+}
+
+/* ---- @supports glass fallback ---- */
+@supports not (backdrop-filter: blur(1px)) {
+    .dccgg-glass-yes .dccgg-tile {
+        background: rgba(255,255,255,0.92);
+    }
+    .dccgg-root.dccgg-is-dark .dccgg-glass-yes .dccgg-tile {
+        background: rgba(28,38,52,0.95);
+    }
+}
+@media (prefers-reduced-data: reduce) {
+    .dccgg-glass-yes .dccgg-tile {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+}
+
+/* ---- Kbd hint: hide on touch-only ---- */
+@media (hover: none) {
+    .dccgg-search-kbd { display: none; }
+}
+
+/* ---- Search mic button (added by JS when supported) ---- */
+.dccgg-search-mic {
+    position: absolute;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: var(--dccgg-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background var(--dccgg-transition-duration) var(--dccgg-transition-easing),
+                color var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+.dccgg-search-mic:hover,
+.dccgg-search-mic:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
+    color: var(--dccgg-primary);
+    outline: none;
+}
+.dccgg-search-mic.is-listening {
+    color: #c43a3a;
+    animation: dccgg-pulse 1.2s ease-in-out infinite;
+}
+@keyframes dccgg-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(196,58,58,0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(196,58,58,0); }
+}
+.dccgg-search-mic + .dccgg-search-kbd { right: 12px; }
+
+/* ---- TTS button (revealed by JS on supported browsers) ---- */
+.dccgg-item-tts {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 4px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--dccgg-muted);
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration);
+}
+.dccgg-item-tts:hover,
+.dccgg-item-tts:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-primary) 10%, transparent);
+    color: var(--dccgg-primary);
+    outline: none;
+}
+.dccgg-item-tts.is-speaking {
+    color: var(--dccgg-primary);
+    background: color-mix(in srgb, var(--dccgg-primary) 20%, transparent);
+}
+
+/* ---- Read-time chip ---- */
+.dccgg-read-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--dccgg-muted) 12%, transparent);
+    color: var(--dccgg-muted);
+    font-size: 0.75em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ---- Procedure mode (numbered steps with progress line) ---- */
+.dccgg-procedure {
+    list-style: none;
+    counter-reset: dccgg-step;
+    padding-left: 0;
+    margin: 0;
+    position: relative;
+}
+.dccgg-procedure > li {
+    counter-increment: dccgg-step;
+    position: relative;
+    padding-left: 56px;
+    margin-bottom: 32px;
+}
+.dccgg-procedure > li::before {
+    content: counter(dccgg-step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--dccgg-primary);
+    color: var(--dccgg-btn-txt);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.dccgg-procedure > li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 36px;
+    bottom: -32px;
+    width: 2px;
+    background: var(--dccgg-tile-border);
+}
+
+/* ---- Detail layout with sticky TOC ---- */
+.dccgg-detail-layout { display: block; position: relative; }
+.dccgg-toc { display: none; }
+.dccgg-detail--has-toc .dccgg-detail-layout {
+    display: block;
+}
+@media (min-width: 768px) {
+    .dccgg-detail--has-toc .dccgg-detail-layout {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 32px;
+        align-items: start;
+    }
+    .dccgg-detail--has-toc .dccgg-toc {
+        display: block;
+        position: sticky;
+        top: 16px;
+    }
+    .dccgg-toc ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border-left: 2px solid var(--dccgg-tile-border);
+    }
+    .dccgg-toc li { padding: 0; }
+    .dccgg-toc a {
+        display: block;
+        padding: 8px 12px;
+        color: var(--dccgg-muted);
+        text-decoration: none;
+        font-size: 0.875em;
+        border-left: 2px solid transparent;
+        margin-left: -2px;
+        transition: color var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
+    }
+    .dccgg-toc a:hover,
+    .dccgg-toc a:focus-visible,
+    .dccgg-toc a.is-current {
+        color: var(--dccgg-primary);
+        border-left-color: var(--dccgg-primary);
+        outline: none;
+    }
+}
+
+/* ---- Reading progress bar (top of detail) ---- */
+.dccgg-progress-bar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--dccgg-primary);
+    z-index: 5;
+    transition: width 80ms linear;
+}
+
+/* ---- Mobile bottom-sheet for detail ---- */
+@media (max-width: 768px) and (pointer: coarse) {
+    .dccgg-stage {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        top: auto;
+        max-height: 90vh;
+        background: var(--dccgg-detail-bg);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
+        z-index: 9990;
+        overflow-y: auto;
+        transform: translateY(100%);
+        opacity: 1;
+        visibility: hidden;
+        transition: transform var(--dccgg-transition-duration) var(--dccgg-transition-easing),
+                    visibility var(--dccgg-transition-duration);
+        padding: 16px;
+    }
+    .dccgg-root.is-detail .dccgg-stage {
+        visibility: visible;
+        transform: translateY(0);
+    }
+    .dccgg-root.is-sheet-dragging .dccgg-stage {
+        transition: none;
+    }
+    .dccgg-stage::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: var(--dccgg-muted);
+        border-radius: 2px;
+        margin: 4px auto 12px;
+        opacity: 0.5;
+    }
+    .dccgg-root.is-detail .dccgg-menu {
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        position: relative;
+    }
+    .dccgg-sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 9989;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--dccgg-transition-duration);
+    }
+    .dccgg-root.is-detail .dccgg-sheet-backdrop {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* ---- Image lightbox (uses <dialog>) ---- */
+.dccgg-lightbox {
+    border: 0;
+    background: rgba(0,0,0,0.92);
+    padding: 0;
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+}
+.dccgg-lightbox::backdrop {
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+}
+.dccgg-lightbox img {
+    max-width: 96vw;
+    max-height: 92vh;
+    margin: auto;
+    display: block;
+    object-fit: contain;
+    touch-action: pinch-zoom;
+}
+.dccgg-lightbox-content {
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dccgg-lightbox-close {
+    position: fixed;
+    top: 16px; right: 16px;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+.dccgg-lightbox-close:hover { background: rgba(255,255,255,0.25); }
+.dccgg-media[data-lightbox-clickable] {
+    cursor: zoom-in;
+}
+
+/* ---- Long-press peek tooltip ---- */
+.dccgg-peek {
+    position: fixed;
+    z-index: 9999;
+    max-width: 300px;
+    padding: 12px 16px;
+    background: var(--dccgg-detail-bg);
+    color: var(--dccgg-text);
+    border: 1px solid var(--dccgg-tile-border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    font-size: 0.85em;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+.dccgg-peek.is-open { opacity: 1; }
+
+/* ---- Confetti (copy success) ---- */
+.dccgg-confetti-piece {
+    position: fixed;
+    width: 8px;
+    height: 12px;
+    pointer-events: none;
+    z-index: 99999;
+    will-change: transform, opacity;
+}
+
+/* ---- Welcome-pack notice button in editor ---- */
+.elementor-panel-alert button[data-dccgg-welcome-pack] {
+    cursor: pointer;
+}
+
 /* -------- Print (scoped) -------- */
 @media print {
     .dccgg-root .dccgg-toolbar,
@@ -982,8 +1423,14 @@ video.dccgg-media {
     .dccgg-root .dccgg-qr-dialog,
     .dccgg-root .dccgg-quick-action,
     .dccgg-root .dccgg-item-share,
+    .dccgg-root .dccgg-item-tts,
+    .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
-    .dccgg-root .dccgg-theme-toggle {
+    .dccgg-root .dccgg-theme-toggle,
+    .dccgg-root .dccgg-toc,
+    .dccgg-root .dccgg-progress-bar,
+    .dccgg-root .dccgg-sheet-backdrop,
+    .dccgg-root .dccgg-search-mic {
         display: none !important;
     }
     .dccgg-root .dccgg-collapsible {
