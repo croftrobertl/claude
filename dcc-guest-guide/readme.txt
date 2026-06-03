@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,46 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.4.0 =
+
+Bug fixes:
+* Reading progress bar no longer shows stale percentage on section
+  switch. `openDetail` now zeroes the bar of the newly visible detail
+  and clears any leftover search highlights from a prior visit.
+* Wizard ↔ section-nav arrow-key conflict resolved. A single
+  document-level keyboard router checks the visible detail's
+  `data-wizard` attribute first; wizard sections own ←/→, others
+  route to section nav.
+* `extract_search_text` request-scoped static memo when "Include
+  Elementor-template content in search" is on. Each referenced
+  template renders at most once per pageload (was N renders per
+  template per item).
+* Lightbox close button reads `str_lightbox_close` from the strings
+  panel (was hardcoded English "Close").
+* `wireSectionNav`'s per-widget document keydown listener replaced
+  with a single global router (no more N listeners on multi-widget
+  pages).
+* `navigator.share` only falls back to clipboard for real errors;
+  user dismissal (`AbortError`) is now silent.
+* Section-nav arrows have explicit `:active` styles so touch taps
+  don't flash an inconsistent state.
+
+New features:
+* **Search-result deep highlight** — clicking a Cmd-K result opens the
+  detail, scrolls the matched term into view, wraps every occurrence
+  in `<mark class="dccgg-hit">`, and pulses the surrounding card for
+  1.5 s. Wizard sections jump to the matching step first. Highlights
+  auto-clear after 8 s or on detail close.
+* **Inline emoji icons** — new "Emoji (overrides icon)" text field on
+  sections and items. Paste an emoji like 🛁 and it replaces the
+  Font Awesome icon at render. Zero JS, no FA dependency, works
+  offline.
+* **Animated icon hover** — new "Icon hover animation" SELECT in
+  Layout & Interaction (pulse / bounce / rotate / wiggle / shake)
+  plus an optional per-section override on the Sections panel. Only
+  the framed icon moves on hover, not the surrounding tile. Respects
+  `prefers-reduced-motion`.
 
 = 0.3.0 =
 

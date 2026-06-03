@@ -37,6 +37,7 @@
     function initAll() {
         document.querySelectorAll('.dccgg-root').forEach(init);
         wireGlobalCmdK();
+        wireGlobalArrowKeys();
         wireWelcomePackEditor();
     }
     if (document.readyState === 'loading') {
@@ -237,15 +238,25 @@
     function openDetail(root, key) {
         const details = root.querySelectorAll('.dccgg-detail');
         let found = false;
+        let activeDetail = null;
         withViewTransition(() => {
             details.forEach(d => {
                 const match = (d.dataset.key === key);
                 d.hidden = !match;
-                if (match) found = true;
+                if (match) { found = true; activeDetail = d; }
             });
             if (found) root.classList.add('is-detail');
         });
         if (!found) return;
+        // v0.4 fix: zero the progress bar of the newly visible detail and
+        // clear any stale search highlights from a prior visit. Without
+        // these the bar would show the last scroll percentage and old
+        // <mark>s would render with no current query.
+        if (activeDetail) {
+            const bar = activeDetail.querySelector('.dccgg-progress-bar');
+            if (bar) bar.style.width = '0%';
+            if (typeof clearHighlights === 'function') clearHighlights(activeDetail);
+        }
         const top = root.getBoundingClientRect().top + window.scrollY - 20;
         if (window.scrollY > top + 40) window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
     }
@@ -366,7 +377,14 @@
                 url.hash = key ? ('guide-' + key) : '';
 
                 if (navigator.share) {
-                    navigator.share({ title: title || document.title, url: url.toString() }).catch(() => {});
+                    navigator.share({ title: title || document.title, url: url.toString() }).catch((err) => {
+                        // v0.4 fix: distinguish user-dismissal from a real
+                        // failure. Only fall back to clipboard for the latter.
+                        if (err && err.name === 'AbortError') return;
+                        copyText(url.toString()).then(() => {
+                            flashCopied(btn, (config.strings && config.strings.shareCopied) || 'Link copied!');
+                        }).catch(() => {});
+                    });
                     return;
                 }
                 copyText(url.toString()).then(() => {
@@ -490,7 +508,15 @@
             list.querySelectorAll('.dccgg-search-result').forEach(b => {
                 b.addEventListener('click', () => {
                     const sec = b.dataset.section;
+                    const itemIdx = parseInt(b.dataset.itemIdx || '0', 10);
+                    const queryText = input.value.trim();
                     openDetail(root, sec);
+                    // v0.4: deep-highlight the matched term inside the target
+                    // item, scroll it into view, pulse the surrounding card.
+                    requestAnimationFrame(() => {
+                        const detail = root.querySelector('.dccgg-detail[data-key="' + cssEsc(sec) + '"]:not([hidden])');
+                        if (detail) highlightQuery(detail, queryText, itemIdx);
+                    });
                     hide();
                     input.value = '';
                 });
@@ -504,6 +530,103 @@
         });
         input.addEventListener('blur', () => setTimeout(hide, 200));
         input.addEventListener('focus', () => { if (input.value.length >= 2) render(input.value); });
+    }
+
+    // -- Deep-highlight a matched query inside a detail (v0.4) ------------
+    let _hitClearTimer = null;
+    let _hitClearTarget = null;
+    function clearHighlights(detail) {
+        if (!detail) return;
+        detail.querySelectorAll('mark.dccgg-hit').forEach(m => {
+            const parent = m.parentNode;
+            if (!parent) return;
+            parent.replaceChild(document.createTextNode(m.textContent || ''), m);
+            parent.normalize();
+        });
+        detail.querySelectorAll('.dccgg-hit-pulse').forEach(el => el.classList.remove('dccgg-hit-pulse'));
+    }
+    function highlightQuery(detail, query, itemIdx) {
+        if (!detail || !query || query.length < 2) return;
+
+        // If a wizard section, advance to the matching step first so the
+        // content we're going to highlight is visible.
+        if (detail.dataset.wizard === '1') {
+            const wiz = detail.querySelector('.dccgg-wizard');
+            if (wiz) {
+                const dot = wiz.querySelector('.dccgg-wizard-dot[data-wizard-goto="' + (itemIdx | 0) + '"]');
+                if (dot) dot.click();
+            }
+        }
+
+        // Clear stale highlights in this detail before painting fresh ones.
+        clearHighlights(detail);
+
+        // Find the target item container.
+        let target = detail.querySelector('.dccgg-detail-item-anchor[data-item-idx="' + (itemIdx | 0) + '"]');
+        if (!target) {
+            // Wizard / procedure: pick the active step or Nth <li>.
+            const step = detail.querySelector('.dccgg-wizard-step[data-wizard-step="' + (itemIdx | 0) + '"]');
+            if (step) target = step;
+            else {
+                const lis = detail.querySelectorAll('.dccgg-procedure > li');
+                if (lis[itemIdx | 0]) target = lis[itemIdx | 0];
+            }
+        }
+        if (!target) target = detail.querySelector('.dccgg-item');
+        if (!target) return;
+
+        // Walk text nodes inside the target item only (avoid touching
+        // template content with JS handlers attached).
+        const escapeRe = (s) => String(s).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const re = new RegExp('(' + escapeRe(query) + ')', 'gi');
+        const skipTags = { SCRIPT: 1, STYLE: 1, MARK: 1, BUTTON: 1, A: 1 };
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+            acceptNode(n) {
+                if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                let p = n.parentNode;
+                while (p && p !== target) {
+                    if (p.nodeType === 1 && skipTags[p.tagName]) return NodeFilter.FILTER_REJECT;
+                    p = p.parentNode;
+                }
+                return re.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        });
+        const matches = [];
+        let n;
+        while ((n = walker.nextNode())) matches.push(n);
+        matches.forEach(textNode => {
+            re.lastIndex = 0;
+            const frag = document.createDocumentFragment();
+            const txt = textNode.nodeValue;
+            let last = 0, m;
+            while ((m = re.exec(txt)) !== null) {
+                if (m.index > last) frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
+                const mark = document.createElement('mark');
+                mark.className = 'dccgg-hit';
+                mark.textContent = m[0];
+                frag.appendChild(mark);
+                last = m.index + m[0].length;
+                if (m[0].length === 0) re.lastIndex++;
+            }
+            if (last < txt.length) frag.appendChild(document.createTextNode(txt.slice(last)));
+            textNode.parentNode.replaceChild(frag, textNode);
+        });
+
+        // Scroll first hit into view + pulse the card.
+        const firstHit = target.querySelector('mark.dccgg-hit');
+        if (firstHit) firstHit.scrollIntoView({ block: 'center', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        target.classList.remove('dccgg-hit-pulse');
+        void target.offsetWidth;
+        target.classList.add('dccgg-hit-pulse');
+
+        // Auto-clear after 8 s.
+        if (_hitClearTimer) clearTimeout(_hitClearTimer);
+        _hitClearTarget = detail;
+        _hitClearTimer = setTimeout(() => {
+            clearHighlights(_hitClearTarget);
+            _hitClearTimer = null;
+            _hitClearTarget = null;
+        }, 8000);
     }
 
     function sectionTitleFor(root, key) {
@@ -752,12 +875,21 @@
 
     // -- Image lightbox (single global <dialog>, shared across widgets) ---
     let _lightbox = null;
-    function ensureLightbox() {
-        if (_lightbox) return _lightbox;
+    function ensureLightbox(closeLabel) {
+        if (_lightbox) {
+            // Refresh the label in case a later-init widget had a different
+            // localized string.
+            const btn = _lightbox.querySelector('.dccgg-lightbox-close');
+            if (btn && closeLabel) btn.setAttribute('aria-label', closeLabel);
+            return _lightbox;
+        }
         _lightbox = document.createElement('dialog');
         _lightbox.className = 'dccgg-lightbox';
+        const label = closeLabel || 'Close';
         _lightbox.innerHTML = '<div class="dccgg-lightbox-content"><img alt=""></div>' +
-                              '<button type="button" class="dccgg-lightbox-close" aria-label="Close">&times;</button>';
+                              '<button type="button" class="dccgg-lightbox-close" aria-label="' +
+                              label.replace(/"/g, '&quot;') +
+                              '">&times;</button>';
         document.body.appendChild(_lightbox);
         _lightbox.querySelector('.dccgg-lightbox-close').addEventListener('click', () => _lightbox.close());
         _lightbox.addEventListener('click', (e) => {
@@ -768,10 +900,11 @@
     function wireLightbox(root) {
         const imgs = root.querySelectorAll('img.dccgg-media');
         if (!imgs.length) return;
+        const closeLabel = (root.__dccgg && root.__dccgg.config && root.__dccgg.config.strings && root.__dccgg.config.strings.lightboxClose) || 'Close';
         imgs.forEach(img => {
             img.setAttribute('data-lightbox-clickable', '1');
             img.addEventListener('click', () => {
-                const d = ensureLightbox();
+                const d = ensureLightbox(closeLabel);
                 if (typeof d.showModal !== 'function') return;
                 d.querySelector('img').src = img.currentSrc || img.src;
                 d.showModal();
@@ -1007,46 +1140,76 @@
             console.error('DCCGG: Welcome Pack injection failed:', err);
         }
     }
-    // -- Section prev/next nav (v0.3) -------------------------------------
+    // -- Section prev/next nav (v0.3, single-listener in v0.4) -----------
     function wireSectionNav(root, config) {
         if (!config.enableSectionNav) return;
         const stage = root.querySelector('.dccgg-stage');
         if (!stage) return;
 
-        const goTo = (key) => {
-            if (!key) return;
-            const exists = root.querySelector('.dccgg-detail[data-key="' + cssEsc(key) + '"]');
-            if (!exists) return;
-            openDetail(root, key);
-            hapticPulse(root, 20);
-        };
-
-        // Click handlers on the rendered buttons.
+        // Click handlers on the rendered buttons (per-root; cheap).
         stage.querySelectorAll('.dccgg-section-prev, .dccgg-section-next').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (btn.hasAttribute('disabled')) return;
-                goTo(btn.dataset.targetKey || '');
+                const key = btn.dataset.targetKey || '';
+                if (!key) return;
+                openDetail(root, key);
+                hapticPulse(root, 20);
             });
         });
+    }
 
-        // Keyboard: ←/→ when a detail is visible, focus isn't in an input,
-        // and no modifier keys are held.
+    /**
+     * One document-level keyboard router that handles ←/→ for every widget
+     * on the page. Routes to wizard-step navigation when the visible detail
+     * is in wizard mode; otherwise to section-nav. Replaces v0.3's
+     * per-widget document listener.
+     */
+    function wireGlobalArrowKeys() {
+        const root = document.documentElement;
+        if (root && root.dataset && root.dataset.dccggArrows) return;
         document.addEventListener('keydown', (e) => {
-            if (!root.classList.contains('is-detail')) return;
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
             if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
             const tag = (document.activeElement && document.activeElement.tagName) || '';
             if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
-            const active = stage.querySelector('.dccgg-detail:not([hidden])');
-            if (!active) return;
-            if (e.key === 'ArrowLeft') {
-                const prev = active.querySelector('.dccgg-section-prev');
-                if (prev && !prev.hasAttribute('disabled')) { e.preventDefault(); goTo(prev.dataset.targetKey || ''); }
-            } else if (e.key === 'ArrowRight') {
-                const next = active.querySelector('.dccgg-section-next');
-                if (next && !next.hasAttribute('disabled')) { e.preventDefault(); goTo(next.dataset.targetKey || ''); }
+
+            // Find an active widget by looking for a root with .is-detail
+            // and a visible detail inside it.
+            const roots = document.querySelectorAll('.dccgg-root.is-detail');
+            for (const r of roots) {
+                const stage = r.querySelector('.dccgg-stage');
+                if (!stage) continue;
+                const active = stage.querySelector('.dccgg-detail:not([hidden])');
+                if (!active) continue;
+
+                // Wizard mode owns arrow keys when the active detail is one.
+                if (active.dataset.wizard === '1') {
+                    const wiz = active.querySelector('.dccgg-wizard');
+                    if (wiz) {
+                        const btn = e.key === 'ArrowLeft'
+                            ? wiz.querySelector('.dccgg-wizard-back')
+                            : wiz.querySelector('.dccgg-wizard-next');
+                        if (btn && !btn.disabled) {
+                            e.preventDefault();
+                            btn.click();
+                        }
+                    }
+                    return;
+                }
+
+                // Otherwise drive the section nav, if it has one.
+                const btn = e.key === 'ArrowLeft'
+                    ? active.querySelector('.dccgg-section-prev')
+                    : active.querySelector('.dccgg-section-next');
+                if (btn && !btn.hasAttribute('disabled')) {
+                    e.preventDefault();
+                    btn.click();
+                }
+                return;
             }
         });
+        if (root) root.dataset.dccggArrows = '1';
     }
 
     // -- Wizard mode (v0.3) ------------------------------------------------

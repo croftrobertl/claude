@@ -1526,6 +1526,96 @@ video.dccgg-media {
     .dccgg-wizard-step { animation: none; }
 }
 
+/* =============================================================
+ * v0.4 additions: emoji icons, icon hover animations,
+ * search-result deep highlight, section-nav active state
+ * ============================================================= */
+
+/* ---- Inline emoji icons ---- */
+.dccgg-emoji-icon {
+    font-size: 1.6em;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+    color: inherit;
+}
+.dccgg-tile-icon .dccgg-emoji-icon { font-size: 1.6em; }
+.dccgg-frame-none .dccgg-tile-icon .dccgg-emoji-icon { font-size: 2.2em; }
+.dccgg-item-title .dccgg-emoji-icon { font-size: 1.15em; }
+
+/* ---- Animated icon hover ---- */
+@keyframes dccgg-icon-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.18); }
+}
+@keyframes dccgg-icon-bounce {
+    0%, 20%, 60%, 100% { transform: translateY(0); }
+    40%                { transform: translateY(-8px); }
+    80%                { transform: translateY(-3px); }
+}
+@keyframes dccgg-icon-rotate {
+    from { transform: rotate(0); }
+    to   { transform: rotate(360deg); }
+}
+@keyframes dccgg-icon-wiggle {
+    0%, 100% { transform: rotate(0); }
+    25%      { transform: rotate(-10deg); }
+    75%      { transform: rotate(10deg); }
+}
+@keyframes dccgg-icon-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-4px); }
+    40%      { transform: translateX(4px); }
+    60%      { transform: translateX(-3px); }
+    80%      { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .dccgg-icon-anim-pulse  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-pulse  600ms ease-in-out; }
+    .dccgg-icon-anim-bounce .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-bounce 700ms ease; }
+    .dccgg-icon-anim-rotate .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-rotate 900ms ease-in-out; }
+    .dccgg-icon-anim-wiggle .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-wiggle 500ms ease-in-out; }
+    .dccgg-icon-anim-shake  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-shake  500ms ease-in-out; }
+
+    /* Per-section override wins via data-attribute specificity. */
+    .dccgg-tile-wrap[data-icon-anim="none"]   .dccgg-tile:hover .dccgg-tile-icon { animation: none; }
+    .dccgg-tile-wrap[data-icon-anim="pulse"]  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-pulse  600ms ease-in-out; }
+    .dccgg-tile-wrap[data-icon-anim="bounce"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-bounce 700ms ease; }
+    .dccgg-tile-wrap[data-icon-anim="rotate"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-rotate 900ms ease-in-out; }
+    .dccgg-tile-wrap[data-icon-anim="wiggle"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-wiggle 500ms ease-in-out; }
+    .dccgg-tile-wrap[data-icon-anim="shake"]  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-shake  500ms ease-in-out; }
+}
+
+/* ---- Search-result deep highlight ---- */
+.dccgg-hit {
+    background: color-mix(in srgb, var(--dccgg-accent, var(--dccgg-primary)) 35%, transparent);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--dccgg-accent, var(--dccgg-primary)) 30%, transparent);
+}
+.dccgg-hit-pulse {
+    animation: dccgg-hit-pulse 1500ms ease-out;
+}
+@keyframes dccgg-hit-pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dccgg-primary) 50%, transparent); background-color: color-mix(in srgb, var(--dccgg-primary) 12%, transparent); }
+    70%  { box-shadow: 0 0 0 14px transparent; background-color: transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-hit-pulse { animation: none; }
+}
+
+/* ---- Section-nav arrows: explicit :active for touch ---- */
+.dccgg-section-prev:active:not([disabled]),
+.dccgg-section-next:active:not([disabled]) {
+    background: var(--dccgg-primary);
+    color: var(--dccgg-btn-txt);
+    transform: scale(0.96);
+}
+
 /* -------- Print (scoped) -------- */
 
 /* -------- Print (scoped) -------- */

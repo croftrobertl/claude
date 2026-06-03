@@ -494,6 +494,29 @@ final class Widget extends Widget_Base
             'default' => ['value' => 'fas fa-info', 'library' => 'solid'],
         ]);
 
+        $repeater->add_control('section_emoji', [
+            'label'       => __('Emoji (overrides icon)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Paste an emoji like 🛁 to use it instead of the Font Awesome icon. Leave blank to keep the icon above.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('section_icon_anim', [
+            'label'   => __('Icon hover animation override', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => [
+                ''        => __('— Use global default —', 'dcc-guest-guide'),
+                'none'    => __('None', 'dcc-guest-guide'),
+                'pulse'   => __('Pulse', 'dcc-guest-guide'),
+                'bounce'  => __('Bounce', 'dcc-guest-guide'),
+                'rotate'  => __('Rotate', 'dcc-guest-guide'),
+                'wiggle'  => __('Wiggle', 'dcc-guest-guide'),
+                'shake'   => __('Shake', 'dcc-guest-guide'),
+            ],
+            'description' => __('Animate just this section\'s icon on tile hover; leave blank to use the global setting in Layout & Interaction.', 'dcc-guest-guide'),
+        ]);
+
         $repeater->add_control('procedure_mode', [
             'label'        => __('Render items as a numbered procedure', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -592,6 +615,13 @@ final class Widget extends Widget_Base
             'label'   => __('Icon', 'dcc-guest-guide'),
             'type'    => Controls_Manager::ICONS,
             'default' => ['value' => 'fas fa-check', 'library' => 'solid'],
+        ]);
+
+        $repeater->add_control('item_emoji', [
+            'label'       => __('Emoji (overrides icon)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Paste an emoji to replace the Font Awesome icon for just this item. Leave blank to keep the icon above.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('content_source', [
@@ -754,6 +784,7 @@ final class Widget extends Widget_Base
             'str_wizard_prev'  => [__('Wizard back button', 'dcc-guest-guide'),  __('Back', 'dcc-guest-guide')],
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
+            'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -922,6 +953,22 @@ final class Widget extends Widget_Base
                 'shake'     => __('Soft shake', 'dcc-guest-guide'),
             ],
             'prefix_class' => 'dccgg-click-',
+        ]);
+
+        $this->add_control('icon_hover_anim', [
+            'label'        => __('Icon hover animation', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'none',
+            'options'      => [
+                'none'    => __('None', 'dcc-guest-guide'),
+                'pulse'   => __('Pulse', 'dcc-guest-guide'),
+                'bounce'  => __('Bounce', 'dcc-guest-guide'),
+                'rotate'  => __('Rotate', 'dcc-guest-guide'),
+                'wiggle'  => __('Wiggle', 'dcc-guest-guide'),
+                'shake'   => __('Shake', 'dcc-guest-guide'),
+            ],
+            'prefix_class' => 'dccgg-icon-anim-',
+            'description'  => __('Animates the framed icon on tile hover. Individual sections can override this in the Sections panel.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('entry_animation', [
@@ -1459,8 +1506,9 @@ final class Widget extends Widget_Base
                 'readMore'    => (string) ($s['str_read_more'] ?? 'Read more'),
                 'readLess'    => (string) ($s['str_read_less'] ?? 'Read less'),
                 'noResults'   => (string) ($s['search_no_results'] ?? 'No matches.'),
-                'shareCopied' => (string) ($s['str_share_copied'] ?? 'Link copied!'),
-                'qrClose'     => (string) ($s['str_qr_close'] ?? 'Close'),
+                'shareCopied'   => (string) ($s['str_share_copied'] ?? 'Link copied!'),
+                'qrClose'       => (string) ($s['str_qr_close'] ?? 'Close'),
+                'lightboxClose' => (string) ($s['str_lightbox_close'] ?? 'Close image'),
             ],
         ];
 
@@ -1556,6 +1604,7 @@ final class Widget extends Widget_Base
                 $items = $items_by_section[$key] ?? [];
                 $qa_on = ($sec['enable_quick_action'] ?? '') === 'yes' && trim((string) ($sec['quick_action_val'] ?? '')) !== '';
                 $procedure = ($sec['procedure_mode'] ?? '') === 'yes';
+                $anim_override = (string) ($sec['section_icon_anim'] ?? '');
 
                 // Stable IDs for a11y linkage. Hashed key so a quoted/odd
                 // section key still produces a valid attribute value.
@@ -1563,7 +1612,7 @@ final class Widget extends Widget_Base
                 $tile_id    = 'dccgg-tile-' . $safe_key;
                 $panel_id   = 'dccgg-panel-' . $safe_key;
                 ?>
-                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>">
+                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>"<?php echo $anim_override !== '' ? ' data-icon-anim="' . esc_attr($anim_override) . '"' : ''; ?>>
                     <?php if ($reveal_mode === 'flip') : ?>
                         <div class="dccgg-flip-card">
                             <div class="dccgg-flip-inner">
@@ -1633,10 +1682,15 @@ final class Widget extends Widget_Base
         $title = (string) ($sec['section_title'] ?? '');
         $desc  = (string) ($sec['section_desc'] ?? '');
         $icon  = (array) ($sec['section_icon'] ?? ['value' => 'fas fa-info', 'library' => 'solid']);
+        $emoji = trim((string) ($sec['section_emoji'] ?? ''));
         ?>
         <span class="dccgg-tile-icon-wrap">
             <span class="dccgg-tile-icon">
-                <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                <?php if ($emoji !== '') : ?>
+                    <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
+                <?php else :
+                    \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+                endif; ?>
             </span>
         </span>
         <span class="dccgg-tile-content">
@@ -1787,6 +1841,7 @@ final class Widget extends Widget_Base
         $map_on         = ($item['enable_map'] ?? '') === 'yes';
         $map_url        = (string) ($item['map_url']['url'] ?? '');
         $badge          = trim((string) ($item['item_badge'] ?? ''));
+        $emoji          = trim((string) ($item['item_emoji'] ?? ''));
 
         // Auto-link + read-time apply to WYSIWYG content only.
         $body_html = '';
@@ -1798,7 +1853,11 @@ final class Widget extends Widget_Base
         ?>
         <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>">
             <h3 class="dccgg-item-title">
-                <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                <?php if ($emoji !== '') : ?>
+                    <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
+                <?php else :
+                    \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+                endif; ?>
                 <span><?php echo esc_html($title); ?></span>
                 <?php if ($badge !== '') : ?>
                     <span class="dccgg-item-badge"><?php echo esc_html($badge); ?></span>
@@ -1878,16 +1937,25 @@ final class Widget extends Widget_Base
      */
     private static function extract_search_text(array $item, bool $include_templates = false): string
     {
+        // Request-scoped memo so the same template referenced by multiple
+        // items only renders once per pageload. Prior to v0.4 this was O(N)
+        // template renders when "Include templates in search" was on.
+        static $tpl_cache = [];
+
         $parts = [];
         $parts[] = (string) ($item['item_title'] ?? '');
         $parts[] = (string) ($item['item_badge'] ?? '');
+        $parts[] = (string) ($item['item_emoji'] ?? '');
         $source = (string) ($item['content_source'] ?? 'wysiwyg');
         if ($source === 'wysiwyg') {
             $parts[] = wp_strip_all_tags((string) ($item['item_content'] ?? ''));
         } elseif ($source === 'template' && $include_templates) {
             $tpl_id = (int) ($item['item_template'] ?? 0);
             if ($tpl_id > 0) {
-                $parts[] = wp_strip_all_tags(self::render_template($tpl_id));
+                if (!array_key_exists($tpl_id, $tpl_cache)) {
+                    $tpl_cache[$tpl_id] = wp_strip_all_tags(self::render_template($tpl_id));
+                }
+                $parts[] = $tpl_cache[$tpl_id];
             }
         }
         if (($item['item_copy'] ?? '') === 'yes') {
