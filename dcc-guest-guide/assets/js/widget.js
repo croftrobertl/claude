@@ -82,6 +82,15 @@
         wireSheetDrag(root);
         wireToc(root);
         wireProgressBar(root);
+        wireSectionNav(root, config);
+        wireWizard(root);
+    }
+
+    // -- Haptic feedback (v0.3) -------------------------------------------
+    function hapticPulse(root, ms) {
+        if (!root.__dccgg || !root.__dccgg.config || !root.__dccgg.config.enableHaptic) return;
+        if (!('vibrate' in navigator)) return;
+        try { navigator.vibrate(ms || 30); } catch (_) {}
     }
 
     // -- Dark mode --------------------------------------------------------
@@ -186,6 +195,7 @@
                 const key = tile.dataset.key;
                 if (!key) return;
                 ripple(tile, e);
+                hapticPulse(root, 30);
 
                 if (mode === 'flip') {
                     const card = tile.closest('.dccgg-flip-card');
@@ -290,6 +300,7 @@
             copyText(value).then(() => {
                 flashCopied(btn, config.strings && config.strings.copied);
                 spawnConfetti(btn);
+                hapticPulse(root, [20, 40, 60]);
             }).catch(() => {});
         };
         root.querySelectorAll('.dccgg-copy').forEach(btn => {
@@ -508,7 +519,10 @@
 
     // -- Multi-widget-aware Cmd-K / Ctrl-K (single document binding) ------
     function wireGlobalCmdK() {
-        if (document.dataset && document.dataset.dccggCmdK) return;
+        // v0.3 fix: document.dataset doesn't exist (only HTMLElement.dataset
+        // does), so the v0.2 guard never actually short-circuited.
+        const root = document.documentElement;
+        if (root && root.dataset && root.dataset.dccggCmdK) return;
         document.addEventListener('keydown', (e) => {
             if (!((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === 'k')) return;
             const target = findClosestVisibleWidgetSearchInput();
@@ -517,7 +531,7 @@
             target.focus();
             target.select();
         });
-        if (document.documentElement) document.documentElement.dataset.dccggCmdK = '1';
+        if (root) root.dataset.dccggCmdK = '1';
     }
     function findClosestVisibleWidgetSearchInput() {
         const inputs = document.querySelectorAll('.dccgg-root .dccgg-search-input');
@@ -736,29 +750,29 @@
         } catch (_) {}
     }
 
-    // -- Image lightbox ---------------------------------------------------
+    // -- Image lightbox (single global <dialog>, shared across widgets) ---
+    let _lightbox = null;
+    function ensureLightbox() {
+        if (_lightbox) return _lightbox;
+        _lightbox = document.createElement('dialog');
+        _lightbox.className = 'dccgg-lightbox';
+        _lightbox.innerHTML = '<div class="dccgg-lightbox-content"><img alt=""></div>' +
+                              '<button type="button" class="dccgg-lightbox-close" aria-label="Close">&times;</button>';
+        document.body.appendChild(_lightbox);
+        _lightbox.querySelector('.dccgg-lightbox-close').addEventListener('click', () => _lightbox.close());
+        _lightbox.addEventListener('click', (e) => {
+            if (e.target === _lightbox) _lightbox.close();
+        });
+        return _lightbox;
+    }
     function wireLightbox(root) {
         const imgs = root.querySelectorAll('img.dccgg-media');
         if (!imgs.length) return;
-        let dialog = null;
-        const ensure = () => {
-            if (dialog) return dialog;
-            dialog = document.createElement('dialog');
-            dialog.className = 'dccgg-lightbox';
-            dialog.innerHTML = '<div class="dccgg-lightbox-content"><img alt=""></div>' +
-                               '<button type="button" class="dccgg-lightbox-close" aria-label="Close">&times;</button>';
-            document.body.appendChild(dialog);
-            dialog.querySelector('.dccgg-lightbox-close').addEventListener('click', () => dialog.close());
-            dialog.addEventListener('click', (e) => {
-                if (e.target === dialog) dialog.close();
-            });
-            return dialog;
-        };
         imgs.forEach(img => {
             img.setAttribute('data-lightbox-clickable', '1');
             img.addEventListener('click', () => {
-                const d = ensure();
-                if (typeof d.showModal !== 'function') return; // older browsers
+                const d = ensureLightbox();
+                if (typeof d.showModal !== 'function') return;
                 d.querySelector('img').src = img.currentSrc || img.src;
                 d.showModal();
             });
@@ -808,7 +822,10 @@
 
         root.querySelectorAll('.dccgg-tile').forEach(tile => {
             tile.addEventListener('pointerdown', (e) => {
-                if (e.pointerType !== 'touch' && e.button !== 2) return;
+                // v0.3 fix: pointerdown handles touch ONLY. Right-click is
+                // handled exclusively by the contextmenu listener so we
+                // don't double-fire the peek on desktop.
+                if (e.pointerType !== 'touch') return;
                 startX = e.clientX; startY = e.clientY;
                 activeTile = tile;
                 timer = setTimeout(() => openPeekFor(tile, startX, startY), 500);
@@ -851,7 +868,10 @@
 
         stage.addEventListener('pointerdown', (e) => {
             if (!isMobileSheet() || !root.classList.contains('is-detail')) return;
-            // Only start drag from the top 60px (drag handle area)
+            // v0.3 fix: don't hijack interactive controls (back button,
+            // section nav arrows, wizard buttons) that happen to live in
+            // the drag-handle zone at the top of the sheet.
+            if (e.target.closest('button, a, input, select, textarea')) return;
             const r = stage.getBoundingClientRect();
             if (e.clientY - r.top > 60) return;
             dragging = true;
@@ -970,8 +990,14 @@
             if (!settings) { console.warn('DCCGG: no settings model.'); return; }
             const existingSections = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
             const existingItems    = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
-            settings.set('guide_sections', existingSections.concat(pack.sections));
-            settings.set('guide_items',    existingItems.concat(pack.items));
+            // v0.3 fix: Elementor's repeater model identifies rows by _id;
+            // injecting plain objects without it can confuse the panel
+            // renderer (drag handles, delete buttons get stuck on the
+            // first row).
+            const rid = () => Math.random().toString(36).slice(2, 9);
+            const withId = (rows) => rows.map(r => Object.assign({ _id: rid() }, r));
+            settings.set('guide_sections', existingSections.concat(withId(pack.sections)));
+            settings.set('guide_items',    existingItems.concat(withId(pack.items)));
             if (window.elementor.saver && window.elementor.saver.update) {
                 window.elementor.saver.update();
             }
@@ -981,6 +1007,110 @@
             console.error('DCCGG: Welcome Pack injection failed:', err);
         }
     }
+    // -- Section prev/next nav (v0.3) -------------------------------------
+    function wireSectionNav(root, config) {
+        if (!config.enableSectionNav) return;
+        const stage = root.querySelector('.dccgg-stage');
+        if (!stage) return;
+
+        const goTo = (key) => {
+            if (!key) return;
+            const exists = root.querySelector('.dccgg-detail[data-key="' + cssEsc(key) + '"]');
+            if (!exists) return;
+            openDetail(root, key);
+            hapticPulse(root, 20);
+        };
+
+        // Click handlers on the rendered buttons.
+        stage.querySelectorAll('.dccgg-section-prev, .dccgg-section-next').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (btn.hasAttribute('disabled')) return;
+                goTo(btn.dataset.targetKey || '');
+            });
+        });
+
+        // Keyboard: ←/→ when a detail is visible, focus isn't in an input,
+        // and no modifier keys are held.
+        document.addEventListener('keydown', (e) => {
+            if (!root.classList.contains('is-detail')) return;
+            if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+            const tag = (document.activeElement && document.activeElement.tagName) || '';
+            if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
+            const active = stage.querySelector('.dccgg-detail:not([hidden])');
+            if (!active) return;
+            if (e.key === 'ArrowLeft') {
+                const prev = active.querySelector('.dccgg-section-prev');
+                if (prev && !prev.hasAttribute('disabled')) { e.preventDefault(); goTo(prev.dataset.targetKey || ''); }
+            } else if (e.key === 'ArrowRight') {
+                const next = active.querySelector('.dccgg-section-next');
+                if (next && !next.hasAttribute('disabled')) { e.preventDefault(); goTo(next.dataset.targetKey || ''); }
+            }
+        });
+    }
+
+    // -- Wizard mode (v0.3) ------------------------------------------------
+    function wireWizard(root) {
+        root.querySelectorAll('.dccgg-wizard').forEach(wiz => {
+            const steps   = wiz.querySelectorAll('.dccgg-wizard-step');
+            const dots    = wiz.querySelectorAll('.dccgg-wizard-dot');
+            const back    = wiz.querySelector('.dccgg-wizard-back');
+            const next    = wiz.querySelector('.dccgg-wizard-next');
+            const total   = steps.length;
+            if (!total) return;
+
+            const labelNext = next ? (next.dataset.labelNext || 'Next') : 'Next';
+            const labelDone = next ? (next.dataset.labelDone || 'Done') : 'Done';
+
+            const setStep = (idx) => {
+                idx = Math.max(0, Math.min(total - 1, idx));
+                wiz.dataset.step = String(idx);
+                steps.forEach((s, i) => {
+                    s.hidden = (i !== idx);
+                    s.classList.toggle('is-active', i === idx);
+                });
+                dots.forEach((d, i) => {
+                    d.classList.toggle('is-active', i === idx);
+                    d.classList.toggle('is-visited', i < idx);
+                    d.setAttribute('aria-selected', String(i === idx));
+                });
+                if (back) back.disabled = (idx === 0);
+                if (next) {
+                    // On the last step, the Next button becomes Done and
+                    // collapses the wizard back to step 0 (treat it as a
+                    // "reset" — easy to retry).
+                    const isLast = idx === total - 1;
+                    const label  = isLast ? labelDone : labelNext;
+                    next.innerHTML = label + ' <i class="fas fa-' + (isLast ? 'check' : 'arrow-right') + '" aria-hidden="true"></i>';
+                }
+                hapticPulse(root, 15);
+            };
+
+            if (back) back.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setStep((parseInt(wiz.dataset.step || '0', 10)) - 1);
+            });
+            if (next) next.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cur = parseInt(wiz.dataset.step || '0', 10);
+                if (cur === total - 1) {
+                    // Done → confetti, reset to 0
+                    spawnConfetti(next);
+                    setStep(0);
+                } else {
+                    setStep(cur + 1);
+                }
+            });
+            dots.forEach((d) => {
+                d.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const t = parseInt(d.dataset.wizardGoto || '0', 10);
+                    setStep(t);
+                });
+            });
+        });
+    }
+
     function welcomePackPayload() {
         const sections = [
             { section_key: 'wifi',      section_title: 'Wi-Fi',           section_desc: 'Network name & password.',             section_icon: { value: 'fas fa-wifi',             library: 'solid' } },

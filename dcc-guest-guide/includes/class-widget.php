@@ -49,12 +49,29 @@ final class Widget extends Widget_Base
     /**
      * Force-enqueue assets into the Elementor editor preview iframe so the
      * JS-driven layouts, flip cards, and stage transitions actually render
-     * while editing.
+     * while editing. Explicitly enqueues Font Awesome too — its registration
+     * isn't guaranteed at this point on every Elementor version.
      */
     public static function enqueue_for_preview(): void
     {
         self::register_assets();
+        foreach (['elementor-icons-fa-solid', 'elementor-icons-fa-regular'] as $h) {
+            if (wp_style_is($h, 'registered')) {
+                wp_enqueue_style($h);
+            }
+        }
         wp_enqueue_style('dccgg-widget');
+        wp_enqueue_script('dccgg-widget');
+    }
+
+    /**
+     * Enqueue into the Elementor editor (NOT the preview iframe). Required
+     * so the Welcome Pack button — rendered via RAW_HTML into the panel —
+     * has a click handler that actually runs in that context.
+     */
+    public static function enqueue_for_editor(): void
+    {
+        self::register_assets();
         wp_enqueue_script('dccgg-widget');
     }
 
@@ -339,24 +356,28 @@ final class Widget extends Widget_Base
             if ($i % 2 === 1) {
                 continue;
             }
-            // Tokenize HTML tags so we only touch text nodes.
-            $tokens = preg_split('/(<[^>]+>)/', $chunk, -1, PREG_SPLIT_DELIM_CAPTURE);
-            if (!is_array($tokens)) {
-                continue;
+            // Re-tokenize HTML tags between EACH pattern so we don't run a
+            // later pattern (e.g. phone) over text injected by an earlier one
+            // (e.g. email → <a href="mailto:…">…</a>). Without this, the
+            // phone regex could match digits inside the href of an anchor we
+            // just created.
+            foreach ($patterns as $pat => $cb) {
+                $tokens = preg_split('/(<[^>]+>)/', $chunk, -1, PREG_SPLIT_DELIM_CAPTURE);
+                if (!is_array($tokens)) {
+                    break;
+                }
+                foreach ($tokens as $t => $tok) {
+                    if ($t % 2 === 1) {
+                        continue; // tag
+                    }
+                    if ($tok === '') {
+                        continue;
+                    }
+                    $tokens[$t] = preg_replace_callback($pat, $cb, $tok);
+                }
+                $chunk = implode('', $tokens);
             }
-            foreach ($tokens as $t => $tok) {
-                if ($t % 2 === 1) {
-                    continue; // tag
-                }
-                if ($tok === '') {
-                    continue;
-                }
-                foreach ($patterns as $pat => $cb) {
-                    $tok = preg_replace_callback($pat, $cb, $tok);
-                }
-                $tokens[$t] = $tok;
-            }
-            $parts[$i] = implode('', $tokens);
+            $parts[$i] = $chunk;
         }
 
         return implode('', $parts);
@@ -388,6 +409,22 @@ final class Widget extends Widget_Base
             'default'      => '',
             'prefix_class' => 'dccgg-fab--',
             'description'  => __('When on, the widget collapses into a small floating button. Tapping it opens the guide as a centered modal.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('enable_haptic', [
+            'label'        => __('Enable haptic feedback (mobile)', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('On supported devices, vibrates briefly on tile tap and after a successful Copy. Uses navigator.vibrate; silently no-ops where unsupported.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('enable_section_nav', [
+            'label'        => __('Show prev/next arrows in detail', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('Adds ← / → buttons in the detail header that cycle to the previous / next section. Also bound to keyboard arrow keys.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('fab_icon', [
@@ -462,6 +499,13 @@ final class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'description'  => __('Items in this section render as Step 1, 2, 3… with a connecting progress line. Use for instruction-style sections like "How to start the hot tub".', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('wizard_mode', [
+            'label'        => __('Wizard mode (one step at a time)', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Items show one at a time with Next / Back buttons and a progress strip. Overrides procedure mode for this section.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('enable_quick_action', [
@@ -705,6 +749,11 @@ final class Widget extends Widget_Base
             'str_qr_close'     => [__('QR close aria-label', 'dcc-guest-guide'),      __('Close QR code', 'dcc-guest-guide')],
             'str_share'        => [__('Share button', 'dcc-guest-guide'),       __('Share', 'dcc-guest-guide')],
             'str_share_copied' => [__('Share-link copied', 'dcc-guest-guide'),  __('Link copied!', 'dcc-guest-guide')],
+            'str_prev_section' => [__('Previous-section aria-label', 'dcc-guest-guide'), __('Previous section', 'dcc-guest-guide')],
+            'str_next_section' => [__('Next-section aria-label', 'dcc-guest-guide'),     __('Next section', 'dcc-guest-guide')],
+            'str_wizard_prev'  => [__('Wizard back button', 'dcc-guest-guide'),  __('Back', 'dcc-guest-guide')],
+            'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
+            'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1396,15 +1445,16 @@ final class Widget extends Widget_Base
         $theme_preset   = (string) ($s['theme_preset'] ?? 'custom');
 
         $config = [
-            'revealMode'   => $reveal_mode,
-            'menuLayout'   => $menu_layout,
-            'enableSearch' => $enable_search,
-            'enableFab'    => $enable_fab,
-            'darkMode'     => $dark_mode,
-            'themePreset'  => $theme_preset,
-            'searchIndex'  => $search_index,
-            'themePresets' => self::theme_presets(),
-            'strings'      => [
+            'revealMode'       => $reveal_mode,
+            'menuLayout'       => $menu_layout,
+            'enableSearch'     => $enable_search,
+            'enableFab'        => $enable_fab,
+            'enableHaptic'     => ($s['enable_haptic'] ?? '') === 'yes',
+            'enableSectionNav' => ($s['enable_section_nav'] ?? 'yes') === 'yes',
+            'darkMode'         => $dark_mode,
+            'themePreset'      => $theme_preset,
+            'searchIndex'      => $search_index,
+            'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'readMore'    => (string) ($s['str_read_more'] ?? 'Read more'),
                 'readLess'    => (string) ($s['str_read_less'] ?? 'Read less'),
@@ -1611,19 +1661,26 @@ final class Widget extends Widget_Base
      */
     private function render_stage(array $sections, array $items_by_section, array $s): void
     {
-        $label_back = (string) ($s['str_back'] ?? 'Back');
+        $label_back     = (string) ($s['str_back'] ?? 'Back');
+        $label_prev     = (string) ($s['str_prev_section'] ?? __('Previous section', 'dcc-guest-guide'));
+        $label_next     = (string) ($s['str_next_section'] ?? __('Next section', 'dcc-guest-guide'));
+        $show_nav       = ($s['enable_section_nav'] ?? 'yes') === 'yes';
+        $valid_sections = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
+        $section_count  = count($valid_sections);
         ?>
         <div class="dccgg-stage" aria-live="polite">
-            <?php foreach ($sections as $sec) :
+            <?php foreach ($valid_sections as $idx => $sec) :
                 $key = trim((string) ($sec['section_key'] ?? ''));
-                if ($key === '') { continue; }
                 $title = (string) ($sec['section_title'] ?? $key);
                 $icon  = (array) ($sec['section_icon'] ?? ['value' => 'fas fa-info', 'library' => 'solid']);
                 $items = $items_by_section[$key] ?? [];
-                $procedure = ($sec['procedure_mode'] ?? '') === 'yes';
-                $show_toc  = count($items) >= 4 && !$procedure;
+                $wizard    = ($sec['wizard_mode'] ?? '') === 'yes';
+                $procedure = ($sec['procedure_mode'] ?? '') === 'yes' && !$wizard;
+                $show_toc  = count($items) >= 4 && !$procedure && !$wizard;
+                $prev_key  = $idx > 0 ? trim((string) ($valid_sections[$idx - 1]['section_key'] ?? '')) : '';
+                $next_key  = $idx < $section_count - 1 ? trim((string) ($valid_sections[$idx + 1]['section_key'] ?? '')) : '';
                 ?>
-                <div class="dccgg-detail<?php echo $show_toc ? ' dccgg-detail--has-toc' : ''; ?>" data-key="<?php echo esc_attr($key); ?>" hidden>
+                <div class="dccgg-detail<?php echo $show_toc ? ' dccgg-detail--has-toc' : ''; ?><?php echo $wizard ? ' dccgg-detail--wizard' : ''; ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" hidden>
                     <div class="dccgg-progress-bar" aria-hidden="true"></div>
                     <div class="dccgg-detail-header">
                         <button type="button" class="dccgg-btn dccgg-back">
@@ -1633,6 +1690,16 @@ final class Widget extends Widget_Base
                             <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
                             <span><?php echo esc_html($title); ?></span>
                         </h2>
+                        <?php if ($show_nav && $section_count > 1) : ?>
+                            <div class="dccgg-section-nav">
+                                <button type="button" class="dccgg-section-prev" aria-label="<?php echo esc_attr($label_prev); ?>" <?php echo $prev_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($prev_key) . '"'; ?>>
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="dccgg-section-next" aria-label="<?php echo esc_attr($label_next); ?>" <?php echo $next_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($next_key) . '"'; ?>>
+                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <div class="dccgg-detail-layout">
                         <?php if ($show_toc) : ?>
@@ -1646,7 +1713,9 @@ final class Widget extends Widget_Base
                                 </ul>
                             </nav>
                         <?php endif; ?>
-                        <?php if ($procedure) : ?>
+                        <?php if ($wizard) : ?>
+                            <?php $this->render_wizard($items, $s); ?>
+                        <?php elseif ($procedure) : ?>
                             <ol class="dccgg-detail-items dccgg-procedure">
                                 <?php foreach ($items as $it) { echo '<li>'; $this->render_item($it, $s, false); echo '</li>'; } ?>
                             </ol>
@@ -1662,6 +1731,44 @@ final class Widget extends Widget_Base
                     </div>
                 </div>
             <?php endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render a section's items in wizard mode: one step visible at a time
+     * with Next / Back buttons and a progress-dot strip. JS toggles which
+     * step is active; this is purely the rendered scaffold.
+     */
+    private function render_wizard(array $items, array $s): void
+    {
+        $count       = count($items);
+        $label_prev  = (string) ($s['str_wizard_prev'] ?? __('Back', 'dcc-guest-guide'));
+        $label_next  = (string) ($s['str_wizard_next'] ?? __('Next', 'dcc-guest-guide'));
+        $label_done  = (string) ($s['str_wizard_done'] ?? __('Done', 'dcc-guest-guide'));
+        ?>
+        <div class="dccgg-wizard" data-step="0" data-total="<?php echo (int) $count; ?>">
+            <div class="dccgg-wizard-dots" role="tablist" aria-label="<?php echo esc_attr__('Wizard progress', 'dcc-guest-guide'); ?>">
+                <?php for ($i = 0; $i < $count; $i++) : ?>
+                    <button type="button" class="dccgg-wizard-dot<?php echo $i === 0 ? ' is-active' : ''; ?>" role="tab" aria-label="<?php echo esc_attr(sprintf(/* translators: 1: current step, 2: total steps */ __('Step %1$d of %2$d', 'dcc-guest-guide'), $i + 1, $count)); ?>" data-wizard-goto="<?php echo (int) $i; ?>"></button>
+                <?php endfor; ?>
+            </div>
+            <div class="dccgg-wizard-steps">
+                <?php foreach ($items as $idx => $it) : ?>
+                    <div class="dccgg-wizard-step<?php echo $idx === 0 ? ' is-active' : ''; ?>" data-wizard-step="<?php echo (int) $idx; ?>" <?php echo $idx === 0 ? '' : 'hidden'; ?>>
+                        <p class="dccgg-wizard-counter"><?php echo esc_html(sprintf(/* translators: 1: current step, 2: total steps */ __('Step %1$d of %2$d', 'dcc-guest-guide'), $idx + 1, $count)); ?></p>
+                        <?php $this->render_item($it, $s, false); ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="dccgg-wizard-actions">
+                <button type="button" class="dccgg-btn dccgg-wizard-back" disabled>
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_prev); ?>
+                </button>
+                <button type="button" class="dccgg-btn dccgg-btn-primary dccgg-wizard-next" data-label-next="<?php echo esc_attr($label_next); ?>" data-label-done="<?php echo esc_attr($label_done); ?>">
+                    <?php echo esc_html($label_next); ?> <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
         <?php
     }

@@ -33,6 +33,10 @@ final class Plugin
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\DCCGG\\Widget', 'register_assets']);
         add_action('elementor/preview/enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_preview']);
+        // Welcome Pack button lives in the editor panel, not the preview
+        // iframe — the script must also load on the editor side so the
+        // delegated click handler actually fires.
+        add_action('elementor/editor/after_enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_editor']);
     }
 
     public function load_textdomain(): void

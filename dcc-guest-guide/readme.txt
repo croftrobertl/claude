@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,50 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.3.0 =
+
+Bug fixes:
+* Welcome Pack button now actually works. v0.2 enqueued the script only
+  into the preview iframe but the button lived in the editor panel, so
+  the delegated click handler never fired. Script is now also enqueued
+  on `elementor/editor/after_enqueue_scripts`.
+* Auto-link re-tokenizes between patterns so the phone regex can no
+  longer accidentally match digits inside an `<a href="mailto:...">`
+  anchor that the email pattern just created.
+* `wireGlobalCmdK` no longer probes the non-existent `document.dataset`;
+  uses `document.documentElement.dataset` so the one-shot guard works.
+* `.dccgg-sheet-backdrop` now `display: none` on desktop (v0.2 left it as
+  a default `<div>`, which would render a full-screen layer over
+  the wrapper outside the mobile media query).
+* Long-press peek only fires on touch via `pointerdown`. Right-click on
+  desktop is exclusively the `contextmenu` path, so the peek no longer
+  opens twice.
+* Sheet drag skips `pointerdown` on `button` / `a` / `input` targets so
+  tapping the back arrow, section-nav arrows, or wizard buttons in the
+  drag-handle zone no longer initiates a phantom drag.
+* Welcome Pack rows now ship with a `_id` UUID per row so Elementor's
+  repeater panel renders them with working drag handles and delete
+  buttons.
+* Image lightbox `<dialog>` hoisted to a single global instance shared
+  across widgets, rather than one per widget.
+* `enqueue_for_preview` now explicitly enqueues Font Awesome instead of
+  relying on it being registered at probe time.
+* `themePresets` dropped from `data-config` (dead bytes since v0.2 moved
+  presets to static CSS).
+
+New features:
+* **Wizard mode** — per-section toggle that renders items one at a time
+  with Next / Back buttons and a progress-dot strip. Pressing Done on
+  the last step fires a confetti burst and resets to step 1. Replaces
+  procedure mode for the section when both are toggled on.
+* **Section prev / next arrows** — buttons in the detail header cycle
+  between sections without bouncing back to the menu. Also bound to
+  the keyboard ← / → arrow keys when a detail is visible and focus
+  isn't in an input.
+* **Haptic feedback** — opt-in switcher in the General panel. On
+  supported devices, vibrates briefly on tile tap and a triple-pulse on
+  successful copy. Uses `navigator.vibrate`; silently no-ops elsewhere.
 
 = 0.2.0 =
 
