@@ -2142,8 +2142,162 @@ video.dccgg-media {
 
 /* -------- Print (scoped) -------- */
 
-/* -------- Print (scoped) -------- */
+/* -------------------------------------------------------------- *
+ * On-screen styles for v0.8 (print-only helpers + report + voice)
+ * -------------------------------------------------------------- */
+
+/* Print-only blocks are hidden in the normal viewport. */
+.dccgg-print-only { display: none !important; }
+
+/* Per-item Report button (mirrors share button shape). */
+.dccgg-item-report {
+    background: transparent;
+    border: 0;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 55%, transparent);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.dccgg-item-report:hover {
+    background: color-mix(in srgb, #d54040 12%, transparent);
+    color: #d54040;
+}
+
+/* Report dialog (vanilla <dialog>). */
+.dccgg-report-dialog {
+    border: 0;
+    border-radius: 14px;
+    padding: 0;
+    width: min(520px, 92vw);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+    color: var(--dccgg-text, #111);
+    background: var(--dccgg-detail-bg, #fff);
+}
+.dccgg-report-dialog::backdrop { background: rgba(0,0,0,0.55); }
+.dccgg-report-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 10%, transparent);
+}
+.dccgg-report-head h3 { margin: 0; font-size: 1.05em; font-weight: 700; }
+.dccgg-report-close {
+    background: transparent; border: 0; cursor: pointer;
+    font-size: 1.5em; color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
+    line-height: 1;
+}
+.dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
+.dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }
+.dccgg-report-body select,
+.dccgg-report-body textarea,
+.dccgg-report-body input[type="email"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent);
+    border-radius: 8px;
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-text, #111);
+    font: inherit;
+    box-sizing: border-box;
+}
+.dccgg-report-body textarea { resize: vertical; min-height: 100px; }
+.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; }
+.dccgg-report-foot {
+    padding: 12px 20px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 10%, transparent);
+}
+.dccgg-report-foot .dccgg-btn-cancel {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent);
+    color: var(--dccgg-text, #111);
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.dccgg-report-foot .dccgg-btn-send {
+    background: var(--dccgg-primary);
+    color: #fff;
+    border: 0;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.dccgg-report-foot .dccgg-btn-send:disabled { opacity: 0.6; cursor: wait; }
+
+/* AI mic button + transcript preview + speak indicator (v0.8). */
+.dccgg-ai-prompt { position: relative; }
+.dccgg-ai-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.dccgg-ai-mic {
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-primary);
+    border: 2px solid var(--dccgg-primary);
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.dccgg-ai-mic.is-listening {
+    background: var(--dccgg-primary);
+    color: #fff;
+    animation: dccgg-mic-pulse 1.4s ease-in-out infinite;
+}
+@keyframes dccgg-mic-pulse {
+    0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dccgg-primary) 60%, transparent); }
+    50%     { box-shadow: 0 0 0 12px transparent; }
+}
+.dccgg-ai-transcript {
+    margin-top: 10px;
+    font-style: italic;
+    font-size: 0.9em;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 70%, transparent);
+    min-height: 1.2em;
+}
+.dccgg-ai-speak {
+    background: transparent;
+    border: 0;
+    color: var(--dccgg-primary);
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 1em;
+}
+
+/* -------------------------------------------------------------- *
+ * Print: magazine-quality output (v0.8)
+ *
+ * Goal: a printable / Save-as-PDF document that looks like a
+ * hospitality booklet — branded cover, contents page, fresh page
+ * per section, items kept whole, serif body for paper readability,
+ * page numbers in the running header. None of the on-screen chrome
+ * (toolbar, search, FAB, conditions card, AI panel, parallax,
+ * checklist progress, gallery scroller, video iframes, theme
+ * toggle, report dialog, mic) appears.
+ * -------------------------------------------------------------- */
+@page {
+    margin: 0.6in 0.55in 0.7in;
+    @top-left  { content: "Doracanal Court Guest Guide"; font: 10pt Georgia, serif; color: #5a5a5a; }
+    @top-right { content: counter(page) " / " counter(pages);   font: 10pt Georgia, serif; color: #5a5a5a; }
+}
+@page :first { @top-left { content: ""; } @top-right { content: ""; } }
+
 @media print {
+    /* Surface the print-only blocks. */
+    .dccgg-root .dccgg-print-only { display: block !important; }
+
+    /* Reset chrome that has no place on paper. */
     .dccgg-root .dccgg-toolbar,
     .dccgg-root .dccgg-search,
     .dccgg-root .dccgg-back,
@@ -2154,35 +2308,52 @@ video.dccgg-media {
     .dccgg-root .dccgg-qr-dialog,
     .dccgg-root .dccgg-quick-action,
     .dccgg-root .dccgg-item-share,
+    .dccgg-root .dccgg-item-report,
+    .dccgg-root .dccgg-item-check,
     .dccgg-root .dccgg-item-tts,
     .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
     .dccgg-root .dccgg-theme-toggle,
     .dccgg-root .dccgg-toc,
     .dccgg-root .dccgg-progress-bar,
+    .dccgg-root .dccgg-shrink-sentinel,
     .dccgg-root .dccgg-sheet-backdrop,
     .dccgg-root .dccgg-search-mic,
     .dccgg-root .dccgg-section-nav,
     .dccgg-root .dccgg-wizard-dots,
     .dccgg-root .dccgg-wizard-actions,
-    .dccgg-root .dccgg-more {
+    .dccgg-root .dccgg-more,
+    .dccgg-root .dccgg-menu,
+    .dccgg-root .dccgg-conditions,
+    .dccgg-root .dccgg-checklist-progress,
+    .dccgg-root .dccgg-ai-prompt,
+    .dccgg-root .dccgg-parallax-bg,
+    .dccgg-root .dccgg-parallax-overlay,
+    .dccgg-root .dccgg-section-share,
+    .dccgg-root .dccgg-confetti-piece,
+    .dccgg-root .dccgg-info-popup,
+    .dccgg-root .dccgg-sheet,
+    .dccgg-root .dccgg-report-dialog,
+    .dccgg-report-dialog {
         display: none !important;
     }
+
+    /* Show all wizard steps (turn the one-at-a-time UI into a list). */
     .dccgg-root .dccgg-wizard-step[hidden] { display: block !important; }
-    .dccgg-root .dccgg-collapsible {
-        max-height: none !important;
-    }
+
+    /* Force read-more collapsibles fully expanded for paper. */
+    .dccgg-root .dccgg-collapsible        { max-height: none !important; }
     .dccgg-root .dccgg-collapsible::after { display: none !important; }
+
+    /* All sections + items become block-flow children of the page. */
     .dccgg-root .dccgg-stage,
     .dccgg-root .dccgg-detail {
         visibility: visible !important;
         position: static !important;
         opacity: 1 !important;
         transform: none !important;
-        page-break-inside: avoid;
     }
     .dccgg-root .dccgg-detail[hidden] { display: block !important; }
-    .dccgg-root .dccgg-menu { display: none !important; }
     .dccgg-root .dccgg-wrapper {
         position: static !important;
         transform: none !important;
@@ -2192,4 +2363,189 @@ video.dccgg-media {
         box-shadow: none !important;
         padding: 0 !important;
     }
+    .dccgg-root .dccgg-detail--parallax .dccgg-detail-header {
+        color: #111 !important;
+        text-shadow: none !important;
+        background: transparent !important;
+    }
+
+    /* Body type for paper: serif at 11pt with generous leading. */
+    .dccgg-root,
+    .dccgg-root .dccgg-item-body,
+    .dccgg-root .dccgg-item-body * {
+        font-family: Georgia, "Times New Roman", Cambria, serif !important;
+        font-size: 11pt !important;
+        line-height: 1.45 !important;
+        color: #111 !important;
+        background: #fff !important;
+    }
+    .dccgg-root h1, .dccgg-root h2, .dccgg-root h3 {
+        font-family: "Helvetica Neue", Arial, sans-serif !important;
+        color: #0f6dbf !important;
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
+    /* Each section starts on a fresh sheet; items stay whole. */
+    .dccgg-root .dccgg-detail {
+        break-before: page;
+        page-break-before: always;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .dccgg-root .dccgg-stage > .dccgg-detail:first-of-type {
+        break-before: auto;
+        page-break-before: auto;
+    }
+    .dccgg-root .dccgg-detail-header { margin-bottom: 14pt; }
+    .dccgg-root .dccgg-detail-title {
+        font-size: 22pt !important;
+        border-bottom: 1pt solid #0f6dbf;
+        padding-bottom: 6pt;
+    }
+    .dccgg-root .dccgg-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin: 0 0 14pt;
+        padding: 8pt 0;
+        border-bottom: 0.5pt solid #ddd;
+    }
+    .dccgg-root .dccgg-item:last-child { border-bottom: 0; }
+    .dccgg-root .dccgg-item-title {
+        font-size: 13pt !important;
+        margin: 0 0 4pt;
+    }
+
+    /* Media: first gallery image inlined (vector PDFs don't carry the
+       scroller well), videos replaced by a caption, single image kept
+       at print-friendly width. */
+    .dccgg-root .dccgg-gallery-strip {
+        display: block !important;
+        overflow: visible !important;
+        white-space: normal !important;
+    }
+    .dccgg-root .dccgg-gallery-strip .dccgg-gallery-thumb {
+        display: none !important;
+    }
+    .dccgg-root .dccgg-gallery-strip .dccgg-gallery-thumb:first-child {
+        display: block !important;
+        position: relative;
+        width: 70%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        background-size: cover;
+        background-position: center;
+        margin: 6pt 0;
+    }
+    .dccgg-root .dccgg-gallery-pin-badge { display: none !important; }
+    .dccgg-root iframe.dccgg-media { display: none !important; }
+    .dccgg-root .dccgg-video-poster {
+        display: block !important;
+        width: 70%;
+        aspect-ratio: 16 / 9;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        margin: 6pt 0;
+    }
+    .dccgg-root .dccgg-video-poster::after {
+        content: "🎥 Video — view online";
+        position: absolute; inset: auto 0 8pt 0;
+        text-align: center;
+        font-family: Georgia, serif;
+        font-size: 9pt;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    }
+    .dccgg-root img.dccgg-media {
+        max-width: 70% !important;
+        height: auto !important;
+        margin: 6pt 0;
+    }
+
+    /* Cover page. */
+    .dccgg-print-cover {
+        page-break-after: always;
+        break-after: page;
+        padding: 1.2in 0.4in 0;
+        text-align: center;
+        position: relative;
+    }
+    .dccgg-print-cover-band {
+        position: absolute;
+        top: 0; left: -0.55in; right: -0.55in;
+        height: 0.45in;
+        background: #0f6dbf;
+    }
+    .dccgg-print-cover-title {
+        font-family: "Helvetica Neue", Arial, sans-serif !important;
+        font-size: 32pt !important;
+        color: #0f6dbf !important;
+        margin: 0.4in 0 0.15in;
+    }
+    .dccgg-print-cover-sub {
+        font-style: italic;
+        font-size: 14pt !important;
+        color: #444 !important;
+        margin: 0 0 0.6in;
+    }
+    .dccgg-print-cover-meta {
+        position: absolute;
+        bottom: 0.6in; left: 0; right: 0;
+        font-size: 10pt !important;
+        color: #5a5a5a !important;
+    }
+    .dccgg-print-cover-meta p { margin: 0.05in 0; }
+    .dccgg-print-cover-url { font-family: Menlo, Consolas, monospace !important; }
+
+    /* Table of contents. */
+    .dccgg-print-toc {
+        page-break-after: always;
+        break-after: page;
+        padding: 0.2in 0 0;
+    }
+    .dccgg-print-toc-title {
+        font-size: 20pt !important;
+        color: #0f6dbf !important;
+        margin: 0 0 0.3in;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .dccgg-print-toc-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: dccgg-toc;
+    }
+    .dccgg-print-toc-list li {
+        counter-increment: dccgg-toc;
+        display: flex;
+        align-items: baseline;
+        gap: 4pt;
+        padding: 6pt 0;
+        font-size: 12pt;
+        border-bottom: 0.5pt dotted #bbb;
+    }
+    .dccgg-print-toc-list li::before {
+        content: counter(dccgg-toc, decimal-leading-zero) ".";
+        font-weight: 700;
+        color: #0f6dbf;
+        margin-right: 6pt;
+        min-width: 26pt;
+    }
+    .dccgg-print-toc-label { flex: 0 0 auto; }
+    .dccgg-print-toc-leader {
+        flex: 1 0 auto;
+        border-bottom: 1pt dotted #999;
+        margin: 0 6pt 4pt;
+        height: 1pt;
+    }
+
+    /* Hyperlinks in print: black underlined; don't append the URL —
+       Chrome's default print stylesheet does that and it bloats lines. */
+    .dccgg-root a {
+        color: #111 !important;
+        text-decoration: underline !important;
+    }
+    .dccgg-root a[href]:after { content: "" !important; }
 }

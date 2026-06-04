@@ -93,6 +93,270 @@
         wireConditions(root, config);
         wireGalleryStrip(root);
         wireAiSearch(root, config);
+        wireSavePdf(root, config);
+        wireReportProblem(root, config);
+        wireVoiceConcierge(root, config);
+    }
+
+    // -- Save as PDF (v0.8) -----------------------------------------------
+    // The button just kicks window.print(); the magazine-quality output is
+    // produced by the @media print CSS. A small toast tells first-timers
+    // how to pick the "Save as PDF" destination in the browser dialog.
+    function wireSavePdf(root, config) {
+        const SHOWN_KEY = 'dccgg:savepdf-tip-shown';
+        root.addEventListener('click', (e) => {
+            const btn = e.target.closest('.dccgg-more-save-pdf');
+            if (!btn) return;
+            const tip = (config.savePdf && config.savePdf.tip) || '';
+            let shown = false;
+            try { shown = sessionStorage.getItem(SHOWN_KEY) === '1'; } catch (_) {}
+            if (tip && !shown) {
+                showPdfTip(tip);
+                try { sessionStorage.setItem(SHOWN_KEY, '1'); } catch (_) {}
+                // Let the toast paint before opening the print dialog.
+                setTimeout(() => window.print(), 600);
+            } else {
+                window.print();
+            }
+        });
+    }
+    function showPdfTip(text) {
+        const t = document.createElement('div');
+        t.className = 'dccgg-toast';
+        t.textContent = text;
+        Object.assign(t.style, {
+            position: 'fixed', left: '50%', top: '24px', transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.86)', color: '#fff', padding: '10px 16px',
+            borderRadius: '999px', font: '14px system-ui, sans-serif',
+            zIndex: 99999, maxWidth: '90vw', textAlign: 'center',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+        });
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 4500);
+    }
+
+    // -- Report a problem (v0.8) ------------------------------------------
+    function wireReportProblem(root, config) {
+        if (!config.report || !config.report.enabled) return;
+        const STR = config.report.strings || {};
+        const CATS = Array.isArray(config.report.categories) ? config.report.categories : [];
+
+        let dialog = null;
+        const ensureDialog = () => {
+            if (dialog) return dialog;
+            dialog = document.createElement('dialog');
+            dialog.className = 'dccgg-report-dialog';
+            const catField = CATS.length
+                ? `<label>${escHtml(STR.category || 'Category')}<select class="dccgg-report-cat">${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
+                : '';
+            dialog.innerHTML = `
+                <div class="dccgg-report-head">
+                    <h3>${escHtml(STR.title || 'Report a problem')}</h3>
+                    <button type="button" class="dccgg-report-close" aria-label="Close">&times;</button>
+                </div>
+                <div class="dccgg-report-body">
+                    ${catField}
+                    <label>
+                        ${escHtml(STR.desc || 'Describe the problem')}
+                        <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
+                    </label>
+                    <label>
+                        ${escHtml(STR.contact || 'Email to reach you back (optional)')}
+                        <input type="email" class="dccgg-report-contact" autocomplete="email">
+                    </label>
+                    <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
+                </div>
+                <div class="dccgg-report-foot">
+                    <button type="button" class="dccgg-btn-cancel">${escHtml(STR.cancel || 'Cancel')}</button>
+                    <button type="button" class="dccgg-btn-send">${escHtml(STR.send || 'Send report')}</button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+            dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+            dialog.querySelector('.dccgg-report-close').addEventListener('click', () => dialog.close());
+            dialog.querySelector('.dccgg-btn-cancel').addEventListener('click', () => dialog.close());
+            dialog.querySelector('.dccgg-btn-send').addEventListener('click', () => sendReport(dialog, root, config));
+            return dialog;
+        };
+
+        const open = (section, itemTitle) => {
+            const d = ensureDialog();
+            d.dataset.section = section || '';
+            d.dataset.item    = itemTitle || '';
+            const desc = d.querySelector('.dccgg-report-desc');
+            desc.value = itemTitle ? `[${itemTitle}] ` : '';
+            d.querySelector('.dccgg-report-contact').value = '';
+            const sendBtn = d.querySelector('.dccgg-btn-send');
+            sendBtn.disabled = false;
+            sendBtn.textContent = STR.send || 'Send report';
+            if (typeof d.showModal === 'function') d.showModal();
+            else d.setAttribute('open', '');
+            setTimeout(() => desc.focus(), 50);
+        };
+
+        // More-menu "Report a problem" → context is the current section title.
+        root.addEventListener('click', (e) => {
+            const m = e.target.closest('.dccgg-more-report');
+            if (!m) return;
+            // Close the parent <details> popover so it doesn't sit open behind the dialog.
+            const details = m.closest('details');
+            if (details) details.open = false;
+            open(m.dataset.reportSection || '', '');
+        });
+
+        // Per-item Report button.
+        root.addEventListener('click', (e) => {
+            const b = e.target.closest('.dccgg-item-report');
+            if (!b) return;
+            open(b.dataset.reportSection || '', b.dataset.reportItem || '');
+        });
+    }
+    function sendReport(dialog, root, config) {
+        const STR  = (config.report && config.report.strings) || {};
+        const desc = dialog.querySelector('.dccgg-report-desc').value.trim();
+        if (!desc) { dialog.querySelector('.dccgg-report-desc').focus(); return; }
+        const catEl   = dialog.querySelector('.dccgg-report-cat');
+        const contact = dialog.querySelector('.dccgg-report-contact').value.trim();
+        const send    = dialog.querySelector('.dccgg-btn-send');
+        send.disabled = true;
+        send.textContent = '…';
+        const body = new URLSearchParams();
+        body.set('action',      'dccgg_report_problem');
+        body.set('nonce',       config.nonce);
+        body.set('category',    catEl ? catEl.value : '');
+        body.set('description', desc);
+        body.set('contact',     contact);
+        body.set('section',     dialog.dataset.section || '');
+        body.set('item',        dialog.dataset.item || '');
+        body.set('stay',        stayKey());
+        body.set('page_url',    window.location.href);
+        body.set('recipients',  (config.report && config.report.recipients) || '');
+        fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        }).then(r => r.json()).then(json => {
+            if (json && json.success) {
+                dialog.close();
+                showPdfTip(STR.thankYou || 'Thanks!');
+            } else {
+                send.disabled = false;
+                send.textContent = STR.send || 'Send report';
+                showPdfTip((json && json.data && json.data.message) || STR.error || 'Could not send.');
+            }
+        }).catch(() => {
+            send.disabled = false;
+            send.textContent = STR.send || 'Send report';
+            showPdfTip(STR.error || 'Could not send.');
+        });
+    }
+    function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
+
+    // -- Voice-first concierge (v0.8) -------------------------------------
+    // Adds a mic button next to the existing "Ask anything" AI button.
+    // Tap → speech-recognize → fill question → askAi() → answer is spoken.
+    function wireVoiceConcierge(root, config) {
+        if (!config.aiSearch || !config.aiSearch.enabled) return;
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const synth = window.speechSynthesis;
+        if (!SR && !synth) return;
+
+        // Inject the mic + transcript into the AI prompt the moment it appears.
+        const results = root.querySelector('.dccgg-search-results');
+        if (!results) return;
+        const decorate = (wrap) => {
+            if (!wrap || wrap.dataset.voiceWired === '1') return;
+            wrap.dataset.voiceWired = '1';
+            const btn = wrap.querySelector('.dccgg-ai-button');
+            if (!btn) return;
+            // Wrap the existing button + new mic in a row.
+            const row = document.createElement('div');
+            row.className = 'dccgg-ai-actions';
+            btn.parentNode.insertBefore(row, btn);
+            row.appendChild(btn);
+            if (SR) {
+                const mic = document.createElement('button');
+                mic.type = 'button';
+                mic.className = 'dccgg-ai-mic';
+                mic.setAttribute('aria-label', config.aiSearch.voiceLabel || 'Ask by voice');
+                mic.innerHTML = '<i class="fas fa-microphone" aria-hidden="true"></i>';
+                row.appendChild(mic);
+                const transcript = document.createElement('div');
+                transcript.className = 'dccgg-ai-transcript';
+                row.parentNode.insertBefore(transcript, row.nextSibling);
+                mic.addEventListener('click', () => {
+                    recordOnce(SR,
+                        (interim) => { transcript.textContent = interim; },
+                        (final) => {
+                            transcript.textContent = final;
+                            mic.classList.remove('is-listening');
+                            if (final) askAi(root, config, final, wrap, /*onAnswer*/ (answer) => {
+                                if (synth && answer) speak(synth, answer, wrap);
+                            });
+                        },
+                        () => { mic.classList.add('is-listening'); },
+                        () => { mic.classList.remove('is-listening'); }
+                    );
+                });
+            }
+        };
+
+        const obs = new MutationObserver(() => {
+            const wrap = results.querySelector('.dccgg-ai-prompt');
+            if (wrap) decorate(wrap);
+        });
+        obs.observe(results, { childList: true, subtree: true });
+    }
+    function recordOnce(SR, onInterim, onFinal, onStart, onStop) {
+        const r = new SR();
+        r.interimResults = true;
+        r.continuous = false;
+        r.lang = (navigator.language || 'en-US');
+        let finalText = '';
+        r.onresult = (ev) => {
+            let interim = '';
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+                const res = ev.results[i];
+                if (res.isFinal) { finalText += res[0].transcript; }
+                else             { interim   += res[0].transcript; }
+            }
+            if (interim) onInterim(interim);
+        };
+        r.onend   = () => { onStop && onStop(); onFinal((finalText || '').trim()); };
+        r.onerror = () => { onStop && onStop(); };
+        try {
+            r.start();
+            onStart && onStart();
+        } catch (_) { onStop && onStop(); }
+        return r;
+    }
+    function speak(synth, text, wrap) {
+        try { synth.cancel(); } catch (_) {}
+        const u = new SpeechSynthesisUtterance(text);
+        const voices = synth.getVoices ? synth.getVoices() : [];
+        if (voices && voices.length) {
+            const lang = (navigator.language || 'en-US').split('-')[0];
+            const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(lang));
+            if (match) u.voice = match;
+        }
+        u.rate = 1.0;
+        u.pitch = 1.0;
+        // Add a small pause button next to the answer.
+        const answer = wrap && wrap.querySelector('.dccgg-ai-answer');
+        let pauseBtn = null;
+        if (answer) {
+            pauseBtn = document.createElement('button');
+            pauseBtn.type = 'button';
+            pauseBtn.className = 'dccgg-ai-speak';
+            pauseBtn.innerHTML = '<i class="fas fa-volume-up" aria-hidden="true"></i>';
+            pauseBtn.title = 'Stop reading';
+            pauseBtn.addEventListener('click', () => { try { synth.cancel(); } catch (_) {} pauseBtn.remove(); });
+            answer.appendChild(pauseBtn);
+        }
+        u.onend = () => { if (pauseBtn) pauseBtn.remove(); };
+        synth.speak(u);
     }
 
     // -- Checklist (v0.7) -------------------------------------------------
@@ -385,7 +649,7 @@
         });
         obs.observe(results, { childList: true, subtree: true });
     }
-    function askAi(root, config, question, wrap) {
+    function askAi(root, config, question, wrap, onAnswer) {
         const btn    = wrap.querySelector('.dccgg-ai-button');
         const answer = wrap.querySelector('.dccgg-ai-answer');
         btn.disabled = true;
@@ -408,6 +672,7 @@
             btn.disabled = false;
             if (json && json.success && json.data && json.data.answer) {
                 answer.textContent = json.data.answer;
+                if (typeof onAnswer === 'function') onAnswer(json.data.answer);
             } else {
                 answer.textContent = (json && json.data && json.data.message) || config.aiSearch.error;
             }

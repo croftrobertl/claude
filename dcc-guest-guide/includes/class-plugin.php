@@ -47,6 +47,107 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_ai_query', [$this, 'handle_ai_query']);
         add_action('wp_ajax_dccgg_weather',         [$this, 'handle_weather']);
         add_action('wp_ajax_nopriv_dccgg_weather',  [$this, 'handle_weather']);
+        add_action('wp_ajax_dccgg_report_problem',        [$this, 'handle_report_problem']);
+        add_action('wp_ajax_nopriv_dccgg_report_problem', [$this, 'handle_report_problem']);
+    }
+
+    /**
+     * AJAX: deliver a guest-submitted "Report a problem" message to the
+     * host via wp_mail(). Recipients come from the widget config (POSTed
+     * with the report), one per line; falls back to admin_email if empty.
+     * Per-IP rate limit: 3 reports / 15 minutes.
+     */
+    public function handle_report_problem(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_report_rl_' . $ip_hash;
+        $count   = (int) get_transient($rl_key);
+        if ($count >= 3) {
+            wp_send_json_error(['message' => __('Too many reports in a short window — please try again in a few minutes.', 'dcc-guest-guide')], 429);
+        }
+
+        $category    = isset($_POST['category'])    ? sanitize_text_field(wp_unslash((string) $_POST['category']))    : '';
+        $description = isset($_POST['description']) ? sanitize_textarea_field(wp_unslash((string) $_POST['description'])) : '';
+        $contact     = isset($_POST['contact'])     ? sanitize_email(wp_unslash((string) $_POST['contact']))          : '';
+        $section     = isset($_POST['section'])     ? sanitize_text_field(wp_unslash((string) $_POST['section']))     : '';
+        $item        = isset($_POST['item'])        ? sanitize_text_field(wp_unslash((string) $_POST['item']))        : '';
+        $stay        = isset($_POST['stay'])        ? sanitize_text_field(wp_unslash((string) $_POST['stay']))        : '';
+        $page_url    = isset($_POST['page_url'])    ? esc_url_raw(wp_unslash((string) $_POST['page_url']))            : '';
+        $recipients  = isset($_POST['recipients'])  ? wp_unslash((string) $_POST['recipients'])                       : '';
+
+        $description = mb_substr($description, 0, 1500);
+        if ($description === '') {
+            wp_send_json_error(['message' => __('Please describe the problem.', 'dcc-guest-guide')], 400);
+        }
+
+        $to = $this->parse_recipient_list($recipients);
+        if (empty($to)) {
+            $admin = get_option('admin_email', '');
+            if (is_email($admin)) { $to = [$admin]; }
+        }
+        if (empty($to)) {
+            wp_send_json_error(['message' => __('No recipient configured.', 'dcc-guest-guide')], 500);
+        }
+
+        $ctx_label = $section !== '' ? $section : __('general', 'dcc-guest-guide');
+        $subject = sprintf(
+            /* translators: 1: category, 2: section title or "general" */
+            __('[DCC Guest Guide] %1$s — %2$s', 'dcc-guest-guide'),
+            $category !== '' ? $category : __('Report', 'dcc-guest-guide'),
+            $ctx_label
+        );
+
+        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash((string) $_SERVER['HTTP_USER_AGENT'])) : '';
+        $ua = mb_substr($ua, 0, 250);
+
+        $lines = [];
+        $lines[] = __('A guest submitted a problem report from the Guest Guide.', 'dcc-guest-guide');
+        $lines[] = str_repeat('-', 60);
+        if ($category !== '') { $lines[] = __('Category:    ', 'dcc-guest-guide') . $category; }
+        if ($section !== '')  { $lines[] = __('Section:     ', 'dcc-guest-guide') . $section; }
+        if ($item !== '')     { $lines[] = __('Item:        ', 'dcc-guest-guide') . $item; }
+        if ($stay !== '')     { $lines[] = __('Stay key:    ', 'dcc-guest-guide') . $stay; }
+        if ($page_url !== '') { $lines[] = __('Page URL:    ', 'dcc-guest-guide') . $page_url; }
+        if ($contact !== '')  { $lines[] = __('Reply to:    ', 'dcc-guest-guide') . $contact; }
+        $lines[] = __('Submitted:   ', 'dcc-guest-guide') . current_time('mysql');
+        if ($ua !== '')       { $lines[] = __('User-agent:  ', 'dcc-guest-guide') . $ua; }
+        $lines[] = '';
+        $lines[] = __('Message:', 'dcc-guest-guide');
+        $lines[] = $description;
+
+        $body    = implode("\n", $lines);
+        $headers = [];
+        if ($contact !== '' && is_email($contact)) {
+            $headers[] = 'Reply-To: ' . $contact;
+        }
+
+        $ok = wp_mail($to, $subject, $body, $headers);
+        if (!$ok) {
+            error_log('DCCGG: wp_mail() returned false for problem report to ' . implode(',', $to));
+            wp_send_json_error(['message' => __('Could not send your report. Please contact the host directly.', 'dcc-guest-guide')], 502);
+        }
+
+        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
+        wp_send_json_success(['ok' => true]);
+    }
+
+    /**
+     * Parse a newline / comma separated string of email addresses into a
+     * deduplicated array of valid recipients. Used by handle_report_problem
+     * to interpret the per-widget recipients TEXTAREA.
+     */
+    private function parse_recipient_list(string $raw): array
+    {
+        $parts = preg_split('/[\s,;]+/', trim($raw)) ?: [];
+        $out = [];
+        foreach ($parts as $p) {
+            $p = trim($p);
+            if ($p === '') { continue; }
+            if (is_email($p)) { $out[$p] = true; }
+        }
+        return array_keys($out);
     }
 
     public function register_settings_page(): void

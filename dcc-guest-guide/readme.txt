@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.0
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,40 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.8.0 =
+
+New features:
+* **Save as PDF (magazine-quality)** — new More-menu item below Print.
+  The print stylesheet was fully rebuilt: a branded cover page, a
+  contents page with leader dots and section numbers, a fresh sheet
+  per section, items kept whole across page breaks, serif body type
+  at 11pt for paper readability, and a running header that reads
+  "Doracanal Court Guest Guide · X / Y" on every page. Gallery
+  scrollers collapse to the first image, videos become a "view
+  online" caption, and all on-screen chrome (toolbar, search, FAB,
+  conditions card, AI panel, parallax background, checklist progress,
+  theme toggle) is hidden. Output is a genuine vector PDF generated
+  by the browser, no extra JS dependency.
+* **Report a Problem (email)** — opt-in per widget. Adds a "Report a
+  problem" item to the section detail's More menu (and, optionally,
+  a small Report button on each item card). Tapping opens a vanilla
+  <dialog> with a category dropdown (host-configurable), a
+  description textarea, and an optional reply-to email. Submissions
+  are sent via wp_mail() to one or more host addresses listed in the
+  widget settings (falls back to the WordPress admin email when
+  empty). Reports include the page URL, the section / item context,
+  and the ?stay= key, with the guest's email wired to Reply-To when
+  provided. Server-side per-IP rate limit (3 reports / 15 minutes).
+* **Voice-first concierge** — when AI fallback search is enabled and
+  the browser supports Web Speech Recognition (Chrome, Safari, Edge),
+  a microphone button appears next to the "Ask anything" button.
+  Tapping it records the guest's spoken question, fills the prompt,
+  fires the existing AI flow, then reads the answer back aloud via
+  Web Speech Synthesis. A small 🔊 button next to the answer cancels
+  playback. Voice is processed entirely on-device; only the
+  transcribed text travels the same admin-ajax → Gemini path that
+  v0.7 text search uses.
 
 = 0.7.0 =
 

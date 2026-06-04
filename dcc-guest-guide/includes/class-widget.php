@@ -488,6 +488,38 @@ final class Widget extends Widget_Base
             'condition' => ['enable_ai_search' => 'yes'],
         ]);
 
+        $this->add_control('enable_problem_report', [
+            'label'        => __('Enable "Report a problem" button', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('Adds a "Report a problem" item to the section detail\'s More menu. Submissions are emailed to the recipients you list below; no SMS, no third-party service.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('enable_per_item_report', [
+            'label'        => __('Per-item Report button', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('Also show a small "Report" button on each item card so guests can flag a specific tip ("This Wi-Fi password didn\'t work"). Item title is pre-filled in the report.', 'dcc-guest-guide'),
+            'condition'    => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_recipients', [
+            'label'       => __('Report recipients (one email per line)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 3,
+            'default'     => '',
+            'description' => __('Where reports go. Leave blank to use the WordPress admin email. Multiple lines or commas accepted.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_categories', [
+            'label'       => __('Report categories (one per line)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 4,
+            'default'     => "Maintenance issue\nSupply missing\nCleanliness concern\nWi-Fi or TV\nSafety\nOther",
+            'description' => __('Shown as a dropdown in the report dialog. Leave blank for a single freeform field.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+
         $this->add_control('fab_icon', [
             'label'     => __('FAB icon', 'dcc-guest-guide'),
             'type'      => Controls_Manager::ICONS,
@@ -896,6 +928,20 @@ final class Widget extends Widget_Base
         $strings = [
             'str_back'         => [__('Back button', 'dcc-guest-guide'),        __('Back', 'dcc-guest-guide')],
             'str_print'        => [__('Print button', 'dcc-guest-guide'),       __('Print guide', 'dcc-guest-guide')],
+            'str_save_pdf'     => [__('Save as PDF button', 'dcc-guest-guide'), __('Save as PDF', 'dcc-guest-guide')],
+            'str_save_pdf_tip' => [__('Save-as-PDF tip toast', 'dcc-guest-guide'), __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')],
+            'str_report_problem'  => [__('Report a problem button', 'dcc-guest-guide'),        __('Report a problem', 'dcc-guest-guide')],
+            'str_report_title'    => [__('Report dialog title', 'dcc-guest-guide'),            __('Report a problem', 'dcc-guest-guide')],
+            'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
+            'str_report_desc'     => [__('Report dialog description label', 'dcc-guest-guide'),__('Describe the problem', 'dcc-guest-guide')],
+            'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to reach you back (optional)', 'dcc-guest-guide')],
+            'str_report_privacy'  => [__('Report dialog privacy note', 'dcc-guest-guide'),     __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')],
+            'str_report_send'     => [__('Report dialog Send button', 'dcc-guest-guide'),      __('Send report', 'dcc-guest-guide')],
+            'str_report_cancel'   => [__('Report dialog Cancel button', 'dcc-guest-guide'),    __('Cancel', 'dcc-guest-guide')],
+            'str_report_thank_you' => [__('Report sent confirmation', 'dcc-guest-guide'),       __('Thanks! Your host has been notified.', 'dcc-guest-guide')],
+            'str_report_error'    => [__('Report failed message', 'dcc-guest-guide'),          __('Could not send. Please contact the host directly.', 'dcc-guest-guide')],
+            'str_per_item_report' => [__('Per-item Report label', 'dcc-guest-guide'),          __('Report', 'dcc-guest-guide')],
+            'str_ai_voice'        => [__('AI search mic button aria-label', 'dcc-guest-guide'),__('Ask by voice', 'dcc-guest-guide')],
             'str_read_more'    => [__('Read More', 'dcc-guest-guide'),          __('Read more', 'dcc-guest-guide')],
             'str_read_less'    => [__('Read Less', 'dcc-guest-guide'),          __('Read less', 'dcc-guest-guide')],
             'str_copy'         => [__('Copy button', 'dcc-guest-guide'),        __('Copy', 'dcc-guest-guide')],
@@ -1696,6 +1742,30 @@ final class Widget extends Widget_Base
                 'thinking' => (string) __('Thinking…', 'dcc-guest-guide'),
                 'error'    => (string) __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
                 'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
+                'voiceLabel' => (string) ($s['str_ai_voice'] ?? __('Ask by voice', 'dcc-guest-guide')),
+            ],
+            'savePdf'              => [
+                'label' => (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide')),
+                'tip'   => (string) ($s['str_save_pdf_tip'] ?? __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')),
+            ],
+            'report'               => [
+                'enabled'    => ($s['enable_problem_report'] ?? '') === 'yes',
+                'perItem'    => ($s['enable_per_item_report'] ?? '') === 'yes',
+                'recipients' => (string) ($s['problem_report_recipients'] ?? ''),
+                'categories' => array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string) ($s['problem_report_categories'] ?? '')) ?: []))),
+                'strings'    => [
+                    'menuLabel'  => (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')),
+                    'title'      => (string) ($s['str_report_title'] ?? __('Report a problem', 'dcc-guest-guide')),
+                    'category'   => (string) ($s['str_report_category'] ?? __('What\'s the issue?', 'dcc-guest-guide')),
+                    'desc'       => (string) ($s['str_report_desc'] ?? __('Describe the problem', 'dcc-guest-guide')),
+                    'contact'    => (string) ($s['str_report_contact'] ?? __('Email to reach you back (optional)', 'dcc-guest-guide')),
+                    'privacy'    => (string) ($s['str_report_privacy'] ?? __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')),
+                    'send'       => (string) ($s['str_report_send'] ?? __('Send report', 'dcc-guest-guide')),
+                    'cancel'     => (string) ($s['str_report_cancel'] ?? __('Cancel', 'dcc-guest-guide')),
+                    'thankYou'   => (string) ($s['str_report_thank_you'] ?? __('Thanks! Your host has been notified.', 'dcc-guest-guide')),
+                    'error'      => (string) ($s['str_report_error'] ?? __('Could not send. Please contact the host directly.', 'dcc-guest-guide')),
+                    'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
+                ],
             ],
             'darkMode'         => $dark_mode,
             'themePreset'      => $theme_preset,
@@ -1725,6 +1795,9 @@ final class Widget extends Widget_Base
                 </button>
                 <div class="dccgg-overlay" hidden></div>
             <?php endif; ?>
+
+            <?php $this->render_print_cover($s, $sections); ?>
+            <?php $this->render_print_toc($sections); ?>
 
             <div class="dccgg-wrapper">
                 <?php if ($enable_fab) : ?>
@@ -1986,7 +2059,10 @@ final class Widget extends Widget_Base
                             </div>
                         <?php endif; ?>
                         <?php if ($show_more) :
-                            $dm_state = (string) ($s['dark_mode'] ?? 'off'); ?>
+                            $dm_state         = (string) ($s['dark_mode'] ?? 'off');
+                            $label_save_pdf   = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
+                            $report_on        = ($s['enable_problem_report'] ?? '') === 'yes';
+                            $label_report     = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')); ?>
                             <details class="dccgg-more">
                                 <summary aria-label="<?php echo esc_attr($label_more); ?>">
                                     <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
@@ -1995,9 +2071,17 @@ final class Widget extends Widget_Base
                                     <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
                                         <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
                                     </button>
+                                    <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
+                                        <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
+                                    </button>
                                     <?php if ($dm_state !== 'off') : ?>
                                         <button type="button" class="dccgg-more-item dccgg-more-theme" role="menuitem">
                                             <i class="fas fa-moon" aria-hidden="true"></i> <?php echo esc_html($label_theme); ?>
+                                        </button>
+                                    <?php endif; ?>
+                                    <?php if ($report_on) : ?>
+                                        <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="<?php echo esc_attr($title); ?>" role="menuitem">
+                                            <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
                                         </button>
                                     <?php endif; ?>
                                     <button type="button" class="dccgg-more-item dccgg-more-share" data-share-section="<?php echo esc_attr($key); ?>" role="menuitem">
@@ -2154,6 +2238,11 @@ final class Widget extends Widget_Base
                 <button type="button" class="dccgg-item-share" data-share-title="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_share']); ?>">
                     <i class="fas fa-link" aria-hidden="true"></i>
                 </button>
+                <?php if (($strings['enable_problem_report'] ?? '') === 'yes' && ($strings['enable_per_item_report'] ?? '') === 'yes') : ?>
+                    <button type="button" class="dccgg-item-report" data-report-section="<?php echo esc_attr($section_key); ?>" data-report-item="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')); ?>">
+                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    </button>
+                <?php endif; ?>
             </h3>
 
             <div class="dccgg-item-content-wrap<?php echo $read_more ? ' dccgg-collapsible' : ''; ?>">
@@ -2400,6 +2489,68 @@ final class Widget extends Widget_Base
             return '';
         }
         return '<style id="' . esc_attr($widget_uid) . '-accents">' . implode('', $rules) . '</style>';
+    }
+
+    /**
+     * Print-only cover page. Hidden on screen via .dccgg-print-only,
+     * surfaced by the @media print block. Branded heading, optional
+     * subtitle, page URL, and "Printed on …" footer.
+     */
+    private function render_print_cover(array $s, array $sections): void
+    {
+        $heading  = (string) ($s['guide_heading'] ?? __('Guest Guide', 'dcc-guest-guide'));
+        $sub      = (string) ($s['guide_subtitle'] ?? '');
+        $url      = isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])
+            ? esc_url_raw('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'])
+            : home_url('/');
+        $section_count = count(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
+        $printed = wp_date(get_option('date_format', 'F j, Y'));
+        ?>
+        <div class="dccgg-print-only dccgg-print-cover" aria-hidden="true">
+            <div class="dccgg-print-cover-band"></div>
+            <h1 class="dccgg-print-cover-title"><?php echo esc_html($heading); ?></h1>
+            <?php if ($sub !== '') : ?>
+                <p class="dccgg-print-cover-sub"><?php echo esc_html($sub); ?></p>
+            <?php endif; ?>
+            <div class="dccgg-print-cover-meta">
+                <p><?php echo esc_html(sprintf(
+                    /* translators: %d: number of sections */
+                    _n('%d section', '%d sections', $section_count, 'dcc-guest-guide'),
+                    $section_count
+                )); ?></p>
+                <p class="dccgg-print-cover-url"><?php echo esc_html($url); ?></p>
+                <p class="dccgg-print-cover-date"><?php
+                    /* translators: %s: print date */
+                    echo esc_html(sprintf(__('Printed on %s', 'dcc-guest-guide'), $printed));
+                ?></p>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Print-only table of contents. One row per section with leader-dot
+     * styling. Section numbers from a CSS counter so they renumber if
+     * the host reorders sections without a re-edit.
+     */
+    private function render_print_toc(array $sections): void
+    {
+        $valid = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
+        if (empty($valid)) { return; }
+        ?>
+        <nav class="dccgg-print-only dccgg-print-toc" aria-hidden="true">
+            <h2 class="dccgg-print-toc-title"><?php esc_html_e('Contents', 'dcc-guest-guide'); ?></h2>
+            <ol class="dccgg-print-toc-list">
+                <?php foreach ($valid as $sec) :
+                    $title = trim((string) ($sec['section_title'] ?? $sec['section_key'] ?? '')); ?>
+                    <li>
+                        <span class="dccgg-print-toc-label"><?php echo esc_html($title); ?></span>
+                        <span class="dccgg-print-toc-leader" aria-hidden="true"></span>
+                    </li>
+                <?php endforeach; ?>
+            </ol>
+        </nav>
+        <?php
     }
 
     /**
