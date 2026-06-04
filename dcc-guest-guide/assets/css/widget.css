@@ -1,5 +1,273 @@
 /* DCC Guest Guide — frontend styles */
 
+/* =============================================================
+ * v0.7 additions: checklist, conditions card, gallery + hotspots,
+ * parallax bg, AI fallback search panel.
+ * ============================================================= */
+
+/* ---- Checklist ---- */
+.dccgg-checklist-progress {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--dccgg-detail-bg, #fff);
+    border-bottom: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 8%, transparent);
+    font-size: 0.9em;
+}
+.dccgg-checklist-progress-fill {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right,
+        var(--dccgg-primary) var(--p, 0%),
+        color-mix(in srgb, var(--dccgg-text, #111) 8%, transparent) var(--p, 0%));
+    transition: --p 0.3s ease;
+}
+.dccgg-checklist-progress-label {
+    font-variant-numeric: tabular-nums;
+    color: var(--dccgg-text);
+    font-weight: 600;
+}
+.dccgg-checklist-reset {
+    background: transparent;
+    border: 0;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
+    font-size: 0.85em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.dccgg-checklist-reset:hover { background: color-mix(in srgb, var(--dccgg-text, #111) 6%, transparent); }
+
+.dccgg-item-check {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin-right: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.dccgg-item-check-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid color-mix(in srgb, var(--dccgg-text, #111) 30%, transparent);
+    border-radius: 6px;
+    background: transparent;
+    color: transparent;
+    transition: all 0.18s ease;
+}
+.dccgg-item-check[aria-pressed="true"] .dccgg-item-check-box {
+    background: var(--dccgg-primary);
+    border-color: var(--dccgg-primary);
+    color: #fff;
+}
+.dccgg-item--checkable[data-checked="1"] .dccgg-item-title > span:not(.dccgg-emoji-icon) {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--dccgg-text, #111) 40%, transparent);
+    opacity: 0.65;
+}
+.dccgg-item--checkable[data-checked="1"] .dccgg-item-content-wrap { opacity: 0.55; }
+
+/* ---- Conditions side-card ---- */
+.dccgg-conditions {
+    background: color-mix(in srgb, var(--dccgg-primary) 8%, var(--dccgg-detail-bg, #fff));
+    border: 1px solid color-mix(in srgb, var(--dccgg-primary) 20%, transparent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 0 0 20px;
+    font-size: 0.92em;
+}
+.dccgg-detail-layout .dccgg-conditions {
+    margin: 0 0 20px 16px;
+    min-width: 220px;
+    max-width: 280px;
+    float: right;
+}
+.dccgg-conditions-title {
+    margin: 0 0 10px;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: var(--dccgg-primary);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.dccgg-conditions-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dccgg-conditions-list li {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 8px;
+}
+.dccgg-cond-ico { font-size: 1.2em; line-height: 1; }
+.dccgg-cond-k   { color: color-mix(in srgb, var(--dccgg-text, #111) 70%, transparent); }
+.dccgg-cond-v   { font-weight: 600; color: var(--dccgg-text); text-align: right; }
+
+/* ---- Gallery strip + hotspots ---- */
+.dccgg-gallery-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px 2px;
+    scroll-snap-type: x mandatory;
+    margin-top: 12px;
+}
+.dccgg-gallery-thumb {
+    flex: 0 0 auto;
+    position: relative;
+    width: 160px;
+    height: 110px;
+    border: 0;
+    padding: 0;
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+    background-color: #000;
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.dccgg-gallery-thumb:hover,
+.dccgg-gallery-thumb:focus-visible {
+    transform: scale(1.03);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    outline: none;
+}
+.dccgg-gallery-pin-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 0.75em;
+    padding: 3px 7px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Hotspot pins rendered on the lightbox image */
+.dccgg-hotspot-pin {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--dccgg-primary);
+    color: #fff;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    font-weight: 700;
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    animation: dccgg-pin-pulse 2.4s ease-in-out infinite;
+}
+@keyframes dccgg-pin-pulse {
+    0%,100% { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 0 color-mix(in srgb, var(--dccgg-primary) 70%, transparent); }
+    50%     { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 12px transparent; }
+}
+.dccgg-hotspot-tip {
+    position: absolute;
+    background: #fff;
+    color: #111;
+    padding: 10px 12px;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    max-width: 260px;
+    font-size: 0.9em;
+    z-index: 10;
+    transform: translate(-50%, calc(-100% - 18px));
+}
+.dccgg-hotspot-tip-label { font-weight: 700; display: block; margin-bottom: 4px; }
+
+/* ---- Parallax background ---- */
+.dccgg-detail--parallax { position: relative; }
+.dccgg-parallax-bg {
+    position: absolute;
+    inset: -10% 0 0 0;
+    height: 60vh;
+    background-size: cover;
+    background-position: center;
+    background-attachment: scroll;
+    will-change: transform;
+    z-index: 0;
+    pointer-events: none;
+}
+.dccgg-parallax-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.4) 60%, transparent);
+    pointer-events: none;
+}
+.dccgg-detail--parallax > :not(.dccgg-parallax-bg) { position: relative; z-index: 1; }
+.dccgg-detail--parallax .dccgg-detail-header { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+.dccgg-detail--parallax .dccgg-detail-header .dccgg-btn,
+.dccgg-detail--parallax .dccgg-section-nav button {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    backdrop-filter: blur(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-parallax-bg { transform: none !important; }
+}
+
+/* ---- AI fallback search panel ---- */
+.dccgg-ai-prompt {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--dccgg-primary) 6%, var(--dccgg-detail-bg, #fff));
+    border: 1px dashed color-mix(in srgb, var(--dccgg-primary) 30%, transparent);
+    border-radius: 12px;
+    text-align: center;
+}
+.dccgg-ai-button {
+    background: var(--dccgg-primary);
+    color: #fff;
+    border: 0;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.dccgg-ai-button:hover { filter: brightness(1.08); }
+.dccgg-ai-button:disabled { opacity: 0.6; cursor: wait; }
+.dccgg-ai-privacy { font-size: 0.78em; opacity: 0.75; margin-top: 8px; }
+.dccgg-ai-answer {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--dccgg-detail-bg, #fff);
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 10%, transparent);
+    text-align: left;
+    line-height: 1.5;
+}
+.dccgg-ai-answer[data-state="loading"]::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid color-mix(in srgb, var(--dccgg-primary) 40%, transparent);
+    border-top-color: var(--dccgg-primary);
+    border-radius: 50%;
+    animation: dccgg-spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+@keyframes dccgg-spin { to { transform: rotate(360deg); } }
+
 .dccgg-root {
     /* Design tokens (also overridable by theme presets via JS) */
     --dccgg-primary: #0f6dbf;
@@ -1374,6 +1642,65 @@ video.dccgg-media {
     cursor: pointer;
 }
 .dccgg-lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+/* Gallery lightbox additions (v0.7) */
+.dccgg-gallery-lightbox .dccgg-lightbox-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dccgg-gallery-lightbox .dccgg-lightbox-stage img {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    display: block;
+    position: relative;
+}
+.dccgg-lightbox-prev,
+.dccgg-lightbox-next {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dccgg-lightbox-prev { left: 16px; }
+.dccgg-lightbox-next { right: 16px; }
+.dccgg-lightbox-prev:hover,
+.dccgg-lightbox-next:hover { background: rgba(255,255,255,0.3); }
+.dccgg-lightbox-counter {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Conditions card responsive: stack on narrow screens */
+@media (max-width: 720px) {
+    .dccgg-detail-layout .dccgg-conditions {
+        float: none;
+        margin: 0 0 16px;
+        max-width: none;
+    }
+}
 .dccgg-media[data-lightbox-clickable] {
     cursor: zoom-in;
 }

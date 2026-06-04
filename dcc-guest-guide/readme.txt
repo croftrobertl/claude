@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,44 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.7.0 =
+
+New features:
+* **Checklist mode** — per-section "Checklist mode" toggle makes every
+  item in that section a checkbox guests can tick off; an alternative
+  per-item "Make this item a checkbox" toggle lets a single item be
+  checkable. State persists in localStorage scoped to `?stay=…` so
+  each booking can reset cleanly. A sticky progress bar with `X / N`
+  count + Reset button shows at the top of the detail; confetti
+  fires when all items are checked.
+* **Conditions side-card** — per-section "Show conditions side-card"
+  toggle renders a small card with sunrise / sunset / moon phase
+  (server-side, instant, no API) plus today's weather + tomorrow's
+  forecast via Open-Meteo (free, no API key, 30-min transient cache
+  shared across visitors). Cottage latitude / longitude configured
+  once in Layout & Interaction; defaults to Mt. Dora, FL.
+* **Photo gallery with hotspots** — new "Gallery" media type accepts
+  multiple images. Each item can include an annotation textarea
+  with one pin per line: `IMAGE_INDEX X% Y% | Label | Description`.
+  Gallery renders as a horizontal scroll strip; tapping opens a
+  lightbox with prev/next, image counter, and numbered hotspot pins
+  overlaid on annotated images. Tap a pin to read its label and
+  description. Ideal for hot-tub control panels, breaker boxes, etc.
+* **Per-section parallax background image** — new MEDIA control per
+  section + overlay opacity slider. Renders a hero image behind the
+  detail header with scroll-linked parallax (rAF-throttled, transforms
+  only). Respects prefers-reduced-motion. Detail header gets a
+  glass treatment over the image so back / share / nav buttons stay
+  legible.
+* **AI fallback search** — opt-in per widget. When a guest's search
+  returns no matches, the widget surfaces an "Ask anything about
+  the cottage" button that POSTs the question + the entire guide
+  content to Google Gemini via a server-side admin-ajax proxy.
+  Free tier: 1,500 questions per day site-wide, no charge. Configure
+  the Gemini API key under Settings → DCC Guest Guide (admin-only,
+  stored in wp_options, never sent to the browser). Per-widget
+  controls for the button label and a privacy notice.
 
 = 0.6.0 =
 

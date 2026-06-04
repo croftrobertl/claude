@@ -88,6 +88,348 @@
         wireShrinkHeader(root);
         wireMoreMenu(root, config);
         wireVideoPosters(root);
+        wireChecklists(root);
+        wireParallax(root);
+        wireConditions(root, config);
+        wireGalleryStrip(root);
+        wireAiSearch(root, config);
+    }
+
+    // -- Checklist (v0.7) -------------------------------------------------
+    function stayKey() {
+        const p = new URLSearchParams(window.location.search);
+        return p.get('stay') || 'default';
+    }
+    function checkStorageKey(widgetId) { return 'dccgg:check:' + widgetId + ':' + stayKey(); }
+    function loadChecks(widgetId) {
+        try { return JSON.parse(localStorage.getItem(checkStorageKey(widgetId)) || '{}'); }
+        catch (_) { return {}; }
+    }
+    function saveChecks(widgetId, state) {
+        try { localStorage.setItem(checkStorageKey(widgetId), JSON.stringify(state)); } catch (_) {}
+    }
+    function wireChecklists(root) {
+        const widgetId = root.id || (root.closest('[data-id]') && root.closest('[data-id]').dataset.id) || 'global';
+        const state = loadChecks(widgetId);
+
+        // Apply persisted state on load.
+        root.querySelectorAll('.dccgg-item[data-checkable="1"]').forEach(item => {
+            const key = item.dataset.checkKey;
+            if (state[key]) {
+                item.dataset.checked = '1';
+                const btn = item.querySelector('.dccgg-item-check');
+                if (btn) btn.setAttribute('aria-pressed', 'true');
+            }
+        });
+
+        // Click handler.
+        root.addEventListener('click', (e) => {
+            const btn = e.target.closest('.dccgg-item-check');
+            if (!btn) return;
+            const item = btn.closest('.dccgg-item');
+            if (!item) return;
+            const key  = item.dataset.checkKey;
+            const next = item.dataset.checked !== '1';
+            item.dataset.checked = next ? '1' : '0';
+            btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+            state[key] = next;
+            saveChecks(widgetId, state);
+            updateChecklistProgress(root, item.closest('.dccgg-detail'));
+        });
+
+        // Reset.
+        root.addEventListener('click', (e) => {
+            const reset = e.target.closest('.dccgg-checklist-reset');
+            if (!reset) return;
+            const detail = reset.closest('.dccgg-detail');
+            detail.querySelectorAll('.dccgg-item[data-checkable="1"]').forEach(item => {
+                item.dataset.checked = '0';
+                const btn = item.querySelector('.dccgg-item-check');
+                if (btn) btn.setAttribute('aria-pressed', 'false');
+                delete state[item.dataset.checkKey];
+            });
+            saveChecks(widgetId, state);
+            updateChecklistProgress(root, detail);
+        });
+
+        // Initial progress paint for each detail.
+        root.querySelectorAll('.dccgg-detail').forEach(d => updateChecklistProgress(root, d));
+    }
+    function updateChecklistProgress(root, detail) {
+        if (!detail) return;
+        const bar = detail.querySelector('.dccgg-checklist-progress');
+        if (!bar) return;
+        const items = detail.querySelectorAll('.dccgg-item[data-checkable="1"]');
+        const done  = detail.querySelectorAll('.dccgg-item[data-checkable="1"][data-checked="1"]').length;
+        const total = items.length;
+        const pct   = total === 0 ? 0 : Math.round((done / total) * 100);
+        const fill  = bar.querySelector('.dccgg-checklist-progress-fill');
+        if (fill) fill.style.setProperty('--p', pct + '%');
+        const label = bar.querySelector('.dccgg-checklist-progress-label');
+        if (label) label.textContent = done + ' / ' + total;
+        if (total > 0 && done === total && !bar.dataset.celebrated) {
+            bar.dataset.celebrated = '1';
+            if (typeof spawnConfetti === 'function') spawnConfetti(bar);
+        } else if (done < total) {
+            delete bar.dataset.celebrated;
+        }
+    }
+
+    // -- Parallax background (v0.7) ---------------------------------------
+    function wireParallax(root) {
+        if (REDUCED_MOTION) return;
+        const bgs = root.querySelectorAll('.dccgg-parallax-bg');
+        if (!bgs.length) return;
+        let raf = 0;
+        const update = () => {
+            raf = 0;
+            bgs.forEach(bg => {
+                const detail = bg.closest('.dccgg-detail');
+                if (!detail || detail.hidden) return;
+                const rect = detail.getBoundingClientRect();
+                const offset = Math.max(-200, Math.min(200, rect.top * -0.25));
+                bg.style.transform = 'translate3d(0,' + offset.toFixed(1) + 'px,0)';
+            });
+        };
+        const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        // Also recompute when a detail opens.
+        const obs = new MutationObserver(onScroll);
+        root.querySelectorAll('.dccgg-detail--parallax').forEach(d => obs.observe(d, { attributes: true, attributeFilter: ['hidden'] }));
+        update();
+    }
+
+    // -- Conditions side-card weather (v0.7) ------------------------------
+    function wireConditions(root, config) {
+        const cards = root.querySelectorAll('.dccgg-conditions');
+        if (!cards.length) return;
+        const lat = config.cottageLat;
+        const lng = config.cottageLng;
+        if (!lat || !lng || !config.ajaxUrl) return;
+        const url = config.ajaxUrl + '?action=dccgg_weather&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng;
+        fetch(url, { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(json => {
+                if (!json.success) return;
+                const d = json.data;
+                if (!d || !d.current || !d.daily) return;
+                const code = d.current.weather_code;
+                const emoji = weatherEmoji(code, d.current.is_day);
+                const desc  = weatherText(code);
+                const temp  = Math.round(d.current.temperature_2m);
+                cards.forEach(card => {
+                    const wxRow = card.querySelector('.dccgg-cond-weather');
+                    if (wxRow) {
+                        wxRow.querySelector('.dccgg-cond-ico').textContent = emoji;
+                        wxRow.querySelector('.dccgg-cond-v').textContent  = temp + '°F · ' + desc;
+                    }
+                    const fcRow = card.querySelector('.dccgg-cond-forecast');
+                    if (fcRow && d.daily.temperature_2m_max && d.daily.temperature_2m_max.length > 1) {
+                        const hi   = Math.round(d.daily.temperature_2m_max[1]);
+                        const lo   = Math.round(d.daily.temperature_2m_min[1]);
+                        const pop  = d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[1] : 0;
+                        const fcc  = d.daily.weather_code ? d.daily.weather_code[1] : 0;
+                        fcRow.hidden = false;
+                        fcRow.querySelector('.dccgg-cond-ico').textContent = weatherEmoji(fcc, 1);
+                        fcRow.querySelector('.dccgg-cond-v').textContent  = hi + '° / ' + lo + '° · ' + pop + '% rain';
+                    }
+                });
+            })
+            .catch(() => {});
+    }
+    function weatherEmoji(code, isDay) {
+        if (code === 0)            return isDay ? '☀️' : '🌙';
+        if (code <= 2)             return isDay ? '⛅' : '☁️';
+        if (code === 3)            return '☁️';
+        if (code >= 45 && code <= 48) return '🌫️';
+        if (code >= 51 && code <= 67) return '🌦️';
+        if (code >= 71 && code <= 77) return '❄️';
+        if (code >= 80 && code <= 82) return '🌧️';
+        if (code >= 95)            return '⛈️';
+        return '☁️';
+    }
+    function weatherText(code) {
+        const map = {
+            0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
+            45: 'Fog', 48: 'Fog',
+            51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
+            61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+            71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
+            80: 'Showers', 81: 'Heavy showers', 82: 'Violent showers',
+            95: 'Thunderstorm', 96: 'Thunderstorm + hail', 99: 'Severe thunderstorm',
+        };
+        return map[code] || 'Mixed';
+    }
+
+    // -- Gallery strip click → lightbox with hotspots (v0.7) --------------
+    function wireGalleryStrip(root) {
+        root.addEventListener('click', (e) => {
+            const thumb = e.target.closest('.dccgg-gallery-thumb');
+            if (!thumb) return;
+            e.preventDefault();
+            const strip = thumb.parentNode;
+            const thumbs = Array.from(strip.querySelectorAll('.dccgg-gallery-thumb'));
+            const idx = thumbs.indexOf(thumb);
+            const images = thumbs.map(t => {
+                const bg = t.style.backgroundImage || '';
+                const url = bg.replace(/^url\(['"]?/, '').replace(/['"]?\)$/, '');
+                let hotspots = [];
+                try { hotspots = JSON.parse(t.dataset.hotspots || '[]'); } catch (_) {}
+                return { url, hotspots, alt: t.getAttribute('aria-label') || '' };
+            });
+            openGalleryLightbox(images, idx);
+        });
+    }
+    function openGalleryLightbox(images, startIdx) {
+        if (!images.length) return;
+        let dialog = document.querySelector('.dccgg-gallery-lightbox');
+        if (!dialog) {
+            dialog = document.createElement('dialog');
+            dialog.className = 'dccgg-lightbox dccgg-gallery-lightbox';
+            dialog.innerHTML = `
+                <button type="button" class="dccgg-lightbox-close" aria-label="Close">×</button>
+                <button type="button" class="dccgg-lightbox-prev" aria-label="Previous">‹</button>
+                <button type="button" class="dccgg-lightbox-next" aria-label="Next">›</button>
+                <div class="dccgg-lightbox-stage"></div>
+                <div class="dccgg-lightbox-counter"></div>
+            `;
+            document.body.appendChild(dialog);
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) dialog.close();
+            });
+            dialog.querySelector('.dccgg-lightbox-close').addEventListener('click', () => dialog.close());
+        }
+        let i = startIdx;
+        const stage   = dialog.querySelector('.dccgg-lightbox-stage');
+        const counter = dialog.querySelector('.dccgg-lightbox-counter');
+        const render = () => {
+            const img = images[i];
+            stage.innerHTML = `<img src="${img.url.replace(/"/g, '&quot;')}" alt="${(img.alt || '').replace(/"/g, '&quot;')}">`;
+            const stageImg = stage.querySelector('img');
+            // Wait for image dims so pin placement is correct.
+            const placePins = () => {
+                (img.hotspots || []).forEach((h, hi) => {
+                    const pin = document.createElement('button');
+                    pin.type = 'button';
+                    pin.className = 'dccgg-hotspot-pin';
+                    pin.textContent = String(hi + 1);
+                    pin.style.left = h.x + '%';
+                    pin.style.top  = h.y + '%';
+                    pin.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        stage.querySelectorAll('.dccgg-hotspot-tip').forEach(t => t.remove());
+                        const tip = document.createElement('div');
+                        tip.className = 'dccgg-hotspot-tip';
+                        tip.style.left = h.x + '%';
+                        tip.style.top  = h.y + '%';
+                        tip.innerHTML = '<span class="dccgg-hotspot-tip-label"></span><span class="dccgg-hotspot-tip-desc"></span>';
+                        tip.querySelector('.dccgg-hotspot-tip-label').textContent = h.label || '';
+                        tip.querySelector('.dccgg-hotspot-tip-desc').textContent  = h.desc  || '';
+                        stage.appendChild(tip);
+                        setTimeout(() => {
+                            const onAway = (ev) => { if (!tip.contains(ev.target)) { tip.remove(); document.removeEventListener('click', onAway); } };
+                            document.addEventListener('click', onAway);
+                        }, 0);
+                    });
+                    stage.appendChild(pin);
+                });
+            };
+            if (stageImg.complete) placePins();
+            else stageImg.addEventListener('load', placePins, { once: true });
+            counter.textContent = (i + 1) + ' / ' + images.length;
+        };
+        const goPrev = () => { i = (i - 1 + images.length) % images.length; render(); };
+        const goNext = () => { i = (i + 1) % images.length; render(); };
+        dialog.querySelector('.dccgg-lightbox-prev').onclick = goPrev;
+        dialog.querySelector('.dccgg-lightbox-next').onclick = goNext;
+        const onKey = (e) => {
+            if (e.key === 'ArrowLeft')  goPrev();
+            if (e.key === 'ArrowRight') goNext();
+        };
+        dialog.addEventListener('close', () => document.removeEventListener('keydown', onKey), { once: true });
+        document.addEventListener('keydown', onKey);
+        render();
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+    }
+
+    // -- AI fallback search (v0.7) ----------------------------------------
+    function wireAiSearch(root, config) {
+        if (!config.aiSearch || !config.aiSearch.enabled) return;
+        const searchInput = root.querySelector('.dccgg-search-input');
+        const results     = root.querySelector('.dccgg-search-results');
+        if (!searchInput || !results) return;
+
+        // Hook into the existing search render: after the empty-state is
+        // rendered, append an "Ask anything" prompt.
+        const obs = new MutationObserver(() => {
+            if (results.querySelector('.dccgg-ai-prompt')) return;
+            const empty = results.querySelector('.dccgg-search-no-results');
+            if (!empty) return;
+            const q = searchInput.value.trim();
+            if (q.length < 3) return;
+            const wrap = document.createElement('div');
+            wrap.className = 'dccgg-ai-prompt';
+            wrap.innerHTML = `
+                <button type="button" class="dccgg-ai-button">
+                    <i class="fas fa-sparkles" aria-hidden="true"></i>
+                    <span class="dccgg-ai-label"></span>
+                </button>
+                <div class="dccgg-ai-privacy"></div>
+                <div class="dccgg-ai-answer" hidden></div>
+            `;
+            wrap.querySelector('.dccgg-ai-label').textContent = config.aiSearch.label;
+            wrap.querySelector('.dccgg-ai-privacy').textContent = config.aiSearch.privacy || '';
+            wrap.querySelector('.dccgg-ai-button').addEventListener('click', () => askAi(root, config, q, wrap));
+            results.appendChild(wrap);
+        });
+        obs.observe(results, { childList: true, subtree: true });
+    }
+    function askAi(root, config, question, wrap) {
+        const btn    = wrap.querySelector('.dccgg-ai-button');
+        const answer = wrap.querySelector('.dccgg-ai-answer');
+        btn.disabled = true;
+        answer.hidden = false;
+        answer.dataset.state = 'loading';
+        answer.textContent = config.aiSearch.thinking;
+        const context = buildAiContext(root);
+        const body = new URLSearchParams();
+        body.set('action', 'dccgg_ai_query');
+        body.set('nonce', config.nonce);
+        body.set('question', question);
+        body.set('context', context);
+        fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        }).then(r => r.json()).then(json => {
+            delete answer.dataset.state;
+            btn.disabled = false;
+            if (json && json.success && json.data && json.data.answer) {
+                answer.textContent = json.data.answer;
+            } else {
+                answer.textContent = (json && json.data && json.data.message) || config.aiSearch.error;
+            }
+        }).catch(() => {
+            delete answer.dataset.state;
+            btn.disabled = false;
+            answer.textContent = config.aiSearch.error;
+        });
+    }
+    function buildAiContext(root) {
+        // Stitch together section titles + item titles + item plain text.
+        const parts = [];
+        root.querySelectorAll('.dccgg-detail').forEach(detail => {
+            const title = (detail.querySelector('.dccgg-detail-title span') || {}).textContent || detail.dataset.key || '';
+            parts.push('## ' + title.trim());
+            detail.querySelectorAll('.dccgg-item').forEach(item => {
+                const itTitle = (item.querySelector('.dccgg-item-title span:last-of-type') || {}).textContent || '';
+                const body    = (item.querySelector('.dccgg-item-body') || {}).textContent || '';
+                parts.push('### ' + itTitle.trim() + '\n' + body.trim());
+            });
+        });
+        return parts.join('\n\n').slice(0, 18000);
     }
 
     // -- Click-to-play video posters (v0.6) -------------------------------

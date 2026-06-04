@@ -453,6 +453,41 @@ final class Widget extends Widget_Base
             'description'  => __('For YouTube / Vimeo items, show the poster image instead of an empty iframe; click the poster to load the player. Saves the network cost of every video iframe on first paint.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('cottage_latitude', [
+            'label'       => __('Cottage latitude', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::NUMBER,
+            'step'        => 0.0001,
+            'default'     => 28.8028,
+            'description' => __('Used for sunrise / sunset / moon phase / weather in the Conditions side-card. Default is Mt Dora, FL.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('cottage_longitude', [
+            'label'   => __('Cottage longitude', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::NUMBER,
+            'step'    => 0.0001,
+            'default' => -81.6448,
+        ]);
+
+        $this->add_control('enable_ai_search', [
+            'label'        => __('Enable AI fallback search', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('When a guest\'s search returns no matches, offer an "Ask anything" button that routes the question to Google Gemini (uses the API key configured in Settings → DCC Guest Guide). Free tier: 1,500 questions / day site-wide.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('ai_search_button_label', [
+            'label'     => __('AI search button label', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::TEXT,
+            'default'   => __('Ask anything about the cottage', 'dcc-guest-guide'),
+            'condition' => ['enable_ai_search' => 'yes'],
+        ]);
+        $this->add_control('ai_search_privacy', [
+            'label'     => __('AI privacy notice', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::TEXTAREA,
+            'rows'      => 2,
+            'default'   => __('Your question is sent to Google Gemini along with the guide content. Don\'t include personal information.', 'dcc-guest-guide'),
+            'condition' => ['enable_ai_search' => 'yes'],
+        ]);
+
         $this->add_control('fab_icon', [
             'label'     => __('FAB icon', 'dcc-guest-guide'),
             'type'      => Controls_Manager::ICONS,
@@ -573,6 +608,35 @@ final class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'description'  => __('Items show one at a time with Next / Back buttons and a progress strip. Overrides procedure mode for this section.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('checklist_mode', [
+            'label'        => __('Checklist mode', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Every item in this section gets a checkbox guests can tick off. Progress is saved in their browser (scoped to ?stay=… so different guests get fresh state). Confetti fires when all items are checked.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('show_conditions_card', [
+            'label'        => __('Show conditions side-card', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Shows sunrise / sunset, moon phase, and today\'s weather in a side card on this section. Configure the cottage location in Layout & Interaction.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('section_bg_image', [
+            'label'       => __('Section parallax background image', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::MEDIA,
+            'description' => __('Optional hero image shown behind this section\'s detail header with a gentle scroll-linked parallax effect. Respects reduced-motion preferences.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('section_bg_overlay', [
+            'label'      => __('Parallax overlay opacity (%)', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'range'      => ['px' => ['min' => 0, 'max' => 100, 'step' => 5]],
+            'default'    => ['size' => 55, 'unit' => 'px'],
+            'condition'  => ['section_bg_image[url]!' => ''],
+            'description' => __('Dark overlay opacity over the parallax image — keeps header text legible.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('enable_quick_action', [
@@ -715,9 +779,10 @@ final class Widget extends Widget_Base
             'type'    => Controls_Manager::SELECT,
             'default' => 'none',
             'options' => [
-                'none'  => __('None', 'dcc-guest-guide'),
-                'image' => __('Image', 'dcc-guest-guide'),
-                'video' => __('Video (YouTube / Vimeo / self-hosted)', 'dcc-guest-guide'),
+                'none'    => __('None', 'dcc-guest-guide'),
+                'image'   => __('Single image', 'dcc-guest-guide'),
+                'gallery' => __('Gallery (multiple images, with optional hotspots)', 'dcc-guest-guide'),
+                'video'   => __('Video (YouTube / Vimeo / self-hosted)', 'dcc-guest-guide'),
             ],
         ]);
         $repeater->add_control('item_image', [
@@ -725,11 +790,30 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::MEDIA,
             'condition' => ['media_type' => 'image'],
         ]);
+        $repeater->add_control('item_gallery', [
+            'label'     => __('Gallery images', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::GALLERY,
+            'default'   => [],
+            'condition' => ['media_type' => 'gallery'],
+        ]);
+        $repeater->add_control('item_hotspots', [
+            'label'       => __('Hotspots (one per line)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 6,
+            'description' => __('Optional pins overlaid on gallery images. Format per line: <code>IMAGE_INDEX X% Y% | Label | Description</code> — e.g. <code>0 32 58 | Power button | Hold for 3 seconds to start the jets</code>. Image index is 0-based.', 'dcc-guest-guide'),
+            'condition'   => ['media_type' => 'gallery'],
+        ]);
         $repeater->add_control('item_video', [
             'label'       => __('Video URL', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
             'description' => __('Accepts YouTube (watch / embed / shorts / youtu.be), Vimeo, or self-hosted mp4/webm/mov.', 'dcc-guest-guide'),
             'condition'   => ['media_type' => 'video'],
+        ]);
+        $repeater->add_control('item_checkable', [
+            'label'        => __('Make this item a checkbox', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Guest can tick the item off. State saved in their browser. Overridden by section-level Checklist mode (which makes every item checkable).', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('enable_map', [
@@ -1601,6 +1685,18 @@ final class Widget extends Widget_Base
             'enableHaptic'         => ($s['enable_haptic'] ?? '') === 'yes',
             'enableSectionNav'     => ($s['enable_section_nav'] ?? 'yes') === 'yes',
             'enableDetailMoreMenu' => ($s['enable_detail_more_menu'] ?? '') === 'yes',
+            'ajaxUrl'              => admin_url('admin-ajax.php'),
+            'nonce'                => wp_create_nonce('dccgg_nonce'),
+            'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
+            'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
+            'aiSearch'             => [
+                'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
+                'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
+                'privacy'  => (string) ($s['ai_search_privacy'] ?? ''),
+                'thinking' => (string) __('Thinking…', 'dcc-guest-guide'),
+                'error'    => (string) __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
+                'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
+            ],
             'darkMode'         => $dark_mode,
             'themePreset'      => $theme_preset,
             'searchIndex'      => $search_index,
@@ -1832,6 +1928,8 @@ final class Widget extends Widget_Base
         $show_more      = ($s['enable_detail_more_menu'] ?? '') === 'yes';
         $valid_sections = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
         $section_count  = count($valid_sections);
+        $lat = (float) ($s['cottage_latitude']  ?? 28.8028);
+        $lng = (float) ($s['cottage_longitude'] ?? -81.6448);
         ?>
         <div class="dccgg-stage" aria-live="polite">
             <?php foreach ($valid_sections as $idx => $sec) :
@@ -1841,13 +1939,34 @@ final class Widget extends Widget_Base
                 $items = $items_by_section[$key] ?? [];
                 $wizard    = ($sec['wizard_mode'] ?? '') === 'yes';
                 $procedure = ($sec['procedure_mode'] ?? '') === 'yes' && !$wizard;
+                $checklist = ($sec['checklist_mode'] ?? '') === 'yes' && !$wizard;
                 $show_toc  = count($items) >= 4 && !$procedure && !$wizard;
                 $prev_key  = $idx > 0 ? trim((string) ($valid_sections[$idx - 1]['section_key'] ?? '')) : '';
                 $next_key  = $idx < $section_count - 1 ? trim((string) ($valid_sections[$idx + 1]['section_key'] ?? '')) : '';
+                $bg_url    = (string) ($sec['section_bg_image']['url'] ?? '');
+                $bg_op     = (int) ($sec['section_bg_overlay']['size'] ?? 55);
+                $show_cond = ($sec['show_conditions_card'] ?? '') === 'yes';
+                $detail_classes = 'dccgg-detail';
+                if ($show_toc)  { $detail_classes .= ' dccgg-detail--has-toc'; }
+                if ($wizard)    { $detail_classes .= ' dccgg-detail--wizard'; }
+                if ($checklist) { $detail_classes .= ' dccgg-detail--checklist'; }
+                if ($bg_url !== '') { $detail_classes .= ' dccgg-detail--parallax'; }
                 ?>
-                <div class="dccgg-detail<?php echo $show_toc ? ' dccgg-detail--has-toc' : ''; ?><?php echo $wizard ? ' dccgg-detail--wizard' : ''; ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" hidden>
+                <div class="<?php echo esc_attr($detail_classes); ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" data-checklist="<?php echo $checklist ? '1' : '0'; ?>" hidden>
+                    <?php if ($bg_url !== '') : ?>
+                        <div class="dccgg-parallax-bg" aria-hidden="true" style="background-image:url('<?php echo esc_url($bg_url); ?>');">
+                            <div class="dccgg-parallax-overlay" style="opacity: <?php echo esc_attr((string) ($bg_op / 100)); ?>;"></div>
+                        </div>
+                    <?php endif; ?>
                     <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
                     <div class="dccgg-progress-bar" aria-hidden="true"></div>
+                    <?php if ($checklist) : ?>
+                        <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
+                            <div class="dccgg-checklist-progress-fill"></div>
+                            <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
+                            <button type="button" class="dccgg-checklist-reset" data-section-key="<?php echo esc_attr($key); ?>"><?php esc_html_e('Reset', 'dcc-guest-guide'); ?></button>
+                        </div>
+                    <?php endif; ?>
                     <div class="dccgg-detail-header">
                         <button type="button" class="dccgg-btn dccgg-back">
                             <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
@@ -1900,17 +2019,22 @@ final class Widget extends Widget_Base
                                 </ul>
                             </nav>
                         <?php endif; ?>
+                        <?php if ($show_cond) : self::render_conditions_card($lat, $lng); endif; ?>
                         <?php if ($wizard) : ?>
                             <?php $this->render_wizard($items, $s); ?>
                         <?php elseif ($procedure) : ?>
                             <ol class="dccgg-detail-items dccgg-procedure">
-                                <?php foreach ($items as $it) { echo '<li>'; $this->render_item($it, $s, false); echo '</li>'; } ?>
+                                <?php foreach ($items as $it_idx => $it) {
+                                    echo '<li>';
+                                    $this->render_item($it, $s, false, $checklist, $it_idx, $key);
+                                    echo '</li>';
+                                } ?>
                             </ol>
                         <?php else : ?>
                             <div class="dccgg-detail-items">
                                 <?php foreach ($items as $it_idx => $it) {
                                     echo '<div class="dccgg-detail-item-anchor" data-item-idx="' . (int) $it_idx . '">';
-                                    $this->render_item($it, $s, false);
+                                    $this->render_item($it, $s, false, $checklist, $it_idx, $key);
                                     echo '</div>';
                                 } ?>
                             </div>
@@ -1960,7 +2084,7 @@ final class Widget extends Widget_Base
         <?php
     }
 
-    private function render_item(array $item, array $strings, bool $compact): void
+    private function render_item(array $item, array $strings, bool $compact, bool $section_checklist = false, int $item_idx = 0, string $section_key = ''): void
     {
         $title          = (string) ($item['item_title'] ?? '');
         $icon           = (array) ($item['item_icon'] ?? ['value' => 'fas fa-check', 'library' => 'solid']);
@@ -1975,6 +2099,7 @@ final class Widget extends Widget_Base
         $map_url        = (string) ($item['map_url']['url'] ?? '');
         $badge          = trim((string) ($item['item_badge'] ?? ''));
         $emoji          = trim((string) ($item['item_emoji'] ?? ''));
+        $checkable      = $section_checklist || ($item['item_checkable'] ?? '') === 'yes';
 
         // Auto-fold (v0.6): when the WYSIWYG word count exceeds the global
         // threshold, force read-more even when the per-item toggle is off.
@@ -1998,8 +2123,15 @@ final class Widget extends Widget_Base
         $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
-        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>">
+        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?><?php echo $checkable ? ' dccgg-item--checkable' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>"<?php if ($checkable) : ?> data-checkable="1" data-check-key="<?php echo esc_attr($section_key . ':' . $item_idx); ?>"<?php endif; ?>>
             <h3 class="dccgg-item-title">
+                <?php if ($checkable) : ?>
+                    <button type="button" class="dccgg-item-check" aria-pressed="false" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Mark "%s" as done', 'dcc-guest-guide'), $title)); ?>">
+                        <span class="dccgg-item-check-box" aria-hidden="true">
+                            <i class="fas fa-check"></i>
+                        </span>
+                    </button>
+                <?php endif; ?>
                 <?php if ($emoji !== '') : ?>
                     <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
                 <?php else :
@@ -2042,6 +2174,28 @@ final class Widget extends Widget_Base
 
             <?php if ($media_type === 'image' && !empty($item['item_image']['url'])) : ?>
                 <img class="dccgg-media" src="<?php echo esc_url($item['item_image']['url']); ?>" alt="<?php echo esc_attr($title); ?>" loading="lazy">
+            <?php elseif ($media_type === 'gallery' && !empty($item['item_gallery']) && is_array($item['item_gallery'])) :
+                $hotspots = self::parse_hotspots((string) ($item['item_hotspots'] ?? '')); ?>
+                <div class="dccgg-gallery-strip" role="list">
+                    <?php foreach ($item['item_gallery'] as $g_idx => $g) :
+                        $g_url = (string) ($g['url'] ?? '');
+                        if ($g_url === '') { continue; }
+                        $pins = $hotspots[$g_idx] ?? [];
+                        $alt  = (string) ($g['alt'] ?? $title);
+                        ?>
+                        <button type="button"
+                                class="dccgg-gallery-thumb<?php echo $pins ? ' has-hotspots' : ''; ?>"
+                                role="listitem"
+                                data-gallery-idx="<?php echo (int) $g_idx; ?>"
+                                data-hotspots="<?php echo esc_attr(wp_json_encode($pins)); ?>"
+                                style="background-image:url('<?php echo esc_url($g_url); ?>');"
+                                aria-label="<?php echo esc_attr($alt); ?>">
+                            <?php if ($pins) : ?>
+                                <span class="dccgg-gallery-pin-badge" aria-hidden="true"><i class="fas fa-map-pin"></i> <?php echo (int) count($pins); ?></span>
+                            <?php endif; ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
             <?php elseif ($media_type === 'video' && !empty($item['item_video'])) :
                 $v = self::normalize_video_url((string) $item['item_video']);
                 if ($v !== null) :
@@ -2246,6 +2400,111 @@ final class Widget extends Widget_Base
             return '';
         }
         return '<style id="' . esc_attr($widget_uid) . '-accents">' . implode('', $rules) . '</style>';
+    }
+
+    /**
+     * Render the Conditions side-card: sunrise/sunset/moon phase server-side
+     * (instant, no JS), then a placeholder the frontend fills with weather
+     * via the admin-ajax proxy on load.
+     */
+    public static function render_conditions_card(float $lat, float $lng): void
+    {
+        $c = self::compute_conditions($lat, $lng);
+        ?>
+        <aside class="dccgg-conditions" data-lat="<?php echo esc_attr((string) $lat); ?>" data-lng="<?php echo esc_attr((string) $lng); ?>" aria-label="<?php echo esc_attr__('Today at the cottage', 'dcc-guest-guide'); ?>">
+            <h3 class="dccgg-conditions-title"><?php esc_html_e('At the cottage today', 'dcc-guest-guide'); ?></h3>
+            <ul class="dccgg-conditions-list">
+                <?php if ($c['sunrise'] !== '') : ?>
+                    <li><span class="dccgg-cond-ico">🌅</span><span class="dccgg-cond-k"><?php esc_html_e('Sunrise', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['sunrise']); ?></span></li>
+                <?php endif; ?>
+                <?php if ($c['sunset'] !== '') : ?>
+                    <li><span class="dccgg-cond-ico">🌇</span><span class="dccgg-cond-k"><?php esc_html_e('Sunset', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['sunset']); ?></span></li>
+                <?php endif; ?>
+                <li><span class="dccgg-cond-ico"><?php echo esc_html($c['moon_emoji']); ?></span><span class="dccgg-cond-k"><?php esc_html_e('Moon', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['moon_name']); ?> (<?php echo (int) $c['illumination']; ?>%)</span></li>
+                <li class="dccgg-cond-weather" data-empty="<?php echo esc_attr__('Loading weather…', 'dcc-guest-guide'); ?>">
+                    <span class="dccgg-cond-ico">☁️</span>
+                    <span class="dccgg-cond-k"><?php esc_html_e('Weather', 'dcc-guest-guide'); ?></span>
+                    <span class="dccgg-cond-v"><?php esc_html_e('Loading…', 'dcc-guest-guide'); ?></span>
+                </li>
+                <li class="dccgg-cond-forecast" hidden>
+                    <span class="dccgg-cond-ico">📅</span>
+                    <span class="dccgg-cond-k"><?php esc_html_e('Tomorrow', 'dcc-guest-guide'); ?></span>
+                    <span class="dccgg-cond-v">—</span>
+                </li>
+            </ul>
+        </aside>
+        <?php
+    }
+
+    /**
+     * Compute today's sunrise / sunset / moon phase for the cottage. Uses
+     * PHP's date_sun_info() (no API). Moon phase is a Conway-style
+     * approximation good to ±1 day, which is plenty for "🌒 waxing crescent"
+     * display.
+     */
+    public static function compute_conditions(float $lat, float $lng): array
+    {
+        $tz   = new \DateTimeZone(wp_timezone_string() ?: 'America/New_York');
+        $now  = new \DateTimeImmutable('now', $tz);
+        $sun  = date_sun_info($now->getTimestamp(), $lat, $lng);
+        $sr   = isset($sun['sunrise']) && is_int($sun['sunrise'])
+            ? (new \DateTimeImmutable('@' . $sun['sunrise']))->setTimezone($tz)->format('g:i A') : '';
+        $ss   = isset($sun['sunset']) && is_int($sun['sunset'])
+            ? (new \DateTimeImmutable('@' . $sun['sunset']))->setTimezone($tz)->format('g:i A') : '';
+
+        // Moon phase: days since known new moon (2000-01-06 18:14 UTC) / 29.5306.
+        $synodic = 29.530588853;
+        $days    = ($now->getTimestamp() - 947182440) / 86400;
+        $phase   = fmod($days, $synodic) / $synodic; // 0..1
+        if ($phase < 0) { $phase += 1; }
+        $idx = (int) floor($phase * 8 + 0.5) % 8;
+        $names = [
+            __('New moon', 'dcc-guest-guide'),
+            __('Waxing crescent', 'dcc-guest-guide'),
+            __('First quarter', 'dcc-guest-guide'),
+            __('Waxing gibbous', 'dcc-guest-guide'),
+            __('Full moon', 'dcc-guest-guide'),
+            __('Waning gibbous', 'dcc-guest-guide'),
+            __('Last quarter', 'dcc-guest-guide'),
+            __('Waning crescent', 'dcc-guest-guide'),
+        ];
+        $emojis = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+        return [
+            'sunrise'      => $sr,
+            'sunset'       => $ss,
+            'moon_name'    => $names[$idx],
+            'moon_emoji'   => $emojis[$idx],
+            'illumination' => (int) round((1 - cos($phase * 2 * M_PI)) / 2 * 100),
+        ];
+    }
+
+    /**
+     * Parse the hotspot textarea into a per-image lookup table.
+     * Input format, one per line:  IMAGE_INDEX X% Y% | Label | Description
+     * Lines that don't match are silently skipped.
+     */
+    public static function parse_hotspots(string $raw): array
+    {
+        $by_image = [];
+        $raw = trim($raw);
+        if ($raw === '') { return $by_image; }
+        foreach (preg_split('/\r?\n/', $raw) as $line) {
+            $line = trim($line);
+            if ($line === '') { continue; }
+            // IMAGE_IDX X Y | Label | Description
+            if (!preg_match('/^(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*\|\s*([^|]+?)(?:\s*\|\s*(.+))?$/u', $line, $m)) {
+                continue;
+            }
+            $img = (int) $m[1];
+            $by_image[$img] = $by_image[$img] ?? [];
+            $by_image[$img][] = [
+                'x'     => (float) $m[2],
+                'y'     => (float) $m[3],
+                'label' => trim($m[4]),
+                'desc'  => isset($m[5]) ? trim($m[5]) : '',
+            ];
+        }
+        return $by_image;
     }
 
     private static function render_template(int $template_id): string
