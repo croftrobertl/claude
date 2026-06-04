@@ -87,6 +87,27 @@
         wireWizard(root);
         wireShrinkHeader(root);
         wireMoreMenu(root, config);
+        wireVideoPosters(root);
+    }
+
+    // -- Click-to-play video posters (v0.6) -------------------------------
+    function wireVideoPosters(root) {
+        root.querySelectorAll('.dccgg-video-poster').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const embed = btn.dataset.embed;
+                if (!embed) return;
+                const iframe = document.createElement('iframe');
+                iframe.className = 'dccgg-media';
+                iframe.src = embed + (embed.indexOf('?') > -1 ? '&' : '?') + 'autoplay=1';
+                iframe.loading = 'lazy';
+                iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+                iframe.setAttribute('allowfullscreen', '');
+                iframe.setAttribute('frameborder', '0');
+                iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                btn.replaceWith(iframe);
+            });
+        });
     }
 
     // -- Sticky shrinking detail header (v0.5) ----------------------------
@@ -328,9 +349,10 @@
         });
         if (!found) return;
         // v0.4 fix: zero the progress bar of the newly visible detail and
-        // clear any stale search highlights from a prior visit. Without
-        // these the bar would show the last scroll percentage and old
-        // <mark>s would render with no current query.
+        // clear any stale search highlights from a prior visit. v0.6: also
+        // strip .is-shrunk from every detail so a previously-scrolled
+        // detail's shrunk header doesn't flash on reopen.
+        details.forEach(d => d.classList.remove('is-shrunk'));
         if (activeDetail) {
             const bar = activeDetail.querySelector('.dccgg-progress-bar');
             if (bar) bar.style.width = '0%';
@@ -357,7 +379,13 @@
             btn.addEventListener('click', () => {
                 withViewTransition(() => root.classList.remove('is-detail'));
                 setTimeout(() => {
-                    root.querySelectorAll('.dccgg-detail').forEach(d => { d.hidden = true; });
+                    // v0.6: also clear .is-shrunk so a re-open of a long
+                    // section doesn't flash the shrunk header before the
+                    // sentinel re-intersects.
+                    root.querySelectorAll('.dccgg-detail').forEach(d => {
+                        d.hidden = true;
+                        d.classList.remove('is-shrunk');
+                    });
                 }, 400);
             });
         });
@@ -1213,15 +1241,97 @@
         mo.observe(root, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // -- Welcome Pack editor hook -----------------------------------------
+    // -- Welcome Pack + Export/Import editor hooks (v0.6) ------------------
     function wireWelcomePackEditor() {
-        // Single delegated listener; only fires in the Elementor editor panel.
+        // Single delegated listener for all editor-panel buttons.
         document.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-dccgg-welcome-pack]');
-            if (!btn) return;
-            e.preventDefault();
-            insertWelcomePack(btn);
+            const pack = e.target.closest('[data-dccgg-welcome-pack]');
+            if (pack) { e.preventDefault(); insertWelcomePack(pack); return; }
+            const exp = e.target.closest('[data-dccgg-export]');
+            if (exp)  { e.preventDefault(); exportGuide(exp); return; }
+            const imp = e.target.closest('[data-dccgg-import]');
+            if (imp)  { e.preventDefault(); importGuide(imp); return; }
         });
+    }
+
+    /** Resolve the active widget's settings model; shared by Welcome Pack
+     *  + Export + Import. Returns null on failure (a console.warn is
+     *  emitted by the caller). */
+    function resolveWidgetSettings() {
+        try {
+            if (!window.elementor || !window.elementor.getPanelView) return null;
+            const panel = window.elementor.getPanelView();
+            const view  = panel && panel.getCurrentPageView && panel.getCurrentPageView();
+            const model = view && view.model && view.model.get && view.model.get('editedElementView') && view.model.get('editedElementView').getEditModel();
+            const elementModel = model || (window.elementor.selection && window.elementor.selection.getElements && window.elementor.selection.getElements()[0]);
+            if (!elementModel || !elementModel.get) return null;
+            return elementModel.get('settings') || null;
+        } catch (_) { return null; }
+    }
+
+    function stripIds(rows) {
+        return rows.map(r => {
+            const out = {};
+            Object.keys(r).forEach(k => { if (k !== '_id') out[k] = r[k]; });
+            return out;
+        });
+    }
+
+    function exportGuide(btn) {
+        const settings = resolveWidgetSettings();
+        if (!settings) { console.warn('DCCGG: Export requires the Elementor editor.'); return; }
+        const sections = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
+        const items    = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
+        const payload  = { dccgg_schema: 1, sections: stripIds(sections), items: stripIds(items) };
+        const json     = JSON.stringify(payload, null, 2);
+        copyText(json).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = '✓ Copied to clipboard';
+            setTimeout(() => { btn.textContent = orig; }, 1800);
+        }).catch(() => {
+            console.warn('DCCGG: Export — clipboard write failed. Falling back to console.log.');
+            console.log(json);
+        });
+    }
+
+    function importGuide(btn) {
+        const settings = resolveWidgetSettings();
+        if (!settings) { console.warn('DCCGG: Import requires the Elementor editor.'); return; }
+        const json = window.prompt('Paste Guide JSON (exported via the Export button on another widget):', '');
+        if (!json) return;
+        let payload;
+        try { payload = JSON.parse(json); } catch (_) {
+            window.alert('DCCGG: Invalid JSON — could not parse the paste.');
+            return;
+        }
+        if (!payload || !Array.isArray(payload.sections) || !Array.isArray(payload.items)) {
+            window.alert('DCCGG: Unrecognized schema — expected { sections: [...], items: [...] }.');
+            return;
+        }
+        const rid = () => Math.random().toString(36).slice(2, 9);
+        const withId = (rows) => rows.map(r => Object.assign({ _id: rid() }, r));
+
+        const replaceCheckbox = btn.parentNode && btn.parentNode.querySelector('[data-dccgg-import-replace]');
+        const replace = !!(replaceCheckbox && replaceCheckbox.checked);
+        const newSections = withId(payload.sections);
+        const newItems    = withId(payload.items);
+
+        if (replace) {
+            settings.set('guide_sections', newSections);
+            settings.set('guide_items',    newItems);
+        } else {
+            const existingSec = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
+            const existingIt  = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
+            settings.set('guide_sections', existingSec.concat(newSections));
+            settings.set('guide_items',    existingIt.concat(newItems));
+        }
+        if (window.elementor.saver && window.elementor.saver.update) {
+            window.elementor.saver.update();
+        }
+        const orig = btn.textContent;
+        btn.textContent = '✓ Imported ' + payload.sections.length + ' sections, ' + payload.items.length + ' items';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2500);
     }
     function insertWelcomePack(btn) {
         const pack = welcomePackPayload();

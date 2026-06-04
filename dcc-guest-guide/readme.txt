@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,54 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.6.0 =
+
+Bug fixes:
+* `.is-shrunk` no longer persists on hidden details — `openDetail`
+  and `wireBack` strip the class so a previously-scrolled section
+  doesn't flash a shrunk header on reopen.
+* Preset swatch script guards against re-initialization. v0.5
+  attached a fresh delegated click listener every time the editor
+  panel re-rendered (selection change / undo / tab toggle); v0.6
+  uses a `window.__dccggPresetWired` flag.
+* Section search-haystack capped to 200 chars. v0.5 appended
+  section_title + emoji + desc to each item's haystack *after* the
+  per-item cap, so a long section description × many items bloated
+  the inlined JSON. The meta string is now truncated and empty
+  pieces are skipped.
+* More-menu Theme row hidden when `dark_mode = off`. v0.5 showed
+  the Theme toggle in the popover even when the admin disabled
+  dark mode, which let guests turn on a dark palette the admin
+  hadn't configured.
+
+New features:
+* **Auto-fold long detail content** — new "Auto-fold items over N
+  words" setting in Display. When > 0, items whose WYSIWYG content
+  exceeds the threshold get Read More / Read Less automatically.
+  Per-item toggle still wins when explicitly on.
+* **JSON export / import** — new Export Guide / Import Guide
+  buttons in the Sections panel. Export copies a JSON of all
+  sections + items to the clipboard. Import accepts a JSON paste
+  and inserts (or replaces, via the adjacent checkbox) the
+  current widget's content. Backs up + transfers a guide between
+  sites. Schema is `{ dccgg_schema: 1, sections: [...], items: [...] }`.
+* **Auto-thumbnail for video items** — YouTube and Vimeo items
+  now show a poster image first; clicking loads the player with
+  autoplay. YouTube uses the static thumbnail URL; Vimeo posters
+  are fetched via the public API and cached for 7 days in a
+  transient. Saves the network cost of every video iframe on the
+  first paint. New "Show video poster thumbnails" switch (default
+  on).
+* **Per-tile color override** — new "Tile accent color" picker per
+  section. When set, that section's icon, quick-action chip, and
+  hover state use the chosen color instead of the global primary.
+  Inline `<style>` block emits one set of rules per overridden
+  section.
+* **Density modes** — new "Density" SELECT in Layout & Interaction:
+  Compact / Cozy (default) / Comfy. Applies a coordinated
+  padding / gap / font-size scale across the widget. Other style
+  controls still take precedence when set explicitly.
 
 = 0.5.0 =
 

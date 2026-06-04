@@ -435,6 +435,24 @@ final class Widget extends Widget_Base
             'description'  => __('Adds a compact disclosure menu in the detail header with Print, Theme toggle, and Share-this-section. Useful on small screens where the header gets crowded.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('auto_fold_words', [
+            'label'       => __('Auto-fold items over N words', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::NUMBER,
+            'min'         => 0,
+            'max'         => 5000,
+            'step'        => 25,
+            'default'     => 0,
+            'description' => __('Items whose content exceeds this word count auto-apply Read More / Read Less, even if the per-item toggle is off. Set to 0 to disable.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('enable_video_thumbnails', [
+            'label'        => __('Show video poster thumbnails', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('For YouTube / Vimeo items, show the poster image instead of an empty iframe; click the poster to load the player. Saves the network cost of every video iframe on first paint.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('fab_icon', [
             'label'     => __('FAB icon', 'dcc-guest-guide'),
             'type'      => Controls_Manager::ICONS,
@@ -481,6 +499,18 @@ final class Widget extends Widget_Base
             'content_classes' => 'elementor-descriptor',
         ]);
 
+        $this->add_control('export_import_notice', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert" style="background:#f6f7f7;border-color:#e0e1e2;color:#2c3338;margin-bottom:8px;">' .
+                                  esc_html__('Back up the whole guide or move it to another site. Export copies a JSON of all sections + items to your clipboard; Import pastes one in.', 'dcc-guest-guide') .
+                                  '<br><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' .
+                                  '<button type="button" class="elementor-button elementor-button-default" data-dccgg-export>' . esc_html__('Export Guide (JSON)', 'dcc-guest-guide') . '</button>' .
+                                  '<button type="button" class="elementor-button elementor-button-default" data-dccgg-import>' . esc_html__('Import Guide (JSON)', 'dcc-guest-guide') . '</button>' .
+                                  '<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#555;"><input type="checkbox" data-dccgg-import-replace> ' . esc_html__('Replace existing on import', 'dcc-guest-guide') . '</label>' .
+                                  '</div></div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
         $repeater = new Repeater();
         $repeater->add_control('section_key', [
             'label'       => __('Section key', 'dcc-guest-guide'),
@@ -507,6 +537,12 @@ final class Widget extends Widget_Base
             'type'        => Controls_Manager::TEXT,
             'label_block' => true,
             'description' => __('Paste an emoji like 🛁 to use it instead of the Font Awesome icon. Leave blank to keep the icon above.', 'dcc-guest-guide'),
+        ]);
+
+        $repeater->add_control('section_accent', [
+            'label'       => __('Tile accent color', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Per-section color override for this tile\'s icon, quick-action chip, and hover state. Leave blank to use the global primary color.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('section_icon_anim', [
@@ -968,6 +1004,19 @@ final class Widget extends Widget_Base
                 'shake'     => __('Soft shake', 'dcc-guest-guide'),
             ],
             'prefix_class' => 'dccgg-click-',
+        ]);
+
+        $this->add_control('density', [
+            'label'        => __('Density', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'cozy',
+            'options'      => [
+                'compact' => __('Compact (tighter padding, smaller text)', 'dcc-guest-guide'),
+                'cozy'    => __('Cozy (default)', 'dcc-guest-guide'),
+                'comfy'   => __('Comfy (extra padding, larger text)', 'dcc-guest-guide'),
+            ],
+            'prefix_class' => 'dccgg-density-',
+            'description'  => __('Global spacing / typography scale. Other style controls still take precedence when set explicitly.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('icon_hover_anim', [
@@ -1489,19 +1538,22 @@ final class Widget extends Widget_Base
         $enable_search       = ($s['enable_search'] ?? 'yes') === 'yes';
         $include_tpl_search  = ($s['include_templates_in_search'] ?? '') === 'yes';
 
-        // Index section title + emoji by key so we can append them to the
-        // search haystack for every item under that section. Without this,
-        // a guest typing "Wi-Fi" only matches items containing that string,
-        // not the section's own tile.
+        // Index section title + emoji + desc by key so we can append them
+        // to the search haystack for every item under that section.
+        // Without this, a guest typing "Wi-Fi" only matches items
+        // containing that string, not the section's own tile.
+        // v0.6: cap to 200 chars per section and skip empty pieces so a
+        // long section_desc × many items doesn't bloat the inlined JSON.
         $section_meta = [];
         foreach ($sections as $sec) {
             $k = trim((string) ($sec['section_key'] ?? ''));
             if ($k === '') { continue; }
-            $section_meta[$k] = trim(
-                (string) ($sec['section_title'] ?? '')
-                . ' ' . (string) ($sec['section_emoji'] ?? '')
-                . ' ' . (string) ($sec['section_desc'] ?? '')
-            );
+            $pieces = array_filter([
+                trim((string) ($sec['section_title'] ?? '')),
+                trim((string) ($sec['section_emoji'] ?? '')),
+                trim((string) ($sec['section_desc'] ?? '')),
+            ], static fn($v) => $v !== '');
+            $section_meta[$k] = mb_substr(implode(' ', $pieces), 0, 200);
         }
 
         $items_by_section = [];
@@ -1564,7 +1616,10 @@ final class Widget extends Widget_Base
         ];
 
         $root_class = 'dccgg-root';
+        // v0.6: emit per-section accent overrides as a tiny inline <style>.
+        $accent_css = self::accent_override_styles($this->get_id(), $sections);
         ?>
+        <?php if ($accent_css !== '') { echo $accent_css; /* phpcs:ignore */ } ?>
         <div class="<?php echo esc_attr($root_class); ?>"
              data-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
 
@@ -1811,7 +1866,8 @@ final class Widget extends Widget_Base
                                 </button>
                             </div>
                         <?php endif; ?>
-                        <?php if ($show_more) : ?>
+                        <?php if ($show_more) :
+                            $dm_state = (string) ($s['dark_mode'] ?? 'off'); ?>
                             <details class="dccgg-more">
                                 <summary aria-label="<?php echo esc_attr($label_more); ?>">
                                     <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
@@ -1820,9 +1876,11 @@ final class Widget extends Widget_Base
                                     <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
                                         <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
                                     </button>
-                                    <button type="button" class="dccgg-more-item dccgg-more-theme" role="menuitem">
-                                        <i class="fas fa-moon" aria-hidden="true"></i> <?php echo esc_html($label_theme); ?>
-                                    </button>
+                                    <?php if ($dm_state !== 'off') : ?>
+                                        <button type="button" class="dccgg-more-item dccgg-more-theme" role="menuitem">
+                                            <i class="fas fa-moon" aria-hidden="true"></i> <?php echo esc_html($label_theme); ?>
+                                        </button>
+                                    <?php endif; ?>
                                     <button type="button" class="dccgg-more-item dccgg-more-share" data-share-section="<?php echo esc_attr($key); ?>" role="menuitem">
                                         <i class="fas fa-link" aria-hidden="true"></i> <?php echo esc_html($label_share); ?>
                                     </button>
@@ -1918,6 +1976,20 @@ final class Widget extends Widget_Base
         $badge          = trim((string) ($item['item_badge'] ?? ''));
         $emoji          = trim((string) ($item['item_emoji'] ?? ''));
 
+        // Auto-fold (v0.6): when the WYSIWYG word count exceeds the global
+        // threshold, force read-more even when the per-item toggle is off.
+        $auto_fold_words = max(0, (int) ($strings['auto_fold_words'] ?? 0));
+        if (!$read_more && $auto_fold_words > 0 && $source === 'wysiwyg') {
+            $plain = trim(wp_strip_all_tags($content));
+            if ($plain !== '') {
+                $wc = count(preg_split('/\s+/u', $plain) ?: []);
+                if ($wc > $auto_fold_words) {
+                    $read_more = true;
+                }
+            }
+        }
+        $video_thumbs = ($strings['enable_video_thumbnails'] ?? 'yes') === 'yes';
+
         // Auto-link + read-time apply to WYSIWYG content only.
         $body_html = '';
         if ($source === 'wysiwyg') {
@@ -1977,9 +2049,16 @@ final class Widget extends Widget_Base
                         <video class="dccgg-media" controls preload="metadata">
                             <source src="<?php echo esc_url($v['embed']); ?>">
                         </video>
-                    <?php else : ?>
-                        <iframe class="dccgg-media" src="<?php echo esc_url($v['embed']); ?>" loading="lazy" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    <?php endif;
+                    <?php else :
+                        $poster = $video_thumbs ? self::resolve_video_poster((string) $item['item_video']) : '';
+                        if ($poster !== '') : ?>
+                            <button type="button" class="dccgg-video-poster" data-embed="<?php echo esc_attr($v['embed']); ?>" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Play video: %s', 'dcc-guest-guide'), $title)); ?>" style="background-image:url('<?php echo esc_url($poster); ?>');">
+                                <span class="dccgg-video-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                            </button>
+                        <?php else : ?>
+                            <iframe class="dccgg-media" src="<?php echo esc_url($v['embed']); ?>" loading="lazy" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                        <?php endif;
+                    endif;
                 endif;
             endif; ?>
 
@@ -2073,7 +2152,11 @@ final class Widget extends Widget_Base
         // Tiny inline script: when a card is clicked, set the SELECT below
         // it to that value. Uses Backbone change-events so Elementor's
         // live preview updates immediately.
+        // v0.6 fix: guard against the IIFE running on every Elementor panel
+        // re-render (which happens on selection / undo / tab change),
+        // otherwise we accumulate one delegated click listener per render.
         $rows[] = "<script>(function(){"
+            . "if(window.__dccggPresetWired)return; window.__dccggPresetWired=1;"
             . "var doc=document; doc.addEventListener('click',function(e){"
             . "var b=e.target.closest('[data-dccgg-preset]'); if(!b) return;"
             . "var card=b; var section=card.closest('.elementor-control'); if(!section) return;"
@@ -2085,6 +2168,84 @@ final class Widget extends Widget_Base
             . "}, true);"
             . "})();</script>";
         return implode('', $rows);
+    }
+
+    /**
+     * Resolve a poster image URL for a video item. YouTube IDs map to the
+     * static thumbnail; Vimeo IDs go through the public OG endpoint and
+     * are cached for a week in a transient. Returns '' when no poster can
+     * be derived (self-hosted MP4 / unknown host).
+     */
+    public static function resolve_video_poster(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        $yt_id = null;
+        $vimeo_id = null;
+        if (preg_match('~^https?://(?:www\.)?youtu\.be/([A-Za-z0-9_\-]{6,})~', $url, $m)) {
+            $yt_id = $m[1];
+        } elseif (preg_match('~^https?://(?:www\.)?youtube\.com/(?:watch\?v=|embed/|shorts/)([A-Za-z0-9_\-]{6,})~', $url, $m)) {
+            $yt_id = $m[1];
+        } elseif (preg_match('~^https?://(?:www\.)?(?:player\.)?vimeo\.com/(?:video/)?(\d{6,})~', $url, $m)) {
+            $vimeo_id = $m[1];
+        }
+        if ($yt_id !== null) {
+            return 'https://img.youtube.com/vi/' . $yt_id . '/hqdefault.jpg';
+        }
+        if ($vimeo_id !== null) {
+            $key = 'dccgg_vimeo_' . $vimeo_id;
+            $cached = get_transient($key);
+            if (is_string($cached) && $cached !== '') {
+                return $cached;
+            }
+            try {
+                $res = wp_remote_get('https://vimeo.com/api/v2/video/' . $vimeo_id . '.json', ['timeout' => 5]);
+                if (!is_wp_error($res)) {
+                    $body = wp_remote_retrieve_body($res);
+                    $data = json_decode($body, true);
+                    if (is_array($data) && isset($data[0]['thumbnail_large']) && is_string($data[0]['thumbnail_large'])) {
+                        $poster = $data[0]['thumbnail_large'];
+                        set_transient($key, $poster, 7 * DAY_IN_SECONDS);
+                        return $poster;
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('DCCGG: vimeo poster fetch failed for ' . $vimeo_id . ': ' . $e->getMessage());
+            }
+            // Cache a sentinel so we don't hammer the API on every render.
+            set_transient($key, ' ', HOUR_IN_SECONDS);
+            return '';
+        }
+        return '';
+    }
+
+    /**
+     * Build a per-widget inline <style> block emitting per-section accent
+     * overrides. Only sections with a non-empty section_accent contribute
+     * a rule, so the output is short for typical guides.
+     */
+    public static function accent_override_styles(string $widget_uid, array $sections): string
+    {
+        $rules = [];
+        foreach ($sections as $sec) {
+            $key   = trim((string) ($sec['section_key'] ?? ''));
+            $color = trim((string) ($sec['section_accent'] ?? ''));
+            if ($key === '' || $color === '') { continue; }
+            $color = sanitize_hex_color($color) ?: $color;
+            // Scope by tile-wrap data attribute so the override only paints
+            // this tile + chip — not the menu-wide primary.
+            $sel = '.dccgg-tile-wrap[data-section-key="' . esc_attr($key) . '"]';
+            $rules[] = $sel . ' .dccgg-tile-icon { color: ' . esc_attr($color) . '; background: color-mix(in srgb, ' . esc_attr($color) . ' 12%, transparent); }';
+            $rules[] = $sel . ' .dccgg-quick-action { color: ' . esc_attr($color) . '; }';
+            $rules[] = $sel . ' .dccgg-quick-action:hover, ' . $sel . ' .dccgg-quick-action:focus-visible { background: ' . esc_attr($color) . '; color: #fff; }';
+            $rules[] = $sel . ' .dccgg-tile:hover { border-color: ' . esc_attr($color) . '; }';
+        }
+        if (!$rules) {
+            return '';
+        }
+        return '<style id="' . esc_attr($widget_uid) . '-accents">' . implode('', $rules) . '</style>';
     }
 
     private static function render_template(int $template_id): string
