@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,12 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.1 =
+* Today's column is now visually distinct on the body cells, not just the header row — a subtle yellow column tint plus a bolder header makes it easier to orient yourself in a 14- or 31-day grid.
+* Smart all-booked hint. When the visible date range starts with one or more days where every cottage is already booked, a small banner appears above the grid: "All cottages booked through Jul 7. Next opening: Jul 8 (Cottage 1)." Quietly hidden in the normal case where the first visible day already has openings. Two new editable strings in the Elementor "Strings" tab (`str_all_booked` and `str_next_opening`) use `{through}`, `{date}`, and `{cottage}` placeholders so translators can rearrange the phrasing.
+* Print stylesheet. Opening the browser's print dialog now produces a clean snapshot — heading, date range, grid (with status colors preserved via print-color-adjust), and cottage column — with filters, nav arrows, popups, and skeleton hidden. Useful for property managers sending availability to corporate clients without needing a third-party PDF export.
+* Note: B1a from the v0.8.x plan (lazy-loading cottage info HTML to reduce page weight) was intentionally skipped. The 0.6.0 history confirms it broke Elementor template CSS enqueueing, and a safer migration path needs runtime verification.
 
 = 0.8.0 =
 * Hardening pass — no visible feature changes. Closes a latent XSS surface by running Elementor template renders through wp_kses_post() before they're emitted into the page (the same sanitizer WordPress uses for post_content). Adds a deterministic ORDER BY rr.ID to the reservation SQL query for predictable execution and slightly better plan caching on properties with many bookings. Drops one duplicate cached lookup per AJAX request (the room-type list is now resolved once and reused). Adds proper accessibility wiring: the calendar grid gets role="region" + aria-live="polite" so screen readers announce updates, and all buttons / inputs / cottage-name toggles in the widget now have a visible focus-ring for keyboard users. View Transitions are skipped entirely (not just animated to zero) when the visitor has prefers-reduced-motion: reduce set, saving the transition setup cost.

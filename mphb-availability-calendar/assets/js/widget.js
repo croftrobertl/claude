@@ -531,6 +531,7 @@
                 var tip = statusLabels[status] || status;
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
+                if (config && config.today === day) cell.classList.add('is-today');
                 cell.setAttribute('role', clickable ? 'button' : 'cell');
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
@@ -546,8 +547,63 @@
         });
 
         wrap.innerHTML = '';
+        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels);
+        if (hint) wrap.appendChild(hint);
         wrap.appendChild(grid);
         updateRange(root, from, to);
+    }
+
+    // Smart empty-window hint. If the visible window starts with one or more
+    // days where NO cottage is available, surface that fact and (when there
+    // IS an opening later in the window) point the visitor at the first
+    // available date and the cottage opening then. Quietly returns null
+    // when the window's first day has any availability, which is the
+    // overwhelmingly common case.
+    function buildAvailabilityHint(rooms, availability, days, strings, customLabels) {
+        if (!rooms.length || !days.length) return null;
+        if (!strings || !strings.allBooked) return null;
+
+        function dayHasAvail(day) {
+            for (var i = 0; i < rooms.length; i++) {
+                if ((availability[rooms[i].id] || {})[day] === 'available') return true;
+            }
+            return false;
+        }
+
+        if (dayHasAvail(days[0])) return null; // normal case — bail
+
+        var firstAvailIdx = -1;
+        for (var i = 1; i < days.length; i++) {
+            if (dayHasAvail(days[i])) { firstAvailIdx = i; break; }
+        }
+
+        var hintEl = document.createElement('div');
+        hintEl.className = 'mphbac-availability-hint';
+        hintEl.setAttribute('role', 'status');
+
+        var throughDay = firstAvailIdx > 0 ? days[firstAvailIdx - 1] : days[days.length - 1];
+        hintEl.textContent = strings.allBooked.replace('{through}', throughDay);
+
+        if (firstAvailIdx > 0 && strings.nextOpening) {
+            var openDay = days[firstAvailIdx];
+            var openRoom = null;
+            for (var j = 0; j < rooms.length; j++) {
+                if ((availability[rooms[j].id] || {})[openDay] === 'available') {
+                    openRoom = rooms[j];
+                    break;
+                }
+            }
+            if (openRoom) {
+                var label = (customLabels && (customLabels[openRoom.id] || customLabels[String(openRoom.id)]))
+                    || openRoom.title
+                    || ((openRoom.abbrev || '') + (openRoom.number ? ' #' + openRoom.number : '')).trim();
+                hintEl.textContent += ' ' + strings.nextOpening
+                    .replace('{date}', openDay)
+                    .replace('{cottage}', label);
+            }
+        }
+
+        return hintEl;
     }
 
     function buildDayHeader(day) {

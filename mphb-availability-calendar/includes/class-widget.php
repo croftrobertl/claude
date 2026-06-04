@@ -610,6 +610,8 @@ final class Widget extends Widget_Base
             'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
             'str_book_min_nights' => [__('Popup minimum-nights message', 'mphb-availability-calendar'), __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar')],
+            'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
+            'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1031,6 +1033,8 @@ final class Widget extends Widget_Base
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
                 'property'      => $property_label,
+                'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
+                'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
             ],
         ];
 
