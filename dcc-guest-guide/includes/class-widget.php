@@ -424,7 +424,15 @@ final class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'default'      => 'yes',
-            'description'  => __('Adds ← / → buttons in the detail header that cycle to the previous / next section. Also bound to keyboard arrow keys.', 'dcc-guest-guide'),
+            'description'  => __('Adds ← / → buttons in the detail header that cycle to the previous / next section. Also bound to keyboard arrow keys and to horizontal swipe on touch.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('enable_detail_more_menu', [
+            'label'        => __('Show ⋯ "more" menu in detail header', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('Adds a compact disclosure menu in the detail header with Print, Theme toggle, and Share-this-section. Useful on small screens where the header gets crowded.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('fab_icon', [
@@ -785,6 +793,7 @@ final class Widget extends Widget_Base
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
+            'str_more_menu'      => [__('More-menu button label', 'dcc-guest-guide'), __('More', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -807,6 +816,12 @@ final class Widget extends Widget_Base
         $this->start_controls_section('section_style_theme', [
             'label' => __('Theme Preset & Dark Mode', 'dcc-guest-guide'),
             'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('theme_preset_swatches', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => self::preset_swatches_html(),
+            'content_classes' => 'elementor-descriptor',
         ]);
 
         $this->add_control('theme_preset', [
@@ -1113,6 +1128,21 @@ final class Widget extends Widget_Base
             'default'    => ['size' => 20, 'unit' => 'px'],
             'range'      => ['px' => ['min' => 0, 'max' => 60, 'step' => 1]],
             'selectors'  => [self::SEL . '.dccgg-menu' => '--dccgg-gap: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('tile_aspect', [
+            'label'        => __('Tile aspect ratio', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'auto',
+            'options'      => [
+                'auto'  => __('Auto (content-driven)', 'dcc-guest-guide'),
+                '1'     => __('Square (1:1)', 'dcc-guest-guide'),
+                '4-3'   => __('4 : 3', 'dcc-guest-guide'),
+                '16-9'  => __('16 : 9', 'dcc-guest-guide'),
+                'golden'=> __('Golden (1.618 : 1)', 'dcc-guest-guide'),
+            ],
+            'prefix_class' => 'dccgg-aspect-',
+            'description'  => __('Forces all menu tiles to the same aspect for a visually consistent grid. Auto preserves the current content-driven height.', 'dcc-guest-guide'),
         ]);
 
         $this->add_responsive_control('tile_min_width', [
@@ -1459,6 +1489,21 @@ final class Widget extends Widget_Base
         $enable_search       = ($s['enable_search'] ?? 'yes') === 'yes';
         $include_tpl_search  = ($s['include_templates_in_search'] ?? '') === 'yes';
 
+        // Index section title + emoji by key so we can append them to the
+        // search haystack for every item under that section. Without this,
+        // a guest typing "Wi-Fi" only matches items containing that string,
+        // not the section's own tile.
+        $section_meta = [];
+        foreach ($sections as $sec) {
+            $k = trim((string) ($sec['section_key'] ?? ''));
+            if ($k === '') { continue; }
+            $section_meta[$k] = trim(
+                (string) ($sec['section_title'] ?? '')
+                . ' ' . (string) ($sec['section_emoji'] ?? '')
+                . ' ' . (string) ($sec['section_desc'] ?? '')
+            );
+        }
+
         $items_by_section = [];
         $search_index     = [];
         foreach ($items_raw as $i => $item) {
@@ -1468,11 +1513,16 @@ final class Widget extends Widget_Base
             }
             $items_by_section[$key][] = $item;
             if ($enable_search) {
+                $text = self::extract_search_text($item, $include_tpl_search);
+                $section_haystack = $section_meta[$key] ?? '';
+                if ($section_haystack !== '') {
+                    $text = $section_haystack . ' ' . $text;
+                }
                 $search_index[] = [
                     'section'  => $key,
                     'item_idx' => count($items_by_section[$key]) - 1,
                     'title'    => (string) ($item['item_title'] ?? ''),
-                    'text'     => self::extract_search_text($item, $include_tpl_search),
+                    'text'     => $text,
                 ];
             }
         }
@@ -1494,10 +1544,11 @@ final class Widget extends Widget_Base
         $config = [
             'revealMode'       => $reveal_mode,
             'menuLayout'       => $menu_layout,
-            'enableSearch'     => $enable_search,
-            'enableFab'        => $enable_fab,
-            'enableHaptic'     => ($s['enable_haptic'] ?? '') === 'yes',
-            'enableSectionNav' => ($s['enable_section_nav'] ?? 'yes') === 'yes',
+            'enableSearch'         => $enable_search,
+            'enableFab'            => $enable_fab,
+            'enableHaptic'         => ($s['enable_haptic'] ?? '') === 'yes',
+            'enableSectionNav'     => ($s['enable_section_nav'] ?? 'yes') === 'yes',
+            'enableDetailMoreMenu' => ($s['enable_detail_more_menu'] ?? '') === 'yes',
             'darkMode'         => $dark_mode,
             'themePreset'      => $theme_preset,
             'searchIndex'      => $search_index,
@@ -1718,7 +1769,12 @@ final class Widget extends Widget_Base
         $label_back     = (string) ($s['str_back'] ?? 'Back');
         $label_prev     = (string) ($s['str_prev_section'] ?? __('Previous section', 'dcc-guest-guide'));
         $label_next     = (string) ($s['str_next_section'] ?? __('Next section', 'dcc-guest-guide'));
+        $label_more     = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
+        $label_print    = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
+        $label_theme    = (string) ($s['str_theme_toggle'] ?? __('Toggle dark mode', 'dcc-guest-guide'));
+        $label_share    = (string) ($s['str_share'] ?? __('Share', 'dcc-guest-guide'));
         $show_nav       = ($s['enable_section_nav'] ?? 'yes') === 'yes';
+        $show_more      = ($s['enable_detail_more_menu'] ?? '') === 'yes';
         $valid_sections = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
         $section_count  = count($valid_sections);
         ?>
@@ -1735,6 +1791,7 @@ final class Widget extends Widget_Base
                 $next_key  = $idx < $section_count - 1 ? trim((string) ($valid_sections[$idx + 1]['section_key'] ?? '')) : '';
                 ?>
                 <div class="dccgg-detail<?php echo $show_toc ? ' dccgg-detail--has-toc' : ''; ?><?php echo $wizard ? ' dccgg-detail--wizard' : ''; ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" hidden>
+                    <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
                     <div class="dccgg-progress-bar" aria-hidden="true"></div>
                     <div class="dccgg-detail-header">
                         <button type="button" class="dccgg-btn dccgg-back">
@@ -1753,6 +1810,24 @@ final class Widget extends Widget_Base
                                     <i class="fas fa-chevron-right" aria-hidden="true"></i>
                                 </button>
                             </div>
+                        <?php endif; ?>
+                        <?php if ($show_more) : ?>
+                            <details class="dccgg-more">
+                                <summary aria-label="<?php echo esc_attr($label_more); ?>">
+                                    <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
+                                </summary>
+                                <div class="dccgg-more-popover" role="menu">
+                                    <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
+                                        <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
+                                    </button>
+                                    <button type="button" class="dccgg-more-item dccgg-more-theme" role="menuitem">
+                                        <i class="fas fa-moon" aria-hidden="true"></i> <?php echo esc_html($label_theme); ?>
+                                    </button>
+                                    <button type="button" class="dccgg-more-item dccgg-more-share" data-share-section="<?php echo esc_attr($key); ?>" role="menuitem">
+                                        <i class="fas fa-link" aria-hidden="true"></i> <?php echo esc_html($label_share); ?>
+                                    </button>
+                                </div>
+                            </details>
                         <?php endif; ?>
                     </div>
                     <div class="dccgg-detail-layout">
@@ -1970,6 +2045,48 @@ final class Widget extends Widget_Base
      * Elementor enqueues the template's per-widget CSS file via the normal page
      * pass — AJAX-only rendering leaves those stylesheets unloaded.
      */
+    /**
+     * Build a row of clickable preset preview cards for the editor panel.
+     * Each card shows a 5-swatch color strip from theme_presets() so the
+     * admin can see what each preset looks like before picking it from the
+     * SELECT below. Clicking a card sets the SELECT value.
+     */
+    public static function preset_swatches_html(): string
+    {
+        $presets = self::theme_presets();
+        $vars    = ['--dccgg-primary', '--dccgg-accent', '--dccgg-tile-bg', '--dccgg-detail-bg', '--dccgg-text'];
+        $rows    = [];
+        $rows[]  = '<div class="dccgg-preset-cards" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
+        foreach ($presets as $name => $palette) {
+            $strip = '';
+            foreach ($vars as $v) {
+                $c = isset($palette[$v]) ? $palette[$v] : '#cccccc';
+                $strip .= '<span style="flex:1 1 0;height:14px;background:' . esc_attr($c) . ';"></span>';
+            }
+            $label = ucfirst($name);
+            $rows[] = '<button type="button" data-dccgg-preset="' . esc_attr($name) . '" title="' . esc_attr($label) . '" style="flex:1 1 80px;min-width:80px;padding:4px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;text-align:left;">' .
+                '<span style="display:flex;gap:1px;border-radius:3px;overflow:hidden;">' . $strip . '</span>' .
+                '<span style="display:block;font-size:11px;margin-top:3px;color:#666;">' . esc_html($label) . '</span>' .
+                '</button>';
+        }
+        $rows[] = '</div>';
+        // Tiny inline script: when a card is clicked, set the SELECT below
+        // it to that value. Uses Backbone change-events so Elementor's
+        // live preview updates immediately.
+        $rows[] = "<script>(function(){"
+            . "var doc=document; doc.addEventListener('click',function(e){"
+            . "var b=e.target.closest('[data-dccgg-preset]'); if(!b) return;"
+            . "var card=b; var section=card.closest('.elementor-control'); if(!section) return;"
+            . "var panel=section.closest('.elementor-controls') || section.parentNode;"
+            . "var sel=panel ? panel.querySelector('select[data-setting=\"theme_preset\"]') : null;"
+            . "if(!sel) return;"
+            . "sel.value=b.getAttribute('data-dccgg-preset');"
+            . "sel.dispatchEvent(new Event('change',{bubbles:true}));"
+            . "}, true);"
+            . "})();</script>";
+        return implode('', $rows);
+    }
+
     private static function render_template(int $template_id): string
     {
         if ($template_id <= 0) {

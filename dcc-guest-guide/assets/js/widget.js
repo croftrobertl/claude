@@ -85,6 +85,85 @@
         wireProgressBar(root);
         wireSectionNav(root, config);
         wireWizard(root);
+        wireShrinkHeader(root);
+        wireMoreMenu(root, config);
+    }
+
+    // -- Sticky shrinking detail header (v0.5) ----------------------------
+    function wireShrinkHeader(root) {
+        if (!('IntersectionObserver' in window)) return;
+        const details = root.querySelectorAll('.dccgg-detail');
+        details.forEach(detail => {
+            const sentinel = detail.querySelector('.dccgg-shrink-sentinel');
+            if (!sentinel) return;
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(en => {
+                    // Sentinel is the 1-px element ABOVE the header. When
+                    // it leaves the viewport (scrolls above the top), the
+                    // header is now stuck → shrink. When it re-enters,
+                    // unshrink.
+                    detail.classList.toggle('is-shrunk', !en.isIntersecting && en.boundingClientRect.top < 0);
+                });
+            }, { threshold: [0], rootMargin: '0px' });
+            io.observe(sentinel);
+        });
+    }
+
+    // -- More-menu actions (v0.5; opt-in via enable_detail_more_menu) -----
+    function wireMoreMenu(root, config) {
+        if (!config.enableDetailMoreMenu) return;
+        root.querySelectorAll('.dccgg-more').forEach(menu => {
+            // Click outside closes the <details>.
+            const onDocClick = (e) => {
+                if (!menu.contains(e.target) && menu.open) menu.open = false;
+            };
+            document.addEventListener('click', onDocClick);
+
+            const print = menu.querySelector('.dccgg-more-print');
+            const theme = menu.querySelector('.dccgg-more-theme');
+            const share = menu.querySelector('.dccgg-more-share');
+
+            if (print) {
+                print.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.open = false;
+                    window.print();
+                });
+            }
+            if (theme) {
+                theme.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.open = false;
+                    const toggle = root.querySelector('.dccgg-theme-toggle');
+                    if (toggle) {
+                        toggle.click();
+                    } else {
+                        // Fallback: flip dark class directly + persist.
+                        const next = !root.classList.contains('dccgg-is-dark');
+                        root.classList.toggle('dccgg-is-dark', next);
+                        root.classList.toggle('dccgg-is-light', !next);
+                        try { localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light'); } catch (_) {}
+                    }
+                });
+            }
+            if (share) {
+                share.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.open = false;
+                    const key = share.dataset.shareSection || '';
+                    const url = new URL(window.location.href);
+                    if (key) url.searchParams.set('guide', key);
+                    if (navigator.share) {
+                        navigator.share({ title: document.title, url: url.toString() }).catch((err) => {
+                            if (err && err.name === 'AbortError') return;
+                            copyText(url.toString()).then(() => flashCopied(share, (config.strings && config.strings.shareCopied) || 'Link copied!')).catch(() => {});
+                        });
+                    } else {
+                        copyText(url.toString()).then(() => flashCopied(share, (config.strings && config.strings.shareCopied) || 'Link copied!')).catch(() => {});
+                    }
+                });
+            }
+        });
     }
 
     // -- Haptic feedback (v0.3) -------------------------------------------
@@ -259,6 +338,18 @@
         }
         const top = root.getBoundingClientRect().top + window.scrollY - 20;
         if (window.scrollY > top + 40) window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+
+        // v0.5: public custom event for other Elementor widgets / external
+        // JS to react to a section opening. Bubbles so listeners on
+        // document / body work too.
+        try {
+            const titleEl = activeDetail && activeDetail.querySelector('.dccgg-detail-title span');
+            const sectionTitle = titleEl ? titleEl.textContent.trim() : key;
+            root.dispatchEvent(new CustomEvent('dccgg:section-opened', {
+                bubbles: true,
+                detail: { key: key, widget: root, sectionTitle: sectionTitle }
+            }));
+        } catch (_) {}
     }
 
     function wireBack(root, config) {
@@ -532,9 +623,11 @@
         input.addEventListener('focus', () => { if (input.value.length >= 2) render(input.value); });
     }
 
-    // -- Deep-highlight a matched query inside a detail (v0.4) ------------
-    let _hitClearTimer = null;
-    let _hitClearTarget = null;
+    // -- Deep-highlight a matched query inside a detail (v0.4, v0.5 fixes) -
+    // v0.5 fix: per-detail auto-clear timers in a WeakMap so multi-widget
+    // pages don't have one widget's highlightQuery cancel another's
+    // pending clear (v0.4 used module-level globals).
+    const _hitClearTimers = new WeakMap();
     function clearHighlights(detail) {
         if (!detail) return;
         detail.querySelectorAll('mark.dccgg-hit').forEach(m => {
@@ -578,6 +671,12 @@
         // Walk text nodes inside the target item only (avoid touching
         // template content with JS handlers attached).
         const escapeRe = (s) => String(s).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        // v0.5 fix: separate non-global probe regex for the walker gate.
+        // The replacement regex below stays global. v0.4 used the same
+        // /.../gi for both, which silently advanced lastIndex between
+        // acceptNode calls and rejected nodes whose match was below the
+        // currently-set lastIndex.
+        const probe = new RegExp(escapeRe(query), 'i');
         const re = new RegExp('(' + escapeRe(query) + ')', 'gi');
         const skipTags = { SCRIPT: 1, STYLE: 1, MARK: 1, BUTTON: 1, A: 1 };
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
@@ -588,7 +687,7 @@
                     if (p.nodeType === 1 && skipTags[p.tagName]) return NodeFilter.FILTER_REJECT;
                     p = p.parentNode;
                 }
-                return re.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                return probe.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
             }
         });
         const matches = [];
@@ -619,14 +718,15 @@
         void target.offsetWidth;
         target.classList.add('dccgg-hit-pulse');
 
-        // Auto-clear after 8 s.
-        if (_hitClearTimer) clearTimeout(_hitClearTimer);
-        _hitClearTarget = detail;
-        _hitClearTimer = setTimeout(() => {
-            clearHighlights(_hitClearTarget);
-            _hitClearTimer = null;
-            _hitClearTarget = null;
+        // Auto-clear after 8 s — per-detail timer in the WeakMap so
+        // simultaneous activity on multiple widgets doesn't lose any.
+        const prev = _hitClearTimers.get(detail);
+        if (prev) clearTimeout(prev);
+        const t = setTimeout(() => {
+            clearHighlights(detail);
+            _hitClearTimers.delete(detail);
         }, 8000);
+        _hitClearTimers.set(detail, t);
     }
 
     function sectionTitleFor(root, key) {
@@ -860,9 +960,33 @@
             if (!guide) return;
             if (!root.__dccgg || !root.__dccgg.ownedKeys || !root.__dccgg.ownedKeys.has(guide)) return;
 
+            // v0.5: ?q=PHRASE auto-runs highlightQuery on the matched
+            // detail. Empty or 1-char queries are silently ignored.
+            const phrase = (url.searchParams.get('q') || '').trim();
+            const item   = (url.searchParams.get('item') || '').trim();
+
             const mode = config.revealMode || 'stage';
             if (mode === 'stage') {
                 openDetail(root, guide);
+                if (phrase.length >= 2) {
+                    // Wait a frame so the detail is rendered before walking.
+                    requestAnimationFrame(() => {
+                        const detail = root.querySelector('.dccgg-detail[data-key="' + cssEsc(guide) + '"]:not([hidden])');
+                        if (detail) {
+                            // Resolve item index: prefer ?item= slug match,
+                            // else default to 0.
+                            let idx = 0;
+                            if (item) {
+                                const anchors = detail.querySelectorAll('.dccgg-detail-item-anchor');
+                                anchors.forEach((a, i) => {
+                                    const art = a.querySelector('.dccgg-item');
+                                    if (art && slugify(art.dataset.itemTitle || '') === item) idx = i;
+                                });
+                            }
+                            highlightQuery(detail, phrase, idx);
+                        }
+                    });
+                }
             } else if (mode === 'accordion') {
                 const tile = root.querySelector('.dccgg-accordion-toggle[data-key="' + cssEsc(guide) + '"]');
                 if (tile) tile.click();
@@ -876,13 +1000,9 @@
     // -- Image lightbox (single global <dialog>, shared across widgets) ---
     let _lightbox = null;
     function ensureLightbox(closeLabel) {
-        if (_lightbox) {
-            // Refresh the label in case a later-init widget had a different
-            // localized string.
-            const btn = _lightbox.querySelector('.dccgg-lightbox-close');
-            if (btn && closeLabel) btn.setAttribute('aria-label', closeLabel);
-            return _lightbox;
-        }
+        // v0.5: only set the aria-label on first creation. v0.4 reset it on
+        // every wireLightbox call, which was harmless but pointless.
+        if (_lightbox) return _lightbox;
         _lightbox = document.createElement('dialog');
         _lightbox.className = 'dccgg-lightbox';
         const label = closeLabel || 'Close';
@@ -1140,7 +1260,7 @@
             console.error('DCCGG: Welcome Pack injection failed:', err);
         }
     }
-    // -- Section prev/next nav (v0.3, single-listener in v0.4) -----------
+    // -- Section prev/next nav (v0.3, single-listener in v0.4, swipe in v0.5)
     function wireSectionNav(root, config) {
         if (!config.enableSectionNav) return;
         const stage = root.querySelector('.dccgg-stage');
@@ -1157,6 +1277,43 @@
                 hapticPulse(root, 20);
             });
         });
+
+        // v0.5: horizontal swipe inside the active detail on touch devices.
+        // Wizard-mode sections route to wizard Back/Next; other sections to
+        // the prev/next arrows. Vertical drift > 30 px aborts so vertical
+        // scroll isn't hijacked.
+        if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
+        let startX = 0, startY = 0, startT = 0, tracking = false;
+        stage.addEventListener('pointerdown', (e) => {
+            if (e.pointerType !== 'touch') return;
+            // Don't fight interactive controls inside the detail.
+            if (e.target.closest('button, a, input, select, textarea')) return;
+            tracking = true; startX = e.clientX; startY = e.clientY; startT = e.timeStamp || Date.now();
+        });
+        stage.addEventListener('pointerup', (e) => {
+            if (!tracking) return;
+            tracking = false;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const dt = (e.timeStamp || Date.now()) - startT;
+            if (Math.abs(dx) < 50) return;
+            if (Math.abs(dy) > 30) return;
+            if (dt > 800) return; // too slow → probably a drag/scroll
+            const active = stage.querySelector('.dccgg-detail:not([hidden])');
+            if (!active) return;
+            // Wizard owns left/right swipe inside its section.
+            if (active.dataset.wizard === '1') {
+                const wiz = active.querySelector('.dccgg-wizard');
+                if (wiz) {
+                    const btn = dx > 0 ? wiz.querySelector('.dccgg-wizard-back') : wiz.querySelector('.dccgg-wizard-next');
+                    if (btn && !btn.disabled) btn.click();
+                }
+                return;
+            }
+            const btn = dx > 0 ? active.querySelector('.dccgg-section-prev') : active.querySelector('.dccgg-section-next');
+            if (btn && !btn.hasAttribute('disabled')) btn.click();
+        });
+        stage.addEventListener('pointercancel', () => { tracking = false; });
     }
 
     /**

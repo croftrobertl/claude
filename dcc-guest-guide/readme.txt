@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,74 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.5.0 =
+
+Bug fixes:
+* `highlightQuery` TreeWalker no longer skips some matches. v0.4 used a
+  single `/.../gi` regex for both the walker gate and the replacement
+  pass, so `test()` would carry `lastIndex` between text nodes and
+  silently reject nodes whose match position was below the current
+  index. Now uses a non-global `/.../i` probe for the gate and the
+  global regex only for replacement.
+* `_hitClearTimer` cross-widget interference resolved. Each detail's
+  auto-clear timer now lives in a `WeakMap` so widget B's
+  search-result-click can't cancel widget A's pending clear.
+* Section titles, emojis, and descriptions are now part of the search
+  haystack. Typing "Wi-Fi" surfaces the Wi-Fi tile even when no item
+  contains that string.
+* `ensureLightbox` only sets the close-button aria-label on first
+  creation (was redundantly re-set on every widget init).
+
+New features:
+* **URL deep-link to search term** — `?guide=wifi&q=password` opens the
+  Wi-Fi detail AND auto-runs `highlightQuery("password")` once the
+  detail is visible. Optional `&item=slug` picks a specific item to
+  search within.
+* **Customizable tile aspect ratio** — new "Tile aspect ratio" SELECT
+  in the Tile / Card panel: auto / 1 : 1 / 4 : 3 / 16 : 9 / golden.
+  Driven by `prefix_class` so every menu layout (grid, masonry, etc.)
+  picks up the same fixed ratio for a visually consistent grid.
+* **Swipe to advance section on mobile** — horizontal swipe (≥ 50 px,
+  vertical drift < 30 px) on the detail stage cycles prev/next.
+  Wizard-mode sections route to wizard Back/Next instead. Falls back
+  to the existing arrow handler for accessibility.
+* **Floating ⋯ "more" menu in detail** — new opt-in toggle in General.
+  Adds a small disclosure button to the detail header with Print,
+  Theme toggle, and Share-this-section actions; useful on small
+  screens where the header gets crowded.
+* **`dccgg:section-opened` custom DOM event** — bubbles from the
+  widget root every time a detail opens. Detail payload:
+  `{ key, widget, sectionTitle }`. Wire other Elementor widgets
+  with `document.addEventListener('dccgg:section-opened', fn)`.
+* **Sticky shrinking detail header on scroll** — header pins to the
+  top of the detail card and shrinks once you scroll past it,
+  keeping the section title and prev/next arrows always visible.
+  Respects `prefers-reduced-motion`.
+* **Theme preset preview swatches in admin** — six mini-cards above
+  the preset SELECT show the actual colors of each preset. Clicking
+  a card sets the SELECT.
+
+== Hooks for other widgets ==
+
+This widget dispatches a `dccgg:section-opened` event on its root
+element every time a detail becomes visible. Listen for it from any
+Elementor widget or external script:
+
+    document.addEventListener('dccgg:section-opened', function (e) {
+        var key   = e.detail.key;          // e.g. "wifi"
+        var title = e.detail.sectionTitle; // e.g. "Wi-Fi"
+        var root  = e.detail.widget;       // the .dccgg-root element
+        // … react however you like
+    });
+
+URL parameters supported on the page where the widget is embedded:
+
+* `?guide=KEY` — opens the named section on load
+* `?guide=KEY&q=PHRASE` — opens the section AND highlights occurrences
+  of PHRASE inside the content
+* `?guide=KEY&item=SLUG&q=PHRASE` — same, but scoped to the item whose
+  slugified title matches SLUG
 
 = 0.4.0 =
 

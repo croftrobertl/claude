@@ -1616,6 +1616,124 @@ video.dccgg-media {
     transform: scale(0.96);
 }
 
+/* =============================================================
+ * v0.5 additions: aspect ratio, sticky shrink header,
+ * more-menu popover
+ * ============================================================= */
+
+/* ---- Tile aspect-ratio overrides ---- */
+.dccgg-aspect-1      .dccgg-tile { aspect-ratio: 1 / 1; }
+.dccgg-aspect-4-3    .dccgg-tile { aspect-ratio: 4 / 3; }
+.dccgg-aspect-16-9   .dccgg-tile { aspect-ratio: 16 / 9; }
+.dccgg-aspect-golden .dccgg-tile { aspect-ratio: 1.618 / 1; }
+/* When the tile has a fixed aspect, the content should be centered and
+   can clip slightly rather than break the box. */
+.dccgg-aspect-1 .dccgg-tile,
+.dccgg-aspect-4-3 .dccgg-tile,
+.dccgg-aspect-16-9 .dccgg-tile,
+.dccgg-aspect-golden .dccgg-tile {
+    overflow: hidden;
+    justify-content: center;
+}
+
+/* ---- Sticky shrinking detail header ---- */
+.dccgg-shrink-sentinel {
+    display: block;
+    width: 1px;
+    height: 1px;
+    margin-top: -1px;
+    pointer-events: none;
+}
+.dccgg-detail-header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--dccgg-detail-bg);
+    transition: padding var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+.dccgg-detail.is-shrunk .dccgg-detail-header {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.dccgg-detail.is-shrunk .dccgg-detail-title {
+    font-size: 1.05em;
+    transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+.dccgg-detail-title {
+    transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-detail-header,
+    .dccgg-detail-title { transition: none; }
+}
+
+/* ---- "More" menu in detail header (uses <details>) ---- */
+.dccgg-more {
+    position: relative;
+    margin-left: 4px;
+}
+.dccgg-more > summary {
+    list-style: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--dccgg-tile-border);
+    background: var(--dccgg-tile-bg);
+    color: var(--dccgg-text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration), transform var(--dccgg-transition-duration);
+}
+.dccgg-more > summary::-webkit-details-marker { display: none; }
+.dccgg-more > summary:hover,
+.dccgg-more > summary:focus-visible {
+    background: var(--dccgg-primary);
+    color: var(--dccgg-btn-txt);
+    outline: none;
+}
+.dccgg-more[open] > summary {
+    background: var(--dccgg-primary);
+    color: var(--dccgg-btn-txt);
+}
+.dccgg-more-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 180px;
+    padding: 6px;
+    background: var(--dccgg-detail-bg);
+    border: 1px solid var(--dccgg-tile-border);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.dccgg-more-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--dccgg-text);
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    font: inherit;
+    width: 100%;
+}
+.dccgg-more-item:hover,
+.dccgg-more-item:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
+    color: var(--dccgg-primary);
+    outline: none;
+}
+
 /* -------- Print (scoped) -------- */
 
 /* -------- Print (scoped) -------- */
@@ -1640,7 +1758,8 @@ video.dccgg-media {
     .dccgg-root .dccgg-search-mic,
     .dccgg-root .dccgg-section-nav,
     .dccgg-root .dccgg-wizard-dots,
-    .dccgg-root .dccgg-wizard-actions {
+    .dccgg-root .dccgg-wizard-actions,
+    .dccgg-root .dccgg-more {
         display: none !important;
     }
     .dccgg-root .dccgg-wizard-step[hidden] { display: block !important; }
