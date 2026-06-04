@@ -185,6 +185,18 @@
     background-color: var(--mphbac-color-nav-hover);
 }
 
+/* Back-to-today button is a text label, not an arrow icon — let it size
+   to its content. Inherits all other nav-btn styling for consistency.
+   `hidden` attribute controls visibility (set from JS by updateRange). */
+.mphbac-nav-btn.mphbac-nav-today {
+    width: auto;
+    padding: 0 0.85em;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
 .mphbac-nav-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -312,6 +324,26 @@
     background-image: linear-gradient(rgba(244, 218, 98, 0.18), rgba(244, 218, 98, 0.18));
 }
 
+/* Weekend (Sat/Sun) column tint — barely-there warm grey background that
+   helps weekenders spot Fri-Sun runs at a glance without competing with
+   the available/booked colors. Applied to both the header day cell and
+   every body cell in the same column. */
+.mphbac-cell-day.is-weekend {
+    background-color: rgba(0, 0, 0, 0.025);
+}
+.mphbac-cell-status.is-weekend {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.035), rgba(0, 0, 0, 0.035));
+}
+
+/* Month-boundary divider — when the visible window crosses a month
+   boundary (e.g. Jul 31 → Aug 1), a thin vertical line on the left edge
+   of the first cell of the new month gives orienting structure to long
+   grids. */
+.mphbac-cell-day.is-month-start,
+.mphbac-cell-status.is-month-start {
+    border-left: 1px solid var(--mphbac-color-frame);
+}
+
 .mphbac-row-header .mphbac-cell-label {
     background: var(--mphbac-color-header);
     color: #ffffff;
@@ -387,9 +419,23 @@
     color: var(--mphbac-color-text, #111);
 }
 
-/* Available cells stay tappable (booking popup); no hover scale per design. */
+/* Available cells stay tappable (booking popup). Brief active-state scale
+   gives tactile feedback when a visitor taps — felt on mobile, ignored on
+   resting state so the grid still reads as a data table. */
 .mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable {
     cursor: pointer;
+    transition: transform 100ms ease;
+}
+.mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable:active {
+    transform: scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+    .mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable {
+        transition: none;
+    }
+    .mphbac-popup-enabled .mphbac-cell-status.is-available.is-clickable:active {
+        transform: none;
+    }
 }
 
 /* Book Now sheet + Cottage Info sheet share these styles */

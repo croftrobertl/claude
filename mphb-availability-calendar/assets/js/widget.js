@@ -168,8 +168,13 @@
     function wireNav(root, config, state) {
         var prev = root.querySelector('.mphbac-nav-prev');
         var next = root.querySelector('.mphbac-nav-next');
+        var today = root.querySelector('.mphbac-nav-today');
         if (prev) prev.addEventListener('click', function () { shiftMonth(root, config, state, -1); });
         if (next) next.addEventListener('click', function () { shiftMonth(root, config, state, 1); });
+        if (today) today.addEventListener('click', function () {
+            applyDefaultWindow(config, state);
+            request(root, config, state);
+        });
     }
 
     function shiftMonth(root, config, state, direction) {
@@ -461,7 +466,7 @@
         if (rooms.length === 0) {
             if (empty) empty.hidden = false;
             wrap.innerHTML = '';
-            updateRange(root, from, to);
+            updateRange(root, from, to, config);
             return;
         }
         if (empty) empty.hidden = true;
@@ -483,9 +488,12 @@
         corner.setAttribute('role', 'columnheader');
         corner.textContent = strings.property || '';
         header.appendChild(corner);
-        days.forEach(function (day) {
+        days.forEach(function (day, idx) {
             var dh = buildDayHeader(day);
             if (config && config.today === day) dh.classList.add('is-today');
+            if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
+                dh.classList.add('is-month-start');
+            }
             header.appendChild(dh);
         });
         grid.appendChild(header);
@@ -525,13 +533,18 @@
             row.appendChild(labelBtn);
 
             var roomAvail = availability[room.id] || {};
-            days.forEach(function (day) {
+            days.forEach(function (day, idx) {
                 var status = roomAvail[day] || 'booked';
                 var clickable = status === 'available';
                 var tip = statusLabels[status] || status;
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
                 if (config && config.today === day) cell.classList.add('is-today');
+                var dowJ = new Date(day + 'T00:00:00').getDay();
+                if (dowJ === 0 || dowJ === 6) cell.classList.add('is-weekend');
+                if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
+                    cell.classList.add('is-month-start');
+                }
                 cell.setAttribute('role', clickable ? 'button' : 'cell');
                 cell.setAttribute('data-date', day);
                 cell.setAttribute('data-status', status);
@@ -550,7 +563,7 @@
         var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels);
         if (hint) wrap.appendChild(hint);
         wrap.appendChild(grid);
-        updateRange(root, from, to);
+        updateRange(root, from, to, config);
     }
 
     // Smart empty-window hint. If the visible window starts with one or more
@@ -611,6 +624,7 @@
         var di = d.getDay();
         var el = document.createElement('div');
         el.className = 'mphbac-cell mphbac-cell-day';
+        if (di === 0 || di === 6) el.classList.add('is-weekend');
         el.setAttribute('role', 'columnheader');
         // Both abbreviations are rendered; CSS (driven by the responsive
         // "Day-of-week format" control) shows the right one per device.
@@ -642,7 +656,7 @@
         return days;
     }
 
-    function updateRange(root, from, to) {
+    function updateRange(root, from, to, config) {
         var label = root.querySelector('.mphbac-nav-range');
         if (!label) return;
         var f = new Date(from + 'T00:00:00');
@@ -651,6 +665,15 @@
             return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         };
         label.textContent = fmt(f) + ' – ' + fmt(t) + ', ' + t.getFullYear();
+
+        // Back-to-today button shows only when today is OUTSIDE the current
+        // visible range. YYYY-MM-DD strings compare lexically, so straight
+        // string comparison gives the right answer.
+        var todayBtn = root.querySelector('.mphbac-nav-today');
+        if (todayBtn) {
+            var today = (config && config.today) || '';
+            todayBtn.hidden = !today || (today >= from && today <= to);
+        }
     }
 
     function wirePopup(root, config, state) {

@@ -601,6 +601,7 @@ final class Widget extends Widget_Base
             'str_legend_past'   => [__('Legend: past', 'mphb-availability-calendar'), __('Past', 'mphb-availability-calendar')],
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
+            'str_today'         => [__('Back-to-today button label', 'mphb-availability-calendar'), __('Today', 'mphb-availability-calendar')],
             'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
@@ -1093,6 +1094,7 @@ final class Widget extends Widget_Base
                 <div class="mphbac-nav">
                     <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
                     <span class="mphbac-nav-range" aria-live="polite"></span>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-today" hidden><?php echo esc_html($settings['str_today']); ?></button>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>

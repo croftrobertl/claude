@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.1
+Stable tag: 0.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,13 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.2 =
+* Polish pass on the existing display experience. Four small visual additions, no new features:
+* Weekend column tint — Saturday and Sunday columns get a barely-there warm-grey background so weekenders can spot Fri-Sun runs without scanning header labels.
+* Month-boundary divider — when the visible window crosses a month boundary (e.g. Jul 31 → Aug 1), a thin vertical line appears on the first cell of the new month, giving orienting structure to 14- and 31-day grids.
+* "Today" quick-jump button — appears in the nav row only when today is OUTSIDE the current visible range. Tapping it resets the calendar to the default device window starting today. New editable string in the Strings tab (`str_today`, default "Today").
+* Cell tap scale — available cells briefly scale to 94% on tap, giving tactile feedback the moment a visitor commits to opening the booking popup. Honors prefers-reduced-motion: reduce.
 
 = 0.8.1 =
 * Today's column is now visually distinct on the body cells, not just the header row — a subtle yellow column tint plus a bolder header makes it easier to orient yourself in a 14- or 31-day grid.
