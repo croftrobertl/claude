@@ -1093,7 +1093,7 @@ final class Widget extends Widget_Base
                 </div>
             <?php endif; ?>
 
-            <div class="mphbac-grid-wrap">
+            <div class="mphbac-grid-wrap" role="region" aria-live="polite" aria-label="<?php echo esc_attr__('Availability calendar', 'mphb-availability-calendar'); ?>">
                 <div class="mphbac-skeleton" aria-hidden="true">
                     <?php foreach ($rooms as $i => $r) : ?>
                         <div class="mphbac-skeleton-row<?php echo ($i % 2 === 1) ? ' mphbac-skeleton-row-alt' : ''; ?>">
@@ -1273,7 +1273,12 @@ final class Widget extends Widget_Base
             if (class_exists('\\Elementor\\Plugin')) {
                 $elementor = \Elementor\Plugin::instance();
                 if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
-                    return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
+                    // wp_kses_post strips <script>, inline event handlers, and
+                    // similar XSS surfaces. Templates are first-party content,
+                    // but anything they embed (form values, comment renders,
+                    // shortcode output) is sanitized by the same rules
+                    // post_content already uses.
+                    return wp_kses_post((string) $elementor->frontend->get_builder_content_for_display($template_id, true));
                 }
             }
         } catch (\Throwable $e) {

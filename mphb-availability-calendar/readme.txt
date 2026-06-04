@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.4
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.0 =
+* Hardening pass — no visible feature changes. Closes a latent XSS surface by running Elementor template renders through wp_kses_post() before they're emitted into the page (the same sanitizer WordPress uses for post_content). Adds a deterministic ORDER BY rr.ID to the reservation SQL query for predictable execution and slightly better plan caching on properties with many bookings. Drops one duplicate cached lookup per AJAX request (the room-type list is now resolved once and reused). Adds proper accessibility wiring: the calendar grid gets role="region" + aria-live="polite" so screen readers announce updates, and all buttons / inputs / cottage-name toggles in the widget now have a visible focus-ring for keyboard users. View Transitions are skipped entirely (not just animated to zero) when the visitor has prefers-reduced-motion: reduce set, saving the transition setup cost.
 
 = 0.7.4 =
 * Fixed: the cottage info popup could appear at the bottom of the page on Elementor sections whose stack includes a transformed ancestor (the same ancestor that broke clipping in v0.7.2). Root cause was a long-standing latent bug — the info sheet had `display: flex` set for its internal layout, which silently overrode the browser-default `[hidden] { display: none }`. The closed-state `transform: translateY(100%)` normally pushed it off-screen, but the transformed ancestor broke that transform's containing block. Added an explicit `[hidden] { display: none !important }` rule for popup elements so visibility is governed strictly by the attribute now.

@@ -625,6 +625,16 @@ body.mphbac-info-open {
     color: var(--mphbac-color-nav-bg);
 }
 
+/* Universal focus ring for buttons + inputs that don't already define one.
+   Keyboard users need a visible indicator of where focus is. Uses a 2px
+   outline + 2px offset so it doesn't clip against rounded button edges. */
+.mphbac-root.mphbac-root .mphbac-btn:focus-visible,
+.mphbac-root.mphbac-root .mphbac-input:focus-visible,
+.mphbac-root.mphbac-root .mphbac-row-toggle:focus-visible {
+    outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
+    outline-offset: 2px;
+}
+
 .mphbac-sheet-body {
     display: flex;
     flex-direction: column;

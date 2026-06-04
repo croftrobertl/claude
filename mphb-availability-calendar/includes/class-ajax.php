@@ -42,13 +42,15 @@ final class Ajax
             $to = $from->modify('+' . self::MAX_RANGE_DAYS . ' days');
         }
 
+        // Resolve the room list once and reuse — the response payload needs
+        // it for titles/abbrev/number, and an empty room_type_ids request
+        // also needs it to know which IDs to query availability for.
+        $rooms = Data_Provider::list_room_types();
         if (empty($room_type_ids)) {
-            $all = Data_Provider::list_room_types();
-            $room_type_ids = array_map(static fn($t) => (int) $t['id'], $all);
+            $room_type_ids = array_map(static fn($t) => (int) $t['id'], $rooms);
         }
 
         $availability = Data_Provider::get_availability($room_type_ids, $from, $to);
-        $rooms        = Data_Provider::list_room_types();
 
         wp_send_json_success([
             'rooms'        => array_values($rooms),

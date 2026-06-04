@@ -264,7 +264,8 @@ final class Data_Provider
                       AND bk.post_status IN ($status_ph)
                       AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
                       AND ci.meta_value <= %s
-                      AND co.meta_value > %s";
+                      AND co.meta_value > %s
+                    ORDER BY rr.ID";
             $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
             $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
             foreach ((array) $rows as $row) {

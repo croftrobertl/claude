@@ -7,12 +7,17 @@
 
     // Run a DOM mutation inside a same-document View Transition when supported,
     // falling back to the bare call so legacy browsers see today's behavior.
+    // Also skip the transition entirely when the user has requested reduced
+    // motion — saves the transition setup cost and avoids any flicker.
     function withViewTransition(fn) {
         if (typeof document !== 'undefined' && typeof document.startViewTransition === 'function') {
-            try {
-                document.startViewTransition(fn);
-                return;
-            } catch (e) { /* fall through to direct call */ }
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!reduceMotion) {
+                try {
+                    document.startViewTransition(fn);
+                    return;
+                } catch (e) { /* fall through to direct call */ }
+            }
         }
         fn();
     }
