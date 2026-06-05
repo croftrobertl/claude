@@ -967,17 +967,16 @@ final class Widget extends Widget_Base
         $contacts->add_control('contact_icon', [
             'label'   => __('Chip emoji', 'dcc-guest-guide'),
             'type'    => Controls_Manager::TEXT,
-            'default' => '📞',
-            'description' => __('A single emoji shown before the label (e.g. 📞 🏠 🏥 🚒).', 'dcc-guest-guide'),
+            'description' => __('A single emoji shown before the label (e.g. 📞 🏠 🏥 🚒). Defaults to 📞 if blank.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('emergency_contacts', [
-            'label'       => __('Emergency contacts', 'dcc-guest-guide'),
-            'type'        => Controls_Manager::REPEATER,
-            'fields'      => $contacts->get_controls(),
-            'title_field' => '{{{ contact_label || contact_phone || "Contact" }}}',
-            'default'     => [],
-            'description' => __('A 911 chip is added automatically at the start. List your own contacts here.', 'dcc-guest-guide'),
+            'label'        => __('Emergency contacts', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::REPEATER,
+            'fields'       => $contacts->get_controls(),
+            'title_field'  => '{{{ contact_label || contact_phone || "Contact" }}}',
+            'prevent_empty' => false,
+            'description'  => __('A 911 chip is added automatically at the start. List your own contacts here.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('enable_emergency_fab', [
@@ -1041,26 +1040,25 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('review_airbnb_url', [
-            'label'       => __('Airbnb listing URL', 'dcc-guest-guide'),
-            'type'        => Controls_Manager::URL,
-            'default'     => ['url' => '', 'is_external' => true],
-            'placeholder' => 'https://www.airbnb.com/rooms/1234567',
-            'condition'   => ['enable_checkout_review' => 'yes'],
-            'description' => __('Leave blank to hide the Airbnb button.', 'dcc-guest-guide'),
+            'label'         => __('Airbnb listing URL', 'dcc-guest-guide'),
+            'type'          => Controls_Manager::URL,
+            'show_external' => false,
+            'condition'     => ['enable_checkout_review' => 'yes'],
+            'description'   => __('Leave blank to hide the Airbnb button. e.g. https://www.airbnb.com/rooms/1234567', 'dcc-guest-guide'),
         ]);
         $this->add_control('review_vrbo_url', [
-            'label'       => __('Vrbo listing URL', 'dcc-guest-guide'),
-            'type'        => Controls_Manager::URL,
-            'default'     => ['url' => '', 'is_external' => true],
-            'placeholder' => 'https://www.vrbo.com/1234567',
-            'condition'   => ['enable_checkout_review' => 'yes'],
+            'label'         => __('Vrbo listing URL', 'dcc-guest-guide'),
+            'type'          => Controls_Manager::URL,
+            'show_external' => false,
+            'condition'     => ['enable_checkout_review' => 'yes'],
+            'description'   => __('e.g. https://www.vrbo.com/1234567', 'dcc-guest-guide'),
         ]);
         $this->add_control('review_google_url', [
-            'label'       => __('Google review URL', 'dcc-guest-guide'),
-            'type'        => Controls_Manager::URL,
-            'default'     => ['url' => '', 'is_external' => true],
-            'placeholder' => 'https://g.page/r/…/review',
-            'condition'   => ['enable_checkout_review' => 'yes'],
+            'label'         => __('Google review URL', 'dcc-guest-guide'),
+            'type'          => Controls_Manager::URL,
+            'show_external' => false,
+            'condition'     => ['enable_checkout_review' => 'yes'],
+            'description'   => __('e.g. https://g.page/r/.../review', 'dcc-guest-guide'),
         ]);
 
         $this->end_controls_section();
