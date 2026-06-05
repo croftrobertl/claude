@@ -82,8 +82,13 @@ final class Widget extends Widget_Base
         $this->register_sections_controls();
         $this->register_items_controls();
         $this->register_search_controls();
-        $this->register_emergency_controls();
-        $this->register_review_controls();
+        // v0.9.1: emergency + review panels temporarily disabled while we
+        // diagnose an editor-hang report. The render-side code paths are
+        // preserved (controlled by data-config flags that remain false
+        // when these panels don't register their toggles), so existing
+        // widgets render unchanged.
+        // $this->register_emergency_controls();
+        // $this->register_review_controls();
         $this->register_strings_controls();
 
         // Style tab
@@ -614,17 +619,7 @@ final class Widget extends Widget_Base
             'description' => __('Per-section color override for this tile\'s icon, quick-action chip, and hover state. Leave blank to use the global primary color.', 'dcc-guest-guide'),
         ]);
 
-        $repeater->add_control('section_role', [
-            'label'   => __('Section role', 'dcc-guest-guide'),
-            'type'    => Controls_Manager::SELECT,
-            'default' => '',
-            'options' => [
-                ''          => __('Normal section', 'dcc-guest-guide'),
-                'emergency' => __('Emergency (red accent + pinned + SOS button)', 'dcc-guest-guide'),
-                'checkout'  => __('Checkout (shows review prompt at the bottom)', 'dcc-guest-guide'),
-            ],
-            'description' => __('Mark this section for special treatment. Emergency tiles are pinned, painted red, and can show a floating SOS button. Checkout sections append the review prompt configured in the Checkout Review panel. At most one of each role per widget.', 'dcc-guest-guide'),
-        ]);
+        // v0.9.1: section_role temporarily disabled — see register_controls().
 
         $repeater->add_control('section_icon_anim', [
             'label'   => __('Icon hover animation override', 'dcc-guest-guide'),
@@ -1106,19 +1101,9 @@ final class Widget extends Widget_Base
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
             'str_more_menu'      => [__('More-menu button label', 'dcc-guest-guide'), __('More', 'dcc-guest-guide')],
-            'str_emergency_sos'      => [__('SOS button label', 'dcc-guest-guide'),                  __('Emergency', 'dcc-guest-guide')],
-            'str_emergency_911'      => [__('Auto-added 911 chip label', 'dcc-guest-guide'),         __('Call 911', 'dcc-guest-guide')],
-            'str_noaa_banner_prefix' => [__('NOAA banner prefix', 'dcc-guest-guide'),                __('Active weather alert:', 'dcc-guest-guide')],
-            'str_noaa_more'          => [__('NOAA "more info" link text', 'dcc-guest-guide'),       __('More info', 'dcc-guest-guide')],
-            'str_review_heading'     => [__('Review prompt heading', 'dcc-guest-guide'),             __('How was your stay?', 'dcc-guest-guide')],
-            'str_review_yes'         => [__('Review 👍 button label', 'dcc-guest-guide'),            __('Loved it', 'dcc-guest-guide')],
-            'str_review_no'          => [__('Review 👎 button label', 'dcc-guest-guide'),            __('Something was off', 'dcc-guest-guide')],
-            'str_review_help'        => [__('Review panel helper text', 'dcc-guest-guide'),          __('Edit the suggested review if you\'d like, then pick a platform — we\'ll copy the text and open the site for you.', 'dcc-guest-guide')],
-            'str_review_copy_airbnb' => [__('Copy & open Airbnb', 'dcc-guest-guide'),                __('Copy & open Airbnb', 'dcc-guest-guide')],
-            'str_review_copy_vrbo'   => [__('Copy & open Vrbo', 'dcc-guest-guide'),                  __('Copy & open Vrbo', 'dcc-guest-guide')],
-            'str_review_copy_google' => [__('Copy & open Google', 'dcc-guest-guide'),                __('Copy & open Google', 'dcc-guest-guide')],
-            'str_review_copied'      => [__('Review copied toast', 'dcc-guest-guide'),               __('Review text copied — paste it after the page opens.', 'dcc-guest-guide')],
-            'str_review_thanks'      => [__('Review prompt collapsed thanks', 'dcc-guest-guide'),    __('Thanks for the feedback!', 'dcc-guest-guide')],
+            // v0.9.1: emergency + review strings temporarily disabled.
+            // The PHP render layer uses ?? __() fallbacks so omitting these
+            // controls is harmless.
         ];
 
         foreach ($strings as $key => [$label, $default]) {
