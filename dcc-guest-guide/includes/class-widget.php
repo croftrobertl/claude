@@ -82,6 +82,8 @@ final class Widget extends Widget_Base
         $this->register_sections_controls();
         $this->register_items_controls();
         $this->register_search_controls();
+        $this->register_emergency_controls();
+        $this->register_review_controls();
         $this->register_strings_controls();
 
         // Style tab
@@ -612,6 +614,18 @@ final class Widget extends Widget_Base
             'description' => __('Per-section color override for this tile\'s icon, quick-action chip, and hover state. Leave blank to use the global primary color.', 'dcc-guest-guide'),
         ]);
 
+        $repeater->add_control('section_role', [
+            'label'   => __('Section role', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => [
+                ''          => __('Normal section', 'dcc-guest-guide'),
+                'emergency' => __('Emergency (red accent + pinned + SOS button)', 'dcc-guest-guide'),
+                'checkout'  => __('Checkout (shows review prompt at the bottom)', 'dcc-guest-guide'),
+            ],
+            'description' => __('Mark this section for special treatment. Emergency tiles are pinned, painted red, and can show a floating SOS button. Checkout sections append the review prompt configured in the Checkout Review panel. At most one of each role per widget.', 'dcc-guest-guide'),
+        ]);
+
         $repeater->add_control('section_icon_anim', [
             'label'   => __('Icon hover animation override', 'dcc-guest-guide'),
             'type'    => Controls_Manager::SELECT,
@@ -918,6 +932,140 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    private function register_emergency_controls(): void
+    {
+        $this->start_controls_section('section_emergency', [
+            'label' => __('Emergency mode', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->add_control('emergency_intro', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert" style="background:#fdecec;border-color:#f0b3b3;color:#7a1414;">' .
+                                  esc_html__('Mark one section above with role = Emergency. These controls drive how that section is presented — pinned tile, red accent, contacts strip, optional SOS button, optional NOAA weather-alert banner.', 'dcc-guest-guide') .
+                                  '</div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $contacts = new Repeater();
+        $contacts->add_control('contact_label', [
+            'label'       => __('Label', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('What the chip says (e.g. "Host (Bob)", "Mt Dora Hospital").', 'dcc-guest-guide'),
+        ]);
+        $contacts->add_control('contact_phone', [
+            'label'       => __('Phone number', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'description' => __('Tapping renders as a tel: link. Leave blank if the contact is a map destination instead.', 'dcc-guest-guide'),
+        ]);
+        $contacts->add_control('contact_map', [
+            'label'       => __('Map URL or address', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'description' => __('Optional. If set and phone is blank, the chip opens a maps link instead.', 'dcc-guest-guide'),
+        ]);
+        $contacts->add_control('contact_icon', [
+            'label'   => __('Chip emoji', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::TEXT,
+            'default' => '📞',
+            'description' => __('A single emoji shown before the label (e.g. 📞 🏠 🏥 🚒).', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('emergency_contacts', [
+            'label'       => __('Emergency contacts', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::REPEATER,
+            'fields'      => $contacts->get_controls(),
+            'title_field' => '{{{ contact_label || contact_phone || "Contact" }}}',
+            'default'     => [],
+            'description' => __('A 911 chip is added automatically at the start. List your own contacts here.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('enable_emergency_fab', [
+            'label'        => __('Show floating SOS button in detail views', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('A small red triangle in the corner that jumps straight to the emergency section from anywhere in the guide.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('emergency_position', [
+            'label'   => __('Tile position', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => 'top',
+            'options' => [
+                'top'    => __('Top of menu (default)', 'dcc-guest-guide'),
+                'bottom' => __('Bottom of menu', 'dcc-guest-guide'),
+            ],
+        ]);
+
+        $this->add_control('enable_noaa_banner', [
+            'label'        => __('Show NOAA active-alert banner', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('When the National Weather Service has an active alert for the cottage location, render a red banner at the top of the guide. Uses the cottage latitude/longitude from the General panel. Cached server-side for 30 min.', 'dcc-guest-guide'),
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_review_controls(): void
+    {
+        $this->start_controls_section('section_review', [
+            'label' => __('Checkout review prompt', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->add_control('review_intro', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => '<div class="elementor-panel-alert elementor-panel-alert-info">' .
+                                  esc_html__('Mark one section above with role = Checkout. The review prompt below appears at the bottom of that section. 👍 reveals the editable template + per-platform "Copy & open" buttons; 👎 opens the Report-a-Problem dialog (requires that feature enabled in General).', 'dcc-guest-guide') .
+                                  '</div>',
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $this->add_control('enable_checkout_review', [
+            'label'        => __('Enable review prompt', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+        ]);
+
+        $this->add_control('review_template_text', [
+            'label'       => __('Suggested review (editable by guest)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 6,
+            'default'     => __('Doracanal Court was a wonderful stay. The cottage was spotless, the lake views were exactly as advertised, and the host was thoughtful and quick to respond. Highly recommend.', 'dcc-guest-guide'),
+            'condition'   => ['enable_checkout_review' => 'yes'],
+            'description' => __('Pre-fills the textarea the guest copies. Supports {guest_name} (best-effort parsing of ?stay=) and {stay_key}.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('review_airbnb_url', [
+            'label'       => __('Airbnb listing URL', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::URL,
+            'default'     => ['url' => '', 'is_external' => true],
+            'placeholder' => 'https://www.airbnb.com/rooms/1234567',
+            'condition'   => ['enable_checkout_review' => 'yes'],
+            'description' => __('Leave blank to hide the Airbnb button.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('review_vrbo_url', [
+            'label'       => __('Vrbo listing URL', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::URL,
+            'default'     => ['url' => '', 'is_external' => true],
+            'placeholder' => 'https://www.vrbo.com/1234567',
+            'condition'   => ['enable_checkout_review' => 'yes'],
+        ]);
+        $this->add_control('review_google_url', [
+            'label'       => __('Google review URL', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::URL,
+            'default'     => ['url' => '', 'is_external' => true],
+            'placeholder' => 'https://g.page/r/…/review',
+            'condition'   => ['enable_checkout_review' => 'yes'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
     private function register_strings_controls(): void
     {
         $this->start_controls_section('section_strings', [
@@ -960,6 +1108,19 @@ final class Widget extends Widget_Base
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
             'str_more_menu'      => [__('More-menu button label', 'dcc-guest-guide'), __('More', 'dcc-guest-guide')],
+            'str_emergency_sos'      => [__('SOS button label', 'dcc-guest-guide'),                  __('Emergency', 'dcc-guest-guide')],
+            'str_emergency_911'      => [__('Auto-added 911 chip label', 'dcc-guest-guide'),         __('Call 911', 'dcc-guest-guide')],
+            'str_noaa_banner_prefix' => [__('NOAA banner prefix', 'dcc-guest-guide'),                __('Active weather alert:', 'dcc-guest-guide')],
+            'str_noaa_more'          => [__('NOAA "more info" link text', 'dcc-guest-guide'),       __('More info', 'dcc-guest-guide')],
+            'str_review_heading'     => [__('Review prompt heading', 'dcc-guest-guide'),             __('How was your stay?', 'dcc-guest-guide')],
+            'str_review_yes'         => [__('Review 👍 button label', 'dcc-guest-guide'),            __('Loved it', 'dcc-guest-guide')],
+            'str_review_no'          => [__('Review 👎 button label', 'dcc-guest-guide'),            __('Something was off', 'dcc-guest-guide')],
+            'str_review_help'        => [__('Review panel helper text', 'dcc-guest-guide'),          __('Edit the suggested review if you\'d like, then pick a platform — we\'ll copy the text and open the site for you.', 'dcc-guest-guide')],
+            'str_review_copy_airbnb' => [__('Copy & open Airbnb', 'dcc-guest-guide'),                __('Copy & open Airbnb', 'dcc-guest-guide')],
+            'str_review_copy_vrbo'   => [__('Copy & open Vrbo', 'dcc-guest-guide'),                  __('Copy & open Vrbo', 'dcc-guest-guide')],
+            'str_review_copy_google' => [__('Copy & open Google', 'dcc-guest-guide'),                __('Copy & open Google', 'dcc-guest-guide')],
+            'str_review_copied'      => [__('Review copied toast', 'dcc-guest-guide'),               __('Review text copied — paste it after the page opens.', 'dcc-guest-guide')],
+            'str_review_thanks'      => [__('Review prompt collapsed thanks', 'dcc-guest-guide'),    __('Thanks for the feedback!', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1723,6 +1884,36 @@ final class Widget extends Widget_Base
         $show_toggle    = ($s['show_theme_toggle'] ?? 'yes') === 'yes';
         $theme_preset   = (string) ($s['theme_preset'] ?? 'custom');
 
+        // v0.9: resolve emergency + checkout section keys. First section with
+        // the role wins; duplicates are silently ignored.
+        $emergency_key = '';
+        $checkout_key  = '';
+        foreach ($sections as $sec) {
+            $sk   = trim((string) ($sec['section_key'] ?? ''));
+            $role = (string) ($sec['section_role'] ?? '');
+            if ($sk === '') { continue; }
+            if ($emergency_key === '' && $role === 'emergency') { $emergency_key = $sk; }
+            if ($checkout_key  === '' && $role === 'checkout')  { $checkout_key  = $sk; }
+        }
+
+        // Build the emergency-contacts list for the data-config block; the
+        // 911 chip is auto-added on the JS side using str_emergency_911.
+        $emergency_contacts_raw = (array) ($s['emergency_contacts'] ?? []);
+        $emergency_contacts = [];
+        foreach ($emergency_contacts_raw as $row) {
+            $label = trim((string) ($row['contact_label'] ?? ''));
+            $phone = trim((string) ($row['contact_phone'] ?? ''));
+            $map   = trim((string) ($row['contact_map'] ?? ''));
+            $icon  = trim((string) ($row['contact_icon'] ?? '📞'));
+            if ($label === '' && $phone === '' && $map === '') { continue; }
+            $emergency_contacts[] = [
+                'label' => $label,
+                'phone' => $phone,
+                'map'   => $map,
+                'icon'  => $icon !== '' ? $icon : '📞',
+            ];
+        }
+
         $config = [
             'revealMode'       => $reveal_mode,
             'menuLayout'       => $menu_layout,
@@ -1767,6 +1958,39 @@ final class Widget extends Widget_Base
                     'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
                 ],
             ],
+            'emergency'        => [
+                'key'        => $emergency_key,
+                'fab'        => $emergency_key !== '' && ($s['enable_emergency_fab'] ?? '') === 'yes',
+                'noaaBanner' => $emergency_key !== '' && ($s['enable_noaa_banner'] ?? '') === 'yes',
+                'contacts'   => $emergency_contacts,
+                'strings'    => [
+                    'sos'         => (string) ($s['str_emergency_sos']      ?? __('Emergency', 'dcc-guest-guide')),
+                    'call911'     => (string) ($s['str_emergency_911']      ?? __('Call 911', 'dcc-guest-guide')),
+                    'bannerPrefix'=> (string) ($s['str_noaa_banner_prefix'] ?? __('Active weather alert:', 'dcc-guest-guide')),
+                    'bannerMore'  => (string) ($s['str_noaa_more']          ?? __('More info', 'dcc-guest-guide')),
+                ],
+            ],
+            'review'           => [
+                'enabled' => $checkout_key !== '' && ($s['enable_checkout_review'] ?? '') === 'yes',
+                'key'     => $checkout_key,
+                'template'=> (string) ($s['review_template_text'] ?? ''),
+                'urls'    => [
+                    'airbnb' => (string) ($s['review_airbnb_url']['url'] ?? ''),
+                    'vrbo'   => (string) ($s['review_vrbo_url']['url']   ?? ''),
+                    'google' => (string) ($s['review_google_url']['url'] ?? ''),
+                ],
+                'strings' => [
+                    'heading'    => (string) ($s['str_review_heading']     ?? __('How was your stay?', 'dcc-guest-guide')),
+                    'yes'        => (string) ($s['str_review_yes']         ?? __('Loved it', 'dcc-guest-guide')),
+                    'no'         => (string) ($s['str_review_no']          ?? __('Something was off', 'dcc-guest-guide')),
+                    'help'       => (string) ($s['str_review_help']        ?? ''),
+                    'copyAirbnb' => (string) ($s['str_review_copy_airbnb'] ?? __('Copy & open Airbnb', 'dcc-guest-guide')),
+                    'copyVrbo'   => (string) ($s['str_review_copy_vrbo']   ?? __('Copy & open Vrbo', 'dcc-guest-guide')),
+                    'copyGoogle' => (string) ($s['str_review_copy_google'] ?? __('Copy & open Google', 'dcc-guest-guide')),
+                    'copied'     => (string) ($s['str_review_copied']      ?? __('Review text copied.', 'dcc-guest-guide')),
+                    'thanks'     => (string) ($s['str_review_thanks']      ?? __('Thanks for the feedback!', 'dcc-guest-guide')),
+                ],
+            ],
             'darkMode'         => $dark_mode,
             'themePreset'      => $theme_preset,
             'searchIndex'      => $search_index,
@@ -1782,6 +2006,11 @@ final class Widget extends Widget_Base
         ];
 
         $root_class = 'dccgg-root';
+        // v0.9: emergency tile position is driven by a root-level class.
+        $emergency_pos = (string) ($s['emergency_position'] ?? 'top');
+        if ($emergency_key !== '' && in_array($emergency_pos, ['top', 'bottom'], true)) {
+            $root_class .= ' dccgg-emergency-pos-' . $emergency_pos;
+        }
         // v0.6: emit per-section accent overrides as a tiny inline <style>.
         $accent_css = self::accent_override_styles($this->get_id(), $sections);
         ?>
@@ -1794,6 +2023,20 @@ final class Widget extends Widget_Base
                     <?php \Elementor\Icons_Manager::render_icon((array) ($s['fab_icon'] ?? []), ['aria-hidden' => 'true']); ?>
                 </button>
                 <div class="dccgg-overlay" hidden></div>
+            <?php endif; ?>
+
+            <?php if ($emergency_key !== '' && ($s['enable_emergency_fab'] ?? '') === 'yes') : ?>
+                <button type="button" class="dccgg-sos-fab" data-emergency-key="<?php echo esc_attr($emergency_key); ?>" aria-label="<?php echo esc_attr($s['str_emergency_sos'] ?? __('Emergency', 'dcc-guest-guide')); ?>" hidden>
+                    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                </button>
+            <?php endif; ?>
+
+            <?php if ($emergency_key !== '' && ($s['enable_noaa_banner'] ?? '') === 'yes') : ?>
+                <div class="dccgg-noaa-banner" role="alert" hidden>
+                    <span class="dccgg-noaa-ico" aria-hidden="true">⚠️</span>
+                    <span class="dccgg-noaa-text"></span>
+                    <a class="dccgg-noaa-link" href="#" target="_blank" rel="noopener" hidden></a>
+                </div>
             <?php endif; ?>
 
             <?php $this->render_print_cover($s, $sections); ?>
@@ -1880,6 +2123,7 @@ final class Widget extends Widget_Base
                 $qa_on = ($sec['enable_quick_action'] ?? '') === 'yes' && trim((string) ($sec['quick_action_val'] ?? '')) !== '';
                 $procedure = ($sec['procedure_mode'] ?? '') === 'yes';
                 $anim_override = (string) ($sec['section_icon_anim'] ?? '');
+                $role          = (string) ($sec['section_role'] ?? '');
 
                 // Stable IDs for a11y linkage. Hashed key so a quoted/odd
                 // section key still produces a valid attribute value.
@@ -1887,7 +2131,7 @@ final class Widget extends Widget_Base
                 $tile_id    = 'dccgg-tile-' . $safe_key;
                 $panel_id   = 'dccgg-panel-' . $safe_key;
                 ?>
-                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>"<?php echo $anim_override !== '' ? ' data-icon-anim="' . esc_attr($anim_override) . '"' : ''; ?>>
+                <div class="dccgg-tile-wrap<?php echo $procedure ? ' dccgg-tile-wrap--procedure' : ''; ?>" data-section-key="<?php echo esc_attr($key); ?>" data-procedure="<?php echo $procedure ? '1' : '0'; ?>"<?php echo $anim_override !== '' ? ' data-icon-anim="' . esc_attr($anim_override) . '"' : ''; ?><?php echo $role !== '' ? ' data-section-role="' . esc_attr($role) . '"' : ''; ?>>
                     <?php if ($reveal_mode === 'flip') : ?>
                         <div class="dccgg-flip-card">
                             <div class="dccgg-flip-inner">
@@ -2003,6 +2247,8 @@ final class Widget extends Widget_Base
         $section_count  = count($valid_sections);
         $lat = (float) ($s['cottage_latitude']  ?? 28.8028);
         $lng = (float) ($s['cottage_longitude'] ?? -81.6448);
+        $emergency_contacts_render = (array) ($s['emergency_contacts'] ?? []);
+        $label_911 = (string) ($s['str_emergency_911'] ?? __('Call 911', 'dcc-guest-guide'));
         ?>
         <div class="dccgg-stage" aria-live="polite">
             <?php foreach ($valid_sections as $idx => $sec) :
@@ -2019,13 +2265,16 @@ final class Widget extends Widget_Base
                 $bg_url    = (string) ($sec['section_bg_image']['url'] ?? '');
                 $bg_op     = (int) ($sec['section_bg_overlay']['size'] ?? 55);
                 $show_cond = ($sec['show_conditions_card'] ?? '') === 'yes';
+                $role      = (string) ($sec['section_role'] ?? '');
                 $detail_classes = 'dccgg-detail';
                 if ($show_toc)  { $detail_classes .= ' dccgg-detail--has-toc'; }
                 if ($wizard)    { $detail_classes .= ' dccgg-detail--wizard'; }
                 if ($checklist) { $detail_classes .= ' dccgg-detail--checklist'; }
                 if ($bg_url !== '') { $detail_classes .= ' dccgg-detail--parallax'; }
+                if ($role === 'emergency') { $detail_classes .= ' dccgg-detail--emergency'; }
+                if ($role === 'checkout')  { $detail_classes .= ' dccgg-detail--checkout'; }
                 ?>
-                <div class="<?php echo esc_attr($detail_classes); ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" data-checklist="<?php echo $checklist ? '1' : '0'; ?>" hidden>
+                <div class="<?php echo esc_attr($detail_classes); ?>" data-key="<?php echo esc_attr($key); ?>" data-wizard="<?php echo $wizard ? '1' : '0'; ?>" data-checklist="<?php echo $checklist ? '1' : '0'; ?>"<?php echo $role !== '' ? ' data-section-role="' . esc_attr($role) . '"' : ''; ?> hidden>
                     <?php if ($bg_url !== '') : ?>
                         <div class="dccgg-parallax-bg" aria-hidden="true" style="background-image:url('<?php echo esc_url($bg_url); ?>');">
                             <div class="dccgg-parallax-overlay" style="opacity: <?php echo esc_attr((string) ($bg_op / 100)); ?>;"></div>
@@ -2104,6 +2353,7 @@ final class Widget extends Widget_Base
                             </nav>
                         <?php endif; ?>
                         <?php if ($show_cond) : self::render_conditions_card($lat, $lng); endif; ?>
+                        <?php if ($role === 'emergency') : self::render_emergency_contacts($emergency_contacts_render, $label_911); endif; ?>
                         <?php if ($wizard) : ?>
                             <?php $this->render_wizard($items, $s); ?>
                         <?php elseif ($procedure) : ?>
@@ -2123,9 +2373,91 @@ final class Widget extends Widget_Base
                                 } ?>
                             </div>
                         <?php endif; ?>
+                        <?php if ($role === 'checkout' && ($s['enable_checkout_review'] ?? '') === 'yes') : $this->render_review_prompt($s, $title); endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Emergency contacts quick-call strip. Renders at the top of the
+     * emergency section's detail. The 911 chip is auto-prepended so the
+     * host doesn't have to remember to add it.
+     */
+    public static function render_emergency_contacts(array $contacts, string $label_911): void
+    {
+        ?>
+        <div class="dccgg-emergency-strip" aria-label="<?php echo esc_attr__('Emergency contacts', 'dcc-guest-guide'); ?>">
+            <a class="dccgg-emergency-chip dccgg-emergency-chip--911" href="tel:911">
+                <span class="dccgg-emergency-chip-ico" aria-hidden="true">🚨</span>
+                <span class="dccgg-emergency-chip-label"><?php echo esc_html($label_911); ?></span>
+            </a>
+            <?php foreach ($contacts as $row) :
+                $label = trim((string) ($row['contact_label'] ?? ''));
+                $phone = trim((string) ($row['contact_phone'] ?? ''));
+                $map   = trim((string) ($row['contact_map'] ?? ''));
+                $icon  = trim((string) ($row['contact_icon'] ?? '📞'));
+                if ($icon === '') { $icon = '📞'; }
+                if ($label === '' && $phone === '' && $map === '') { continue; }
+                // Prefer phone, fall back to map URL, fall back to text-only chip.
+                if ($phone !== '') {
+                    $href     = 'tel:' . preg_replace('/[^0-9+]/', '', $phone);
+                    $external = false;
+                } elseif ($map !== '') {
+                    $href     = (preg_match('~^https?://~i', $map) ? $map : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($map));
+                    $external = true;
+                } else {
+                    $href     = '';
+                    $external = false;
+                }
+                $text = $label !== '' ? $label : ($phone !== '' ? $phone : $map);
+                if ($href !== '') : ?>
+                    <a class="dccgg-emergency-chip" href="<?php echo esc_url($href); ?>"<?php echo $external ? ' target="_blank" rel="noopener"' : ''; ?>>
+                        <span class="dccgg-emergency-chip-ico" aria-hidden="true"><?php echo esc_html($icon); ?></span>
+                        <span class="dccgg-emergency-chip-label"><?php echo esc_html($text); ?></span>
+                        <?php if ($label !== '' && $phone !== '') : ?>
+                            <span class="dccgg-emergency-chip-sub"><?php echo esc_html($phone); ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php else : ?>
+                    <span class="dccgg-emergency-chip dccgg-emergency-chip--static">
+                        <span class="dccgg-emergency-chip-ico" aria-hidden="true"><?php echo esc_html($icon); ?></span>
+                        <span class="dccgg-emergency-chip-label"><?php echo esc_html($text); ?></span>
+                    </span>
+                <?php endif;
+            endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Checkout review prompt scaffold. JS injects the 👍 / 👎 panel into
+     * .dccgg-review-prompt on first open. The prompt is wired via class
+     * + data-section so the JS doesn't need to know which key it belongs
+     * to in advance.
+     */
+    private function render_review_prompt(array $s, string $section_title): void
+    {
+        $heading = (string) ($s['str_review_heading'] ?? __('How was your stay?', 'dcc-guest-guide'));
+        $yes     = (string) ($s['str_review_yes']     ?? __('Loved it', 'dcc-guest-guide'));
+        $no      = (string) ($s['str_review_no']      ?? __('Something was off', 'dcc-guest-guide'));
+        ?>
+        <div class="dccgg-review-prompt" data-review-section="<?php echo esc_attr($section_title); ?>">
+            <h3 class="dccgg-review-heading"><?php echo esc_html($heading); ?></h3>
+            <div class="dccgg-review-choice">
+                <button type="button" class="dccgg-review-yes">
+                    <span class="dccgg-review-emoji" aria-hidden="true">👍</span>
+                    <span><?php echo esc_html($yes); ?></span>
+                </button>
+                <button type="button" class="dccgg-review-no">
+                    <span class="dccgg-review-emoji" aria-hidden="true">👎</span>
+                    <span><?php echo esc_html($no); ?></span>
+                </button>
+            </div>
+            <div class="dccgg-review-panel" hidden></div>
+            <div class="dccgg-review-thanks" hidden></div>
         </div>
         <?php
     }
@@ -2474,8 +2806,15 @@ final class Widget extends Widget_Base
         $rules = [];
         foreach ($sections as $sec) {
             $key   = trim((string) ($sec['section_key'] ?? ''));
+            if ($key === '') { continue; }
+            $role  = (string) ($sec['section_role'] ?? '');
+            // Emergency role auto-applies the baked-in emergency color,
+            // unless the host has manually picked a section_accent.
             $color = trim((string) ($sec['section_accent'] ?? ''));
-            if ($key === '' || $color === '') { continue; }
+            if ($color === '' && $role === 'emergency') {
+                $color = '#d54040';
+            }
+            if ($color === '') { continue; }
             $color = sanitize_hex_color($color) ?: $color;
             // Scope by tile-wrap data attribute so the override only paints
             // this tile + chip — not the menu-wide primary.

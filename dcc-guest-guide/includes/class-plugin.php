@@ -49,6 +49,76 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_weather',  [$this, 'handle_weather']);
         add_action('wp_ajax_dccgg_report_problem',        [$this, 'handle_report_problem']);
         add_action('wp_ajax_nopriv_dccgg_report_problem', [$this, 'handle_report_problem']);
+        add_action('wp_ajax_dccgg_noaa_alerts',         [$this, 'handle_noaa_alerts']);
+        add_action('wp_ajax_nopriv_dccgg_noaa_alerts',  [$this, 'handle_noaa_alerts']);
+    }
+
+    /**
+     * AJAX: NWS active-alert proxy. Mirrors handle_weather() — round lat/lng
+     * to 3 decimals, 30-min transient cache, single shared upstream call.
+     * NWS requires a polite User-Agent identifying the contact email.
+     * On debug, accepts ?fake=1 to return a synthetic Hurricane Warning so
+     * the banner can be exercised without waiting for live weather.
+     */
+    public function handle_noaa_alerts(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+        $lat = isset($_GET['lat']) ? (float) $_GET['lat'] : 0.0;
+        $lng = isset($_GET['lng']) ? (float) $_GET['lng'] : 0.0;
+        if ($lat === 0.0 && $lng === 0.0) {
+            wp_send_json_error(['message' => 'lat/lng required'], 400);
+        }
+        if (!empty($_GET['fake'])) {
+            wp_send_json_success([
+                'alerts' => [[
+                    'event'    => 'Hurricane Warning (TEST)',
+                    'headline' => 'TEST — Hurricane Warning in effect for Lake County. This is a simulated alert.',
+                    'severity' => 'Extreme',
+                    'url'      => 'https://www.weather.gov/',
+                ]],
+            ]);
+        }
+        $lat = round($lat, 3);
+        $lng = round($lng, 3);
+        $key = 'dccgg_noaa_' . md5($lat . ':' . $lng);
+        $cached = get_transient($key);
+        if (is_array($cached)) {
+            wp_send_json_success($cached);
+        }
+        $url = sprintf('https://api.weather.gov/alerts/active?point=%s,%s', $lat, $lng);
+        $contact = (string) get_option('admin_email', '');
+        $res = wp_remote_get($url, [
+            'timeout' => 8,
+            'headers' => [
+                'Accept'     => 'application/geo+json',
+                'User-Agent' => 'DCC Guest Guide / WP plugin (contact: ' . ($contact !== '' ? $contact : 'site-admin') . ')',
+            ],
+        ]);
+        if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
+            // Cache a tombstone so a broken upstream doesn't re-hit on every visitor.
+            set_transient($key, ['alerts' => []], 10 * MINUTE_IN_SECONDS);
+            wp_send_json_success(['alerts' => []]);
+        }
+        $data = json_decode(wp_remote_retrieve_body($res), true);
+        $alerts = [];
+        if (is_array($data) && isset($data['features']) && is_array($data['features'])) {
+            foreach ($data['features'] as $f) {
+                $p = $f['properties'] ?? [];
+                $event    = (string) ($p['event']    ?? '');
+                $headline = (string) ($p['headline'] ?? $event);
+                $severity = (string) ($p['severity'] ?? '');
+                if ($event === '') { continue; }
+                $alerts[] = [
+                    'event'    => $event,
+                    'headline' => $headline,
+                    'severity' => $severity,
+                    'url'      => (string) ($p['@id'] ?? ''),
+                ];
+            }
+        }
+        $payload = ['alerts' => $alerts];
+        set_transient($key, $payload, 30 * MINUTE_IN_SECONDS);
+        wp_send_json_success($payload);
     }
 
     /**

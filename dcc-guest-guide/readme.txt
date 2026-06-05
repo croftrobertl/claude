@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.0
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,86 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.0 =
+
+New features:
+* **Emergency / hurricane mode** — mark any section with role =
+  Emergency in its repeater row. That section's tile is auto-painted
+  red, pinned to the top (or bottom) of the menu, and given a
+  triangle-exclamation icon. The detail view starts with a quick-
+  call strip: an auto-added 911 chip plus any host-configured
+  contacts (each with label, tel: link, optional map URL, emoji).
+  Hurricane prep + shutoff diagrams reuse the existing checklist
+  mode and gallery + hotspots features — no new content type.
+* **Floating SOS button** — optional. A small red triangle that
+  appears in the corner whenever a section detail is open, jumping
+  straight to the emergency section from anywhere in the guide.
+* **NOAA active-alert banner** — optional. When the National
+  Weather Service has an active alert for the cottage location
+  (uses the lat/lng configured in the General panel), a red banner
+  renders at the top of the guide with the alert headline and a
+  link to the full details. Cached server-side for 30 minutes;
+  silent when there's no active alert.
+* **One-tap review prompt at checkout** — mark any section with
+  role = Checkout. A panel appears at the bottom: 👍 Loved it /
+  👎 Something was off. 👍 reveals an editable suggested review
+  (with `{guest_name}` and `{stay_key}` placeholders parsed from
+  `?stay=`) plus per-platform "Copy & open" buttons for Airbnb,
+  Vrbo, and Google — only the buttons whose URL the host has
+  configured appear. 👎 routes into the Report-a-Problem dialog
+  with the section pre-tagged as checkout feedback. The prompt
+  collapses to a "Thanks for the feedback!" line on subsequent
+  visits (scoped per stay via `?stay=`).
+
+Admin controls added:
+* Sections repeater → new "Section role" SELECT (Normal /
+  Emergency / Checkout).
+* New "Emergency mode" panel: emergency contacts repeater (label /
+  phone / map / emoji), enable floating SOS button, tile position
+  (top / bottom), enable NOAA active-alert banner.
+* New "Checkout review prompt" panel: enable toggle, suggested
+  review template (textarea, supports placeholders), Airbnb / Vrbo
+  / Google URL fields.
+* New strings on the Labels & Strings panel for every visible
+  emergency + review string.
+
+Implementation notes:
+* New AJAX endpoint `dccgg_noaa_alerts` proxies
+  `api.weather.gov/alerts/active?point=lat,lng` with a 30-min
+  transient cache and a polite User-Agent (`DCC Guest Guide / WP
+  plugin / contact: {admin_email}`). Append
+  `?dccgg-fake-alert=1` to the page URL to render a simulated
+  alert for testing.
+* Append `?dccgg-reset-review=1` to re-enable the review prompt
+  after a guest has acted on it.
+* The emergency tile uses CSS `order: -1` (or `order: 999` when
+  "bottom" is picked) to pin its position regardless of where the
+  host placed the row in the Sections repeater.
+* Emergency accent is forced to `#d54040` via the existing
+  `accent_override_styles()` path unless the host manually sets a
+  `section_accent` color on the row.
+* All new elements are hidden in `@media print` so the PDF
+  booklet stays clean.
+
+Smoke checklist additions:
+1. Set a section's role to Emergency, add 2–3 emergency contacts.
+   Confirm the tile is pinned, red, and that the detail view's
+   contacts strip renders with 911 + your chips, each tappable.
+2. Toggle "Floating SOS button" → open any other section detail →
+   the red triangle appears in the corner → tap → emergency
+   section opens.
+3. Toggle "NOAA banner" → visit the page with
+   `?dccgg-fake-alert=1` → a red banner appears at the top with
+   "Hurricane Warning (TEST)".
+4. Set a section's role to Checkout, configure
+   `review_template_text` + one or more review URLs. Visit the page
+   with `?stay=jane-2026-06` → open the checkout section → tap 👍 →
+   suggested review appears with "Jane" interpolated → tap a
+   platform button → toast confirms copy, the review site opens in
+   a new tab. Reload → prompt is collapsed; append
+   `?dccgg-reset-review=1` → prompt reappears. Tap 👎 instead →
+   Report-a-Problem dialog opens with "[checkout feedback]" prefix.
 
 = 0.8.0 =
 

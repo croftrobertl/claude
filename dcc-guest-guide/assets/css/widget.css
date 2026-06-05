@@ -2276,6 +2276,249 @@ video.dccgg-media {
 }
 
 /* -------------------------------------------------------------- *
+ * Emergency mode + checkout review prompt (v0.9)
+ * -------------------------------------------------------------- */
+.dccgg-root.dccgg-root { --dccgg-color-emergency: #d54040; }
+
+/* Pin the emergency tile via CSS order. The menu container becomes a
+   flex column on order-aware layouts; grid layouts use order natively. */
+.dccgg-root .dccgg-menu { /* order-aware in both grid and flex */ }
+.dccgg-root.dccgg-emergency-pos-top .dccgg-tile-wrap[data-section-role="emergency"]    { order: -1; }
+.dccgg-root.dccgg-emergency-pos-bottom .dccgg-tile-wrap[data-section-role="emergency"] { order:  999; }
+
+/* Detail-header tint for the emergency role. */
+.dccgg-root.dccgg-root .dccgg-detail--emergency .dccgg-detail-title svg,
+.dccgg-root.dccgg-root .dccgg-detail--emergency .dccgg-detail-title i { color: var(--dccgg-color-emergency); }
+.dccgg-root.dccgg-root .dccgg-detail--emergency .dccgg-detail-title { color: var(--dccgg-color-emergency); }
+
+/* Emergency contacts strip. */
+.dccgg-root.dccgg-root .dccgg-emergency-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 18px;
+    padding: 12px;
+    background: color-mix(in srgb, var(--dccgg-color-emergency) 8%, var(--dccgg-detail-bg, #fff));
+    border: 1px solid color-mix(in srgb, var(--dccgg-color-emergency) 30%, transparent);
+    border-radius: 12px;
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    min-height: 44px;
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-text, #111);
+    border: 1px solid color-mix(in srgb, var(--dccgg-color-emergency) 35%, transparent);
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95em;
+    line-height: 1.1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip:hover,
+.dccgg-root.dccgg-root .dccgg-emergency-chip:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-color-emergency) 10%, var(--dccgg-detail-bg, #fff));
+    transform: translateY(-1px);
+    outline: none;
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip--911 {
+    background: var(--dccgg-color-emergency);
+    color: #fff;
+    border-color: var(--dccgg-color-emergency);
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip--911:hover,
+.dccgg-root.dccgg-root .dccgg-emergency-chip--911:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-color-emergency) 88%, #000);
+    color: #fff;
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip-ico { font-size: 1.15em; line-height: 1; }
+.dccgg-root.dccgg-root .dccgg-emergency-chip-sub {
+    margin-left: 4px;
+    font-weight: 500;
+    font-size: 0.85em;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 65%, transparent);
+}
+.dccgg-root.dccgg-root .dccgg-emergency-chip--911 .dccgg-emergency-chip-sub { color: rgba(255,255,255,0.8); }
+.dccgg-root.dccgg-root .dccgg-emergency-chip--static { cursor: default; }
+
+/* SOS floating action button (separate from the main FAB). */
+.dccgg-root .dccgg-sos-fab {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 52px;
+    height: 52px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--dccgg-color-emergency);
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(213,64,64,0.45);
+    z-index: 9996;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: dccgg-sos-pulse 2.4s ease-in-out infinite;
+}
+.dccgg-root.is-detail .dccgg-sos-fab { display: inline-flex; }
+@keyframes dccgg-sos-pulse {
+    0%,100% { box-shadow: 0 6px 20px rgba(213,64,64,0.45), 0 0 0 0 rgba(213,64,64,0.5); }
+    50%     { box-shadow: 0 6px 20px rgba(213,64,64,0.45), 0 0 0 14px rgba(213,64,64,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-root .dccgg-sos-fab { animation: none; }
+}
+
+/* NOAA active-alert banner — sits above the wrapper at the top of the widget. */
+.dccgg-root .dccgg-noaa-banner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--dccgg-color-emergency);
+    color: #fff;
+    border-radius: 10px;
+    margin: 0 0 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    box-shadow: 0 4px 12px rgba(213,64,64,0.3);
+}
+.dccgg-root .dccgg-noaa-banner[hidden] { display: none; }
+.dccgg-root .dccgg-noaa-ico { font-size: 1.2em; }
+.dccgg-root .dccgg-noaa-text { flex: 1 1 auto; min-width: 0; }
+.dccgg-root .dccgg-noaa-link {
+    color: #fff;
+    text-decoration: underline;
+    font-size: 0.85em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Review prompt (checkout role). */
+.dccgg-root.dccgg-root .dccgg-review-prompt {
+    margin: 28px 0 0;
+    padding: 18px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--dccgg-primary) 5%, var(--dccgg-detail-bg, #fff));
+    border: 1px solid color-mix(in srgb, var(--dccgg-primary) 18%, transparent);
+    text-align: center;
+}
+.dccgg-root.dccgg-root .dccgg-review-heading {
+    margin: 0 0 14px;
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--dccgg-text, #111);
+}
+.dccgg-root.dccgg-root .dccgg-review-choice {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+.dccgg-root.dccgg-root .dccgg-review-yes,
+.dccgg-root.dccgg-root .dccgg-review-no {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    min-height: 48px;
+    border-radius: 999px;
+    border: 2px solid color-mix(in srgb, var(--dccgg-primary) 35%, transparent);
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-text, #111);
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.dccgg-root.dccgg-root .dccgg-review-yes:hover,
+.dccgg-root.dccgg-root .dccgg-review-yes:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-primary) 12%, var(--dccgg-detail-bg, #fff));
+    transform: translateY(-1px);
+    outline: none;
+}
+.dccgg-root.dccgg-root .dccgg-review-no:hover,
+.dccgg-root.dccgg-root .dccgg-review-no:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-color-emergency, #d54040) 10%, var(--dccgg-detail-bg, #fff));
+    border-color: color-mix(in srgb, var(--dccgg-color-emergency, #d54040) 40%, transparent);
+    transform: translateY(-1px);
+    outline: none;
+}
+.dccgg-root.dccgg-root .dccgg-review-emoji { font-size: 1.25em; line-height: 1; }
+.dccgg-root.dccgg-root .dccgg-review-panel { margin-top: 16px; text-align: left; }
+.dccgg-root.dccgg-root .dccgg-review-help {
+    font-size: 0.88em;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 70%, transparent);
+    margin: 0 0 10px;
+}
+.dccgg-root.dccgg-root .dccgg-review-textarea {
+    width: 100%;
+    min-height: 130px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent);
+    border-radius: 10px;
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-text, #111);
+    font: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+.dccgg-root.dccgg-root .dccgg-review-platforms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+.dccgg-root.dccgg-root .dccgg-review-platform {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    min-height: 48px;
+    border-radius: 10px;
+    border: 0;
+    background: var(--dccgg-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+.dccgg-root.dccgg-root .dccgg-review-platform:hover,
+.dccgg-root.dccgg-root .dccgg-review-platform:focus-visible {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+    outline: none;
+}
+.dccgg-root.dccgg-root .dccgg-review-platform--airbnb { background: #ff5a5f; }
+.dccgg-root.dccgg-root .dccgg-review-platform--vrbo   { background: #245abc; }
+.dccgg-root.dccgg-root .dccgg-review-platform--google { background: #1a73e8; }
+.dccgg-root.dccgg-root .dccgg-review-thanks {
+    margin-top: 6px;
+    font-size: 0.95em;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 70%, transparent);
+    font-style: italic;
+}
+
+/* Hide emergency contacts strip, SOS button, NOAA banner, and review
+   prompt in print so the saved-as-PDF booklet stays clean. */
+@media print {
+    .dccgg-root .dccgg-emergency-strip,
+    .dccgg-root .dccgg-sos-fab,
+    .dccgg-root .dccgg-noaa-banner,
+    .dccgg-root .dccgg-review-prompt { display: none !important; }
+}
+
+/* -------------------------------------------------------------- *
  * Print: magazine-quality output (v0.8)
  *
  * Goal: a printable / Save-as-PDF document that looks like a

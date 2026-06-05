@@ -96,6 +96,8 @@
         wireSavePdf(root, config);
         wireReportProblem(root, config);
         wireVoiceConcierge(root, config);
+        wireEmergency(root, config);
+        wireReview(root, config);
     }
 
     // -- Save as PDF (v0.8) -----------------------------------------------
@@ -357,6 +359,189 @@
         }
         u.onend = () => { if (pauseBtn) pauseBtn.remove(); };
         synth.speak(u);
+    }
+
+    // -- Emergency mode (v0.9) --------------------------------------------
+    // SOS floating button → openDetail(emergencyKey). NOAA banner fetches
+    // active alerts for the cottage lat/lng from the proxy endpoint.
+    function wireEmergency(root, config) {
+        const em = config.emergency || {};
+        if (!em.key) return;
+
+        if (em.fab) {
+            const sos = root.querySelector('.dccgg-sos-fab');
+            if (sos) {
+                sos.hidden = false;
+                sos.addEventListener('click', () => {
+                    hapticPulse(root, 30);
+                    openDetail(root, em.key);
+                });
+            }
+        }
+
+        if (em.noaaBanner && config.ajaxUrl) {
+            const banner = root.querySelector('.dccgg-noaa-banner');
+            if (!banner) return;
+            const params = new URLSearchParams({
+                action: 'dccgg_noaa_alerts',
+                nonce:  config.nonce,
+                lat:    String(config.cottageLat || 0),
+                lng:    String(config.cottageLng || 0),
+            });
+            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) params.set('fake', '1');
+            fetch(config.ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(json => {
+                    if (!json || !json.success) return;
+                    const alerts = (json.data && json.data.alerts) || [];
+                    if (!alerts.length) return;
+                    const top = alerts[0];
+                    const prefix = (em.strings && em.strings.bannerPrefix) || '';
+                    const text   = banner.querySelector('.dccgg-noaa-text');
+                    const link   = banner.querySelector('.dccgg-noaa-link');
+                    if (text) text.textContent = (prefix ? prefix + ' ' : '') + (top.headline || top.event || '');
+                    if (link && top.url) {
+                        link.href = top.url;
+                        link.textContent = (em.strings && em.strings.bannerMore) || 'More info';
+                        link.hidden = false;
+                    }
+                    banner.hidden = false;
+                })
+                .catch(() => {});
+        }
+    }
+
+    // -- Checkout review prompt (v0.9) ------------------------------------
+    function reviewStorageKey(widgetId) { return 'dccgg:review:' + widgetId + ':' + stayKey(); }
+    function wireReview(root, config) {
+        const rv = config.review || {};
+        if (!rv.enabled) return;
+
+        // Optional reset hook for testing.
+        if (/[?&]dccgg-reset-review=1/.test(window.location.search)) {
+            try { localStorage.removeItem(reviewStorageKey(getWidgetId(root))); } catch (_) {}
+        }
+
+        const STR = rv.strings || {};
+        const URLS = rv.urls || {};
+        const platforms = [
+            { key: 'airbnb', url: URLS.airbnb, label: STR.copyAirbnb || 'Copy & open Airbnb' },
+            { key: 'vrbo',   url: URLS.vrbo,   label: STR.copyVrbo   || 'Copy & open Vrbo' },
+            { key: 'google', url: URLS.google, label: STR.copyGoogle || 'Copy & open Google' },
+        ].filter(p => p.url);
+
+        const prompts = root.querySelectorAll('.dccgg-review-prompt');
+        prompts.forEach(prompt => {
+            const choice = prompt.querySelector('.dccgg-review-choice');
+            const panel  = prompt.querySelector('.dccgg-review-panel');
+            const thanks = prompt.querySelector('.dccgg-review-thanks');
+            if (!choice || !panel || !thanks) return;
+
+            // Collapsed state when the guest has already responded.
+            let acted = false;
+            try { acted = localStorage.getItem(reviewStorageKey(getWidgetId(root))) === '1'; } catch (_) {}
+            if (acted) {
+                choice.hidden = true;
+                thanks.hidden = false;
+                thanks.textContent = STR.thanks || 'Thanks for the feedback!';
+                return;
+            }
+
+            const markActed = () => {
+                try { localStorage.setItem(reviewStorageKey(getWidgetId(root)), '1'); } catch (_) {}
+            };
+
+            const yes = prompt.querySelector('.dccgg-review-yes');
+            const no  = prompt.querySelector('.dccgg-review-no');
+
+            yes.addEventListener('click', () => {
+                choice.hidden = true;
+                panel.hidden = false;
+                // Build panel content if not already there.
+                if (!panel.dataset.built) {
+                    panel.dataset.built = '1';
+                    const help = document.createElement('p');
+                    help.className = 'dccgg-review-help';
+                    help.textContent = STR.help || '';
+                    if (STR.help) panel.appendChild(help);
+
+                    const ta = document.createElement('textarea');
+                    ta.className = 'dccgg-review-textarea';
+                    ta.rows = 6;
+                    ta.value = interpolateReview(rv.template || '');
+                    panel.appendChild(ta);
+
+                    const row = document.createElement('div');
+                    row.className = 'dccgg-review-platforms';
+                    platforms.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'dccgg-review-platform dccgg-review-platform--' + p.key;
+                        btn.textContent = p.label;
+                        btn.addEventListener('click', () => {
+                            copyText(ta.value).then(() => {
+                                showPdfTip(STR.copied || 'Copied!');
+                                window.open(p.url, '_blank', 'noopener');
+                                markActed();
+                            }).catch(() => {
+                                // Still open the URL even if clipboard failed.
+                                window.open(p.url, '_blank', 'noopener');
+                                markActed();
+                            });
+                        });
+                        row.appendChild(btn);
+                    });
+                    if (!platforms.length) {
+                        const empty = document.createElement('p');
+                        empty.className = 'dccgg-review-help';
+                        empty.textContent = '(No review platforms configured.)';
+                        panel.appendChild(empty);
+                    } else {
+                        panel.appendChild(row);
+                    }
+                }
+            });
+
+            no.addEventListener('click', () => {
+                markActed();
+                choice.hidden = true;
+                thanks.hidden = false;
+                thanks.textContent = STR.thanks || 'Thanks for the feedback!';
+                // Route into the report dialog if available; otherwise just collapse.
+                const sectionTitle = prompt.dataset.reviewSection || '';
+                if (config.report && config.report.enabled) {
+                    // Inject a transient button that piggybacks on the
+                    // wireReportProblem click delegate — saves us from
+                    // exposing its open() function publicly.
+                    const tmp = document.createElement('button');
+                    tmp.className = 'dccgg-more-report';
+                    tmp.style.display = 'none';
+                    tmp.dataset.reportSection = '[checkout feedback] ' + sectionTitle;
+                    root.appendChild(tmp);
+                    tmp.click();
+                    setTimeout(() => tmp.remove(), 0);
+                }
+            });
+        });
+    }
+    function getWidgetId(root) {
+        // Each Elementor widget gets a data-id attribute on the enclosing
+        // .elementor-widget element; fall back to the root's class hash.
+        const wrap = root.closest('[data-id]');
+        return (wrap && wrap.dataset.id) || 'w';
+    }
+    function interpolateReview(template) {
+        if (!template) return '';
+        let guestName = '';
+        const stay = stayKey();
+        if (stay && stay !== 'default') {
+            // Heuristic: ?stay=jane-2026-06 → "Jane".
+            const m = stay.match(/^([a-z]+)/i);
+            if (m) guestName = m[1].charAt(0).toUpperCase() + m[1].slice(1);
+        }
+        return template
+            .replace(/\{guest_name\}/g, guestName)
+            .replace(/\{stay_key\}/g, stay);
     }
 
     // -- Checklist (v0.7) -------------------------------------------------
