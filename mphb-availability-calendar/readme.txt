@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.2
+Stable tag: 0.8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,11 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.3 =
+* Fixed: cottage info popups using an Elementor template source were losing the image-carousel widget at the top and the container template's styling (centering, text colors, etc.). The wp_kses_post() wrap added in v0.8.0 was stripping inline scripts (carousel bootstrap), custom data-* attributes, and some inline style/class attributes that Elementor's container system relies on. Reverted to the raw render — templates are first-party site-owner content so the XSS concern doesn't apply in practice.
+* New: weekend vs weekday colors are now fully customizable in the Calendar Header Row style section. The existing "Background color" and "Text color" are now labeled "Weekday background color" and "Weekday text color" (no behavior change for existing installs — same defaults, same selectors), and two new controls — "Weekend background color" and "Weekend text color" — apply to Saturday and Sunday header cells only. Leave a weekend control empty to inherit the weekday color.
+* Default change: when the new Weekend background color is left empty, weekend header cells now match weekday header cells exactly (instead of the barely-visible 2.5% black overlay from v0.8.2). Set the weekend color explicitly to differentiate.
 
 = 0.8.2 =
 * Polish pass on the existing display experience. Four small visual additions, no new features:

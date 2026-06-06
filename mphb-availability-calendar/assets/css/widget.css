@@ -324,12 +324,15 @@
     background-image: linear-gradient(rgba(244, 218, 98, 0.18), rgba(244, 218, 98, 0.18));
 }
 
-/* Weekend (Sat/Sun) column tint — barely-there warm grey background that
-   helps weekenders spot Fri-Sun runs at a glance without competing with
-   the available/booked colors. Applied to both the header day cell and
-   every body cell in the same column. */
+/* Weekend (Sat/Sun) treatment. Header cells use a dedicated background
+   color set by the "Weekend background color" Elementor control, falling
+   back to the weekday header color when not set — so out-of-the-box the
+   header reads as a single solid bar, and editors who want a different
+   weekend hue can dial it in. Body cells keep a barely-there overlay
+   that helps weekenders spot Fri-Sun runs without competing with the
+   available/booked colors. */
 .mphbac-cell-day.is-weekend {
-    background-color: rgba(0, 0, 0, 0.025);
+    background-color: var(--mphbac-color-header-weekend, var(--mphbac-color-header));
 }
 .mphbac-cell-status.is-weekend {
     background-image: linear-gradient(rgba(0, 0, 0, 0.035), rgba(0, 0, 0, 0.035));

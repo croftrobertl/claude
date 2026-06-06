@@ -259,7 +259,7 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('calheader_bg', [
-            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'label'     => __('Weekday background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0A50B2',
             'selectors' => [
@@ -268,12 +268,30 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('calheader_text', [
-            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'label'     => __('Weekday text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
             'selectors' => [
                 self::SEL . '.mphbac-cell-day'                 => 'color: {{VALUE}};',
                 self::SEL . '.mphbac-row-header .mphbac-cell-label' => 'color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('calheader_bg_weekend', [
+            'label'       => __('Weekend background color', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Applied to Saturday and Sunday header cells only. Leave empty to use the weekday background.', 'mphb-availability-calendar'),
+            'selectors'   => [
+                self::SEL => '--mphbac-color-header-weekend: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('calheader_text_weekend', [
+            'label'       => __('Weekend text color', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Applied to Saturday and Sunday header cells only. Leave empty to use the weekday text color.', 'mphb-availability-calendar'),
+            'selectors'   => [
+                self::SEL . '.mphbac-cell-day.is-weekend' => 'color: {{VALUE}};',
             ],
         ]);
 
@@ -1279,12 +1297,16 @@ final class Widget extends Widget_Base
             if (class_exists('\\Elementor\\Plugin')) {
                 $elementor = \Elementor\Plugin::instance();
                 if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
-                    // wp_kses_post strips <script>, inline event handlers, and
-                    // similar XSS surfaces. Templates are first-party content,
-                    // but anything they embed (form values, comment renders,
-                    // shortcode output) is sanitized by the same rules
-                    // post_content already uses.
-                    return wp_kses_post((string) $elementor->frontend->get_builder_content_for_display($template_id, true));
+                    // Templates are first-party content authored in Elementor
+                    // by the site owner. Returning the raw render preserves
+                    // the inline scripts (image carousel bootstrap, accordion
+                    // initializer, etc.), the container classes (alignment,
+                    // grid, theme-globals), and the inline style attributes
+                    // that wp_kses_post() previously stripped — which was
+                    // breaking the image carousel widget and the container
+                    // template's centering / text-color styling. Trust
+                    // boundary: only the site owner can publish templates.
+                    return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
                 }
             }
         } catch (\Throwable $e) {
