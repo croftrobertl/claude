@@ -578,15 +578,17 @@ final class Widget extends Widget_Base
             'description'  => __('When on, the cottage-info popup fills the entire viewport (recommended when the source is the MotoPress accommodation page, so its gallery/rates/attributes render at their natural width). When off, the popup is a centered modal capped by the Max width setting below.', 'mphb-availability-calendar'),
         ]);
 
-        $this->add_control('info_popup_max_width', [
-            'label'       => __('Info popup max width (px)', 'mphb-availability-calendar'),
-            'type'        => Controls_Manager::NUMBER,
-            'min'         => 320,
-            'max'         => 1400,
-            'step'        => 10,
-            'default'     => 800,
-            'description' => __('Maximum width of the cottage-info popup on desktop when "Full viewport width" is off. Mobile is always full-width.', 'mphb-availability-calendar'),
-            'condition'   => ['info_popup_full_width!' => 'yes'],
+        $this->add_responsive_control('info_popup_max_width', [
+            'label'          => __('Info popup max width (px)', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::NUMBER,
+            'min'            => 320,
+            'max'            => 1600,
+            'step'           => 10,
+            'default'        => 1200,
+            'tablet_default' => 800,
+            'mobile_default' => 480,
+            'description'    => __('Maximum width of the cottage-info popup when "Full viewport width" is off. Set independent values per device using the icons next to the label. The popup is always capped at 96vw to avoid horizontal scroll.', 'mphb-availability-calendar'),
+            'condition'      => ['info_popup_full_width!' => 'yes'],
         ]);
 
         $this->add_responsive_control('info_popup_side_margin', [
@@ -1042,7 +1044,11 @@ final class Widget extends Widget_Base
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
-            'infoPopupMaxWidth' => max(320, min(1400, (int) ($settings['info_popup_max_width'] ?? 800))),
+            'infoPopupMaxWidth' => [
+                'desktop' => max(320, min(1600, (int) ($settings['info_popup_max_width']        ?? 1200))),
+                'tablet'  => max(320, min(1600, (int) ($settings['info_popup_max_width_tablet'] ?? 800))),
+                'mobile'  => max(320, min(1600, (int) ($settings['info_popup_max_width_mobile'] ?? 480))),
+            ],
             'infoTitles'       => $info_titles,
             'infoPopupSideMargin' => [
                 'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),

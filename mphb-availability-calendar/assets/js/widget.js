@@ -228,13 +228,6 @@
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var lastTrigger = null;
 
-        // Apply the configured desktop max-width as a CSS variable on the
-        // popup itself. This honors the Elementor "Info popup max width"
-        // control without needing a server-rendered <style> block.
-        if (config.infoPopupMaxWidth) {
-            sheet.style.setProperty('--mphbac-info-max-width', config.infoPopupMaxWidth + 'px');
-        }
-
         // Portal anchors. The popup is rendered inside .mphbac-root by PHP
         // (so its hidden content and Elementor template CSS enqueue
         // correctly), but Elementor / Bravada ancestors often have
@@ -312,6 +305,18 @@
                         sheet.style.setProperty('--mphbac-info-side', side + 'px');
                     }
                 }
+            }
+            // Per-device max-width from the responsive Elementor control.
+            // Applies only in non-full mode (the --mphbac-info-max-width var
+            // isn't read in full-mode CSS), but we set it unconditionally so
+            // that a user toggling full-mode off mid-session sees the value
+            // immediately. Accepts both the new {desktop,tablet,mobile} object
+            // shape and the legacy single-int shape from < 0.8.5.
+            if (config.infoPopupMaxWidth) {
+                var mw = (typeof config.infoPopupMaxWidth === 'object')
+                    ? config.infoPopupMaxWidth[deviceBucket()]
+                    : config.infoPopupMaxWidth;
+                if (mw) sheet.style.setProperty('--mphbac-info-max-width', mw + 'px');
             }
             // Portal out of the widget so transformed / overflow-hidden
             // Elementor ancestors can't constrain the popup.

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.4
+Stable tag: 0.8.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,11 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.5 =
+* Fixed: on iPhone (and other notched devices) the cottage info popup's title and close-X could render slightly above the visible viewport, hidden under the notch / Dynamic Island / status bar. The full-mode popup's top anchor is now `max(widget-top, env(safe-area-inset-top))`, so the popup never starts above the device's safe area. Falls back to 0 on devices without a safe-area inset (every non-notched device, so no desktop impact).
+* Made the "Info popup max width" control responsive — three independent values (Desktop / Tablet / Mobile) via the device-icon buttons next to the label, with bumped defaults: 1200 / 800 / 480 (was a single 800 across all viewports). Existing installs that have an explicit value saved keep it as the desktop value; tablet/mobile fall back to the new defaults until touched. The cap also moved from 1400 → 1600 for ultra-wide monitors.
+* Default viewport ceiling for the non-full popup raised from 92vw → 96vw so a desktop popup at the new 1200px default doesn't leave a wide blue gutter on large displays. JS now sets the chosen max-width inline on the popup at open time (using the same per-device pattern as the side-margin control), so toggling the desktop browser between widths reflects on next popup open.
 
 = 0.8.4 =
 * Fixed: embedded Elementor widgets inside the cottage info popup (pricing tables, image carousels, multi-column containers) could overflow horizontally past the popup edge — worse in full-viewport mode, where the wider popup gave 100vw-anchored elements more space to scale up. Added defensive max-width: 100% and overflow: hidden containment on common Elementor wrapper classes inside .mphbac-info-body, plus min-width: 0 on the body itself so flex/grid children can shrink properly. Templates designed for the full page width should now fit cleanly inside the popup.

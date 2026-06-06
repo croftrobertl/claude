@@ -546,7 +546,10 @@
        but can be tuned via the "Info popup max width" Elementor control to
        comfortably display image galleries / multi-column widgets. */
     .mphbac-info-sheet {
-        width: min(var(--mphbac-info-max-width, 800px), 92vw);
+        /* Default 1200px raised in v0.8.5 (was 800px in v0.8.4). 96vw cap
+           gives the popup more horizontal room on wide monitors while still
+           leaving a sliver of frame around it. */
+        width: min(var(--mphbac-info-max-width, 1200px), 96vw);
     }
     .mphbac-sheet.is-open,
     .mphbac-info-sheet.is-open {
@@ -571,7 +574,11 @@
 .mphbac-info-sheet.mphbac-info-sheet--full {
     left: var(--mphbac-info-side, 12px);
     right: var(--mphbac-info-side, 12px);
-    top: var(--mphbac-info-sheet-top, 0);
+    /* max() with env(safe-area-inset-top) keeps the popup's title row
+       below the iPhone notch / Dynamic Island / status bar when the
+       widget is near the top of the page. Falls back to 0 on devices
+       without a safe-area inset (every non-notched device). */
+    top: max(var(--mphbac-info-sheet-top, 0px), env(safe-area-inset-top, 0px));
     bottom: 0;
     width: auto;
     max-width: none;
@@ -593,7 +600,7 @@
         --mphbac-info-side: 32px;
         left: var(--mphbac-info-side);
         right: var(--mphbac-info-side);
-        top: var(--mphbac-info-sheet-top, 0);
+        top: max(var(--mphbac-info-sheet-top, 0px), env(safe-area-inset-top, 0px));
         bottom: 0;
         width: auto;
         max-width: none;
