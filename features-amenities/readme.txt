@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,13 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.1.0 =
+* New "Inherit Theme Styles" switcher (default ON). The widget now adopts the active WordPress theme's colors, fonts, and backgrounds out of the box. Toggle off to restore the original v1.0.0 baked-in palette. Per-element style controls still override either way.
+* Removed the hardcoded #0E9AAF default on the Primary Brand Color control so the theme cascade isn't pre-empted. The CSS stylesheet still falls back to #0E9AAF when the toggle is off and no color is picked.
+* Accessibility: hover transforms and accordion slide animations are now disabled when the user has `prefers-reduced-motion: reduce` set in their OS preferences.
+* Theme hardening: every style-control selector now uses doubled-class specificity so aggressive theme resets (e.g. Bravada) can't override the controls. A universal `box-sizing: border-box` reset inside the widget root defends against themes that flip it elsewhere.
+* Code organization: `register_controls()` split into seven per-section methods (data source, list, search, layout, colors, section headers, amenity cards). The bootstrap now uses a tiny PSR-4-ish autoloader instead of manual `require_once` calls. Internal refactor only; no output or control-name changes.
 
 = 1.0.0 =
 * Initial release. Ported from Angie Code snippet `features_and_amenities_list_3f0db7b3`.

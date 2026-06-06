@@ -1,3 +1,10 @@
+.fal-container,
+.fal-container *,
+.fal-container *::before,
+.fal-container *::after {
+	box-sizing: border-box;
+}
+
 .fal-container {
 	--fal-primary: #0E9AAF;
 	--fal-bg: rgba(255, 255, 255, 0.95);
@@ -88,3 +95,52 @@
 .fal-container.desktop-accordion-enabled .fal-section.is-open .fal-section-content { display: block; }
 
 mark.fal-hit { background: rgba(14, 154, 175, 0.2); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* Inherit Theme Styles — strip baked-in palette/typography
+   so the active WordPress theme's cascade shows through.
+   Any user-set style control still wins because Elementor's
+   inline CSS is injected later in the cascade. */
+.fal-inherit-yes .fal-container.fal-container .fal-section-header,
+.fal-inherit-yes .fal-container.fal-container .fal-amenity {
+	background: transparent;
+	border-color: transparent;
+	box-shadow: none;
+}
+.fal-inherit-yes .fal-container.fal-container .fal-section-title,
+.fal-inherit-yes .fal-container.fal-container .fal-amenity-title,
+.fal-inherit-yes .fal-container.fal-container .fal-amenity-desc,
+.fal-inherit-yes .fal-container.fal-container .fal-section-header {
+	color: inherit;
+	font-family: inherit;
+	font-weight: inherit;
+}
+.fal-inherit-yes .fal-container.fal-container .fal-amenity-desc {
+	opacity: 1;
+}
+.fal-inherit-yes .fal-container.fal-container .fal-amenity-icon-wrap {
+	background: transparent;
+	color: currentColor;
+}
+.fal-inherit-yes .fal-container.fal-container .fal-search-input {
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+}
+.fal-inherit-yes .fal-container.fal-container .fal-amenity:hover {
+	box-shadow: none;
+}
+
+/* Respect users who request reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+	.fal-section-header,
+	.fal-amenity,
+	.fal-collapsible,
+	.fal-section-header::after,
+	.fal-section-content {
+		transition: none !important;
+	}
+	.fal-section-header:hover,
+	.fal-amenity:hover {
+		transform: none !important;
+	}
+}

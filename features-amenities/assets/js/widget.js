@@ -31,7 +31,9 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 	}
 
 	bindEvents() {
-		const sel = this.getSettings('selectors');
+		const sel             = this.getSettings('selectors');
+		const reduceMotionMql = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+		const prefersReduced  = () => !!(reduceMotionMql && reduceMotionMql.matches);
 
 		// Accordion
 		this.elements.$headers.on('click', (e) => {
@@ -40,17 +42,26 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 				const $section  = jQuery(e.currentTarget).closest(sel.section);
 				const isOpening = !$section.hasClass('is-open');
 				const exclusive = this.elements.$container.hasClass('exclusive-accordion-enabled');
+				const reduced   = prefersReduced();
 
 				if (isOpening && exclusive) {
 					const $others = this.elements.$container
 						.find(sel.section + '.is-open')
 						.not($section);
 					$others.removeClass('is-open');
-					$others.find(sel.content).slideUp(300);
+					if (reduced) {
+						$others.find(sel.content).hide();
+					} else {
+						$others.find(sel.content).slideUp(300);
+					}
 				}
 
 				$section.toggleClass('is-open');
-				$section.find(sel.content).slideToggle(300);
+				if (reduced) {
+					$section.find(sel.content).toggle();
+				} else {
+					$section.find(sel.content).slideToggle(300);
+				}
 			}
 		});
 

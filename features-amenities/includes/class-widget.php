@@ -43,7 +43,9 @@ class Widget extends Widget_Base {
 		return [ 'features-amenities' ];
 	}
 
-	private const SEL = '{{WRAPPER}} .fal-container ';
+	// Doubled class makes every style-control selector (0,3,0) so it
+	// outranks aggressive theme resets (e.g. Bravada at (0,3,1)).
+	private const SEL = '{{WRAPPER}} .fal-container.fal-container ';
 
 	private function get_motopress_templates(): array {
 		$templates = [ '' => esc_html__( 'None (Use custom list below)', 'features-amenities' ) ];
@@ -109,7 +111,16 @@ class Widget extends Widget_Base {
 	}
 
 	protected function register_controls() {
+		$this->register_data_source_controls();
+		$this->register_list_controls();
+		$this->register_search_controls();
+		$this->register_layout_controls();
+		$this->register_color_controls();
+		$this->register_section_header_style_controls();
+		$this->register_amenity_card_style_controls();
+	}
 
+	private function register_data_source_controls(): void {
 		$this->start_controls_section(
 			'section_data_source',
 			[
@@ -128,7 +139,9 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->end_controls_section();
+	}
 
+	private function register_list_controls(): void {
 		$this->start_controls_section(
 			'section_content',
 			[
@@ -210,7 +223,9 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->end_controls_section();
+	}
 
+	private function register_search_controls(): void {
 		$this->start_controls_section(
 			'section_search',
 			[
@@ -238,7 +253,9 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->end_controls_section();
+	}
 
+	private function register_layout_controls(): void {
 		$this->start_controls_section(
 			'section_layout_options',
 			[
@@ -303,7 +320,9 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->end_controls_section();
+	}
 
+	private function register_color_controls(): void {
 		$this->start_controls_section(
 			'style_colors',
 			[
@@ -313,11 +332,22 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->add_control(
+			'inherit_theme',
+			[
+				'label'        => esc_html__( 'Inherit Theme Styles', 'features-amenities' ),
+				'description'  => esc_html__( 'When on, the widget uses your WordPress theme\'s colors, fonts, and backgrounds by default. Style controls below still override.', 'features-amenities' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'prefix_class' => 'fal-inherit-',
+				'return_value' => 'yes',
+				'default'      => 'yes',
+				'separator'    => 'after',
+			]
+		);
+		$this->add_control(
 			'primary_color',
 			[
 				'label'     => esc_html__( 'Primary Brand Color', 'features-amenities' ),
 				'type'      => Controls_Manager::COLOR,
-				'default'   => '#0E9AAF',
 				'selectors' => [ self::SEL => '--fal-primary: {{VALUE}};' ],
 			]
 		);
@@ -332,8 +362,9 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->end_controls_section();
+	}
 
-		// --- Style: Section Headers -------------------------------------
+	private function register_section_header_style_controls(): void {
 		$this->start_controls_section(
 			'style_section_headers',
 			[
@@ -451,8 +482,9 @@ class Widget extends Widget_Base {
 		);
 
 		$this->end_controls_section();
+	}
 
-		// --- Style: Amenity Cards ---------------------------------------
+	private function register_amenity_card_style_controls(): void {
 		$this->start_controls_section(
 			'style_amenities',
 			[
