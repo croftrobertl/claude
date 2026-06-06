@@ -119,6 +119,12 @@ final class Widget extends Widget_Base
             'options'     => $this->cottage_options(),
             'label_block' => true,
         ]);
+        $repeater->add_control('ci_title', [
+            'label'       => __('Popup title (optional)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Overrides the cottage name as the popup header. Leave empty to use the cottage name from MotoPress.', 'mphb-availability-calendar'),
+        ]);
         $repeater->add_control('ci_source', [
             'label'   => __('Content source', 'mphb-availability-calendar'),
             'type'    => Controls_Manager::SELECT,
@@ -976,10 +982,15 @@ final class Widget extends Widget_Base
         // page in that mode, so multi-column widgets like a pricing-table
         // switcher lost their styles on subsequent opens.)
         $info_html = [];
+        $info_titles = [];
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
             if ($cid <= 0) {
                 continue;
+            }
+            $title_override = trim((string) ($row['ci_title'] ?? ''));
+            if ($title_override !== '') {
+                $info_titles[$cid] = $title_override;
             }
             $source = (string) ($row['ci_source'] ?? 'text');
             if ($source === 'template') {
@@ -1032,6 +1043,7 @@ final class Widget extends Widget_Base
             'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => max(320, min(1400, (int) ($settings['info_popup_max_width'] ?? 800))),
+            'infoTitles'       => $info_titles,
             'infoPopupSideMargin' => [
                 'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
                 'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),

@@ -286,7 +286,13 @@
 
         function openInfo(typeId, content, trigger) {
             lastTrigger = trigger || null;
-            titleEl.textContent = (config.roomTitles && config.roomTitles[typeId]) || '';
+            // Per-cottage popup title override from the cottage_info
+            // repeater's ci_title field, falling back to the MotoPress
+            // cottage name when the override is empty.
+            var titleOverride = config.infoTitles && (config.infoTitles[typeId] || config.infoTitles[String(typeId)]);
+            titleEl.textContent = titleOverride
+                || (config.roomTitles && config.roomTitles[typeId])
+                || '';
             bodyEl.innerHTML = content.innerHTML;
             // In full-viewport mode, anchor the popup's top to the widget's
             // current top position so it grows out of the calendar rather

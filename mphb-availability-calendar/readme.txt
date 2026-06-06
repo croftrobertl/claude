@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.3
+Stable tag: 0.8.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.4 =
+* Fixed: embedded Elementor widgets inside the cottage info popup (pricing tables, image carousels, multi-column containers) could overflow horizontally past the popup edge — worse in full-viewport mode, where the wider popup gave 100vw-anchored elements more space to scale up. Added defensive max-width: 100% and overflow: hidden containment on common Elementor wrapper classes inside .mphbac-info-body, plus min-width: 0 on the body itself so flex/grid children can shrink properly. Templates designed for the full page width should now fit cleanly inside the popup.
+* New: per-cottage popup title override. The cottage_info repeater now has a "Popup title (optional)" text field above the Content source selector. Whatever you enter there shows as the popup header for that cottage. Leave it empty to use the MotoPress cottage name (existing behavior). Useful for marketing-tuned headlines like "Meet Cottage 3: Sunset" instead of the raw cottage post title.
 
 = 0.8.3 =
 * Fixed: cottage info popups using an Elementor template source were losing the image-carousel widget at the top and the container template's styling (centering, text colors, etc.). The wp_kses_post() wrap added in v0.8.0 was stripping inline scripts (carousel bootstrap), custom data-* attributes, and some inline style/class attributes that Elementor's container system relies on. Reverted to the raw render — templates are first-party site-owner content so the XSS concern doesn't apply in practice.

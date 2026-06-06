@@ -677,9 +677,43 @@ body.mphbac-info-open {
 /* Cottage info popup body */
 .mphbac-info-body {
     overflow-wrap: anywhere;
+    /* Hard-contain the popup width. min-width:0 lets flex/grid children
+       shrink below their declared min-content; max-width:100% prevents
+       any nested widget from pushing the body wider than its slot. */
+    max-width: 100%;
+    min-width: 0;
 }
 .mphbac-info-body :first-child { margin-top: 0; }
 .mphbac-info-body :last-child  { margin-bottom: 0; }
+
+/* Defensive containment for embedded Elementor widgets (pricing tables,
+   image carousels, multi-column containers). Their server-rendered
+   markup carries width/min-width assumptions from the page context
+   where they were authored — which can leak out past the popup edge,
+   especially in full-viewport mode where the popup is wider and
+   100vw-anchored elements scale up. !important is justified because
+   we own the popup's width contract. */
+.mphbac-info-body,
+.mphbac-info-body > *,
+.mphbac-info-body .elementor-section,
+.mphbac-info-body .elementor-container,
+.mphbac-info-body .elementor-row,
+.mphbac-info-body .elementor-column,
+.mphbac-info-body .elementor-column-wrap,
+.mphbac-info-body .elementor-widget,
+.mphbac-info-body .elementor-widget-wrap,
+.mphbac-info-body .elementor-widget-container,
+.mphbac-info-body table,
+.mphbac-info-body figure {
+    max-width: 100% !important;
+    box-sizing: border-box;
+}
+.mphbac-info-body .elementor-widget-price-table,
+.mphbac-info-body .elementor-widget-table,
+.mphbac-info-body .elementor-widget-image-carousel,
+.mphbac-info-body .elementor-widget-image-gallery {
+    overflow: hidden;
+}
 .mphbac-sheet-close {
     background: transparent;
     border: 0;
