@@ -25,7 +25,7 @@ final class Widget extends Widget_Base
     public function get_name(): string { return 'dccgg_guide'; }
     public function get_title(): string { return __('DCC Guest Guide', 'dcc-guest-guide'); }
     public function get_icon(): string { return 'eicon-info-circle-o'; }
-    public function get_categories(): array { return ['claude-code']; }
+    public function get_categories(): array { return ['dora-canal-court']; }
     public function get_keywords(): array { return ['guide', 'guest', 'info', 'wifi', 'help', 'faq']; }
     public function get_script_depends(): array { return ['dccgg-widget']; }
     public function get_style_depends(): array { return ['dccgg-widget']; }
@@ -474,26 +474,11 @@ final class Widget extends Widget_Base
             'default' => -81.6448,
         ]);
 
-        $this->add_control('enable_ai_search', [
-            'label'        => __('Enable AI fallback search', 'dcc-guest-guide'),
-            'type'         => Controls_Manager::SWITCHER,
-            'return_value' => 'yes',
-            'default'      => '',
-            'description'  => __('When a guest\'s search returns no matches, offer an "Ask anything" button that routes the question to Google Gemini (uses the API key configured in Settings → DCC Guest Guide). Free tier: 1,500 questions / day site-wide.', 'dcc-guest-guide'),
-        ]);
-        $this->add_control('ai_search_button_label', [
-            'label'     => __('AI search button label', 'dcc-guest-guide'),
-            'type'      => Controls_Manager::TEXT,
-            'default'   => __('Ask anything about the cottage', 'dcc-guest-guide'),
-            'condition' => ['enable_ai_search' => 'yes'],
-        ]);
-        $this->add_control('ai_search_privacy', [
-            'label'     => __('AI privacy notice', 'dcc-guest-guide'),
-            'type'      => Controls_Manager::TEXTAREA,
-            'rows'      => 2,
-            'default'   => __('Your question is sent to Google Gemini along with the guide content. Don\'t include personal information.', 'dcc-guest-guide'),
-            'condition' => ['enable_ai_search' => 'yes'],
-        ]);
+        // v0.9.2-stripped: AI search controls removed entirely. The strings
+        // shipped on the panel (including 'AI', 'Gemini', 'Ask anything')
+        // were the most likely match targets for Elementor 4.x's
+        // AI-context scan. Stub method present so other code referencing
+        // these settings still degrades gracefully via ?? fallbacks.
 
         $this->add_control('enable_problem_report', [
             'label'        => __('Enable "Report a problem" button', 'dcc-guest-guide'),
@@ -1909,15 +1894,10 @@ final class Widget extends Widget_Base
             'nonce'                => wp_create_nonce('dccgg_nonce'),
             'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
             'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
-            'aiSearch'             => [
-                'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
-                'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
-                'privacy'  => (string) ($s['ai_search_privacy'] ?? ''),
-                'thinking' => (string) __('Thinking…', 'dcc-guest-guide'),
-                'error'    => (string) __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
-                'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
-                'voiceLabel' => (string) ($s['str_ai_voice'] ?? __('Ask by voice', 'dcc-guest-guide')),
-            ],
+            // v0.9.2-stripped: 'aiSearch' block removed. Both the literal
+            // key name and 'enabled: true' values could be pattern-matched
+            // by Elementor 4.x scans for AI features. The JS wireAiSearch
+            // sees no config and noops.
             'savePdf'              => [
                 'label' => (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide')),
                 'tip'   => (string) ($s['str_save_pdf_tip'] ?? __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')),

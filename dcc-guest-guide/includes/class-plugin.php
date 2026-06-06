@@ -33,18 +33,21 @@ final class Plugin
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\DCCGG\\Widget', 'register_assets']);
         add_action('elementor/preview/enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_preview']);
-        // Welcome Pack button lives in the editor panel, not the preview
-        // iframe — the script must also load on the editor side so the
-        // delegated click handler actually fires.
-        add_action('elementor/editor/after_enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_editor']);
+        // v0.9.2-stripped: editor-side enqueue removed to test whether it was
+        // nudging Elementor 4.x's Angie auth iframe to fire. The Welcome Pack
+        // button + Export/Import will stop responding in the editor as a
+        // result — acceptable for this diagnostic build.
+        // add_action('elementor/editor/after_enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_editor']);
 
-        // v0.7: settings page (Gemini key) + AJAX endpoints (AI fallback +
-        // weather proxy so the Open-Meteo response is transient-cached
-        // server-side rather than re-hit on every page load).
-        add_action('admin_menu', [$this, 'register_settings_page']);
-        add_action('admin_init', [$this, 'register_settings_fields']);
-        add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
-        add_action('wp_ajax_nopriv_dccgg_ai_query', [$this, 'handle_ai_query']);
+        // v0.9.2-stripped: Settings page (Gemini key) and AI AJAX endpoints
+        // removed. These were the most likely triggers for Elementor 4.x to
+        // wake up its Angie/AI context probe based on the "gemini" option
+        // name. Weather, NOAA, and report-problem AJAX endpoints stay — they
+        // don't carry AI-evoking names.
+        // add_action('admin_menu', [$this, 'register_settings_page']);
+        // add_action('admin_init', [$this, 'register_settings_fields']);
+        // add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
+        // add_action('wp_ajax_nopriv_dccgg_ai_query', [$this, 'handle_ai_query']);
         add_action('wp_ajax_dccgg_weather',         [$this, 'handle_weather']);
         add_action('wp_ajax_nopriv_dccgg_weather',  [$this, 'handle_weather']);
         add_action('wp_ajax_dccgg_report_problem',        [$this, 'handle_report_problem']);
@@ -414,10 +417,15 @@ final class Plugin
     {
         // Shared with MPHB Availability Calendar; add_category is idempotent so
         // it's safe to register from both plugins regardless of activation order.
+        // v0.9.2-stripped: renamed from 'claude-code' / 'Claude Code' to a
+        // neutral string so it can't trigger any Elementor 4.x AI-related
+        // scan that pattern-matches on those tokens. MPHB still references
+        // the old slug — that one stays valid because add_category is
+        // idempotent and both can coexist.
         $elements_manager->add_category(
-            'claude-code',
+            'dora-canal-court',
             [
-                'title' => __('Claude Code', 'dcc-guest-guide'),
+                'title' => __('Dora Canal Court', 'dcc-guest-guide'),
                 'icon'  => 'fa fa-plug',
             ]
         );
