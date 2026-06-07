@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.2.2
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,11 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.3.0 =
+* Amenity icon now always appears above the title and description text — in both Grid and List layouts. List mode previously placed the icon to the left of the text; that side-by-side arrangement is removed.
+* The "Icon → Content Gap (List)" control is renamed "Icon → Text Gap" and now controls the vertical space between the icon and the text in every layout (responsive: desktop / tablet / mobile). Baked-in CSS default is 10px when the control is unset.
+* Removed the implicit 10px `margin-bottom` on the icon wrapper. Spacing is now driven entirely by the flex `gap` on the amenity card, which the new control overrides cleanly.
 
 = 1.2.2 =
 * Fixed (real cause): accordion section would expand and then immediately collapse on a single tap/click in mobile view and in desktop accordion mode. The CSS rule that reveals .fal-section-content when .is-open is present was making the element computed-visible the instant the class was added, and slideToggle then saw it as "already visible" and slid it back closed. The handler now picks the open/close direction explicitly from the pre-click state, calls .stop(true, false) to clear any in-flight animation, forces inline display:none before sliding down so jQuery sees the right starting state, and removes the .is-open class only after slideUp completes. Bug had been carried over from the original Angie Code snippet and only manifested on mobile or with the desktop accordion toggle on.

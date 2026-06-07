@@ -56,8 +56,8 @@
 	display: flex; flex-direction: column; align-items: center; padding: var(--fal-density-pad);
 	background: var(--fal-bg); border: 1px solid var(--fal-border); border-radius: 12px;
 	box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: center; transition: 0.2s;
+	gap: 10px;
 }
-.fal-layout-list .fal-amenity { flex-direction: row; align-items: flex-start; gap: 15px; }
 .fal-glass-yes .fal-amenity,
 .fal-glass-yes .fal-section-header {
 	backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -68,9 +68,8 @@
 	display: flex; align-items: center; justify-content: center;
 	width: 40px; height: 40px;
 	background: rgba(14, 154, 175, 0.1); border-radius: 50%;
-	color: var(--fal-primary); flex-shrink: 0; margin-bottom: 10px;
+	color: var(--fal-primary); flex-shrink: 0;
 }
-.fal-layout-list .fal-amenity-icon-wrap { margin-bottom: 0; }
 
 .fal-amenity-content { flex: 1; }
 .fal-amenity-title { font-weight: 600; font-size: 1.1em; margin-bottom: 5px; }

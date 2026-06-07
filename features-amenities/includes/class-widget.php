@@ -629,11 +629,12 @@ class Widget extends Widget_Base {
 		$this->add_responsive_control(
 			'amenity_inner_gap',
 			[
-				'label'      => esc_html__( 'Icon → Content Gap (List)', 'features-amenities' ),
-				'type'       => Controls_Manager::SLIDER,
-				'size_units' => [ 'px', 'em' ],
-				'range'      => [ 'px' => [ 'min' => 0, 'max' => 60 ] ],
-				'selectors'  => [ self::SEL . '.fal-layout-list .fal-amenity' => 'gap: {{SIZE}}{{UNIT}};' ],
+				'label'       => esc_html__( 'Icon → Text Gap', 'features-amenities' ),
+				'type'        => Controls_Manager::SLIDER,
+				'size_units'  => [ 'px', 'em' ],
+				'range'       => [ 'px' => [ 'min' => 0, 'max' => 80 ] ],
+				'description' => esc_html__( 'Vertical space between the amenity icon and the title/description text. Defaults to 10px when unset.', 'features-amenities' ),
+				'selectors'   => [ self::SEL . '.fal-amenity' => 'gap: {{SIZE}}{{UNIT}};' ],
 			]
 		);
 		$this->add_responsive_control(
