@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.7
+Stable tag: 0.8.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.8 =
+* Fixed: Features & Amenities accordion (and other third-party Elementor widgets) inside the cottage info popup did not respond to taps/clicks. The naive `frontend/element_ready/<type>` re-fire from v0.8.4 doesn't handle two third-party gotchas: (1) the cloned widget keeps the original's `data-id`, and many widget registries dedupe by id and skip re-init; (2) Elementor's Base handler tracks bound handlers via jQuery `$.data('handlers')`, and re-firing the hook on the same DOM is silently a no-op. The popup's reinit now (a) rewrites `data-id` on every `.elementor-element` in the clone to a unique value, (b) clears any carried-over jQuery data, and (c) prefers `elementorFrontend.elementsHandler.runReadyTrigger()` — Elementor's canonical re-init entry point — over manual hook dispatch. This is also expected to fix the image carousel inside the popup (Swiper-based, same root cause).
 
 = 0.8.7 =
 * New: cottage info popup title is now a hyperlink. By default it links to that cottage's MotoPress accommodation page (the post the cottage_info row is assigned to). Each cottage_info row has a new "Title link URL (optional)" field above Content source — set a URL there to override the default. Links open in the same tab. Underlined title styling inherits the existing title typography.

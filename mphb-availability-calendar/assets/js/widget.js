@@ -197,23 +197,61 @@
     // frontend/element_ready action once, on the original (hidden) nodes.
     // This walks the popup and dispatches that action for each widget so
     // Elementor's handler system rebinds onto the copy.
+    //
+    // Two third-party gotchas the naive "doAction(...element_ready)" path
+    // doesn't solve:
+    //
+    //   1. data-id collision. Every cloned widget keeps the original's
+    //      data-id. Many third-party widgets (and Elementor's own modules)
+    //      track initialized widgets by id in a global registry; when they
+    //      see a duplicate, they skip init. Rewriting data-id to a unique
+    //      value on the clone breaks that dedup.
+    //
+    //   2. handler bookkeeping. Elementor's Base handler attaches itself to
+    //      the element via jQuery $.data('handlers'); when the element_ready
+    //      hook fires a second time on the same DOM, the Base constructor
+    //      sees the marker and refuses to re-bind. innerHTML strips jQuery
+    //      data implicitly, BUT the cloned widget can re-acquire stale
+    //      values via data-* attributes that the framework parses; calling
+    //      removeData() defensively clears any such carryover.
+    //
+    // We also prefer Elementor's own elementsHandler.runReadyTrigger() when
+    // available — it does the global + specific hook + handler-tracking
+    // dance in one call, which is the canonical entry point that
+    // third-party widget JS expects.
     function reinitElementorWidgets(container) {
-        if (!container || !window.elementorFrontend ||
-            !window.elementorFrontend.hooks || !window.jQuery) {
+        if (!container || !window.elementorFrontend || !window.jQuery) {
             return;
         }
+        var ef = window.elementorFrontend;
+        var $ = window.jQuery;
+
+        // 1. Uniquify data-id + clear jQuery data on every Elementor
+        // element (sections, columns, widgets, containers) in the clone.
+        var stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        var elements = container.querySelectorAll('.elementor-element[data-id]');
+        elements.forEach(function (el, idx) {
+            var origId = el.getAttribute('data-id');
+            if (origId && origId.indexOf('mphbac-') !== 0) {
+                el.setAttribute('data-id', 'mphbac-' + stamp + '-' + idx + '-' + origId);
+            }
+            try { $(el).removeData(); } catch (e) { /* ignore */ }
+        });
+
+        // 2. Trigger ready handlers per widget.
         var widgets = container.querySelectorAll('.elementor-widget[data-widget_type]');
         widgets.forEach(function (widget) {
             var widgetType = widget.getAttribute('data-widget_type');
             if (!widgetType) return;
-            var $widget = window.jQuery(widget);
             try {
-                window.elementorFrontend.hooks.doAction(
-                    'frontend/element_ready/global', $widget, window.jQuery
-                );
-                window.elementorFrontend.hooks.doAction(
-                    'frontend/element_ready/' + widgetType, $widget, window.jQuery
-                );
+                if (ef.elementsHandler &&
+                    typeof ef.elementsHandler.runReadyTrigger === 'function') {
+                    ef.elementsHandler.runReadyTrigger(widget);
+                } else if (ef.hooks) {
+                    var $widget = $(widget);
+                    ef.hooks.doAction('frontend/element_ready/global', $widget, $);
+                    ef.hooks.doAction('frontend/element_ready/' + widgetType, $widget, $);
+                }
             } catch (e) { /* third-party handler threw; keep going */ }
         });
     }
