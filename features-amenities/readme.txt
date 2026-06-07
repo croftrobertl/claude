@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,9 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.6.1 =
+* Fixed: "Import failed: Cannot read properties of undefined (reading 'id')" when uploading an Elementor template JSON. The generated repeater items were missing a _id field; Elementor's repeater Backbone model uses idAttribute '_id', so the panel's per-row lookup crashed after reset. The importer now stamps each generated section/amenity with a fresh unique _id (via elementorCommon.helpers.getUniqueId() when available, falling back to a 7-char random string).
 
 = 1.6.0 =
 * Import is now a file picker, not a paste dialog. Clicking "Import from Elementor Template File…" in the editor panel opens a native file chooser that accepts a .json file exported from an Elementor container template. The importer walks the template, finds every Icon List widget, treats each one as a section (first item = section header with its icon; remaining items = amenities under that header), strips HTML tags and leading anchor characters (⚓︎) from the text, and replaces the widget's list with the result. Reports how many sections and amenities were imported.

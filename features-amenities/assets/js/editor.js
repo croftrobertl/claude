@@ -43,6 +43,23 @@
 		return ok;
 	}
 
+	// Elementor repeater rows are Backbone models with idAttribute '_id'.
+	// reset()-ing the collection with items that lack _id leaves the new
+	// models with model.id === undefined, which crashes the panel's
+	// per-row lookup ("Cannot read properties of undefined (reading 'id')").
+	// Generate a 7-char id, preferring Elementor's own helper when present
+	// so the shape matches what other repeaters in the editor produce.
+	function genRepeaterId() {
+		if (
+			typeof elementorCommon !== 'undefined' &&
+			elementorCommon.helpers &&
+			typeof elementorCommon.helpers.getUniqueId === 'function'
+		) {
+			try { return elementorCommon.helpers.getUniqueId(); } catch ( err ) { /* fall through */ }
+		}
+		return Math.random().toString( 36 ).slice( 2, 9 ).padEnd( 7, '0' );
+	}
+
 	// Strip HTML tags and leading anchor characters (U+2693 with optional
 	// variation selector U+FE0E) from a chunk of Elementor icon-list text.
 	function stripText( raw ) {
@@ -88,6 +105,7 @@
 
 			// First item = section header
 			result.push( {
+				_id:       genRepeaterId(),
 				item_type: 'section',
 				item_text: stripText( items[ 0 ].text || '' ),
 				item_icon: items[ 0 ].selected_icon || { value: '', library: '' },
@@ -96,6 +114,7 @@
 			// Remaining items = amenities
 			for ( let i = 1; i < items.length; i++ ) {
 				result.push( {
+					_id:              genRepeaterId(),
 					item_type:        'amenity',
 					item_text:        stripText( items[ i ].text || '' ),
 					item_description: '',
