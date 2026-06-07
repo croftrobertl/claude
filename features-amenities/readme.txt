@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,9 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.2.1 =
+* Fixed: accordion section would expand and then immediately collapse on a single tap/click on cached/optimized pages. The widget's click handler was being bound twice when Elementor's `element_ready` event fired more than once for the same widget (a known interaction with cache plugins that defer or concatenate JS). Added a dataset guard on the widget root plus a registration-level guard so the click handler can only attach once per element regardless of how many times the script loads or initializes.
 
 = 1.2.0 =
 * Section Header titles and Amenity Card titles + descriptions now default to centered text. In grid layout, the amenity icon is also centered above the text for visual balance. List layout keeps the icon to the left of the text as before.

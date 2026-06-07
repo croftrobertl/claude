@@ -31,6 +31,19 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 	}
 
 	bindEvents() {
+		// Guard against double-binding. Elementor's element_ready can fire
+		// more than once for the same widget (cache plugins deferring JS,
+		// re-firing of elementor/frontend/init, etc.), which would attach
+		// two click handlers and cause the accordion to expand-then-collapse
+		// on a single tap.
+		const root = this.$element && this.$element[0];
+		if (root) {
+			if (root.dataset.falBound === '1') {
+				return;
+			}
+			root.dataset.falBound = '1';
+		}
+
 		const sel             = this.getSettings('selectors');
 		const reduceMotionMql = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
 		const prefersReduced  = () => !!(reduceMotionMql && reduceMotionMql.matches);
@@ -191,8 +204,13 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 	}
 }
 
-jQuery(window).on('elementor/frontend/init', () => {
-	elementorFrontend.hooks.addAction('frontend/element_ready/features_and_amenities.default', ($element) => {
-		elementorFrontend.elementsHandler.addHandler(FeaturesAmenitiesHandler, { $element });
+// Second layer of double-binding defense: guard against this whole script
+// being loaded twice (some cache/optimizer plugins do this when concatenating).
+if (!window.__falRegistered) {
+	window.__falRegistered = true;
+	jQuery(window).on('elementor/frontend/init', () => {
+		elementorFrontend.hooks.addAction('frontend/element_ready/features_and_amenities.default', ($element) => {
+			elementorFrontend.elementsHandler.addHandler(FeaturesAmenitiesHandler, { $element });
+		});
 	});
-});
+}
