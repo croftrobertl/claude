@@ -45,7 +45,7 @@
 	box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px; cursor: pointer; transition: 0.2s;
 }
 .fal-section-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
-.fal-section-title { font-weight: 600; font-size: 1.2em; }
+.fal-section-title { font-weight: 600; font-size: 1.2em; flex: 1; text-align: center; }
 .fal-section-icon  { color: var(--fal-primary); font-size: 1.2em; }
 
 .fal-amenities { display: grid; gap: var(--fal-density-gap); }
@@ -53,9 +53,9 @@
 .fal-layout-list .fal-amenities { grid-template-columns: 1fr; }
 
 .fal-amenity {
-	display: flex; flex-direction: column; padding: var(--fal-density-pad);
+	display: flex; flex-direction: column; align-items: center; padding: var(--fal-density-pad);
 	background: var(--fal-bg); border: 1px solid var(--fal-border); border-radius: 12px;
-	box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: left; transition: 0.2s;
+	box-shadow: 0 4px 15px rgba(0,0,0,0.02); text-align: center; transition: 0.2s;
 }
 .fal-layout-list .fal-amenity { flex-direction: row; align-items: flex-start; gap: 15px; }
 .fal-glass-yes .fal-amenity,

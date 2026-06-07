@@ -374,6 +374,21 @@ class Widget extends Widget_Base {
 			]
 		);
 
+		$this->add_responsive_control(
+			'header_text_align',
+			[
+				'label'     => esc_html__( 'Text Alignment', 'features-amenities' ),
+				'type'      => Controls_Manager::CHOOSE,
+				'default'   => 'center',
+				'options'   => [
+					'left'    => [ 'title' => esc_html__( 'Left', 'features-amenities' ),    'icon' => 'eicon-text-align-left' ],
+					'center'  => [ 'title' => esc_html__( 'Center', 'features-amenities' ),  'icon' => 'eicon-text-align-center' ],
+					'right'   => [ 'title' => esc_html__( 'Right', 'features-amenities' ),   'icon' => 'eicon-text-align-right' ],
+					'justify' => [ 'title' => esc_html__( 'Justify', 'features-amenities' ), 'icon' => 'eicon-text-align-justify' ],
+				],
+				'selectors' => [ self::SEL . '.fal-section-title' => 'text-align: {{VALUE}};' ],
+			]
+		);
 		$this->add_control(
 			'header_bg_color',
 			[
@@ -494,6 +509,21 @@ class Widget extends Widget_Base {
 			]
 		);
 
+		$this->add_responsive_control(
+			'amenity_text_align',
+			[
+				'label'     => esc_html__( 'Text Alignment', 'features-amenities' ),
+				'type'      => Controls_Manager::CHOOSE,
+				'default'   => 'center',
+				'options'   => [
+					'left'    => [ 'title' => esc_html__( 'Left', 'features-amenities' ),    'icon' => 'eicon-text-align-left' ],
+					'center'  => [ 'title' => esc_html__( 'Center', 'features-amenities' ),  'icon' => 'eicon-text-align-center' ],
+					'right'   => [ 'title' => esc_html__( 'Right', 'features-amenities' ),   'icon' => 'eicon-text-align-right' ],
+					'justify' => [ 'title' => esc_html__( 'Justify', 'features-amenities' ), 'icon' => 'eicon-text-align-justify' ],
+				],
+				'selectors' => [ self::SEL . '.fal-amenity' => 'text-align: {{VALUE}};' ],
+			]
+		);
 		$this->add_control(
 			'amenity_bg_color',
 			[

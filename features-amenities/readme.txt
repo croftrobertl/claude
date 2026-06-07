@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,10 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.2.0 =
+* Section Header titles and Amenity Card titles + descriptions now default to centered text. In grid layout, the amenity icon is also centered above the text for visual balance. List layout keeps the icon to the left of the text as before.
+* New "Text Alignment" responsive control in both the Section Headers and Amenity Cards style sections. Choose left / center / right / justify per device. Defaults to center.
 
 = 1.1.0 =
 * New "Inherit Theme Styles" switcher (default ON). The widget now adopts the active WordPress theme's colors, fonts, and backgrounds out of the box. Toggle off to restore the original v1.0.0 baked-in palette. Per-element style controls still override either way.
