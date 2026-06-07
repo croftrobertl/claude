@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,12 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.5.0 =
+* Search input text and placeholder are now centered. Removes the visual crowding of the "Search amenities..." placeholder against the magnifying glass on narrow viewports.
+* Pressing Enter (or Return) in the search box now smoothly scrolls the viewport to the first matched amenity card and opens any accordion sections that contain matches. Sections without matches stay hidden entirely. No-op when the input is empty or matches nothing.
+* Typing no longer auto-opens accordion sections. Real-time filtering (highlighting matches, hiding non-matching amenities, hiding empty sections) is unchanged; the "open the matched sections" step now only happens on Enter, so the UI no longer jumps around mid-type.
+* Clearing the search (X button or manual delete) now closes exactly the sections that the Enter handler had opened and restores the widget's initial accordion state. Previously the .is-open class lingered, leaving sections open after the search was cleared.
 
 = 1.4.0 =
 * Fixed: "Import List from JSON" button did nothing when clicked. The Export/Import buttons live in the Elementor editor panel (outer frame), not inside the widget itself, so the frontend handler could never find them. They are now wired up by a new editor-only script (assets/js/editor.js) that binds at the document level and writes the imported items into the widget's repeater collection via Elementor's editor API. Import now reports how many items were brought in.

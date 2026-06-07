@@ -109,9 +109,14 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 
 		// Search
 		if (this.elements.$searchInputs.length) {
-			const input = this.elements.$searchInputs[0];
-			const clear = this.elements.$searchClears[0];
-			const items = this.elements.$amenities.toArray();
+			const input    = this.elements.$searchInputs[0];
+			const clear    = this.elements.$searchClears[0];
+			const items    = this.elements.$amenities.toArray();
+			const sections = this.elements.$container.find(sel.section).toArray();
+
+			// Track sections the Enter handler opened so we can close exactly
+			// those (and not anything the user manually opened) on clear.
+			const sectionsOpenedBySearch = new Set();
 
 			const doSearch = () => {
 				const q = input.value.toLowerCase().trim();
@@ -125,7 +130,9 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 
 				if (!q) {
 					items.forEach(i => i.style.display = '');
-					this.elements.$headers.parent().show();
+					sections.forEach(sec => { sec.style.display = ''; });
+					sectionsOpenedBySearch.forEach(sec => closeSection(jQuery(sec)));
+					sectionsOpenedBySearch.clear();
 					return;
 				}
 
@@ -163,19 +170,42 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 					}
 				});
 
-				// Hide empty sections
-				this.elements.$headers.parent().each((i, sec) => {
+				// Hide sections with zero matches. Do NOT auto-open matched
+				// sections during typing — that's the Enter key's job.
+				sections.forEach(sec => {
 					const visibleItems = sec.querySelectorAll(sel.amenity + ':not([style*="display: none"])');
 					sec.style.display = visibleItems.length ? '' : 'none';
-					if (visibleItems.length) {
-						sec.classList.add('is-open');
-						const c = sec.querySelector(sel.content);
-						if (c) c.style.display = 'block';
-					}
 				});
 			};
 
+			const openMatchedSectionsAndScroll = () => {
+				if (!input.value.trim()) return;
+				const visibleAmenities = items.filter(it => it.style.display !== 'none');
+				if (!visibleAmenities.length) return;
+
+				sections.forEach(sec => {
+					if (sec.style.display === 'none') return;
+					if (sec.classList.contains('is-open')) return;
+					const hasMatch = sec.querySelector(sel.amenity + ':not([style*="display: none"])');
+					if (hasMatch) {
+						openSection(jQuery(sec));
+						sectionsOpenedBySearch.add(sec);
+					}
+				});
+
+				const first = visibleAmenities[0];
+				if (first && typeof first.scrollIntoView === 'function') {
+					first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			};
+
 			input.addEventListener('input', doSearch);
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					openMatchedSectionsAndScroll();
+				}
+			});
 			if (clear) {
 				clear.addEventListener('click', () => { input.value = ''; doSearch(); input.focus(); });
 			}
