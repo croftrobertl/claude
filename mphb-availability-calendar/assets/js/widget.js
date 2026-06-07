@@ -703,6 +703,15 @@
         var context = { roomTypeId: 0, lastTrigger: null };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
+        // Portal anchors — same pattern as the info popup. Without this,
+        // a transformed Elementor ancestor becomes the containing block for
+        // position:fixed and the popup ends up centered to the widget
+        // instead of the viewport.
+        var sheetOrigParent = sheet.parentNode;
+        var sheetMarker = document.createComment('mphbac-sheet');
+        var overlayOrigParent = overlay.parentNode;
+        var overlayMarker = document.createComment('mphbac-sheet-overlay');
+
         root.addEventListener('click', function (e) {
             var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
             if (!cell) return;
@@ -723,12 +732,16 @@
             checkoutEl.value = checkout || '';
             errorEl.hidden = true;
             errorEl.textContent = '';
-            // Anchor the popup's top edge to the widget's current top — so it
-            // opens out of the calendar rather than floating at viewport
-            // center / sticking to the page bottom. Clamp >= 0 in case the
-            // user has scrolled past the widget.
-            var rect = root.getBoundingClientRect();
-            sheet.style.setProperty('--mphbac-sheet-top', Math.max(0, Math.round(rect.top)) + 'px');
+            // Portal sheet + overlay to document.body so position:fixed
+            // anchors to the viewport, not a transformed Elementor ancestor.
+            if (sheet.parentNode !== document.body) {
+                sheetOrigParent.insertBefore(sheetMarker, sheet);
+                document.body.appendChild(sheet);
+            }
+            if (overlay.parentNode !== document.body) {
+                overlayOrigParent.insertBefore(overlayMarker, overlay);
+                document.body.appendChild(overlay);
+            }
             withViewTransition(function () {
                 sheet.hidden = false;
                 overlay.hidden = false;
@@ -747,6 +760,16 @@
             setTimeout(function () {
                 sheet.hidden = true;
                 overlay.hidden = true;
+                // Restore the portaled nodes to their original DOM slots so
+                // subsequent re-inits find the popup where they expect it.
+                if (sheetMarker.parentNode) {
+                    sheetMarker.parentNode.insertBefore(sheet, sheetMarker);
+                    sheetMarker.parentNode.removeChild(sheetMarker);
+                }
+                if (overlayMarker.parentNode) {
+                    overlayMarker.parentNode.insertBefore(overlay, overlayMarker);
+                    overlayMarker.parentNode.removeChild(overlayMarker);
+                }
             }, 200);
             document.removeEventListener('keydown', onKeydown);
             if (context.lastTrigger && context.lastTrigger.focus) {

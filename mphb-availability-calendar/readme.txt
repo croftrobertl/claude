@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.5
+Stable tag: 0.8.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.6 =
+* Book Now popup now centers to the visible viewport on every device — desktop, tablet, and mobile — instead of anchoring to the widget's top. Tapping an available date opens the popup right where the visitor's eyes are, no matter where the calendar sits on the page. Previously the popup was tied to the widget's getBoundingClientRect().top, which on tall pages put it well outside the visible area; the auto-scroll fallback that tried to compensate was unreliable on desktop after the first open and never fired on mobile. The popup is now portaled to document.body on open (same pattern the cottage info popup has used since v0.7.2), so position:fixed + top/left 50% with transform:translate(-50%, -50%) gives literal viewport center regardless of any transformed Elementor ancestor in the page stack. Subtle 20px slide-up animation on open preserves the existing motion language.
 
 = 0.8.5 =
 * Fixed: on iPhone (and other notched devices) the cottage info popup's title and close-X could render slightly above the visible viewport, hidden under the notch / Dynamic Island / status bar. The full-mode popup's top anchor is now `max(widget-top, env(safe-area-inset-top))`, so the popup never starts above the device's safe area. Falls back to 0 on devices without a safe-area inset (every non-notched device, so no desktop impact).
