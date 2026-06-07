@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,10 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.2.2 =
+* Fixed (real cause): accordion section would expand and then immediately collapse on a single tap/click in mobile view and in desktop accordion mode. The CSS rule that reveals .fal-section-content when .is-open is present was making the element computed-visible the instant the class was added, and slideToggle then saw it as "already visible" and slid it back closed. The handler now picks the open/close direction explicitly from the pre-click state, calls .stop(true, false) to clear any in-flight animation, forces inline display:none before sliding down so jQuery sees the right starting state, and removes the .is-open class only after slideUp completes. Bug had been carried over from the original Angie Code snippet and only manifested on mobile or with the desktop accordion toggle on.
+* The double-binding guards from 1.2.1 are retained as defense-in-depth.
 
 = 1.2.1 =
 * Fixed: accordion section would expand and then immediately collapse on a single tap/click on cached/optimized pages. The widget's click handler was being bound twice when Elementor's `element_ready` event fired more than once for the same widget (a known interaction with cache plugins that defer or concatenate JS). Added a dataset guard on the widget root plus a registration-level guard so the click handler can only attach once per element regardless of how many times the script loads or initializes.
