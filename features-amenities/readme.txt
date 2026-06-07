@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,12 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.4.0 =
+* Fixed: "Import List from JSON" button did nothing when clicked. The Export/Import buttons live in the Elementor editor panel (outer frame), not inside the widget itself, so the frontend handler could never find them. They are now wired up by a new editor-only script (assets/js/editor.js) that binds at the document level and writes the imported items into the widget's repeater collection via Elementor's editor API. Import now reports how many items were brought in.
+* New "Hover Effect" control in the Section Headers style section: "Lift up (default)" or "None". When set to None, the lift-on-hover transform and shadow change are suppressed.
+* New "Hover Effect" control in the Amenity Cards style section: "Scale up (default)" or "None". When set to None, the scale-on-hover transform and shadow change are suppressed.
+* Renamed the "Icon → Text Gap" control to "Icon → Heading Spacing" to match how users describe it. Same control under the hood — saved values carry through.
 
 = 1.3.0 =
 * Amenity icon now always appears above the title and description text — in both Grid and List layouts. List mode previously placed the icon to the left of the text; that side-by-side arrangement is removed.

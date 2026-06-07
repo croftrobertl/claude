@@ -19,7 +19,7 @@ class Plugin {
 		add_action( 'elementor/elements/categories_registered', [ $this, 'register_category' ] );
 		add_action( 'elementor/widgets/register', [ $this, 'register_widget' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
-		add_action( 'elementor/editor/after_enqueue_scripts', [ $this, 'register_assets' ] );
+		add_action( 'elementor/editor/after_enqueue_scripts', [ $this, 'enqueue_editor_assets' ] );
 	}
 
 	public function load_textdomain(): void {
@@ -51,6 +51,16 @@ class Plugin {
 			'features-amenities',
 			FA_URL . 'assets/js/widget.js',
 			[ 'elementor-frontend' ],
+			FA_VERSION,
+			true
+		);
+	}
+
+	public function enqueue_editor_assets(): void {
+		wp_enqueue_script(
+			'features-amenities-editor',
+			FA_URL . 'assets/js/editor.js',
+			[ 'jquery', 'elementor-editor' ],
 			FA_VERSION,
 			true
 		);

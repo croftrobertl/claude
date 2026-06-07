@@ -390,6 +390,20 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->add_control(
+			'header_hover',
+			[
+				'label'        => esc_html__( 'Hover Effect', 'features-amenities' ),
+				'type'         => Controls_Manager::SELECT,
+				'default'      => 'lift',
+				'options'      => [
+					'lift' => esc_html__( 'Lift up (default)', 'features-amenities' ),
+					'none' => esc_html__( 'None', 'features-amenities' ),
+				],
+				'description'  => esc_html__( 'Visual effect when the section header is hovered.', 'features-amenities' ),
+				'prefix_class' => 'fal-hh-',
+			]
+		);
+		$this->add_control(
 			'header_bg_color',
 			[
 				'label'     => esc_html__( 'Background Color', 'features-amenities' ),
@@ -525,6 +539,20 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->add_control(
+			'amenity_hover',
+			[
+				'label'        => esc_html__( 'Hover Effect', 'features-amenities' ),
+				'type'         => Controls_Manager::SELECT,
+				'default'      => 'scale',
+				'options'      => [
+					'scale' => esc_html__( 'Scale up (default)', 'features-amenities' ),
+					'none'  => esc_html__( 'None', 'features-amenities' ),
+				],
+				'description'  => esc_html__( 'Visual effect when an amenity card is hovered.', 'features-amenities' ),
+				'prefix_class' => 'fal-ah-',
+			]
+		);
+		$this->add_control(
 			'amenity_bg_color',
 			[
 				'label'     => esc_html__( 'Background Color', 'features-amenities' ),
@@ -629,11 +657,11 @@ class Widget extends Widget_Base {
 		$this->add_responsive_control(
 			'amenity_inner_gap',
 			[
-				'label'       => esc_html__( 'Icon → Text Gap', 'features-amenities' ),
+				'label'       => esc_html__( 'Icon → Heading Spacing', 'features-amenities' ),
 				'type'        => Controls_Manager::SLIDER,
 				'size_units'  => [ 'px', 'em' ],
 				'range'       => [ 'px' => [ 'min' => 0, 'max' => 80 ] ],
-				'description' => esc_html__( 'Vertical space between the amenity icon and the title/description text. Defaults to 10px when unset.', 'features-amenities' ),
+				'description' => esc_html__( 'Vertical space between the amenity icon and the title heading. Defaults to 10px when unset.', 'features-amenities' ),
 				'selectors'   => [ self::SEL . '.fal-amenity' => 'gap: {{SIZE}}{{UNIT}};' ],
 			]
 		);

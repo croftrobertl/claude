@@ -2,16 +2,14 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 	getDefaultSettings() {
 		return {
 			selectors: {
-				container:    '.fal-container',
-				header:       '.fal-section-header',
-				content:      '.fal-section-content',
-				section:      '.fal-section',
-				readMore:     '.fal-read-more',
-				searchInput:  '.fal-search-input',
+				container:   '.fal-container',
+				header:      '.fal-section-header',
+				content:     '.fal-section-content',
+				section:     '.fal-section',
+				readMore:    '.fal-read-more',
+				searchInput: '.fal-search-input',
 				searchClear: '.fal-search-clear',
-				amenity:      '.fal-amenity',
-				exportBtn:    '[data-fal-export]',
-				importBtn:    '[data-fal-import]'
+				amenity:     '.fal-amenity'
 			}
 		};
 	}
@@ -24,9 +22,7 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			$readMores:    this.$element.find(sel.readMore),
 			$searchInputs: this.$element.find(sel.searchInput),
 			$searchClears: this.$element.find(sel.searchClear),
-			$amenities:    this.$element.find(sel.amenity),
-			$exportBtns:   this.$element.find(sel.exportBtn),
-			$importBtns:   this.$element.find(sel.importBtn)
+			$amenities:    this.$element.find(sel.amenity)
 		};
 	}
 
@@ -185,47 +181,9 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			}
 		}
 
-		// Export
-		if (this.elements.$exportBtns.length) {
-			const configStr = this.elements.$container[0]?.getAttribute('data-config');
-			let config = {};
-			try { config = JSON.parse(configStr || '{}'); } catch (e) {}
-
-			this.elements.$exportBtns.on('click', (e) => {
-				const btn = e.currentTarget;
-				if (!config.raw_items) return;
-				const text = JSON.stringify(config.raw_items, null, 2);
-				const fb   = document.createElement('textarea');
-				fb.value   = text;
-				document.body.appendChild(fb);
-				fb.select();
-				try { document.execCommand('copy'); } catch (err) {}
-				document.body.removeChild(fb);
-				const orig = btn.innerText;
-				btn.innerText = 'Copied!';
-				setTimeout(() => btn.innerText = orig, 2000);
-			});
-		}
-
-		// Import
-		if (this.elements.$importBtns.length) {
-			this.elements.$importBtns.on('click', () => {
-				const jsonStr = prompt('Paste your JSON configuration here:');
-				if (!jsonStr) return;
-				try {
-					const data = JSON.parse(jsonStr);
-					if (Array.isArray(data) && window.elementor) {
-						const widgetModel = window.elementor.elements.findWhere({ id: this.$element.data('id') });
-						if (widgetModel) {
-							widgetModel.settings.set('list_items', data);
-							alert('Imported! Panel will refresh.');
-						}
-					}
-				} catch (err) {
-					alert('Error parsing JSON.');
-				}
-			});
-		}
+		// Export and Import buttons live in the Elementor editor panel
+		// (outer frame), not inside the widget. They're wired up by
+		// assets/js/editor.js, which is enqueued only in the editor.
 	}
 }
 

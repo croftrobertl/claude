@@ -45,6 +45,7 @@
 	box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px; cursor: pointer; transition: 0.2s;
 }
 .fal-section-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
+.fal-hh-none .fal-section-header:hover { transform: none; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
 .fal-section-title { font-weight: 600; font-size: 1.2em; flex: 1; text-align: center; }
 .fal-section-icon  { color: var(--fal-primary); font-size: 1.2em; }
 
@@ -63,6 +64,7 @@
 	backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 .fal-amenity:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.05); }
+.fal-ah-none .fal-amenity:hover { transform: none; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
 
 .fal-amenity-icon-wrap {
 	display: flex; align-items: center; justify-content: center;
@@ -126,6 +128,11 @@ mark.fal-hit { background: rgba(14, 154, 175, 0.2); color: inherit; padding: 0 2
 	font-family: inherit;
 }
 .fal-inherit-yes .fal-container.fal-container .fal-amenity:hover {
+	box-shadow: none;
+}
+.fal-ah-none.fal-inherit-yes .fal-container.fal-container .fal-amenity:hover,
+.fal-hh-none.fal-inherit-yes .fal-container.fal-container .fal-section-header:hover {
+	transform: none;
 	box-shadow: none;
 }
 
