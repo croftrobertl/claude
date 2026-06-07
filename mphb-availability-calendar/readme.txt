@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.6
+Stable tag: 0.8.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,11 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.7 =
+* New: cottage info popup title is now a hyperlink. By default it links to that cottage's MotoPress accommodation page (the post the cottage_info row is assigned to). Each cottage_info row has a new "Title link URL (optional)" field above Content source — set a URL there to override the default. Links open in the same tab. Underlined title styling inherits the existing title typography.
+* Fixed: Book Now popup wasn't actually centering to the viewport after v0.8.6. The centering CSS used `.mphbac-root .mphbac-sheet` (descendant selector), but the v0.8.6 portal moves the sheet to `document.body` where `.mphbac-root` is no longer an ancestor — so the rule never matched and the popup fell back to the original bottom-of-viewport mobile rule. Switched to the class-doubled selector `.mphbac-sheet.mphbac-sheet` (same pattern the info-sheet uses) which reaches (0,2,0) specificity without depending on any parent. Popup now centers reliably on desktop, tablet, and mobile portrait every time, not just the first.
+* New: Book Now popup's Check-in and Check-out date fields now sit side-by-side on every viewport (mobile, tablet, desktop). Previously they were stacked. The two fields share the row 50/50 with a small gap. Error message wraps below at full width. On viewports too narrow for two date inputs (~< 320px) the fields gracefully stack via flex-wrap.
 
 = 0.8.6 =
 * Book Now popup now centers to the visible viewport on every device — desktop, tablet, and mobile — instead of anchoring to the widget's top. Tapping an available date opens the popup right where the visitor's eyes are, no matter where the calendar sits on the page. Previously the popup was tied to the widget's getBoundingClientRect().top, which on tall pages put it well outside the visible area; the auto-scroll fallback that tried to compensate was unreliable on desktop after the first open and never fired on mobile. The popup is now portaled to document.body on open (same pattern the cottage info popup has used since v0.7.2), so position:fixed + top/left 50% with transform:translate(-50%, -50%) gives literal viewport center regardless of any transformed Elementor ancestor in the page stack. Subtle 20px slide-up animation on open preserves the existing motion language.

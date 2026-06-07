@@ -628,8 +628,15 @@ body.mphbac-info-open {
    and the auto-scroll fallback was unreliable on mobile. position:fixed
    + portal-to-body (openSheet() moves the node to document.body) makes
    the center coordinates literal viewport center. Subtle 20px slide-up
-   on open via the closed-state translateY offset. */
-.mphbac-root .mphbac-sheet {
+   on open via the closed-state translateY offset.
+
+   Selector uses the class-doubled trick (.mphbac-sheet.mphbac-sheet)
+   rather than .mphbac-root .mphbac-sheet — once the sheet is portaled
+   to document.body, the .mphbac-root ancestor is gone, so descendant
+   selectors fail to match. Class-doubling reaches (0,2,0) specificity
+   without depending on any parent. Mirror of the .mphbac-info-sheet
+   --full pattern. */
+.mphbac-sheet.mphbac-sheet {
     left: 50%;
     right: auto;
     top: 50%;
@@ -640,7 +647,7 @@ body.mphbac-info-open {
     transform: translate(-50%, -50%) translateY(20px);
     opacity: 0;
 }
-.mphbac-root .mphbac-sheet.is-open {
+.mphbac-sheet.mphbac-sheet.is-open {
     transform: translate(-50%, -50%);
     opacity: 1;
 }
@@ -680,6 +687,19 @@ body.mphbac-info-open {
     min-width: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+/* Cottage info popup title link — inherits the typography from
+   .mphbac-sheet-title (color, weight, size); just adds a subtle
+   underline cue and a hover state. */
+.mphbac-sheet-title-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+.mphbac-sheet-title-link:hover,
+.mphbac-sheet-title-link:focus-visible {
+    text-decoration-thickness: 2px;
 }
 
 /* Cottage info popup body */
@@ -747,15 +767,24 @@ body.mphbac-info-open {
     outline-offset: 2px;
 }
 
+/* Check-in and check-out fields sit side-by-side on every viewport.
+   flex-wrap: wrap is the safety net on viewports too narrow for two date
+   inputs (~< 320px) — fields gracefully stack instead of overflowing.
+   The error message lives in the same flex container; flex-basis: 100%
+   pushes it to a new row below the date pair, full width. */
 .mphbac-sheet-body {
     display: flex;
-    flex-direction: column;
-    gap: 0.75em;
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 0.75em;
+    row-gap: 0.75em;
     margin-bottom: 1em;
 }
 .mphbac-sheet-field {
     display: flex;
     flex-direction: column;
+    flex: 1 1 calc(50% - 0.5em);
+    min-width: 0;
     gap: 0.3em;
     font-size: 0.95em;
 }
@@ -764,6 +793,7 @@ body.mphbac-info-open {
     color: #111111;
 }
 .mphbac-sheet-error {
+    flex-basis: 100%;
     margin: 0;
     padding: 0.5em 0.7em;
     background: rgba(196, 58, 58, 0.12);

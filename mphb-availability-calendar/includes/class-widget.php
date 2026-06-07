@@ -125,6 +125,13 @@ final class Widget extends Widget_Base
             'label_block' => true,
             'description' => __('Overrides the cottage name as the popup header. Leave empty to use the cottage name from MotoPress.', 'mphb-availability-calendar'),
         ]);
+        $repeater->add_control('ci_title_url', [
+            'label'       => __('Title link URL (optional)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'input_type'  => 'url',
+            'description' => __('Leave empty to link the popup title to this cottage\'s accommodation page (MotoPress permalink). Set a URL here to override.', 'mphb-availability-calendar'),
+        ]);
         $repeater->add_control('ci_source', [
             'label'   => __('Content source', 'mphb-availability-calendar'),
             'type'    => Controls_Manager::SELECT,
@@ -985,6 +992,7 @@ final class Widget extends Widget_Base
         // switcher lost their styles on subsequent opens.)
         $info_html = [];
         $info_titles = [];
+        $info_title_urls = [];
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
             if ($cid <= 0) {
@@ -993,6 +1001,19 @@ final class Widget extends Widget_Base
             $title_override = trim((string) ($row['ci_title'] ?? ''));
             if ($title_override !== '') {
                 $info_titles[$cid] = $title_override;
+            }
+            // Title link: explicit URL override wins; otherwise the
+            // cottage's accommodation page (the cottage IS the mphb_room_type
+            // post, so $cid == accommodation post ID per the CLAUDE.md
+            // invariant). Skip when neither resolves to a usable URL.
+            $title_url_override = trim((string) ($row['ci_title_url'] ?? ''));
+            if ($title_url_override !== '') {
+                $info_title_urls[$cid] = esc_url($title_url_override);
+            } else {
+                $permalink = get_permalink($cid);
+                if (is_string($permalink) && $permalink !== '') {
+                    $info_title_urls[$cid] = esc_url($permalink);
+                }
             }
             $source = (string) ($row['ci_source'] ?? 'text');
             if ($source === 'template') {
@@ -1050,6 +1071,7 @@ final class Widget extends Widget_Base
                 'mobile'  => max(320, min(1600, (int) ($settings['info_popup_max_width_mobile'] ?? 480))),
             ],
             'infoTitles'       => $info_titles,
+            'infoTitleUrls'    => $info_title_urls,
             'infoPopupSideMargin' => [
                 'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
                 'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),

@@ -283,9 +283,23 @@
             // repeater's ci_title field, falling back to the MotoPress
             // cottage name when the override is empty.
             var titleOverride = config.infoTitles && (config.infoTitles[typeId] || config.infoTitles[String(typeId)]);
-            titleEl.textContent = titleOverride
+            var titleText = titleOverride
                 || (config.roomTitles && config.roomTitles[typeId])
                 || '';
+            // Per-cottage title link (defaults to the accommodation page
+            // permalink server-side; per-row override via ci_title_url).
+            // Empty string / missing => render as plain text.
+            var titleUrl = config.infoTitleUrls && (config.infoTitleUrls[typeId] || config.infoTitleUrls[String(typeId)]);
+            if (titleUrl) {
+                titleEl.textContent = '';
+                var titleLink = document.createElement('a');
+                titleLink.href = titleUrl;
+                titleLink.className = 'mphbac-sheet-title-link';
+                titleLink.textContent = titleText;
+                titleEl.appendChild(titleLink);
+            } else {
+                titleEl.textContent = titleText;
+            }
             bodyEl.innerHTML = content.innerHTML;
             // In full-viewport mode, anchor the popup's top to the widget's
             // current top position so it grows out of the calendar rather
