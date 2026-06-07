@@ -157,7 +157,8 @@ class Widget extends Widget_Base {
 				'type' => Controls_Manager::RAW_HTML,
 				'raw'  => '<div style="margin-bottom:10px;">'
 					. '<button class="elementor-button elementor-button-default" data-fal-export type="button" style="width:100%;margin-bottom:5px;">' . esc_html__( 'Export List to Clipboard', 'features-amenities' ) . '</button>'
-					. '<button class="elementor-button elementor-button-default" data-fal-import type="button" style="width:100%;">' . esc_html__( 'Import List from JSON', 'features-amenities' ) . '</button>'
+					. '<button class="elementor-button elementor-button-default" data-fal-import type="button" style="width:100%;">' . esc_html__( 'Import from Elementor Template File…', 'features-amenities' ) . '</button>'
+					. '<div style="margin-top:6px;font-size:11px;opacity:0.7;line-height:1.4;">' . esc_html__( 'Import accepts a JSON file exported from an Elementor container template that contains Icon List widgets. The first item of each Icon List becomes a Section Header; the rest become Amenities.', 'features-amenities' ) . '</div>'
 					. '</div>',
 			]
 		);
