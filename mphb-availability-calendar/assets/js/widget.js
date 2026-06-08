@@ -265,6 +265,14 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var lastTrigger = null;
+        // When the popup opens we MOVE (not clone) the cottage's hidden
+        // .mphbac-info-content node into the popup body. Same DOM identity
+        // means Elementor's frontend init that ran at page-load keeps its
+        // bindings — third-party widget handlers (the features_and_amenities
+        // accordion, Swiper carousel, pricing-table switcher) stay alive.
+        // closeInfo() moves the node back to its original slot.
+        var movedContent = null;
+        var movedContentOrigParent = null;
 
         // Portal anchors. The popup is rendered inside .mphbac-root by PHP
         // (so its hidden content and Elementor template CSS enqueue
@@ -338,7 +346,19 @@
             } else {
                 titleEl.textContent = titleText;
             }
-            bodyEl.innerHTML = content.innerHTML;
+            // Move the original .mphbac-info-content into the popup body.
+            // If a previous cottage's content is still mounted (rapid open
+            // without close), restore it first so we never orphan a node.
+            if (movedContent && movedContent !== content) {
+                restoreMovedContent();
+            }
+            if (content !== movedContent) {
+                movedContentOrigParent = content.parentNode;
+                bodyEl.innerHTML = '';
+                bodyEl.appendChild(content);
+                content.hidden = false;
+                movedContent = content;
+            }
             // In full-viewport mode, anchor the popup's top to the widget's
             // current top position so it grows out of the calendar rather
             // than covering the page above. Clamp to >= 0 in case the user
@@ -389,12 +409,11 @@
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
-                // Re-fire Elementor's element_ready hooks for every widget we
-                // just cloned via innerHTML, so widget handlers (e.g. the
-                // pricing-table switcher) bind to the popup copy. We do this
-                // inside rAF so the popup is on-screen first — handlers like
-                // the pricing table's indicator measure element offsets.
-                reinitElementorWidgets(bodyEl);
+                // Swiper instances and ResizeObservers cached zero-dimension
+                // metrics while the source div was display:none at page-load.
+                // A resize event pokes them to re-measure now that we're
+                // mounted into a visible container.
+                try { window.dispatchEvent(new Event('resize')); } catch (e) {}
             });
             document.addEventListener('keydown', onKeydown);
         }
@@ -407,11 +426,11 @@
             setTimeout(function () {
                 sheet.hidden = true;
                 overlay.hidden = true;
-                // Clear the popup body so any body-level overlays a
-                // third-party widget appended (carousel pagination, lightbox
-                // controls, etc.) get torn down with their DOM owner. On
-                // next open we re-clone the cottage's pristine source.
-                bodyEl.innerHTML = '';
+                // Move the cottage's content node back to its original
+                // hidden slot. Same DOM identity is preserved across opens
+                // so widget JS state (accordion open/closed, carousel
+                // position, etc.) survives between popups.
+                restoreMovedContent();
                 // Restore the portaled elements to their original DOM slots
                 // so subsequent re-renders / re-inits work against the
                 // original tree.
@@ -428,6 +447,15 @@
             if (lastTrigger && lastTrigger.focus) {
                 try { lastTrigger.focus(); } catch (e) { /* ignore */ }
             }
+        }
+
+        function restoreMovedContent() {
+            if (movedContent && movedContentOrigParent) {
+                movedContent.hidden = true;
+                movedContentOrigParent.appendChild(movedContent);
+            }
+            movedContent = null;
+            movedContentOrigParent = null;
         }
 
         function onKeydown(e) {

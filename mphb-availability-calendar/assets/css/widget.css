@@ -652,6 +652,42 @@ body.mphbac-info-open {
     opacity: 1;
 }
 
+/* Cottage info popup adopts the Book Now popup's centered-modal feel on
+   every viewport (v0.8.9): 12px gutters on mobile, 32px on tablet/desktop,
+   12px radius all corners, body scrolls internally. Class-doubled selector
+   for two reasons — (a) it wins over the (0,1,0) bottom-sheet base rule,
+   (b) it keeps applying after openInfo() portals the sheet to
+   document.body where the .mphbac-root ancestor is no longer present. */
+.mphbac-info-sheet.mphbac-info-sheet {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: min(440px, calc(100vw - 24px));
+    max-height: min(85vh, 85dvh);
+    border-radius: 12px;
+    transform: translate(-50%, -50%) translateY(20px);
+    opacity: 0;
+}
+.mphbac-info-sheet.mphbac-info-sheet.is-open {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+/* Tablet: 32px gutter floor, up to 720px. */
+@media (min-width: 601px) {
+    .mphbac-info-sheet.mphbac-info-sheet {
+        width: min(720px, calc(100vw - 64px));
+    }
+}
+/* Desktop: respects the Elementor "Info popup max width" responsive control
+   (falls back to 900px — down from 1200px in v0.8.5 — so the carousel and
+   accordion have room without dominating the screen). */
+@media (min-width: 1025px) {
+    .mphbac-info-sheet.mphbac-info-sheet {
+        width: min(var(--mphbac-info-max-width, 900px), calc(100vw - 64px));
+    }
+}
+
 /* Defensive rules for arbitrary Elementor / Angie-snippet content cloned
    into the popup. Without these, an image set to width:1200px in a
    template would force the popup to scroll horizontally. */

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.8
+Stable tag: 0.8.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,11 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.9 =
+* Fixed: Features & Amenities accordion finally responds to taps inside the cottage info popup. v0.8.4's clone-via-innerHTML approach (and v0.8.8's hardened reinit) couldn't keep third-party widget bindings alive after a clone, because their JS caches state against the original DOM node identity. New approach: instead of cloning, MOVE the original hidden `.mphbac-info-content` node into the popup body on open, and move it back to its hidden slot on close. Same DOM identity = the bindings Elementor's frontend init already attached at page-load stay alive — accordion clicks, Swiper carousel, pricing-table switcher all just work. Replaces the `data-id` uniquification / `removeData()` / `runReadyTrigger()` dance with a one-line `appendChild`.
+* New: cottage info popup now mirrors the Book Now popup's mobile feel — centered vertically + horizontally, 12px gutters each side, 12px rounded corners all around, body scrolls internally up to 85% of the viewport. Drops the slide-up-from-bottom bottom-sheet pattern entirely. Same mental model across both popups.
+* Improved: tablet (601–1024px) info popup uses 32px gutters, up to 720px wide. Desktop (≥1025px) default max-width lowered to 900px (was 1200px) so the layout doesn't feel sparse on wide monitors — the "Info popup max width" Elementor responsive control still overrides per-device when set.
 
 = 0.8.8 =
 * Fixed: Features & Amenities accordion (and other third-party Elementor widgets) inside the cottage info popup did not respond to taps/clicks. The naive `frontend/element_ready/<type>` re-fire from v0.8.4 doesn't handle two third-party gotchas: (1) the cloned widget keeps the original's `data-id`, and many widget registries dedupe by id and skip re-init; (2) Elementor's Base handler tracks bound handlers via jQuery `$.data('handlers')`, and re-firing the hook on the same DOM is silently a no-op. The popup's reinit now (a) rewrites `data-id` on every `.elementor-element` in the clone to a unique value, (b) clears any carried-over jQuery data, and (c) prefers `elementorFrontend.elementsHandler.runReadyTrigger()` — Elementor's canonical re-init entry point — over manual hook dispatch. This is also expected to fix the image carousel inside the popup (Swiper-based, same root cause).
