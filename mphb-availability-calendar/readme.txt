@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.9
+Stable tag: 0.8.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.10 =
+* Fixed: image carousel inside the cottage info popup now responds to taps/clicks. Symptom was the classic Swiper-init-in-a-hidden-container pattern — the carousel briefly drew its first slide and nav arrows, then Swiper's resize observer fired, recomputed against the stale zero-width measurements cached at page-load (when the .mphbac-info-content source div was display:none), decided "everything fits, no nav needed", added `.swiper-button-disabled` to both arrows and they vanished. v0.8.9's `window.dispatchEvent('resize')` nudge updated Swiper's size but didn't re-evaluate navigation arrow state or kick the lazy-load queue. New `refreshSwipers()` helper walks every `.swiper` / `.swiper-container` inside the moved popup body and calls `swiper.update()` + `swiper.navigation.update()` + `swiper.pagination.update()` + `swiper.lazy.load()` explicitly. Reproduced on every mobile cottage and on the desktop cottage 22 popup; fixed for both.
 
 = 0.8.9 =
 * Fixed: Features & Amenities accordion finally responds to taps inside the cottage info popup. v0.8.4's clone-via-innerHTML approach (and v0.8.8's hardened reinit) couldn't keep third-party widget bindings alive after a clone, because their JS caches state against the original DOM node identity. New approach: instead of cloning, MOVE the original hidden `.mphbac-info-content` node into the popup body on open, and move it back to its hidden slot on close. Same DOM identity = the bindings Elementor's frontend init already attached at page-load stay alive — accordion clicks, Swiper carousel, pricing-table switcher all just work. Replaces the `data-id` uniquification / `removeData()` / `runReadyTrigger()` dance with a one-line `appendChild`.

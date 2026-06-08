@@ -256,6 +256,36 @@
         });
     }
 
+    // After v0.8.9 mounts the original .mphbac-info-content into the popup
+    // body, any Swiper instance that initialized against the source div
+    // while it was display:none has stale measurements: container width was
+    // 0, slidesPerView resolved to a weird number, navigation arrows ended
+    // up disabled. dispatchEvent('resize') alone updates size but doesn't
+    // re-evaluate navigation enable/disable state or trigger lazy-loads, so
+    // we kick the Swiper APIs explicitly. Idempotent — safe to call every
+    // open. el.swiper is the canonical Swiper-attaches-instance pattern
+    // (works on Swiper 6+, which is what current Elementor ships).
+    function refreshSwipers(container) {
+        if (!container) return;
+        var swiperEls = container.querySelectorAll('.swiper, .swiper-container');
+        swiperEls.forEach(function (el) {
+            var sw = el.swiper;
+            if (!sw) return;
+            try {
+                sw.update();
+                if (sw.navigation && sw.navigation.update) {
+                    sw.navigation.update();
+                }
+                if (sw.pagination && sw.pagination.update) {
+                    sw.pagination.update();
+                }
+                if (sw.lazy && sw.lazy.load) {
+                    sw.lazy.load();
+                }
+            } catch (e) { /* swiper threw on update — ignore, next one */ }
+        });
+    }
+
     function wireInfoPopup(root, config) {
         var sheet = root.querySelector('.mphbac-info-sheet');
         var overlay = root.querySelector('.mphbac-info-overlay');
@@ -409,10 +439,14 @@
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
-                // Swiper instances and ResizeObservers cached zero-dimension
-                // metrics while the source div was display:none at page-load.
-                // A resize event pokes them to re-measure now that we're
-                // mounted into a visible container.
+                // Surgically re-measure every Swiper inside the moved
+                // content. resize alone updates size but doesn't re-eval
+                // navigation arrow state or trigger lazy-load — both bit
+                // us on the v0.8.9 carousel.
+                refreshSwipers(bodyEl);
+                // Keep the resize dispatch as a belt-and-braces nudge for
+                // any non-Swiper third-party ResizeObserver that may also
+                // have cached zero-dimension state in the hidden source.
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
             });
             document.addEventListener('keydown', onKeydown);
