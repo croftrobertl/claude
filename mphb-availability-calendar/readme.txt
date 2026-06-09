@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.11
+Stable tag: 0.8.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.12 =
+* Fixed: Book Now popup's check-in / check-out date fields rendered as a thin horizontal slice with the top and bottom of the date text cut off on desktop. Same `line-height: 1px` regression v0.2.0 fixed for the calendar filter row, surfacing on the popup inputs for the first time. Root cause: v0.8.6 portaled the booking popup out to `document.body`, but the `.mphbac-root .mphbac-input` rule that carries the `line-height: 1.4 !important` override still required `.mphbac-root` as an ancestor — which fails on the portaled popup. v0.8.7 fixed the popup centering with the same class-doubled selector pattern but didn't apply it to the input rule. Switched `.mphbac-root .mphbac-input` to `.mphbac-input.mphbac-input` so the rule matches whether the input lives inside the widget tree (filter row) or has been portaled out (booking popup). Also restores correct padding, border, and background on the popup inputs as a side benefit.
 
 = 0.8.11 =
 * Fixed: image carousel inside the cottage info popup — navigation arrows and the Elementor lightbox now work on first open. v0.8.10's `swiper.update()` rescue couldn't recover the missing nav-arrow click bindings or the lightbox click handler, because both are wired once during Elementor's image-carousel init and not redone by update. Root cause: the `.mphbac-info-content` source div was `display: none` at page-load, so Elementor's `image-carousel.default` handler ran against a 0×0 container and didn't fully bind. The source div is now rendered offscreen with real width (`position: fixed; transform: translateY(-200vh); width: var(--mphbac-info-prerender-width, 720px)`) so Elementor's handler initializes Swiper, navigation, and lightbox correctly at page-load. v0.8.10's `refreshSwipers()` continues to backstop the post-move re-measure when runtime width differs from the prerender width.

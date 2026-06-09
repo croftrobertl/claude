@@ -89,7 +89,14 @@
     }
 }
 
-.mphbac-root .mphbac-input {
+/* Class-doubled selector (.mphbac-input.mphbac-input) instead of
+   .mphbac-root .mphbac-input so the rule matches both the filter-row
+   inputs AND the booking popup's date inputs after v0.8.6's portal to
+   document.body. Without doubling-via-no-ancestor, Bravada's Elementor
+   kit reset (line-height: 1px) wins on the portaled inputs and
+   collapses the date text to a thin slice. Same pattern as the
+   .mphbac-sheet.mphbac-sheet centering fix from v0.8.7. */
+.mphbac-input.mphbac-input {
     padding: 10px 12px;
     border: 1px solid var(--mphbac-color-frame);
     border-radius: 6px;
