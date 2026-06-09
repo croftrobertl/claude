@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.0
+Stable tag: 0.9.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,47 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.4 =
+
+Live-page UX fixes and editor cleanup from real-use feedback on 0.9.3.
+
+Fixes:
+* **Empty space above opened section eliminated.** The menu hub used to
+  reserve its full layout height while invisible; switched to display:none
+  in detail mode so detail content sits right under the search box.
+* **Viewport now scrolls to opened section.** Previously only scrolled
+  when the visitor was already below the widget; now always brings the
+  detail's title into view.
+* **Items in a section detail center by default**, matching the menu
+  tiles. Procedure (numbered-list) mode keeps left alignment.
+* **Search placeholder centered.** "(⌘K)" removed from the default
+  placeholder.
+
+New:
+* **Items per row in section detail** — responsive Elementor SELECT
+  control (1 / 2 / 3 / 4 columns). Phones always collapse to 1 column.
+* **WiFi-format QR for credentials items** — new per-item "WiFi
+  credentials mode" toggle. Adds SSID, security (WPA / WEP / open) and
+  hidden-network fields; reuses the existing "Value to copy" as the
+  password. Renders a "Show WiFi QR" button next to Copy that opens a
+  scannable QR encoding the WIFI:T:WPA;S:...;P:...;; format every modern
+  phone camera recognizes for one-tap join.
+
+Removed:
+* Generic QR button next to Copy on items (replaced by WiFi-specific QR
+  above; copy still works the same).
+* Per-item chain/share button next to each item title (section-level
+  Share in the More menu still works).
+
+Editor:
+* **Export Guide (JSON) and Import Guide (JSON) work again on
+  Elementor 4.x.** Rewrote both as server-side admin-ajax endpoints
+  that read/write _elementor_data postmeta directly instead of the
+  editor panel JS API (which changed in 4.x). Export now triggers a
+  guest-guide-export.json file download. Import accepts the same JSON
+  pasted into a prompt and writes it back to the page. Clear error
+  messages if the page has zero or multiple DCC Guest Guide widgets.
 
 = 0.9.0 =
 

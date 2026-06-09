@@ -73,6 +73,24 @@ final class Widget extends Widget_Base
     {
         self::register_assets();
         wp_enqueue_script('dccgg-widget');
+
+        // v0.9.4: localize editor-side data for the server-backed Export /
+        // Import flow. The Elementor editor URL is ?post=ID&action=elementor,
+        // so the JS reads $post_id from the query string itself, but we hand
+        // it down here too as a defensive fallback. Two separate nonces so
+        // Import (mutating) and Export (read-only) can be audited independently.
+        $post_id = 0;
+        if (isset($_GET['post'])) {
+            $post_id = (int) $_GET['post'];
+        } elseif (isset($_GET['post_id'])) {
+            $post_id = (int) $_GET['post_id'];
+        }
+        wp_localize_script('dccgg-widget', 'dccggEditor', [
+            'ajaxUrl'     => admin_url('admin-ajax.php'),
+            'exportNonce' => wp_create_nonce('dccgg_export'),
+            'importNonce' => wp_create_nonce('dccgg_import'),
+            'postId'      => $post_id,
+        ]);
     }
 
     protected function register_controls(): void
@@ -596,7 +614,7 @@ final class Widget extends Widget_Base
         $this->add_control('export_import_notice', [
             'type'            => Controls_Manager::RAW_HTML,
             'raw'             => '<div class="elementor-panel-alert" style="background:#f6f7f7;border-color:#e0e1e2;color:#2c3338;margin-bottom:8px;">' .
-                                  esc_html__('Back up the whole guide or move it to another site. Export copies a JSON of all sections + items to your clipboard; Import pastes one in.', 'dcc-guest-guide') .
+                                  esc_html__('Back up the whole guide or move it to another site. Export downloads a JSON of all sections + items; Import pastes one back in. The page must already be saved with at least one DCC Guest Guide widget.', 'dcc-guest-guide') .
                                   '<br><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' .
                                   '<button type="button" class="elementor-button elementor-button-default" data-dccgg-export>' . esc_html__('Export Guide (JSON)', 'dcc-guest-guide') . '</button>' .
                                   '<button type="button" class="elementor-button elementor-button-default" data-dccgg-import>' . esc_html__('Import Guide (JSON)', 'dcc-guest-guide') . '</button>' .
@@ -845,6 +863,36 @@ final class Widget extends Widget_Base
             'condition' => ['item_copy' => 'yes'],
         ]);
 
+        $repeater->add_control('item_wifi_mode', [
+            'label'        => __('WiFi credentials mode', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'description'  => __('Adds a "Show WiFi QR" button on this item. Guests scan it with their phone camera to join the network. Password is taken from the "Value to copy" field above — turn on the Copy button and fill the password there.', 'dcc-guest-guide'),
+        ]);
+        $repeater->add_control('wifi_ssid', [
+            'label'       => __('Network name (SSID)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'condition'   => ['item_wifi_mode' => 'yes'],
+        ]);
+        $repeater->add_control('wifi_security', [
+            'label'     => __('Security', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::SELECT,
+            'default'   => 'WPA',
+            'options'   => [
+                'WPA'    => __('WPA / WPA2 / WPA3', 'dcc-guest-guide'),
+                'WEP'    => __('WEP', 'dcc-guest-guide'),
+                'nopass' => __('Open (no password)', 'dcc-guest-guide'),
+            ],
+            'condition' => ['item_wifi_mode' => 'yes'],
+        ]);
+        $repeater->add_control('wifi_hidden', [
+            'label'        => __('Hidden network', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'condition'    => ['item_wifi_mode' => 'yes'],
+        ]);
+
         $repeater->add_control('media_type', [
             'label'   => __('Media', 'dcc-guest-guide'),
             'type'    => Controls_Manager::SELECT,
@@ -934,7 +982,7 @@ final class Widget extends Widget_Base
         $this->add_control('search_placeholder', [
             'label'     => __('Placeholder', 'dcc-guest-guide'),
             'type'      => Controls_Manager::TEXT,
-            'default'   => __('Search the guide… (⌘K)', 'dcc-guest-guide'),
+            'default'   => __('Search the guide…', 'dcc-guest-guide'),
             'condition' => ['enable_search' => 'yes'],
         ]);
 
@@ -1122,6 +1170,7 @@ final class Widget extends Widget_Base
             'str_fab_close'    => [__('FAB close aria-label', 'dcc-guest-guide'),     __('Close guide', 'dcc-guest-guide')],
             'str_theme_toggle' => [__('Theme toggle aria-label', 'dcc-guest-guide'),  __('Toggle dark mode', 'dcc-guest-guide')],
             'str_qr_close'     => [__('QR close aria-label', 'dcc-guest-guide'),      __('Close QR code', 'dcc-guest-guide')],
+            'str_wifi_qr'      => [__('WiFi QR button label', 'dcc-guest-guide'),    __('Show WiFi QR', 'dcc-guest-guide')],
             'str_share'        => [__('Share button', 'dcc-guest-guide'),       __('Share', 'dcc-guest-guide')],
             'str_share_copied' => [__('Share-link copied', 'dcc-guest-guide'),  __('Link copied!', 'dcc-guest-guide')],
             'str_prev_section' => [__('Previous-section aria-label', 'dcc-guest-guide'), __('Previous section', 'dcc-guest-guide')],
@@ -1517,6 +1566,26 @@ final class Widget extends Widget_Base
             'mobile_default' => ['size' => 140, 'unit' => 'px'],
             'range'      => ['px' => ['min' => 120, 'max' => 400, 'step' => 5]],
             'selectors'  => [self::SEL . '.dccgg-menu' => '--dccgg-tile-min: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        $this->add_responsive_control('detail_items_cols', [
+            'label'          => __('Items per row in section detail', 'dcc-guest-guide'),
+            'type'           => Controls_Manager::SELECT,
+            'default'        => '1',
+            'tablet_default' => '1',
+            'mobile_default' => '1',
+            'options'        => [
+                '1' => __('1 (stacked)', 'dcc-guest-guide'),
+                '2' => __('2 columns', 'dcc-guest-guide'),
+                '3' => __('3 columns', 'dcc-guest-guide'),
+                '4' => __('4 columns', 'dcc-guest-guide'),
+            ],
+            'selectors'      => [
+                self::SEL . ' .dccgg-detail-items:not(.dccgg-procedure)' =>
+                    'display: grid; grid-template-columns: repeat({{VALUE}}, minmax(0, 1fr)); gap: 18px; align-items: start;',
+            ],
+            'description'    => __('Tile-style layout for items inside a section. Stacks back to 1 on mobile regardless of this value.', 'dcc-guest-guide'),
+            'separator'      => 'before',
         ]);
 
         $this->add_control('css_filters_heading', [
@@ -2539,6 +2608,13 @@ final class Widget extends Widget_Base
         $badge          = trim((string) ($item['item_badge'] ?? ''));
         $emoji          = trim((string) ($item['item_emoji'] ?? ''));
         $checkable      = $section_checklist || ($item['item_checkable'] ?? '') === 'yes';
+        $wifi_on        = ($item['item_wifi_mode'] ?? '') === 'yes';
+        $wifi_ssid      = trim((string) ($item['wifi_ssid'] ?? ''));
+        $wifi_security  = (string) ($item['wifi_security'] ?? 'WPA');
+        $wifi_hidden    = ($item['wifi_hidden'] ?? '') === 'yes';
+        $wifi_payload   = ($wifi_on && $wifi_ssid !== '')
+            ? self::wifi_qr_payload($wifi_ssid, $copy_val, $wifi_security, $wifi_hidden)
+            : '';
 
         // Auto-fold (v0.6): when the WYSIWYG word count exceeds the global
         // threshold, force read-more even when the per-item toggle is off.
@@ -2590,9 +2666,6 @@ final class Widget extends Widget_Base
                         <i class="fas fa-volume-up" aria-hidden="true"></i>
                     </button>
                 <?php endif; ?>
-                <button type="button" class="dccgg-item-share" data-share-title="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_share']); ?>">
-                    <i class="fas fa-link" aria-hidden="true"></i>
-                </button>
                 <?php if (($strings['enable_problem_report'] ?? '') === 'yes' && ($strings['enable_per_item_report'] ?? '') === 'yes') : ?>
                     <button type="button" class="dccgg-item-report" data-report-section="<?php echo esc_attr($section_key); ?>" data-report-item="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')); ?>">
                         <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
@@ -2660,7 +2733,7 @@ final class Widget extends Widget_Base
                 endif;
             endif; ?>
 
-            <?php if ($map_on || $copy_on) : ?>
+            <?php if ($map_on || $copy_on || $wifi_payload !== '') : ?>
                 <div class="dccgg-item-utils">
                     <?php if ($map_on && $map_url !== '') : ?>
                         <a class="dccgg-btn dccgg-map" href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener">
@@ -2671,8 +2744,13 @@ final class Widget extends Widget_Base
                         <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
                         </button>
-                        <button type="button" class="dccgg-btn dccgg-qr" data-qr="<?php echo esc_attr($copy_val); ?>" data-qr-title="<?php echo esc_attr($title); ?>" title="QR">
-                            <i class="fas fa-qrcode" aria-hidden="true"></i>
+                    <?php endif; ?>
+                    <?php if ($wifi_payload !== '') : ?>
+                        <button type="button" class="dccgg-btn dccgg-qr dccgg-qr--wifi"
+                                data-qr="<?php echo esc_attr($wifi_payload); ?>"
+                                data-qr-title="<?php echo esc_attr(sprintf(/* translators: %s: WiFi network name */ __('Join WiFi: %s', 'dcc-guest-guide'), $wifi_ssid)); ?>"
+                                data-qr-caption="<?php echo esc_attr($wifi_ssid . ($copy_val !== '' && $wifi_security !== 'nopass' ? '  ·  ' . sprintf(/* translators: %s: WiFi password */ __('Password: %s', 'dcc-guest-guide'), $copy_val) : '')); ?>">
+                            <i class="fas fa-wifi" aria-hidden="true"></i> <?php echo esc_html($strings['str_wifi_qr'] ?? __('Show WiFi QR', 'dcc-guest-guide')); ?>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -3018,6 +3096,22 @@ final class Widget extends Widget_Base
             ];
         }
         return $by_image;
+    }
+
+    public static function wifi_qr_payload(string $ssid, string $password, string $security, bool $hidden): string
+    {
+        $escape = static function (string $v): string {
+            return preg_replace('/([\\\\;,":])/', '\\\\$1', $v);
+        };
+        $security = in_array($security, ['WPA', 'WEP', 'nopass'], true) ? $security : 'WPA';
+        $parts = ['T:' . $security, 'S:' . $escape($ssid)];
+        if ($security !== 'nopass' && $password !== '') {
+            $parts[] = 'P:' . $escape($password);
+        }
+        if ($hidden) {
+            $parts[] = 'H:true';
+        }
+        return 'WIFI:' . implode(';', $parts) . ';;';
     }
 
     private static function render_template(int $template_id): string

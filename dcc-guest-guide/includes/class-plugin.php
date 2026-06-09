@@ -51,6 +51,199 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_report_problem', [$this, 'handle_report_problem']);
         add_action('wp_ajax_dccgg_noaa_alerts',         [$this, 'handle_noaa_alerts']);
         add_action('wp_ajax_nopriv_dccgg_noaa_alerts',  [$this, 'handle_noaa_alerts']);
+
+        // v0.9.4: server-side Export / Import — the editor-panel JS API
+        // path broke in Elementor 4.x, so read/write _elementor_data
+        // postmeta directly from a privileged AJAX endpoint instead.
+        add_action('wp_ajax_dccgg_export_guide', [$this, 'handle_export_guide']);
+        add_action('wp_ajax_dccgg_import_guide', [$this, 'handle_import_guide']);
+    }
+
+    /**
+     * AJAX: export the DCC Guest Guide widget's sections + items from the
+     * given Elementor post's _elementor_data meta as a JSON payload.
+     * Editor-only (current_user_can('edit_posts')) + nonce-protected.
+     * Returns a clear error if zero or more than one widget exists on
+     * the page.
+     */
+    public function handle_export_guide(): void
+    {
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(['message' => __('Insufficient permissions.', 'dcc-guest-guide')], 403);
+        }
+        check_ajax_referer('dccgg_export', 'nonce');
+        $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+        if ($post_id <= 0) {
+            wp_send_json_error(['message' => __('Missing post ID.', 'dcc-guest-guide')], 400);
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error(['message' => __('You cannot edit this page.', 'dcc-guest-guide')], 403);
+        }
+        $raw = get_post_meta($post_id, '_elementor_data', true);
+        if (!is_string($raw) || $raw === '') {
+            wp_send_json_error(['message' => __('No Elementor data on this page.', 'dcc-guest-guide')], 404);
+        }
+        $tree = json_decode($raw, true);
+        if (!is_array($tree)) {
+            wp_send_json_error(['message' => __('Could not parse Elementor data.', 'dcc-guest-guide')], 500);
+        }
+        $hits = [];
+        $this->collect_dccgg_widgets($tree, $hits);
+        if (empty($hits)) {
+            wp_send_json_error(['message' => __('This page has no DCC Guest Guide widget.', 'dcc-guest-guide')], 404);
+        }
+        if (count($hits) > 1) {
+            wp_send_json_error(['message' => __('Multiple DCC Guest Guide widgets found on this page — Export only supports one widget per page right now.', 'dcc-guest-guide')], 409);
+        }
+        $widget   = $hits[0];
+        $settings = (array) ($widget['settings'] ?? []);
+        $sections = $this->strip_row_ids((array) ($settings['guide_sections'] ?? []));
+        $items    = $this->strip_row_ids((array) ($settings['guide_items']    ?? []));
+        wp_send_json_success([
+            'schema'    => 1,
+            'widget_id' => (string) ($widget['id'] ?? ''),
+            'sections'  => $sections,
+            'items'     => $items,
+        ]);
+    }
+
+    /**
+     * AJAX: import a Guide JSON payload into the single DCC Guest Guide
+     * widget on the given Elementor post. Replace or append mode.
+     * Writes _elementor_data meta back and clears Elementor's cached CSS
+     * for the post so the front-end reflects the change on the next view.
+     */
+    public function handle_import_guide(): void
+    {
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(['message' => __('Insufficient permissions.', 'dcc-guest-guide')], 403);
+        }
+        check_ajax_referer('dccgg_import', 'nonce');
+        $post_id = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+        $payload_raw = isset($_POST['payload']) ? wp_unslash((string) $_POST['payload']) : '';
+        $replace = !empty($_POST['replace']);
+        if ($post_id <= 0 || $payload_raw === '') {
+            wp_send_json_error(['message' => __('Missing post ID or payload.', 'dcc-guest-guide')], 400);
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error(['message' => __('You cannot edit this page.', 'dcc-guest-guide')], 403);
+        }
+        $payload = json_decode($payload_raw, true);
+        if (!is_array($payload) || !isset($payload['sections']) || !isset($payload['items'])
+            || !is_array($payload['sections']) || !is_array($payload['items'])) {
+            wp_send_json_error(['message' => __('Unrecognized schema — expected { sections: [...], items: [...] }.', 'dcc-guest-guide')], 400);
+        }
+        $raw = get_post_meta($post_id, '_elementor_data', true);
+        if (!is_string($raw) || $raw === '') {
+            wp_send_json_error(['message' => __('No Elementor data on this page.', 'dcc-guest-guide')], 404);
+        }
+        $tree = json_decode($raw, true);
+        if (!is_array($tree)) {
+            wp_send_json_error(['message' => __('Could not parse Elementor data.', 'dcc-guest-guide')], 500);
+        }
+
+        $new_sections = $this->assign_row_ids($payload['sections']);
+        $new_items    = $this->assign_row_ids($payload['items']);
+
+        $matched = 0;
+        $written_sections = 0;
+        $written_items = 0;
+        $update_widget = function (array &$w) use ($replace, $new_sections, $new_items, &$matched, &$written_sections, &$written_items) {
+            $settings = (array) ($w['settings'] ?? []);
+            $existing_s = (array) ($settings['guide_sections'] ?? []);
+            $existing_i = (array) ($settings['guide_items']    ?? []);
+            $settings['guide_sections'] = $replace ? $new_sections : array_merge($existing_s, $new_sections);
+            $settings['guide_items']    = $replace ? $new_items    : array_merge($existing_i, $new_items);
+            $w['settings'] = $settings;
+            $matched++;
+            $written_sections = count($settings['guide_sections']);
+            $written_items    = count($settings['guide_items']);
+        };
+        $this->walk_dccgg_widgets($tree, $update_widget);
+
+        if ($matched === 0) {
+            wp_send_json_error(['message' => __('This page has no DCC Guest Guide widget to import into. Add the widget first, save the page, then try again.', 'dcc-guest-guide')], 404);
+        }
+        if ($matched > 1) {
+            wp_send_json_error(['message' => __('Multiple DCC Guest Guide widgets found on this page — Import only supports one widget per page right now.', 'dcc-guest-guide')], 409);
+        }
+
+        $encoded = wp_slash(wp_json_encode($tree));
+        update_post_meta($post_id, '_elementor_data', $encoded);
+
+        // Best-effort CSS-cache flush so the front-end picks up the new
+        // content without waiting for the editor to re-save.
+        try {
+            if (class_exists('\\Elementor\\Plugin')) {
+                $el = \Elementor\Plugin::instance();
+                if (isset($el->files_manager) && method_exists($el->files_manager, 'clear_cache')) {
+                    $el->files_manager->clear_cache();
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('DCCGG: post-import cache clear failed — ' . $e->getMessage());
+        }
+
+        wp_send_json_success([
+            'imported_sections' => count($new_sections),
+            'imported_items'    => count($new_items),
+            'total_sections'    => $written_sections,
+            'total_items'       => $written_items,
+        ]);
+    }
+
+    /** Recursively collect every widget with widgetType=dccgg_guide in
+     *  an Elementor element tree. */
+    private function collect_dccgg_widgets(array $tree, array &$out): void
+    {
+        foreach ($tree as $node) {
+            if (!is_array($node)) { continue; }
+            if (($node['elType'] ?? '') === 'widget' && ($node['widgetType'] ?? '') === 'dccgg_guide') {
+                $out[] = $node;
+            }
+            if (!empty($node['elements']) && is_array($node['elements'])) {
+                $this->collect_dccgg_widgets($node['elements'], $out);
+            }
+        }
+    }
+
+    /** Recursively walk the tree in place, calling $fn on each
+     *  dccgg_guide widget so the caller can mutate its settings. */
+    private function walk_dccgg_widgets(array &$tree, callable $fn): void
+    {
+        foreach ($tree as &$node) {
+            if (!is_array($node)) { continue; }
+            if (($node['elType'] ?? '') === 'widget' && ($node['widgetType'] ?? '') === 'dccgg_guide') {
+                $fn($node);
+            }
+            if (!empty($node['elements']) && is_array($node['elements'])) {
+                $this->walk_dccgg_widgets($node['elements'], $fn);
+            }
+        }
+        unset($node);
+    }
+
+    private function strip_row_ids(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) { continue; }
+            unset($row['_id']);
+            $out[] = $row;
+        }
+        return $out;
+    }
+
+    /** Assign a fresh 7-char Elementor-style _id to each row. */
+    private function assign_row_ids(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) { continue; }
+            $row['_id'] = substr(bin2hex(random_bytes(4)), 0, 7);
+            $out[] = $row;
+        }
+        return $out;
     }
 
     /**

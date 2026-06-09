@@ -1150,8 +1150,15 @@
             if (bar) bar.style.width = '0%';
             if (typeof clearHighlights === 'function') clearHighlights(activeDetail);
         }
-        const top = root.getBoundingClientRect().top + window.scrollY - 20;
-        if (window.scrollY > top + 40) window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        // v0.9.4: always scroll the opened detail into view (was: only when
+        // the user had scrolled past the root). Visitors tapping a tile from
+        // a near-top viewport otherwise saw the detail pop in below the fold.
+        if (activeDetail && typeof activeDetail.scrollIntoView === 'function') {
+            activeDetail.scrollIntoView({ block: 'start', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        } else {
+            const top = root.getBoundingClientRect().top + window.scrollY - 20;
+            window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        }
 
         // v0.5: public custom event for other Elementor widgets / external
         // JS to react to a section opening. Bubbles so listeners on
@@ -1331,7 +1338,7 @@
                 const value = btn.dataset.qr || '';
                 if (!value) return;
                 title.textContent = btn.dataset.qrTitle || '';
-                caption.textContent = value;
+                caption.textContent = btn.dataset.qrCaption || value;
                 canvas.innerHTML = '';
                 canvas.appendChild(renderQrSvg(value));
                 overlay.hidden = false;
@@ -2046,84 +2053,109 @@
         });
     }
 
-    /** Resolve the active widget's settings model; shared by Welcome Pack
-     *  + Export + Import. Returns null on failure (a console.warn is
-     *  emitted by the caller). */
-    function resolveWidgetSettings() {
+    /** v0.9.4: server-backed Export. The editor-panel JS API broke in
+     *  Elementor 4.x; we now POST the post ID to admin-ajax which reads
+     *  _elementor_data, locates the dccgg_guide widget, and returns the
+     *  scrubbed payload. JS turns it into a file download. */
+    function editorPostId() {
         try {
-            if (!window.elementor || !window.elementor.getPanelView) return null;
-            const panel = window.elementor.getPanelView();
-            const view  = panel && panel.getCurrentPageView && panel.getCurrentPageView();
-            const model = view && view.model && view.model.get && view.model.get('editedElementView') && view.model.get('editedElementView').getEditModel();
-            const elementModel = model || (window.elementor.selection && window.elementor.selection.getElements && window.elementor.selection.getElements()[0]);
-            if (!elementModel || !elementModel.get) return null;
-            return elementModel.get('settings') || null;
-        } catch (_) { return null; }
-    }
-
-    function stripIds(rows) {
-        return rows.map(r => {
-            const out = {};
-            Object.keys(r).forEach(k => { if (k !== '_id') out[k] = r[k]; });
-            return out;
-        });
+            const fromUrl = new URLSearchParams(window.location.search).get('post');
+            if (fromUrl) return parseInt(fromUrl, 10);
+        } catch (_) {}
+        return (window.dccggEditor && window.dccggEditor.postId) ? parseInt(window.dccggEditor.postId, 10) : 0;
     }
 
     function exportGuide(btn) {
-        const settings = resolveWidgetSettings();
-        if (!settings) { console.warn('DCCGG: Export requires the Elementor editor.'); return; }
-        const sections = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
-        const items    = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
-        const payload  = { dccgg_schema: 1, sections: stripIds(sections), items: stripIds(items) };
-        const json     = JSON.stringify(payload, null, 2);
-        copyText(json).then(() => {
-            const orig = btn.textContent;
-            btn.textContent = '✓ Copied to clipboard';
-            setTimeout(() => { btn.textContent = orig; }, 1800);
-        }).catch(() => {
-            console.warn('DCCGG: Export — clipboard write failed. Falling back to console.log.');
-            console.log(json);
-        });
+        const cfg = window.dccggEditor || {};
+        const postId = editorPostId();
+        if (!postId || !cfg.ajaxUrl || !cfg.exportNonce) {
+            window.alert('DCCGG: Export requires the Elementor editor (post ID + nonce missing).');
+            return;
+        }
+        const body = new FormData();
+        body.append('action',  'dccgg_export_guide');
+        body.append('nonce',   cfg.exportNonce);
+        body.append('post_id', String(postId));
+        const orig = btn.textContent;
+        btn.textContent = '…';
+        btn.disabled = true;
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body })
+            .then(r => r.json())
+            .then(res => {
+                if (!res || !res.success) {
+                    const msg = (res && res.data && res.data.message) ? res.data.message : 'Export failed.';
+                    window.alert('DCCGG: ' + msg);
+                    return;
+                }
+                const json = JSON.stringify(res.data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = 'guest-guide-export.json';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+                btn.textContent = '✓ Downloaded';
+                setTimeout(() => { btn.textContent = orig; }, 1800);
+            })
+            .catch(err => {
+                console.warn('DCCGG: Export request failed', err);
+                window.alert('DCCGG: Export request failed — see browser console.');
+            })
+            .finally(() => { btn.disabled = false; setTimeout(() => { if (btn.textContent === '…') btn.textContent = orig; }, 100); });
     }
 
     function importGuide(btn) {
-        const settings = resolveWidgetSettings();
-        if (!settings) { console.warn('DCCGG: Import requires the Elementor editor.'); return; }
+        const cfg = window.dccggEditor || {};
+        const postId = editorPostId();
+        if (!postId || !cfg.ajaxUrl || !cfg.importNonce) {
+            window.alert('DCCGG: Import requires the Elementor editor (post ID + nonce missing).');
+            return;
+        }
         const json = window.prompt('Paste Guide JSON (exported via the Export button on another widget):', '');
         if (!json) return;
-        let payload;
-        try { payload = JSON.parse(json); } catch (_) {
+        let parsed;
+        try { parsed = JSON.parse(json); } catch (_) {
             window.alert('DCCGG: Invalid JSON — could not parse the paste.');
             return;
         }
-        if (!payload || !Array.isArray(payload.sections) || !Array.isArray(payload.items)) {
+        if (!parsed || !Array.isArray(parsed.sections) || !Array.isArray(parsed.items)) {
             window.alert('DCCGG: Unrecognized schema — expected { sections: [...], items: [...] }.');
             return;
         }
-        const rid = () => Math.random().toString(36).slice(2, 9);
-        const withId = (rows) => rows.map(r => Object.assign({ _id: rid() }, r));
-
         const replaceCheckbox = btn.parentNode && btn.parentNode.querySelector('[data-dccgg-import-replace]');
         const replace = !!(replaceCheckbox && replaceCheckbox.checked);
-        const newSections = withId(payload.sections);
-        const newItems    = withId(payload.items);
 
-        if (replace) {
-            settings.set('guide_sections', newSections);
-            settings.set('guide_items',    newItems);
-        } else {
-            const existingSec = (settings.get('guide_sections') || []).toJSON ? settings.get('guide_sections').toJSON() : [];
-            const existingIt  = (settings.get('guide_items')    || []).toJSON ? settings.get('guide_items').toJSON()    : [];
-            settings.set('guide_sections', existingSec.concat(newSections));
-            settings.set('guide_items',    existingIt.concat(newItems));
-        }
-        if (window.elementor.saver && window.elementor.saver.update) {
-            window.elementor.saver.update();
-        }
+        const body = new FormData();
+        body.append('action',  'dccgg_import_guide');
+        body.append('nonce',   cfg.importNonce);
+        body.append('post_id', String(postId));
+        body.append('payload', JSON.stringify({ sections: parsed.sections, items: parsed.items }));
+        if (replace) body.append('replace', '1');
         const orig = btn.textContent;
-        btn.textContent = '✓ Imported ' + payload.sections.length + ' sections, ' + payload.items.length + ' items';
+        btn.textContent = '…';
         btn.disabled = true;
-        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2500);
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body })
+            .then(r => r.json())
+            .then(res => {
+                if (!res || !res.success) {
+                    const msg = (res && res.data && res.data.message) ? res.data.message : 'Import failed.';
+                    window.alert('DCCGG: ' + msg);
+                    btn.textContent = orig;
+                    return;
+                }
+                const d = res.data || {};
+                btn.textContent = '✓ Imported ' + (d.imported_sections || 0) + ' sections, ' + (d.imported_items || 0) + ' items';
+                window.alert('DCCGG: Imported ' + (d.imported_sections || 0) + ' sections and ' + (d.imported_items || 0) + ' items. Reload the editor to see the new content.');
+                setTimeout(() => { btn.textContent = orig; }, 2500);
+            })
+            .catch(err => {
+                console.warn('DCCGG: Import request failed', err);
+                window.alert('DCCGG: Import request failed — see browser console.');
+                btn.textContent = orig;
+            })
+            .finally(() => { btn.disabled = false; });
     }
     function insertWelcomePack(btn) {
         const pack = welcomePackPayload();

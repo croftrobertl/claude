@@ -362,9 +362,11 @@
     font-size: 1em;
     line-height: 1.2;
     outline: none;
+    text-align: center;
     transition: border-color var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 box-shadow var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
+.dccgg-search-input::placeholder { text-align: center; }
 .dccgg-search-input:focus {
     border-color: var(--dccgg-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--dccgg-primary) 25%, transparent);
@@ -459,10 +461,7 @@
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
 .dccgg-root.is-detail .dccgg-menu {
-    visibility: hidden;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(-20px);
+    display: none;
 }
 .dccgg-root.is-detail .dccgg-stage {
     position: relative;
@@ -820,6 +819,7 @@
     padding: 24px;
     text-align: left;
     box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    scroll-margin-top: 20px;
 }
 .dccgg-detail-header {
     display: flex;
@@ -840,11 +840,30 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    text-align: center;
 }
 
 /* Item */
 .dccgg-item {
+    text-align: center;
+}
+.dccgg-item .dccgg-item-utils {
+    justify-content: center;
+}
+/* Procedure mode keeps the numbered-list look — restore left alignment. */
+.dccgg-detail-items.dccgg-procedure,
+.dccgg-detail-items.dccgg-procedure .dccgg-item {
     text-align: left;
+}
+.dccgg-detail-items.dccgg-procedure .dccgg-item .dccgg-item-utils {
+    justify-content: flex-start;
+}
+/* Items-per-row safety net: phones always collapse to 1 column even if a
+   higher value was picked at desktop in v0.9.4. */
+@media (max-width: 600px) {
+    .dccgg-root .dccgg-detail-items:not(.dccgg-procedure) {
+        grid-template-columns: 1fr !important;
+    }
 }
 .dccgg-sep-yes .dccgg-item + .dccgg-item {
     padding-top: 24px;
@@ -1582,6 +1601,7 @@ video.dccgg-media {
         opacity: 0.5;
     }
     .dccgg-root.is-detail .dccgg-menu {
+        display: grid;
         visibility: visible;
         opacity: 1;
         transform: none;
