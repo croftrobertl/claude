@@ -25,7 +25,7 @@ final class Widget extends Widget_Base
     public function get_name(): string { return 'dccgg_guide'; }
     public function get_title(): string { return __('DCC Guest Guide', 'dcc-guest-guide'); }
     public function get_icon(): string { return 'eicon-info-circle-o'; }
-    public function get_categories(): array { return ['dora-canal-court']; }
+    public function get_categories(): array { return ['claude-code']; }
     public function get_keywords(): array { return ['guide', 'guest', 'info', 'wifi', 'help', 'faq']; }
     public function get_script_depends(): array { return ['dccgg-widget']; }
     public function get_style_depends(): array { return ['dccgg-widget']; }
@@ -82,13 +82,8 @@ final class Widget extends Widget_Base
         $this->register_sections_controls();
         $this->register_items_controls();
         $this->register_search_controls();
-        // v0.9.1: emergency + review panels temporarily disabled while we
-        // diagnose an editor-hang report. The render-side code paths are
-        // preserved (controlled by data-config flags that remain false
-        // when these panels don't register their toggles), so existing
-        // widgets render unchanged.
-        // $this->register_emergency_controls();
-        // $this->register_review_controls();
+        $this->register_emergency_controls();
+        $this->register_review_controls();
         $this->register_strings_controls();
 
         // Style tab
@@ -109,6 +104,31 @@ final class Widget extends Widget_Base
     // ----------------------------------------------------------------------
 
     /**
+     * Defensive wrapper around get_settings() for use DURING register_controls().
+     *
+     * In Elementor 4.x, Controls_Stack::sanitize_settings() gained a strict
+     * `array $settings` type hint. During the register_controls() lifecycle
+     * phase the widget's settings aren't hydrated yet — Elementor's internal
+     * get_data('settings') returns null — and the strict 4.x signature throws
+     * a TypeError instead of silently treating null as an empty array (which
+     * is what 3.x did).
+     *
+     * This wrapper catches that TypeError and returns []. find_orphan_items()
+     * and sections_options() both need to read saved settings during control
+     * registration so the items repeater's section dropdown stays in sync
+     * with the sections list — there's no clean way to avoid the read.
+     */
+    private function safe_get_settings(string $key): array
+    {
+        try {
+            $value = $this->get_settings($key);
+            return is_array($value) ? $value : [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Build SELECT options for the Sections repeater so items can pick their
      * parent section without typo bugs. Reads currently-saved sections; new
      * sections appear in the dropdown after the editor saves and reopens
@@ -119,7 +139,7 @@ final class Widget extends Widget_Base
     private function sections_options(): array
     {
         $options  = ['' => __('— Pick a section —', 'dcc-guest-guide')];
-        $sections = (array) $this->get_settings('guide_sections');
+        $sections = $this->safe_get_settings('guide_sections');
         foreach ($sections as $row) {
             $key   = trim((string) ($row['section_key'] ?? ''));
             $title = trim((string) ($row['section_title'] ?? ''));
@@ -268,8 +288,8 @@ final class Widget extends Widget_Base
      */
     private function find_orphan_items(): array
     {
-        $sections = (array) $this->get_settings('guide_sections');
-        $items    = (array) $this->get_settings('guide_items');
+        $sections = $this->safe_get_settings('guide_sections');
+        $items    = $this->safe_get_settings('guide_items');
         if (empty($items)) {
             return [];
         }
@@ -474,11 +494,26 @@ final class Widget extends Widget_Base
             'default' => -81.6448,
         ]);
 
-        // v0.9.2-stripped: AI search controls removed entirely. The strings
-        // shipped on the panel (including 'AI', 'Gemini', 'Ask anything')
-        // were the most likely match targets for Elementor 4.x's
-        // AI-context scan. Stub method present so other code referencing
-        // these settings still degrades gracefully via ?? fallbacks.
+        $this->add_control('enable_ai_search', [
+            'label'        => __('Enable AI fallback search', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('When a guest\'s search returns no matches, offer an "Ask anything" button that routes the question to Google Gemini (uses the API key configured in Settings → DCC Guest Guide). Free tier: 1,500 questions / day site-wide.', 'dcc-guest-guide'),
+        ]);
+        $this->add_control('ai_search_button_label', [
+            'label'     => __('AI search button label', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::TEXT,
+            'default'   => __('Ask anything about the cottage', 'dcc-guest-guide'),
+            'condition' => ['enable_ai_search' => 'yes'],
+        ]);
+        $this->add_control('ai_search_privacy', [
+            'label'     => __('AI privacy notice', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::TEXTAREA,
+            'rows'      => 2,
+            'default'   => __('Your question is sent to Google Gemini along with the guide content. Don\'t include personal information.', 'dcc-guest-guide'),
+            'condition' => ['enable_ai_search' => 'yes'],
+        ]);
 
         $this->add_control('enable_problem_report', [
             'label'        => __('Enable "Report a problem" button', 'dcc-guest-guide'),
@@ -604,7 +639,17 @@ final class Widget extends Widget_Base
             'description' => __('Per-section color override for this tile\'s icon, quick-action chip, and hover state. Leave blank to use the global primary color.', 'dcc-guest-guide'),
         ]);
 
-        // v0.9.1: section_role temporarily disabled — see register_controls().
+        $repeater->add_control('section_role', [
+            'label'   => __('Section role', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => [
+                ''          => __('Normal section', 'dcc-guest-guide'),
+                'emergency' => __('Emergency (red accent + pinned + SOS button)', 'dcc-guest-guide'),
+                'checkout'  => __('Checkout (shows review prompt at the bottom)', 'dcc-guest-guide'),
+            ],
+            'description' => __('Mark this section for special treatment. Emergency tiles are pinned, painted red, and can show a floating SOS button. Checkout sections append the review prompt configured in the Checkout Review panel. At most one of each role per widget.', 'dcc-guest-guide'),
+        ]);
 
         $repeater->add_control('section_icon_anim', [
             'label'   => __('Icon hover animation override', 'dcc-guest-guide'),
@@ -1086,9 +1131,19 @@ final class Widget extends Widget_Base
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
             'str_more_menu'      => [__('More-menu button label', 'dcc-guest-guide'), __('More', 'dcc-guest-guide')],
-            // v0.9.1: emergency + review strings temporarily disabled.
-            // The PHP render layer uses ?? __() fallbacks so omitting these
-            // controls is harmless.
+            'str_emergency_sos'      => [__('SOS button label', 'dcc-guest-guide'),                  __('Emergency', 'dcc-guest-guide')],
+            'str_emergency_911'      => [__('Auto-added 911 chip label', 'dcc-guest-guide'),         __('Call 911', 'dcc-guest-guide')],
+            'str_noaa_banner_prefix' => [__('NOAA banner prefix', 'dcc-guest-guide'),                __('Active weather alert:', 'dcc-guest-guide')],
+            'str_noaa_more'          => [__('NOAA "more info" link text', 'dcc-guest-guide'),       __('More info', 'dcc-guest-guide')],
+            'str_review_heading'     => [__('Review prompt heading', 'dcc-guest-guide'),             __('How was your stay?', 'dcc-guest-guide')],
+            'str_review_yes'         => [__('Review 👍 button label', 'dcc-guest-guide'),            __('Loved it', 'dcc-guest-guide')],
+            'str_review_no'          => [__('Review 👎 button label', 'dcc-guest-guide'),            __('Something was off', 'dcc-guest-guide')],
+            'str_review_help'        => [__('Review panel helper text', 'dcc-guest-guide'),          __('Edit the suggested review if you\'d like, then pick a platform — we\'ll copy the text and open the site for you.', 'dcc-guest-guide')],
+            'str_review_copy_airbnb' => [__('Copy & open Airbnb', 'dcc-guest-guide'),                __('Copy & open Airbnb', 'dcc-guest-guide')],
+            'str_review_copy_vrbo'   => [__('Copy & open Vrbo', 'dcc-guest-guide'),                  __('Copy & open Vrbo', 'dcc-guest-guide')],
+            'str_review_copy_google' => [__('Copy & open Google', 'dcc-guest-guide'),                __('Copy & open Google', 'dcc-guest-guide')],
+            'str_review_copied'      => [__('Review copied toast', 'dcc-guest-guide'),               __('Review text copied — paste it after the page opens.', 'dcc-guest-guide')],
+            'str_review_thanks'      => [__('Review prompt collapsed thanks', 'dcc-guest-guide'),    __('Thanks for the feedback!', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1894,10 +1949,15 @@ final class Widget extends Widget_Base
             'nonce'                => wp_create_nonce('dccgg_nonce'),
             'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
             'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
-            // v0.9.2-stripped: 'aiSearch' block removed. Both the literal
-            // key name and 'enabled: true' values could be pattern-matched
-            // by Elementor 4.x scans for AI features. The JS wireAiSearch
-            // sees no config and noops.
+            'aiSearch'             => [
+                'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
+                'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
+                'privacy'  => (string) ($s['ai_search_privacy'] ?? ''),
+                'thinking' => (string) __('Thinking…', 'dcc-guest-guide'),
+                'error'    => (string) __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
+                'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
+                'voiceLabel' => (string) ($s['str_ai_voice'] ?? __('Ask by voice', 'dcc-guest-guide')),
+            ],
             'savePdf'              => [
                 'label' => (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide')),
                 'tip'   => (string) ($s['str_save_pdf_tip'] ?? __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')),
