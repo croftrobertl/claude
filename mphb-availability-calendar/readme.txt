@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.10
+Stable tag: 0.8.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.11 =
+* Fixed: image carousel inside the cottage info popup — navigation arrows and the Elementor lightbox now work on first open. v0.8.10's `swiper.update()` rescue couldn't recover the missing nav-arrow click bindings or the lightbox click handler, because both are wired once during Elementor's image-carousel init and not redone by update. Root cause: the `.mphbac-info-content` source div was `display: none` at page-load, so Elementor's `image-carousel.default` handler ran against a 0×0 container and didn't fully bind. The source div is now rendered offscreen with real width (`position: fixed; transform: translateY(-200vh); width: var(--mphbac-info-prerender-width, 720px)`) so Elementor's handler initializes Swiper, navigation, and lightbox correctly at page-load. v0.8.10's `refreshSwipers()` continues to backstop the post-move re-measure when runtime width differs from the prerender width.
 
 = 0.8.10 =
 * Fixed: image carousel inside the cottage info popup now responds to taps/clicks. Symptom was the classic Swiper-init-in-a-hidden-container pattern — the carousel briefly drew its first slide and nav arrows, then Swiper's resize observer fired, recomputed against the stale zero-width measurements cached at page-load (when the .mphbac-info-content source div was display:none), decided "everything fits, no nav needed", added `.swiper-button-disabled` to both arrows and they vanished. v0.8.9's `window.dispatchEvent('resize')` nudge updated Swiper's size but didn't re-evaluate navigation arrow state or kick the lazy-load queue. New `refreshSwipers()` helper walks every `.swiper` / `.swiper-container` inside the moved popup body and calls `swiper.update()` + `swiper.navigation.update()` + `swiper.pagination.update()` + `swiper.lazy.load()` explicitly. Reproduced on every mobile cottage and on the desktop cottage 22 popup; fixed for both.
