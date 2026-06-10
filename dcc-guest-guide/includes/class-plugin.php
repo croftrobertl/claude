@@ -319,6 +319,10 @@ final class Plugin
      * host via wp_mail(). Recipients come from the widget config (POSTed
      * with the report), one per line; falls back to admin_email if empty.
      * Per-IP rate limit: 3 reports / 15 minutes.
+     *
+     * v0.9.7: subject + body templates with smart-tag placeholders, custom
+     * From email/name (with Reply-To fallback for deliverability), plus
+     * reporter Name + Cottage fields.
      */
     public function handle_report_problem(): void
     {
@@ -334,13 +338,23 @@ final class Plugin
         $category    = isset($_POST['category'])    ? sanitize_text_field(wp_unslash((string) $_POST['category']))    : '';
         $description = isset($_POST['description']) ? sanitize_textarea_field(wp_unslash((string) $_POST['description'])) : '';
         $contact     = isset($_POST['contact'])     ? sanitize_email(wp_unslash((string) $_POST['contact']))          : '';
+        $reporter_name    = isset($_POST['reporter_name'])    ? sanitize_text_field(wp_unslash((string) $_POST['reporter_name']))    : '';
+        $reporter_cottage = isset($_POST['reporter_cottage']) ? sanitize_text_field(wp_unslash((string) $_POST['reporter_cottage'])) : '';
         $section     = isset($_POST['section'])     ? sanitize_text_field(wp_unslash((string) $_POST['section']))     : '';
         $item        = isset($_POST['item'])        ? sanitize_text_field(wp_unslash((string) $_POST['item']))        : '';
         $stay        = isset($_POST['stay'])        ? sanitize_text_field(wp_unslash((string) $_POST['stay']))        : '';
         $page_url    = isset($_POST['page_url'])    ? esc_url_raw(wp_unslash((string) $_POST['page_url']))            : '';
         $recipients  = isset($_POST['recipients'])  ? wp_unslash((string) $_POST['recipients'])                       : '';
+        $subject_tpl = isset($_POST['subject_tpl']) ? sanitize_text_field(wp_unslash((string) $_POST['subject_tpl'])) : '';
+        $body_tpl    = isset($_POST['body_tpl'])    ? wp_kses_post(wp_unslash((string) $_POST['body_tpl']))           : '';
+        $from_email  = isset($_POST['from_email'])  ? sanitize_email(wp_unslash((string) $_POST['from_email']))       : '';
+        $from_name   = isset($_POST['from_name'])   ? sanitize_text_field(wp_unslash((string) $_POST['from_name']))   : '';
+        $include_ua  = isset($_POST['include_ua'])  ? (string) $_POST['include_ua']                                   : 'yes';
 
-        $description = mb_substr($description, 0, 1500);
+        $description       = mb_substr($description, 0, 1500);
+        $reporter_name     = mb_substr($reporter_name, 0, 100);
+        $reporter_cottage  = mb_substr($reporter_cottage, 0, 100);
+
         if ($description === '') {
             wp_send_json_error(['message' => __('Please describe the problem.', 'dcc-guest-guide')], 400);
         }
@@ -354,36 +368,60 @@ final class Plugin
             wp_send_json_error(['message' => __('No recipient configured.', 'dcc-guest-guide')], 500);
         }
 
-        $ctx_label = $section !== '' ? $section : __('general', 'dcc-guest-guide');
-        $subject = sprintf(
-            /* translators: 1: category, 2: section title or "general" */
-            __('[DCC Guest Guide] %1$s — %2$s', 'dcc-guest-guide'),
-            $category !== '' ? $category : __('Report', 'dcc-guest-guide'),
-            $ctx_label
-        );
+        $ua = '';
+        if ($include_ua === 'yes') {
+            $ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash((string) $_SERVER['HTTP_USER_AGENT'])) : '';
+            $ua = mb_substr($ua, 0, 250);
+        }
 
-        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash((string) $_SERVER['HTTP_USER_AGENT'])) : '';
-        $ua = mb_substr($ua, 0, 250);
+        $tags = [
+            '{site_name}'        => (string) get_bloginfo('name'),
+            '{site_url}'         => (string) home_url('/'),
+            '{page_url}'         => $page_url,
+            '{category}'         => $category !== '' ? $category : __('Report', 'dcc-guest-guide'),
+            '{section_title}'    => $section !== '' ? $section : __('general', 'dcc-guest-guide'),
+            '{item_title}'       => $item !== '' ? $item : '—',
+            '{report_text}'      => $description,
+            '{reporter_name}'    => $reporter_name !== '' ? $reporter_name : '—',
+            '{reporter_cottage}' => $reporter_cottage !== '' ? $reporter_cottage : '—',
+            '{reporter_email}'   => $contact !== '' ? $contact : '—',
+            '{timestamp}'        => current_time('mysql'),
+            '{user_agent}'       => $ua,
+        ];
 
-        $lines = [];
-        $lines[] = __('A guest submitted a problem report from the Guest Guide.', 'dcc-guest-guide');
-        $lines[] = str_repeat('-', 60);
-        if ($category !== '') { $lines[] = __('Category:    ', 'dcc-guest-guide') . $category; }
-        if ($section !== '')  { $lines[] = __('Section:     ', 'dcc-guest-guide') . $section; }
-        if ($item !== '')     { $lines[] = __('Item:        ', 'dcc-guest-guide') . $item; }
-        if ($stay !== '')     { $lines[] = __('Stay key:    ', 'dcc-guest-guide') . $stay; }
-        if ($page_url !== '') { $lines[] = __('Page URL:    ', 'dcc-guest-guide') . $page_url; }
-        if ($contact !== '')  { $lines[] = __('Reply to:    ', 'dcc-guest-guide') . $contact; }
-        $lines[] = __('Submitted:   ', 'dcc-guest-guide') . current_time('mysql');
-        if ($ua !== '')       { $lines[] = __('User-agent:  ', 'dcc-guest-guide') . $ua; }
-        $lines[] = '';
-        $lines[] = __('Message:', 'dcc-guest-guide');
-        $lines[] = $description;
+        if ($subject_tpl === '') {
+            $subject_tpl = '[DCC Guest Guide] {category} — {section_title}';
+        }
+        $subject = strtr($subject_tpl, $tags);
 
-        $body    = implode("\n", $lines);
-        $headers = [];
+        if ($body_tpl === '') {
+            $body_tpl = "<p>A guest submitted a problem report from {site_name}.</p>\n"
+                     . "<p><strong>Name:</strong> {reporter_name}<br>"
+                     . "<strong>Cottage:</strong> {reporter_cottage}<br>"
+                     . "<strong>Reply-to:</strong> {reporter_email}<br>"
+                     . "<strong>Category:</strong> {category}<br>"
+                     . "<strong>Section:</strong> {section_title}<br>"
+                     . "<strong>Item:</strong> {item_title}<br>"
+                     . "<strong>Page:</strong> {page_url}<br>"
+                     . "<strong>Submitted:</strong> {timestamp}</p>\n"
+                     . "<p><strong>Message:</strong></p>\n"
+                     . "<blockquote>{report_text}</blockquote>\n"
+                     . "<p style=\"font-size:11px;color:#888\">{user_agent}</p>";
+        }
+        // {report_text} is plaintext from a textarea — newline-to-<br> so guest
+        // line breaks survive into the HTML email. esc_html keeps it safe.
+        $tags['{report_text}'] = nl2br(esc_html($description));
+        $tags['{user_agent}']  = $ua !== '' ? esc_html($ua) : '';
+        $tags['{page_url}']    = $page_url !== '' ? esc_url($page_url) : '—';
+        $body = strtr($body_tpl, $tags);
+
+        $headers = ['Content-Type: text/html; charset=UTF-8'];
         if ($contact !== '' && is_email($contact)) {
             $headers[] = 'Reply-To: ' . $contact;
+        }
+        if ($from_email !== '' && is_email($from_email)) {
+            $name = $from_name !== '' ? $from_name : (string) get_bloginfo('name');
+            $headers[] = 'From: ' . $name . ' <' . $from_email . '>';
         }
 
         $ok = wp_mail($to, $subject, $body, $headers);

@@ -6,16 +6,20 @@
  * ============================================================= */
 
 /* ---- Checklist ---- */
+/* v0.9.7: moved out of the detail header to sit BELOW [Back] [Title].
+   Center horizontally with a max-width + margin auto so the bar doesn't
+   stretch edge-to-edge inside a wide modal. */
 .dccgg-checklist-progress {
-    position: sticky;
-    top: 0;
-    z-index: 5;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
     padding: 8px 16px;
+    margin: 0 auto 16px;
+    max-width: 480px;
     background: var(--dccgg-detail-bg, #fff);
-    border-bottom: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 8%, transparent);
+    border-radius: 999px;
     font-size: 0.9em;
 }
 .dccgg-checklist-progress-fill {
@@ -473,34 +477,41 @@
 /* v0.9.5: in stage-reveal mode (not split-pane), the open detail becomes
    a real centered modal. See widget.js openDetail/closeDetail for the
    portal + scroll-lock dance that pairs with these rules. */
-.dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage {
+/* v0.9.7: scope off body.dccgg-detail-open (set in showDetailModal) so the
+   selector still matches after the stage is portaled to <body> — the
+   ancestor-based v0.9.5 scoping silently stopped matching once the portal
+   moved .dccgg-stage out from under .dccgg-reveal-stage, which is what
+   was making the modal blow past the viewport edges. */
+body.dccgg-detail-open .dccgg-stage {
     position: fixed;
     left: 50%;
-    top: 50%;
+    top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
+    bottom: 16px;
     inset: auto;
-    width: min(720px, calc(100vw - 64px));
+    width: min(720px, calc(100vw - 32px));
     max-width: 900px;
-    max-height: 85dvh;
+    max-height: none;
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 10010;
-    background: var(--dccgg-detail-bg);
-    color: var(--dccgg-text);
+    background: var(--dccgg-detail-bg, #ffffff);
+    color: var(--dccgg-text, #111111);
     border-radius: 16px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
     padding: 24px;
     opacity: 0;
     visibility: hidden;
-    transform: translate(-50%, -50%) scale(0.96);
+    transform: translateX(-50%) scale(0.96);
+    transform-origin: 50% 0;
     transition: opacity 0.25s ease,
                 transform 0.25s ease,
                 visibility 0.25s;
 }
-.dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
+body.dccgg-detail-open .dccgg-stage.is-modal-open {
     visibility: visible;
     pointer-events: auto;
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateX(-50%) scale(1);
 }
 
 .dccgg-detail-overlay {
@@ -529,6 +540,15 @@ body.dccgg-detail-open {
 /* Grid (default) */
 .dccgg-layout-grid .dccgg-menu {
     grid-template-columns: repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr));
+}
+/* v0.9.7: on phones in portrait, override auto-fill with a fixed count
+   from the Elementor Layout panel (defaults to 1). repeat(var(...)) takes
+   the numeric value directly; the fallback is 1 so the column count never
+   collapses to 0 if the var is unset. */
+@media (max-width: 600px) and (orientation: portrait) {
+    .dccgg-layout-grid .dccgg-menu {
+        grid-template-columns: repeat(var(--dccgg-grid-cols-mobile, 1), minmax(0, 1fr));
+    }
 }
 
 /* List */
@@ -866,20 +886,42 @@ body.dccgg-detail-open {
     box-shadow: 0 8px 32px rgba(0,0,0,0.06);
     scroll-margin-top: 20px;
 }
+/* v0.9.7: detail header is a 1fr / auto / 1fr grid so the title centers
+   on the row regardless of how wide Back / nav are. align-items: start
+   pushes Back to the top so the title can sit slightly lower without
+   shoving Back down with it. */
 .dccgg-detail-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 16px;
 }
+.dccgg-detail-header .dccgg-back { justify-self: start; }
+.dccgg-detail-header .dccgg-section-nav { grid-column: 3; justify-self: end; }
 .dccgg-detail-title {
+    grid-column: 2;
+    justify-self: center;
+    text-align: center;
     margin: 0;
-    font-size: 1.5em;
+    /* Match the Back button's font size so the title doesn't tower over
+       it. JS does not stamp --dccgg-back-font-size today; the fallback
+       (1em, inherited from the button typography control) keeps parity. */
+    font-size: var(--dccgg-back-font-size, 1em);
+    line-height: 1.2;
+    margin-top: 6px;
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     color: var(--dccgg-primary);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dccgg-detail-title svg,
+.dccgg-detail-title i {
+    flex-shrink: 0;
 }
 .dccgg-detail-items {
     display: flex;
@@ -1611,31 +1653,30 @@ video.dccgg-media {
 
 /* ---- Mobile bottom-sheet variant of the detail modal ---- */
 @media (max-width: 600px) {
-    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage {
+    body.dccgg-detail-open .dccgg-stage {
+        /* v0.9.7: bottom sheet covers the full visible viewport below the
+           sticky header. Slides up from translateY(100%) → 0 on open. */
         left: 0;
         right: 0;
+        top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
         bottom: 0;
-        top: auto;
         width: 100%;
         max-width: 100%;
-        max-height: 90dvh;
+        max-height: none;
         border-radius: 16px 16px 0 0;
         padding: 16px;
         transform: translateY(100%);
         box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
     }
-    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
+    body.dccgg-detail-open .dccgg-stage.is-modal-open {
         transform: translateY(0);
     }
-    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-sheet-dragging .dccgg-stage {
-        transition: none;
-    }
-    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage::before {
+    body.dccgg-detail-open .dccgg-stage::before {
         content: '';
         display: block;
         width: 40px;
         height: 4px;
-        background: var(--dccgg-muted);
+        background: var(--dccgg-muted, #888);
         border-radius: 2px;
         margin: 4px auto 12px;
         opacity: 0.5;
@@ -1646,7 +1687,8 @@ video.dccgg-media {
    active detail prints / PDF-saves cleanly. ---- */
 @media print {
     .dccgg-reveal-stage .dccgg-stage,
-    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
+    body.dccgg-detail-open .dccgg-stage,
+    body.dccgg-detail-open .dccgg-stage.is-modal-open {
         position: static !important;
         inset: auto !important;
         width: auto !important;
@@ -2137,10 +2179,20 @@ video.dccgg-media {
     .dccgg-detail-title { transition: none; }
 }
 
-/* ---- "More" menu in detail header (uses <details>) ---- */
+/* ---- "More" menu (uses <details>). v0.9.7: moved from the detail
+   header to the hub toolbar. The .dccgg-more--hub variant docks to the
+   right edge of the toolbar so it sits next to the search input. ---- */
 .dccgg-more {
     position: relative;
     margin-left: 4px;
+}
+.dccgg-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.dccgg-more--hub {
+    margin-left: auto;
 }
 .dccgg-more > summary {
     list-style: none;
@@ -2282,16 +2334,37 @@ video.dccgg-media {
     border-radius: 8px;
     cursor: pointer;
 }
+/* v0.9.7: the <dialog> portals to <body>, outside .dccgg-root, so the
+   --dccgg-primary cascade doesn't reach it. Without a fallback color the
+   button paints transparent on a white background — invisible. Force a
+   contrasting blue with a sane fallback so the button is always visible
+   even if the theme's CSS vars haven't been applied. */
 .dccgg-report-foot .dccgg-btn-send {
-    background: var(--dccgg-primary);
-    color: #fff;
-    border: 0;
+    background: var(--dccgg-primary, #0f6dbf);
+    color: var(--dccgg-btn-txt, #ffffff);
+    border: 1px solid var(--dccgg-primary, #0f6dbf);
     padding: 9px 18px;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 1em;
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25);
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
-.dccgg-report-foot .dccgg-btn-send:disabled { opacity: 0.6; cursor: wait; }
+.dccgg-report-foot .dccgg-btn-send:hover,
+.dccgg-report-foot .dccgg-btn-send:focus-visible {
+    background: color-mix(in srgb, var(--dccgg-primary, #0f6dbf) 85%, #000);
+    box-shadow: 0 4px 10px rgba(15, 109, 191, 0.35);
+    outline: none;
+}
+.dccgg-report-foot .dccgg-btn-send:active {
+    transform: translateY(1px);
+}
+.dccgg-report-foot .dccgg-btn-send:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    box-shadow: none;
+}
 
 /* AI mic button + transcript preview + speak indicator (v0.8). */
 .dccgg-ai-prompt { position: relative; }

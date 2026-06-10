@@ -473,11 +473,11 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('enable_detail_more_menu', [
-            'label'        => __('Show ⋯ "more" menu in detail header', 'dcc-guest-guide'),
+            'label'        => __('Show ⋯ Settings menu on the hub', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'default'      => '',
-            'description'  => __('Adds a compact disclosure menu in the detail header with Print, Theme toggle, and Share-this-section. Useful on small screens where the header gets crowded.', 'dcc-guest-guide'),
+            'description'  => __('Adds a compact ⋯ menu to the main hub toolbar with Print, Save as PDF, and (when enabled) Report a Problem. Visible before opening any section.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('auto_fold_words', [
@@ -563,6 +563,59 @@ final class Widget extends Widget_Base
             'default'     => "Maintenance issue\nSupply missing\nCleanliness concern\nWi-Fi or TV\nSafety\nOther",
             'description' => __('Shown as a dropdown in the report dialog. Leave blank for a single freeform field.', 'dcc-guest-guide'),
             'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+
+        // v0.9.7: full From / Subject / Body customization for the email
+        // that wp_mail() sends. Supports smart-tag placeholders so the host
+        // can weave guest-submitted context into custom copy without code.
+        $this->add_control('problem_report_from_email', [
+            'label'       => __('From email (optional)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'description' => __('Custom "From" address. Leave blank to use the WordPress default — recommended on shared hosting without SPF/DKIM. The visitor\'s typed email is always set as Reply-To regardless.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_from_name', [
+            'label'       => __('From name (optional)', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'description' => __('Display name attached to the From email address. Defaults to your site name.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_subject', [
+            'label'       => __('Email subject', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '[DCC Guest Guide] {category} — {section_title}',
+            'description' => __('Subject line for the emailed report. Smart tags: {site_name}, {category}, {section_title}, {item_title}, {reporter_name}, {reporter_cottage}, {timestamp}.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_body', [
+            'label'       => __('Email body', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::WYSIWYG,
+            'default'     => "<p>A guest submitted a problem report from {site_name}.</p>\n"
+                          . "<ul>\n"
+                          . "<li><strong>Name:</strong> {reporter_name}</li>\n"
+                          . "<li><strong>Cottage:</strong> {reporter_cottage}</li>\n"
+                          . "<li><strong>Reply-to:</strong> {reporter_email}</li>\n"
+                          . "<li><strong>Category:</strong> {category}</li>\n"
+                          . "<li><strong>Section:</strong> {section_title}</li>\n"
+                          . "<li><strong>Item:</strong> {item_title}</li>\n"
+                          . "<li><strong>Page:</strong> <a href=\"{page_url}\">{page_url}</a></li>\n"
+                          . "<li><strong>Submitted:</strong> {timestamp}</li>\n"
+                          . "</ul>\n"
+                          . "<p><strong>Message:</strong></p>\n"
+                          . "<blockquote>{report_text}</blockquote>\n"
+                          . "<p style=\"font-size:11px;color:#888\">{user_agent}</p>",
+            'description' => __('Email body. Supports HTML. Smart tags: {site_name}, {site_url}, {page_url}, {section_title}, {item_title}, {category}, {report_text}, {reporter_name}, {reporter_cottage}, {reporter_email}, {timestamp}, {user_agent}.', 'dcc-guest-guide'),
+            'condition'   => ['enable_problem_report' => 'yes'],
+        ]);
+        $this->add_control('problem_report_include_ua', [
+            'label'        => __('Include user-agent in body', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('When off, the {user_agent} placeholder expands to an empty string.', 'dcc-guest-guide'),
+            'condition'    => ['enable_problem_report' => 'yes'],
         ]);
 
         $this->add_control('fab_icon', [
@@ -1154,6 +1207,8 @@ final class Widget extends Widget_Base
             'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
             'str_report_desc'     => [__('Report dialog description label', 'dcc-guest-guide'),__('Describe the problem', 'dcc-guest-guide')],
             'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to reach you back (optional)', 'dcc-guest-guide')],
+            'str_report_name'     => [__('Report dialog "Your name" label', 'dcc-guest-guide'),  __('Your name (optional)', 'dcc-guest-guide')],
+            'str_report_cottage'  => [__('Report dialog "Cottage" label', 'dcc-guest-guide'),    __('Which cottage are you staying in?', 'dcc-guest-guide')],
             'str_report_privacy'  => [__('Report dialog privacy note', 'dcc-guest-guide'),     __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')],
             'str_report_send'     => [__('Report dialog Send button', 'dcc-guest-guide'),      __('Send report', 'dcc-guest-guide')],
             'str_report_cancel'   => [__('Report dialog Cancel button', 'dcc-guest-guide'),    __('Cancel', 'dcc-guest-guide')],
@@ -1295,6 +1350,26 @@ final class Widget extends Widget_Base
             ],
             'prefix_class' => 'dccgg-reveal-',
             'description'  => __('Flip-card falls back to stage-swap automatically when paired with List / Carousel / Split-pane.', 'dcc-guest-guide'),
+        ]);
+
+        // v0.9.7: explicit column count for the menu hub on phones in
+        // portrait. Without this, narrow viewports collapse to a single
+        // column because the tile-min-width breakpoint wins; the host can
+        // now force 2/3/4 columns on the small viewport.
+        $this->add_control('grid_columns_mobile', [
+            'label'     => __('Grid columns — mobile (portrait)', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::SELECT,
+            'default'   => '1',
+            'options'   => [
+                '1' => '1', '2' => '2', '3' => '3', '4' => '4',
+            ],
+            'condition' => ['menu_layout' => 'grid'],
+            'selectors' => [
+                self::SEL . '.dccgg-layout-grid .dccgg-menu' =>
+                    '--dccgg-grid-cols-mobile: {{VALUE}};',
+            ],
+            'description' => __('Number of section tiles per row on a phone in portrait orientation. The auto layout from the tile min-width still applies to wider viewports.', 'dcc-guest-guide'),
+            'separator' => 'before',
         ]);
 
         $this->add_control('icon_position', [
@@ -1533,6 +1608,31 @@ final class Widget extends Widget_Base
             'separator'  => 'before',
         ]);
 
+        // v0.9.7: explicit section icon color on the menu hub tiles.
+        $this->add_control('section_icon_color', [
+            'label'     => __('Section icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-tile .dccgg-tile-icon i' =>
+                    'color: {{VALUE}};',
+                self::SEL . '.dccgg-tile .dccgg-tile-icon svg' =>
+                    'fill: {{VALUE}}; color: {{VALUE}};',
+                self::SEL . '.dccgg-tile .dccgg-tile-icon .dccgg-emoji-icon' =>
+                    'color: {{VALUE}};',
+            ],
+            'description' => __('Color of the icon shown inside each section tile on the menu hub. Leave blank to use the per-section accent.', 'dcc-guest-guide'),
+            'separator' => 'before',
+        ]);
+        $this->add_control('section_icon_bg_color', [
+            'label'     => __('Section icon background', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-tile .dccgg-tile-icon' =>
+                    'background: {{VALUE}};',
+            ],
+            'description' => __('Background tint behind the section icon. Leave blank for the baked-in 12%-of-primary look.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_responsive_control('tile_gap', [
             'label'      => __('Gap between tiles', 'dcc-guest-guide'),
             'type'       => Controls_Manager::SLIDER,
@@ -1756,6 +1856,22 @@ final class Widget extends Widget_Base
             'return_value' => 'yes',
             'default'      => 'yes',
             'prefix_class' => 'dccgg-sep-',
+        ]);
+
+        // v0.9.7: explicit Guide Item icon color inside the detail popup.
+        $this->add_control('item_icon_color', [
+            'label'     => __('Guide Item icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-detail .dccgg-item-title i' =>
+                    'color: {{VALUE}};',
+                self::SEL . '.dccgg-detail .dccgg-item-title svg' =>
+                    'fill: {{VALUE}}; color: {{VALUE}};',
+                self::SEL . '.dccgg-detail .dccgg-item-title .dccgg-emoji-icon' =>
+                    'color: {{VALUE}};',
+            ],
+            'description' => __('Color of icons that appear next to each Guide Item title inside the Guide Items popup.', 'dcc-guest-guide'),
+            'separator' => 'before',
         ]);
 
         $this->end_controls_section();
@@ -2035,6 +2151,11 @@ final class Widget extends Widget_Base
                 'perItem'    => ($s['enable_per_item_report'] ?? '') === 'yes',
                 'recipients' => (string) ($s['problem_report_recipients'] ?? ''),
                 'categories' => array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string) ($s['problem_report_categories'] ?? '')) ?: []))),
+                'fromEmail'  => (string) ($s['problem_report_from_email'] ?? ''),
+                'fromName'   => (string) ($s['problem_report_from_name']  ?? ''),
+                'subjectTpl' => (string) ($s['problem_report_subject']    ?? ''),
+                'bodyTpl'    => (string) ($s['problem_report_body']       ?? ''),
+                'includeUA'  => (($s['problem_report_include_ua'] ?? 'yes') === 'yes') ? 'yes' : 'no',
                 'strings'    => [
                     'menuLabel'  => (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')),
                     'title'      => (string) ($s['str_report_title'] ?? __('Report a problem', 'dcc-guest-guide')),
@@ -2047,6 +2168,8 @@ final class Widget extends Widget_Base
                     'thankYou'   => (string) ($s['str_report_thank_you'] ?? __('Thanks! Your host has been notified.', 'dcc-guest-guide')),
                     'error'      => (string) ($s['str_report_error'] ?? __('Could not send. Please contact the host directly.', 'dcc-guest-guide')),
                     'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
+                    'name'       => (string) ($s['str_report_name']    ?? __('Your name (optional)', 'dcc-guest-guide')),
+                    'cottage'    => (string) ($s['str_report_cottage'] ?? __('Which cottage are you staying in?', 'dcc-guest-guide')),
                 ],
             ],
             'emergency'        => [
@@ -2150,6 +2273,33 @@ final class Widget extends Widget_Base
                         </button>
                     <?php endif; ?>
 
+                    <?php // v0.9.7: More menu (Print / Save PDF / Report a Problem) lives in the hub toolbar so guests reach Settings without first opening a section.
+                    $show_more_hub = ($s['enable_detail_more_menu'] ?? '') === 'yes';
+                    if ($show_more_hub) :
+                        $label_more       = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
+                        $label_print      = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
+                        $label_save_pdf   = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
+                        $report_on        = ($s['enable_problem_report'] ?? '') === 'yes';
+                        $label_report     = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')); ?>
+                        <details class="dccgg-more dccgg-more--hub">
+                            <summary aria-label="<?php echo esc_attr($label_more); ?>">
+                                <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
+                            </summary>
+                            <div class="dccgg-more-popover" role="menu">
+                                <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
+                                    <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
+                                </button>
+                                <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
+                                    <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
+                                </button>
+                                <?php if ($report_on) : ?>
+                                    <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="" role="menuitem">
+                                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </details>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ($enable_search) : ?>
@@ -2369,13 +2519,6 @@ final class Widget extends Widget_Base
                     <?php endif; ?>
                     <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
                     <div class="dccgg-progress-bar" aria-hidden="true"></div>
-                    <?php if ($checklist) : ?>
-                        <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
-                            <div class="dccgg-checklist-progress-fill"></div>
-                            <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
-                            <button type="button" class="dccgg-checklist-reset" data-section-key="<?php echo esc_attr($key); ?>"><?php esc_html_e('Reset', 'dcc-guest-guide'); ?></button>
-                        </div>
-                    <?php endif; ?>
                     <div class="dccgg-detail-header">
                         <button type="button" class="dccgg-btn dccgg-back">
                             <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
@@ -2394,30 +2537,15 @@ final class Widget extends Widget_Base
                                 </button>
                             </div>
                         <?php endif; ?>
-                        <?php if ($show_more) :
-                            $label_save_pdf   = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
-                            $report_on        = ($s['enable_problem_report'] ?? '') === 'yes';
-                            $label_report     = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')); ?>
-                            <details class="dccgg-more">
-                                <summary aria-label="<?php echo esc_attr($label_more); ?>">
-                                    <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
-                                </summary>
-                                <div class="dccgg-more-popover" role="menu">
-                                    <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
-                                        <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
-                                    </button>
-                                    <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
-                                        <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
-                                    </button>
-                                    <?php if ($report_on) : ?>
-                                        <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="<?php echo esc_attr($title); ?>" role="menuitem">
-                                            <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </details>
-                        <?php endif; ?>
+                        <?php // v0.9.7: More menu moved to the hub toolbar (see render() above) so guests can reach Print / Save PDF / Report a Problem without opening a section. ?>
                     </div>
+                    <?php if ($checklist) : ?>
+                        <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
+                            <div class="dccgg-checklist-progress-fill"></div>
+                            <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
+                            <button type="button" class="dccgg-checklist-reset" data-section-key="<?php echo esc_attr($key); ?>"><?php esc_html_e('Reset', 'dcc-guest-guide'); ?></button>
+                        </div>
+                    <?php endif; ?>
                     <div class="dccgg-detail-layout">
                         <?php if ($show_toc) : ?>
                             <nav class="dccgg-toc" aria-label="<?php echo esc_attr($title); ?>">

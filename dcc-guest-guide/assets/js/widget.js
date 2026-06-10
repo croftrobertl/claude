@@ -159,6 +159,14 @@
                 <div class="dccgg-report-body">
                     ${catField}
                     <label>
+                        ${escHtml(STR.name || 'Your name (optional)')}
+                        <input type="text" class="dccgg-report-name" maxlength="100" autocomplete="name">
+                    </label>
+                    <label>
+                        ${escHtml(STR.cottage || 'Which cottage are you staying in?')}
+                        <input type="text" class="dccgg-report-cottage" maxlength="100" autocomplete="off">
+                    </label>
+                    <label>
                         ${escHtml(STR.desc || 'Describe the problem')}
                         <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
                     </label>
@@ -188,12 +196,18 @@
             const desc = d.querySelector('.dccgg-report-desc');
             desc.value = itemTitle ? `[${itemTitle}] ` : '';
             d.querySelector('.dccgg-report-contact').value = '';
+            const nameEl = d.querySelector('.dccgg-report-name');
+            const cottageEl = d.querySelector('.dccgg-report-cottage');
+            if (nameEl) nameEl.value = '';
+            if (cottageEl) cottageEl.value = '';
             const sendBtn = d.querySelector('.dccgg-btn-send');
             sendBtn.disabled = false;
             sendBtn.textContent = STR.send || 'Send report';
             if (typeof d.showModal === 'function') d.showModal();
             else d.setAttribute('open', '');
-            setTimeout(() => desc.focus(), 50);
+            // Focus name first if it exists — it's the friendliest field
+            // to land in. Falls back to desc if name was customized away.
+            setTimeout(() => (nameEl || desc).focus(), 50);
         };
 
         // More-menu "Report a problem" → context is the current section title.
@@ -217,22 +231,35 @@
         const STR  = (config.report && config.report.strings) || {};
         const desc = dialog.querySelector('.dccgg-report-desc').value.trim();
         if (!desc) { dialog.querySelector('.dccgg-report-desc').focus(); return; }
-        const catEl   = dialog.querySelector('.dccgg-report-cat');
-        const contact = dialog.querySelector('.dccgg-report-contact').value.trim();
-        const send    = dialog.querySelector('.dccgg-btn-send');
+        const catEl    = dialog.querySelector('.dccgg-report-cat');
+        const contact  = dialog.querySelector('.dccgg-report-contact').value.trim();
+        const nameEl   = dialog.querySelector('.dccgg-report-name');
+        const cottEl   = dialog.querySelector('.dccgg-report-cottage');
+        const send     = dialog.querySelector('.dccgg-btn-send');
         send.disabled = true;
         send.textContent = '…';
+        const reportCfg = config.report || {};
         const body = new URLSearchParams();
-        body.set('action',      'dccgg_report_problem');
-        body.set('nonce',       config.nonce);
-        body.set('category',    catEl ? catEl.value : '');
-        body.set('description', desc);
-        body.set('contact',     contact);
-        body.set('section',     dialog.dataset.section || '');
-        body.set('item',        dialog.dataset.item || '');
-        body.set('stay',        stayKey());
-        body.set('page_url',    window.location.href);
-        body.set('recipients',  (config.report && config.report.recipients) || '');
+        body.set('action',           'dccgg_report_problem');
+        body.set('nonce',            config.nonce);
+        body.set('category',         catEl ? catEl.value : '');
+        body.set('description',      desc);
+        body.set('contact',          contact);
+        body.set('reporter_name',    nameEl ? nameEl.value.trim() : '');
+        body.set('reporter_cottage', cottEl ? cottEl.value.trim() : '');
+        body.set('section',          dialog.dataset.section || '');
+        body.set('item',             dialog.dataset.item || '');
+        body.set('stay',             stayKey());
+        body.set('page_url',         window.location.href);
+        body.set('recipients',       reportCfg.recipients || '');
+        // v0.9.7: pass the host's template + From settings so the AJAX
+        // handler can compose a custom email. Server still has a sane
+        // default if any of these are blank.
+        body.set('subject_tpl',      reportCfg.subjectTpl || '');
+        body.set('body_tpl',         reportCfg.bodyTpl || '');
+        body.set('from_email',       reportCfg.fromEmail || '');
+        body.set('from_name',        reportCfg.fromName || '');
+        body.set('include_ua',       reportCfg.includeUA || 'yes');
         fetch(config.ajaxUrl, {
             method: 'POST',
             credentials: 'same-origin',
@@ -1146,7 +1173,12 @@
         return true;
     }
 
-    function openDetail(root, key) {
+    // v0.9.7: openDetail accepts an optional onShown(activeDetail) callback
+    // fired after the modal has actually painted in its open state. The
+    // search-click handler uses this so the deep-link highlight runs
+    // against the portaled stage (the stage is moved off `root` into
+    // <body>, so root.querySelector can't find the detail anymore).
+    function openDetail(root, key, onShown) {
         const details = root.querySelectorAll('.dccgg-detail');
         let found = false;
         let activeDetail = null;
@@ -1177,6 +1209,18 @@
         } else {
             const top = root.getBoundingClientRect().top + window.scrollY - 20;
             window.scrollTo({ top: Math.max(0, top), behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        }
+
+        if (typeof onShown === 'function') {
+            // Wait for the modal's open transition (250ms in CSS) to settle
+            // so the caller's DOM lookup hits the post-portal layout. For
+            // non-modal modes (accordion, split-pane) one rAF is enough.
+            const delay = shouldUseDetailModal(root) ? 300 : 0;
+            const stage = (root.__dccggModal && root.__dccggModal.stage) || root;
+            const fresh = stage.querySelector
+                ? stage.querySelector('.dccgg-detail[data-key="' + cssEsc(key) + '"]:not([hidden])')
+                : activeDetail;
+            setTimeout(() => { try { onShown(fresh || activeDetail); } catch (_) {} }, delay);
         }
 
         // v0.5: public custom event for other Elementor widgets / external
@@ -1210,6 +1254,30 @@
     // position:fixed containment. Lifting the stage + overlay to <body>
     // sidesteps that. Markers preserve the original DOM position so the
     // elements snap back on close (so future opens find them inside root).
+
+    // v0.9.7: measure any sticky / fixed theme header pinned to the top of
+    // the viewport so the detail modal can sit flush below it instead of
+    // overflowing past the bottom edge. Curated candidate list keeps the
+    // scan cheap; sanity bounds reject huge / hidden / off-screen elements.
+    function detectStickyTopOffset() {
+        let max = 0;
+        const candidates = document.querySelectorAll(
+            'header, nav, [role="banner"], [class*="sticky"], [class*="fixed-top"], ' +
+            '.ast-primary-header-bar, .site-header, .elementor-sticky--active'
+        );
+        for (const el of candidates) {
+            if (el.closest && el.closest('.dccgg-root')) continue;
+            const cs = getComputedStyle(el);
+            if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
+            if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+            const r = el.getBoundingClientRect();
+            if (r.top > 5 || r.bottom <= 0) continue;
+            if (r.height < 1 || r.height > 200) continue;
+            if (r.bottom > max) max = r.bottom;
+        }
+        return Math.max(0, Math.round(max));
+    }
+
     function showDetailModal(root) {
         const stage = root.querySelector('.dccgg-stage')
             || (root.__dccggModal && root.__dccggModal.stage);
@@ -1242,9 +1310,31 @@
         }
         state.lastTrigger = document.activeElement;
         state.overlay.hidden = false;
+        // v0.9.7: stamp the sticky-header offset so the modal's top edge
+        // sits just below the theme header. Re-measure on resize so a
+        // hide-on-scroll header that changes height still aligns.
+        const stampOffset = () => {
+            const off = detectStickyTopOffset();
+            state.stage.style.setProperty('--dccgg-detail-top-offset', off + 'px');
+            state.overlay.style.setProperty('--dccgg-detail-top-offset', off + 'px');
+        };
+        stampOffset();
+        if (state.onResize) window.removeEventListener('resize', state.onResize);
+        let resizeT = null;
+        state.onResize = () => {
+            clearTimeout(resizeT);
+            resizeT = setTimeout(stampOffset, 80);
+        };
+        window.addEventListener('resize', state.onResize);
         document.documentElement.classList.add('dccgg-detail-open');
         document.body.classList.add('dccgg-detail-open');
+        // Force a layout flush so the closed-state CSS commits before we
+        // add .is-modal-open in the next frame — without this, the browser
+        // collapses the closed→open paints into a single tick and the
+        // transition doesn't animate.
+        void state.stage.offsetWidth;
         requestAnimationFrame(() => {
+            state.stage.classList.add('is-modal-open');
             const focusTarget = state.stage.querySelector('.dccgg-back')
                 || state.stage.querySelector('button, [href], input, [tabindex]:not([tabindex="-1"])');
             if (focusTarget && typeof focusTarget.focus === 'function') {
@@ -1276,8 +1366,15 @@
         if (state.onOverlayClick && state.overlay) {
             state.overlay.removeEventListener('click', state.onOverlayClick);
         }
+        if (state.onResize) {
+            window.removeEventListener('resize', state.onResize);
+            state.onResize = null;
+        }
         state.onKey = null;
         state.onOverlayClick = null;
+        // v0.9.7: trigger the close transition (opacity → 0, transform back
+        // to scale 0.96 / translateY(100%)) by removing the open class.
+        if (state.stage) state.stage.classList.remove('is-modal-open');
         state.closeTimer = setTimeout(() => {
             document.documentElement.classList.remove('dccgg-detail-open');
             document.body.classList.remove('dccgg-detail-open');
@@ -1642,16 +1739,19 @@
                     const itemIdx = parseInt(b.dataset.itemIdx || '0', 10);
                     let toks = [];
                     try { toks = JSON.parse(b.dataset.matchedToks || '[]'); } catch (_) {}
-                    openDetail(root, sec);
-                    // v0.4 / v0.9.6: highlight the actual matched
-                    // haystack tokens (not the typed query, which may
-                    // differ in punctuation / spelling).
-                    requestAnimationFrame(() => {
-                        const detail = root.querySelector('.dccgg-detail[data-key="' + cssEsc(sec) + '"]:not([hidden])');
-                        if (detail) highlightQuery(detail, toks.length ? toks : input.value.trim(), itemIdx);
-                    });
+                    const typed = input.value.trim();
                     hide();
                     input.value = '';
+                    // v0.9.7: pass an onShown callback so the highlight
+                    // runs against the modal-portaled .dccgg-detail (after
+                    // showDetailModal moves the stage off `root` into
+                    // <body>). Without this, on desktop the highlight
+                    // lookup found null because root no longer contains
+                    // the detail — and the modal painted in a stale layout
+                    // (the cause of the off-center / cut-off bug).
+                    openDetail(root, sec, (detail) => {
+                        if (detail) highlightQuery(detail, toks.length ? toks : typed, itemIdx);
+                    });
                 });
             });
         };

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.6
+Stable tag: 0.9.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,46 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7 =
+
+Seven UX/Editor fixes from live use of 0.9.6:
+
+* Detail popup fills the visible viewport: anchored just below the sticky
+  theme header (auto-detected at open time) and just above the viewport
+  bottom, with internal scroll for long content. Fixes the v0.9.5
+  CSS-scoping bug where portaling the stage to `<body>` silently dropped
+  the modal layout rules.
+* Detail header is now a centered grid: title centered horizontally,
+  matches the Back button's font size, and sits 6px lower so it doesn't
+  wrap onto two lines on narrow viewports.
+* Four new editor settings:
+  - Style → Tile / Card → **Section icon color** + **Section icon background**.
+  - Style → Detail Card → **Guide Item icon color**.
+  - Style → Layout & Interaction → **Grid columns — mobile (portrait)**
+    so phones can show 2/3/4 section tiles per row instead of stacking
+    1-up.
+  - Content → Engagement → **Report a Problem** email customization:
+    custom From email + From name (with safe Reply-To fallback for
+    shared hosts without SPF/DKIM), subject template, WYSIWYG body
+    template, both with smart-tag placeholders ({site_name},
+    {section_title}, {item_title}, {category}, {report_text},
+    {reporter_name}, {reporter_cottage}, {reporter_email}, {timestamp},
+    {user_agent}). The visitor-facing report popup also gains
+    **Name** and **Cottage** input fields.
+* Checklist counter moved out of the detail header into its own
+  centered row below `[Back] [Title]`, styled as a rounded pill.
+* Desktop search-result click now opens the section popup at the
+  correct centered position with the matched item highlighted —
+  previously the popup landed off-screen to the left because the
+  highlight call ran against a now-stale DOM reference.
+* The ⋯ Settings menu (Print / Save as PDF / Report a Problem) moved
+  from the per-section detail header to the main hub toolbar, so
+  visitors can reach Print / PDF / Report without opening a section.
+* Send Report button is now visible on a white background — the
+  previous `var(--dccgg-primary)` lookup found no fallback because the
+  `<dialog>` portals to `<body>` outside `.dccgg-root`, painting it
+  transparent.
 
 = 0.9.6 =
 * Forgiving guide search: now matches across punctuation, spaces, and accents
