@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.12
+Stable tag: 0.8.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.13 =
+* Fixed: image-carousel inside cottage info popup — navigation arrow icons no longer disappear after each slide settles on mobile. Elementor's image-carousel (or Bravada's kit) was zeroing icon opacity once the slide-transition class came off. Plugin now pins opacity + visibility on the arrow buttons and their inner icons whenever the popup is open. Scoped to the cottage info popup so carousels elsewhere on the site keep their default behavior.
 
 = 0.8.12 =
 * Fixed: Book Now popup's check-in / check-out date fields rendered as a thin horizontal slice with the top and bottom of the date text cut off on desktop. Same `line-height: 1px` regression v0.2.0 fixed for the calendar filter row, surfacing on the popup inputs for the first time. Root cause: v0.8.6 portaled the booking popup out to `document.body`, but the `.mphbac-root .mphbac-input` rule that carries the `line-height: 1.4 !important` override still required `.mphbac-root` as an ancestor — which fails on the portaled popup. v0.8.7 fixed the popup centering with the same class-doubled selector pattern but didn't apply it to the input rule. Switched `.mphbac-root .mphbac-input` to `.mphbac-input.mphbac-input` so the rule matches whether the input lives inside the widget tree (filter row) or has been portaled out (booking popup). Also restores correct padding, border, and background on the popup inputs as a side benefit.

@@ -805,6 +805,29 @@ body.mphbac-info-open {
 .mphbac-info-body .elementor-widget-image-gallery {
     overflow: hidden;
 }
+/* Elementor's image-carousel (or Bravada's kit) zeros out arrow-icon
+   opacity on mobile once the slide-transition class comes off — the
+   button stays tap-targetable but the icon vanishes. Pin opacity +
+   visibility on both the button and its icon child. Scoped to the
+   cottage info popup so other carousels on the site keep their
+   defaults. */
+.mphbac-info-body .elementor-swiper-button,
+.mphbac-info-body .swiper-button-prev,
+.mphbac-info-body .swiper-button-next {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+.mphbac-info-body .elementor-swiper-button svg,
+.mphbac-info-body .elementor-swiper-button i,
+.mphbac-info-body .elementor-swiper-button-icon,
+.mphbac-info-body .swiper-button-prev svg,
+.mphbac-info-body .swiper-button-prev i,
+.mphbac-info-body .swiper-button-next svg,
+.mphbac-info-body .swiper-button-next i {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
 .mphbac-sheet-close {
     background: transparent;
     border: 0;
