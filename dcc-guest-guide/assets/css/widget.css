@@ -483,11 +483,18 @@
    moved .dccgg-stage out from under .dccgg-reveal-stage, which is what
    was making the modal blow past the viewport edges. */
 body.dccgg-detail-open .dccgg-stage {
+    /* v0.9.7.1: do NOT use `inset: auto` here — it's a shorthand that
+       resets the explicit top/bottom/left declarations just above to
+       auto, killing the anchoring and leaving the modal at its natural
+       (body-child = 0,0) position. translateX(-50%) then shifts it
+       off-screen to the left, making it invisible. Set right/bottom
+       explicitly instead so the base .dccgg-stage rule (inset: 0)
+       doesn't conflict. */
     position: fixed;
-    left: 50%;
     top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
     bottom: 16px;
-    inset: auto;
+    left: 50%;
+    right: auto;
     width: min(720px, calc(100vw - 32px));
     max-width: 900px;
     max-height: none;

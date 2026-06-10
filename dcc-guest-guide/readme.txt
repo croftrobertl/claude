@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7
+Stable tag: 0.9.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,23 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.1 =
+
+Same-day hotfix on top of 0.9.7:
+
+* Section popup wasn't appearing when tiles were tapped on the live
+  page. The 0.9.7 modal CSS had `inset: auto` after the explicit
+  `top` / `bottom` / `left` declarations, which reset all four to
+  auto. With `transform: translateX(-50%)` still applying, the modal
+  rendered ~360px to the LEFT of viewport origin — off-screen and
+  invisible. Removed the `inset: auto` line and made `right: auto`
+  explicit so the base `.dccgg-stage { inset: 0 }` rule doesn't
+  conflict with the modal's width.
+* Report-a-Problem "What's the issue?" dropdown no longer pre-selects
+  the first category. It now opens on a blank placeholder option and
+  the guest must pick one before Send is enabled — clicking Send
+  with no category surfaces the native browser validation bubble.
 
 = 0.9.7 =
 

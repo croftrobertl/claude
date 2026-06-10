@@ -148,8 +148,11 @@
             if (dialog) return dialog;
             dialog = document.createElement('dialog');
             dialog.className = 'dccgg-report-dialog';
+            // v0.9.7.1: leading blank option, selected + disabled by default,
+            // so the guest must pick a category. Combined with `required`,
+            // the form blocks submission until something is chosen.
             const catField = CATS.length
-                ? `<label>${escHtml(STR.category || 'Category')}<select class="dccgg-report-cat">${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
+                ? `<label>${escHtml(STR.category || 'Category')}<select class="dccgg-report-cat" required><option value="" selected disabled>${escHtml(STR.category || 'What’s the issue?')}</option>${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
                 : '';
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
@@ -229,9 +232,18 @@
     }
     function sendReport(dialog, root, config) {
         const STR  = (config.report && config.report.strings) || {};
+        const catEl    = dialog.querySelector('.dccgg-report-cat');
+        // v0.9.7.1: when a category dropdown exists, the guest must pick
+        // one before sending. The dropdown is `required` + starts on a
+        // blank/disabled placeholder, so reporting `validity.valueMissing`
+        // is enough; reportValidity surfaces the browser's native bubble.
+        if (catEl && !catEl.value) {
+            catEl.focus();
+            if (typeof catEl.reportValidity === 'function') catEl.reportValidity();
+            return;
+        }
         const desc = dialog.querySelector('.dccgg-report-desc').value.trim();
         if (!desc) { dialog.querySelector('.dccgg-report-desc').focus(); return; }
-        const catEl    = dialog.querySelector('.dccgg-report-cat');
         const contact  = dialog.querySelector('.dccgg-report-contact').value.trim();
         const nameEl   = dialog.querySelector('.dccgg-report-name');
         const cottEl   = dialog.querySelector('.dccgg-report-cottage');
