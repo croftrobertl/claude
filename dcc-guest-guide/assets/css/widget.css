@@ -450,6 +450,8 @@
 .dccgg-stage-container {
     position: relative;
 }
+/* Closed-state stage: hidden offstage. Used by every reveal/layout mode
+   while no detail is open. */
 .dccgg-stage {
     position: absolute;
     inset: 0;
@@ -463,16 +465,59 @@
 .dccgg-root.is-detail .dccgg-menu {
     display: none;
 }
-.dccgg-root.is-detail .dccgg-stage {
-    position: relative;
-    visibility: visible;
-    pointer-events: auto;
-    opacity: 1;
-    transform: translateY(0);
-}
 .dccgg-menu {
     transition: opacity var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+
+/* v0.9.5: in stage-reveal mode (not split-pane), the open detail becomes
+   a real centered modal. See widget.js openDetail/closeDetail for the
+   portal + scroll-lock dance that pairs with these rules. */
+.dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    inset: auto;
+    width: min(720px, calc(100vw - 64px));
+    max-width: 900px;
+    max-height: 85dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10010;
+    background: var(--dccgg-detail-bg);
+    color: var(--dccgg-text);
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, -50%) scale(0.96);
+    transition: opacity 0.25s ease,
+                transform 0.25s ease,
+                visibility 0.25s;
+}
+.dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.dccgg-detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10009;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.dccgg-detail-overlay:not([hidden]) {
+    opacity: 1;
+}
+
+html.dccgg-detail-open,
+body.dccgg-detail-open {
+    overflow: hidden;
 }
 
 /* -------- Menu hub: layouts -------- */
@@ -1564,33 +1609,28 @@ video.dccgg-media {
     transition: width 80ms linear;
 }
 
-/* ---- Mobile bottom-sheet for detail ---- */
-@media (max-width: 768px) and (pointer: coarse) {
-    .dccgg-stage {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
+/* ---- Mobile bottom-sheet variant of the detail modal ---- */
+@media (max-width: 600px) {
+    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage {
+        left: 0;
+        right: 0;
+        bottom: 0;
         top: auto;
-        max-height: 90vh;
-        background: var(--dccgg-detail-bg);
+        width: 100%;
+        max-width: 100%;
+        max-height: 90dvh;
         border-radius: 16px 16px 0 0;
-        box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
-        z-index: 9990;
-        overflow-y: auto;
-        transform: translateY(100%);
-        opacity: 1;
-        visibility: hidden;
-        transition: transform var(--dccgg-transition-duration) var(--dccgg-transition-easing),
-                    visibility var(--dccgg-transition-duration);
         padding: 16px;
+        transform: translateY(100%);
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
     }
-    .dccgg-root.is-detail .dccgg-stage {
-        visibility: visible;
+    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
         transform: translateY(0);
     }
-    .dccgg-root.is-sheet-dragging .dccgg-stage {
+    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-sheet-dragging .dccgg-stage {
         transition: none;
     }
-    .dccgg-stage::before {
+    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-stage::before {
         content: '';
         display: block;
         width: 40px;
@@ -1600,25 +1640,28 @@ video.dccgg-media {
         margin: 4px auto 12px;
         opacity: 0.5;
     }
-    .dccgg-root.is-detail .dccgg-menu {
-        display: grid;
-        visibility: visible;
-        opacity: 1;
-        transform: none;
-        position: relative;
+}
+
+/* ---- Print: flatten the fixed-position modal back to flow so the
+   active detail prints / PDF-saves cleanly. ---- */
+@media print {
+    .dccgg-reveal-stage .dccgg-stage,
+    .dccgg-reveal-stage:not(.dccgg-layout-split-pane) .dccgg-root.is-detail .dccgg-stage {
+        position: static !important;
+        inset: auto !important;
+        width: auto !important;
+        max-width: none !important;
+        max-height: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        z-index: auto !important;
     }
-    .dccgg-sheet-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        z-index: 9989;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity var(--dccgg-transition-duration);
-    }
-    .dccgg-root.is-detail .dccgg-sheet-backdrop {
-        opacity: 1;
-        visibility: visible;
+    .dccgg-detail-overlay {
+        display: none !important;
     }
 }
 

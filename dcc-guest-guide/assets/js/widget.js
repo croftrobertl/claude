@@ -905,6 +905,11 @@
     // -- Sticky shrinking detail header (v0.5) ----------------------------
     function wireShrinkHeader(root) {
         if (!('IntersectionObserver' in window)) return;
+        // v0.9.5: in stage-modal mode the stage itself is the scroll
+        // container, so observe relative to it; otherwise observe the
+        // viewport as before.
+        const stage = root.querySelector('.dccgg-stage');
+        const useStageRoot = !!stage && shouldUseDetailModal(root);
         const details = root.querySelectorAll('.dccgg-detail');
         details.forEach(detail => {
             const sentinel = detail.querySelector('.dccgg-shrink-sentinel');
@@ -917,7 +922,7 @@
                     // unshrink.
                     detail.classList.toggle('is-shrunk', !en.isIntersecting && en.boundingClientRect.top < 0);
                 });
-            }, { threshold: [0], rootMargin: '0px' });
+            }, { threshold: [0], rootMargin: '0px', root: useStageRoot ? stage : null });
             io.observe(sentinel);
         });
     }
@@ -1069,7 +1074,9 @@
             overlay.classList.remove('is-open');
             document.removeEventListener('keydown', trap);
             setTimeout(() => { overlay.hidden = true; }, 320);
-            setTimeout(() => root.classList.remove('is-detail'), 320);
+            // Also tear down any open detail modal (portal, scroll-lock, …)
+            // so closing the FAB leaves a clean slate.
+            closeDetail(root);
             if (lastTrigger && typeof lastTrigger.focus === 'function') lastTrigger.focus();
         };
 
@@ -1127,6 +1134,18 @@
         });
     }
 
+    // v0.9.5: in stage-reveal mode (not split-pane), the open detail is a
+    // viewport-centered modal portaled to <body>. Split-pane / accordion /
+    // flip-card keep the original inline behavior because their tile content
+    // is supposed to live in place.
+    function shouldUseDetailModal(root) {
+        const config = (root.__dccgg && root.__dccgg.config) || {};
+        if ((config.revealMode || 'stage') !== 'stage') return false;
+        const widgetEl = root.closest('.elementor-widget');
+        if (widgetEl && widgetEl.classList.contains('dccgg-layout-split-pane')) return false;
+        return true;
+    }
+
     function openDetail(root, key) {
         const details = root.querySelectorAll('.dccgg-detail');
         let found = false;
@@ -1150,10 +1169,10 @@
             if (bar) bar.style.width = '0%';
             if (typeof clearHighlights === 'function') clearHighlights(activeDetail);
         }
-        // v0.9.4: always scroll the opened detail into view (was: only when
-        // the user had scrolled past the root). Visitors tapping a tile from
-        // a near-top viewport otherwise saw the detail pop in below the fold.
-        if (activeDetail && typeof activeDetail.scrollIntoView === 'function') {
+
+        if (shouldUseDetailModal(root)) {
+            showDetailModal(root);
+        } else if (activeDetail && typeof activeDetail.scrollIntoView === 'function') {
             activeDetail.scrollIntoView({ block: 'start', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
         } else {
             const top = root.getBoundingClientRect().top + window.scrollY - 20;
@@ -1173,20 +1192,117 @@
         } catch (_) {}
     }
 
+    function closeDetail(root) {
+        if (!root.classList.contains('is-detail')) return;
+        const wasModal = !!root.__dccggModal;
+        withViewTransition(() => root.classList.remove('is-detail'));
+        if (wasModal) hideDetailModal(root);
+        setTimeout(() => {
+            root.querySelectorAll('.dccgg-detail').forEach(d => {
+                d.hidden = true;
+                d.classList.remove('is-shrunk');
+            });
+        }, 400);
+    }
+
+    // -- Detail-modal portal + scroll-lock + ESC + backdrop -----------------
+    // Ancestors of the widget often have transform/overflow that breaks
+    // position:fixed containment. Lifting the stage + overlay to <body>
+    // sidesteps that. Markers preserve the original DOM position so the
+    // elements snap back on close (so future opens find them inside root).
+    function showDetailModal(root) {
+        const stage = root.querySelector('.dccgg-stage')
+            || (root.__dccggModal && root.__dccggModal.stage);
+        if (!stage) return;
+        let state = root.__dccggModal;
+        if (state && state.closeTimer) {
+            // Re-opened during the closing fade-out — abort teardown and
+            // re-use the already-portaled nodes.
+            clearTimeout(state.closeTimer);
+            state.closeTimer = null;
+        } else if (!state) {
+            const overlay = root.querySelector('.dccgg-detail-overlay');
+            if (!overlay) return;
+            const stageMarker = document.createComment('dccgg-stage-anchor');
+            const overlayMarker = document.createComment('dccgg-detail-overlay-anchor');
+            stage.parentNode.insertBefore(stageMarker, stage);
+            overlay.parentNode.insertBefore(overlayMarker, overlay);
+            document.body.appendChild(overlay);
+            document.body.appendChild(stage);
+            state = root.__dccggModal = {
+                stage: stage,
+                overlay: overlay,
+                stageMarker: stageMarker,
+                overlayMarker: overlayMarker,
+                lastTrigger: null,
+                onKey: null,
+                onOverlayClick: null,
+                closeTimer: null
+            };
+        }
+        state.lastTrigger = document.activeElement;
+        state.overlay.hidden = false;
+        document.documentElement.classList.add('dccgg-detail-open');
+        document.body.classList.add('dccgg-detail-open');
+        requestAnimationFrame(() => {
+            const focusTarget = state.stage.querySelector('.dccgg-back')
+                || state.stage.querySelector('button, [href], input, [tabindex]:not([tabindex="-1"])');
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                try { focusTarget.focus({ preventScroll: true }); } catch (_) { focusTarget.focus(); }
+            }
+        });
+        // Re-bind handlers in case we're reopening during a pending close.
+        if (state.onKey) document.removeEventListener('keydown', state.onKey);
+        if (state.onOverlayClick && state.overlay) {
+            state.overlay.removeEventListener('click', state.onOverlayClick);
+        }
+        state.onKey = (e) => {
+            if (e.key !== 'Escape') return;
+            // Don't steal Escape from QR / lightbox / report dialogs that
+            // open on top of the detail modal.
+            if (document.querySelector('.dccgg-qr-dialog:not([hidden]), .dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
+            e.preventDefault();
+            closeDetail(root);
+        };
+        state.onOverlayClick = () => closeDetail(root);
+        document.addEventListener('keydown', state.onKey);
+        state.overlay.addEventListener('click', state.onOverlayClick);
+    }
+
+    function hideDetailModal(root) {
+        const state = root.__dccggModal;
+        if (!state) return;
+        if (state.onKey) document.removeEventListener('keydown', state.onKey);
+        if (state.onOverlayClick && state.overlay) {
+            state.overlay.removeEventListener('click', state.onOverlayClick);
+        }
+        state.onKey = null;
+        state.onOverlayClick = null;
+        state.closeTimer = setTimeout(() => {
+            document.documentElement.classList.remove('dccgg-detail-open');
+            document.body.classList.remove('dccgg-detail-open');
+            if (state.overlay) state.overlay.hidden = true;
+            if (state.stageMarker && state.stageMarker.parentNode) {
+                state.stageMarker.parentNode.insertBefore(state.stage, state.stageMarker);
+                state.stageMarker.parentNode.removeChild(state.stageMarker);
+            }
+            if (state.overlayMarker && state.overlayMarker.parentNode) {
+                state.overlayMarker.parentNode.insertBefore(state.overlay, state.overlayMarker);
+                state.overlayMarker.parentNode.removeChild(state.overlayMarker);
+            }
+            const lastTrigger = state.lastTrigger;
+            root.__dccggModal = null;
+            if (lastTrigger && typeof lastTrigger.focus === 'function') {
+                try { lastTrigger.focus({ preventScroll: true }); } catch (_) {
+                    try { lastTrigger.focus(); } catch (_) {}
+                }
+            }
+        }, 280);
+    }
+
     function wireBack(root, config) {
         root.querySelectorAll('.dccgg-back').forEach(btn => {
-            btn.addEventListener('click', () => {
-                withViewTransition(() => root.classList.remove('is-detail'));
-                setTimeout(() => {
-                    // v0.6: also clear .is-shrunk so a re-open of a long
-                    // section doesn't flash the shrunk header before the
-                    // sentinel re-intersects.
-                    root.querySelectorAll('.dccgg-detail').forEach(d => {
-                        d.hidden = true;
-                        d.classList.remove('is-shrunk');
-                    });
-                }, 400);
-            });
+            btn.addEventListener('click', () => closeDetail(root));
         });
     }
 
@@ -1929,22 +2045,14 @@
     function wireSheetDrag(root) {
         const stage = root.querySelector('.dccgg-stage');
         if (!stage) return;
-        const isMobileSheet = () => window.matchMedia('(max-width: 768px) and (pointer: coarse)').matches;
+        // Align with the bottom-sheet breakpoint in widget.css (v0.9.5).
+        // The server-rendered .dccgg-detail-overlay handles tap-to-dismiss;
+        // this function only owns the swipe-down gesture.
+        const isMobileSheet = () => window.matchMedia('(max-width: 600px)').matches;
 
         let startY = 0;
         let currentY = 0;
         let dragging = false;
-        let backdrop = null;
-
-        const ensureBackdrop = () => {
-            if (backdrop) return backdrop;
-            backdrop = document.createElement('div');
-            backdrop.className = 'dccgg-sheet-backdrop';
-            root.querySelector('.dccgg-wrapper').appendChild(backdrop);
-            backdrop.addEventListener('click', () => root.classList.remove('is-detail'));
-            return backdrop;
-        };
-        ensureBackdrop();
 
         stage.addEventListener('pointerdown', (e) => {
             if (!isMobileSheet() || !root.classList.contains('is-detail')) return;
@@ -1972,12 +2080,7 @@
             const dy = Math.max(0, currentY - startY);
             const dismiss = dy > (stage.offsetHeight * 0.3);
             stage.style.transform = '';
-            if (dismiss) {
-                root.classList.remove('is-detail');
-                setTimeout(() => {
-                    root.querySelectorAll('.dccgg-detail').forEach(d => { d.hidden = true; });
-                }, 320);
-            }
+            if (dismiss) closeDetail(root);
         });
     }
 
@@ -2019,12 +2122,20 @@
             if (!detail) return;
             const bar = detail.querySelector('.dccgg-progress-bar');
             if (!bar) return;
-            // Compute progress through the detail card vs the viewport.
-            const r = detail.getBoundingClientRect();
-            const vh = window.innerHeight;
-            const total = Math.max(1, r.height - vh);
-            const scrolled = Math.min(total, Math.max(0, -r.top));
-            const pct = (scrolled / total) * 100;
+            // v0.9.5: in modal mode the stage itself is the scrollable
+            // container (overflow-y: auto), so progress tracks stage scroll;
+            // outside the modal, fall back to viewport-relative geometry.
+            let pct;
+            if (stage.scrollHeight > stage.clientHeight + 4) {
+                const total = Math.max(1, stage.scrollHeight - stage.clientHeight);
+                pct = (stage.scrollTop / total) * 100;
+            } else {
+                const r = detail.getBoundingClientRect();
+                const vh = window.innerHeight;
+                const total = Math.max(1, r.height - vh);
+                const scrolled = Math.min(total, Math.max(0, -r.top));
+                pct = (scrolled / total) * 100;
+            }
             bar.style.width = pct.toFixed(1) + '%';
         };
         let pending = false;
@@ -2035,6 +2146,7 @@
         };
         window.addEventListener('scroll', onScroll, { passive: true });
         window.addEventListener('resize', onScroll);
+        stage.addEventListener('scroll', onScroll, { passive: true });
         // Update once on entering detail
         const mo = new MutationObserver(update);
         mo.observe(root, { attributes: true, attributeFilter: ['class'] });
@@ -2266,10 +2378,13 @@
             if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
 
             // Find an active widget by looking for a root with .is-detail
-            // and a visible detail inside it.
+            // and a visible detail inside it. v0.9.5: the stage may be
+            // portaled to <body> in modal mode, so fall back to the
+            // captured reference on root.__dccggModal.
             const roots = document.querySelectorAll('.dccgg-root.is-detail');
             for (const r of roots) {
-                const stage = r.querySelector('.dccgg-stage');
+                const stage = r.querySelector('.dccgg-stage')
+                    || (r.__dccggModal && r.__dccggModal.stage);
                 if (!stage) continue;
                 const active = stage.querySelector('.dccgg-detail:not([hidden])');
                 if (!active) continue;

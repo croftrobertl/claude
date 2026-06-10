@@ -1973,7 +1973,6 @@ final class Widget extends Widget_Base
         $enable_fab     = ($s['enable_fab'] ?? '') === 'yes';
         $enable_print   = ($s['enable_print'] ?? '') === 'yes';
         $dark_mode      = (string) ($s['dark_mode'] ?? 'off');
-        $show_toggle    = ($s['show_theme_toggle'] ?? 'yes') === 'yes';
         $theme_preset   = (string) ($s['theme_preset'] ?? 'custom');
 
         // v0.9: resolve emergency + checkout section keys. First section with
@@ -2151,12 +2150,6 @@ final class Widget extends Widget_Base
                         </button>
                     <?php endif; ?>
 
-                    <?php if ($dark_mode !== 'off' && $show_toggle) : ?>
-                        <button type="button" class="dccgg-theme-toggle" aria-label="<?php echo esc_attr($s['str_theme_toggle']); ?>" aria-pressed="false">
-                            <i class="fas fa-moon dccgg-theme-icon-dark" aria-hidden="true"></i>
-                            <i class="fas fa-sun dccgg-theme-icon-light" aria-hidden="true"></i>
-                        </button>
-                    <?php endif; ?>
                 </div>
 
                 <?php if ($enable_search) : ?>
@@ -2178,6 +2171,10 @@ final class Widget extends Widget_Base
                         <?php $this->render_stage($sections, $items_by_section, $s); ?>
                     <?php endif; ?>
                 </div>
+
+                <?php if ($reveal_mode === 'stage') : ?>
+                    <div class="dccgg-detail-overlay" hidden></div>
+                <?php endif; ?>
 
                 <?php if ($reveal_mode !== 'stage') : ?>
                     <?php // For accordion/flip, item content is inline in the menu — no separate stage needed. ?>
@@ -2331,8 +2328,6 @@ final class Widget extends Widget_Base
         $label_next     = (string) ($s['str_next_section'] ?? __('Next section', 'dcc-guest-guide'));
         $label_more     = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
         $label_print    = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
-        $label_theme    = (string) ($s['str_theme_toggle'] ?? __('Toggle dark mode', 'dcc-guest-guide'));
-        $label_share    = (string) ($s['str_share'] ?? __('Share', 'dcc-guest-guide'));
         $show_nav       = ($s['enable_section_nav'] ?? 'yes') === 'yes';
         $show_more      = ($s['enable_detail_more_menu'] ?? '') === 'yes';
         $valid_sections = array_values(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
@@ -2400,7 +2395,6 @@ final class Widget extends Widget_Base
                             </div>
                         <?php endif; ?>
                         <?php if ($show_more) :
-                            $dm_state         = (string) ($s['dark_mode'] ?? 'off');
                             $label_save_pdf   = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
                             $report_on        = ($s['enable_problem_report'] ?? '') === 'yes';
                             $label_report     = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')); ?>
@@ -2415,19 +2409,11 @@ final class Widget extends Widget_Base
                                     <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
                                         <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
                                     </button>
-                                    <?php if ($dm_state !== 'off') : ?>
-                                        <button type="button" class="dccgg-more-item dccgg-more-theme" role="menuitem">
-                                            <i class="fas fa-moon" aria-hidden="true"></i> <?php echo esc_html($label_theme); ?>
-                                        </button>
-                                    <?php endif; ?>
                                     <?php if ($report_on) : ?>
                                         <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="<?php echo esc_attr($title); ?>" role="menuitem">
                                             <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
                                         </button>
                                     <?php endif; ?>
-                                    <button type="button" class="dccgg-more-item dccgg-more-share" data-share-section="<?php echo esc_attr($key); ?>" role="menuitem">
-                                        <i class="fas fa-link" aria-hidden="true"></i> <?php echo esc_html($label_share); ?>
-                                    </button>
                                 </div>
                             </details>
                         <?php endif; ?>

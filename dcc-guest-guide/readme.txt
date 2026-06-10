@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.4
+Stable tag: 0.9.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,29 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.5 =
+
+Live-page polish from 0.9.4 use:
+
+* **Section detail opens as a centered modal popup**, ported from the MPHB
+  Availability Calendar pattern. Stage-reveal mode now portals the detail
+  to `<body>`, locks page scroll, dims the background, traps focus on the
+  Back button, and closes on ESC / backdrop tap / Back. Bottom-sheet
+  variant on phones (≤600 px) slides up from the bottom with a drag
+  handle. Visitors no longer have to hunt for the items below the fold
+  when the widget sits low on the page. Accordion / flip-card / split-pane
+  reveal modes are unchanged.
+* **Visitor-facing Toggle Dark Mode removed.** The toolbar moon/sun
+  button and the "Toggle dark mode" entry in the per-section More menu
+  are gone — the dark theme had contrast gaps that we'd rather not ship
+  to guests. The editor controls (`Dark mode` and `Show Toggle`) stay
+  intact, so a host can still ship a guide as `always`-dark or
+  `auto`-following-OS; the visitor just can't flip it at runtime.
+* **Per-section Share link removed.** It paired with the per-item Share
+  button removed in 0.9.4 and was the last surface using `navigator.share`
+  from the More menu. Print, Save as PDF, and (if enabled) Report a
+  Problem remain.
 
 = 0.9.4 =
 
