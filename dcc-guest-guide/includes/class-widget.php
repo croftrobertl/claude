@@ -586,7 +586,7 @@ final class Widget extends Widget_Base
             'label'       => __('Email subject', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
             'default'     => '[DCC Guest Guide] {category} — {section_title}',
-            'description' => __('Subject line for the emailed report. Smart tags: {site_name}, {category}, {section_title}, {item_title}, {reporter_name}, {reporter_cottage}, {timestamp}.', 'dcc-guest-guide'),
+            'description' => __('Subject line for the emailed report. Smart tags: {site_name}, {category}, {section_title}, {item_title}, {reporter_name}, {reporter_cottage}, {reporter_phone}, {timestamp}.', 'dcc-guest-guide'),
             'condition'   => ['enable_problem_report' => 'yes'],
         ]);
         $this->add_control('problem_report_body', [
@@ -596,6 +596,7 @@ final class Widget extends Widget_Base
                           . "<ul>\n"
                           . "<li><strong>Name:</strong> {reporter_name}</li>\n"
                           . "<li><strong>Cottage:</strong> {reporter_cottage}</li>\n"
+                          . "<li><strong>Phone:</strong> {reporter_phone}</li>\n"
                           . "<li><strong>Reply-to:</strong> {reporter_email}</li>\n"
                           . "<li><strong>Category:</strong> {category}</li>\n"
                           . "<li><strong>Section:</strong> {section_title}</li>\n"
@@ -606,7 +607,7 @@ final class Widget extends Widget_Base
                           . "<p><strong>Message:</strong></p>\n"
                           . "<blockquote>{report_text}</blockquote>\n"
                           . "<p style=\"font-size:11px;color:#888\">{user_agent}</p>",
-            'description' => __('Email body. Supports HTML. Smart tags: {site_name}, {site_url}, {page_url}, {section_title}, {item_title}, {category}, {report_text}, {reporter_name}, {reporter_cottage}, {reporter_email}, {timestamp}, {user_agent}.', 'dcc-guest-guide'),
+            'description' => __('Email body. Supports HTML. Smart tags: {site_name}, {site_url}, {page_url}, {section_title}, {item_title}, {category}, {report_text}, {reporter_name}, {reporter_cottage}, {reporter_phone}, {reporter_email}, {timestamp}, {user_agent}.', 'dcc-guest-guide'),
             'condition'   => ['enable_problem_report' => 'yes'],
         ]);
         $this->add_control('problem_report_include_ua', [
@@ -1209,6 +1210,7 @@ final class Widget extends Widget_Base
             'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to reach you back (optional)', 'dcc-guest-guide')],
             'str_report_name'     => [__('Report dialog "Your name" label', 'dcc-guest-guide'),  __('Your name (optional)', 'dcc-guest-guide')],
             'str_report_cottage'  => [__('Report dialog "Cottage" label', 'dcc-guest-guide'),    __('Which cottage are you staying in?', 'dcc-guest-guide')],
+            'str_report_phone'    => [__('Report dialog "Phone" label', 'dcc-guest-guide'),      __('Phone (optional)', 'dcc-guest-guide')],
             'str_report_privacy'  => [__('Report dialog privacy note', 'dcc-guest-guide'),     __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')],
             'str_report_send'     => [__('Report dialog Send button', 'dcc-guest-guide'),      __('Send report', 'dcc-guest-guide')],
             'str_report_cancel'   => [__('Report dialog Cancel button', 'dcc-guest-guide'),    __('Cancel', 'dcc-guest-guide')],
@@ -2170,6 +2172,7 @@ final class Widget extends Widget_Base
                     'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
                     'name'       => (string) ($s['str_report_name']    ?? __('Your name (optional)', 'dcc-guest-guide')),
                     'cottage'    => (string) ($s['str_report_cottage'] ?? __('Which cottage are you staying in?', 'dcc-guest-guide')),
+                    'phone'      => (string) ($s['str_report_phone']   ?? __('Phone (optional)', 'dcc-guest-guide')),
                 ],
             ],
             'emergency'        => [

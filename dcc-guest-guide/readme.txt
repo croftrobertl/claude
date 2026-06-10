@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.1
+Stable tag: 0.9.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,19 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.2 =
+
+* Hub-toolbar ⋯ Settings menu: the hover/focus highlight on Print /
+  Save as PDF / Report a Problem no longer overflows the dropdown
+  box. The item is `box-sizing: border-box` now, so its 100% width
+  is inclusive of its 8/10px padding instead of adding on top.
+* Report a Problem popup gains an optional **Phone** field between
+  Cottage and Email, with `type="tel"` + `inputmode="tel"` so phones
+  open the dial-pad keyboard. The default email body template
+  includes a `Phone:` line under Reply-to, and host-customized
+  subject / body templates can use the new `{reporter_phone}`
+  smart-tag the same way as `{reporter_name}` and friends.
 
 = 0.9.7.1 =
 

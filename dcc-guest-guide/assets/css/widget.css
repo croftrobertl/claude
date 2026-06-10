@@ -2242,7 +2242,14 @@ video.dccgg-media {
     gap: 2px;
 }
 .dccgg-more-item {
-    display: inline-flex;
+    /* v0.9.7.2: include padding within the 100% width so the hover
+       background (painted on the item) doesn't extend beyond the
+       popover's inner area. Without border-box, width:100% +
+       padding:8px 10px makes the item's outer width exceed the
+       popover's content width, and the rounded hover tint visibly
+       overflows the popover's inner edge. */
+    box-sizing: border-box;
+    display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;

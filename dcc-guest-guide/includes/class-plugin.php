@@ -340,6 +340,7 @@ final class Plugin
         $contact     = isset($_POST['contact'])     ? sanitize_email(wp_unslash((string) $_POST['contact']))          : '';
         $reporter_name    = isset($_POST['reporter_name'])    ? sanitize_text_field(wp_unslash((string) $_POST['reporter_name']))    : '';
         $reporter_cottage = isset($_POST['reporter_cottage']) ? sanitize_text_field(wp_unslash((string) $_POST['reporter_cottage'])) : '';
+        $reporter_phone   = isset($_POST['reporter_phone'])   ? sanitize_text_field(wp_unslash((string) $_POST['reporter_phone']))   : '';
         $section     = isset($_POST['section'])     ? sanitize_text_field(wp_unslash((string) $_POST['section']))     : '';
         $item        = isset($_POST['item'])        ? sanitize_text_field(wp_unslash((string) $_POST['item']))        : '';
         $stay        = isset($_POST['stay'])        ? sanitize_text_field(wp_unslash((string) $_POST['stay']))        : '';
@@ -354,6 +355,7 @@ final class Plugin
         $description       = mb_substr($description, 0, 1500);
         $reporter_name     = mb_substr($reporter_name, 0, 100);
         $reporter_cottage  = mb_substr($reporter_cottage, 0, 100);
+        $reporter_phone    = mb_substr($reporter_phone, 0, 40);
 
         if ($description === '') {
             wp_send_json_error(['message' => __('Please describe the problem.', 'dcc-guest-guide')], 400);
@@ -384,6 +386,7 @@ final class Plugin
             '{report_text}'      => $description,
             '{reporter_name}'    => $reporter_name !== '' ? $reporter_name : '—',
             '{reporter_cottage}' => $reporter_cottage !== '' ? $reporter_cottage : '—',
+            '{reporter_phone}'   => $reporter_phone !== '' ? $reporter_phone : '—',
             '{reporter_email}'   => $contact !== '' ? $contact : '—',
             '{timestamp}'        => current_time('mysql'),
             '{user_agent}'       => $ua,

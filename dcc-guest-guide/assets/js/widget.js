@@ -170,12 +170,16 @@
                         <input type="text" class="dccgg-report-cottage" maxlength="100" autocomplete="off">
                     </label>
                     <label>
-                        ${escHtml(STR.desc || 'Describe the problem')}
-                        <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
+                        ${escHtml(STR.phone || 'Phone (optional)')}
+                        <input type="tel" class="dccgg-report-phone" maxlength="40" inputmode="tel" autocomplete="tel">
                     </label>
                     <label>
                         ${escHtml(STR.contact || 'Email to reach you back (optional)')}
                         <input type="email" class="dccgg-report-contact" autocomplete="email">
+                    </label>
+                    <label>
+                        ${escHtml(STR.desc || 'Describe the problem')}
+                        <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
                     </label>
                     <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
                 </div>
@@ -201,8 +205,10 @@
             d.querySelector('.dccgg-report-contact').value = '';
             const nameEl = d.querySelector('.dccgg-report-name');
             const cottageEl = d.querySelector('.dccgg-report-cottage');
+            const phoneEl = d.querySelector('.dccgg-report-phone');
             if (nameEl) nameEl.value = '';
             if (cottageEl) cottageEl.value = '';
+            if (phoneEl) phoneEl.value = '';
             const sendBtn = d.querySelector('.dccgg-btn-send');
             sendBtn.disabled = false;
             sendBtn.textContent = STR.send || 'Send report';
@@ -247,6 +253,7 @@
         const contact  = dialog.querySelector('.dccgg-report-contact').value.trim();
         const nameEl   = dialog.querySelector('.dccgg-report-name');
         const cottEl   = dialog.querySelector('.dccgg-report-cottage');
+        const phoneEl  = dialog.querySelector('.dccgg-report-phone');
         const send     = dialog.querySelector('.dccgg-btn-send');
         send.disabled = true;
         send.textContent = '…';
@@ -259,6 +266,7 @@
         body.set('contact',          contact);
         body.set('reporter_name',    nameEl ? nameEl.value.trim() : '');
         body.set('reporter_cottage', cottEl ? cottEl.value.trim() : '');
+        body.set('reporter_phone',   phoneEl ? phoneEl.value.trim() : '');
         body.set('section',          dialog.dataset.section || '');
         body.set('item',             dialog.dataset.item || '');
         body.set('stay',             stayKey());
