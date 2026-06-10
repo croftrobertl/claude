@@ -1476,6 +1476,70 @@
         return img;
     }
 
+    // -- Search normalization (v0.9.6) ------------------------------------
+    // Lowercase, NFD-decompose then strip combining marks (accent fold),
+    // collapse runs of non-letter/non-digit to a single space. So
+    // "Wi-Fi" -> "wi fi", "Café" -> "cafe", "check-in" -> "check in".
+    function normalizeForSearch(s) {
+        return String(s)
+            .toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .trim();
+    }
+    function tokenizeForSearch(s) {
+        const n = normalizeForSearch(s);
+        return n ? n.split(' ') : [];
+    }
+    // Damerau-free Levenshtein, 2-row DP. Used for typo tolerance.
+    function levenshtein(a, b) {
+        if (a === b) return 0;
+        const m = a.length, n = b.length;
+        if (!m) return n;
+        if (!n) return m;
+        let prev = new Array(n + 1);
+        for (let j = 0; j <= n; j++) prev[j] = j;
+        for (let i = 1; i <= m; i++) {
+            const curr = [i];
+            for (let j = 1; j <= n; j++) {
+                const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+            }
+            prev = curr;
+        }
+        return prev[n];
+    }
+    // Returns {toks, kind:'sub'|'concat'|'fuzz'} on match, null otherwise.
+    // Three match paths, in priority order:
+    //   1. 'sub'    — some haystack token contains q as substring.
+    //   2. 'concat' — q appears as substring in the no-space concat of all
+    //                 haystack tokens. Handles bidirectional cases like
+    //                 query "wifi" → "Wi-Fi" (haystack toks ['wi','fi'],
+    //                 concat 'wifi') and query "wi-fi" → "wifi" (q toks
+    //                 ['wi','fi'] → caller passes individual 'wi' / 'fi').
+    //   3. 'fuzz'   — Levenshtein ≤ tol against any haystack token.
+    function searchTokenMatches(q, hayToks, hayConcat, hayPos) {
+        for (const h of hayToks) {
+            if (h.indexOf(q) !== -1) return { toks: [h], kind: 'sub' };
+        }
+        if (hayConcat) {
+            const idx = hayConcat.indexOf(q);
+            if (idx !== -1) {
+                const spanned = new Set();
+                const end = Math.min(idx + q.length, hayPos.length);
+                for (let i = idx; i < end; i++) spanned.add(hayPos[i]);
+                return { toks: Array.from(spanned), kind: 'concat' };
+            }
+        }
+        const tol = q.length <= 2 ? 0 : q.length <= 5 ? 1 : 2;
+        if (!tol) return null;
+        for (const h of hayToks) {
+            if (Math.abs(h.length - q.length) > tol) continue;
+            if (levenshtein(q, h) <= tol) return { toks: [h], kind: 'fuzz' };
+        }
+        return null;
+    }
+
     // -- Search (per-widget) ----------------------------------------------
     function wireSearch(root, config) {
         if (!config.enableSearch) return;
@@ -1485,6 +1549,20 @@
         if (!input || !list) return;
 
         const index = Array.isArray(config.searchIndex) ? config.searchIndex : [];
+        // v0.9.6: pre-normalize each index entry once so per-keystroke
+        // matching is just two token loops + Levenshtein. Also build a
+        // no-space concat of all tokens + a position-to-token map, used
+        // by the concat-substring match path in searchTokenMatches().
+        for (const e of index) {
+            e._titleToks = tokenizeForSearch(e.title);
+            e._textToks  = tokenizeForSearch(e.text);
+            let tc = '', tp = [];
+            for (const t of e._titleToks) for (let i = 0; i < t.length; i++) { tc += t[i]; tp.push(t); }
+            let xc = '', xp = [];
+            for (const t of e._textToks)  for (let i = 0; i < t.length; i++) { xc += t[i]; xp.push(t); }
+            e._titleConcat = tc; e._titlePos = tp;
+            e._textConcat  = xc; e._textPos  = xp;
+        }
 
         // Platform-aware kbd label (Mac vs everyone else).
         const kbd = root.querySelector('.dccgg-search-kbd');
@@ -1507,19 +1585,28 @@
         const hide = () => { list.hidden = true; list.innerHTML = ''; if (live) live.textContent = ''; };
 
         const render = (q) => {
-            q = q.trim();
-            if (q.length < 2) { hide(); return; }
-            const re = new RegExp(escRegex(q), 'gi');
+            // v0.9.6: punctuation/space-insensitive + accent-folded +
+            // multi-word AND + typo-tolerant matching.
+            const qToks = tokenizeForSearch(q);
+            if (!qToks.length || qToks.join('').length < 2) { hide(); return; }
+
             const hits = [];
             for (const entry of index) {
-                const titleHit = re.test(entry.title);
-                re.lastIndex = 0;
-                const textHit = re.test(entry.text);
-                re.lastIndex = 0;
-                if (titleHit || textHit) {
-                    hits.push(entry);
-                    if (hits.length >= 12) break;
+                let titleMatches = 0, textMatches = 0, subMatches = 0;
+                const matched = new Set();
+                let allMatched = true;
+                for (const qt of qToks) {
+                    const hitTitle = searchTokenMatches(qt, entry._titleToks, entry._titleConcat, entry._titlePos);
+                    const hitText  = hitTitle ? null : searchTokenMatches(qt, entry._textToks, entry._textConcat, entry._textPos);
+                    const hit = hitTitle || hitText;
+                    if (!hit) { allMatched = false; break; }
+                    if (hitTitle) titleMatches++; else textMatches++;
+                    if (hit.kind !== 'fuzz') subMatches++;
+                    for (const t of hit.toks) matched.add(t);
                 }
+                if (!allMatched) continue;
+                const score = titleMatches * 10 + textMatches * 3 + subMatches * 5;
+                hits.push({ entry, score, matched: Array.from(matched) });
             }
             if (!hits.length) {
                 list.innerHTML = '<p class="dccgg-search-no-results">' +
@@ -1528,28 +1615,40 @@
                 if (live) live.textContent = '0 results';
                 return;
             }
-            list.innerHTML = hits.map(h => {
-                const titleHtml = escHtml(h.title).replace(re, m => '<mark>' + m + '</mark>');
-                const sectionLabel = escHtml(sectionTitleFor(root, h.section));
-                return '<button type="button" class="dccgg-search-result" data-section="' + escHtml(h.section) + '" data-item-idx="' + h.item_idx + '">' +
+            hits.sort((a, b) => b.score - a.score || a.entry.title.length - b.entry.title.length);
+            const top = hits.slice(0, 12);
+
+            list.innerHTML = top.map(h => {
+                const e = h.entry;
+                const markRe = h.matched.length
+                    ? new RegExp('(' + h.matched.map(escRegex).join('|') + ')', 'gi')
+                    : null;
+                const titleHtml = markRe
+                    ? escHtml(e.title).replace(markRe, m => '<mark>' + m + '</mark>')
+                    : escHtml(e.title);
+                const sectionLabel = escHtml(sectionTitleFor(root, e.section));
+                const matchedAttr = escHtml(JSON.stringify(h.matched));
+                return '<button type="button" class="dccgg-search-result" data-section="' + escHtml(e.section) + '" data-item-idx="' + e.item_idx + '" data-matched-toks="' + matchedAttr + '">' +
                     '<span class="dccgg-search-result-section">' + sectionLabel + '</span>' +
                     titleHtml +
                 '</button>';
             }).join('');
             list.hidden = false;
-            if (live) live.textContent = hits.length + ' results';
+            if (live) live.textContent = top.length + ' results';
 
             list.querySelectorAll('.dccgg-search-result').forEach(b => {
                 b.addEventListener('click', () => {
                     const sec = b.dataset.section;
                     const itemIdx = parseInt(b.dataset.itemIdx || '0', 10);
-                    const queryText = input.value.trim();
+                    let toks = [];
+                    try { toks = JSON.parse(b.dataset.matchedToks || '[]'); } catch (_) {}
                     openDetail(root, sec);
-                    // v0.4: deep-highlight the matched term inside the target
-                    // item, scroll it into view, pulse the surrounding card.
+                    // v0.4 / v0.9.6: highlight the actual matched
+                    // haystack tokens (not the typed query, which may
+                    // differ in punctuation / spelling).
                     requestAnimationFrame(() => {
                         const detail = root.querySelector('.dccgg-detail[data-key="' + cssEsc(sec) + '"]:not([hidden])');
-                        if (detail) highlightQuery(detail, queryText, itemIdx);
+                        if (detail) highlightQuery(detail, toks.length ? toks : input.value.trim(), itemIdx);
                     });
                     hide();
                     input.value = '';
@@ -1582,7 +1681,20 @@
         detail.querySelectorAll('.dccgg-hit-pulse').forEach(el => el.classList.remove('dccgg-hit-pulse'));
     }
     function highlightQuery(detail, query, itemIdx) {
-        if (!detail || !query || query.length < 2) return;
+        if (!detail || !query) return;
+
+        // v0.9.6: query may be a string (legacy deep-link) or an array
+        // of already-matched haystack tokens (from the search results).
+        const escapeRe = (s) => String(s).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        let pattern;
+        if (Array.isArray(query)) {
+            const toks = query.filter(t => t && t.length);
+            if (!toks.length) return;
+            pattern = toks.map(escapeRe).join('|');
+        } else {
+            if (query.length < 2) return;
+            pattern = escapeRe(query);
+        }
 
         // If a wizard section, advance to the matching step first so the
         // content we're going to highlight is visible.
@@ -1613,14 +1725,13 @@
 
         // Walk text nodes inside the target item only (avoid touching
         // template content with JS handlers attached).
-        const escapeRe = (s) => String(s).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         // v0.5 fix: separate non-global probe regex for the walker gate.
         // The replacement regex below stays global. v0.4 used the same
         // /.../gi for both, which silently advanced lastIndex between
         // acceptNode calls and rejected nodes whose match was below the
         // currently-set lastIndex.
-        const probe = new RegExp(escapeRe(query), 'i');
-        const re = new RegExp('(' + escapeRe(query) + ')', 'gi');
+        const probe = new RegExp(pattern, 'i');
+        const re = new RegExp('(' + pattern + ')', 'gi');
         const skipTags = { SCRIPT: 1, STYLE: 1, MARK: 1, BUTTON: 1, A: 1 };
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
             acceptNode(n) {

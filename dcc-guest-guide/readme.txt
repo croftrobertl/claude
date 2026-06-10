@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.5
+Stable tag: 0.9.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,13 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.6 =
+* Forgiving guide search: now matches across punctuation, spaces, and accents
+  ("wi-fi" finds "WiFi", "checkin" finds "Check-in", "cafe" finds "Café"),
+  supports multi-word queries in any order ("qr wifi"), and tolerates small
+  typos ("wfi" still finds Wi-Fi). Highlighting in the opened detail uses
+  the actual word that matched, not the typed query.
 
 = 0.9.5 =
 
