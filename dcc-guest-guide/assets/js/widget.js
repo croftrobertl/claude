@@ -1202,15 +1202,23 @@
         const details = root.querySelectorAll('.dccgg-detail');
         let found = false;
         let activeDetail = null;
-        withViewTransition(() => {
-            details.forEach(d => {
-                const match = (d.dataset.key === key);
-                d.hidden = !match;
-                if (match) { found = true; activeDetail = d; }
-            });
-            if (found) root.classList.add('is-detail');
-        });
+        // v0.9.7.3: resolve the match synchronously so the early-return and
+        // showDetailModal calls below don't depend on withViewTransition's
+        // callback timing. Chrome's startViewTransition queues the callback
+        // to the next rendering opportunity, so reading `found` right after
+        // withViewTransition() returned was racing the lambda — it was
+        // always still false, the function bailed at `if (!found) return;`,
+        // and showDetailModal never ran. The menu's `is-detail` class still
+        // got added (when the deferred lambda finally fired), which is why
+        // the menu disappeared but no modal ever opened.
+        for (const d of details) {
+            if (d.dataset.key === key) { found = true; activeDetail = d; break; }
+        }
         if (!found) return;
+        withViewTransition(() => {
+            details.forEach(d => { d.hidden = (d.dataset.key !== key); });
+            root.classList.add('is-detail');
+        });
         // v0.4 fix: zero the progress bar of the newly visible detail and
         // clear any stale search highlights from a prior visit. v0.6: also
         // strip .is-shrunk from every detail so a previously-scrolled

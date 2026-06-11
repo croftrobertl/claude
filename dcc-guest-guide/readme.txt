@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.2
+Stable tag: 0.9.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,24 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.3 =
+
+Same-day hotfix on top of 0.9.7.2:
+
+* Tapping a section tile now opens the modal in Chrome/Edge. Regression
+  since 0.9.7 (masked by the 0.9.7.1 hotfix): `openDetail()` resolved
+  the matched detail inside a `withViewTransition` callback, which
+  Chrome's View Transitions API queues to the next rendering
+  opportunity rather than running synchronously. The function then
+  read the not-yet-set match flag, bailed early, and never reached
+  `showDetailModal()`. The menu's `is-detail` class still got added
+  when the deferred callback eventually fired — so the menu disappeared
+  but no modal ever opened. Firefox/Safari (no View Transitions API)
+  and visitors with `prefers-reduced-motion` were unaffected because
+  both code paths run the callback synchronously. Fix: resolve the
+  match synchronously up front; keep only the visible DOM mutations
+  inside the view-transition callback.
 
 = 0.9.7.2 =
 
