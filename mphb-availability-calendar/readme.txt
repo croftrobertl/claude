@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.14
+Stable tag: 0.8.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.15 =
+* Fixed (follow-up to 0.8.14): the v0.8.14 CSS chevron rendered as a thin sliver in the top-left corner of the arrow button instead of centered. Cause: Elementor's CSS pins the `::before` pseudo-element absolutely at top-left of the button for its own icon rendering, and v0.8.14 set chevron geometry on `::before` without overriding `position`/`top`/`left`. v0.8.15 abandons the pseudo-element entirely and paints the chevron directly on the button as an inline-SVG `background-image`. Background images are part of the button's own painting — no pseudo positioning to fight, no descendant rules to worry about, and `background-position: center` guarantees centering. Mobile-only; desktop is unchanged.
 
 = 0.8.14 =
 * Fixed (follow-up to 0.8.13): on mobile, the cottage info popup's image-carousel arrow icon still disappeared after each slide settled — `!important` on opacity + visibility for the original Elementor icon was not enough to keep it visible. The hiding mechanism is something the override didn't intercept (likely a Swiper inline style, a pseudo-element rule, or icon-font rendering tied to a class that comes off post-transition). Switched approach: on mobile only, the plugin now hides the original icon and draws its own CSS chevron (border-based, white on a translucent dark circle) inside the arrow button via a `::before` pseudo-element. The chevron belongs to the plugin and cannot be hidden by Elementor/Bravada rules. Desktop is unchanged (the original Elementor icon renders correctly there). Scoped to the cottage info popup so carousels elsewhere on the site keep their default arrows.
