@@ -539,7 +539,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.92);
+    background: #888888;
+    color: rgba(255, 255, 255, 0.92);
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     /* Reserve no extra vertical space — visually overlap the header below. */

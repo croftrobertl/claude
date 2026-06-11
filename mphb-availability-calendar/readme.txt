@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.16
+Stable tag: 0.8.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.17 =
+* Changed: cottage info popup close ("X") button — swapped background and text colors so the X now reads as near-white on a gray circle instead of gray on near-white. The previous near-white-on-white had insufficient contrast against the popup's white background.
 
 = 0.8.16 =
 * Fixed (follow-up to 0.8.15): the v0.8.15 chevron rendered perfectly on the right arrow and stayed visible, but the LEFT button itself disappeared 0.3s after each slide settled. Cause: v0.8.15 dropped the `display` declaration (it had been there in v0.8.14 for flex centering, removed when switching to background-image), so any rule that sets `display: none` on the prev button — Elementor's mobile-hide rule, Bravada's reset, or Swiper's `.swiper-button-disabled` state — was now able to hide the button entirely. v0.8.16 pins `display: flex !important` on both arrow buttons so the layout slot stays regardless of state-class changes, and also covers Elementor's long-form `-previous` class name as a defensive measure in case the deployed Elementor version uses that variant. Mobile-only; desktop is unchanged.
