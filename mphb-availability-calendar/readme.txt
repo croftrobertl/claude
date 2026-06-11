@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.13
+Stable tag: 0.8.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.14 =
+* Fixed (follow-up to 0.8.13): on mobile, the cottage info popup's image-carousel arrow icon still disappeared after each slide settled — `!important` on opacity + visibility for the original Elementor icon was not enough to keep it visible. The hiding mechanism is something the override didn't intercept (likely a Swiper inline style, a pseudo-element rule, or icon-font rendering tied to a class that comes off post-transition). Switched approach: on mobile only, the plugin now hides the original icon and draws its own CSS chevron (border-based, white on a translucent dark circle) inside the arrow button via a `::before` pseudo-element. The chevron belongs to the plugin and cannot be hidden by Elementor/Bravada rules. Desktop is unchanged (the original Elementor icon renders correctly there). Scoped to the cottage info popup so carousels elsewhere on the site keep their default arrows.
 
 = 0.8.13 =
 * Fixed: image-carousel inside cottage info popup — navigation arrow icons no longer disappear after each slide settles on mobile. Elementor's image-carousel (or Bravada's kit) was zeroing icon opacity once the slide-transition class came off. Plugin now pins opacity + visibility on the arrow buttons and their inner icons whenever the popup is open. Scoped to the cottage info popup so carousels elsewhere on the site keep their default behavior.

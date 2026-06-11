@@ -805,28 +805,69 @@ body.mphbac-info-open {
 .mphbac-info-body .elementor-widget-image-gallery {
     overflow: hidden;
 }
-/* Elementor's image-carousel (or Bravada's kit) zeros out arrow-icon
-   opacity on mobile once the slide-transition class comes off — the
-   button stays tap-targetable but the icon vanishes. Pin opacity +
-   visibility on both the button and its icon child. Scoped to the
-   cottage info popup so other carousels on the site keep their
-   defaults. */
-.mphbac-info-body .elementor-swiper-button,
-.mphbac-info-body .swiper-button-prev,
-.mphbac-info-body .swiper-button-next {
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-}
-.mphbac-info-body .elementor-swiper-button svg,
-.mphbac-info-body .elementor-swiper-button i,
-.mphbac-info-body .elementor-swiper-button-icon,
-.mphbac-info-body .swiper-button-prev svg,
-.mphbac-info-body .swiper-button-prev i,
-.mphbac-info-body .swiper-button-next svg,
-.mphbac-info-body .swiper-button-next i {
-    opacity: 1 !important;
-    visibility: visible !important;
+/* Mobile cottage-info carousel arrows: v0.8.13 tried to keep the
+   original Elementor icon visible via !important on opacity +
+   visibility for the button and its svg/i children. The icon still
+   vanishes after each slide settles — the hiding mechanism is
+   something we didn't intercept (likely a Swiper inline style, a
+   ::before/::after pseudo-element rule, or icon-font rendering tied
+   to a class that comes off post-transition). Rather than keep
+   guessing which rule wins, replace the icon outright with a CSS-
+   drawn chevron the plugin owns. Pinned with !important on every
+   declaration so Bravada's Elementor-kit reset cannot reach it.
+   Mobile-only (matches widget.css's 600px breakpoint) so desktop
+   keeps the original Elementor icon, which renders fine there. */
+@media (max-width: 600px) {
+    .mphbac-info-body .elementor-swiper-button,
+    .mphbac-info-body .swiper-button-prev,
+    .mphbac-info-body .swiper-button-next {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 20 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 36px !important;
+        height: 36px !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        border-radius: 50% !important;
+    }
+    /* Hide the original Elementor icon (svg, i, icon-font span) so
+       it doesn't double up with our chevron. Whether or not the
+       original is itself being hidden by Elementor/Bravada doesn't
+       matter — we want our chevron to be the only thing visible. */
+    .mphbac-info-body .elementor-swiper-button > *,
+    .mphbac-info-body .swiper-button-prev > *,
+    .mphbac-info-body .swiper-button-next > * {
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    /* CSS chevron via ::before — two borders + a rotate. Anchored
+       to a pseudo-element so it can't be hidden by any descendant-
+       targeting rule. */
+    .mphbac-info-body .elementor-swiper-button::before,
+    .mphbac-info-body .swiper-button-prev::before,
+    .mphbac-info-body .swiper-button-next::before {
+        content: "" !important;
+        display: block !important;
+        width: 10px !important;
+        height: 10px !important;
+        border-top: 2px solid #ffffff !important;
+        border-right: 2px solid #ffffff !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    .mphbac-info-body .elementor-swiper-button-prev::before,
+    .mphbac-info-body .swiper-button-prev::before {
+        transform: rotate(-135deg) !important;
+        margin-left: 4px !important;
+    }
+    .mphbac-info-body .elementor-swiper-button-next::before,
+    .mphbac-info-body .swiper-button-next::before {
+        transform: rotate(45deg) !important;
+        margin-right: 4px !important;
+    }
 }
 .mphbac-sheet-close {
     background: transparent;
