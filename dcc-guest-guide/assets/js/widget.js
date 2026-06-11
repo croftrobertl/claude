@@ -618,10 +618,22 @@
             }
         });
 
+        // v0.9.7.5: stamp a back-pointer so document-level delegation can
+        // identify clicks inside this widget's stage even after the stage is
+        // portaled to <body> by showDetailModal. Without this the bubble path
+        // bypasses `root` and the previous root-level delegation never fired.
+        const stage = root.querySelector('.dccgg-stage');
+        if (stage) stage.__dccggRoot = root;
+        const ownsTarget = (el) => {
+            if (root.contains(el)) return true;
+            const s = el.closest && el.closest('.dccgg-stage');
+            return !!(s && s.__dccggRoot === root);
+        };
+
         // Click handler.
-        root.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('.dccgg-item-check');
-            if (!btn) return;
+            if (!btn || !ownsTarget(btn)) return;
             const item = btn.closest('.dccgg-item');
             if (!item) return;
             const key  = item.dataset.checkKey;
@@ -634,9 +646,9 @@
         });
 
         // Reset.
-        root.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
             const reset = e.target.closest('.dccgg-checklist-reset');
-            if (!reset) return;
+            if (!reset || !ownsTarget(reset)) return;
             const detail = reset.closest('.dccgg-detail');
             detail.querySelectorAll('.dccgg-item[data-checkable="1"]').forEach(item => {
                 item.dataset.checked = '0';
@@ -1199,7 +1211,14 @@
     // against the portaled stage (the stage is moved off `root` into
     // <body>, so root.querySelector can't find the detail anymore).
     function openDetail(root, key, onShown) {
-        const details = root.querySelectorAll('.dccgg-detail');
+        // v0.9.7.5: after the first open, showDetailModal portals .dccgg-stage
+        // (and its .dccgg-detail children) to <body>, so root.querySelectorAll
+        // returns an empty list and prev/next/back re-entries bailed silently.
+        // Walk to the portaled stage when it exists; fall back to root pre-portal.
+        const portaledStage = root.__dccggModal && root.__dccggModal.stage;
+        const details = portaledStage
+            ? portaledStage.querySelectorAll('.dccgg-detail')
+            : root.querySelectorAll('.dccgg-detail');
         let found = false;
         let activeDetail = null;
         // v0.9.7.3: resolve the match synchronously so the early-return and

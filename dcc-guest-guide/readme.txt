@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.4
+Stable tag: 0.9.7.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,22 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.5 =
+
+Two pre-existing bugs surfaced from live use, both rooted in the v0.9.5
+detail-modal portal:
+
+* **Section prev/next arrows in the popup did nothing.** `openDetail()`
+  looked up `.dccgg-detail` from `root`, but the stage and its details
+  were moved to `<body>` on first open, so the lookup returned empty
+  and the function bailed silently. Walk to the portaled stage when
+  it's present.
+* **Checklist checkboxes wouldn't toggle.** `wireChecklists()`
+  delegated click handling on `root`, but after the portal the click
+  bubble path no longer passes through `root`. Bind the handlers to
+  `document` with a back-pointer (`stage.__dccggRoot`) so each widget
+  still only handles its own clicks.
 
 = 0.9.7.4 =
 
