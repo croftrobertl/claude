@@ -805,23 +805,28 @@ body.mphbac-info-open {
 .mphbac-info-body .elementor-widget-image-gallery {
     overflow: hidden;
 }
-/* Mobile cottage-info carousel arrows: v0.8.13 tried to force the
-   original Elementor icon visible via !important; the icon still
-   vanished after each slide settled. v0.8.14 hid the original and
-   drew a chevron via a ::before pseudo with border-rotate — but
-   Elementor's CSS pins ::before to top-left of the button with
-   position: absolute, which we didn't override, so only a sliver
-   of the rotated chevron showed in the corner of the button.
-   v0.8.15: skip the pseudo-element entirely and paint the chevron
-   directly on the button via background-image (inline SVG). The
-   image is part of the button's own painting — no positioning to
-   fight, no descendant rules to worry about. Mobile-only (matches
-   widget.css's 600px breakpoint) so desktop keeps the original
-   Elementor icon, which renders fine there. */
+/* Mobile cottage-info carousel arrows: v0.8.13 forced original
+   icon visible (didn't hold). v0.8.14 drew a ::before chevron
+   (rendered in the corner). v0.8.15 switched to background-image
+   chevron — the RIGHT arrow renders perfectly and stays visible,
+   but the LEFT button itself disappears 0.3s after each slide
+   settles. v0.8.15 dropped `display`, so any rule that sets
+   `display: none` on the prev button (Elementor's mobile-hide
+   rule, Bravada's reset, or Swiper's `.swiper-button-disabled`
+   state) wins. v0.8.16: force `display: flex !important` so the
+   button stays in the layout regardless, and add Elementor's
+   long-form `-previous` class to the selector list as a defensive
+   measure in case the deployed Elementor version uses that. */
 @media (max-width: 600px) {
     .mphbac-info-body .elementor-swiper-button,
+    .mphbac-info-body .elementor-swiper-button-prev,
+    .mphbac-info-body .elementor-swiper-button-previous,
+    .mphbac-info-body .elementor-swiper-button-next,
     .mphbac-info-body .swiper-button-prev,
     .mphbac-info-body .swiper-button-next {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         opacity: 1 !important;
         visibility: visible !important;
         pointer-events: auto !important;
@@ -834,9 +839,18 @@ body.mphbac-info-open {
         background-position: center center !important;
         background-size: 16px 16px !important;
     }
+    /* Defeat Swiper's `.swiper-button-disabled` state hiding too —
+       if the carousel hits a non-loop endpoint we still want the
+       arrow visible (dimmed at most), not gone. */
+    .mphbac-info-body .swiper-button-disabled,
+    .mphbac-info-body .swiper-button-lock {
+        display: flex !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
     /* Hide the original Elementor icon (svg, i, icon-font span, and
-       its ::before pseudo if any) so they don't compete with the
-       background-image chevron. */
+       its ::before / ::after pseudos if any) so they don't compete
+       with the background-image chevron. */
     .mphbac-info-body .elementor-swiper-button > *,
     .mphbac-info-body .swiper-button-prev > *,
     .mphbac-info-body .swiper-button-next > * {
@@ -855,6 +869,7 @@ body.mphbac-info-open {
     /* Inline-SVG chevrons. URL-encoded (# → %23) so they're safe
        inline in CSS without needing url-escape gymnastics. */
     .mphbac-info-body .elementor-swiper-button-prev,
+    .mphbac-info-body .elementor-swiper-button-previous,
     .mphbac-info-body .swiper-button-prev {
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='15 18 9 12 15 6'/></svg>") !important;
     }
