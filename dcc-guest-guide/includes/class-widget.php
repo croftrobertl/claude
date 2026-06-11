@@ -112,6 +112,10 @@ final class Widget extends Widget_Base
         $this->register_quick_action_style_controls();
         $this->register_button_style_controls();
         $this->register_detail_style_controls();
+        $this->register_popup_back_style_controls();
+        $this->register_popup_nav_style_controls();
+        $this->register_popup_title_style_controls();
+        $this->register_popup_icon_style_controls();
         $this->register_flip_card_controls();
         $this->register_fab_style_controls();
         $this->register_transitions_controls();
@@ -1879,6 +1883,269 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    // v0.9.7.4: dedicated Style controls for the popup header nav bar (Back
+    // button, prev/next arrows, section title, section icon). Each one is
+    // scoped under .dccgg-detail-header so it only overrides the popup; the
+    // generic .dccgg-btn / --dccgg-primary baselines from
+    // register_button_style_controls() and register_color_controls() still
+    // apply when no override is set. No defaults — baked-in look stays in
+    // widget.css; controls are override-only (CLAUDE.md invariant).
+    private function register_popup_back_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_back', [
+            'label' => __('Popup Header — Back Button', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'popup_back_typography',
+            'selector' => self::SEL . '.dccgg-detail-header .dccgg-back',
+        ]);
+
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'popup_back_border',
+            'selector' => self::SEL . '.dccgg-detail-header .dccgg-back',
+        ]);
+
+        $this->add_control('popup_back_radius', [
+            'label'      => __('Border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [self::SEL . '.dccgg-detail-header .dccgg-back' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('popup_back_padding', [
+            'label'      => __('Padding', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [self::SEL . '.dccgg-detail-header .dccgg-back' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->start_controls_tabs('popup_back_tabs');
+
+        $this->start_controls_tab('popup_back_tab_normal', ['label' => __('Normal', 'dcc-guest-guide')]);
+        $this->add_control('popup_back_text', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.dccgg-detail-header .dccgg-back' => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('popup_back_bg', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.dccgg-detail-header .dccgg-back' => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('popup_back_tab_hover', ['label' => __('Hover', 'dcc-guest-guide')]);
+        $this->add_control('popup_back_text_hover', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-detail-header .dccgg-back:hover, ' . self::SEL . '.dccgg-detail-header .dccgg-back:focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_back_bg_hover', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-detail-header .dccgg-back:hover, ' . self::SEL . '.dccgg-detail-header .dccgg-back:focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
+    private function register_popup_nav_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_nav', [
+            'label' => __('Popup Header — Section Nav', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('popup_nav_size', [
+            'label'      => __('Arrow button size', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 20, 'max' => 64, 'step' => 1]],
+            'selectors'  => [
+                self::SEL . '.dccgg-section-prev, ' . self::SEL . '.dccgg-section-next' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'popup_nav_border',
+            'selector' => self::SEL . '.dccgg-section-prev, ' . self::SEL . '.dccgg-section-next',
+        ]);
+
+        $this->add_control('popup_nav_radius', [
+            'label'      => __('Border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::SEL . '.dccgg-section-prev, ' . self::SEL . '.dccgg-section-next' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('popup_nav_gap', [
+            'label'      => __('Gap between arrows', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 0, 'max' => 32, 'step' => 1]],
+            'selectors'  => [self::SEL . '.dccgg-section-nav' => 'gap: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        $this->start_controls_tabs('popup_nav_color_tabs');
+
+        $this->start_controls_tab('popup_nav_tab_normal', ['label' => __('Normal', 'dcc-guest-guide')]);
+        $this->add_control('popup_nav_icon', [
+            'label'     => __('Icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-section-prev, ' . self::SEL . '.dccgg-section-next' => 'color: {{VALUE}};',
+                self::SEL . '.dccgg-section-prev i, ' . self::SEL . '.dccgg-section-next i' => 'color: {{VALUE}};',
+                self::SEL . '.dccgg-section-prev svg, ' . self::SEL . '.dccgg-section-next svg' => 'fill: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_nav_bg', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-section-prev, ' . self::SEL . '.dccgg-section-next' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('popup_nav_tab_hover', ['label' => __('Hover', 'dcc-guest-guide')]);
+        $this->add_control('popup_nav_icon_hover', [
+            'label'     => __('Icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-section-prev:hover:not([disabled]), ' . self::SEL . '.dccgg-section-next:hover:not([disabled]), ' . self::SEL . '.dccgg-section-prev:focus-visible:not([disabled]), ' . self::SEL . '.dccgg-section-next:focus-visible:not([disabled])' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_nav_bg_hover', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-section-prev:hover:not([disabled]), ' . self::SEL . '.dccgg-section-next:hover:not([disabled]), ' . self::SEL . '.dccgg-section-prev:focus-visible:not([disabled]), ' . self::SEL . '.dccgg-section-next:focus-visible:not([disabled])' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->add_control('popup_nav_disabled_opacity', [
+            'label'     => __('Disabled opacity', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::NUMBER,
+            'min'       => 0,
+            'max'       => 1,
+            'step'      => 0.05,
+            'selectors' => [
+                self::SEL . '.dccgg-section-prev[disabled], ' . self::SEL . '.dccgg-section-next[disabled]' => 'opacity: {{VALUE}};',
+            ],
+            'separator' => 'before',
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_popup_title_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_title', [
+            'label' => __('Popup Header — Section Title', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'popup_title_typography',
+            'selector' => self::SEL . '.dccgg-detail-title .dccgg-detail-title-text',
+        ]);
+
+        $this->add_control('popup_title_color', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.dccgg-detail-title .dccgg-detail-title-text' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_control('popup_title_align', [
+            'label'   => __('Alignment', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'flex-start' => ['title' => __('Left', 'dcc-guest-guide'),   'icon' => 'eicon-text-align-left'],
+                'center'     => ['title' => __('Center', 'dcc-guest-guide'), 'icon' => 'eicon-text-align-center'],
+                'flex-end'   => ['title' => __('Right', 'dcc-guest-guide'),  'icon' => 'eicon-text-align-right'],
+            ],
+            'selectors' => [self::SEL . '.dccgg-detail-title' => 'justify-content: {{VALUE}}; text-align: {{VALUE}};'],
+        ]);
+
+        $this->add_control('popup_title_gap', [
+            'label'      => __('Icon ↔ text gap', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 0, 'max' => 32, 'step' => 1]],
+            'selectors'  => [self::SEL . '.dccgg-detail-title' => 'gap: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_popup_icon_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_icon', [
+            'label' => __('Popup Header — Section Icon', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('popup_icon_color', [
+            'label'     => __('Icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccgg-detail-title-icon' => 'color: {{VALUE}};',
+                self::SEL . '.dccgg-detail-title-icon i' => 'color: {{VALUE}};',
+                self::SEL . '.dccgg-detail-title-icon svg' => 'fill: {{VALUE}}; color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('popup_icon_size', [
+            'label'      => __('Icon size', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em'],
+            'range'      => [
+                'px' => ['min' => 8, 'max' => 96, 'step' => 1],
+                'em' => ['min' => 0.5, 'max' => 6, 'step' => 0.1],
+            ],
+            'selectors'  => [
+                self::SEL . '.dccgg-detail-title-icon' => 'font-size: {{SIZE}}{{UNIT}};',
+                self::SEL . '.dccgg-detail-title-icon svg' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('popup_icon_bg', [
+            'label'     => __('Background color (chip)', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.dccgg-detail-title-icon' => 'background-color: {{VALUE}};'],
+        ]);
+
+        $this->add_control('popup_icon_padding', [
+            'label'      => __('Chip padding', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [self::SEL . '.dccgg-detail-title-icon' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('popup_icon_radius', [
+            'label'      => __('Chip border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [self::SEL . '.dccgg-detail-title-icon' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
     private function register_flip_card_controls(): void
     {
         $this->start_controls_section('section_style_flip', [
@@ -2523,24 +2790,30 @@ final class Widget extends Widget_Base
                     <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
                     <div class="dccgg-progress-bar" aria-hidden="true"></div>
                     <div class="dccgg-detail-header">
-                        <button type="button" class="dccgg-btn dccgg-back">
-                            <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
-                        </button>
+                        <div class="dccgg-detail-header-actions">
+                            <button type="button" class="dccgg-btn dccgg-back">
+                                <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
+                            </button>
+                            <?php if ($show_nav && $section_count > 1) : ?>
+                                <div class="dccgg-section-nav">
+                                    <button type="button" class="dccgg-section-prev" aria-label="<?php echo esc_attr($label_prev); ?>" <?php echo $prev_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($prev_key) . '"'; ?>>
+                                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="dccgg-section-next" aria-label="<?php echo esc_attr($label_next); ?>" <?php echo $next_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($next_key) . '"'; ?>>
+                                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            <?php else : ?>
+                                <span class="dccgg-section-nav-spacer" aria-hidden="true"></span>
+                            <?php endif; ?>
+                            <?php // v0.9.7: More menu moved to the hub toolbar (see render() above) so guests can reach Print / Save PDF / Report a Problem without opening a section. ?>
+                        </div>
                         <h2 class="dccgg-detail-title">
-                            <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
-                            <span><?php echo esc_html($title); ?></span>
+                            <span class="dccgg-detail-title-icon">
+                                <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                            </span>
+                            <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
                         </h2>
-                        <?php if ($show_nav && $section_count > 1) : ?>
-                            <div class="dccgg-section-nav">
-                                <button type="button" class="dccgg-section-prev" aria-label="<?php echo esc_attr($label_prev); ?>" <?php echo $prev_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($prev_key) . '"'; ?>>
-                                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                                </button>
-                                <button type="button" class="dccgg-section-next" aria-label="<?php echo esc_attr($label_next); ?>" <?php echo $next_key === '' ? 'disabled' : 'data-target-key="' . esc_attr($next_key) . '"'; ?>>
-                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                                </button>
-                            </div>
-                        <?php endif; ?>
-                        <?php // v0.9.7: More menu moved to the hub toolbar (see render() above) so guests can reach Print / Save PDF / Report a Problem without opening a section. ?>
                     </div>
                     <?php if ($checklist) : ?>
                         <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">

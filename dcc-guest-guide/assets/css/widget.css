@@ -893,41 +893,52 @@ body.dccgg-detail-open {
     box-shadow: 0 8px 32px rgba(0,0,0,0.06);
     scroll-margin-top: 20px;
 }
-/* v0.9.7: detail header is a 1fr / auto / 1fr grid so the title centers
-   on the row regardless of how wide Back / nav are. align-items: start
-   pushes Back to the top so the title can sit slightly lower without
-   shoving Back down with it. */
+/* v0.9.7.4: detail header is two rows — actions (Back + nav arrows) on
+   row 1, icon + title centered on row 2. The 3-column grid from v0.9.7
+   crammed everything into one row and the title truncated with ellipsis
+   the moment any column took more space than expected; long titles got
+   cut off and Back/arrows could crowd each other. Two-row flex column
+   gives the title the full width to soft-wrap centered. The actions row
+   pins Back to the left and arrows to the right via margin-auto on a
+   spacer when nav is hidden (single-section guides) so Back stays
+   anchored. The sticky / .is-shrunk behavior at line 2165 still applies
+   to .dccgg-detail-header as a whole. */
 .dccgg-detail-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: start;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 16px;
 }
-.dccgg-detail-header .dccgg-back { justify-self: start; }
-.dccgg-detail-header .dccgg-section-nav { grid-column: 3; justify-self: end; }
+.dccgg-detail-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.dccgg-detail-header .dccgg-back { margin-right: auto; }
+.dccgg-detail-header .dccgg-section-nav,
+.dccgg-detail-header .dccgg-section-nav-spacer { margin-left: auto; }
 .dccgg-detail-title {
-    grid-column: 2;
-    justify-self: center;
-    text-align: center;
     margin: 0;
-    /* Match the Back button's font size so the title doesn't tower over
-       it. JS does not stamp --dccgg-back-font-size today; the fallback
-       (1em, inherited from the button typography control) keeps parity. */
-    font-size: var(--dccgg-back-font-size, 1em);
-    line-height: 1.2;
-    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--dccgg-primary);
+    font-size: 1.15em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    max-width: 100%;
+}
+.dccgg-detail-title-icon {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    color: var(--dccgg-primary);
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex-shrink: 0;
 }
-.dccgg-detail-title svg,
-.dccgg-detail-title i {
+.dccgg-detail-title-icon svg,
+.dccgg-detail-title-icon i {
     flex-shrink: 0;
 }
 .dccgg-detail-items {

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.3
+Stable tag: 0.9.7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,38 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.4 =
+
+Two improvements to the section detail popup's top navigation bar:
+
+* **Two-row nav bar.** The bar used to cram Back, the section
+  icon+title, and the prev/next arrows into one row, with the title
+  truncating to an ellipsis the moment anything got tight. It now
+  splits into two rows: Back (left) and the prev/next arrows (right)
+  stay together on row 1; the section icon and title sit centered on
+  row 2 and the title soft-wraps onto multiple lines instead of
+  ellipsis-truncating. Single-section guides (no nav arrows) keep
+  Back anchored at the left via a hidden spacer.
+* **Four new Style-tab sections** scoped to the popup nav bar so the
+  host can tune each piece independently of the generic button /
+  color controls:
+  - **Popup Header — Back Button**: typography, border, radius,
+    padding, Normal/Hover text + background colors.
+  - **Popup Header — Section Nav**: arrow button size, border,
+    radius, gap between arrows, Normal/Hover icon + background
+    colors, disabled-state opacity.
+  - **Popup Header — Section Title**: typography, color, alignment,
+    icon ↔ text gap.
+  - **Popup Header — Section Icon**: icon color, icon size, plus
+    optional background color / padding / border-radius to build a
+    chip behind the icon.
+
+  None of the new controls carry defaults — set one and it overrides
+  the baked-in look; leave it blank and the v0.9.7.3 appearance
+  stays. The generic Buttons style controls keep working unchanged
+  for every other button in the widget (Send Report, hub actions,
+  etc.).
 
 = 0.9.7.3 =
 
