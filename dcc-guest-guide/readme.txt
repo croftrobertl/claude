@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.5
+Stable tag: 0.9.7.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,18 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.6 =
+
+New editor setting: **Override printable PDF** (General tab). Assign a
+PDF from the WordPress Media Library and the toolbar "Print guide"
+button + the ⋯ menu's "Save as PDF" both route through that file
+instead of the auto-generated print stylesheet. Save opens the PDF in
+a new tab; Print loads it in a hidden iframe and auto-fires the
+browser's print dialog. Leave the field empty to keep the current
+auto-generated behavior. The toolbar Print button's inline
+`onclick="window.print()"` is removed so the JS handler can intercept
+cleanly; behavior with no override set is unchanged.
 
 = 0.9.7.5 =
 

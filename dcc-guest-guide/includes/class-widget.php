@@ -451,6 +451,14 @@ final class Widget extends Widget_Base
             'description'  => __('Adds a "Print guide" button above the menu. The print stylesheet shows only the guide content.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('manual_pdf', [
+            'label'       => __('Override printable PDF', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::MEDIA,
+            'media_types' => ['application/pdf'],
+            'default'     => ['url' => ''],
+            'description' => __('Optional. When you assign a PDF here, the "Print guide" button and the ⋯ menu\'s "Save as PDF" both use this file instead of the auto-generated print stylesheet — Save opens the PDF in a new tab; Print loads it in a hidden frame and auto-launches the browser print dialog. Leave empty to keep the default behavior.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('enable_fab', [
             'label'        => __('Enable floating help button (FAB)', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -2415,6 +2423,11 @@ final class Widget extends Widget_Base
                 'label' => (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide')),
                 'tip'   => (string) ($s['str_save_pdf_tip'] ?? __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')),
             ],
+            'manualPdfUrl'         => (function () use ($s) {
+                $m = $s['manual_pdf'] ?? null;
+                $u = is_array($m) ? trim((string) ($m['url'] ?? '')) : '';
+                return esc_url_raw($u);
+            })(),
             'report'               => [
                 'enabled'    => ($s['enable_problem_report'] ?? '') === 'yes',
                 'perItem'    => ($s['enable_per_item_report'] ?? '') === 'yes',
@@ -2537,7 +2550,7 @@ final class Widget extends Widget_Base
 
                 <div class="dccgg-toolbar">
                     <?php if ($enable_print) : ?>
-                        <button type="button" class="dccgg-btn dccgg-print" onclick="window.print()">
+                        <button type="button" class="dccgg-btn dccgg-print">
                             <i class="fas fa-print" aria-hidden="true"></i>
                             <?php echo esc_html($s['str_print']); ?>
                         </button>

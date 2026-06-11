@@ -63,7 +63,7 @@
         root.__dccgg = { config, ownedKeys };
 
         wireDarkMode(root, config);
-        wirePrint(root);
+        wirePrint(root, config);
         wireFab(root, config);
         wireMenu(root, config);
         wireBack(root, config);
@@ -104,11 +104,50 @@
     // The button just kicks window.print(); the magazine-quality output is
     // produced by the @media print CSS. A small toast tells first-timers
     // how to pick the "Save as PDF" destination in the browser dialog.
+    // v0.9.7.6: when the host assigns an Override PDF in the editor, both the
+    // Print and Save-as-PDF triggers route through this PDF instead of the
+    // auto-generated print stylesheet. Print loads the PDF in a hidden iframe
+    // and fires the browser's print dialog as soon as the viewer is ready;
+    // Save opens the PDF in a new tab so the visitor can use the native
+    // viewer's Download button.
+    function manualPdfPrint(url) {
+        const old = document.getElementById('dccgg-print-pdf-frame');
+        if (old) old.remove();
+        const iframe = document.createElement('iframe');
+        iframe.id = 'dccgg-print-pdf-frame';
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+        let fired = false;
+        const tryPrint = () => {
+            if (fired) return;
+            fired = true;
+            try {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } catch (_) {
+                // Cross-origin viewer or print blocked — fall back to opening in a tab.
+                window.open(url, '_blank', 'noopener');
+            }
+        };
+        iframe.addEventListener('load', () => setTimeout(tryPrint, 250));
+        // Belt-and-braces: some PDF viewers never fire `load`. Force-fire after 2.5s.
+        setTimeout(tryPrint, 2500);
+        document.body.appendChild(iframe);
+        iframe.src = url;
+    }
+    function manualPdfOpen(url) {
+        window.open(url, '_blank', 'noopener');
+    }
+
     function wireSavePdf(root, config) {
         const SHOWN_KEY = 'dccgg:savepdf-tip-shown';
         root.addEventListener('click', (e) => {
             const btn = e.target.closest('.dccgg-more-save-pdf');
             if (!btn) return;
+            if (config.manualPdfUrl) {
+                manualPdfOpen(config.manualPdfUrl);
+                return;
+            }
             const tip = (config.savePdf && config.savePdf.tip) || '';
             let shown = false;
             try { shown = sessionStorage.getItem(SHOWN_KEY) === '1'; } catch (_) {}
@@ -1004,6 +1043,10 @@
                 print.addEventListener('click', (e) => {
                     e.stopPropagation();
                     menu.open = false;
+                    if (config.manualPdfUrl) {
+                        manualPdfPrint(config.manualPdfUrl);
+                        return;
+                    }
                     window.print();
                 });
             }
@@ -1087,10 +1130,16 @@
     function writeStored(v)  { try { localStorage.setItem(STORAGE_KEY, v); } catch (_) {} }
 
     // -- Print (CSP-safe binding, replaces v0.1 inline onclick) -----------
-    function wirePrint(root) {
+    function wirePrint(root, config) {
         const btn = root.querySelector('.dccgg-print');
         if (!btn) return;
-        btn.addEventListener('click', () => window.print());
+        btn.addEventListener('click', () => {
+            if (config && config.manualPdfUrl) {
+                manualPdfPrint(config.manualPdfUrl);
+                return;
+            }
+            window.print();
+        });
     }
 
     // -- FAB --------------------------------------------------------------
