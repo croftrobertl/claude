@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.6
+Stable tag: 0.9.7.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,34 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.7 =
+
+Fixes a transparent-sticky-header bug visible on the live page and adds
+the host control to customize that background.
+
+* **Sticky popup header was transparent.** Scrolling inside a section
+  detail popup let guide-item content show THROUGH the sticky header
+  at the top of the popup. Root cause: the rule at widget.css:2176
+  set `background: var(--dccgg-detail-bg);` with no fallback, and the
+  variable isn't always set by the active theme/preset context, so
+  the background resolved to transparent. Extended the rule to
+  `background: var(--dccgg-popup-header-bg, var(--dccgg-detail-bg,
+  #ffffff));` — defensive solid white at the end of the chain so the
+  bug can't reappear under any theme context.
+* **New Style control: Popup Header — Background.** Pick a custom
+  color for the sticky popup-header background per widget. Empty
+  field falls back to the popup body color (or solid white if neither
+  is set).
+* **Portal-aware CSS variables.** When the modal opens, the
+  `.dccgg-stage` is moved (portaled) to `<body>` so position:fixed
+  works inside transformed Elementor ancestors. Custom-property
+  cascade stops at the new parent, so any `--dccgg-*` variable set
+  on `.dccgg-root` by a Style control silently stopped reaching the
+  stage's children after portal. `showDetailModal()` now snapshots
+  all `--dccgg-*` properties from root onto `stage.style` at portal
+  time, so variable-based overrides keep applying after the move.
+  Lays groundwork for future variable-based Style controls.
 
 = 0.9.7.6 =
 

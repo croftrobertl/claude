@@ -1393,6 +1393,23 @@
             overlay.parentNode.insertBefore(overlayMarker, overlay);
             document.body.appendChild(overlay);
             document.body.appendChild(stage);
+            // v0.9.7.7: CSS custom properties cascade through DOM ancestors,
+            // so once stage moves to <body> the --dccgg-* vars set on
+            // .dccgg-root by Elementor Style controls (popup_header_bg,
+            // future variable-based controls) stop reaching the stage and
+            // its sticky header. Snapshot the current values onto
+            // stage.style at portal time so variable-based overrides
+            // continue to apply post-portal.
+            try {
+                const rootStyle = getComputedStyle(root);
+                for (let i = 0; i < rootStyle.length; i++) {
+                    const name = rootStyle[i];
+                    if (name.indexOf('--dccgg-') === 0) {
+                        const val = rootStyle.getPropertyValue(name);
+                        if (val) stage.style.setProperty(name, val);
+                    }
+                }
+            } catch (_) { /* getComputedStyle is universally supported; defensive only */ }
             state = root.__dccggModal = {
                 stage: stage,
                 overlay: overlay,

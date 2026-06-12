@@ -2177,7 +2177,14 @@ video.dccgg-media {
     position: sticky;
     top: 0;
     z-index: 4;
-    background: var(--dccgg-detail-bg);
+    /* v0.9.7.7: fallback chain — new popup-header-bg override wins, then
+       the existing detail-bg var, then a defensive solid white so
+       scrolled content can never bleed through. Pre-0.9.7.7 this rule
+       read just `var(--dccgg-detail-bg)` with no fallback; when the
+       active theme/preset context didn't set the variable, the
+       background resolved to transparent and guide-item text showed
+       through on scroll. */
+    background: var(--dccgg-popup-header-bg, var(--dccgg-detail-bg, #ffffff));
     transition: padding var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
 .dccgg-detail.is-shrunk .dccgg-detail-header {

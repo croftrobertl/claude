@@ -116,6 +116,7 @@ final class Widget extends Widget_Base
         $this->register_popup_nav_style_controls();
         $this->register_popup_title_style_controls();
         $this->register_popup_icon_style_controls();
+        $this->register_popup_header_bg_style_controls();
         $this->register_flip_card_controls();
         $this->register_fab_style_controls();
         $this->register_transitions_controls();
@@ -2149,6 +2150,25 @@ final class Widget extends Widget_Base
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [self::SEL . '.dccgg-detail-title-icon' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    private function register_popup_header_bg_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_header_bg', [
+            'label' => __('Popup Header — Background', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('popup_header_bg', [
+            'label'       => __('Sticky header background', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Solid color shown behind the sticky popup header so guide-item content can\'t bleed through when the visitor scrolls. Leave empty to fall back to the popup body color (or solid white when none is set).', 'dcc-guest-guide'),
+            'selectors'   => [
+                self::SEL => '--dccgg-popup-header-bg: {{VALUE}};',
+            ],
         ]);
 
         $this->end_controls_section();
