@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.7
+Stable tag: 0.9.7.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,23 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.8 =
+
+* **Menu Hub tiles no longer show the "N items" line.** Section tiles
+  now render icon → title → optional description and stop there. The
+  count line was removed from `render_tile_inner()` for all three
+  layout modes (grid / list / carousel) in one shot.
+* **Seven new Florida-themed Copy-button effects.** General tab gets a
+  new "Copy-button effect" SELECT control letting the host pick from
+  None / Confetti (default) / Splash droplets / Rising bubbles / Sun
+  rays burst / Palm fronds / Seaplane flyby / Concentric ripples /
+  Fish school. Themed to Tavares lakes, Central Florida sunshine,
+  boating, fishing, and leisure. Each effect spawns from the tapped
+  Copy button, finishes in under ~1.5s, uses only DOM + CSS + rAF
+  (no canvas, no images), and is automatically skipped for visitors
+  with the OS Reduce-Motion preference. Confetti remains the default
+  so saved widgets behave exactly as before this update.
 
 = 0.9.7.7 =
 

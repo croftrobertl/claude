@@ -1554,7 +1554,7 @@
             if (e) e.stopPropagation();
             copyText(value).then(() => {
                 flashCopied(btn, config.strings && config.strings.copied);
-                spawnConfetti(btn);
+                spawnCopyEffect(btn, config.copyEffect);
                 hapticPulse(root, [20, 40, 60]);
             }).catch(() => {});
         };
@@ -1569,6 +1569,236 @@
         const orig = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> ' + (label || 'Copied!');
         setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    }
+
+    // v0.9.7.8: Copy-button effect dispatcher. Reads the host's choice from
+    // the editor (config.copyEffect) and routes to one of the themed spawners
+    // below. REDUCED_MOTION is checked once here so each per-effect function
+    // doesn't have to repeat the gate. 'confetti' is the default fallback so
+    // a missing / unrecognized config value keeps today's behavior.
+    function spawnCopyEffect(anchor, kind) {
+        if (REDUCED_MOTION) return;
+        switch (kind) {
+            case 'none':     return;
+            case 'splash':   return spawnSplash(anchor);
+            case 'bubbles':  return spawnBubbles(anchor);
+            case 'sunrays':  return spawnSunrays(anchor);
+            case 'palm':     return spawnPalm(anchor);
+            case 'seaplane': return spawnSeaplane(anchor);
+            case 'ripples':  return spawnRipples(anchor);
+            case 'fish':     return spawnFish(anchor);
+            case 'confetti': /* fall-through */
+            default:         return spawnConfetti(anchor);
+        }
+    }
+
+    // Shared helpers for the themed effects below. Each effect appends pieces
+    // to <body>, animates via a single rAF loop per piece, and removes the
+    // element when its progress (t) reaches 1.
+    function anchorCenter(anchor) {
+        const r = anchor.getBoundingClientRect();
+        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, r };
+    }
+    function fxPiece(cls, x, y) {
+        const p = document.createElement('span');
+        p.className = 'dccgg-fx ' + cls;
+        p.style.left = x + 'px';
+        p.style.top  = y + 'px';
+        document.body.appendChild(p);
+        return p;
+    }
+
+    // -- Splash droplets — Tavares-lakes / boating ----------------------
+    function spawnSplash(anchor) {
+        const { cx, cy } = anchorCenter(anchor);
+        const colors = ['#5fa8e8', '#7bc4f0', '#3d8ed8', '#a9d6f5'];
+        const N = 14;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-droplet', cx, cy);
+            p.style.background = colors[i % colors.length];
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI; // upward fan
+            const speed = 140 + Math.random() * 140;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            const rot = Math.random() * 360 - 180;
+            const start = performance.now();
+            const dur = 900 + Math.random() * 300;
+            const tick = (now) => {
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const x = vx * t;
+                const y = vy * t + 0.5 * 700 * t * t; // gravity
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot + t * 90).toFixed(0) + 'deg)';
+                p.style.opacity = String(1 - t * t);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+    }
+
+    // -- Rising bubbles — fishing / lakes underwater --------------------
+    function spawnBubbles(anchor) {
+        const { cx, cy } = anchorCenter(anchor);
+        const N = 12;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-bubble', cx + (Math.random() - 0.5) * 30, cy);
+            const size = 8 + Math.random() * 8;
+            p.style.width = size + 'px';
+            p.style.height = size + 'px';
+            const rise = 120 + Math.random() * 90;          // total upward distance
+            const wobbleAmp = 12 + Math.random() * 14;
+            const wobbleFreq = 2 + Math.random() * 2;
+            const start = performance.now() + Math.random() * 200;
+            const dur = 1100 + Math.random() * 300;
+            const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const y = -rise * t;
+                const x = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp;
+                const scale = 1 + t * 0.3;
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + scale.toFixed(2) + ')';
+                p.style.opacity = String(t < 0.85 ? 1 - t * 0.4 : (1 - t) * 4);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+    }
+
+    // -- Sun rays burst — Florida sunshine ------------------------------
+    function spawnSunrays(anchor) {
+        const { cx, cy } = anchorCenter(anchor);
+        const colors = ['#f4da62', '#f6a01a', '#fff7b0', '#ffb74d'];
+        const N = 10;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-ray', cx, cy);
+            p.style.background = colors[i % colors.length];
+            const angle = (i / N) * 360 + Math.random() * 8;
+            const start = performance.now();
+            const dur = 600;
+            const tick = (now) => {
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                // Grow length outward, fade tail.
+                const lengthScale = t < 0.4 ? t / 0.4 : 1;
+                p.style.transform = 'translate(-50%,-100%) rotate(' + angle + 'deg) scaleY(' + lengthScale.toFixed(2) + ')';
+                p.style.opacity = String(1 - t);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+    }
+
+    // -- Palm fronds — tropical leisure ---------------------------------
+    function spawnPalm(anchor) {
+        const { cx, cy } = anchorCenter(anchor);
+        const colors = ['#3a7d3a', '#5fa75f', '#8bc18b', '#2f6a2f'];
+        const N = 7;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-palm', cx + (Math.random() - 0.5) * 40, cy - 10);
+            p.style.background = colors[i % colors.length];
+            const drift = (Math.random() - 0.5) * 80;
+            const fall = 200 + Math.random() * 80;
+            const wobbleAmp = 18 + Math.random() * 10;
+            const rot0 = Math.random() * 360;
+            const rotSpeed = 90 + Math.random() * 120;
+            const start = performance.now() + Math.random() * 200;
+            const dur = 1300 + Math.random() * 300;
+            const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const x = drift * t + Math.sin(t * Math.PI * 3) * wobbleAmp;
+                const y = fall * t;
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot0 + rotSpeed * t).toFixed(0) + 'deg)';
+                p.style.opacity = String(1 - t * t);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+    }
+
+    // -- Seaplane flyby — Tavares ("America's Seaplane City") -----------
+    function spawnSeaplane(anchor) {
+        const { cy } = anchorCenter(anchor);
+        const vw = window.innerWidth;
+        const y = Math.max(40, Math.min(cy - 30, window.innerHeight - 60));
+        // Plane: a Font-Awesome glyph inside the span. Rotation flips it from
+        // pointing up (FA default for fa-plane) to horizontal-right.
+        const plane = fxPiece('dccgg-fx-seaplane', -60, y);
+        plane.innerHTML = '<i class="fas fa-plane" aria-hidden="true"></i>';
+        // Tiny contrail trailing behind: drawn as a span that grows with the plane.
+        const trail = fxPiece('dccgg-fx-contrail', -60, y + 16);
+        trail.style.width = '0px';
+        const startX = -60;
+        const endX = vw + 60;
+        const start = performance.now();
+        const dur = 1400;
+        const tick = (now) => {
+            const t = (now - start) / dur;
+            if (t >= 1) { plane.remove(); trail.remove(); return; }
+            const x = startX + (endX - startX) * t;
+            plane.style.transform = 'translate(' + x.toFixed(1) + 'px,0) rotate(45deg)';
+            // contrail draws from startX up to current plane x
+            const len = Math.max(0, x - startX - 12);
+            trail.style.width = Math.min(180, len) + 'px';
+            trail.style.transform = 'translate(' + Math.max(startX, x - 180).toFixed(1) + 'px,0)';
+            trail.style.opacity = String(t < 0.85 ? 0.7 : (1 - t) * 4);
+            plane.style.opacity = String(t < 0.1 ? t / 0.1 : (t > 0.9 ? (1 - t) / 0.1 : 1));
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    // -- Concentric ripples — minimal-motion lake ripples --------------
+    function spawnRipples(anchor) {
+        const { cx, cy } = anchorCenter(anchor);
+        const N = 3;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-ripple', cx - 9, cy - 9);
+            const start = performance.now() + i * 130;
+            const dur = 800;
+            const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const scale = 0.4 + t * 5.6;
+                p.style.transform = 'scale(' + scale.toFixed(2) + ')';
+                p.style.opacity = String(0.8 * (1 - t));
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+    }
+
+    // -- Fish school — fishing / lakes ----------------------------------
+    function spawnFish(anchor) {
+        const { cy } = anchorCenter(anchor);
+        const vw = window.innerWidth;
+        const baseY = Math.max(80, Math.min(cy, window.innerHeight - 80));
+        const colors = ['#c1a14b', '#8a8eaa', '#f08a5f', '#a36a3e', '#d9b86a'];
+        const N = 6;
+        for (let i = 0; i < N; i++) {
+            const p = fxPiece('dccgg-fx-fish', -30, baseY + (Math.random() - 0.5) * 40);
+            p.style.background = colors[i % colors.length];
+            const startX = -30;
+            const endX = vw + 30;
+            const dur = 1200 + Math.random() * 400;
+            const start = performance.now() + i * 90;
+            const wobbleAmp = 10 + Math.random() * 8;
+            const wobbleFreq = 3 + Math.random() * 2;
+            const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
+                const t = (now - start) / dur;
+                if (t >= 1) { p.remove(); return; }
+                const x = startX + (endX - startX) * t;
+                const yWobble = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp;
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + yWobble.toFixed(1) + 'px)';
+                p.style.opacity = String(t < 0.15 ? t / 0.15 : (t > 0.85 ? (1 - t) / 0.15 : 1));
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
     }
 
     function spawnConfetti(anchor) {

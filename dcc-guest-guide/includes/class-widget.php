@@ -477,6 +477,24 @@ final class Widget extends Widget_Base
             'description'  => __('On supported devices, vibrates briefly on tile tap and after a successful Copy. Uses navigator.vibrate; silently no-ops where unsupported.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('copy_effect', [
+            'label'       => __('Copy-button effect', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'confetti',
+            'options'     => [
+                'none'     => __('None', 'dcc-guest-guide'),
+                'confetti' => __('Confetti (default)', 'dcc-guest-guide'),
+                'splash'   => __('Splash droplets', 'dcc-guest-guide'),
+                'bubbles'  => __('Rising bubbles', 'dcc-guest-guide'),
+                'sunrays'  => __('Sun rays burst', 'dcc-guest-guide'),
+                'palm'     => __('Palm fronds', 'dcc-guest-guide'),
+                'seaplane' => __('Seaplane flyby', 'dcc-guest-guide'),
+                'ripples'  => __('Concentric ripples', 'dcc-guest-guide'),
+                'fish'     => __('Fish school', 'dcc-guest-guide'),
+            ],
+            'description' => __('Plays after a visitor taps a Copy button. Themed to Tavares lakes / Central Florida. Skipped automatically for visitors with the OS Reduce-Motion preference.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('enable_section_nav', [
             'label'        => __('Show prev/next arrows in detail', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -2448,6 +2466,7 @@ final class Widget extends Widget_Base
                 $u = is_array($m) ? trim((string) ($m['url'] ?? '')) : '';
                 return esc_url_raw($u);
             })(),
+            'copyEffect'           => (string) ($s['copy_effect'] ?? 'confetti'),
             'report'               => [
                 'enabled'    => ($s['enable_problem_report'] ?? '') === 'yes',
                 'perItem'    => ($s['enable_per_item_report'] ?? '') === 'yes',
@@ -2758,14 +2777,6 @@ final class Widget extends Widget_Base
             <span class="dccgg-tile-title"><?php echo esc_html($title); ?></span>
             <?php if ($desc !== '') : ?>
                 <span class="dccgg-tile-desc"><?php echo esc_html($desc); ?></span>
-            <?php endif; ?>
-            <?php if ($item_count > 0) : ?>
-                <span class="dccgg-tile-count"><?php
-                    printf(
-                        esc_html(_n('%d item', '%d items', $item_count, 'dcc-guest-guide')),
-                        (int) $item_count
-                    );
-                ?></span>
             <?php endif; ?>
         </span>
         <?php

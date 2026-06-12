@@ -2960,3 +2960,34 @@ video.dccgg-media {
     }
     .dccgg-root a[href]:after { content: "" !important; }
 }
+
+/* v0.9.7.8: Copy-button themed effects. All pieces are fixed-positioned and
+   pointer-events: none so they ride over page content without ever
+   intercepting taps. Each effect's JS spawner reads the host's editor
+   choice (copy_effect SELECT) and dispatches accordingly. */
+.dccgg-fx {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    will-change: transform, opacity;
+}
+.dccgg-fx-droplet  { width: 6px; height: 10px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; }
+.dccgg-fx-bubble   { width: 12px; height: 12px; border-radius: 50%;
+                     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(95,168,232,0.25));
+                     border: 1px solid rgba(95,168,232,0.5); }
+.dccgg-fx-ray      { width: 3px; height: 38px; transform-origin: 50% 100%; border-radius: 2px; }
+.dccgg-fx-palm     { width: 14px; height: 26px;
+                     clip-path: polygon(50% 0, 70% 25%, 100% 50%, 70% 75%, 50% 100%, 30% 75%, 0 50%, 30% 25%); }
+.dccgg-fx-seaplane { font-size: 26px; color: #2a3d5c; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+.dccgg-fx-contrail { height: 2px; border-radius: 2px; background: rgba(255,255,255,0.75);
+                     box-shadow: 0 0 4px rgba(255,255,255,0.6); }
+.dccgg-fx-ripple   { width: 18px; height: 18px; border: 2px solid #5fa8e8; border-radius: 50%; background: transparent; }
+.dccgg-fx-fish     { width: 20px; height: 9px; border-radius: 50%; }
+.dccgg-fx-fish::after {
+    content: ""; position: absolute; right: -6px; top: 50%; width: 9px; height: 9px;
+    background: inherit; clip-path: polygon(0 50%, 100% 0, 100% 100%);
+    transform: translateY(-50%);
+}
+@media (prefers-reduced-motion: reduce) {
+    .dccgg-fx { display: none !important; }
+}
