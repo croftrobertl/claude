@@ -511,6 +511,64 @@ final class Widget extends Widget_Base
             'description'  => __('Adds a compact ⋯ menu to the main hub toolbar with Print, Save as PDF, and (when enabled) Report a Problem. Visible before opening any section.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('more_button_label', [
+            'label'       => __('More button text', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'placeholder' => __('e.g. Options, More', 'dcc-guest-guide'),
+            'description' => __('Replaces the "⋯" icon with this text on the More button. Leave empty to keep the icon-only look.', 'dcc-guest-guide'),
+            'condition'   => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
+        $this->add_control('enable_popup_more_menu', [
+            'label'        => __('Also show ⋯ menu in popup header', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('When on, the same More menu also appears in each section popup header, right-aligned next to the section title. Reports opened from the popup auto-fill the section context.', 'dcc-guest-guide'),
+            'condition'    => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
+        $this->add_control('more_menu_slot_1', [
+            'label'       => __('More menu — slot 1', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'print',
+            'options'     => [
+                'print'    => __('Print guide', 'dcc-guest-guide'),
+                'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
+                'report'   => __('Report a problem', 'dcc-guest-guide'),
+                'none'     => __('— None —', 'dcc-guest-guide'),
+            ],
+            'description' => __('First (top) item in the More menu. Duplicate picks across slots render only the first occurrence.', 'dcc-guest-guide'),
+            'condition'   => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
+        $this->add_control('more_menu_slot_2', [
+            'label'     => __('More menu — slot 2', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::SELECT,
+            'default'   => 'save_pdf',
+            'options'   => [
+                'print'    => __('Print guide', 'dcc-guest-guide'),
+                'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
+                'report'   => __('Report a problem', 'dcc-guest-guide'),
+                'none'     => __('— None —', 'dcc-guest-guide'),
+            ],
+            'condition' => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
+        $this->add_control('more_menu_slot_3', [
+            'label'     => __('More menu — slot 3', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::SELECT,
+            'default'   => 'report',
+            'options'   => [
+                'print'    => __('Print guide', 'dcc-guest-guide'),
+                'save_pdf' => __('Save as PDF', 'dcc-guest-guide'),
+                'report'   => __('Report a problem', 'dcc-guest-guide'),
+                'none'     => __('— None —', 'dcc-guest-guide'),
+            ],
+            'condition' => ['enable_detail_more_menu' => 'yes'],
+        ]);
+
         $this->add_control('auto_fold_words', [
             'label'       => __('Auto-fold items over N words', 'dcc-guest-guide'),
             'type'        => Controls_Manager::NUMBER,
@@ -2595,33 +2653,10 @@ final class Widget extends Widget_Base
                         </button>
                     <?php endif; ?>
 
-                    <?php // v0.9.7: More menu (Print / Save PDF / Report a Problem) lives in the hub toolbar so guests reach Settings without first opening a section.
-                    $show_more_hub = ($s['enable_detail_more_menu'] ?? '') === 'yes';
-                    if ($show_more_hub) :
-                        $label_more       = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
-                        $label_print      = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
-                        $label_save_pdf   = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
-                        $report_on        = ($s['enable_problem_report'] ?? '') === 'yes';
-                        $label_report     = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')); ?>
-                        <details class="dccgg-more dccgg-more--hub">
-                            <summary aria-label="<?php echo esc_attr($label_more); ?>">
-                                <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
-                            </summary>
-                            <div class="dccgg-more-popover" role="menu">
-                                <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
-                                    <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
-                                </button>
-                                <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
-                                    <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
-                                </button>
-                                <?php if ($report_on) : ?>
-                                    <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="" role="menuitem">
-                                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </details>
-                    <?php endif; ?>
+                    <?php // v0.9.7: More menu (Print / Save PDF / Report a Problem) lives in the hub toolbar so guests reach Settings without first opening a section. v0.9.7.8: markup extracted into render_more_menu().
+                    if (($s['enable_detail_more_menu'] ?? '') === 'yes') {
+                        $this->render_more_menu($s, 'hub');
+                    } ?>
                 </div>
 
                 <?php if ($enable_search) : ?>
@@ -2783,6 +2818,68 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * v0.9.7.8: render the ⋯ More menu. Shared between the hub toolbar
+     * (context='hub', $section_key='') and each popup header
+     * (context='popup', $section_key=<that section's key>).
+     *
+     * Honors three host-configurable settings:
+     *  - more_button_label:    empty → icon-only summary; filled → text-only summary.
+     *  - more_menu_slot_1..3:  controls item ordering. Duplicate picks across
+     *                          slots render only the first occurrence so the
+     *                          host can't accidentally double up.
+     *  - enable_problem_report: gates the Report a Problem slot independently.
+     */
+    private function render_more_menu(array $s, string $context, string $section_key = ''): void
+    {
+        $label_more     = (string) ($s['str_more_menu'] ?? __('More', 'dcc-guest-guide'));
+        $label_text     = trim((string) ($s['more_button_label'] ?? ''));
+        $label_print    = (string) ($s['str_print'] ?? __('Print guide', 'dcc-guest-guide'));
+        $label_save_pdf = (string) ($s['str_save_pdf'] ?? __('Save as PDF', 'dcc-guest-guide'));
+        $label_report   = (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide'));
+        $report_on      = ($s['enable_problem_report'] ?? '') === 'yes';
+        $slots          = [
+            (string) ($s['more_menu_slot_1'] ?? 'print'),
+            (string) ($s['more_menu_slot_2'] ?? 'save_pdf'),
+            (string) ($s['more_menu_slot_3'] ?? 'report'),
+        ];
+        $modifier       = $context === 'popup' ? 'dccgg-more--popup' : 'dccgg-more--hub';
+        $summary_class  = $label_text !== '' ? 'dccgg-more-summary--text' : 'dccgg-more-summary--icon';
+        $rendered       = [];
+        ?>
+        <details class="dccgg-more <?php echo esc_attr($modifier); ?>">
+            <summary class="<?php echo esc_attr($summary_class); ?>" aria-label="<?php echo esc_attr($label_more); ?>">
+                <?php if ($label_text !== '') : ?>
+                    <span class="dccgg-more-summary-text"><?php echo esc_html($label_text); ?></span>
+                <?php else : ?>
+                    <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
+                <?php endif; ?>
+            </summary>
+            <div class="dccgg-more-popover" role="menu">
+                <?php foreach ($slots as $slot) :
+                    if ($slot === 'none' || in_array($slot, $rendered, true)) continue;
+                    if ($slot === 'print') :
+                        $rendered[] = $slot; ?>
+                        <button type="button" class="dccgg-more-item dccgg-more-print" role="menuitem">
+                            <i class="fas fa-print" aria-hidden="true"></i> <?php echo esc_html($label_print); ?>
+                        </button>
+                    <?php elseif ($slot === 'save_pdf') :
+                        $rendered[] = $slot; ?>
+                        <button type="button" class="dccgg-more-item dccgg-more-save-pdf" role="menuitem">
+                            <i class="fas fa-file-pdf" aria-hidden="true"></i> <?php echo esc_html($label_save_pdf); ?>
+                        </button>
+                    <?php elseif ($slot === 'report' && $report_on) :
+                        $rendered[] = $slot; ?>
+                        <button type="button" class="dccgg-more-item dccgg-more-report" data-report-section="<?php echo esc_attr($section_key); ?>" role="menuitem">
+                            <i class="fas fa-exclamation-circle" aria-hidden="true"></i> <?php echo esc_html($label_report); ?>
+                        </button>
+                    <?php endif;
+                endforeach; ?>
+            </div>
+        </details>
+        <?php
+    }
+
+    /**
      * Render the detail stage (stage-swap reveal mode only).
      */
     private function render_stage(array $sections, array $items_by_section, array $s): void
@@ -2850,14 +2947,24 @@ final class Widget extends Widget_Base
                             <?php else : ?>
                                 <span class="dccgg-section-nav-spacer" aria-hidden="true"></span>
                             <?php endif; ?>
-                            <?php // v0.9.7: More menu moved to the hub toolbar (see render() above) so guests can reach Print / Save PDF / Report a Problem without opening a section. ?>
+                            <?php // v0.9.7: More menu moved to the hub toolbar (see render() above). v0.9.7.9: optionally also rendered inside row 2 below when enable_popup_more_menu=yes. ?>
                         </div>
-                        <h2 class="dccgg-detail-title">
-                            <span class="dccgg-detail-title-icon">
-                                <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
-                            </span>
-                            <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
-                        </h2>
+                        <?php // v0.9.7.9: row 2 wrapped in a 1fr/auto/1fr grid so the title stays centered whether the right cell holds the ⋯ menu or an invisible spacer.
+                        $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
+                        <div class="dccgg-detail-header-titlebar">
+                            <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
+                            <h2 class="dccgg-detail-title">
+                                <span class="dccgg-detail-title-icon">
+                                    <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                                </span>
+                                <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
+                            </h2>
+                            <?php if ($show_popup_more) : ?>
+                                <?php $this->render_more_menu($s, 'popup', $key); ?>
+                            <?php else : ?>
+                                <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <?php if ($checklist) : ?>
                         <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">

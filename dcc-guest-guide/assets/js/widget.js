@@ -141,9 +141,20 @@
 
     function wireSavePdf(root, config) {
         const SHOWN_KEY = 'dccgg:savepdf-tip-shown';
-        root.addEventListener('click', (e) => {
+        // v0.9.7.9: document delegation + stage back-pointer so the popup
+        // ⋯ menu's Save-PDF item fires after .dccgg-stage is portaled to <body>.
+        // Hub menu lives inside root, popup menu lives inside the (eventually
+        // portaled) stage — ownsTarget covers both.
+        const stage = root.querySelector('.dccgg-stage');
+        if (stage) stage.__dccggRoot = root;
+        const ownsTarget = (el) => {
+            if (root.contains(el)) return true;
+            const s = el.closest && el.closest('.dccgg-stage');
+            return !!(s && s.__dccggRoot === root);
+        };
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('.dccgg-more-save-pdf');
-            if (!btn) return;
+            if (!btn || !ownsTarget(btn)) return;
             if (config.manualPdfUrl) {
                 manualPdfOpen(config.manualPdfUrl);
                 return;
@@ -181,6 +192,17 @@
         if (!config.report || !config.report.enabled) return;
         const STR = config.report.strings || {};
         const CATS = Array.isArray(config.report.categories) ? config.report.categories : [];
+
+        // v0.9.7.9: document delegation + stage back-pointer so both the popup
+        // ⋯ menu's Report item AND per-item Report buttons fire after
+        // .dccgg-stage is portaled to <body>.
+        const stage = root.querySelector('.dccgg-stage');
+        if (stage) stage.__dccggRoot = root;
+        const ownsTarget = (el) => {
+            if (root.contains(el)) return true;
+            const s = el.closest && el.closest('.dccgg-stage');
+            return !!(s && s.__dccggRoot === root);
+        };
 
         let dialog = null;
         const ensureDialog = () => {
@@ -259,9 +281,9 @@
         };
 
         // More-menu "Report a problem" → context is the current section title.
-        root.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
             const m = e.target.closest('.dccgg-more-report');
-            if (!m) return;
+            if (!m || !ownsTarget(m)) return;
             // Close the parent <details> popover so it doesn't sit open behind the dialog.
             const details = m.closest('details');
             if (details) details.open = false;
@@ -269,9 +291,9 @@
         });
 
         // Per-item Report button.
-        root.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
             const b = e.target.closest('.dccgg-item-report');
-            if (!b) return;
+            if (!b || !ownsTarget(b)) return;
             open(b.dataset.reportSection || '', b.dataset.reportItem || '');
         });
     }

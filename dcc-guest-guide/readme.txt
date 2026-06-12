@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.8
+Stable tag: 0.9.7.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,28 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.9 =
+
+* **More-menu button: optional text label.** New General-tab field
+  "More button text" lets the host replace the ⋯ icon with a text
+  label like "Options" or "More". Empty keeps the icon-only look.
+* **Optional ⋯ menu inside section popups.** New toggle "Also show
+  ⋯ menu in popup header" adds the same menu to each section
+  popup's title row, right-aligned next to the title. When a guest
+  opens "Report a problem" from a popup, the active section title
+  auto-fills into the report dialog. Title stays perfectly centered
+  via an invisible left-side spacer.
+* **Reorderable menu slots.** Three new SELECT controls let the
+  host pick which item goes in slot 1 / 2 / 3, choosing from Print,
+  Save as PDF, Report a problem, and None. Duplicate picks render
+  only once so the host can't accidentally double an item.
+* **Click routing fix for the new popup ⋯ menu.** `wireSavePdf`
+  and `wireReportProblem` now use document-level delegation with a
+  stage back-pointer (same pattern as `wireChecklists`), so the
+  popup-side Save-PDF and Report items fire correctly after
+  `.dccgg-stage` is portaled to `<body>`. Per-item Report buttons
+  also get the same routing fix.
 
 = 0.9.7.8 =
 

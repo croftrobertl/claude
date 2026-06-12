@@ -2991,3 +2991,43 @@ video.dccgg-media {
 @media (prefers-reduced-motion: reduce) {
     .dccgg-fx { display: none !important; }
 }
+
+/* =============================================================
+ * v0.9.7.9 — More-menu polish.
+ *
+ * - Popup header row 2 is a three-column grid (1fr / auto / 1fr) so
+ *   the title stays centered whether the right cell holds the ⋯ menu
+ *   or an invisible spacer. The left spacer is always rendered, so
+ *   the grid stays symmetric regardless of state.
+ * - When `more_button_label` is set, the ⋯ <summary> becomes a padded
+ *   text button instead of an icon. Hover + open states pick up the
+ *   primary brand color so it reads as an interactive control.
+ * ============================================================= */
+.dccgg-detail-header-titlebar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+}
+.dccgg-detail-header-titlebar .dccgg-detail-title { grid-column: 2; margin: 0; }
+.dccgg-detail-header-titlebar .dccgg-more         { justify-self: end; }
+.dccgg-detail-titlebar-spacer                     { display: block; min-width: 1px; }
+
+.dccgg-more-summary--text {
+    padding: 6px 12px;
+    border-radius: 6px;
+    line-height: 1.2;
+    cursor: pointer;
+    border: 1px solid var(--dccgg-frame, #e0e0e0);
+    background: transparent;
+    color: inherit;
+    transition: background var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease),
+                color      var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease);
+}
+.dccgg-more-summary--text::-webkit-details-marker { display: none; }
+.dccgg-more-summary--text:hover,
+.dccgg-more[open] .dccgg-more-summary--text {
+    background: var(--dccgg-primary, #0f6dbf);
+    color: #fff;
+    border-color: var(--dccgg-primary, #0f6dbf);
+}
