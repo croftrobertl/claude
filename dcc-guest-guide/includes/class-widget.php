@@ -2965,14 +2965,15 @@ final class Widget extends Widget_Base
                                 <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
                             <?php endif; ?>
                         </div>
+                        <?php // v0.9.7.10: checklist progress moved INSIDE the sticky header (was a sibling below) so it stays visible as the guest scrolls long checklists.
+                        if ($checklist) : ?>
+                            <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
+                                <div class="dccgg-checklist-progress-fill"></div>
+                                <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
+                                <button type="button" class="dccgg-checklist-reset" data-section-key="<?php echo esc_attr($key); ?>"><?php esc_html_e('Reset', 'dcc-guest-guide'); ?></button>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    <?php if ($checklist) : ?>
-                        <div class="dccgg-checklist-progress" data-section-key="<?php echo esc_attr($key); ?>">
-                            <div class="dccgg-checklist-progress-fill"></div>
-                            <span class="dccgg-checklist-progress-label">0&nbsp;/&nbsp;<?php echo (int) count($items); ?></span>
-                            <button type="button" class="dccgg-checklist-reset" data-section-key="<?php echo esc_attr($key); ?>"><?php esc_html_e('Reset', 'dcc-guest-guide'); ?></button>
-                        </div>
-                    <?php endif; ?>
                     <div class="dccgg-detail-layout">
                         <?php if ($show_toc) : ?>
                             <nav class="dccgg-toc" aria-label="<?php echo esc_attr($title); ?>">

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.9
+Stable tag: 0.9.7.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,26 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.10 =
+
+* **Checklist counter inside the sticky header.** The progress bar +
+  N/M label + Reset button now live as a third row inside the popup's
+  sticky header (under the section title) instead of as a sibling
+  below it, so guests can see their checklist progress while scrolling
+  long checklists. The counter also tightens its padding when the
+  header is in shrunk mode so it doesn't dominate vertical space.
+* **Report-a-Problem errors now show up in Chrome.** The dialog opens
+  via `dialog.showModal()`, which puts it in Chrome's top layer above
+  body content. Error feedback was being routed through a body-level
+  toast that paints *behind* that top layer, so when the submit
+  failed in Chrome the user saw the button revert with no visible
+  reason. Errors now render inside an inline `.dccgg-report-error`
+  region within the dialog itself, the response's HTTP status is
+  captured before JSON parsing so 4xx/5xx don't disappear into a
+  generic catch, and console.error logs the full server response for
+  DevTools diagnosis. Success path (`dialog.close()` + body toast)
+  is unchanged.
 
 = 0.9.7.9 =
 

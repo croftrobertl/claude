@@ -244,6 +244,7 @@
                     </label>
                     <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>
                 </div>
+                <p class="dccgg-report-error" role="alert" aria-live="polite" hidden></p>
                 <div class="dccgg-report-foot">
                     <button type="button" class="dccgg-btn-cancel">${escHtml(STR.cancel || 'Cancel')}</button>
                     <button type="button" class="dccgg-btn-send">${escHtml(STR.send || 'Send report')}</button>
@@ -273,6 +274,8 @@
             const sendBtn = d.querySelector('.dccgg-btn-send');
             sendBtn.disabled = false;
             sendBtn.textContent = STR.send || 'Send report';
+            const errEl = d.querySelector('.dccgg-report-error');
+            if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
             if (typeof d.showModal === 'function') d.showModal();
             else d.setAttribute('open', '');
             // Focus name first if it exists — it's the friendliest field
@@ -299,6 +302,16 @@
     }
     function sendReport(dialog, root, config) {
         const STR  = (config.report && config.report.strings) || {};
+        // v0.9.7.10: inline error region inside the <dialog>. Body-level
+        // toasts (showPdfTip) paint behind the dialog's top-layer in
+        // Chrome, so the user never saw the failure message. Render the
+        // error inside the dialog instead so it actually shows up.
+        const setError = (msg) => {
+            const el = dialog.querySelector('.dccgg-report-error');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.hidden = !msg;
+        };
         const catEl    = dialog.querySelector('.dccgg-report-cat');
         // v0.9.7.1: when a category dropdown exists, the guest must pick
         // one before sending. The dropdown is `required` + starts on a
@@ -341,24 +354,43 @@
         body.set('from_email',       reportCfg.fromEmail || '');
         body.set('from_name',        reportCfg.fromName || '');
         body.set('include_ua',       reportCfg.includeUA || 'yes');
+        setError('');
         fetch(config.ajaxUrl, {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString(),
-        }).then(r => r.json()).then(json => {
+        }).then(r => {
+            // v0.9.7.10: capture HTTP-error status so it doesn't disappear
+            // into the catch as a generic "Could not send." The user sees
+            // "HTTP 403" / "HTTP 0" right in the dialog and can DM us the
+            // exact failure mode.
+            if (!r.ok) {
+                return r.text().then(txt => {
+                    const e = new Error('HTTP ' + r.status + (r.statusText ? ' ' + r.statusText : ''));
+                    e.responseText = txt;
+                    e.status = r.status;
+                    throw e;
+                });
+            }
+            return r.json();
+        }).then(json => {
             if (json && json.success) {
                 dialog.close();
                 showPdfTip(STR.thankYou || 'Thanks!');
             } else {
                 send.disabled = false;
                 send.textContent = STR.send || 'Send report';
-                showPdfTip((json && json.data && json.data.message) || STR.error || 'Could not send.');
+                const serverMsg = json && json.data && json.data.message;
+                console.error('[DCCGG report] server returned non-success:', json);
+                setError(serverMsg || STR.error || 'Could not send the report. Please try again.');
             }
-        }).catch(() => {
+        }).catch((err) => {
             send.disabled = false;
             send.textContent = STR.send || 'Send report';
-            showPdfTip(STR.error || 'Could not send.');
+            console.error('[DCCGG report] fetch failed:', err, err && err.responseText ? '\n--- response body ---\n' + err.responseText.slice(0, 500) : '');
+            const detail = err && err.message ? err.message : 'Network error';
+            setError((STR.error || 'Could not send the report.') + ' (' + detail + ')');
         });
     }
     function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

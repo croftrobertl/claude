@@ -15,8 +15,9 @@
     justify-content: center;
     gap: 12px;
     padding: 8px 16px;
-    margin: 0 auto 16px;
+    margin: 0 auto;
     max-width: 480px;
+    transition: padding var(--dccgg-transition-duration) var(--dccgg-transition-easing);
     background: var(--dccgg-detail-bg, #fff);
     border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 8%, transparent);
     border-radius: 999px;
@@ -2196,6 +2197,11 @@ video.dccgg-media {
     font-size: 1.05em;
     transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
+/* v0.9.7.10: tighten the checklist progress bar when the header is in
+   shrunk mode so it doesn't dominate vertical space while scrolling. */
+.dccgg-detail.is-shrunk .dccgg-checklist-progress {
+    padding: 4px 12px;
+}
 .dccgg-detail-title {
     transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
@@ -2351,6 +2357,20 @@ video.dccgg-media {
 }
 .dccgg-report-body textarea { resize: vertical; min-height: 100px; }
 .dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; }
+/* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
+   paint behind the top-layer dialog in Chrome, so the error message
+   needs to live inside the dialog itself. */
+.dccgg-report-error {
+    margin: 0 20px 12px;
+    padding: 8px 12px;
+    background: rgba(220, 53, 69, 0.08);
+    color: #842029;
+    border: 1px solid rgba(220, 53, 69, 0.35);
+    border-radius: 6px;
+    font-size: 0.92em;
+    line-height: 1.4;
+}
+.dccgg-report-error[hidden] { display: none; }
 .dccgg-report-foot {
     padding: 12px 20px 16px;
     display: flex;
