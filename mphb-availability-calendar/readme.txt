@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.17
+Stable tag: 0.8.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.8.18 =
+* Changed: cottage info popup header — the cottage name now splits across two rows at the first colon, e.g. "Cottage 31:" on row 1 and "Hibiscus Hut" on row 2. Same typography on both rows; applies on every viewport. Implemented via a small DOM split (text node + `<br>` + text node) inside the title element, preserving the link wrapper when a per-cottage title URL is set so clicking either row still navigates to the cottage page. Titles without a colon fall through unchanged.
 
 = 0.8.17 =
 * Changed: cottage info popup close ("X") button — swapped background and text colors so the X now reads as near-white on a gray circle instead of gray on near-white. The previous near-white-on-white had insufficient contrast against the popup's white background.

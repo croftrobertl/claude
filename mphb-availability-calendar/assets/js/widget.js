@@ -294,6 +294,25 @@
         var titleEl = sheet.querySelector('.mphbac-sheet-title');
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
+
+        // Render a "Cottage NN: Name" title as two rows split at the
+        // first colon. textContent + createElement keep this XSS-safe
+        // regardless of what's in the post_title or override field.
+        function renderSplitTitle(parent, text) {
+            parent.textContent = '';
+            var idx = text.indexOf(':');
+            if (idx < 0) {
+                parent.appendChild(document.createTextNode(text));
+                return;
+            }
+            var head = text.slice(0, idx + 1);
+            var tail = text.slice(idx + 1).replace(/^\s+/, '');
+            parent.appendChild(document.createTextNode(head));
+            if (tail !== '') {
+                parent.appendChild(document.createElement('br'));
+                parent.appendChild(document.createTextNode(tail));
+            }
+        }
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
@@ -371,10 +390,10 @@
                 var titleLink = document.createElement('a');
                 titleLink.href = titleUrl;
                 titleLink.className = 'mphbac-sheet-title-link';
-                titleLink.textContent = titleText;
+                renderSplitTitle(titleLink, titleText);
                 titleEl.appendChild(titleLink);
             } else {
-                titleEl.textContent = titleText;
+                renderSplitTitle(titleEl, titleText);
             }
             // Move the original .mphbac-info-content into the popup body.
             // If a previous cottage's content is still mounted (rapid open
