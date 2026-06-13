@@ -117,6 +117,8 @@ final class Widget extends Widget_Base
         $this->register_popup_title_style_controls();
         $this->register_popup_icon_style_controls();
         $this->register_popup_header_bg_style_controls();
+        $this->register_popup_reset_style_controls();
+        $this->register_popup_more_style_controls();
         $this->register_flip_card_controls();
         $this->register_fab_style_controls();
         $this->register_transitions_controls();
@@ -2246,6 +2248,172 @@ final class Widget extends Widget_Base
                 self::SEL => '--dccgg-popup-header-bg: {{VALUE}};',
             ],
         ]);
+
+        $this->end_controls_section();
+    }
+
+    // v0.9.7.11: dedicated Style section for the Reset checklist button
+    // that lives inside the sticky popup header. Mirrors the Popup Header
+    // — Back Button section's layout (typography + border + radius +
+    // padding + Normal/Hover color tabs). No defaults — baked-in look
+    // (matched to the Back button via --dccgg-btn-bg / txt) lives in
+    // widget.css; controls are override-only.
+    private function register_popup_reset_style_controls(): void
+    {
+        $reset_sel = self::SEL . '.dccgg-detail-header .dccgg-checklist-reset';
+
+        $this->start_controls_section('section_style_popup_reset', [
+            'label' => __('Popup Header — Reset Checklist Button', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'popup_reset_typography',
+            'selector' => $reset_sel,
+        ]);
+
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'popup_reset_border',
+            'selector' => $reset_sel,
+        ]);
+
+        $this->add_control('popup_reset_radius', [
+            'label'      => __('Border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [$reset_sel => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('popup_reset_padding', [
+            'label'      => __('Padding', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [$reset_sel => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->start_controls_tabs('popup_reset_tabs');
+
+        $this->start_controls_tab('popup_reset_tab_normal', ['label' => __('Normal', 'dcc-guest-guide')]);
+        $this->add_control('popup_reset_text', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$reset_sel => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('popup_reset_bg', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$reset_sel => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('popup_reset_tab_hover', ['label' => __('Hover', 'dcc-guest-guide')]);
+        $this->add_control('popup_reset_text_hover', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $reset_sel . ':hover, ' . $reset_sel . ':focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_reset_bg_hover', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $reset_sel . ':hover, ' . $reset_sel . ':focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
+    // v0.9.7.11: dedicated Style section for the More menu (⋯) button
+    // when it's docked inside the popup header (enable_popup_more_menu
+    // = yes). Scoped to .dccgg-detail-header so it doesn't bleed into
+    // the hub-toolbar More menu. Covers both the icon variant
+    // (.dccgg-more-summary--icon) and the text-label variant
+    // (.dccgg-more-summary--text). Popover items are styled by the
+    // existing baseline rules; this section governs the summary trigger.
+    private function register_popup_more_style_controls(): void
+    {
+        $summary_sel = self::SEL . '.dccgg-detail-header .dccgg-more > summary';
+        $hover_sel   = $summary_sel . ':hover, ' . $summary_sel . ':focus-visible';
+        $open_sel    = self::SEL . '.dccgg-detail-header .dccgg-more[open] > summary';
+
+        $this->start_controls_section('section_style_popup_more', [
+            'label' => __('Popup Header — More Button (⋯)', 'dcc-guest-guide'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'popup_more_typography',
+            'selector' => $summary_sel,
+        ]);
+
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'popup_more_border',
+            'selector' => $summary_sel,
+        ]);
+
+        $this->add_control('popup_more_radius', [
+            'label'      => __('Border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [$summary_sel => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('popup_more_padding', [
+            'label'       => __('Padding', 'dcc-guest-guide'),
+            'description' => __('Mostly relevant when "More button label" is set in General; the icon-only variant uses a fixed 36×36 circle.', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::DIMENSIONS,
+            'size_units'  => ['px', 'em'],
+            'selectors'   => [$summary_sel => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->start_controls_tabs('popup_more_tabs');
+
+        $this->start_controls_tab('popup_more_tab_normal', ['label' => __('Normal', 'dcc-guest-guide')]);
+        $this->add_control('popup_more_text', [
+            'label'     => __('Text / icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $summary_sel => 'color: {{VALUE}};',
+                $summary_sel . ' i'   => 'color: {{VALUE}};',
+                $summary_sel . ' svg' => 'fill: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_more_bg', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$summary_sel => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('popup_more_tab_hover', ['label' => __('Hover / Open', 'dcc-guest-guide')]);
+        $this->add_control('popup_more_text_hover', [
+            'label'     => __('Text / icon color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $hover_sel       => 'color: {{VALUE}};',
+                $open_sel        => 'color: {{VALUE}};',
+                $hover_sel . ' i'   => 'color: {{VALUE}};',
+                $hover_sel . ' svg' => 'fill: {{VALUE}};',
+                $open_sel  . ' i'   => 'color: {{VALUE}};',
+                $open_sel  . ' svg' => 'fill: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('popup_more_bg_hover', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $hover_sel => 'background-color: {{VALUE}};',
+                $open_sel  => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
 
         $this->end_controls_section();
     }

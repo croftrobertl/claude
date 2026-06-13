@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.10
+Stable tag: 0.9.7.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,47 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.11 =
+
+* **Reset checklist button now matches the Back button.** The Reset
+  button inside the sticky popup header was rendered with a transparent
+  background and faded-gray text, which blended into the white sticky
+  header. It now uses the same `--dccgg-btn-bg` / `--dccgg-btn-txt`
+  palette as the Back button (primary blue background, white text by
+  default).
+* **New Style sections in the Elementor editor.**
+  *Popup Header — Reset Checklist Button* — typography, border, radius,
+  padding, plus Normal and Hover text + background colors.
+  *Popup Header — More Button (⋯)* — same set of controls for the
+  more-menu trigger when it's docked inside the popup header
+  (`enable_popup_more_menu = yes`). Scoped to `.dccgg-detail-header` so
+  it doesn't bleed into the hub-toolbar More menu.
+* **Copy-button effects no longer hide behind the popup.** The themed
+  effect pieces (`.dccgg-fx`) were at `z-index: 9999` while the open
+  detail modal sits at `10010` and the overlay at `10009` — so the
+  splash droplets, rising bubbles, concentric ripples, palm fronds,
+  sun-rays burst, and seaplane flyby were all painting behind the
+  popup whenever the guest tapped Copy from inside it. `.dccgg-fx`
+  and `.dccgg-confetti-piece` are now both at `z-index: 100000` so
+  every effect paints over the popup on desktop and mobile.
+* **Themed effects rebuilt for confetti-level punch.** Every spawner
+  was sparse and visually thin compared to the 32-piece confetti
+  burst. Each one now:
+  * spawns 22–28 main particles (was 3–14),
+  * uses brighter, more saturated palettes,
+  * adds a "kicker" sub-element so the user gets a clear visual
+    anchor — splash gets an expanding crown ring, bubbles each pop
+    into a tiny burst ring when they reach the top, sun-rays get a
+    glowing sun disc that pops at center and two ray layers (long +
+    short) for a denser fan, palm fronds fan upward with falling
+    coconut orbs, ripples now use six alternating blue/white rings
+    with golden sparkle dots riding the wavefronts,
+  * the seaplane now takes off from the button itself at a 20° climb
+    (instead of crossing edge-to-edge from off-screen), trails a
+    contrail back to the launch point, kicks up water-spray dots,
+    and flips direction automatically if the button is on the
+    right half of the viewport so the plane stays on-screen.
 
 = 0.9.7.10 =
 

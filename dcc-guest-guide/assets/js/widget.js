@@ -1662,27 +1662,52 @@
         return p;
     }
 
+    // v0.9.7.11: All themed effects rebuilt for confetti-level density and
+    // punch. Each one now (a) spawns ≥24 main particles where appropriate,
+    // (b) uses brighter/more-saturated palettes, (c) adds a "kicker"
+    // sub-element (splash crown, bubble pop, sun disc, palm coconut,
+    // seaplane spray, ripple sparkle) so the user gets a clear visual
+    // anchor, and (d) originates from the button center.
+
     // -- Splash droplets — Tavares-lakes / boating ----------------------
     function spawnSplash(anchor) {
         const { cx, cy } = anchorCenter(anchor);
-        const colors = ['#5fa8e8', '#7bc4f0', '#3d8ed8', '#a9d6f5'];
-        const N = 14;
+        const colors = ['#3d8ed8', '#5fa8e8', '#7bc4f0', '#a9d6f5', '#ffffff'];
+        // Splash crown ring expands outward from the button center.
+        const crown = fxPiece('dccgg-fx-crown', cx - 14, cy - 14);
+        const crownStart = performance.now();
+        const crownDur = 520;
+        const crownTick = (now) => {
+            const t = (now - crownStart) / crownDur;
+            if (t >= 1) { crown.remove(); return; }
+            const scale = 0.4 + t * 2.6;
+            crown.style.transform = 'scale(' + scale.toFixed(2) + ')';
+            crown.style.opacity = String(0.85 * (1 - t));
+            requestAnimationFrame(crownTick);
+        };
+        requestAnimationFrame(crownTick);
+        // Droplets — bigger fan, more pieces.
+        const N = 28;
         for (let i = 0; i < N; i++) {
             const p = fxPiece('dccgg-fx-droplet', cx, cy);
             p.style.background = colors[i % colors.length];
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI; // upward fan
-            const speed = 140 + Math.random() * 140;
+            const sz = 5 + Math.random() * 7;
+            p.style.width = sz + 'px';
+            p.style.height = (sz * 1.5) + 'px';
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.05;
+            const speed = 180 + Math.random() * 200;
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
             const rot = Math.random() * 360 - 180;
-            const start = performance.now();
-            const dur = 900 + Math.random() * 300;
+            const start = performance.now() + Math.random() * 60;
+            const dur = 900 + Math.random() * 400;
             const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
                 const t = (now - start) / dur;
                 if (t >= 1) { p.remove(); return; }
                 const x = vx * t;
-                const y = vy * t + 0.5 * 700 * t * t; // gravity
-                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot + t * 90).toFixed(0) + 'deg)';
+                const y = vy * t + 0.5 * 760 * t * t;
+                p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot + t * 120).toFixed(0) + 'deg)';
                 p.style.opacity = String(1 - t * t);
                 requestAnimationFrame(tick);
             };
@@ -1693,26 +1718,44 @@
     // -- Rising bubbles — fishing / lakes underwater --------------------
     function spawnBubbles(anchor) {
         const { cx, cy } = anchorCenter(anchor);
-        const N = 12;
+        const N = 26;
         for (let i = 0; i < N; i++) {
-            const p = fxPiece('dccgg-fx-bubble', cx + (Math.random() - 0.5) * 30, cy);
-            const size = 8 + Math.random() * 8;
+            const startXOff = (Math.random() - 0.5) * 40;
+            const p = fxPiece('dccgg-fx-bubble', cx + startXOff, cy);
+            const size = 8 + Math.random() * 14;
             p.style.width = size + 'px';
             p.style.height = size + 'px';
-            const rise = 120 + Math.random() * 90;          // total upward distance
-            const wobbleAmp = 12 + Math.random() * 14;
+            const rise = 180 + Math.random() * 180;
+            const wobbleAmp = 14 + Math.random() * 16;
             const wobbleFreq = 2 + Math.random() * 2;
-            const start = performance.now() + Math.random() * 200;
-            const dur = 1100 + Math.random() * 300;
+            const start = performance.now() + Math.random() * 280;
+            const dur = 1100 + Math.random() * 500;
             const tick = (now) => {
                 if (now < start) { requestAnimationFrame(tick); return; }
                 const t = (now - start) / dur;
-                if (t >= 1) { p.remove(); return; }
+                if (t >= 1) {
+                    // Pop kicker: a tiny burst ring where the bubble vanishes.
+                    const popY = cy - rise;
+                    const popX = cx + startXOff + Math.sin(wobbleFreq * Math.PI * 2) * wobbleAmp;
+                    const pop = fxPiece('dccgg-fx-bubble-pop', popX - 3, popY - 3);
+                    const ps = performance.now();
+                    const pd = 280;
+                    const ptick = (now2) => {
+                        const pt = (now2 - ps) / pd;
+                        if (pt >= 1) { pop.remove(); return; }
+                        pop.style.transform = 'scale(' + (1 + pt * 3).toFixed(2) + ')';
+                        pop.style.opacity = String(1 - pt);
+                        requestAnimationFrame(ptick);
+                    };
+                    requestAnimationFrame(ptick);
+                    p.remove();
+                    return;
+                }
                 const y = -rise * t;
                 const x = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp;
-                const scale = 1 + t * 0.3;
+                const scale = 1 + t * 0.4;
                 p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + scale.toFixed(2) + ')';
-                p.style.opacity = String(t < 0.85 ? 1 - t * 0.4 : (1 - t) * 4);
+                p.style.opacity = String(t < 0.85 ? 1 - t * 0.3 : (1 - t) * 6);
                 requestAnimationFrame(tick);
             };
             requestAnimationFrame(tick);
@@ -1722,50 +1765,92 @@
     // -- Sun rays burst — Florida sunshine ------------------------------
     function spawnSunrays(anchor) {
         const { cx, cy } = anchorCenter(anchor);
-        const colors = ['#f4da62', '#f6a01a', '#fff7b0', '#ffb74d'];
-        const N = 10;
-        for (let i = 0; i < N; i++) {
-            const p = fxPiece('dccgg-fx-ray', cx, cy);
-            p.style.background = colors[i % colors.length];
-            const angle = (i / N) * 360 + Math.random() * 8;
-            const start = performance.now();
-            const dur = 600;
-            const tick = (now) => {
-                const t = (now - start) / dur;
-                if (t >= 1) { p.remove(); return; }
-                // Grow length outward, fade tail.
-                const lengthScale = t < 0.4 ? t / 0.4 : 1;
-                p.style.transform = 'translate(-50%,-100%) rotate(' + angle + 'deg) scaleY(' + lengthScale.toFixed(2) + ')';
-                p.style.opacity = String(1 - t);
+        const colors = ['#f4da62', '#f6a01a', '#fff7b0', '#ffb74d', '#ffd54f'];
+        // Glowing sun-disc kicker at center: pops and fades.
+        const disc = fxPiece('dccgg-fx-sun', cx - 18, cy - 18);
+        const ds = performance.now();
+        const dd = 540;
+        const discTick = (now) => {
+            const t = (now - ds) / dd;
+            if (t >= 1) { disc.remove(); return; }
+            const sc = t < 0.3 ? (0.4 + (t / 0.3) * 1.0) : (1.4 + (t - 0.3) * 0.3);
+            disc.style.transform = 'scale(' + sc.toFixed(2) + ')';
+            disc.style.opacity = String(0.95 * (1 - t));
+            requestAnimationFrame(discTick);
+        };
+        requestAnimationFrame(discTick);
+        // Rays in two layers: 12 long, 12 short, offset for a denser fan.
+        for (let layer = 0; layer < 2; layer++) {
+            const N = 12;
+            const offset = layer === 0 ? 0 : 15;
+            const lengthMul = layer === 0 ? 1 : 0.65;
+            for (let i = 0; i < N; i++) {
+                const p = fxPiece('dccgg-fx-ray', cx, cy);
+                p.style.background = colors[(i + layer) % colors.length];
+                const angle = (i / N) * 360 + offset + Math.random() * 6;
+                const start = performance.now() + layer * 80;
+                const dur = 700;
+                const tick = (now) => {
+                    if (now < start) { requestAnimationFrame(tick); return; }
+                    const t = (now - start) / dur;
+                    if (t >= 1) { p.remove(); return; }
+                    const lengthScale = (t < 0.35 ? t / 0.35 : 1) * lengthMul;
+                    p.style.transform = 'translate(-50%,-100%) rotate(' + angle + 'deg) scaleY(' + lengthScale.toFixed(2) + ')';
+                    p.style.opacity = String(1 - t);
+                    requestAnimationFrame(tick);
+                };
                 requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
+            }
         }
     }
 
     // -- Palm fronds — tropical leisure ---------------------------------
     function spawnPalm(anchor) {
         const { cx, cy } = anchorCenter(anchor);
-        const colors = ['#3a7d3a', '#5fa75f', '#8bc18b', '#2f6a2f'];
-        const N = 7;
+        const colors = ['#2f6a2f', '#3a7d3a', '#5fa75f', '#8bc18b', '#a9d49a'];
+        // Fronds fan up and out of the button.
+        const N = 22;
         for (let i = 0; i < N; i++) {
-            const p = fxPiece('dccgg-fx-palm', cx + (Math.random() - 0.5) * 40, cy - 10);
+            const p = fxPiece('dccgg-fx-palm', cx, cy);
             p.style.background = colors[i % colors.length];
-            const drift = (Math.random() - 0.5) * 80;
-            const fall = 200 + Math.random() * 80;
-            const wobbleAmp = 18 + Math.random() * 10;
+            const sz = 16 + Math.random() * 14;
+            p.style.width = sz + 'px';
+            p.style.height = (sz * 1.8) + 'px';
+            // Initial upward fan, then gravity pulls back down.
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.1;
+            const speed = 140 + Math.random() * 160;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
             const rot0 = Math.random() * 360;
-            const rotSpeed = 90 + Math.random() * 120;
-            const start = performance.now() + Math.random() * 200;
-            const dur = 1300 + Math.random() * 300;
+            const rotSpeed = 180 + Math.random() * 200;
+            const start = performance.now() + Math.random() * 120;
+            const dur = 1300 + Math.random() * 400;
             const tick = (now) => {
                 if (now < start) { requestAnimationFrame(tick); return; }
                 const t = (now - start) / dur;
                 if (t >= 1) { p.remove(); return; }
-                const x = drift * t + Math.sin(t * Math.PI * 3) * wobbleAmp;
-                const y = fall * t;
+                const x = vx * t;
+                const y = vy * t + 0.5 * 480 * t * t;
                 p.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + (rot0 + rotSpeed * t).toFixed(0) + 'deg)';
                 p.style.opacity = String(1 - t * t);
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+        // Coconut kickers — 4 small dark orbs that fall.
+        for (let i = 0; i < 4; i++) {
+            const c = fxPiece('dccgg-fx-coconut', cx - 5, cy - 5);
+            const vx = (Math.random() - 0.5) * 220;
+            const vy = -80 - Math.random() * 120;
+            const start = performance.now();
+            const dur = 1100;
+            const tick = (now) => {
+                const t = (now - start) / dur;
+                if (t >= 1) { c.remove(); return; }
+                const x = vx * t;
+                const y = vy * t + 0.5 * 720 * t * t;
+                c.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+                c.style.opacity = String(1 - t * t);
                 requestAnimationFrame(tick);
             };
             requestAnimationFrame(tick);
@@ -1773,32 +1858,59 @@
     }
 
     // -- Seaplane flyby — Tavares ("America's Seaplane City") -----------
+    // v0.9.7.11: takes off FROM the button instead of crossing the screen
+    // edge-to-edge. It launches at a 20° climb, leaves a contrail back to
+    // the button, and shakes loose a few water spray dots as it goes.
     function spawnSeaplane(anchor) {
-        const { cy } = anchorCenter(anchor);
+        const { cx, cy } = anchorCenter(anchor);
         const vw = window.innerWidth;
-        const y = Math.max(40, Math.min(cy - 30, window.innerHeight - 60));
-        // Plane: a Font-Awesome glyph inside the span. Rotation flips it from
-        // pointing up (FA default for fa-plane) to horizontal-right.
-        const plane = fxPiece('dccgg-fx-seaplane', -60, y);
+        const plane = fxPiece('dccgg-fx-seaplane', cx - 13, cy - 13);
         plane.innerHTML = '<i class="fas fa-plane" aria-hidden="true"></i>';
-        // Tiny contrail trailing behind: drawn as a span that grows with the plane.
-        const trail = fxPiece('dccgg-fx-contrail', -60, y + 16);
+        const trail = fxPiece('dccgg-fx-contrail', cx, cy);
         trail.style.width = '0px';
-        const startX = -60;
-        const endX = vw + 60;
+        trail.style.transformOrigin = '0% 50%';
+        const startX = cx;
+        const startY = cy;
+        // Climb up-right toward the top-right corner; if the button is on
+        // the right half, flip horizontally so the plane stays on-screen.
+        const goRight = cx < vw * 0.6;
+        const dirX = goRight ? 1 : -1;
+        const endX = goRight ? vw + 60 : -60;
+        const endY = Math.max(20, startY - 220);
         const start = performance.now();
-        const dur = 1400;
+        const dur = 1300;
+        // Spray pieces fired immediately on takeoff.
+        for (let i = 0; i < 10; i++) {
+            const s = fxPiece('dccgg-fx-spray', cx, cy + 10);
+            const vx = (Math.random() - 0.5) * 160 - dirX * 60;
+            const vy = 40 + Math.random() * 80;
+            const ss = performance.now();
+            const sd = 600 + Math.random() * 200;
+            const stick = (now) => {
+                const t = (now - ss) / sd;
+                if (t >= 1) { s.remove(); return; }
+                s.style.transform = 'translate(' + (vx * t).toFixed(1) + 'px,' + (vy * t + 0.5 * 500 * t * t).toFixed(1) + 'px)';
+                s.style.opacity = String(1 - t);
+                requestAnimationFrame(stick);
+            };
+            requestAnimationFrame(stick);
+        }
         const tick = (now) => {
             const t = (now - start) / dur;
             if (t >= 1) { plane.remove(); trail.remove(); return; }
             const x = startX + (endX - startX) * t;
-            plane.style.transform = 'translate(' + x.toFixed(1) + 'px,0) rotate(45deg)';
-            // contrail draws from startX up to current plane x
-            const len = Math.max(0, x - startX - 12);
-            trail.style.width = Math.min(180, len) + 'px';
-            trail.style.transform = 'translate(' + Math.max(startX, x - 180).toFixed(1) + 'px,0)';
-            trail.style.opacity = String(t < 0.85 ? 0.7 : (1 - t) * 4);
-            plane.style.opacity = String(t < 0.1 ? t / 0.1 : (t > 0.9 ? (1 - t) / 0.1 : 1));
+            const y = startY + (endY - startY) * t;
+            const rotDeg = goRight ? -20 + 45 : 20 + 135; // 45° base flip from FA's up-pointing plane
+            plane.style.transform = 'translate(' + (x - startX).toFixed(1) + 'px,' + (y - startY).toFixed(1) + 'px) rotate(' + rotDeg + 'deg)';
+            // Trail tracks from origin to current plane position.
+            const dx = x - startX;
+            const dy = y - startY;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+            trail.style.width = len.toFixed(1) + 'px';
+            trail.style.transform = 'rotate(' + ang.toFixed(1) + 'deg)';
+            trail.style.opacity = String(t < 0.85 ? 0.75 : (1 - t) * 5);
+            plane.style.opacity = String(t > 0.9 ? (1 - t) / 0.1 : 1);
             requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
@@ -1807,18 +1919,43 @@
     // -- Concentric ripples — minimal-motion lake ripples --------------
     function spawnRipples(anchor) {
         const { cx, cy } = anchorCenter(anchor);
-        const N = 3;
+        // Six expanding rings, alternating blue + white tints.
+        const tints = ['#3d8ed8', '#5fa8e8', '#7bc4f0', '#ffffff', '#a9d6f5', '#5fa8e8'];
+        const N = 6;
         for (let i = 0; i < N; i++) {
             const p = fxPiece('dccgg-fx-ripple', cx - 9, cy - 9);
-            const start = performance.now() + i * 130;
-            const dur = 800;
+            p.style.borderColor = tints[i % tints.length];
+            const start = performance.now() + i * 110;
+            const dur = 950;
             const tick = (now) => {
                 if (now < start) { requestAnimationFrame(tick); return; }
                 const t = (now - start) / dur;
                 if (t >= 1) { p.remove(); return; }
-                const scale = 0.4 + t * 5.6;
+                const scale = 0.4 + t * 7.5;
                 p.style.transform = 'scale(' + scale.toFixed(2) + ')';
-                p.style.opacity = String(0.8 * (1 - t));
+                p.style.opacity = String(0.85 * (1 - t));
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+        // Sparkle dots ride the wavefronts — small golden specks that
+        // drift outward and twinkle as the rings pass.
+        for (let i = 0; i < 14; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 30 + Math.random() * 80;
+            const sx = cx + Math.cos(angle) * 8;
+            const sy = cy + Math.sin(angle) * 8;
+            const s = fxPiece('dccgg-fx-sparkle', sx - 3, sy - 3);
+            const start = performance.now() + Math.random() * 300;
+            const dur = 700 + Math.random() * 300;
+            const tx = Math.cos(angle) * radius;
+            const ty = Math.sin(angle) * radius;
+            const tick = (now) => {
+                if (now < start) { requestAnimationFrame(tick); return; }
+                const t = (now - start) / dur;
+                if (t >= 1) { s.remove(); return; }
+                s.style.transform = 'translate(' + (tx * t).toFixed(1) + 'px,' + (ty * t).toFixed(1) + 'px) scale(' + (1 + t * 0.8).toFixed(2) + ')';
+                s.style.opacity = String((Math.sin(t * Math.PI * 6) * 0.4 + 0.6) * (1 - t));
                 requestAnimationFrame(tick);
             };
             requestAnimationFrame(tick);
