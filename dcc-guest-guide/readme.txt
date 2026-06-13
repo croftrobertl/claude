@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.11
+Stable tag: 0.9.7.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,53 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.12 =
+
+* **Seven new rows on the Conditions side-card** — toggle with the new
+  *Show extended conditions rows* switch in the General settings
+  (default on). Every new row hides itself if its data source returns
+  nothing, so the card stays clean when an upstream is down or
+  rate-limited.
+  * **NWS alert banner** — red callout at the top of the card whenever
+    the National Weather Service has an active alert for the cottage
+    lat/lng (Heat Advisory, Severe Thunderstorm Warning, Hurricane
+    Watch, etc). Hidden otherwise. Reuses the existing alerts proxy
+    (30-min cache); add `?dccgg-fake-alert=1` to any page URL to
+    preview the styling without waiting for live weather.
+  * **Harris Chain lake water level + surface temp** — pulls the
+    nearest USGS NWIS gauge (Lake Dora / Lake Eustis / Lake Harris
+    keyed off cottage coords) and shows e.g. *Lake Dora · 62.4′ ·
+    surface 78°F* with a plain-English takeaway tuned to the surface
+    temp band ("prime water temp — bass active shallow"). New
+    `dccgg_usgs` AJAX action with 30-min `dccgg_usgs_<md5>` transient.
+  * **Barometric pressure trend** — current pressure plus a trend
+    arrow vs. the reading 3 hours ago, with a one-line bite
+    implication ("bass more active" when rising > 0.04 in/3hr,
+    "bite often slow, then picks up before storms" when falling). One
+    extra Open-Meteo parameter, no new endpoint.
+  * **Wind + leeward-shore tip** — direction · speed · gusts (only
+    shown when gusts exceed steady wind by 5 mph), plus a 16-direction
+    lookup table that names the actual sheltered shore on Lake Dora
+    ("north shore of Lake Dora — try the lily-pad line off Wooton
+    Park" when the wind is from the south).
+  * **UV index + reapply window** — today's max UV with a band label
+    (low / moderate / high / very high / extreme); above "high" adds
+    a reapply-by clock time (now + 2 hr). Hidden at night.
+  * **Heat index / feels-like + hydration nudge** — hidden below 90°F;
+    at 90–102°F adds "drink water every 30 min"; at 103°F and above
+    flips the row red and switches to "dangerous heat — limit time
+    outdoors, drink water every 20 min".
+  * **Solunar feeding windows** — today's two major windows
+    (±45 min around lunar transit and lunar underfoot), computed
+    entirely server-side from the existing moon math — no network
+    call. Renders only when at least one window falls in the next 18
+    hours.
+* **Existing Open-Meteo call expanded.** The conditions weather proxy
+  now requests apparent temperature, surface pressure (current and
+  6 hours of history for the trend calculation), wind direction,
+  wind gusts, and daily UV max — all on the same upstream call. No
+  net change in upstream API count.
 
 = 0.9.7.11 =
 

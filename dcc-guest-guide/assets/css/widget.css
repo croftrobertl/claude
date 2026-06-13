@@ -3087,3 +3087,51 @@ video.dccgg-media {
     color: #fff;
     border-color: var(--dccgg-primary, #0f6dbf);
 }
+
+/* v0.9.7.12: extended Conditions side-card rows. Each new row uses a
+   stacked grid (icon · key · value on row 1, plain-English takeaway on
+   row 2 spanning cols 2–3) so the interpretation reads as a soft sub-
+   line beneath the measurement without breaking the existing 3-col
+   layout. Alert banner sits above the list and only appears when the
+   NWS endpoint returns at least one active alert. */
+.dccgg-root.dccgg-root .dccgg-cond-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    background: rgba(220, 53, 69, 0.10);
+    color: #842029;
+    border: 1px solid rgba(220, 53, 69, 0.45);
+    border-radius: 8px;
+    font-size: 0.92em;
+    line-height: 1.35;
+}
+.dccgg-root.dccgg-root .dccgg-cond-alert[hidden] { display: none; }
+.dccgg-root.dccgg-root .dccgg-cond-alert-ico { font-size: 1.1em; line-height: 1.2; }
+.dccgg-root.dccgg-root .dccgg-cond-alert-text { flex: 1 1 auto; font-weight: 600; }
+.dccgg-root.dccgg-root .dccgg-cond-alert-link {
+    color: #842029;
+    text-decoration: underline;
+    font-weight: 600;
+    white-space: nowrap;
+    align-self: center;
+}
+.dccgg-root.dccgg-root .dccgg-cond-extra {
+    grid-template-columns: 28px 1fr auto;
+    grid-template-rows: auto auto;
+    row-gap: 2px;
+}
+.dccgg-root.dccgg-root .dccgg-cond-extra .dccgg-cond-takeaway {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 0.88em;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 65%, transparent);
+    text-align: left;
+}
+.dccgg-root.dccgg-root .dccgg-cond-extra .dccgg-cond-takeaway:empty { display: none; }
+.dccgg-root.dccgg-root .dccgg-cond-heat--red .dccgg-cond-v,
+.dccgg-root.dccgg-root .dccgg-cond-heat--red .dccgg-cond-takeaway { color: #b3261e; }

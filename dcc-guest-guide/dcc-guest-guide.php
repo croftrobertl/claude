@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Guest Guide
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Elementor widget that displays a sectioned, mobile-friendly guest guide (Wi-Fi, hot tub, local tips, etc.) with grid/list/masonry/bento/carousel/split-pane layouts, stage-swap/accordion/flip-card reveal modes, theme presets with auto dark mode, and a Cmd-K search.
- * Version:           0.9.7.11
+ * Version:           0.9.7.12
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCCGG_VERSION', '0.9.7.11');
+define('DCCGG_VERSION', '0.9.7.12');
 define('DCCGG_FILE', __FILE__);
 define('DCCGG_DIR', plugin_dir_path(__FILE__));
 define('DCCGG_URL', plugin_dir_url(__FILE__));

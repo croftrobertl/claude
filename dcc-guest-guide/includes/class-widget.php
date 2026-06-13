@@ -603,6 +603,16 @@ final class Widget extends Widget_Base
             'default' => -81.6448,
         ]);
 
+        $this->add_control('enable_conditions_extras', [
+            'label'        => __('Show extended conditions rows', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'label_on'     => __('Show', 'dcc-guest-guide'),
+            'label_off'    => __('Hide', 'dcc-guest-guide'),
+            'return_value' => 'yes',
+            'default'      => 'yes',
+            'description'  => __('Adds NWS alert banner, Harris Chain lake water level + surface temp, pressure trend, wind + leeward-shore tip, UV index, heat-index, and solunar feeding windows to the Conditions side-card. Each row hides itself if its data source returns nothing.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('enable_ai_search', [
             'label'        => __('Enable AI fallback search', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -2674,6 +2684,7 @@ final class Widget extends Widget_Base
             'nonce'                => wp_create_nonce('dccgg_nonce'),
             'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
             'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
+            'conditionsExtras'     => ($s['enable_conditions_extras'] ?? 'yes') === 'yes',
             'aiSearch'             => [
                 'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
                 'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
@@ -3154,7 +3165,7 @@ final class Widget extends Widget_Base
                                 </ul>
                             </nav>
                         <?php endif; ?>
-                        <?php if ($show_cond) : self::render_conditions_card($lat, $lng); endif; ?>
+                        <?php if ($show_cond) : self::render_conditions_card($lat, $lng, ($s['enable_conditions_extras'] ?? 'yes') === 'yes'); endif; ?>
                         <?php if ($role === 'emergency') : self::render_emergency_contacts($emergency_contacts_render, $label_911); endif; ?>
                         <?php if ($wizard) : ?>
                             <?php $this->render_wizard($items, $s); ?>
@@ -3704,16 +3715,24 @@ final class Widget extends Widget_Base
     }
 
     /**
-     * Render the Conditions side-card: sunrise/sunset/moon phase server-side
-     * (instant, no JS), then a placeholder the frontend fills with weather
-     * via the admin-ajax proxy on load.
+     * Render the Conditions side-card: sunrise/sunset/moon phase + (when
+     * extras are enabled) solunar windows server-side; everything else is
+     * a placeholder that the frontend fills via admin-ajax on load. Rows
+     * with no data hide themselves — never show "—" or an error state.
      */
-    public static function render_conditions_card(float $lat, float $lng): void
+    public static function render_conditions_card(float $lat, float $lng, bool $extras = true): void
     {
         $c = self::compute_conditions($lat, $lng);
         ?>
         <aside class="dccgg-conditions" data-lat="<?php echo esc_attr((string) $lat); ?>" data-lng="<?php echo esc_attr((string) $lng); ?>" aria-label="<?php echo esc_attr__('Today at the cottage', 'dcc-guest-guide'); ?>">
             <h3 class="dccgg-conditions-title"><?php esc_html_e('At the cottage today', 'dcc-guest-guide'); ?></h3>
+            <?php if ($extras) : ?>
+                <div class="dccgg-cond-alert" role="status" hidden>
+                    <span class="dccgg-cond-alert-ico" aria-hidden="true">🚨</span>
+                    <span class="dccgg-cond-alert-text"></span>
+                    <a class="dccgg-cond-alert-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e('More info', 'dcc-guest-guide'); ?></a>
+                </div>
+            <?php endif; ?>
             <ul class="dccgg-conditions-list">
                 <?php if ($c['sunrise'] !== '') : ?>
                     <li><span class="dccgg-cond-ico">🌅</span><span class="dccgg-cond-k"><?php esc_html_e('Sunrise', 'dcc-guest-guide'); ?></span><span class="dccgg-cond-v"><?php echo esc_html($c['sunrise']); ?></span></li>
@@ -3732,6 +3751,46 @@ final class Widget extends Widget_Base
                     <span class="dccgg-cond-k"><?php esc_html_e('Tomorrow', 'dcc-guest-guide'); ?></span>
                     <span class="dccgg-cond-v">—</span>
                 </li>
+                <?php if ($extras) : ?>
+                    <li class="dccgg-cond-extra dccgg-cond-lake" hidden>
+                        <span class="dccgg-cond-ico">🌊</span>
+                        <span class="dccgg-cond-k"><?php esc_html_e('Lake', 'dcc-guest-guide'); ?></span>
+                        <span class="dccgg-cond-v">—</span>
+                        <span class="dccgg-cond-takeaway"></span>
+                    </li>
+                    <li class="dccgg-cond-extra dccgg-cond-pressure" hidden>
+                        <span class="dccgg-cond-ico">🌡️</span>
+                        <span class="dccgg-cond-k"><?php esc_html_e('Pressure', 'dcc-guest-guide'); ?></span>
+                        <span class="dccgg-cond-v">—</span>
+                        <span class="dccgg-cond-takeaway"></span>
+                    </li>
+                    <li class="dccgg-cond-extra dccgg-cond-wind" hidden>
+                        <span class="dccgg-cond-ico">💨</span>
+                        <span class="dccgg-cond-k"><?php esc_html_e('Wind', 'dcc-guest-guide'); ?></span>
+                        <span class="dccgg-cond-v">—</span>
+                        <span class="dccgg-cond-takeaway"></span>
+                    </li>
+                    <li class="dccgg-cond-extra dccgg-cond-uv" hidden>
+                        <span class="dccgg-cond-ico">☀️</span>
+                        <span class="dccgg-cond-k"><?php esc_html_e('UV', 'dcc-guest-guide'); ?></span>
+                        <span class="dccgg-cond-v">—</span>
+                        <span class="dccgg-cond-takeaway"></span>
+                    </li>
+                    <li class="dccgg-cond-extra dccgg-cond-heat" hidden>
+                        <span class="dccgg-cond-ico">🥵</span>
+                        <span class="dccgg-cond-k"><?php esc_html_e('Feels like', 'dcc-guest-guide'); ?></span>
+                        <span class="dccgg-cond-v">—</span>
+                        <span class="dccgg-cond-takeaway"></span>
+                    </li>
+                    <?php if (!empty($c['solunar'])) : ?>
+                        <li class="dccgg-cond-extra dccgg-cond-solunar">
+                            <span class="dccgg-cond-ico">🎣</span>
+                            <span class="dccgg-cond-k"><?php esc_html_e('Best fishing', 'dcc-guest-guide'); ?></span>
+                            <span class="dccgg-cond-v"><?php echo esc_html($c['solunar']); ?></span>
+                            <span class="dccgg-cond-takeaway"><?php esc_html_e('major feeding windows', 'dcc-guest-guide'); ?></span>
+                        </li>
+                    <?php endif; ?>
+                <?php endif; ?>
             </ul>
         </aside>
         <?php
@@ -3770,12 +3829,54 @@ final class Widget extends Widget_Base
             __('Waning crescent', 'dcc-guest-guide'),
         ];
         $emojis = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+
+        // Solunar major feeding windows. Moon transits the local meridian
+        // ~50 min later each solar day; over one synodic period it slips a
+        // full 24h relative to the sun. So local upper transit ≈ solar noon
+        // shifted by phase × 24.6h. Lower transit (moon underfoot) is half a
+        // lunar day later (~12h25m). Each major window is ±45 min centered
+        // on the transit. We render the next two majors falling within the
+        // upcoming 18 hours so the row stays current through the day.
+        $solunar = '';
+        if (isset($sun['sunrise'], $sun['sunset']) && is_int($sun['sunrise']) && is_int($sun['sunset'])) {
+            $solar_noon_ts = (int) (($sun['sunrise'] + $sun['sunset']) / 2);
+            $upper = $solar_noon_ts + (int) round($phase * 29.530588853 * 50 * 60);
+            $lunar_day = 24.84 * 3600;
+            $candidates = [
+                $upper - $lunar_day / 2,
+                $upper,
+                $upper + $lunar_day / 2,
+                $upper + $lunar_day,
+            ];
+            $now_ts = $now->getTimestamp();
+            $horizon = $now_ts + 18 * 3600;
+            $picked = [];
+            foreach ($candidates as $t) {
+                $t = (int) $t;
+                if ($t >= $now_ts - 1800 && $t <= $horizon) {
+                    $picked[] = $t;
+                }
+                if (count($picked) >= 2) { break; }
+            }
+            sort($picked);
+            $parts = [];
+            foreach ($picked as $t) {
+                $start = (new \DateTimeImmutable('@' . ($t - 45 * 60)))->setTimezone($tz)->format('g:i A');
+                $end   = (new \DateTimeImmutable('@' . ($t + 45 * 60)))->setTimezone($tz)->format('g:i A');
+                $parts[] = $start . '–' . $end;
+            }
+            if ($parts) {
+                $solunar = implode(', ', $parts);
+            }
+        }
+
         return [
             'sunrise'      => $sr,
             'sunset'       => $ss,
             'moon_name'    => $names[$idx],
             'moon_emoji'   => $emojis[$idx],
             'illumination' => (int) round((1 - cos($phase * 2 * M_PI)) / 2 * 100),
+            'solunar'      => $solunar,
         ];
     }
 

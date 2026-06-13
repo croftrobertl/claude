@@ -51,6 +51,8 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_report_problem', [$this, 'handle_report_problem']);
         add_action('wp_ajax_dccgg_noaa_alerts',         [$this, 'handle_noaa_alerts']);
         add_action('wp_ajax_nopriv_dccgg_noaa_alerts',  [$this, 'handle_noaa_alerts']);
+        add_action('wp_ajax_dccgg_usgs',                [$this, 'handle_usgs']);
+        add_action('wp_ajax_nopriv_dccgg_usgs',         [$this, 'handle_usgs']);
 
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
@@ -603,7 +605,11 @@ final class Plugin
             wp_send_json_success($cached);
         }
         $url = sprintf(
-            'https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,weather_code,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&timezone=auto',
+            'https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s'
+            . '&current=temperature_2m,apparent_temperature,weather_code,is_day,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
+            . '&hourly=surface_pressure'
+            . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max'
+            . '&temperature_unit=fahrenheit&wind_speed_unit=mph&pressure_unit=inhg&forecast_days=2&past_hours=6&timezone=auto',
             $lat,
             $lng
         );
@@ -617,6 +623,104 @@ final class Plugin
         }
         set_transient($key, $data, 30 * MINUTE_IN_SECONDS);
         wp_send_json_success($data);
+    }
+
+    /**
+     * AJAX: USGS NWIS proxy. Picks the nearest published Harris-Chain gauge
+     * for the cottage lat/lng (Lake Dora, Lake Eustis, Lake Harris) and
+     * returns gauge height + surface water temperature when available.
+     * 30-min transient cache, mirrors handle_weather() / handle_noaa_alerts().
+     *
+     * USGS NWIS sites used (all publish elevation; some publish temp):
+     *   Lake Dora    — 02238500
+     *   Lake Eustis  — 02236000
+     *   Lake Harris  — 02237700
+     */
+    public function handle_usgs(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+        $lat = isset($_GET['lat']) ? (float) $_GET['lat'] : 0.0;
+        $lng = isset($_GET['lng']) ? (float) $_GET['lng'] : 0.0;
+        if ($lat === 0.0 && $lng === 0.0) {
+            wp_send_json_error(['message' => 'lat/lng required'], 400);
+        }
+        $lat = round($lat, 3);
+        $lng = round($lng, 3);
+        $site = $this->nearest_harris_chain_site($lat, $lng);
+        $key  = 'dccgg_usgs_' . md5($site['id']);
+        $cached = get_transient($key);
+        if (is_array($cached)) {
+            wp_send_json_success($cached);
+        }
+        // Parameter codes: 00065 = gauge height (ft), 00010 = water temp (°C).
+        $url = sprintf(
+            'https://waterservices.usgs.gov/nwis/iv/?sites=%s&parameterCd=00065,00010&format=json&siteStatus=active',
+            $site['id']
+        );
+        $contact = (string) get_option('admin_email', '');
+        $res = wp_remote_get($url, [
+            'timeout' => 8,
+            'headers' => [
+                'Accept'     => 'application/json',
+                'User-Agent' => 'DCC Guest Guide / WP plugin (contact: ' . ($contact !== '' ? $contact : 'site-admin') . ')',
+            ],
+        ]);
+        if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
+            // Tombstone so a broken upstream doesn't re-hit on every visitor.
+            set_transient($key, ['available' => false], 10 * MINUTE_IN_SECONDS);
+            wp_send_json_success(['available' => false]);
+        }
+        $data = json_decode(wp_remote_retrieve_body($res), true);
+        $payload = [
+            'available'  => false,
+            'lake_name'  => $site['name'],
+            'site_id'    => $site['id'],
+        ];
+        if (is_array($data) && isset($data['value']['timeSeries']) && is_array($data['value']['timeSeries'])) {
+            foreach ($data['value']['timeSeries'] as $ts) {
+                $code  = $ts['variable']['variableCode'][0]['value'] ?? '';
+                $value = $ts['values'][0]['value'][0]['value'] ?? null;
+                if (!is_string($value) || $value === '' || (float) $value <= -9999) {
+                    continue;
+                }
+                if ($code === '00065') {
+                    $payload['gauge_ft'] = round((float) $value, 2);
+                    $payload['available'] = true;
+                } elseif ($code === '00010') {
+                    // °C → °F.
+                    $payload['surface_f'] = (int) round((float) $value * 9 / 5 + 32);
+                    $payload['available'] = true;
+                }
+            }
+        }
+        set_transient($key, $payload, 30 * MINUTE_IN_SECONDS);
+        wp_send_json_success($payload);
+    }
+
+    /**
+     * Pick the closest USGS gauge on the Harris Chain for the given coords.
+     * All three lake centroids are baked in; with the default cottage coords
+     * (28.8028, -81.6448) this returns Lake Dora.
+     */
+    private function nearest_harris_chain_site(float $lat, float $lng): array
+    {
+        $sites = [
+            ['id' => '02238500', 'name' => 'Lake Dora',   'lat' => 28.7920, 'lng' => -81.6390],
+            ['id' => '02236000', 'name' => 'Lake Eustis', 'lat' => 28.8470, 'lng' => -81.7270],
+            ['id' => '02237700', 'name' => 'Lake Harris', 'lat' => 28.7740, 'lng' => -81.8190],
+        ];
+        $best = $sites[0];
+        $best_d = PHP_FLOAT_MAX;
+        foreach ($sites as $s) {
+            $dlat = $s['lat'] - $lat;
+            $dlng = $s['lng'] - $lng;
+            $d = $dlat * $dlat + $dlng * $dlng;
+            if ($d < $best_d) {
+                $best_d = $d;
+                $best = $s;
+            }
+        }
+        return $best;
     }
 
     public function load_textdomain(): void

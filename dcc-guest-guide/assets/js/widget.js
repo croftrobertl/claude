@@ -800,13 +800,18 @@
         update();
     }
 
-    // -- Conditions side-card weather (v0.7) ------------------------------
+    // -- Conditions side-card weather (v0.7, extended v0.9.7.12) ----------
+    // v0.9.7.12 adds (when config.conditionsExtras): NWS alert banner,
+    // pressure trend, wind + leeward-shore tip, UV, heat-index, and
+    // (via a USGS proxy) lake water level + surface temp. Every new row
+    // hides itself if its data source returns nothing.
     function wireConditions(root, config) {
         const cards = root.querySelectorAll('.dccgg-conditions');
         if (!cards.length) return;
         const lat = config.cottageLat;
         const lng = config.cottageLng;
         if (!lat || !lng || !config.ajaxUrl) return;
+        const extras = !!config.conditionsExtras;
         const url = config.ajaxUrl + '?action=dccgg_weather&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng;
         fetch(url, { credentials: 'same-origin' })
             .then(r => r.json())
@@ -834,9 +839,200 @@
                         fcRow.querySelector('.dccgg-cond-ico').textContent = weatherEmoji(fcc, 1);
                         fcRow.querySelector('.dccgg-cond-v').textContent  = hi + '° / ' + lo + '° · ' + pop + '% rain';
                     }
+                    if (extras) {
+                        renderPressureRow(card, d);
+                        renderWindRow(card, d);
+                        renderUvRow(card, d);
+                        renderHeatRow(card, d);
+                    }
                 });
             })
             .catch(() => {});
+
+        if (extras) {
+            // Card 1: NWS alert banner — uses the existing alerts endpoint.
+            const alertParams = new URLSearchParams({
+                action: 'dccgg_noaa_alerts',
+                nonce:  config.nonce,
+                lat:    String(lat),
+                lng:    String(lng),
+            });
+            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) alertParams.set('fake', '1');
+            fetch(config.ajaxUrl + '?' + alertParams.toString(), { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(json => {
+                    if (!json || !json.success) return;
+                    const alerts = (json.data && json.data.alerts) || [];
+                    if (!alerts.length) return;
+                    const top = alerts[0];
+                    cards.forEach(card => {
+                        const banner = card.querySelector('.dccgg-cond-alert');
+                        if (!banner) return;
+                        const text = banner.querySelector('.dccgg-cond-alert-text');
+                        const link = banner.querySelector('.dccgg-cond-alert-link');
+                        if (text) text.textContent = top.headline || top.event || '';
+                        if (link && top.url) { link.href = top.url; link.hidden = false; }
+                        banner.hidden = false;
+                    });
+                })
+                .catch(() => {});
+
+            // Card 2: USGS lake water level + surface temp.
+            const usgsUrl = config.ajaxUrl + '?action=dccgg_usgs&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng;
+            fetch(usgsUrl, { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(json => {
+                    if (!json || !json.success || !json.data || !json.data.available) return;
+                    cards.forEach(card => renderLakeRow(card, json.data));
+                })
+                .catch(() => {});
+        }
+    }
+
+    // Card 3: barometric pressure + 3-hour trend.
+    function renderPressureRow(card, d) {
+        const row = card.querySelector('.dccgg-cond-pressure');
+        if (!row) return;
+        const cur = d.current && typeof d.current.surface_pressure === 'number' ? d.current.surface_pressure : null;
+        if (cur == null) return;
+        // Open-Meteo's hourly array is local-time-aligned; past_hours=6 is on
+        // the request so index 0..6 are the last six hours, then current.
+        let past = null;
+        if (d.current && d.current.time && d.hourly && Array.isArray(d.hourly.surface_pressure) && Array.isArray(d.hourly.time)) {
+            // Find the index closest to (now - 3h).
+            const target = Date.parse(d.current.time) - 3 * 3600 * 1000;
+            let bestIdx = -1;
+            let bestDelta = Infinity;
+            for (let i = 0; i < d.hourly.time.length; i++) {
+                const dt = Math.abs(Date.parse(d.hourly.time[i]) - target);
+                if (dt < bestDelta) { bestDelta = dt; bestIdx = i; }
+            }
+            if (bestIdx >= 0 && typeof d.hourly.surface_pressure[bestIdx] === 'number') {
+                past = d.hourly.surface_pressure[bestIdx];
+            }
+        }
+        const delta = past != null ? cur - past : 0;
+        let arrow = '→', takeaway = 'steady pressure — bite predictable';
+        if (delta >= 0.04)      { arrow = '↑'; takeaway = 'bass more active'; }
+        else if (delta <= -0.04){ arrow = '↓'; takeaway = 'bite often slow, then picks up before storms'; }
+        row.querySelector('.dccgg-cond-v').textContent = cur.toFixed(2) + ' in ' + arrow;
+        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
+        row.hidden = false;
+    }
+
+    // Card 4: wind + leeward-shore tip on Lake Dora.
+    function renderWindRow(card, d) {
+        const row = card.querySelector('.dccgg-cond-wind');
+        if (!row) return;
+        const spd  = d.current && typeof d.current.wind_speed_10m  === 'number' ? d.current.wind_speed_10m  : null;
+        const dirN = d.current && typeof d.current.wind_direction_10m === 'number' ? d.current.wind_direction_10m : null;
+        const gst  = d.current && typeof d.current.wind_gusts_10m === 'number' ? d.current.wind_gusts_10m : null;
+        if (spd == null || dirN == null) return;
+        const dirLabel = compassFromDegrees(dirN);
+        let display = 'Wind ' + dirLabel + ' ' + Math.round(spd) + ' mph';
+        if (gst != null && gst > spd + 5) display += ', gusts ' + Math.round(gst);
+        row.querySelector('.dccgg-cond-v').textContent = display;
+        row.querySelector('.dccgg-cond-takeaway').textContent = leewardTipForLakeDora(dirLabel, spd);
+        row.hidden = false;
+    }
+    function compassFromDegrees(deg) {
+        const names = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+        return names[Math.round(((deg % 360) / 22.5)) % 16];
+    }
+    function leewardTipForLakeDora(dir, spd) {
+        if (spd < 5) return 'flat on the Dora Canal — pick any shore';
+        const tips = {
+            N:   'south shore of Lake Dora will be the calm side',
+            NNE: 'south shore of Lake Dora will be the calm side',
+            NE:  'southwest shore of Lake Dora — try the cove off Lake Dora Pkwy',
+            ENE: 'west shore of Lake Dora — try the cove off Lake Dora Pkwy',
+            E:   'west shore of Lake Dora — try the cove off Lake Dora Pkwy',
+            ESE: 'northwest shore of Lake Dora — sheltered along the Tavares side',
+            SE:  'northwest shore of Lake Dora — sheltered along the Tavares side',
+            SSE: 'north shore of Lake Dora — try the lily-pad line off Wooton Park',
+            S:   'north shore of Lake Dora — try the lily-pad line off Wooton Park',
+            SSW: 'north shore of Lake Dora — try the lily-pad line off Wooton Park',
+            SW:  'northeast shore of Lake Dora near the canal mouth',
+            WSW: 'east shore of Lake Dora — Dora Canal entrance is sheltered',
+            W:   'east shore of Lake Dora — Dora Canal entrance is sheltered',
+            WNW: 'east shore of Lake Dora — Dora Canal entrance is sheltered',
+            NW:  'southeast shore of Lake Dora will be the calm side',
+            NNW: 'south shore of Lake Dora will be the calm side',
+        };
+        return tips[dir] || '';
+    }
+
+    // Card 5: UV index + reapply window.
+    function renderUvRow(card, d) {
+        const row = card.querySelector('.dccgg-cond-uv');
+        if (!row) return;
+        const uv = d.daily && Array.isArray(d.daily.uv_index_max) && typeof d.daily.uv_index_max[0] === 'number'
+            ? d.daily.uv_index_max[0] : null;
+        if (uv == null) return;
+        const isDay = d.current && d.current.is_day;
+        if (!isDay) return;
+        let band = '';
+        if      (uv >= 11) band = 'extreme';
+        else if (uv >= 8)  band = 'very high';
+        else if (uv >= 6)  band = 'high';
+        else if (uv >= 3)  band = 'moderate';
+        else               band = 'low';
+        row.querySelector('.dccgg-cond-v').textContent = 'UV ' + Math.round(uv) + ' · ' + band;
+        let takeaway = '';
+        if (uv >= 6) {
+            const reapply = new Date(Date.now() + 2 * 3600 * 1000);
+            takeaway = 'reapply sunscreen by ' + formatClock(reapply);
+        } else if (uv >= 3) {
+            takeaway = 'sunscreen recommended';
+        }
+        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
+        row.hidden = false;
+    }
+    function formatClock(d) {
+        let h = d.getHours();
+        const m = d.getMinutes().toString().padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12; if (h === 0) h = 12;
+        return h + ':' + m + ' ' + ampm;
+    }
+
+    // Card 6: heat-index / feels-like + hydration nudge.
+    function renderHeatRow(card, d) {
+        const row = card.querySelector('.dccgg-cond-heat');
+        if (!row) return;
+        const feels = d.current && typeof d.current.apparent_temperature === 'number' ? d.current.apparent_temperature : null;
+        if (feels == null || feels < 90) return;
+        row.classList.remove('dccgg-cond-heat--red');
+        if (feels >= 103) row.classList.add('dccgg-cond-heat--red');
+        row.querySelector('.dccgg-cond-v').textContent = Math.round(feels) + '°F';
+        row.querySelector('.dccgg-cond-takeaway').textContent = feels >= 103
+            ? 'dangerous heat — limit time outdoors, drink water every 20 min'
+            : 'drink water every 30 min';
+        row.hidden = false;
+    }
+
+    // Card 2: lake water level + surface temp from USGS.
+    function renderLakeRow(card, info) {
+        const row = card.querySelector('.dccgg-cond-lake');
+        if (!row) return;
+        const lake = info.lake_name || 'Lake';
+        const parts = [];
+        if (typeof info.gauge_ft === 'number')  parts.push(info.gauge_ft.toFixed(1) + '′');
+        if (typeof info.surface_f === 'number') parts.push('surface ' + info.surface_f + '°F');
+        if (!parts.length) return;
+        row.querySelector('.dccgg-cond-v').textContent = lake + ' · ' + parts.join(' · ');
+        // Plain-English takeaway from the two readings we have.
+        let takeaway = '';
+        const temp = info.surface_f;
+        if (typeof temp === 'number') {
+            if (temp < 60)       takeaway = 'cold water — bass deep and slow';
+            else if (temp < 70)  takeaway = 'cool water — bass moving up to feed';
+            else if (temp < 80)  takeaway = 'prime water temp — bass active shallow';
+            else if (temp < 87)  takeaway = 'warm water — bass early and late, shaded mid-day';
+            else                 takeaway = 'hot water — bass deep, focus on dawn and dusk';
+        }
+        row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
+        row.hidden = false;
     }
     function weatherEmoji(code, isDay) {
         if (code === 0)            return isDay ? '☀️' : '🌙';
