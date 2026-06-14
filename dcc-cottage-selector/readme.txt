@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,17 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.2.0 =
+* Real cottage names pulled from the live site.
+* Mini-entry opens Quick Pick pre-filled and highlights the current cottage's rank.
+* Live "N cottages match" count; sticky "See my matches" CTA on mobile.
+* Empty-result combos now show the closest fallback matches.
+* "Match site theme colors" toggle; persistent screen-reader live region.
+* Full ARIA tab/radio keyboard navigation, modal focus trap + background scroll-lock.
+* Weights serialized to the URL; per-visit highlight no longer remembered.
+* Translatable floor/layout values; bundled translation template (.pot).
+* Added a jsdom DOM smoke-test suite (34 assertions).
 
 = 0.1.0 =
 * Initial release: three-mode selector, two-phase scoring engine, badges,
