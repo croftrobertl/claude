@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.2.1 =
+* Fix: guard the MutationObserver against a missing document.body and wrap
+  per-widget init in try/catch, so the script can never break the Elementor
+  editor preview if it loads before <body> or a single widget errors.
 
 = 0.2.0 =
 * Real cottage names pulled from the live site.

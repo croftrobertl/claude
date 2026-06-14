@@ -648,8 +648,14 @@
   function bootAll(scope) {
     scope = scope || document;
     if (!scope.querySelectorAll) { return; }
-    Array.prototype.forEach.call(scope.querySelectorAll('.dccs-root:not([data-dccs-ready])'), initSelector);
-    Array.prototype.forEach.call(scope.querySelectorAll('.dccs-entry:not([data-dccs-ready])'), initEntry);
+    // Wrap each init so one failing widget can't break the page (or the
+    // Elementor editor preview) for the others.
+    Array.prototype.forEach.call(scope.querySelectorAll('.dccs-root:not([data-dccs-ready])'), function (n) {
+      try { initSelector(n); } catch (e) { if (window.console) { console.warn('DCCS selector init failed', e); } }
+    });
+    Array.prototype.forEach.call(scope.querySelectorAll('.dccs-entry:not([data-dccs-ready])'), function (n) {
+      try { initEntry(n); } catch (e) { if (window.console) { console.warn('DCCS entry init failed', e); } }
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -668,8 +674,10 @@
     });
   }
 
-  // Catch dynamically inserted widgets.
-  if (window.MutationObserver) {
+  // Catch dynamically inserted widgets (e.g. the Elementor editor preview, which
+  // injects markup after load). Guard document.body — if this script ever runs
+  // before <body> exists, observe(null) would throw and break the preview.
+  if (window.MutationObserver && document.body) {
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
         if (muts[i].addedNodes && muts[i].addedNodes.length) { bootAll(document); break; }
