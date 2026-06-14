@@ -604,21 +604,33 @@ final class Plugin
         if (is_array($cached)) {
             wp_send_json_success($cached);
         }
+        // Open-Meteo's documented param names: `past_days=1` (not `past_hours`),
+        // `pressure_unit` only accepts hPa/mmHg — convert to inHg client-side.
         $url = sprintf(
             'https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s'
             . '&current=temperature_2m,apparent_temperature,weather_code,is_day,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
             . '&hourly=surface_pressure'
             . '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,uv_index_max'
-            . '&temperature_unit=fahrenheit&wind_speed_unit=mph&pressure_unit=inhg&forecast_days=2&past_hours=6&timezone=auto',
+            . '&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2&past_days=1&timezone=auto',
             $lat,
             $lng
         );
         $res = wp_remote_get($url, ['timeout' => 8]);
+        $debug = !empty($_GET['debug']);
         if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
+            if ($debug) {
+                $err = is_wp_error($res)
+                    ? $res->get_error_message()
+                    : 'HTTP ' . wp_remote_retrieve_response_code($res) . ' — ' . substr((string) wp_remote_retrieve_body($res), 0, 400);
+                wp_send_json_error(['message' => 'Open-Meteo unavailable', 'debug' => ['url' => $url, 'error' => $err]], 502);
+            }
             wp_send_json_error(['message' => 'Open-Meteo unavailable'], 502);
         }
         $data = json_decode(wp_remote_retrieve_body($res), true);
         if (!is_array($data)) {
+            if ($debug) {
+                wp_send_json_error(['message' => 'Bad upstream response', 'debug' => ['url' => $url, 'body_excerpt' => substr((string) wp_remote_retrieve_body($res), 0, 400)]], 502);
+            }
             wp_send_json_error(['message' => 'Bad upstream response'], 502);
         }
         set_transient($key, $data, 30 * MINUTE_IN_SECONDS);
@@ -646,81 +658,100 @@ final class Plugin
         }
         $lat = round($lat, 3);
         $lng = round($lng, 3);
-        $site = $this->nearest_harris_chain_site($lat, $lng);
-        $key  = 'dccgg_usgs_' . md5($site['id']);
+        $debug = !empty($_GET['debug']);
+        // Cache key is the cottage lat/lng so a fallback to a sibling site
+        // still satisfies repeat lookups from the same widget instance.
+        $key = 'dccgg_usgs_' . md5($lat . ':' . $lng);
         $cached = get_transient($key);
-        if (is_array($cached)) {
+        if (is_array($cached) && !$debug) {
             wp_send_json_success($cached);
         }
-        // Parameter codes: 00065 = gauge height (ft), 00010 = water temp (°C).
-        $url = sprintf(
-            'https://waterservices.usgs.gov/nwis/iv/?sites=%s&parameterCd=00065,00010&format=json&siteStatus=active',
-            $site['id']
-        );
+        $sites = $this->ordered_harris_chain_sites($lat, $lng);
+        $tries = [];
         $contact = (string) get_option('admin_email', '');
-        $res = wp_remote_get($url, [
-            'timeout' => 8,
-            'headers' => [
-                'Accept'     => 'application/json',
-                'User-Agent' => 'DCC Guest Guide / WP plugin (contact: ' . ($contact !== '' ? $contact : 'site-admin') . ')',
-            ],
-        ]);
-        if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
-            // Tombstone so a broken upstream doesn't re-hit on every visitor.
-            set_transient($key, ['available' => false], 10 * MINUTE_IN_SECONDS);
-            wp_send_json_success(['available' => false]);
-        }
-        $data = json_decode(wp_remote_retrieve_body($res), true);
         $payload = [
-            'available'  => false,
-            'lake_name'  => $site['name'],
-            'site_id'    => $site['id'],
+            'available' => false,
+            'lake_name' => $sites[0]['name'],
+            'site_id'   => $sites[0]['id'],
         ];
-        if (is_array($data) && isset($data['value']['timeSeries']) && is_array($data['value']['timeSeries'])) {
-            foreach ($data['value']['timeSeries'] as $ts) {
-                $code  = $ts['variable']['variableCode'][0]['value'] ?? '';
-                $value = $ts['values'][0]['value'][0]['value'] ?? null;
-                if (!is_string($value) || $value === '' || (float) $value <= -9999) {
-                    continue;
-                }
-                if ($code === '00065') {
-                    $payload['gauge_ft'] = round((float) $value, 2);
-                    $payload['available'] = true;
-                } elseif ($code === '00010') {
-                    // °C → °F.
-                    $payload['surface_f'] = (int) round((float) $value * 9 / 5 + 32);
-                    $payload['available'] = true;
+        // Parameter codes: 00065 = gauge height (ft), 00010 = water temp (°C).
+        foreach ($sites as $site) {
+            $url = sprintf(
+                'https://waterservices.usgs.gov/nwis/iv/?sites=%s&parameterCd=00065,00010&format=json&siteStatus=active',
+                $site['id']
+            );
+            $res = wp_remote_get($url, [
+                'timeout' => 8,
+                'headers' => [
+                    'Accept'     => 'application/json',
+                    'User-Agent' => 'DCC Guest Guide / WP plugin (contact: ' . ($contact !== '' ? $contact : 'site-admin') . ')',
+                ],
+            ]);
+            $http = is_wp_error($res) ? 0 : (int) wp_remote_retrieve_response_code($res);
+            $body = is_wp_error($res) ? '' : (string) wp_remote_retrieve_body($res);
+            $tries[] = [
+                'site'  => $site['id'],
+                'name'  => $site['name'],
+                'url'   => $url,
+                'http'  => $http,
+                'error' => is_wp_error($res) ? $res->get_error_message() : '',
+            ];
+            if ($http !== 200) { continue; }
+            $data = json_decode($body, true);
+            $candidate = [
+                'available' => false,
+                'lake_name' => $site['name'],
+                'site_id'   => $site['id'],
+            ];
+            if (is_array($data) && isset($data['value']['timeSeries']) && is_array($data['value']['timeSeries'])) {
+                foreach ($data['value']['timeSeries'] as $ts) {
+                    $code  = $ts['variable']['variableCode'][0]['value'] ?? '';
+                    $value = $ts['values'][0]['value'][0]['value'] ?? null;
+                    if (!is_string($value) || $value === '' || (float) $value <= -9999) {
+                        continue;
+                    }
+                    if ($code === '00065') {
+                        $candidate['gauge_ft']  = round((float) $value, 2);
+                        $candidate['available'] = true;
+                    } elseif ($code === '00010') {
+                        // °C → °F.
+                        $candidate['surface_f'] = (int) round((float) $value * 9 / 5 + 32);
+                        $candidate['available'] = true;
+                    }
                 }
             }
+            if ($candidate['available']) {
+                $payload = $candidate;
+                break;
+            }
         }
-        set_transient($key, $payload, 30 * MINUTE_IN_SECONDS);
+        // Tombstone an unavailable lookup for 10 min so a broken upstream
+        // doesn't trigger 3 retries on every visitor.
+        set_transient($key, $payload, $payload['available'] ? 30 * MINUTE_IN_SECONDS : 10 * MINUTE_IN_SECONDS);
+        if ($debug) {
+            $payload['debug'] = ['tries' => $tries];
+        }
         wp_send_json_success($payload);
     }
 
     /**
-     * Pick the closest USGS gauge on the Harris Chain for the given coords.
-     * All three lake centroids are baked in; with the default cottage coords
-     * (28.8028, -81.6448) this returns Lake Dora.
+     * Order the Harris Chain sites by squared-degree distance from the
+     * cottage. First entry is the closest; the AJAX handler walks down the
+     * list as a fallback chain when the closest site has no usable data.
      */
-    private function nearest_harris_chain_site(float $lat, float $lng): array
+    private function ordered_harris_chain_sites(float $lat, float $lng): array
     {
         $sites = [
             ['id' => '02238500', 'name' => 'Lake Dora',   'lat' => 28.7920, 'lng' => -81.6390],
             ['id' => '02236000', 'name' => 'Lake Eustis', 'lat' => 28.8470, 'lng' => -81.7270],
             ['id' => '02237700', 'name' => 'Lake Harris', 'lat' => 28.7740, 'lng' => -81.8190],
         ];
-        $best = $sites[0];
-        $best_d = PHP_FLOAT_MAX;
-        foreach ($sites as $s) {
-            $dlat = $s['lat'] - $lat;
-            $dlng = $s['lng'] - $lng;
-            $d = $dlat * $dlat + $dlng * $dlng;
-            if ($d < $best_d) {
-                $best_d = $d;
-                $best = $s;
-            }
-        }
-        return $best;
+        usort($sites, static function ($a, $b) use ($lat, $lng) {
+            $da = ($a['lat'] - $lat) ** 2 + ($a['lng'] - $lng) ** 2;
+            $db = ($b['lat'] - $lat) ** 2 + ($b['lng'] - $lng) ** 2;
+            return $da <=> $db;
+        });
+        return $sites;
     }
 
     public function load_textdomain(): void

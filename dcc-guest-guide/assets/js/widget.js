@@ -563,11 +563,19 @@
         }
 
         const STR = rv.strings || {};
-        const URLS = rv.urls || {};
+        const URLS    = rv.urls   || {};
+        const EXTRAS  = Array.isArray(rv.extras) ? rv.extras : [];
+        const COPY_EX = STR.copyExtra || 'Copy & open';
         const platforms = [
             { key: 'airbnb', url: URLS.airbnb, label: STR.copyAirbnb || 'Copy & open Airbnb' },
             { key: 'vrbo',   url: URLS.vrbo,   label: STR.copyVrbo   || 'Copy & open Vrbo' },
             { key: 'google', url: URLS.google, label: STR.copyGoogle || 'Copy & open Google' },
+            ...EXTRAS.map((e, i) => ({
+                key:   'extra-' + i,
+                url:   e.url,
+                label: COPY_EX + ' ' + (e.label || 'review'),
+                icon:  e.icon || null,
+            })),
         ].filter(p => p.url);
 
         const prompts = root.querySelectorAll('.dccgg-review-prompt');
@@ -617,7 +625,15 @@
                         const btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'dccgg-review-platform dccgg-review-platform--' + p.key;
-                        btn.textContent = p.label;
+                        if (p.icon && p.icon.value) {
+                            const ic = document.createElement('i');
+                            ic.className = p.icon.value + ' dccgg-review-platform-ico';
+                            ic.setAttribute('aria-hidden', 'true');
+                            btn.appendChild(ic);
+                            btn.appendChild(document.createTextNode(' ' + p.label));
+                        } else {
+                            btn.textContent = p.label;
+                        }
                         btn.addEventListener('click', () => {
                             copyText(ta.value).then(() => {
                                 showPdfTip(STR.copied || 'Copied!');
@@ -805,6 +821,11 @@
     // pressure trend, wind + leeward-shore tip, UV, heat-index, and
     // (via a USGS proxy) lake water level + surface temp. Every new row
     // hides itself if its data source returns nothing.
+    //
+    // v0.9.7.13: ?dccgg-debug-conditions=1 in the URL surfaces each
+    // upstream payload to the console and (via wireConditionsDebug) into
+    // a <pre> beneath the card so the host can paste the raw shapes back
+    // for targeted follow-ups.
     function wireConditions(root, config) {
         const cards = root.querySelectorAll('.dccgg-conditions');
         if (!cards.length) return;
@@ -812,10 +833,24 @@
         const lng = config.cottageLng;
         if (!lat || !lng || !config.ajaxUrl) return;
         const extras = !!config.conditionsExtras;
-        const url = config.ajaxUrl + '?action=dccgg_weather&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng;
+        const debug = /[?&]dccgg-debug-conditions=1/.test(window.location.search);
+        const debugSuffix = debug ? '&debug=1' : '';
+        const logIfDebug = (label, payload) => {
+            if (debug) console.log('[DCCGG conditions] ' + label, payload);
+        };
+        const surfaceDebug = (label, payload) => {
+            if (!debug) return;
+            cards.forEach(card => attachDebugBlock(card, label, payload));
+        };
+        const url = config.ajaxUrl + '?action=dccgg_weather&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng + debugSuffix;
         fetch(url, { credentials: 'same-origin' })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) console.warn('[DCCGG conditions] weather HTTP ' + r.status);
+                return r.json();
+            })
             .then(json => {
+                logIfDebug('weather', json);
+                surfaceDebug('weather', json);
                 if (!json.success) return;
                 const d = json.data;
                 if (!d || !d.current || !d.daily) return;
@@ -858,9 +893,15 @@
                 lng:    String(lng),
             });
             if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) alertParams.set('fake', '1');
+            if (debug) alertParams.set('debug', '1');
             fetch(config.ajaxUrl + '?' + alertParams.toString(), { credentials: 'same-origin' })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) console.warn('[DCCGG conditions] noaa HTTP ' + r.status);
+                    return r.json();
+                })
                 .then(json => {
+                    logIfDebug('noaa', json);
+                    surfaceDebug('noaa', json);
                     if (!json || !json.success) return;
                     const alerts = (json.data && json.data.alerts) || [];
                     if (!alerts.length) return;
@@ -875,31 +916,51 @@
                         banner.hidden = false;
                     });
                 })
-                .catch(() => {});
+                .catch((err) => { console.warn('[DCCGG conditions] noaa fetch failed', err); });
 
             // Card 2: USGS lake water level + surface temp.
-            const usgsUrl = config.ajaxUrl + '?action=dccgg_usgs&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng;
+            const usgsUrl = config.ajaxUrl + '?action=dccgg_usgs&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng + debugSuffix;
             fetch(usgsUrl, { credentials: 'same-origin' })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) console.warn('[DCCGG conditions] usgs HTTP ' + r.status);
+                    return r.json();
+                })
                 .then(json => {
+                    logIfDebug('usgs', json);
+                    surfaceDebug('usgs', json);
                     if (!json || !json.success || !json.data || !json.data.available) return;
                     cards.forEach(card => renderLakeRow(card, json.data));
                 })
-                .catch(() => {});
+                .catch((err) => { console.warn('[DCCGG conditions] usgs fetch failed', err); });
         }
     }
 
-    // Card 3: barometric pressure + 3-hour trend.
+    function attachDebugBlock(card, label, payload) {
+        let pre = card.querySelector('.dccgg-debug-conditions');
+        if (!pre) {
+            pre = document.createElement('pre');
+            pre.className = 'dccgg-debug-conditions';
+            pre.textContent = '';
+            card.appendChild(pre);
+        }
+        pre.textContent += '--- ' + label + ' ---\n' + JSON.stringify(payload, null, 2) + '\n\n';
+    }
+
+    // Card 3: barometric pressure + 3-hour trend. Open-Meteo returns
+    // surface_pressure in hPa (v0.9.7.13: we dropped `pressure_unit=inhg`
+    // because Open-Meteo doesn't support it as a unit) so we convert to
+    // inHg client-side: 1 hPa = 0.02953 inHg.
+    const HPA_TO_INHG = 0.02953;
     function renderPressureRow(card, d) {
         const row = card.querySelector('.dccgg-cond-pressure');
         if (!row) return;
-        const cur = d.current && typeof d.current.surface_pressure === 'number' ? d.current.surface_pressure : null;
-        if (cur == null) return;
-        // Open-Meteo's hourly array is local-time-aligned; past_hours=6 is on
-        // the request so index 0..6 are the last six hours, then current.
+        const curHpa = d.current && typeof d.current.surface_pressure === 'number' ? d.current.surface_pressure : null;
+        if (curHpa == null) return;
+        const cur = curHpa * HPA_TO_INHG;
+        // Hourly surface_pressure comes from past_days=1, so the array spans
+        // ~yesterday + today's forecast. Pick the entry nearest (now - 3h).
         let past = null;
         if (d.current && d.current.time && d.hourly && Array.isArray(d.hourly.surface_pressure) && Array.isArray(d.hourly.time)) {
-            // Find the index closest to (now - 3h).
             const target = Date.parse(d.current.time) - 3 * 3600 * 1000;
             let bestIdx = -1;
             let bestDelta = Infinity;
@@ -908,13 +969,18 @@
                 if (dt < bestDelta) { bestDelta = dt; bestIdx = i; }
             }
             if (bestIdx >= 0 && typeof d.hourly.surface_pressure[bestIdx] === 'number') {
-                past = d.hourly.surface_pressure[bestIdx];
+                past = d.hourly.surface_pressure[bestIdx] * HPA_TO_INHG;
             }
         }
-        const delta = past != null ? cur - past : 0;
+        // When hourly history is missing entirely, fall back to "steady"
+        // instead of computing against zero (which v0.9.7.12 mis-tagged as
+        // "rising — bass more active" for everyone).
         let arrow = '→', takeaway = 'steady pressure — bite predictable';
-        if (delta >= 0.04)      { arrow = '↑'; takeaway = 'bass more active'; }
-        else if (delta <= -0.04){ arrow = '↓'; takeaway = 'bite often slow, then picks up before storms'; }
+        if (past != null) {
+            const delta = cur - past;
+            if (delta >= 0.04)       { arrow = '↑'; takeaway = 'bass more active'; }
+            else if (delta <= -0.04) { arrow = '↓'; takeaway = 'bite often slow, then picks up before storms'; }
+        }
         row.querySelector('.dccgg-cond-v').textContent = cur.toFixed(2) + ' in ' + arrow;
         row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
         row.hidden = false;

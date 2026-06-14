@@ -3135,3 +3135,25 @@ video.dccgg-media {
 .dccgg-root.dccgg-root .dccgg-cond-extra .dccgg-cond-takeaway:empty { display: none; }
 .dccgg-root.dccgg-root .dccgg-cond-heat--red .dccgg-cond-v,
 .dccgg-root.dccgg-root .dccgg-cond-heat--red .dccgg-cond-takeaway { color: #b3261e; }
+
+/* v0.9.7.13: debug overlay rendered when ?dccgg-debug-conditions=1 is
+   present in the URL. Each upstream payload (weather, noaa, usgs) is
+   dumped here so the host can paste the raw shapes back for diagnosis
+   without opening DevTools. */
+.dccgg-root.dccgg-root .dccgg-debug-conditions {
+    margin: 12px 0 0;
+    padding: 8px 10px;
+    background: rgba(15, 109, 191, 0.06);
+    border: 1px dashed rgba(15, 109, 191, 0.35);
+    border-radius: 6px;
+    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: color-mix(in srgb, var(--dccgg-text, #111) 80%, transparent);
+    max-height: 320px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* v0.9.7.13: keep the FA icon on extra review platform buttons aligned
+   with the label text. */
+.dccgg-root.dccgg-root .dccgg-review-platform-ico { margin-right: 6px; }

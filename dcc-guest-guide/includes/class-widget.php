@@ -613,6 +613,17 @@ final class Widget extends Widget_Base
             'description'  => __('Adds NWS alert banner, Harris Chain lake water level + surface temp, pressure trend, wind + leeward-shore tip, UV index, heat-index, and solunar feeding windows to the Conditions side-card. Each row hides itself if its data source returns nothing.', 'dcc-guest-guide'),
         ]);
 
+        $this->add_control('conditions_position', [
+            'label'       => __('Conditions card position', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'first',
+            'options'     => [
+                'first' => __('First — above the items', 'dcc-guest-guide'),
+                'last'  => __('Last — after the items', 'dcc-guest-guide'),
+            ],
+            'description' => __('Where the side-card sits inside each popup that has it enabled.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('enable_ai_search', [
             'label'        => __('Enable AI fallback search', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -1289,6 +1300,34 @@ final class Widget extends Widget_Base
             'description'   => __('e.g. https://g.page/r/.../review', 'dcc-guest-guide'),
         ]);
 
+        $extras = new Repeater();
+        $extras->add_control('extra_label', [
+            'label'       => __('Platform label', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Shown on the button (e.g. "Booking.com", "TripAdvisor").', 'dcc-guest-guide'),
+        ]);
+        $extras->add_control('extra_url', [
+            'label'         => __('Review URL', 'dcc-guest-guide'),
+            'type'          => Controls_Manager::URL,
+            'show_external' => true,
+            'default'       => ['url' => '', 'is_external' => true],
+        ]);
+        $extras->add_control('extra_icon', [
+            'label'   => __('Icon', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::ICONS,
+            'default' => ['value' => 'fas fa-star', 'library' => 'solid'],
+        ]);
+
+        $this->add_control('review_extras', [
+            'label'       => __('Additional review platforms', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::REPEATER,
+            'fields'      => $extras->get_controls(),
+            'title_field' => '{{{ extra_label || "Platform" }}}',
+            'condition'   => ['enable_checkout_review' => 'yes'],
+            'description' => __('Extra review platforms beyond Airbnb / Vrbo / Google. Each row needs a label, URL, and icon.', 'dcc-guest-guide'),
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -1349,8 +1388,10 @@ final class Widget extends Widget_Base
             'str_review_copy_airbnb' => [__('Copy & open Airbnb', 'dcc-guest-guide'),                __('Copy & open Airbnb', 'dcc-guest-guide')],
             'str_review_copy_vrbo'   => [__('Copy & open Vrbo', 'dcc-guest-guide'),                  __('Copy & open Vrbo', 'dcc-guest-guide')],
             'str_review_copy_google' => [__('Copy & open Google', 'dcc-guest-guide'),                __('Copy & open Google', 'dcc-guest-guide')],
+            'str_review_copy_extra'  => [__('Extra platforms button prefix', 'dcc-guest-guide'),     __('Copy & open', 'dcc-guest-guide')],
             'str_review_copied'      => [__('Review copied toast', 'dcc-guest-guide'),               __('Review text copied — paste it after the page opens.', 'dcc-guest-guide')],
             'str_review_thanks'      => [__('Review prompt collapsed thanks', 'dcc-guest-guide'),    __('Thanks for the feedback!', 'dcc-guest-guide')],
+            'str_conditions_title'   => [__('Conditions card heading', 'dcc-guest-guide'),           __('At the cottage today', 'dcc-guest-guide')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -2752,6 +2793,20 @@ final class Widget extends Widget_Base
                     'vrbo'   => (string) ($s['review_vrbo_url']['url']   ?? ''),
                     'google' => (string) ($s['review_google_url']['url'] ?? ''),
                 ],
+                'extras'  => array_values(array_filter(array_map(static function ($row) {
+                    if (!is_array($row)) { return null; }
+                    $url = trim((string) ($row['extra_url']['url'] ?? ''));
+                    if ($url === '') { return null; }
+                    $icon = is_array($row['extra_icon'] ?? null) ? $row['extra_icon'] : null;
+                    return [
+                        'label' => (string) ($row['extra_label'] ?? ''),
+                        'url'   => $url,
+                        'icon'  => $icon ? [
+                            'value'   => (string) ($icon['value']   ?? ''),
+                            'library' => (string) ($icon['library'] ?? ''),
+                        ] : null,
+                    ];
+                }, (array) ($s['review_extras'] ?? [])))),
                 'strings' => [
                     'heading'    => (string) ($s['str_review_heading']     ?? __('How was your stay?', 'dcc-guest-guide')),
                     'yes'        => (string) ($s['str_review_yes']         ?? __('Loved it', 'dcc-guest-guide')),
@@ -2760,6 +2815,7 @@ final class Widget extends Widget_Base
                     'copyAirbnb' => (string) ($s['str_review_copy_airbnb'] ?? __('Copy & open Airbnb', 'dcc-guest-guide')),
                     'copyVrbo'   => (string) ($s['str_review_copy_vrbo']   ?? __('Copy & open Vrbo', 'dcc-guest-guide')),
                     'copyGoogle' => (string) ($s['str_review_copy_google'] ?? __('Copy & open Google', 'dcc-guest-guide')),
+                    'copyExtra'  => (string) ($s['str_review_copy_extra']  ?? __('Copy & open', 'dcc-guest-guide')),
                     'copied'     => (string) ($s['str_review_copied']      ?? __('Review text copied.', 'dcc-guest-guide')),
                     'thanks'     => (string) ($s['str_review_thanks']      ?? __('Thanks for the feedback!', 'dcc-guest-guide')),
                 ],
@@ -3165,7 +3221,13 @@ final class Widget extends Widget_Base
                                 </ul>
                             </nav>
                         <?php endif; ?>
-                        <?php if ($show_cond) : self::render_conditions_card($lat, $lng, ($s['enable_conditions_extras'] ?? 'yes') === 'yes'); endif; ?>
+                        <?php
+                        // v0.9.7.13: conditions card position — "first" (above items, original behavior) or "last" (after items).
+                        $cond_extras   = ($s['enable_conditions_extras'] ?? 'yes') === 'yes';
+                        $cond_position = ($s['conditions_position'] ?? 'first') === 'last' ? 'last' : 'first';
+                        $cond_title    = (string) ($s['str_conditions_title'] ?? __('At the cottage today', 'dcc-guest-guide'));
+                        ?>
+                        <?php if ($show_cond && $cond_position === 'first') : self::render_conditions_card($lat, $lng, $cond_extras, $cond_title); endif; ?>
                         <?php if ($role === 'emergency') : self::render_emergency_contacts($emergency_contacts_render, $label_911); endif; ?>
                         <?php if ($wizard) : ?>
                             <?php $this->render_wizard($items, $s); ?>
@@ -3186,6 +3248,7 @@ final class Widget extends Widget_Base
                                 } ?>
                             </div>
                         <?php endif; ?>
+                        <?php if ($show_cond && $cond_position === 'last') : self::render_conditions_card($lat, $lng, $cond_extras, $cond_title); endif; ?>
                         <?php if ($role === 'checkout' && ($s['enable_checkout_review'] ?? '') === 'yes') : $this->render_review_prompt($s, $title); endif; ?>
                     </div>
                 </div>
@@ -3720,12 +3783,13 @@ final class Widget extends Widget_Base
      * a placeholder that the frontend fills via admin-ajax on load. Rows
      * with no data hide themselves — never show "—" or an error state.
      */
-    public static function render_conditions_card(float $lat, float $lng, bool $extras = true): void
+    public static function render_conditions_card(float $lat, float $lng, bool $extras = true, string $title = ''): void
     {
         $c = self::compute_conditions($lat, $lng);
+        $title = trim($title) !== '' ? $title : __('At the cottage today', 'dcc-guest-guide');
         ?>
-        <aside class="dccgg-conditions" data-lat="<?php echo esc_attr((string) $lat); ?>" data-lng="<?php echo esc_attr((string) $lng); ?>" aria-label="<?php echo esc_attr__('Today at the cottage', 'dcc-guest-guide'); ?>">
-            <h3 class="dccgg-conditions-title"><?php esc_html_e('At the cottage today', 'dcc-guest-guide'); ?></h3>
+        <aside class="dccgg-conditions" data-lat="<?php echo esc_attr((string) $lat); ?>" data-lng="<?php echo esc_attr((string) $lng); ?>" aria-label="<?php echo esc_attr($title); ?>">
+            <h3 class="dccgg-conditions-title"><?php echo esc_html($title); ?></h3>
             <?php if ($extras) : ?>
                 <div class="dccgg-cond-alert" role="status" hidden>
                     <span class="dccgg-cond-alert-ico" aria-hidden="true">🚨</span>

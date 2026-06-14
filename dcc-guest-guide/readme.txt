@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.12
+Stable tag: 0.9.7.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,46 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.13 =
+
+* **Conditions card reliability fixes.** The v0.9.7.12 extended rows
+  were silently degrading because the Open-Meteo proxy was sending
+  two unsupported parameters — `past_hours=6` and
+  `pressure_unit=inhg`. The proxy now uses Open-Meteo's documented
+  `past_days=1` for historical hours and returns pressure in hPa;
+  the JS converts hPa to inHg client-side (×0.02953). The pressure
+  trend row now reads as a sane ~30 inHg instead of misclassifying
+  a "1019" hPa value as "rising — bass more active." The trend
+  arrow falls back to "steady" when no historical pressure is
+  available, instead of computing against zero.
+* **USGS fallback chain.** If the closest Harris Chain gauge (Lake
+  Dora) returns no usable gauge height or surface temperature, the
+  proxy now walks down to Lake Eustis and then Lake Harris before
+  giving up. Whichever lake first satisfies the lookup is reported
+  by name on the card. The 30-min transient cache is now keyed by
+  cottage lat/lng (was per-site), so the fallback is sticky across
+  visitors.
+* **Conditions debug mode.** Append `?dccgg-debug-conditions=1` to
+  any guide page URL to render a `<pre>` block beneath every visible
+  conditions card showing the raw weather / NWS / USGS payloads, AND
+  emit `[DCCGG conditions]` console.log lines. Both AJAX endpoints
+  honor `&debug=1` and include upstream HTTP status, tried-URL list,
+  and a body excerpt on failure. Hidden in normal use.
+* **Conditions card position toggle.** New General-tab setting
+  *Conditions card position* — *First — above the items* (default,
+  the v0.9.7.12 behavior) or *Last — after the items*. Source-order
+  change only; the float behavior stays as today.
+* **Conditions card title is editable.** New string control
+  *Conditions card heading* under Strings — defaults to "At the
+  cottage today" if blank.
+* **Extra review platforms as a repeater.** The three named slots
+  (Airbnb / Vrbo / Google) stay exactly as they were — your existing
+  URLs are untouched. A new repeater *Additional review platforms*
+  underneath them lets you add any number of extras with a Platform
+  label, Review URL, and Icon (Elementor's Font Awesome picker).
+  Each populated extra renders as another platform button on the
+  checkout review prompt, sharing the same copy-and-open behavior.
 
 = 0.9.7.12 =
 
