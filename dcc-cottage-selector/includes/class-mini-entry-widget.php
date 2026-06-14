@@ -125,6 +125,24 @@ class Mini_Entry_Widget extends Widget_Base
     }
 
     /**
+     * Build the deep-link query string that pre-fills the selector for a cottage
+     * (soft Quick-Pick preferences derived from its attributes, plus highlight).
+     * Mirrors derivePresetQuick() in selector.js.
+     */
+    private static function deeplink_for(string $id): string
+    {
+        $c = Data::find($id);
+        $args = ['mode' => 'quick', 'highlight' => $id];
+        if ($c) {
+            if (!empty($c['desk'])) { $args['desk'] = 'yes'; }
+            if (!empty($c['pulloutCouch'])) { $args['pullout'] = 'yes'; }
+            $args['layout'] = (($c['layoutType'] ?? '') === 'Studio') ? 'studio' : 'onebed';
+            if ((int) ($c['squareFeet'] ?? 0) >= 400) { $args['largest'] = 'true'; }
+        }
+        return http_build_query($args);
+    }
+
+    /**
      * Shared markup for both the widget and shortcode.
      */
     private static function markup(string $current, string $selector_url, string $copy): string
@@ -134,12 +152,17 @@ class Mini_Entry_Widget extends Widget_Base
             'selectorUrl' => $selector_url,
         ];
 
-        // Only embed the full selector config when we'll open a same-page modal.
         if ($selector_url === '') {
+            // Same-page modal: embed the full selector config (opened in Quick Pick,
+            // highlighting this cottage — preferences are derived client-side).
             $entry['modalConfig'] = Config::build([], [
                 'highlight' => $current,
-                'startMode' => 'compare',
+                'startMode' => 'quick',
             ]);
+        } else {
+            // Linked selector page: pre-build the deep-link query from this cottage
+            // so the destination opens pre-filled and highlighting it.
+            $entry['deeplink'] = self::deeplink_for($current);
         }
 
         $label = $copy !== '' ? $copy : self::default_copy();

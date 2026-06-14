@@ -39,12 +39,25 @@
   /* ---------- state ---------- */
 
   function defaultState(config) {
+    var quick = { desk: 'either', pullout: 'either', layout: 'either', dining: 'either', pet: 'no', ground: 'no', largest: 'no' };
+    if (config.presetQuick) { Object.keys(config.presetQuick).forEach(function (k) { quick[k] = config.presetQuick[k]; }); }
     return {
       mode: config.startMode || 'quick',
-      quick: { desk: 'either', pullout: 'either', layout: 'either', dining: 'either', pet: 'no', ground: 'no', largest: 'no' },
+      quick: quick,
       weights: { workspace: 1, moreroom: 1, fewerstairs: 1, pet: 1, studio: 1, onebed: 1, dining: 1, pullout: 1 },
       compareIds: (config.preCompare || []).slice(0, 4).map(String),
       highlight: config.highlight || ''
+    };
+  }
+
+  /** Soft Quick-Pick preferences that describe a given cottage (no hard filters,
+      so every cottage stays rankable and the guest sees full positioning). */
+  function derivePresetQuick(c) {
+    return {
+      desk: c.desk ? 'yes' : 'either',
+      pullout: c.pulloutCouch ? 'yes' : 'either',
+      layout: c.layoutType === 'Studio' ? 'studio' : 'onebed',
+      largest: Number(c.squareFeet) >= 400 ? 'yes' : 'no'
     };
   }
 
@@ -99,6 +112,7 @@
       if (v && LVL[v]) { state.weights[k] = LVL[v]; }
     });
 
+    if (p.get('highlight')) { state.highlight = p.get('highlight'); }
     if (config.highlight) { state.highlight = config.highlight; }
   }
 
@@ -114,18 +128,27 @@
     syncUrl(state);
   }
 
+  var LVL_NAME = { 1: 'low', 2: 'medium', 3: 'high' };
+
   function syncUrl(state) {
     if (!window.history || !window.history.replaceState) { return; }
     var p = new URLSearchParams();
     p.set('mode', state.mode);
-    if (state.quick.pet === 'yes') { p.set('pet', 'true'); }
-    if (state.quick.ground === 'yes') { p.set('ground', 'true'); }
-    if (state.quick.largest === 'yes') { p.set('largest', 'true'); }
-    if (state.quick.desk !== 'either') { p.set('desk', state.quick.desk); }
-    if (state.quick.pullout !== 'either') { p.set('pullout', state.quick.pullout); }
-    if (state.quick.layout !== 'either') { p.set('layout', state.quick.layout); }
-    if (state.quick.dining !== 'either') { p.set('dining', String(state.quick.dining)); }
+    if (state.mode === 'weights') {
+      Object.keys(state.weights).forEach(function (k) {
+        if (Number(state.weights[k]) !== 1) { p.set('w_' + k, LVL_NAME[state.weights[k]] || String(state.weights[k])); }
+      });
+    } else {
+      if (state.quick.pet === 'yes') { p.set('pet', 'true'); }
+      if (state.quick.ground === 'yes') { p.set('ground', 'true'); }
+      if (state.quick.largest === 'yes') { p.set('largest', 'true'); }
+      if (state.quick.desk !== 'either') { p.set('desk', state.quick.desk); }
+      if (state.quick.pullout !== 'either') { p.set('pullout', state.quick.pullout); }
+      if (state.quick.layout !== 'either') { p.set('layout', state.quick.layout); }
+      if (state.quick.dining !== 'either') { p.set('dining', String(state.quick.dining)); }
+    }
     if (state.mode === 'compare' && state.compareIds.length) { p.set('compare', state.compareIds.join(',')); }
+    if (state.highlight) { p.set('highlight', state.highlight); }
     try { window.history.replaceState(null, '', window.location.pathname + '?' + p.toString()); } catch (e) { /* ignore */ }
   }
 
@@ -264,38 +287,24 @@
       return html;
     }
 
-    var top = DCCS.score.dedupe(res.results.slice(0, 3), config.diffFields);
+    var ranked = res.results;
+    var top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
     html += '<h3 class="dccs-results-h">' + esc(S.results_heading) + '</h3>';
 
-    top.forEach(function (c) {
-      var isHi = st.highlight && String(st.highlight) === String(c.id);
-      html += '<div class="dccs-card' + (isHi ? ' is-highlight' : '') + '">';
-      html += '<div class="dccs-card-head"><h4>' + esc(c.name) + '</h4></div>';
+    top.forEach(function (c) { html += buildCard(c, config, st, crit, ''); });
 
-      var badges = DCCS.labels.badges(c).map(function (b) { return S['badge_' + b]; }).filter(Boolean);
-      if (badges.length) {
-        html += '<div class="dccs-badges">' + badges.slice(0, 3).map(function (b) {
-          return '<span class="dccs-badge">' + esc(b) + '</span>';
-        }).join('') + '</div>';
+    // Always surface the highlighted cottage (mini-entry / deep link), even if it
+    // didn't make the top three — showing its rank makes its positioning clear.
+    if (st.highlight) {
+      var inTop = top.some(function (c) { return String(c.id) === String(st.highlight); });
+      if (!inTop) {
+        var hc = findCottage(config, st.highlight);
+        var idx = ranked.map(function (c) { return String(c.id); }).indexOf(String(st.highlight));
+        if (hc && idx !== -1) {
+          html += buildCard(hc, config, st, crit, fmt(S.rank_label, idx + 1));
+        }
       }
-
-      var reasons = DCCS.labels.whyFits(c, crit).map(function (k) { return S['why_' + k]; }).filter(Boolean);
-      if (reasons.length) {
-        html += '<p class="dccs-why"><strong>' + esc(S.why_heading) + ':</strong> ' +
-          esc(S.why_lead) + ' ' + esc(joinList(reasons)) + '.</p>';
-      }
-
-      if (c.duplicateOf) {
-        var other = findCottage(config, c.duplicateOf);
-        if (other) { html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, other.name)) + '</p>'; }
-      }
-
-      html += '<div class="dccs-card-actions">' +
-        '<a class="dccs-view" href="' + esc(c.pageUrl) + '">' + esc(S.view_cottage) + '</a>' +
-        '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
-        (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + esc(S.add_compare) + '</label>' +
-        '</div></div>';
-    });
+    }
 
     if (res.excluded.length) {
       html += '<details class="dccs-excluded"><summary>' + esc(S.excluded_toggle) + '</summary><ul>';
@@ -307,6 +316,39 @@
     }
 
     html += '</div>';
+    return html;
+  }
+
+  function buildCard(c, config, st, crit, rankLabel) {
+    var S = config.strings;
+    var isHi = st.highlight && String(st.highlight) === String(c.id);
+    var html = '<div class="dccs-card' + (isHi ? ' is-highlight' : '') + '">';
+    html += '<div class="dccs-card-head"><h4>' + esc(c.name) +
+      (rankLabel ? ' <span class="dccs-rank">' + esc(rankLabel) + '</span>' : '') + '</h4></div>';
+
+    var badges = DCCS.labels.badges(c).map(function (b) { return S['badge_' + b]; }).filter(Boolean);
+    if (badges.length) {
+      html += '<div class="dccs-badges">' + badges.slice(0, 3).map(function (b) {
+        return '<span class="dccs-badge">' + esc(b) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    var reasons = DCCS.labels.whyFits(c, crit).map(function (k) { return S['why_' + k]; }).filter(Boolean);
+    if (reasons.length) {
+      html += '<p class="dccs-why"><strong>' + esc(S.why_heading) + ':</strong> ' +
+        esc(S.why_lead) + ' ' + esc(joinList(reasons)) + '.</p>';
+    }
+
+    if (c.duplicateOf) {
+      var other = findCottage(config, c.duplicateOf);
+      if (other) { html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, other.name)) + '</p>'; }
+    }
+
+    html += '<div class="dccs-card-actions">' +
+      '<a class="dccs-view" href="' + esc(c.pageUrl) + '">' + esc(S.view_cottage) + '</a>' +
+      '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
+      (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + esc(S.add_compare) + '</label>' +
+      '</div></div>';
     return html;
   }
 
@@ -339,12 +381,15 @@
       : renderQuick(S, state);
 
     var results = state.mode === 'compare' ? '' : renderResults(config, state);
+    var cta = state.mode === 'compare' ? '' :
+      '<div class="dccs-cta-bar"><button type="button" class="dccs-see-results">' + esc(S.see_matches) + '</button></div>';
 
     root.innerHTML =
       head +
       '<div class="dccs-tabs" role="tablist">' + tabs + '</div>' +
       '<div class="dccs-body">' + body + '</div>' +
       results +
+      cta +
       '<div class="dccs-footer"><button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div>';
   }
 
@@ -380,6 +425,11 @@
         state = defaultState(config);
         try { window.localStorage.removeItem(STORE_KEY); } catch (err) { /* ignore */ }
         persist(config, state); rerender(); return;
+      }
+      if (t.classList.contains('dccs-see-results')) {
+        var res = root.querySelector('.dccs-results');
+        if (res && res.scrollIntoView) { res.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        return;
       }
     });
 
@@ -421,28 +471,26 @@
 
     btn.addEventListener('click', function () {
       if (entry.selectorUrl) {
+        var q = entry.deeplink || ('highlight=' + encodeURIComponent(entry.current || '') + '&mode=quick');
         var sep = entry.selectorUrl.indexOf('?') === -1 ? '?' : '&';
-        window.location.href = entry.selectorUrl + sep + 'highlight=' + encodeURIComponent(entry.current || '') + '&mode=compare';
+        window.location.href = entry.selectorUrl + sep + q;
         return;
       }
-      openModal(entry);
+      openModal(entry, btn);
     });
   }
 
-  function openModal(entry) {
+  function openModal(entry, trigger) {
     var config = entry.modalConfig;
     if (!config) { return; }
 
-    // Pre-select the highlighted cottage plus a few others for context, and
-    // open straight into Compare so guests see exactly how it stacks up.
-    config.startMode = 'compare';
-    config.remember = false; // a contextual pop-up shouldn't overwrite saved prefs
-    config.preCompare = [String(entry.current)];
-    (config.cottages || []).forEach(function (c) {
-      if (config.preCompare.length < 4 && String(c.id) !== String(entry.current)) {
-        config.preCompare.push(String(c.id));
-      }
-    });
+    // Open in Quick Pick with soft preferences derived from this cottage and the
+    // cottage highlighted, so the guest sees exactly how it ranks vs the others.
+    var current = findCottageIn(config.cottages, entry.current);
+    config.startMode = 'quick';
+    config.remember = false; // a contextual pop-up must not overwrite saved prefs
+    config.highlight = String(entry.current);
+    if (current) { config.presetQuick = derivePresetQuick(current); }
 
     var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true"><div class="dccs-modal-box">' +
       '<button type="button" class="dccs-modal-close" aria-label="Close">&times;</button>' +
@@ -453,10 +501,38 @@
     initSelector(inner);            // sets data-dccs-ready before insertion
     document.body.appendChild(overlay);
 
-    function close() { if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); } document.removeEventListener('keydown', onKey); }
-    function onKey(e) { if (e.key === 'Escape') { close(); } }
+    // Focus management: move focus in, trap Tab, restore on close.
+    var prevFocus = document.activeElement;
+    var closeBtn = overlay.querySelector('.dccs-modal-close');
+    if (closeBtn) { closeBtn.focus(); }
+
+    function focusables() {
+      return Array.prototype.slice.call(overlay.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    }
+    function close() {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      document.removeEventListener('keydown', onKey);
+      if (trigger && trigger.focus) { trigger.focus(); }
+      else if (prevFocus && prevFocus.focus) { prevFocus.focus(); }
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') {
+        var f = focusables();
+        if (!f.length) { return; }
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
     overlay.addEventListener('click', function (e) { if (e.target === overlay || e.target.closest('.dccs-modal-close')) { close(); } });
     document.addEventListener('keydown', onKey);
+  }
+
+  function findCottageIn(list, id) {
+    for (var i = 0; i < (list || []).length; i++) { if (String(list[i].id) === String(id)) { return list[i]; } }
+    return null;
   }
 
   /* ---------- boot ---------- */

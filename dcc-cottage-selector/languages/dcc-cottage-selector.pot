@@ -1,0 +1,320 @@
+# Dora Canal Cottage Selector
+# Copyright (C) 2026 Dora Canal Court
+# This file is distributed under GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Dora Canal Cottage Selector 0.1.0\n"
+"Report-Msgid-Bugs-To: https://doracanalcourt.com/\n"
+"POT-Creation-Date: 2026-06-14 15:09+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: \n"
+"X-Domain: dcc-cottage-selector\n"
+
+msgid "%d sq ft"
+msgstr ""
+
+msgid "%s hidden: no table for four."
+msgstr ""
+
+msgid "%s hidden: not pet-friendly."
+msgstr ""
+
+msgid "%s hidden: upstairs."
+msgstr ""
+
+msgid "1-bedroom"
+msgstr ""
+
+msgid "1-bedroom separation"
+msgstr ""
+
+msgid "Accent color"
+msgstr ""
+
+msgid "Accent text color"
+msgstr ""
+
+msgid "All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector)."
+msgstr ""
+
+msgid "All our cottages sleep two with a queen bed — here is what actually sets them apart. Answer a few quick questions and we will match you in seconds."
+msgstr ""
+
+msgid "Card background"
+msgstr ""
+
+msgid "Claude Code"
+msgstr ""
+
+msgid "Compact Escape"
+msgstr ""
+
+msgid "Compare"
+msgstr ""
+
+msgid "Content"
+msgstr ""
+
+msgid "Cottage Selector"
+msgstr ""
+
+msgid "Cottage Selector — Mini Entry"
+msgstr ""
+
+msgid "Desk / workspace"
+msgstr ""
+
+msgid "Dining comfort"
+msgstr ""
+
+msgid "Dining table"
+msgstr ""
+
+msgid "Do you need a desk for work?"
+msgstr ""
+
+msgid "Do you need a pet-friendly cottage?"
+msgstr ""
+
+msgid "Do you want a pullout couch?"
+msgstr ""
+
+msgid "Dora Canal Cottage Selector works best with Elementor active; the [dcc_selector_entry] shortcode still works without it."
+msgstr ""
+
+msgid "Easy-Access Ground Floor"
+msgstr ""
+
+msgid "Enabled modes"
+msgstr ""
+
+msgid "Fewer stairs"
+msgstr ""
+
+msgid "Find your perfect cottage"
+msgstr ""
+
+msgid "Floor"
+msgstr ""
+
+msgid "Great because it offers"
+msgstr ""
+
+msgid "Ground floor only?"
+msgstr ""
+
+msgid "Heading"
+msgstr ""
+
+msgid "High"
+msgstr ""
+
+msgid "Intro text"
+msgstr ""
+
+msgid "Layout"
+msgstr ""
+
+msgid "Leave blank to open the selector in a pop-up on this page."
+msgstr ""
+
+msgid "Loading…"
+msgstr ""
+
+msgid "Low"
+msgstr ""
+
+msgid "Medium"
+msgstr ""
+
+msgid "More room"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "No cottage meets every must-have"
+msgstr ""
+
+msgid "No preference"
+msgstr ""
+
+msgid "Not sure this layout fits you best? Open our 30-Second Selector."
+msgstr ""
+
+msgid "Note: this cottage has an identical layout and features to %s."
+msgstr ""
+
+msgid "Pet Stay Cottage"
+msgstr ""
+
+msgid "Pet-friendly"
+msgstr ""
+
+msgid "Pets"
+msgstr ""
+
+msgid "Pick 2 to 4 cottages to compare side by side."
+msgstr ""
+
+msgid "Prompt text"
+msgstr ""
+
+msgid "Pullout couch"
+msgstr ""
+
+msgid "Pullout couch flexibility"
+msgstr ""
+
+msgid "Quick Pick"
+msgstr ""
+
+msgid "Ranked #%d for you"
+msgstr ""
+
+msgid "Remember visitor choices"
+msgstr ""
+
+msgid "Reset button"
+msgstr ""
+
+msgid "Results heading"
+msgstr ""
+
+msgid "Saves the last preferences in the browser so returning guests resume where they left off."
+msgstr ""
+
+msgid "Seats %d"
+msgstr ""
+
+msgid "See my matches"
+msgstr ""
+
+msgid "Selector page URL"
+msgstr ""
+
+msgid "Show heading"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Spacious Retreat"
+msgstr ""
+
+msgid "Start over"
+msgstr ""
+
+msgid "Starting mode"
+msgstr ""
+
+msgid "Studio"
+msgstr ""
+
+msgid "Studio or 1-bedroom?"
+msgstr ""
+
+msgid "Studio simplicity"
+msgstr ""
+
+msgid "Style"
+msgstr ""
+
+msgid "Suite-Style Comfort"
+msgstr ""
+
+msgid "Tab: Compare"
+msgstr ""
+
+msgid "Tab: Quick Pick"
+msgstr ""
+
+msgid "Tab: What Matters Most"
+msgstr ""
+
+msgid "Table for 2"
+msgstr ""
+
+msgid "Table for 4"
+msgstr ""
+
+msgid "Table for two or four?"
+msgstr ""
+
+msgid "Tap to set how much each thing matters to you."
+msgstr ""
+
+msgid "Text & labels"
+msgstr ""
+
+msgid "Text color"
+msgstr ""
+
+msgid "The cottage selector is temporarily unavailable."
+msgstr ""
+
+msgid "This cottage"
+msgstr ""
+
+msgid "Try relaxing “%s” — here are the closest options."
+msgstr ""
+
+msgid "Upstairs Quiet View"
+msgstr ""
+
+msgid "View this cottage"
+msgstr ""
+
+msgid "Want the largest space available?"
+msgstr ""
+
+msgid "What Matters Most"
+msgstr ""
+
+msgid "Why aren’t the others shown?"
+msgstr ""
+
+msgid "Why this fits your trip"
+msgstr ""
+
+msgid "Work-Friendly Hideaway"
+msgstr ""
+
+msgid "Workspace"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "Your top matches"
+msgstr ""
+
+msgid "a dedicated desk for getting work done"
+msgstr ""
+
+msgid "a dining table that seats four"
+msgstr ""
+
+msgid "a pullout couch for an extra guest"
+msgstr ""
+
+msgid "a separate bedroom for privacy"
+msgstr ""
+
+msgid "a simple, open studio layout"
+msgstr ""
+
+msgid "a warm welcome for your pet"
+msgstr ""
+
+msgid "easy ground-floor access, no stairs"
+msgstr ""
+
+msgid "the most square footage of the bunch"
+msgstr ""
+
+msgid "— None —"
+msgstr ""
+

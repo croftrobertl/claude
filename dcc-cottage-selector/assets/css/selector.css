@@ -131,6 +131,23 @@
 .dccs-root.dccs-root .dccs-excluded summary { cursor: pointer; }
 .dccs-root.dccs-root .dccs-excluded ul { margin: 8px 0 0; padding-left: 18px; }
 
+.dccs-root.dccs-root .dccs-rank {
+  font-size: 0.78rem; font-weight: 700; color: var(--dccs-accent);
+  background: rgba(15,109,191,0.1); border-radius: 999px; padding: 2px 8px; vertical-align: middle;
+}
+
+/* Sticky "See my matches" bar — keeps the call-to-action in reach on mobile. */
+.dccs-root.dccs-root .dccs-cta-bar {
+  position: sticky; bottom: 8px; z-index: 5; margin-top: 14px;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.dccs-root.dccs-root .dccs-see-results {
+  pointer-events: auto; min-height: 46px; padding: 10px 24px;
+  border: 0; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 1rem;
+  background: var(--dccs-accent); color: var(--dccs-accent-text);
+  box-shadow: 0 6px 16px rgba(15,109,191,0.32);
+}
+
 .dccs-root.dccs-root .dccs-footer { margin-top: 12px; }
 .dccs-root.dccs-root .dccs-reset {
   min-height: 44px; padding: 8px 18px; border-radius: 999px;
