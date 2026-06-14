@@ -1,0 +1,98 @@
+[
+  {
+    "id": "22",
+    "name": "The Boathouse",
+    "squareFeet": 400,
+    "pulloutCouch": true,
+    "desk": true,
+    "floorLevel": "Ground Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 4,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-22/"
+  },
+  {
+    "id": "23",
+    "name": "The Lighthouse",
+    "squareFeet": 400,
+    "pulloutCouch": true,
+    "desk": true,
+    "floorLevel": "Second Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-23/"
+  },
+  {
+    "id": "31",
+    "name": "The Canal Side",
+    "squareFeet": 340,
+    "pulloutCouch": true,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-31/"
+  },
+  {
+    "id": "32",
+    "name": "The Heron's Rest",
+    "squareFeet": 340,
+    "pulloutCouch": true,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-32/"
+  },
+  {
+    "id": "33",
+    "name": "The Cozy Nest",
+    "squareFeet": 240,
+    "pulloutCouch": false,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "Studio",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-33/"
+  },
+  {
+    "id": "34",
+    "name": "Coconut Cottage",
+    "squareFeet": 240,
+    "pulloutCouch": false,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "Studio",
+    "diningSeats": 2,
+    "petAllowed": true,
+    "pageUrl": "/accommodation/cottage-34/"
+  },
+  {
+    "id": "35",
+    "name": "The Manatee Suite",
+    "squareFeet": 336,
+    "pulloutCouch": true,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-35/"
+  },
+  {
+    "id": "36",
+    "name": "Sunshine Suite",
+    "squareFeet": 336,
+    "pulloutCouch": true,
+    "desk": false,
+    "floorLevel": "Ground Floor",
+    "layoutType": "1-bedroom",
+    "diningSeats": 2,
+    "petAllowed": false,
+    "pageUrl": "/accommodation/cottage-36/"
+  }
+]
