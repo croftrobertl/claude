@@ -165,6 +165,14 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
+        $this->add_control('inherit_theme', [
+            'label'        => __('Match site theme colors', 'dcc-cottage-selector'),
+            'description'  => __('Use the theme\'s global colors instead of the built-in palette.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SWITCHER,
+            'default'      => '',
+            'return_value' => 'yes',
+        ]);
+
         $this->add_control('color_accent', [
             'label'     => __('Accent color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
@@ -235,8 +243,12 @@ class Selector_Widget extends Widget_Base
         }
 
         $strings = $config['strings'];
+        $root_class = 'dccs-root dccs-root';
+        if (($settings['inherit_theme'] ?? '') === 'yes') {
+            $root_class .= ' dccs-inherit-theme';
+        }
         ?>
-        <div class="dccs-root dccs-root" data-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
+        <div class="<?php echo esc_attr($root_class); ?>" data-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
             <noscript>
                 <ul class="dccs-noscript">
                     <?php foreach ($cottages as $c) : ?>

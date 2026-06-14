@@ -30,6 +30,22 @@
 .dccs-root.dccs-root *::before,
 .dccs-root.dccs-root *::after { box-sizing: border-box; }
 
+/* Optional: inherit the site/Elementor global palette (matches sibling plugins'
+   .gguide-inherit-theme / .mphbac-inherit-theme), falling back to the baked
+   brand colors when the theme doesn't define globals. */
+.dccs-root.dccs-root.dccs-inherit-theme {
+  --dccs-accent: var(--e-global-color-primary, #0f6dbf);
+  --dccs-accent-2: var(--e-global-color-secondary, #f08080);
+  --dccs-text: var(--e-global-color-text, #1a2330);
+}
+
+/* Screen-reader-only live region. */
+.dccs-root.dccs-root .dccs-sr-only {
+  position: absolute !important; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
 .dccs-root.dccs-root .dccs-head { margin-bottom: 14px; }
 .dccs-root.dccs-root .dccs-heading { margin: 0 0 4px; font-size: 1.4rem; line-height: 1.2; }
 .dccs-root.dccs-root .dccs-intro { margin: 0; color: var(--dccs-muted); font-size: 0.95rem; }

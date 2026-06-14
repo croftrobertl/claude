@@ -68,6 +68,19 @@ function cardNames(root) {
   ok('renders results region', !!root.querySelector('.dccs-results'));
   ok('renders sticky CTA', !!root.querySelector('.dccs-see-results'));
   ok('live count starts at 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
+  ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
+  ok('sr region announces a summary', /\d/.test(root.querySelector('.dccs-sr-only').textContent));
+})();
+
+// ---- 1c. Live region is the SAME node across re-renders (so aria-live works) ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  const live1 = root.querySelector('.dccs-sr-only');
+  clickChip(root, 'pet', 'yes');
+  const live2 = root.querySelector('.dccs-sr-only');
+  ok('live region node persists across rerender', live1 === live2);
+  ok('live region text updates after filter', /\b1\b/.test(live2.textContent));
 })();
 
 // ---- 1b. Live match count updates as filters narrow ----

@@ -225,7 +225,7 @@
     var yn = [{ t: S.opt_yes, v: 'yes' }, { t: S.opt_no, v: 'no' }];
     var yne = [{ t: S.opt_yes, v: 'yes' }, { t: S.opt_no, v: 'no' }, { t: S.opt_either, v: 'either' }];
     var html = '<div class="dccs-quick">';
-    html += '<div class="dccs-count" aria-live="polite">' + esc(fmt(S.match_count, n)) + '</div>';
+    html += '<div class="dccs-count">' + esc(fmt(S.match_count, n)) + '</div>';
     html += chipRow(S.q_desk, 'desk', q.desk, yne);
     html += chipRow(S.q_pullout, 'pullout', q.pullout, yne);
     html += chipRow(S.q_layout, 'layout', q.layout, [{ t: S.opt_studio, v: 'studio' }, { t: S.opt_onebed, v: 'onebed' }, { t: S.opt_either, v: 'either' }]);
@@ -399,6 +399,17 @@
     return html;
   }
 
+  /** Update the screen-reader live region with the current match summary. */
+  function announce(live, config, state) {
+    var S = config.strings;
+    if (state.mode === 'compare') { live.textContent = ''; return; }
+    var res = DCCS.score.run(config.cottages, criteriaFromState(state));
+    var n = res.empty ? 0 : res.results.length;
+    var msg = fmt(S.match_count, n);
+    if (!res.empty && res.results[0]) { msg += '. ' + fmt(S.sr_top_match, res.results[0].name); }
+    live.textContent = msg;
+  }
+
   function ledgerField(reasonKey) {
     return { ex_pet: 'petAllowed', ex_upstairs: 'floorLevel', ex_dining: 'diningSeats' }[reasonKey] || 'squareFeet';
   }
@@ -456,10 +467,18 @@
 
     var state = buildState(config);
 
+    // Persistent screen-reader live region — kept across re-renders (re-appended,
+    // not recreated) so aria-live actually announces result changes.
+    var live = document.createElement('div');
+    live.className = 'dccs-sr-only';
+    live.setAttribute('aria-live', 'polite');
+
     // Re-render, preserving keyboard focus across the innerHTML swap.
     function rerender() {
       var key = root.contains(document.activeElement) ? focusKey(document.activeElement) : null;
       renderSelector(root, config, state);
+      root.appendChild(live);
+      announce(live, config, state);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
     }
     rerender();

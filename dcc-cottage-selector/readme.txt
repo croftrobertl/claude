@@ -42,6 +42,28 @@ The whole experience is client-side over a tiny bundled dataset
 Square footage · pullout couch · desk/workspace · floor level · studio vs.
 1-bedroom · dining table for 2 vs. 4 · pet policy.
 
+= How the three modes work =
+
+Everything runs in the browser from a small dataset inlined into the page — no
+server round-trips.
+
+* **Quick Pick** uses a strict two-phase engine. Phase 1 applies the hard filters
+  (pet-friendly, ground-floor-only, table-for-4) to narrow the pool; a live
+  "N cottages match" count updates as you tap. Phase 2 ranks whatever survives by
+  your softer preferences. If a hard filter leaves three or fewer cottages, they
+  are returned directly. If a combination is impossible (e.g. pet-friendly AND a
+  table for four), the closest matches are shown with a "relax this" hint.
+* **What Matters Most** scores every cottage by the Low/Medium/High weight you
+  give each priority — no hard filters.
+* **Compare** shows a side-by-side matrix of 2–4 cottages over the seven
+  differences, highlighting the cells that actually differ.
+
+Results show the top three with friendly badges, a short "why this fits" line,
+and a link to each cottage. Identical-layout cottages (e.g. two of the suites)
+are flagged so guests understand why both appear. Preferences are kept in the URL
+(shareable) and in the browser (remembered for return visits); a deep link such
+as ?pet=true&mode=quick opens the tool pre-filled.
+
 == Installation ==
 
 1. Upload the plugin zip via WP Admin → Plugins → Add New → Upload.

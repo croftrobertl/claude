@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Dora Canal Cottage Selector 0.1.0\n"
 "Report-Msgid-Bugs-To: https://doracanalcourt.com/\n"
-"POT-Creation-Date: 2026-06-14 15:30+0000\n"
+"POT-Creation-Date: 2026-06-14 16:10+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -129,6 +129,9 @@ msgid "Loading…"
 msgstr ""
 
 msgid "Low"
+msgstr ""
+
+msgid "Match site theme colors"
 msgstr ""
 
 msgid "Medium"
@@ -266,10 +269,16 @@ msgstr ""
 msgid "This cottage"
 msgstr ""
 
+msgid "Top match: %s"
+msgstr ""
+
 msgid "Try relaxing “%s” — here are the closest options."
 msgstr ""
 
 msgid "Upstairs Quiet View"
+msgstr ""
+
+msgid "Use the theme's global colors instead of the built-in palette."
 msgstr ""
 
 msgid "View this cottage"
