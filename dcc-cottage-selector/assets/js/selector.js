@@ -11,6 +11,7 @@
 
   var DCCS = window.DCCS = window.DCCS || {};
   var STORE_KEY = 'dccs_prefs_v1';
+  var UID = 0;
 
   /* ---------- small utilities ---------- */
 
@@ -27,6 +28,24 @@
   }
 
   function fmt(tpl, val) { return String(tpl).replace('%d', val).replace('%s', val); }
+
+  /** Allow only http(s), root-relative, or fragment URLs in hrefs. */
+  function safeUrl(u) {
+    u = String(u == null ? '' : u);
+    return /^(https?:\/\/|\/|#|\.\/|\.\.\/)/i.test(u) ? u : '#';
+  }
+
+  /** A stable selector for the focused control, used to restore focus on re-render. */
+  function focusKey(a) {
+    if (!a || !a.classList) { return null; }
+    if (a.classList.contains('dccs-tab')) { return '.dccs-tab[data-mode="' + a.dataset.mode + '"]'; }
+    if (a.classList.contains('dccs-chip')) { return '.dccs-chip[data-group="' + a.dataset.group + '"][data-value="' + a.dataset.value + '"]'; }
+    if (a.classList.contains('dccs-seg')) { return '.dccs-seg[data-weight="' + a.dataset.weight + '"][data-value="' + a.dataset.value + '"]'; }
+    if (a.classList.contains('dccs-pick')) { return '.dccs-pick[data-cmp="' + a.dataset.cmp + '"]'; }
+    if (a.classList.contains('dccs-see-results')) { return '.dccs-see-results'; }
+    if (a.classList.contains('dccs-reset')) { return '.dccs-reset'; }
+    return null;
+  }
 
   function findCottage(config, id) {
     var list = config.cottages || [];
@@ -123,7 +142,11 @@
 
   function persist(config, state) {
     if (config.remember) {
-      try { window.localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+      try {
+        // highlight is per-visit context (mini-entry / deep link); never remember it.
+        var toSave = { mode: state.mode, quick: state.quick, weights: state.weights, compareIds: state.compareIds };
+        window.localStorage.setItem(STORE_KEY, JSON.stringify(toSave));
+      } catch (e) { /* ignore */ }
     }
     syncUrl(state);
   }
@@ -184,6 +207,7 @@
   function chip(text, value, group, active) {
     return '<button type="button" class="dccs-chip' + (active ? ' is-active' : '') +
       '" role="radio" aria-checked="' + (active ? 'true' : 'false') +
+      '" tabindex="' + (active ? '0' : '-1') +
       '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(text) + '</button>';
   }
 
@@ -223,6 +247,7 @@
         var on = Number(cur) === l[0];
         return '<button type="button" class="dccs-seg' + (on ? ' is-active' : '') +
           '" role="radio" aria-checked="' + (on ? 'true' : 'false') +
+          '" tabindex="' + (on ? '0' : '-1') +
           '" data-weight="' + esc(key) + '" data-value="' + l[0] + '">' + esc(l[1]) + '</button>';
       }).join('');
       html += '<div class="dccs-wrow"><div class="dccs-wlabel">' + esc(r[1]) + '</div>' +
@@ -239,6 +264,8 @@
       case 'desk': return c.desk ? S.val_yes : S.val_no;
       case 'pulloutCouch': return c.pulloutCouch ? S.val_yes : S.val_no;
       case 'petAllowed': return c.petAllowed ? S.val_yes : S.val_no;
+      case 'floorLevel': return DCCS.score.isGround(c) ? S.floor_ground : S.floor_second;
+      case 'layoutType': return c.layoutType === 'Studio' ? S.opt_studio : S.opt_onebed;
       default: return c[field];
     }
   }
@@ -281,9 +308,25 @@
     var html = '<div class="dccs-results">';
 
     if (res.empty) {
-      var relax = res.excluded.length ? (S['diff_' + ledgerField(res.excluded[res.excluded.length - 1].reasonKey)] || '') : '';
+      // Find a single hard-filter relaxation that yields matches (relax the
+      // least-essential constraint first), and show those closest options.
+      var relaxOrder = [['hardDining4', 'diff_diningSeats'], ['hardGround', 'diff_floorLevel'], ['hardPet', 'diff_petAllowed']];
+      var fallback = null, relaxedName = '';
+      for (var i = 0; i < relaxOrder.length; i++) {
+        if (!crit[relaxOrder[i][0]]) { continue; }
+        var c2 = {};
+        Object.keys(crit).forEach(function (k) { c2[k] = crit[k]; });
+        c2[relaxOrder[i][0]] = false;
+        var r2 = DCCS.score.run(config.cottages, c2);
+        if (!r2.empty) { fallback = r2; relaxedName = S[relaxOrder[i][1]] || ''; break; }
+      }
       html += '<div class="dccs-empty"><h3>' + esc(S.empty_heading) + '</h3>' +
-        '<p>' + esc(fmt(S.empty_relax, relax)) + '</p></div></div>';
+        '<p>' + esc(fmt(S.empty_relax, relaxedName)) + '</p></div>';
+      if (fallback) {
+        var fb = DCCS.score.dedupe(fallback.results.slice(0, 3), config.diffFields);
+        fb.forEach(function (c) { html += buildCard(c, config, st, crit, ''); });
+      }
+      html += '</div>';
       return html;
     }
 
@@ -345,7 +388,7 @@
     }
 
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(c.pageUrl) + '">' + esc(S.view_cottage) + '</a>' +
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + esc(S.view_cottage) + '</a>' +
       '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
       (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + esc(S.add_compare) + '</label>' +
       '</div></div>';
@@ -365,11 +408,17 @@
 
   function renderSelector(root, config, state) {
     var S = config.strings;
+    var uid = root.dataset.dccsUid || 'dccs';
+    var panelId = uid + '-panel';
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
+    var activeTabId = uid + '-t-' + state.mode;
     var tabs = modes.map(function (m) {
       var label = { quick: S.mode_quick, weights: S.mode_weights, compare: S.mode_compare }[m];
-      return '<button type="button" class="dccs-tab' + (state.mode === m ? ' is-active' : '') +
-        '" role="tab" aria-selected="' + (state.mode === m ? 'true' : 'false') + '" data-mode="' + m + '">' + esc(label) + '</button>';
+      var on = state.mode === m;
+      return '<button type="button" class="dccs-tab' + (on ? ' is-active' : '') +
+        '" role="tab" id="' + uid + '-t-' + m + '" aria-controls="' + panelId + '"' +
+        ' aria-selected="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') +
+        '" data-mode="' + m + '">' + esc(label) + '</button>';
     }).join('');
 
     var head = config.showHeading === false ? '' :
@@ -387,7 +436,7 @@
     root.innerHTML =
       head +
       '<div class="dccs-tabs" role="tablist">' + tabs + '</div>' +
-      '<div class="dccs-body">' + body + '</div>' +
+      '<div class="dccs-body" role="tabpanel" id="' + panelId + '" aria-labelledby="' + activeTabId + '">' + body + '</div>' +
       results +
       cta +
       '<div class="dccs-footer"><button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div>';
@@ -399,10 +448,16 @@
     try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { return; }
     if (!config.cottages || !config.cottages.length) { return; }
     root.dataset.dccsReady = '1';
+    if (!root.dataset.dccsUid) { root.dataset.dccsUid = 'dccs' + (++UID); }
 
     var state = buildState(config);
 
-    function rerender() { renderSelector(root, config, state); }
+    // Re-render, preserving keyboard focus across the innerHTML swap.
+    function rerender() {
+      var key = root.contains(document.activeElement) ? focusKey(document.activeElement) : null;
+      renderSelector(root, config, state);
+      if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
+    }
     rerender();
 
     root.addEventListener('click', function (e) {
@@ -441,6 +496,30 @@
       }
     });
 
+    // Arrow-key navigation for tabs and radio groups (WAI-ARIA roving focus).
+    root.addEventListener('keydown', function (e) {
+      var t = e.target;
+      if (!t || !t.classList) { return; }
+      var isTab = t.classList.contains('dccs-tab');
+      var isRadio = t.getAttribute && t.getAttribute('role') === 'radio';
+      if (!isTab && !isRadio) { return; }
+      if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].indexOf(e.key) === -1) { return; }
+      e.preventDefault();
+      var group;
+      if (isTab) {
+        group = Array.prototype.slice.call(root.querySelectorAll('.dccs-tab'));
+      } else {
+        var rg = t.closest('[role="radiogroup"]');
+        group = rg ? Array.prototype.slice.call(rg.querySelectorAll('[role="radio"]')) : [t];
+      }
+      var idx = group.indexOf(t);
+      if (idx === -1) { return; }
+      var dir = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+      var next = group[(idx + dir + group.length) % group.length];
+      next.focus();
+      next.click(); // activate; rerender restores focus to the now-active control
+    });
+
     // Fire a CustomEvent so themes/analytics can observe (no hardcoded provider).
     root.dispatchEvent(new CustomEvent('dccs:ready', { bubbles: true }));
   }
@@ -471,9 +550,10 @@
 
     btn.addEventListener('click', function () {
       if (entry.selectorUrl) {
+        var base = safeUrl(entry.selectorUrl);
         var q = entry.deeplink || ('highlight=' + encodeURIComponent(entry.current || '') + '&mode=quick');
-        var sep = entry.selectorUrl.indexOf('?') === -1 ? '?' : '&';
-        window.location.href = entry.selectorUrl + sep + q;
+        var sep = base.indexOf('?') === -1 ? '?' : '&';
+        window.location.href = base + sep + q;
         return;
       }
       openModal(entry, btn);

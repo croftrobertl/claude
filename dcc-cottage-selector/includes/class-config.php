@@ -72,6 +72,8 @@ final class Config
             'diff_petAllowed'   => __('Pets', 'dcc-cottage-selector'),
             'val_sqft'          => /* translators: %d: square feet */ __('%d sq ft', 'dcc-cottage-selector'),
             'val_seats'         => /* translators: %d: number of seats */ __('Seats %d', 'dcc-cottage-selector'),
+            'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
+            'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
             'compare_prompt'    => __('Pick 2 to 4 cottages to compare side by side.', 'dcc-cottage-selector'),
 
             // Results
