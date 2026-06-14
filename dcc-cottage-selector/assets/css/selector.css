@@ -75,6 +75,80 @@
 .dccs-root.dccs-root .dccs-q { margin-bottom: 14px; }
 .dccs-root.dccs-root .dccs-q-label { font-weight: 600; margin-bottom: 6px; }
 .dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Wizard ---- */
+.dccs-root.dccs-root .dccs-head-compact { margin-bottom: 10px; }
+.dccs-root.dccs-root .dccs-head-compact .dccs-heading { font-size: 1.2rem; }
+
+.dccs-root.dccs-root .dccs-wizard {
+  display: flex; flex-direction: column; min-height: 300px;
+}
+.dccs-root.dccs-root .dccs-progress-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+}
+.dccs-root.dccs-root .dccs-progress-label { font-weight: 600; color: var(--dccs-muted); font-size: 0.9rem; }
+.dccs-root.dccs-root .dccs-progress {
+  height: 6px; border-radius: 999px; background: var(--dccs-border); overflow: hidden; margin-bottom: 18px;
+}
+.dccs-root.dccs-root .dccs-progress > span {
+  display: block; height: 100%; background: var(--dccs-accent); border-radius: 999px; transition: width .2s ease;
+}
+.dccs-root.dccs-root .dccs-step-q {
+  font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none;
+}
+.dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
+.dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; }
+.dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
+  width: 100%; min-height: 52px; font-size: 1.05rem; font-weight: 600; text-align: left; padding: 12px 18px;
+}
+.dccs-root.dccs-root .dccs-wizard-nav {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px;
+}
+.dccs-root.dccs-root .dccs-back,
+.dccs-root.dccs-root .dccs-edit-answers {
+  min-height: 44px; padding: 8px 18px; border-radius: 999px;
+  border: 1px solid var(--dccs-border); background: transparent; color: var(--dccs-text); cursor: pointer; font-size: 0.95rem;
+}
+.dccs-root.dccs-root .dccs-primary {
+  min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
+  box-shadow: 0 6px 16px rgba(15,109,191,0.32);
+}
+
+/* Review list */
+.dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
+.dccs-root.dccs-root .dccs-review-list li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--dccs-border);
+}
+.dccs-root.dccs-root .dccs-review-q { flex: 1 1 40%; font-weight: 600; }
+.dccs-root.dccs-root .dccs-review-a { flex: 1 1 30%; color: var(--dccs-muted); }
+.dccs-root.dccs-root .dccs-edit {
+  margin-left: auto; min-height: 36px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dccs-border); background: var(--dccs-surface); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
+}
+
+/* Results recap + "what it misses" tags */
+.dccs-root.dccs-root .dccs-recap {
+  margin: 12px 0; padding: 10px 14px; border-radius: var(--dccs-radius);
+  background: var(--dccs-surface); border: 1px solid var(--dccs-border); font-size: 0.9rem;
+}
+.dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dccs-root.dccs-root .dccs-miss {
+  background: rgba(240,128,128,0.18); color: #a8322e; border: 1px solid rgba(240,128,128,0.5);
+  border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600;
+}
+
+/* More options / back-to-finder row */
+.dccs-root.dccs-root .dccs-more {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--dccs-border);
+}
+.dccs-root.dccs-root .dccs-more-label { color: var(--dccs-muted); font-size: 0.88rem; }
+.dccs-root.dccs-root .dccs-to-mode,
+.dccs-root.dccs-root .dccs-to-finder {
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+  color: var(--dccs-accent); font-weight: 600; font-size: 0.9rem; text-decoration: underline;
+}
 .dccs-root.dccs-root .dccs-chip {
   min-height: 44px; padding: 8px 16px; border-radius: 999px;
   border: 1px solid var(--dccs-border); background: var(--dccs-surface);

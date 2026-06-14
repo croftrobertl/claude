@@ -40,6 +40,24 @@ final class Config
             'q_pet'             => __('Do you need a pet-friendly cottage?', 'dcc-cottage-selector'),
             'q_ground'          => __('Ground floor only?', 'dcc-cottage-selector'),
             'q_largest'         => __('Want the largest space available?', 'dcc-cottage-selector'),
+            'short_largest'     => __('Most space', 'dcc-cottage-selector'),
+
+            // Wizard flow
+            'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
+            'wiz_back'          => __('Back', 'dcc-cottage-selector'),
+            'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
+            'edit'              => __('Edit', 'dcc-cottage-selector'),
+            'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
+            'your_criteria'     => __('What you’re looking for', 'dcc-cottage-selector'),
+            'more_options'      => __('More ways to choose:', 'dcc-cottage-selector'),
+            'opt_weights'       => __('Weigh priorities', 'dcc-cottage-selector'),
+            'opt_compare'       => __('Compare cottages', 'dcc-cottage-selector'),
+            'to_finder'         => __('← Back to the quick finder', 'dcc-cottage-selector'),
+
+            // No-match "what it misses" tags
+            'tag_pet'           => __('Not pet-friendly', 'dcc-cottage-selector'),
+            'tag_upstairs'      => __('Upstairs', 'dcc-cottage-selector'),
+            'tag_dining'        => __('No table for 4', 'dcc-cottage-selector'),
 
             // Generic chip answers
             'opt_yes'           => __('Yes', 'dcc-cottage-selector'),

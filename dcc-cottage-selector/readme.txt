@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.1
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,14 +14,15 @@ Dora Canal Court cottages by focusing only on their real differences.
 
 The eight cottages all sleep two on a queen bed and share the same amenities, so
 guests face needless choice overload. This plugin adds a short, elegant decision
-tool with three modes:
+tool:
 
-* **Quick Pick** — a handful of large tappable questions (desk? pullout couch?
-  studio or 1-bedroom? table for 2 or 4? pet-friendly? ground floor? largest?).
-* **What Matters Most** — set how much each thing matters with a tap (Low /
-  Medium / High); no sliders, no drag-and-drop.
-* **Compare** — a tight side-by-side matrix of 2–4 cottages over the seven
-  meaningful differences only.
+* **Quick finder (default)** — a step-through wizard, one tappable question per
+  screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
+  pet-friendly? ground floor? largest?), then a review screen and the top matches.
+* **Weigh priorities** (behind "More options") — set how much each thing matters
+  with a tap (Low / Medium / High); no sliders, no drag-and-drop.
+* **Compare** (behind "More options") — a tight side-by-side matrix of 2–4
+  cottages over the seven meaningful differences only.
 
 Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
@@ -31,7 +32,8 @@ The whole experience is client-side over a tiny bundled dataset
 
 = Provided widgets / shortcode =
 
-* **Cottage Selector** (Elementor) — the full three-mode tool.
+* **Cottage Selector** (Elementor) — the full wizard finder (plus Weigh
+  priorities / Compare under "More options").
 * **Cottage Selector — Mini Entry** (Elementor) — a compact cross-sell prompt for
   individual cottage pages.
 * `[dcc_selector_entry current="22" url="/cottage-selector/"]` — the same mini
@@ -42,27 +44,34 @@ The whole experience is client-side over a tiny bundled dataset
 Square footage · pullout couch · desk/workspace · floor level · studio vs.
 1-bedroom · dining table for 2 vs. 4 · pet policy.
 
-= How the three modes work =
+= How it works =
 
 Everything runs in the browser from a small dataset inlined into the page — no
 server round-trips.
 
-* **Quick Pick** uses a strict two-phase engine. Phase 1 applies the hard filters
-  (pet-friendly, ground-floor-only, table-for-4) to narrow the pool; a live
-  "N cottages match" count updates as you tap. Phase 2 ranks whatever survives by
-  your softer preferences. If a hard filter leaves three or fewer cottages, they
-  are returned directly. If a combination is impossible (e.g. pet-friendly AND a
-  table for four), the closest matches are shown with a "relax this" hint.
-* **What Matters Most** scores every cottage by the Low/Medium/High weight you
-  give each priority — no hard filters.
-* **Compare** shows a side-by-side matrix of 2–4 cottages over the seven
-  differences, highlighting the cells that actually differ.
+The default experience is a **step-through wizard**: one question per screen so a
+guest never scrolls to find their results. Each step shows progress ("Step 3 of
+7") and a live "N cottages match" count; tapping an answer advances automatically,
+a Back control edits the previous step, and every step offers "Doesn't matter" so
+nothing is forced. After the last question a **Review** screen lists all answers
+(each editable) before "See my matches" reveals the **Top 3**, with a recap of
+what was searched.
 
-Results show the top three with friendly badges, a short "why this fits" line,
-and a link to each cottage. Identical-layout cottages (e.g. two of the suites)
-are flagged so guests understand why both appear. Preferences are kept in the URL
-(shareable) and in the browser (remembered for return visits); a deep link such
-as ?pet=true&mode=quick opens the tool pre-filled.
+Scoring is a strict two-phase engine: Phase 1 applies the hard filters
+(pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
+by softer preferences. If a hard filter leaves three or fewer cottages they are
+returned directly. If a combination is impossible (e.g. pet-friendly AND a table
+for four), the closest matches are shown, each **tagged with the must-have it
+misses** ("Upstairs", "No table for 4").
+
+Two extra tools sit behind a **"More options"** link: **Weigh priorities** (score
+by Low/Medium/High importance) and **Compare** (a side-by-side matrix of 2–4
+cottages, highlighting the cells that differ).
+
+Identical-layout cottages (e.g. two of the suites) are flagged so guests
+understand why both appear. Preferences are kept in the URL (shareable) and the
+browser (remembered for return visits); a deep link such as ?pet=true opens
+straight to results.
 
 == Installation ==
 
@@ -79,21 +88,35 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 
 == Manual smoke test ==
 
-* Quick Pick: choosing **Pet-friendly = Yes** returns only Coconut Cottage (#34).
-* **Ground floor only = Yes** never shows The Lighthouse (#23); the "Why aren’t
-  the others shown?" panel explains it is upstairs.
+* Wizard: each step shows one question, "Step X of 7", a live count, and (after
+  step 1) a Back button; tapping an answer auto-advances.
+* The Review screen lists all 7 answers with Edit links; "See my matches" shows
+  the top 3 plus a "What you’re looking for" recap.
+* Answering **Pet-friendly = Yes** returns only Coconut Cottage (#34).
+* **Ground floor only = Yes** never shows The Lighthouse (#23).
 * **Table for 4** isolates The Boathouse (#22).
+* Impossible combo (pet + table-for-4) shows the next-best cottage tagged
+  "No table for 4".
 * Any hard filter leaving ≤3 cottages returns them directly (no re-ranking).
 * When #31 & #32 (or #35 & #36) both appear, the lower-numbered one shows an
   "identical layout and features" note.
-* What Matters Most: raising **Workspace** to High floats #22/#23 to the top.
-* Compare: pick 2–4 cottages; differing cells are highlighted.
-* Deep link: loading `?pet=true&mode=quick` initializes the tool directly.
+* More options → Weigh priorities: raising **Workspace** to High floats #22/#23.
+* More options → Compare: pick 2–4 cottages; differing cells are highlighted.
+* Deep link: loading `?pet=true` opens straight to results.
 * Mini Entry: with a selector URL it links there pre-filled; without one it opens
-  an on-page pop-up in Compare mode highlighting the current cottage.
+  an on-page pop-up showing how the current cottage ranks.
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.3.0 =
+* Redesigned the default flow as a one-question-per-step wizard so guests never
+  scroll to reach results: per-step progress + live match count, auto-advance,
+  Back/edit, a "Doesn't matter" option on every step, and a Review screen before
+  results with a recap of what was searched.
+* No-match results now tag each next-best cottage with the must-have it misses.
+* "What Matters Most" and "Compare" moved behind a "More options" link.
+* DOM smoke test expanded to 40 assertions covering the full wizard.
 
 = 0.2.1 =
 * Fix: guard the MutationObserver against a missing document.body and wrap

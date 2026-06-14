@@ -1,10 +1,10 @@
 /**
- * DOM smoke test for the Dora Canal Cottage Selector front-end.
+ * DOM smoke test for the Dora Canal Cottage Selector front-end (wizard flow).
  *
- * Mounts the widget in jsdom with the REAL data-config (produced by
- * tests/dump-config.php), then drives the actual controller — rendering all three
- * modes, simulating taps, deep links, localStorage, and the mini-entry modal —
- * asserting on the resulting DOM. This turns "lints clean" into "actually runs".
+ * Mounts the widget in jsdom with the REAL data-config (tests/dump-config.php),
+ * then drives the actual controller — stepping through the wizard, review/edit,
+ * results, deep links, no-match tagging, More-options modes, localStorage, and
+ * the mini-entry modal — asserting on the resulting DOM.
  *
  * Run: npm test   (or: node tests/dom-smoke.test.js)
  */
@@ -21,9 +21,6 @@ let pass = 0, fail = 0;
 function ok(name, cond) { cond ? pass++ : fail++; console.log((cond ? 'PASS ' : 'FAIL ') + name); }
 
 function freshDom(url, html) {
-  // runScripts:'dangerously' executes the bundled scripts inside jsdom's own JS
-  // context, so bare globals (MutationObserver, document, CustomEvent) resolve
-  // exactly as they would in a real browser.
   const dom = new JSDOM(html || '<!DOCTYPE html><body></body>', {
     url: url || 'https://example.com/',
     pretendToBeVisual: true,
@@ -47,121 +44,131 @@ function mountSelector(window, configStr) {
   return div;
 }
 
-function chips(root, group) {
-  return Array.prototype.slice.call(root.querySelectorAll('.dccs-chip[data-group="' + group + '"]'));
-}
-function clickChip(root, group, value) {
-  chips(root, group).filter(function (c) { return c.dataset.value === value; })[0].click();
+function progress(root) { var p = root.querySelector('.dccs-progress-label'); return p ? p.textContent : ''; }
+function curChips(root) { return Array.prototype.slice.call(root.querySelectorAll('.dccs-chips-wizard .dccs-chip')); }
+function clickAnswer(root, value) {
+  var c = curChips(root).filter(function (n) { return n.dataset.value === value; })[0] || curChips(root)[0];
+  c.click();
 }
 function cardNames(root) {
   return Array.prototype.slice.call(root.querySelectorAll('.dccs-card h4')).map(function (h) { return h.textContent.trim(); });
 }
+function stepThrough(root, value) {
+  // Click `value` (or the first chip) on each question until we leave stage 'q'.
+  for (var k = 0; k < 8 && root.querySelector('.dccs-chips-wizard'); k++) { clickAnswer(root, value); }
+}
 
-// ---- 1. Initial render (Quick Pick) ----
+// ---- 1. Wizard starts at one question ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  ok('renders 3 tabs', root.querySelectorAll('.dccs-tab').length === 3);
-  ok('renders 7 quick questions', root.querySelectorAll('.dccs-q').length === 7);
-  ok('panel wired role=tabpanel', !!root.querySelector('.dccs-body[role="tabpanel"][aria-labelledby]'));
-  ok('active tab has tabindex 0', root.querySelector('.dccs-tab.is-active').getAttribute('tabindex') === '0');
-  ok('renders results region', !!root.querySelector('.dccs-results'));
-  ok('renders sticky CTA', !!root.querySelector('.dccs-see-results'));
-  ok('live count starts at 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
+  ok('no tabs (wizard, not tabbed)', root.querySelectorAll('.dccs-tab').length === 0);
+  ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
+  ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
+  ok('three answer chips', curChips(root).length === 3);
+  ok('live count shows 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
+  ok('no Back on first step', !root.querySelector('.dccs-back'));
+  ok('More options row present', !!root.querySelector('.dccs-to-mode[data-mode="compare"]'));
   ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
-  ok('sr region announces a summary', /\d/.test(root.querySelector('.dccs-sr-only').textContent));
 })();
 
-// ---- 1c. Live region is the SAME node across re-renders (so aria-live works) ----
+// ---- 2. Auto-advance + Back preserves the answer ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  const live1 = root.querySelector('.dccs-sr-only');
-  clickChip(root, 'pet', 'yes');
-  const live2 = root.querySelector('.dccs-sr-only');
-  ok('live region node persists across rerender', live1 === live2);
-  ok('live region text updates after filter', /\b1\b/.test(live2.textContent));
+  clickAnswer(root, 'yes');                 // answer Q1
+  ok('auto-advanced to step 2', /2\b.*\b7/.test(progress(root)));
+  ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
+  root.querySelector('.dccs-back').click(); // go back to Q1
+  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
+  var active = curChips(root).filter(function (c) { return c.classList.contains('is-active'); })[0];
+  ok('previous answer preserved', active && active.dataset.value === 'yes');
 })();
 
-// ---- 1b. Live match count updates as filters narrow ----
+// ---- 3. Reaching the Review step, then Edit jumps back ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  clickChip(root, 'pet', 'yes');
-  ok('live count drops to 1 after pet filter', /\b1\b/.test(root.querySelector('.dccs-count').textContent));
+  stepThrough(root, 'either');
+  ok('review step lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('review has a See-my-matches button', !!root.querySelector('.dccs-see-matches'));
+  root.querySelector('.dccs-edit[data-step="4"]').click();
+  ok('Edit jumps to that question (step 5)', /5\b.*\b7/.test(progress(root)));
 })();
 
-// ---- 2. Pet filter -> only Coconut Cottage (#34) ----
+// ---- 4. See my matches -> results with recap ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  clickChip(root, 'pet', 'yes');
-  const names = cardNames(root);
-  ok('pet=yes shows Coconut Cottage', names.indexOf('Coconut Cottage') !== -1);
-  ok('pet=yes shows exactly one card', root.querySelectorAll('.dccs-card').length === 1);
+  // Answer with a real preference so the recap has content.
+  clickAnswer(root, 'yes');                 // desk = yes
+  stepThrough(root, 'either');              // rest = doesn't matter
+  root.querySelector('.dccs-see-matches').click();
+  ok('results region shown', !!root.querySelector('.dccs-results'));
+  ok('results recap present', !!root.querySelector('.dccs-recap'));
+  ok('edit-answers control present', !!root.querySelector('.dccs-edit-answers'));
 })();
 
-// ---- 3. Ground-floor filter excludes The Lighthouse (#23) + why-excluded ----
+// ---- 5. Deep link jumps straight to results ----
 (function () {
-  const w = freshDom();
+  const w = freshDom('https://example.com/?pet=true');
   const root = mountSelector(w);
-  clickChip(root, 'ground', 'yes');
-  ok('ground filter never shows The Lighthouse', cardNames(root).indexOf('The Lighthouse') === -1);
-  ok('why-excluded panel present', !!root.querySelector('.dccs-excluded'));
-})();
-
-// ---- 4. Empty combo (pet + table-for-4) shows fallback closest matches ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  clickChip(root, 'pet', 'yes');
-  clickChip(root, 'dining', '4');
-  ok('impossible combo shows empty heading', !!root.querySelector('.dccs-empty'));
-  ok('empty state still offers fallback cards', root.querySelectorAll('.dccs-card').length >= 1);
-})();
-
-// ---- 5. Tab switching: weights + compare ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  root.querySelector('.dccs-tab[data-mode="weights"]').click();
-  ok('weights mode renders 8 priority rows', root.querySelectorAll('.dccs-wrow').length === 8);
-  root.querySelector('.dccs-tab[data-mode="compare"]').click();
-  ok('compare mode renders 8 pickers', root.querySelectorAll('.dccs-pick').length === 8);
-  // Re-query after each click — the widget re-renders, so prior nodes go stale.
-  root.querySelector('.dccs-pick[data-cmp="22"]').click();
-  root.querySelector('.dccs-pick[data-cmp="23"]').click();
-  ok('compare matrix appears with 2 picks', !!root.querySelector('.dccs-matrix'));
-  ok('matrix highlights differing cells', !!root.querySelector('.dccs-matrix td.is-diff'));
-})();
-
-// ---- 6. Reset returns to defaults ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  clickChip(root, 'pet', 'yes');
-  root.querySelector('.dccs-reset').click();
-  ok('reset clears pet filter (>1 card again)', root.querySelectorAll('.dccs-card').length > 1);
-})();
-
-// ---- 7. Deep link initializes state ----
-(function () {
-  const w = freshDom('https://example.com/?pet=true&mode=quick');
-  const root = mountSelector(w);
+  ok('deeplink skips the questionnaire', !root.querySelector('.dccs-chips-wizard'));
   ok('deeplink pet=true -> Coconut Cottage only', cardNames(root).length === 1 && cardNames(root)[0] === 'Coconut Cottage');
 })();
 
-// ---- 8. localStorage recall across reload ----
+// ---- 6. No-match combo shows tagged fallback ----
+(function () {
+  const w = freshDom('https://example.com/?pet=true&dining=4');
+  const root = mountSelector(w);
+  ok('impossible combo shows empty heading', !!root.querySelector('.dccs-empty'));
+  ok('fallback cards present', root.querySelectorAll('.dccs-card').length >= 1);
+  ok('fallback card tagged with what it misses', !!root.querySelector('.dccs-miss'));
+})();
+
+// ---- 7. "Doesn't matter" leaves hard filters off ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  root.querySelector('.dccs-tab[data-mode="weights"]').click();
-  const saved = w.localStorage.getItem('dccs_prefs_v1');
-  ok('preferences saved to localStorage', !!saved && JSON.parse(saved).mode === 'weights');
-  ok('highlight not persisted', JSON.parse(saved).highlight === undefined);
+  stepThrough(root, 'either');              // all "Doesn't matter"
+  root.querySelector('.dccs-see-matches').click();
+  ok('no constraints -> several cottages match', root.querySelectorAll('.dccs-card').length > 1);
+  ok('no recap when nothing chosen', !root.querySelector('.dccs-recap'));
 })();
 
-// ---- 9. Mini-entry modal opens in Quick Pick, highlights cottage, traps focus, Esc closes ----
+// ---- 8. More options: Compare + back to finder ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  root.querySelector('.dccs-to-mode[data-mode="compare"]').click();
+  ok('compare mode shows 8 pickers', root.querySelectorAll('.dccs-pick').length === 8);
+  root.querySelector('.dccs-pick[data-cmp="22"]').click();
+  root.querySelector('.dccs-pick[data-cmp="23"]').click();
+  ok('compare matrix appears', !!root.querySelector('.dccs-matrix'));
+  ok('matrix highlights differing cells', !!root.querySelector('.dccs-matrix td.is-diff'));
+  root.querySelector('.dccs-to-finder').click();
+  ok('back to finder returns to wizard', !!root.querySelector('.dccs-chips-wizard'));
+})();
+
+// ---- 9. Reset returns to the first question ----
+(function () {
+  const w = freshDom('https://example.com/?pet=true');
+  const root = mountSelector(w);
+  root.querySelector('.dccs-reset').click();
+  ok('reset returns to step 1 of the wizard', /1\b.*\b7/.test(progress(root)));
+})();
+
+// ---- 10. localStorage recall (no step/stage/highlight persisted) ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  clickAnswer(root, 'yes');
+  const saved = JSON.parse(w.localStorage.getItem('dccs_prefs_v1') || '{}');
+  ok('preferences saved', saved && saved.quick && saved.quick.desk === 'yes');
+  ok('step/stage/highlight not persisted', saved.step === undefined && saved.stage === undefined && saved.highlight === undefined);
+})();
+
+// ---- 11. Mini-entry modal opens at results, highlights cottage, traps focus ----
 (function () {
   const w = freshDom();
   const cfg = JSON.parse(CONFIG);
@@ -176,21 +183,19 @@ function cardNames(root) {
   node.querySelector('.dccs-entry-btn').click();
   const modal = w.document.querySelector('.dccs-modal');
   ok('mini-entry opens modal', !!modal);
-  ok('modal selector renders in quick mode', !!modal.querySelector('.dccs-q'));
-  ok('modal focus moved to close button', w.document.activeElement === modal.querySelector('.dccs-modal-close'));
-  ok('body scroll locked while modal open', w.document.body.style.overflow === 'hidden');
+  ok('modal opens straight to results', !!modal.querySelector('.dccs-results') && !modal.querySelector('.dccs-chips-wizard'));
+  ok('modal focus on close button', w.document.activeElement === modal.querySelector('.dccs-modal-close'));
+  ok('body scroll locked', w.document.body.style.overflow === 'hidden');
   const hc = modal.querySelector('.dccs-card.is-highlight');
   ok('highlighted cottage (#31) surfaced', !!hc && hc.querySelector('h4').textContent.indexOf('Hibiscus Hut') !== -1);
-
-  const esc = new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
-  w.document.dispatchEvent(esc);
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
-  ok('body scroll restored after close', w.document.body.style.overflow === '');
+  ok('body scroll restored', w.document.body.style.overflow === '');
 })();
 
-// ---- 10. pageUrl uses safe, real cottage links ----
+// ---- 12. Result links point to real cottage pages ----
 (function () {
-  const w = freshDom();
+  const w = freshDom('https://example.com/?pet=true');
   const root = mountSelector(w);
   const href = root.querySelector('.dccs-view').getAttribute('href');
   ok('view link points to /accommodation/', /^\/accommodation\/cottage-\d+\/$/.test(href));

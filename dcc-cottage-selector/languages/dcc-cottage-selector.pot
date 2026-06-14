@@ -3,9 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.2.1\n"
-"Report-Msgid-Bugs-To: https://doracanalcourt.com/\n"
-"POT-Creation-Date: 2026-06-14 16:10+0000\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.3.0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -44,6 +42,9 @@ msgstr ""
 msgid "All our cottages sleep two with a queen bed — here is what actually sets them apart. Answer a few quick questions and we will match you in seconds."
 msgstr ""
 
+msgid "Back"
+msgstr ""
+
 msgid "Card background"
 msgstr ""
 
@@ -54,6 +55,9 @@ msgid "Compact Escape"
 msgstr ""
 
 msgid "Compare"
+msgstr ""
+
+msgid "Compare cottages"
 msgstr ""
 
 msgid "Content"
@@ -87,6 +91,12 @@ msgid "Dora Canal Cottage Selector works best with Elementor active; the [dcc_se
 msgstr ""
 
 msgid "Easy-Access Ground Floor"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Edit answers"
 msgstr ""
 
 msgid "Enabled modes"
@@ -140,6 +150,12 @@ msgstr ""
 msgid "More room"
 msgstr ""
 
+msgid "More ways to choose:"
+msgstr ""
+
+msgid "Most space"
+msgstr ""
+
 msgid "No"
 msgstr ""
 
@@ -147,6 +163,12 @@ msgid "No cottage meets every must-have"
 msgstr ""
 
 msgid "No preference"
+msgstr ""
+
+msgid "No table for 4"
+msgstr ""
+
+msgid "Not pet-friendly"
 msgstr ""
 
 msgid "Not sure this layout fits you best? Open our 30-Second Selector."
@@ -191,6 +213,9 @@ msgstr ""
 msgid "Results heading"
 msgstr ""
 
+msgid "Review your answers"
+msgstr ""
+
 msgid "Saves the last preferences in the browser so returning guests resume where they left off."
 msgstr ""
 
@@ -219,6 +244,9 @@ msgid "Start over"
 msgstr ""
 
 msgid "Starting mode"
+msgstr ""
+
+msgid "Step %1$d of %2$d"
 msgstr ""
 
 msgid "Studio"
@@ -275,6 +303,9 @@ msgstr ""
 msgid "Try relaxing “%s” — here are the closest options."
 msgstr ""
 
+msgid "Upstairs"
+msgstr ""
+
 msgid "Upstairs Quiet View"
 msgstr ""
 
@@ -287,7 +318,13 @@ msgstr ""
 msgid "Want the largest space available?"
 msgstr ""
 
+msgid "Weigh priorities"
+msgstr ""
+
 msgid "What Matters Most"
+msgstr ""
+
+msgid "What you’re looking for"
 msgstr ""
 
 msgid "Why aren’t the others shown?"
@@ -333,5 +370,8 @@ msgid "the most square footage of the bunch"
 msgstr ""
 
 msgid "— None —"
+msgstr ""
+
+msgid "← Back to the quick finder"
 msgstr ""
 
