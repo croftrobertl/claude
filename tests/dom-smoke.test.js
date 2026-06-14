@@ -67,6 +67,15 @@ function cardNames(root) {
   ok('active tab has tabindex 0', root.querySelector('.dccs-tab.is-active').getAttribute('tabindex') === '0');
   ok('renders results region', !!root.querySelector('.dccs-results'));
   ok('renders sticky CTA', !!root.querySelector('.dccs-see-results'));
+  ok('live count starts at 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
+})();
+
+// ---- 1b. Live match count updates as filters narrow ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  clickChip(root, 'pet', 'yes');
+  ok('live count drops to 1 after pet filter', /\b1\b/.test(root.querySelector('.dccs-count').textContent));
 })();
 
 // ---- 2. Pet filter -> only Coconut Cottage (#34) ----
@@ -156,12 +165,14 @@ function cardNames(root) {
   ok('mini-entry opens modal', !!modal);
   ok('modal selector renders in quick mode', !!modal.querySelector('.dccs-q'));
   ok('modal focus moved to close button', w.document.activeElement === modal.querySelector('.dccs-modal-close'));
+  ok('body scroll locked while modal open', w.document.body.style.overflow === 'hidden');
   const hc = modal.querySelector('.dccs-card.is-highlight');
   ok('highlighted cottage (#31) surfaced', !!hc && hc.querySelector('h4').textContent.indexOf('Hibiscus Hut') !== -1);
 
   const esc = new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
   w.document.dispatchEvent(esc);
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
+  ok('body scroll restored after close', w.document.body.style.overflow === '');
 })();
 
 // ---- 10. pageUrl uses safe, real cottage links ----

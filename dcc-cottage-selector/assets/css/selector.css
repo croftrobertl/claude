@@ -50,6 +50,12 @@
 }
 
 /* Question rows + chips */
+.dccs-root.dccs-root .dccs-count {
+  font-weight: 700; color: var(--dccs-accent); font-size: 0.95rem;
+  margin: 0 0 12px; padding: 6px 12px; border-radius: 999px;
+  background: rgba(15,109,191,0.1); display: inline-block;
+}
+
 .dccs-root.dccs-root .dccs-q { margin-bottom: 14px; }
 .dccs-root.dccs-root .dccs-q-label { font-weight: 600; margin-bottom: 6px; }
 .dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }

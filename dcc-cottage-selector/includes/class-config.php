@@ -27,6 +27,7 @@ final class Config
             'mode_quick'        => __('Quick Pick', 'dcc-cottage-selector'),
             'mode_weights'      => __('What Matters Most', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare', 'dcc-cottage-selector'),
+            'match_count'       => /* translators: %d: number of matching cottages */ __('%d cottages match', 'dcc-cottage-selector'),
             'loading'           => __('Loading…', 'dcc-cottage-selector'),
             'unavailable'       => __('The cottage selector is temporarily unavailable.', 'dcc-cottage-selector'),
 

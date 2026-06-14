@@ -217,11 +217,15 @@
       '<div class="dccs-chips" role="radiogroup" aria-label="' + esc(label) + '">' + chips + '</div></div>';
   }
 
-  function renderQuick(S, st) {
+  function renderQuick(config, st) {
+    var S = config.strings;
     var q = st.quick;
+    var res = DCCS.score.run(config.cottages, criteriaFromState(st));
+    var n = res.empty ? 0 : res.results.length;
     var yn = [{ t: S.opt_yes, v: 'yes' }, { t: S.opt_no, v: 'no' }];
     var yne = [{ t: S.opt_yes, v: 'yes' }, { t: S.opt_no, v: 'no' }, { t: S.opt_either, v: 'either' }];
     var html = '<div class="dccs-quick">';
+    html += '<div class="dccs-count" aria-live="polite">' + esc(fmt(S.match_count, n)) + '</div>';
     html += chipRow(S.q_desk, 'desk', q.desk, yne);
     html += chipRow(S.q_pullout, 'pullout', q.pullout, yne);
     html += chipRow(S.q_layout, 'layout', q.layout, [{ t: S.opt_studio, v: 'studio' }, { t: S.opt_onebed, v: 'onebed' }, { t: S.opt_either, v: 'either' }]);
@@ -427,7 +431,7 @@
 
     var body = state.mode === 'weights' ? renderWeights(S, state)
       : state.mode === 'compare' ? renderCompare(config, state)
-      : renderQuick(S, state);
+      : renderQuick(config, state);
 
     var results = state.mode === 'compare' ? '' : renderResults(config, state);
     var cta = state.mode === 'compare' ? '' :
@@ -581,6 +585,10 @@
     initSelector(inner);            // sets data-dccs-ready before insertion
     document.body.appendChild(overlay);
 
+    // Lock background scroll while the modal is open.
+    var prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     // Focus management: move focus in, trap Tab, restore on close.
     var prevFocus = document.activeElement;
     var closeBtn = overlay.querySelector('.dccs-modal-close');
@@ -593,6 +601,7 @@
     function close() {
       if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
       document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
       if (trigger && trigger.focus) { trigger.focus(); }
       else if (prevFocus && prevFocus.focus) { prevFocus.focus(); }
     }
