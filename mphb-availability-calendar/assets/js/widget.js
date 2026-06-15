@@ -22,6 +22,98 @@
         fn();
     }
 
+    var FOCUSABLE_SELECTOR =
+        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+        'select:not([disabled]), textarea:not([disabled]), ' +
+        '[tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
+    // Mobile swipe-to-close gesture for the bottom-sheet popups. Touch must
+    // start at the top of the sheet (header zone) AND the sheet's body
+    // must be scrolled to the top — both conditions ensure swiping doesn't
+    // hijack content scroll. Closes on threshold (~80px) or fast flick.
+    // No-op on devices without touch and skipped if reduced-motion is on
+    // (the snap-back animation is the only motion source).
+    function wireSwipeToClose(sheet, closeFn) {
+        if (!sheet || !closeFn) return;
+        if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return;
+
+        var startY = 0;
+        var startX = 0;
+        var startTime = 0;
+        var dragging = false;
+        var TOP_ZONE_PX = 80;     // touch must start here to engage drag
+        var CLOSE_DELTA_PX = 80;  // straight-distance threshold
+        var FLICK_VELOCITY = 0.5; // px/ms — alternative threshold
+
+        sheet.addEventListener('touchstart', function (e) {
+            if (!e.touches || !e.touches[0]) return;
+            // Skip if the sheet is scrolled — let the browser handle scroll.
+            if (sheet.scrollTop > 0) return;
+            var rect = sheet.getBoundingClientRect();
+            var y = e.touches[0].clientY;
+            if (y - rect.top > TOP_ZONE_PX) return;
+            startY = y;
+            startX = e.touches[0].clientX;
+            startTime = Date.now();
+            dragging = true;
+        }, { passive: true });
+
+        sheet.addEventListener('touchmove', function (e) {
+            if (!dragging || !e.touches || !e.touches[0]) return;
+            var dx = e.touches[0].clientX - startX;
+            var dy = e.touches[0].clientY - startY;
+            // Cancel if horizontal sweep dominates (probably a swipe gesture
+            // intended for something else).
+            if (Math.abs(dx) > Math.abs(dy)) { dragging = false; return; }
+            // Only follow the finger downward — upward should let the browser
+            // do whatever it normally does.
+            if (dy <= 0) return;
+            sheet.style.transition = 'none';
+            sheet.style.transform = 'translateY(' + dy + 'px)';
+            sheet.classList.add('is-dragging');
+        }, { passive: true });
+
+        sheet.addEventListener('touchend', function (e) {
+            if (!dragging) return;
+            dragging = false;
+            sheet.classList.remove('is-dragging');
+            var touch = (e.changedTouches && e.changedTouches[0]) || null;
+            var dy = touch ? touch.clientY - startY : 0;
+            var dt = Math.max(1, Date.now() - startTime);
+            var v = dy / dt;
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+            if (dy > CLOSE_DELTA_PX || v > FLICK_VELOCITY) {
+                closeFn();
+            }
+        });
+
+        sheet.addEventListener('touchcancel', function () {
+            if (!dragging) return;
+            dragging = false;
+            sheet.classList.remove('is-dragging');
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+        });
+    }
+
+    function collectFocusables(container) {
+        if (!container) return [];
+        var nodes = container.querySelectorAll(FOCUSABLE_SELECTOR);
+        var out = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            // offsetParent === null catches display:none ancestors. Width/
+            // height check catches visibility:hidden. Doesn't matter that we
+            // miss `position: fixed` w/ display:none ancestors — Tab order
+            // already excludes those.
+            if (n.offsetParent !== null || n.getClientRects().length > 0) {
+                out.push(n);
+            }
+        }
+        return out;
+    }
+
     // Track which cottages we've already warmed so rapid mouse-overs don't
     // re-issue the same image fetches.
     var warmedInfoIds = Object.create(null);
@@ -144,14 +236,43 @@
         if (resetEmpty) resetEmpty.addEventListener('click', doReset);
 
         // When a check-in is chosen, default the check-out to check-in + the
-        // minimum stay (two nights) unless the guest already picked a valid one.
+        // minimum stay (two nights) unless the guest already picked a valid
+        // one. If we have to FORCE the checkout (the user's choice is now
+        // invalid), give visual + screen-reader feedback so the change isn't
+        // silent.
+        var filterStatus = root.querySelector('.mphbac-filter-status');
+        var filterStatusTimer = null;
         if (checkin && checkout) {
             checkin.addEventListener('change', function () {
                 if (!checkin.value) return;
                 var minN = Math.max(1, parseInt(config.minNights, 10) || 2);
-                checkout.min = addDays(checkin.value, minN);
-                if (!checkout.value || checkout.value <= checkin.value) {
-                    checkout.value = addDays(checkin.value, minN);
+                var newMin = addDays(checkin.value, minN);
+                checkout.min = newMin;
+                var hadValue = !!checkout.value;
+                var wasInvalid = hadValue && checkout.value <= checkin.value;
+                if (!hadValue || wasInvalid) {
+                    checkout.value = newMin;
+                    if (wasInvalid) {
+                        // Brief visual highlight (CSS handles the fade-out).
+                        checkout.classList.add('mphbac-input--just-changed');
+                        setTimeout(function () {
+                            checkout.classList.remove('mphbac-input--just-changed');
+                        }, 1500);
+                        // Screen-reader announce. Clear-then-set so the same
+                        // text on consecutive forced moves still announces.
+                        if (filterStatus) {
+                            clearTimeout(filterStatusTimer);
+                            filterStatus.textContent = '';
+                            requestAnimationFrame(function () {
+                                var tmpl = (config.strings && config.strings.checkoutMoved)
+                                    || 'Checkout date moved to {date}.';
+                                filterStatus.textContent = tmpl.replace('{date}', newMin);
+                                filterStatusTimer = setTimeout(function () {
+                                    filterStatus.textContent = '';
+                                }, 3000);
+                            });
+                        }
+                    }
                 }
             });
         }
@@ -517,6 +638,7 @@
 
         overlay.addEventListener('click', closeInfo);
         if (closeBtn) closeBtn.addEventListener('click', closeInfo);
+        wireSwipeToClose(sheet, closeInfo);
     }
 
     function wireSwipe(root, config, state) {
@@ -549,6 +671,14 @@
         return d.getFullYear() + '-' + m + '-' + day;
     }
 
+    function setStatus(root, message) {
+        // The live region for screen readers — toggling text triggers an
+        // announce. Mutating to the same string can be silent in some SRs,
+        // so callers clear-then-set on each new load.
+        var status = root.querySelector('.mphbac-grid-wrap .mphbac-sr-only');
+        if (status) status.textContent = message || '';
+    }
+
     function request(root, config, state) {
         var now = Date.now();
         if (now - state.lastRequest < REQUEST_THROTTLE_MS) {
@@ -558,7 +688,18 @@
         }
         state.lastRequest = now;
 
+        // Abort any in-flight fetch so the latest nav wins. Throttling above
+        // coalesces rapid triggers within 250ms; AbortController handles the
+        // case where a slower network leaves an older fetch outstanding when
+        // a newer one is issued.
+        if (state.controller) {
+            try { state.controller.abort(); } catch (e) { /* ignore */ }
+        }
+        var controller = new AbortController();
+        state.controller = controller;
+
         root.classList.add('is-loading');
+        setStatus(root, (config.strings && config.strings.loading) || 'Loading availability…');
 
         var body = new URLSearchParams();
         body.append('action', config.action || 'mphbac_query');
@@ -572,27 +713,43 @@
             method: 'POST',
             credentials: 'same-origin',
             body: body,
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         }).then(function (r) {
             return r.json();
         }).then(function (json) {
+            if (controller !== state.controller) return; // superseded
             root.classList.remove('is-loading');
+            setStatus(root, '');
             if (!json || !json.success || !json.data) {
                 showError(root);
                 return;
             }
             renderGrid(root, json.data, state, config);
-        }).catch(function () {
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return; // expected — newer request superseded this one
+            if (controller !== state.controller) return;
             root.classList.remove('is-loading');
+            setStatus(root, '');
             showError(root);
         });
+    }
+
+    // Wipe the grid-wrap's contents but preserve the .mphbac-sr-only live
+    // region so the next loading announce can target it. Without this,
+    // renderGrid's `wrap.innerHTML = ''` would remove the span, and screen
+    // readers would never re-announce subsequent loads.
+    function clearWrapPreservingStatus(wrap) {
+        if (!wrap) return;
+        var status = wrap.querySelector('.mphbac-sr-only');
+        wrap.innerHTML = '';
+        if (status) wrap.appendChild(status);
     }
 
     function showError(root) {
         // Clear the "Loading availability…" placeholder so it isn't left
         // dangling above the empty-state message on a request failure.
-        var wrap = root.querySelector('.mphbac-grid-wrap');
-        if (wrap) wrap.innerHTML = '';
+        clearWrapPreservingStatus(root.querySelector('.mphbac-grid-wrap'));
         var empty = root.querySelector('.mphbac-empty');
         if (empty) empty.hidden = false;
     }
@@ -609,7 +766,7 @@
 
         if (rooms.length === 0) {
             if (empty) empty.hidden = false;
-            wrap.innerHTML = '';
+            clearWrapPreservingStatus(wrap);
             updateRange(root, from, to, config);
             return;
         }
@@ -703,9 +860,17 @@
             grid.appendChild(row);
         });
 
-        wrap.innerHTML = '';
+        clearWrapPreservingStatus(wrap);
         var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels);
-        if (hint) wrap.appendChild(hint);
+        if (hint) {
+            wrap.appendChild(hint);
+            // Trigger the fade-in transition on the next frame so the
+            // browser registers the initial state (.mphbac-hint--enter,
+            // opacity 0) before flipping to the shown state.
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { hint.classList.add('mphbac-hint--shown'); });
+            });
+        }
         wrap.appendChild(grid);
         updateRange(root, from, to, config);
     }
@@ -735,7 +900,7 @@
         }
 
         var hintEl = document.createElement('div');
-        hintEl.className = 'mphbac-availability-hint';
+        hintEl.className = 'mphbac-availability-hint mphbac-hint--enter';
         hintEl.setAttribute('role', 'status');
 
         var throughDay = firstAvailIdx > 0 ? days[firstAvailIdx - 1] : days[days.length - 1];
@@ -833,7 +998,7 @@
         var cancelBtn = sheet.querySelector('.mphbac-sheet-cancel');
         var closeBtn = sheet.querySelector('.mphbac-sheet-close');
 
-        var context = { roomTypeId: 0, lastTrigger: null };
+        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
         // Portal anchors — same pattern as the info popup. Without this,
@@ -845,13 +1010,28 @@
         var overlayOrigParent = overlay.parentNode;
         var overlayMarker = document.createComment('mphbac-sheet-overlay');
 
-        root.addEventListener('click', function (e) {
-            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
-            if (!cell) return;
+        function openSheetFromCell(cell) {
             var row = cell.parentNode;
             var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
             var date = cell.getAttribute('data-date') || '';
             openSheet(typeId, date, addDays(date, minNights), cell);
+        }
+
+        root.addEventListener('click', function (e) {
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
+            if (!cell) return;
+            openSheetFromCell(cell);
+        });
+        // Keyboard parity: Enter or Space on a focused available cell opens
+        // the booking popup. Without this, cells get `tabindex="0"` and
+        // appear focusable but do nothing on key press — keyboard users hit
+        // a dead end.
+        root.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
+            if (!cell) return;
+            e.preventDefault();
+            openSheetFromCell(cell);
         });
 
         function openSheet(typeId, checkin, checkout, trigger) {
@@ -879,15 +1059,29 @@
                 sheet.hidden = false;
                 overlay.hidden = false;
             });
+            context.isOpen = true;
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
+                // Focus after the popup is fully attached + painted. Double
+                // rAF lets the slide-in transition start before focus moves,
+                // avoiding the iOS Safari quirk where focusing during a
+                // transform causes a flash. Tracked so close can cancel.
+                context.focusRaf = requestAnimationFrame(function () {
+                    if (context.isOpen) {
+                        try { checkinEl.focus(); } catch (e) { /* ignore */ }
+                    }
+                });
             });
-            setTimeout(function () { checkinEl.focus(); }, 50);
             document.addEventListener('keydown', onKeydown);
         }
 
         function closeSheet() {
+            context.isOpen = false;
+            if (context.focusRaf) {
+                cancelAnimationFrame(context.focusRaf);
+                context.focusRaf = 0;
+            }
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
             setTimeout(function () {
@@ -916,7 +1110,10 @@
         }
 
         function trapFocus(e) {
-            var focusable = sheet.querySelectorAll('input, button');
+            // Re-collect on every Tab so nested Elementor widgets (carousel
+            // arrows, accordion toggles, etc.) that get mounted/unmounted
+            // inside the popup are picked up. Filter out hidden / disabled.
+            var focusable = collectFocusables(sheet);
             if (!focusable.length) return;
             var first = focusable[0];
             var last = focusable[focusable.length - 1];
@@ -930,6 +1127,7 @@
         overlay.addEventListener('click', closeSheet);
         cancelBtn.addEventListener('click', closeSheet);
         closeBtn.addEventListener('click', closeSheet);
+        wireSwipeToClose(sheet, closeSheet);
 
         confirmBtn.addEventListener('click', function () {
             errorEl.hidden = true;

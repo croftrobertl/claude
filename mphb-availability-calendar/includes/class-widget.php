@@ -635,6 +635,9 @@ final class Widget extends Widget_Base
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
             'str_today'         => [__('Back-to-today button label', 'mphb-availability-calendar'), __('Today', 'mphb-availability-calendar')],
+            'str_today_hint'    => [__('Back-to-today button tooltip', 'mphb-availability-calendar'), __('Jump back to today\'s availability', 'mphb-availability-calendar')],
+            'str_loading'       => [__('Loading status (screen-reader)', 'mphb-availability-calendar'), __('Loading availability…', 'mphb-availability-calendar')],
+            'str_checkout_moved' => [__('Forced-checkout-date announcement (screen-reader, {date} is replaced)', 'mphb-availability-calendar'), __('Checkout date moved to {date}.', 'mphb-availability-calendar')],
             'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
@@ -1055,10 +1058,7 @@ final class Widget extends Widget_Base
             'daysDesktop'    => $days_desktop,
             'daysTablet'     => $days_tablet,
             'daysMobile'     => $days_mobile,
-            'labelStyle'     => (string) ($settings['label_style'] ?? 'abbrev_number'),
             'showPast'       => $settings['show_past'] === 'yes',
-            'inheritTheme'   => $settings['inherit_theme'] === 'yes',
-            'tooltipPrefix'  => (string) ($settings['str_tooltip_prefix'] ?? ''),
             'today'          => $today->format('Y-m-d'),
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
@@ -1094,6 +1094,8 @@ final class Widget extends Widget_Base
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
+                'loading'       => (string) ($settings['str_loading'] ?? ''),
+                'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),
             ],
         ];
 
@@ -1136,6 +1138,7 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
                 </div>
+                <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
@@ -1152,7 +1155,10 @@ final class Widget extends Widget_Base
                 <div class="mphbac-nav">
                     <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
                     <span class="mphbac-nav-range" aria-live="polite"></span>
-                    <button type="button" class="mphbac-nav-btn mphbac-nav-today" hidden><?php echo esc_html($settings['str_today']); ?></button>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-today"
+                            title="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            aria-label="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            hidden><?php echo esc_html($settings['str_today']); ?></button>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>
@@ -1166,7 +1172,7 @@ final class Widget extends Widget_Base
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <span class="mphbac-sr-only" role="status"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></span>
+                <span class="mphbac-sr-only" role="status" aria-live="polite"><?php echo esc_html($settings['str_loading']); ?></span>
             </div>
 
             <?php foreach ($info_html as $cid => $html) : ?>

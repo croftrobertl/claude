@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.18
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,16 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.0 =
+* Accessibility — calendar day cells are now actually keyboard-operable: Enter or Space on a focused available cell opens the booking popup (previously cells were `tabindex="0"` with no key handler, a dead end for keyboard users). The booking-popup focus trap now re-collects focusables on every Tab, so nested Elementor widgets (carousel arrows, accordion toggles) cycle correctly inside the trap instead of leaking out. Loading state is announced to screen readers on every fetch (previously the sr-only span was wiped by the first render and never re-announced).
+* Stability — in-flight AJAX is now aborted via `AbortController` when a newer request supersedes it, so rapid month-nav clicks no longer pile up wasted network traffic or race to render stale data. The booking popup's open-focus timer is cancelled on close and uses a double `requestAnimationFrame` instead of a 50ms `setTimeout`, eliminating the race where rapid open-close-open could land focus on a closed or stale element. SpeedyCache settings recursion now has an 8-level depth guard against pathological/cyclic option arrays.
+* Mobile reliability — booking + cottage info popups now use `max-height: 90svh` (with `90dvh` and `90vh` fallbacks) so the popup never extends behind the iOS on-screen keyboard. Nav arrows are now 44×44 minimum to meet iOS HIG / WCAG 2.5.5 AAA touch-target guidance. When the check-in date moves and the existing check-out becomes invalid, the forced-shift now briefly highlights the check-out input and announces the change to screen readers instead of silently changing the value.
+* Multisite-safe uninstall — `uninstall.php` now iterates every subsite via `switch_to_blog()` and clears each one's `mphbac_` transients individually, so a network uninstall doesn't orphan subsite transients in the database.
+* Swipe-to-close on info & booking popups — drag the top of the sheet down to dismiss (matches iOS/Android sheet conventions). Only engages on touch devices, only from the sheet's top 80px, and only when the sheet body is scrolled to the top, so internal scroll is never hijacked.
+* Today indicator on the date cell itself — every body cell in today's column now mirrors the header's underline (inset bottom border in the today-outline color), so "today" is scannable mid-grid without scanning back up to the header.
+* Polish — back-to-today nav button has a tooltip + aria-label ("Jump back to today's availability"). The "all booked through" hint banner fades in instead of popping in. The grid breathes its opacity slightly during in-flight fetches so the visitor sees motion instead of a frozen dim state. All new motion respects `prefers-reduced-motion: reduce`.
+* Tidy — stripped three unused fields (`labelStyle`, `inheritTheme`, `tooltipPrefix`) from the `data-config` JSON payload that's serialized to every widget on every page (≈250 bytes/page saved).
 
 = 0.8.18 =
 * Changed: cottage info popup header — the cottage name now splits across two rows at the first colon, e.g. "Cottage 31:" on row 1 and "Hibiscus Hut" on row 2. Same typography on both rows; applies on every viewport. Implemented via a small DOM split (text node + `<br>` + text node) inside the title element, preserving the link wrapper when a per-cottage title URL is set so clicking either row still navigates to the cottage page. Titles without a colon fall through unchanged.
