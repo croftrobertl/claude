@@ -243,6 +243,29 @@ function cardNames(root) {
   ok('body scroll restored', w.document.body.style.overflow === '');
 })();
 
+// ---- 14b. Accessibility hooks ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  ok('mode toggle is a group of pressed buttons', root.querySelector('.dccs-modebar[role="group"]') &&
+    root.querySelector('.dccs-modetab[aria-pressed="true"]') &&
+    root.querySelectorAll('.dccs-modetab[role="tab"]').length === 0);
+  ok('current step has aria-current', !!root.querySelector('.dccs-step-dot[aria-current="step"]'));
+  ok('disabled Next exposes a hint', /\w/.test(root.querySelector('.dccs-next').getAttribute('aria-label') || ''));
+  ok('radiogroup is keyboard-reachable when nothing is selected',
+    curChips(root).filter(function (c) { return c.getAttribute('tabindex') === '0'; }).length === 1);
+  clickAnswer(root, 'yes');
+  ok('selected pill marks aria-pressed', !!activeChip(root));
+
+  // Compare overlay dialog is labelled
+  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
+  root.querySelector('.dccs-flexible').click();
+  function tick(idx) { var b = root.querySelectorAll('.dccs-card input[type="checkbox"][data-cmp]')[idx]; b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true })); }
+  tick(0); tick(1);
+  root.querySelector('.dccs-open-compare').click();
+  ok('compare dialog has an aria-label', /\w/.test(w.document.querySelector('.dccs-modal[role="dialog"]').getAttribute('aria-label') || ''));
+})();
+
 // ---- 15. Result links point to real cottage pages ----
 (function () {
   const w = freshDom('https://example.com/?pet=true');

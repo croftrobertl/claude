@@ -51,29 +51,13 @@
 .dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
-/* Tabs */
-.dccs-root.dccs-root .dccs-tabs {
-  display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
-}
-.dccs-root.dccs-root .dccs-tab {
-  flex: 1 1 auto; min-height: 44px; padding: 8px 12px;
-  border: 1px solid var(--dccs-border); background: var(--dccs-surface);
-  color: var(--dccs-text); border-radius: 999px; cursor: pointer;
-  font-size: 0.95rem; font-weight: 600; line-height: 1.1;
-}
-.dccs-root.dccs-root .dccs-tab.is-active {
-  background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent);
-}
-
-/* Question rows + chips */
+/* Match-count pill + chips */
 .dccs-root.dccs-root .dccs-count {
   font-weight: 700; color: var(--dccs-accent); font-size: 0.95rem;
   margin: 0 0 12px; padding: 6px 12px; border-radius: 999px;
   background: rgba(15,109,191,0.1); display: inline-block;
 }
 
-.dccs-root.dccs-root .dccs-q { margin-bottom: 14px; }
-.dccs-root.dccs-root .dccs-q-label { font-weight: 600; margin-bottom: 6px; }
 .dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ---- Mode toggle (header) ---- */
@@ -159,7 +143,6 @@
 .dccs-root.dccs-root .dccs-results-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
 }
-.dccs-root.dccs-root .dccs-results-h { margin: 0; }
 .dccs-root.dccs-root .dccs-open-compare {
   min-height: 40px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--dccs-accent); background: var(--dccs-surface); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
@@ -219,7 +202,7 @@
 }
 .dccs-root.dccs-root .dccs-pick.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; min-width: 320px; background: var(--dccs-surface); }
+.dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; min-width: 280px; background: var(--dccs-surface); }
 .dccs-root.dccs-root .dccs-matrix th,
 .dccs-root.dccs-root .dccs-matrix td {
   border: 1px solid var(--dccs-border); padding: 10px; text-align: left; font-size: 0.9rem; vertical-align: top;
@@ -258,28 +241,11 @@
 }
 .dccs-root.dccs-root .dccs-empty h3 { margin: 0 0 6px; }
 
-.dccs-root.dccs-root .dccs-excluded { margin-top: 8px; font-size: 0.88rem; color: var(--dccs-muted); }
-.dccs-root.dccs-root .dccs-excluded summary { cursor: pointer; }
-.dccs-root.dccs-root .dccs-excluded ul { margin: 8px 0 0; padding-left: 18px; }
-
 .dccs-root.dccs-root .dccs-rank {
   font-size: 0.78rem; font-weight: 700; color: var(--dccs-accent);
   background: rgba(15,109,191,0.1); border-radius: 999px; padding: 2px 8px; vertical-align: middle;
 }
 
-/* Sticky "See my matches" bar — keeps the call-to-action in reach on mobile. */
-.dccs-root.dccs-root .dccs-cta-bar {
-  position: sticky; bottom: 8px; z-index: 5; margin-top: 14px;
-  display: flex; justify-content: center; pointer-events: none;
-}
-.dccs-root.dccs-root .dccs-see-results {
-  pointer-events: auto; min-height: 46px; padding: 10px 24px;
-  border: 0; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 1rem;
-  background: var(--dccs-accent); color: var(--dccs-accent-text);
-  box-shadow: 0 6px 16px rgba(15,109,191,0.32);
-}
-
-.dccs-root.dccs-root .dccs-footer { margin-top: 12px; }
 .dccs-root.dccs-root .dccs-reset {
   min-height: 44px; padding: 8px 18px; border-radius: 999px;
   border: 1px solid var(--dccs-border); background: transparent;
@@ -320,6 +286,17 @@
 @media (min-width: 640px) {
   .dccs-root.dccs-root { padding: 22px; }
   .dccs-root.dccs-root .dccs-heading { font-size: 1.7rem; }
+}
+
+/* Small phones: stop the results header + compare button from cramping. */
+@media (max-width: 480px) {
+  .dccs-root.dccs-root .dccs-results-head { flex-direction: column; align-items: stretch; }
+  .dccs-root.dccs-root .dccs-open-compare { width: 100%; }
+}
+
+/* Very narrow: keep the modal close button inside the box. */
+@media (max-width: 360px) {
+  .dccs-modal-close { top: 4px; right: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

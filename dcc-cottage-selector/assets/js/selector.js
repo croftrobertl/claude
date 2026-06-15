@@ -227,10 +227,11 @@
 
   /* ---------- rendering ---------- */
 
-  function chip(text, value, group, active) {
+  function chip(text, value, group, active, tabbable) {
+    if (tabbable === undefined) { tabbable = active; }
     return '<button type="button" class="dccs-chip' + (active ? ' is-active' : '') +
       '" role="radio" aria-checked="' + (active ? 'true' : 'false') +
-      '" tabindex="' + (active ? '0' : '-1') +
+      '" tabindex="' + (tabbable ? '0' : '-1') +
       '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(text) + '</button>';
   }
 
@@ -259,24 +260,28 @@
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
   /** Dispatch the wizard by stage: questionnaire → review → results. */
-  function renderWizard(config, state) {
+  function renderWizard(config, state, ctx) {
     if (state.stage === 'review') { return renderReview(config, state); }
-    if (state.stage === 'results') { return renderResults(config, state); }
-    return renderWizardStep(config, state);
+    if (state.stage === 'results') { return renderResults(config, state, ctx); }
+    return renderWizardStep(config, state, ctx);
   }
 
-  function renderWizardStep(config, state) {
+  function renderWizardStep(config, state, ctx) {
     var S = config.strings;
     var qs = WIZARD_QUESTIONS;
     var i = clamp(state.step | 0, 0, qs.length - 1);
     var q = qs[i];
     var value = state.quick[q.group];
 
-    var res = DCCS.score.run(config.cottages, criteriaFromState(state));
+    var res = ctx && ctx.res ? ctx.res : DCCS.score.run(config.cottages, criteriaFromState(state));
     var n = res.empty ? 0 : res.results.length;
 
-    var chips = q.opts.map(function (o) {
-      return chip(S[o[0]], o[1], q.group, String(value) === String(o[1]));
+    // When nothing is selected yet, keep the first option keyboard-tabbable so the
+    // radiogroup is reachable (ARIA roving-focus pattern needs one tabbable entry).
+    var anyActive = q.opts.some(function (o) { return String(value) === String(o[1]); });
+    var chips = q.opts.map(function (o, idx) {
+      var active = String(value) === String(o[1]);
+      return chip(S[o[0]], o[1], q.group, active, active || (!anyActive && idx === 0));
     }).join('');
 
     // Clickable stepper: answered steps (and the current one) are navigable.
@@ -286,10 +291,12 @@
       if (done && j !== i) {
         return '<button type="button" class="' + cls + ' dccs-edit" data-step="' + j + '" aria-label="' + esc(fmt2(S.wiz_progress, j + 1, qs.length)) + '"></button>';
       }
-      return '<span class="' + cls + '" aria-hidden="true"></span>';
+      return '<span class="' + cls + '"' + (j === i ? ' aria-current="step"' : ' aria-hidden="true"') + '></span>';
     }).join('');
 
     var canNext = answered(state, q.group);
+    var nextAttrs = canNext ? '' : ' disabled title="' + esc(S.next_hint || '') +
+      '" aria-label="' + esc((S.wiz_next || '') + ' — ' + (S.next_hint || '')) + '"';
 
     var html = '<div class="dccs-wizard" data-stage="q">';
     html += '<div class="dccs-progress-row">';
@@ -305,7 +312,7 @@
     html += i === 0
       ? '<button type="button" class="dccs-flexible">' + esc(S.flexible_cta) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
-    html += '<button type="button" class="dccs-next dccs-primary"' + (canNext ? '' : ' disabled') + '>' + esc(S.wiz_next) + '</button>';
+    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + '</button>';
     html += '</div></div>';
     return html;
   }
@@ -424,10 +431,10 @@
     return '<button type="button" class="dccs-open-compare">' + esc(fmt(config.strings.compare_btn, n)) + '</button>';
   }
 
-  function renderResults(config, st) {
+  function renderResults(config, st, ctx) {
     var S = config.strings;
-    var crit = criteriaFromState(st);
-    var res = DCCS.score.run(config.cottages, crit);
+    var crit = ctx && ctx.crit ? ctx.crit : criteriaFromState(st);
+    var res = ctx && ctx.res ? ctx.res : DCCS.score.run(config.cottages, crit);
     var html = '<div class="dccs-results">';
 
     if (res.empty) {
@@ -528,18 +535,17 @@
   }
 
   /** Update the screen-reader live region with the current step / match summary. */
-  function announce(live, config, state) {
+  function announce(live, config, state, res) {
     var S = config.strings;
+    res = res || DCCS.score.run(config.cottages, criteriaFromState(state));
     if (state.mode === 'quick' && state.stage === 'q') {
       var qs = WIZARD_QUESTIONS;
       var i = clamp(state.step | 0, 0, qs.length - 1);
-      var r = DCCS.score.run(config.cottages, criteriaFromState(state));
       live.textContent = fmt2(S.wiz_progress, i + 1, qs.length) + '. ' + S[qs[i].qKey] + '. ' +
-        fmt(S.match_count, r.empty ? 0 : r.results.length);
+        fmt(S.match_count, res.empty ? 0 : res.results.length);
       return;
     }
     if (state.mode === 'compare') { live.textContent = ''; return; }
-    var res = DCCS.score.run(config.cottages, criteriaFromState(state));
     var n = res.empty ? 0 : res.results.length;
     var msg = fmt(S.match_count, n);
     if (!res.empty && res.results[0]) { msg += '. ' + fmt(S.sr_top_match, cname(config, res.results[0])); }
@@ -555,20 +561,22 @@
 
   var MODE_LABEL = { quick: 'mode_quick', weights: 'mode_weights', compare: 'mode_compare' };
 
-  /** Top segmented mode toggle. Hidden when only one mode is enabled. */
+  /** Top segmented mode toggle (a labelled group of toggle buttons — there are no
+      real tabpanels, so aria-pressed is honest where role="tab" would not be).
+      Hidden when only one mode is enabled. */
   function modeBar(config, state, S) {
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
     if (!modes || modes.length <= 1) { return ''; }
     var pills = modes.map(function (m) {
       var on = state.mode === m;
       return '<button type="button" class="dccs-modetab' + (on ? ' is-active' : '') +
-        '" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') +
-        '" data-mode="' + m + '">' + esc(S[MODE_LABEL[m]] || m) + '</button>';
+        '" aria-pressed="' + (on ? 'true' : 'false') + '" data-mode="' + m + '">' +
+        esc(S[MODE_LABEL[m]] || m) + '</button>';
     }).join('');
-    return '<div class="dccs-modebar" role="tablist" aria-label="' + esc(S.more_options || '') + '">' + pills + '</div>';
+    return '<div class="dccs-modebar" role="group" aria-label="' + esc(S.more_options || '') + '">' + pills + '</div>';
   }
 
-  function renderSelector(root, config, state) {
+  function renderSelector(root, config, state, ctx) {
     var S = config.strings;
     // Keep the header compact on a question step so the step fits the viewport.
     var compact = (state.mode === 'quick' && state.stage === 'q');
@@ -582,11 +590,11 @@
     var bar = modeBar(config, state, S);
 
     if (state.mode === 'quick') {
-      root.innerHTML = head + bar + renderWizard(config, state);
+      root.innerHTML = head + bar + renderWizard(config, state, ctx);
       return;
     }
     var body = state.mode === 'weights' ? renderWeights(S, state) : renderCompare(config, state);
-    var results = state.mode === 'compare' ? '' : renderResults(config, state);
+    var results = state.mode === 'compare' ? '' : renderResults(config, state, ctx);
     root.innerHTML = head + bar + '<div class="dccs-body">' + body + '</div>' + results;
   }
 
@@ -619,9 +627,12 @@
 
     function rerender() {
       var key = root.contains(document.activeElement) ? focusKey(document.activeElement) : null;
-      renderSelector(root, config, state);
+      // Score once per render and reuse it for the body + the live region.
+      var crit = criteriaFromState(state);
+      var res = DCCS.score.run(config.cottages, crit);
+      renderSelector(root, config, state, { crit: crit, res: res });
       root.appendChild(live);
-      announce(live, config, state);
+      announce(live, config, state, res);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
     }
     rerender();
@@ -747,9 +758,10 @@
 
   /* ---------- overlays (mini-entry modal + compare modal) ---------- */
 
-  /** Shared overlay scaffold: focus-trap, background scroll-lock, Esc/click close. */
-  function buildOverlay(trigger) {
-    var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true"><div class="dccs-modal-box">' +
+  /** Shared overlay scaffold: focus-trap, background scroll-lock, Esc/click close.
+      `label` names the dialog for screen readers. */
+  function buildOverlay(trigger, label) {
+    var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true" aria-label="' + esc(label || '') + '"><div class="dccs-modal-box">' +
       '<button type="button" class="dccs-modal-close" aria-label="Close">&times;</button>' +
       '<div class="dccs-modal-content"></div></div></div>');
     document.body.appendChild(overlay);
@@ -794,7 +806,7 @@
   function openCompareModal(config, state, trigger) {
     var matrix = compareMatrixHtml(config, state);
     if (!matrix) { return; }
-    var o = buildOverlay(trigger);
+    var o = buildOverlay(trigger, config.strings.mode_compare);
     // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply
     // (data-dccs-ready stops bootAll from trying to initialize this shell).
     o.content.innerHTML = '<div class="dccs-root dccs-root dccs-in-modal" data-dccs-ready="1">' +
@@ -836,7 +848,7 @@
     config.highlight = String(entry.current);
     if (current) { config.presetQuick = derivePresetQuick(current); }
 
-    var o = buildOverlay(trigger);
+    var o = buildOverlay(trigger, config.strings && config.strings.heading);
     var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');
     inner.dataset.config = JSON.stringify(config);
     o.content.appendChild(inner);
@@ -883,10 +895,29 @@
   // Catch dynamically inserted widgets (e.g. the Elementor editor preview, which
   // injects markup after load). Guard document.body — if this script ever runs
   // before <body> exists, observe(null) would throw and break the preview.
+  // Only react to mutations that actually add a widget (not our own re-renders or
+  // unrelated page nodes), and coalesce a burst into a single boot.
   if (window.MutationObserver && document.body) {
+    var bootPending = false;
+    var scheduleBoot = window.requestAnimationFrame
+      ? window.requestAnimationFrame.bind(window)
+      : function (f) { setTimeout(f, 16); };
+    var addsWidget = function (node) {
+      if (!node || node.nodeType !== 1) { return false; }
+      return (node.matches && node.matches('.dccs-root, .dccs-entry')) ||
+        (node.querySelector && !!node.querySelector('.dccs-root, .dccs-entry'));
+    };
     new MutationObserver(function (muts) {
+      if (bootPending) { return; }
       for (var i = 0; i < muts.length; i++) {
-        if (muts[i].addedNodes && muts[i].addedNodes.length) { bootAll(document); break; }
+        var added = muts[i].addedNodes || [];
+        for (var j = 0; j < added.length; j++) {
+          if (addsWidget(added[j])) {
+            bootPending = true;
+            scheduleBoot(function () { bootPending = false; bootAll(document); });
+            return;
+          }
+        }
       }
     }).observe(document.body, { childList: true, subtree: true });
   }

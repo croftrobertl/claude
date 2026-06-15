@@ -174,13 +174,13 @@ class Selector_Widget extends Widget_Base
     }
 
     /** Shorthand: a COLOR control that drives a CSS custom property on the root. */
-    private function var_color(string $id, string $label, string $var): void
+    private function var_color(string $id, string $label, string $var, array $args = []): void
     {
-        $this->add_control($id, [
+        $this->add_control($id, array_merge([
             'label'     => $label,
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::ROOT => $var . ': {{VALUE}};'],
-        ]);
+        ], $args));
     }
 
     /** Overall size, spacing, alignment and the widget container. */
@@ -252,12 +252,18 @@ class Selector_Widget extends Widget_Base
             'return_value' => 'yes',
         ]);
 
-        $this->var_color('color_accent', __('Accent', 'dcc-cottage-selector'), '--dccs-accent');
+        // These three are also driven by the "Match site theme colors" rule (which
+        // wins on specificity), so hide them while inheriting to avoid a dead picker.
+        $inherited = [
+            'condition'   => ['inherit_theme!' => 'yes'],
+            'description' => __('Hidden while “Match site theme colors” is on.', 'dcc-cottage-selector'),
+        ];
+        $this->var_color('color_accent', __('Accent', 'dcc-cottage-selector'), '--dccs-accent', $inherited);
         $this->var_color('color_accent_text', __('Accent text', 'dcc-cottage-selector'), '--dccs-accent-text');
-        $this->var_color('color_accent2', __('Secondary accent', 'dcc-cottage-selector'), '--dccs-accent-2');
+        $this->var_color('color_accent2', __('Secondary accent', 'dcc-cottage-selector'), '--dccs-accent-2', $inherited);
         $this->var_color('color_surface', __('Card background', 'dcc-cottage-selector'), '--dccs-surface');
         $this->var_color('color_bg', __('Widget background', 'dcc-cottage-selector'), '--dccs-bg');
-        $this->var_color('color_text', __('Text', 'dcc-cottage-selector'), '--dccs-text');
+        $this->var_color('color_text', __('Text', 'dcc-cottage-selector'), '--dccs-text', $inherited);
         $this->var_color('color_muted', __('Muted text', 'dcc-cottage-selector'), '--dccs-muted');
         $this->var_color('color_border', __('Borders', 'dcc-cottage-selector'), '--dccs-border');
         $this->var_color('color_good', __('Positive highlight', 'dcc-cottage-selector'), '--dccs-good');

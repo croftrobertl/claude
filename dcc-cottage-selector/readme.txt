@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,7 +33,7 @@ The whole experience is client-side over a tiny bundled dataset
 = Provided widgets / shortcode =
 
 * **Cottage Selector** (Elementor) — the full wizard finder (plus Weigh
-  priorities / Compare under "More options").
+  priorities / Compare in the header mode toggle).
 * **Cottage Selector — Mini Entry** (Elementor) — a compact cross-sell prompt for
   individual cottage pages.
 * `[dcc_selector_entry current="22" url="/cottage-selector/"]` — the same mini
@@ -116,6 +116,20 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.4.1 =
+* Performance: the boot MutationObserver now ignores unrelated page mutations and
+  our own re-renders (acts only when a widget is added, coalesced per frame); the
+  match score is computed once per render instead of 2–4 times.
+* Accessibility: dialogs are labelled for screen readers; the mode toggle uses an
+  honest button group (aria-pressed) instead of a faux tablist; the current step
+  has aria-current; the disabled Next button explains itself; and the answer
+  radiogroup is keyboard-reachable when nothing is selected yet.
+* Fix: enabling "Match site theme colors" no longer leaves the Accent / Secondary
+  / Text pickers visible-but-dead — they're hidden while inheriting.
+* Mobile: small-screen fixes for the modal close button, the results header +
+  Compare button, and the compare table width.
+* Removed dead CSS left over from earlier versions.
 
 = 0.4.0 =
 * Fix: the widget no longer hangs on "Loading…" in the Elementor editor preview —

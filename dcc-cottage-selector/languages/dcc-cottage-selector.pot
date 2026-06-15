@@ -3,7 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.4.0\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.4.1\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -76,6 +76,9 @@ msgid "Cell borders"
 msgstr ""
 
 msgid "Center"
+msgstr ""
+
+msgid "Choose an answer to continue"
 msgstr ""
 
 msgid "Claude Code"
@@ -184,6 +187,9 @@ msgid "Heading & intro"
 msgstr ""
 
 msgid "Heading color"
+msgstr ""
+
+msgid "Hidden while “Match site theme colors” is on."
 msgstr ""
 
 msgid "High"
