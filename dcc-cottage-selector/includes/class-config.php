@@ -24,9 +24,10 @@ final class Config
             // Shell / modes
             'heading'           => __('Find your perfect cottage', 'dcc-cottage-selector'),
             'intro'             => __('All our cottages sleep two with a queen bed — here is what actually sets them apart. Answer a few quick questions and we will match you in seconds.', 'dcc-cottage-selector'),
-            'mode_quick'        => __('Quick Pick', 'dcc-cottage-selector'),
-            'mode_weights'      => __('What Matters Most', 'dcc-cottage-selector'),
+            'mode_quick'        => __('Quick finder', 'dcc-cottage-selector'),
+            'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare', 'dcc-cottage-selector'),
+            'name_format'       => /* translators: %1$s: cottage number, %2$s: cottage name */ __('Cottage %1$s: %2$s', 'dcc-cottage-selector'),
             'match_count'       => /* translators: %d: number of matching cottages */ __('%d cottages match', 'dcc-cottage-selector'),
             'sr_top_match'      => /* translators: %s: cottage name */ __('Top match: %s', 'dcc-cottage-selector'),
             'loading'           => __('Loading…', 'dcc-cottage-selector'),
@@ -44,15 +45,15 @@ final class Config
 
             // Wizard flow
             'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
-            'wiz_back'          => __('Back', 'dcc-cottage-selector'),
+            'wiz_back'          => __('← Back', 'dcc-cottage-selector'),
+            'wiz_next'          => __('Next →', 'dcc-cottage-selector'),
+            'flexible_cta'      => __('I’m flexible — just show matches', 'dcc-cottage-selector'),
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
             'your_criteria'     => __('What you’re looking for', 'dcc-cottage-selector'),
-            'more_options'      => __('More ways to choose:', 'dcc-cottage-selector'),
-            'opt_weights'       => __('Weigh priorities', 'dcc-cottage-selector'),
-            'opt_compare'       => __('Compare cottages', 'dcc-cottage-selector'),
-            'to_finder'         => __('← Back to the quick finder', 'dcc-cottage-selector'),
+            'more_options'      => __('More ways to choose', 'dcc-cottage-selector'),
+            'compare_btn'       => /* translators: %d: number of cottages selected */ __('Compare %d cottages', 'dcc-cottage-selector'),
 
             // No-match "what it misses" tags
             'tag_pet'           => __('Not pet-friendly', 'dcc-cottage-selector'),
@@ -109,12 +110,6 @@ final class Config
             // Empty state
             'empty_heading'     => __('No cottage meets every must-have', 'dcc-cottage-selector'),
             'empty_relax'       => /* translators: %s: name of the filter to relax */ __('Try relaxing “%s” — here are the closest options.', 'dcc-cottage-selector'),
-
-            // Show why excluded
-            'excluded_toggle'   => __('Why aren’t the others shown?', 'dcc-cottage-selector'),
-            'ex_pet'            => /* translators: %s: cottage name */ __('%s hidden: not pet-friendly.', 'dcc-cottage-selector'),
-            'ex_upstairs'       => /* translators: %s: cottage name */ __('%s hidden: upstairs.', 'dcc-cottage-selector'),
-            'ex_dining'         => /* translators: %s: cottage name */ __('%s hidden: no table for four.', 'dcc-cottage-selector'),
 
             // Badges
             'badge_spacious'    => __('Spacious Retreat', 'dcc-cottage-selector'),

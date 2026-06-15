@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,10 +19,10 @@ tool:
 * **Quick finder (default)** — a step-through wizard, one tappable question per
   screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
   pet-friendly? ground floor? largest?), then a review screen and the top matches.
-* **Weigh priorities** (behind "More options") — set how much each thing matters
-  with a tap (Low / Medium / High); no sliders, no drag-and-drop.
-* **Compare** (behind "More options") — a tight side-by-side matrix of 2–4
-  cottages over the seven meaningful differences only.
+* **Weigh priorities** (a tap away in the mode toggle) — set how much each thing
+  matters with a tap (Low / Medium / High); no sliders, no drag-and-drop.
+* **Compare** (mode toggle, or tick cottages on the results) — a tight
+  side-by-side matrix of 2–4 cottages over the seven meaningful differences only.
 
 Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
@@ -50,12 +50,14 @@ Everything runs in the browser from a small dataset inlined into the page — no
 server round-trips.
 
 The default experience is a **step-through wizard**: one question per screen so a
-guest never scrolls to find their results. Each step shows progress ("Step 3 of
-7") and a live "N cottages match" count; tapping an answer advances automatically,
-a Back control edits the previous step, and every step offers "Doesn't matter" so
-nothing is forced. After the last question a **Review** screen lists all answers
-(each editable) before "See my matches" reveals the **Top 3**, with a recap of
-what was searched.
+guest never scrolls to find their results. Each step shows a clickable progress
+stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
+pre-selected — the guest taps an answer (including "No preference") and presses
+**Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
+both edit earlier answers, and an **"I'm flexible — just show matches"** shortcut
+skips the rest. After the last question a **Review** screen lists all answers
+(each editable) before "See my matches" reveals the **Top 3**, with a tappable
+recap of what was searched.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
 (pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
@@ -64,14 +66,17 @@ returned directly. If a combination is impossible (e.g. pet-friendly AND a table
 for four), the closest matches are shown, each **tagged with the must-have it
 misses** ("Upstairs", "No table for 4").
 
-Two extra tools sit behind a **"More options"** link: **Weigh priorities** (score
-by Low/Medium/High importance) and **Compare** (a side-by-side matrix of 2–4
-cottages, highlighting the cells that differ).
+A header **mode toggle** switches between the Quick finder, **Weigh priorities**
+(score by Low/Medium/High importance) and **Compare**. On the results, ticking two
+or more cottages reveals a **"Compare N cottages"** button that opens the
+side-by-side matrix in a pop-up.
 
+Cottages are labelled with their number ("Cottage 32: Flamingo Bungalow").
 Identical-layout cottages (e.g. two of the suites) are flagged so guests
 understand why both appear. Preferences are kept in the URL (shareable) and the
 browser (remembered for return visits); a deep link such as ?pet=true opens
-straight to results.
+straight to results. Every visible string and the full look (colors, typography,
+spacing, borders, alignment, buttons) is configurable in the Elementor editor.
 
 == Installation ==
 
@@ -88,26 +93,46 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 
 == Manual smoke test ==
 
-* Wizard: each step shows one question, "Step X of 7", a live count, and (after
-  step 1) a Back button; tapping an answer auto-advances.
+* Editor: the widget renders in the Elementor editor preview (not stuck on
+  "Loading…") — clear SpeedyCache and Elementor → Tools → Regenerate Files & Data
+  after updating.
+* Wizard: each step shows one question with nothing pre-selected; **Next** is
+  disabled until an answer is tapped and never advances on its own. The clickable
+  stepper and a low-key Back link jump to earlier answers.
+* "I'm flexible — just show matches" on step 1 skips straight to results.
 * The Review screen lists all 7 answers with Edit links; "See my matches" shows
-  the top 3 plus a "What you’re looking for" recap.
-* Answering **Pet-friendly = Yes** returns only Coconut Cottage (#34).
-* **Ground floor only = Yes** never shows The Lighthouse (#23).
-* **Table for 4** isolates The Boathouse (#22).
+  the top 3 with full names ("Cottage 34: Coconut Cottage") and a tappable recap.
+* Answering **Pet-friendly = Yes** returns only Cottage 34: Coconut Cottage.
 * Impossible combo (pet + table-for-4) shows the next-best cottage tagged
-  "No table for 4".
-* Any hard filter leaving ≤3 cottages returns them directly (no re-ranking).
+  "No table for 4". (There is no "why excluded" panel.)
 * When #31 & #32 (or #35 & #36) both appear, the lower-numbered one shows an
   "identical layout and features" note.
-* More options → Weigh priorities: raising **Workspace** to High floats #22/#23.
-* More options → Compare: pick 2–4 cottages; differing cells are highlighted.
+* Mode toggle → Weigh priorities: raising **Workspace** to High floats #22/#23.
+* Compare: tick two cottages on the results to reveal "Compare 2 cottages" → the
+  matrix opens in a pop-up; or use the Compare mode and pick 2–4.
 * Deep link: loading `?pet=true` opens straight to results.
 * Mini Entry: with a selector URL it links there pre-filled; without one it opens
   an on-page pop-up showing how the current cottage ranks.
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.4.0 =
+* Fix: the widget no longer hangs on "Loading…" in the Elementor editor preview —
+  boot now waits for the data layer and the preview enqueues it in order.
+* Wizard: a Next button replaces auto-advance (no more accidental skips); no
+  answer is pre-selected; the Back control is a low-key link, not an answer; a
+  clickable progress stepper and an "I'm flexible" shortcut were added.
+* The secondary modes moved into a header mode toggle (Quick finder / Weigh
+  priorities / Compare).
+* Compare is now self-explanatory: tick 2+ cottages on the results to reveal a
+  "Compare N cottages" button that opens the matrix in a pop-up.
+* Cottages are labelled with their number ("Cottage 32: Flamingo Bungalow").
+* Removed the low-value "Why aren't the others shown?" panel; centered the
+  heading/intro.
+* Comprehensive Elementor style controls (typography, colors, spacing, borders,
+  alignment, Normal/Hover/Selected button + answer styling, cards, compare table).
+* DOM smoke test expanded to 57 assertions.
 
 = 0.3.0 =
 * Redesigned the default flow as a one-question-per-step wizard so guests never

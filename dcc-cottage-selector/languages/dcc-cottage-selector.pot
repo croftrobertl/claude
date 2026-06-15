@@ -3,7 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.3.0\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.4.0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -15,25 +15,19 @@ msgstr ""
 msgid "%d sq ft"
 msgstr ""
 
-msgid "%s hidden: no table for four."
-msgstr ""
-
-msgid "%s hidden: not pet-friendly."
-msgstr ""
-
-msgid "%s hidden: upstairs."
-msgstr ""
-
 msgid "1-bedroom"
 msgstr ""
 
 msgid "1-bedroom separation"
 msgstr ""
 
-msgid "Accent color"
+msgid "Accent"
 msgstr ""
 
-msgid "Accent text color"
+msgid "Accent text"
+msgstr ""
+
+msgid "Active"
 msgstr ""
 
 msgid "All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector)."
@@ -42,13 +36,52 @@ msgstr ""
 msgid "All our cottages sleep two with a queen bed — here is what actually sets them apart. Answer a few quick questions and we will match you in seconds."
 msgstr ""
 
-msgid "Back"
+msgid "Answer padding"
+msgstr ""
+
+msgid "Answer radius"
+msgstr ""
+
+msgid "Background"
+msgstr ""
+
+msgid "Badge background"
+msgstr ""
+
+msgid "Badge text"
+msgstr ""
+
+msgid "Bar background"
+msgstr ""
+
+msgid "Border"
+msgstr ""
+
+msgid "Borders"
+msgstr ""
+
+msgid "Button padding"
+msgstr ""
+
+msgid "Button radius"
+msgstr ""
+
+msgid "Buttons"
 msgstr ""
 
 msgid "Card background"
 msgstr ""
 
+msgid "Cell borders"
+msgstr ""
+
+msgid "Center"
+msgstr ""
+
 msgid "Claude Code"
+msgstr ""
+
+msgid "Colors"
 msgstr ""
 
 msgid "Compact Escape"
@@ -57,10 +90,25 @@ msgstr ""
 msgid "Compare"
 msgstr ""
 
-msgid "Compare cottages"
+msgid "Compare %d cottages"
+msgstr ""
+
+msgid "Compare table"
+msgstr ""
+
+msgid "Compare “differs” highlight"
+msgstr ""
+
+msgid "Completed step color"
 msgstr ""
 
 msgid "Content"
+msgstr ""
+
+msgid "Corner radius"
+msgstr ""
+
+msgid "Cottage %1$s: %2$s"
 msgstr ""
 
 msgid "Cottage Selector"
@@ -99,6 +147,9 @@ msgstr ""
 msgid "Edit answers"
 msgstr ""
 
+msgid "Element spacing"
+msgstr ""
+
 msgid "Enabled modes"
 msgstr ""
 
@@ -120,19 +171,49 @@ msgstr ""
 msgid "Ground floor only?"
 msgstr ""
 
+msgid "Header background"
+msgstr ""
+
+msgid "Header text"
+msgstr ""
+
 msgid "Heading"
+msgstr ""
+
+msgid "Heading & intro"
+msgstr ""
+
+msgid "Heading color"
 msgstr ""
 
 msgid "High"
 msgstr ""
 
+msgid "Hover"
+msgstr ""
+
+msgid "Intro color"
+msgstr ""
+
 msgid "Intro text"
+msgstr ""
+
+msgid "I’m flexible — just show matches"
 msgstr ""
 
 msgid "Layout"
 msgstr ""
 
+msgid "Layout & spacing"
+msgstr ""
+
 msgid "Leave blank to open the selector in a pop-up on this page."
+msgstr ""
+
+msgid "Left"
+msgstr ""
+
+msgid "Link controls (Back / I’m flexible)"
 msgstr ""
 
 msgid "Loading…"
@@ -144,16 +225,43 @@ msgstr ""
 msgid "Match site theme colors"
 msgstr ""
 
+msgid "Match-count background"
+msgstr ""
+
+msgid "Match-count text"
+msgstr ""
+
+msgid "Maximum width"
+msgstr ""
+
 msgid "Medium"
+msgstr ""
+
+msgid "Mode label: Compare"
+msgstr ""
+
+msgid "Mode label: Quick finder"
+msgstr ""
+
+msgid "Mode label: Weigh priorities"
+msgstr ""
+
+msgid "Mode toggle"
 msgstr ""
 
 msgid "More room"
 msgstr ""
 
-msgid "More ways to choose:"
+msgid "More ways to choose"
 msgstr ""
 
 msgid "Most space"
+msgstr ""
+
+msgid "Muted text"
+msgstr ""
+
+msgid "Next →"
 msgstr ""
 
 msgid "No"
@@ -168,6 +276,9 @@ msgstr ""
 msgid "No table for 4"
 msgstr ""
 
+msgid "Normal"
+msgstr ""
+
 msgid "Not pet-friendly"
 msgstr ""
 
@@ -175,6 +286,9 @@ msgid "Not sure this layout fits you best? Open our 30-Second Selector."
 msgstr ""
 
 msgid "Note: this cottage has an identical layout and features to %s."
+msgstr ""
+
+msgid "Padding"
 msgstr ""
 
 msgid "Pet Stay Cottage"
@@ -189,6 +303,15 @@ msgstr ""
 msgid "Pick 2 to 4 cottages to compare side by side."
 msgstr ""
 
+msgid "Positive highlight"
+msgstr ""
+
+msgid "Progress & steps"
+msgstr ""
+
+msgid "Progress label color"
+msgstr ""
+
 msgid "Prompt text"
 msgstr ""
 
@@ -198,7 +321,19 @@ msgstr ""
 msgid "Pullout couch flexibility"
 msgstr ""
 
+msgid "Question color"
+msgstr ""
+
+msgid "Questions & answers"
+msgstr ""
+
 msgid "Quick Pick"
+msgstr ""
+
+msgid "Quick finder"
+msgstr ""
+
+msgid "Radius"
 msgstr ""
 
 msgid "Ranked #%d for you"
@@ -210,10 +345,16 @@ msgstr ""
 msgid "Reset button"
 msgstr ""
 
+msgid "Result cards"
+msgstr ""
+
 msgid "Results heading"
 msgstr ""
 
 msgid "Review your answers"
+msgstr ""
+
+msgid "Right"
 msgstr ""
 
 msgid "Saves the last preferences in the browser so returning guests resume where they left off."
@@ -225,7 +366,13 @@ msgstr ""
 msgid "Second Floor"
 msgstr ""
 
+msgid "Secondary accent"
+msgstr ""
+
 msgid "See my matches"
+msgstr ""
+
+msgid "Selected"
 msgstr ""
 
 msgid "Selector page URL"
@@ -249,6 +396,9 @@ msgstr ""
 msgid "Step %1$d of %2$d"
 msgstr ""
 
+msgid "Step bar thickness"
+msgstr ""
+
 msgid "Studio"
 msgstr ""
 
@@ -258,19 +408,7 @@ msgstr ""
 msgid "Studio simplicity"
 msgstr ""
 
-msgid "Style"
-msgstr ""
-
 msgid "Suite-Style Comfort"
-msgstr ""
-
-msgid "Tab: Compare"
-msgstr ""
-
-msgid "Tab: Quick Pick"
-msgstr ""
-
-msgid "Tab: What Matters Most"
 msgstr ""
 
 msgid "Table for 2"
@@ -285,10 +423,13 @@ msgstr ""
 msgid "Tap to set how much each thing matters to you."
 msgstr ""
 
+msgid "Text"
+msgstr ""
+
 msgid "Text & labels"
 msgstr ""
 
-msgid "Text color"
+msgid "Text alignment"
 msgstr ""
 
 msgid "The cottage selector is temporarily unavailable."
@@ -301,6 +442,9 @@ msgid "Top match: %s"
 msgstr ""
 
 msgid "Try relaxing “%s” — here are the closest options."
+msgstr ""
+
+msgid "Upcoming step color"
 msgstr ""
 
 msgid "Upstairs"
@@ -327,10 +471,10 @@ msgstr ""
 msgid "What you’re looking for"
 msgstr ""
 
-msgid "Why aren’t the others shown?"
+msgid "Why this fits your trip"
 msgstr ""
 
-msgid "Why this fits your trip"
+msgid "Widget background"
 msgstr ""
 
 msgid "Work-Friendly Hideaway"
@@ -372,6 +516,9 @@ msgstr ""
 msgid "— None —"
 msgstr ""
 
-msgid "← Back to the quick finder"
+msgid "“Differs” cell highlight"
+msgstr ""
+
+msgid "← Back"
 msgstr ""
 

@@ -108,6 +108,12 @@ final class Plugin
     {
         $this->register_assets();
         wp_enqueue_style('dccs-selector');
+        // Enqueue the dependency chain explicitly and in order. In the editor
+        // preview the widget markup is injected dynamically, and relying on
+        // implicit dependency resolution alone can leave the data layer
+        // (dccs-score / dccs-labels) unavailable when the widget boots.
+        wp_enqueue_script('dccs-score');
+        wp_enqueue_script('dccs-labels');
         wp_enqueue_script('dccs-selector');
     }
 }

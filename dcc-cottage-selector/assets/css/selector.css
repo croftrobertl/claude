@@ -46,9 +46,9 @@
   white-space: nowrap; border: 0;
 }
 
-.dccs-root.dccs-root .dccs-head { margin-bottom: 14px; }
-.dccs-root.dccs-root .dccs-heading { margin: 0 0 4px; font-size: 1.4rem; line-height: 1.2; }
-.dccs-root.dccs-root .dccs-intro { margin: 0; color: var(--dccs-muted); font-size: 0.95rem; }
+.dccs-root.dccs-root .dccs-head { margin-bottom: 14px; text-align: var(--dccs-align, center); }
+.dccs-root.dccs-root .dccs-heading { margin: 0 0 6px; font-size: 1.4rem; line-height: 1.2; }
+.dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
 /* Tabs */
@@ -76,35 +76,62 @@
 .dccs-root.dccs-root .dccs-q-label { font-weight: 600; margin-bottom: 6px; }
 .dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* ---- Mode toggle (header) ---- */
+.dccs-root.dccs-root .dccs-modebar {
+  display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+  margin: 0 0 16px; padding: 4px; background: var(--dccs-surface);
+  border: 1px solid var(--dccs-border); border-radius: 999px;
+}
+.dccs-root.dccs-root .dccs-modetab {
+  flex: 1 1 auto; min-height: 40px; padding: 8px 14px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--dccs-muted); cursor: pointer;
+  font-size: 0.92rem; font-weight: 600; line-height: 1.1;
+}
+.dccs-root.dccs-root .dccs-modetab.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); }
+
 /* ---- Wizard ---- */
 .dccs-root.dccs-root .dccs-head-compact { margin-bottom: 10px; }
 .dccs-root.dccs-root .dccs-head-compact .dccs-heading { font-size: 1.2rem; }
 
-.dccs-root.dccs-root .dccs-wizard {
-  display: flex; flex-direction: column; min-height: 300px;
-}
+.dccs-root.dccs-root .dccs-wizard { display: flex; flex-direction: column; min-height: 300px; }
 .dccs-root.dccs-root .dccs-progress-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;
 }
 .dccs-root.dccs-root .dccs-progress-label { font-weight: 600; color: var(--dccs-muted); font-size: 0.9rem; }
-.dccs-root.dccs-root .dccs-progress {
-  height: 6px; border-radius: 999px; background: var(--dccs-border); overflow: hidden; margin-bottom: 18px;
+.dccs-root.dccs-root .dccs-back-spacer, .dccs-root.dccs-root .dccs-nav-spacer { flex: 0 0 auto; }
+
+/* Back: a low-emphasis text link, deliberately unlike the answer chips */
+.dccs-root.dccs-root .dccs-back {
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+  color: var(--dccs-muted); font-size: 0.9rem; font-weight: 600;
 }
-.dccs-root.dccs-root .dccs-progress > span {
-  display: block; height: 100%; background: var(--dccs-accent); border-radius: 999px; transition: width .2s ease;
+.dccs-root.dccs-root .dccs-back:hover, .dccs-root.dccs-root .dccs-back:focus-visible { color: var(--dccs-accent); text-decoration: underline; }
+
+/* Clickable stepper dots */
+.dccs-root.dccs-root .dccs-stepper { display: flex; gap: 6px; margin-bottom: 18px; }
+.dccs-root.dccs-root .dccs-step-dot {
+  flex: 1 1 0; height: var(--dccs-dot-h, 6px); padding: 0; border: 0; border-radius: 999px;
+  background: var(--dccs-border); cursor: default;
 }
-.dccs-root.dccs-root .dccs-step-q {
-  font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none;
-}
+.dccs-root.dccs-root button.dccs-step-dot { cursor: pointer; }
+.dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.55; }
+
+.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; }
 .dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
 .dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; }
 .dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
   width: 100%; min-height: 52px; font-size: 1.05rem; font-weight: 600; text-align: left; padding: 12px 18px;
 }
+
 .dccs-root.dccs-root .dccs-wizard-nav {
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 18px;
 }
-.dccs-root.dccs-root .dccs-back,
+.dccs-root.dccs-root .dccs-flexible {
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+  color: var(--dccs-muted); font-size: 0.9rem; text-decoration: underline;
+}
+.dccs-root.dccs-root .dccs-flexible:hover, .dccs-root.dccs-root .dccs-flexible:focus-visible { color: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-edit-answers {
   min-height: 44px; padding: 8px 18px; border-radius: 999px;
   border: 1px solid var(--dccs-border); background: transparent; color: var(--dccs-text); cursor: pointer; font-size: 0.95rem;
@@ -114,6 +141,7 @@
   background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
   box-shadow: 0 6px 16px rgba(15,109,191,0.32);
 }
+.dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
 /* Review list */
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
@@ -127,27 +155,34 @@
   border: 1px solid var(--dccs-border); background: var(--dccs-surface); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
 }
 
-/* Results recap + "what it misses" tags */
+/* Results head + open-compare button */
+.dccs-root.dccs-root .dccs-results-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.dccs-root.dccs-root .dccs-results-h { margin: 0; }
+.dccs-root.dccs-root .dccs-open-compare {
+  min-height: 40px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-surface); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
+}
+
+/* Results recap — tappable criterion chips */
 .dccs-root.dccs-root .dccs-recap {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin: 12px 0; padding: 10px 14px; border-radius: var(--dccs-radius);
   background: var(--dccs-surface); border: 1px solid var(--dccs-border); font-size: 0.9rem;
 }
+.dccs-root.dccs-root .dccs-recap-label { color: var(--dccs-muted); font-weight: 600; }
+.dccs-root.dccs-root .dccs-recap-chip {
+  border: 1px solid var(--dccs-border); background: var(--dccs-bg); color: var(--dccs-text);
+  border-radius: 999px; padding: 4px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.dccs-root.dccs-root .dccs-recap-chip:hover, .dccs-root.dccs-root .dccs-recap-chip:focus-visible { border-color: var(--dccs-accent); color: var(--dccs-accent); }
+
+/* "What it misses" tags */
 .dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .dccs-root.dccs-root .dccs-miss {
   background: rgba(240,128,128,0.18); color: #a8322e; border: 1px solid rgba(240,128,128,0.5);
   border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600;
-}
-
-/* More options / back-to-finder row */
-.dccs-root.dccs-root .dccs-more {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--dccs-border);
-}
-.dccs-root.dccs-root .dccs-more-label { color: var(--dccs-muted); font-size: 0.88rem; }
-.dccs-root.dccs-root .dccs-to-mode,
-.dccs-root.dccs-root .dccs-to-finder {
-  background: none; border: 0; padding: 4px 2px; cursor: pointer;
-  color: var(--dccs-accent); font-weight: 600; font-size: 0.9rem; text-decoration: underline;
 }
 .dccs-root.dccs-root .dccs-chip {
   min-height: 44px; padding: 8px 16px; border-radius: 999px;
@@ -215,7 +250,7 @@
   background: var(--dccs-accent); color: var(--dccs-accent-text);
   border-radius: 999px; text-decoration: none; font-weight: 600;
 }
-.dccs-root.dccs-root .dccs-cmp-toggle { font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
+.dccs-root.dccs-root .dccs-cmp-toggle { margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 
 .dccs-root.dccs-root .dccs-empty {
   background: var(--dccs-surface); border: 1px dashed var(--dccs-accent-2);
@@ -279,6 +314,8 @@
   width: 40px; height: 40px; border-radius: 999px; border: 0;
   background: #1a2330; color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
 }
+.dccs-modal-content .dccs-compare-modal { padding: 4px; }
+.dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }
 
 @media (min-width: 640px) {
   .dccs-root.dccs-root { padding: 22px; }

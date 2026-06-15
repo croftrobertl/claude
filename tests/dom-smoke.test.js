@@ -1,10 +1,12 @@
 /**
- * DOM smoke test for the Dora Canal Cottage Selector front-end (wizard flow).
+ * DOM smoke test for the Dora Canal Cottage Selector front-end (v0.4 wizard).
  *
- * Mounts the widget in jsdom with the REAL data-config (tests/dump-config.php),
- * then drives the actual controller — stepping through the wizard, review/edit,
- * results, deep links, no-match tagging, More-options modes, localStorage, and
- * the mini-entry modal — asserting on the resulting DOM.
+ * Mounts the widget in jsdom with the REAL data-config (tests/dump-config.php)
+ * and drives the actual controller: the Next-button wizard (no auto-advance, no
+ * default highlight), the clickable stepper, review/edit, results with full
+ * cottage names + tappable recap, the header mode toggle, the compare overlay,
+ * the no-match tags, the boot dependency-guard, localStorage, and the mini-entry
+ * modal — asserting on the resulting DOM.
  *
  * Run: npm test   (or: node tests/dom-smoke.test.js)
  */
@@ -20,19 +22,18 @@ const CONFIG = execSync('php ' + path.join(__dirname, 'dump-config.php')).toStri
 let pass = 0, fail = 0;
 function ok(name, cond) { cond ? pass++ : fail++; console.log((cond ? 'PASS ' : 'FAIL ') + name); }
 
-function freshDom(url, html) {
-  const dom = new JSDOM(html || '<!DOCTYPE html><body></body>', {
-    url: url || 'https://example.com/',
-    pretendToBeVisual: true,
-    runScripts: 'dangerously'
+function injectScript(window, file) {
+  const s = window.document.createElement('script');
+  s.textContent = fs.readFileSync(path.join(JS, file), 'utf8');
+  window.document.body.appendChild(s);
+}
+
+function freshDom(url) {
+  const dom = new JSDOM('<!DOCTYPE html><body></body>', {
+    url: url || 'https://example.com/', pretendToBeVisual: true, runScripts: 'dangerously'
   });
-  const { window } = dom;
-  ['score.js', 'labels.js', 'selector.js'].forEach(function (f) {
-    const s = window.document.createElement('script');
-    s.textContent = fs.readFileSync(path.join(JS, f), 'utf8');
-    window.document.body.appendChild(s);
-  });
-  return window;
+  ['score.js', 'labels.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
+  return dom.window;
 }
 
 function mountSelector(window, configStr) {
@@ -46,119 +47,169 @@ function mountSelector(window, configStr) {
 
 function progress(root) { var p = root.querySelector('.dccs-progress-label'); return p ? p.textContent : ''; }
 function curChips(root) { return Array.prototype.slice.call(root.querySelectorAll('.dccs-chips-wizard .dccs-chip')); }
+function activeChip(root) { return curChips(root).filter(function (c) { return c.classList.contains('is-active'); })[0]; }
 function clickAnswer(root, value) {
   var c = curChips(root).filter(function (n) { return n.dataset.value === value; })[0] || curChips(root)[0];
   c.click();
 }
-function cardNames(root) {
-  return Array.prototype.slice.call(root.querySelectorAll('.dccs-card h4')).map(function (h) { return h.textContent.trim(); });
-}
+function clickNext(root) { var b = root.querySelector('.dccs-next'); if (b && !b.disabled) { b.click(); } }
+function answerNext(root, value) { clickAnswer(root, value); clickNext(root); }
 function stepThrough(root, value) {
-  // Click `value` (or the first chip) on each question until we leave stage 'q'.
-  for (var k = 0; k < 8 && root.querySelector('.dccs-chips-wizard'); k++) { clickAnswer(root, value); }
+  for (var k = 0; k < 8 && root.querySelector('.dccs-chips-wizard'); k++) { answerNext(root, value); }
+}
+function cardNames(root) {
+  return Array.prototype.slice.call(root.querySelectorAll('.dccs-card h4')).map(function (h) { return h.textContent.replace(/\s+/g, ' ').trim(); });
 }
 
-// ---- 1. Wizard starts at one question ----
+// ---- 1. Wizard starts: one question, nothing preselected, Next disabled ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  ok('no tabs (wizard, not tabbed)', root.querySelectorAll('.dccs-tab').length === 0);
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
   ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
+  ok('no answer preselected', !activeChip(root));
+  ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
   ok('live count shows 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
   ok('no Back on first step', !root.querySelector('.dccs-back'));
-  ok('More options row present', !!root.querySelector('.dccs-to-mode[data-mode="compare"]'));
+  ok('mode toggle present (3 pills)', root.querySelectorAll('.dccs-modetab').length === 3);
+  ok('"I\'m flexible" shortcut on step 1', !!root.querySelector('.dccs-flexible'));
   ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
 })();
 
-// ---- 2. Auto-advance + Back preserves the answer ----
+// ---- 2. Tapping an answer selects without advancing; Next advances ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  clickAnswer(root, 'yes');                 // answer Q1
-  ok('auto-advanced to step 2', /2\b.*\b7/.test(progress(root)));
+  clickAnswer(root, 'yes');
+  ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === 'yes');
+  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
+  ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
+  clickNext(root);
+  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
-  root.querySelector('.dccs-back').click(); // go back to Q1
-  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
-  var active = curChips(root).filter(function (c) { return c.classList.contains('is-active'); })[0];
-  ok('previous answer preserved', active && active.dataset.value === 'yes');
+  ok('Back is not a chip', root.querySelector('.dccs-back').className.indexOf('dccs-chip') === -1);
 })();
 
-// ---- 3. Reaching the Review step, then Edit jumps back ----
+// ---- 3. Back preserves the chosen answer ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  answerNext(root, 'yes');
+  root.querySelector('.dccs-back').click();
+  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === 'yes');
+})();
+
+// ---- 4. Clickable stepper jumps back to an answered step ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  answerNext(root, 'yes');     // step 1
+  answerNext(root, 'no');      // step 2 -> now on step 3
+  ok('on step 3', /3\b.*\b7/.test(progress(root)));
+  var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
+  ok('answered steps are clickable dots', !!dot);
+  dot.click();
+  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
+})();
+
+// ---- 5. Review step + edit returns to where you came from ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   stepThrough(root, 'either');
-  ok('review step lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
-  ok('review has a See-my-matches button', !!root.querySelector('.dccs-see-matches'));
-  root.querySelector('.dccs-edit[data-step="4"]').click();
-  ok('Edit jumps to that question (step 5)', /5\b.*\b7/.test(progress(root)));
+  ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
+  root.querySelector('.dccs-edit[data-step="3"]').click();
+  ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
+  clickNext(root);
+  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 7);
 })();
 
-// ---- 4. See my matches -> results with recap ----
+// ---- 6. See matches -> results, full names, recap, edit-answers ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  // Answer with a real preference so the recap has content.
-  clickAnswer(root, 'yes');                 // desk = yes
-  stepThrough(root, 'either');              // rest = doesn't matter
+  clickAnswer(root, 'yes'); clickNext(root);   // desk = yes
+  root.querySelector('.dccs-flexible'); // (not on step 2) — finish via stepThrough
+  stepThrough(root, 'either');
   root.querySelector('.dccs-see-matches').click();
   ok('results region shown', !!root.querySelector('.dccs-results'));
-  ok('results recap present', !!root.querySelector('.dccs-recap'));
+  ok('cottage names include their number', cardNames(root).every(function (n) { return /^Cottage \d+: /.test(n); }));
+  ok('recap shows the chosen criterion', !!root.querySelector('.dccs-recap-chip'));
   ok('edit-answers control present', !!root.querySelector('.dccs-edit-answers'));
+  ok('no "why excluded" panel', !root.querySelector('.dccs-excluded'));
 })();
 
-// ---- 5. Deep link jumps straight to results ----
+// ---- 7. "I'm flexible" jumps to results with several matches ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  root.querySelector('.dccs-flexible').click();
+  ok('flexible -> results', !!root.querySelector('.dccs-results') && !root.querySelector('.dccs-chips-wizard'));
+  ok('several cottages match', root.querySelectorAll('.dccs-card').length > 1);
+})();
+
+// ---- 8. Deep link jumps straight to results ----
 (function () {
   const w = freshDom('https://example.com/?pet=true');
   const root = mountSelector(w);
   ok('deeplink skips the questionnaire', !root.querySelector('.dccs-chips-wizard'));
-  ok('deeplink pet=true -> Coconut Cottage only', cardNames(root).length === 1 && cardNames(root)[0] === 'Coconut Cottage');
+  ok('deeplink pet=true -> only Coconut Cottage', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
 })();
 
-// ---- 6. No-match combo shows tagged fallback ----
+// ---- 9. No-match combo shows tagged fallback, no excluded panel ----
 (function () {
   const w = freshDom('https://example.com/?pet=true&dining=4');
   const root = mountSelector(w);
   ok('impossible combo shows empty heading', !!root.querySelector('.dccs-empty'));
-  ok('fallback cards present', root.querySelectorAll('.dccs-card').length >= 1);
   ok('fallback card tagged with what it misses', !!root.querySelector('.dccs-miss'));
+  ok('no excluded panel anywhere', !root.querySelector('.dccs-excluded'));
 })();
 
-// ---- 7. "Doesn't matter" leaves hard filters off ----
+// ---- 10. Header mode toggle switches modes ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  stepThrough(root, 'either');              // all "Doesn't matter"
-  root.querySelector('.dccs-see-matches').click();
-  ok('no constraints -> several cottages match', root.querySelectorAll('.dccs-card').length > 1);
-  ok('no recap when nothing chosen', !root.querySelector('.dccs-recap'));
-})();
-
-// ---- 8. More options: Compare + back to finder ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  root.querySelector('.dccs-to-mode[data-mode="compare"]').click();
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
   ok('compare mode shows 8 pickers', root.querySelectorAll('.dccs-pick').length === 8);
-  root.querySelector('.dccs-pick[data-cmp="22"]').click();
-  root.querySelector('.dccs-pick[data-cmp="23"]').click();
-  ok('compare matrix appears', !!root.querySelector('.dccs-matrix'));
-  ok('matrix highlights differing cells', !!root.querySelector('.dccs-matrix td.is-diff'));
-  root.querySelector('.dccs-to-finder').click();
-  ok('back to finder returns to wizard', !!root.querySelector('.dccs-chips-wizard'));
+  ok('compare picker uses full names', root.querySelector('.dccs-pick').textContent.indexOf('Cottage ') === 0);
+  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
+  ok('back to quick finder', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
-// ---- 9. Reset returns to the first question ----
+// ---- 11. Compare overlay from results checkboxes ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  root.querySelector('.dccs-flexible').click();              // results with 3 cards
+  ok('no compare button with <2 ticked', !root.querySelector('.dccs-open-compare'));
+  // Re-query after each toggle — a re-render detaches the previous nodes.
+  function tick(idx) {
+    var b = root.querySelectorAll('.dccs-card input[type="checkbox"][data-cmp]')[idx];
+    b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  tick(0); tick(1);
+  var btn = root.querySelector('.dccs-open-compare');
+  ok('compare button appears with 2 ticked', !!btn && /2/.test(btn.textContent));
+  btn.click();
+  ok('overlay shows the comparison matrix', !!w.document.querySelector('.dccs-modal .dccs-matrix'));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
+})();
+
+// ---- 12. Tappable recap chip edits one answer ----
 (function () {
   const w = freshDom('https://example.com/?pet=true');
   const root = mountSelector(w);
-  root.querySelector('.dccs-reset').click();
-  ok('reset returns to step 1 of the wizard', /1\b.*\b7/.test(progress(root)));
+  var chip = root.querySelector('.dccs-recap-chip');
+  ok('recap chip present for an active criterion', !!chip);
+  chip.click();
+  ok('recap chip jumps back into the wizard', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
-// ---- 10. localStorage recall (no step/stage/highlight persisted) ----
+// ---- 13. localStorage recall (no step/stage/highlight persisted) ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
@@ -168,7 +219,7 @@ function stepThrough(root, value) {
   ok('step/stage/highlight not persisted', saved.step === undefined && saved.stage === undefined && saved.highlight === undefined);
 })();
 
-// ---- 11. Mini-entry modal opens at results, highlights cottage, traps focus ----
+// ---- 14. Mini-entry modal opens at results with the cottage highlighted ----
 (function () {
   const w = freshDom();
   const cfg = JSON.parse(CONFIG);
@@ -184,21 +235,37 @@ function stepThrough(root, value) {
   const modal = w.document.querySelector('.dccs-modal');
   ok('mini-entry opens modal', !!modal);
   ok('modal opens straight to results', !!modal.querySelector('.dccs-results') && !modal.querySelector('.dccs-chips-wizard'));
-  ok('modal focus on close button', w.document.activeElement === modal.querySelector('.dccs-modal-close'));
   ok('body scroll locked', w.document.body.style.overflow === 'hidden');
   const hc = modal.querySelector('.dccs-card.is-highlight');
-  ok('highlighted cottage (#31) surfaced', !!hc && hc.querySelector('h4').textContent.indexOf('Hibiscus Hut') !== -1);
+  ok('highlighted cottage #31 surfaced with full name', !!hc && hc.querySelector('h4').textContent.indexOf('Cottage 31: Hibiscus Hut') !== -1);
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
   ok('body scroll restored', w.document.body.style.overflow === '');
 })();
 
-// ---- 12. Result links point to real cottage pages ----
+// ---- 15. Result links point to real cottage pages ----
 (function () {
   const w = freshDom('https://example.com/?pet=true');
   const root = mountSelector(w);
   const href = root.querySelector('.dccs-view').getAttribute('href');
   ok('view link points to /accommodation/', /^\/accommodation\/cottage-\d+\/$/.test(href));
+})();
+
+// ---- 16. Boot dependency-guard: render is deferred until score/labels exist ----
+(function () {
+  const dom = new JSDOM('<!DOCTYPE html><body></body>', { url: 'https://example.com/', runScripts: 'dangerously', pretendToBeVisual: true });
+  const w = dom.window;
+  injectScript(w, 'selector.js');                 // controller only — no data layer yet
+  const div = w.document.createElement('div');
+  div.className = 'dccs-root dccs-root';
+  div.dataset.config = CONFIG;
+  w.document.body.appendChild(div);
+  w.DCCS.bootAll(w.document);
+  ok('no render while deps missing', !div.querySelector('.dccs-step-q') && !div.dataset.dccsReady);
+  injectScript(w, 'score.js');
+  injectScript(w, 'labels.js');
+  w.DCCS.bootAll(w.document);
+  ok('renders once deps are available', !!div.querySelector('.dccs-step-q'));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
