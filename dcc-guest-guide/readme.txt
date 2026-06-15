@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.13
+Stable tag: 0.9.7.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,108 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.14 =
+
+Audit-driven cleanup pass: security, i18n, mobile ergonomics, payload
+size, dark-mode polish. No new features. Eleven items, grouped by area.
+
+**Security (3).**
+
+* **Sensitive data no longer round-trips through page source.** The
+  recipient email list, From identity and subject / body templates for
+  Report-a-Problem used to be inlined into the widget's `data-config`
+  JSON, where View-Source revealed the host's contact emails. They now
+  resolve server-side from the widget's saved Elementor settings at
+  submit time (keyed by `post_id` + `widget_id`). View-Source on a
+  published guide page no longer leaks any of those values.
+* **AI search has rate limits.** Per-IP burst limit (5 questions / 15
+  minutes) plus a site-wide daily cap (default 500 / day, override via
+  the `dccgg_ai_daily_cap` filter) so a scraper can't drain the 1500
+  free-tier Gemini requests / day.
+* The report-a-problem PHP handler now refuses unknown widget IDs
+  rather than honoring any recipient list the client supplies — closes
+  the matching abuse vector.
+
+**Mobile / accessibility (3).**
+
+* **44 px touch targets.** Six tap controls were below the
+  WCAG 2.5.5 recommended size: `.dccgg-more > summary` (36→44),
+  `.dccgg-item-share` (28→44), `.dccgg-quick-action` (32→44), the
+  flip-card close (28→44), the QR-dialog close (32→44), and the
+  detail-header section-nav arrows (36→44). Icons stay the same; the
+  hit area grows around them.
+* **Hover state no longer sticks after tap on touch devices.** Every
+  `:hover` rule in `widget.css` is now wrapped in
+  `@media (hover: hover)` so phones don't paint the hover style and
+  then leave it stuck until the next tap somewhere else.
+* **300 ms tap delay killed** on Android browsers that still
+  implement it — `touch-action: manipulation` on all primary tap
+  controls.
+
+**i18n (1).**
+
+* **Conditions card takeaways are translatable.** Every English
+  string baked into `widget.js` for the conditions card — the
+  18-entry weather-code label map, the 9-entry Lake-Dora leeward-shore
+  tips, the pressure-trend takeaways ("bass more active" / "bite
+  often slow…"), the UV band labels and reapply prompt, the heat-index
+  hydration nudge, and the lake-surface-temp takeaways — is now
+  routed through `__()` server-side and read by the JS from the
+  `conditionsStrings` config block. Loco Translate / WPML pick all
+  ~50 strings up automatically.
+
+**Performance (3).**
+
+* **Minified JS + CSS bundles** ship alongside the unminified
+  sources. The plugin enqueues `widget.min.js` (~81 KB) and
+  `widget.min.css` (~71 KB) when present, falling back to the full
+  files for editor preview and source-map diffing. ~55 % size cut on
+  JS, ~32 % on CSS over the wire.
+* **Search index is lazy-loaded.** On a 50-item guide the index used
+  to be inlined into every page's `data-config` JSON (~30-50 KB). The
+  index now fetches via a new `dccgg_search_index` AJAX action on the
+  first search-input focus, with a 1-hour transient cached against
+  the widget settings' content hash so it only rebuilds when the host
+  re-saves the guide.
+* The render path no longer recomputes `section_meta` /
+  `extract_search_text` when the index isn't being inlined — that
+  work moved into the new `Widget::build_search_index()` static
+  helper, shared by `render()` and the AJAX endpoint.
+
+**Polish (1).**
+
+* **Checklist progress bar actually animates.** Previous CSS tried
+  to `transition: --p`, which is a no-op without `@property`
+  registration. The fill is now a child element whose `width`
+  transitions, so ticking an item slides the bar over 0.3 s rather
+  than snapping.
+
+**Dark-mode coverage.**
+
+* `.dccgg-conditions` no longer near-invisible on the Twitter-dim
+  base (the `color-mix() 8 %` background went transparent against a
+  dark surface — bumped to 18 % + a translucent fallback).
+* Parallax-header titles get a `0 0 6 px / 0 1 px 0` text-shadow pair
+  in dark mode so they stay legible over photographs that the
+  default light-mode `rgba(0,0,0,0.6)` shadow couldn't carry.
+* `<mark>` highlights in search results and inside the detail switch
+  to a higher-contrast `55 % primary` background + white text on dark
+  backgrounds (was 30 % which faded to invisible).
+
+**Internal notes.**
+
+* New AJAX action: `dccgg_search_index`. Same nonce as every other
+  endpoint (`dccgg_nonce`).
+* New filter: `dccgg_ai_daily_cap` (int, default 500).
+* New helper: `Widget::build_search_index(array $settings): array` —
+  shared by render and AJAX so the lazy payload is identical to what
+  the page used to inline.
+* New helper: `Plugin::find_widget_settings(int $post_id, string
+  $widget_id): array` — used by both the report and search-index
+  handlers to safely look up widget settings from `_elementor_data`.
+* Build script: `build-min.sh` at the repo root regenerates the
+  `.min` bundles. Run before each release zip; not used at runtime.
 
 = 0.9.7.13 =
 

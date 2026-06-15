@@ -42,8 +42,13 @@ final class Widget extends Widget_Base
                 $style_deps[] = $h;
             }
         }
-        wp_register_style('dccgg-widget', DCCGG_URL . 'assets/css/widget.css', $style_deps, DCCGG_VERSION);
-        wp_register_script('dccgg-widget', DCCGG_URL . 'assets/js/widget.js', [], DCCGG_VERSION, true);
+        // v0.9.7.14: prefer the pre-minified bundles when present (built via
+        // build-min.sh at release time). Unminified sources stay in the zip
+        // so the editor preview / source maps / Loco scan continue to work.
+        $css_path = file_exists(DCCGG_DIR . 'assets/css/widget.min.css') ? 'assets/css/widget.min.css' : 'assets/css/widget.css';
+        $js_path  = file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js';
+        wp_register_style('dccgg-widget', DCCGG_URL . $css_path, $style_deps, DCCGG_VERSION);
+        wp_register_script('dccgg-widget', DCCGG_URL . $js_path, [], DCCGG_VERSION, true);
     }
 
     /**
@@ -2627,48 +2632,19 @@ final class Widget extends Widget_Base
             }
         }
         $enable_search       = ($s['enable_search'] ?? 'yes') === 'yes';
-        $include_tpl_search  = ($s['include_templates_in_search'] ?? '') === 'yes';
 
-        // Index section title + emoji + desc by key so we can append them
-        // to the search haystack for every item under that section.
-        // Without this, a guest typing "Wi-Fi" only matches items
-        // containing that string, not the section's own tile.
-        // v0.6: cap to 200 chars per section and skip empty pieces so a
-        // long section_desc × many items doesn't bloat the inlined JSON.
-        $section_meta = [];
-        foreach ($sections as $sec) {
-            $k = trim((string) ($sec['section_key'] ?? ''));
-            if ($k === '') { continue; }
-            $pieces = array_filter([
-                trim((string) ($sec['section_title'] ?? '')),
-                trim((string) ($sec['section_emoji'] ?? '')),
-                trim((string) ($sec['section_desc'] ?? '')),
-            ], static fn($v) => $v !== '');
-            $section_meta[$k] = mb_substr(implode(' ', $pieces), 0, 200);
-        }
 
         $items_by_section = [];
-        $search_index     = [];
         foreach ($items_raw as $i => $item) {
             $key = trim((string) ($item['item_section'] ?? ''));
             if ($key === '' || !isset($valid_keys[$key])) {
                 continue;
             }
             $items_by_section[$key][] = $item;
-            if ($enable_search) {
-                $text = self::extract_search_text($item, $include_tpl_search);
-                $section_haystack = $section_meta[$key] ?? '';
-                if ($section_haystack !== '') {
-                    $text = $section_haystack . ' ' . $text;
-                }
-                $search_index[] = [
-                    'section'  => $key,
-                    'item_idx' => count($items_by_section[$key]) - 1,
-                    'title'    => (string) ($item['item_title'] ?? ''),
-                    'text'     => $text,
-                ];
-            }
         }
+        // v0.9.7.14: search index moved off the inlined data-config payload —
+        // the JS now lazy-fetches it via the dccgg_search_index AJAX action on
+        // first search-focus. Build_search_index() rebuilds section_meta on demand.
 
         $reveal_mode  = (string) ($s['reveal_mode'] ?? 'stage');
         $menu_layout  = (string) ($s['menu_layout'] ?? 'grid');
@@ -2726,6 +2702,74 @@ final class Widget extends Widget_Base
             'cottageLat'           => (float) ($s['cottage_latitude']  ?? 28.8028),
             'cottageLng'           => (float) ($s['cottage_longitude'] ?? -81.6448),
             'conditionsExtras'     => ($s['enable_conditions_extras'] ?? 'yes') === 'yes',
+            // v0.9.7.14: every English string baked into widget.js for the
+            // conditions card is sent through __() so Loco Translate / WPML
+            // can localize them.
+            'conditionsStrings'    => [
+                'weather' => [
+                    'clear'             => __('Clear', 'dcc-guest-guide'),
+                    'mostly_clear'      => __('Mostly clear', 'dcc-guest-guide'),
+                    'partly_cloudy'     => __('Partly cloudy', 'dcc-guest-guide'),
+                    'overcast'          => __('Overcast', 'dcc-guest-guide'),
+                    'fog'               => __('Fog', 'dcc-guest-guide'),
+                    'light_drizzle'     => __('Light drizzle', 'dcc-guest-guide'),
+                    'drizzle'           => __('Drizzle', 'dcc-guest-guide'),
+                    'heavy_drizzle'     => __('Heavy drizzle', 'dcc-guest-guide'),
+                    'light_rain'        => __('Light rain', 'dcc-guest-guide'),
+                    'rain'              => __('Rain', 'dcc-guest-guide'),
+                    'heavy_rain'        => __('Heavy rain', 'dcc-guest-guide'),
+                    'light_snow'        => __('Light snow', 'dcc-guest-guide'),
+                    'snow'              => __('Snow', 'dcc-guest-guide'),
+                    'heavy_snow'        => __('Heavy snow', 'dcc-guest-guide'),
+                    'showers'           => __('Showers', 'dcc-guest-guide'),
+                    'heavy_showers'     => __('Heavy showers', 'dcc-guest-guide'),
+                    'violent_showers'   => __('Violent showers', 'dcc-guest-guide'),
+                    'thunderstorm'      => __('Thunderstorm', 'dcc-guest-guide'),
+                    'thunderstorm_hail' => __('Thunderstorm + hail', 'dcc-guest-guide'),
+                    'severe_thunder'    => __('Severe thunderstorm', 'dcc-guest-guide'),
+                    'mixed'             => __('Mixed', 'dcc-guest-guide'),
+                ],
+                'pressure' => [
+                    'rising'  => __('bass more active', 'dcc-guest-guide'),
+                    'falling' => __('bite often slow, then picks up before storms', 'dcc-guest-guide'),
+                    'steady'  => __('steady pressure — bite predictable', 'dcc-guest-guide'),
+                ],
+                'wind' => [
+                    'label'         => __('Wind', 'dcc-guest-guide'),
+                    'gusts'         => __('gusts', 'dcc-guest-guide'),
+                    'flat'          => __('flat on the Dora Canal — pick any shore', 'dcc-guest-guide'),
+                    'south_shore'   => __('south shore of Lake Dora will be the calm side', 'dcc-guest-guide'),
+                    'sw_shore'      => __('southwest shore of Lake Dora — try the cove off Lake Dora Pkwy', 'dcc-guest-guide'),
+                    'west_shore'    => __('west shore of Lake Dora — try the cove off Lake Dora Pkwy', 'dcc-guest-guide'),
+                    'nw_shore'      => __('northwest shore of Lake Dora — sheltered along the Tavares side', 'dcc-guest-guide'),
+                    'north_shore'   => __('north shore of Lake Dora — try the lily-pad line off Wooton Park', 'dcc-guest-guide'),
+                    'ne_shore'      => __('northeast shore of Lake Dora near the canal mouth', 'dcc-guest-guide'),
+                    'east_shore'    => __('east shore of Lake Dora — Dora Canal entrance is sheltered', 'dcc-guest-guide'),
+                    'se_shore'      => __('southeast shore of Lake Dora will be the calm side', 'dcc-guest-guide'),
+                ],
+                'uv' => [
+                    'extreme'         => __('extreme', 'dcc-guest-guide'),
+                    'very_high'       => __('very high', 'dcc-guest-guide'),
+                    'high'            => __('high', 'dcc-guest-guide'),
+                    'moderate'        => __('moderate', 'dcc-guest-guide'),
+                    'low'             => __('low', 'dcc-guest-guide'),
+                    'reapply_by'      => /* translators: %s: clock time */ __('reapply sunscreen by %s', 'dcc-guest-guide'),
+                    'sunscreen'       => __('sunscreen recommended', 'dcc-guest-guide'),
+                ],
+                'heat' => [
+                    'danger' => __('dangerous heat — limit time outdoors, drink water every 20 min', 'dcc-guest-guide'),
+                    'warn'   => __('drink water every 30 min', 'dcc-guest-guide'),
+                ],
+                'lake' => [
+                    'fallback_name' => __('Lake', 'dcc-guest-guide'),
+                    'surface'       => __('surface', 'dcc-guest-guide'),
+                    'cold'          => __('cold water — bass deep and slow', 'dcc-guest-guide'),
+                    'cool'          => __('cool water — bass moving up to feed', 'dcc-guest-guide'),
+                    'prime'         => __('prime water temp — bass active shallow', 'dcc-guest-guide'),
+                    'warm'          => __('warm water — bass early and late, shaded mid-day', 'dcc-guest-guide'),
+                    'hot'           => __('hot water — bass deep, focus on dawn and dusk', 'dcc-guest-guide'),
+                ],
+            ],
             'aiSearch'             => [
                 'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
                 'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
@@ -2748,13 +2792,10 @@ final class Widget extends Widget_Base
             'report'               => [
                 'enabled'    => ($s['enable_problem_report'] ?? '') === 'yes',
                 'perItem'    => ($s['enable_per_item_report'] ?? '') === 'yes',
-                'recipients' => (string) ($s['problem_report_recipients'] ?? ''),
+                // v0.9.7.14: recipient list / From identity / templates resolved
+                // server-side from widget settings keyed by postId + widgetId,
+                // so they never appear in page source.
                 'categories' => array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string) ($s['problem_report_categories'] ?? '')) ?: []))),
-                'fromEmail'  => (string) ($s['problem_report_from_email'] ?? ''),
-                'fromName'   => (string) ($s['problem_report_from_name']  ?? ''),
-                'subjectTpl' => (string) ($s['problem_report_subject']    ?? ''),
-                'bodyTpl'    => (string) ($s['problem_report_body']       ?? ''),
-                'includeUA'  => (($s['problem_report_include_ua'] ?? 'yes') === 'yes') ? 'yes' : 'no',
                 'strings'    => [
                     'menuLabel'  => (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')),
                     'title'      => (string) ($s['str_report_title'] ?? __('Report a problem', 'dcc-guest-guide')),
@@ -2822,7 +2863,12 @@ final class Widget extends Widget_Base
             ],
             'darkMode'         => $dark_mode,
             'themePreset'      => $theme_preset,
-            'searchIndex'      => $search_index,
+            // v0.9.7.14: postId + widgetId let the JS round-trip the report and
+            // (lazy) search-index lookups without inlining sensitive data.
+            'postId'           => (int) get_the_ID(),
+            'widgetId'         => (string) $this->get_id(),
+            // v0.9.7.14: searchIndex moved to a lazy AJAX fetch (dccgg_search_index)
+            // so a 50-item guide no longer inlines 30-50 KB of JSON on every page.
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'readMore'    => (string) ($s['str_read_more'] ?? 'Read more'),
@@ -3549,7 +3595,7 @@ final class Widget extends Widget_Base
      * $include_templates is true (server-renders each template — opt-in
      * because it costs one extra render per template per pageload).
      */
-    private static function extract_search_text(array $item, bool $include_templates = false): string
+    public static function extract_search_text(array $item, bool $include_templates = false): string
     {
         // Request-scoped memo so the same template referenced by multiple
         // items only renders once per pageload. Prior to v0.4 this was O(N)
@@ -3576,6 +3622,54 @@ final class Widget extends Widget_Base
             $parts[] = (string) ($item['item_copy_value'] ?? '');
         }
         return mb_substr(trim(preg_replace('/\s+/u', ' ', implode(' ', $parts)) ?: ''), 0, 1500);
+    }
+
+    /**
+     * v0.9.7.14: Build the search index for a widget's saved sections + items.
+     * Shared by Widget::render() and Plugin::handle_search_index() so the lazy
+     * AJAX path returns exactly the same payload the page used to inline.
+     */
+    public static function build_search_index(array $settings): array
+    {
+        $sections = (array) ($settings['guide_sections'] ?? []);
+        $items    = (array) ($settings['guide_items']    ?? []);
+        $include_templates = ($settings['include_templates_in_search'] ?? '') === 'yes';
+
+        $valid_keys = [];
+        foreach ($sections as $sec) {
+            $key = trim((string) ($sec['section_key'] ?? ''));
+            if ($key !== '') { $valid_keys[$key] = true; }
+        }
+        $section_meta = [];
+        foreach ($sections as $sec) {
+            $k = trim((string) ($sec['section_key'] ?? ''));
+            if ($k === '') { continue; }
+            $pieces = array_filter([
+                trim((string) ($sec['section_title'] ?? '')),
+                trim((string) ($sec['section_emoji'] ?? '')),
+                trim((string) ($sec['section_desc'] ?? '')),
+            ], static fn($v) => $v !== '');
+            $section_meta[$k] = mb_substr(implode(' ', $pieces), 0, 200);
+        }
+        $items_by_section = [];
+        $out = [];
+        foreach ($items as $item) {
+            $key = trim((string) ($item['item_section'] ?? ''));
+            if ($key === '' || !isset($valid_keys[$key])) { continue; }
+            $items_by_section[$key][] = $item;
+            $text = self::extract_search_text($item, $include_templates);
+            $section_haystack = $section_meta[$key] ?? '';
+            if ($section_haystack !== '') {
+                $text = $section_haystack . ' ' . $text;
+            }
+            $out[] = [
+                'section'  => $key,
+                'item_idx' => count($items_by_section[$key]) - 1,
+                'title'    => (string) ($item['item_title'] ?? ''),
+                'text'     => $text,
+            ];
+        }
+        return $out;
     }
 
     /**

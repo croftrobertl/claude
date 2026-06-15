@@ -331,7 +331,6 @@
         const send     = dialog.querySelector('.dccgg-btn-send');
         send.disabled = true;
         send.textContent = '…';
-        const reportCfg = config.report || {};
         const body = new URLSearchParams();
         body.set('action',           'dccgg_report_problem');
         body.set('nonce',            config.nonce);
@@ -345,15 +344,12 @@
         body.set('item',             dialog.dataset.item || '');
         body.set('stay',             stayKey());
         body.set('page_url',         window.location.href);
-        body.set('recipients',       reportCfg.recipients || '');
-        // v0.9.7: pass the host's template + From settings so the AJAX
-        // handler can compose a custom email. Server still has a sane
-        // default if any of these are blank.
-        body.set('subject_tpl',      reportCfg.subjectTpl || '');
-        body.set('body_tpl',         reportCfg.bodyTpl || '');
-        body.set('from_email',       reportCfg.fromEmail || '');
-        body.set('from_name',        reportCfg.fromName || '');
-        body.set('include_ua',       reportCfg.includeUA || 'yes');
+        // v0.9.7.14: recipient list, From identity, subject/body templates and
+        // include-UA flag now resolved server-side from the widget's saved
+        // Elementor settings (keyed by post_id + widget_id). They never leave
+        // wp_options / postmeta, so they no longer appear in page source.
+        body.set('post_id',          String(config.postId || 0));
+        body.set('widget_id',        String(config.widgetId || ''));
         setError('');
         fetch(config.ajaxUrl, {
             method: 'POST',
@@ -829,6 +825,11 @@
     function wireConditions(root, config) {
         const cards = root.querySelectorAll('.dccgg-conditions');
         if (!cards.length) return;
+        // v0.9.7.14: stash the translated strings dict on each card so the
+        // per-row renderers can read takeaways / band labels / shore tips
+        // without threading the config through every call.
+        const condStrings = config.conditionsStrings || {};
+        cards.forEach(c => { c.__dccggCondStrings = condStrings; });
         const lat = config.cottageLat;
         const lng = config.cottageLng;
         if (!lat || !lng || !config.ajaxUrl) return;
@@ -856,13 +857,12 @@
                 if (!d || !d.current || !d.daily) return;
                 const code = d.current.weather_code;
                 const emoji = weatherEmoji(code, d.current.is_day);
-                const desc  = weatherText(code);
                 const temp  = Math.round(d.current.temperature_2m);
                 cards.forEach(card => {
                     const wxRow = card.querySelector('.dccgg-cond-weather');
                     if (wxRow) {
                         wxRow.querySelector('.dccgg-cond-ico').textContent = emoji;
-                        wxRow.querySelector('.dccgg-cond-v').textContent  = temp + '°F · ' + desc;
+                        wxRow.querySelector('.dccgg-cond-v').textContent  = temp + '°F · ' + weatherText(code, card.__dccggCondStrings);
                     }
                     const fcRow = card.querySelector('.dccgg-cond-forecast');
                     if (fcRow && d.daily.temperature_2m_max && d.daily.temperature_2m_max.length > 1) {
@@ -975,11 +975,13 @@
         // When hourly history is missing entirely, fall back to "steady"
         // instead of computing against zero (which v0.9.7.12 mis-tagged as
         // "rising — bass more active" for everyone).
-        let arrow = '→', takeaway = 'steady pressure — bite predictable';
+        const CS = (card.__dccggCondStrings || {});
+        const PS = CS.pressure || {};
+        let arrow = '→', takeaway = PS.steady || 'steady pressure — bite predictable';
         if (past != null) {
             const delta = cur - past;
-            if (delta >= 0.04)       { arrow = '↑'; takeaway = 'bass more active'; }
-            else if (delta <= -0.04) { arrow = '↓'; takeaway = 'bite often slow, then picks up before storms'; }
+            if (delta >= 0.04)       { arrow = '↑'; takeaway = PS.rising  || 'bass more active'; }
+            else if (delta <= -0.04) { arrow = '↓'; takeaway = PS.falling || 'bite often slow, then picks up before storms'; }
         }
         row.querySelector('.dccgg-cond-v').textContent = cur.toFixed(2) + ' in ' + arrow;
         row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
@@ -995,35 +997,37 @@
         const gst  = d.current && typeof d.current.wind_gusts_10m === 'number' ? d.current.wind_gusts_10m : null;
         if (spd == null || dirN == null) return;
         const dirLabel = compassFromDegrees(dirN);
-        let display = 'Wind ' + dirLabel + ' ' + Math.round(spd) + ' mph';
-        if (gst != null && gst > spd + 5) display += ', gusts ' + Math.round(gst);
+        const W = ((card.__dccggCondStrings || {}).wind) || {};
+        let display = (W.label || 'Wind') + ' ' + dirLabel + ' ' + Math.round(spd) + ' mph';
+        if (gst != null && gst > spd + 5) display += ', ' + (W.gusts || 'gusts') + ' ' + Math.round(gst);
         row.querySelector('.dccgg-cond-v').textContent = display;
-        row.querySelector('.dccgg-cond-takeaway').textContent = leewardTipForLakeDora(dirLabel, spd);
+        row.querySelector('.dccgg-cond-takeaway').textContent = leewardTipForLakeDora(dirLabel, spd, W);
         row.hidden = false;
     }
     function compassFromDegrees(deg) {
         const names = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
         return names[Math.round(((deg % 360) / 22.5)) % 16];
     }
-    function leewardTipForLakeDora(dir, spd) {
-        if (spd < 5) return 'flat on the Dora Canal — pick any shore';
+    function leewardTipForLakeDora(dir, spd, W) {
+        W = W || {};
+        if (spd < 5) return W.flat || 'flat on the Dora Canal — pick any shore';
+        const south = W.south_shore || 'south shore of Lake Dora will be the calm side';
+        const sw    = W.sw_shore    || 'southwest shore of Lake Dora — try the cove off Lake Dora Pkwy';
+        const west  = W.west_shore  || 'west shore of Lake Dora — try the cove off Lake Dora Pkwy';
+        const nw    = W.nw_shore    || 'northwest shore of Lake Dora — sheltered along the Tavares side';
+        const north = W.north_shore || 'north shore of Lake Dora — try the lily-pad line off Wooton Park';
+        const ne    = W.ne_shore    || 'northeast shore of Lake Dora near the canal mouth';
+        const east  = W.east_shore  || 'east shore of Lake Dora — Dora Canal entrance is sheltered';
+        const se    = W.se_shore    || 'southeast shore of Lake Dora will be the calm side';
         const tips = {
-            N:   'south shore of Lake Dora will be the calm side',
-            NNE: 'south shore of Lake Dora will be the calm side',
-            NE:  'southwest shore of Lake Dora — try the cove off Lake Dora Pkwy',
-            ENE: 'west shore of Lake Dora — try the cove off Lake Dora Pkwy',
-            E:   'west shore of Lake Dora — try the cove off Lake Dora Pkwy',
-            ESE: 'northwest shore of Lake Dora — sheltered along the Tavares side',
-            SE:  'northwest shore of Lake Dora — sheltered along the Tavares side',
-            SSE: 'north shore of Lake Dora — try the lily-pad line off Wooton Park',
-            S:   'north shore of Lake Dora — try the lily-pad line off Wooton Park',
-            SSW: 'north shore of Lake Dora — try the lily-pad line off Wooton Park',
-            SW:  'northeast shore of Lake Dora near the canal mouth',
-            WSW: 'east shore of Lake Dora — Dora Canal entrance is sheltered',
-            W:   'east shore of Lake Dora — Dora Canal entrance is sheltered',
-            WNW: 'east shore of Lake Dora — Dora Canal entrance is sheltered',
-            NW:  'southeast shore of Lake Dora will be the calm side',
-            NNW: 'south shore of Lake Dora will be the calm side',
+            N: south, NNE: south, NNW: south,
+            NE: sw,
+            ENE: west, E: west,
+            ESE: nw, SE: nw,
+            SSE: north, S: north, SSW: north,
+            SW: ne,
+            WSW: east, W: east, WNW: east,
+            NW: se,
         };
         return tips[dir] || '';
     }
@@ -1037,19 +1041,21 @@
         if (uv == null) return;
         const isDay = d.current && d.current.is_day;
         if (!isDay) return;
+        const U = ((card.__dccggCondStrings || {}).uv) || {};
         let band = '';
-        if      (uv >= 11) band = 'extreme';
-        else if (uv >= 8)  band = 'very high';
-        else if (uv >= 6)  band = 'high';
-        else if (uv >= 3)  band = 'moderate';
-        else               band = 'low';
+        if      (uv >= 11) band = U.extreme   || 'extreme';
+        else if (uv >= 8)  band = U.very_high || 'very high';
+        else if (uv >= 6)  band = U.high      || 'high';
+        else if (uv >= 3)  band = U.moderate  || 'moderate';
+        else               band = U.low       || 'low';
         row.querySelector('.dccgg-cond-v').textContent = 'UV ' + Math.round(uv) + ' · ' + band;
         let takeaway = '';
         if (uv >= 6) {
             const reapply = new Date(Date.now() + 2 * 3600 * 1000);
-            takeaway = 'reapply sunscreen by ' + formatClock(reapply);
+            const tpl = U.reapply_by || 'reapply sunscreen by %s';
+            takeaway = tpl.replace('%s', formatClock(reapply));
         } else if (uv >= 3) {
-            takeaway = 'sunscreen recommended';
+            takeaway = U.sunscreen || 'sunscreen recommended';
         }
         row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
         row.hidden = false;
@@ -1070,10 +1076,11 @@
         if (feels == null || feels < 90) return;
         row.classList.remove('dccgg-cond-heat--red');
         if (feels >= 103) row.classList.add('dccgg-cond-heat--red');
+        const H = ((card.__dccggCondStrings || {}).heat) || {};
         row.querySelector('.dccgg-cond-v').textContent = Math.round(feels) + '°F';
         row.querySelector('.dccgg-cond-takeaway').textContent = feels >= 103
-            ? 'dangerous heat — limit time outdoors, drink water every 20 min'
-            : 'drink water every 30 min';
+            ? (H.danger || 'dangerous heat — limit time outdoors, drink water every 20 min')
+            : (H.warn   || 'drink water every 30 min');
         row.hidden = false;
     }
 
@@ -1081,21 +1088,21 @@
     function renderLakeRow(card, info) {
         const row = card.querySelector('.dccgg-cond-lake');
         if (!row) return;
-        const lake = info.lake_name || 'Lake';
+        const L = ((card.__dccggCondStrings || {}).lake) || {};
+        const lake = info.lake_name || L.fallback_name || 'Lake';
         const parts = [];
         if (typeof info.gauge_ft === 'number')  parts.push(info.gauge_ft.toFixed(1) + '′');
-        if (typeof info.surface_f === 'number') parts.push('surface ' + info.surface_f + '°F');
+        if (typeof info.surface_f === 'number') parts.push((L.surface || 'surface') + ' ' + info.surface_f + '°F');
         if (!parts.length) return;
         row.querySelector('.dccgg-cond-v').textContent = lake + ' · ' + parts.join(' · ');
-        // Plain-English takeaway from the two readings we have.
         let takeaway = '';
         const temp = info.surface_f;
         if (typeof temp === 'number') {
-            if (temp < 60)       takeaway = 'cold water — bass deep and slow';
-            else if (temp < 70)  takeaway = 'cool water — bass moving up to feed';
-            else if (temp < 80)  takeaway = 'prime water temp — bass active shallow';
-            else if (temp < 87)  takeaway = 'warm water — bass early and late, shaded mid-day';
-            else                 takeaway = 'hot water — bass deep, focus on dawn and dusk';
+            if (temp < 60)       takeaway = L.cold  || 'cold water — bass deep and slow';
+            else if (temp < 70)  takeaway = L.cool  || 'cool water — bass moving up to feed';
+            else if (temp < 80)  takeaway = L.prime || 'prime water temp — bass active shallow';
+            else if (temp < 87)  takeaway = L.warm  || 'warm water — bass early and late, shaded mid-day';
+            else                 takeaway = L.hot   || 'hot water — bass deep, focus on dawn and dusk';
         }
         row.querySelector('.dccgg-cond-takeaway').textContent = takeaway;
         row.hidden = false;
@@ -1111,17 +1118,32 @@
         if (code >= 95)            return '⛈️';
         return '☁️';
     }
-    function weatherText(code) {
+    function weatherText(code, condStrings) {
+        const W = (condStrings && condStrings.weather) || {};
         const map = {
-            0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
-            45: 'Fog', 48: 'Fog',
-            51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
-            61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
-            71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
-            80: 'Showers', 81: 'Heavy showers', 82: 'Violent showers',
-            95: 'Thunderstorm', 96: 'Thunderstorm + hail', 99: 'Severe thunderstorm',
+            0:  W.clear            || 'Clear',
+            1:  W.mostly_clear     || 'Mostly clear',
+            2:  W.partly_cloudy    || 'Partly cloudy',
+            3:  W.overcast         || 'Overcast',
+            45: W.fog              || 'Fog',
+            48: W.fog              || 'Fog',
+            51: W.light_drizzle    || 'Light drizzle',
+            53: W.drizzle          || 'Drizzle',
+            55: W.heavy_drizzle    || 'Heavy drizzle',
+            61: W.light_rain       || 'Light rain',
+            63: W.rain             || 'Rain',
+            65: W.heavy_rain       || 'Heavy rain',
+            71: W.light_snow       || 'Light snow',
+            73: W.snow             || 'Snow',
+            75: W.heavy_snow       || 'Heavy snow',
+            80: W.showers          || 'Showers',
+            81: W.heavy_showers    || 'Heavy showers',
+            82: W.violent_showers  || 'Violent showers',
+            95: W.thunderstorm     || 'Thunderstorm',
+            96: W.thunderstorm_hail|| 'Thunderstorm + hail',
+            99: W.severe_thunder   || 'Severe thunderstorm',
         };
-        return map[code] || 'Mixed';
+        return map[code] || W.mixed || 'Mixed';
     }
 
     // -- Gallery strip click → lightbox with hotspots (v0.7) --------------
@@ -2441,12 +2463,14 @@
         const live  = root.querySelector('[data-dccgg-results-count]');
         if (!input || !list) return;
 
-        const index = Array.isArray(config.searchIndex) ? config.searchIndex : [];
-        // v0.9.6: pre-normalize each index entry once so per-keystroke
-        // matching is just two token loops + Levenshtein. Also build a
-        // no-space concat of all tokens + a position-to-token map, used
-        // by the concat-substring match path in searchTokenMatches().
-        for (const e of index) {
+        // v0.9.7.14: the search index used to be inlined into data-config on
+        // every page load (~30-50 KB on a 50-item guide). Now lazy-loaded on
+        // the first focus / first keystroke via the dccgg_search_index AJAX
+        // endpoint. `index` starts empty; `indexReady` flips true once the
+        // fetch resolves (or fails — in which case search is a no-op).
+        let index = [];
+        let indexLoad = null;
+        const normalizeEntry = (e) => {
             e._titleToks = tokenizeForSearch(e.title);
             e._textToks  = tokenizeForSearch(e.text);
             let tc = '', tp = [];
@@ -2455,7 +2479,32 @@
             for (const t of e._textToks)  for (let i = 0; i < t.length; i++) { xc += t[i]; xp.push(t); }
             e._titleConcat = tc; e._titlePos = tp;
             e._textConcat  = xc; e._textPos  = xp;
-        }
+        };
+        const loadIndex = () => {
+            if (indexLoad) return indexLoad;
+            const body = new URLSearchParams();
+            body.set('action',    'dccgg_search_index');
+            body.set('nonce',     config.nonce);
+            body.set('post_id',   String(config.postId || 0));
+            body.set('widget_id', String(config.widgetId || ''));
+            indexLoad = fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString(),
+            }).then(r => r.json()).then(json => {
+                const arr = (json && json.success && json.data && Array.isArray(json.data.index))
+                    ? json.data.index : [];
+                arr.forEach(normalizeEntry);
+                index = arr;
+                return arr;
+            }).catch((err) => {
+                console.error('[DCCGG search] index fetch failed:', err);
+                index = [];
+                return [];
+            });
+            return indexLoad;
+        };
 
         // Platform-aware kbd label (Mac vs everyone else).
         const kbd = root.querySelector('.dccgg-search-kbd');
@@ -2553,12 +2602,26 @@
         };
 
         let t = null;
+        const deferredRender = (q) => {
+            // v0.9.7.14: if the index hasn't arrived yet, await the lazy
+            // fetch and render after it resolves so the first keystroke
+            // still returns hits.
+            if (index.length === 0 && indexLoad) {
+                indexLoad.then(() => render(q));
+            } else {
+                render(q);
+            }
+        };
         input.addEventListener('input', () => {
             clearTimeout(t);
-            t = setTimeout(() => render(input.value), 80);
+            loadIndex();
+            t = setTimeout(() => deferredRender(input.value), 80);
         });
         input.addEventListener('blur', () => setTimeout(hide, 200));
-        input.addEventListener('focus', () => { if (input.value.length >= 2) render(input.value); });
+        input.addEventListener('focus', () => {
+            loadIndex();
+            if (input.value.length >= 2) deferredRender(input.value);
+        });
     }
 
     // -- Deep-highlight a matched query inside a detail (v0.4, v0.5 fixes) -

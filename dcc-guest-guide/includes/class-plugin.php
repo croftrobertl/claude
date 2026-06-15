@@ -53,6 +53,8 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_noaa_alerts',  [$this, 'handle_noaa_alerts']);
         add_action('wp_ajax_dccgg_usgs',                [$this, 'handle_usgs']);
         add_action('wp_ajax_nopriv_dccgg_usgs',         [$this, 'handle_usgs']);
+        add_action('wp_ajax_dccgg_search_index',        [$this, 'handle_search_index']);
+        add_action('wp_ajax_nopriv_dccgg_search_index', [$this, 'handle_search_index']);
 
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
@@ -192,6 +194,37 @@ final class Plugin
             'total_sections'    => $written_sections,
             'total_items'       => $written_items,
         ]);
+    }
+
+    /**
+     * Look up a single DCCGG widget's saved Elementor settings by post +
+     * widget ID. Returns [] when the post has no Elementor data, the JSON
+     * is unparseable, or no matching widget exists. Used by the report
+     * and search-index handlers so sensitive fields (recipient emails,
+     * From identity, templates) never have to round-trip through the JS
+     * payload.
+     */
+    private function find_widget_settings(int $post_id, string $widget_id): array
+    {
+        if ($post_id <= 0 || $widget_id === '') {
+            return [];
+        }
+        $raw = get_post_meta($post_id, '_elementor_data', true);
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+        $tree = json_decode($raw, true);
+        if (!is_array($tree)) {
+            return [];
+        }
+        $hits = [];
+        $this->collect_dccgg_widgets($tree, $hits);
+        foreach ($hits as $w) {
+            if ((string) ($w['id'] ?? '') === $widget_id) {
+                return (array) ($w['settings'] ?? []);
+            }
+        }
+        return [];
     }
 
     /** Recursively collect every widget with widgetType=dccgg_guide in
@@ -347,12 +380,19 @@ final class Plugin
         $item        = isset($_POST['item'])        ? sanitize_text_field(wp_unslash((string) $_POST['item']))        : '';
         $stay        = isset($_POST['stay'])        ? sanitize_text_field(wp_unslash((string) $_POST['stay']))        : '';
         $page_url    = isset($_POST['page_url'])    ? esc_url_raw(wp_unslash((string) $_POST['page_url']))            : '';
-        $recipients  = isset($_POST['recipients'])  ? wp_unslash((string) $_POST['recipients'])                       : '';
-        $subject_tpl = isset($_POST['subject_tpl']) ? sanitize_text_field(wp_unslash((string) $_POST['subject_tpl'])) : '';
-        $body_tpl    = isset($_POST['body_tpl'])    ? wp_kses_post(wp_unslash((string) $_POST['body_tpl']))           : '';
-        $from_email  = isset($_POST['from_email'])  ? sanitize_email(wp_unslash((string) $_POST['from_email']))       : '';
-        $from_name   = isset($_POST['from_name'])   ? sanitize_text_field(wp_unslash((string) $_POST['from_name']))   : '';
-        $include_ua  = isset($_POST['include_ua'])  ? (string) $_POST['include_ua']                                   : 'yes';
+        $post_id     = isset($_POST['post_id'])     ? (int) $_POST['post_id']                                         : 0;
+        $widget_id   = isset($_POST['widget_id'])   ? sanitize_text_field(wp_unslash((string) $_POST['widget_id']))   : '';
+
+        // v0.9.7.14: recipient list, From identity and templates used to round-trip
+        // through the JS payload (visible in page source). Now resolved server-side
+        // from the widget's saved Elementor settings, keyed by post_id + widget_id.
+        $widget_settings = $this->find_widget_settings($post_id, $widget_id);
+        $recipients  = (string) ($widget_settings['problem_report_recipients'] ?? '');
+        $subject_tpl = (string) ($widget_settings['problem_report_subject']    ?? '');
+        $body_tpl    = (string) ($widget_settings['problem_report_body']       ?? '');
+        $from_email  = (string) ($widget_settings['problem_report_from_email'] ?? '');
+        $from_name   = (string) ($widget_settings['problem_report_from_name']  ?? '');
+        $include_ua  = (($widget_settings['problem_report_include_ua'] ?? 'yes') === 'no') ? 'no' : 'yes';
 
         $description       = mb_substr($description, 0, 1500);
         $reporter_name     = mb_substr($reporter_name, 0, 100);
@@ -529,6 +569,21 @@ final class Plugin
     public function handle_ai_query(): void
     {
         check_ajax_referer('dccgg_nonce', 'nonce');
+
+        // v0.9.7.14: per-IP burst limit (5 / 15 min) + site-wide daily cap
+        // so distributed scraping can't drain the 1500/day Gemini free tier.
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_ai_rl_' . $ip_hash;
+        $rl_count = (int) get_transient($rl_key);
+        if ($rl_count >= 5) {
+            wp_send_json_error(['message' => __('Too many questions in a short window — please try again in a few minutes.', 'dcc-guest-guide')], 429);
+        }
+        $daily_cap   = (int) apply_filters('dccgg_ai_daily_cap', 500);
+        $daily_count = (int) get_transient('dccgg_ai_daily');
+        if ($daily_cap > 0 && $daily_count >= $daily_cap) {
+            wp_send_json_error(['message' => __('AI search has hit today\'s usage limit. Please try again tomorrow or contact the host.', 'dcc-guest-guide')], 429);
+        }
+
         $key   = (string) get_option('dccgg_gemini_key', '');
         $model = (string) get_option('dccgg_gemini_model', 'gemini-2.5-flash');
         if ($key === '') {
@@ -582,6 +637,8 @@ final class Plugin
         if ($answer === '') {
             wp_send_json_error(['message' => __('AI returned an empty answer.', 'dcc-guest-guide')], 502);
         }
+        set_transient($rl_key, $rl_count + 1, 15 * MINUTE_IN_SECONDS);
+        set_transient('dccgg_ai_daily', $daily_count + 1, DAY_IN_SECONDS);
         wp_send_json_success(['answer' => $answer]);
     }
 
@@ -732,6 +789,36 @@ final class Plugin
             $payload['debug'] = ['tries' => $tries];
         }
         wp_send_json_success($payload);
+    }
+
+    /**
+     * AJAX: return the search-index payload for one widget on one page.
+     * v0.9.7.14: index used to be inlined into data-config on every page
+     * load (~30-50 KB on a 50-item guide). Now fetched lazily on the
+     * first search-focus. Cached server-side by post_id + content hash so
+     * the index regenerates only when the host re-saves the guide.
+     */
+    public function handle_search_index(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+        $post_id   = isset($_REQUEST['post_id'])   ? (int) $_REQUEST['post_id']                                          : 0;
+        $widget_id = isset($_REQUEST['widget_id']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['widget_id']))    : '';
+        if ($post_id <= 0 || $widget_id === '') {
+            wp_send_json_error(['message' => 'post_id and widget_id required'], 400);
+        }
+        $settings = $this->find_widget_settings($post_id, $widget_id);
+        if (empty($settings)) {
+            wp_send_json_success(['index' => []]);
+        }
+        $hash = substr(sha1((string) wp_json_encode($settings)), 0, 12);
+        $key  = 'dccgg_searchidx_' . $post_id . '_' . $hash;
+        $cached = get_transient($key);
+        if (is_array($cached)) {
+            wp_send_json_success(['index' => $cached]);
+        }
+        $index = Widget::build_search_index($settings);
+        set_transient($key, $index, HOUR_IN_SECONDS);
+        wp_send_json_success(['index' => $index]);
     }
 
     /**
