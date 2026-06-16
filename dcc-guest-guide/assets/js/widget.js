@@ -24,6 +24,62 @@
     const STORAGE_KEY = 'dccgg:theme';
     const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // -- Nonce-refreshing AJAX wrappers (v0.9.7.15) -----------------------
+    // Full-page caches (SpeedyCache, etc.) bake the anonymous-visitor
+    // nonce into the cached HTML. A logged-in admin loading that page
+    // gets a stale nonce on every dccgg_nonce-gated endpoint and sees
+    // HTTP 403. These two helpers wrap fetch() so that the FIRST 403
+    // of the session triggers a single dccgg_refresh_nonce round-trip,
+    // updates config.nonce in place, and retries the original request.
+    // Guests with a matching anon nonce never hit the refresh path —
+    // their first response is 200 and the helper is transparent.
+    function dccggRefreshNonce(config) {
+        if (config.__nonceRefresh) return config.__nonceRefresh;
+        const params = new URLSearchParams({ action: 'dccgg_refresh_nonce' });
+        config.__nonceRefresh = fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString(),
+        }).then(r => r.json()).then(json => {
+            const fresh = json && json.success && json.data && json.data.nonce;
+            if (fresh) config.nonce = fresh;
+            return fresh;
+        }).catch(() => null);
+        return config.__nonceRefresh;
+    }
+    function dccggFetch(config, body) {
+        body.set('nonce', config.nonce);
+        const post = () => fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        });
+        return post().then(r => {
+            if (r.status !== 403 || config.__nonceRetried) return r;
+            config.__nonceRetried = true;
+            return dccggRefreshNonce(config).then(fresh => {
+                if (fresh) body.set('nonce', fresh);
+                return post();
+            });
+        });
+    }
+    function dccggFetchGet(config, action, params) {
+        const sp = new URLSearchParams(params || {});
+        sp.set('action', action);
+        sp.set('nonce', config.nonce);
+        const get = () => fetch(config.ajaxUrl + '?' + sp.toString(), { credentials: 'same-origin' });
+        return get().then(r => {
+            if (r.status !== 403 || config.__nonceRetried) return r;
+            config.__nonceRetried = true;
+            return dccggRefreshNonce(config).then(fresh => {
+                if (fresh) sp.set('nonce', fresh);
+                return get();
+            });
+        });
+    }
+
     // -- View Transitions wrapper -----------------------------------------
     function withViewTransition(fn) {
         if (REDUCED_MOTION) { fn(); return; }
@@ -333,7 +389,6 @@
         send.textContent = '…';
         const body = new URLSearchParams();
         body.set('action',           'dccgg_report_problem');
-        body.set('nonce',            config.nonce);
         body.set('category',         catEl ? catEl.value : '');
         body.set('description',      desc);
         body.set('contact',          contact);
@@ -351,12 +406,7 @@
         body.set('post_id',          String(config.postId || 0));
         body.set('widget_id',        String(config.widgetId || ''));
         setError('');
-        fetch(config.ajaxUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString(),
-        }).then(r => {
+        dccggFetch(config, body).then(r => {
             // v0.9.7.10: capture HTTP-error status so it doesn't disappear
             // into the catch as a generic "Could not send." The user sees
             // "HTTP 403" / "HTTP 0" right in the dialog and can DM us the
@@ -518,14 +568,12 @@
         if (em.noaaBanner && config.ajaxUrl) {
             const banner = root.querySelector('.dccgg-noaa-banner');
             if (!banner) return;
-            const params = new URLSearchParams({
-                action: 'dccgg_noaa_alerts',
-                nonce:  config.nonce,
-                lat:    String(config.cottageLat || 0),
-                lng:    String(config.cottageLng || 0),
-            });
-            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) params.set('fake', '1');
-            fetch(config.ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
+            const noaaParams = {
+                lat: String(config.cottageLat || 0),
+                lng: String(config.cottageLng || 0),
+            };
+            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) noaaParams.fake = '1';
+            dccggFetchGet(config, 'dccgg_noaa_alerts', noaaParams)
                 .then(r => r.json())
                 .then(json => {
                     if (!json || !json.success) return;
@@ -835,7 +883,6 @@
         if (!lat || !lng || !config.ajaxUrl) return;
         const extras = !!config.conditionsExtras;
         const debug = /[?&]dccgg-debug-conditions=1/.test(window.location.search);
-        const debugSuffix = debug ? '&debug=1' : '';
         const logIfDebug = (label, payload) => {
             if (debug) console.log('[DCCGG conditions] ' + label, payload);
         };
@@ -843,8 +890,9 @@
             if (!debug) return;
             cards.forEach(card => attachDebugBlock(card, label, payload));
         };
-        const url = config.ajaxUrl + '?action=dccgg_weather&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng + debugSuffix;
-        fetch(url, { credentials: 'same-origin' })
+        const wxParams = { lat: String(lat), lng: String(lng) };
+        if (debug) wxParams.debug = '1';
+        dccggFetchGet(config, 'dccgg_weather', wxParams)
             .then(r => {
                 if (!r.ok) console.warn('[DCCGG conditions] weather HTTP ' + r.status);
                 return r.json();
@@ -886,15 +934,10 @@
 
         if (extras) {
             // Card 1: NWS alert banner — uses the existing alerts endpoint.
-            const alertParams = new URLSearchParams({
-                action: 'dccgg_noaa_alerts',
-                nonce:  config.nonce,
-                lat:    String(lat),
-                lng:    String(lng),
-            });
-            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) alertParams.set('fake', '1');
-            if (debug) alertParams.set('debug', '1');
-            fetch(config.ajaxUrl + '?' + alertParams.toString(), { credentials: 'same-origin' })
+            const alertParams = { lat: String(lat), lng: String(lng) };
+            if (/[?&]dccgg-fake-alert=1/.test(window.location.search)) alertParams.fake = '1';
+            if (debug) alertParams.debug = '1';
+            dccggFetchGet(config, 'dccgg_noaa_alerts', alertParams)
                 .then(r => {
                     if (!r.ok) console.warn('[DCCGG conditions] noaa HTTP ' + r.status);
                     return r.json();
@@ -919,8 +962,9 @@
                 .catch((err) => { console.warn('[DCCGG conditions] noaa fetch failed', err); });
 
             // Card 2: USGS lake water level + surface temp.
-            const usgsUrl = config.ajaxUrl + '?action=dccgg_usgs&nonce=' + encodeURIComponent(config.nonce) + '&lat=' + lat + '&lng=' + lng + debugSuffix;
-            fetch(usgsUrl, { credentials: 'same-origin' })
+            const usgsParams = { lat: String(lat), lng: String(lng) };
+            if (debug) usgsParams.debug = '1';
+            dccggFetchGet(config, 'dccgg_usgs', usgsParams)
                 .then(r => {
                     if (!r.ok) console.warn('[DCCGG conditions] usgs HTTP ' + r.status);
                     return r.json();
@@ -1280,15 +1324,9 @@
         const context = buildAiContext(root);
         const body = new URLSearchParams();
         body.set('action', 'dccgg_ai_query');
-        body.set('nonce', config.nonce);
         body.set('question', question);
         body.set('context', context);
-        fetch(config.ajaxUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString(),
-        }).then(r => r.json()).then(json => {
+        dccggFetch(config, body).then(r => r.json()).then(json => {
             delete answer.dataset.state;
             btn.disabled = false;
             if (json && json.success && json.data && json.data.answer) {
@@ -2484,15 +2522,9 @@
             if (indexLoad) return indexLoad;
             const body = new URLSearchParams();
             body.set('action',    'dccgg_search_index');
-            body.set('nonce',     config.nonce);
             body.set('post_id',   String(config.postId || 0));
             body.set('widget_id', String(config.widgetId || ''));
-            indexLoad = fetch(config.ajaxUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: body.toString(),
-            }).then(r => r.json()).then(json => {
+            indexLoad = dccggFetch(config, body).then(r => r.json()).then(json => {
                 const arr = (json && json.success && json.data && Array.isArray(json.data.index))
                     ? json.data.index : [];
                 arr.forEach(normalizeEntry);

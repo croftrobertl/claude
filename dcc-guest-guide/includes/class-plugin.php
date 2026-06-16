@@ -55,6 +55,13 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_usgs',         [$this, 'handle_usgs']);
         add_action('wp_ajax_dccgg_search_index',        [$this, 'handle_search_index']);
         add_action('wp_ajax_nopriv_dccgg_search_index', [$this, 'handle_search_index']);
+        // v0.9.7.15: stale-nonce refresh path. When SpeedyCache serves a
+        // cached page populated by an anonymous visitor to a logged-in
+        // admin, the inlined nonce is for user 0 and every dccgg_nonce
+        // check fails with HTTP 403. The JS retries once after hitting
+        // this endpoint to mint a fresh nonce for the current session.
+        add_action('wp_ajax_dccgg_refresh_nonce',        [$this, 'handle_refresh_nonce']);
+        add_action('wp_ajax_nopriv_dccgg_refresh_nonce', [$this, 'handle_refresh_nonce']);
 
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
@@ -819,6 +826,21 @@ final class Plugin
         $index = Widget::build_search_index($settings);
         set_transient($key, $index, HOUR_IN_SECONDS);
         wp_send_json_success(['index' => $index]);
+    }
+
+    /**
+     * AJAX: return a fresh dccgg_nonce bound to the current session.
+     * v0.9.7.15: full-page caches (SpeedyCache, on this host) bake the
+     * anonymous-user nonce into the cached HTML, so logged-in visitors
+     * loading that cached page get a stale nonce on their data-config.
+     * The JS hits this endpoint after a 403 to mint a fresh one. No
+     * check_ajax_referer here — the session cookie is what authenticates
+     * the requester, and the returned nonce is bound to that session so
+     * it can't be used to escalate privileges.
+     */
+    public function handle_refresh_nonce(): void
+    {
+        wp_send_json_success(['nonce' => wp_create_nonce('dccgg_nonce')]);
     }
 
     /**

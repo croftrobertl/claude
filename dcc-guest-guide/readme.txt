@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.14
+Stable tag: 0.9.7.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,55 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.15 =
+
+Hotfix: Report-a-Problem (and every other AJAX feature — search, AI
+fallback, conditions card, NOAA banner) returned HTTP 403 in the
+host's regular Chrome session while working in incognito Chrome,
+Edge and Safari.
+
+Root cause: SpeedyCache (active on this site) serves the full-page-
+cached HTML to every visitor, regardless of login state. The cached
+HTML carries the WordPress nonce that was minted for the anonymous
+visitor who originally populated the cache entry (user ID 0). When
+the logged-in admin then loads that page and submits a form, the
+plugin's `check_ajax_referer('dccgg_nonce', 'nonce')` validates the
+nonce against the AJAX request's session — which belongs to the
+logged-in admin's user ID, not 0. WordPress nonces are bound to
+(user ID + action), so the comparison fails, `check_ajax_referer`
+dies with `-1`, and the response comes back as HTTP 403. Guests
+never hit this — their cached anonymous nonce matches their
+anonymous session.
+
+Fix: lazy nonce refresh, retried at most once per session.
+
+* New AJAX action `dccgg_refresh_nonce` returns a fresh nonce bound
+  to the current session. No referer / nonce check on the endpoint
+  itself — the session cookie authenticates the requester, and the
+  returned nonce is locked to that session so it can't be used to
+  escalate privileges.
+* New JS helpers `dccggFetch(config, body)` and
+  `dccggFetchGet(config, action, params)` wrap fetch() so the first
+  HTTP 403 of the page life triggers a single
+  `dccgg_refresh_nonce` round-trip, updates `config.nonce` in
+  place, and retries the original request. A flag on the config
+  object (`__nonceRetried`) prevents the retry path from looping
+  if the second response is also 403 (which means real failure, not
+  stale nonce).
+* All visitor-side AJAX call sites converted to the helpers:
+  Report-a-Problem submit, lazy search-index fetch, AI search
+  query, conditions-card weather / NOAA-alerts / USGS triple, and
+  the SOS-button NOAA banner.
+
+Transparent to anonymous guests — their first response is 200, so
+the refresh path never fires. Logged-in users see exactly one
+extra round-trip on the first AJAX call after a page load, then
+zero overhead on every subsequent call in the same page lifetime.
+
+Editor-side Export / Import are unaffected — the Elementor editor
+isn't full-page cached, so its nonces (`dccgg_export`,
+`dccgg_import`) are always fresh.
 
 = 0.9.7.14 =
 
