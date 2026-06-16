@@ -2642,9 +2642,15 @@ final class Widget extends Widget_Base
             }
             $items_by_section[$key][] = $item;
         }
-        // v0.9.7.14: search index moved off the inlined data-config payload —
-        // the JS now lazy-fetches it via the dccgg_search_index AJAX action on
-        // first search-focus. Build_search_index() rebuilds section_meta on demand.
+        // v0.9.7.16: search index re-inlined into data-config. The v0.9.7.14
+        // lazy-AJAX path regressed search in production — when SpeedyCache
+        // served HTML missing the new postId/widgetId fields, the AJAX call
+        // returned an empty index and the JS "Whoops! No matches" message
+        // fired for every query. The 30-50 KB inlined-payload optimization
+        // wasn't worth the reliability cost. The dccgg_search_index AJAX
+        // endpoint stays registered as a defensive fallback for browsers
+        // still running cached v0.9.7.14/15 JS.
+        $search_index = $enable_search ? self::build_search_index($s) : [];
 
         $reveal_mode  = (string) ($s['reveal_mode'] ?? 'stage');
         $menu_layout  = (string) ($s['menu_layout'] ?? 'grid');
@@ -2867,8 +2873,9 @@ final class Widget extends Widget_Base
             // (lazy) search-index lookups without inlining sensitive data.
             'postId'           => (int) get_the_ID(),
             'widgetId'         => (string) $this->get_id(),
-            // v0.9.7.14: searchIndex moved to a lazy AJAX fetch (dccgg_search_index)
-            // so a 50-item guide no longer inlines 30-50 KB of JSON on every page.
+            // v0.9.7.16: searchIndex back inline. Lazy AJAX endpoint stays
+            // registered as a fallback for stale cached v0.9.7.14/15 JS.
+            'searchIndex'      => $search_index,
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'readMore'    => (string) ($s['str_read_more'] ?? 'Read more'),

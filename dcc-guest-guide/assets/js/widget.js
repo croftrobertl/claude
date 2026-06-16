@@ -2501,11 +2501,17 @@
         const live  = root.querySelector('[data-dccgg-results-count]');
         if (!input || !list) return;
 
-        // v0.9.7.14: the search index used to be inlined into data-config on
-        // every page load (~30-50 KB on a 50-item guide). Now lazy-loaded on
-        // the first focus / first keystroke via the dccgg_search_index AJAX
-        // endpoint. `index` starts empty; `indexReady` flips true once the
-        // fetch resolves (or fails — in which case search is a no-op).
+        // v0.9.7.16: the search index is back inline on data-config (the
+        // v0.9.7.14 lazy-AJAX optimization regressed search in production —
+        // stale cached HTML missing postId/widgetId returned an empty index
+        // and triggered "Whoops! No matches" for every query). When the
+        // inline payload is present, use it directly; only fall back to
+        // the dccgg_search_index AJAX path when running cached JS against
+        // a v0.9.7.14/15 page that didn't emit `searchIndex`.
+        const debugSearch = /[?&]dccgg-debug-search=1/.test(window.location.search);
+        const dbgSearch = (label, payload) => {
+            if (debugSearch) console.log('[DCCGG search] ' + label, payload);
+        };
         let index = [];
         let indexLoad = null;
         const normalizeEntry = (e) => {
@@ -2518,13 +2524,23 @@
             e._titleConcat = tc; e._titlePos = tp;
             e._textConcat  = xc; e._textPos  = xp;
         };
+        if (Array.isArray(config.searchIndex) && config.searchIndex.length > 0) {
+            index = config.searchIndex.slice();
+            index.forEach(normalizeEntry);
+            indexLoad = Promise.resolve(index);
+            dbgSearch('path: inline', { entries: index.length });
+        }
         const loadIndex = () => {
             if (indexLoad) return indexLoad;
             const body = new URLSearchParams();
             body.set('action',    'dccgg_search_index');
             body.set('post_id',   String(config.postId || 0));
             body.set('widget_id', String(config.widgetId || ''));
+            dbgSearch('path: ajax (no inline index found)', {
+                postId: config.postId, widgetId: config.widgetId,
+            });
             indexLoad = dccggFetch(config, body).then(r => r.json()).then(json => {
+                dbgSearch('ajax response', json);
                 const arr = (json && json.success && json.data && Array.isArray(json.data.index))
                     ? json.data.index : [];
                 arr.forEach(normalizeEntry);

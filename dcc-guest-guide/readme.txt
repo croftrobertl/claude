@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.15
+Stable tag: 0.9.7.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,35 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.16 =
+
+Hotfix: live search returned "Whoops! No matches" for every query —
+even trivial words like "the" that appear in nearly every section.
+
+Root cause: the v0.9.7.14 lazy-AJAX search index introduced for
+payload-size savings was fragile in production. When SpeedyCache
+served HTML that predated v0.9.7.14 (or any render context where
+`get_the_ID()` didn't resolve), the new `post_id` / `widget_id`
+config fields were missing, the `dccgg_search_index` AJAX call
+returned an empty array, and the JS rendered "No matches" for
+every search query.
+
+Fix: re-inline the search index on `data-config`, restoring the
+v0.9.7.13 and earlier behavior. The ~30-50 KB inlined-payload
+savings wasn't worth the reliability cost — search is one of the
+two highest-traffic features and it needs to be bulletproof.
+
+* `Widget::render()` now calls `Widget::build_search_index($s)` and
+  re-emits the result on the data-config `searchIndex` key.
+* `wireSearch()` in `widget.js` uses the inline payload directly
+  when present; the `dccgg_search_index` AJAX endpoint stays
+  registered as a defensive fallback for any browser still running
+  cached v0.9.7.14/15 JS against a v0.9.7.16 page.
+* New diagnostic flag: append `?dccgg-debug-search=1` to the page
+  URL to log which code path fired (inline vs AJAX) and the index
+  size into the browser console. Mirrors the existing
+  `?dccgg-debug-conditions=1` pattern.
 
 = 0.9.7.15 =
 
