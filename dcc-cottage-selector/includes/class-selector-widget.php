@@ -299,22 +299,25 @@ class Selector_Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    /** The top mode-toggle pills (Normal / Active). */
+    /** The top mode-switcher dropdown (trigger + options). */
     private function register_modebar_style_controls(): void
     {
         $this->start_controls_section('style_modebar', [
-            'label' => __('Mode toggle', 'dcc-cottage-selector'),
+            'label' => __('Mode switcher', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'modetab_typography',
-            'selector' => self::SEL . '.dccs-modetab',
+            'selector' => self::SEL . '.dccs-modeselect-trigger, ' . self::SEL . '.dccs-modetab',
         ]);
         $this->add_control('modebar_bg', [
-            'label'     => __('Bar background', 'dcc-cottage-selector'),
+            'label'     => __('Control background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccs-modebar' => 'background-color: {{VALUE}};'],
+            'selectors' => [
+                self::SEL . '.dccs-modeselect-trigger' => 'background-color: {{VALUE}};',
+                self::SEL . '.dccs-modeselect-list'    => 'background-color: {{VALUE}};',
+            ],
         ]);
 
         $this->start_controls_tabs('modetab_tabs');
@@ -322,10 +325,13 @@ class Selector_Widget extends Widget_Base
         $this->add_control('modetab_color', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccs-modetab' => 'color: {{VALUE}};'],
+            'selectors' => [
+                self::SEL . '.dccs-modeselect-trigger' => 'color: {{VALUE}};',
+                self::SEL . '.dccs-modetab'            => 'color: {{VALUE}};',
+            ],
         ]);
         $this->end_controls_tab();
-        $this->start_controls_tab('modetab_active', ['label' => __('Active', 'dcc-cottage-selector')]);
+        $this->start_controls_tab('modetab_active', ['label' => __('Selected', 'dcc-cottage-selector')]);
         $this->add_control('modetab_color_active', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,

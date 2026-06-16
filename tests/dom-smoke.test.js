@@ -77,9 +77,28 @@ function cardNames(root) {
   ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
   ok('live count shows 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
   ok('no Back on first step', !root.querySelector('.dccs-back'));
-  ok('mode toggle present (3 pills)', root.querySelectorAll('.dccs-modetab').length === 3);
+  ok('mode switcher is a dropdown (3 options)', !!root.querySelector('.dccs-modeselect-trigger') && root.querySelectorAll('.dccs-modetab').length === 3);
   ok('no "I\'m flexible" shortcut', !root.querySelector('.dccs-flexible'));
   ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
+})();
+
+// ---- 1b. Mode dropdown opens/closes via the trigger ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  const trig = root.querySelector('.dccs-modeselect-trigger');
+  ok('dropdown starts closed', !root.querySelector('.dccs-modeselect.is-open'));
+  trig.click();
+  ok('trigger opens the dropdown', !!root.querySelector('.dccs-modeselect.is-open') && trig.getAttribute('aria-expanded') === 'true');
+})();
+
+// ---- 1c. "N cottage matches" is singular when 1 ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 4)
+  clickAnswer(root, 'yes'); // pet=yes -> only Coconut
+  ok('singular count reads "1 cottage matches"', /\b1 cottage matches\b/.test(root.querySelector('.dccs-count').textContent));
 })();
 
 // ---- 2. Tapping an answer selects without advancing; Next advances ----
@@ -93,7 +112,8 @@ function cardNames(root) {
   clickNext(root);
   ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
-  ok('Back is not a chip', root.querySelector('.dccs-back').className.indexOf('dccs-chip') === -1);
+  ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
+  ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
 })();
 
 // ---- 3. Back preserves the chosen answer ----
@@ -168,27 +188,44 @@ function cardNames(root) {
   ok('deeplink pet=true -> only Coconut Cottage', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
 })();
 
-// ---- 9. No-match combo shows tagged fallback, no excluded panel ----
+// ---- 9. No-match: new heading/subhead + blocking recap chips in red ----
 (function () {
   const w = freshDom('https://example.com/?pet=true&dining=4');
   const root = mountSelector(w);
-  ok('impossible combo shows empty heading', !!root.querySelector('.dccs-empty'));
+  ok('empty heading reads "No Perfect Matches"', /No Perfect Matches/.test(root.querySelector('.dccs-empty h3').textContent));
   ok('fallback card tagged with what it misses', !!root.querySelector('.dccs-miss'));
+  ok('blocking must-haves are flagged red', root.querySelectorAll('.dccs-recap-chip.is-blocking').length >= 1);
+  ok('a soft pref would not be flagged', !root.querySelector('.dccs-recap-chip.is-blocking[data-step="0"]'));
   ok('no excluded panel anywhere', !root.querySelector('.dccs-excluded'));
 })();
 
-// ---- 10. Header mode toggle switches modes ----
+// ---- 10. Mode dropdown switches modes; Compare uses a checkbox dropdown ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
-  ok('compare mode shows 8 pickers', root.querySelectorAll('.dccs-pick').length === 8);
-  ok('compare picker uses full names', root.querySelector('.dccs-pick').textContent.indexOf('Cottage ') === 0);
+  ok('compare shows a multiselect dropdown', !!root.querySelector('.dccs-cmp-trigger') && root.querySelectorAll('.dccs-cmp-option').length === 8);
+  ok('compare options use full names', /^Cottage \d+: /.test(root.querySelector('.dccs-cmp-option').textContent.trim()));
+  root.querySelector('.dccs-modetab[data-mode="weights"]').click();
+  ok('weights mode is now a wizard', !!root.querySelector('.dccs-chips-wizard') && root.querySelector('.dccs-next').disabled === true);
   root.querySelector('.dccs-modetab[data-mode="quick"]').click();
   ok('back to quick finder', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
-// ---- 11. Compare overlay from results checkboxes ----
+// ---- 10b. Weigh-priorities runs as a step -> review -> results wizard ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  root.querySelector('.dccs-modetab[data-mode="weights"]').click();
+  ok('weights starts at Step 1 of 8', /1\b.*\b8/.test(progress(root)));
+  ok('nothing preselected, Next disabled', !activeChip(root) && root.querySelector('.dccs-next').disabled === true);
+  stepThrough(root, '2');                                   // medium for all 8
+  ok('weights review lists all 8 priorities', root.querySelectorAll('.dccs-review-list li').length === 8);
+  root.querySelector('.dccs-see-matches').click();
+  ok('weights results are ranked cards', root.querySelectorAll('.dccs-card').length >= 1);
+})();
+
+// ---- 11. Compare overlay (windowed) from results checkboxes ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
@@ -204,6 +241,7 @@ function cardNames(root) {
   ok('compare button appears with 2 ticked', !!btn && /2/.test(btn.textContent));
   btn.click();
   ok('overlay shows the comparison matrix', !!w.document.querySelector('.dccs-modal .dccs-matrix'));
+  ok('matrix has a pinned corner cell', !!w.document.querySelector('.dccs-modal .dccs-matrix .dccs-corner'));
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
@@ -246,15 +284,15 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  ok('mode toggle is a group of pressed buttons', root.querySelector('.dccs-modebar[role="group"]') &&
-    root.querySelector('.dccs-modetab[aria-pressed="true"]') &&
+  ok('mode dropdown is a listbox trigger', !!root.querySelector('.dccs-modeselect-trigger[aria-haspopup="listbox"]') &&
+    root.querySelectorAll('.dccs-modetab[role="option"]').length === 3 &&
     root.querySelectorAll('.dccs-modetab[role="tab"]').length === 0);
   ok('current step has aria-current', !!root.querySelector('.dccs-step-dot[aria-current="step"]'));
   ok('disabled Next exposes a hint', /\w/.test(root.querySelector('.dccs-next').getAttribute('aria-label') || ''));
   ok('radiogroup is keyboard-reachable when nothing is selected',
     curChips(root).filter(function (c) { return c.getAttribute('tabindex') === '0'; }).length === 1);
   clickAnswer(root, 'yes');
-  ok('selected pill marks aria-pressed', !!activeChip(root));
+  ok('selected answer marks aria-checked', !!root.querySelector('.dccs-chip.is-active[aria-checked="true"]'));
 
   // Compare overlay dialog is labelled
   toResults(root, 'either');

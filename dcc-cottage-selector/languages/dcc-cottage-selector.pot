@@ -3,13 +3,19 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.4.2\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.5.0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Domain: dcc-cottage-selector\n"
 
+msgid "%d cottage matches"
+msgstr ""
+
 msgid "%d cottages match"
+msgstr ""
+
+msgid "%d selected"
 msgstr ""
 
 msgid "%d sq ft"
@@ -25,9 +31,6 @@ msgid "Accent"
 msgstr ""
 
 msgid "Accent text"
-msgstr ""
-
-msgid "Active"
 msgstr ""
 
 msgid "All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector)."
@@ -52,9 +55,6 @@ msgid "Badge background"
 msgstr ""
 
 msgid "Badge text"
-msgstr ""
-
-msgid "Bar background"
 msgstr ""
 
 msgid "Border"
@@ -109,6 +109,9 @@ msgid "Completed step color"
 msgstr ""
 
 msgid "Content"
+msgstr ""
+
+msgid "Control background"
 msgstr ""
 
 msgid "Corner radius"
@@ -201,6 +204,9 @@ msgstr ""
 msgid "Hover"
 msgstr ""
 
+msgid "How much does %s matter?"
+msgstr ""
+
 msgid "Intro color"
 msgstr ""
 
@@ -249,7 +255,7 @@ msgstr ""
 msgid "Mode label: Weigh priorities"
 msgstr ""
 
-msgid "Mode toggle"
+msgid "Mode switcher"
 msgstr ""
 
 msgid "More room"
@@ -264,13 +270,16 @@ msgstr ""
 msgid "Muted text"
 msgstr ""
 
+msgid "Next cottages"
+msgstr ""
+
 msgid "Next →"
 msgstr ""
 
 msgid "No"
 msgstr ""
 
-msgid "No cottage meets every must-have"
+msgid "No Perfect Matches"
 msgstr ""
 
 msgid "No preference"
@@ -307,6 +316,9 @@ msgid "Pick 2 to 4 cottages to compare side by side."
 msgstr ""
 
 msgid "Positive highlight"
+msgstr ""
+
+msgid "Previous cottages"
 msgstr ""
 
 msgid "Progress & steps"
@@ -369,6 +381,9 @@ msgstr ""
 msgid "See my matches"
 msgstr ""
 
+msgid "Select cottages to compare"
+msgstr ""
+
 msgid "Selected"
 msgstr ""
 
@@ -376,6 +391,9 @@ msgid "Selector page URL"
 msgstr ""
 
 msgid "Show heading"
+msgstr ""
+
+msgid "Showing %1$d–%2$d of %3$d"
 msgstr ""
 
 msgid "Size"
@@ -417,9 +435,6 @@ msgstr ""
 msgid "Table for two or four?"
 msgstr ""
 
-msgid "Tap to set how much each thing matters to you."
-msgstr ""
-
 msgid "Text"
 msgstr ""
 
@@ -436,9 +451,6 @@ msgid "This cottage"
 msgstr ""
 
 msgid "Top match: %s"
-msgstr ""
-
-msgid "Try relaxing “%s” — here are the closest options."
 msgstr ""
 
 msgid "Upcoming step color"
@@ -481,6 +493,12 @@ msgid "Workspace"
 msgstr ""
 
 msgid "Yes"
+msgstr ""
+
+msgid "Your next best match is below. Changing the choices in red will bring more matches."
+msgstr ""
+
+msgid "Your next best matches are below. Changing the choices in red will bring more matches."
 msgstr ""
 
 msgid "Your top matches"

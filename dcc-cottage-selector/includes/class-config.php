@@ -28,7 +28,8 @@ final class Config
             'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare', 'dcc-cottage-selector'),
             'name_format'       => /* translators: %1$s: cottage number, %2$s: cottage name */ __('Cottage %1$s: %2$s', 'dcc-cottage-selector'),
-            'match_count'       => /* translators: %d: number of matching cottages */ __('%d cottages match', 'dcc-cottage-selector'),
+            'match_count'       => /* translators: %d: number of matching cottages (2+) */ __('%d cottages match', 'dcc-cottage-selector'),
+            'match_count_one'   => /* translators: %d: number of matching cottages (always 1) */ __('%d cottage matches', 'dcc-cottage-selector'),
             'sr_top_match'      => /* translators: %s: cottage name */ __('Top match: %s', 'dcc-cottage-selector'),
             'loading'           => __('Loading…', 'dcc-cottage-selector'),
             'unavailable'       => __('The cottage selector is temporarily unavailable.', 'dcc-cottage-selector'),
@@ -70,7 +71,7 @@ final class Config
             'opt_seats4'        => __('Table for 4', 'dcc-cottage-selector'),
 
             // What Matters Most rows + 3-state toggle
-            'w_intro'           => __('Tap to set how much each thing matters to you.', 'dcc-cottage-selector'),
+            'w_question'        => /* translators: %s: a priority, e.g. "Workspace" */ __('How much does %s matter?', 'dcc-cottage-selector'),
             'w_workspace'       => __('Workspace', 'dcc-cottage-selector'),
             'w_moreroom'        => __('More room', 'dcc-cottage-selector'),
             'w_fewerstairs'     => __('Fewer stairs', 'dcc-cottage-selector'),
@@ -96,6 +97,11 @@ final class Config
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
             'compare_prompt'    => __('Pick 2 to 4 cottages to compare side by side.', 'dcc-cottage-selector'),
+            'compare_select'    => __('Select cottages to compare', 'dcc-cottage-selector'),
+            'compare_selected'  => /* translators: %d: number of cottages selected */ __('%d selected', 'dcc-cottage-selector'),
+            'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d–%2$d of %3$d', 'dcc-cottage-selector'),
+            'cmp_prev'          => __('Previous cottages', 'dcc-cottage-selector'),
+            'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),
 
             // Results
             'results_heading'   => __('Your top matches', 'dcc-cottage-selector'),
@@ -108,8 +114,9 @@ final class Config
             'dup_note'          => /* translators: %s: other cottage name */ __('Note: this cottage has an identical layout and features to %s.', 'dcc-cottage-selector'),
 
             // Empty state
-            'empty_heading'     => __('No cottage meets every must-have', 'dcc-cottage-selector'),
-            'empty_relax'       => /* translators: %s: name of the filter to relax */ __('Try relaxing “%s” — here are the closest options.', 'dcc-cottage-selector'),
+            'empty_heading'     => __('No Perfect Matches', 'dcc-cottage-selector'),
+            'empty_sub'         => __('Your next best matches are below. Changing the choices in red will bring more matches.', 'dcc-cottage-selector'),
+            'empty_sub_one'     => __('Your next best match is below. Changing the choices in red will bring more matches.', 'dcc-cottage-selector'),
 
             // Badges
             'badge_spacious'    => __('Spacious Retreat', 'dcc-cottage-selector'),

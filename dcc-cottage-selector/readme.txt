@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.2
+Stable tag: 0.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,10 +19,10 @@ tool:
 * **Quick finder (default)** — a step-through wizard, one tappable question per
   screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
   pet-friendly? ground floor? largest?), then a review screen and the top matches.
-* **Weigh priorities** (a tap away in the mode toggle) — set how much each thing
-  matters with a tap (Low / Medium / High); no sliders, no drag-and-drop.
-* **Compare** (mode toggle, or tick cottages on the results) — a tight
-  side-by-side matrix of 2–4 cottages over the seven meaningful differences only.
+* **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
+  much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
+* **Compare** (mode menu, or tick cottages on the results) — choose from a
+  checkbox list and read a side-by-side table you page through with arrows.
 
 Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
@@ -33,7 +33,7 @@ The whole experience is client-side over a tiny bundled dataset
 = Provided widgets / shortcode =
 
 * **Cottage Selector** (Elementor) — the full wizard finder (plus Weigh
-  priorities / Compare in the header mode toggle).
+  priorities / Compare in the header mode menu).
 * **Cottage Selector — Mini Entry** (Elementor) — a compact cross-sell prompt for
   individual cottage pages.
 * `[dcc_selector_entry current="22" url="/cottage-selector/"]` — the same mini
@@ -66,10 +66,11 @@ returned directly. If a combination is impossible (e.g. pet-friendly AND a table
 for four), the closest matches are shown, each **tagged with the must-have it
 misses** ("Upstairs", "No table for 4").
 
-A header **mode toggle** switches between the Quick finder, **Weigh priorities**
-(score by Low/Medium/High importance) and **Compare**. On the results, ticking two
-or more cottages reveals a **"Compare N cottages"** button that opens the
-side-by-side matrix in a pop-up.
+A header **mode menu** (dropdown) switches between the Quick finder, **Weigh
+priorities** (a parallel step-by-step wizard that ranks by Low/Medium/High
+importance) and **Compare**. On the results, ticking two or more cottages reveals a
+**"Compare N cottages"** button that opens the side-by-side table in a pop-up, with
+a pinned attribute column and ‹ › arrows to page through the cottages.
 
 Cottages are labelled with their number ("Cottage 32: Flamingo Bungalow").
 Identical-layout cottages (e.g. two of the suites) are flagged so guests
@@ -107,15 +108,35 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
   "No table for 4". (There is no "why excluded" panel.)
 * When #31 & #32 (or #35 & #36) both appear, the lower-numbered one shows an
   "identical layout and features" note.
-* Mode toggle → Weigh priorities: raising **Workspace** to High floats #22/#23.
-* Compare: tick two cottages on the results to reveal "Compare 2 cottages" → the
-  matrix opens in a pop-up; or use the Compare mode and pick 2–4.
+* Count is singular at one result ("1 cottage matches"); no-match shows the "No
+  Perfect Matches" screen with the blocking choices in red.
+* Mode menu → Weigh priorities: a step-by-step wizard; setting **Workspace** to
+  High floats #22/#23.
+* Compare: pick from the checkbox dropdown (or tick cottages on the results) → the
+  table pins the attribute column and pages cottages with ‹ › arrows in a pop-up.
+* On a phone, the pop-up and its Next button stay within the viewport; the close
+  "×" sits inside the box with no colour bleed.
 * Deep link: loading `?pet=true` opens straight to results.
 * Mini Entry: with a selector URL it links there pre-filled; without one it opens
   an on-page pop-up showing how the current cottage ranks.
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.5.0 =
+* Mode switcher is now a dropdown menu (cleaner than three stacked buttons on mobile).
+* "Weigh priorities" is now a step-by-step wizard (one priority per step, with a
+  review screen) like the Quick finder.
+* Compare: the cottage picker is a scrollable checkbox dropdown; the results table
+  pins the attribute column and pages through cottages with ‹ › arrows.
+* Pop-ups now fit within the mobile viewport (internal scroll); the close "×" is
+  fixed (no theme colour bleed, centred, inside the box).
+* Wizard: Back is now a primary button beside Next; the step dots stay a uniform
+  size (colour-only change); "1 cottage matches" is singular.
+* No-match results: heading is "No Perfect Matches", a clearer subheading, and the
+  blocking must-haves in the recap are highlighted red.
+* The "What you're looking for" recap is smaller and no longer ALL-CAPS; the
+  Edit-answers / Start-over buttons match the cottage CTA and share one row.
 
 = 0.4.2 =
 * Removed the "I'm flexible — just show matches" shortcut from the wizard.

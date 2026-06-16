@@ -28,7 +28,11 @@
 
   function fmt(tpl, val) { return String(tpl).replace('%d', val).replace('%s', val); }
   function fmt2(tpl, a, b) { return String(tpl).replace('%1$d', a).replace('%2$d', b); }
+  function fmt3(tpl, a, b, c) { return String(tpl).replace('%1$d', a).replace('%2$d', b).replace('%3$d', c); }
   function fmtName(tpl, a, b) { return String(tpl).replace('%1$s', a).replace('%2$s', b); }
+
+  /** "N cottage matches" (singular) / "N cottages match" (plural). */
+  function matchCount(S, n) { return Number(n) === 1 ? fmt(S.match_count_one, n) : fmt(S.match_count, n); }
 
   /** Display name with its cottage number, e.g. "Cottage 32: Flamingo Bungalow". */
   function cname(config, c) {
@@ -47,8 +51,6 @@
     if (!a || !a.classList) { return null; }
     if (a.classList.contains('dccs-modetab')) { return '.dccs-modetab[data-mode="' + a.dataset.mode + '"]'; }
     if (a.classList.contains('dccs-chip')) { return '.dccs-chip[data-group="' + a.dataset.group + '"][data-value="' + a.dataset.value + '"]'; }
-    if (a.classList.contains('dccs-seg')) { return '.dccs-seg[data-weight="' + a.dataset.weight + '"][data-value="' + a.dataset.value + '"]'; }
-    if (a.classList.contains('dccs-pick')) { return '.dccs-pick[data-cmp="' + a.dataset.cmp + '"]'; }
     if (a.classList.contains('dccs-next')) { return '.dccs-next'; }
     if (a.classList.contains('dccs-reset')) { return '.dccs-reset'; }
     return null;
@@ -72,13 +74,18 @@
     return {
       mode: config.startMode || 'quick',
       quick: quick,
-      weights: { workspace: 1, moreroom: 1, fewerstairs: 1, pet: 1, studio: 1, onebed: 1, dining: 1, pullout: 1 },
+      // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
+      // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
+      weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0 },
       compareIds: (config.preCompare || []).slice(0, 4).map(String),
       highlight: config.highlight || '',
       // Wizard navigation: question index + stage ('q' | 'review' | 'results').
       step: 0,
       stage: 'q',
-      editReturn: null
+      editReturn: null,
+      // Transient UI state for the compare dropdown + the compare window offset.
+      compareOpen: false,
+      cmpStart: 0
     };
   }
 
@@ -196,13 +203,58 @@
     { group: 'largest', qKey: 'q_largest', shortKey: 'short_largest', opts: YND }
   ];
 
-  function answered(state, group) { var v = state.quick[group]; return v !== '' && v != null; }
+  // The Weigh-priorities wizard: one priority per step, answered Low/Med/High.
+  var WLEVELS = [['lvl_low', 1], ['lvl_med', 2], ['lvl_high', 3]];
+  var WEIGHT_QUESTIONS = [
+    { group: 'workspace', shortKey: 'w_workspace', opts: WLEVELS },
+    { group: 'moreroom', shortKey: 'w_moreroom', opts: WLEVELS },
+    { group: 'fewerstairs', shortKey: 'w_fewerstairs', opts: WLEVELS },
+    { group: 'pet', shortKey: 'w_pet', opts: WLEVELS },
+    { group: 'studio', shortKey: 'w_studio', opts: WLEVELS },
+    { group: 'onebed', shortKey: 'w_onebed', opts: WLEVELS },
+    { group: 'dining', shortKey: 'w_dining', opts: WLEVELS },
+    { group: 'pullout', shortKey: 'w_pullout', opts: WLEVELS }
+  ];
 
   function answerLabel(q, value, S) {
     for (var i = 0; i < q.opts.length; i++) {
       if (String(q.opts[i][1]) === String(value)) { return S[q.opts[i][0]]; }
     }
     return S.opt_either;
+  }
+  function wLevelLabel(v, S) { return Number(v) === 3 ? S.lvl_high : Number(v) === 2 ? S.lvl_med : Number(v) === 1 ? S.lvl_low : ''; }
+
+  /** Quick finder and Weigh priorities share one wizard renderer via this track. */
+  function wizardTrack(state, S) {
+    if (state.mode === 'weights') {
+      return {
+        questions: WEIGHT_QUESTIONS,
+        get: function (q) { return state.weights[q.group]; },
+        set: function (q, v) { state.weights[q.group] = Number(v); },
+        isAnswered: function (q) { return Number(state.weights[q.group]) > 0; },
+        qLabel: function (q) { return fmt(S.w_question, S[q.shortKey]); },
+        shortLabel: function (q) { return S[q.shortKey]; },
+        valueLabel: function (q, v) { return wLevelLabel(v, S); }
+      };
+    }
+    return {
+      questions: WIZARD_QUESTIONS,
+      get: function (q) { return state.quick[q.group]; },
+      set: function (q, v) { state.quick[q.group] = coerce(v); },
+      isAnswered: function (q) { var x = state.quick[q.group]; return x !== '' && x != null; },
+      qLabel: function (q) { return S[q.qKey]; },
+      shortLabel: function (q) { return S[q.shortKey]; },
+      valueLabel: function (q, v) { return answerLabel(q, v, S); }
+    };
+  }
+
+  /** In the Quick finder, which hard requirement (if active) is over-constraining. */
+  function isBlockingGroup(state, group) {
+    if (state.mode !== 'quick') { return false; }
+    var q = state.quick;
+    return (group === 'pet' && q.pet === 'yes') ||
+      (group === 'ground' && q.ground === 'yes') ||
+      (group === 'dining' && (q.dining === 4 || q.dining === '4'));
   }
 
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
@@ -216,10 +268,11 @@
 
   function renderWizardStep(config, state, ctx) {
     var S = config.strings;
-    var qs = WIZARD_QUESTIONS;
+    var tr = wizardTrack(state, S);
+    var qs = tr.questions;
     var i = clamp(state.step | 0, 0, qs.length - 1);
     var q = qs[i];
-    var value = state.quick[q.group];
+    var value = tr.get(q);
 
     var res = ctx && ctx.res ? ctx.res : DCCS.score.run(config.cottages, criteriaFromState(state));
     var n = res.empty ? 0 : res.results.length;
@@ -234,7 +287,7 @@
 
     // Clickable stepper: answered steps (and the current one) are navigable.
     var dots = qs.map(function (qq, j) {
-      var done = answered(state, qq.group);
+      var done = tr.isAnswered(qq);
       var cls = 'dccs-step-dot' + (j === i ? ' is-current' : '') + (done ? ' is-done' : '');
       if (done && j !== i) {
         return '<button type="button" class="' + cls + ' dccs-edit" data-step="' + j + '" aria-label="' + esc(fmt2(S.wiz_progress, j + 1, qs.length)) + '"></button>';
@@ -242,22 +295,22 @@
       return '<span class="' + cls + '"' + (j === i ? ' aria-current="step"' : ' aria-hidden="true"') + '></span>';
     }).join('');
 
-    var canNext = answered(state, q.group);
+    var canNext = tr.isAnswered(q);
     var nextAttrs = canNext ? '' : ' disabled title="' + esc(S.next_hint || '') +
       '" aria-label="' + esc((S.wiz_next || '') + ' — ' + (S.next_hint || '')) + '"';
+    var qLabel = tr.qLabel(q);
 
     var html = '<div class="dccs-wizard" data-stage="q">';
     html += '<div class="dccs-progress-row">';
-    html += i > 0
-      ? '<button type="button" class="dccs-back">' + esc(S.wiz_back) + '</button>'
-      : '<span class="dccs-back-spacer"></span>';
     html += '<span class="dccs-progress-label">' + esc(fmt2(S.wiz_progress, i + 1, qs.length)) + '</span>';
-    html += '<span class="dccs-count">' + esc(fmt(S.match_count, n)) + '</span></div>';
+    html += '<span class="dccs-count">' + esc(matchCount(S, n)) + '</span></div>';
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
-    html += '<h3 class="dccs-step-q" tabindex="-1">' + esc(S[q.qKey]) + '</h3>';
-    html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(S[q.qKey]) + '">' + chips + '</div>';
+    html += '<h3 class="dccs-step-q" tabindex="-1">' + esc(qLabel) + '</h3>';
+    html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
     html += '<div class="dccs-wizard-nav">';
-    html += '<span class="dccs-nav-spacer"></span>';
+    html += i > 0
+      ? '<button type="button" class="dccs-back dccs-primary">' + esc(S.wiz_back) + '</button>'
+      : '<span class="dccs-nav-spacer"></span>';
     html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + '</button>';
     html += '</div></div>';
     return html;
@@ -265,27 +318,32 @@
 
   function renderReview(config, state) {
     var S = config.strings;
+    var tr = wizardTrack(state, S);
     var html = '<div class="dccs-review"><h3 class="dccs-step-q" tabindex="-1">' + esc(S.review_heading) + '</h3><ul class="dccs-review-list">';
-    WIZARD_QUESTIONS.forEach(function (q, i) {
-      html += '<li><span class="dccs-review-q">' + esc(S[q.shortKey]) + '</span>' +
-        '<span class="dccs-review-a">' + esc(answerLabel(q, state.quick[q.group], S)) + '</span>' +
+    tr.questions.forEach(function (q, i) {
+      html += '<li><span class="dccs-review-q">' + esc(tr.shortLabel(q)) + '</span>' +
+        '<span class="dccs-review-a">' + esc(tr.valueLabel(q, tr.get(q))) + '</span>' +
         '<button type="button" class="dccs-edit" data-step="' + i + '">' + esc(S.edit) + '</button></li>';
     });
-    html += '</ul><div class="dccs-wizard-nav">' +
+    html += '</ul><div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-see-matches dccs-primary">' + esc(S.see_matches) + '</button>' +
       '<button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div></div>';
     return html;
   }
 
-  /** Compact recap of active criteria — each is a tappable chip that edits it. */
-  function renderRecap(config, state) {
+  /** Compact recap of active criteria — each is a tappable chip that edits it.
+      On a no-match result the blocking must-haves are flagged red. */
+  function renderRecap(config, state, emptyState) {
     var S = config.strings;
+    var tr = wizardTrack(state, S);
+    var weights = state.mode === 'weights';
     var chips = '';
-    WIZARD_QUESTIONS.forEach(function (q, i) {
-      var v = state.quick[q.group];
-      if (v === '' || v === 'either' || v == null) { return; }
-      chips += '<button type="button" class="dccs-recap-chip dccs-edit" data-step="' + i + '">' +
-        esc(S[q.shortKey]) + ': ' + esc(answerLabel(q, v, S)) + '</button>';
+    tr.questions.forEach(function (q, i) {
+      var v = tr.get(q);
+      if (weights ? !v : (v === '' || v === 'either' || v == null)) { return; }
+      var blocking = emptyState && isBlockingGroup(state, q.group);
+      chips += '<button type="button" class="dccs-recap-chip dccs-edit' + (blocking ? ' is-blocking' : '') + '" data-step="' + i + '">' +
+        esc(tr.shortLabel(q)) + ': ' + esc(tr.valueLabel(q, v)) + '</button>';
     });
     if (!chips) { return ''; }
     return '<div class="dccs-recap"><span class="dccs-recap-label">' + esc(S.your_criteria) + ':</span> ' + chips + '</div>';
@@ -298,30 +356,6 @@
     if (crit.hardGround && !DCCS.score.isGround(c)) { t.push(S.tag_upstairs); }
     if (crit.hardDining4 && Number(c.diningSeats) < 4) { t.push(S.tag_dining); }
     return t;
-  }
-
-  function renderWeights(S, st) {
-    var rows = [
-      ['workspace', S.w_workspace], ['moreroom', S.w_moreroom], ['fewerstairs', S.w_fewerstairs],
-      ['pet', S.w_pet], ['studio', S.w_studio], ['onebed', S.w_onebed],
-      ['dining', S.w_dining], ['pullout', S.w_pullout]
-    ];
-    var levels = [[1, S.lvl_low], [2, S.lvl_med], [3, S.lvl_high]];
-    var html = '<div class="dccs-weights"><p class="dccs-hint">' + esc(S.w_intro) + '</p>';
-    rows.forEach(function (r) {
-      var key = r[0], cur = st.weights[key];
-      var seg = levels.map(function (l) {
-        var on = Number(cur) === l[0];
-        return '<button type="button" class="dccs-seg' + (on ? ' is-active' : '') +
-          '" role="radio" aria-checked="' + (on ? 'true' : 'false') +
-          '" tabindex="' + (on ? '0' : '-1') +
-          '" data-weight="' + esc(key) + '" data-value="' + l[0] + '">' + esc(l[1]) + '</button>';
-      }).join('');
-      html += '<div class="dccs-wrow"><div class="dccs-wlabel">' + esc(r[1]) + '</div>' +
-        '<div class="dccs-seg-group" role="radiogroup" aria-label="' + esc(r[1]) + '">' + seg + '</div></div>';
-    });
-    html += '</div>';
-    return html;
   }
 
   function diffValue(c, field, S) {
@@ -337,37 +371,63 @@
     }
   }
 
-  /** The side-by-side comparison table for the selected ids (>= 2), or ''. */
-  function compareMatrixHtml(config, st) {
+  var CMP_WIN = 2; // cottage columns shown at once in the comparison table
+
+  /** The comparison table: a pinned attribute column + a window of up to CMP_WIN
+      cottage columns, paged with ‹ › arrows. `start` is the window offset. */
+  function compareMatrixHtml(config, st, start) {
     var S = config.strings;
-    var sel = st.compareIds.map(function (id) { return findCottage(config, id); }).filter(Boolean);
-    if (sel.length < 2) { return ''; }
-    var html = '<div class="dccs-matrix-wrap"><table class="dccs-matrix"><thead><tr><th></th>';
+    var all = st.compareIds.map(function (id) { return findCottage(config, id); }).filter(Boolean);
+    if (all.length < 2) { return ''; }
+    var total = all.length;
+    start = clamp(start | 0, 0, Math.max(0, total - CMP_WIN));
+    var sel = all.slice(start, start + CMP_WIN);
+
+    var html = '<div class="dccs-matrix-block">';
+    if (total > CMP_WIN) {
+      html += '<div class="dccs-matrix-nav">' +
+        '<button type="button" class="dccs-cmp-prev"' + (start > 0 ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_prev || 'Previous') + '">‹</button>' +
+        '<span class="dccs-matrix-pos">' + esc(fmt3(S.cmp_range, start + 1, Math.min(start + CMP_WIN, total), total)) + '</span>' +
+        '<button type="button" class="dccs-cmp-next"' + (start + CMP_WIN < total ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_next || 'Next') + '">›</button>' +
+        '</div>';
+    }
+    html += '<div class="dccs-matrix-wrap"><table class="dccs-matrix"><thead><tr><th class="dccs-corner"></th>';
     sel.forEach(function (c) { html += '<th>' + esc(cname(config, c)) + '</th>'; });
     html += '</tr></thead><tbody>';
     (config.diffFields || []).forEach(function (field) {
-      var vals = sel.map(function (c) { return String(diffValue(c, field, S)); });
-      var allSame = vals.every(function (v) { return v === vals[0]; });
+      // Highlight "differs" by comparing across ALL selected, not just the window.
+      var allVals = all.map(function (c) { return String(diffValue(c, field, S)); });
+      var allSame = allVals.every(function (v) { return v === allVals[0]; });
       html += '<tr><th scope="row">' + esc(S['diff_' + field] || field) + '</th>';
-      sel.forEach(function (c, i) {
-        html += '<td class="' + (allSame ? '' : 'is-diff') + '">' + esc(vals[i]) + '</td>';
+      sel.forEach(function (c) {
+        html += '<td class="' + (allSame ? '' : 'is-diff') + '">' + esc(diffValue(c, field, S)) + '</td>';
       });
       html += '</tr>';
     });
-    html += '</tbody></table></div>';
+    html += '</tbody></table></div></div>';
     return html;
   }
 
+  /** Compare mode: a scrollable multiselect dropdown + the comparison table. */
   function renderCompare(config, st) {
-    var S = config.strings, cottages = config.cottages;
-    var picker = cottages.map(function (c) {
+    var S = config.strings;
+    var n = st.compareIds.length;
+    var open = !!st.compareOpen;
+    var label = n ? fmt(S.compare_selected, n) : S.compare_select;
+    var list = config.cottages.map(function (c) {
       var on = st.compareIds.indexOf(String(c.id)) !== -1;
-      return '<button type="button" class="dccs-pick' + (on ? ' is-active' : '') +
-        '" aria-pressed="' + (on ? 'true' : 'false') + '" data-cmp="' + esc(c.id) + '">' + esc(cname(config, c)) + '</button>';
+      var disabled = !on && n >= 4;
+      return '<label class="dccs-cmp-option' + (disabled ? ' is-disabled' : '') + '">' +
+        '<input type="checkbox" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' +
+        esc(cname(config, c)) + '</label>';
     }).join('');
 
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
-      '<div class="dccs-picker">' + picker + '</div>' + compareMatrixHtml(config, st) + '</div>';
+      '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
+      '<button type="button" class="dccs-cmp-trigger" aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+      '<span>' + esc(label) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
+      '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
+      compareMatrixHtml(config, st, st.cmpStart) + '</div>';
   }
 
   /** The "Compare N cottages" button, shown once 2+ cards are ticked. */
@@ -385,23 +445,21 @@
 
     if (res.empty) {
       // Relax the least-essential hard filter to surface the closest options.
-      var relaxOrder = [['hardDining4', 'diff_diningSeats'], ['hardGround', 'diff_floorLevel'], ['hardPet', 'diff_petAllowed']];
-      var fallback = null, relaxedName = '';
+      var relaxOrder = ['hardDining4', 'hardGround', 'hardPet'];
+      var fallback = null;
       for (var i = 0; i < relaxOrder.length; i++) {
-        if (!crit[relaxOrder[i][0]]) { continue; }
+        if (!crit[relaxOrder[i]]) { continue; }
         var c2 = {};
         Object.keys(crit).forEach(function (k) { c2[k] = crit[k]; });
-        c2[relaxOrder[i][0]] = false;
+        c2[relaxOrder[i]] = false;
         var r2 = DCCS.score.run(config.cottages, c2);
-        if (!r2.empty) { fallback = r2; relaxedName = S[relaxOrder[i][1]] || ''; break; }
+        if (!r2.empty) { fallback = r2; break; }
       }
+      var fb = fallback ? DCCS.score.dedupe(fallback.results.slice(0, 3), config.diffFields) : [];
       html += '<div class="dccs-empty"><h3 class="dccs-step-q" tabindex="-1">' + esc(S.empty_heading) + '</h3>' +
-        '<p>' + esc(fmt(S.empty_relax, relaxedName)) + '</p></div>';
-      if (fallback) {
-        var fb = DCCS.score.dedupe(fallback.results.slice(0, 3), config.diffFields);
-        fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S)); });
-      }
-      html += wizardResultsTail(config, st);
+        '<p>' + esc(fb.length === 1 ? S.empty_sub_one : S.empty_sub) + '</p></div>';
+      fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S)); });
+      html += wizardResultsTail(config, st, true);
       html += '</div>';
       return html;
     }
@@ -426,17 +484,17 @@
       }
     }
 
-    html += wizardResultsTail(config, st);
+    html += wizardResultsTail(config, st, false);
     html += '</div>';
     return html;
   }
 
-  /** Recap + edit/start-over controls shown under results in the wizard flow. */
-  function wizardResultsTail(config, st) {
-    if (st.mode !== 'quick') { return ''; }
+  /** Recap + edit/start-over controls shown under results in either wizard. */
+  function wizardResultsTail(config, st, emptyState) {
+    if (st.mode !== 'quick' && st.mode !== 'weights') { return ''; }
     var S = config.strings;
-    return renderRecap(config, st) +
-      '<div class="dccs-wizard-nav">' +
+    return renderRecap(config, st, emptyState) +
+      '<div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-edit-answers">' + esc(S.edit_answers) + '</button>' +
       '<button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div>';
   }
@@ -484,16 +542,16 @@
   function announce(live, config, state, res) {
     var S = config.strings;
     res = res || DCCS.score.run(config.cottages, criteriaFromState(state));
-    if (state.mode === 'quick' && state.stage === 'q') {
-      var qs = WIZARD_QUESTIONS;
-      var i = clamp(state.step | 0, 0, qs.length - 1);
-      live.textContent = fmt2(S.wiz_progress, i + 1, qs.length) + '. ' + S[qs[i].qKey] + '. ' +
-        fmt(S.match_count, res.empty ? 0 : res.results.length);
+    var n = res.empty ? 0 : res.results.length;
+    if ((state.mode === 'quick' || state.mode === 'weights') && state.stage === 'q') {
+      var tr = wizardTrack(state, S);
+      var i = clamp(state.step | 0, 0, tr.questions.length - 1);
+      live.textContent = fmt2(S.wiz_progress, i + 1, tr.questions.length) + '. ' +
+        tr.qLabel(tr.questions[i]) + '. ' + matchCount(S, n);
       return;
     }
     if (state.mode === 'compare') { live.textContent = ''; return; }
-    var n = res.empty ? 0 : res.results.length;
-    var msg = fmt(S.match_count, n);
+    var msg = matchCount(S, n);
     if (!res.empty && res.results[0]) { msg += '. ' + fmt(S.sr_top_match, cname(config, res.results[0])); }
     live.textContent = msg;
   }
@@ -507,25 +565,31 @@
 
   var MODE_LABEL = { quick: 'mode_quick', weights: 'mode_weights', compare: 'mode_compare' };
 
-  /** Top segmented mode toggle (a labelled group of toggle buttons — there are no
-      real tabpanels, so aria-pressed is honest where role="tab" would not be).
+  /** Top mode switcher as a dropdown (cleaner than 3 long pills on mobile).
       Hidden when only one mode is enabled. */
-  function modeBar(config, state, S) {
+  function modeSelect(config, state, S) {
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
     if (!modes || modes.length <= 1) { return ''; }
-    var pills = modes.map(function (m) {
+    var current = S[MODE_LABEL[state.mode]] || state.mode;
+    var opts = modes.map(function (m) {
       var on = state.mode === m;
-      return '<button type="button" class="dccs-modetab' + (on ? ' is-active' : '') +
-        '" aria-pressed="' + (on ? 'true' : 'false') + '" data-mode="' + m + '">' +
+      return '<button type="button" role="option" aria-selected="' + (on ? 'true' : 'false') +
+        '" class="dccs-modetab' + (on ? ' is-active' : '') + '" data-mode="' + m + '">' +
         esc(S[MODE_LABEL[m]] || m) + '</button>';
     }).join('');
-    return '<div class="dccs-modebar" role="group" aria-label="' + esc(S.more_options || '') + '">' + pills + '</div>';
+    // The open/close state lives on the DOM (is-open class), not in app state, so
+    // re-renders triggered by other actions don't fight the toggle.
+    return '<div class="dccs-modeselect">' +
+      '<button type="button" class="dccs-modeselect-trigger" aria-haspopup="listbox" aria-expanded="false">' +
+      '<span>' + esc(current) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
+      '<div class="dccs-modeselect-list" role="listbox">' + opts + '</div></div>';
   }
 
   function renderSelector(root, config, state, ctx) {
     var S = config.strings;
+    var isWizard = (state.mode === 'quick' || state.mode === 'weights');
     // Keep the header compact on a question step so the step fits the viewport.
-    var compact = (state.mode === 'quick' && state.stage === 'q');
+    var compact = isWizard && state.stage === 'q';
     var head = '';
     if (config.showHeading !== false) {
       head = compact
@@ -533,15 +597,13 @@
         : '<div class="dccs-head"><h2 class="dccs-heading">' + esc(S.heading) + '</h2>' +
           '<p class="dccs-intro">' + esc(S.intro) + '</p></div>';
     }
-    var bar = modeBar(config, state, S);
+    var bar = modeSelect(config, state, S);
 
-    if (state.mode === 'quick') {
+    if (isWizard) {
       root.innerHTML = head + bar + renderWizard(config, state, ctx);
       return;
     }
-    var body = state.mode === 'weights' ? renderWeights(S, state) : renderCompare(config, state);
-    var results = state.mode === 'compare' ? '' : renderResults(config, state, ctx);
-    root.innerHTML = head + bar + '<div class="dccs-body">' + body + '</div>' + results;
+    root.innerHTML = head + bar + '<div class="dccs-body">' + renderCompare(config, state) + '</div>';
   }
 
   // Defer init until the score/labels dependencies have executed (the Elementor
@@ -588,9 +650,10 @@
       var h = root.querySelector('.dccs-step-q, .dccs-results-h');
       if (h && h.focus) { h.focus(); }
     }
+    function trackLen() { return wizardTrack(state, config.strings).questions.length; }
     function advance() {
       if (state.editReturn) { state.stage = state.editReturn; state.editReturn = null; }
-      else if ((state.step | 0) >= WIZARD_QUESTIONS.length - 1) { state.stage = 'review'; }
+      else if ((state.step | 0) >= trackLen() - 1) { state.stage = 'review'; }
       else { state.step = (state.step | 0) + 1; }
     }
 
@@ -601,7 +664,8 @@
 
       // --- answer chip: select only (no auto-advance) ---
       if (cl.contains('dccs-chip')) {
-        state.quick[t.dataset.group] = coerce(t.dataset.value);
+        if (state.mode === 'weights') { state.weights[t.dataset.group] = Number(t.dataset.value); }
+        else { state.quick[t.dataset.group] = coerce(t.dataset.value); }
         rerender(); return;
       }
       // --- Next: advance to the next step / review (or back to edit origin) ---
@@ -617,7 +681,7 @@
       if (cl.contains('dccs-edit')) {
         // Remember where we came from so Next returns there after a single edit.
         if (state.stage === 'review' || state.stage === 'results') { state.editReturn = state.stage; }
-        state.stage = 'q'; state.step = clamp(Number(t.dataset.step) || 0, 0, WIZARD_QUESTIONS.length - 1);
+        state.stage = 'q'; state.step = clamp(Number(t.dataset.step) || 0, 0, trackLen() - 1);
         rerender(); focusStep(); return;
       }
       if (cl.contains('dccs-see-matches')) {
@@ -626,25 +690,41 @@
       if (cl.contains('dccs-edit-answers')) {
         state.stage = 'review'; state.editReturn = null; rerender(); focusStep(); return;
       }
-      // --- top mode toggle ---
+      // --- mode dropdown (open/close toggled directly on the DOM) ---
+      if (cl.contains('dccs-modeselect-trigger')) {
+        var box = t.closest('.dccs-modeselect');
+        if (box) { var nowOpen = box.classList.toggle('is-open'); t.setAttribute('aria-expanded', nowOpen ? 'true' : 'false'); }
+        return;
+      }
       if (cl.contains('dccs-modetab')) {
-        state.mode = t.dataset.mode; rerender(); return;
+        state.mode = t.dataset.mode;
+        state.step = 0; state.stage = 'q'; state.editReturn = null; // fresh start in the new mode
+        rerender(); focusStep(); return;
       }
-      // --- compare overlay ---
-      if (cl.contains('dccs-open-compare')) {
-        openCompareModal(config, state, t); return;
-      }
-      // --- secondary modes ---
-      if (cl.contains('dccs-seg')) {
-        state.weights[t.dataset.weight] = Number(t.dataset.value); rerender(); return;
-      }
-      if (cl.contains('dccs-pick')) {
-        toggleCompare(state, t.dataset.cmp); rerender(); return;
+      // --- compare ---
+      if (cl.contains('dccs-open-compare')) { openCompareModal(config, state, t); return; }
+      if (cl.contains('dccs-cmp-trigger')) { state.compareOpen = !state.compareOpen; rerender(); return; }
+      if (cl.contains('dccs-cmp-prev') || cl.contains('dccs-cmp-next')) {
+        if (t.disabled) { return; }
+        state.cmpStart = (state.cmpStart | 0) + (cl.contains('dccs-cmp-next') ? 1 : -1);
+        rerender(); return;
       }
       // --- reset (Start over) ---
       if (cl.contains('dccs-reset')) {
         state = defaultState(config);
         rerender(); focusStep(); return;
+      }
+    });
+
+    // Close the mode dropdown when pressing outside it (mousedown fires before any
+    // click-driven re-render, so the live target can be inspected safely).
+    document.addEventListener('mousedown', function (e) {
+      var open = root.querySelector('.dccs-modeselect.is-open');
+      if (!open) { return; }
+      if (!(e.target.closest && e.target.closest('.dccs-modeselect'))) {
+        open.classList.remove('is-open');
+        var trg = open.querySelector('.dccs-modeselect-trigger');
+        if (trg) { trg.setAttribute('aria-expanded', 'false'); }
       }
     });
 
@@ -660,6 +740,16 @@
     root.addEventListener('keydown', function (e) {
       var t = e.target;
       if (!t || !t.classList) { return; }
+      if (e.key === 'Escape') {
+        var openSel = root.querySelector('.dccs-modeselect.is-open');
+        if (openSel) {
+          openSel.classList.remove('is-open');
+          var tg = openSel.querySelector('.dccs-modeselect-trigger');
+          if (tg) { tg.setAttribute('aria-expanded', 'false'); tg.focus(); }
+          e.preventDefault();
+        }
+        return;
+      }
       var isTab = t.classList.contains('dccs-modetab');
       var isRadio = t.getAttribute && t.getAttribute('role') === 'radio';
       if (!isTab && !isRadio) { return; }
@@ -744,14 +834,24 @@
   }
 
   function openCompareModal(config, state, trigger) {
-    var matrix = compareMatrixHtml(config, state);
-    if (!matrix) { return; }
+    if (state.compareIds.length < 2) { return; }
     var o = buildOverlay(trigger, config.strings.mode_compare);
-    // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply
-    // (data-dccs-ready stops bootAll from trying to initialize this shell).
-    o.content.innerHTML = '<div class="dccs-root dccs-root dccs-in-modal" data-dccs-ready="1">' +
-      '<div class="dccs-compare dccs-compare-modal">' +
-      '<h3 class="dccs-modal-h">' + esc(config.strings.mode_compare) + '</h3>' + matrix + '</div></div>';
+    var start = 0;
+    function paint() {
+      // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply
+      // (data-dccs-ready stops bootAll from trying to initialize this shell).
+      o.content.innerHTML = '<div class="dccs-root dccs-root dccs-in-modal" data-dccs-ready="1">' +
+        '<div class="dccs-compare dccs-compare-modal">' +
+        '<h3 class="dccs-modal-h">' + esc(config.strings.mode_compare) + '</h3>' +
+        compareMatrixHtml(config, state, start) + '</div></div>';
+    }
+    o.content.addEventListener('click', function (e) {
+      var b = e.target.closest('.dccs-cmp-prev, .dccs-cmp-next');
+      if (!b || b.disabled) { return; }
+      start = clamp(start + (b.classList.contains('dccs-cmp-next') ? 1 : -1), 0, Math.max(0, state.compareIds.length - CMP_WIN));
+      paint();
+    });
+    paint();
     o.focusClose();
   }
 
