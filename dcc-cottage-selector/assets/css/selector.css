@@ -111,11 +111,6 @@
 .dccs-root.dccs-root .dccs-wizard-nav {
   display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 18px;
 }
-.dccs-root.dccs-root .dccs-flexible {
-  background: none; border: 0; padding: 4px 2px; cursor: pointer;
-  color: var(--dccs-muted); font-size: 0.9rem; text-decoration: underline;
-}
-.dccs-root.dccs-root .dccs-flexible:hover, .dccs-root.dccs-root .dccs-flexible:focus-visible { color: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-edit-answers {
   min-height: 44px; padding: 8px 18px; border-radius: 999px;
   border: 1px solid var(--dccs-border); background: transparent; color: var(--dccs-text); cursor: pointer; font-size: 0.95rem;

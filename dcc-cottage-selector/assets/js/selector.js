@@ -10,7 +10,6 @@
   'use strict';
 
   var DCCS = window.DCCS = window.DCCS || {};
-  var STORE_KEY = 'dccs_prefs_v1';
   var UID = 0;
 
   /* ---------- small utilities ---------- */
@@ -96,40 +95,24 @@
 
   var LVL = { low: 1, medium: 2, high: 3, '1': 1, '2': 2, '3': 3 };
 
-  /** Initialize state: defaults < saved (localStorage) < deeplink (URL). */
+  /** Initialize state: defaults < deeplink (URL). Answers are never persisted —
+      every page load starts fresh; only genuine inbound deep links pre-fill. */
   function buildState(config) {
     var state = defaultState(config);
-
-    if (config.remember) {
-      try {
-        var saved = JSON.parse(window.localStorage.getItem(STORE_KEY) || 'null');
-        if (saved && typeof saved === 'object') { deepMerge(state, saved); }
-      } catch (e) { /* ignore */ }
-    }
 
     applyDeeplink(state, config);
     if (config.enabledModes && config.enabledModes.indexOf(state.mode) === -1) {
       state.mode = config.enabledModes[0];
     }
 
-    // If the guest already has criteria (a deep link, a remembered search, or a
-    // mini-entry pre-fill), skip the questionnaire and jump straight to results.
+    // If the guest arrived with criteria (an inbound deep link or a mini-entry
+    // pre-fill), skip the questionnaire and jump straight to results.
     var hasCriteria = !!state.highlight || !!config.presetQuick ||
       Object.keys(state.quick).some(function (k) { return state.quick[k] !== ''; });
     if (hasCriteria) { state.stage = 'results'; }
     state.step = 0;
     state.editReturn = null;
     return state;
-  }
-
-  function deepMerge(target, src) {
-    Object.keys(src).forEach(function (k) {
-      if (src[k] && typeof src[k] === 'object' && !Array.isArray(src[k]) && target[k]) {
-        deepMerge(target[k], src[k]);
-      } else {
-        target[k] = src[k];
-      }
-    });
   }
 
   var TRUE = { 'true': 1, '1': 1, 'yes': 1, 'on': 1 };
@@ -160,41 +143,6 @@
   function normYesNoLevel(v) {
     if (LVL[v]) { return 'yes'; }       // a weight word implies "yes" in quick mode
     return TRUE[v] ? 'yes' : 'either';
-  }
-
-  function persist(config, state) {
-    if (config.remember) {
-      try {
-        // highlight + nav are per-visit context; never remember them.
-        var toSave = { mode: state.mode, quick: state.quick, weights: state.weights, compareIds: state.compareIds };
-        window.localStorage.setItem(STORE_KEY, JSON.stringify(toSave));
-      } catch (e) { /* ignore */ }
-    }
-    syncUrl(state);
-  }
-
-  var LVL_NAME = { 1: 'low', 2: 'medium', 3: 'high' };
-
-  function syncUrl(state) {
-    if (!window.history || !window.history.replaceState) { return; }
-    var p = new URLSearchParams();
-    p.set('mode', state.mode);
-    if (state.mode === 'weights') {
-      Object.keys(state.weights).forEach(function (k) {
-        if (Number(state.weights[k]) !== 1) { p.set('w_' + k, LVL_NAME[state.weights[k]] || String(state.weights[k])); }
-      });
-    } else {
-      if (state.quick.pet === 'yes') { p.set('pet', 'true'); }
-      if (state.quick.ground === 'yes') { p.set('ground', 'true'); }
-      if (state.quick.largest === 'yes') { p.set('largest', 'true'); }
-      if (state.quick.desk === 'yes') { p.set('desk', 'yes'); }
-      if (state.quick.pullout === 'yes') { p.set('pullout', 'yes'); }
-      if (state.quick.layout === 'studio' || state.quick.layout === 'onebed') { p.set('layout', state.quick.layout); }
-      if (state.quick.dining === 2 || state.quick.dining === 4 || state.quick.dining === '2' || state.quick.dining === '4') { p.set('dining', String(state.quick.dining)); }
-    }
-    if (state.mode === 'compare' && state.compareIds.length) { p.set('compare', state.compareIds.join(',')); }
-    if (state.highlight) { p.set('highlight', state.highlight); }
-    try { window.history.replaceState(null, '', window.location.pathname + '?' + p.toString()); } catch (e) { /* ignore */ }
   }
 
   /* ---------- criteria translation ---------- */
@@ -309,9 +257,7 @@
     html += '<h3 class="dccs-step-q" tabindex="-1">' + esc(S[q.qKey]) + '</h3>';
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(S[q.qKey]) + '">' + chips + '</div>';
     html += '<div class="dccs-wizard-nav">';
-    html += i === 0
-      ? '<button type="button" class="dccs-flexible">' + esc(S.flexible_cta) + '</button>'
-      : '<span class="dccs-nav-spacer"></span>';
+    html += '<span class="dccs-nav-spacer"></span>';
     html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + '</button>';
     html += '</div></div>';
     return html;
@@ -656,17 +602,12 @@
       // --- answer chip: select only (no auto-advance) ---
       if (cl.contains('dccs-chip')) {
         state.quick[t.dataset.group] = coerce(t.dataset.value);
-        persist(config, state); rerender(); return;
+        rerender(); return;
       }
       // --- Next: advance to the next step / review (or back to edit origin) ---
       if (cl.contains('dccs-next')) {
         if (t.disabled) { return; }
-        advance(); persist(config, state); rerender(); focusStep(); return;
-      }
-      // --- "I'm flexible": fill the rest with No preference, show matches ---
-      if (cl.contains('dccs-flexible')) {
-        Object.keys(state.quick).forEach(function (k) { if (state.quick[k] === '') { state.quick[k] = 'either'; } });
-        state.stage = 'results'; state.editReturn = null; persist(config, state); rerender(); focusStep(); return;
+        advance(); rerender(); focusStep(); return;
       }
       // --- wizard navigation ---
       if (cl.contains('dccs-back')) {
@@ -680,14 +621,14 @@
         rerender(); focusStep(); return;
       }
       if (cl.contains('dccs-see-matches')) {
-        state.stage = 'results'; persist(config, state); rerender(); focusStep(); return;
+        state.stage = 'results'; rerender(); focusStep(); return;
       }
       if (cl.contains('dccs-edit-answers')) {
         state.stage = 'review'; state.editReturn = null; rerender(); focusStep(); return;
       }
       // --- top mode toggle ---
       if (cl.contains('dccs-modetab')) {
-        state.mode = t.dataset.mode; persist(config, state); rerender(); return;
+        state.mode = t.dataset.mode; rerender(); return;
       }
       // --- compare overlay ---
       if (cl.contains('dccs-open-compare')) {
@@ -695,16 +636,15 @@
       }
       // --- secondary modes ---
       if (cl.contains('dccs-seg')) {
-        state.weights[t.dataset.weight] = Number(t.dataset.value); persist(config, state); rerender(); return;
+        state.weights[t.dataset.weight] = Number(t.dataset.value); rerender(); return;
       }
       if (cl.contains('dccs-pick')) {
-        toggleCompare(state, t.dataset.cmp); persist(config, state); rerender(); return;
+        toggleCompare(state, t.dataset.cmp); rerender(); return;
       }
       // --- reset (Start over) ---
       if (cl.contains('dccs-reset')) {
         state = defaultState(config);
-        try { window.localStorage.removeItem(STORE_KEY); } catch (err) { /* ignore */ }
-        persist(config, state); rerender(); focusStep(); return;
+        rerender(); focusStep(); return;
       }
     });
 
@@ -712,7 +652,7 @@
     root.addEventListener('change', function (e) {
       var cb = e.target;
       if (cb && cb.matches('input[type="checkbox"][data-cmp]')) {
-        toggleCompare(state, cb.dataset.cmp); persist(config, state); rerender();
+        toggleCompare(state, cb.dataset.cmp); rerender();
       }
     });
 
@@ -844,7 +784,6 @@
     // the cottage highlighted, so the guest sees exactly how it ranks.
     var current = findCottageIn(config.cottages, entry.current);
     config.startMode = 'quick';
-    config.remember = false; // a contextual pop-up must not overwrite saved prefs
     config.highlight = String(entry.current);
     if (current) { config.presetQuick = derivePresetQuick(current); }
 

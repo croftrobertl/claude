@@ -48,7 +48,6 @@ final class Config
             'wiz_back'          => __('← Back', 'dcc-cottage-selector'),
             'wiz_next'          => __('Next →', 'dcc-cottage-selector'),
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
-            'flexible_cta'      => __('I’m flexible — just show matches', 'dcc-cottage-selector'),
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
@@ -160,7 +159,6 @@ final class Config
             'strings'      => $strings,
             'startMode'    => 'quick',
             'enabledModes' => ['quick', 'weights', 'compare'],
-            'remember'     => true,
             'highlight'    => '',
         ], $extra);
     }

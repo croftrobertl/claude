@@ -120,14 +120,6 @@ class Selector_Widget extends Widget_Base
             ],
         ]);
 
-        $this->add_control('remember', [
-            'label'        => __('Remember visitor choices', 'dcc-cottage-selector'),
-            'description'  => __('Saves the last preferences in the browser so returning guests resume where they left off.', 'dcc-cottage-selector'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
-        ]);
-
         $this->end_controls_section();
     }
 
@@ -549,10 +541,10 @@ class Selector_Widget extends Widget_Base
         $this->end_controls_tabs();
 
         $this->add_control('link_color', [
-            'label'     => __('Link controls (Back / I’m flexible)', 'dcc-cottage-selector'),
+            'label'     => __('Back link', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'separator' => 'before',
-            'selectors' => [self::SEL . '.dccs-back' => 'color: {{VALUE}};', self::SEL . '.dccs-flexible' => 'color: {{VALUE}};'],
+            'selectors' => [self::SEL . '.dccs-back' => 'color: {{VALUE}};'],
         ]);
 
         $this->end_controls_section();
@@ -675,7 +667,6 @@ class Selector_Widget extends Widget_Base
             'startMode'    => $start,
             'enabledModes' => array_values($enabled),
             'showHeading'  => ($settings['show_heading'] ?? 'yes') === 'yes',
-            'remember'     => ($settings['remember'] ?? 'yes') === 'yes',
         ]);
 
         if (empty($cottages)) {

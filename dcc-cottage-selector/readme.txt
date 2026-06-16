@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,10 +54,10 @@ guest never scrolls to find their results. Each step shows a clickable progress
 stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
-both edit earlier answers, and an **"I'm flexible — just show matches"** shortcut
-skips the rest. After the last question a **Review** screen lists all answers
-(each editable) before "See my matches" reveals the **Top 3**, with a tappable
-recap of what was searched.
+both edit earlier answers. After the last question a **Review** screen lists all
+answers (each editable) before "See my matches" reveals the **Top 3**, with a
+tappable recap of what was searched. Answers are never remembered — every page
+load starts fresh.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
 (pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
@@ -73,10 +73,11 @@ side-by-side matrix in a pop-up.
 
 Cottages are labelled with their number ("Cottage 32: Flamingo Bungalow").
 Identical-layout cottages (e.g. two of the suites) are flagged so guests
-understand why both appear. Preferences are kept in the URL (shareable) and the
-browser (remembered for return visits); a deep link such as ?pet=true opens
-straight to results. Every visible string and the full look (colors, typography,
-spacing, borders, alignment, buttons) is configurable in the Elementor editor.
+understand why both appear. Answers are not remembered between visits — every page
+load starts fresh — but genuine inbound deep links still work: a link such as
+?pet=true opens straight to results, and the Mini-Entry opens pre-filled. Every
+visible string and the full look (colors, typography, spacing, borders, alignment,
+buttons) is configurable in the Elementor editor.
 
 == Installation ==
 
@@ -99,7 +100,6 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Wizard: each step shows one question with nothing pre-selected; **Next** is
   disabled until an answer is tapped and never advances on its own. The clickable
   stepper and a low-key Back link jump to earlier answers.
-* "I'm flexible — just show matches" on step 1 skips straight to results.
 * The Review screen lists all 7 answers with Edit links; "See my matches" shows
   the top 3 with full names ("Cottage 34: Coconut Cottage") and a tappable recap.
 * Answering **Pet-friendly = Yes** returns only Cottage 34: Coconut Cottage.
@@ -116,6 +116,13 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.4.2 =
+* Removed the "I'm flexible — just show matches" shortcut from the wizard.
+* Removed answer memory: the tool no longer remembers previous answers (dropped
+  the browser-storage recall and the URL answer-sync), so every page refresh
+  starts over at question 1. Inbound deep links and the Mini-Entry pre-fill still
+  work.
 
 = 0.4.1 =
 * Performance: the boot MutationObserver now ignores unrelated page mutations and

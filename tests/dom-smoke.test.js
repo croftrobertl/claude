@@ -5,8 +5,8 @@
  * and drives the actual controller: the Next-button wizard (no auto-advance, no
  * default highlight), the clickable stepper, review/edit, results with full
  * cottage names + tappable recap, the header mode toggle, the compare overlay,
- * the no-match tags, the boot dependency-guard, localStorage, and the mini-entry
- * modal — asserting on the resulting DOM.
+ * the no-match tags, the boot dependency-guard, the no-persistence/start-over
+ * behavior, and the mini-entry modal — asserting on the resulting DOM.
  *
  * Run: npm test   (or: node tests/dom-smoke.test.js)
  */
@@ -57,6 +57,11 @@ function answerNext(root, value) { clickAnswer(root, value); clickNext(root); }
 function stepThrough(root, value) {
   for (var k = 0; k < 8 && root.querySelector('.dccs-chips-wizard'); k++) { answerNext(root, value); }
 }
+function toResults(root, value) {
+  stepThrough(root, value || 'either');
+  var b = root.querySelector('.dccs-see-matches');
+  if (b) { b.click(); }
+}
 function cardNames(root) {
   return Array.prototype.slice.call(root.querySelectorAll('.dccs-card h4')).map(function (h) { return h.textContent.replace(/\s+/g, ' ').trim(); });
 }
@@ -73,7 +78,7 @@ function cardNames(root) {
   ok('live count shows 8', /\b8\b/.test(root.querySelector('.dccs-count').textContent));
   ok('no Back on first step', !root.querySelector('.dccs-back'));
   ok('mode toggle present (3 pills)', root.querySelectorAll('.dccs-modetab').length === 3);
-  ok('"I\'m flexible" shortcut on step 1', !!root.querySelector('.dccs-flexible'));
+  ok('no "I\'m flexible" shortcut', !root.querySelector('.dccs-flexible'));
   ok('sr live region present', !!root.querySelector('.dccs-sr-only[aria-live="polite"]'));
 })();
 
@@ -132,7 +137,6 @@ function cardNames(root) {
   const w = freshDom();
   const root = mountSelector(w);
   clickAnswer(root, 'yes'); clickNext(root);   // desk = yes
-  root.querySelector('.dccs-flexible'); // (not on step 2) — finish via stepThrough
   stepThrough(root, 'either');
   root.querySelector('.dccs-see-matches').click();
   ok('results region shown', !!root.querySelector('.dccs-results'));
@@ -142,13 +146,18 @@ function cardNames(root) {
   ok('no "why excluded" panel', !root.querySelector('.dccs-excluded'));
 })();
 
-// ---- 7. "I'm flexible" jumps to results with several matches ----
+// ---- 7. Answers are not persisted — a refresh starts over ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  root.querySelector('.dccs-flexible').click();
-  ok('flexible -> results', !!root.querySelector('.dccs-results') && !root.querySelector('.dccs-chips-wizard'));
-  ok('several cottages match', root.querySelectorAll('.dccs-card').length > 1);
+  answerNext(root, 'yes');                 // answer step 1 and advance
+  ok('nothing written to localStorage', w.localStorage.getItem('dccs_prefs_v1') === null);
+  ok('answers not written to the URL', w.location.search === '');
+  // A refresh = a brand-new page load with the same (clean) URL.
+  const w2 = freshDom();
+  const root2 = mountSelector(w2);
+  ok('fresh load starts at Step 1', /1\b.*\b7/.test(progress(root2)) && !root2.querySelector('.dccs-results'));
+  ok('fresh load has nothing preselected', !activeChip(root2));
 })();
 
 // ---- 8. Deep link jumps straight to results ----
@@ -183,7 +192,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  root.querySelector('.dccs-flexible').click();              // results with 3 cards
+  toResults(root, 'either');                                 // results with 3 cards
   ok('no compare button with <2 ticked', !root.querySelector('.dccs-open-compare'));
   // Re-query after each toggle — a re-render detaches the previous nodes.
   function tick(idx) {
@@ -207,16 +216,6 @@ function cardNames(root) {
   ok('recap chip present for an active criterion', !!chip);
   chip.click();
   ok('recap chip jumps back into the wizard', !!root.querySelector('.dccs-chips-wizard'));
-})();
-
-// ---- 13. localStorage recall (no step/stage/highlight persisted) ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  clickAnswer(root, 'yes');
-  const saved = JSON.parse(w.localStorage.getItem('dccs_prefs_v1') || '{}');
-  ok('preferences saved', saved && saved.quick && saved.quick.desk === 'yes');
-  ok('step/stage/highlight not persisted', saved.step === undefined && saved.stage === undefined && saved.highlight === undefined);
 })();
 
 // ---- 14. Mini-entry modal opens at results with the cottage highlighted ----
@@ -258,8 +257,7 @@ function cardNames(root) {
   ok('selected pill marks aria-pressed', !!activeChip(root));
 
   // Compare overlay dialog is labelled
-  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
-  root.querySelector('.dccs-flexible').click();
+  toResults(root, 'either');
   function tick(idx) { var b = root.querySelectorAll('.dccs-card input[type="checkbox"][data-cmp]')[idx]; b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true })); }
   tick(0); tick(1);
   root.querySelector('.dccs-open-compare').click();
