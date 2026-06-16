@@ -114,6 +114,26 @@
         return out;
     }
 
+    // Render a "Cottage NN: Name" title as two rows split at the first
+    // colon. textContent + createElement keep this XSS-safe regardless of
+    // what's in the post_title or override field. With no colon, falls back
+    // to a single text node.
+    function renderSplitTitle(parent, text) {
+        parent.textContent = '';
+        var idx = text.indexOf(':');
+        if (idx < 0) {
+            parent.appendChild(document.createTextNode(text));
+            return;
+        }
+        var head = text.slice(0, idx + 1);
+        var tail = text.slice(idx + 1).replace(/^\s+/, '');
+        parent.appendChild(document.createTextNode(head));
+        if (tail !== '') {
+            parent.appendChild(document.createElement('br'));
+            parent.appendChild(document.createTextNode(tail));
+        }
+    }
+
     // Track which cottages we've already warmed so rapid mouse-overs don't
     // re-issue the same image fetches.
     var warmedInfoIds = Object.create(null);
@@ -416,24 +436,6 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
 
-        // Render a "Cottage NN: Name" title as two rows split at the
-        // first colon. textContent + createElement keep this XSS-safe
-        // regardless of what's in the post_title or override field.
-        function renderSplitTitle(parent, text) {
-            parent.textContent = '';
-            var idx = text.indexOf(':');
-            if (idx < 0) {
-                parent.appendChild(document.createTextNode(text));
-                return;
-            }
-            var head = text.slice(0, idx + 1);
-            var tail = text.slice(idx + 1).replace(/^\s+/, '');
-            parent.appendChild(document.createTextNode(head));
-            if (tail !== '') {
-                parent.appendChild(document.createElement('br'));
-                parent.appendChild(document.createTextNode(tail));
-            }
-        }
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
@@ -1040,7 +1042,10 @@
             context.lastTrigger = trigger || null;
             var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
             var roomTitle = (config.roomTitles && config.roomTitles[typeId]) || '';
-            titleEl.textContent = roomTitle ? (title + ' ' + roomTitle) : title;
+            // Split at the first colon (e.g. "Book Cottage 32: Flamingo
+            // Bungalow" → "Book Cottage 32:" / "Flamingo Bungalow") so the
+            // cottage proper name wraps to its own row on narrow viewports.
+            renderSplitTitle(titleEl, roomTitle ? (title + ' ' + roomTitle) : title);
             checkinEl.value = checkin || '';
             checkoutEl.value = checkout || '';
             errorEl.hidden = true;
