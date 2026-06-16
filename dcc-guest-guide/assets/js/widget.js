@@ -80,6 +80,52 @@
         });
     }
 
+    // -- Editor-preview error surface (v0.9.7.17) -------------------------
+    // Long-standing pain point: silent bail-outs in openDetail() /
+    // showDetailModal() left the host with a non-functional click in the
+    // Elementor editor preview and no clue why. This helper surfaces the
+    // failure as a fixed-position toast inside the preview iframe so the
+    // host can see exactly what was missing without opening DevTools.
+    // No-op outside the editor preview, so live visitors never see it.
+    function isElementorEditorPreview() {
+        try {
+            if (document.body && document.body.classList && document.body.classList.contains('elementor-editor-preview')) return true;
+            if (window.elementorFrontend && typeof window.elementorFrontend.isEditMode === 'function'
+                && window.elementorFrontend.isEditMode()) return true;
+            if (window.parent !== window && /elementor=true|action=elementor/.test(String(window.parent.location || ''))) return true;
+        } catch (_) { /* cross-origin parent — fall through */ }
+        return false;
+    }
+    function editorPreviewToast(title, detail) {
+        if (!isElementorEditorPreview()) return;
+        try {
+            let host = document.getElementById('dccgg-editor-toast');
+            if (!host) {
+                host = document.createElement('div');
+                host.id = 'dccgg-editor-toast';
+                host.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483647;'
+                    + 'max-width:min(640px,90vw);background:#fff3cd;color:#664d03;'
+                    + 'border:2px solid #ffc107;border-radius:8px;padding:14px 18px;'
+                    + 'font:13px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;'
+                    + 'box-shadow:0 8px 32px rgba(0,0,0,0.25);cursor:pointer;';
+                host.title = 'Click to copy';
+                document.body.appendChild(host);
+                host.addEventListener('click', () => {
+                    try { navigator.clipboard.writeText(host.dataset.copy || host.textContent || ''); } catch (_) {}
+                    host.style.background = '#d1e7dd';
+                    host.style.borderColor = '#198754';
+                });
+            }
+            const full = '[DCCGG editor] ' + title + '\n\n' + (detail || '');
+            host.dataset.copy = full;
+            host.innerHTML = '<strong>[DCCGG editor] ' + title.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</strong><br>'
+                + '<span style="opacity:0.85">' + String(detail || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</span><br>'
+                + '<small style="opacity:0.7">Click to copy. Auto-dismiss in 12 s.</small>';
+            clearTimeout(host.__dismiss);
+            host.__dismiss = setTimeout(() => { if (host && host.parentNode) host.parentNode.removeChild(host); }, 12000);
+        } catch (_) { /* never let toast plumbing crash the caller */ }
+    }
+
     // -- View Transitions wrapper -----------------------------------------
     function withViewTransition(fn) {
         if (REDUCED_MOTION) { fn(); return; }
@@ -1636,6 +1682,14 @@
     // against the portaled stage (the stage is moved off `root` into
     // <body>, so root.querySelector can't find the detail anymore).
     function openDetail(root, key, onShown) {
+        try { return openDetailImpl(root, key, onShown); }
+        catch (err) {
+            console.error('[DCCGG] openDetail threw:', err);
+            editorPreviewToast('openDetail crashed', (err && (err.stack || err.message)) || String(err));
+            throw err;
+        }
+    }
+    function openDetailImpl(root, key, onShown) {
         // v0.9.7.5: after the first open, showDetailModal portals .dccgg-stage
         // (and its .dccgg-detail children) to <body>, so root.querySelectorAll
         // returns an empty list and prev/next/back re-entries bailed silently.
@@ -1646,19 +1700,20 @@
             : root.querySelectorAll('.dccgg-detail');
         let found = false;
         let activeDetail = null;
-        // v0.9.7.3: resolve the match synchronously so the early-return and
-        // showDetailModal calls below don't depend on withViewTransition's
-        // callback timing. Chrome's startViewTransition queues the callback
-        // to the next rendering opportunity, so reading `found` right after
-        // withViewTransition() returned was racing the lambda — it was
-        // always still false, the function bailed at `if (!found) return;`,
-        // and showDetailModal never ran. The menu's `is-detail` class still
-        // got added (when the deferred lambda finally fired), which is why
-        // the menu disappeared but no modal ever opened.
         for (const d of details) {
             if (d.dataset.key === key) { found = true; activeDetail = d; break; }
         }
-        if (!found) return;
+        if (!found) {
+            console.warn('[DCCGG] openDetail: no .dccgg-detail[data-key="' + key + '"] under',
+                portaledStage ? 'portaled stage' : 'root', { details: details.length });
+            editorPreviewToast('No detail card for "' + key + '"',
+                'Looked under ' + (portaledStage ? 'portaled stage' : '.dccgg-root') +
+                ' — found ' + details.length + ' .dccgg-detail nodes, none matching this key. ' +
+                'Most likely cause in editor preview: Reveal Mode is set to "accordion" or "flip" ' +
+                '(those modes inline content into the menu rather than opening a popup), ' +
+                'or this section has no items / no detail markup yet.');
+            return;
+        }
         withViewTransition(() => {
             details.forEach(d => { d.hidden = (d.dataset.key !== key); });
             root.classList.add('is-detail');
@@ -1729,14 +1784,41 @@
 
     // v0.9.7: measure any sticky / fixed theme header pinned to the top of
     // the viewport so the detail modal can sit flush below it instead of
-    // overflowing past the bottom edge. Curated candidate list keeps the
-    // scan cheap; sanity bounds reject huge / hidden / off-screen elements.
+    // overflowing past the bottom edge.
+    //
+    // v0.9.7.17: two-tier scan. The curated selector list is the fast path
+    // (catches Astra / GeneratePress / Elementor-Sticky themes that already
+    // worked). When it returns 0 — which happens on themes like Bravada
+    // whose sticky-nav class names aren't in the list — fall back to a
+    // depth-bounded scan of every body descendant. Filters mirror the
+    // curated path PLUS a 70%-viewport-width threshold to reject floating
+    // chat widgets, scroll-to-top FABs, and ad sidebars.
     function detectStickyTopOffset() {
-        let max = 0;
-        const candidates = document.querySelectorAll(
+        const fast = detectStickyTopOffsetFor(document.querySelectorAll(
             'header, nav, [role="banner"], [class*="sticky"], [class*="fixed-top"], ' +
             '.ast-primary-header-bar, .site-header, .elementor-sticky--active'
-        );
+        ), false);
+        if (fast > 0) return fast;
+        // Fallback: walk body descendants to depth 4 (deeper than that is
+        // never realistically a sticky theme header). ~500-1500 elements on
+        // a typical Elementor page; getComputedStyle loop runs in well
+        // under a frame, imperceptible at modal-open.
+        const deep = [];
+        const walk = (node, depth) => {
+            if (!node || depth > 4) return;
+            for (const child of node.children) {
+                deep.push(child);
+                walk(child, depth + 1);
+            }
+        };
+        walk(document.body, 0);
+        return detectStickyTopOffsetFor(deep, true);
+    }
+    function detectStickyTopOffsetFor(candidates, requireWidth) {
+        const dbg = /[?&]dccgg-debug-popup=1/.test(window.location.search);
+        const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+        const minWidth = requireWidth ? vw * 0.70 : 0;
+        let max = 0, chosen = null;
         for (const el of candidates) {
             if (el.closest && el.closest('.dccgg-root')) continue;
             const cs = getComputedStyle(el);
@@ -1745,15 +1827,27 @@
             const r = el.getBoundingClientRect();
             if (r.top > 5 || r.bottom <= 0) continue;
             if (r.height < 1 || r.height > 200) continue;
-            if (r.bottom > max) max = r.bottom;
+            if (r.width < minWidth) continue;
+            if (r.bottom > max) { max = r.bottom; chosen = el; }
         }
+        if (dbg) console.log('[DCCGG popup] sticky candidates', {
+            scanned: candidates.length, requireWidth, picked: chosen, offset: Math.round(max),
+        });
         return Math.max(0, Math.round(max));
     }
 
     function showDetailModal(root) {
         const stage = root.querySelector('.dccgg-stage')
             || (root.__dccggModal && root.__dccggModal.stage);
-        if (!stage) return;
+        if (!stage) {
+            console.warn('[DCCGG] showDetailModal: .dccgg-stage missing');
+            editorPreviewToast('Detail stage missing',
+                '.dccgg-stage was not found inside .dccgg-root. The stage element is only ' +
+                'rendered when Reveal Mode is set to "stage" (the default). If the editor ' +
+                'panel shows accordion / flip / split-pane as the current Reveal Mode, ' +
+                'switch back to "Stage swap" to enable the popup detail card.');
+            return;
+        }
         let state = root.__dccggModal;
         if (state && state.closeTimer) {
             // Re-opened during the closing fade-out — abort teardown and
@@ -1762,7 +1856,14 @@
             state.closeTimer = null;
         } else if (!state) {
             const overlay = root.querySelector('.dccgg-detail-overlay');
-            if (!overlay) return;
+            if (!overlay) {
+                console.warn('[DCCGG] showDetailModal: .dccgg-detail-overlay missing');
+                editorPreviewToast('Detail overlay missing',
+                    '.dccgg-detail-overlay was not found inside .dccgg-root. This element is ' +
+                    'rendered by Widget::render() only when Reveal Mode is "stage". If you ' +
+                    'recently changed Reveal Mode in the editor, save and reload the preview.');
+                return;
+            }
             const stageMarker = document.createComment('dccgg-stage-anchor');
             const overlayMarker = document.createComment('dccgg-detail-overlay-anchor');
             stage.parentNode.insertBefore(stageMarker, stage);

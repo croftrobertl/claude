@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.16
+Stable tag: 0.9.7.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,59 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.17 =
+
+Two-issue release.
+
+**A. Detail-card popup overflowed the top of the viewport on the
+live site**, hiding the site's sticky header (DCC logo + hamburger
+menu) and clipping the top of the popup itself. Affected both
+mobile and desktop, both logged-in and anonymous visitors.
+
+Root cause: `detectStickyTopOffset()` in `widget.js` measured the
+height of any sticky/fixed theme header so the popup could sit
+flush below it (via the `--dccgg-detail-top-offset` CSS variable).
+But the function only scanned a curated selector list (`header`,
+`nav`, `[role="banner"]`, `.elementor-sticky--active`, etc.) and
+doracanalcourt.com's sticky nav doesn't match any of them. The
+detector returned 0 and the popup painted at `top: 8 px`, directly
+under the site header.
+
+Fix: two-tier detector. The fast path (the existing curated list)
+runs first; if it returns 0, a depth-bounded scan of every body
+descendant in the first 4 levels runs. The fallback applies the
+same position / visibility / bounds filters as the fast path PLUS
+a 70 %-viewport-width threshold to reject floating chat widgets,
+scroll-to-top FABs and ad sidebars. Catches generic sticky themes
+without theme-specific knowledge.
+
+**B. Clicking a tile in the Elementor editor preview iframe threw
+a console error and didn't open the detail card**, blocking the
+host from previewing detail edits before publishing. Long-standing
+issue, finally addressed.
+
+Fix: defensive guards + a visible error toast inside the editor
+preview. `openDetail()` is now wrapped in a try/catch that
+surfaces any exception as an orange toast at the top of the
+preview iframe (auto-dismisses after 12 s; click-to-copy includes
+the full stack so the host can paste it for a follow-up release).
+The two specific silent bail-outs in `showDetailModal()` —
+`.dccgg-stage` missing, `.dccgg-detail-overlay` missing — now both
+log to the console AND show a toast naming the missing element
+and the most likely cause (usually Reveal Mode set to something
+other than "stage"). Likewise the `openDetail()` "no matching
+.dccgg-detail" bail-out, which previously fired silently when the
+section's detail markup wasn't in the DOM.
+
+The toast is no-op outside the editor preview, so live visitors
+never see it.
+
+**Bonus diagnostic: `?dccgg-debug-popup=1`** URL flag mirrors the
+existing `?dccgg-debug-conditions=1` / `?dccgg-debug-search=1`
+flags. Logs the sticky-header detector's chosen element and offset
+to the browser console so future "popup position is wrong"
+reports can be diagnosed without screenshots.
 
 = 0.9.7.16 =
 
