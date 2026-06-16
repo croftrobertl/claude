@@ -84,7 +84,7 @@
       // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
       // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
       weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0 },
-      compareIds: (config.preCompare || []).slice(0, 4).map(String),
+      compareIds: (config.preCompare || []).map(String),
       highlight: config.highlight || '',
       // Wizard navigation: question index + stage ('q' | 'review' | 'results').
       step: 0,
@@ -143,7 +143,7 @@
     if (p.has('pullout')) { state.quick.pullout = normYesNoLevel(p.get('pullout')); }
     if (p.has('layout')) { state.quick.layout = p.get('layout'); }
     if (p.has('dining')) { state.quick.dining = p.get('dining') === '4' ? 4 : (p.get('dining') === '2' ? 2 : 'either'); }
-    if (p.has('compare')) { state.compareIds = p.get('compare').split(',').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 4); }
+    if (p.has('compare')) { state.compareIds = p.get('compare').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
 
     Object.keys(state.weights).forEach(function (k) {
       var v = p.get('w_' + k);
@@ -424,9 +424,8 @@
     var label = n ? fmt(S.compare_selected, n) : S.compare_select;
     var list = config.cottages.map(function (c) {
       var on = st.compareIds.indexOf(String(c.id)) !== -1;
-      var disabled = !on && n >= 4;
-      return '<label class="dccs-cmp-option' + (disabled ? ' is-disabled' : '') + '">' +
-        '<input type="checkbox" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') + (disabled ? ' disabled' : '') + '> ' +
+      return '<label class="dccs-cmp-option">' +
+        '<input type="checkbox" data-cmp="' + esc(c.id) + '"' + (on ? ' checked' : '') + '> ' +
         esc(cname(config, c)) + '</label>';
     }).join('');
 
@@ -791,7 +790,7 @@
     id = String(id);
     var i = state.compareIds.indexOf(id);
     if (i !== -1) { state.compareIds.splice(i, 1); }
-    else if (state.compareIds.length < 4) { state.compareIds.push(id); }
+    else { state.compareIds.push(id); }
   }
 
   /* ---------- overlays (mini-entry modal + compare modal) ---------- */

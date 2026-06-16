@@ -96,7 +96,7 @@ final class Config
             'val_seats'         => /* translators: %d: number of seats */ __('Seats %d', 'dcc-cottage-selector'),
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
-            'compare_prompt'    => __('Pick 2 to 4 cottages to compare side by side.', 'dcc-cottage-selector'),
+            'compare_prompt'    => __('Pick 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
             'compare_select'    => __('Select cottages to compare', 'dcc-cottage-selector'),
             'compare_selected'  => /* translators: %d: number of cottages selected */ __('%d selected', 'dcc-cottage-selector'),
             'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d–%2$d of %3$d', 'dcc-cottage-selector'),

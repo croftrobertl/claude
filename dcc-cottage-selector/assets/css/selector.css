@@ -236,7 +236,6 @@
   border-bottom: 1px solid var(--dccs-border); font-size: 0.92rem; text-transform: none;
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
-.dccs-root.dccs-root .dccs-cmp-option.is-disabled { opacity: 0.5; cursor: not-allowed; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 18px; height: 18px; flex: 0 0 auto; }
 
 /* Compare table — pinned attribute column + ‹ › paging */

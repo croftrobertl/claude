@@ -231,6 +231,23 @@ function cardNames(root) {
   ok('back to quick finder', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
+// ---- 10a. Compare is no longer capped at 4 cottages ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  // Tick every cottage in the dropdown; re-query after each (re-render detaches nodes).
+  for (let i = 0; i < 8; i++) {
+    const cb = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
+    cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  const checked = Array.prototype.filter.call(
+    root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked).length;
+  ok('all 8 cottages can be selected for compare (no 4-cap)', checked === 8);
+  ok('no compare option is disabled', !root.querySelector('.dccs-cmp-option input[disabled]'));
+  ok('matrix pages through all 8', /\b8\b/.test((root.querySelector('.dccs-matrix-pos') || {}).textContent || ''));
+})();
+
 // ---- 10b. Weigh-priorities runs as a step -> review -> results wizard ----
 (function () {
   const w = freshDom();
