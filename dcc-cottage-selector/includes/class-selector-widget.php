@@ -67,6 +67,7 @@ class Selector_Widget extends Widget_Base
     protected function register_controls(): void
     {
         $this->register_content_controls();
+        $this->register_icon_controls();
         $this->register_strings_controls();
 
         // Style tab — every section maps to CSS custom properties / element
@@ -118,6 +119,45 @@ class Selector_Widget extends Widget_Base
                 'weights' => __('What Matters Most', 'dcc-cottage-selector'),
                 'compare' => __('Compare', 'dcc-cottage-selector'),
             ],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * Optional leading icons for the fixed action buttons. Each picker accepts a
+     * Font Awesome icon or an uploaded SVG; the chosen icon is rendered to HTML in
+     * render() and passed through data-config so selector.js can inject it (the body
+     * is client-rendered). Emoji can still be typed directly into the button labels.
+     */
+    private function register_icon_controls(): void
+    {
+        $this->start_controls_section('icons', [
+            'label' => __('Button icons', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $buttons = [
+            'submit'  => __('Submit button', 'dcc-cottage-selector'),
+            'restart' => __('Restart button', 'dcc-cottage-selector'),
+            'next'    => __('Next button', 'dcc-cottage-selector'),
+            'back'    => __('Back button', 'dcc-cottage-selector'),
+            'view'    => __('View cottage button', 'dcc-cottage-selector'),
+            'compare' => __('Compare button', 'dcc-cottage-selector'),
+        ];
+        foreach ($buttons as $key => $label) {
+            $this->add_control('icon_' . $key, [
+                'label'       => $label,
+                'type'        => Controls_Manager::ICONS,
+                'skin'        => 'inline',
+                'label_block' => false,
+            ]);
+        }
+
+        $this->add_control('icons_note', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => esc_html__('Leave a picker empty for no icon. You can also type an emoji directly into a label under “Text & labels”.', 'dcc-cottage-selector'),
+            'content_classes' => 'elementor-descriptor',
         ]);
 
         $this->end_controls_section();
@@ -307,6 +347,16 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
+        $this->add_responsive_control('menu_align', [
+            'label'   => __('Option alignment', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-left'],
+                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-center'],
+                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-right'],
+            ],
+            'selectors' => [self::ROOT => '--dccs-menu-align: {{VALUE}};'],
+        ]);
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'modetab_typography',
             'selector' => self::SEL . '.dccs-modeselect-trigger, ' . self::SEL . '.dccs-modetab',
@@ -414,6 +464,16 @@ class Selector_Widget extends Widget_Base
             'selectors' => [self::SEL . '.dccs-step-q' => 'color: {{VALUE}};'],
         ]);
 
+        $this->add_responsive_control('answer_align', [
+            'label'   => __('Answer alignment', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-left'],
+                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-center'],
+                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-right'],
+            ],
+            'selectors' => [self::ROOT => '--dccs-answer-align: {{VALUE}};'],
+        ]);
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'chip_typography',
             'selector' => self::SEL . '.dccs-chip',
@@ -604,6 +664,17 @@ class Selector_Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-badge' => 'color: {{VALUE}};'],
         ]);
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'badge_typography',
+            'selector' => self::SEL . '.dccs-badge',
+        ]);
+        $this->add_responsive_control('badge_radius', [
+            'label'      => __('Badge radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 30]],
+            'selectors'  => [self::SEL . '.dccs-badge' => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
 
         $this->end_controls_section();
     }
@@ -647,6 +718,43 @@ class Selector_Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    /**
+     * Render each chosen button icon to a trusted HTML string keyed by the JS-side
+     * name (submit/restart/next/back/view/compare). Empty pickers are omitted.
+     *
+     * @param array<string,mixed> $settings
+     * @return array<string,string>
+     */
+    private function collect_icons(array $settings): array
+    {
+        $keys = ['submit', 'restart', 'next', 'back', 'view', 'compare'];
+        $icons = [];
+        foreach ($keys as $key) {
+            $icon = $settings['icon_' . $key] ?? null;
+            $html = $this->icon_html($icon);
+            if ($html !== '') {
+                $icons[$key] = $html;
+            }
+        }
+        return $icons;
+    }
+
+    /**
+     * Render an Elementor ICONS control value (Font Awesome or uploaded SVG) to an
+     * HTML string. Returns '' when nothing is selected or the icon manager is absent.
+     *
+     * @param mixed $icon
+     */
+    private function icon_html($icon): string
+    {
+        if (!is_array($icon) || empty($icon['value']) || !class_exists('\Elementor\Icons_Manager')) {
+            return '';
+        }
+        ob_start();
+        \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+        return trim((string) ob_get_clean());
+    }
+
     protected function render(): void
     {
         $settings = $this->get_settings_for_display();
@@ -673,6 +781,7 @@ class Selector_Widget extends Widget_Base
             'startMode'    => $start,
             'enabledModes' => array_values($enabled),
             'showHeading'  => ($settings['show_heading'] ?? 'yes') === 'yes',
+            'icons'        => $this->collect_icons($settings),
         ]);
 
         if (empty($cottages)) {

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,21 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.6.0 =
+* Review screen: the two buttons are now "Restart" (left) and "Submit" (right),
+  styled identically.
+* Results recap: "What you're looking for" is now a centred, bold section header
+  that separates the recap from the cottages above it.
+* Fixed (for real this time) on small screens: completed wizard step dots stay the
+  same thin bars as upcoming ones; the pop-up close "×" sits inside the card; and
+  the results pop-up fits the viewport and scrolls internally.
+* Dropdown menu options and wizard answers are now centred by default, with new
+  alignment controls in the Elementor editor.
+* First-pass icon support: optional Font Awesome / SVG icons for the Submit,
+  Restart, Next, Back, View-cottage and Compare buttons (emoji still work in
+  labels). Plus smooth hover transitions, an answer-alignment control, and badge
+  typography / radius controls. (Further styling controls to follow.)
 
 = 0.5.0 =
 * Mode switcher is now a dropdown menu (cleaner than three stacked buttons on mobile).

@@ -40,6 +40,13 @@
     return f ? fmtName(f, c.id, c.name) : c.name;
   }
 
+  /** Optional admin-set leading icon for a fixed button. config.icons holds trusted
+      HTML rendered server-side by Elementor's icon manager (admin-only input). */
+  function ico(config, key) {
+    var h = config && config.icons && config.icons[key];
+    return h ? '<span class="dccs-ico">' + h + '</span>' : '';
+  }
+
   /** Allow only http(s), root-relative, or fragment URLs in hrefs. */
   function safeUrl(u) {
     u = String(u == null ? '' : u);
@@ -309,9 +316,9 @@
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
     html += '<div class="dccs-wizard-nav">';
     html += i > 0
-      ? '<button type="button" class="dccs-back dccs-primary">' + esc(S.wiz_back) + '</button>'
+      ? '<button type="button" class="dccs-back dccs-primary">' + ico(config, 'back') + esc(S.wiz_back) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
-    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + '</button>';
+    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + ico(config, 'next') + esc(S.wiz_next) + '</button>';
     html += '</div></div>';
     return html;
   }
@@ -326,8 +333,8 @@
         '<button type="button" class="dccs-edit" data-step="' + i + '">' + esc(S.edit) + '</button></li>';
     });
     html += '</ul><div class="dccs-wizard-nav dccs-tail-nav">' +
-      '<button type="button" class="dccs-see-matches dccs-primary">' + esc(S.see_matches) + '</button>' +
-      '<button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div></div>';
+      '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button>' +
+      '<button type="button" class="dccs-see-matches">' + ico(config, 'submit') + esc(S.see_matches) + '</button></div></div>';
     return html;
   }
 
@@ -346,7 +353,8 @@
         esc(tr.shortLabel(q)) + ': ' + esc(tr.valueLabel(q, v)) + '</button>';
     });
     if (!chips) { return ''; }
-    return '<div class="dccs-recap"><span class="dccs-recap-label">' + esc(S.your_criteria) + ':</span> ' + chips + '</div>';
+    return '<div class="dccs-recap"><h4 class="dccs-recap-h">' + esc(S.your_criteria) + '</h4>' +
+      '<div class="dccs-recap-chips">' + chips + '</div></div>';
   }
 
   /** Hard-requirement tags a fallback cottage fails to meet. */
@@ -496,7 +504,7 @@
     return renderRecap(config, st, emptyState) +
       '<div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-edit-answers">' + esc(S.edit_answers) + '</button>' +
-      '<button type="button" class="dccs-reset">' + esc(S.reset) + '</button></div>';
+      '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
   function buildCard(c, config, st, crit, rankLabel, miss) {
@@ -531,9 +539,9 @@
     }
 
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + esc(S.view_cottage) + '</a>' +
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + ico(config, 'view') + esc(S.view_cottage) + '</a>' +
       '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
-      (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + esc(S.add_compare) + '</label>' +
+      (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>' +
       '</div></div>';
     return html;
   }

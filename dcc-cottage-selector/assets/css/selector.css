@@ -76,7 +76,7 @@
 }
 .dccs-root.dccs-root .dccs-modeselect.is-open .dccs-modeselect-list { display: block; }
 .dccs-root.dccs-root .dccs-modetab {
-  display: block; width: 100%; text-align: left; min-height: 46px; padding: 12px 16px; cursor: pointer;
+  display: block; width: 100%; text-align: var(--dccs-menu-align, center); min-height: 46px; padding: 12px 16px; cursor: pointer;
   border: 0; background: transparent; color: var(--dccs-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
 }
 .dccs-root.dccs-root .dccs-modetab + .dccs-modetab { border-top: 1px solid var(--dccs-border); }
@@ -101,14 +101,47 @@
   border-radius: 999px; background: var(--dccs-border); box-shadow: none; -webkit-appearance: none; appearance: none; cursor: default;
 }
 .dccs-root.dccs-root button.dccs-step-dot { cursor: pointer; font-size: 0; line-height: 0; }
+/* Bravada resets <button> at (0,3,1) with min-height:44px; the completed dots are
+   buttons, so restate the bar geometry at (0,4,1) to keep them thin like the spans. */
+.dccs-root.dccs-root .dccs-stepper button.dccs-step-dot {
+  height: var(--dccs-dot-h, 6px); min-height: 0; padding: 0; flex: 1 1 0;
+}
 .dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.5; }
 
 .dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; }
 .dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
-.dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; }
+.dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; align-items: center; }
 .dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
-  width: 100%; min-height: 52px; font-size: 1.05rem; font-weight: 600; text-align: left; padding: 12px 18px;
+  width: 100%; min-height: 52px; font-size: 1.05rem; font-weight: 600;
+  text-align: var(--dccs-answer-align, center); padding: 12px 18px;
+}
+/* Optional leading icon/emoji on buttons, answers and badges (admin-set in Elementor).
+   inline-flex keeps it on the text baseline so the parent's text-align still centers. */
+.dccs-root.dccs-root .dccs-ico { display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em; }
+.dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
+.dccs-root.dccs-root .dccs-ico:empty { display: none; }
+
+/* Motion: smooth hover transitions + a subtle lift on the action buttons. */
+.dccs-root.dccs-root .dccs-primary,
+.dccs-root.dccs-root .dccs-chip,
+.dccs-root.dccs-root .dccs-reset,
+.dccs-root.dccs-root .dccs-see-matches,
+.dccs-root.dccs-root .dccs-edit-answers,
+.dccs-root.dccs-root .dccs-modetab,
+.dccs-root.dccs-root .dccs-view {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.dccs-root.dccs-root .dccs-primary:hover,
+.dccs-root.dccs-root .dccs-reset:hover,
+.dccs-root.dccs-root .dccs-see-matches:hover,
+.dccs-root.dccs-root .dccs-edit-answers:hover { transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .dccs-root.dccs-root * { transition: none !important; }
+  .dccs-root.dccs-root .dccs-primary:hover,
+  .dccs-root.dccs-root .dccs-reset:hover,
+  .dccs-root.dccs-root .dccs-see-matches:hover,
+  .dccs-root.dccs-root .dccs-edit-answers:hover { transform: none; }
 }
 
 .dccs-root.dccs-root .dccs-wizard-nav {
@@ -117,6 +150,7 @@
 /* Tail / review nav: two equal buttons on one row, styled like the cottage CTA. */
 .dccs-root.dccs-root .dccs-tail-nav { flex-wrap: nowrap; }
 .dccs-root.dccs-root .dccs-edit-answers,
+.dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset {
   flex: 1; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
   background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
@@ -151,11 +185,16 @@
 
 /* Results recap — small, tappable criterion chips (not ALL-CAPS) */
 .dccs-root.dccs-root .dccs-recap {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin: 12px 0; padding: 8px 12px; border-radius: var(--dccs-radius);
+  margin: 18px 0 12px; padding: 14px 12px 12px; border-radius: var(--dccs-radius);
   background: var(--dccs-surface); border: 1px solid var(--dccs-border); font-size: 0.8rem;
+  border-top: 2px solid var(--dccs-border);
 }
-.dccs-root.dccs-root .dccs-recap-label { color: var(--dccs-muted); font-weight: 600; font-size: 0.8rem; }
+.dccs-root.dccs-root .dccs-recap-h {
+  margin: 0 0 10px; text-align: center; font-weight: 700; font-size: 0.95rem; color: var(--dccs-text);
+}
+.dccs-root.dccs-root .dccs-recap-chips {
+  display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+}
 .dccs-root.dccs-root .dccs-recap-chip {
   border: 1px solid var(--dccs-border); background: var(--dccs-bg); color: var(--dccs-text);
   border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; text-transform: none;
@@ -276,10 +315,13 @@
 .dccs-modal-box {
   position: relative; width: 100%; max-width: 760px; margin: 0 auto;
   max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
 }
-.dccs-modal-content { overflow: auto; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
-.dccs-modal-content .dccs-in-modal { padding-top: 46px; }
+/* min-height:0 lets the scroll area shrink inside the flex-column box so it scrolls
+   within the viewport instead of overflowing it. */
+.dccs-modal-content { overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
+/* The card must fill the box so the close button (pinned to the box) sits inside it. */
+.dccs-modal-content .dccs-in-modal { padding-top: 46px; max-width: none; margin: 0; }
 .dccs-modal .dccs-modal-close {
   position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0;
   width: 36px; height: 36px; border-radius: 999px; border: 0;

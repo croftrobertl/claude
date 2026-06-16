@@ -146,6 +146,11 @@ function cardNames(root) {
   stepThrough(root, 'either');
   ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
+  const reviewBtns = root.querySelectorAll('.dccs-tail-nav > button');
+  ok('review: Restart is left, Submit is right',
+    reviewBtns.length === 2 &&
+    reviewBtns[0].classList.contains('dccs-reset') &&
+    reviewBtns[1].classList.contains('dccs-see-matches'));
   root.querySelector('.dccs-edit[data-step="3"]').click();
   ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
   clickNext(root);
@@ -162,8 +167,22 @@ function cardNames(root) {
   ok('results region shown', !!root.querySelector('.dccs-results'));
   ok('cottage names include their number', cardNames(root).every(function (n) { return /^Cottage \d+: /.test(n); }));
   ok('recap shows the chosen criterion', !!root.querySelector('.dccs-recap-chip'));
+  ok('recap has a centered section header', !!root.querySelector('.dccs-recap .dccs-recap-h'));
+  ok('recap chips live in their own row', !!root.querySelector('.dccs-recap .dccs-recap-chips .dccs-recap-chip'));
   ok('edit-answers control present', !!root.querySelector('.dccs-edit-answers'));
   ok('no "why excluded" panel', !root.querySelector('.dccs-excluded'));
+})();
+
+// ---- 6b. Admin-set button icons are injected from config.icons ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  cfg.icons = { submit: '<i class="dccs-test-ico"></i>', view: '<i class="dccs-test-ico"></i>' };
+  const root = mountSelector(w, JSON.stringify(cfg));
+  stepThrough(root, 'either');
+  ok('Submit button carries its icon', !!root.querySelector('.dccs-see-matches .dccs-ico .dccs-test-ico'));
+  root.querySelector('.dccs-see-matches').click();
+  ok('View-cottage links carry their icon', !!root.querySelector('.dccs-view .dccs-ico .dccs-test-ico'));
 })();
 
 // ---- 7. Answers are not persisted — a refresh starts over ----

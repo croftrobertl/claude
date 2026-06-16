@@ -108,8 +108,8 @@ final class Config
             'why_heading'       => __('Why this fits your trip', 'dcc-cottage-selector'),
             'view_cottage'      => __('View this cottage', 'dcc-cottage-selector'),
             'add_compare'       => __('Compare', 'dcc-cottage-selector'),
-            'reset'             => __('Start over', 'dcc-cottage-selector'),
-            'see_matches'       => __('See my matches', 'dcc-cottage-selector'),
+            'reset'             => __('Restart', 'dcc-cottage-selector'),
+            'see_matches'       => __('Submit', 'dcc-cottage-selector'),
             'rank_label'        => /* translators: %d: ranking position */ __('Ranked #%d for you', 'dcc-cottage-selector'),
             'dup_note'          => /* translators: %s: other cottage name */ __('Note: this cottage has an identical layout and features to %s.', 'dcc-cottage-selector'),
 
