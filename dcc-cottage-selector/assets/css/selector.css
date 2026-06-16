@@ -252,7 +252,9 @@
 .dccs-root.dccs-root .dccs-matrix td {
   border: 1px solid var(--dccs-border); padding: 10px; text-align: left; font-size: 0.9rem; vertical-align: top;
 }
-.dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; }
+.dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; font-size: 0.8rem; padding: 8px 6px; }
+.dccs-root.dccs-root .dccs-cmp-th-num { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
+.dccs-root.dccs-root .dccs-cmp-th-name { display: block; font-weight: 700; line-height: 1.2; }
 .dccs-root.dccs-root .dccs-matrix tbody th { position: sticky; left: 0; background: var(--dccs-surface); z-index: 1; }
 .dccs-root.dccs-root .dccs-matrix thead th.dccs-corner { left: 0; z-index: 3; background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-matrix td.is-diff { background: var(--dccs-diff); font-weight: 600; }

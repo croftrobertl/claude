@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.1
+Stable tag: 0.6.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.6.2 =
+* Compare table: cottage column headers are now smaller and stack the cottage
+  number above the name (e.g. "Cottage 22:" / "The Boathouse"), so the columns
+  take less width and fit better on phones.
 
 = 0.6.1 =
 * Compare: you can now pick any number of cottages (2 up to all of them), not just

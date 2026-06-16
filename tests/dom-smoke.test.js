@@ -278,6 +278,10 @@ function cardNames(root) {
   btn.click();
   ok('overlay shows the comparison matrix', !!w.document.querySelector('.dccs-modal .dccs-matrix'));
   ok('matrix has a pinned corner cell', !!w.document.querySelector('.dccs-modal .dccs-matrix .dccs-corner'));
+  var thNum = w.document.querySelector('.dccs-modal .dccs-matrix thead th .dccs-cmp-th-num');
+  var thName = w.document.querySelector('.dccs-modal .dccs-matrix thead th .dccs-cmp-th-name');
+  ok('column header stacks number above name', !!thNum && !!thName &&
+    /:$/.test(thNum.textContent.trim()) && /\w/.test(thName.textContent.trim()));
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();

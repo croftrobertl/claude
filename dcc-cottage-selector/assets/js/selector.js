@@ -379,6 +379,17 @@
     }
   }
 
+  /** Compare-table column header: stack "Cottage NN:" above the name (smaller, narrower
+      columns) by splitting the formatted title at the first colon. Falls back to one line
+      when a translated name_format carries no colon. */
+  function cmpHeader(title) {
+    title = String(title == null ? '' : title);
+    var ci = title.indexOf(':');
+    if (ci === -1) { return '<span class="dccs-cmp-th-name">' + esc(title) + '</span>'; }
+    return '<span class="dccs-cmp-th-num">' + esc(title.slice(0, ci + 1)) + '</span>' +
+      '<span class="dccs-cmp-th-name">' + esc(title.slice(ci + 1).trim()) + '</span>';
+  }
+
   var CMP_WIN = 2; // cottage columns shown at once in the comparison table
 
   /** The comparison table: a pinned attribute column + a window of up to CMP_WIN
@@ -400,7 +411,7 @@
         '</div>';
     }
     html += '<div class="dccs-matrix-wrap"><table class="dccs-matrix"><thead><tr><th class="dccs-corner"></th>';
-    sel.forEach(function (c) { html += '<th>' + esc(cname(config, c)) + '</th>'; });
+    sel.forEach(function (c) { html += '<th>' + cmpHeader(cname(config, c)) + '</th>'; });
     html += '</tr></thead><tbody>';
     (config.diffFields || []).forEach(function (field) {
       // Highlight "differs" by comparing across ALL selected, not just the window.
