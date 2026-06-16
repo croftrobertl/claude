@@ -3,7 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.6.2\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.6.3\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -787,5 +787,45 @@ msgstr ""
 
 #: includes/class-config.php:49
 msgid "← Back"
+msgstr ""
+
+#: includes/class-selector-widget.php:733
+msgid "Compare picker"
+msgstr ""
+
+#: includes/class-selector-widget.php:817
+msgid "Effects"
+msgstr ""
+
+#: includes/class-selector-widget.php:836
+msgid "Hover transition speed"
+msgstr ""
+
+#: includes/class-selector-widget.php:799
+msgid "Item corner radius"
+msgstr ""
+
+#: includes/class-selector-widget.php:831
+msgid "Item hover background"
+msgstr ""
+
+#: includes/class-selector-widget.php:826
+msgid "Item hover text"
+msgstr ""
+
+#: includes/class-selector-widget.php:806
+msgid "Item padding"
+msgstr ""
+
+#: includes/class-selector-widget.php:792
+msgid "Menu panel corner radius"
+msgstr ""
+
+#: includes/class-selector-widget.php:780
+msgid "Shape"
+msgstr ""
+
+#: includes/class-selector-widget.php:785
+msgid "Trigger corner radius"
 msgstr ""
 

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.2
+Stable tag: 0.6.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,14 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.6.3 =
+* Editor: the mode-switcher dropdown and the Compare cottage-picker dropdown now
+  have full Shape controls (trigger / panel / item corner radius, item padding,
+  trigger border) and Effects controls (panel shadow, item hover text + background,
+  and a hover transition-speed slider). The Compare picker also gained its own
+  typography / background / text-colour controls to match the mode switcher.
+* Both dropdown menus now have a subtle default hover state.
 
 = 0.6.2 =
 * Compare table: cottage column headers are now smaller and stack the cottage

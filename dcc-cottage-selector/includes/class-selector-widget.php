@@ -81,6 +81,7 @@ class Selector_Widget extends Widget_Base
         $this->register_question_style_controls();
         $this->register_button_style_controls();
         $this->register_card_style_controls();
+        $this->register_cmpmenu_style_controls();
         $this->register_compare_style_controls();
     }
 
@@ -394,6 +395,13 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->end_controls_tab();
         $this->end_controls_tabs();
+
+        $this->add_dropdown_shape_effects(
+            'mode',
+            self::SEL . '.dccs-modeselect-trigger',
+            self::SEL . '.dccs-modeselect-list',
+            self::SEL . '.dccs-modetab'
+        );
 
         $this->end_controls_section();
     }
@@ -716,6 +724,124 @@ class Selector_Widget extends Widget_Base
         ]);
 
         $this->end_controls_section();
+    }
+
+    /** The compare-mode cottage picker (its own dropdown, mirrors the mode switcher). */
+    private function register_cmpmenu_style_controls(): void
+    {
+        $this->start_controls_section('style_cmpmenu', [
+            'label' => __('Compare picker', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'cmpmenu_typography',
+            'selector' => self::SEL . '.dccs-cmp-trigger, ' . self::SEL . '.dccs-cmp-option',
+        ]);
+        $this->add_control('cmpmenu_bg', [
+            'label'     => __('Control background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccs-cmp-trigger' => 'background-color: {{VALUE}};',
+                self::SEL . '.dccs-cmp-list'    => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('cmpmenu_color', [
+            'label'     => __('Text', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccs-cmp-trigger' => 'color: {{VALUE}};',
+                self::SEL . '.dccs-cmp-option'  => 'color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_dropdown_shape_effects(
+            'cmpmenu',
+            self::SEL . '.dccs-cmp-trigger',
+            self::SEL . '.dccs-cmp-list',
+            self::SEL . '.dccs-cmp-option'
+        );
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * Shared "Shape" + "Effects" controls for a dropdown menu (trigger + panel +
+     * items). Used by both the mode switcher and the compare picker so they expose
+     * identical corner-radius, border, padding, panel-shadow, hover and transition
+     * controls. $prefix keeps the generated control names unique per menu; the three
+     * selector strings already include the self::SEL specificity prefix.
+     */
+    private function add_dropdown_shape_effects(string $prefix, string $trigger, string $panel, string $item): void
+    {
+        $hover = $item . ':hover, ' . $item . ':focus-visible';
+
+        $this->add_control($prefix . '_shape_heading', [
+            'label'     => __('Shape', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+        $this->add_responsive_control($prefix . '_trigger_radius', [
+            'label'      => __('Trigger corner radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 100], '%' => ['min' => 0, 'max' => 50]],
+            'selectors'  => [$trigger => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
+        $this->add_responsive_control($prefix . '_panel_radius', [
+            'label'      => __('Menu panel corner radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 100], '%' => ['min' => 0, 'max' => 50]],
+            'selectors'  => [$panel => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
+        $this->add_responsive_control($prefix . '_item_radius', [
+            'label'      => __('Item corner radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 60], '%' => ['min' => 0, 'max' => 50]],
+            'selectors'  => [$item => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
+        $this->add_responsive_control($prefix . '_item_padding', [
+            'label'      => __('Item padding', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [$item => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => $prefix . '_trigger_border',
+            'selector' => $trigger,
+        ]);
+
+        $this->add_control($prefix . '_fx_heading', [
+            'label'     => __('Effects', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+        $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
+            'name'     => $prefix . '_panel_shadow',
+            'selector' => $panel,
+        ]);
+        $this->add_control($prefix . '_item_hover_color', [
+            'label'     => __('Item hover text', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$hover => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control($prefix . '_item_hover_bg', [
+            'label'     => __('Item hover background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$hover => 'background-color: {{VALUE}};'],
+        ]);
+        $this->add_responsive_control($prefix . '_transition', [
+            'label'      => __('Hover transition speed', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['ms'],
+            'range'      => ['ms' => ['min' => 0, 'max' => 1000, 'step' => 10]],
+            'selectors'  => [
+                $trigger => 'transition-duration: {{SIZE}}ms;',
+                $item    => 'transition-duration: {{SIZE}}ms;',
+            ],
+        ]);
     }
 
     /**
