@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.1
+Stable tag: 0.9.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.2 =
+* Today indicator — removed the yellow tint and bottom border from body cells in today's column. The header (date/day row) keeps its underline, which is enough orientation when past days aren't shown. Reverts an over-eager addition from 0.9.0.
 
 = 0.9.1 =
 * Book Now popup — cottage name now wraps to a second row at the colon, matching the cottage info popup ("Book Cottage 32:" on row 1, "Flamingo Bungalow" on row 2). Applies to all eight cottages via the shared `renderSplitTitle` helper.

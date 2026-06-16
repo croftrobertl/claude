@@ -842,7 +842,6 @@
                 var tip = statusLabels[status] || status;
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
-                if (config && config.today === day) cell.classList.add('is-today');
                 var dowJ = new Date(day + 'T00:00:00').getDay();
                 if (dowJ === 0 || dowJ === 6) cell.classList.add('is-weekend');
                 if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
