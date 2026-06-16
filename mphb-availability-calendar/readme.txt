@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.2
+Stable tag: 0.9.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.3 =
+* "All cottages booked through {date}" hint now reports the REAL through-date — when every visible day is booked, the AJAX endpoint scans up to a year forward and returns the day before the next true availability. Previously the hint could only point to the last visible day in the current window, which understated the cutoff whenever the booked stretch extended beyond what was on screen.
 
 = 0.9.2 =
 * Today indicator — removed the yellow tint and bottom border from body cells in today's column. The header (date/day row) keeps its underline, which is enough orientation when past days aren't shown. Reverts an over-eager addition from 0.9.0.

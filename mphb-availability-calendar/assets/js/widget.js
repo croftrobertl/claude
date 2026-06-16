@@ -862,7 +862,7 @@
         });
 
         clearWrapPreservingStatus(wrap);
-        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels);
+        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels, data.bookedThrough);
         if (hint) {
             wrap.appendChild(hint);
             // Trigger the fade-in transition on the next frame so the
@@ -882,7 +882,7 @@
     // available date and the cottage opening then. Quietly returns null
     // when the window's first day has any availability, which is the
     // overwhelmingly common case.
-    function buildAvailabilityHint(rooms, availability, days, strings, customLabels) {
+    function buildAvailabilityHint(rooms, availability, days, strings, customLabels, bookedThrough) {
         if (!rooms.length || !days.length) return null;
         if (!strings || !strings.allBooked) return null;
 
@@ -904,7 +904,17 @@
         hintEl.className = 'mphbac-availability-hint mphbac-hint--enter';
         hintEl.setAttribute('role', 'status');
 
-        var throughDay = firstAvailIdx > 0 ? days[firstAvailIdx - 1] : days[days.length - 1];
+        // Through-day priority: an in-window opening wins (we know exactly when
+        // it lands), else the server's forward-scan result, else the last
+        // visible day as a fallback.
+        var throughDay;
+        if (firstAvailIdx > 0) {
+            throughDay = days[firstAvailIdx - 1];
+        } else if (bookedThrough) {
+            throughDay = bookedThrough;
+        } else {
+            throughDay = days[days.length - 1];
+        }
         hintEl.textContent = strings.allBooked.replace('{through}', throughDay);
 
         if (firstAvailIdx > 0 && strings.nextOpening) {
