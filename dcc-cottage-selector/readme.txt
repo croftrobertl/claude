@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.3
+Stable tag: 0.6.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,21 @@ buttons) is configurable in the Elementor editor.
 3. Drop the **Cottage Selector** widget on a page (Elementor), or place the
    **Mini Entry** widget / `[dcc_selector_entry]` shortcode on each cottage page.
 
+== Caching (SpeedyCache / HostGator) ==
+
+The front end loads three small scripts that must keep their order:
+`dccs-score` and `dccs-labels` before `dccs-selector` (the selector reads the data
+layer the other two define). WordPress and Elementor enqueue them in the right
+order automatically.
+
+If you turn on JavaScript "combine"/"merge" or "defer" in SpeedyCache (or any
+optimizer) and the widget ever shows "Loading…" too long, exclude the plugin's
+scripts — match `dcc-cottage-selector/assets/js/` (or the handles `dccs-score`,
+`dccs-labels`, `dccs-selector`) in the optimizer's JS-exclusion list. The selector
+also has a built-in self-healing retry, so most setups need no change. After
+updating the plugin, clear SpeedyCache and run Elementor → Tools → Regenerate Files
+& Data so the new CSS/JS is served.
+
 == Editing the cottage data ==
 
 Cottage attributes live in `data/cottages.json`. Edit that file to change sizes,
@@ -122,6 +137,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.6.4 =
+* Mobile: compare-table cells use tighter padding on small phones (still scrolls
+  sideways for wide comparisons); the mode menu now caps its height and scrolls so
+  it can never open off the bottom of a short screen; compare checkboxes are a full
+  44px tap target.
+* Accessibility: a clear keyboard focus ring on every interactive control (buttons,
+  answer chips, dropdowns, compare paging, the pop-up close).
+* Hardening: the Mini-Entry link is sanitised with esc_url_raw() and the embedded
+  config always serialises to valid JSON.
+* (Internal note for a future pass: scope the global MutationObserver and tidy a
+  per-widget document listener — deferred to avoid behavioural risk now.)
 
 = 0.6.3 =
 * Editor: the mode-switcher dropdown and the Compare cottage-picker dropdown now

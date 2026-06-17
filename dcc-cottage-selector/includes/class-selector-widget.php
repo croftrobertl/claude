@@ -924,7 +924,7 @@ class Selector_Widget extends Widget_Base
             $root_class .= ' dccs-inherit-theme';
         }
         ?>
-        <div class="<?php echo esc_attr($root_class); ?>" data-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
+        <div class="<?php echo esc_attr($root_class); ?>" data-config="<?php echo esc_attr((string) (wp_json_encode($config) ?: '{}')); ?>">
             <noscript>
                 <ul class="dccs-noscript">
                     <?php foreach ($cottages as $c) : ?>

@@ -147,6 +147,9 @@ class Mini_Entry_Widget extends Widget_Base
      */
     private static function markup(string $current, string $selector_url, string $copy): string
     {
+        // Normalize/validate the link server-side (the JS safeUrl() guards at runtime too).
+        $selector_url = $selector_url !== '' ? esc_url_raw($selector_url) : '';
+
         $entry = [
             'current'     => $current,
             'selectorUrl' => $selector_url,
@@ -171,7 +174,7 @@ class Mini_Entry_Widget extends Widget_Base
             '<div class="dccs-entry dccs-entry" data-entry="%1$s">'
             . '<button type="button" class="dccs-entry-btn">%2$s</button>'
             . '</div>',
-            esc_attr((string) wp_json_encode($entry)),
+            esc_attr((string) (wp_json_encode($entry) ?: '{}')),
             esc_html($label)
         );
     }
