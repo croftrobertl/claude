@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.17
+Stable tag: 0.9.7.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,66 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.18 =
+
+Tier-1 audit-bundle release. Six high-confidence, low-risk fixes
+across PHP, JS, and CSS — no behavior changes for normal use.
+
+**Security — gate `?debug=1` behind admin capability.** The
+`dccgg_weather` and `dccgg_usgs` AJAX endpoints are registered for
+both logged-in and anonymous visitors (so the conditions card
+works for guests). Appending `?debug=1` previously caused those
+endpoints to return the upstream URL and a 400-char excerpt of
+the upstream response body in their JSON error payload — useful
+for the host, but visible to any anonymous visitor who knew the
+flag. Both handlers now only honor `debug=1` when
+`current_user_can('manage_options')` is true.
+
+**Security — strip newlines from the email `From:` display
+name.** `wp_mail` builds the `From:` header by concatenating the
+admin-configured `problem_report_from_name` setting with the
+admin-configured email address. `is_email()` already rejects
+newlines in the email itself, so the address half was safe, but
+the display-name half had no equivalent guard. A compromised
+admin or a future Elementor-panel injection could splice `\r\n`
+into the name to add a `Bcc:`. Strips `\r`, `\n`, and `\0` from
+the name before building the header.
+
+**iOS Safari — lightbox now uses `100dvh`.** The image lightbox
+used `height: 100vh; max-height: 100vh;` which on iOS Safari
+includes the address-bar height. Tall portrait photos were
+clipping at the bottom of the viewport whenever the URL bar was
+showing. Adds `100dvh` (dynamic viewport height) with `100vh` as
+the fallback line for older browsers.
+
+**Perf — cache the sticky-header offset between modal opens.**
+v0.9.7.17's `detectStickyTopOffset()` fallback walks every body
+descendant to depth 4 and calls `getComputedStyle` on each. On a
+typical Bravada + Elementor page that's 500-1500 calls every
+time a guest opens a section, plus another full run on every
+80 ms-debounced resize event. The result is now memoized and
+only re-scanned when the viewport width changes (rotation,
+tablet split-screen, devtools open / close). The
+`?dccgg-debug-popup=1` flag still re-scans on every open so
+diagnosis isn't cached.
+
+**Debugging — conditions card weather fetch now logs failures.**
+The `wireConditions()` weather chain ended with
+`.catch(() => {})` — completely silent on failure. The NOAA and
+USGS chains in the same function already used
+`console.warn('[DCCGG conditions] ...')`. Brought the weather
+chain into line so an Open-Meteo outage shows up in DevTools
+instead of just leaving the row blank with no signal.
+
+**Editor preview — toast now visible in mobile preview.** The
+v0.9.7.17 `editorPreviewToast` was pinned to `top: 12px`. In
+Elementor's mobile preview iframe the top 60-80 px is the
+device-frame chrome, so the toast landed behind it. On viewports
+narrower than 500 px the toast now pins to `bottom: 12px`
+instead. Also caps height at `60vh` with `overflow: auto` so a
+long stack trace scrolls inside the toast rather than overflowing
+the iframe.
 
 = 0.9.7.17 =
 

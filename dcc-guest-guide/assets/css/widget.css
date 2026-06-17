@@ -1796,9 +1796,11 @@ video.dccgg-media {
     background: rgba(0,0,0,0.92);
     padding: 0;
     max-width: 100vw;
-    max-height: 100vh;
+    max-height: 100vh;   /* fallback for browsers without dvh support */
+    max-height: 100dvh;  /* v0.9.7.18: iOS Safari clips tall images at 100vh because the URL bar is counted */
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
 }
 .dccgg-lightbox::backdrop {
     background: rgba(0,0,0,0.85);

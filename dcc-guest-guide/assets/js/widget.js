@@ -103,8 +103,14 @@
             if (!host) {
                 host = document.createElement('div');
                 host.id = 'dccgg-editor-toast';
-                host.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483647;'
-                    + 'max-width:min(640px,90vw);background:#fff3cd;color:#664d03;'
+                // v0.9.7.18: in Elementor's mobile preview the top ~60-80 px
+                // is the device-frame chrome, so the toast was hidden. Pin
+                // to the bottom on narrow viewports; cap height so a long
+                // stack trace can scroll instead of exploding the iframe.
+                const narrow = (window.innerWidth || 9999) < 500;
+                const vertical = narrow ? 'bottom:12px;' : 'top:12px;';
+                host.style.cssText = 'position:fixed;' + vertical + 'left:50%;transform:translateX(-50%);z-index:2147483647;'
+                    + 'max-width:min(640px,90vw);max-height:60vh;overflow:auto;background:#fff3cd;color:#664d03;'
                     + 'border:2px solid #ffc107;border-radius:8px;padding:14px 18px;'
                     + 'font:13px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;'
                     + 'box-shadow:0 8px 32px rgba(0,0,0,0.25);cursor:pointer;';
@@ -976,7 +982,7 @@
                     }
                 });
             })
-            .catch(() => {});
+            .catch((err) => { console.warn('[DCCGG conditions] weather fetch failed', err); });
 
         if (extras) {
             // Card 1: NWS alert banner — uses the existing alerts endpoint.
@@ -1793,26 +1799,39 @@
     // depth-bounded scan of every body descendant. Filters mirror the
     // curated path PLUS a 70%-viewport-width threshold to reject floating
     // chat widgets, scroll-to-top FABs, and ad sidebars.
+    // v0.9.7.18: memoize across openings — the deep walk runs ~500-1500
+    // getComputedStyle calls on a Bravada + Elementor page, and re-doing it
+    // on every modal open + every 80 ms-debounced resize was the dominant
+    // cost on the modal-open path. Invalidate on viewport-width change
+    // (rotation, tablet split-screen, devtools resize) since that's the
+    // only way a sticky header's height could change in practice; the
+    // ?dccgg-debug-popup=1 path always re-scans so diagnosis isn't cached.
+    let stickyOffsetCache = { width: -1, value: 0 };
     function detectStickyTopOffset() {
+        const dbg = /[?&]dccgg-debug-popup=1/.test(window.location.search);
+        const w = window.innerWidth || document.documentElement.clientWidth || 0;
+        if (!dbg && stickyOffsetCache.width === w) return stickyOffsetCache.value;
         const fast = detectStickyTopOffsetFor(document.querySelectorAll(
             'header, nav, [role="banner"], [class*="sticky"], [class*="fixed-top"], ' +
             '.ast-primary-header-bar, .site-header, .elementor-sticky--active'
         ), false);
-        if (fast > 0) return fast;
-        // Fallback: walk body descendants to depth 4 (deeper than that is
-        // never realistically a sticky theme header). ~500-1500 elements on
-        // a typical Elementor page; getComputedStyle loop runs in well
-        // under a frame, imperceptible at modal-open.
-        const deep = [];
-        const walk = (node, depth) => {
-            if (!node || depth > 4) return;
-            for (const child of node.children) {
-                deep.push(child);
-                walk(child, depth + 1);
-            }
-        };
-        walk(document.body, 0);
-        return detectStickyTopOffsetFor(deep, true);
+        let value = fast;
+        if (value === 0) {
+            // Fallback: walk body descendants to depth 4 (deeper than that
+            // is never realistically a sticky theme header).
+            const deep = [];
+            const walk = (node, depth) => {
+                if (!node || depth > 4) return;
+                for (const child of node.children) {
+                    deep.push(child);
+                    walk(child, depth + 1);
+                }
+            };
+            walk(document.body, 0);
+            value = detectStickyTopOffsetFor(deep, true);
+        }
+        stickyOffsetCache = { width: w, value: value };
+        return value;
     }
     function detectStickyTopOffsetFor(candidates, requireWidth) {
         const dbg = /[?&]dccgg-debug-popup=1/.test(window.location.search);

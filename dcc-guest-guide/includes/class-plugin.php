@@ -473,6 +473,12 @@ final class Plugin
         }
         if ($from_email !== '' && is_email($from_email)) {
             $name = $from_name !== '' ? $from_name : (string) get_bloginfo('name');
+            // v0.9.7.18: belt-and-suspenders against header injection.
+            // is_email() already rejects newlines in $from_email, but the
+            // display name is admin-controlled free text and could otherwise
+            // splice a Bcc: via a compromised admin or a future panel-
+            // injection bug.
+            $name = trim(str_replace(["\r", "\n", "\0"], '', $name));
             $headers[] = 'From: ' . $name . ' <' . $from_email . '>';
         }
 
@@ -680,7 +686,11 @@ final class Plugin
             $lng
         );
         $res = wp_remote_get($url, ['timeout' => 8]);
-        $debug = !empty($_GET['debug']);
+        // v0.9.7.18: gate ?debug=1 behind a manage_options check — both this
+        // handler and dccgg_usgs are registered for wp_ajax_nopriv_, so an
+        // anonymous visitor could otherwise see upstream URLs / response
+        // excerpts. Diagnostic value is admin-only by design.
+        $debug = !empty($_GET['debug']) && current_user_can('manage_options');
         if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
             if ($debug) {
                 $err = is_wp_error($res)
@@ -722,7 +732,8 @@ final class Plugin
         }
         $lat = round($lat, 3);
         $lng = round($lng, 3);
-        $debug = !empty($_GET['debug']);
+        // v0.9.7.18: admin-only, same as dccgg_weather above.
+        $debug = !empty($_GET['debug']) && current_user_can('manage_options');
         // Cache key is the cottage lat/lng so a fallback to a sibling site
         // still satisfies repeat lookups from the same widget instance.
         $key = 'dccgg_usgs_' . md5($lat . ':' . $lng);
