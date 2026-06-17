@@ -1030,19 +1030,27 @@ body.mphbac-info-open {
 .mphbac-root .mphbac-skeleton {
     display: flex;
     flex-direction: column;
-    gap: var(--mphbac-cell-gap, 2px);
-    padding: 2px;
+    /* Match the real grid's --mphbac-gap var (set by the cell-gap control)
+       so the skeleton-to-grid swap doesn't shift width/height. No outer
+       padding for the same reason — the real grid has none. */
+    gap: var(--mphbac-gap, 2px);
 }
 .mphbac-root .mphbac-skeleton-row {
     display: grid;
     grid-template-columns: var(--mphbac-label-width, 180px) 1fr;
-    gap: var(--mphbac-cell-gap, 2px);
+    gap: var(--mphbac-gap, 2px);
     min-height: var(--mphbac-cell-min, 42px);
     background: var(--mphbac-color-namecol, #F8F9FA);
     border-radius: var(--mphbac-cell-radius, 0);
 }
 .mphbac-root .mphbac-skeleton-row-alt {
     background: var(--mphbac-color-namecol-alt, #F1F3F5);
+}
+/* Header stripe — same color/height as the rendered grid's top row, so the
+   skeleton-to-grid swap doesn't introduce a vertical shift. No shimmer
+   inside (the band is itself the placeholder). */
+.mphbac-root .mphbac-skeleton-row--header {
+    background: var(--mphbac-color-header, #0A50B2);
 }
 .mphbac-root .mphbac-skeleton-name,
 .mphbac-root .mphbac-skeleton-cells {

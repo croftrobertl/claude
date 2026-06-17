@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.3
+Stable tag: 0.9.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,13 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.4 =
+* Render flicker — the skeleton placeholder now matches the rendered grid one-for-one: same gap variable (`--mphbac-gap`, the one the Elementor cell-gap control writes to — the skeleton previously read a separate `--mphbac-cell-gap` that no control updated), no outer padding mismatch, and a header stripe that mirrors the rendered grid's top row so the swap doesn't shift the grid down by a row.
+* Frontend perf — the `MutationObserver` that watches for late-injected widget markup is now gated to the Elementor editor preview (where it's actually needed); on the live frontend it's skipped entirely. Frees up the per-mutation callback cost on every Elementor page. Late-mounted instances on the frontend are still caught by Elementor's `frontend/element_ready` hook.
+* Frontend perf — jQuery UI Datepicker is no longer a hard JS dependency. ~70 KB of JS + CSS no longer loads on every page that contains the widget. The fallback code stays in place and quietly re-engages on browsers that lack `<input type="date">` IF jQuery UI happens to be loaded by the theme or another plugin; modern browsers within the support floor (Safari 16+ / iOS 16+ / evergreen Chrome and Firefox) use the native picker either way.
+* Stability — added a 15-second timeout to the calendar's availability fetch. A hung MotoPress / SpeedyCache misconfig used to leave the spinner running indefinitely; now the empty-state appears and the visitor can retry. Timeout is distinguished from "newer request superseded this one" via a TimeoutError-named DOMException so the silent-abort path still works for rapid month-nav.
+* Tidy — removed `reinitElementorWidgets`, a ~36-line dead function from before v0.8.9 switched the info popup to MOVE (rather than clone) the cottage's content node. `refreshSwipers()` already handles the only post-v0.8.9 reinit need.
 
 = 0.9.3 =
 * "All cottages booked through {date}" hint now reports the REAL through-date — when every visible day is booked, the AJAX endpoint scans up to a year forward and returns the day before the next true availability. Previously the hint could only point to the last visible day in the current window, which understated the cutoff whenever the booked stretch extended beyond what was on screen.

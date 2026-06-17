@@ -332,71 +332,6 @@
         );
     }
 
-    // When we copy a cottage's Elementor template into the popup via
-    // innerHTML, the cloned .elementor-widget nodes have no event handlers —
-    // innerHTML doesn't run scripts and Elementor only fires its
-    // frontend/element_ready action once, on the original (hidden) nodes.
-    // This walks the popup and dispatches that action for each widget so
-    // Elementor's handler system rebinds onto the copy.
-    //
-    // Two third-party gotchas the naive "doAction(...element_ready)" path
-    // doesn't solve:
-    //
-    //   1. data-id collision. Every cloned widget keeps the original's
-    //      data-id. Many third-party widgets (and Elementor's own modules)
-    //      track initialized widgets by id in a global registry; when they
-    //      see a duplicate, they skip init. Rewriting data-id to a unique
-    //      value on the clone breaks that dedup.
-    //
-    //   2. handler bookkeeping. Elementor's Base handler attaches itself to
-    //      the element via jQuery $.data('handlers'); when the element_ready
-    //      hook fires a second time on the same DOM, the Base constructor
-    //      sees the marker and refuses to re-bind. innerHTML strips jQuery
-    //      data implicitly, BUT the cloned widget can re-acquire stale
-    //      values via data-* attributes that the framework parses; calling
-    //      removeData() defensively clears any such carryover.
-    //
-    // We also prefer Elementor's own elementsHandler.runReadyTrigger() when
-    // available — it does the global + specific hook + handler-tracking
-    // dance in one call, which is the canonical entry point that
-    // third-party widget JS expects.
-    function reinitElementorWidgets(container) {
-        if (!container || !window.elementorFrontend || !window.jQuery) {
-            return;
-        }
-        var ef = window.elementorFrontend;
-        var $ = window.jQuery;
-
-        // 1. Uniquify data-id + clear jQuery data on every Elementor
-        // element (sections, columns, widgets, containers) in the clone.
-        var stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-        var elements = container.querySelectorAll('.elementor-element[data-id]');
-        elements.forEach(function (el, idx) {
-            var origId = el.getAttribute('data-id');
-            if (origId && origId.indexOf('mphbac-') !== 0) {
-                el.setAttribute('data-id', 'mphbac-' + stamp + '-' + idx + '-' + origId);
-            }
-            try { $(el).removeData(); } catch (e) { /* ignore */ }
-        });
-
-        // 2. Trigger ready handlers per widget.
-        var widgets = container.querySelectorAll('.elementor-widget[data-widget_type]');
-        widgets.forEach(function (widget) {
-            var widgetType = widget.getAttribute('data-widget_type');
-            if (!widgetType) return;
-            try {
-                if (ef.elementsHandler &&
-                    typeof ef.elementsHandler.runReadyTrigger === 'function') {
-                    ef.elementsHandler.runReadyTrigger(widget);
-                } else if (ef.hooks) {
-                    var $widget = $(widget);
-                    ef.hooks.doAction('frontend/element_ready/global', $widget, $);
-                    ef.hooks.doAction('frontend/element_ready/' + widgetType, $widget, $);
-                }
-            } catch (e) { /* third-party handler threw; keep going */ }
-        });
-    }
-
     // After v0.8.9 mounts the original .mphbac-info-content into the popup
     // body, any Swiper instance that initialized against the source div
     // while it was display:none has stale measurements: container width was
@@ -700,6 +635,22 @@
         var controller = new AbortController();
         state.controller = controller;
 
+        // Ceiling on how long we'll wait for the AJAX response. A hung
+        // MotoPress / SpeedyCache misconfig would otherwise leave the
+        // spinner running indefinitely. The empty-state has a reset button
+        // so the visitor can retry. Abort with a TimeoutError-named
+        // DOMException so the .catch below can distinguish "timeout"
+        // (show empty-state) from "superseded by next request" (silent).
+        var timeoutMs = 15000;
+        var timeoutHandle = setTimeout(function () {
+            if (state.controller !== controller) return;
+            try {
+                controller.abort(new DOMException('Request timed out', 'TimeoutError'));
+            } catch (e) {
+                try { controller.abort(); } catch (_) { /* ignore */ }
+            }
+        }, timeoutMs);
+
         root.classList.add('is-loading');
         setStatus(root, (config.strings && config.strings.loading) || 'Loading availability…');
 
@@ -734,6 +685,8 @@
             root.classList.remove('is-loading');
             setStatus(root, '');
             showError(root);
+        }).finally(function () {
+            clearTimeout(timeoutHandle);
         });
     }
 
@@ -1247,6 +1200,19 @@
 
     function setupObserver() {
         if (!document.body || !window.MutationObserver) return;
+        // The observer exists ONLY to catch widget markup that the Elementor
+        // editor preview iframe injects post-DOMContentLoaded without firing
+        // frontend/element_ready reliably. On the live frontend, boot()'s
+        // initial querySelectorAll covers existing instances and the
+        // elementor/frontend/element_ready/mphbac_calendar.default hook
+        // (registered below) covers any late-mounted ones. Observing
+        // document.body { subtree: true } there would mean a callback on
+        // EVERY DOM mutation across the page — measurable cost on heavy
+        // Elementor pages. Gate by the editor-active body class so
+        // frontend pages get zero observer overhead.
+        if (!document.body.classList.contains('elementor-editor-active')) {
+            return;
+        }
         var observer = new MutationObserver(function () {
             var roots = document.querySelectorAll('.mphbac-root');
             if (roots.length === 0) return;

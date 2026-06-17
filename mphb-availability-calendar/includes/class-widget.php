@@ -61,10 +61,17 @@ final class Widget extends Widget_Base
             [],
             MPHBAC_VERSION
         );
+        // No JS deps. The jQuery UI datepicker is used as an OPTIONAL fallback
+        // by wireFilters() only when `<input type="date">` is unsupported and
+        // jQuery UI happens to be on the page anyway (loaded by the theme or
+        // another plugin). Declaring it as a hard dep here would force ~70 KB
+        // of JS + CSS onto every page, just for a fallback that browsers
+        // within the support floor (Safari 16+ / iOS 16+ / evergreen Chrome
+        // and Firefox) never trigger.
         wp_register_script(
             'mphbac-widget',
             MPHBAC_URL . 'assets/js/widget.js',
-            ['jquery-ui-datepicker'],
+            [],
             MPHBAC_VERSION,
             true
         );
@@ -1165,6 +1172,7 @@ final class Widget extends Widget_Base
 
             <div class="mphbac-grid-wrap" role="region" aria-live="polite" aria-label="<?php echo esc_attr__('Availability calendar', 'mphb-availability-calendar'); ?>">
                 <div class="mphbac-skeleton" aria-hidden="true">
+                    <div class="mphbac-skeleton-row mphbac-skeleton-row--header"></div>
                     <?php foreach ($rooms as $i => $r) : ?>
                         <div class="mphbac-skeleton-row<?php echo ($i % 2 === 1) ? ' mphbac-skeleton-row-alt' : ''; ?>">
                             <span class="mphbac-skeleton-name"></span>
