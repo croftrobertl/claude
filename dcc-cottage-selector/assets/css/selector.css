@@ -305,13 +305,14 @@
 }
 
 /* Compare table — pinned attribute column + ‹ › paging */
-.dccs-root.dccs-root .dccs-matrix-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 10px; }
+.dccs-root.dccs-root .dccs-matrix-nav { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; margin-bottom: 10px; }
 .dccs-root.dccs-root .dccs-matrix-nav button {
-  width: 42px; height: 42px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--dccs-border); background: var(--dccs-surface); color: var(--dccs-accent); font-size: 22px; line-height: 1;
+  width: 32px; height: 32px; flex: 0 0 auto; padding: 0; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-accent); color: var(--dccs-accent-text); font-size: 18px; line-height: 1;
 }
 .dccs-root.dccs-root .dccs-matrix-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
-.dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); }
+.dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); white-space: nowrap; }
 .dccs-root.dccs-root .dccs-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; background: var(--dccs-surface); }
 .dccs-root.dccs-root .dccs-matrix th,
