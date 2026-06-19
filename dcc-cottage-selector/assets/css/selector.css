@@ -139,6 +139,9 @@
 /* Optional leading icon/emoji on buttons, answers and badges (admin-set in Elementor).
    inline-flex keeps it on the text baseline so the parent's text-align still centers. */
 .dccs-root.dccs-root .dccs-ico { display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em; }
+/* Side modifiers: the icon sits before (left) or after (right) the label. */
+.dccs-root.dccs-root .dccs-ico-left { margin-inline-end: 0.45em; margin-inline-start: 0; }
+.dccs-root.dccs-root .dccs-ico-right { margin-inline-start: 0.45em; margin-inline-end: 0; }
 .dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
 .dccs-root.dccs-root .dccs-ico:empty { display: none; }
 

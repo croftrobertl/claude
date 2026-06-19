@@ -16,6 +16,7 @@
     var id = String(c.id);
 
     if (inSet(id, ['22', '23'])) { out.push('spacious'); }
+    if (c.screenedPorch) { out.push('porch'); }             // 22
     if (c.desk) { out.push('work'); }                       // 22, 23
     if (c.layoutType === 'Studio') { out.push('compact'); } // 33, 34
     if (c.petAllowed) { out.push('pet'); }                  // 34
@@ -44,6 +45,7 @@
     add('onebed', crit.wOneBed > 0, c.layoutType !== 'Studio');
     add('dining', crit.wDining > 0, Number(c.diningSeats) >= 4);
     add('pullout', crit.wPullout > 0, c.pulloutCouch);
+    add('porch', (crit.wScreenedPorch > 0) || crit.hardScreenedPorch, c.screenedPorch);
 
     // Wanted reasons first (stable), then the rest; keep up to three.
     var wanted = ranked.filter(function (r) { return r.wanted; });

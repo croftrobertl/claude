@@ -55,7 +55,7 @@ function clickAnswer(root, value) {
 function clickNext(root) { var b = root.querySelector('.dccs-next'); if (b && !b.disabled) { b.click(); } }
 function answerNext(root, value) { clickAnswer(root, value); clickNext(root); }
 function stepThrough(root, value) {
-  for (var k = 0; k < 8 && root.querySelector('.dccs-chips-wizard'); k++) { answerNext(root, value); }
+  for (var k = 0; k < 12 && root.querySelector('.dccs-chips-wizard'); k++) { answerNext(root, value); }
 }
 function toResults(root, value) {
   stepThrough(root, value || 'either');
@@ -91,7 +91,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
-  ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
+  ok('progress reads Step 1 of 8', /1\b.*\b8/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
   ok('no answer preselected', !activeChip(root));
   ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
@@ -130,10 +130,10 @@ function enter(root, mode) {
   enter(root, 'quick');
   clickAnswer(root, 'yes');
   ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === 'yes');
-  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
+  ok('still on step 1 (no auto-advance)', /1\b.*\b8/.test(progress(root)));
   ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
   clickNext(root);
-  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
+  ok('Next advances to step 2', /2\b.*\b8/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
   ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
   ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
@@ -146,7 +146,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, 'yes');
   root.querySelector('.dccs-back').click();
-  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('Back returns to step 1', /1\b.*\b8/.test(progress(root)));
   ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === 'yes');
 })();
 
@@ -157,11 +157,11 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, 'yes');     // step 1
   answerNext(root, 'no');      // step 2 -> now on step 3
-  ok('on step 3', /3\b.*\b7/.test(progress(root)));
+  ok('on step 3', /3\b.*\b8/.test(progress(root)));
   var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
   ok('answered steps are clickable dots', !!dot);
   dot.click();
-  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('stepper dot jumps to step 1', /1\b.*\b8/.test(progress(root)));
 })();
 
 // ---- 5. Review step + edit returns to where you came from ----
@@ -170,7 +170,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   stepThrough(root, 'either');
-  ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('review lists all 8 answers', root.querySelectorAll('.dccs-review-list li').length === 8);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
   const reviewBtns = root.querySelectorAll('.dccs-tail-nav > button');
   ok('review: Restart is left, Submit is right',
@@ -178,9 +178,9 @@ function enter(root, mode) {
     reviewBtns[0].classList.contains('dccs-reset') &&
     reviewBtns[1].classList.contains('dccs-see-matches'));
   root.querySelector('.dccs-edit[data-step="3"]').click();
-  ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
+  ok('edit jumps to that question (step 4)', /4\b.*\b8/.test(progress(root)));
   clickNext(root);
-  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 8);
 })();
 
 // ---- 6. See matches -> results, full names, recap, edit-answers ----
@@ -247,6 +247,28 @@ function enter(root, mode) {
   ok('deeplink pet=true -> only Coconut Cottage', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
 })();
 
+// ---- 8b. Screened-porch is a hard filter: porch=true -> only The Boathouse ----
+(function () {
+  const w = freshDom('https://example.com/?porch=true');
+  const root = mountSelector(w);
+  ok('deeplink porch=true -> only The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
+})();
+
+// ---- 8c. Screened-porch question appears as the 8th Quick-Match step ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 6)
+  ok('step 7 of 8 is the screened-porch question', /7\b.*\b8/.test(progress(root)) &&
+    /porch/i.test(root.querySelector('.dccs-step-q').textContent));
+  clickAnswer(root, 'yes'); clickNext(root);
+  stepThrough(root, 'either');                                  // answer the last step (largest)
+  root.querySelector('.dccs-see-matches').click();
+  ok('answering porch=Yes narrows to The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
+})();
+
 // ---- 9. No-match: new heading/subhead + blocking recap chips in red ----
 (function () {
   const w = freshDom('https://example.com/?pet=true&dining=4');
@@ -303,10 +325,10 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'weights');
-  ok('weights starts at Step 1 of 8', /1\b.*\b8/.test(progress(root)));
+  ok('weights starts at Step 1 of 9', /1\b.*\b9/.test(progress(root)));
   ok('nothing preselected, Next disabled', !activeChip(root) && root.querySelector('.dccs-next').disabled === true);
-  stepThrough(root, '2');                                   // medium for all 8
-  ok('weights review lists all 8 priorities', root.querySelectorAll('.dccs-review-list li').length === 8);
+  stepThrough(root, '2');                                   // medium for all 9
+  ok('weights review lists all 9 priorities', root.querySelectorAll('.dccs-review-list li').length === 9);
   root.querySelector('.dccs-see-matches').click();
   ok('weights results are ranked cards', root.querySelectorAll('.dccs-card').length >= 1);
 })();
@@ -333,6 +355,19 @@ function enter(root, mode) {
   var thName = w.document.querySelector('.dccs-modal .dccs-matrix thead th .dccs-cmp-th-name');
   ok('column header stacks number above name', !!thNum && !!thName &&
     /:$/.test(thNum.textContent.trim()) && /\w/.test(thName.textContent.trim()));
+  function rowValue(label) {
+    var ths = w.document.querySelectorAll('.dccs-modal .dccs-matrix tbody th');
+    for (var i = 0; i < ths.length; i++) {
+      if (ths[i].textContent.trim() === label) {
+        var td = ths[i].nextElementSibling;
+        return td ? td.textContent.trim() : null;
+      }
+    }
+    return null;
+  }
+  ok('matrix has Guests + Bed + Screened-porch rows',
+    rowValue('Guests') !== null && rowValue('Bed') !== null && rowValue('Screened porch') !== null);
+  ok('matrix shows the constant Guests/Bed values', rowValue('Guests') === '2' && rowValue('Bed') === 'Queen');
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
@@ -369,6 +404,48 @@ function enter(root, mode) {
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
   ok('body scroll restored', w.document.body.style.overflow === '');
+})();
+
+function configWith(overrides) {
+  const cfg = JSON.parse(CONFIG);
+  Object.keys(overrides).forEach(function (k) { cfg[k] = overrides[k]; });
+  return JSON.stringify(cfg);
+}
+
+// ---- 15. Next/Back show a default arrow; a chosen icon replaces it ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  answerNext(root, 'either');                                  // advance so Back appears
+  var next = root.querySelector('.dccs-next');
+  var back = root.querySelector('.dccs-back');
+  ok('Next shows the default right arrow', /→/.test(next.textContent) && !!next.querySelector('.dccs-ico-right'));
+  ok('Back shows the default left arrow', /←/.test(back.textContent) && !!back.querySelector('.dccs-ico-left'));
+})();
+
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w, configWith({ icons: { next: '<svg class="ic-next"></svg>', back: '<svg class="ic-back"></svg>' } }));
+  enter(root, 'quick');
+  answerNext(root, 'either');
+  var next = root.querySelector('.dccs-next');
+  var back = root.querySelector('.dccs-back');
+  ok('a Next icon replaces the arrow', !!next.querySelector('.dccs-ico-right svg.ic-next') && !/→/.test(next.textContent));
+  ok('a Back icon replaces the arrow', !!back.querySelector('.dccs-ico-left svg.ic-back') && !/←/.test(back.textContent));
+})();
+
+// ---- 16. Icon-side control places an answer icon after the label ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w, configWith({
+    icons: { ans_either: '<svg class="ic-either"></svg>' },
+    iconSides: { answers: 'right' }
+  }));
+  enter(root, 'quick');
+  var eitherChip = curChips(root).filter(function (c) { return c.dataset.value === 'either'; })[0];
+  ok('right-side answer icon sits after the label',
+    !!eitherChip && eitherChip.lastElementChild && eitherChip.lastElementChild.classList.contains('dccs-ico-right'));
 })();
 
 // ---- 14b. Accessibility hooks ----

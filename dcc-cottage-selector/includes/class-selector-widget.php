@@ -181,7 +181,7 @@ class Selector_Widget extends Widget_Base
             'submit', 'restart', 'next', 'back', 'view', 'compare',
             'edit_answers', 'compare_select', 'mode_quick', 'mode_weights', 'mode_compare',
             // Questions + answers (declared in register_qa_icon_controls()).
-            'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_largest',
+            'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_screenedporch', 'q_largest',
             'ans_yes', 'ans_no', 'ans_either', 'ans_studio', 'ans_onebed', 'ans_2', 'ans_4',
             'lvl_1', 'lvl_2', 'lvl_3',
         ];
@@ -207,6 +207,7 @@ class Selector_Widget extends Widget_Base
             'q_dining'   => __('Question: dining', 'dcc-cottage-selector'),
             'q_pet'      => __('Question: pet-friendly', 'dcc-cottage-selector'),
             'q_ground'   => __('Question: ground floor', 'dcc-cottage-selector'),
+            'q_screenedporch' => __('Question: screened porch', 'dcc-cottage-selector'),
             'q_largest'  => __('Question: largest space', 'dcc-cottage-selector'),
             'w_question' => __('Question: Weigh priorities (all)', 'dcc-cottage-selector'),
         ];
@@ -301,8 +302,9 @@ class Selector_Widget extends Widget_Base
             'q_dining'    => __('Question: dining', 'dcc-cottage-selector'),
             'q_pet'       => __('Question: pet-friendly', 'dcc-cottage-selector'),
             'q_ground'    => __('Question: ground floor', 'dcc-cottage-selector'),
+            'q_screenedporch' => __('Question: screened porch', 'dcc-cottage-selector'),
             'q_largest'   => __('Question: largest space', 'dcc-cottage-selector'),
-            // Weigh priorities — the question template + the eight priority rows
+            // Weigh priorities — the question template + the priority rows
             'w_question'  => __('Weigh priorities question (use %s)', 'dcc-cottage-selector'),
             'w_workspace' => __('Priority: Workspace', 'dcc-cottage-selector'),
             'w_moreroom'  => __('Priority: More room', 'dcc-cottage-selector'),
@@ -312,6 +314,7 @@ class Selector_Widget extends Widget_Base
             'w_onebed'    => __('Priority: 1-bedroom separation', 'dcc-cottage-selector'),
             'w_dining'    => __('Priority: Dining comfort', 'dcc-cottage-selector'),
             'w_pullout'   => __('Priority: Pullout couch', 'dcc-cottage-selector'),
+            'w_screenedporch' => __('Priority: Screened-in porch', 'dcc-cottage-selector'),
             // Answer options
             'opt_yes'     => __('Answer: Yes', 'dcc-cottage-selector'),
             'opt_no'      => __('Answer: No', 'dcc-cottage-selector'),
@@ -619,6 +622,7 @@ class Selector_Widget extends Widget_Base
             ],
             'selectors' => [self::ROOT => '--dccs-question-align: {{VALUE}};'],
         ]);
+        $this->add_icon_side_control('questions');
 
         $this->add_responsive_control('answer_align', [
             'label'   => __('Answer alignment', 'dcc-cottage-selector'),
@@ -630,6 +634,7 @@ class Selector_Widget extends Widget_Base
             ],
             'selectors' => [self::ROOT => '--dccs-answer-align: {{VALUE}};'],
         ]);
+        $this->add_icon_side_control('answers');
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'chip_typography',
             'selector' => self::SEL . '.dccs-chip',
@@ -711,9 +716,27 @@ class Selector_Widget extends Widget_Base
      * button and the View-cottage link so each can be styled independently of the
      * primary Next/Submit buttons. $sel already carries the self::SEL specificity.
      */
-    private function add_button_style_section(string $id, string $label, string $sel): void
+    /** A Left/Right select controlling which side of the label an icon sits on. */
+    private function add_icon_side_control(string $key): void
+    {
+        $this->add_control('icon_side_' . $key, [
+            'label'   => __('Icon side', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => 'left',
+            'options' => [
+                'left'  => __('Left of text', 'dcc-cottage-selector'),
+                'right' => __('Right of text', 'dcc-cottage-selector'),
+            ],
+        ]);
+    }
+
+    private function add_button_style_section(string $id, string $label, string $sel, string $side_key = ''): void
     {
         $this->start_controls_section($id, ['label' => $label, 'tab' => Controls_Manager::TAB_STYLE]);
+
+        if ($side_key !== '') {
+            $this->add_icon_side_control($side_key);
+        }
 
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => $id . '_typography',
@@ -785,13 +808,13 @@ class Selector_Widget extends Widget_Base
     /** Dedicated styling for the "Edit answers" button (decoupled from the primary CTA). */
     private function register_editanswers_style_controls(): void
     {
-        $this->add_button_style_section('style_editanswers', __('Edit answers button', 'dcc-cottage-selector'), self::SEL . '.dccs-edit-answers');
+        $this->add_button_style_section('style_editanswers', __('Edit answers button', 'dcc-cottage-selector'), self::SEL . '.dccs-edit-answers', 'edit_answers');
     }
 
     /** Dedicated styling for the "View this cottage" link on each result card. */
     private function register_viewbtn_style_controls(): void
     {
-        $this->add_button_style_section('style_viewbtn', __('View cottage button', 'dcc-cottage-selector'), self::SEL . '.dccs-view');
+        $this->add_button_style_section('style_viewbtn', __('View cottage button', 'dcc-cottage-selector'), self::SEL . '.dccs-view', 'view');
     }
 
     private function register_button_style_controls(): void
@@ -1008,6 +1031,7 @@ class Selector_Widget extends Widget_Base
             ],
             'selectors' => [self::SEL . '.dccs-cmp-select' => '{{VALUE}}'],
         ]);
+        $this->add_icon_side_control('compare_select');
 
         $this->add_dropdown_shape_effects(
             'cmpmenu',
@@ -1120,6 +1144,22 @@ class Selector_Widget extends Widget_Base
     }
 
     /**
+     * Which side ('left'|'right') each icon-bearing element places its icon on.
+     * Mirrors the icon_side_* SELECT controls; defaults to 'left'.
+     *
+     * @param array<string,mixed> $settings
+     * @return array<string,string>
+     */
+    private function collect_icon_sides(array $settings): array
+    {
+        $sides = [];
+        foreach (['edit_answers', 'view', 'questions', 'answers', 'compare_select'] as $key) {
+            $sides[$key] = ($settings['icon_side_' . $key] ?? 'left') === 'right' ? 'right' : 'left';
+        }
+        return $sides;
+    }
+
+    /**
      * Render an Elementor ICONS control value (Font Awesome or uploaded SVG) to an
      * HTML string. Returns '' when nothing is selected or the icon manager is absent.
      *
@@ -1162,6 +1202,7 @@ class Selector_Widget extends Widget_Base
             'enabledModes' => array_values($enabled),
             'showHeading'  => ($settings['show_heading'] ?? 'yes') === 'yes',
             'icons'        => $this->collect_icons($settings),
+            'iconSides'    => $this->collect_icon_sides($settings),
         ]);
 
         if (empty($cottages)) {

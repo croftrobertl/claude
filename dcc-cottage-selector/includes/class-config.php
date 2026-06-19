@@ -41,13 +41,14 @@ final class Config
             'q_dining'          => __('Table for two or four?', 'dcc-cottage-selector'),
             'q_pet'             => __('Do you need a pet-friendly cottage?', 'dcc-cottage-selector'),
             'q_ground'          => __('Ground floor only?', 'dcc-cottage-selector'),
+            'q_screenedporch'   => __('Do you want a private screened-in porch?', 'dcc-cottage-selector'),
             'q_largest'         => __('Want the largest space available?', 'dcc-cottage-selector'),
             'short_largest'     => __('Most space', 'dcc-cottage-selector'),
 
             // Wizard flow
             'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
-            'wiz_back'          => __('← Back', 'dcc-cottage-selector'),
-            'wiz_next'          => __('Next →', 'dcc-cottage-selector'),
+            'wiz_back'          => __('Back', 'dcc-cottage-selector'),
+            'wiz_next'          => __('Next', 'dcc-cottage-selector'),
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
@@ -60,6 +61,7 @@ final class Config
             'tag_pet'           => __('Not pet-friendly', 'dcc-cottage-selector'),
             'tag_upstairs'      => __('Upstairs', 'dcc-cottage-selector'),
             'tag_dining'        => __('No table for 4', 'dcc-cottage-selector'),
+            'tag_porch'         => __('No screened porch', 'dcc-cottage-selector'),
 
             // Generic chip answers
             'opt_yes'           => __('Yes', 'dcc-cottage-selector'),
@@ -80,20 +82,25 @@ final class Config
             'w_onebed'          => __('1-bedroom separation', 'dcc-cottage-selector'),
             'w_dining'          => __('Dining comfort', 'dcc-cottage-selector'),
             'w_pullout'         => __('Pullout couch flexibility', 'dcc-cottage-selector'),
+            'w_screenedporch'   => __('Screened-in porch', 'dcc-cottage-selector'),
             'lvl_low'           => __('Low', 'dcc-cottage-selector'),
             'lvl_med'           => __('Medium', 'dcc-cottage-selector'),
             'lvl_high'          => __('High', 'dcc-cottage-selector'),
 
-            // Compare matrix row headers (the 7 differences)
+            // Compare matrix row headers
+            'diff_guests'       => __('Guests', 'dcc-cottage-selector'),
+            'diff_bed'          => __('Bed', 'dcc-cottage-selector'),
             'diff_squareFeet'   => __('Size', 'dcc-cottage-selector'),
             'diff_layoutType'   => __('Layout', 'dcc-cottage-selector'),
             'diff_floorLevel'   => __('Floor', 'dcc-cottage-selector'),
             'diff_diningSeats'  => __('Dining table', 'dcc-cottage-selector'),
             'diff_desk'         => __('Desk / workspace', 'dcc-cottage-selector'),
             'diff_pulloutCouch' => __('Pullout couch', 'dcc-cottage-selector'),
+            'diff_screenedPorch' => __('Screened porch', 'dcc-cottage-selector'),
             'diff_petAllowed'   => __('Pets', 'dcc-cottage-selector'),
             'val_sqft'          => /* translators: %d: square feet */ __('%d sq ft', 'dcc-cottage-selector'),
             'val_seats'         => /* translators: %d: number of seats */ __('Seats %d', 'dcc-cottage-selector'),
+            'val_queen'         => __('Queen', 'dcc-cottage-selector'),
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
             'compare_prompt'    => __('Pick 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
@@ -126,6 +133,7 @@ final class Config
             'badge_ground'      => __('Easy-Access Ground Floor', 'dcc-cottage-selector'),
             'badge_upstairs'    => __('Upstairs Quiet View', 'dcc-cottage-selector'),
             'badge_suite'       => __('Suite-Style Comfort', 'dcc-cottage-selector'),
+            'badge_porch'       => __('Private Porch Retreat', 'dcc-cottage-selector'),
 
             // "Why this fits" reason fragments (assembled by JS from data keys)
             'why_desk'          => __('a dedicated desk for getting work done', 'dcc-cottage-selector'),
@@ -136,6 +144,7 @@ final class Config
             'why_onebed'        => __('a separate bedroom for privacy', 'dcc-cottage-selector'),
             'why_dining'        => __('a dining table that seats four', 'dcc-cottage-selector'),
             'why_pullout'       => __('a pullout couch for an extra guest', 'dcc-cottage-selector'),
+            'why_porch'         => __('a private screened-in porch', 'dcc-cottage-selector'),
             'why_lead'          => __('Great because it offers', 'dcc-cottage-selector'),
 
             // Misc value labels

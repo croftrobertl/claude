@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.2
+Stable tag: 0.8.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,17 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.8.0 =
+* New distinguishing feature: a **private screened-in porch** (The Boathouse only).
+  Quick Match now asks about it as a must-have filter, Weigh Priorities offers it as
+  a Low/Med/High priority, and it appears as a row in the comparison table.
+* Comparison table now lists **Guests** and **Bed** (2 / Queen) as core specs.
+* New per-element control for whether an icon sits to the **left or right** of its
+  label (Edit-answers button, View-cottage button, wizard questions & answers, and
+  the Compare picker).
+* A chosen **Next/Back icon now replaces** the default arrow instead of sitting
+  beside it.
 
 = 0.7.2 =
 * Compare pop-up: the ‹ › paging buttons are now smaller, filled the same blue as

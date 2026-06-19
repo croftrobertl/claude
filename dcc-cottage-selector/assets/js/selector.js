@@ -47,6 +47,28 @@
     return h ? '<span class="dccs-ico">' + h + '</span>' : '';
   }
 
+  /** Wrap an admin-set icon in a side-aware span ('left' | 'right'). */
+  function icoSpan(html, side) {
+    return '<span class="dccs-ico dccs-ico-' + (side === 'right' ? 'right' : 'left') + '">' + html + '</span>';
+  }
+
+  /** Place an optional icon before (left) or after (right) some inner HTML. The
+      side is read from config.iconSides[sideKey] (set in the Elementor editor). */
+  function withIcon(config, iconKey, sideKey, innerHtml) {
+    var h = config && config.icons && config.icons[iconKey];
+    if (!h) { return innerHtml; }
+    var side = (config.iconSides && config.iconSides[sideKey]) || 'left';
+    return side === 'right' ? innerHtml + icoSpan(h, 'right') : icoSpan(h, 'left') + innerHtml;
+  }
+
+  /** A Next/Back directional affordance: the chosen icon if set, otherwise the
+      default arrow glyph — rendered on the button's fixed side so the icon simply
+      replaces the arrow in place. */
+  function navAffix(config, key, glyph, side) {
+    var h = config && config.icons && config.icons[key];
+    return h ? icoSpan(h, side) : '<span class="dccs-ico dccs-ico-' + side + '" aria-hidden="true">' + esc(glyph) + '</span>';
+  }
+
   /** Allow only http(s), root-relative, or fragment URLs in hrefs. */
   function safeUrl(u) {
     u = String(u == null ? '' : u);
@@ -76,14 +98,14 @@
   function defaultState(config) {
     // Quick answers start UNSET ('') so no option is pre-highlighted; a step is
     // "answered" once the guest taps something ('either' = an explicit skip).
-    var quick = { desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', largest: '' };
+    var quick = { desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '', largest: '' };
     if (config.presetQuick) { Object.keys(config.presetQuick).forEach(function (k) { quick[k] = config.presetQuick[k]; }); }
     return {
       mode: config.startMode || 'quick',
       quick: quick,
       // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
       // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
-      weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0 },
+      weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0, screenedporch: 0 },
       compareIds: (config.preCompare || []).map(String),
       highlight: config.highlight || '',
       // Navigation: question index + stage ('landing' | 'q' | 'review' | 'results').
@@ -142,6 +164,7 @@
     if (p.get('mode')) { state.mode = p.get('mode'); }
     if (p.has('pet')) { state.quick.pet = TRUE[p.get('pet')] ? 'yes' : 'either'; }
     if (p.has('ground')) { state.quick.ground = TRUE[p.get('ground')] ? 'yes' : 'either'; }
+    if (p.has('porch')) { state.quick.screenedporch = TRUE[p.get('porch')] ? 'yes' : 'either'; }
     if (p.has('largest')) { state.quick.largest = TRUE[p.get('largest')] ? 'yes' : 'either'; }
     if (p.has('desk')) { state.quick.desk = normYesNoLevel(p.get('desk')); }
     if (p.has('pullout')) { state.quick.pullout = normYesNoLevel(p.get('pullout')); }
@@ -169,9 +192,10 @@
     if (state.mode === 'weights') {
       var w = state.weights;
       return {
-        hardPet: false, hardGround: false, hardDining4: false, wantLargest: false,
+        hardPet: false, hardGround: false, hardDining4: false, hardScreenedPorch: false, wantLargest: false,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
-        wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout
+        wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
+        wScreenedPorch: w.screenedporch
       };
     }
     // Quick finder: hard filters + medium-weight soft preferences. Unset ('') and
@@ -181,27 +205,32 @@
       hardPet: q.pet === 'yes',
       hardGround: q.ground === 'yes',
       hardDining4: q.dining === 4 || q.dining === '4',
+      hardScreenedPorch: q.screenedporch === 'yes',
       wantLargest: q.largest === 'yes',
       wDesk: q.desk === 'yes' ? 2 : 0,
       wPullout: q.pullout === 'yes' ? 2 : 0,
       wSpace: q.largest === 'yes' ? 2 : 0,
       wStudio: q.layout === 'studio' ? 2 : 0,
       wOneBed: q.layout === 'onebed' ? 2 : 0,
-      wDining: 0, wPet: 0, wFewerStairs: 0
+      wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0
     };
   }
 
   /* ---------- rendering ---------- */
 
-  function chip(text, value, group, active, tabbable, iconHtml) {
+  function chip(text, value, group, active, tabbable, iconHtml, iconSide) {
     if (tabbable === undefined) { tabbable = active; }
+    var inner = esc(text);
+    if (iconHtml) {
+      inner = iconSide === 'right' ? inner + icoSpan(iconHtml, 'right') : icoSpan(iconHtml, 'left') + inner;
+    }
     return '<button type="button" class="dccs-chip' + (active ? ' is-active' : '') +
       '" role="radio" aria-checked="' + (active ? 'true' : 'false') +
       '" tabindex="' + (tabbable ? '0' : '-1') +
-      '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + (iconHtml || '') + esc(text) + '</button>';
+      '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + inner + '</button>';
   }
 
-  // The wizard's 7 questions (the spec's seven differences), in natural order.
+  // The wizard's 8 questions (the meaningful differences), in natural order.
   // Each option is [stringKey, value]; the last is always "No preference".
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
@@ -211,6 +240,7 @@
     { group: 'dining', qKey: 'q_dining', shortKey: 'diff_diningSeats', opts: [['opt_seats2', '2'], ['opt_seats4', '4'], ['opt_either', 'either']] },
     { group: 'pet', qKey: 'q_pet', shortKey: 'diff_petAllowed', opts: YND },
     { group: 'ground', qKey: 'q_ground', shortKey: 'diff_floorLevel', opts: YND },
+    { group: 'screenedporch', qKey: 'q_screenedporch', shortKey: 'diff_screenedPorch', opts: YND },
     { group: 'largest', qKey: 'q_largest', shortKey: 'short_largest', opts: YND }
   ];
 
@@ -224,7 +254,8 @@
     { group: 'studio', shortKey: 'w_studio', opts: WLEVELS },
     { group: 'onebed', shortKey: 'w_onebed', opts: WLEVELS },
     { group: 'dining', shortKey: 'w_dining', opts: WLEVELS },
-    { group: 'pullout', shortKey: 'w_pullout', opts: WLEVELS }
+    { group: 'pullout', shortKey: 'w_pullout', opts: WLEVELS },
+    { group: 'screenedporch', shortKey: 'w_screenedporch', opts: WLEVELS }
   ];
 
   function answerLabel(q, value, S) {
@@ -265,6 +296,7 @@
     var q = state.quick;
     return (group === 'pet' && q.pet === 'yes') ||
       (group === 'ground' && q.ground === 'yes') ||
+      (group === 'screenedporch' && q.screenedporch === 'yes') ||
       (group === 'dining' && (q.dining === 4 || q.dining === '4'));
   }
 
@@ -291,11 +323,13 @@
     // When nothing is selected yet, keep the first option keyboard-tabbable so the
     // radiogroup is reachable (ARIA roving-focus pattern needs one tabbable entry).
     var anyActive = q.opts.some(function (o) { return String(value) === String(o[1]); });
+    var ansSide = (config.iconSides && config.iconSides.answers) || 'left';
     var chips = q.opts.map(function (o, idx) {
       var active = String(value) === String(o[1]);
       // Optional admin-set answer icon, keyed per option value (weights use lvl_*).
       var iconKey = (state.mode === 'weights' ? 'lvl_' : 'ans_') + o[1];
-      return chip(S[o[0]], o[1], q.group, active, active || (!anyActive && idx === 0), ico(config, iconKey));
+      var iconHtml = (config.icons && config.icons[iconKey]) || '';
+      return chip(S[o[0]], o[1], q.group, active, active || (!anyActive && idx === 0), iconHtml, ansSide);
     }).join('');
 
     // Clickable stepper: answered steps (and the current one) are navigable.
@@ -320,13 +354,14 @@
     html += '<span class="dccs-progress-label">' + esc(fmt2(S.wiz_progress, i + 1, qs.length)) + '</span>';
     html += '<span class="dccs-count">' + esc(matchCount(S, n)) + '</span></div>';
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
-    html += '<h3 class="dccs-step-q" tabindex="-1">' + ico(config, qIconKey) + esc(qLabel) + '</h3>';
+    html += '<h3 class="dccs-step-q" tabindex="-1">' + withIcon(config, qIconKey, 'questions', esc(qLabel)) + '</h3>';
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
     html += '<div class="dccs-wizard-nav">';
+    // Back/Next: a chosen icon replaces the default arrow (Back = left, Next = right).
     html += i > 0
-      ? '<button type="button" class="dccs-back dccs-primary">' + ico(config, 'back') + esc(S.wiz_back) + '</button>'
+      ? '<button type="button" class="dccs-back dccs-primary">' + navAffix(config, 'back', '←', 'left') + esc(S.wiz_back) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
-    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + ico(config, 'next') + esc(S.wiz_next) + '</button>';
+    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + navAffix(config, 'next', '→', 'right') + '</button>';
     html += '</div></div>';
     return html;
   }
@@ -371,15 +406,19 @@
     if (crit.hardPet && !c.petAllowed) { t.push(S.tag_pet); }
     if (crit.hardGround && !DCCS.score.isGround(c)) { t.push(S.tag_upstairs); }
     if (crit.hardDining4 && Number(c.diningSeats) < 4) { t.push(S.tag_dining); }
+    if (crit.hardScreenedPorch && !c.screenedPorch) { t.push(S.tag_porch); }
     return t;
   }
 
   function diffValue(c, field, S) {
     switch (field) {
+      case 'guests': return String(c.guests);
+      case 'bed': return c.bed === 'Queen' ? S.val_queen : c.bed;
       case 'squareFeet': return fmt(S.val_sqft, c.squareFeet);
       case 'diningSeats': return fmt(S.val_seats, c.diningSeats);
       case 'desk': return c.desk ? S.val_yes : S.val_no;
       case 'pulloutCouch': return c.pulloutCouch ? S.val_yes : S.val_no;
+      case 'screenedPorch': return c.screenedPorch ? S.val_yes : S.val_no;
       case 'petAllowed': return c.petAllowed ? S.val_yes : S.val_no;
       case 'floorLevel': return DCCS.score.isGround(c) ? S.floor_ground : S.floor_second;
       case 'layoutType': return c.layoutType === 'Studio' ? S.opt_studio : S.opt_onebed;
@@ -460,7 +499,7 @@
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
       '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
       '<button type="button" class="dccs-cmp-trigger" aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-      '<span>' + ico(config, 'compare_select') + esc(label) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
+      '<span>' + withIcon(config, 'compare_select', 'compare_select', esc(label)) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
       '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
       btn + '</div>';
   }
@@ -480,7 +519,7 @@
 
     if (res.empty) {
       // Relax the least-essential hard filter to surface the closest options.
-      var relaxOrder = ['hardDining4', 'hardGround', 'hardPet'];
+      var relaxOrder = ['hardScreenedPorch', 'hardDining4', 'hardGround', 'hardPet'];
       var fallback = null;
       for (var i = 0; i < relaxOrder.length; i++) {
         if (!crit[relaxOrder[i]]) { continue; }
@@ -530,7 +569,7 @@
     var S = config.strings;
     return renderRecap(config, st, emptyState) +
       '<div class="dccs-wizard-nav dccs-tail-nav">' +
-      '<button type="button" class="dccs-edit-answers">' + ico(config, 'edit_answers') + esc(S.edit_answers) + '</button>' +
+      '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
@@ -566,7 +605,7 @@
     }
 
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + ico(config, 'view') + esc(S.view_cottage) + '</a>' +
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + withIcon(config, 'view', 'view', esc(S.view_cottage)) + '</a>' +
       '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
       (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>' +
       '</div></div>';

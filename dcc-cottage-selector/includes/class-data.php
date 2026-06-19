@@ -13,14 +13,19 @@ if (!defined('ABSPATH')) {
  */
 final class Data
 {
-    /** The seven meaningful difference fields. Order drives the Compare matrix. */
+    /** The comparison-table fields. Order drives the Compare matrix. Guests + bed
+     *  are the same for every cottage (shown as core specs); the rest are the
+     *  meaningful differences. */
     public const DIFF_FIELDS = [
+        'guests',
+        'bed',
         'squareFeet',
         'layoutType',
         'floorLevel',
         'diningSeats',
         'desk',
         'pulloutCouch',
+        'screenedPorch',
         'petAllowed',
     ];
 

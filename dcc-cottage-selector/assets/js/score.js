@@ -35,6 +35,7 @@
     if (crit.hardPet) { drop('ex_pet', function (c) { return c.petAllowed === true; }); }
     if (crit.hardGround) { drop('ex_upstairs', function (c) { return isGround(c); }); }
     if (crit.hardDining4) { drop('ex_dining', function (c) { return Number(c.diningSeats) >= 4; }); }
+    if (crit.hardScreenedPorch) { drop('ex_porch', function (c) { return c.screenedPorch === true; }); }
 
     return { pool: pool, excluded: excluded };
   }
@@ -53,6 +54,7 @@
     s += (Number(c.diningSeats) >= 4 ? 1 : 0) * (crit.wDining || 0);
     s += (c.petAllowed ? 1 : 0) * (crit.wPet || 0);
     s += (isGround(c) ? 1 : 0) * (crit.wFewerStairs || 0);
+    s += (c.screenedPorch ? 1 : 0) * (crit.wScreenedPorch || 0);
 
     return s;
   }
