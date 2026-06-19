@@ -1208,11 +1208,29 @@
         // (registered below) covers any late-mounted ones. Observing
         // document.body { subtree: true } there would mean a callback on
         // EVERY DOM mutation across the page — measurable cost on heavy
-        // Elementor pages. Gate by the editor-active body class so
-        // frontend pages get zero observer overhead.
-        if (!document.body.classList.contains('elementor-editor-active')) {
-            return;
-        }
+        // Elementor pages. Gate by an editor-preview signal so frontend
+        // pages get zero observer overhead.
+        //
+        // Detection priority:
+        //   1. URL has `elementor-preview=` — the preview-iframe URL pattern.
+        //      Bulletproof and available BEFORE elementor-frontend.js runs,
+        //      so we don't race the script-load order on DOMContentLoaded.
+        //   2. body.elementor-edit-mode — the class elementor-frontend.js
+        //      adds to the preview iframe body once it boots.
+        //   3. body.elementor-editor-active — the class on the TOP-LEVEL
+        //      editor body (outside the iframe). Our widget shouldn't live
+        //      there, but covers the edge case.
+        //
+        // v0.9.4 only checked elementor-editor-active, which is the
+        // top-level body — never set inside the preview iframe — so the
+        // calendar failed to re-init after Elementor rebuilt the widget on
+        // every setting change. Fixed in v0.9.5.
+        var inEditorPreview =
+            (window.location && window.location.search &&
+                window.location.search.indexOf('elementor-preview=') >= 0) ||
+            document.body.classList.contains('elementor-edit-mode') ||
+            document.body.classList.contains('elementor-editor-active');
+        if (!inEditorPreview) return;
         var observer = new MutationObserver(function () {
             var roots = document.querySelectorAll('.mphbac-root');
             if (roots.length === 0) return;

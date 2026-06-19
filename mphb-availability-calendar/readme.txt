@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.4
+Stable tag: 0.9.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.5 =
+* Fix: calendar failed to (re-)load inside the Elementor editor preview after v0.9.4. The observer gate checked `body.elementor-editor-active` — that class lives on the TOP-LEVEL editor body, not inside the preview iframe where the widget actually renders. Detection now uses the `elementor-preview=` URL parameter (set on the preview iframe URL, available before elementor-frontend.js boots) plus `body.elementor-edit-mode` and `body.elementor-editor-active` as backups. Live-frontend perf win from v0.9.4 is preserved — no observer on public pages.
 
 = 0.9.4 =
 * Render flicker — the skeleton placeholder now matches the rendered grid one-for-one: same gap variable (`--mphbac-gap`, the one the Elementor cell-gap control writes to — the skeleton previously read a separate `--mphbac-cell-gap` that no control updated), no outer padding mismatch, and a header stripe that mirrors the rendered grid's top row so the swap doesn't shift the grid down by a row.
