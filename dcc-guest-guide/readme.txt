@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.18
+Stable tag: 0.9.7.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,42 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.19 =
+
+**FAB wrapper no longer overflows the top of the viewport.** The
+v0.9.7.17 sticky-header fix targeted the detail modal
+(`.dccgg-stage`), but the popup the host was actually seeing
+overflow was the FAB wrapper (`.dccgg-fab--yes .dccgg-wrapper`)
+— the floating-action-button modal that opens when guests tap
+the wrench icon. Different DOM node, different CSS, never got
+the offset treatment.
+
+Root cause: the FAB wrapper used `position: fixed; top: 50%;
+transform: translate(-50%, -50%); max-height: 90vh;` to center
+itself in the viewport. On any site with a sticky theme header
+the `top: 50%` anchor was measured against the full visual
+viewport, so when the wrapper grew to `90vh` its top edge — and
+the close `×` button — landed above the sticky nav and were
+unreachable on mobile.
+
+Fix mirrors the v0.9.7.17 detail-modal pattern: replace the
+center+max-height approach with `top: calc(var(
+--dccgg-detail-top-offset, 0px) + 16px); bottom: 16px;` so the
+wrapper is physically constrained between the sticky header and
+the viewport bottom. `wireFab.open()` now calls the existing
+`detectStickyTopOffset()` helper to stamp the offset onto
+`.dccgg-wrapper` before opening, with a debounced re-measure on
+window resize. On phones (`max-width: 600px`) the wrapper
+becomes a full-width bottom sheet with the same offset
+treatment, matching the detail-modal bottom-sheet pattern.
+
+Verification: install, hard-refresh, tap the wrench on the
+guide page. The wrapper now opens with its top edge clearly
+below the site's sticky nav and the close X always reachable —
+both mobile and desktop. If you still see the old behavior,
+purge SpeedyCache from the admin bar; it has been serving stale
+assets across these releases.
 
 = 0.9.7.18 =
 

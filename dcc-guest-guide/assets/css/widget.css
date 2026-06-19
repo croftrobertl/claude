@@ -1272,11 +1272,23 @@ video.dccgg-media {
 /* FAB modal mode: collapse the wrapper offscreen until opened */
 .dccgg-fab--yes .dccgg-wrapper {
     position: fixed;
-    top: 50%; left: 50%;
+    /* v0.9.7.19: pin top + bottom so the wrapper physically can't overflow
+       the viewport, and consume --dccgg-detail-top-offset (stamped by
+       wireFab.open) so the top clears any sticky theme nav. The earlier
+       top:50% / translate-50% / max-height:90vh approach centered the
+       wrapper on the visual viewport without accounting for a sticky
+       header, so on doracanalcourt.com the top edge (and the close X)
+       overflowed past the URL bar. Mirrors the detail-modal pattern. */
+    top: calc(var(--dccgg-detail-top-offset, 0px) + 16px);
+    bottom: 16px;
+    left: 50%;
+    right: auto;
     width: min(94vw, 900px);
-    max-height: 90vh;
+    max-width: 900px;
+    max-height: none;
     overflow-y: auto;
-    transform: translate(-50%, -50%) scale(0.9);
+    overflow-x: hidden;
+    transform: translateX(-50%) scale(0.96);
     opacity: 0;
     visibility: hidden;
     background: var(--dccgg-detail-bg);
@@ -1290,7 +1302,7 @@ video.dccgg-media {
 .dccgg-fab--yes .dccgg-wrapper.is-open {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateX(-50%) scale(1);
 }
 .dccgg-overlay {
     position: fixed;
@@ -1763,6 +1775,23 @@ video.dccgg-media {
         border-radius: 2px;
         margin: 4px auto 12px;
         opacity: 0.5;
+    }
+    /* v0.9.7.19: FAB wrapper becomes a full-width bottom sheet on phones,
+       same pattern as the detail modal above. Stays anchored below the
+       sticky theme header so the close X is always reachable. */
+    .dccgg-fab--yes .dccgg-wrapper {
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
+        bottom: 0;
+        border-radius: 16px 16px 0 0;
+        padding: 16px;
+        transform: translateY(20px) scale(1);
+    }
+    .dccgg-fab--yes .dccgg-wrapper.is-open {
+        transform: translateY(0) scale(1);
     }
 }
 

@@ -1581,6 +1581,8 @@
         if (!fab || !wrapper || !overlay) return;
 
         let lastTrigger = null;
+        let onResize = null;
+        let resizeT = null;
 
         const trap = (e) => {
             if (e.key === 'Escape') { close(); return; }
@@ -1593,9 +1595,26 @@
             else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
         };
 
+        // v0.9.7.19: stamp the sticky-header offset on the wrapper so the
+        // CSS `top: calc(var(--dccgg-detail-top-offset) + …)` lands below
+        // any sticky theme nav. Without this the wrapper centered itself
+        // over the visual viewport and overflowed past the URL bar — the
+        // close X went out of reach on mobile.
+        const stampOffset = () => {
+            const off = detectStickyTopOffset();
+            wrapper.style.setProperty('--dccgg-detail-top-offset', off + 'px');
+        };
+
         const open = () => {
             lastTrigger = document.activeElement;
             overlay.hidden = false;
+            stampOffset();
+            if (onResize) window.removeEventListener('resize', onResize);
+            onResize = () => {
+                clearTimeout(resizeT);
+                resizeT = setTimeout(stampOffset, 80);
+            };
+            window.addEventListener('resize', onResize);
             requestAnimationFrame(() => {
                 overlay.classList.add('is-open');
                 wrapper.classList.add('is-open');
@@ -1609,6 +1628,11 @@
             wrapper.classList.remove('is-open');
             overlay.classList.remove('is-open');
             document.removeEventListener('keydown', trap);
+            if (onResize) {
+                window.removeEventListener('resize', onResize);
+                onResize = null;
+            }
+            clearTimeout(resizeT);
             setTimeout(() => { overlay.hidden = true; }, 320);
             // Also tear down any open detail modal (portal, scroll-lock, …)
             // so closing the FAB leaves a clean slate.
