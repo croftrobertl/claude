@@ -65,11 +65,31 @@ function toResults(root, value) {
 function cardNames(root) {
   return Array.prototype.slice.call(root.querySelectorAll('.dccs-card h4')).map(function (h) { return h.textContent.replace(/\s+/g, ' ').trim(); });
 }
+// Fresh loads open on the landing screen; choose a mode to enter the flow.
+function enter(root, mode) {
+  var c = root.querySelector('.dccs-landing-choice[data-mode="' + (mode || 'quick') + '"]');
+  if (c) { c.click(); }
+}
+
+// ---- 0. Landing screen first: heading + intro + the three mode choices ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  ok('landing screen shown first', !!root.querySelector('.dccs-landing'));
+  ok('landing shows heading + intro', !!root.querySelector('.dccs-landing .dccs-heading') && !!root.querySelector('.dccs-landing .dccs-intro'));
+  ok('landing offers all three mode choices', root.querySelectorAll('.dccs-landing-choice').length === 3);
+  ok('no wizard or mode dropdown on landing', !root.querySelector('.dccs-chips-wizard') && !root.querySelector('.dccs-modeselect-trigger'));
+  enter(root, 'quick');
+  ok('choosing a mode enters the flow', !!root.querySelector('.dccs-chips-wizard'));
+  ok('heading + intro gone once a mode is chosen', !root.querySelector('.dccs-head') && !root.querySelector('.dccs-intro'));
+  ok('mode dropdown appears after landing', !!root.querySelector('.dccs-modeselect-trigger'));
+})();
 
 // ---- 1. Wizard starts: one question, nothing preselected, Next disabled ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
   ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
@@ -86,6 +106,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   const trig = root.querySelector('.dccs-modeselect-trigger');
   ok('dropdown starts closed', !root.querySelector('.dccs-modeselect.is-open'));
   trig.click();
@@ -96,6 +117,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 4)
   clickAnswer(root, 'yes'); // pet=yes -> only Coconut
   ok('singular count reads "1 cottage matches"', /\b1 cottage matches\b/.test(root.querySelector('.dccs-count').textContent));
@@ -105,6 +127,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   clickAnswer(root, 'yes');
   ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === 'yes');
   ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
@@ -120,6 +143,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   answerNext(root, 'yes');
   root.querySelector('.dccs-back').click();
   ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
@@ -130,6 +154,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   answerNext(root, 'yes');     // step 1
   answerNext(root, 'no');      // step 2 -> now on step 3
   ok('on step 3', /3\b.*\b7/.test(progress(root)));
@@ -143,6 +168,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   stepThrough(root, 'either');
   ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
@@ -161,6 +187,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   clickAnswer(root, 'yes'); clickNext(root);   // desk = yes
   stepThrough(root, 'either');
   root.querySelector('.dccs-see-matches').click();
@@ -179,23 +206,36 @@ function cardNames(root) {
   const cfg = JSON.parse(CONFIG);
   cfg.icons = { submit: '<i class="dccs-test-ico"></i>', view: '<i class="dccs-test-ico"></i>' };
   const root = mountSelector(w, JSON.stringify(cfg));
+  enter(root, 'quick');
   stepThrough(root, 'either');
   ok('Submit button carries its icon', !!root.querySelector('.dccs-see-matches .dccs-ico .dccs-test-ico'));
   root.querySelector('.dccs-see-matches').click();
   ok('View-cottage links carry their icon', !!root.querySelector('.dccs-view .dccs-ico .dccs-test-ico'));
 })();
 
+// ---- 6c. Question + answer icons inject from config.icons ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  cfg.icons = { q_desk: '<i class="dccs-test-qico"></i>', ans_yes: '<i class="dccs-test-aico"></i>' };
+  const root = mountSelector(w, JSON.stringify(cfg));
+  enter(root, 'quick');
+  ok('the question carries its icon', !!root.querySelector('.dccs-step-q .dccs-ico .dccs-test-qico'));
+  ok('the Yes answer chip carries its icon', !!root.querySelector('.dccs-chip[data-value="yes"] .dccs-ico .dccs-test-aico'));
+})();
+
 // ---- 7. Answers are not persisted — a refresh starts over ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   answerNext(root, 'yes');                 // answer step 1 and advance
   ok('nothing written to localStorage', w.localStorage.getItem('dccs_prefs_v1') === null);
   ok('answers not written to the URL', w.location.search === '');
   // A refresh = a brand-new page load with the same (clean) URL.
   const w2 = freshDom();
   const root2 = mountSelector(w2);
-  ok('fresh load starts at Step 1', /1\b.*\b7/.test(progress(root2)) && !root2.querySelector('.dccs-results'));
+  ok('fresh load starts on the landing screen', !!root2.querySelector('.dccs-landing') && !root2.querySelector('.dccs-results'));
   ok('fresh load has nothing preselected', !activeChip(root2));
 })();
 
@@ -222,6 +262,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
   ok('compare shows a multiselect dropdown', !!root.querySelector('.dccs-cmp-trigger') && root.querySelectorAll('.dccs-cmp-option').length === 8);
   ok('compare options use full names', /^Cottage \d+: /.test(root.querySelector('.dccs-cmp-option').textContent.trim()));
@@ -235,7 +276,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  enter(root, 'compare');
   // Tick every cottage in the dropdown; re-query after each (re-render detaches nodes).
   for (let i = 0; i < 8; i++) {
     const cb = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
@@ -252,7 +293,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
-  root.querySelector('.dccs-modetab[data-mode="weights"]').click();
+  enter(root, 'weights');
   ok('weights starts at Step 1 of 8', /1\b.*\b8/.test(progress(root)));
   ok('nothing preselected, Next disabled', !activeChip(root) && root.querySelector('.dccs-next').disabled === true);
   stepThrough(root, '2');                                   // medium for all 8
@@ -265,6 +306,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   toResults(root, 'either');                                 // results with 3 cards
   ok('no compare button with <2 ticked', !root.querySelector('.dccs-open-compare'));
   // Re-query after each toggle — a re-render detaches the previous nodes.
@@ -324,6 +366,7 @@ function cardNames(root) {
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
+  enter(root, 'quick');
   ok('mode dropdown is a listbox trigger', !!root.querySelector('.dccs-modeselect-trigger[aria-haspopup="listbox"]') &&
     root.querySelectorAll('.dccs-modetab[role="option"]').length === 3 &&
     root.querySelectorAll('.dccs-modetab[role="tab"]').length === 0);
@@ -360,11 +403,11 @@ function cardNames(root) {
   div.dataset.config = CONFIG;
   w.document.body.appendChild(div);
   w.DCCS.bootAll(w.document);
-  ok('no render while deps missing', !div.querySelector('.dccs-step-q') && !div.dataset.dccsReady);
+  ok('no render while deps missing', !div.querySelector('.dccs-landing') && !div.dataset.dccsReady);
   injectScript(w, 'score.js');
   injectScript(w, 'labels.js');
   w.DCCS.bootAll(w.document);
-  ok('renders once deps are available', !!div.querySelector('.dccs-step-q'));
+  ok('renders once deps are available', !!div.querySelector('.dccs-landing-choice'));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

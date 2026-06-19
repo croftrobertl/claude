@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.4
+Stable tag: 0.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,7 +49,9 @@ Square footage · pullout couch · desk/workspace · floor level · studio vs.
 Everything runs in the browser from a small dataset inlined into the page — no
 server round-trips.
 
-The default experience is a **step-through wizard**: one question per screen so a
+The widget opens on a **start screen** with the heading, a short intro, and a
+choice of Quick finder, Weigh priorities, or Compare; picking one enters that mode.
+The default Quick finder is a **step-through wizard**: one question per screen so a
 guest never scrolls to find their results. Each step shows a clickable progress
 stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
@@ -137,6 +139,24 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.7.0 =
+* New **start screen**: the widget now opens on a landing screen showing the
+  heading, intro, and a choice of Quick finder / Weigh priorities / Compare. The
+  heading and intro now appear only there — once a mode is chosen they step aside so
+  the questions/results get the full space. The in-flow mode dropdown still lets you
+  switch modes, and Restart returns to the start screen. Deep links and the
+  Mini-Entry pop-up still open straight to results.
+* Much more is now editable in the Elementor editor:
+  * Editable text for every wizard question, priority, and answer option (empty
+    fields keep your Loco translations).
+  * Optional icons/SVGs for each question and answer, the Edit-answers button, and
+    the Compare picker button (plus the landing choices).
+  * Dedicated style sections for the **Edit answers** button and the **View cottage**
+    button (typography, colours, background, border, radius, padding, alignment,
+    hover), and a question alignment + background control.
+* Compare: the "Select cottages to compare" button is now only as wide as its label
+  and centred, with the checklist sized to its items (checkboxes stay aligned).
 
 = 0.6.4 =
 * Mobile: compare-table cells use tighter padding on small phones (still scrolls

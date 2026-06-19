@@ -68,7 +68,9 @@ class Selector_Widget extends Widget_Base
     {
         $this->register_content_controls();
         $this->register_icon_controls();
+        $this->register_qa_icon_controls();
         $this->register_strings_controls();
+        $this->register_qa_text_controls();
 
         // Style tab — every section maps to CSS custom properties / element
         // selectors via the SEL prefix. Controls carry no defaults; the baked
@@ -79,8 +81,10 @@ class Selector_Widget extends Widget_Base
         $this->register_modebar_style_controls();
         $this->register_progress_style_controls();
         $this->register_question_style_controls();
+        $this->register_editanswers_style_controls();
         $this->register_button_style_controls();
         $this->register_card_style_controls();
+        $this->register_viewbtn_style_controls();
         $this->register_cmpmenu_style_controls();
         $this->register_compare_style_controls();
     }
@@ -139,12 +143,17 @@ class Selector_Widget extends Widget_Base
         ]);
 
         $buttons = [
-            'submit'  => __('Submit button', 'dcc-cottage-selector'),
-            'restart' => __('Restart button', 'dcc-cottage-selector'),
-            'next'    => __('Next button', 'dcc-cottage-selector'),
-            'back'    => __('Back button', 'dcc-cottage-selector'),
-            'view'    => __('View cottage button', 'dcc-cottage-selector'),
-            'compare' => __('Compare button', 'dcc-cottage-selector'),
+            'submit'         => __('Submit button', 'dcc-cottage-selector'),
+            'restart'        => __('Restart button', 'dcc-cottage-selector'),
+            'next'           => __('Next button', 'dcc-cottage-selector'),
+            'back'           => __('Back button', 'dcc-cottage-selector'),
+            'view'           => __('View cottage button', 'dcc-cottage-selector'),
+            'compare'        => __('Compare chip (result card)', 'dcc-cottage-selector'),
+            'edit_answers'   => __('Edit answers button', 'dcc-cottage-selector'),
+            'compare_select' => __('Compare picker button', 'dcc-cottage-selector'),
+            'mode_quick'     => __('Landing choice: Quick finder', 'dcc-cottage-selector'),
+            'mode_weights'   => __('Landing choice: Weigh priorities', 'dcc-cottage-selector'),
+            'mode_compare'   => __('Landing choice: Compare', 'dcc-cottage-selector'),
         ];
         foreach ($buttons as $key => $label) {
             $this->add_control('icon_' . $key, [
@@ -160,6 +169,67 @@ class Selector_Widget extends Widget_Base
             'raw'             => esc_html__('Leave a picker empty for no icon. You can also type an emoji directly into a label under “Text & labels”.', 'dcc-cottage-selector'),
             'content_classes' => 'elementor-descriptor',
         ]);
+
+        $this->end_controls_section();
+    }
+
+    /** A keyed map of every icon the front end can place, name => editor label. */
+    private function icon_keys(): array
+    {
+        return [
+            // Buttons + landing choices (declared in register_icon_controls()).
+            'submit', 'restart', 'next', 'back', 'view', 'compare',
+            'edit_answers', 'compare_select', 'mode_quick', 'mode_weights', 'mode_compare',
+            // Questions + answers (declared in register_qa_icon_controls()).
+            'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_largest',
+            'ans_yes', 'ans_no', 'ans_either', 'ans_studio', 'ans_onebed', 'ans_2', 'ans_4',
+            'lvl_1', 'lvl_2', 'lvl_3',
+        ];
+    }
+
+    /**
+     * Optional leading icons for each wizard question and each answer option. Like
+     * the button icons, the chosen icon is rendered in render() and injected by
+     * selector.js (the body is client-rendered). Answer icons are keyed by option
+     * value (ans_* for Quick finder, lvl_* for the Weigh-priorities levels).
+     */
+    private function register_qa_icon_controls(): void
+    {
+        $this->start_controls_section('qa_icons', [
+            'label' => __('Question & answer icons', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $questions = [
+            'q_desk'     => __('Question: desk', 'dcc-cottage-selector'),
+            'q_pullout'  => __('Question: pullout couch', 'dcc-cottage-selector'),
+            'q_layout'   => __('Question: layout', 'dcc-cottage-selector'),
+            'q_dining'   => __('Question: dining', 'dcc-cottage-selector'),
+            'q_pet'      => __('Question: pet-friendly', 'dcc-cottage-selector'),
+            'q_ground'   => __('Question: ground floor', 'dcc-cottage-selector'),
+            'q_largest'  => __('Question: largest space', 'dcc-cottage-selector'),
+            'w_question' => __('Question: Weigh priorities (all)', 'dcc-cottage-selector'),
+        ];
+        $answers = [
+            'ans_yes'    => __('Answer: Yes', 'dcc-cottage-selector'),
+            'ans_no'     => __('Answer: No', 'dcc-cottage-selector'),
+            'ans_either' => __('Answer: No preference', 'dcc-cottage-selector'),
+            'ans_studio' => __('Answer: Studio', 'dcc-cottage-selector'),
+            'ans_onebed' => __('Answer: 1-bedroom', 'dcc-cottage-selector'),
+            'ans_2'      => __('Answer: Table for 2', 'dcc-cottage-selector'),
+            'ans_4'      => __('Answer: Table for 4', 'dcc-cottage-selector'),
+            'lvl_1'      => __('Answer: Low', 'dcc-cottage-selector'),
+            'lvl_2'      => __('Answer: Medium', 'dcc-cottage-selector'),
+            'lvl_3'      => __('Answer: High', 'dcc-cottage-selector'),
+        ];
+        foreach (array_merge($questions, $answers) as $key => $label) {
+            $this->add_control('icon_' . $key, [
+                'label'       => $label,
+                'type'        => Controls_Manager::ICONS,
+                'skin'        => 'inline',
+                'label_block' => false,
+            ]);
+        }
 
         $this->end_controls_section();
     }
@@ -186,6 +256,9 @@ class Selector_Widget extends Widget_Base
             'mode_compare'    => __('Mode label: Compare', 'dcc-cottage-selector'),
             'results_heading' => __('Results heading', 'dcc-cottage-selector'),
             'reset'           => __('Reset button', 'dcc-cottage-selector'),
+            'edit_answers'    => __('Edit answers button', 'dcc-cottage-selector'),
+            'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
+            'compare_select'  => __('Compare picker button', 'dcc-cottage-selector'),
         ];
 
         foreach ($editable as $key => $label) {
@@ -202,6 +275,66 @@ class Selector_Widget extends Widget_Base
             'raw'             => esc_html__('All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector).', 'dcc-cottage-selector'),
             'content_classes' => 'elementor-descriptor',
         ]);
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * Per-instance overrides for the wizard question + answer wording. These are the
+     * same translatable Config::strings() keys; each str_<key> control flows through
+     * the generic override in render(), so no extra plumbing is needed. (Translators
+     * can still localize the defaults via Loco.)
+     */
+    private function register_qa_text_controls(): void
+    {
+        $this->start_controls_section('qa_text', [
+            'label' => __('Questions & answers text', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $defaults = Config::strings();
+        $fields = [
+            // Quick finder questions
+            'q_desk'      => __('Question: desk', 'dcc-cottage-selector'),
+            'q_pullout'   => __('Question: pullout couch', 'dcc-cottage-selector'),
+            'q_layout'    => __('Question: layout', 'dcc-cottage-selector'),
+            'q_dining'    => __('Question: dining', 'dcc-cottage-selector'),
+            'q_pet'       => __('Question: pet-friendly', 'dcc-cottage-selector'),
+            'q_ground'    => __('Question: ground floor', 'dcc-cottage-selector'),
+            'q_largest'   => __('Question: largest space', 'dcc-cottage-selector'),
+            // Weigh priorities — the question template + the eight priority rows
+            'w_question'  => __('Weigh priorities question (use %s)', 'dcc-cottage-selector'),
+            'w_workspace' => __('Priority: Workspace', 'dcc-cottage-selector'),
+            'w_moreroom'  => __('Priority: More room', 'dcc-cottage-selector'),
+            'w_fewerstairs' => __('Priority: Fewer stairs', 'dcc-cottage-selector'),
+            'w_pet'       => __('Priority: Pet-friendly', 'dcc-cottage-selector'),
+            'w_studio'    => __('Priority: Studio simplicity', 'dcc-cottage-selector'),
+            'w_onebed'    => __('Priority: 1-bedroom separation', 'dcc-cottage-selector'),
+            'w_dining'    => __('Priority: Dining comfort', 'dcc-cottage-selector'),
+            'w_pullout'   => __('Priority: Pullout couch', 'dcc-cottage-selector'),
+            // Answer options
+            'opt_yes'     => __('Answer: Yes', 'dcc-cottage-selector'),
+            'opt_no'      => __('Answer: No', 'dcc-cottage-selector'),
+            'opt_either'  => __('Answer: No preference', 'dcc-cottage-selector'),
+            'opt_studio'  => __('Answer: Studio', 'dcc-cottage-selector'),
+            'opt_onebed'  => __('Answer: 1-bedroom', 'dcc-cottage-selector'),
+            'opt_seats2'  => __('Answer: Table for 2', 'dcc-cottage-selector'),
+            'opt_seats4'  => __('Answer: Table for 4', 'dcc-cottage-selector'),
+            'lvl_low'     => __('Answer: Low', 'dcc-cottage-selector'),
+            'lvl_med'     => __('Answer: Medium', 'dcc-cottage-selector'),
+            'lvl_high'    => __('Answer: High', 'dcc-cottage-selector'),
+        ];
+        // Use a placeholder (not a default) so an empty field keeps the translated /
+        // Config string — only a typed value overrides it. This preserves Loco
+        // translations for the many question/answer strings.
+        foreach ($fields as $key => $label) {
+            $this->add_control('str_' . $key, [
+                'label'       => $label,
+                'type'        => Controls_Manager::TEXT,
+                'placeholder' => $defaults[$key] ?? '',
+                'label_block' => true,
+            ]);
+        }
 
         $this->end_controls_section();
     }
@@ -471,6 +604,21 @@ class Selector_Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-step-q' => 'color: {{VALUE}};'],
         ]);
+        $this->add_control('question_bg', [
+            'label'     => __('Question background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.dccs-step-q' => 'background-color: {{VALUE}};'],
+        ]);
+        $this->add_responsive_control('question_align', [
+            'label'   => __('Question alignment', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-left'],
+                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-center'],
+                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-right'],
+            ],
+            'selectors' => [self::ROOT => '--dccs-question-align: {{VALUE}};'],
+        ]);
 
         $this->add_responsive_control('answer_align', [
             'label'   => __('Answer alignment', 'dcc-cottage-selector'),
@@ -557,6 +705,95 @@ class Selector_Widget extends Widget_Base
     }
 
     /** Primary button (Next / See matches) + the low-emphasis link controls. */
+    /**
+     * A self-contained "button" Style section: typography, border, radius, padding,
+     * content alignment, and Normal/Hover text + background. Used for the Edit-answers
+     * button and the View-cottage link so each can be styled independently of the
+     * primary Next/Submit buttons. $sel already carries the self::SEL specificity.
+     */
+    private function add_button_style_section(string $id, string $label, string $sel): void
+    {
+        $this->start_controls_section($id, ['label' => $label, 'tab' => Controls_Manager::TAB_STYLE]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => $id . '_typography',
+            'selector' => $sel,
+        ]);
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => $id . '_border',
+            'selector' => $sel,
+        ]);
+        $this->add_responsive_control($id . '_radius', [
+            'label'      => __('Corner radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [$sel => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+        $this->add_responsive_control($id . '_padding', [
+            'label'      => __('Padding', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [$sel => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+        $this->add_responsive_control($id . '_align', [
+            'label'   => __('Text alignment', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-left'],
+                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-center'],
+                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-text-align-right'],
+            ],
+            'selectors' => [$sel => 'text-align: {{VALUE}}; justify-content: {{VALUE}};'],
+        ]);
+
+        $this->start_controls_tabs($id . '_tabs');
+        $this->start_controls_tab($id . '_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
+        $this->add_control($id . '_color', [
+            'label'     => __('Text', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$sel => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control($id . '_bg', [
+            'label'     => __('Background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$sel => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+        $this->start_controls_tab($id . '_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
+        $this->add_control($id . '_color_hover', [
+            'label'     => __('Text', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $sel . ':hover'         => 'color: {{VALUE}};',
+                $sel . ':focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control($id . '_bg_hover', [
+            'label'     => __('Background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                $sel . ':hover'         => 'background-color: {{VALUE}};',
+                $sel . ':focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
+    /** Dedicated styling for the "Edit answers" button (decoupled from the primary CTA). */
+    private function register_editanswers_style_controls(): void
+    {
+        $this->add_button_style_section('style_editanswers', __('Edit answers button', 'dcc-cottage-selector'), self::SEL . '.dccs-edit-answers');
+    }
+
+    /** Dedicated styling for the "View this cottage" link on each result card. */
+    private function register_viewbtn_style_controls(): void
+    {
+        $this->add_button_style_section('style_viewbtn', __('View cottage button', 'dcc-cottage-selector'), self::SEL . '.dccs-view');
+    }
+
     private function register_button_style_controls(): void
     {
         $this->start_controls_section('style_buttons', [
@@ -754,6 +991,23 @@ class Selector_Widget extends Widget_Base
                 self::SEL . '.dccs-cmp-option'  => 'color: {{VALUE}};',
             ],
         ]);
+        // The picker hugs its label; this places that compact button left / centre /
+        // right (defaults to centred in selector.css).
+        $this->add_responsive_control('cmpmenu_align', [
+            'label'   => __('Picker alignment', 'dcc-cottage-selector'),
+            'type'    => Controls_Manager::CHOOSE,
+            'options' => [
+                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-left'],
+                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-center'],
+                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-right'],
+            ],
+            'selectors_dictionary' => [
+                'left'   => 'margin-left: 0; margin-right: auto;',
+                'center' => 'margin-left: auto; margin-right: auto;',
+                'right'  => 'margin-left: auto; margin-right: 0;',
+            ],
+            'selectors' => [self::SEL . '.dccs-cmp-select' => '{{VALUE}}'],
+        ]);
 
         $this->add_dropdown_shape_effects(
             'cmpmenu',
@@ -853,7 +1107,7 @@ class Selector_Widget extends Widget_Base
      */
     private function collect_icons(array $settings): array
     {
-        $keys = ['submit', 'restart', 'next', 'back', 'view', 'compare'];
+        $keys = $this->icon_keys();
         $icons = [];
         foreach ($keys as $key) {
             $icon = $settings['icon_' . $key] ?? null;

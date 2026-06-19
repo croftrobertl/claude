@@ -51,6 +51,23 @@
 .dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
+/* Landing / start screen — heading + intro + the three mode choices. */
+.dccs-root.dccs-root .dccs-landing { text-align: var(--dccs-align, center); }
+.dccs-root.dccs-root .dccs-landing-choices {
+  display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 18px auto 0;
+}
+.dccs-root.dccs-root .dccs-landing-choice {
+  display: flex; align-items: center; justify-content: center; gap: 0.5em; width: 100%;
+  min-height: 56px; padding: 14px 20px; cursor: pointer; text-transform: none;
+  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-surface);
+  color: var(--dccs-text); font-weight: 700; font-size: 1.05rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.dccs-root.dccs-root .dccs-landing-choice:hover,
+.dccs-root.dccs-root .dccs-landing-choice:focus-visible {
+  border-color: var(--dccs-accent); background: var(--dccs-bg); transform: translateY(-1px);
+}
+
 /* Match-count pill + chips */
 .dccs-root.dccs-root .dccs-count {
   font-weight: 700; color: var(--dccs-accent); font-size: 0.95rem;
@@ -112,7 +129,7 @@
 .dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.5; }
 
-.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; }
+.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; text-align: var(--dccs-question-align, center); }
 .dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
 .dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; align-items: center; }
 .dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
@@ -147,6 +164,7 @@
   .dccs-root.dccs-root .dccs-primary:hover,
   .dccs-root.dccs-root .dccs-reset:hover,
   .dccs-root.dccs-root .dccs-see-matches:hover,
+  .dccs-root.dccs-root .dccs-landing-choice:hover,
   .dccs-root.dccs-root .dccs-edit-answers:hover { transform: none; }
 }
 
@@ -161,6 +179,7 @@
 .dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
 .dccs-root.dccs-root .dccs-cmp-trigger:focus-visible,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
+.dccs-root.dccs-root .dccs-landing-choice:focus-visible,
 .dccs-root.dccs-root .dccs-matrix-nav button:focus-visible,
 .dccs-modal .dccs-modal-close:focus-visible {
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
@@ -241,7 +260,12 @@
 }
 
 /* Compare — multiselect dropdown */
-.dccs-root.dccs-root .dccs-cmp-select { position: relative; margin-bottom: 14px; }
+/* The picker sizes to its label and centres itself; the panel is a popover so it
+   can be wider than the button (to fit cottage names) without stretching it. */
+.dccs-root.dccs-root .dccs-cmp-select {
+  position: relative; width: -moz-fit-content; width: fit-content; max-width: 100%;
+  margin: 0 auto 14px; text-align: left;
+}
 .dccs-root.dccs-root .dccs-cmp-trigger {
   width: 100%; min-height: 46px; padding: 10px 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -249,8 +273,11 @@
   color: var(--dccs-text); font-weight: 700; font-size: 0.95rem; text-transform: none;
 }
 .dccs-root.dccs-root .dccs-cmp-list {
-  display: none; margin-top: 6px; max-height: 230px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: none; position: absolute; left: 50%; transform: translateX(-50%); top: calc(100% + 6px); z-index: 20;
+  min-width: 100%; width: -moz-max-content; width: max-content; max-width: min(90vw, 360px);
+  max-height: 230px; overflow-y: auto; -webkit-overflow-scrolling: touch;
   border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-surface);
+  box-shadow: 0 12px 30px rgba(20, 28, 40, 0.18);
 }
 .dccs-root.dccs-root .dccs-cmp-select.is-open .dccs-cmp-list { display: block; }
 .dccs-root.dccs-root .dccs-cmp-option {

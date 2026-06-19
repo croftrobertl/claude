@@ -86,9 +86,10 @@
       weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0 },
       compareIds: (config.preCompare || []).map(String),
       highlight: config.highlight || '',
-      // Wizard navigation: question index + stage ('q' | 'review' | 'results').
+      // Navigation: question index + stage ('landing' | 'q' | 'review' | 'results').
+      // Fresh loads open on the landing screen; a mode choice moves past it.
       step: 0,
-      stage: 'q',
+      stage: 'landing',
       editReturn: null,
       // Transient UI state for the compare dropdown + the compare window offset.
       compareOpen: false,
@@ -120,10 +121,13 @@
     }
 
     // If the guest arrived with criteria (an inbound deep link or a mini-entry
-    // pre-fill), skip the questionnaire and jump straight to results.
+    // pre-fill), skip the landing + questionnaire and jump straight to results.
+    // An explicit ?mode=/?compare= deep link skips the landing into that mode.
     var hasCriteria = !!state.highlight || !!config.presetQuick ||
       Object.keys(state.quick).some(function (k) { return state.quick[k] !== ''; });
+    var p = new URLSearchParams(window.location.search);
     if (hasCriteria) { state.stage = 'results'; }
+    else if (p.has('mode') || p.has('compare')) { state.stage = 'q'; }
     state.step = 0;
     state.editReturn = null;
     return state;
@@ -189,12 +193,12 @@
 
   /* ---------- rendering ---------- */
 
-  function chip(text, value, group, active, tabbable) {
+  function chip(text, value, group, active, tabbable, iconHtml) {
     if (tabbable === undefined) { tabbable = active; }
     return '<button type="button" class="dccs-chip' + (active ? ' is-active' : '') +
       '" role="radio" aria-checked="' + (active ? 'true' : 'false') +
       '" tabindex="' + (tabbable ? '0' : '-1') +
-      '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(text) + '</button>';
+      '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + (iconHtml || '') + esc(text) + '</button>';
   }
 
   // The wizard's 7 questions (the spec's seven differences), in natural order.
@@ -289,7 +293,9 @@
     var anyActive = q.opts.some(function (o) { return String(value) === String(o[1]); });
     var chips = q.opts.map(function (o, idx) {
       var active = String(value) === String(o[1]);
-      return chip(S[o[0]], o[1], q.group, active, active || (!anyActive && idx === 0));
+      // Optional admin-set answer icon, keyed per option value (weights use lvl_*).
+      var iconKey = (state.mode === 'weights' ? 'lvl_' : 'ans_') + o[1];
+      return chip(S[o[0]], o[1], q.group, active, active || (!anyActive && idx === 0), ico(config, iconKey));
     }).join('');
 
     // Clickable stepper: answered steps (and the current one) are navigable.
@@ -306,13 +312,15 @@
     var nextAttrs = canNext ? '' : ' disabled title="' + esc(S.next_hint || '') +
       '" aria-label="' + esc((S.wiz_next || '') + ' — ' + (S.next_hint || '')) + '"';
     var qLabel = tr.qLabel(q);
+    // Optional admin-set icon for the question (weights share one w_question icon).
+    var qIconKey = state.mode === 'weights' ? 'w_question' : q.qKey;
 
     var html = '<div class="dccs-wizard" data-stage="q">';
     html += '<div class="dccs-progress-row">';
     html += '<span class="dccs-progress-label">' + esc(fmt2(S.wiz_progress, i + 1, qs.length)) + '</span>';
     html += '<span class="dccs-count">' + esc(matchCount(S, n)) + '</span></div>';
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
-    html += '<h3 class="dccs-step-q" tabindex="-1">' + esc(qLabel) + '</h3>';
+    html += '<h3 class="dccs-step-q" tabindex="-1">' + ico(config, qIconKey) + esc(qLabel) + '</h3>';
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
     html += '<div class="dccs-wizard-nav">';
     html += i > 0
@@ -443,7 +451,7 @@
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
       '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
       '<button type="button" class="dccs-cmp-trigger" aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-      '<span>' + esc(label) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
+      '<span>' + ico(config, 'compare_select') + esc(label) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
       '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
       compareMatrixHtml(config, st, st.cmpStart) + '</div>';
   }
@@ -513,7 +521,7 @@
     var S = config.strings;
     return renderRecap(config, st, emptyState) +
       '<div class="dccs-wizard-nav dccs-tail-nav">' +
-      '<button type="button" class="dccs-edit-answers">' + esc(S.edit_answers) + '</button>' +
+      '<button type="button" class="dccs-edit-answers">' + ico(config, 'edit_answers') + esc(S.edit_answers) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
@@ -583,6 +591,24 @@
 
   var MODE_LABEL = { quick: 'mode_quick', weights: 'mode_weights', compare: 'mode_compare' };
 
+  /** Opening screen: heading + intro + a choice of the enabled modes. Picking one
+      enters that mode; the heading/intro then disappear for the rest of the flow. */
+  function renderLanding(config, state, S) {
+    var modes = config.enabledModes || ['quick', 'weights', 'compare'];
+    var head = '';
+    if (config.showHeading !== false) {
+      head = '<div class="dccs-head"><h2 class="dccs-heading">' + esc(S.heading) + '</h2>' +
+        '<p class="dccs-intro">' + esc(S.intro) + '</p></div>';
+    }
+    var choices = modes.map(function (m) {
+      return '<button type="button" class="dccs-landing-choice" data-mode="' + esc(m) + '">' +
+        ico(config, 'mode_' + m) +
+        '<span class="dccs-landing-choice-label">' + esc(S[MODE_LABEL[m]] || m) + '</span></button>';
+    }).join('');
+    return '<div class="dccs-landing">' + head +
+      '<div class="dccs-landing-choices" role="group" aria-label="' + esc(S.heading) + '">' + choices + '</div></div>';
+  }
+
   /** Top mode switcher as a dropdown (cleaner than 3 long pills on mobile).
       Hidden when only one mode is enabled. */
   function modeSelect(config, state, S) {
@@ -605,23 +631,20 @@
 
   function renderSelector(root, config, state, ctx) {
     var S = config.strings;
-    var isWizard = (state.mode === 'quick' || state.mode === 'weights');
-    // Keep the header compact on a question step so the step fits the viewport.
-    var compact = isWizard && state.stage === 'q';
-    var head = '';
-    if (config.showHeading !== false) {
-      head = compact
-        ? '<div class="dccs-head dccs-head-compact"><h2 class="dccs-heading">' + esc(S.heading) + '</h2></div>'
-        : '<div class="dccs-head"><h2 class="dccs-heading">' + esc(S.heading) + '</h2>' +
-          '<p class="dccs-intro">' + esc(S.intro) + '</p></div>';
+    // The heading + intro live ONLY on the landing screen; once a mode is chosen
+    // they disappear for the rest of the flow.
+    if (state.stage === 'landing') {
+      root.innerHTML = renderLanding(config, state, S);
+      return;
     }
+    var isWizard = (state.mode === 'quick' || state.mode === 'weights');
     var bar = modeSelect(config, state, S);
 
     if (isWizard) {
-      root.innerHTML = head + bar + renderWizard(config, state, ctx);
+      root.innerHTML = bar + renderWizard(config, state, ctx);
       return;
     }
-    root.innerHTML = head + bar + '<div class="dccs-body">' + renderCompare(config, state) + '</div>';
+    root.innerHTML = bar + '<div class="dccs-body">' + renderCompare(config, state) + '</div>';
   }
 
   // Defer init until the score/labels dependencies have executed (the Elementor
@@ -713,6 +736,12 @@
         var box = t.closest('.dccs-modeselect');
         if (box) { var nowOpen = box.classList.toggle('is-open'); t.setAttribute('aria-expanded', nowOpen ? 'true' : 'false'); }
         return;
+      }
+      // --- landing screen: choose a mode and leave the landing ---
+      if (cl.contains('dccs-landing-choice')) {
+        state.mode = t.dataset.mode;
+        state.step = 0; state.stage = 'q'; state.editReturn = null;
+        rerender(); focusStep(); return;
       }
       if (cl.contains('dccs-modetab')) {
         state.mode = t.dataset.mode;
