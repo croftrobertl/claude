@@ -272,11 +272,14 @@ function enter(root, mode) {
   ok('back to quick finder', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
-// ---- 10a. Compare is no longer capped at 4 cottages ----
+// ---- 10a. Compare mode: button opens the popup table (no inline matrix), uncapped ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'compare');
+  ok('no inline comparison table in compare mode', !root.querySelector('.dccs-matrix'));
+  const btn0 = root.querySelector('.dccs-open-compare');
+  ok('compare button is present but disabled with <2 ticked', !!btn0 && btn0.disabled === true);
   // Tick every cottage in the dropdown; re-query after each (re-render detaches nodes).
   for (let i = 0; i < 8; i++) {
     const cb = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
@@ -286,7 +289,13 @@ function enter(root, mode) {
     root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked).length;
   ok('all 8 cottages can be selected for compare (no 4-cap)', checked === 8);
   ok('no compare option is disabled', !root.querySelector('.dccs-cmp-option input[disabled]'));
-  ok('matrix pages through all 8', /\b8\b/.test((root.querySelector('.dccs-matrix-pos') || {}).textContent || ''));
+  const btn = root.querySelector('.dccs-open-compare');
+  ok('compare button enabled once 2+ ticked', !!btn && btn.disabled === false);
+  btn.click();
+  ok('compare button opens the popup matrix', !!w.document.querySelector('.dccs-modal .dccs-matrix'));
+  ok('popup matrix pages through all 8', /\b8\b/.test((w.document.querySelector('.dccs-modal .dccs-matrix-pos') || {}).textContent || ''));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('Esc closes the compare-mode popup', !w.document.querySelector('.dccs-modal'));
 })();
 
 // ---- 10b. Weigh-priorities runs as a step -> review -> results wizard ----

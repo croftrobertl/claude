@@ -223,6 +223,9 @@
   min-height: 40px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--dccs-accent); background: var(--dccs-surface); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
 }
+.dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
+/* Compare mode: the button that opens the comparison popup, centred under the checklist. */
+.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
 
 /* Results recap — small, tappable criterion chips (not ALL-CAPS) */
 .dccs-root.dccs-root .dccs-recap {

@@ -435,7 +435,8 @@
     return html;
   }
 
-  /** Compare mode: a scrollable multiselect dropdown + the comparison table. */
+  /** Compare mode: a scrollable multiselect dropdown + a button that opens the
+      comparison table in the same popup used from the wizard results. */
   function renderCompare(config, st) {
     var S = config.strings;
     var n = st.compareIds.length;
@@ -448,12 +449,20 @@
         esc(cname(config, c)) + '</label>';
     }).join('');
 
+    // Always-present "Compare" button (disabled until 2+ are ticked). It reuses the
+    // .dccs-open-compare class so the existing click handler opens the shared popup.
+    var canCompare = n >= 2;
+    var btnLabel = canCompare ? fmt(S.compare_btn, n) : S.mode_compare;
+    var btn = '<div class="dccs-compare-actions">' +
+      '<button type="button" class="dccs-open-compare"' + (canCompare ? '' : ' disabled') + '>' +
+      esc(btnLabel) + '</button></div>';
+
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
       '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
       '<button type="button" class="dccs-cmp-trigger" aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
       '<span>' + ico(config, 'compare_select') + esc(label) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
       '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
-      compareMatrixHtml(config, st, st.cmpStart) + '</div>';
+      btn + '</div>';
   }
 
   /** The "Compare N cottages" button, shown once 2+ cards are ticked. */

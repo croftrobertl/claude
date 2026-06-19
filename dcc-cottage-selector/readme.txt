@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,8 @@ tool:
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
 * **Compare** (mode menu, or tick cottages on the results) — choose from a
-  checkbox list and read a side-by-side table you page through with arrows.
+  checkbox list, then tap **Compare** to open a side-by-side table in a pop-up you
+  page through with arrows.
 
 Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
@@ -139,6 +140,12 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.7.1 =
+* Compare mode now opens the side-by-side table in a **pop-up** (the same one used
+  when comparing cottages from the wizard results) instead of showing it inline
+  under the checklist. Pick your cottages, then tap the **Compare** button — it is
+  disabled until two are selected and then reads "Compare N cottages".
 
 = 0.7.0 =
 * New **start screen**: the widget now opens on a landing screen showing the
