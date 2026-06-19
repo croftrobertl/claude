@@ -19,23 +19,38 @@
     return String(c.floorLevel || '').toLowerCase().indexOf('ground') === 0;
   }
 
-  /** Phase 1: apply hard filters, collecting an exclusion ledger with reasons. */
+  /**
+   * Hard-requirement features. Each key maps a binary cottage trait to its test
+   * and the no-match tag shown when a fallback cottage fails it. Quick Match
+   * "must-haves" and Weigh-Priorities "High" answers both resolve to these keys.
+   */
+  var FEATURES = {
+    pet:      { test: function (c) { return c.petAllowed === true; }, tag: 'tag_pet' },
+    ground:   { test: function (c) { return isGround(c); }, tag: 'tag_upstairs' },
+    dining4:  { test: function (c) { return Number(c.diningSeats) >= 4; }, tag: 'tag_dining' },
+    porch:    { test: function (c) { return c.screenedPorch === true; }, tag: 'tag_porch' },
+    desk:     { test: function (c) { return c.desk === true; }, tag: 'tag_desk' },
+    pullout:  { test: function (c) { return c.pulloutCouch === true; }, tag: 'tag_pullout' },
+    studio:   { test: function (c) { return c.layoutType === 'Studio'; }, tag: 'tag_studio' },
+    onebed:   { test: function (c) { return c.layoutType !== 'Studio'; }, tag: 'tag_onebed' },
+    moreroom: { test: function (c) { return Number(c.squareFeet) >= 336; }, tag: 'tag_moreroom' }
+  };
+
+  /** Phase 1: apply hard filters (crit.hard = feature keys), collecting a reason ledger. */
   function phase1(cottages, crit) {
     var pool = cottages.slice();
     var excluded = [];
+    var hard = (crit && crit.hard) || [];
 
-    function drop(reasonKey, keepFn) {
+    hard.forEach(function (key) {
+      var f = FEATURES[key];
+      if (!f) { return; }
       pool = pool.filter(function (c) {
-        if (keepFn(c)) { return true; }
-        excluded.push({ id: c.id, reasonKey: reasonKey });
+        if (f.test(c)) { return true; }
+        excluded.push({ id: c.id, reasonKey: 'ex_' + key });
         return false;
       });
-    }
-
-    if (crit.hardPet) { drop('ex_pet', function (c) { return c.petAllowed === true; }); }
-    if (crit.hardGround) { drop('ex_upstairs', function (c) { return isGround(c); }); }
-    if (crit.hardDining4) { drop('ex_dining', function (c) { return Number(c.diningSeats) >= 4; }); }
-    if (crit.hardScreenedPorch) { drop('ex_porch', function (c) { return c.screenedPorch === true; }); }
+    });
 
     return { pool: pool, excluded: excluded };
   }
@@ -120,6 +135,7 @@
     run: run,
     dedupe: dedupe,
     signature: signature,
-    isGround: isGround
+    isGround: isGround,
+    FEATURES: FEATURES
   };
 })(window);

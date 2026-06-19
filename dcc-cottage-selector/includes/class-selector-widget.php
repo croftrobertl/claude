@@ -71,6 +71,7 @@ class Selector_Widget extends Widget_Base
         $this->register_qa_icon_controls();
         $this->register_strings_controls();
         $this->register_qa_text_controls();
+        $this->register_badge_text_controls();
 
         // Style tab — every section maps to CSS custom properties / element
         // selectors via the SEL prefix. Controls carry no defaults; the baked
@@ -256,10 +257,12 @@ class Selector_Widget extends Widget_Base
             'mode_weights'    => __('Mode label: Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'    => __('Mode label: Compare', 'dcc-cottage-selector'),
             'results_heading' => __('Results heading', 'dcc-cottage-selector'),
+            'review_heading'  => __('Wizard review heading', 'dcc-cottage-selector'),
             'reset'           => __('Reset button', 'dcc-cottage-selector'),
             'edit_answers'    => __('Edit answers button', 'dcc-cottage-selector'),
             'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
             'compare_select'  => __('Compare picker button', 'dcc-cottage-selector'),
+            'compare_prompt'  => __('Compare subheader', 'dcc-cottage-selector'),
         ];
 
         foreach ($editable as $key => $label) {
@@ -330,6 +333,41 @@ class Selector_Widget extends Widget_Base
         // Use a placeholder (not a default) so an empty field keeps the translated /
         // Config string — only a typed value overrides it. This preserves Loco
         // translations for the many question/answer strings.
+        foreach ($fields as $key => $label) {
+            $this->add_control('str_' . $key, [
+                'label'       => $label,
+                'type'        => Controls_Manager::TEXT,
+                'placeholder' => $defaults[$key] ?? '',
+                'label_block' => true,
+            ]);
+        }
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * Editable text for the short-hand cottage description badges. Same str_<key>
+     * override path; placeholder (not default) so an empty field keeps the
+     * Config/Loco string.
+     */
+    private function register_badge_text_controls(): void
+    {
+        $this->start_controls_section('badge_text', [
+            'label' => __('Badge labels', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $defaults = Config::strings();
+        $fields = [
+            'badge_spacious' => __('Badge: Spacious Retreat', 'dcc-cottage-selector'),
+            'badge_work'     => __('Badge: Work-Friendly Hideaway', 'dcc-cottage-selector'),
+            'badge_compact'  => __('Badge: Compact Escape', 'dcc-cottage-selector'),
+            'badge_pet'      => __('Badge: Pet Stay Cottage', 'dcc-cottage-selector'),
+            'badge_ground'   => __('Badge: Easy-Access Ground Floor', 'dcc-cottage-selector'),
+            'badge_upstairs' => __('Badge: Upstairs Quiet View', 'dcc-cottage-selector'),
+            'badge_suite'    => __('Badge: Suite-Style Comfort', 'dcc-cottage-selector'),
+            'badge_porch'    => __('Badge: Private Porch Retreat', 'dcc-cottage-selector'),
+        ];
         foreach ($fields as $key => $label) {
             $this->add_control('str_' . $key, [
                 'label'       => $label,

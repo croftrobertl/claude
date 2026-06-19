@@ -46,6 +46,7 @@ function mountSelector(window, configStr) {
 }
 
 function progress(root) { var p = root.querySelector('.dccs-progress-label'); return p ? p.textContent : ''; }
+function countText(root) { var c = root.querySelector('.dccs-count'); return c ? c.textContent : ''; }
 function curChips(root) { return Array.prototype.slice.call(root.querySelectorAll('.dccs-chips-wizard .dccs-chip')); }
 function activeChip(root) { return curChips(root).filter(function (c) { return c.classList.contains('is-active'); })[0]; }
 function clickAnswer(root, value) {
@@ -404,6 +405,55 @@ function enter(root, mode) {
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
   ok('body scroll restored', w.document.body.style.overflow === '');
+})();
+
+// ---- 17. Live "X cottages match" narrows on a Quick must-have ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  answerNext(root, 'either'); answerNext(root, 'either');
+  answerNext(root, 'either'); answerNext(root, 'either');          // advance to the pet step
+  ok('count starts at all 8 on the pet step', /\b8\b/.test(countText(root)));
+  clickAnswer(root, 'yes');                                        // pet = yes (no advance)
+  ok('answering pet=Yes drops the live count to 1',
+    /\b1\b/.test(countText(root)) && !/\b8\b/.test(countText(root)));
+})();
+
+// ---- 18. Weigh Priorities: a "High" priority narrows the count + results ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'weights');
+  ok('weights count starts at all 8', /\b8\b/.test(countText(root)));
+  answerNext(root, '1'); answerNext(root, '1'); answerNext(root, '1');  // Low: workspace/moreroom/fewerstairs
+  ok('Low priorities do not narrow the count', /\b8\b/.test(countText(root)));
+  clickAnswer(root, '3');                                          // pet priority = High
+  ok('marking pet High drops the count to 1', /\b1\b/.test(countText(root)));
+  clickNext(root);
+  stepThrough(root, '1');
+  root.querySelector('.dccs-see-matches').click();
+  ok('a High priority filters results to the matching cottage',
+    cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
+})();
+
+// ---- 19. Compare picker closes on an outside click ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  root.querySelector('.dccs-cmp-trigger').click();
+  ok('compare dropdown opens on the trigger', !!root.querySelector('.dccs-cmp-select.is-open'));
+  w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+  ok('compare dropdown closes on an outside click', !root.querySelector('.dccs-cmp-select.is-open'));
+})();
+
+// ---- 20. Compare subheader uses the new "Select 2 or more..." wording ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  ok('compare subheader reads "Select 2 or more..."', /^Select 2 or more cottages/.test(root.querySelector('.dccs-compare .dccs-hint').textContent));
 })();
 
 function configWith(overrides) {

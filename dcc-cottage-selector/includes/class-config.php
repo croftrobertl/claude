@@ -62,6 +62,11 @@ final class Config
             'tag_upstairs'      => __('Upstairs', 'dcc-cottage-selector'),
             'tag_dining'        => __('No table for 4', 'dcc-cottage-selector'),
             'tag_porch'         => __('No screened porch', 'dcc-cottage-selector'),
+            'tag_desk'          => __('No desk', 'dcc-cottage-selector'),
+            'tag_pullout'       => __('No pullout couch', 'dcc-cottage-selector'),
+            'tag_studio'        => __('Not a studio', 'dcc-cottage-selector'),
+            'tag_onebed'        => __('Not a 1-bedroom', 'dcc-cottage-selector'),
+            'tag_moreroom'      => __('Less square footage', 'dcc-cottage-selector'),
 
             // Generic chip answers
             'opt_yes'           => __('Yes', 'dcc-cottage-selector'),
@@ -103,7 +108,7 @@ final class Config
             'val_queen'         => __('Queen', 'dcc-cottage-selector'),
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
-            'compare_prompt'    => __('Pick 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
+            'compare_prompt'    => __('Select 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
             'compare_select'    => __('Select cottages to compare', 'dcc-cottage-selector'),
             'compare_selected'  => /* translators: %d: number of cottages selected */ __('%d selected', 'dcc-cottage-selector'),
             'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d–%2$d of %3$d', 'dcc-cottage-selector'),

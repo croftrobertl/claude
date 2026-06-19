@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.0
+Stable tag: 0.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,16 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.9.0 =
+* The live "X cottages match" counter now narrows as you answer. In Quick Match it
+  drops on must-have answers; in Weigh Priorities, marking a priority **High** treats
+  it as required, so the count (and the final results) shrink accordingly.
+* Compare picker dropdown now closes when you click/tap anywhere outside it.
+* Compare subheader is now editable and reads "Select 2 or more cottages to compare
+  side by side." by default.
+* The wizard **review heading** and all eight **feature-badge labels** (Spacious
+  Retreat, Work-Friendly Hideaway, etc.) are now editable in the Elementor panel.
 
 = 0.8.0 =
 * New distinguishing feature: a **private screened-in porch** (The Boathouse only).

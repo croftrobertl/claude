@@ -45,7 +45,8 @@
     add('onebed', crit.wOneBed > 0, c.layoutType !== 'Studio');
     add('dining', crit.wDining > 0, Number(c.diningSeats) >= 4);
     add('pullout', crit.wPullout > 0, c.pulloutCouch);
-    add('porch', (crit.wScreenedPorch > 0) || crit.hardScreenedPorch, c.screenedPorch);
+    var hard = crit.hard || [];
+    add('porch', (crit.wScreenedPorch > 0) || hard.indexOf('porch') !== -1, c.screenedPorch);
 
     // Wanted reasons first (stable), then the rest; keep up to three.
     var wanted = ranked.filter(function (r) { return r.wanted; });

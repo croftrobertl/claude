@@ -188,24 +188,38 @@
 
   /* ---------- criteria translation ---------- */
 
+  // Weigh-priorities: a "High" (3) answer maps its priority to a hard-required feature.
+  var WEIGHT_HARD = {
+    workspace: 'desk', moreroom: 'moreroom', fewerstairs: 'ground', pet: 'pet',
+    studio: 'studio', onebed: 'onebed', dining: 'dining4', pullout: 'pullout', screenedporch: 'porch'
+  };
+
   function criteriaFromState(state) {
     if (state.mode === 'weights') {
       var w = state.weights;
+      // High priorities become must-haves (they narrow the count + results);
+      // Medium/Low stay soft ranking weights.
+      var whard = [];
+      Object.keys(WEIGHT_HARD).forEach(function (g) {
+        if (Number(w[g]) === 3) { whard.push(WEIGHT_HARD[g]); }
+      });
       return {
-        hardPet: false, hardGround: false, hardDining4: false, hardScreenedPorch: false, wantLargest: false,
+        hard: whard, wantLargest: false,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
         wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
         wScreenedPorch: w.screenedporch
       };
     }
-    // Quick finder: hard filters + medium-weight soft preferences. Unset ('') and
+    // Quick finder: hard must-haves + medium-weight soft preferences. Unset ('') and
     // 'either' both impose no constraint.
     var q = state.quick;
+    var hard = [];
+    if (q.pet === 'yes') { hard.push('pet'); }
+    if (q.ground === 'yes') { hard.push('ground'); }
+    if (q.dining === 4 || q.dining === '4') { hard.push('dining4'); }
+    if (q.screenedporch === 'yes') { hard.push('porch'); }
     return {
-      hardPet: q.pet === 'yes',
-      hardGround: q.ground === 'yes',
-      hardDining4: q.dining === 4 || q.dining === '4',
-      hardScreenedPorch: q.screenedporch === 'yes',
+      hard: hard,
       wantLargest: q.largest === 'yes',
       wDesk: q.desk === 'yes' ? 2 : 0,
       wPullout: q.pullout === 'yes' ? 2 : 0,
@@ -290,9 +304,12 @@
     };
   }
 
-  /** In the Quick finder, which hard requirement (if active) is over-constraining. */
+  /** Which answered question imposes a hard requirement (so the recap can flag it red).
+   *  Quick: a "yes"/table-for-4 must-have. Weights: a "High" priority. */
   function isBlockingGroup(state, group) {
-    if (state.mode !== 'quick') { return false; }
+    if (state.mode === 'weights') {
+      return Number(state.weights[group]) === 3 && !!WEIGHT_HARD[group];
+    }
     var q = state.quick;
     return (group === 'pet' && q.pet === 'yes') ||
       (group === 'ground' && q.ground === 'yes') ||
@@ -403,10 +420,10 @@
   /** Hard-requirement tags a fallback cottage fails to meet. */
   function missTags(c, crit, S) {
     var t = [];
-    if (crit.hardPet && !c.petAllowed) { t.push(S.tag_pet); }
-    if (crit.hardGround && !DCCS.score.isGround(c)) { t.push(S.tag_upstairs); }
-    if (crit.hardDining4 && Number(c.diningSeats) < 4) { t.push(S.tag_dining); }
-    if (crit.hardScreenedPorch && !c.screenedPorch) { t.push(S.tag_porch); }
+    (crit.hard || []).forEach(function (key) {
+      var f = DCCS.score.FEATURES[key];
+      if (f && !f.test(c)) { t.push(S[f.tag]); }
+    });
     return t;
   }
 
@@ -518,14 +535,18 @@
     var html = '<div class="dccs-results">';
 
     if (res.empty) {
-      // Relax the least-essential hard filter to surface the closest options.
-      var relaxOrder = ['hardScreenedPorch', 'hardDining4', 'hardGround', 'hardPet'];
+      // Drop the least-essential must-haves (one at a time, in order) until the
+      // closest options surface. Style preferences relax before policy ones.
+      var relaxOrder = ['moreroom', 'desk', 'pullout', 'studio', 'onebed', 'porch', 'dining4', 'ground', 'pet'];
+      var relaxed = (crit.hard || []).slice();
       var fallback = null;
-      for (var i = 0; i < relaxOrder.length; i++) {
-        if (!crit[relaxOrder[i]]) { continue; }
+      for (var i = 0; i < relaxOrder.length && relaxed.length; i++) {
+        var idx = relaxed.indexOf(relaxOrder[i]);
+        if (idx === -1) { continue; }
+        relaxed.splice(idx, 1);
         var c2 = {};
         Object.keys(crit).forEach(function (k) { c2[k] = crit[k]; });
-        c2[relaxOrder[i]] = false;
+        c2.hard = relaxed;
         var r2 = DCCS.score.run(config.cottages, c2);
         if (!r2.empty) { fallback = r2; break; }
       }
@@ -811,9 +832,14 @@
       }
     });
 
-    // Close the mode dropdown when pressing outside it (mousedown fires before any
+    // Close either dropdown when pressing outside it (mousedown fires before any
     // click-driven re-render, so the live target can be inspected safely).
     document.addEventListener('mousedown', function (e) {
+      var inside = e.target.closest;
+      // Compare picker: state-driven, so close it via re-render.
+      if (state.compareOpen && !(inside && e.target.closest('.dccs-cmp-select'))) {
+        state.compareOpen = false; rerender(); return;
+      }
       var open = root.querySelector('.dccs-modeselect.is-open');
       if (!open) { return; }
       if (!(e.target.closest && e.target.closest('.dccs-modeselect'))) {
