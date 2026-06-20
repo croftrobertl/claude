@@ -541,7 +541,17 @@
     /* Mobile: full-width bottom sheet that never causes horizontal scroll */
     left: 0;
     right: 0;
-    bottom: 0;
+    /* `bottom: 0` puts the popup's bottom edge at the viewport's vh-bottom,
+       which on iOS Safari is BEHIND the floating bottom toolbar — the
+       toolbar overlays the viewport, so the bottom ~80px of the popup
+       (background + content + padding) is clipped underneath it. The
+       env(safe-area-inset-bottom) value, available when the document's
+       viewport meta carries `viewport-fit=cover` (which boot() ensures —
+       see widget.js), reports the height of that safe-area inset; pinning
+       the popup there lifts it above the toolbar. Falls back to 0 on
+       browsers without env() support (no harm — they had the bug before
+       too, and likely don't have an overlaying toolbar). */
+    bottom: env(safe-area-inset-bottom, 0px);
     width: 100%;
     border-radius: 16px 16px 0 0;
     transform: translateY(100%);

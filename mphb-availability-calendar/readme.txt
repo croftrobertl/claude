@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.5
+Stable tag: 0.9.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.6 =
+* Fix (iOS Safari): bottom of the cottage info popup and Book Now popup were hidden behind the floating Safari toolbar. The v0.9.0 svh fix capped popup HEIGHT correctly but the popup was still anchored with `bottom: 0`, which on iOS puts the popup's bottom edge at the vh-bottom — BEHIND the toolbar that overlays the viewport. Switched the anchor to `bottom: env(safe-area-inset-bottom, 0px)` so the popup lifts above the toolbar, and added a JS-side `viewport-fit=cover` injection so `env()` returns a real value even when the theme's viewport meta omits it.
 
 = 0.9.5 =
 * Fix: calendar failed to (re-)load inside the Elementor editor preview after v0.9.4. The observer gate checked `body.elementor-editor-active` — that class lives on the TOP-LEVEL editor body, not inside the preview iframe where the widget actually renders. Detection now uses the `elementor-preview=` URL parameter (set on the preview iframe URL, available before elementor-frontend.js boots) plus `body.elementor-edit-mode` and `body.elementor-editor-active` as backups. Live-frontend perf win from v0.9.4 is preserved — no observer on public pages.

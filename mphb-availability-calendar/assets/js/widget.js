@@ -1190,12 +1190,30 @@
     }
 
     function boot() {
+        ensureViewportFitCover();
         document.querySelectorAll('.mphbac-root').forEach(init);
         // The Elementor editor preview iframe injects widget markup AFTER
         // DOMContentLoaded and does not reliably fire frontend/element_ready,
         // so a MutationObserver catches the .mphbac-root when it appears (and
         // re-inits when the editor rebuilds the widget after a setting change).
         setupObserver();
+    }
+
+    // Append `viewport-fit=cover` to the document's viewport meta if it isn't
+    // already present, so env(safe-area-inset-bottom) returns a real value on
+    // iOS Safari. Without this, our bottom-anchored popup's `bottom:
+    // env(safe-area-inset-bottom, 0px)` evaluates to 0 and the popup's bottom
+    // edge stays behind the Safari toolbar overlay — the exact bug we're
+    // fixing in 0.9.6. Idempotent (no-op if the directive is already in the
+    // meta content). Site-wide effect, but the only practical implication is
+    // that the page can now address the safe-area insets via env() — which is
+    // what we want.
+    function ensureViewportFitCover() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) return;
+        var content = meta.getAttribute('content') || '';
+        if (content.indexOf('viewport-fit') >= 0) return;
+        meta.setAttribute('content', content + (content ? ', ' : '') + 'viewport-fit=cover');
     }
 
     function setupObserver() {
