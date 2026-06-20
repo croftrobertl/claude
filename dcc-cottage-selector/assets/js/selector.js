@@ -722,11 +722,7 @@
       return;
     }
     var isWizard = (state.mode === 'quick' || state.mode === 'weights');
-    // Top bar: a "back to the first screen" button (same action as Reset) on the left,
-    // the mode dropdown on the right. Shown on every in-flow screen, never on landing.
-    var bar = '<div class="dccs-topbar">' +
-      '<button type="button" class="dccs-home">' + withIcon(config, 'home', 'home', esc(S.nav_home)) + '</button>' +
-      modeSelect(config, state, S) + '</div>';
+    var bar = modeSelect(config, state, S);
 
     if (isWizard) {
       root.innerHTML = bar + renderWizard(config, state, ctx);
@@ -844,8 +840,8 @@
         state.cmpStart = (state.cmpStart | 0) + (cl.contains('dccs-cmp-next') ? 1 : -1);
         rerender(); return;
       }
-      // --- reset / home (back to the first screen) ---
-      if (cl.contains('dccs-reset') || cl.contains('dccs-home')) {
+      // --- reset (Start over) ---
+      if (cl.contains('dccs-reset')) {
         state = defaultState(config);
         rerender(); focusStep(); return;
       }

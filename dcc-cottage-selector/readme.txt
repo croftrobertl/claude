@@ -142,8 +142,6 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 == Changelog ==
 
 = 0.10.0 =
-* New **first-screen button** (next to the mode menu) returns to the start screen at
-  any point — same action as Reset, with its own full set of button style controls.
 * **Mini Entry** now mirrors the main Cottage Selector: it has the full set of text +
   style controls, its pop-up opens on the landing screen, and it reflects your own
   heading/subheader/button/colour settings (no more stale defaults).

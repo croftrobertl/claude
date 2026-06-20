@@ -216,16 +216,6 @@
 }
 .dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
-/* Top bar: first-screen ("Start over") button on the left, mode dropdown on the right. */
-.dccs-root.dccs-root .dccs-topbar {
-  display: flex; gap: 10px; flex-wrap: nowrap; align-items: center; justify-content: space-between; margin-bottom: 12px;
-}
-.dccs-root.dccs-root .dccs-home {
-  flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 0.95rem;
-  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
-}
-
 /* Review list */
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
 .dccs-root.dccs-root .dccs-review-list li {

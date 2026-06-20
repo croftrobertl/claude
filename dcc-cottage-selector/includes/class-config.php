@@ -50,7 +50,6 @@ final class Config
             'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
             'wiz_back'          => __('Back', 'dcc-cottage-selector'),
             'wiz_next'          => __('Next', 'dcc-cottage-selector'),
-            'nav_home'          => __('Start over', 'dcc-cottage-selector'),
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),

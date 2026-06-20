@@ -556,23 +556,6 @@ function configWith(overrides) {
   ok('renders once deps are available', !!div.querySelector('.dccs-landing-choice'));
 })();
 
-// ---- 21. First-screen ("Start over") button on the mode bar returns to landing ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either');     // a few steps in
-  var home = root.querySelector('.dccs-topbar .dccs-home');
-  ok('home button shows on the mode bar during the flow', !!home);
-  ok('home button is not on the landing screen', (function () {
-    var r2 = mountSelector(freshDom());
-    return !r2.querySelector('.dccs-home');
-  })());
-  home.click();
-  ok('home button returns to the first (landing) screen',
-    !!root.querySelector('.dccs-landing') && !root.querySelector('.dccs-chips-wizard'));
-})();
-
 // ---- 22. Quick Finder: every specific "want" narrows the count; "No preference" doesn't ----
 (function () {
   const w = freshDom();
