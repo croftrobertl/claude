@@ -413,6 +413,19 @@
 .dccs-modal-content .dccs-compare-modal { padding: 4px; }
 .dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }
 
+/* Inside the popup the dropdown panels must flow in the scrollable content. When
+   absolutely positioned they are laid out against their .dccs-cmp-select /
+   .dccs-modeselect parent, not the scroll box, so they overflow the modal and get
+   clipped (the compare checklist could only show its first row). Scoped with the
+   doubled .dccs-root so it outranks the base (0,3,0) dropdown rules. */
+.dccs-modal-content .dccs-root.dccs-root .dccs-cmp-select { width: 100%; }
+.dccs-modal-content .dccs-root.dccs-root .dccs-cmp-list,
+.dccs-modal-content .dccs-root.dccs-root .dccs-modeselect-list {
+  position: static; transform: none; left: auto; right: auto; top: auto;
+  width: auto; min-width: 0; max-width: none; margin-top: 8px;
+  box-shadow: none; max-height: 50vh;
+}
+
 @media (min-width: 640px) {
   .dccs-root.dccs-root { padding: 22px; }
   .dccs-root.dccs-root .dccs-heading { font-size: 1.7rem; }
