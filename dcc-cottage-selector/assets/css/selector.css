@@ -74,6 +74,9 @@
   margin: 0 0 12px; padding: 6px 12px; border-radius: 999px;
   background: rgba(15,109,191,0.1); display: inline-block;
 }
+.dccs-root.dccs-root .dccs-count-note {
+  margin: -6px 0 12px; font-size: 0.85rem; color: var(--dccs-muted, #6b7280);
+}
 
 .dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -188,23 +191,40 @@
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
 }
 
+/* Paired button rows never wrap: each button takes half the width and shrinks,
+   with long labels wrapping to two lines inside the button. */
 .dccs-root.dccs-root .dccs-wizard-nav {
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 18px;
+  display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch; justify-content: space-between; margin-top: auto; padding-top: 18px;
 }
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next,
+.dccs-root.dccs-root .dccs-nav-spacer { flex: 1 1 0; min-width: 0; }
 /* Tail / review nav: two equal buttons on one row, styled like the cottage CTA. */
 .dccs-root.dccs-root .dccs-tail-nav { flex-wrap: nowrap; }
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset {
-  flex: 1; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
+  flex: 1 1 0; min-width: 0; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
   background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+  white-space: normal; overflow-wrap: anywhere;
 }
 .dccs-root.dccs-root .dccs-primary {
   min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
   box-shadow: 0 6px 16px rgba(15,109,191,0.32);
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
 }
 .dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* Top bar: first-screen ("Start over") button on the left, mode dropdown on the right. */
+.dccs-root.dccs-root .dccs-topbar {
+  display: flex; gap: 10px; flex-wrap: nowrap; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.dccs-root.dccs-root .dccs-home {
+  flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 0.95rem;
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
+}
 
 /* Review list */
 .dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }

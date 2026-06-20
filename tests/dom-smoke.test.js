@@ -383,10 +383,11 @@ function enter(root, mode) {
   ok('recap chip jumps back into the wizard', !!root.querySelector('.dccs-chips-wizard'));
 })();
 
-// ---- 14. Mini-entry modal opens at results with the cottage highlighted ----
+// ---- 14. Mini-entry modal opens on the LANDING screen, reflecting its own config ----
 (function () {
   const w = freshDom();
   const cfg = JSON.parse(CONFIG);
+  cfg.strings.intro = 'CUSTOM MINI INTRO XYZ';   // a per-instance override the popup must show
   const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
   const node = w.document.createElement('div');
   node.className = 'dccs-entry dccs-entry';
@@ -398,10 +399,19 @@ function enter(root, mode) {
   node.querySelector('.dccs-entry-btn').click();
   const modal = w.document.querySelector('.dccs-modal');
   ok('mini-entry opens modal', !!modal);
-  ok('modal opens straight to results', !!modal.querySelector('.dccs-results') && !modal.querySelector('.dccs-chips-wizard'));
+  ok('overlay mounts inside the entry wrapper', !!node.querySelector('.dccs-modal'));
+  const modalRoot = modal.querySelector('.dccs-root');
+  ok('modal opens on the landing screen (not results)',
+    !!modalRoot.querySelector('.dccs-landing') && !modalRoot.querySelector('.dccs-results'));
+  ok('popup reflects the mini-entry intro override', modal.textContent.indexOf('CUSTOM MINI INTRO XYZ') !== -1);
   ok('body scroll locked', w.document.body.style.overflow === 'hidden');
-  const hc = modal.querySelector('.dccs-card.is-highlight');
-  ok('highlighted cottage #31 surfaced with full name', !!hc && hc.querySelector('h4').textContent.indexOf('Cottage 31: Hibiscus Hut') !== -1);
+  // Drive to results: the cottage is still highlighted once they get there.
+  enter(modalRoot, 'quick');
+  stepThrough(modalRoot, 'either');
+  modalRoot.querySelector('.dccs-see-matches').click();
+  const hc = modalRoot.querySelector('.dccs-card.is-highlight');
+  ok('highlighted cottage #31 surfaces once results are reached',
+    !!hc && hc.querySelector('h4').textContent.indexOf('Cottage 31: Hibiscus Hut') !== -1);
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
   ok('body scroll restored', w.document.body.style.overflow === '');
@@ -544,6 +554,71 @@ function configWith(overrides) {
   injectScript(w, 'labels.js');
   w.DCCS.bootAll(w.document);
   ok('renders once deps are available', !!div.querySelector('.dccs-landing-choice'));
+})();
+
+// ---- 21. First-screen ("Start over") button on the mode bar returns to landing ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  answerNext(root, 'either'); answerNext(root, 'either');     // a few steps in
+  var home = root.querySelector('.dccs-topbar .dccs-home');
+  ok('home button shows on the mode bar during the flow', !!home);
+  ok('home button is not on the landing screen', (function () {
+    var r2 = mountSelector(freshDom());
+    return !r2.querySelector('.dccs-home');
+  })());
+  home.click();
+  ok('home button returns to the first (landing) screen',
+    !!root.querySelector('.dccs-landing') && !root.querySelector('.dccs-chips-wizard'));
+})();
+
+// ---- 22. Quick Finder: every specific "want" narrows the count; "No preference" doesn't ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  ok('count starts at all 8', /\b8\b/.test(countText(root)));
+  clickAnswer(root, 'yes');                                   // desk = yes (a specific want)
+  ok('answering Desk: Yes narrows the count below 8', !/\b8\b/.test(countText(root)));
+  // A fresh run: "No preference" must NOT narrow.
+  const root2 = mountSelector(freshDom());
+  enter(root2, 'quick');
+  clickAnswer(root2, 'either');                               // desk = no preference
+  ok('"No preference" leaves the count at 8', /\b8\b/.test(countText(root2)));
+})();
+
+// ---- 23. Quick Finder: over-constraining shows 0 with a reassurance note ----
+(function () {
+  // pet=yes (only Coconut) + screened porch=yes (only Boathouse) → no cottage has both.
+  const w = freshDom('https://example.com/?mode=quick&pet=true&porch=true');
+  const root = mountSelector(w);
+  // Deep links jump to results; walk back into the wizard via Edit answers to see the live count.
+  // Simpler: drive a fresh wizard to the contradiction.
+  const r = mountSelector(freshDom());
+  enter(r, 'quick');
+  // desk/pullout/layout/dining → no preference; pet step = yes; ground = no pref; porch step = yes.
+  answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either');
+  answerNext(r, 'yes');                                       // pet = yes
+  answerNext(r, 'either');                                    // ground = no pref
+  clickAnswer(r, 'yes');                                      // screened porch = yes → contradiction
+  ok('an impossible combination shows 0 matches', /\b0\b/.test(countText(r)));
+  ok('a reassurance note appears at 0 matches', !!r.querySelector('.dccs-count-note'));
+})();
+
+// ---- 24. Paired button rows are equal-width and never wrap (markup + CSS source) ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  answerNext(root, 'either');                                 // Back + Next both present
+  const nav = root.querySelector('.dccs-wizard-nav');
+  ok('wizard nav holds Back + Next as its only two children',
+    !!nav && nav.children.length === 2 && !!nav.querySelector('.dccs-back') && !!nav.querySelector('.dccs-next'));
+  // jsdom has no CSS cascade, so verify the responsive rules in the stylesheet source.
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  ok('wizard-nav is set to nowrap', /\.dccs-wizard-nav\s*\{[^}]*flex-wrap:\s*nowrap/.test(css));
+  ok('Back/Next are equal-flex (1 1 0)', /\.dccs-back[\s\S]*?\.dccs-next[\s\S]*?flex:\s*1 1 0/.test(css));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

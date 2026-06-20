@@ -28,6 +28,7 @@
     pet:      { test: function (c) { return c.petAllowed === true; }, tag: 'tag_pet' },
     ground:   { test: function (c) { return isGround(c); }, tag: 'tag_upstairs' },
     dining4:  { test: function (c) { return Number(c.diningSeats) >= 4; }, tag: 'tag_dining' },
+    dining2:  { test: function (c) { return Number(c.diningSeats) < 4; }, tag: 'tag_dining2' },
     porch:    { test: function (c) { return c.screenedPorch === true; }, tag: 'tag_porch' },
     desk:     { test: function (c) { return c.desk === true; }, tag: 'tag_desk' },
     pullout:  { test: function (c) { return c.pulloutCouch === true; }, tag: 'tag_pullout' },

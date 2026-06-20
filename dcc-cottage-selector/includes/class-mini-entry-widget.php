@@ -5,21 +5,26 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use Elementor\Widget_Base;
 use Elementor\Controls_Manager;
 
 /**
  * Compact cross-sell entry point for individual cottage pages.
  *
- * "Both (configurable)" behavior:
- *   - If a selector-page URL is set, the entry is a link to that page with the
- *     current cottage pre-filled via the query string (?highlight=<id>).
- *   - If no URL is set, clicking opens the full selector in a same-page modal,
- *     pre-filled and highlighting the current cottage vs the other seven.
+ * Subclasses {@see Selector_Widget} so it inherits the FULL set of text + style
+ * controls (and the build_config() helper). That means the Mini-Entry popup
+ * carries the exact same customizable look and copy as the main Selector — you
+ * configure this widget's own controls and they flow into the modal.
+ *
+ * Behavior:
+ *   - If a selector-page URL is set, the entry links to that page with the
+ *     current cottage highlighted (?highlight=<id>).
+ *   - If no URL is set, clicking opens the full selector in a same-page modal.
+ *     The modal opens on the landing screen (mirroring the Selector's first
+ *     section) and highlights this cottage once the guest reaches results.
  *
  * Exposed both as an Elementor widget and the [dcc_selector_entry] shortcode.
  */
-class Mini_Entry_Widget extends Widget_Base
+class Mini_Entry_Widget extends Selector_Widget
 {
     public function get_name(): string
     {
@@ -36,25 +41,17 @@ class Mini_Entry_Widget extends Widget_Base
         return 'eicon-help-o';
     }
 
-    public function get_categories(): array
+    public function get_keywords(): array
     {
-        return ['claude-code'];
-    }
-
-    public function get_script_depends(): array
-    {
-        return ['dccs-selector'];
-    }
-
-    public function get_style_depends(): array
-    {
-        return ['dccs-selector'];
+        return ['cottage', 'selector', 'mini', 'cross-sell', 'dora canal'];
     }
 
     protected function register_controls(): void
     {
-        $this->start_controls_section('content', [
-            'label' => __('Content', 'dcc-cottage-selector'),
+        // Mini-Entry–specific content first, then the full inherited Selector
+        // control set (text + styles) so the popup is fully configurable here.
+        $this->start_controls_section('mini_content', [
+            'label' => __('Mini Entry', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
@@ -85,6 +82,8 @@ class Mini_Entry_Widget extends Widget_Base
         ]);
 
         $this->end_controls_section();
+
+        parent::register_controls();
     }
 
     protected function render(): void
@@ -94,11 +93,21 @@ class Mini_Entry_Widget extends Widget_Base
         if (!empty($s['selector_url']) && is_array($s['selector_url'])) {
             $url = (string) ($s['selector_url']['url'] ?? '');
         }
-        echo self::markup((string) ($s['current'] ?? ''), $url, (string) ($s['copy'] ?? self::default_copy())); // phpcs:ignore WordPress.Security.EscapeOutput
+        $current = (string) ($s['current'] ?? '');
+        $copy    = (string) ($s['copy'] ?? self::default_copy());
+
+        // Same-page modal: embed this widget instance's own full config so the
+        // popup matches the Selector's styling/copy. Opened on the landing screen
+        // (the JS sets openStage), with the cottage highlighted in results.
+        $modal_config = $url === '' ? $this->build_config(['highlight' => $current, 'startMode' => 'quick']) : null;
+
+        echo self::markup($current, $url, $copy, $modal_config); // phpcs:ignore WordPress.Security.EscapeOutput
     }
 
     /**
      * Shortcode: [dcc_selector_entry current="22" url="/cottage-selector/" text="…"]
+     * (Shortcode has no widget instance, so it uses the default config — for
+     * per-instance styling, use the Elementor widget.)
      *
      * @param array<string,string>|string $atts
      */
@@ -125,27 +134,22 @@ class Mini_Entry_Widget extends Widget_Base
     }
 
     /**
-     * Build the deep-link query string that pre-fills the selector for a cottage
-     * (soft Quick-Pick preferences derived from its attributes, plus highlight).
-     * Mirrors derivePresetQuick() in selector.js.
+     * Deep-link query string for the linked-page variant: just highlight the
+     * cottage in the destination selector's results (no attribute pre-fill, which
+     * would now hard-filter under the "every specific want" count logic).
      */
     private static function deeplink_for(string $id): string
     {
-        $c = Data::find($id);
-        $args = ['mode' => 'quick', 'highlight' => $id];
-        if ($c) {
-            if (!empty($c['desk'])) { $args['desk'] = 'yes'; }
-            if (!empty($c['pulloutCouch'])) { $args['pullout'] = 'yes'; }
-            $args['layout'] = (($c['layoutType'] ?? '') === 'Studio') ? 'studio' : 'onebed';
-            if ((int) ($c['squareFeet'] ?? 0) >= 400) { $args['largest'] = 'true'; }
-        }
-        return http_build_query($args);
+        return http_build_query(['mode' => 'quick', 'highlight' => $id]);
     }
 
     /**
-     * Shared markup for both the widget and shortcode.
+     * Shared markup for the widget and shortcode. $modal_config, when provided,
+     * is this widget instance's full config (styled + copy-overridden).
+     *
+     * @param array<string,mixed>|null $modal_config
      */
-    private static function markup(string $current, string $selector_url, string $copy): string
+    private static function markup(string $current, string $selector_url, string $copy, ?array $modal_config = null): string
     {
         // Normalize/validate the link server-side (the JS safeUrl() guards at runtime too).
         $selector_url = $selector_url !== '' ? esc_url_raw($selector_url) : '';
@@ -156,15 +160,13 @@ class Mini_Entry_Widget extends Widget_Base
         ];
 
         if ($selector_url === '') {
-            // Same-page modal: embed the full selector config (opened in Quick Pick,
-            // highlighting this cottage — preferences are derived client-side).
-            $entry['modalConfig'] = Config::build([], [
+            // Same-page modal: embed the full selector config (opened on the landing
+            // screen, highlighting this cottage once results are reached).
+            $entry['modalConfig'] = $modal_config ?? Config::build([], [
                 'highlight' => $current,
                 'startMode' => 'quick',
             ]);
         } else {
-            // Linked selector page: pre-build the deep-link query from this cottage
-            // so the destination opens pre-filled and highlighting it.
             $entry['deeplink'] = self::deeplink_for($current);
         }
 

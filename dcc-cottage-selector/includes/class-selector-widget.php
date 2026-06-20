@@ -83,6 +83,7 @@ class Selector_Widget extends Widget_Base
         $this->register_progress_style_controls();
         $this->register_question_style_controls();
         $this->register_editanswers_style_controls();
+        $this->register_home_style_controls();
         $this->register_button_style_controls();
         $this->register_card_style_controls();
         $this->register_viewbtn_style_controls();
@@ -148,6 +149,7 @@ class Selector_Widget extends Widget_Base
             'restart'        => __('Restart button', 'dcc-cottage-selector'),
             'next'           => __('Next button', 'dcc-cottage-selector'),
             'back'           => __('Back button', 'dcc-cottage-selector'),
+            'home'           => __('First-screen button', 'dcc-cottage-selector'),
             'view'           => __('View cottage button', 'dcc-cottage-selector'),
             'compare'        => __('Compare chip (result card)', 'dcc-cottage-selector'),
             'edit_answers'   => __('Edit answers button', 'dcc-cottage-selector'),
@@ -179,7 +181,7 @@ class Selector_Widget extends Widget_Base
     {
         return [
             // Buttons + landing choices (declared in register_icon_controls()).
-            'submit', 'restart', 'next', 'back', 'view', 'compare',
+            'submit', 'restart', 'next', 'back', 'home', 'view', 'compare',
             'edit_answers', 'compare_select', 'mode_quick', 'mode_weights', 'mode_compare',
             // Questions + answers (declared in register_qa_icon_controls()).
             'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_screenedporch', 'q_largest',
@@ -259,10 +261,12 @@ class Selector_Widget extends Widget_Base
             'results_heading' => __('Results heading', 'dcc-cottage-selector'),
             'review_heading'  => __('Wizard review heading', 'dcc-cottage-selector'),
             'reset'           => __('Reset button', 'dcc-cottage-selector'),
+            'nav_home'        => __('First-screen button', 'dcc-cottage-selector'),
             'edit_answers'    => __('Edit answers button', 'dcc-cottage-selector'),
             'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
             'compare_select'  => __('Compare picker button', 'dcc-cottage-selector'),
             'compare_prompt'  => __('Compare subheader', 'dcc-cottage-selector'),
+            'count_zero_hint' => __('Zero-match note', 'dcc-cottage-selector'),
         ];
 
         foreach ($editable as $key => $label) {
@@ -855,6 +859,13 @@ class Selector_Widget extends Widget_Base
         $this->add_button_style_section('style_viewbtn', __('View cottage button', 'dcc-cottage-selector'), self::SEL . '.dccs-view', 'view');
     }
 
+    /** Dedicated styling for the first-screen ("Start over") button — its own copy
+        of the Next button's settings. */
+    private function register_home_style_controls(): void
+    {
+        $this->add_button_style_section('style_home', __('First-screen button', 'dcc-cottage-selector'), self::SEL . '.dccs-home', 'home');
+    }
+
     private function register_button_style_controls(): void
     {
         $this->start_controls_section('style_buttons', [
@@ -1191,7 +1202,7 @@ class Selector_Widget extends Widget_Base
     private function collect_icon_sides(array $settings): array
     {
         $sides = [];
-        foreach (['edit_answers', 'view', 'questions', 'answers', 'compare_select'] as $key) {
+        foreach (['edit_answers', 'view', 'home', 'questions', 'answers', 'compare_select'] as $key) {
             $sides[$key] = ($settings['icon_side_' . $key] ?? 'left') === 'right' ? 'right' : 'left';
         }
         return $sides;
@@ -1213,11 +1224,19 @@ class Selector_Widget extends Widget_Base
         return trim((string) ob_get_clean());
     }
 
-    protected function render(): void
+    /**
+     * Assemble the full front-end config from this widget instance's settings:
+     * per-instance string overrides, icons, icon sides, mode + heading options.
+     * Shared by the Selector and the Mini-Entry (which subclasses this widget), so
+     * both popups carry the same text + style customizations. $extra is merged last
+     * (e.g. the Mini-Entry passes 'highlight').
+     *
+     * @param array<string,mixed> $extra
+     * @return array<string,mixed>
+     */
+    protected function build_config(array $extra = []): array
     {
         $settings = $this->get_settings_for_display();
-
-        $cottages = Data::all();
 
         $string_overrides = [];
         foreach ($settings as $k => $v) {
@@ -1235,13 +1254,22 @@ class Selector_Widget extends Widget_Base
             $start = $enabled[0];
         }
 
-        $config = Config::build($string_overrides, [
+        return Config::build($string_overrides, array_merge([
             'startMode'    => $start,
             'enabledModes' => array_values($enabled),
             'showHeading'  => ($settings['show_heading'] ?? 'yes') === 'yes',
             'icons'        => $this->collect_icons($settings),
             'iconSides'    => $this->collect_icon_sides($settings),
-        ]);
+        ], $extra));
+    }
+
+    protected function render(): void
+    {
+        $settings = $this->get_settings_for_display();
+
+        $cottages = Data::all();
+
+        $config = $this->build_config();
 
         if (empty($cottages)) {
             printf(

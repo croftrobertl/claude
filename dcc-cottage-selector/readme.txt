@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.0
+Stable tag: 0.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,19 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.10.0 =
+* New **first-screen button** (next to the mode menu) returns to the start screen at
+  any point — same action as Reset, with its own full set of button style controls.
+* **Mini Entry** now mirrors the main Cottage Selector: it has the full set of text +
+  style controls, its pop-up opens on the landing screen, and it reflects your own
+  heading/subheader/button/colour settings (no more stale defaults).
+* **Quick Finder** live "X cottages match" count now narrows on every specific answer
+  (e.g. Desk: Yes, Studio, Table for 2/4), not just the must-haves; "No preference"
+  never narrows. When a combination rules everything out it shows "0" with a note that
+  the closest options appear at the end. Weigh Priorities is unchanged (High = required).
+* Paired button rows (Back/Next, Reset/Submit, Edit-Answers/Reset, first-screen + mode
+  menu) now stay on one line on narrow phones, splitting the width evenly.
 
 = 0.9.0 =
 * The live "X cottages match" counter now narrows as you answer. In Quick Match it

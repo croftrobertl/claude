@@ -148,7 +148,10 @@
     var hasCriteria = !!state.highlight || !!config.presetQuick ||
       Object.keys(state.quick).some(function (k) { return state.quick[k] !== ''; });
     var p = new URLSearchParams(window.location.search);
-    if (hasCriteria) { state.stage = 'results'; }
+    // The mini-entry modal opens on the landing screen (matching the main Selector's
+    // first section); the highlight still applies once the guest reaches results.
+    if (config.openStage === 'landing') { state.stage = 'landing'; }
+    else if (hasCriteria) { state.stage = 'results'; }
     else if (p.has('mode') || p.has('compare')) { state.stage = 'q'; }
     state.step = 0;
     state.editReturn = null;
@@ -210,14 +213,21 @@
         wScreenedPorch: w.screenedporch
       };
     }
-    // Quick finder: hard must-haves + medium-weight soft preferences. Unset ('') and
-    // 'either' both impose no constraint.
+    // Quick finder: every SPECIFIC want narrows the count + results. Each positive /
+    // specific answer becomes a hard filter; 'No', 'No preference' ('either') and unset
+    // ('') impose no constraint. The wX weights still rank the survivors.
     var q = state.quick;
     var hard = [];
+    if (q.desk === 'yes') { hard.push('desk'); }
+    if (q.pullout === 'yes') { hard.push('pullout'); }
+    if (q.layout === 'studio') { hard.push('studio'); }
+    if (q.layout === 'onebed') { hard.push('onebed'); }
+    if (q.dining === 4 || q.dining === '4') { hard.push('dining4'); }
+    if (q.dining === 2 || q.dining === '2') { hard.push('dining2'); }
     if (q.pet === 'yes') { hard.push('pet'); }
     if (q.ground === 'yes') { hard.push('ground'); }
-    if (q.dining === 4 || q.dining === '4') { hard.push('dining4'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
+    if (q.largest === 'yes') { hard.push('moreroom'); }
     return {
       hard: hard,
       wantLargest: q.largest === 'yes',
@@ -370,6 +380,11 @@
     html += '<div class="dccs-progress-row">';
     html += '<span class="dccs-progress-label">' + esc(fmt2(S.wiz_progress, i + 1, qs.length)) + '</span>';
     html += '<span class="dccs-count">' + esc(matchCount(S, n)) + '</span></div>';
+    // When the answers so far rule everything out, reassure that the closest options
+    // still surface at the end (the results page falls back to near-matches).
+    if (n === 0 && S.count_zero_hint) {
+      html += '<p class="dccs-count-note">' + esc(S.count_zero_hint) + '</p>';
+    }
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
     html += '<h3 class="dccs-step-q" tabindex="-1">' + withIcon(config, qIconKey, 'questions', esc(qLabel)) + '</h3>';
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
@@ -537,7 +552,7 @@
     if (res.empty) {
       // Drop the least-essential must-haves (one at a time, in order) until the
       // closest options surface. Style preferences relax before policy ones.
-      var relaxOrder = ['moreroom', 'desk', 'pullout', 'studio', 'onebed', 'porch', 'dining4', 'ground', 'pet'];
+      var relaxOrder = ['moreroom', 'desk', 'pullout', 'studio', 'onebed', 'dining2', 'porch', 'dining4', 'ground', 'pet'];
       var relaxed = (crit.hard || []).slice();
       var fallback = null;
       for (var i = 0; i < relaxOrder.length && relaxed.length; i++) {
@@ -707,7 +722,11 @@
       return;
     }
     var isWizard = (state.mode === 'quick' || state.mode === 'weights');
-    var bar = modeSelect(config, state, S);
+    // Top bar: a "back to the first screen" button (same action as Reset) on the left,
+    // the mode dropdown on the right. Shown on every in-flow screen, never on landing.
+    var bar = '<div class="dccs-topbar">' +
+      '<button type="button" class="dccs-home">' + withIcon(config, 'home', 'home', esc(S.nav_home)) + '</button>' +
+      modeSelect(config, state, S) + '</div>';
 
     if (isWizard) {
       root.innerHTML = bar + renderWizard(config, state, ctx);
@@ -825,8 +844,8 @@
         state.cmpStart = (state.cmpStart | 0) + (cl.contains('dccs-cmp-next') ? 1 : -1);
         rerender(); return;
       }
-      // --- reset (Start over) ---
-      if (cl.contains('dccs-reset')) {
+      // --- reset / home (back to the first screen) ---
+      if (cl.contains('dccs-reset') || cl.contains('dccs-home')) {
         state = defaultState(config);
         rerender(); focusStep(); return;
       }
@@ -911,11 +930,11 @@
 
   /** Shared overlay scaffold: focus-trap, background scroll-lock, Esc/click close.
       `label` names the dialog for screen readers. */
-  function buildOverlay(trigger, label) {
+  function buildOverlay(trigger, label, mount) {
     var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true" aria-label="' + esc(label || '') + '"><div class="dccs-modal-box">' +
       '<button type="button" class="dccs-modal-close" aria-label="Close">&times;</button>' +
       '<div class="dccs-modal-content"></div></div></div>');
-    document.body.appendChild(overlay);
+    (mount || document.body).appendChild(overlay);
 
     var prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -993,22 +1012,22 @@
         window.location.href = base + sep + q;
         return;
       }
-      openModal(entry, btn);
+      openModal(entry, btn, node);
     });
   }
 
-  function openModal(entry, trigger) {
+  function openModal(entry, trigger, mount) {
     var config = entry.modalConfig;
     if (!config) { return; }
 
-    // Open in the quick finder with soft preferences derived from this cottage and
-    // the cottage highlighted, so the guest sees exactly how it ranks.
-    var current = findCottageIn(config.cottages, entry.current);
-    config.startMode = 'quick';
+    // Open on the landing screen — the popup's first section mirrors the main Selector.
+    // The cottage stays highlighted once the guest reaches results.
+    config.openStage = 'landing';
     config.highlight = String(entry.current);
-    if (current) { config.presetQuick = derivePresetQuick(current); }
 
-    var o = buildOverlay(trigger, config.strings && config.strings.heading);
+    // Mount the overlay inside the widget wrapper so the Mini-Entry's own (scoped)
+    // Elementor style controls reach the modal content.
+    var o = buildOverlay(trigger, config.strings && config.strings.heading, mount);
     var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');
     inner.dataset.config = JSON.stringify(config);
     o.content.appendChild(inner);
