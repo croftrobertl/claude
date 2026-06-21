@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.2
+Stable tag: 0.10.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,14 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.10.3 =
+* Review/cleanup pass: removed unused internal code, and the "Want the largest space
+  available?" answer now ranks bigger cottages to the top instead of filtering others
+  out (so it never zeroes your results).
+* Polish: the pop-up close button now follows your color settings; the compare table
+  and in-pop-up checklist read better on small phones; minor accessibility fixes.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.10.2 =
 * Fixed the cottage-picker checklist (and mode dropdown) being cut off inside the

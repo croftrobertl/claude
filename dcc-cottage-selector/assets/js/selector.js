@@ -119,17 +119,6 @@
     };
   }
 
-  /** Soft Quick-Pick preferences that describe a given cottage (no hard filters,
-      so every cottage stays rankable and the guest sees full positioning). */
-  function derivePresetQuick(c) {
-    return {
-      desk: c.desk ? 'yes' : 'either',
-      pullout: c.pulloutCouch ? 'yes' : 'either',
-      layout: c.layoutType === 'Studio' ? 'studio' : 'onebed',
-      largest: Number(c.squareFeet) >= 400 ? 'yes' : 'no'
-    };
-  }
-
   var LVL = { low: 1, medium: 2, high: 3, '1': 1, '2': 2, '3': 3 };
 
   /** Initialize state: defaults < deeplink (URL). Answers are never persisted —
@@ -227,7 +216,9 @@
     if (q.pet === 'yes') { hard.push('pet'); }
     if (q.ground === 'yes') { hard.push('ground'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
-    if (q.largest === 'yes') { hard.push('moreroom'); }
+    // 'largest' is comparative, not a binary feature — keep it a soft ranking signal
+    // (wantLargest / wSpace below) rather than a hard filter, so it floats the biggest
+    // cottages to the top without excluding anyone.
     return {
       hard: hard,
       wantLargest: q.largest === 'yes',
@@ -530,7 +521,7 @@
 
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
       '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
-      '<button type="button" class="dccs-cmp-trigger" aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+      '<button type="button" class="dccs-cmp-trigger" aria-haspopup="true" aria-expanded="' + (open ? 'true' : 'false') + '">' +
       '<span>' + withIcon(config, 'compare_select', 'compare_select', esc(label)) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
       '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
       btn + '</div>';
@@ -1029,11 +1020,6 @@
     o.content.appendChild(inner);
     initSelector(inner);
     o.focusClose();
-  }
-
-  function findCottageIn(list, id) {
-    for (var i = 0; i < (list || []).length; i++) { if (String(list[i].id) === String(id)) { return list[i]; } }
-    return null;
   }
 
   /* ---------- boot ---------- */

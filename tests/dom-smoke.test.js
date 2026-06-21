@@ -604,5 +604,19 @@ function configWith(overrides) {
   ok('Back/Next are equal-flex (1 1 0)', /\.dccs-back[\s\S]*?\.dccs-next[\s\S]*?flex:\s*1 1 0/.test(css));
 })();
 
+// ---- 25. "Largest = Yes" ranks big cottages first but does NOT filter the count ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  for (var i = 0; i < 7; i++) { answerNext(root, 'either'); }   // advance to the "largest" step
+  ok('count is all 8 before answering largest', /\b8\b/.test(countText(root)));
+  clickAnswer(root, 'yes');                                     // largest = Yes (comparative)
+  ok('answering largest=Yes does NOT narrow the count', /\b8\b/.test(countText(root)));
+  clickNext(root);                                              // last step -> review
+  root.querySelector('.dccs-see-matches').click();              // -> results
+  ok('largest cottages (#22/#23) rank first', /Cottage 2[23]:/.test(cardNames(root)[0]));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

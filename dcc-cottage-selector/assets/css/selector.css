@@ -106,9 +106,6 @@
 .dccs-root.dccs-root .dccs-modetab.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); }
 
 /* ---- Wizard ---- */
-.dccs-root.dccs-root .dccs-head-compact { margin-bottom: 10px; }
-.dccs-root.dccs-root .dccs-head-compact .dccs-heading { font-size: 1.2rem; }
-
 .dccs-root.dccs-root .dccs-wizard { display: flex; flex-direction: column; min-height: 300px; }
 .dccs-root.dccs-root .dccs-progress-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;
@@ -299,6 +296,7 @@
 .dccs-root.dccs-root .dccs-cmp-option {
   display: flex; align-items: center; gap: 10px; padding: 11px 14px; min-height: 44px; cursor: pointer;
   border-bottom: 1px solid var(--dccs-border); font-size: 0.92rem; text-transform: none;
+  overflow-wrap: anywhere;
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 18px; height: 18px; flex: 0 0 auto; }
@@ -407,7 +405,7 @@
   position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0;
   width: 36px; height: 36px; border-radius: 999px; border: 0;
   display: flex; align-items: center; justify-content: center;
-  background: #1a2330 !important; color: #fff !important; font-size: 22px; line-height: 1; cursor: pointer;
+  background: var(--dccs-text) !important; color: var(--dccs-surface) !important; font-size: 22px; line-height: 1; cursor: pointer;
   -webkit-appearance: none; appearance: none; box-shadow: none; -webkit-tap-highlight-color: transparent;
 }
 .dccs-modal-content .dccs-compare-modal { padding: 4px; }
@@ -422,7 +420,7 @@
 .dccs-modal-content .dccs-root.dccs-root .dccs-cmp-list,
 .dccs-modal-content .dccs-root.dccs-root .dccs-modeselect-list {
   position: static; transform: none; left: auto; right: auto; top: auto;
-  width: auto; min-width: 0; max-width: none; margin-top: 8px;
+  width: auto; min-width: 0; max-width: 100%; margin-top: 8px;
   box-shadow: none; max-height: 50vh;
 }
 
@@ -437,7 +435,7 @@
   .dccs-root.dccs-root .dccs-open-compare { width: 100%; }
   /* Tighter compare-table cells so more fits before horizontal scroll kicks in. */
   .dccs-root.dccs-root .dccs-matrix th,
-  .dccs-root.dccs-root .dccs-matrix td { padding: 6px 5px; }
+  .dccs-root.dccs-root .dccs-matrix td { padding: 6px 5px; font-size: 0.82rem; }
   .dccs-root.dccs-root .dccs-matrix thead th { font-size: 0.72rem; }
 }
 
