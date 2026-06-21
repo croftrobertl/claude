@@ -316,9 +316,6 @@
     font-weight: 400;
 }
 
-.mphbac-label-number .mphbac-label-abbrev { display: none; }
-.mphbac-label-number .mphbac-label-num    { font-size: 1em; opacity: 1; }
-
 /* Top row — day-of-week + date headers, and the corner "Property" cell */
 .mphbac-cell-day {
     flex-direction: column;

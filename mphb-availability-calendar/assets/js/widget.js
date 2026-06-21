@@ -525,6 +525,9 @@
                 // any non-Swiper third-party ResizeObserver that may also
                 // have cached zero-dimension state in the hidden source.
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+                // Move focus inside the dialog so Tab cycling has a
+                // defined starting point and the trap below activates.
+                if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
             });
             document.addEventListener('keydown', onKeydown);
         }
@@ -571,6 +574,22 @@
 
         function onKeydown(e) {
             if (e.key === 'Escape') closeInfo();
+            if (e.key === 'Tab') trapFocus(e);
+        }
+
+        function trapFocus(e) {
+            // Re-collect on every Tab so nested Elementor widgets (carousel
+            // arrows, accordion toggles, etc.) that get mounted/unmounted
+            // inside the popup are picked up. Filter out hidden / disabled.
+            var focusable = collectFocusables(sheet);
+            if (!focusable.length) return;
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
         }
 
         overlay.addEventListener('click', closeInfo);

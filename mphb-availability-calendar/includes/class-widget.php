@@ -1,7 +1,6 @@
 <?php
 namespace MPHBAC;
 
-use DateTimeImmutable;
 use Elementor\Controls_Manager;
 use Elementor\Widget_Base;
 
@@ -645,7 +644,6 @@ final class Widget extends Widget_Base
             'str_today_hint'    => [__('Back-to-today button tooltip', 'mphb-availability-calendar'), __('Jump back to today\'s availability', 'mphb-availability-calendar')],
             'str_loading'       => [__('Loading status (screen-reader)', 'mphb-availability-calendar'), __('Loading availability…', 'mphb-availability-calendar')],
             'str_checkout_moved' => [__('Forced-checkout-date announcement (screen-reader, {date} is replaced)', 'mphb-availability-calendar'), __('Checkout date moved to {date}.', 'mphb-availability-calendar')],
-            'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
             'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],

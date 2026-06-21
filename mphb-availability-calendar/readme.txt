@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.6
+Stable tag: 0.9.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,12 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.7 =
+* Cleanup: removed an orphan "Tooltip prefix" string control that was registered in the Strings panel but never consumed by any markup or script.
+* Cleanup: removed an unused `.mphbac-label-number` CSS rule (the parent class was never applied; the nested `.mphbac-label-abbrev` / `.mphbac-label-num` selectors used elsewhere are unaffected).
+* Cleanup: dropped an unused `use DateTimeImmutable;` import from the widget class.
+* A11y: the cottage info popup now has the same keyboard focus-trap as the Book Now popup — Tab cycles inside the dialog and wraps at both ends, initial focus lands on the close button on open, and Escape still closes and returns focus to the triggering cottage name. `role="dialog"` / `aria-modal="true"` were already present; this completes the parity.
 
 = 0.9.6 =
 * Fix (iOS Safari): bottom of the cottage info popup and Book Now popup were hidden behind the floating Safari toolbar. The v0.9.0 svh fix capped popup HEIGHT correctly but the popup was still anchored with `bottom: 0`, which on iOS puts the popup's bottom edge at the vh-bottom — BEHIND the toolbar that overlays the viewport. Switched the anchor to `bottom: env(safe-area-inset-bottom, 0px)` so the popup lifts above the toolbar, and added a JS-side `viewport-fit=cover` injection so `env()` returns a real value even when the theme's viewport meta omits it.
