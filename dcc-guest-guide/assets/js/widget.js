@@ -21,7 +21,6 @@
 (function () {
     'use strict';
 
-    const STORAGE_KEY = 'dccgg:theme';
     const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // -- Nonce-refreshing AJAX wrappers (v0.9.7.15) -----------------------
@@ -177,7 +176,6 @@
         wireBack(root, config);
         wireReadMore(root, config);
         wireCopy(root, config);
-        wireShare(root, config);
         wireQr(root, config);
         wireSearch(root, config);
         wireSearchMic(root, config);
@@ -1243,10 +1241,22 @@
     }
 
     // -- Gallery strip click → lightbox with hotspots (v0.7) --------------
+    // v0.9.7.20: delegate from `document` with a stage back-pointer so the
+    // handler still fires after `.dccgg-stage` is portaled to <body> by
+    // showDetailModal() — same fix pattern v0.9.7.5 applied to wireChecklists
+    // and wireSectionNav. Without this the click bubble path bypasses `root`
+    // once any detail has been opened and gallery thumbs silently no-op.
     function wireGalleryStrip(root) {
-        root.addEventListener('click', (e) => {
+        const stage = root.querySelector('.dccgg-stage');
+        if (stage) stage.__dccggRoot = root;
+        const ownsTarget = (el) => {
+            if (root.contains(el)) return true;
+            const s = el.closest && el.closest('.dccgg-stage');
+            return !!(s && s.__dccggRoot === root);
+        };
+        document.addEventListener('click', (e) => {
             const thumb = e.target.closest('.dccgg-gallery-thumb');
-            if (!thumb) return;
+            if (!thumb || !ownsTarget(thumb)) return;
             e.preventDefault();
             const strip = thumb.parentNode;
             const thumbs = Array.from(strip.querySelectorAll('.dccgg-gallery-thumb'));
@@ -1464,8 +1474,6 @@
             document.addEventListener('click', onDocClick);
 
             const print = menu.querySelector('.dccgg-more-print');
-            const theme = menu.querySelector('.dccgg-more-theme');
-            const share = menu.querySelector('.dccgg-more-share');
 
             if (print) {
                 print.addEventListener('click', (e) => {
@@ -1476,39 +1484,6 @@
                         return;
                     }
                     window.print();
-                });
-            }
-            if (theme) {
-                theme.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.open = false;
-                    const toggle = root.querySelector('.dccgg-theme-toggle');
-                    if (toggle) {
-                        toggle.click();
-                    } else {
-                        // Fallback: flip dark class directly + persist.
-                        const next = !root.classList.contains('dccgg-is-dark');
-                        root.classList.toggle('dccgg-is-dark', next);
-                        root.classList.toggle('dccgg-is-light', !next);
-                        try { localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light'); } catch (_) {}
-                    }
-                });
-            }
-            if (share) {
-                share.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.open = false;
-                    const key = share.dataset.shareSection || '';
-                    const url = new URL(window.location.href);
-                    if (key) url.searchParams.set('guide', key);
-                    if (navigator.share) {
-                        navigator.share({ title: document.title, url: url.toString() }).catch((err) => {
-                            if (err && err.name === 'AbortError') return;
-                            copyText(url.toString()).then(() => flashCopied(share, (config.strings && config.strings.shareCopied) || 'Link copied!')).catch(() => {});
-                        });
-                    } else {
-                        copyText(url.toString()).then(() => flashCopied(share, (config.strings && config.strings.shareCopied) || 'Link copied!')).catch(() => {});
-                    }
                 });
             }
         });
@@ -1526,36 +1501,20 @@
         const mode = config.darkMode || 'off';
         if (mode === 'off') return;
 
-        const toggle = root.querySelector('.dccgg-theme-toggle');
-        const stored = readStored();
-
         const apply = (isDark) => {
             root.classList.toggle('dccgg-is-dark', isDark);
             root.classList.toggle('dccgg-is-light', !isDark);
-            if (toggle) toggle.setAttribute('aria-pressed', String(isDark));
         };
 
-        if (stored === 'dark') apply(true);
-        else if (stored === 'light') apply(false);
-        else if (mode === 'always') apply(true);
+        if (mode === 'always') apply(true);
         else if (mode === 'auto') {
             const mq = window.matchMedia('(prefers-color-scheme: dark)');
             apply(mq.matches);
             if (mq.addEventListener) {
-                mq.addEventListener('change', e => { if (!readStored()) apply(e.matches); });
+                mq.addEventListener('change', e => apply(e.matches));
             }
         }
-
-        if (toggle) {
-            toggle.addEventListener('click', () => {
-                const next = !root.classList.contains('dccgg-is-dark');
-                apply(next);
-                writeStored(next ? 'dark' : 'light');
-            });
-        }
     }
-    function readStored()    { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } }
-    function writeStored(v)  { try { localStorage.setItem(STORAGE_KEY, v); } catch (_) {} }
 
     // -- Print (CSP-safe binding, replaces v0.1 inline onclick) -----------
     function wirePrint(root, config) {
@@ -2491,39 +2450,6 @@
         }
     }
 
-    // -- Share -------------------------------------------------------------
-    function wireShare(root, config) {
-        root.querySelectorAll('.dccgg-item-share').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const tileWrap = btn.closest('.dccgg-tile-wrap');
-                const detail   = btn.closest('.dccgg-detail');
-                const article  = btn.closest('.dccgg-item');
-                const key = (tileWrap && tileWrap.dataset.sectionKey) || (detail && detail.dataset.key) || '';
-                const title = (article && article.dataset.itemTitle) || '';
-                const url = new URL(window.location.href);
-                if (key) url.searchParams.set('guide', key);
-                if (title) url.searchParams.set('item', slugify(title));
-                else url.searchParams.delete('item');
-                url.hash = key ? ('guide-' + key) : '';
-
-                if (navigator.share) {
-                    navigator.share({ title: title || document.title, url: url.toString() }).catch((err) => {
-                        // v0.4 fix: distinguish user-dismissal from a real
-                        // failure. Only fall back to clipboard for the latter.
-                        if (err && err.name === 'AbortError') return;
-                        copyText(url.toString()).then(() => {
-                            flashCopied(btn, (config.strings && config.strings.shareCopied) || 'Link copied!');
-                        }).catch(() => {});
-                    });
-                    return;
-                }
-                copyText(url.toString()).then(() => {
-                    flashCopied(btn, (config.strings && config.strings.shareCopied) || 'Link copied!');
-                }).catch(() => {});
-            });
-        });
-    }
     function slugify(s) {
         return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     }

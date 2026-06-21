@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.19
+Stable tag: 0.9.7.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,50 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.20 =
+
+Code-health cleanup pass. One real bug fix, four orphan-code deletions
+left over from earlier feature removals. No new features, no behaviour
+changes for live guests beyond the gallery fix.
+
+**Bug fix — Photo gallery thumbs work again once any section has been
+opened.** The Gallery / hotspots feature shipped in v0.7 used
+`root.addEventListener('click', …)` for thumb-tap → lightbox delegation.
+When v0.9.5 portaled `.dccgg-stage` (containing every detail card)
+to `<body>` on first detail open, the click bubble path stopped passing
+through `.dccgg-root`, so every gallery thumb silently no-op'd from the
+second detail open onward — no console error, no visible signal. Same
+bug pattern v0.9.7.5 fixed for `wireChecklists` and `wireSectionNav`;
+finally caught for galleries. `wireGalleryStrip` now delegates from
+`document` with a `stage.__dccggRoot` back-pointer so each widget still
+only handles its own thumbs.
+
+**Cleanup — drop orphan code from earlier removals.**
+
+* Per-section More menu — Theme + Share button handlers
+  (`wireMoreMenu`) attached click listeners to `.dccgg-more-theme` and
+  `.dccgg-more-share`, which haven't been rendered since v0.9.5
+  removed the visitor-facing dark-mode toggle and per-section Share
+  link. ~50 lines of unreachable JS deleted, including the only
+  remaining `navigator.share` call site in the file.
+* `.dccgg-theme-toggle` CSS rules (~30 lines across light, dark, focus
+  and print blocks) deleted — the element hasn't been rendered since
+  v0.9.5. `wireDarkMode` simplified to apply mode + follow-OS without
+  the dead toggle-click branch. `STORAGE_KEY`, `readStored()`,
+  `writeStored()` deleted in the same pass.
+* `wireShare()` (~80 lines) deleted — queried `.dccgg-item-share`,
+  which v0.9.4 removed from `render_item()`. Function ran every init
+  and no-op'd because the selector never matched. The matching
+  `.dccgg-item-share` CSS rules across three blocks deleted in the
+  same pass.
+* Orphan strings: the `str_share`, `str_share_copied`, and
+  `str_theme_toggle` Elementor string controls registered in
+  `register_strings_controls()` deleted — every consumer was one of
+  the deleted JS handlers above.
+
+Net effect: smaller bundle, fewer dead-code traps for the next
+debugging session, and one real broken-feature fix.
 
 = 0.9.7.19 =
 

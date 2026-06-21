@@ -1044,28 +1044,6 @@ body.dccgg-detail-open {
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
-.dccgg-item-share {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px; height: 44px;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--dccgg-muted);
-    cursor: pointer;
-    transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration);
-    font-size: 0.85em;
-}
-@media (hover: hover) {
-    .dccgg-item-share:hover,
-    .dccgg-item-share:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-primary) 10%, transparent);
-        color: var(--dccgg-primary);
-        outline: none;
-    }
-}
-
 .dccgg-item-content-wrap { position: relative; }
 .dccgg-collapsible {
     max-height: 120px;
@@ -1375,24 +1353,6 @@ video.dccgg-media {
     color: var(--dccgg-muted);
 }
 
-/* -------- Theme toggle button -------- */
-.dccgg-theme-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px; height: 40px;
-    padding: 0;
-    border: 1px solid var(--dccgg-tile-border);
-    border-radius: 50%;
-    background: var(--dccgg-tile-bg);
-    color: var(--dccgg-text);
-    cursor: pointer;
-    transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration);
-}
-.dccgg-theme-toggle .dccgg-theme-icon-light { display: none; }
-.dccgg-root.dccgg-is-dark .dccgg-theme-toggle .dccgg-theme-icon-dark  { display: none; }
-.dccgg-root.dccgg-is-dark .dccgg-theme-toggle .dccgg-theme-icon-light { display: inline; }
-
 /* -------- Dark mode palette -------- */
 .dccgg-root.dccgg-is-dark {
     --dccgg-tile-bg: rgba(28,38,52,0.85);
@@ -1500,8 +1460,6 @@ video.dccgg-media {
 .dccgg-root.dccgg-root .dccgg-btn,
 .dccgg-root.dccgg-root .dccgg-search-input,
 .dccgg-root.dccgg-root .dccgg-quick-action,
-.dccgg-root.dccgg-root .dccgg-theme-toggle,
-.dccgg-root.dccgg-root .dccgg-item-share,
 .dccgg-root.dccgg-root .dccgg-item-tts,
 .dccgg-root.dccgg-root .dccgg-flip-close,
 .dccgg-root.dccgg-root .dccgg-fab-close,
@@ -1516,8 +1474,6 @@ video.dccgg-media {
 .dccgg-root .dccgg-btn:focus-visible,
 .dccgg-root .dccgg-search-input:focus-visible,
 .dccgg-root .dccgg-quick-action:focus-visible,
-.dccgg-root .dccgg-theme-toggle:focus-visible,
-.dccgg-root .dccgg-item-share:focus-visible,
 .dccgg-root .dccgg-item-tts:focus-visible,
 .dccgg-root .dccgg-flip-close:focus-visible,
 .dccgg-root .dccgg-fab-close:focus-visible,
@@ -2885,13 +2841,11 @@ video.dccgg-media {
     .dccgg-root .dccgg-qr-overlay,
     .dccgg-root .dccgg-qr-dialog,
     .dccgg-root .dccgg-quick-action,
-    .dccgg-root .dccgg-item-share,
     .dccgg-root .dccgg-item-report,
     .dccgg-root .dccgg-item-check,
     .dccgg-root .dccgg-item-tts,
     .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
-    .dccgg-root .dccgg-theme-toggle,
     .dccgg-root .dccgg-toc,
     .dccgg-root .dccgg-progress-bar,
     .dccgg-root .dccgg-shrink-sentinel,
@@ -3303,7 +3257,6 @@ video.dccgg-media {
 .dccgg-root.dccgg-root .dccgg-btn,
 .dccgg-root.dccgg-root .dccgg-back,
 .dccgg-root.dccgg-root .dccgg-quick-action,
-.dccgg-root.dccgg-root .dccgg-item-share,
 .dccgg-root.dccgg-root .dccgg-section-prev,
 .dccgg-root.dccgg-root .dccgg-section-next,
 .dccgg-root.dccgg-root .dccgg-more > summary,
