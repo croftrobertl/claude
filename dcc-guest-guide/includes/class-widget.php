@@ -2875,13 +2875,16 @@ final class Widget extends Widget_Base
             'searchIndex'      => $search_index,
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
-                'readMore'    => (string) ($s['str_read_more'] ?? 'Read more'),
-                'readLess'    => (string) ($s['str_read_less'] ?? 'Read less'),
                 'noResults'   => (string) ($s['search_no_results'] ?? 'No matches.'),
                 'qrClose'       => (string) ($s['str_qr_close'] ?? 'Close'),
                 'lightboxClose' => (string) ($s['str_lightbox_close'] ?? 'Close image'),
             ],
         ];
+        // v0.9.7.20: only emit searchIndex when search is enabled. wireSearch
+        // is gated on enableSearch anyway, so an empty array is pure payload.
+        if (!$enable_search) {
+            unset($config['searchIndex']);
+        }
 
         $root_class = 'dccgg-root';
         // v0.9: emergency tile position is driven by a root-level class.

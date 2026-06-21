@@ -110,6 +110,15 @@ only handles its own thumbs.
   `str_theme_toggle` Elementor string controls registered in
   `register_strings_controls()` deleted — every consumer was one of
   the deleted JS handlers above.
+* `data-config.strings.readMore` / `readLess` keys deleted — never
+  consumed by JS (the live Read-More button reads its text from
+  per-item `data-more` / `data-less` attributes set inline by
+  `render_item()`). The `str_read_more` / `str_read_less` Elementor
+  controls stay; they still feed the inline attributes.
+* `data-config.searchIndex` no longer emitted when search is disabled.
+  Previously serialised as `"searchIndex":[]` even when `wireSearch`
+  was gated off — small per-page payload waste on guides that ship
+  search turned off.
 
 Net effect: smaller bundle, fewer dead-code traps for the next
 debugging session, and one real broken-feature fix.
