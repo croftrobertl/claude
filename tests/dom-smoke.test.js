@@ -447,6 +447,36 @@ function enter(root, mode) {
   ok('closing removes the generated scope host', !w.document.querySelector('.dccs-modal-host'));
 })();
 
+// ---- 14c. Mirroring: the pop-up adopts the SOURCE Selector's explicit scope ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  // entry.scope carries the source Cottage Selector's Elementor scope (page + element id),
+  // so the pop-up host is built from those instead of the Mini Entry's own DOM ancestors.
+  const entry = { current: '31', selectorUrl: '', modalConfig: cfg, scope: { page: 'elementor-42', el: 'elementor-element-srcXYZ' } };
+  // Put the entry inside a DIFFERENT widget scope to prove the source scope wins.
+  const widget = w.document.createElement('div');
+  widget.className = 'elementor-element elementor-element-mini999';
+  const node = w.document.createElement('div');
+  node.className = 'dccs-entry dccs-entry';
+  node.dataset.entry = JSON.stringify(entry);
+  node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+  widget.appendChild(node); w.document.body.appendChild(widget);
+  w.DCCS.bootAll(w.document);
+
+  node.querySelector('.dccs-entry-btn').click();
+  const host = w.document.querySelector('body > .dccs-modal-host');
+  ok('mirror pop-up mounts on a body-level host', !!host && !node.querySelector('.dccs-modal'));
+  ok('host carries the SOURCE page scope (not the Mini Entry’s)',
+    !!host && host.classList.contains('elementor-42'));
+  const inner = host.querySelector('.elementor-element.elementor-element-srcXYZ');
+  ok('inner host carries the SOURCE element scope', !!inner && !!inner.querySelector('.dccs-modal .dccs-root'));
+  ok('mirror pop-up does not use the Mini Entry’s own element scope',
+    !host.querySelector('.elementor-element-mini999'));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('closing the mirror pop-up removes its host', !w.document.querySelector('.dccs-modal-host'));
+})();
+
 // ---- 17. Live "X cottages match" narrows on a Quick must-have ----
 (function () {
   const w = freshDom();

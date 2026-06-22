@@ -81,9 +81,39 @@ class Mini_Entry_Widget extends Selector_Widget
             'label_block' => true,
         ]);
 
+        // Mirror a Cottage Selector's published design (see Selector_Widget::publish_design).
+        // Choosing one hides this widget's own design/text controls and makes the pop-up
+        // reuse the source's styling + copy, updating automatically when the source changes.
+        $sources = get_option(Selector_Widget::DESIGN_OPTION, []);
+        $source_options = ['' => __('— None (use my own settings) —', 'dcc-cottage-selector')];
+        if (is_array($sources)) {
+            foreach (array_keys($sources) as $name) {
+                $source_options[(string) $name] = (string) $name;
+            }
+        }
+
+        $this->add_control('mirror_source', [
+            'label'       => __('Mirror design from', 'dcc-cottage-selector'),
+            'description' => __('Match a Cottage Selector that has "Share this design" turned on. Save that Selector first to populate this list.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => '',
+            'options'     => $source_options,
+        ]);
+
         $this->end_controls_section();
 
         parent::register_controls();
+    }
+
+    /** Mini Entries don't publish designs — only the Cottage Selector does. */
+    protected function register_design_source_controls(): void
+    {
+    }
+
+    /** Hide the inherited design + text sections whenever a source is being mirrored. */
+    protected function inherited_section_condition(): array
+    {
+        return ['mirror_source' => ''];
     }
 
     protected function render(): void
@@ -95,13 +125,49 @@ class Mini_Entry_Widget extends Selector_Widget
         }
         $current = (string) ($s['current'] ?? '');
         $copy    = (string) ($s['copy'] ?? self::default_copy());
+        $mirror  = (string) ($s['mirror_source'] ?? '');
 
-        // Same-page modal: embed this widget instance's own full config so the
-        // popup matches the Selector's styling/copy. Opened on the landing screen
-        // (the JS sets openStage), with the cottage highlighted in results.
-        $modal_config = $url === '' ? $this->build_config(['highlight' => $current, 'startMode' => 'quick']) : null;
+        $modal_config = null;
+        $scope        = null;
+        if ($url === '') {
+            $src = $this->mirror_source($mirror);
+            if ($src !== null) {
+                // Mirror: build the pop-up config from the source's published snapshot and
+                // point the pop-up at the source's Elementor scope so its own generated CSS
+                // styles it. Enqueue that page's Elementor CSS so the rules are present here.
+                $modal_config = Selector_Widget::config_from_snapshot(
+                    (array) $src['overrides'],
+                    ['highlight' => $current, 'startMode' => 'quick']
+                );
+                $scope = ['page' => (string) $src['page_class'], 'el' => (string) $src['el_class']];
+                if (class_exists('\Elementor\Core\Files\CSS\Post')) {
+                    \Elementor\Core\Files\CSS\Post::create((int) $src['post_id'])->enqueue();
+                }
+            } else {
+                // Same-page modal with this widget's own full config (styling/copy).
+                $modal_config = $this->build_config(['highlight' => $current, 'startMode' => 'quick']);
+            }
+        }
 
-        echo self::markup($current, $url, $copy, $modal_config); // phpcs:ignore WordPress.Security.EscapeOutput
+        echo self::markup($current, $url, $copy, $modal_config, $scope); // phpcs:ignore WordPress.Security.EscapeOutput
+    }
+
+    /**
+     * Look up a published design source by name. Returns null when the name is empty
+     * or no longer in the registry (the Mini Entry then falls back to its own settings).
+     *
+     * @return array<string,mixed>|null
+     */
+    private function mirror_source(string $name): ?array
+    {
+        if ($name === '') {
+            return null;
+        }
+        $sources = get_option(Selector_Widget::DESIGN_OPTION, []);
+        if (is_array($sources) && isset($sources[$name]) && is_array($sources[$name]) && !empty($sources[$name]['overrides'])) {
+            return $sources[$name];
+        }
+        return null;
     }
 
     /**
@@ -145,11 +211,14 @@ class Mini_Entry_Widget extends Selector_Widget
 
     /**
      * Shared markup for the widget and shortcode. $modal_config, when provided,
-     * is this widget instance's full config (styled + copy-overridden).
+     * is this widget instance's full config (styled + copy-overridden). $scope, when
+     * given, carries the mirrored source's Elementor scope classes so the pop-up can
+     * adopt the source's generated CSS (see selector.js openModal).
      *
      * @param array<string,mixed>|null $modal_config
+     * @param array<string,string>|null $scope
      */
-    private static function markup(string $current, string $selector_url, string $copy, ?array $modal_config = null): string
+    private static function markup(string $current, string $selector_url, string $copy, ?array $modal_config = null, ?array $scope = null): string
     {
         // Normalize/validate the link server-side (the JS safeUrl() guards at runtime too).
         $selector_url = $selector_url !== '' ? esc_url_raw($selector_url) : '';
@@ -166,6 +235,9 @@ class Mini_Entry_Widget extends Selector_Widget
                 'highlight' => $current,
                 'startMode' => 'quick',
             ]);
+            if ($scope !== null) {
+                $entry['scope'] = $scope;
+            }
         } else {
             $entry['deeplink'] = self::deeplink_for($current);
         }

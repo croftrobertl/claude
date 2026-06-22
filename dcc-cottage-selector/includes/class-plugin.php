@@ -46,6 +46,9 @@ final class Plugin
         // The UI is client-rendered, so the script must also run inside the
         // Elementor editor preview iframe.
         add_action('elementor/preview/enqueue_scripts', [$this, 'enqueue_for_preview']);
+        // Keep the design registry fresh the moment a Selector is saved in Elementor,
+        // so mirroring Mini Entries update without the selector page being visited.
+        add_action('elementor/document/after_save', [$this, 'republish_designs'], 10, 2);
     }
 
     public function load_textdomain(): void
@@ -88,6 +91,55 @@ final class Plugin
     {
         $widgets_manager->register(new Selector_Widget());
         $widgets_manager->register(new Mini_Entry_Widget());
+    }
+
+    /**
+     * On every Elementor save, (re)publish the design of any Cottage Selector on the
+     * saved document that has "Share this design" on, so mirroring Mini Entries pick
+     * up the change automatically. Writes are deduped by hash in publish_design().
+     *
+     * @param \Elementor\Core\Base\Document $document
+     */
+    public function republish_designs($document, array $data): void
+    {
+        if (!is_object($document) || !method_exists($document, 'get_elements_data')) {
+            return;
+        }
+        $post_id = method_exists($document, 'get_main_id') ? (int) $document->get_main_id() : 0;
+        if ($post_id <= 0) {
+            return;
+        }
+        $this->walk_elements($document->get_elements_data(), $post_id);
+    }
+
+    /**
+     * Recurse an Elementor element tree, publishing each share-enabled Cottage Selector.
+     *
+     * @param array<int,array<string,mixed>> $elements
+     */
+    private function walk_elements(array $elements, int $post_id): void
+    {
+        foreach ($elements as $el) {
+            if (!is_array($el)) {
+                continue;
+            }
+            $type = (string) ($el['widgetType'] ?? '');
+            // dccs_mini_entry subclasses the Selector, but Mini Entries don't publish.
+            if ($type === 'dccs_selector') {
+                $settings = is_array($el['settings'] ?? null) ? $el['settings'] : [];
+                if (($settings['share_design'] ?? '') === 'yes') {
+                    Selector_Widget::publish_design(
+                        (string) ($settings['design_name'] ?? ''),
+                        $post_id,
+                        (string) ($el['id'] ?? ''),
+                        $settings
+                    );
+                }
+            }
+            if (!empty($el['elements']) && is_array($el['elements'])) {
+                $this->walk_elements($el['elements'], $post_id);
+            }
+        }
     }
 
     /**

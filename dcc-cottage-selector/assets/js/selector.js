@@ -1011,6 +1011,18 @@
     return { outer: outer, inner: inner };
   }
 
+  /** Like elementorScopeHost, but from explicit class names — used when a Mini-Entry
+      mirrors another Cottage Selector: the host carries the SOURCE widget's scope
+      (`scope.page` = elementor-{POST_ID}, `scope.el` = elementor-element-{ID}) so the
+      source's own generated CSS (enqueued server-side) styles the mirrored pop-up. */
+  function explicitScopeHost(scope) {
+    var outer = el('<div class="' + ('dccs-modal-host ' + (scope.page || '')).trim() + '"></div>');
+    var inner = el('<div class="' + ('elementor-element ' + (scope.el || '')).trim() + '"></div>');
+    outer.appendChild(inner);
+    document.body.appendChild(outer);
+    return { outer: outer, inner: inner };
+  }
+
   function openModal(entry, trigger, mount) {
     var config = entry.modalConfig;
     if (!config) { return; }
@@ -1020,10 +1032,11 @@
     config.openStage = 'landing';
     config.highlight = String(entry.current);
 
-    // Mount on a clean body-level host (with the widget's Elementor scope classes) so the
-    // overlay's position:fixed is relative to the viewport — always centered, scrollable,
-    // and closable regardless of scroll position — yet still picks up the widget's styling.
-    var host = elementorScopeHost(mount);
+    // Mount on a clean body-level host (with Elementor scope classes) so the overlay's
+    // position:fixed is relative to the viewport — always centered, scrollable, and
+    // closable regardless of scroll position — yet still picks up the right styling.
+    // When mirroring, use the SOURCE Selector's scope so its CSS styles the pop-up.
+    var host = entry.scope ? explicitScopeHost(entry.scope) : elementorScopeHost(mount);
     var o = buildOverlay(trigger, config.strings && config.strings.heading, host ? host.inner : null);
     if (host) { o.overlay._dccsHost = host.outer; }
     var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');

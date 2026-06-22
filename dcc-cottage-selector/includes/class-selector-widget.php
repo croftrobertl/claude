@@ -27,6 +27,9 @@ class Selector_Widget extends Widget_Base
     /** Root element itself (no trailing space) — for root-level box properties. */
     private const ROOT = '{{WRAPPER}} .dccs-root.dccs-root';
 
+    /** Registry option mapping a design name to a published Selector design snapshot. */
+    public const DESIGN_OPTION = 'dccs_design_sources';
+
     public function get_name(): string
     {
         return 'dccs_selector';
@@ -67,6 +70,7 @@ class Selector_Widget extends Widget_Base
     protected function register_controls(): void
     {
         $this->register_content_controls();
+        $this->register_design_source_controls();
         $this->register_icon_controls();
         $this->register_qa_icon_controls();
         $this->register_strings_controls();
@@ -92,7 +96,7 @@ class Selector_Widget extends Widget_Base
 
     private function register_content_controls(): void
     {
-        $this->start_controls_section('content', [
+        $this->section('content', [
             'label' => __('Content', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -131,6 +135,66 @@ class Selector_Widget extends Widget_Base
     }
 
     /**
+     * "Design source" section — lets a Cottage Selector publish its full design +
+     * copy under a name so Mini Entry widgets can mirror it (see Mini_Entry_Widget).
+     * Mini Entry overrides this method to a no-op, so the controls appear only on the
+     * Selector.
+     */
+    protected function register_design_source_controls(): void
+    {
+        $this->section('design_source', [
+            'label' => __('Design source', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->add_control('share_design', [
+            'label'        => __('Share this design', 'dcc-cottage-selector'),
+            'description'  => __('Publish this widget\'s full design + text under a name so Mini Entry widgets can mirror it.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+        ]);
+
+        $this->add_control('design_name', [
+            'label'       => __('Design name', 'dcc-cottage-selector'),
+            'description' => __('A short label Mini Entries pick from (e.g. "Main"). Save the page to publish it.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'condition'   => ['share_design' => 'yes'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * Sections to hide when this widget is a Mini Entry mirroring a source design.
+     * Empty for the Selector itself (returns no condition). Mini_Entry_Widget
+     * overrides it to `['mirror_source' => '']` so all inherited content + style
+     * sections collapse once a source is chosen.
+     *
+     * @return array<string,mixed>
+     */
+    protected function inherited_section_condition(): array
+    {
+        return [];
+    }
+
+    /**
+     * start_controls_section that also applies inherited_section_condition(), so a
+     * subclass can hide every inherited section at once without editing each one.
+     *
+     * @param array<string,mixed> $args
+     */
+    protected function section(string $id, array $args): void
+    {
+        $cond = $this->inherited_section_condition();
+        if (!empty($cond)) {
+            $args['condition'] = array_merge($args['condition'] ?? [], $cond);
+        }
+        $this->start_controls_section($id, $args);
+    }
+
+    /**
      * Optional leading icons for the fixed action buttons. Each picker accepts a
      * Font Awesome icon or an uploaded SVG; the chosen icon is rendered to HTML in
      * render() and passed through data-config so selector.js can inject it (the body
@@ -138,7 +202,7 @@ class Selector_Widget extends Widget_Base
      */
     private function register_icon_controls(): void
     {
-        $this->start_controls_section('icons', [
+        $this->section('icons', [
             'label' => __('Button icons', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -175,7 +239,7 @@ class Selector_Widget extends Widget_Base
     }
 
     /** A keyed map of every icon the front end can place, name => editor label. */
-    private function icon_keys(): array
+    private static function icon_keys(): array
     {
         return [
             // Buttons + landing choices (declared in register_icon_controls()).
@@ -196,7 +260,7 @@ class Selector_Widget extends Widget_Base
      */
     private function register_qa_icon_controls(): void
     {
-        $this->start_controls_section('qa_icons', [
+        $this->section('qa_icons', [
             'label' => __('Question & answer icons', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -244,7 +308,7 @@ class Selector_Widget extends Widget_Base
      */
     private function register_strings_controls(): void
     {
-        $this->start_controls_section('strings', [
+        $this->section('strings', [
             'label' => __('Text & labels', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -292,7 +356,7 @@ class Selector_Widget extends Widget_Base
      */
     private function register_qa_text_controls(): void
     {
-        $this->start_controls_section('qa_text', [
+        $this->section('qa_text', [
             'label' => __('Questions & answers text', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -353,7 +417,7 @@ class Selector_Widget extends Widget_Base
      */
     private function register_badge_text_controls(): void
     {
-        $this->start_controls_section('badge_text', [
+        $this->section('badge_text', [
             'label' => __('Badge labels', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
@@ -394,7 +458,7 @@ class Selector_Widget extends Widget_Base
     /** Overall size, spacing, alignment and the widget container. */
     private function register_layout_style_controls(): void
     {
-        $this->start_controls_section('style_layout', [
+        $this->section('style_layout', [
             'label' => __('Layout & spacing', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -447,7 +511,7 @@ class Selector_Widget extends Widget_Base
     /** The palette: every CSS custom property is exposed. */
     private function register_color_style_controls(): void
     {
-        $this->start_controls_section('style_colors', [
+        $this->section('style_colors', [
             'label' => __('Colors', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -488,7 +552,7 @@ class Selector_Widget extends Widget_Base
     /** Heading + intro typography and color. */
     private function register_heading_style_controls(): void
     {
-        $this->start_controls_section('style_heading', [
+        $this->section('style_heading', [
             'label' => __('Heading & intro', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -518,7 +582,7 @@ class Selector_Widget extends Widget_Base
     /** The top mode-switcher dropdown (trigger + options). */
     private function register_modebar_style_controls(): void
     {
-        $this->start_controls_section('style_modebar', [
+        $this->section('style_modebar', [
             'label' => __('Mode switcher', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -584,7 +648,7 @@ class Selector_Widget extends Widget_Base
     /** Progress label, live count badge and the stepper dots. */
     private function register_progress_style_controls(): void
     {
-        $this->start_controls_section('style_progress', [
+        $this->section('style_progress', [
             'label' => __('Progress & steps', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -632,7 +696,7 @@ class Selector_Widget extends Widget_Base
     /** The question text and the answer chips (Normal / Hover / Selected). */
     private function register_question_style_controls(): void
     {
-        $this->start_controls_section('style_question', [
+        $this->section('style_question', [
             'label' => __('Questions & answers', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -771,7 +835,7 @@ class Selector_Widget extends Widget_Base
 
     private function add_button_style_section(string $id, string $label, string $sel, string $side_key = ''): void
     {
-        $this->start_controls_section($id, ['label' => $label, 'tab' => Controls_Manager::TAB_STYLE]);
+        $this->section($id, ['label' => $label, 'tab' => Controls_Manager::TAB_STYLE]);
 
         if ($side_key !== '') {
             $this->add_icon_side_control($side_key);
@@ -858,7 +922,7 @@ class Selector_Widget extends Widget_Base
 
     private function register_button_style_controls(): void
     {
-        $this->start_controls_section('style_buttons', [
+        $this->section('style_buttons', [
             'label' => __('Buttons', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -926,7 +990,7 @@ class Selector_Widget extends Widget_Base
     /** Result cards: surface, border, shadow, title, badges. */
     private function register_card_style_controls(): void
     {
-        $this->start_controls_section('style_cards', [
+        $this->section('style_cards', [
             'label' => __('Result cards', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -989,7 +1053,7 @@ class Selector_Widget extends Widget_Base
     /** The side-by-side comparison table. */
     private function register_compare_style_controls(): void
     {
-        $this->start_controls_section('style_compare', [
+        $this->section('style_compare', [
             'label' => __('Compare table', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -1028,7 +1092,7 @@ class Selector_Widget extends Widget_Base
     /** The compare-mode cottage picker (its own dropdown, mirrors the mode switcher). */
     private function register_cmpmenu_style_controls(): void
     {
-        $this->start_controls_section('style_cmpmenu', [
+        $this->section('style_cmpmenu', [
             'label' => __('Compare picker', 'dcc-cottage-selector'),
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
@@ -1168,13 +1232,13 @@ class Selector_Widget extends Widget_Base
      * @param array<string,mixed> $settings
      * @return array<string,string>
      */
-    private function collect_icons(array $settings): array
+    private static function collect_icons(array $settings): array
     {
-        $keys = $this->icon_keys();
+        $keys = self::icon_keys();
         $icons = [];
         foreach ($keys as $key) {
             $icon = $settings['icon_' . $key] ?? null;
-            $html = $this->icon_html($icon);
+            $html = self::icon_html($icon);
             if ($html !== '') {
                 $icons[$key] = $html;
             }
@@ -1189,7 +1253,7 @@ class Selector_Widget extends Widget_Base
      * @param array<string,mixed> $settings
      * @return array<string,string>
      */
-    private function collect_icon_sides(array $settings): array
+    private static function collect_icon_sides(array $settings): array
     {
         $sides = [];
         foreach (['edit_answers', 'view', 'questions', 'answers', 'compare_select'] as $key) {
@@ -1204,7 +1268,7 @@ class Selector_Widget extends Widget_Base
      *
      * @param mixed $icon
      */
-    private function icon_html($icon): string
+    private static function icon_html($icon): string
     {
         if (!is_array($icon) || empty($icon['value']) || !class_exists('\Elementor\Icons_Manager')) {
             return '';
@@ -1226,12 +1290,24 @@ class Selector_Widget extends Widget_Base
      */
     protected function build_config(array $extra = []): array
     {
-        $settings = $this->get_settings_for_display();
+        return self::config_from_snapshot(self::design_snapshot($this->get_settings_for_display()), $extra);
+    }
 
+    /**
+     * Distil a settings array into the portable design payload (string overrides,
+     * icons, icon sides, mode + heading options) that drives the front end. Static so
+     * it works on a raw settings array with no bound widget — used both by
+     * build_config() and by the design-publishing path (render + the save hook).
+     *
+     * @param array<string,mixed> $settings
+     * @return array<string,mixed>
+     */
+    public static function design_snapshot(array $settings): array
+    {
         $string_overrides = [];
         foreach ($settings as $k => $v) {
-            if (strncmp($k, 'str_', 4) === 0) {
-                $string_overrides[substr($k, 4)] = (string) $v;
+            if (strncmp((string) $k, 'str_', 4) === 0 && is_scalar($v)) {
+                $string_overrides[substr((string) $k, 4)] = (string) $v;
             }
         }
 
@@ -1244,18 +1320,84 @@ class Selector_Widget extends Widget_Base
             $start = $enabled[0];
         }
 
-        return Config::build($string_overrides, array_merge([
-            'startMode'    => $start,
-            'enabledModes' => array_values($enabled),
-            'showHeading'  => ($settings['show_heading'] ?? 'yes') === 'yes',
-            'icons'        => $this->collect_icons($settings),
-            'iconSides'    => $this->collect_icon_sides($settings),
+        return [
+            'string_overrides' => $string_overrides,
+            'startMode'        => (string) $start,
+            'enabledModes'     => array_values($enabled),
+            'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
+            'icons'            => self::collect_icons($settings),
+            'iconSides'        => self::collect_icon_sides($settings),
+        ];
+    }
+
+    /**
+     * Build the full front-end config from a design snapshot. $extra is merged last
+     * (e.g. a Mini Entry passes 'highlight').
+     *
+     * @param array<string,mixed> $snap
+     * @param array<string,mixed> $extra
+     * @return array<string,mixed>
+     */
+    public static function config_from_snapshot(array $snap, array $extra = []): array
+    {
+        return Config::build($snap['string_overrides'] ?? [], array_merge([
+            'startMode'    => $snap['startMode'] ?? 'quick',
+            'enabledModes' => $snap['enabledModes'] ?? ['quick', 'weights', 'compare'],
+            'showHeading'  => $snap['showHeading'] ?? true,
+            'icons'        => $snap['icons'] ?? [],
+            'iconSides'    => $snap['iconSides'] ?? [],
         ], $extra));
+    }
+
+    /**
+     * Publish a Selector's design into the shared registry option so Mini Entry
+     * widgets can mirror it. Stores the portable snapshot plus the source's Elementor
+     * scope classes (so the mirrored pop-up can reuse the source's generated CSS).
+     * Deduped by hash so ordinary front-end views don't thrash the DB.
+     *
+     * @param array<string,mixed> $settings
+     */
+    public static function publish_design(string $name, int $post_id, string $el_id, array $settings): void
+    {
+        $name = trim($name);
+        if ($name === '' || $post_id <= 0 || $el_id === '') {
+            return;
+        }
+
+        $entry = [
+            'post_id'    => $post_id,
+            'page_class' => 'elementor-' . $post_id,
+            'el_class'   => 'elementor-element-' . $el_id,
+            'overrides'  => self::design_snapshot($settings),
+        ];
+        $entry['hash'] = md5((string) wp_json_encode($entry));
+
+        $sources = get_option(self::DESIGN_OPTION, []);
+        if (!is_array($sources)) {
+            $sources = [];
+        }
+        if (isset($sources[$name]['hash']) && $sources[$name]['hash'] === $entry['hash']) {
+            return; // Unchanged — skip the write.
+        }
+        $entry['updated'] = time();
+        $sources[$name]   = $entry;
+        update_option(self::DESIGN_OPTION, $sources, false);
     }
 
     protected function render(): void
     {
         $settings = $this->get_settings_for_display();
+
+        // Publish this design for Mini Entries to mirror (the Elementor save hook is
+        // the authoritative refresh; this keeps the registry fresh on front-end views).
+        if (($settings['share_design'] ?? '') === 'yes') {
+            self::publish_design(
+                (string) ($settings['design_name'] ?? ''),
+                (int) get_the_ID(),
+                (string) $this->get_id(),
+                $settings
+            );
+        }
 
         $cottages = Data::all();
 

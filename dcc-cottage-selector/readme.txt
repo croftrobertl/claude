@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.5
+Stable tag: 0.11.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,9 +36,27 @@ The whole experience is client-side over a tiny bundled dataset
 * **Cottage Selector** (Elementor) — the full wizard finder (plus Weigh
   priorities / Compare in the header mode menu).
 * **Cottage Selector — Mini Entry** (Elementor) — a compact cross-sell prompt for
-  individual cottage pages.
+  individual cottage pages. Its pop-up can **mirror a Cottage Selector's design**
+  (see below) so you style everything in one place.
 * `[dcc_selector_entry current="22" url="/cottage-selector/"]` — the same mini
   entry as a shortcode. Omit `url` to open the selector in an on-page pop-up.
+
+= Mirror a Cottage Selector's design into Mini Entries =
+
+Style and word your **Cottage Selector** once, then have every Mini Entry pop-up
+match it automatically:
+
+1. On the Cottage Selector, open **Content → Design source**, turn on **Share this
+   design**, give it a **Design name** (e.g. "Main"), and save the page.
+2. On each Mini Entry, set **Mini Entry → Mirror design from** to that name. The
+   Mini Entry's own design/text controls hide, and its pop-up adopts the Selector's
+   colors, typography, spacing, icons, and every text string.
+3. Edit the Selector later and the mirrored pop-ups update automatically — no need
+   to touch the Mini Entries.
+
+The mirror styles the **pop-up** (the small entry-prompt button keeps its own
+look). If you run SpeedyCache's "remove unused CSS", exclude the selector page (or
+leave that option off) so the pop-up keeps the Selector's styles.
 
 = The seven meaningful differences =
 
@@ -142,6 +160,16 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.11.0 =
+* New: a Mini Entry can **mirror a Cottage Selector's full design and text**. Turn on
+  "Share this design" + a name on the Selector, then pick it under "Mirror design from"
+  on the Mini Entry. The pop-up matches the Selector's styles/copy and updates
+  automatically whenever you edit the Selector; the Mini Entry's own controls hide while
+  mirroring.
+* Note: the mirror styles the pop-up. If "remove unused CSS" is enabled in SpeedyCache,
+  exclude the selector page so the pop-up keeps the Selector's styles.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.10.5 =
 * Results: removed the "What you're looking for" recap (your answers are already on the
