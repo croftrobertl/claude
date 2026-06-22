@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.4
+Stable tag: 0.10.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -58,9 +58,9 @@ stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question a **Review** screen lists all
-answers (each editable) before "See my matches" reveals the **Top 3**, with a
-tappable recap of what was searched. Answers are never remembered — every page
-load starts fresh.
+answers (each editable) before "See my matches" reveals the **Top 3**. The
+**Edit answers** button on the results returns to those answers to change them.
+Answers are never remembered — every page load starts fresh.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
 (pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
@@ -120,14 +120,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
   disabled until an answer is tapped and never advances on its own. The clickable
   stepper and a low-key Back link jump to earlier answers.
 * The Review screen lists all 7 answers with Edit links; "See my matches" shows
-  the top 3 with full names ("Cottage 34: Coconut Cottage") and a tappable recap.
+  the top 3 with full names ("Cottage 34: Coconut Cottage"); the **Edit answers**
+  button returns to the answers to change them.
 * Answering **Pet-friendly = Yes** returns only Cottage 34: Coconut Cottage.
 * Impossible combo (pet + table-for-4) shows the next-best cottage tagged
   "No table for 4". (There is no "why excluded" panel.)
 * When #31 & #32 (or #35 & #36) both appear, the lower-numbered one shows an
   "identical layout and features" note.
 * Count is singular at one result ("1 cottage matches"); no-match shows the "No
-  Perfect Matches" screen with the blocking choices in red.
+  Perfect Matches" screen with the closest cottages tagged with what they miss.
 * Mode menu → Weigh priorities: a step-by-step wizard; setting **Workspace** to
   High floats #22/#23.
 * Compare: pick from the checkbox dropdown (or tick cottages on the results) → the
@@ -136,10 +137,22 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
   "×" sits inside the box with no colour bleed.
 * Deep link: loading `?pet=true` opens straight to results.
 * Mini Entry: with a selector URL it links there pre-filled; without one it opens
-  an on-page pop-up showing how the current cottage ranks.
+  an on-page pop-up showing how the current cottage ranks. From any scroll position
+  the pop-up centers in the viewport, scrolls internally, and the "×" stays reachable.
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.10.5 =
+* Results: removed the "What you're looking for" recap (your answers are already on the
+  Review screen, and the Edit answers button lets you change them).
+* Results: moved the "Compare N cottages" button below the cottage cards (where the recap
+  was), above Edit/Restart.
+* Mini Entry pop-up: fixed a bug where it could open partly off-screen and lock all
+  scrolling depending on how far down the page you'd scrolled. The pop-up now always
+  centers in the viewport, scrolls internally, and stays closable — while still picking up
+  the widget's own styling.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.10.4 =
 * Compare checklist now shows a soft fade and a down-chevron at the bottom when there

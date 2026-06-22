@@ -305,19 +305,6 @@
     };
   }
 
-  /** Which answered question imposes a hard requirement (so the recap can flag it red).
-   *  Quick: a "yes"/table-for-4 must-have. Weights: a "High" priority. */
-  function isBlockingGroup(state, group) {
-    if (state.mode === 'weights') {
-      return Number(state.weights[group]) === 3 && !!WEIGHT_HARD[group];
-    }
-    var q = state.quick;
-    return (group === 'pet' && q.pet === 'yes') ||
-      (group === 'ground' && q.ground === 'yes') ||
-      (group === 'screenedporch' && q.screenedporch === 'yes') ||
-      (group === 'dining' && (q.dining === 4 || q.dining === '4'));
-  }
-
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
   /** Dispatch the wizard by stage: questionnaire → review → results. */
@@ -402,25 +389,6 @@
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button>' +
       '<button type="button" class="dccs-see-matches">' + ico(config, 'submit') + esc(S.see_matches) + '</button></div></div>';
     return html;
-  }
-
-  /** Compact recap of active criteria — each is a tappable chip that edits it.
-      On a no-match result the blocking must-haves are flagged red. */
-  function renderRecap(config, state, emptyState) {
-    var S = config.strings;
-    var tr = wizardTrack(state, S);
-    var weights = state.mode === 'weights';
-    var chips = '';
-    tr.questions.forEach(function (q, i) {
-      var v = tr.get(q);
-      if (weights ? !v : (v === '' || v === 'either' || v == null)) { return; }
-      var blocking = emptyState && isBlockingGroup(state, q.group);
-      chips += '<button type="button" class="dccs-recap-chip dccs-edit' + (blocking ? ' is-blocking' : '') + '" data-step="' + i + '">' +
-        esc(tr.shortLabel(q)) + ': ' + esc(tr.valueLabel(q, v)) + '</button>';
-    });
-    if (!chips) { return ''; }
-    return '<div class="dccs-recap"><h4 class="dccs-recap-h">' + esc(S.your_criteria) + '</h4>' +
-      '<div class="dccs-recap-chips">' + chips + '</div></div>';
   }
 
   /** Hard-requirement tags a fallback cottage fails to meet. */
@@ -567,8 +535,7 @@
 
     var ranked = res.results;
     var top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
-    html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3>' +
-      compareButton(config, st) + '</div>';
+    html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
 
     top.forEach(function (c) { html += buildCard(c, config, st, crit, ''); });
 
@@ -585,17 +552,20 @@
       }
     }
 
+    // The "Compare N cottages" button sits below the cards (where the old recap was),
+    // above the edit/restart nav. Only appears once 2+ cards are ticked.
+    var cmpBtn = compareButton(config, st);
+    if (cmpBtn) { html += '<div class="dccs-compare-actions dccs-results-compare">' + cmpBtn + '</div>'; }
     html += wizardResultsTail(config, st, false);
     html += '</div>';
     return html;
   }
 
-  /** Recap + edit/start-over controls shown under results in either wizard. */
+  /** Edit/start-over controls shown under results in either wizard. */
   function wizardResultsTail(config, st, emptyState) {
     if (st.mode !== 'quick' && st.mode !== 'weights') { return ''; }
     var S = config.strings;
-    return renderRecap(config, st, emptyState) +
-      '<div class="dccs-wizard-nav dccs-tail-nav">' +
+    return '<div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
@@ -949,6 +919,8 @@
     }
     function close() {
       if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      // Remove any generated body-level scope host (see openModal) so it doesn't pile up.
+      if (overlay._dccsHost && overlay._dccsHost.parentNode) { overlay._dccsHost.parentNode.removeChild(overlay._dccsHost); }
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
       if (trigger && trigger.focus) { trigger.focus(); }
@@ -1018,6 +990,27 @@
     });
   }
 
+  /** Recreate a widget's Elementor scope classes on a clean, body-level host so the
+      Mini-Entry popup's scoped style controls (`{{WRAPPER}} .dccs-root…`) still match,
+      while escaping any transformed/filtered ancestor that would trap the fixed-position
+      overlay inside the page (the cause of the off-viewport / scroll-locked popup bug).
+      Returns { outer, inner } appended to <body>, or null when there's no Elementor
+      wrapper (e.g. the shortcode) — callers then fall back to a plain body mount. */
+  function elementorScopeHost(node) {
+    var widgetEl = node && node.closest ? node.closest('.elementor-element') : null;
+    if (!widgetEl) { return null; }
+    function pick(elm, re) {
+      return elm ? Array.prototype.filter.call(elm.classList, function (c) { return re.test(c); }).join(' ') : '';
+    }
+    // Copy ONLY the elementor* scope tokens (page + element id) — never animation or
+    // transform helper classes, so the hosts themselves introduce no containing block.
+    var outer = el('<div class="' + ('dccs-modal-host ' + pick(node.closest('.elementor'), /^elementor(-\d+)?$/)).trim() + '"></div>');
+    var inner = el('<div class="' + pick(widgetEl, /^elementor-element(-[\w]+)?$/) + '"></div>');
+    outer.appendChild(inner);
+    document.body.appendChild(outer);
+    return { outer: outer, inner: inner };
+  }
+
   function openModal(entry, trigger, mount) {
     var config = entry.modalConfig;
     if (!config) { return; }
@@ -1027,9 +1020,12 @@
     config.openStage = 'landing';
     config.highlight = String(entry.current);
 
-    // Mount the overlay inside the widget wrapper so the Mini-Entry's own (scoped)
-    // Elementor style controls reach the modal content.
-    var o = buildOverlay(trigger, config.strings && config.strings.heading, mount);
+    // Mount on a clean body-level host (with the widget's Elementor scope classes) so the
+    // overlay's position:fixed is relative to the viewport — always centered, scrollable,
+    // and closable regardless of scroll position — yet still picks up the widget's styling.
+    var host = elementorScopeHost(mount);
+    var o = buildOverlay(trigger, config.strings && config.strings.heading, host ? host.inner : null);
+    if (host) { o.overlay._dccsHost = host.outer; }
     var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');
     inner.dataset.config = JSON.stringify(config);
     o.content.appendChild(inner);

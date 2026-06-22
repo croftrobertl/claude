@@ -236,26 +236,9 @@
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
 /* Compare mode: the button that opens the comparison popup, centred under the checklist. */
 .dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
-
-/* Results recap — small, tappable criterion chips (not ALL-CAPS) */
-.dccs-root.dccs-root .dccs-recap {
-  margin: 18px 0 12px; padding: 14px 12px 12px; border-radius: var(--dccs-radius);
-  background: var(--dccs-surface); border: 1px solid var(--dccs-border); font-size: 0.8rem;
-  border-top: 2px solid var(--dccs-border);
-}
-.dccs-root.dccs-root .dccs-recap-h {
-  margin: 0 0 10px; text-align: center; font-weight: 700; font-size: 0.95rem; color: var(--dccs-text);
-}
-.dccs-root.dccs-root .dccs-recap-chips {
-  display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
-}
-.dccs-root.dccs-root .dccs-recap-chip {
-  border: 1px solid var(--dccs-border); background: var(--dccs-bg); color: var(--dccs-text);
-  border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; text-transform: none;
-}
-.dccs-root.dccs-root .dccs-recap-chip:hover, .dccs-root.dccs-root .dccs-recap-chip:focus-visible { border-color: var(--dccs-accent); color: var(--dccs-accent); }
-.dccs-root.dccs-root .dccs-recap-chip.is-blocking { color: #a8322e; border-color: rgba(240,128,128,0.6); background: rgba(240,128,128,0.12); }
-.dccs-root.dccs-root .dccs-recap-chip.is-blocking:hover, .dccs-root.dccs-root .dccs-recap-chip.is-blocking:focus-visible { border-color: #a8322e; color: #a8322e; }
+/* On the results screen the same button sits below the cards (where the recap used to be),
+   separated from the cards above and the edit/restart nav below. */
+.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; }
 
 /* "What it misses" tags */
 .dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -413,7 +396,10 @@
 }
 /* min-height:0 lets the scroll area shrink inside the flex-column box so it scrolls
    within the viewport instead of overflowing it. */
-.dccs-modal-content { overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
+.dccs-modal-content { overflow: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
+/* Body-level scope host for the Mini-Entry popup (see openModal): the overlay is its only,
+   fixed-positioned child, so the host adds no layout. */
+.dccs-modal-host { position: static; }
 /* The card must fill the box so the close button (pinned to the box) sits inside it. */
 .dccs-modal-content .dccs-in-modal { padding-top: 46px; max-width: none; margin: 0; }
 .dccs-modal .dccs-modal-close {

@@ -194,9 +194,7 @@ function enter(root, mode) {
   root.querySelector('.dccs-see-matches').click();
   ok('results region shown', !!root.querySelector('.dccs-results'));
   ok('cottage names include their number', cardNames(root).every(function (n) { return /^Cottage \d+: /.test(n); }));
-  ok('recap shows the chosen criterion', !!root.querySelector('.dccs-recap-chip'));
-  ok('recap has a centered section header', !!root.querySelector('.dccs-recap .dccs-recap-h'));
-  ok('recap chips live in their own row', !!root.querySelector('.dccs-recap .dccs-recap-chips .dccs-recap-chip'));
+  ok('no "What you’re looking for" recap on results', !root.querySelector('.dccs-recap'));
   ok('edit-answers control present', !!root.querySelector('.dccs-edit-answers'));
   ok('no "why excluded" panel', !root.querySelector('.dccs-excluded'));
 })();
@@ -270,14 +268,13 @@ function enter(root, mode) {
   ok('answering porch=Yes narrows to The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
 
-// ---- 9. No-match: new heading/subhead + blocking recap chips in red ----
+// ---- 9. No-match: new heading/subhead + fallback cards tagged with what they miss ----
 (function () {
   const w = freshDom('https://example.com/?pet=true&dining=4');
   const root = mountSelector(w);
   ok('empty heading reads "No Perfect Matches"', /No Perfect Matches/.test(root.querySelector('.dccs-empty h3').textContent));
   ok('fallback card tagged with what it misses', !!root.querySelector('.dccs-miss'));
-  ok('blocking must-haves are flagged red', root.querySelectorAll('.dccs-recap-chip.is-blocking').length >= 1);
-  ok('a soft pref would not be flagged', !root.querySelector('.dccs-recap-chip.is-blocking[data-step="0"]'));
+  ok('no recap on the no-match screen', !root.querySelector('.dccs-recap'));
   ok('no excluded panel anywhere', !root.querySelector('.dccs-excluded'));
 })();
 
@@ -349,6 +346,16 @@ function enter(root, mode) {
   tick(0); tick(1);
   var btn = root.querySelector('.dccs-open-compare');
   ok('compare button appears with 2 ticked', !!btn && /2/.test(btn.textContent));
+  // It now sits below the cards (where the recap was), before the edit/restart nav.
+  (function () {
+    var cards = root.querySelectorAll('.dccs-results .dccs-card');
+    var lastCard = cards[cards.length - 1];
+    var nav = root.querySelector('.dccs-results .dccs-tail-nav');
+    var afterCards = !!lastCard && (lastCard.compareDocumentPosition(btn) & w.Node.DOCUMENT_POSITION_FOLLOWING);
+    var beforeNav = !!nav && (btn.compareDocumentPosition(nav) & w.Node.DOCUMENT_POSITION_FOLLOWING);
+    ok('results compare button sits below the cards', !!afterCards);
+    ok('results compare button sits above the edit/restart nav', !!beforeNav);
+  })();
   btn.click();
   ok('overlay shows the comparison matrix', !!w.document.querySelector('.dccs-modal .dccs-matrix'));
   ok('matrix has a pinned corner cell', !!w.document.querySelector('.dccs-modal .dccs-matrix .dccs-corner'));
@@ -373,16 +380,6 @@ function enter(root, mode) {
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
 
-// ---- 12. Tappable recap chip edits one answer ----
-(function () {
-  const w = freshDom('https://example.com/?pet=true');
-  const root = mountSelector(w);
-  var chip = root.querySelector('.dccs-recap-chip');
-  ok('recap chip present for an active criterion', !!chip);
-  chip.click();
-  ok('recap chip jumps back into the wizard', !!root.querySelector('.dccs-chips-wizard'));
-})();
-
 // ---- 14. Mini-entry modal opens on the LANDING screen, reflecting its own config ----
 (function () {
   const w = freshDom();
@@ -399,7 +396,9 @@ function enter(root, mode) {
   node.querySelector('.dccs-entry-btn').click();
   const modal = w.document.querySelector('.dccs-modal');
   ok('mini-entry opens modal', !!modal);
-  ok('overlay mounts inside the entry wrapper', !!node.querySelector('.dccs-modal'));
+  // Without an Elementor wrapper the overlay falls back to a plain body mount (escaping
+  // any transformed ancestor) — it must NOT be trapped inside the entry node.
+  ok('overlay mounts at body level, not inside the entry node', !node.querySelector('.dccs-modal'));
   const modalRoot = modal.querySelector('.dccs-root');
   ok('modal opens on the landing screen (not results)',
     !!modalRoot.querySelector('.dccs-landing') && !modalRoot.querySelector('.dccs-results'));
@@ -415,6 +414,37 @@ function enter(root, mode) {
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes modal', !w.document.querySelector('.dccs-modal'));
   ok('body scroll restored', w.document.body.style.overflow === '');
+})();
+
+// ---- 14b. Inside an Elementor wrapper the popup mounts on a clean body-level scope host ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
+  // Simulate Elementor's DOM: page wrapper > widget wrapper > entry node.
+  const page = w.document.createElement('div');
+  page.className = 'elementor elementor-7';
+  const widget = w.document.createElement('div');
+  widget.className = 'elementor-element elementor-element-abc123 elementor-widget elementor-widget-dccs_mini_entry';
+  const node = w.document.createElement('div');
+  node.className = 'dccs-entry dccs-entry';
+  node.dataset.entry = JSON.stringify(entry);
+  node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+  widget.appendChild(node); page.appendChild(widget); w.document.body.appendChild(page);
+  w.DCCS.bootAll(w.document);
+
+  node.querySelector('.dccs-entry-btn').click();
+  const host = w.document.querySelector('body > .dccs-modal-host');
+  ok('popup mounts on a body-level scope host (escapes the widget subtree)',
+    !!host && !node.querySelector('.dccs-modal'));
+  ok('host carries the Elementor page scope class', !!host && host.classList.contains('elementor-7'));
+  // Only elementor* scope tokens are copied — no widget/animation helper classes.
+  ok('host omits non-scope widget classes', !!host && !host.classList.contains('elementor-widget'));
+  const inner = host.querySelector('.elementor-element.elementor-element-abc123');
+  ok('inner host recreates the widget element scope', !!inner && !!inner.querySelector('.dccs-modal .dccs-root'));
+  // Closing removes the whole generated host, leaving no orphan in <body>.
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('closing removes the generated scope host', !w.document.querySelector('.dccs-modal-host'));
 })();
 
 // ---- 17. Live "X cottages match" narrows on a Quick must-have ----
