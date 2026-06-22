@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7
+Stable tag: 0.9.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.8 =
+* Mobile (≤600px): the cottage column now shows just the cottage number (e.g. `#22`) instead of stacking a truncated cottage name above it. The truncated name was forcing rows ~30% taller than necessary, which made every day cell on the same row taller and narrower. Rows now collapse to a single line; day cells become roughly square; the whole calendar reads more compactly on phones. Tap any cottage number to open the existing cottage info popup with the full name and details — that's what it's there for.
+* Tablet, desktop, and the header row are unchanged. Cottages whose post title doesn't follow the `Cottage NN:` naming pattern (no parsed number) keep their abbreviated name visible — never blank cells. Per-cottage custom-label overrides (`cottage_labels` repeater) also continue to display the configured label on mobile, since explicit overrides should win over the default rule.
 
 = 0.9.7 =
 * Cleanup: removed an orphan "Tooltip prefix" string control that was registered in the Strings panel but never consumed by any markup or script.

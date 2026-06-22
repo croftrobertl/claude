@@ -87,6 +87,25 @@
     .mphbac-filter-actions {
         width: 100%;
     }
+    /* Cottage column collapses to just the #number on phones — the
+       truncated name above it was forcing rows ~30% taller than the
+       configured --mphbac-cell-min, which in turn forced every day cell
+       on the same row to be taller and narrower. Guests who need to
+       know "what is #22?" tap the cell → the cottage info popup opens
+       with the full cottage record. Scoped with :has() so a cottage
+       whose post title doesn't match the "Cottage NN:" pattern (no
+       parsed number) keeps its abbrev visible — never blank cells.
+       Custom-label overrides (cottage_labels repeater) emit only a
+       .mphbac-label-custom span with no .mphbac-label-num sibling, so
+       this selector silently doesn't match them either. */
+    .mphbac-cell-label:has(.mphbac-label-num:not(:empty)) .mphbac-label-abbrev {
+        display: none;
+    }
+    .mphbac-cell-label .mphbac-label-num {
+        opacity: 1;
+        font-size: 1em;
+        font-weight: 600;
+    }
 }
 
 /* Class-doubled selector (.mphbac-input.mphbac-input) instead of
