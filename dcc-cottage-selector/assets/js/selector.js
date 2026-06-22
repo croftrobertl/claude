@@ -757,7 +757,22 @@
       renderSelector(root, config, state, { crit: crit, res: res });
       root.appendChild(live);
       announce(live, config, state, res);
+      wireCmpScrollCue(root);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
+    }
+
+    // Toggle the "more cottages below" fade/chevron on the Compare checklist: show it
+    // while there's more to scroll, hide it (.is-atend) once the list reaches its end
+    // or doesn't overflow. The list is rebuilt each render, so we (re)bind every time.
+    function wireCmpScrollCue(r) {
+      var list = r.querySelector('.dccs-cmp-list');
+      if (!list) { return; }
+      function upd() {
+        var more = (list.scrollHeight - list.clientHeight - list.scrollTop) > 2;
+        list.classList.toggle('is-atend', !more);
+      }
+      list.addEventListener('scroll', upd, { passive: true });
+      upd();
     }
     rerender();
 

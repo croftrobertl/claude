@@ -301,6 +301,21 @@
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 18px; height: 18px; flex: 0 0 auto; }
 
+/* "More cottages below" cue: a soft fade + down chevron pinned to the bottom of the
+   scrollable checklist so it's clear the list scrolls. A sticky pseudo-element keeps
+   it at the bottom of the scroll viewport; its negative margin cancels its own height
+   so it never inflates the scroll area. JS adds .is-atend to hide it at the end. */
+.dccs-root.dccs-root .dccs-cmp-list::after {
+  content: ''; display: block; position: sticky; bottom: 0;
+  height: 34px; margin-top: -34px; pointer-events: none;
+  border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;
+  opacity: 1; transition: opacity 0.15s ease;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6675' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat center bottom 5px / 16px 16px,
+    linear-gradient(to top, var(--dccs-surface), rgba(255, 255, 255, 0));
+}
+.dccs-root.dccs-root .dccs-cmp-list.is-atend::after { opacity: 0; }
+
 /* Default hover/focus feedback for both dropdown menus. Kept at low specificity so
    the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */
 .dccs-root.dccs-root .dccs-modeselect-trigger:hover,

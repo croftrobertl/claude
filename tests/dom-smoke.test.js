@@ -618,5 +618,16 @@ function configWith(overrides) {
   ok('largest cottages (#22/#23) rank first', /Cottage 2[23]:/.test(cardNames(root)[0]));
 })();
 
+// ---- 26. Compare checklist has a scroll-more cue (fade/chevron + JS toggle) ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const js = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
+  // jsdom has no layout (scrollHeight/clientHeight are 0), so assert the wiring exists.
+  ok('checklist has a sticky scroll-more cue pseudo-element',
+    /\.dccs-cmp-list::after\s*\{[\s\S]*?position:\s*sticky/.test(css));
+  ok('cue is hidden at the end via .is-atend', /\.dccs-cmp-list\.is-atend::after\s*\{[^}]*opacity:\s*0/.test(css));
+  ok('JS toggles .is-atend on scroll/overflow', /is-atend/.test(js) && /addEventListener\('scroll'/.test(js));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

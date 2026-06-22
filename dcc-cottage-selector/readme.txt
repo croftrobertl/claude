@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.3
+Stable tag: 0.10.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,12 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.10.4 =
+* Compare checklist now shows a soft fade and a down-chevron at the bottom when there
+  are more cottages to scroll to, so it's obvious the list continues past the first
+  few. The cue disappears once you reach the end.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.10.3 =
 * Review/cleanup pass: removed unused internal code, and the "Want the largest space
