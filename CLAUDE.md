@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Site context
+
+**Read `SITE-CONTEXT.md` at the start of every session.** It contains the full
+doracanalcourt.com site architecture: installed plugins + versions, MotoPress data
+model (cottage IDs, room type IDs, booking counts), iCal OTA feeds, cache stack,
+security findings, and gotchas that affect every plugin in this repo.
+
+Key facts from that document that affect this plugin:
+- DB table prefix: `portal_` (not `wp_`)
+- Room type IDs: 1065/1067/1069/1071/1604/1607/1740/1742 (8 cottages)
+- Checkout page ID: 1399
+- Three active cache layers (SpeedyCache Pro + HostGator Endurance + advanced-cache.php)
+
 ## Repository purpose
 
 A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
