@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.6.1
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,13 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.7.0 =
+* Fixed: the X (clear) button in the search field never appeared because the icon was rendered with FontAwesome's `fa-times` class, which FontAwesome 6 renamed to `fa-xmark`. The button is now drawn with an inline SVG that has no dependency on any icon font, so it renders identically whether your site loads FA 4, 5, 6, or none.
+* The X now fades and scales in when there's text in the search field (and fades out when it's cleared) instead of popping into place.
+* Bigger mobile tap target on the X (36×36px on mobile, 32×32px on desktop) so it's easy to hit on touch screens.
+* Pressing Escape inside the search field now clears it (same as clicking the X).
+* New live status line under the search bar shows the result count (e.g. "3 matches") while you type, and "No matches" when the query has zero hits. Aria-live for screen readers. Translatable through the `features-amenities` text domain (Loco Translate).
 
 = 1.6.1 =
 * Fixed: "Import failed: Cannot read properties of undefined (reading 'id')" when uploading an Elementor template JSON. The generated repeater items were missing a _id field; Elementor's repeater Backbone model uses idAttribute '_id', so the panel's per-row lookup crashed after reset. The importer now stamps each generated section/amenity with a fresh unique _id (via elementorCommon.helpers.getUniqueId() when available, falling back to a 7-char random string).

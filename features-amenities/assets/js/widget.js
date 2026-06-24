@@ -111,8 +111,21 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 		if (this.elements.$searchInputs.length) {
 			const input    = this.elements.$searchInputs[0];
 			const clear    = this.elements.$searchClears[0];
+			const status   = this.$element.find('.fal-search-status')[0];
 			const items    = this.elements.$amenities.toArray();
 			const sections = this.elements.$container.find(sel.section).toArray();
+
+			// Translatable status strings (localized by wp_localize_script in
+			// class-plugin.php). Fall back to English if absent.
+			const i18n = (window.falI18n) || {};
+			const labelNo  = i18n.noMatches || 'No matches';
+			const labelOne = i18n.oneMatch  || '1 match';
+			const labelN   = i18n.nMatches  || '%d matches';
+			const formatCount = (n) => {
+				if (n === 0) return labelNo;
+				if (n === 1) return labelOne;
+				return labelN.replace('%d', n);
+			};
 
 			// Track sections the Enter handler opened so we can close exactly
 			// those (and not anything the user manually opened) on clear.
@@ -120,7 +133,7 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 
 			const doSearch = () => {
 				const q = input.value.toLowerCase().trim();
-				if (clear) clear.hidden = q.length === 0;
+				if (clear) clear.classList.toggle('is-active', q.length > 0);
 
 				// Clear previous marks
 				items.forEach(item => {
@@ -133,6 +146,7 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 					sections.forEach(sec => { sec.style.display = ''; });
 					sectionsOpenedBySearch.forEach(sec => closeSection(jQuery(sec)));
 					sectionsOpenedBySearch.clear();
+					if (status) status.textContent = '';
 					return;
 				}
 
@@ -176,6 +190,17 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 					const visibleItems = sec.querySelectorAll(sel.amenity + ':not([style*="display: none"])');
 					sec.style.display = visibleItems.length ? '' : 'none';
 				});
+
+				if (status) {
+					const count = items.filter(it => it.style.display !== 'none').length;
+					status.textContent = formatCount(count);
+				}
+			};
+
+			const clearSearch = () => {
+				input.value = '';
+				doSearch();
+				input.focus();
 			};
 
 			const openMatchedSectionsAndScroll = () => {
@@ -204,10 +229,13 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 				if (e.key === 'Enter') {
 					e.preventDefault();
 					openMatchedSectionsAndScroll();
+				} else if (e.key === 'Escape' && input.value) {
+					e.preventDefault();
+					clearSearch();
 				}
 			});
 			if (clear) {
-				clear.addEventListener('click', () => { input.value = ''; doSearch(); input.focus(); });
+				clear.addEventListener('click', clearSearch);
 			}
 		}
 

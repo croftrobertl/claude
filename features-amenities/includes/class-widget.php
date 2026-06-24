@@ -760,8 +760,13 @@ class Widget extends Widget_Base {
 			echo '<div class="fal-search-wrap">';
 			echo '<i class="fas fa-search fal-search-icon" aria-hidden="true"></i>';
 			echo '<input type="text" class="fal-search-input" placeholder="' . esc_attr( $search_placeholder ) . '">';
-			echo '<button class="fal-search-clear" type="button" hidden aria-label="' . esc_attr__( 'Clear search', 'features-amenities' ) . '"><i class="fas fa-times" aria-hidden="true"></i></button>';
+			echo '<button class="fal-search-clear" type="button" aria-label="' . esc_attr__( 'Clear search', 'features-amenities' ) . '">';
+			echo '<svg class="fal-search-clear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
+			echo '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
+			echo '</svg>';
+			echo '</button>';
 			echo '</div>';
+			echo '<div class="fal-search-status" aria-live="polite"></div>';
 		}
 
 		$in_section   = false;

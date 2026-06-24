@@ -54,6 +54,15 @@ class Plugin {
 			FA_VERSION,
 			true
 		);
+		wp_localize_script(
+			'features-amenities',
+			'falI18n',
+			[
+				'noMatches' => __( 'No matches', 'features-amenities' ),
+				'oneMatch'  => __( '1 match', 'features-amenities' ),
+				'nMatches'  => __( '%d matches', 'features-amenities' ),
+			]
+		);
 	}
 
 	public function enqueue_editor_assets(): void {
