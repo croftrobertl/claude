@@ -22,6 +22,118 @@
         fn();
     }
 
+    var FOCUSABLE_SELECTOR =
+        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+        'select:not([disabled]), textarea:not([disabled]), ' +
+        '[tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
+    // Mobile swipe-to-close gesture for the bottom-sheet popups. Touch must
+    // start at the top of the sheet (header zone) AND the sheet's body
+    // must be scrolled to the top — both conditions ensure swiping doesn't
+    // hijack content scroll. Closes on threshold (~80px) or fast flick.
+    // No-op on devices without touch and skipped if reduced-motion is on
+    // (the snap-back animation is the only motion source).
+    function wireSwipeToClose(sheet, closeFn) {
+        if (!sheet || !closeFn) return;
+        if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return;
+
+        var startY = 0;
+        var startX = 0;
+        var startTime = 0;
+        var dragging = false;
+        var TOP_ZONE_PX = 80;     // touch must start here to engage drag
+        var CLOSE_DELTA_PX = 80;  // straight-distance threshold
+        var FLICK_VELOCITY = 0.5; // px/ms — alternative threshold
+
+        sheet.addEventListener('touchstart', function (e) {
+            if (!e.touches || !e.touches[0]) return;
+            // Skip if the sheet is scrolled — let the browser handle scroll.
+            if (sheet.scrollTop > 0) return;
+            var rect = sheet.getBoundingClientRect();
+            var y = e.touches[0].clientY;
+            if (y - rect.top > TOP_ZONE_PX) return;
+            startY = y;
+            startX = e.touches[0].clientX;
+            startTime = Date.now();
+            dragging = true;
+        }, { passive: true });
+
+        sheet.addEventListener('touchmove', function (e) {
+            if (!dragging || !e.touches || !e.touches[0]) return;
+            var dx = e.touches[0].clientX - startX;
+            var dy = e.touches[0].clientY - startY;
+            // Cancel if horizontal sweep dominates (probably a swipe gesture
+            // intended for something else).
+            if (Math.abs(dx) > Math.abs(dy)) { dragging = false; return; }
+            // Only follow the finger downward — upward should let the browser
+            // do whatever it normally does.
+            if (dy <= 0) return;
+            sheet.style.transition = 'none';
+            sheet.style.transform = 'translateY(' + dy + 'px)';
+            sheet.classList.add('is-dragging');
+        }, { passive: true });
+
+        sheet.addEventListener('touchend', function (e) {
+            if (!dragging) return;
+            dragging = false;
+            sheet.classList.remove('is-dragging');
+            var touch = (e.changedTouches && e.changedTouches[0]) || null;
+            var dy = touch ? touch.clientY - startY : 0;
+            var dt = Math.max(1, Date.now() - startTime);
+            var v = dy / dt;
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+            if (dy > CLOSE_DELTA_PX || v > FLICK_VELOCITY) {
+                closeFn();
+            }
+        });
+
+        sheet.addEventListener('touchcancel', function () {
+            if (!dragging) return;
+            dragging = false;
+            sheet.classList.remove('is-dragging');
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+        });
+    }
+
+    function collectFocusables(container) {
+        if (!container) return [];
+        var nodes = container.querySelectorAll(FOCUSABLE_SELECTOR);
+        var out = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            // offsetParent === null catches display:none ancestors. Width/
+            // height check catches visibility:hidden. Doesn't matter that we
+            // miss `position: fixed` w/ display:none ancestors — Tab order
+            // already excludes those.
+            if (n.offsetParent !== null || n.getClientRects().length > 0) {
+                out.push(n);
+            }
+        }
+        return out;
+    }
+
+    // Render a "Cottage NN: Name" title as two rows split at the first
+    // colon. textContent + createElement keep this XSS-safe regardless of
+    // what's in the post_title or override field. With no colon, falls back
+    // to a single text node.
+    function renderSplitTitle(parent, text) {
+        parent.textContent = '';
+        var idx = text.indexOf(':');
+        if (idx < 0) {
+            parent.appendChild(document.createTextNode(text));
+            return;
+        }
+        var head = text.slice(0, idx + 1);
+        var tail = text.slice(idx + 1).replace(/^\s+/, '');
+        parent.appendChild(document.createTextNode(head));
+        if (tail !== '') {
+            parent.appendChild(document.createElement('br'));
+            parent.appendChild(document.createTextNode(tail));
+        }
+    }
+
     // Track which cottages we've already warmed so rapid mouse-overs don't
     // re-issue the same image fetches.
     var warmedInfoIds = Object.create(null);
@@ -144,14 +256,43 @@
         if (resetEmpty) resetEmpty.addEventListener('click', doReset);
 
         // When a check-in is chosen, default the check-out to check-in + the
-        // minimum stay (two nights) unless the guest already picked a valid one.
+        // minimum stay (two nights) unless the guest already picked a valid
+        // one. If we have to FORCE the checkout (the user's choice is now
+        // invalid), give visual + screen-reader feedback so the change isn't
+        // silent.
+        var filterStatus = root.querySelector('.mphbac-filter-status');
+        var filterStatusTimer = null;
         if (checkin && checkout) {
             checkin.addEventListener('change', function () {
                 if (!checkin.value) return;
                 var minN = Math.max(1, parseInt(config.minNights, 10) || 2);
-                checkout.min = addDays(checkin.value, minN);
-                if (!checkout.value || checkout.value <= checkin.value) {
-                    checkout.value = addDays(checkin.value, minN);
+                var newMin = addDays(checkin.value, minN);
+                checkout.min = newMin;
+                var hadValue = !!checkout.value;
+                var wasInvalid = hadValue && checkout.value <= checkin.value;
+                if (!hadValue || wasInvalid) {
+                    checkout.value = newMin;
+                    if (wasInvalid) {
+                        // Brief visual highlight (CSS handles the fade-out).
+                        checkout.classList.add('mphbac-input--just-changed');
+                        setTimeout(function () {
+                            checkout.classList.remove('mphbac-input--just-changed');
+                        }, 1500);
+                        // Screen-reader announce. Clear-then-set so the same
+                        // text on consecutive forced moves still announces.
+                        if (filterStatus) {
+                            clearTimeout(filterStatusTimer);
+                            filterStatus.textContent = '';
+                            requestAnimationFrame(function () {
+                                var tmpl = (config.strings && config.strings.checkoutMoved)
+                                    || 'Checkout date moved to {date}.';
+                                filterStatus.textContent = tmpl.replace('{date}', newMin);
+                                filterStatusTimer = setTimeout(function () {
+                                    filterStatus.textContent = '';
+                                }, 3000);
+                            });
+                        }
+                    }
                 }
             });
         }
@@ -189,71 +330,6 @@
         return Math.round(
             (new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000
         );
-    }
-
-    // When we copy a cottage's Elementor template into the popup via
-    // innerHTML, the cloned .elementor-widget nodes have no event handlers —
-    // innerHTML doesn't run scripts and Elementor only fires its
-    // frontend/element_ready action once, on the original (hidden) nodes.
-    // This walks the popup and dispatches that action for each widget so
-    // Elementor's handler system rebinds onto the copy.
-    //
-    // Two third-party gotchas the naive "doAction(...element_ready)" path
-    // doesn't solve:
-    //
-    //   1. data-id collision. Every cloned widget keeps the original's
-    //      data-id. Many third-party widgets (and Elementor's own modules)
-    //      track initialized widgets by id in a global registry; when they
-    //      see a duplicate, they skip init. Rewriting data-id to a unique
-    //      value on the clone breaks that dedup.
-    //
-    //   2. handler bookkeeping. Elementor's Base handler attaches itself to
-    //      the element via jQuery $.data('handlers'); when the element_ready
-    //      hook fires a second time on the same DOM, the Base constructor
-    //      sees the marker and refuses to re-bind. innerHTML strips jQuery
-    //      data implicitly, BUT the cloned widget can re-acquire stale
-    //      values via data-* attributes that the framework parses; calling
-    //      removeData() defensively clears any such carryover.
-    //
-    // We also prefer Elementor's own elementsHandler.runReadyTrigger() when
-    // available — it does the global + specific hook + handler-tracking
-    // dance in one call, which is the canonical entry point that
-    // third-party widget JS expects.
-    function reinitElementorWidgets(container) {
-        if (!container || !window.elementorFrontend || !window.jQuery) {
-            return;
-        }
-        var ef = window.elementorFrontend;
-        var $ = window.jQuery;
-
-        // 1. Uniquify data-id + clear jQuery data on every Elementor
-        // element (sections, columns, widgets, containers) in the clone.
-        var stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-        var elements = container.querySelectorAll('.elementor-element[data-id]');
-        elements.forEach(function (el, idx) {
-            var origId = el.getAttribute('data-id');
-            if (origId && origId.indexOf('mphbac-') !== 0) {
-                el.setAttribute('data-id', 'mphbac-' + stamp + '-' + idx + '-' + origId);
-            }
-            try { $(el).removeData(); } catch (e) { /* ignore */ }
-        });
-
-        // 2. Trigger ready handlers per widget.
-        var widgets = container.querySelectorAll('.elementor-widget[data-widget_type]');
-        widgets.forEach(function (widget) {
-            var widgetType = widget.getAttribute('data-widget_type');
-            if (!widgetType) return;
-            try {
-                if (ef.elementsHandler &&
-                    typeof ef.elementsHandler.runReadyTrigger === 'function') {
-                    ef.elementsHandler.runReadyTrigger(widget);
-                } else if (ef.hooks) {
-                    var $widget = $(widget);
-                    ef.hooks.doAction('frontend/element_ready/global', $widget, $);
-                    ef.hooks.doAction('frontend/element_ready/' + widgetType, $widget, $);
-                }
-            } catch (e) { /* third-party handler threw; keep going */ }
-        });
     }
 
     // After v0.8.9 mounts the original .mphbac-info-content into the popup
@@ -295,24 +371,6 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
 
-        // Render a "Cottage NN: Name" title as two rows split at the
-        // first colon. textContent + createElement keep this XSS-safe
-        // regardless of what's in the post_title or override field.
-        function renderSplitTitle(parent, text) {
-            parent.textContent = '';
-            var idx = text.indexOf(':');
-            if (idx < 0) {
-                parent.appendChild(document.createTextNode(text));
-                return;
-            }
-            var head = text.slice(0, idx + 1);
-            var tail = text.slice(idx + 1).replace(/^\s+/, '');
-            parent.appendChild(document.createTextNode(head));
-            if (tail !== '') {
-                parent.appendChild(document.createElement('br'));
-                parent.appendChild(document.createTextNode(tail));
-            }
-        }
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
@@ -467,6 +525,9 @@
                 // any non-Swiper third-party ResizeObserver that may also
                 // have cached zero-dimension state in the hidden source.
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+                // Move focus inside the dialog so Tab cycling has a
+                // defined starting point and the trap below activates.
+                if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
             });
             document.addEventListener('keydown', onKeydown);
         }
@@ -513,10 +574,27 @@
 
         function onKeydown(e) {
             if (e.key === 'Escape') closeInfo();
+            if (e.key === 'Tab') trapFocus(e);
+        }
+
+        function trapFocus(e) {
+            // Re-collect on every Tab so nested Elementor widgets (carousel
+            // arrows, accordion toggles, etc.) that get mounted/unmounted
+            // inside the popup are picked up. Filter out hidden / disabled.
+            var focusable = collectFocusables(sheet);
+            if (!focusable.length) return;
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
         }
 
         overlay.addEventListener('click', closeInfo);
         if (closeBtn) closeBtn.addEventListener('click', closeInfo);
+        wireSwipeToClose(sheet, closeInfo);
     }
 
     function wireSwipe(root, config, state) {
@@ -549,6 +627,14 @@
         return d.getFullYear() + '-' + m + '-' + day;
     }
 
+    function setStatus(root, message) {
+        // The live region for screen readers — toggling text triggers an
+        // announce. Mutating to the same string can be silent in some SRs,
+        // so callers clear-then-set on each new load.
+        var status = root.querySelector('.mphbac-grid-wrap .mphbac-sr-only');
+        if (status) status.textContent = message || '';
+    }
+
     function request(root, config, state) {
         var now = Date.now();
         if (now - state.lastRequest < REQUEST_THROTTLE_MS) {
@@ -558,7 +644,34 @@
         }
         state.lastRequest = now;
 
+        // Abort any in-flight fetch so the latest nav wins. Throttling above
+        // coalesces rapid triggers within 250ms; AbortController handles the
+        // case where a slower network leaves an older fetch outstanding when
+        // a newer one is issued.
+        if (state.controller) {
+            try { state.controller.abort(); } catch (e) { /* ignore */ }
+        }
+        var controller = new AbortController();
+        state.controller = controller;
+
+        // Ceiling on how long we'll wait for the AJAX response. A hung
+        // MotoPress / SpeedyCache misconfig would otherwise leave the
+        // spinner running indefinitely. The empty-state has a reset button
+        // so the visitor can retry. Abort with a TimeoutError-named
+        // DOMException so the .catch below can distinguish "timeout"
+        // (show empty-state) from "superseded by next request" (silent).
+        var timeoutMs = 15000;
+        var timeoutHandle = setTimeout(function () {
+            if (state.controller !== controller) return;
+            try {
+                controller.abort(new DOMException('Request timed out', 'TimeoutError'));
+            } catch (e) {
+                try { controller.abort(); } catch (_) { /* ignore */ }
+            }
+        }, timeoutMs);
+
         root.classList.add('is-loading');
+        setStatus(root, (config.strings && config.strings.loading) || 'Loading availability…');
 
         var body = new URLSearchParams();
         body.append('action', config.action || 'mphbac_query');
@@ -572,27 +685,45 @@
             method: 'POST',
             credentials: 'same-origin',
             body: body,
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         }).then(function (r) {
             return r.json();
         }).then(function (json) {
+            if (controller !== state.controller) return; // superseded
             root.classList.remove('is-loading');
+            setStatus(root, '');
             if (!json || !json.success || !json.data) {
                 showError(root);
                 return;
             }
             renderGrid(root, json.data, state, config);
-        }).catch(function () {
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return; // expected — newer request superseded this one
+            if (controller !== state.controller) return;
             root.classList.remove('is-loading');
+            setStatus(root, '');
             showError(root);
+        }).finally(function () {
+            clearTimeout(timeoutHandle);
         });
+    }
+
+    // Wipe the grid-wrap's contents but preserve the .mphbac-sr-only live
+    // region so the next loading announce can target it. Without this,
+    // renderGrid's `wrap.innerHTML = ''` would remove the span, and screen
+    // readers would never re-announce subsequent loads.
+    function clearWrapPreservingStatus(wrap) {
+        if (!wrap) return;
+        var status = wrap.querySelector('.mphbac-sr-only');
+        wrap.innerHTML = '';
+        if (status) wrap.appendChild(status);
     }
 
     function showError(root) {
         // Clear the "Loading availability…" placeholder so it isn't left
         // dangling above the empty-state message on a request failure.
-        var wrap = root.querySelector('.mphbac-grid-wrap');
-        if (wrap) wrap.innerHTML = '';
+        clearWrapPreservingStatus(root.querySelector('.mphbac-grid-wrap'));
         var empty = root.querySelector('.mphbac-empty');
         if (empty) empty.hidden = false;
     }
@@ -609,7 +740,7 @@
 
         if (rooms.length === 0) {
             if (empty) empty.hidden = false;
-            wrap.innerHTML = '';
+            clearWrapPreservingStatus(wrap);
             updateRange(root, from, to, config);
             return;
         }
@@ -683,7 +814,6 @@
                 var tip = statusLabels[status] || status;
                 var cell = document.createElement('div');
                 cell.className = 'mphbac-cell mphbac-cell-status is-' + status + (clickable ? ' is-clickable' : '');
-                if (config && config.today === day) cell.classList.add('is-today');
                 var dowJ = new Date(day + 'T00:00:00').getDay();
                 if (dowJ === 0 || dowJ === 6) cell.classList.add('is-weekend');
                 if (idx > 0 && day.slice(0, 7) !== days[idx - 1].slice(0, 7)) {
@@ -703,9 +833,17 @@
             grid.appendChild(row);
         });
 
-        wrap.innerHTML = '';
-        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels);
-        if (hint) wrap.appendChild(hint);
+        clearWrapPreservingStatus(wrap);
+        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels, data.bookedThrough);
+        if (hint) {
+            wrap.appendChild(hint);
+            // Trigger the fade-in transition on the next frame so the
+            // browser registers the initial state (.mphbac-hint--enter,
+            // opacity 0) before flipping to the shown state.
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { hint.classList.add('mphbac-hint--shown'); });
+            });
+        }
         wrap.appendChild(grid);
         updateRange(root, from, to, config);
     }
@@ -716,7 +854,7 @@
     // available date and the cottage opening then. Quietly returns null
     // when the window's first day has any availability, which is the
     // overwhelmingly common case.
-    function buildAvailabilityHint(rooms, availability, days, strings, customLabels) {
+    function buildAvailabilityHint(rooms, availability, days, strings, customLabels, bookedThrough) {
         if (!rooms.length || !days.length) return null;
         if (!strings || !strings.allBooked) return null;
 
@@ -735,10 +873,20 @@
         }
 
         var hintEl = document.createElement('div');
-        hintEl.className = 'mphbac-availability-hint';
+        hintEl.className = 'mphbac-availability-hint mphbac-hint--enter';
         hintEl.setAttribute('role', 'status');
 
-        var throughDay = firstAvailIdx > 0 ? days[firstAvailIdx - 1] : days[days.length - 1];
+        // Through-day priority: an in-window opening wins (we know exactly when
+        // it lands), else the server's forward-scan result, else the last
+        // visible day as a fallback.
+        var throughDay;
+        if (firstAvailIdx > 0) {
+            throughDay = days[firstAvailIdx - 1];
+        } else if (bookedThrough) {
+            throughDay = bookedThrough;
+        } else {
+            throughDay = days[days.length - 1];
+        }
         hintEl.textContent = strings.allBooked.replace('{through}', throughDay);
 
         if (firstAvailIdx > 0 && strings.nextOpening) {
@@ -833,7 +981,7 @@
         var cancelBtn = sheet.querySelector('.mphbac-sheet-cancel');
         var closeBtn = sheet.querySelector('.mphbac-sheet-close');
 
-        var context = { roomTypeId: 0, lastTrigger: null };
+        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
         // Portal anchors — same pattern as the info popup. Without this,
@@ -845,13 +993,28 @@
         var overlayOrigParent = overlay.parentNode;
         var overlayMarker = document.createComment('mphbac-sheet-overlay');
 
-        root.addEventListener('click', function (e) {
-            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
-            if (!cell) return;
+        function openSheetFromCell(cell) {
             var row = cell.parentNode;
             var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
             var date = cell.getAttribute('data-date') || '';
             openSheet(typeId, date, addDays(date, minNights), cell);
+        }
+
+        root.addEventListener('click', function (e) {
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
+            if (!cell) return;
+            openSheetFromCell(cell);
+        });
+        // Keyboard parity: Enter or Space on a focused available cell opens
+        // the booking popup. Without this, cells get `tabindex="0"` and
+        // appear focusable but do nothing on key press — keyboard users hit
+        // a dead end.
+        root.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+            var cell = e.target.closest && e.target.closest('.mphbac-cell-status.is-available.is-clickable');
+            if (!cell) return;
+            e.preventDefault();
+            openSheetFromCell(cell);
         });
 
         function openSheet(typeId, checkin, checkout, trigger) {
@@ -860,7 +1023,10 @@
             context.lastTrigger = trigger || null;
             var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
             var roomTitle = (config.roomTitles && config.roomTitles[typeId]) || '';
-            titleEl.textContent = roomTitle ? (title + ' ' + roomTitle) : title;
+            // Split at the first colon (e.g. "Book Cottage 32: Flamingo
+            // Bungalow" → "Book Cottage 32:" / "Flamingo Bungalow") so the
+            // cottage proper name wraps to its own row on narrow viewports.
+            renderSplitTitle(titleEl, roomTitle ? (title + ' ' + roomTitle) : title);
             checkinEl.value = checkin || '';
             checkoutEl.value = checkout || '';
             errorEl.hidden = true;
@@ -879,15 +1045,29 @@
                 sheet.hidden = false;
                 overlay.hidden = false;
             });
+            context.isOpen = true;
             requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
+                // Focus after the popup is fully attached + painted. Double
+                // rAF lets the slide-in transition start before focus moves,
+                // avoiding the iOS Safari quirk where focusing during a
+                // transform causes a flash. Tracked so close can cancel.
+                context.focusRaf = requestAnimationFrame(function () {
+                    if (context.isOpen) {
+                        try { checkinEl.focus(); } catch (e) { /* ignore */ }
+                    }
+                });
             });
-            setTimeout(function () { checkinEl.focus(); }, 50);
             document.addEventListener('keydown', onKeydown);
         }
 
         function closeSheet() {
+            context.isOpen = false;
+            if (context.focusRaf) {
+                cancelAnimationFrame(context.focusRaf);
+                context.focusRaf = 0;
+            }
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
             setTimeout(function () {
@@ -916,7 +1096,10 @@
         }
 
         function trapFocus(e) {
-            var focusable = sheet.querySelectorAll('input, button');
+            // Re-collect on every Tab so nested Elementor widgets (carousel
+            // arrows, accordion toggles, etc.) that get mounted/unmounted
+            // inside the popup are picked up. Filter out hidden / disabled.
+            var focusable = collectFocusables(sheet);
             if (!focusable.length) return;
             var first = focusable[0];
             var last = focusable[focusable.length - 1];
@@ -930,6 +1113,7 @@
         overlay.addEventListener('click', closeSheet);
         cancelBtn.addEventListener('click', closeSheet);
         closeBtn.addEventListener('click', closeSheet);
+        wireSwipeToClose(sheet, closeSheet);
 
         confirmBtn.addEventListener('click', function () {
             errorEl.hidden = true;
@@ -1025,6 +1209,7 @@
     }
 
     function boot() {
+        ensureViewportFitCover();
         document.querySelectorAll('.mphbac-root').forEach(init);
         // The Elementor editor preview iframe injects widget markup AFTER
         // DOMContentLoaded and does not reliably fire frontend/element_ready,
@@ -1033,8 +1218,56 @@
         setupObserver();
     }
 
+    // Append `viewport-fit=cover` to the document's viewport meta if it isn't
+    // already present, so env(safe-area-inset-bottom) returns a real value on
+    // iOS Safari. Without this, our bottom-anchored popup's `bottom:
+    // env(safe-area-inset-bottom, 0px)` evaluates to 0 and the popup's bottom
+    // edge stays behind the Safari toolbar overlay — the exact bug we're
+    // fixing in 0.9.6. Idempotent (no-op if the directive is already in the
+    // meta content). Site-wide effect, but the only practical implication is
+    // that the page can now address the safe-area insets via env() — which is
+    // what we want.
+    function ensureViewportFitCover() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) return;
+        var content = meta.getAttribute('content') || '';
+        if (content.indexOf('viewport-fit') >= 0) return;
+        meta.setAttribute('content', content + (content ? ', ' : '') + 'viewport-fit=cover');
+    }
+
     function setupObserver() {
         if (!document.body || !window.MutationObserver) return;
+        // The observer exists ONLY to catch widget markup that the Elementor
+        // editor preview iframe injects post-DOMContentLoaded without firing
+        // frontend/element_ready reliably. On the live frontend, boot()'s
+        // initial querySelectorAll covers existing instances and the
+        // elementor/frontend/element_ready/mphbac_calendar.default hook
+        // (registered below) covers any late-mounted ones. Observing
+        // document.body { subtree: true } there would mean a callback on
+        // EVERY DOM mutation across the page — measurable cost on heavy
+        // Elementor pages. Gate by an editor-preview signal so frontend
+        // pages get zero observer overhead.
+        //
+        // Detection priority:
+        //   1. URL has `elementor-preview=` — the preview-iframe URL pattern.
+        //      Bulletproof and available BEFORE elementor-frontend.js runs,
+        //      so we don't race the script-load order on DOMContentLoaded.
+        //   2. body.elementor-edit-mode — the class elementor-frontend.js
+        //      adds to the preview iframe body once it boots.
+        //   3. body.elementor-editor-active — the class on the TOP-LEVEL
+        //      editor body (outside the iframe). Our widget shouldn't live
+        //      there, but covers the edge case.
+        //
+        // v0.9.4 only checked elementor-editor-active, which is the
+        // top-level body — never set inside the preview iframe — so the
+        // calendar failed to re-init after Elementor rebuilt the widget on
+        // every setting change. Fixed in v0.9.5.
+        var inEditorPreview =
+            (window.location && window.location.search &&
+                window.location.search.indexOf('elementor-preview=') >= 0) ||
+            document.body.classList.contains('elementor-edit-mode') ||
+            document.body.classList.contains('elementor-editor-active');
+        if (!inEditorPreview) return;
         var observer = new MutationObserver(function () {
             var roots = document.querySelectorAll('.mphbac-root');
             if (roots.length === 0) return;

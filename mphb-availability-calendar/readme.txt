@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.18
+Stable tag: 0.9.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,48 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.8 =
+* Mobile (≤600px): the cottage column now shows just the cottage number (e.g. `#22`) instead of stacking a truncated cottage name above it. The truncated name was forcing rows ~30% taller than necessary, which made every day cell on the same row taller and narrower. Rows now collapse to a single line; day cells become roughly square; the whole calendar reads more compactly on phones. Tap any cottage number to open the existing cottage info popup with the full name and details — that's what it's there for.
+* Tablet, desktop, and the header row are unchanged. Cottages whose post title doesn't follow the `Cottage NN:` naming pattern (no parsed number) keep their abbreviated name visible — never blank cells. Per-cottage custom-label overrides (`cottage_labels` repeater) also continue to display the configured label on mobile, since explicit overrides should win over the default rule.
+
+= 0.9.7 =
+* Cleanup: removed an orphan "Tooltip prefix" string control that was registered in the Strings panel but never consumed by any markup or script.
+* Cleanup: removed an unused `.mphbac-label-number` CSS rule (the parent class was never applied; the nested `.mphbac-label-abbrev` / `.mphbac-label-num` selectors used elsewhere are unaffected).
+* Cleanup: dropped an unused `use DateTimeImmutable;` import from the widget class.
+* A11y: the cottage info popup now has the same keyboard focus-trap as the Book Now popup — Tab cycles inside the dialog and wraps at both ends, initial focus lands on the close button on open, and Escape still closes and returns focus to the triggering cottage name. `role="dialog"` / `aria-modal="true"` were already present; this completes the parity.
+
+= 0.9.6 =
+* Fix (iOS Safari): bottom of the cottage info popup and Book Now popup were hidden behind the floating Safari toolbar. The v0.9.0 svh fix capped popup HEIGHT correctly but the popup was still anchored with `bottom: 0`, which on iOS puts the popup's bottom edge at the vh-bottom — BEHIND the toolbar that overlays the viewport. Switched the anchor to `bottom: env(safe-area-inset-bottom, 0px)` so the popup lifts above the toolbar, and added a JS-side `viewport-fit=cover` injection so `env()` returns a real value even when the theme's viewport meta omits it.
+
+= 0.9.5 =
+* Fix: calendar failed to (re-)load inside the Elementor editor preview after v0.9.4. The observer gate checked `body.elementor-editor-active` — that class lives on the TOP-LEVEL editor body, not inside the preview iframe where the widget actually renders. Detection now uses the `elementor-preview=` URL parameter (set on the preview iframe URL, available before elementor-frontend.js boots) plus `body.elementor-edit-mode` and `body.elementor-editor-active` as backups. Live-frontend perf win from v0.9.4 is preserved — no observer on public pages.
+
+= 0.9.4 =
+* Render flicker — the skeleton placeholder now matches the rendered grid one-for-one: same gap variable (`--mphbac-gap`, the one the Elementor cell-gap control writes to — the skeleton previously read a separate `--mphbac-cell-gap` that no control updated), no outer padding mismatch, and a header stripe that mirrors the rendered grid's top row so the swap doesn't shift the grid down by a row.
+* Frontend perf — the `MutationObserver` that watches for late-injected widget markup is now gated to the Elementor editor preview (where it's actually needed); on the live frontend it's skipped entirely. Frees up the per-mutation callback cost on every Elementor page. Late-mounted instances on the frontend are still caught by Elementor's `frontend/element_ready` hook.
+* Frontend perf — jQuery UI Datepicker is no longer a hard JS dependency. ~70 KB of JS + CSS no longer loads on every page that contains the widget. The fallback code stays in place and quietly re-engages on browsers that lack `<input type="date">` IF jQuery UI happens to be loaded by the theme or another plugin; modern browsers within the support floor (Safari 16+ / iOS 16+ / evergreen Chrome and Firefox) use the native picker either way.
+* Stability — added a 15-second timeout to the calendar's availability fetch. A hung MotoPress / SpeedyCache misconfig used to leave the spinner running indefinitely; now the empty-state appears and the visitor can retry. Timeout is distinguished from "newer request superseded this one" via a TimeoutError-named DOMException so the silent-abort path still works for rapid month-nav.
+* Tidy — removed `reinitElementorWidgets`, a ~36-line dead function from before v0.8.9 switched the info popup to MOVE (rather than clone) the cottage's content node. `refreshSwipers()` already handles the only post-v0.8.9 reinit need.
+
+= 0.9.3 =
+* "All cottages booked through {date}" hint now reports the REAL through-date — when every visible day is booked, the AJAX endpoint scans up to a year forward and returns the day before the next true availability. Previously the hint could only point to the last visible day in the current window, which understated the cutoff whenever the booked stretch extended beyond what was on screen.
+
+= 0.9.2 =
+* Today indicator — removed the yellow tint and bottom border from body cells in today's column. The header (date/day row) keeps its underline, which is enough orientation when past days aren't shown. Reverts an over-eager addition from 0.9.0.
+
+= 0.9.1 =
+* Book Now popup — cottage name now wraps to a second row at the colon, matching the cottage info popup ("Book Cottage 32:" on row 1, "Flamingo Bungalow" on row 2). Applies to all eight cottages via the shared `renderSplitTitle` helper.
+
+= 0.9.0 =
+* Accessibility — calendar day cells are now actually keyboard-operable: Enter or Space on a focused available cell opens the booking popup (previously cells were `tabindex="0"` with no key handler, a dead end for keyboard users). The booking-popup focus trap now re-collects focusables on every Tab, so nested Elementor widgets (carousel arrows, accordion toggles) cycle correctly inside the trap instead of leaking out. Loading state is announced to screen readers on every fetch (previously the sr-only span was wiped by the first render and never re-announced).
+* Stability — in-flight AJAX is now aborted via `AbortController` when a newer request supersedes it, so rapid month-nav clicks no longer pile up wasted network traffic or race to render stale data. The booking popup's open-focus timer is cancelled on close and uses a double `requestAnimationFrame` instead of a 50ms `setTimeout`, eliminating the race where rapid open-close-open could land focus on a closed or stale element. SpeedyCache settings recursion now has an 8-level depth guard against pathological/cyclic option arrays.
+* Mobile reliability — booking + cottage info popups now use `max-height: 90svh` (with `90dvh` and `90vh` fallbacks) so the popup never extends behind the iOS on-screen keyboard. Nav arrows are now 44×44 minimum to meet iOS HIG / WCAG 2.5.5 AAA touch-target guidance. When the check-in date moves and the existing check-out becomes invalid, the forced-shift now briefly highlights the check-out input and announces the change to screen readers instead of silently changing the value.
+* Multisite-safe uninstall — `uninstall.php` now iterates every subsite via `switch_to_blog()` and clears each one's `mphbac_` transients individually, so a network uninstall doesn't orphan subsite transients in the database.
+* Swipe-to-close on info & booking popups — drag the top of the sheet down to dismiss (matches iOS/Android sheet conventions). Only engages on touch devices, only from the sheet's top 80px, and only when the sheet body is scrolled to the top, so internal scroll is never hijacked.
+* Today indicator on the date cell itself — every body cell in today's column now mirrors the header's underline (inset bottom border in the today-outline color), so "today" is scannable mid-grid without scanning back up to the header.
+* Polish — back-to-today nav button has a tooltip + aria-label ("Jump back to today's availability"). The "all booked through" hint banner fades in instead of popping in. The grid breathes its opacity slightly during in-flight fetches so the visitor sees motion instead of a frozen dim state. All new motion respects `prefers-reduced-motion: reduce`.
+* Tidy — stripped three unused fields (`labelStyle`, `inheritTheme`, `tooltipPrefix`) from the `data-config` JSON payload that's serialized to every widget on every page (≈250 bytes/page saved).
 
 = 0.8.18 =
 * Changed: cottage info popup header — the cottage name now splits across two rows at the first colon, e.g. "Cottage 31:" on row 1 and "Hibiscus Hut" on row 2. Same typography on both rows; applies on every viewport. Implemented via a small DOM split (text node + `<br>` + text node) inside the title element, preserving the link wrapper when a per-cottage title URL is set so clicking either row still navigates to the cottage page. Titles without a colon fall through unchanged.
