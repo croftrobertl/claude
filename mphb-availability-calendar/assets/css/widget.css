@@ -105,6 +105,20 @@
         opacity: 1;
         font-size: 1em;
         font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+    }
+    /* Center the #N inside the data-row cottage cells so the column reads
+       as an intentional ID column rather than a left-jammed remnant of
+       the pre-v0.9.8 two-line layout. Doubled-class prefix outranks
+       Bravada's (0,3,1) button reset on text-align / justify-content.
+       Scoped to data rows only — the .mphbac-row-header corner cell
+       (the "COTTAGE" string) keeps its existing left-aligned styling. */
+    .mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label {
+        justify-content: center;
+        text-align: center;
+        padding-left: 8px;
+        padding-right: 8px;
     }
 }
 
