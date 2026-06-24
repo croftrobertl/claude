@@ -19,6 +19,7 @@
     --mphbac-font-size: 14px;
     --mphbac-days: 7;
     --mphbac-cell-min: 38px;
+    --mphbac-header-min: 38px;
     --mphbac-label-width: 180px;
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
@@ -77,15 +78,28 @@
     gap: 0.5em;
 }
 
-/* Mobile: stack each filter element on its own full-width row, centered */
+/* Mobile (≤600px): single-row layout — dates fill the left ⅔ side-by-side,
+   action button(s) fill the right ⅓. Replaces the previous column stack
+   (v0.9.x and earlier) which wasted vertical space on small screens and
+   pushed the calendar below the fold. The per-filter element keeps its
+   own label-above-input column layout — only the parent's stacking
+   direction changes. min-width: 0 lets native date inputs shrink instead
+   of forcing horizontal overflow on the narrowest 320px screens. */
 @media (max-width: 600px) {
     .mphbac-filters {
-        flex-direction: column;
-        align-items: center;
+        flex-wrap: nowrap;
+        align-items: flex-end;
     }
-    .mphbac-filter,
-    .mphbac-filter-actions {
+    .mphbac-filter {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .mphbac-filter .mphbac-input {
         width: 100%;
+        min-width: 0;
+    }
+    .mphbac-filter-actions {
+        flex: 0 0 auto;
     }
     /* Cottage column collapses to just the #number on phones — the
        truncated name above it was forcing rows ~30% taller than the
@@ -293,7 +307,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+/* Cottage-row cells use --mphbac-cell-min ("Cottage row height" control).
+   Header-row cells use --mphbac-header-min ("Header row height" control).
+   Split in v0.10.0 — previously a single --mphbac-cell-min governed both,
+   which meant editors trying to enlarge the cottage rows ended up dialing
+   the header row instead (the header content was tighter, so the min-height
+   bound there first). */
+.mphbac-row:not(.mphbac-row-header) .mphbac-cell {
     min-height: var(--mphbac-cell-min);
+}
+.mphbac-row-header .mphbac-cell {
+    min-height: var(--mphbac-header-min);
 }
 
 /* Cottage-name column (data rows) */
@@ -347,6 +372,37 @@
     opacity: 0.7;
     font-size: 0.85em;
     font-weight: 400;
+}
+
+/* "Number only" row-label mode (Elementor: Display → Row label style).
+   When the root carries .mphbac-label-number, suppress the cottage-name
+   abbrev so only the parsed #N stays. The cottage column width is
+   intentionally unchanged — the user has a separate Cottage column width
+   control if a narrower column is wanted. Graceful degradation: when a
+   row's parsed number is empty (custom-label override or unparseable post
+   title), the abbrev stays visible — never blank cells. Mirrors the v0.9.9
+   mobile rules but gated on the .mphbac-label-number root class so they
+   fire on every viewport. Doubled .mphbac-root prefix beats Bravada's
+   (0,3,1) button reset on text-align / justify-content. */
+.mphbac-root.mphbac-root.mphbac-label-number
+    .mphbac-row:not(.mphbac-row-header)
+    .mphbac-cell-label:has(.mphbac-label-num:not(:empty))
+    .mphbac-label-abbrev {
+    display: none;
+}
+.mphbac-root.mphbac-root.mphbac-label-number
+    .mphbac-row:not(.mphbac-row-header)
+    .mphbac-cell-label {
+    justify-content: center;
+    text-align: center;
+}
+.mphbac-root.mphbac-root.mphbac-label-number
+    .mphbac-cell-label .mphbac-label-num {
+    opacity: 1;
+    font-size: 1em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
 }
 
 /* Top row — day-of-week + date headers, and the corner "Property" cell */
@@ -609,20 +665,41 @@
     position: sticky;
     top: 0;
     align-self: flex-end;
-    z-index: 2;
-    width: 1.9em;
-    height: 1.9em;
+    /* Above any popup-internal stacking (Elementor image-carousel slides
+       and pagination dots create their own stacking contexts that beat the
+       old z-index: 2). 10 sits the X above all known popup content while
+       staying well below site-level overlays. */
+    z-index: 10;
+    width: 2.1em;
+    height: 2.1em;
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #888888;
-    color: rgba(255, 255, 255, 0.92);
+    /* Frosted pill — translucent fill + backdrop blur so the X reads
+       cleanly against any color/image/text that scrolls underneath.
+       Earlier solid #888 disappeared into gray photos. */
+    background: rgba(60, 60, 60, 0.45);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    color: rgba(255, 255, 255, 0.96);
     border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
     /* Reserve no extra vertical space — visually overlap the header below. */
-    margin-bottom: -1.9em;
+    margin-bottom: -2.1em;
     margin-right: -0.25em;
+}
+.mphbac-info-close--floating:focus-visible {
+    outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
+    outline-offset: 2px;
+}
+/* Older browsers without backdrop-filter: bump opacity so the pill stays
+   readable instead of falling back to the translucent rgba which would be
+   nearly invisible against a light background. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .mphbac-info-close--floating {
+        background: rgba(40, 40, 40, 0.92);
+    }
 }
 .mphbac-sheet-header--info .mphbac-sheet-title {
     /* The X is no longer a flex sibling; leave room so the title never

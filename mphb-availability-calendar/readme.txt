@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.9
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,12 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.0 =
+* Desktop and tablet now honor the "Number only" row-label setting — only the `#N` shows, centered with tabular figures, while the column stays the same width as today's two-line layout (use the existing Cottage column width control to narrow it if desired). Previously the abbrev still rendered above the `#N` on desktop/tablet, ignoring the toggle. Mobile behavior is unchanged. The full cottage name remains in the cell's accessible name (tooltip + screen reader) and tapping any cottage cell still opens its info popup with the full record.
+* The cottage info popup's close X is now a frosted-blur pill that stays cleanly visible against any image, color, or text that scrolls underneath. Previously a solid `#888` X could disappear into gray photos when content scrolled past. z-index bumped above Elementor image-carousel stacking contexts, a proper `:focus-visible` outline added for keyboard users, and a `@supports not (backdrop-filter)` fallback gives a near-opaque dark fill on browsers without backdrop blur.
+* The single "Cell size" slider under Style → Calendar Cells is now two: "Cottage row height" (data rows only — keeps the old `cell_min_height` control id, so saved values continue to apply) and "Header row height" (top day-of-week / date row only, new `header_min_height` control). Previously the lone slider visibly resized the header row instead of the cottage rows — the header content was tighter, so `min-height` bound there first. Existing widgets that had cranked the old slider up specifically to enlarge the header will see the header revert to the default until the new slider is set; that revert was the bug.
+* On mobile (≤600 px) the Check-in / Check-out date filters and the action button(s) now sit on a single row — dates fill the left ⅔ side-by-side, button(s) fill the right ⅓. Previously each filter element stacked on its own full-width row, wasting vertical space and often pushing the calendar below the fold on phones. Each filter keeps its own label-above-input column layout — only the parent's stacking direction changes. `min-width: 0` lets native date pickers shrink instead of horizontally overflowing on the narrowest 320 px screens.
 
 = 0.9.9 =
 * Mobile (≤600px) cottage column polish, building on v0.9.8: the `#22` / `#23` IDs are now centered in the column with tabular numerals, so every digit lines up character-for-character down the page regardless of which cottages are shown. Adds a hair of letter-spacing so `#36` doesn't read as `#86` at small sizes. Reads as an intentional ID column rather than a collapsed remnant of the old two-line layout. Tablet, desktop, the navy header corner ("COTTAGE"), and cottages whose post title doesn't match the `Cottage NN:` pattern are all unchanged.

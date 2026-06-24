@@ -903,13 +903,25 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('cell_min_height', [
-            'label'      => __('Cell size', 'mphb-availability-calendar'),
+            'label'      => __('Cottage row height', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
             'default'    => ['size' => 38, 'unit' => 'px'],
             'range'      => ['px' => ['min' => 16, 'max' => 60, 'step' => 2]],
             'selectors'  => [
                 self::SEL => '--mphbac-cell-min: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('header_min_height', [
+            'label'      => __('Header row height', 'mphb-availability-calendar'),
+            'description'=> __('Height of the top day-of-week / date row.', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'default'    => ['size' => 38, 'unit' => 'px'],
+            'range'      => ['px' => ['min' => 16, 'max' => 60, 'step' => 2]],
+            'selectors'  => [
+                self::SEL => '--mphbac-header-min: {{SIZE}}{{UNIT}};',
             ],
         ]);
 
