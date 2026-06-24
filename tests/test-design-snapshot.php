@@ -55,6 +55,9 @@ namespace {
         'icon_submit'         => ['value' => ''],    // empty icon -> dropped
         'icon_side_view'      => 'right',
         'not_a_string'        => ['x' => 1],         // ignored (non-scalar, non str_)
+        'color_accent'        => '#123456',          // -> --dccs-accent
+        'color_text'          => '',                 // unset -> dropped
+        'corner_radius'       => ['size' => 14, 'unit' => 'px'], // -> --dccs-radius: 14px
     ];
 
     $snap = Selector_Widget::design_snapshot($settings);
@@ -68,6 +71,9 @@ namespace {
     ok('empty icons are dropped', !isset($snap['icons']['submit']));
     ok('icon sides captured', ($snap['iconSides']['view'] ?? null) === 'right');
     ok('icon sides default to left', ($snap['iconSides']['questions'] ?? null) === 'left');
+    ok('cssVars capture a set colour', ($snap['cssVars']['--dccs-accent'] ?? null) === '#123456');
+    ok('cssVars format a slider as size+unit', ($snap['cssVars']['--dccs-radius'] ?? null) === '14px');
+    ok('cssVars drop unset colours', !array_key_exists('--dccs-text', $snap['cssVars']));
 
     // Rebuild the front-end config from the snapshot (what a Mini Entry does when mirroring).
     $cfg = Selector_Widget::config_from_snapshot($snap, ['highlight' => '31']);
@@ -75,6 +81,7 @@ namespace {
     ok('config carries startMode from the snapshot', ($cfg['startMode'] ?? null) === 'weights');
     ok('config carries the extra highlight', ($cfg['highlight'] ?? null) === '31');
     ok('config still includes the cottage dataset', !empty($cfg['cottages']));
+    ok('config surfaces cssVars for inline application', ($cfg['cssVars']['--dccs-accent'] ?? null) === '#123456');
 
     // publish_design() round-trip + hash dedupe.
     Selector_Widget::publish_design('Main', 123, 'abc123', $settings);

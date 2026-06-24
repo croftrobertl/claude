@@ -1327,7 +1327,54 @@ class Selector_Widget extends Widget_Base
             'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
+            'cssVars'          => self::collect_css_vars($settings),
         ];
+    }
+
+    /**
+     * The palette + spacing as CSS custom properties (the same `--dccs-*` vars the
+     * colour/slider style controls feed through Elementor `selectors`). Emitted INLINE
+     * on a mirrored pop-up root so the colours/spacing survive SpeedyCache's "remove
+     * unused CSS" — inline properties win over (and are never stripped with) the
+     * deferred stylesheets. Only explicitly-set values are returned; the rest fall
+     * through to selector.css's baked defaults, exactly as on the source Selector.
+     *
+     * @param array<string,mixed> $settings
+     * @return array<string,string>
+     */
+    private static function collect_css_vars(array $settings): array
+    {
+        $vars = [];
+        $colors = [
+            'color_accent'      => '--dccs-accent',
+            'color_accent_text' => '--dccs-accent-text',
+            'color_accent2'     => '--dccs-accent-2',
+            'color_surface'     => '--dccs-surface',
+            'color_bg'          => '--dccs-bg',
+            'color_text'        => '--dccs-text',
+            'color_muted'       => '--dccs-muted',
+            'color_border'      => '--dccs-border',
+            'color_good'        => '--dccs-good',
+            'color_diff'        => '--dccs-diff',
+        ];
+        foreach ($colors as $key => $var) {
+            $v = $settings[$key] ?? '';
+            if (is_string($v) && $v !== '') {
+                $vars[$var] = $v;
+            }
+        }
+        // SLIDER controls store ['size' => n, 'unit' => 'px'].
+        $sliders = [
+            'corner_radius' => '--dccs-radius',
+            'section_gap'   => '--dccs-gap',
+        ];
+        foreach ($sliders as $key => $var) {
+            $sz = $settings[$key] ?? null;
+            if (is_array($sz) && isset($sz['size']) && $sz['size'] !== '') {
+                $vars[$var] = $sz['size'] . ($sz['unit'] ?? 'px');
+            }
+        }
+        return $vars;
     }
 
     /**
@@ -1346,6 +1393,7 @@ class Selector_Widget extends Widget_Base
             'showHeading'  => $snap['showHeading'] ?? true,
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
+            'cssVars'      => $snap['cssVars'] ?? [],
         ], $extra));
     }
 

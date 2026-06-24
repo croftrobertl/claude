@@ -1040,6 +1040,14 @@
     var o = buildOverlay(trigger, config.strings && config.strings.heading, host ? host.inner : null);
     if (host) { o.overlay._dccsHost = host.outer; }
     var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');
+    // Apply the palette/spacing as INLINE custom properties so the pop-up shows the
+    // right colours even when SpeedyCache's "remove unused CSS" defers the stylesheets
+    // (inline props win over, and are never stripped with, those sheets).
+    if (config.cssVars) {
+      Object.keys(config.cssVars).forEach(function (k) {
+        try { inner.style.setProperty(k, config.cssVars[k]); } catch (e) { /* ignore bad value */ }
+      });
+    }
     inner.dataset.config = JSON.stringify(config);
     o.content.appendChild(inner);
     initSelector(inner);

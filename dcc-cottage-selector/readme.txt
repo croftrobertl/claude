@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.0
+Stable tag: 0.11.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,8 +55,11 @@ match it automatically:
    to touch the Mini Entries.
 
 The mirror styles the **pop-up** (the small entry-prompt button keeps its own
-look). If you run SpeedyCache's "remove unused CSS", exclude the selector page (or
-leave that option off) so the pop-up keeps the Selector's styles.
+look). The pop-up's colors and spacing are applied inline, so they show correctly
+even with SpeedyCache's "remove unused CSS" enabled. Finer details (typography,
+borders) may briefly settle in on first interaction under aggressive unused-CSS
+removal; if you want those instant too, exclude the selector page from unused-CSS
+removal.
 
 = The seven meaningful differences =
 
@@ -160,6 +163,13 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.11.1 =
+* Mirror hardening: a mirrored Mini Entry pop-up now applies the Selector's colors and
+  spacing inline, so they render correctly even with SpeedyCache's "remove unused CSS"
+  turned on (no wrong-color flash). Finer typography/borders still load with the rest of
+  the page's CSS.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.11.0 =
 * New: a Mini Entry can **mirror a Cottage Selector's full design and text**. Turn on

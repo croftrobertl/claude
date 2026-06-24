@@ -453,6 +453,7 @@ function enter(root, mode) {
   const cfg = JSON.parse(CONFIG);
   // entry.scope carries the source Cottage Selector's Elementor scope (page + element id),
   // so the pop-up host is built from those instead of the Mini Entry's own DOM ancestors.
+  cfg.cssVars = { '--dccs-accent': '#123456', '--dccs-radius': '14px' };
   const entry = { current: '31', selectorUrl: '', modalConfig: cfg, scope: { page: 'elementor-42', el: 'elementor-element-srcXYZ' } };
   // Put the entry inside a DIFFERENT widget scope to prove the source scope wins.
   const widget = w.document.createElement('div');
@@ -473,6 +474,11 @@ function enter(root, mode) {
   ok('inner host carries the SOURCE element scope', !!inner && !!inner.querySelector('.dccs-modal .dccs-root'));
   ok('mirror pop-up does not use the Mini Entry’s own element scope',
     !host.querySelector('.elementor-element-mini999'));
+  // Palette is applied INLINE on the pop-up root (survives "remove unused CSS").
+  const popRoot = host.querySelector('.dccs-modal .dccs-root');
+  ok('mirror palette is set inline on the pop-up root',
+    !!popRoot && popRoot.style.getPropertyValue('--dccs-accent').trim() === '#123456'
+             && popRoot.style.getPropertyValue('--dccs-radius').trim() === '14px');
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('closing the mirror pop-up removes its host', !w.document.querySelector('.dccs-modal-host'));
 })();
