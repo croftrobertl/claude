@@ -42,19 +42,50 @@ final class Ajax
             $to = $from->modify('+' . self::MAX_RANGE_DAYS . ' days');
         }
 
+        // Resolve the room list once and reuse — the response payload needs
+        // it for titles/abbrev/number, and an empty room_type_ids request
+        // also needs it to know which IDs to query availability for.
+        $rooms = Data_Provider::list_room_types();
         if (empty($room_type_ids)) {
-            $all = Data_Provider::list_room_types();
-            $room_type_ids = array_map(static fn($t) => (int) $t['id'], $all);
+            $room_type_ids = array_map(static fn($t) => (int) $t['id'], $rooms);
         }
 
         $availability = Data_Provider::get_availability($room_type_ids, $from, $to);
-        $rooms        = Data_Provider::list_room_types();
+
+        // When every visible day is booked across every requested cottage,
+        // scan forward to find the real through-date so the "all cottages
+        // booked through X" hint can show the true cutoff instead of the
+        // last visible day. Skipped on the common case where the window has
+        // any availability at all — costs one extra cached query only when
+        // the user is actually staring at an all-booked stretch.
+        $booked_through = null;
+        if (!empty($room_type_ids)) {
+            $any_avail = false;
+            foreach ($availability as $type_avail) {
+                foreach ($type_avail as $status) {
+                    if ($status === Data_Provider::ST_AVAIL) {
+                        $any_avail = true;
+                        break 2;
+                    }
+                }
+            }
+            if (!$any_avail) {
+                $next = Data_Provider::find_first_availability(
+                    $room_type_ids,
+                    $to->modify('+1 day')
+                );
+                if ($next instanceof DateTimeImmutable) {
+                    $booked_through = $next->modify('-1 day')->format('Y-m-d');
+                }
+            }
+        }
 
         wp_send_json_success([
-            'rooms'        => array_values($rooms),
-            'availability' => $availability,
-            'from'         => $from->format('Y-m-d'),
-            'to'           => $to->format('Y-m-d'),
+            'rooms'         => array_values($rooms),
+            'availability'  => $availability,
+            'from'          => $from->format('Y-m-d'),
+            'to'            => $to->format('Y-m-d'),
+            'bookedThrough' => $booked_through,
         ]);
     }
 

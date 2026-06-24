@@ -1,7 +1,6 @@
 <?php
 namespace MPHBAC;
 
-use DateTimeImmutable;
 use Elementor\Controls_Manager;
 use Elementor\Widget_Base;
 
@@ -61,10 +60,17 @@ final class Widget extends Widget_Base
             [],
             MPHBAC_VERSION
         );
+        // No JS deps. The jQuery UI datepicker is used as an OPTIONAL fallback
+        // by wireFilters() only when `<input type="date">` is unsupported and
+        // jQuery UI happens to be on the page anyway (loaded by the theme or
+        // another plugin). Declaring it as a hard dep here would force ~70 KB
+        // of JS + CSS onto every page, just for a fallback that browsers
+        // within the support floor (Safari 16+ / iOS 16+ / evergreen Chrome
+        // and Firefox) never trigger.
         wp_register_script(
             'mphbac-widget',
             MPHBAC_URL . 'assets/js/widget.js',
-            ['jquery-ui-datepicker'],
+            [],
             MPHBAC_VERSION,
             true
         );
@@ -118,6 +124,19 @@ final class Widget extends Widget_Base
             'type'        => Controls_Manager::SELECT,
             'options'     => $this->cottage_options(),
             'label_block' => true,
+        ]);
+        $repeater->add_control('ci_title', [
+            'label'       => __('Popup title (optional)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'description' => __('Overrides the cottage name as the popup header. Leave empty to use the cottage name from MotoPress.', 'mphb-availability-calendar'),
+        ]);
+        $repeater->add_control('ci_title_url', [
+            'label'       => __('Title link URL (optional)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'input_type'  => 'url',
+            'description' => __('Leave empty to link the popup title to this cottage\'s accommodation page (MotoPress permalink). Set a URL here to override.', 'mphb-availability-calendar'),
         ]);
         $repeater->add_control('ci_source', [
             'label'   => __('Content source', 'mphb-availability-calendar'),
@@ -259,7 +278,7 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('calheader_bg', [
-            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'label'     => __('Weekday background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0A50B2',
             'selectors' => [
@@ -268,12 +287,30 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('calheader_text', [
-            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'label'     => __('Weekday text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
             'selectors' => [
                 self::SEL . '.mphbac-cell-day'                 => 'color: {{VALUE}};',
                 self::SEL . '.mphbac-row-header .mphbac-cell-label' => 'color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('calheader_bg_weekend', [
+            'label'       => __('Weekend background color', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Applied to Saturday and Sunday header cells only. Leave empty to use the weekday background.', 'mphb-availability-calendar'),
+            'selectors'   => [
+                self::SEL => '--mphbac-color-header-weekend: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('calheader_text_weekend', [
+            'label'       => __('Weekend text color', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::COLOR,
+            'description' => __('Applied to Saturday and Sunday header cells only. Leave empty to use the weekday text color.', 'mphb-availability-calendar'),
+            'selectors'   => [
+                self::SEL . '.mphbac-cell-day.is-weekend' => 'color: {{VALUE}};',
             ],
         ]);
 
@@ -554,15 +591,17 @@ final class Widget extends Widget_Base
             'description'  => __('When on, the cottage-info popup fills the entire viewport (recommended when the source is the MotoPress accommodation page, so its gallery/rates/attributes render at their natural width). When off, the popup is a centered modal capped by the Max width setting below.', 'mphb-availability-calendar'),
         ]);
 
-        $this->add_control('info_popup_max_width', [
-            'label'       => __('Info popup max width (px)', 'mphb-availability-calendar'),
-            'type'        => Controls_Manager::NUMBER,
-            'min'         => 320,
-            'max'         => 1400,
-            'step'        => 10,
-            'default'     => 800,
-            'description' => __('Maximum width of the cottage-info popup on desktop when "Full viewport width" is off. Mobile is always full-width.', 'mphb-availability-calendar'),
-            'condition'   => ['info_popup_full_width!' => 'yes'],
+        $this->add_responsive_control('info_popup_max_width', [
+            'label'          => __('Info popup max width (px)', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::NUMBER,
+            'min'            => 320,
+            'max'            => 1600,
+            'step'           => 10,
+            'default'        => 1200,
+            'tablet_default' => 800,
+            'mobile_default' => 480,
+            'description'    => __('Maximum width of the cottage-info popup when "Full viewport width" is off. Set independent values per device using the icons next to the label. The popup is always capped at 96vw to avoid horizontal scroll.', 'mphb-availability-calendar'),
+            'condition'      => ['info_popup_full_width!' => 'yes'],
         ]);
 
         $this->add_responsive_control('info_popup_side_margin', [
@@ -601,7 +640,10 @@ final class Widget extends Widget_Base
             'str_legend_past'   => [__('Legend: past', 'mphb-availability-calendar'), __('Past', 'mphb-availability-calendar')],
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
-            'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
+            'str_today'         => [__('Back-to-today button label', 'mphb-availability-calendar'), __('Today', 'mphb-availability-calendar')],
+            'str_today_hint'    => [__('Back-to-today button tooltip', 'mphb-availability-calendar'), __('Jump back to today\'s availability', 'mphb-availability-calendar')],
+            'str_loading'       => [__('Loading status (screen-reader)', 'mphb-availability-calendar'), __('Loading availability…', 'mphb-availability-calendar')],
+            'str_checkout_moved' => [__('Forced-checkout-date announcement (screen-reader, {date} is replaced)', 'mphb-availability-calendar'), __('Checkout date moved to {date}.', 'mphb-availability-calendar')],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
             'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],
@@ -610,6 +652,8 @@ final class Widget extends Widget_Base
             'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
             'str_book_min_nights' => [__('Popup minimum-nights message', 'mphb-availability-calendar'), __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar')],
+            'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
+            'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -955,10 +999,29 @@ final class Widget extends Widget_Base
         // page in that mode, so multi-column widgets like a pricing-table
         // switcher lost their styles on subsequent opens.)
         $info_html = [];
+        $info_titles = [];
+        $info_title_urls = [];
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
             if ($cid <= 0) {
                 continue;
+            }
+            $title_override = trim((string) ($row['ci_title'] ?? ''));
+            if ($title_override !== '') {
+                $info_titles[$cid] = $title_override;
+            }
+            // Title link: explicit URL override wins; otherwise the
+            // cottage's accommodation page (the cottage IS the mphb_room_type
+            // post, so $cid == accommodation post ID per the CLAUDE.md
+            // invariant). Skip when neither resolves to a usable URL.
+            $title_url_override = trim((string) ($row['ci_title_url'] ?? ''));
+            if ($title_url_override !== '') {
+                $info_title_urls[$cid] = esc_url($title_url_override);
+            } else {
+                $permalink = get_permalink($cid);
+                if (is_string($permalink) && $permalink !== '') {
+                    $info_title_urls[$cid] = esc_url($permalink);
+                }
             }
             $source = (string) ($row['ci_source'] ?? 'text');
             if ($source === 'template') {
@@ -1000,17 +1063,20 @@ final class Widget extends Widget_Base
             'daysDesktop'    => $days_desktop,
             'daysTablet'     => $days_tablet,
             'daysMobile'     => $days_mobile,
-            'labelStyle'     => (string) ($settings['label_style'] ?? 'abbrev_number'),
             'showPast'       => $settings['show_past'] === 'yes',
-            'inheritTheme'   => $settings['inherit_theme'] === 'yes',
-            'tooltipPrefix'  => (string) ($settings['str_tooltip_prefix'] ?? ''),
             'today'          => $today->format('Y-m-d'),
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
             'checkoutUrl'    => self::resolve_checkout_url(),
-            'infoPopupMaxWidth' => max(320, min(1400, (int) ($settings['info_popup_max_width'] ?? 800))),
+            'infoPopupMaxWidth' => [
+                'desktop' => max(320, min(1600, (int) ($settings['info_popup_max_width']        ?? 1200))),
+                'tablet'  => max(320, min(1600, (int) ($settings['info_popup_max_width_tablet'] ?? 800))),
+                'mobile'  => max(320, min(1600, (int) ($settings['info_popup_max_width_mobile'] ?? 480))),
+            ],
+            'infoTitles'       => $info_titles,
+            'infoTitleUrls'    => $info_title_urls,
             'infoPopupSideMargin' => [
                 'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
                 'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),
@@ -1031,6 +1097,10 @@ final class Widget extends Widget_Base
                 'checkin'       => (string) ($settings['str_checkin'] ?? ''),
                 'checkout'      => (string) ($settings['str_checkout'] ?? ''),
                 'property'      => $property_label,
+                'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
+                'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
+                'loading'       => (string) ($settings['str_loading'] ?? ''),
+                'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),
             ],
         ];
 
@@ -1073,6 +1143,7 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
                 </div>
+                <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
@@ -1089,12 +1160,17 @@ final class Widget extends Widget_Base
                 <div class="mphbac-nav">
                     <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
                     <span class="mphbac-nav-range" aria-live="polite"></span>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-today"
+                            title="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            aria-label="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            hidden><?php echo esc_html($settings['str_today']); ?></button>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>
 
-            <div class="mphbac-grid-wrap">
+            <div class="mphbac-grid-wrap" role="region" aria-live="polite" aria-label="<?php echo esc_attr__('Availability calendar', 'mphb-availability-calendar'); ?>">
                 <div class="mphbac-skeleton" aria-hidden="true">
+                    <div class="mphbac-skeleton-row mphbac-skeleton-row--header"></div>
                     <?php foreach ($rooms as $i => $r) : ?>
                         <div class="mphbac-skeleton-row<?php echo ($i % 2 === 1) ? ' mphbac-skeleton-row-alt' : ''; ?>">
                             <span class="mphbac-skeleton-name"></span>
@@ -1102,7 +1178,7 @@ final class Widget extends Widget_Base
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <span class="mphbac-sr-only" role="status"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></span>
+                <span class="mphbac-sr-only" role="status" aria-live="polite"><?php echo esc_html($settings['str_loading']); ?></span>
             </div>
 
             <?php foreach ($info_html as $cid => $html) : ?>
@@ -1273,6 +1349,15 @@ final class Widget extends Widget_Base
             if (class_exists('\\Elementor\\Plugin')) {
                 $elementor = \Elementor\Plugin::instance();
                 if (isset($elementor->frontend) && method_exists($elementor->frontend, 'get_builder_content_for_display')) {
+                    // Templates are first-party content authored in Elementor
+                    // by the site owner. Returning the raw render preserves
+                    // the inline scripts (image carousel bootstrap, accordion
+                    // initializer, etc.), the container classes (alignment,
+                    // grid, theme-globals), and the inline style attributes
+                    // that wp_kses_post() previously stripped — which was
+                    // breaking the image carousel widget and the container
+                    // template's centering / text-color styling. Trust
+                    // boundary: only the site owner can publish templates.
                     return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
                 }
             }
