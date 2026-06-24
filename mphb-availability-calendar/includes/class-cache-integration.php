@@ -75,12 +75,16 @@ final class Cache_Integration
      * exclusion list (exclude_urls / excluded_urls / exclusions) and append our
      * pattern if absent. Returns the modified settings, or null if nothing changed.
      *
+     * Depth-limited: a guard at 8 levels prevents stack overflow on
+     * pathological (cyclic or adversarial) option arrays. SpeedyCache's own
+     * shape is shallow (2-3 levels), so 8 is well above the legitimate ceiling.
+     *
      * @param mixed $settings
      * @return mixed|null
      */
-    private static function merge_exclusion_into_settings($settings, string $pattern)
+    private static function merge_exclusion_into_settings($settings, string $pattern, int $depth = 0)
     {
-        if (!is_array($settings)) {
+        if ($depth > 8 || !is_array($settings)) {
             return null;
         }
         $exclusion_keys = ['exclude_urls', 'excluded_urls', 'exclusions', 'cache_exclude_urls', 'exclude_url'];
@@ -101,7 +105,7 @@ final class Cache_Integration
                     }
                 }
             } elseif (is_array($value)) {
-                $nested = self::merge_exclusion_into_settings($value, $pattern);
+                $nested = self::merge_exclusion_into_settings($value, $pattern, $depth + 1);
                 if ($nested !== null) {
                     $settings[$key] = $nested;
                     $changed = true;

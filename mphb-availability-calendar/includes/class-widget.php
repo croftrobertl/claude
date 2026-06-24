@@ -1,7 +1,6 @@
 <?php
 namespace MPHBAC;
 
-use DateTimeImmutable;
 use Elementor\Controls_Manager;
 use Elementor\Widget_Base;
 
@@ -61,10 +60,17 @@ final class Widget extends Widget_Base
             [],
             MPHBAC_VERSION
         );
+        // No JS deps. The jQuery UI datepicker is used as an OPTIONAL fallback
+        // by wireFilters() only when `<input type="date">` is unsupported and
+        // jQuery UI happens to be on the page anyway (loaded by the theme or
+        // another plugin). Declaring it as a hard dep here would force ~70 KB
+        // of JS + CSS onto every page, just for a fallback that browsers
+        // within the support floor (Safari 16+ / iOS 16+ / evergreen Chrome
+        // and Firefox) never trigger.
         wp_register_script(
             'mphbac-widget',
             MPHBAC_URL . 'assets/js/widget.js',
-            ['jquery-ui-datepicker'],
+            [],
             MPHBAC_VERSION,
             true
         );
@@ -124,6 +130,13 @@ final class Widget extends Widget_Base
             'type'        => Controls_Manager::TEXT,
             'label_block' => true,
             'description' => __('Overrides the cottage name as the popup header. Leave empty to use the cottage name from MotoPress.', 'mphb-availability-calendar'),
+        ]);
+        $repeater->add_control('ci_title_url', [
+            'label'       => __('Title link URL (optional)', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::TEXT,
+            'label_block' => true,
+            'input_type'  => 'url',
+            'description' => __('Leave empty to link the popup title to this cottage\'s accommodation page (MotoPress permalink). Set a URL here to override.', 'mphb-availability-calendar'),
         ]);
         $repeater->add_control('ci_source', [
             'label'   => __('Content source', 'mphb-availability-calendar'),
@@ -628,7 +641,9 @@ final class Widget extends Widget_Base
             'str_prev_month'    => [__('Previous month label', 'mphb-availability-calendar'), __('Previous month', 'mphb-availability-calendar')],
             'str_next_month'    => [__('Next month label', 'mphb-availability-calendar'), __('Next month', 'mphb-availability-calendar')],
             'str_today'         => [__('Back-to-today button label', 'mphb-availability-calendar'), __('Today', 'mphb-availability-calendar')],
-            'str_tooltip_prefix'=> [__('Tooltip prefix', 'mphb-availability-calendar'), ''],
+            'str_today_hint'    => [__('Back-to-today button tooltip', 'mphb-availability-calendar'), __('Jump back to today\'s availability', 'mphb-availability-calendar')],
+            'str_loading'       => [__('Loading status (screen-reader)', 'mphb-availability-calendar'), __('Loading availability…', 'mphb-availability-calendar')],
+            'str_checkout_moved' => [__('Forced-checkout-date announcement (screen-reader, {date} is replaced)', 'mphb-availability-calendar'), __('Checkout date moved to {date}.', 'mphb-availability-calendar')],
             'str_info_close'     => [__('Info popup close (aria-label)', 'mphb-availability-calendar'), __('Close', 'mphb-availability-calendar')],
             'str_book_heading'   => [__('Popup heading prefix', 'mphb-availability-calendar'), __('Book', 'mphb-availability-calendar')],
             'str_book_confirm'   => [__('Popup confirm button', 'mphb-availability-calendar'), __('Book Now', 'mphb-availability-calendar')],
@@ -985,6 +1000,7 @@ final class Widget extends Widget_Base
         // switcher lost their styles on subsequent opens.)
         $info_html = [];
         $info_titles = [];
+        $info_title_urls = [];
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
             if ($cid <= 0) {
@@ -993,6 +1009,19 @@ final class Widget extends Widget_Base
             $title_override = trim((string) ($row['ci_title'] ?? ''));
             if ($title_override !== '') {
                 $info_titles[$cid] = $title_override;
+            }
+            // Title link: explicit URL override wins; otherwise the
+            // cottage's accommodation page (the cottage IS the mphb_room_type
+            // post, so $cid == accommodation post ID per the CLAUDE.md
+            // invariant). Skip when neither resolves to a usable URL.
+            $title_url_override = trim((string) ($row['ci_title_url'] ?? ''));
+            if ($title_url_override !== '') {
+                $info_title_urls[$cid] = esc_url($title_url_override);
+            } else {
+                $permalink = get_permalink($cid);
+                if (is_string($permalink) && $permalink !== '') {
+                    $info_title_urls[$cid] = esc_url($permalink);
+                }
             }
             $source = (string) ($row['ci_source'] ?? 'text');
             if ($source === 'template') {
@@ -1034,10 +1063,7 @@ final class Widget extends Widget_Base
             'daysDesktop'    => $days_desktop,
             'daysTablet'     => $days_tablet,
             'daysMobile'     => $days_mobile,
-            'labelStyle'     => (string) ($settings['label_style'] ?? 'abbrev_number'),
             'showPast'       => $settings['show_past'] === 'yes',
-            'inheritTheme'   => $settings['inherit_theme'] === 'yes',
-            'tooltipPrefix'  => (string) ($settings['str_tooltip_prefix'] ?? ''),
             'today'          => $today->format('Y-m-d'),
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
@@ -1050,6 +1076,7 @@ final class Widget extends Widget_Base
                 'mobile'  => max(320, min(1600, (int) ($settings['info_popup_max_width_mobile'] ?? 480))),
             ],
             'infoTitles'       => $info_titles,
+            'infoTitleUrls'    => $info_title_urls,
             'infoPopupSideMargin' => [
                 'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
                 'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),
@@ -1072,6 +1099,8 @@ final class Widget extends Widget_Base
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
+                'loading'       => (string) ($settings['str_loading'] ?? ''),
+                'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),
             ],
         ];
 
@@ -1114,6 +1143,7 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
                     <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
                 </div>
+                <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
             </div>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
@@ -1130,13 +1160,17 @@ final class Widget extends Widget_Base
                 <div class="mphbac-nav">
                     <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
                     <span class="mphbac-nav-range" aria-live="polite"></span>
-                    <button type="button" class="mphbac-nav-btn mphbac-nav-today" hidden><?php echo esc_html($settings['str_today']); ?></button>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-today"
+                            title="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            aria-label="<?php echo esc_attr($settings['str_today_hint']); ?>"
+                            hidden><?php echo esc_html($settings['str_today']); ?></button>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>
 
             <div class="mphbac-grid-wrap" role="region" aria-live="polite" aria-label="<?php echo esc_attr__('Availability calendar', 'mphb-availability-calendar'); ?>">
                 <div class="mphbac-skeleton" aria-hidden="true">
+                    <div class="mphbac-skeleton-row mphbac-skeleton-row--header"></div>
                     <?php foreach ($rooms as $i => $r) : ?>
                         <div class="mphbac-skeleton-row<?php echo ($i % 2 === 1) ? ' mphbac-skeleton-row-alt' : ''; ?>">
                             <span class="mphbac-skeleton-name"></span>
@@ -1144,7 +1178,7 @@ final class Widget extends Widget_Base
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <span class="mphbac-sr-only" role="status"><?php echo esc_html__('Loading availability…', 'mphb-availability-calendar'); ?></span>
+                <span class="mphbac-sr-only" role="status" aria-live="polite"><?php echo esc_html($settings['str_loading']); ?></span>
             </div>
 
             <?php foreach ($info_html as $cid => $html) : ?>

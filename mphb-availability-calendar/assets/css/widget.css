@@ -22,6 +22,7 @@
     --mphbac-label-width: 180px;
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
+    --mphbac-info-prerender-width: 720px;
 
     position: relative;
     box-sizing: border-box;
@@ -86,9 +87,35 @@
     .mphbac-filter-actions {
         width: 100%;
     }
+    /* Cottage column collapses to just the #number on phones — the
+       truncated name above it was forcing rows ~30% taller than the
+       configured --mphbac-cell-min, which in turn forced every day cell
+       on the same row to be taller and narrower. Guests who need to
+       know "what is #22?" tap the cell → the cottage info popup opens
+       with the full cottage record. Scoped with :has() so a cottage
+       whose post title doesn't match the "Cottage NN:" pattern (no
+       parsed number) keeps its abbrev visible — never blank cells.
+       Custom-label overrides (cottage_labels repeater) emit only a
+       .mphbac-label-custom span with no .mphbac-label-num sibling, so
+       this selector silently doesn't match them either. */
+    .mphbac-cell-label:has(.mphbac-label-num:not(:empty)) .mphbac-label-abbrev {
+        display: none;
+    }
+    .mphbac-cell-label .mphbac-label-num {
+        opacity: 1;
+        font-size: 1em;
+        font-weight: 600;
+    }
 }
 
-.mphbac-root .mphbac-input {
+/* Class-doubled selector (.mphbac-input.mphbac-input) instead of
+   .mphbac-root .mphbac-input so the rule matches both the filter-row
+   inputs AND the booking popup's date inputs after v0.8.6's portal to
+   document.body. Without doubling-via-no-ancestor, Bravada's Elementor
+   kit reset (line-height: 1px) wins on the portaled inputs and
+   collapses the date text to a thin slice. Same pattern as the
+   .mphbac-sheet.mphbac-sheet centering fix from v0.8.7. */
+.mphbac-input.mphbac-input {
     padding: 10px 12px;
     border: 1px solid var(--mphbac-color-frame);
     border-radius: 6px;
@@ -103,6 +130,17 @@
     min-width: 8.5em;
     min-height: 2.4em;
     box-sizing: border-box;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+/* When the checkin date moves and we have to force-shift the checkout to
+   stay valid, briefly highlight the checkout input so the change isn't
+   silent. JS adds this class for ~1.5s. */
+.mphbac-input.mphbac-input--just-changed {
+    border-color: var(--mphbac-color-today-outline, #f4da62);
+    box-shadow: 0 0 0 3px rgba(244, 218, 98, 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+    .mphbac-input.mphbac-input { transition: none; }
 }
 
 .mphbac-filter-label {
@@ -168,8 +206,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    /* iOS HIG / WCAG 2.5.5 AAA recommend ≥ 44px touch targets. The icon
+       glyph stays font-size 16px; only the hit area grew. */
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 4px;
     border: none;
     border-radius: 6px;
     background-color: var(--mphbac-color-nav-bg);
@@ -190,6 +231,7 @@
    `hidden` attribute controls visibility (set from JS by updateRange). */
 .mphbac-nav-btn.mphbac-nav-today {
     width: auto;
+    min-width: 44px;
     padding: 0 0.85em;
     font-size: 13px;
     font-weight: 600;
@@ -293,9 +335,6 @@
     font-weight: 400;
 }
 
-.mphbac-label-number .mphbac-label-abbrev { display: none; }
-.mphbac-label-number .mphbac-label-num    { font-size: 1em; opacity: 1; }
-
 /* Top row — day-of-week + date headers, and the corner "Property" cell */
 .mphbac-cell-day {
     flex-direction: column;
@@ -316,12 +355,6 @@
 .mphbac-cell-day.is-today {
     box-shadow: inset 0 -3px 0 0 var(--mphbac-color-today-outline);
     font-weight: 700;
-}
-/* Subtle column tint on every body cell in today's column — same outline
-   color at low alpha so the column visually pops without competing with
-   the available/booked status colors. */
-.mphbac-cell-status.is-today {
-    background-image: linear-gradient(rgba(244, 218, 98, 0.18), rgba(244, 218, 98, 0.18));
 }
 
 /* Weekend (Sat/Sun) treatment. Header cells use a dedicated background
@@ -420,6 +453,26 @@
     border-radius: var(--mphbac-radius, 4px);
     font-size: 0.92em;
     color: var(--mphbac-color-text, #111);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+/* Initial state for the fade-in. JS appends the hint with this class,
+   then on the next frame swaps in --shown which transitions to opaque. */
+.mphbac-availability-hint.mphbac-hint--enter {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+.mphbac-availability-hint.mphbac-hint--shown {
+    opacity: 1;
+    transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+    .mphbac-availability-hint {
+        transition: none;
+    }
+    .mphbac-availability-hint.mphbac-hint--enter {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* Available cells stay tappable (booking popup). Brief active-state scale
@@ -465,9 +518,28 @@
 .mphbac-sheet[hidden],
 .mphbac-info-sheet[hidden],
 .mphbac-sheet-overlay[hidden],
-.mphbac-info-overlay[hidden],
-.mphbac-info-content[hidden] {
+.mphbac-info-overlay[hidden] {
     display: none !important;
+}
+
+/* Hidden source for the cottage info popup. Rendered with real width
+   offscreen (not display:none) so Elementor's image-carousel handler
+   initializes Swiper + lightbox click binding correctly at page-load.
+   On open, widget.js moves the node into the popup body and removes
+   [hidden]; on close, restoreMovedContent() puts [hidden] back and
+   this rule re-engages. */
+.mphbac-info-content[hidden] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: translateY(-200vh);
+    width: var(--mphbac-info-prerender-width, 720px);
+    max-width: 100vw;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+    z-index: -1;
+    overflow: hidden;
 }
 
 .mphbac-sheet,
@@ -485,12 +557,30 @@
     /* Mobile: full-width bottom sheet that never causes horizontal scroll */
     left: 0;
     right: 0;
-    bottom: 0;
+    /* `bottom: 0` puts the popup's bottom edge at the viewport's vh-bottom,
+       which on iOS Safari is BEHIND the floating bottom toolbar — the
+       toolbar overlays the viewport, so the bottom ~80px of the popup
+       (background + content + padding) is clipped underneath it. The
+       env(safe-area-inset-bottom) value, available when the document's
+       viewport meta carries `viewport-fit=cover` (which boot() ensures —
+       see widget.js), reports the height of that safe-area inset; pinning
+       the popup there lifts it above the toolbar. Falls back to 0 on
+       browsers without env() support (no harm — they had the bug before
+       too, and likely don't have an overlaying toolbar). */
+    bottom: env(safe-area-inset-bottom, 0px);
     width: 100%;
     border-radius: 16px 16px 0 0;
     transform: translateY(100%);
-    max-height: 90dvh;
+    /* Sizing fallback chain: every browser sees one of these. svh is the
+       "small viewport height" unit — excludes browser chrome AND the
+       on-screen keyboard, so the popup never extends behind the iOS
+       keyboard. Older Safari that doesn't support svh falls back to dvh
+       (still excludes browser chrome but not OSK), then vh (excludes
+       neither). Order matters — last declaration the browser understands
+       wins. */
     max-height: 90vh;
+    max-height: 90dvh;
+    max-height: 90svh;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 1em 1.25em 1.5em;
@@ -512,7 +602,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.92);
+    background: #888888;
+    color: rgba(255, 255, 255, 0.92);
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     /* Reserve no extra vertical space — visually overlap the header below. */
@@ -527,6 +618,13 @@
 .mphbac-sheet.is-open,
 .mphbac-info-sheet.is-open {
     transform: translateY(0);
+}
+/* While the user is swipe-dragging, suspend the transition so the sheet
+   tracks the finger 1:1; touchend either snaps back (transition restored)
+   or closes (CSS transition takes care of slide-out). */
+.mphbac-sheet.is-dragging,
+.mphbac-info-sheet.is-dragging {
+    transition: none;
 }
 
 @media (min-width: 601px) {
@@ -622,25 +720,69 @@ body.mphbac-info-open {
     overflow: hidden;
 }
 
-/* Booking popup is anchored to the top of the widget on every viewport
-   (the --mphbac-sheet-top variable is set by openSheet() to
-   root.getBoundingClientRect().top). Overrides the earlier combined
-   .mphbac-sheet / .mphbac-info-sheet rules that anchored the popup to
-   the viewport bottom on mobile and centered it on desktop — both put the
-   popup nowhere near the widget when the page is taller than one
-   viewport. Slides up from below to land flush with the widget top. */
-.mphbac-root .mphbac-sheet {
-    top: var(--mphbac-sheet-top, 0);
+/* Booking popup centers to the visible viewport on every breakpoint
+   (desktop / tablet / mobile). Replaces the v0.7.1 widget-top anchor:
+   on tall pages the visitor sometimes had to scroll to find the popup,
+   and the auto-scroll fallback was unreliable on mobile. position:fixed
+   + portal-to-body (openSheet() moves the node to document.body) makes
+   the center coordinates literal viewport center. Subtle 20px slide-up
+   on open via the closed-state translateY offset.
+
+   Selector uses the class-doubled trick (.mphbac-sheet.mphbac-sheet)
+   rather than .mphbac-root .mphbac-sheet — once the sheet is portaled
+   to document.body, the .mphbac-root ancestor is gone, so descendant
+   selectors fail to match. Class-doubling reaches (0,2,0) specificity
+   without depending on any parent. Mirror of the .mphbac-info-sheet
+   --full pattern. */
+.mphbac-sheet.mphbac-sheet {
+    left: 50%;
+    right: auto;
+    top: 50%;
     bottom: auto;
+    width: min(440px, calc(100vw - 24px));
+    max-height: min(80vh, 80dvh);
     border-radius: 12px;
+    transform: translate(-50%, -50%) translateY(20px);
+    opacity: 0;
 }
+.mphbac-sheet.mphbac-sheet.is-open {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+
+/* Cottage info popup adopts the Book Now popup's centered-modal feel on
+   every viewport (v0.8.9): 12px gutters on mobile, 32px on tablet/desktop,
+   12px radius all corners, body scrolls internally. Class-doubled selector
+   for two reasons — (a) it wins over the (0,1,0) bottom-sheet base rule,
+   (b) it keeps applying after openInfo() portals the sheet to
+   document.body where the .mphbac-root ancestor is no longer present. */
+.mphbac-info-sheet.mphbac-info-sheet {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: min(440px, calc(100vw - 24px));
+    max-height: min(85vh, 85dvh);
+    border-radius: 12px;
+    transform: translate(-50%, -50%) translateY(20px);
+    opacity: 0;
+}
+.mphbac-info-sheet.mphbac-info-sheet.is-open {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+/* Tablet: 32px gutter floor, up to 720px. */
 @media (min-width: 601px) {
-    .mphbac-root .mphbac-sheet {
-        top: var(--mphbac-sheet-top, 0);
-        transform: translateX(-50%) translateY(20px);
+    .mphbac-info-sheet.mphbac-info-sheet {
+        width: min(720px, calc(100vw - 64px));
     }
-    .mphbac-root .mphbac-sheet.is-open {
-        transform: translateX(-50%) translateY(0);
+}
+/* Desktop: respects the Elementor "Info popup max width" responsive control
+   (falls back to 900px — down from 1200px in v0.8.5 — so the carousel and
+   accordion have room without dominating the screen). */
+@media (min-width: 1025px) {
+    .mphbac-info-sheet.mphbac-info-sheet {
+        width: min(var(--mphbac-info-max-width, 900px), calc(100vw - 64px));
     }
 }
 
@@ -679,6 +821,19 @@ body.mphbac-info-open {
     min-width: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+/* Cottage info popup title link — inherits the typography from
+   .mphbac-sheet-title (color, weight, size); just adds a subtle
+   underline cue and a hover state. */
+.mphbac-sheet-title-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+.mphbac-sheet-title-link:hover,
+.mphbac-sheet-title-link:focus-visible {
+    text-decoration-thickness: 2px;
 }
 
 /* Cottage info popup body */
@@ -721,6 +876,79 @@ body.mphbac-info-open {
 .mphbac-info-body .elementor-widget-image-gallery {
     overflow: hidden;
 }
+/* Mobile cottage-info carousel arrows: v0.8.13 forced original
+   icon visible (didn't hold). v0.8.14 drew a ::before chevron
+   (rendered in the corner). v0.8.15 switched to background-image
+   chevron — the RIGHT arrow renders perfectly and stays visible,
+   but the LEFT button itself disappears 0.3s after each slide
+   settles. v0.8.15 dropped `display`, so any rule that sets
+   `display: none` on the prev button (Elementor's mobile-hide
+   rule, Bravada's reset, or Swiper's `.swiper-button-disabled`
+   state) wins. v0.8.16: force `display: flex !important` so the
+   button stays in the layout regardless, and add Elementor's
+   long-form `-previous` class to the selector list as a defensive
+   measure in case the deployed Elementor version uses that. */
+@media (max-width: 600px) {
+    .mphbac-info-body .elementor-swiper-button,
+    .mphbac-info-body .elementor-swiper-button-prev,
+    .mphbac-info-body .elementor-swiper-button-previous,
+    .mphbac-info-body .elementor-swiper-button-next,
+    .mphbac-info-body .swiper-button-prev,
+    .mphbac-info-body .swiper-button-next {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 20 !important;
+        width: 36px !important;
+        height: 36px !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        border-radius: 50% !important;
+        background-repeat: no-repeat !important;
+        background-position: center center !important;
+        background-size: 16px 16px !important;
+    }
+    /* Defeat Swiper's `.swiper-button-disabled` state hiding too —
+       if the carousel hits a non-loop endpoint we still want the
+       arrow visible (dimmed at most), not gone. */
+    .mphbac-info-body .swiper-button-disabled,
+    .mphbac-info-body .swiper-button-lock {
+        display: flex !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    /* Hide the original Elementor icon (svg, i, icon-font span, and
+       its ::before / ::after pseudos if any) so they don't compete
+       with the background-image chevron. */
+    .mphbac-info-body .elementor-swiper-button > *,
+    .mphbac-info-body .swiper-button-prev > *,
+    .mphbac-info-body .swiper-button-next > * {
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    .mphbac-info-body .elementor-swiper-button::before,
+    .mphbac-info-body .elementor-swiper-button::after,
+    .mphbac-info-body .swiper-button-prev::before,
+    .mphbac-info-body .swiper-button-prev::after,
+    .mphbac-info-body .swiper-button-next::before,
+    .mphbac-info-body .swiper-button-next::after {
+        content: none !important;
+        display: none !important;
+    }
+    /* Inline-SVG chevrons. URL-encoded (# → %23) so they're safe
+       inline in CSS without needing url-escape gymnastics. */
+    .mphbac-info-body .elementor-swiper-button-prev,
+    .mphbac-info-body .elementor-swiper-button-previous,
+    .mphbac-info-body .swiper-button-prev {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='15 18 9 12 15 6'/></svg>") !important;
+    }
+    .mphbac-info-body .elementor-swiper-button-next,
+    .mphbac-info-body .swiper-button-next {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 18 15 12 9 6'/></svg>") !important;
+    }
+}
 .mphbac-sheet-close {
     background: transparent;
     border: 0;
@@ -746,15 +974,24 @@ body.mphbac-info-open {
     outline-offset: 2px;
 }
 
+/* Check-in and check-out fields sit side-by-side on every viewport.
+   flex-wrap: wrap is the safety net on viewports too narrow for two date
+   inputs (~< 320px) — fields gracefully stack instead of overflowing.
+   The error message lives in the same flex container; flex-basis: 100%
+   pushes it to a new row below the date pair, full width. */
 .mphbac-sheet-body {
     display: flex;
-    flex-direction: column;
-    gap: 0.75em;
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 0.75em;
+    row-gap: 0.75em;
     margin-bottom: 1em;
 }
 .mphbac-sheet-field {
     display: flex;
     flex-direction: column;
+    flex: 1 1 calc(50% - 0.5em);
+    min-width: 0;
     gap: 0.3em;
     font-size: 0.95em;
 }
@@ -763,6 +1000,7 @@ body.mphbac-info-open {
     color: #111111;
 }
 .mphbac-sheet-error {
+    flex-basis: 100%;
     margin: 0;
     padding: 0.5em 0.7em;
     background: rgba(196, 58, 58, 0.12);
@@ -798,6 +1036,19 @@ body.mphbac-info-open {
     opacity: 0.5;
     pointer-events: none;
 }
+/* While a fetch is in-flight, breathe the grid opacity slightly so the
+   visitor sees motion ("something's happening") instead of a frozen dim
+   state. The skeleton placeholder gets its own shimmer (see below); this
+   animates the post-first-paint reload state. */
+@media (prefers-reduced-motion: no-preference) {
+    .mphbac-root.is-loading .mphbac-grid {
+        animation: mphbac-loading-pulse 1.4s ease-in-out infinite;
+    }
+}
+@keyframes mphbac-loading-pulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 0.75; }
+}
 
 /* Skeleton — first-paint placeholder that mirrors the cottage rows so the
    visitor sees structure immediately instead of a blank box or "Loading…"
@@ -805,19 +1056,27 @@ body.mphbac-info-open {
 .mphbac-root .mphbac-skeleton {
     display: flex;
     flex-direction: column;
-    gap: var(--mphbac-cell-gap, 2px);
-    padding: 2px;
+    /* Match the real grid's --mphbac-gap var (set by the cell-gap control)
+       so the skeleton-to-grid swap doesn't shift width/height. No outer
+       padding for the same reason — the real grid has none. */
+    gap: var(--mphbac-gap, 2px);
 }
 .mphbac-root .mphbac-skeleton-row {
     display: grid;
     grid-template-columns: var(--mphbac-label-width, 180px) 1fr;
-    gap: var(--mphbac-cell-gap, 2px);
+    gap: var(--mphbac-gap, 2px);
     min-height: var(--mphbac-cell-min, 42px);
     background: var(--mphbac-color-namecol, #F8F9FA);
     border-radius: var(--mphbac-cell-radius, 0);
 }
 .mphbac-root .mphbac-skeleton-row-alt {
     background: var(--mphbac-color-namecol-alt, #F1F3F5);
+}
+/* Header stripe — same color/height as the rendered grid's top row, so the
+   skeleton-to-grid swap doesn't introduce a vertical shift. No shimmer
+   inside (the band is itself the placeholder). */
+.mphbac-root .mphbac-skeleton-row--header {
+    background: var(--mphbac-color-header, #0A50B2);
 }
 .mphbac-root .mphbac-skeleton-name,
 .mphbac-root .mphbac-skeleton-cells {

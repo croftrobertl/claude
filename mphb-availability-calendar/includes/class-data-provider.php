@@ -152,6 +152,44 @@ final class Data_Provider
     private const BLOCKING_STATUSES = ['confirmed', 'pending', 'pending-payment'];
 
     /**
+     * Cap for the forward "next availability" scan used by the all-booked hint.
+     * One year is a generous ceiling — properties booked solid for >365 days
+     * fall back to a null result and the client uses its last-visible-day
+     * heuristic. Keeps the SQL footprint bounded.
+     */
+    public const FORWARD_SCAN_MAX_DAYS = 365;
+
+    /**
+     * First day on or after $start where any of the requested cottage types is
+     * available. Returns null if nothing's available within $max_days.
+     *
+     * Backs the "All cottages booked through {date}" hint when the user is
+     * viewing a window where every visible day is booked — without this scan,
+     * the hint can only point to the last visible day, which understates the
+     * real through-date when the booked stretch extends beyond the window.
+     */
+    public static function find_first_availability(array $room_type_ids, DateTimeImmutable $start, int $max_days = self::FORWARD_SCAN_MAX_DAYS): ?DateTimeImmutable
+    {
+        $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
+        if (empty($room_type_ids) || $max_days <= 0) {
+            return null;
+        }
+        $end = $start->modify('+' . max(1, $max_days) . ' days');
+        $availability = self::get_availability($room_type_ids, $start, $end);
+        $cursor = $start;
+        while ($cursor <= $end) {
+            $date = $cursor->format('Y-m-d');
+            foreach ($room_type_ids as $type_id) {
+                if (($availability[$type_id][$date] ?? '') === self::ST_AVAIL) {
+                    return $cursor;
+                }
+            }
+            $cursor = $cursor->modify('+1 day');
+        }
+        return null;
+    }
+
+    /**
      * @param int[]             $room_type_ids
      * @return array<int, array<string,string>>
      */
