@@ -174,12 +174,18 @@ All 8 physical rooms have iCal feeds configured from three OTAs:
 | OTA | Room count |
 |-----|-----------|
 | Booking.com | 8 |
-| Airbnb | 7 (room 1068/Hibiscus Hut missing?) |
+| Airbnb | 8 |
 | VRBO | 8 |
 
 Feeds are stored in `portal_mphb_sync_urls`. MotoPress syncs these every 15 minutes
 via its own cron; imported reservations land as `mphb_booking` posts (same as
 direct bookings). The mphb-availability-calendar plugin reads these correctly.
+
+On 2026-06-24 the owner verified manually that Cottage 31's Airbnb sync is configured
+on both sides (MotoPress holds Airbnb's `ical/1377932695068152623.ics` feed; Airbnb's
+host dashboard holds the site's `feed=mphb.ics&accommodation_id=1068` export). The
+earlier `7` count in this table came from a snapshot SQL row count that under-reported
+by one and should not be re-flagged.
 
 ### Manual host blocks
 
