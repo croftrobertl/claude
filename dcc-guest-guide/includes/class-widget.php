@@ -124,6 +124,7 @@ final class Widget extends Widget_Base
         $this->register_popup_header_bg_style_controls();
         $this->register_popup_reset_style_controls();
         $this->register_popup_more_style_controls();
+        $this->register_ai_button_style_controls();
         $this->register_flip_card_controls();
         $this->register_fab_style_controls();
         $this->register_transitions_controls();
@@ -649,6 +650,21 @@ final class Widget extends Widget_Base
             'default'   => __('Your question is sent to Google Gemini along with the guide content. Don\'t include personal information.', 'dcc-guest-guide'),
             'condition' => ['enable_ai_search' => 'yes'],
         ]);
+        $this->add_control('ai_search_thinking', [
+            'label'       => __('AI "Thinking…" placeholder', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Thinking…', 'dcc-guest-guide'),
+            'description' => __('Shown inside the AI answer area while the Gemini call is in flight.', 'dcc-guest-guide'),
+            'condition'   => ['enable_ai_search' => 'yes'],
+        ]);
+        $this->add_control('ai_search_error', [
+            'label'       => __('AI error text', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 2,
+            'default'     => __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
+            'description' => __('Shown when the AI request fails — rate-limited, network error, or missing API key.', 'dcc-guest-guide'),
+            'condition'   => ['enable_ai_search' => 'yes'],
+        ]);
 
         $this->add_control('enable_problem_report', [
             'label'        => __('Enable "Report a problem" button', 'dcc-guest-guide'),
@@ -1162,6 +1178,20 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::TEXT,
             'default'   => __('No matches. Try a different keyword.', 'dcc-guest-guide'),
             'condition' => ['enable_search' => 'yes'],
+        ]);
+        $this->add_control('search_did_you_mean', [
+            'label'       => __('"Did you mean" label', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Did you mean:', 'dcc-guest-guide'),
+            'description' => __('Prefix shown before the up-to-3 suggestion chips that appear when the full query failed but individual words still hit.', 'dcc-guest-guide'),
+            'condition'   => ['enable_search' => 'yes'],
+        ]);
+        $this->add_control('search_still_stuck_cta', [
+            'label'       => __('"Still stuck?" CTA label', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Still stuck? Tell the host →', 'dcc-guest-guide'),
+            'description' => __('Shown at the bottom of the no-matches dropdown when Report-a-Problem is enabled. Tapping opens the Report dialog with the failed search query pre-filled.', 'dcc-guest-guide'),
+            'condition'   => ['enable_search' => 'yes'],
         ]);
 
         $this->add_control('include_templates_in_search', [
@@ -1976,6 +2006,80 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    // v0.9.7.21: dedicated Style section for the "Ask anything about the
+    // cottage" AI-fallback button in the search empty state. Same control
+    // set as the generic Buttons section so the host can tune just this
+    // button without affecting the rest of the widget. The whole section
+    // is gated on enable_ai_search so it stays out of the way when AI is
+    // off. No defaults — leave a field blank and the baked-in look stays.
+    private function register_ai_button_style_controls(): void
+    {
+        $ai_sel  = self::SEL . '.dccgg-ai-button';
+        $ai_hov  = $ai_sel . ':hover, ' . $ai_sel . ':focus-visible';
+
+        $this->start_controls_section('section_style_ai_button', [
+            'label'     => __('Ask AI Button', 'dcc-guest-guide'),
+            'tab'       => Controls_Manager::TAB_STYLE,
+            'condition' => ['enable_ai_search' => 'yes'],
+        ]);
+
+        $this->add_group_control(Group_Control_Typography::get_type(), [
+            'name'     => 'ai_btn_typography',
+            'selector' => $ai_sel,
+        ]);
+
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'ai_btn_border',
+            'selector' => $ai_sel,
+        ]);
+
+        $this->add_control('ai_btn_radius', [
+            'label'      => __('Border radius', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [$ai_sel => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('ai_btn_padding', [
+            'label'      => __('Padding', 'dcc-guest-guide'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [$ai_sel => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+
+        $this->start_controls_tabs('ai_btn_color_tabs');
+
+        $this->start_controls_tab('ai_btn_tab_normal', ['label' => __('Normal', 'dcc-guest-guide')]);
+        $this->add_control('ai_btn_txt', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$ai_sel => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('ai_btn_bg', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$ai_sel => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('ai_btn_tab_hover', ['label' => __('Hover', 'dcc-guest-guide')]);
+        $this->add_control('ai_btn_txt_hover', [
+            'label'     => __('Text color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$ai_hov => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('ai_btn_bg_hover', [
+            'label'     => __('Background color', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [$ai_hov => 'background-color: {{VALUE}};'],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
     private function register_detail_style_controls(): void
     {
         $this->start_controls_section('section_style_detail', [
@@ -2777,8 +2881,8 @@ final class Widget extends Widget_Base
                 'enabled'  => ($s['enable_ai_search'] ?? '') === 'yes' && get_option('dccgg_gemini_key', '') !== '',
                 'label'    => (string) ($s['ai_search_button_label'] ?? __('Ask anything about the cottage', 'dcc-guest-guide')),
                 'privacy'  => (string) ($s['ai_search_privacy'] ?? ''),
-                'thinking' => (string) __('Thinking…', 'dcc-guest-guide'),
-                'error'    => (string) __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide'),
+                'thinking' => (string) ($s['ai_search_thinking'] ?? __('Thinking…', 'dcc-guest-guide')),
+                'error'    => (string) ($s['ai_search_error'] ?? __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide')),
                 'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
                 'voiceLabel' => (string) ($s['str_ai_voice'] ?? __('Ask by voice', 'dcc-guest-guide')),
             ],
@@ -2875,7 +2979,11 @@ final class Widget extends Widget_Base
             'searchIndex'      => $search_index,
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
-                'noResults'   => (string) ($s['search_no_results'] ?? 'No matches.'),
+                'noResults'   => (string) ($s['search_no_results'] ?? __('No matches.', 'dcc-guest-guide')),
+                'didYouMean'  => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
+                'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
+                'didYouMean'    => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
+                'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
                 'qrClose'       => (string) ($s['str_qr_close'] ?? 'Close'),
                 'lightboxClose' => (string) ($s['str_lightbox_close'] ?? 'Close image'),
             ],

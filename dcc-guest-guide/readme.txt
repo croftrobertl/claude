@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.20
+Stable tag: 0.9.7.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,59 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.21 =
+
+Three changes from live host feedback.
+
+**1. "Ask anything about the cottage" button now works (and got
+smarter).** Root cause: the search input's `blur` handler unconditionally
+wiped the dropdown's contents 200 ms after focus left, which raced the
+AI button's click and destroyed the prompt before the AJAX response
+could render. `wireSearch` now leaves the dropdown alone while focus is
+inside the results list AND while an AI answer is on-screen, so the
+guest can read the answer without it disappearing under them.
+
+The empty state is also rebuilt as a three-tier flow:
+
+* **Tier 1 — Did you mean:** when the full multi-word query fails, we
+  re-search each token individually and surface up to three suggestion
+  chips (e.g. "Wi-Fi · Hot Tub · Checkout") so guests who just
+  misspelled or mistyped one word can recover with a single tap.
+* **Tier 2 — Ask anything:** the existing AI button, fixed.
+* **Tier 3 — Still stuck:** when Report-a-Problem is enabled, a small
+  "Still stuck? Tell the host →" CTA at the bottom opens the Report
+  dialog with the failed query pre-filled (`[Search miss] "..."`). Turns
+  every dead-end into actionable host feedback, no extra config.
+
+The 3-tier render replaces the v0.7 MutationObserver approach — no more
+race window between the search render and the AI prompt appearing.
+
+**2. Detail popup is now centered vertically with internal scroll.**
+Replaces the v0.9.7.17 top+bottom-pinned layout. Popup is now
+`fixed; top: var(--dccgg-detail-top-offset, 0px); left: 0; right: 0;
+bottom: 0; margin: auto; height: fit-content; max-height: calc(100dvh
+- offset - 32px); overflow-y: auto`. Short content sits centered in the
+visible viewport; tall content caps at the available height and scrolls
+inside the popup. Physically cannot overflow the viewport in either
+direction. Same centering pattern applied to the FAB wrapper for
+consistency with v0.9.7.19. Mobile bottom-sheet layout
+(`max-width: 600px`) unchanged.
+
+**3. New editor controls for previously-hardcoded strings + AI button
+styling.**
+
+* Content → Search: two new TEXT controls — *"Did you mean" label* and
+  *"Still stuck?" CTA label*.
+* Content → Engagement → AI fallback search: two new controls — *AI
+  "Thinking…" placeholder* (TEXT) and *AI error text* (TEXTAREA). Both
+  were hardcoded English fallbacks before; now host-customizable and
+  picked up by Loco Translate / WPML.
+* Style → Ask Anything Button: dedicated section matching the existing
+  Buttons / Back Button / Reset Checklist Button pattern — Typography,
+  Border, Border radius, Padding, plus Normal and Hover tabs with text
+  and background color. Scoped to `.dccgg-ai-button` so per-button
+  overrides don't bleed into other buttons in the widget.
 
 = 0.9.7.20 =
 

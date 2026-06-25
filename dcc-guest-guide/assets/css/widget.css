@@ -252,6 +252,74 @@
     .dccgg-parallax-bg { transform: none !important; }
 }
 
+/* ---- Search empty state — v0.9.7.21 three-tier ---- */
+.dccgg-search-dym {
+    margin: 12px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.dccgg-search-dym-label {
+    font-size: 0.85em;
+    color: var(--dccgg-muted);
+    margin-right: 4px;
+}
+.dccgg-search-dym-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--dccgg-primary) 30%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--dccgg-primary) 8%, transparent);
+    color: var(--dccgg-text);
+    cursor: pointer;
+    font-size: 0.85em;
+    line-height: 1.2;
+    transition: background var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
+}
+@media (hover: hover) {
+    .dccgg-search-dym-chip:hover,
+    .dccgg-search-dym-chip:focus-visible {
+        background: color-mix(in srgb, var(--dccgg-primary) 18%, transparent);
+        border-color: var(--dccgg-primary);
+        outline: none;
+    }
+}
+.dccgg-search-dym-chip-section {
+    font-size: 0.78em;
+    color: var(--dccgg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.dccgg-search-dym-chip-item {
+    font-weight: 600;
+}
+.dccgg-search-still-stuck {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 10px 14px;
+    border: 1px dashed color-mix(in srgb, var(--dccgg-muted) 50%, transparent);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--dccgg-text);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
+}
+@media (hover: hover) {
+    .dccgg-search-still-stuck:hover,
+    .dccgg-search-still-stuck:focus-visible {
+        background: color-mix(in srgb, var(--dccgg-muted) 8%, transparent);
+        border-color: var(--dccgg-primary);
+        outline: none;
+    }
+}
+
 /* ---- AI fallback search panel ---- */
 .dccgg-ai-prompt {
     margin-top: 16px;
@@ -514,21 +582,28 @@
    moved .dccgg-stage out from under .dccgg-reveal-stage, which is what
    was making the modal blow past the viewport edges. */
 body.dccgg-detail-open .dccgg-stage {
-    /* v0.9.7.1: do NOT use `inset: auto` here — it's a shorthand that
-       resets the explicit top/bottom/left declarations just above to
-       auto, killing the anchoring and leaving the modal at its natural
-       (body-child = 0,0) position. translateX(-50%) then shifts it
-       off-screen to the left, making it invisible. Set right/bottom
-       explicitly instead so the base .dccgg-stage rule (inset: 0)
-       doesn't conflict. */
+    /* v0.9.7.21: replace the v0.9.7.17 top+bottom-pinned layout with a
+       centered + max-height + overflow-y:auto layout. The popup now sits
+       vertically centered in the visible viewport (below any sticky theme
+       header, accounted for via --dccgg-detail-top-offset), shrinks to
+       content height when content is short, and caps at the available
+       viewport height with internal scroll when content is taller.
+       Centering uses the fixed + margin:auto pattern: with all four
+       insets set, `margin: auto` distributes free space evenly on every
+       side, which centers the box without needing transform translates
+       (and so leaves transform free for the open/close scale animation). */
     position: fixed;
-    top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
-    bottom: 16px;
-    left: 50%;
-    right: auto;
+    top: var(--dccgg-detail-top-offset, 0px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
     width: min(720px, calc(100vw - 32px));
     max-width: 900px;
-    max-height: none;
+    height: -moz-fit-content;
+    height: fit-content;
+    max-height: calc(100vh - var(--dccgg-detail-top-offset, 0px) - 32px);
+    max-height: calc(100dvh - var(--dccgg-detail-top-offset, 0px) - 32px);
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 10010;
@@ -539,8 +614,8 @@ body.dccgg-detail-open .dccgg-stage {
     padding: 24px;
     opacity: 0;
     visibility: hidden;
-    transform: translateX(-50%) scale(0.96);
-    transform-origin: 50% 0;
+    transform: scale(0.96);
+    transform-origin: 50% 50%;
     transition: opacity 0.25s ease,
                 transform 0.25s ease,
                 visibility 0.25s;
@@ -549,7 +624,7 @@ body.dccgg-detail-open .dccgg-stage.is-modal-open {
     visibility: visible;
     pointer-events: auto;
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    transform: scale(1);
 }
 
 .dccgg-detail-overlay {
@@ -1250,23 +1325,28 @@ video.dccgg-media {
 /* FAB modal mode: collapse the wrapper offscreen until opened */
 .dccgg-fab--yes .dccgg-wrapper {
     position: fixed;
-    /* v0.9.7.19: pin top + bottom so the wrapper physically can't overflow
-       the viewport, and consume --dccgg-detail-top-offset (stamped by
-       wireFab.open) so the top clears any sticky theme nav. The earlier
-       top:50% / translate-50% / max-height:90vh approach centered the
-       wrapper on the visual viewport without accounting for a sticky
-       header, so on doracanalcourt.com the top edge (and the close X)
-       overflowed past the URL bar. Mirrors the detail-modal pattern. */
-    top: calc(var(--dccgg-detail-top-offset, 0px) + 16px);
-    bottom: 16px;
-    left: 50%;
-    right: auto;
+    /* v0.9.7.21: centered + max-height + overflow-y:auto, mirroring the
+       v0.9.7.21 detail-popup change. Same margin:auto centering pattern
+       so the wrapper sits in the middle of the visible viewport (below
+       a sticky theme header), shrinks to content when short, and caps
+       at the available viewport height with internal scroll when
+       content is taller. Replaces v0.9.7.19's top+bottom-pinned
+       layout for consistency between the two modal types. */
+    top: var(--dccgg-detail-top-offset, 0px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
     width: min(94vw, 900px);
     max-width: 900px;
-    max-height: none;
+    height: -moz-fit-content;
+    height: fit-content;
+    max-height: calc(100vh - var(--dccgg-detail-top-offset, 0px) - 32px);
+    max-height: calc(100dvh - var(--dccgg-detail-top-offset, 0px) - 32px);
     overflow-y: auto;
     overflow-x: hidden;
-    transform: translateX(-50%) scale(0.96);
+    transform: scale(0.96);
+    transform-origin: 50% 50%;
     opacity: 0;
     visibility: hidden;
     background: var(--dccgg-detail-bg);
@@ -1280,7 +1360,7 @@ video.dccgg-media {
 .dccgg-fab--yes .dccgg-wrapper.is-open {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) scale(1);
+    transform: scale(1);
 }
 .dccgg-overlay {
     position: fixed;

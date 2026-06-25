@@ -389,6 +389,11 @@
             setTimeout(() => (nameEl || desc).focus(), 50);
         };
 
+        // v0.9.7.21: expose `open` so the search empty-state's tier-3
+        // "Still stuck? Tell us" CTA can pre-fill the dialog from the
+        // failed query. Keyed on root so multi-widget pages don't cross.
+        root.__dccggOpenReport = open;
+
         // More-menu "Report a problem" → context is the current section title.
         document.addEventListener('click', (e) => {
             const m = e.target.closest('.dccgg-more-report');
@@ -1344,37 +1349,130 @@
         else dialog.setAttribute('open', '');
     }
 
-    // -- AI fallback search (v0.7) ----------------------------------------
-    function wireAiSearch(root, config) {
-        if (!config.aiSearch || !config.aiSearch.enabled) return;
-        const searchInput = root.querySelector('.dccgg-search-input');
-        const results     = root.querySelector('.dccgg-search-results');
-        if (!searchInput || !results) return;
+    // -- AI fallback search (v0.7, rebuilt as 3-tier empty state in v0.9.7.21) -
+    // wireAiSearch is now a no-op stub: the 3-tier empty state is rendered
+    // directly by renderEmptyState() inside the search render path, so there's
+    // no MutationObserver race or click-eviction window any more. The bug
+    // shipped with v0.7: input.blur() scheduled list.innerHTML='' on a 200ms
+    // timer; the AI button's click did fire askAi, but the prompt was wiped
+    // before the AJAX response could render. wireSearch's blur handler is
+    // also tightened in v0.9.7.21 to leave the dropdown alone while focus
+    // is inside the results list.
+    function wireAiSearch(/* root, config */) { /* superseded by renderEmptyState */ }
 
-        // Hook into the existing search render: after the empty-state is
-        // rendered, append an "Ask anything" prompt.
-        const obs = new MutationObserver(() => {
-            if (results.querySelector('.dccgg-ai-prompt')) return;
-            const empty = results.querySelector('.dccgg-search-no-results');
-            if (!empty) return;
-            const q = searchInput.value.trim();
-            if (q.length < 3) return;
-            const wrap = document.createElement('div');
-            wrap.className = 'dccgg-ai-prompt';
-            wrap.innerHTML = `
-                <button type="button" class="dccgg-ai-button">
-                    <i class="fas fa-sparkles" aria-hidden="true"></i>
-                    <span class="dccgg-ai-label"></span>
-                </button>
-                <div class="dccgg-ai-privacy"></div>
-                <div class="dccgg-ai-answer" hidden></div>
-            `;
-            wrap.querySelector('.dccgg-ai-label').textContent = config.aiSearch.label;
-            wrap.querySelector('.dccgg-ai-privacy').textContent = config.aiSearch.privacy || '';
-            wrap.querySelector('.dccgg-ai-button').addEventListener('click', () => askAi(root, config, q, wrap));
-            results.appendChild(wrap);
+    // v0.9.7.21: search empty-state, three tiers.
+    function renderEmptyState(root, list, query, qToks, index, config) {
+        const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const noResultsTxt = (config.strings && config.strings.noResults) || 'No matches.';
+
+        // Tier 1: did-you-mean chips — re-search per token and surface up to
+        // 3 unique sections that hit on at least one of the typed words.
+        const suggestions = [];
+        const seenSections = new Set();
+        if (qToks.length > 1) {
+            for (const qt of qToks) {
+                for (const entry of index) {
+                    const hitTitle = searchTokenMatches(qt, entry._titleToks, entry._titleConcat, entry._titlePos);
+                    const hitText  = hitTitle ? null : searchTokenMatches(qt, entry._textToks, entry._textConcat, entry._textPos);
+                    if (!hitTitle && !hitText) continue;
+                    const sec = entry.section;
+                    if (seenSections.has(sec)) continue;
+                    seenSections.add(sec);
+                    suggestions.push({ section: sec, sectionTitle: sectionTitleFor(root, sec), itemTitle: entry.title, itemIdx: entry.item_idx });
+                    if (suggestions.length >= 3) break;
+                }
+                if (suggestions.length >= 3) break;
+            }
+        }
+
+        const parts = [];
+        parts.push('<p class="dccgg-search-no-results">' + escHtml(noResultsTxt) + '</p>');
+
+        if (suggestions.length) {
+            const didYouMeanLabel = (config.strings && config.strings.didYouMean) || 'Did you mean:';
+            parts.push('<div class="dccgg-search-dym"><span class="dccgg-search-dym-label">' + escHtml(didYouMeanLabel) + '</span>');
+            for (const s of suggestions) {
+                parts.push(
+                    '<button type="button" class="dccgg-search-dym-chip"' +
+                    ' data-section="' + escHtml(s.section) + '"' +
+                    ' data-item-idx="' + (s.itemIdx | 0) + '">' +
+                    '<span class="dccgg-search-dym-chip-section">' + escHtml(s.sectionTitle) + '</span>' +
+                    '<span class="dccgg-search-dym-chip-item">' + escHtml(s.itemTitle) + '</span>' +
+                    '</button>'
+                );
+            }
+            parts.push('</div>');
+        }
+
+        // Tier 2: AI button. Only render when AI is enabled, the Gemini key
+        // is configured (gated server-side via aiSearch.enabled), and the
+        // query is at least 3 characters (matches the v0.7 minimum).
+        const aiOn = config.aiSearch && config.aiSearch.enabled && query.length >= 3;
+        if (aiOn) {
+            const privacy = config.aiSearch.privacy || '';
+            parts.push(
+                '<div class="dccgg-ai-prompt">' +
+                    '<button type="button" class="dccgg-ai-button dccgg-btn">' +
+                        '<i class="fas fa-sparkles" aria-hidden="true"></i> ' +
+                        '<span class="dccgg-ai-label">' + escHtml(config.aiSearch.label || 'Ask anything') + '</span>' +
+                    '</button>' +
+                    (privacy ? '<div class="dccgg-ai-privacy">' + escHtml(privacy) + '</div>' : '') +
+                    '<div class="dccgg-ai-answer" hidden></div>' +
+                '</div>'
+            );
+        }
+
+        // Tier 3: Report-a-Problem CTA. Only render when Report is enabled
+        // and wireReportProblem has exposed its open() on the root.
+        const reportOn = config.report && config.report.enabled && typeof root.__dccggOpenReport === 'function';
+        if (reportOn) {
+            const ctaLabel = (config.strings && config.strings.stillStuckCta) || 'Still stuck? Tell the host →';
+            parts.push(
+                '<button type="button" class="dccgg-search-still-stuck">' +
+                    '<i class="fas fa-envelope" aria-hidden="true"></i> ' +
+                    escHtml(ctaLabel) +
+                '</button>'
+            );
+        }
+
+        list.innerHTML = parts.join('');
+        list.hidden = false;
+
+        // Chip click → openDetail and highlight the matched item.
+        list.querySelectorAll('.dccgg-search-dym-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const sec = chip.dataset.section;
+                const itemIdx = parseInt(chip.dataset.itemIdx || '0', 10);
+                openDetail(root, sec, (detail) => {
+                    if (detail) highlightQuery(detail, [], itemIdx);
+                });
+            });
         });
-        obs.observe(results, { childList: true, subtree: true });
+
+        // AI button → fire askAi inline. blur-hide on the input is suppressed
+        // by wireSearch when focus is inside .dccgg-search-results, so the
+        // prompt + answer area survive the click.
+        if (aiOn) {
+            const wrap = list.querySelector('.dccgg-ai-prompt');
+            const aiBtn = wrap && wrap.querySelector('.dccgg-ai-button');
+            if (aiBtn) {
+                aiBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    askAi(root, config, query, wrap);
+                });
+            }
+        }
+
+        // Still-stuck → open Report-a-Problem with the failed query
+        // pre-filled in the description so the host gets actionable signal.
+        if (reportOn) {
+            const stuck = list.querySelector('.dccgg-search-still-stuck');
+            if (stuck) {
+                stuck.addEventListener('click', () => {
+                    root.__dccggOpenReport('', '[Search miss] "' + query + '"');
+                });
+            }
+        }
     }
     function askAi(root, config, question, wrap, onAnswer) {
         const btn    = wrap.querySelector('.dccgg-ai-button');
@@ -2669,9 +2767,13 @@
                 hits.push({ entry, score, matched: Array.from(matched) });
             }
             if (!hits.length) {
-                list.innerHTML = '<p class="dccgg-search-no-results">' +
-                    escHtml((config.strings && config.strings.noResults) || 'No matches.') + '</p>';
-                list.hidden = false;
+                // v0.9.7.21: 3-tier empty state.
+                // Tier 1: did-you-mean chips from per-token re-searches when
+                //   the full AND-search failed but individual tokens hit.
+                // Tier 2: AI fallback button (existing behavior, fixed).
+                // Tier 3: "Still stuck?" CTA → opens Report-a-Problem with
+                //   the failed query pre-filled.
+                renderEmptyState(root, list, q, qToks, index, config);
                 if (live) live.textContent = '0 results';
                 return;
             }
@@ -2735,7 +2837,21 @@
             loadIndex();
             t = setTimeout(() => deferredRender(input.value), 80);
         });
-        input.addEventListener('blur', () => setTimeout(hide, 200));
+        // v0.9.7.21: don't wipe the dropdown if focus moved INTO the results
+        // list (search result click, did-you-mean chip, AI button, still-
+        // stuck CTA). The previous unconditional setTimeout(hide, 200) was
+        // racing the AI button: list.innerHTML='' fired before askAi could
+        // render its answer, so the user saw the dropdown close and the
+        // AI button never "worked." Also leave the dropdown open while the
+        // AI answer is on-screen so the guest can read it.
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                const focused = document.activeElement;
+                if (focused && list.contains(focused)) return;
+                if (list.querySelector('.dccgg-ai-answer:not([hidden])')) return;
+                hide();
+            }, 200);
+        });
         input.addEventListener('focus', () => {
             loadIndex();
             if (input.value.length >= 2) deferredRender(input.value);
