@@ -50,10 +50,6 @@
 .fal-search-clear:hover,
 .fal-search-clear:focus-visible { opacity: 1; }
 .fal-search-clear-icon { width: 14px; height: 14px; display: block; }
-@media (max-width: 767px) {
-	.fal-search-clear { padding: 10px; min-width: 36px; min-height: 36px; }
-	.fal-search-clear-icon { width: 16px; height: 16px; }
-}
 
 .fal-search-status {
 	margin-top: 6px; margin-bottom: 18px;
