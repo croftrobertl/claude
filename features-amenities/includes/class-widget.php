@@ -20,7 +20,7 @@ class Widget extends Widget_Base {
 	}
 
 	public function get_title() {
-		return esc_html__( 'Features & Amenities', 'features-amenities' );
+		return esc_html__( 'DCC Features and Amenities', 'features-amenities' );
 	}
 
 	public function get_icon() {

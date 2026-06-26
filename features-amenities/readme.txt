@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.1
+Stable tag: 1.7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,9 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.7.2 =
+* Renamed the human-readable plugin name to "DCC Features and Amenities" in the Installed Plugins list (WP Admin → Plugins) and in the Elementor editor's Widget Selection panel. Folder name, PHP namespace, text domain, CSS class prefix, and the widget machine name `features_and_amenities` are all unchanged, so existing widget instances on pages continue to work and translations are unaffected.
 
 = 1.7.1 =
 * Removed the mobile-only enlargement of the search-clear (X) button. v1.7.0 bumped it to 36×36 with a 16px icon on viewports below 768px; the button now uses the same 32×32 (14px icon) sizing on every device. Everything else from v1.7.0 — inline SVG icon, fade animation, Esc-to-clear, live match-count status line — is unchanged.
