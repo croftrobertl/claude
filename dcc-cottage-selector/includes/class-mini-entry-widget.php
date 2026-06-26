@@ -33,7 +33,7 @@ class Mini_Entry_Widget extends Selector_Widget
 
     public function get_title(): string
     {
-        return __('Cottage Selector — Mini Entry', 'dcc-cottage-selector');
+        return __('DCC Cottage Selector — Mini Entry', 'dcc-cottage-selector');
     }
 
     public function get_icon(): string

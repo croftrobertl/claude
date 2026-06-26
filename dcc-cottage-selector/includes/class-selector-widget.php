@@ -37,7 +37,7 @@ class Selector_Widget extends Widget_Base
 
     public function get_title(): string
     {
-        return __('Cottage Selector', 'dcc-cottage-selector');
+        return __('DCC Cottage Selector', 'dcc-cottage-selector');
     }
 
     public function get_icon(): string

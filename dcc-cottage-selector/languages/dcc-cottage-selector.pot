@@ -3,7 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.11.1\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.11.2\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -311,11 +311,11 @@ msgid "Cottage %1$s: %2$s"
 msgstr ""
 
 #: includes/class-selector-widget.php:40
-msgid "Cottage Selector"
+msgid "DCC Cottage Selector"
 msgstr ""
 
 #: includes/class-mini-entry-widget.php:36
-msgid "Cottage Selector — Mini Entry"
+msgid "DCC Cottage Selector — Mini Entry"
 msgstr ""
 
 #: includes/class-selector-widget.php:159
