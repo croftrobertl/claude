@@ -24,7 +24,7 @@ final class Widget extends Widget_Base
 
     public function get_title(): string
     {
-        return __('MPHB Availability Calendar', 'mphb-availability-calendar');
+        return __('DCC Availability Calendar', 'mphb-availability-calendar');
     }
 
     public function get_icon(): string

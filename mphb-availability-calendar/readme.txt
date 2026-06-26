@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.0
+Stable tag: 0.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.1 =
+* Display-name rename only. The plugin row in WP-Admin → Plugins → Installed Plugins and the draggable widget tile in Elementor's editor panel now both read "DCC Availability Calendar." No functional change — every internal identifier stays the same (folder name, main file, text domain `mphb-availability-calendar`, widget slug `mphbac_calendar`, PHP namespace `MPHBAC\`, CSS class prefix `mphbac-`, transient prefix `mphbac_`, AJAX action `mphbac_query`, Elementor category slug `claude-code`, all constants), so existing Elementor pages, saved widget configs, translations, and CSS overrides keep working without any migration step.
 
 = 0.10.0 =
 * Desktop and tablet now honor the "Number only" row-label setting — only the `#N` shows, centered with tabular figures, while the column stays the same width as today's two-line layout (use the existing Cottage column width control to narrow it if desired). Previously the abbrev still rendered above the `#N` on desktop/tablet, ignoring the toggle. Mobile behavior is unchanged. The full cottage name remains in the cell's accessible name (tooltip + screen reader) and tapping any cottage cell still opens its info popup with the full record.
