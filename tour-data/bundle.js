@@ -108,11 +108,14 @@
           'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
       }
       if (item.type === 'self_hosted') {
-        return '<video src="' + escapeAttr(resolveUrl(item.url)) + '" controls preload="metadata"></video>';
+        const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
+        return '<video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
+               ' controls preload="metadata" style="grid-column: 1 / -1; height:auto; max-height:360px; background:#000;"></video>';
       }
-      // photo
+      // photo — src=thumb for the grid, full kept on data-full for future lightbox
       const src = item.src || item.url;
-      return '<img loading="lazy" src="' + escapeAttr(resolveUrl(src)) + '" alt="" />';
+      const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
+      return '<img loading="lazy" src="' + escapeAttr(resolveUrl(src)) + '" alt=""' + full + ' />';
     }).join('');
     return '<div class="dcc-tour-media">' + html + '</div>';
   }

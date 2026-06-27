@@ -1,15 +1,262 @@
 {
   "version": 1,
-  "generated_at": null,
-  "_comment": "Map of stop_id -> array of media entries. Photos are stored under /tour-data/media/{stop_id}/ as web-optimized JPEGs. Videos are either {type:'youtube', id:'...'} (long-form GoPro) or {type:'self_hosted', url:'media/{stop_id}/clip.mp4'} (short shared-album clips, already Apple-compressed to 720p).",
+  "generated_at": "2026-06-27T22:15:10Z",
+  "_comment": "Generated. Maps stop_id -> ordered list of media entries. Photos: {src, full, date}. Videos: {type, url, poster, date} where type \u2208 {self_hosted, youtube}. Files live under /media/{stop_id}/.",
   "by_stop": {
-    "orl-mco": [],
-    "lgw": [],
-    "dbv-airport": [],
-    "cavtat": [],
-    "dubrovnik-old-town": [],
-    "mount-srd": [],
-    "soline": [],
-    "elaphiti": []
+    "orl-mco": [
+      {
+        "src": "media/orl-mco/2B45379B-6FC5-497E-A540-11164E378D38-thumb.jpg",
+        "full": "media/orl-mco/2B45379B-6FC5-497E-A540-11164E378D38-full.jpg",
+        "date": "2025-09-10T22:00:50Z"
+      },
+      {
+        "src": "media/orl-mco/E7FEF471-EBA7-4F5B-B13C-48200FA2E1A1-thumb.jpg",
+        "full": "media/orl-mco/E7FEF471-EBA7-4F5B-B13C-48200FA2E1A1-full.jpg",
+        "date": "2025-09-11T01:32:52Z"
+      }
+    ],
+    "lgw": [
+      {
+        "src": "media/lgw/63AA72CE-C1F4-45FC-84FA-87A6F2E69A13-thumb.jpg",
+        "full": "media/lgw/63AA72CE-C1F4-45FC-84FA-87A6F2E69A13-full.jpg",
+        "date": "2025-09-11T06:29:23Z"
+      },
+      {
+        "src": "media/lgw/C3B230C7-5C79-419A-BE85-7EC54288176C-thumb.jpg",
+        "full": "media/lgw/C3B230C7-5C79-419A-BE85-7EC54288176C-full.jpg",
+        "date": "2025-09-11T11:32:06Z"
+      }
+    ],
+    "dbv-airport": [
+      {
+        "src": "media/dbv-airport/11718ACD-C2CD-4912-8CF5-972F6DE2C03A-thumb.jpg",
+        "full": "media/dbv-airport/11718ACD-C2CD-4912-8CF5-972F6DE2C03A-full.jpg",
+        "date": "2025-09-11T15:19:19Z"
+      },
+      {
+        "src": "media/dbv-airport/1E0C41EB-81A7-4005-B889-809F14691172-thumb.jpg",
+        "full": "media/dbv-airport/1E0C41EB-81A7-4005-B889-809F14691172-full.jpg",
+        "date": "2025-09-11T16:23:29Z"
+      },
+      {
+        "src": "media/dbv-airport/D6BB5AD7-CBC2-4581-9914-0C0E829BE5A7-thumb.jpg",
+        "full": "media/dbv-airport/D6BB5AD7-CBC2-4581-9914-0C0E829BE5A7-full.jpg",
+        "date": "2025-09-11T17:22:00Z"
+      }
+    ],
+    "cavtat": [
+      {
+        "src": "media/cavtat/B74AE39A-C944-4DE2-AB01-E68595DDD90F-thumb.jpg",
+        "full": "media/cavtat/B74AE39A-C944-4DE2-AB01-E68595DDD90F-full.jpg",
+        "date": "2025-09-11T20:42:20Z"
+      },
+      {
+        "src": "media/cavtat/288CA16D-C31D-4A30-89D0-4C9552C0F217-thumb.jpg",
+        "full": "media/cavtat/288CA16D-C31D-4A30-89D0-4C9552C0F217-full.jpg",
+        "date": "2025-09-13T12:06:05Z"
+      },
+      {
+        "src": "media/cavtat/6E7824A8-C439-4B9B-A34D-F921A6775FCD-thumb.jpg",
+        "full": "media/cavtat/6E7824A8-C439-4B9B-A34D-F921A6775FCD-full.jpg",
+        "date": "2025-09-15T12:49:35Z"
+      },
+      {
+        "src": "media/cavtat/00D1F89A-0271-4ED1-BF3B-73AA23518EA8-thumb.jpg",
+        "full": "media/cavtat/00D1F89A-0271-4ED1-BF3B-73AA23518EA8-full.jpg",
+        "date": "2025-09-16T11:40:53Z"
+      },
+      {
+        "src": "media/cavtat/664683D7-C419-4EA0-82A0-D2A6D1C906E8-thumb.jpg",
+        "full": "media/cavtat/664683D7-C419-4EA0-82A0-D2A6D1C906E8-full.jpg",
+        "date": "2025-09-16T13:19:33Z"
+      },
+      {
+        "src": "media/cavtat/88A90CB4-27D4-4589-AD69-D65671FB8A72-thumb.jpg",
+        "full": "media/cavtat/88A90CB4-27D4-4589-AD69-D65671FB8A72-full.jpg",
+        "date": "2025-09-18T11:04:15Z"
+      },
+      {
+        "src": "media/cavtat/68DF7B7E-4C28-4F63-9AE3-3BD2B87E903C-thumb.jpg",
+        "full": "media/cavtat/68DF7B7E-4C28-4F63-9AE3-3BD2B87E903C-full.jpg",
+        "date": "2025-09-21T12:44:26Z"
+      },
+      {
+        "src": "media/cavtat/FC3820D5-238A-4A90-8F45-25EE3E338C6E-thumb.jpg",
+        "full": "media/cavtat/FC3820D5-238A-4A90-8F45-25EE3E338C6E-full.jpg",
+        "date": "2025-09-22T10:14:22Z"
+      },
+      {
+        "src": "media/cavtat/2D178FBB-5F86-4B53-AFAB-5485626662E8-thumb.jpg",
+        "full": "media/cavtat/2D178FBB-5F86-4B53-AFAB-5485626662E8-full.jpg",
+        "date": "2025-09-24T10:57:21Z"
+      },
+      {
+        "src": "media/cavtat/B4DB4B64-4544-480E-A219-EF2A84A4116B-thumb.jpg",
+        "full": "media/cavtat/B4DB4B64-4544-480E-A219-EF2A84A4116B-full.jpg",
+        "date": "2025-09-25T12:35:37Z"
+      },
+      {
+        "type": "self_hosted",
+        "url": "media/cavtat/EA716958-5D9B-4B2D-99A9-5CAF5A293F4F-hd.mp4",
+        "date": "2025-09-11T18:23:47Z",
+        "poster": "media/cavtat/EA716958-5D9B-4B2D-99A9-5CAF5A293F4F-poster.jpg"
+      }
+    ],
+    "dubrovnik-old-town": [
+      {
+        "src": "media/dubrovnik-old-town/81BA401E-6E0B-4C7C-907D-3646B62229FE-thumb.jpg",
+        "full": "media/dubrovnik-old-town/81BA401E-6E0B-4C7C-907D-3646B62229FE-full.jpg",
+        "date": "2025-09-13T16:15:29Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/3645B9DC-C4F9-4AC2-9A1B-4569D8F7703A-thumb.jpg",
+        "full": "media/dubrovnik-old-town/3645B9DC-C4F9-4AC2-9A1B-4569D8F7703A-full.jpg",
+        "date": "2025-09-13T16:30:05Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/5090593B-1F3A-4D95-9C5F-8B2296B2DBDC-thumb.jpg",
+        "full": "media/dubrovnik-old-town/5090593B-1F3A-4D95-9C5F-8B2296B2DBDC-full.jpg",
+        "date": "2025-09-13T17:11:31Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/BB0982E0-E31B-40DE-8141-DF6679383188-thumb.jpg",
+        "full": "media/dubrovnik-old-town/BB0982E0-E31B-40DE-8141-DF6679383188-full.jpg",
+        "date": "2025-09-16T15:54:17Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/0289A3C6-AE7B-40D3-A6AB-F13E35ECEC99-thumb.jpg",
+        "full": "media/dubrovnik-old-town/0289A3C6-AE7B-40D3-A6AB-F13E35ECEC99-full.jpg",
+        "date": "2025-09-17T16:16:25Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/A0F96D66-CAB7-4C0A-A90C-EBD09F303465-thumb.jpg",
+        "full": "media/dubrovnik-old-town/A0F96D66-CAB7-4C0A-A90C-EBD09F303465-full.jpg",
+        "date": "2025-09-17T16:49:25Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/5294367D-F5F4-498B-AEB6-BE7C822C50C3-thumb.jpg",
+        "full": "media/dubrovnik-old-town/5294367D-F5F4-498B-AEB6-BE7C822C50C3-full.jpg",
+        "date": "2025-09-19T16:52:08Z"
+      },
+      {
+        "src": "media/dubrovnik-old-town/8AFCB89C-4541-4777-BDDD-07111AEAF654-thumb.jpg",
+        "full": "media/dubrovnik-old-town/8AFCB89C-4541-4777-BDDD-07111AEAF654-full.jpg",
+        "date": "2025-09-25T17:02:15Z"
+      },
+      {
+        "type": "self_hosted",
+        "url": "media/dubrovnik-old-town/3B006D05-A692-4E73-9785-DB41D8000FC5-hd.mp4",
+        "date": "2025-09-13T16:18:53Z",
+        "poster": "media/dubrovnik-old-town/3B006D05-A692-4E73-9785-DB41D8000FC5-poster.jpg"
+      }
+    ],
+    "mount-srd": [
+      {
+        "src": "media/mount-srd/8FDA1355-492D-43FE-A414-B52A28FB9D80-thumb.jpg",
+        "full": "media/mount-srd/8FDA1355-492D-43FE-A414-B52A28FB9D80-full.jpg",
+        "date": "2025-09-12T16:37:27Z"
+      },
+      {
+        "src": "media/mount-srd/0A4FEB53-E84D-415B-8AE0-D64EDD34D38F-thumb.jpg",
+        "full": "media/mount-srd/0A4FEB53-E84D-415B-8AE0-D64EDD34D38F-full.jpg",
+        "date": "2025-09-12T16:38:04Z"
+      },
+      {
+        "src": "media/mount-srd/516E01B6-8601-42B8-B27B-588285232DCC-thumb.jpg",
+        "full": "media/mount-srd/516E01B6-8601-42B8-B27B-588285232DCC-full.jpg",
+        "date": "2025-09-12T18:44:36Z"
+      },
+      {
+        "src": "media/mount-srd/18B4A83C-4399-417B-BA52-096C54A63033-thumb.jpg",
+        "full": "media/mount-srd/18B4A83C-4399-417B-BA52-096C54A63033-full.jpg",
+        "date": "2025-09-14T18:31:47Z"
+      },
+      {
+        "src": "media/mount-srd/E037D0E3-AC17-4166-86C7-471B9D84CCEC-thumb.jpg",
+        "full": "media/mount-srd/E037D0E3-AC17-4166-86C7-471B9D84CCEC-full.jpg",
+        "date": "2025-09-15T16:08:31Z"
+      },
+      {
+        "src": "media/mount-srd/3B8F36E7-55FA-4161-B8F2-13FC80C58346-thumb.jpg",
+        "full": "media/mount-srd/3B8F36E7-55FA-4161-B8F2-13FC80C58346-full.jpg",
+        "date": "2025-09-15T16:33:25Z"
+      },
+      {
+        "type": "self_hosted",
+        "url": "media/mount-srd/DD39E537-C8E6-4D51-9071-4501C0C6BAF5-hd.mp4",
+        "date": "2025-09-12T16:51:43Z",
+        "poster": "media/mount-srd/DD39E537-C8E6-4D51-9071-4501C0C6BAF5-poster.jpg"
+      }
+    ],
+    "soline": [
+      {
+        "src": "media/soline/3E7D8D30-C747-46FC-8ACC-D4158C229027-thumb.jpg",
+        "full": "media/soline/3E7D8D30-C747-46FC-8ACC-D4158C229027-full.jpg",
+        "date": "2025-09-18T16:49:30Z"
+      },
+      {
+        "src": "media/soline/AA4D63F8-7974-4F3E-B668-B08C07D74ACC-thumb.jpg",
+        "full": "media/soline/AA4D63F8-7974-4F3E-B668-B08C07D74ACC-full.jpg",
+        "date": "2025-09-18T16:49:40Z"
+      },
+      {
+        "src": "media/soline/5423FF0F-E8E5-420B-813F-F5A29EF00298-thumb.jpg",
+        "full": "media/soline/5423FF0F-E8E5-420B-813F-F5A29EF00298-full.jpg",
+        "date": "2025-09-18T16:49:47Z"
+      },
+      {
+        "src": "media/soline/8AAADDEA-0CF6-406F-B8BF-E37EE506CAAF-thumb.jpg",
+        "full": "media/soline/8AAADDEA-0CF6-406F-B8BF-E37EE506CAAF-full.jpg",
+        "date": "2025-09-18T16:49:56Z"
+      }
+    ],
+    "elaphiti": [
+      {
+        "src": "media/elaphiti/50B43085-97F5-4380-9BFF-3B3D19A670E8-thumb.jpg",
+        "full": "media/elaphiti/50B43085-97F5-4380-9BFF-3B3D19A670E8-full.jpg",
+        "date": "2025-09-20T06:55:00Z"
+      },
+      {
+        "src": "media/elaphiti/1454C24D-89B1-4E18-9626-B9605C84A74A-thumb.jpg",
+        "full": "media/elaphiti/1454C24D-89B1-4E18-9626-B9605C84A74A-full.jpg",
+        "date": "2025-09-20T07:42:10Z"
+      },
+      {
+        "src": "media/elaphiti/5C2137BC-2962-4EB6-B49A-5E7E729DB5C5-thumb.jpg",
+        "full": "media/elaphiti/5C2137BC-2962-4EB6-B49A-5E7E729DB5C5-full.jpg",
+        "date": "2025-09-20T08:09:13Z"
+      },
+      {
+        "src": "media/elaphiti/DF2C89B0-DF53-4479-B5BE-D5F66B8B53DF-thumb.jpg",
+        "full": "media/elaphiti/DF2C89B0-DF53-4479-B5BE-D5F66B8B53DF-full.jpg",
+        "date": "2025-09-20T08:35:25Z"
+      },
+      {
+        "src": "media/elaphiti/2B192C13-FC47-4E42-824C-C4FEC1516B66-thumb.jpg",
+        "full": "media/elaphiti/2B192C13-FC47-4E42-824C-C4FEC1516B66-full.jpg",
+        "date": "2025-09-20T09:33:34Z"
+      },
+      {
+        "src": "media/elaphiti/684F3756-F608-483A-BD9B-3AD4811C6E2A-thumb.jpg",
+        "full": "media/elaphiti/684F3756-F608-483A-BD9B-3AD4811C6E2A-full.jpg",
+        "date": "2025-09-20T09:49:47Z"
+      },
+      {
+        "src": "media/elaphiti/59F3F70B-B824-4D42-A461-3F4CA105216B-thumb.jpg",
+        "full": "media/elaphiti/59F3F70B-B824-4D42-A461-3F4CA105216B-full.jpg",
+        "date": "2025-09-20T11:33:54Z"
+      },
+      {
+        "src": "media/elaphiti/06A4C609-536A-44EB-BC7F-33B8650E6293-thumb.jpg",
+        "full": "media/elaphiti/06A4C609-536A-44EB-BC7F-33B8650E6293-full.jpg",
+        "date": "2025-09-20T14:42:23Z"
+      },
+      {
+        "type": "self_hosted",
+        "url": "media/elaphiti/C48F2DB0-2B77-40B4-86AC-B2F11EBDD74C-hd.mp4",
+        "date": "2025-09-20T06:36:48Z",
+        "poster": "media/elaphiti/C48F2DB0-2B77-40B4-86AC-B2F11EBDD74C-poster.jpg"
+      }
+    ]
   }
 }
