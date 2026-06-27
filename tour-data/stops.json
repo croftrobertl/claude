@@ -2,7 +2,7 @@
   "version": 1,
   "trip": {
     "name": "Croatia",
-    "subtitle": "Cavtat & Dubrovnik · September 2025",
+    "subtitle": "Cavtat & Dubrovnik · September 2025 · A documentary, sort of",
     "start_date": "2025-09-10",
     "end_date": "2025-09-27",
     "base_timezone": "Europe/Zagreb",
@@ -18,7 +18,7 @@
       "date_end": "2025-09-10T21:00:00-04:00",
       "kind": "flight-origin",
       "is_bookend": true,
-      "summary": "Overnight to London on British Airways."
+      "summary": "We began, as all great European journeys must, at an airport in central Florida built to serve a fictional kingdom for mice. British Airways had scheduled the flight for 9 PM, which is the time of day at which airlines decide families ought to bond over shared insomnia at 30,000 feet."
     },
     {
       "id": "lgw",
@@ -29,7 +29,7 @@
       "date_end": "2025-09-11T15:10:00+01:00",
       "kind": "flight-layover",
       "is_bookend": true,
-      "summary": "4h 30m layover."
+      "summary": "Britain's second-busiest airport, located 30 miles south of the actual London — a geographic technicality the British prefer not to discuss. A four-and-a-half-hour layover here is precisely long enough to remember that pasties exist and not long enough to leave the terminal, which the British, who invented the queue, have weaponised into a small economy of overpriced sandwiches."
     },
     {
       "id": "dbv-airport",
@@ -40,7 +40,7 @@
       "date_end": "2025-09-11T18:50:00+02:00",
       "kind": "flight-destination",
       "is_bookend": true,
-      "summary": "Touchdown in Močići. Ulrike's rental car waiting."
+      "summary": "Dubrovnik Airport is in a village called Močići, which our family promptly mispronounced for the next sixteen days and may continue to mispronounce in private. Built into a cliffside above the Adriatic — a Yugoslav-era engineering decision that splits opinion between 'visionary' and 'why' — it's where Croatia begins, both weatherwise and emotionally."
     },
     {
       "id": "cavtat",
@@ -50,7 +50,7 @@
       "date_start": "2025-09-11T19:30:00+02:00",
       "date_end": "2025-09-27T07:00:00+02:00",
       "kind": "home-base",
-      "summary": "The trip's anchor — a small coastal town 20km south of Dubrovnik, where most dinners and lazy mornings happened.",
+      "summary": "Cavtat was founded by Greek refugees in the 6th century BC as Epidauros, conquered by the Romans (who made it nicer), levelled by the Slavs in 614 AD (who didn't), and finally rebuilt by people from a nearby town called Ragusa who liked the views. Today it is a horseshoe-shaped harbour with two churches that pointedly ignore each other and the kind of evening light that makes you understand why every Roman with a pension retired here. It is where we lived for sixteen days, ate too many ice creams, and discovered that holiday brain is a real medical condition.",
       "venues": [
         {"name": "By The Way", "geo": [42.578694, 18.22068], "note": "Lunch Sep 12, dinner Sep 21"}
       ]
@@ -63,7 +63,7 @@
       "date_start": "2025-09-12T00:00:00+02:00",
       "date_end": "2025-09-27T00:00:00+02:00",
       "kind": "day-trip",
-      "summary": "The walled old city — multiple visits across the trip.",
+      "summary": "A walled medieval city built almost entirely out of limestone, which is the rock equivalent of being good-looking but high-maintenance. Eight hundred years of feet have polished its streets to a high gloss the guidebooks generously call 'marble' and locals less generously call 'a hazard.' The Republic of Ragusa ran the place for five centuries on a foreign policy of bribing absolutely everyone, which is a strategy that mostly worked, and which more places, frankly, should try.",
       "venues": [
         {"name": "Charlie Burgers", "geo": [42.655618, 18.076373], "note": "Dinner Sep 13 & Sep 19"},
         {"name": "Maskeron", "note": "Dinner Sep 14, lunch Sep 26"},
@@ -83,7 +83,7 @@
       "date_start": "2025-09-12T19:00:00+02:00",
       "date_end": "2025-09-15T23:00:00+02:00",
       "kind": "activity",
-      "summary": "The peak above Dubrovnik. Free summer DJ nights on Fri/Sat — went up via the cable car.",
+      "summary": "412 metres of mostly bare rock that overlooks Dubrovnik like a parent at a school play. The Yugoslav-era cable car was destroyed in the 1991 siege, when the people on top of the mountain held off the people at the bottom of the mountain for seven months. It was rebuilt in 2010 and now hauls tourists up for €27, and on summer Fridays and Saturdays hosts a free DJ event — a cultural pivot that 14th-century Ragusan defenders would have found confusing, then probably enjoyed.",
       "external_url": "https://www.dubrovnikcablecar.com/free-summer-program/"
     },
     {
@@ -94,7 +94,7 @@
       "date_start": "2025-09-18T19:00:00+02:00",
       "date_end": "2025-09-18T20:00:00+02:00",
       "kind": "venue",
-      "summary": "Bistro pizzeria Žužica — a village dinner spot between Cavtat and Dubrovnik."
+      "summary": "A village so small that Google Maps gets visibly nervous when you ask it for directions. We came for the pizza at Bistro pizzeria Žužica, which arrived at the table without ceremony and was the best of the trip. There is no other story here. The pizza was enough."
     },
     {
       "id": "elaphiti",
@@ -104,7 +104,7 @@
       "date_start": "2025-09-20T09:30:00+02:00",
       "date_end": "2025-09-20T17:00:00+02:00",
       "kind": "activity",
-      "summary": "Galleon Tirena tour — three-island sail across the Elaphiti archipelago.",
+      "summary": "An archipelago of thirteen islands northwest of Dubrovnik named by the ancient Greeks after deer, which is unhelpful because there are no deer. We visited three of them — Koločep, Lopud, and Šipan — aboard the Galleon Tirena, a wooden sailing ship that looks 17th-century and is, in fact, from 2006. The Adriatic that day was the precise blue of an unconvincing screensaver.",
       "external_url": "https://galleontirena.com/"
     }
   ],
