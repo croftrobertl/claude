@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "trip": {
+    "name": "Croatia",
+    "subtitle": "Cavtat & Dubrovnik · September 2025",
+    "start_date": "2025-09-10",
+    "end_date": "2025-09-27",
+    "base_timezone": "Europe/Zagreb",
+    "home_timezone": "America/New_York"
+  },
+  "stops": [
+    {
+      "id": "orl-mco",
+      "name": "Orlando (MCO)",
+      "subtitle": "Departure",
+      "geo": [28.431151, -81.307964],
+      "date_start": "2025-09-10T21:00:00-04:00",
+      "date_end": "2025-09-10T21:00:00-04:00",
+      "kind": "flight-origin",
+      "is_bookend": true,
+      "summary": "Overnight to London on British Airways."
+    },
+    {
+      "id": "lgw",
+      "name": "London Gatwick (LGW)",
+      "subtitle": "Layover",
+      "geo": [51.153346, -0.18358],
+      "date_start": "2025-09-11T10:40:00+01:00",
+      "date_end": "2025-09-11T15:10:00+01:00",
+      "kind": "flight-layover",
+      "is_bookend": true,
+      "summary": "4h 30m layover."
+    },
+    {
+      "id": "dbv-airport",
+      "name": "Dubrovnik Airport (DBV)",
+      "subtitle": "Welcome to Croatia",
+      "geo": [42.56062, 18.262003],
+      "date_start": "2025-09-11T18:50:00+02:00",
+      "date_end": "2025-09-11T18:50:00+02:00",
+      "kind": "flight-destination",
+      "is_bookend": true,
+      "summary": "Touchdown in Močići. Ulrike's rental car waiting."
+    },
+    {
+      "id": "cavtat",
+      "name": "Cavtat",
+      "subtitle": "Home base",
+      "geo": [42.578694, 18.22068],
+      "date_start": "2025-09-11T19:30:00+02:00",
+      "date_end": "2025-09-27T07:00:00+02:00",
+      "kind": "home-base",
+      "summary": "The trip's anchor — a small coastal town 20km south of Dubrovnik, where most dinners and lazy mornings happened.",
+      "venues": [
+        {"name": "By The Way", "geo": [42.578694, 18.22068], "note": "Lunch Sep 12, dinner Sep 21"}
+      ]
+    },
+    {
+      "id": "dubrovnik-old-town",
+      "name": "Dubrovnik Old Town",
+      "subtitle": "City walls, marble streets",
+      "geo": [42.6411, 18.1083],
+      "date_start": "2025-09-12T00:00:00+02:00",
+      "date_end": "2025-09-27T00:00:00+02:00",
+      "kind": "day-trip",
+      "summary": "The walled old city — multiple visits across the trip.",
+      "venues": [
+        {"name": "Charlie Burgers", "geo": [42.655618, 18.076373], "note": "Dinner Sep 13 & Sep 19"},
+        {"name": "Maskeron", "note": "Dinner Sep 14, lunch Sep 26"},
+        {"name": "Taj Mahal", "note": "Dinner Sep 15"},
+        {"name": "Monkovic", "note": "Dinner Sep 16"},
+        {"name": "Ludo More", "note": "Dinner Sep 17"},
+        {"name": "Zamagna Pizza", "note": "Dinner Sep 12"},
+        {"name": "Pino's", "note": "Lunch Sep 23"},
+        {"name": "Mamma Mia", "note": "Dinner Sep 25"}
+      ]
+    },
+    {
+      "id": "mount-srd",
+      "name": "Mount Srđ",
+      "subtitle": "Cable car · DJ nights",
+      "geo": [42.6529, 18.0921],
+      "date_start": "2025-09-12T19:00:00+02:00",
+      "date_end": "2025-09-15T23:00:00+02:00",
+      "kind": "activity",
+      "summary": "The peak above Dubrovnik. Free summer DJ nights on Fri/Sat — went up via the cable car.",
+      "external_url": "https://www.dubrovnikcablecar.com/free-summer-program/"
+    },
+    {
+      "id": "soline",
+      "name": "Soline",
+      "subtitle": "Village dinner",
+      "geo": [42.614894, 18.221995],
+      "date_start": "2025-09-18T19:00:00+02:00",
+      "date_end": "2025-09-18T20:00:00+02:00",
+      "kind": "venue",
+      "summary": "Bistro pizzeria Žužica — a village dinner spot between Cavtat and Dubrovnik."
+    },
+    {
+      "id": "elaphiti",
+      "name": "Elaphiti Islands",
+      "subtitle": "Day-long boat tour",
+      "geo": [42.7167, 17.9167],
+      "date_start": "2025-09-20T09:30:00+02:00",
+      "date_end": "2025-09-20T17:00:00+02:00",
+      "kind": "activity",
+      "summary": "Galleon Tirena tour — three-island sail across the Elaphiti archipelago.",
+      "external_url": "https://galleontirena.com/"
+    }
+  ],
+  "notes": [
+    "This file is generated and hand-curated. Schema version 1.",
+    "Photo + video assets are referenced by media-manifest.json so this file stays small.",
+    "Restaurant geos that say 'note' but no coords are pending reverse-geocoding."
+  ]
+}

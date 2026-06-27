@@ -1,0 +1,18 @@
+/* DCC Croatia Tour — WP shell rules. Doubled .dcc-tour-root for Bravada specificity. */
+.dcc-tour-root.dcc-tour-root {
+  display: block;
+  width: 100%;
+  min-height: 720px;
+  box-sizing: border-box;
+}
+
+/* Pre-mount placeholder visible until bundle.js paints the real layout */
+.dcc-tour-root.dcc-tour-root .dcc-tour-placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* The full visual theme lives in bundle.css (loaded from the bundleUrl by loader.js).
+ * Anything in this file is only for the pre-bundle state — once bundle.css loads,
+ * its grid/header/map/panel rules take over. */

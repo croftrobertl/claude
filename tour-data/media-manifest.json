@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "generated_at": null,
+  "_comment": "Map of stop_id -> array of media entries. Photos are stored under /tour-data/media/{stop_id}/ as web-optimized JPEGs. Videos are either {type:'youtube', id:'...'} (long-form GoPro) or {type:'self_hosted', url:'media/{stop_id}/clip.mp4'} (short shared-album clips, already Apple-compressed to 720p).",
+  "by_stop": {
+    "orl-mco": [],
+    "lgw": [],
+    "dbv-airport": [],
+    "cavtat": [],
+    "dubrovnik-old-town": [],
+    "mount-srd": [],
+    "soline": [],
+    "elaphiti": []
+  }
+}
