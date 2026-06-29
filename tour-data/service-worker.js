@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or stops.json change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v2';
+const CACHE_VERSION = 'dcc-tour-v3';
 const SHELL = [
   './',
   'index.html',

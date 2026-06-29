@@ -119,6 +119,13 @@
           'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
       }
       if (item.type === 'self_hosted') {
+        // If url isn't yet linked (transitional state during media buildout),
+        // degrade to the poster as a still image rather than a broken <video>.
+        if (!item.url && item.poster) {
+          return '<img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) +
+                 '" alt="video preview" style="opacity:0.85;" />';
+        }
+        if (!item.url) return '';
         const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
         return '<video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
                ' controls preload="metadata" style="grid-column: 1 / -1; height:auto; max-height:360px; background:#000;"></video>';
