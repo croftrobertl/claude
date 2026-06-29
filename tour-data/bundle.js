@@ -96,8 +96,19 @@
       '</article>';
   }
 
+  // Lightbox state: list of full-size photo URLs currently in the active stop's panel,
+  // plus the index being shown. We rebuild it whenever a stop renders.
+  let lightboxFulls = [];
+  let lightboxIdx = -1;
+
   function renderMedia(stopId) {
     const items = mediaByStop[stopId] || [];
+    // Refresh the lightbox source list each time a stop renders.
+    lightboxFulls = items
+      .filter(i => i.full || i.src)
+      .filter(i => i.type !== 'self_hosted' && i.type !== 'youtube')
+      .map(i => resolveUrl(i.full || i.src));
+    lightboxIdx = -1;
     if (!items.length) {
       return '<div class="dcc-tour-placeholder" style="margin-top:1rem;">Photos coming soon.</div>';
     }
@@ -123,6 +134,63 @@
   function resolveUrl(p) {
     if (/^https?:/i.test(p)) return p;
     return baseURL + p.replace(/^\.?\//, '');
+  }
+
+  // ===== Lightbox =====
+  // Delegated click handler: any <img> with data-full inside the panel opens the lightbox.
+  document.addEventListener('click', (e) => {
+    const img = e.target.closest('.dcc-tour-media img[data-full]');
+    if (!img) return;
+    const url = img.getAttribute('data-full');
+    const idx = lightboxFulls.indexOf(url);
+    openLightbox(idx >= 0 ? idx : 0);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (lightboxIdx < 0) return;
+    if (e.key === 'Escape') closeLightbox();
+    else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
+    else if (e.key === 'ArrowLeft')  showLightbox(lightboxIdx - 1);
+  });
+
+  function ensureLightboxEl() {
+    let el = document.getElementById('dcc-tour-lightbox');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'dcc-tour-lightbox';
+    el.className = 'dcc-tour-lightbox';
+    el.innerHTML =
+      '<button class="dcc-tour-lightbox-close" aria-label="Close">&times;</button>' +
+      '<button class="dcc-tour-lightbox-nav prev" aria-label="Previous">&#8249;</button>' +
+      '<img class="dcc-tour-lightbox-img" alt="" />' +
+      '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>';
+    el.addEventListener('click', (e) => {
+      if (e.target === el) closeLightbox();
+      else if (e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
+      else if (e.target.classList.contains('prev')) showLightbox(lightboxIdx - 1);
+      else if (e.target.classList.contains('next')) showLightbox(lightboxIdx + 1);
+    });
+    document.body.appendChild(el);
+    return el;
+  }
+  function openLightbox(idx) {
+    if (!lightboxFulls.length) return;
+    ensureLightboxEl();
+    showLightbox(idx);
+  }
+  function showLightbox(idx) {
+    if (!lightboxFulls.length) return;
+    const n = lightboxFulls.length;
+    lightboxIdx = ((idx % n) + n) % n;
+    const el = ensureLightboxEl();
+    el.classList.add('open');
+    el.querySelector('.dcc-tour-lightbox-img').src = lightboxFulls[lightboxIdx];
+    document.body.classList.add('dcc-tour-noscroll');
+  }
+  function closeLightbox() {
+    lightboxIdx = -1;
+    const el = document.getElementById('dcc-tour-lightbox');
+    if (el) el.classList.remove('open');
+    document.body.classList.remove('dcc-tour-noscroll');
   }
 
   function formatDateRange(startISO, endISO) {
