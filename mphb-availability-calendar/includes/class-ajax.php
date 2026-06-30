@@ -21,6 +21,23 @@ final class Ajax
         // which every cached pageload returns 403/-1 and the calendar sits
         // on "Loading availability…" until the cache is purged.
 
+        // Never let this response be cached. The payload is live availability
+        // and must always be fetched fresh. Cache_Integration already excludes
+        // this endpoint from SpeedyCache, but the deployment site also runs
+        // HostGator's Endurance Page Cache and an advanced-cache.php drop-in,
+        // and a CDN or browser back-button cache could store the reply too.
+        // nocache_headers() sets WP's canonical Cache-Control/Expires/Pragma;
+        // the explicit no-store line is the one directive guaranteed to defeat
+        // shared caches. Sent at the top of handle() so the error responses
+        // below (which exit early) are covered as well. Guard on headers_sent()
+        // so a misconfigured cache layer that already flushed output can't turn
+        // this into a PHP warning that corrupts the JSON body.
+        if (!headers_sent()) {
+            nocache_headers();
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+            header('Pragma: no-cache', true);
+        }
+
         $raw_ids = isset($_POST['room_type_ids']) ? (array) wp_unslash($_POST['room_type_ids']) : [];
         $room_type_ids = array_values(array_filter(array_map('absint', $raw_ids)));
 

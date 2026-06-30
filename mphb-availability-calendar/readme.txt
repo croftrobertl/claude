@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.2
+Stable tag: 0.10.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.3 =
+* Hardened the availability AJAX endpoint against caching. The `mphbac_query` response now sends `Cache-Control: no-store` plus WordPress's standard `nocache_headers()` so no cache layer can serve stale availability. The plugin already excluded this endpoint from SpeedyCache on activation; these response headers extend that protection to HostGator's Endurance Page Cache, the `advanced-cache.php` drop-in, any CDN, and the browser's own back-button cache. No visible change — purely a freshness guarantee for the booking data.
 
 = 0.10.2 =
 * Reverted the v0.10.0 mobile filter-row layout. On phones (≤600 px) the Check-in / Check-out date fields and the SHOW / RESET buttons each stack on their own full-width, centered row again, exactly as they did before v0.10.0. The single-row layout introduced in v0.10.0 crowded the row — the labels wrapped to two lines and the date inputs were crushed. The cottage `#N` column polish from v0.9.8 / v0.9.9 is unchanged.
