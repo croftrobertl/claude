@@ -70,6 +70,31 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.22 =
+
+**Mobile popup overflow regression fix.** The v0.9.7.21 desktop centered-
+card pattern added `margin: auto`, `height: fit-content`, and a `dvh`-
+based `max-height` to both popups (the detail modal `.dccgg-stage` and
+the FAB menu hub `.dccgg-fab--yes .dccgg-wrapper`). The existing
+`@media (max-width: 600px)` bottom-sheet overrides only reset
+`max-height: none` on the detail modal and reset nothing on the FAB
+wrapper, so on phones the desktop centering kept applying:
+
+* Detail modal: the sheet shrank to its content and re-centered
+  vertically inside the `top:8+offset → bottom:0` rectangle, leaving
+  awkward backdrop above and below instead of the intended full
+  bottom-sheet coverage.
+* FAB hub: capped at `dvh - offset - 32` AND auto-centered, so on iOS
+  Safari with no detected sticky theme header the wrapper rendered
+  near the top of the viewport, the close-X sat under the URL bar, and
+  the popup read as a regular page rather than a popup.
+
+Fix: explicitly reset `margin: 0; height: auto;` in both mobile rules
+and `max-height: none;` in the FAB wrapper mobile rule (the stage
+already had `max-height: none`). True bottom-sheet behavior restored,
+internal scroll handles overflow, slide-up animation plays correctly,
+desktop centered-card behavior is unchanged.
+
 = 0.9.7.21 =
 
 Three changes from live host feedback.

@@ -1786,13 +1786,21 @@ video.dccgg-media {
 @media (max-width: 600px) {
     body.dccgg-detail-open .dccgg-stage {
         /* v0.9.7: bottom sheet covers the full visible viewport below the
-           sticky header. Slides up from translateY(100%) → 0 on open. */
+           sticky header. Slides up from translateY(100%) → 0 on open.
+           v0.9.7.22: explicitly reset margin/height inherited from the
+           v0.9.7.21 desktop centered-card rule. Without these resets the
+           desktop `margin: auto` + `height: fit-content` keep applying on
+           mobile, shrinking the sheet to its content and re-centering it
+           inside the top:8+offset → bottom:0 rectangle instead of filling
+           it like a true bottom sheet. */
         left: 0;
         right: 0;
         top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
         bottom: 0;
+        margin: 0;
         width: 100%;
         max-width: 100%;
+        height: auto;
         max-height: none;
         border-radius: 16px 16px 0 0;
         padding: 16px;
@@ -1814,14 +1822,24 @@ video.dccgg-media {
     }
     /* v0.9.7.19: FAB wrapper becomes a full-width bottom sheet on phones,
        same pattern as the detail modal above. Stays anchored below the
-       sticky theme header so the close X is always reachable. */
+       sticky theme header so the close X is always reachable.
+       v0.9.7.22: explicitly reset margin/height/max-height inherited from
+       the v0.9.7.21 desktop centered-card rule. Without these resets the
+       wrapper was capped at `calc(100dvh - offset - 32px)` AND auto-
+       centered by `margin: auto`, so on iOS Safari with no sticky theme
+       header the popup rendered as a smaller floating card with the
+       close-X tucked under the URL bar rather than as the intended
+       full-coverage bottom sheet. */
     .dccgg-fab--yes .dccgg-wrapper {
         left: 0;
         right: 0;
+        margin: 0;
         width: 100%;
         max-width: 100%;
         top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
         bottom: 0;
+        height: auto;
+        max-height: none;
         border-radius: 16px 16px 0 0;
         padding: 16px;
         transform: translateY(20px) scale(1);
