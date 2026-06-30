@@ -78,28 +78,15 @@
     gap: 0.5em;
 }
 
-/* Mobile (≤600px): single-row layout — dates fill the left ⅔ side-by-side,
-   action button(s) fill the right ⅓. Replaces the previous column stack
-   (v0.9.x and earlier) which wasted vertical space on small screens and
-   pushed the calendar below the fold. The per-filter element keeps its
-   own label-above-input column layout — only the parent's stacking
-   direction changes. min-width: 0 lets native date inputs shrink instead
-   of forcing horizontal overflow on the narrowest 320px screens. */
+/* Mobile: stack each filter element on its own full-width row, centered */
 @media (max-width: 600px) {
     .mphbac-filters {
-        flex-wrap: nowrap;
-        align-items: flex-end;
+        flex-direction: column;
+        align-items: center;
     }
-    .mphbac-filter {
-        flex: 1 1 0;
-        min-width: 0;
-    }
-    .mphbac-filter .mphbac-input {
-        width: 100%;
-        min-width: 0;
-    }
+    .mphbac-filter,
     .mphbac-filter-actions {
-        flex: 0 0 auto;
+        width: 100%;
     }
     /* Cottage column collapses to just the #number on phones — the
        truncated name above it was forcing rows ~30% taller than the

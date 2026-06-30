@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.1
+Stable tag: 0.10.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.2 =
+* Reverted the v0.10.0 mobile filter-row layout. On phones (≤600 px) the Check-in / Check-out date fields and the SHOW / RESET buttons each stack on their own full-width, centered row again, exactly as they did before v0.10.0. The single-row layout introduced in v0.10.0 crowded the row — the labels wrapped to two lines and the date inputs were crushed. The cottage `#N` column polish from v0.9.8 / v0.9.9 is unchanged.
 
 = 0.10.1 =
 * Display-name rename only. The plugin row in WP-Admin → Plugins → Installed Plugins and the draggable widget tile in Elementor's editor panel now both read "DCC Availability Calendar." No functional change — every internal identifier stays the same (folder name, main file, text domain `mphb-availability-calendar`, widget slug `mphbac_calendar`, PHP namespace `MPHBAC\`, CSS class prefix `mphbac-`, transient prefix `mphbac_`, AJAX action `mphbac_query`, Elementor category slug `claude-code`, all constants), so existing Elementor pages, saved widget configs, translations, and CSS overrides keep working without any migration step.
