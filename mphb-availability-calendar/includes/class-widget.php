@@ -652,6 +652,7 @@ final class Widget extends Widget_Base
             'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
             'str_book_min_nights' => [__('Popup minimum-nights message', 'mphb-availability-calendar'), __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar')],
+            'str_view_cottage'   => [__('Info popup: view-cottage button', 'mphb-availability-calendar'), __('View Cottage Page', 'mphb-availability-calendar')],
             'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
             'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
         ];
@@ -1207,6 +1208,7 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
+                        <a class="mphbac-btn mphbac-btn-primary mphbac-info-view-link" target="_blank" rel="noopener noreferrer" hidden><?php echo esc_html($settings['str_view_cottage']); ?></a>
                     </div>
                     <div class="mphbac-info-body"></div>
                 </div>

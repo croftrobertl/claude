@@ -370,6 +370,7 @@
         var titleEl = sheet.querySelector('.mphbac-sheet-title');
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
+        var viewBtn = sheet.querySelector('.mphbac-info-view-link');
 
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
@@ -447,11 +448,15 @@
                 titleEl.textContent = '';
                 var titleLink = document.createElement('a');
                 titleLink.href = titleUrl;
+                titleLink.target = '_blank';
+                titleLink.rel = 'noopener noreferrer';
                 titleLink.className = 'mphbac-sheet-title-link';
                 renderSplitTitle(titleLink, titleText);
                 titleEl.appendChild(titleLink);
+                if (viewBtn) { viewBtn.href = titleUrl; viewBtn.hidden = false; }
             } else {
                 renderSplitTitle(titleEl, titleText);
+                if (viewBtn) { viewBtn.hidden = true; }
             }
             // Move the original .mphbac-info-content into the popup body.
             // If a previous cottage's content is still mounted (rapid open

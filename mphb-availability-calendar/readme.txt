@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.3
+Stable tag: 0.10.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.4 =
+* Added a "View Cottage Page" button at the top of the cottage info popup, just under the cottage name. The popup title was already a link to the cottage page, but its thin underline didn't read as clickable; the button makes it obvious. Both the button and the title now open the cottage page in a new tab (so the calendar stays open underneath). The button reuses the same per-cottage URL as the title link (MotoPress permalink by default, or the per-cottage "Title link URL" override) and is styled to match the Book Now button. Its label is editable/translatable under the widget's Strings settings ("Info popup: view-cottage button"). Cottages with no title URL show no button and keep a plain-text title.
 
 = 0.10.3 =
 * Hardened the availability AJAX endpoint against caching. The `mphbac_query` response now sends `Cache-Control: no-store` plus WordPress's standard `nocache_headers()` so no cache layer can serve stale availability. The plugin already excluded this endpoint from SpeedyCache on activation; these response headers extend that protection to HostGator's Endurance Page Cache, the `advanced-cache.php` drop-in, any CDN, and the browser's own back-button cache. No visible change — purely a freshness guarantee for the booking data.

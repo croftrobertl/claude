@@ -688,10 +688,33 @@
         background: rgba(40, 40, 40, 0.92);
     }
 }
+.mphbac-sheet-header--info {
+    /* Stack the title and the "View Cottage Page" button vertically —
+       the base .mphbac-sheet-header is a space-between row, which would
+       put the button off to the right of the title. */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5em;
+}
 .mphbac-sheet-header--info .mphbac-sheet-title {
     /* The X is no longer a flex sibling; leave room so the title never
        collides with the floating button. */
     padding-right: 2.2em;
+}
+/* "View Cottage Page" link, styled as a button (inherits .mphbac-btn /
+   .mphbac-btn-primary). It's an <a>, so kill the underline; add a ↗ cue
+   that it opens the cottage page (in a new tab). The [hidden] override is
+   required because .mphbac-btn sets display:inline-block, which would
+   otherwise defeat the hidden attribute when a cottage has no title URL. */
+.mphbac-info-view-link {
+    text-decoration: none;
+    align-self: flex-start;
+}
+.mphbac-info-view-link::after {
+    content: " \2197";
+}
+.mphbac-info-view-link[hidden] {
+    display: none;
 }
 .mphbac-sheet.is-open,
 .mphbac-info-sheet.is-open {
