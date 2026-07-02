@@ -241,7 +241,7 @@ class Widget extends Widget_Base {
 				'label'        => esc_html__( 'Enable Search Bar', 'features-amenities' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
-				'default'      => 'yes',
+				'default'      => 'no',
 			]
 		);
 		$this->add_control(
