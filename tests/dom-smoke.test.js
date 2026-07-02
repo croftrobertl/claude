@@ -695,5 +695,40 @@ function configWith(overrides) {
   ok('JS toggles .is-atend on scroll/overflow', /is-atend/.test(js) && /addEventListener\('scroll'/.test(js));
 })();
 
+// ---- 27. Text-code export/import helpers (editor-io.js pure functions) ----
+(function () {
+  // Load editor-io.js into a bare jsdom window (no `elementor`), so the editor glue
+  // is skipped and only the pure DCCS_IO helpers attach — exactly the testable core.
+  const dom = new JSDOM('<!DOCTYPE html><body></body>', { runScripts: 'dangerously' });
+  injectScript(dom.window, 'editor-io.js');
+  const IO = dom.window.DCCS_IO;
+  ok('editor-io exposes pure helpers without Elementor', !!IO && typeof IO.encodeText === 'function');
+
+  const settings = { str_heading: 'Find your cottage', str_intro: 'Pick 😀', color_accent: '#123', title: 'x' };
+  ok('pickStrings keeps only str_* scalars',
+    JSON.stringify(IO.pickStrings(settings)) === JSON.stringify({ str_heading: 'Find your cottage', str_intro: 'Pick 😀' }));
+
+  const code = IO.encodeText(settings);
+  const back = IO.decodeText(code);
+  ok('encode→decode round-trips the text (UTF-8 safe)',
+    back && back.str_heading === 'Find your cottage' && back.str_intro === 'Pick 😀' && !('color_accent' in back));
+  ok('decode rejects garbage safely', IO.decodeText('not-a-real-code!!') === null);
+  ok('decode rejects empty input', IO.decodeText('') === null);
+})();
+
+// ---- 28. Text export/import is wired into the plugin (control + editor enqueue) ----
+(function () {
+  const io = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'editor-io.js'), 'utf8');
+  const plugin = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-plugin.php'), 'utf8');
+  const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
+  const mini = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-mini-entry-widget.php'), 'utf8');
+  ok('import applies via Elementor document/elements/settings command', /document\/elements\/settings/.test(io));
+  ok('control view registered as dccs_design_io', /addControlView\('dccs_design_io'/.test(io));
+  ok('editor JS enqueued on the editor hook', /elementor\/editor\/after_enqueue_scripts/.test(plugin) && /dccs-editor-io/.test(plugin));
+  ok('control type registered', /elementor\/controls\/register/.test(plugin));
+  ok('Selector exposes an export control', /'export_text'[\s\S]*?'mode'\s*=>\s*'export'/.test(sel));
+  ok('Mini Entry exposes an import control', /'import_text'[\s\S]*?'mode'\s*=>\s*'import'/.test(mini));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

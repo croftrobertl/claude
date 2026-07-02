@@ -163,6 +163,24 @@ class Selector_Widget extends Widget_Base
             'condition'   => ['share_design' => 'yes'],
         ]);
 
+        // One-time copy (as opposed to the live mirror above): export this Selector's
+        // TEXT as a code to paste into a Mini Entry. The visual design is copied
+        // separately with Elementor's native right-click Copy → Paste Style.
+        $this->add_control('copy_hint', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => esc_html__('To copy the LOOK: right-click this widget → Copy, then right-click a Mini Entry → Paste Style. To copy the TEXT: use the button below.', 'dcc-cottage-selector'),
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $this->add_control('export_text', [
+            'label'       => __('Export text', 'dcc-cottage-selector'),
+            'type'        => Control_Design_IO::TYPE,
+            'mode'        => 'export',
+            'button_text' => __('Copy text code', 'dcc-cottage-selector'),
+            'placeholder' => __('Click “Copy text code” to generate a code…', 'dcc-cottage-selector'),
+            'description' => __('Copies this Selector’s wording (headings, labels, buttons, questions, badges…) as a code. Paste it into a Mini Entry’s “Import text”.', 'dcc-cottage-selector'),
+        ]);
+
         $this->end_controls_section();
     }
 

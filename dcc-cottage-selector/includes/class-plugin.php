@@ -41,11 +41,14 @@ final class Plugin
         }
 
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
+        add_action('elementor/controls/register', [$this, 'register_control_types']);
         add_action('elementor/widgets/register', [$this, 'register_widgets']);
         add_action('wp_enqueue_scripts', [$this, 'register_assets']);
         // The UI is client-rendered, so the script must also run inside the
         // Elementor editor preview iframe.
         add_action('elementor/preview/enqueue_scripts', [$this, 'enqueue_for_preview']);
+        // Editor-only helper that powers the text-code export/import control.
+        add_action('elementor/editor/after_enqueue_scripts', [$this, 'enqueue_editor_scripts']);
         // Keep the design registry fresh the moment a Selector is saved in Elementor,
         // so mirroring Mini Entries update without the selector page being visited.
         add_action('elementor/document/after_save', [$this, 'republish_designs'], 10, 2);
@@ -91,6 +94,26 @@ final class Plugin
     {
         $widgets_manager->register(new Selector_Widget());
         $widgets_manager->register(new Mini_Entry_Widget());
+    }
+
+    /** Register the custom control type behind the text-code export/import UI. */
+    public function register_control_types($controls_manager): void
+    {
+        if (is_object($controls_manager) && method_exists($controls_manager, 'register')) {
+            $controls_manager->register(new Control_Design_IO());
+        }
+    }
+
+    /** Editor-only JS: registers the dccs_design_io control view (export/import). */
+    public function enqueue_editor_scripts(): void
+    {
+        wp_enqueue_script(
+            'dccs-editor-io',
+            DCCS_URL . 'assets/js/editor-io.js',
+            ['elementor-editor'],
+            DCCS_VERSION,
+            true
+        );
     }
 
     /**

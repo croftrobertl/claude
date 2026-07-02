@@ -11,7 +11,7 @@
 
 $pluginDir = dirname(__DIR__) . '/dcc-cottage-selector';
 $domain    = 'dcc-cottage-selector';
-$version   = '0.11.2';
+$version   = '0.12.0';
 $out       = $pluginDir . '/languages/dcc-cottage-selector.pot';
 
 $gettext   = ['__', 'esc_html__', 'esc_attr__', '_e', 'esc_html_e', 'esc_attr_e'];

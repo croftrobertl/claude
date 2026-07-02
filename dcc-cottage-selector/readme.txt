@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.2
+Stable tag: 0.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -60,6 +60,24 @@ even with SpeedyCache's "remove unused CSS" enabled. Finer details (typography,
 borders) may briefly settle in on first interaction under aggressive unused-CSS
 removal; if you want those instant too, exclude the selector page from unused-CSS
 removal.
+
+= Copy a Selector's design into a Mini Entry (one-time) =
+
+Prefer to copy the Selector once and then tweak the Mini Entry independently
+(instead of the always-in-sync mirror above)? Do it in two quick steps — it works
+even when the widgets live on different pages:
+
+1. **The look:** right-click the **Cottage Selector** in the Elementor editor and
+   choose **Copy**. Open the page with your **Mini Entry**, right-click it, and
+   choose **Paste Style**. Every color, font, size, and spacing setting copies into
+   the Mini Entry's own controls (still fully editable).
+2. **The wording:** on the Cottage Selector open **Content → Design source** and
+   click **Copy text code**. On the Mini Entry open **Mini Entry → Import text**,
+   paste the code, click **Apply text**, and **Save**. The Selector's headings,
+   labels, buttons, questions, and badges land in the Mini Entry's own text fields.
+
+Unlike the mirror, this is a one-time snapshot — editing the Selector afterward does
+NOT change the copied Mini Entry, so you're free to adjust it per page.
 
 = The seven meaningful differences =
 
@@ -163,6 +181,13 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.12.0 =
+* New: one-time copy of a Cottage Selector's design into a Mini Entry that stays editable
+  afterward (separate from the always-in-sync mirror). Use Elementor's right-click Copy →
+  Paste Style for the look, plus a new "Export text" (Selector) / "Import text" (Mini Entry)
+  code for the wording. Works across pages.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.11.2 =
 * Display name only: the plugin now shows as "DCC Cottage Selector" in the Plugins list
