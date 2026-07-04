@@ -30,7 +30,10 @@
       loadCSS(LEAFLET_CSS),
       loadJS(LEAFLET_JS),
     ]).then(() => {
-      if (loadedBundles.has(bundleUrl)) return; // bundle.js attaches on every fire
+      // bundle.js mounts into the first .dcc-tour-root once, on script load. Loading it
+      // a second time would double-mount, so guard per bundleUrl. Known limitation: only
+      // one tour instance per page — fine for a single-page family site.
+      if (loadedBundles.has(bundleUrl)) return;
       loadedBundles.add(bundleUrl);
       return loadJS(bundleUrl + 'bundle.js');
     }).catch(err => {

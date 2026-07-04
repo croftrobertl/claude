@@ -28,7 +28,7 @@ Two surfaces, same bundle:
 | `bundle.js`             | Vanilla JS app. Fetches data, draws map + side panel.           |
 | `bundle.css`            | Theme (`#0f6dbf` / `#f08080`), responsive grid layout.          |
 | `stops.json`            | Itinerary: trip metadata + ordered stops with geo + summaries.  |
-| `media-manifest.json`   | Photo URLs and video entries (YouTube ID or self-hosted MP4).   |
+| `media-manifest.json`   | Photo URLs and video entries (Drive ID or self-hosted MP4).     |
 | `manifest.webmanifest`  | PWA manifest: name, icons, theme color.                         |
 | `service-worker.js`     | Caches the shell + JSON for offline use.                        |
 | `media/`                | Mirrored / web-optimized photos and short clips, by stop_id.    |
@@ -41,8 +41,9 @@ Two surfaces, same bundle:
   array under that stop_id in `media-manifest.json`.
 - **Add photos to an existing stop:** drop files in `media/{stop_id}/`, then
   add filenames to `media-manifest.json` `by_stop.{stop_id}` array.
-- **Add a YouTube video:** add `{"type":"youtube", "id":"VIDEO_ID"}` to the
-  stop's media array.
+- **Add a Google Drive video:** add `{"type":"drive", "id":"FILE_ID"}` to the
+  stop's media array. The file must be shared "Anyone with the link → Viewer";
+  it renders as a `drive.google.com/file/d/{id}/preview` iframe.
 
 Service worker cache busts itself when `bundle.js`/`bundle.css` change because
 their text content is what the cache stores. For data-only changes (`stops.json`),

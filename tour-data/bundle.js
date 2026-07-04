@@ -104,9 +104,9 @@
   function renderMedia(stopId) {
     const items = mediaByStop[stopId] || [];
     // Refresh the lightbox source list each time a stop renders.
+    // Only untyped entries are photos; typed ones (self_hosted/drive/youtube) are videos.
     lightboxFulls = items
-      .filter(i => i.full || i.src)
-      .filter(i => i.type !== 'self_hosted' && i.type !== 'youtube')
+      .filter(i => !i.type && (i.full || i.src))
       .map(i => resolveUrl(i.full || i.src));
     lightboxIdx = -1;
     if (!items.length) {
@@ -117,6 +117,12 @@
         return '<iframe loading="lazy" allowfullscreen ' +
           'style="grid-column: 1 / -1; height:220px; border:0; border-radius:6px;" ' +
           'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
+      }
+      if (item.type === 'drive') {
+        // Google Drive's built-in player; the file must be shared "anyone with the link".
+        return '<iframe loading="lazy" allowfullscreen allow="autoplay" ' +
+          'style="grid-column: 1 / -1; height:220px; border:0; border-radius:6px;" ' +
+          'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>';
       }
       if (item.type === 'self_hosted') {
         // If url isn't yet linked (transitional state during media buildout),
