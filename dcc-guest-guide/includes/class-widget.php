@@ -3031,7 +3031,21 @@ final class Widget extends Widget_Base
             <?php $this->render_print_cover($s, $sections); ?>
             <?php $this->render_print_toc($sections); ?>
 
-            <div class="dccgg-wrapper">
+            <?php
+            // v0.9.7.23: in FAB mode the wrapper is a native <dialog> shown
+            // via showModal(), which renders in the browser's top layer.
+            // Top-layer boxes are positioned against the real viewport by
+            // spec, so an Elementor/theme ancestor with transform, filter,
+            // will-change or contain can no longer hijack the wrapper's
+            // position:fixed containing block — the mechanism behind the
+            // recurring "popup overflows the top of the screen" bug that
+            // CSS-only fixes (v0.9.7.17/.19/.21/.22) couldn't kill. The
+            // element keeps its DOM position, so every existing selector
+            // (including {{WRAPPER}}-prefixed Elementor style controls)
+            // still matches. Non-FAB embeds keep the plain <div>.
+            $wrapper_tag = $enable_fab ? 'dialog' : 'div';
+            ?>
+            <<?php echo $wrapper_tag; // phpcs:ignore WordPress.Security.EscapeOutput ?> class="dccgg-wrapper"<?php if ($enable_fab) : ?> aria-label="<?php echo esc_attr($s['heading_text'] ?? __('Guest guide', 'dcc-guest-guide')); ?>"<?php endif; ?>>
                 <?php if ($enable_fab) : ?>
                     <button type="button" class="dccgg-fab-close" aria-label="<?php echo esc_attr($s['str_fab_close']); ?>">&times;</button>
                 <?php endif; ?>
@@ -3081,7 +3095,7 @@ final class Widget extends Widget_Base
                 <?php if ($reveal_mode !== 'stage') : ?>
                     <?php // For accordion/flip, item content is inline in the menu — no separate stage needed. ?>
                 <?php endif; ?>
-            </div>
+            </<?php echo $wrapper_tag; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 
             <?php // Shared dialogs portaled out of the widget at runtime. ?>
             <div class="dccgg-qr-overlay" hidden></div>

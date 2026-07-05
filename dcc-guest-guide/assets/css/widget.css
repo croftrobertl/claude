@@ -591,9 +591,12 @@ body.dccgg-detail-open .dccgg-stage {
        Centering uses the fixed + margin:auto pattern: with all four
        insets set, `margin: auto` distributes free space evenly on every
        side, which centers the box without needing transform translates
-       (and so leaves transform free for the open/close scale animation). */
+       (and so leaves transform free for the open/close scale animation).
+       v0.9.7.23: --dccgg-vv-top (visualViewport.offsetTop, stamped by
+       showDetailModal) keeps the top edge inside the VISIBLE viewport
+       when iOS has auto-zoomed or the guest pinch-zoomed. */
     position: fixed;
-    top: var(--dccgg-detail-top-offset, 0px);
+    top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px));
     left: 0;
     right: 0;
     bottom: 0;
@@ -1322,6 +1325,21 @@ video.dccgg-media {
 }
 .dccgg-fab--yes .dccgg-fab-close { display: inline-flex; align-items: center; justify-content: center; }
 
+/* v0.9.7.23: in FAB mode the wrapper is a native <dialog> opened with
+   showModal(), so it renders in the browser's top layer — anchored to the
+   real viewport no matter what transforms/filters sit on its Elementor or
+   theme ancestors (the root cause behind the recurring top-overflow bug).
+   Reset the UA dialog chrome; the layout below applies unchanged. */
+dialog.dccgg-wrapper {
+    border: 0;
+    outline: none;
+}
+dialog.dccgg-wrapper::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
 /* FAB modal mode: collapse the wrapper offscreen until opened */
 .dccgg-fab--yes .dccgg-wrapper {
     position: fixed;
@@ -1331,8 +1349,11 @@ video.dccgg-media {
        a sticky theme header), shrinks to content when short, and caps
        at the available viewport height with internal scroll when
        content is taller. Replaces v0.9.7.19's top+bottom-pinned
-       layout for consistency between the two modal types. */
-    top: var(--dccgg-detail-top-offset, 0px);
+       layout for consistency between the two modal types.
+       v0.9.7.23: --dccgg-vv-top (visualViewport.offsetTop, stamped by
+       wireFab) keeps the top edge inside the VISIBLE viewport when iOS
+       has auto-zoomed or the guest pinch-zoomed. */
+    top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px));
     left: 0;
     right: 0;
     bottom: 0;
@@ -1360,7 +1381,13 @@ video.dccgg-media {
 .dccgg-fab--yes .dccgg-wrapper.is-open {
     opacity: 1;
     visibility: visible;
-    transform: scale(1);
+    /* v0.9.7.23: settle on `none`, not scale(1). Any non-none transform
+       makes the open wrapper the containing block for fixed-position
+       descendants (the detail stage + overlay now stay INSIDE the hub
+       dialog rather than portaling behind the top layer) and lets its
+       overflow-y:auto clip them. `none` animates from scale(0.96) the
+       same way scale(1) did. */
+    transform: none;
 }
 .dccgg-overlay {
     position: fixed;
@@ -1795,7 +1822,7 @@ video.dccgg-media {
            it like a true bottom sheet. */
         left: 0;
         right: 0;
-        top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
+        top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px) + 8px);
         bottom: 0;
         margin: 0;
         width: 100%;
@@ -1836,7 +1863,7 @@ video.dccgg-media {
         margin: 0;
         width: 100%;
         max-width: 100%;
-        top: calc(var(--dccgg-detail-top-offset, 0px) + 8px);
+        top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px) + 8px);
         bottom: 0;
         height: auto;
         max-height: none;
@@ -1845,7 +1872,23 @@ video.dccgg-media {
         transform: translateY(20px) scale(1);
     }
     .dccgg-fab--yes .dccgg-wrapper.is-open {
-        transform: translateY(0) scale(1);
+        /* v0.9.7.23: `none`, not translateY(0) scale(1) — see the desktop
+           .is-open rule. Keeps the open hub from becoming the containing
+           block that clips the fixed-position detail stage inside it. */
+        transform: none;
+    }
+    /* v0.9.7.23: iOS Safari auto-zooms the whole page when a form field
+       with font-size < 16px receives focus — and the zoom PERSISTS after
+       the keyboard closes, panning the layout viewport so any fixed or
+       top-layer popup can hang above the visible screen. Forcing every
+       field in the widget to at least 16px on phones prevents the zoom
+       from ever being triggered. This was a root cause of the recurring
+       "popup overflows the top" reports that CSS layout changes
+       (v0.9.7.17/.19/.21/.22) could not fix. */
+    .dccgg-root input,
+    .dccgg-root select,
+    .dccgg-root textarea {
+        font-size: max(16px, 1em);
     }
 }
 
@@ -2985,6 +3028,10 @@ video.dccgg-media {
     }
     .dccgg-root .dccgg-detail[hidden] { display: block !important; }
     .dccgg-root .dccgg-wrapper {
+        /* v0.9.7.23: display override — a closed <dialog> is display:none
+           per UA stylesheet, but printing the guide must include the FAB
+           wrapper's content whether or not the hub is open. */
+        display: block !important;
         position: static !important;
         transform: none !important;
         opacity: 1 !important;

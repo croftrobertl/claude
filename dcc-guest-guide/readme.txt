@@ -70,6 +70,58 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.23 =
+
+**Definitive fix for the recurring "popup overflows the top of the
+screen" bug.** Four releases (0.9.7.17/.19/.21/.22) adjusted the
+popups' CSS geometry and the overflow kept coming back, because two
+mechanisms outside the CSS were corrupting the coordinate system the
+CSS was written against:
+
+1. **The FAB hub was never viewport-anchored.** The hub wrapper stayed
+   nested inside the Elementor section DOM. Any ancestor with a
+   `transform`, `filter`, `will-change`, or `contain` (Elementor motion
+   effects, entrance animations, sticky wrappers) silently becomes the
+   containing block for `position: fixed` — so "top: just below the
+   header" was measured from that ancestor, not from the screen, and
+   the popup could open with its top far above the visible viewport.
+   The detail modal dodged this via its v0.9.5 portal-to-body; the hub
+   never got the equivalent.
+2. **iOS Safari auto-zoom.** Focusing any form field with a font size
+   under 16px makes iOS zoom the page — and the zoom persists after
+   the keyboard closes. Fixed and top-layer boxes anchor to the LAYOUT
+   viewport, so once zoomed/panned, the popup's top edge can sit above
+   the VISIBLE viewport no matter how correct the CSS is.
+
+Fixes, layered:
+
+* **FAB hub is now a native `<dialog>` opened with `showModal()`** —
+  it renders in the browser's top layer, which the spec positions
+  against the real viewport regardless of ancestor transforms. The
+  element keeps its DOM position, so every existing selector and
+  Elementor style control still applies. Backdrop dimming moves to
+  `::backdrop`; ESC routes through the animated close via the
+  `cancel` event; clicks on the backdrop still close the hub. Browsers
+  without `<dialog>` (pre-iOS 15.4) fall back to the previous flow.
+* **Detail popups opened from inside the hub no longer portal to
+  `<body>`** (a body child would paint BEHIND the top layer). They
+  stay inside the hub dialog; `position: fixed` still resolves against
+  the viewport because the open hub now settles on `transform: none`
+  (any non-none transform would have made the hub the containing block
+  and let its internal scroll clip the detail card). Non-FAB embeds
+  keep the portal.
+* **All form fields inside the widget are forced to ≥16px on phones**,
+  which prevents iOS auto-zoom from ever triggering.
+* **Both popups now track `visualViewport.offsetTop`** (stamped as
+  `--dccgg-vv-top`, updated on visual-viewport resize/scroll while
+  open) so even an already-zoomed/panned page keeps the popup's top
+  edge — and its close button — inside the visible screen.
+* QR dialog, themed copy effects, and toasts re-parent into the open
+  hub dialog so they keep painting above it (body children can't
+  out-z-index the top layer).
+* Print stylesheet forces `display: block` on the wrapper so a closed
+  hub dialog still prints the full guide.
+
 = 0.9.7.22 =
 
 **Mobile popup overflow regression fix.** The v0.9.7.21 desktop centered-

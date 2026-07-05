@@ -289,7 +289,9 @@
             zIndex: 99999, maxWidth: '90vw', textAlign: 'center',
             boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
         });
-        document.body.appendChild(t);
+        // v0.9.7.23: paint above an open top-layer FAB hub (see fxPiece).
+        const topDlg = document.querySelector('dialog.dccgg-wrapper[open]');
+        (topDlg || document.body).appendChild(t);
         setTimeout(() => t.remove(), 4500);
     }
 
@@ -1652,28 +1654,60 @@
             else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
         };
 
+        // v0.9.7.23: when the wrapper is a native <dialog> (FAB mode markup
+        // since this version), open it with showModal() so it renders in
+        // the browser's top layer — positioned against the real viewport
+        // regardless of transformed/filtered ancestors. Older browsers
+        // (< iOS 15.4) fall back to the previous fixed-position flow.
+        const isDialog = wrapper.tagName === 'DIALOG'
+            && typeof wrapper.showModal === 'function';
+
         // v0.9.7.19: stamp the sticky-header offset on the wrapper so the
         // CSS `top: calc(var(--dccgg-detail-top-offset) + …)` lands below
         // any sticky theme nav. Without this the wrapper centered itself
         // over the visual viewport and overflowed past the URL bar — the
         // close X went out of reach on mobile.
+        // v0.9.7.23: also stamp the visual-viewport offset. When iOS has
+        // auto-zoomed (sub-16px input focus) or the guest pinch-zoomed,
+        // fixed/top-layer boxes anchor to the LAYOUT viewport while the
+        // guest sees only the panned visual viewport — the popup's top
+        // edge can sit above the visible screen. --dccgg-vv-top feeds the
+        // mobile top calc so the popup follows the visible top instead.
         const stampOffset = () => {
             const off = detectStickyTopOffset();
             wrapper.style.setProperty('--dccgg-detail-top-offset', off + 'px');
+            const vv = window.visualViewport;
+            const vvTop = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
+            wrapper.style.setProperty('--dccgg-vv-top', vvTop + 'px');
         };
+        let onVV = null;
 
         const open = () => {
             lastTrigger = document.activeElement;
-            overlay.hidden = false;
             stampOffset();
+            if (isDialog) {
+                // ::backdrop supplies the dimming layer; keep the legacy
+                // overlay element hidden so we don't double-darken.
+                try { wrapper.showModal(); } catch (_) { /* already open */ }
+            } else {
+                overlay.hidden = false;
+            }
             if (onResize) window.removeEventListener('resize', onResize);
             onResize = () => {
                 clearTimeout(resizeT);
                 resizeT = setTimeout(stampOffset, 80);
             };
             window.addEventListener('resize', onResize);
+            if (window.visualViewport && !onVV) {
+                onVV = () => {
+                    clearTimeout(resizeT);
+                    resizeT = setTimeout(stampOffset, 80);
+                };
+                window.visualViewport.addEventListener('resize', onVV);
+                window.visualViewport.addEventListener('scroll', onVV);
+            }
             requestAnimationFrame(() => {
-                overlay.classList.add('is-open');
+                if (!isDialog) overlay.classList.add('is-open');
                 wrapper.classList.add('is-open');
             });
             document.addEventListener('keydown', trap);
@@ -1689,8 +1723,20 @@
                 window.removeEventListener('resize', onResize);
                 onResize = null;
             }
+            if (onVV && window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', onVV);
+                window.visualViewport.removeEventListener('scroll', onVV);
+                onVV = null;
+            }
             clearTimeout(resizeT);
-            setTimeout(() => { overlay.hidden = true; }, 320);
+            setTimeout(() => {
+                overlay.hidden = true;
+                // Let the fade-out finish before the dialog leaves the top
+                // layer (close() sets display:none immediately).
+                if (isDialog && wrapper.open) {
+                    try { wrapper.close(); } catch (_) { /* noop */ }
+                }
+            }, 320);
             // Also tear down any open detail modal (portal, scroll-lock, …)
             // so closing the FAB leaves a clean slate.
             closeDetail(root);
@@ -1700,6 +1746,26 @@
         fab.addEventListener('click', open);
         if (closer) closer.addEventListener('click', close);
         overlay.addEventListener('click', close);
+        if (isDialog) {
+            // ESC inside a native dialog fires 'cancel' — route it through
+            // our animated close instead of the instant built-in close.
+            wrapper.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                close();
+            });
+            // Backdrop click-to-close: clicks on ::backdrop are dispatched
+            // with the dialog itself as target. Only close when the click
+            // landed outside the dialog's box so taps on the wrapper's own
+            // padding don't dismiss the guide.
+            wrapper.addEventListener('click', (e) => {
+                if (e.target !== wrapper) return;
+                const r = wrapper.getBoundingClientRect();
+                if (e.clientX < r.left || e.clientX > r.right
+                    || e.clientY < r.top || e.clientY > r.bottom) {
+                    close();
+                }
+            });
+        }
     }
 
     // -- Menu (tile click → stage/accordion/flip) -------------------------
@@ -1964,29 +2030,45 @@
                     'recently changed Reveal Mode in the editor, save and reload the preview.');
                 return;
             }
-            const stageMarker = document.createComment('dccgg-stage-anchor');
-            const overlayMarker = document.createComment('dccgg-detail-overlay-anchor');
-            stage.parentNode.insertBefore(stageMarker, stage);
-            overlay.parentNode.insertBefore(overlayMarker, overlay);
-            document.body.appendChild(overlay);
-            document.body.appendChild(stage);
-            // v0.9.7.7: CSS custom properties cascade through DOM ancestors,
-            // so once stage moves to <body> the --dccgg-* vars set on
-            // .dccgg-root by Elementor Style controls (popup_header_bg,
-            // future variable-based controls) stop reaching the stage and
-            // its sticky header. Snapshot the current values onto
-            // stage.style at portal time so variable-based overrides
-            // continue to apply post-portal.
-            try {
-                const rootStyle = getComputedStyle(root);
-                for (let i = 0; i < rootStyle.length; i++) {
-                    const name = rootStyle[i];
-                    if (name.indexOf('--dccgg-') === 0) {
-                        const val = rootStyle.getPropertyValue(name);
-                        if (val) stage.style.setProperty(name, val);
+            // v0.9.7.23: when the FAB wrapper is an OPEN top-layer <dialog>,
+            // do NOT portal to <body> — a body child paints BELOW the top
+            // layer, so the detail card would vanish behind the hub. Leave
+            // the stage + overlay inside the dialog instead: position:fixed
+            // still resolves against the viewport (the dialog creates no
+            // containing block), and they paint above the hub content
+            // within the dialog's own top-layer stacking context. The
+            // no-marker state is handled by the guarded restore in
+            // hideDetailModal.
+            const fabDialog = root.querySelector('dialog.dccgg-wrapper');
+            const inTopLayer = !!(fabDialog && fabDialog.open
+                && fabDialog.contains(stage));
+            let stageMarker = null;
+            let overlayMarker = null;
+            if (!inTopLayer) {
+                stageMarker = document.createComment('dccgg-stage-anchor');
+                overlayMarker = document.createComment('dccgg-detail-overlay-anchor');
+                stage.parentNode.insertBefore(stageMarker, stage);
+                overlay.parentNode.insertBefore(overlayMarker, overlay);
+                document.body.appendChild(overlay);
+                document.body.appendChild(stage);
+                // v0.9.7.7: CSS custom properties cascade through DOM ancestors,
+                // so once stage moves to <body> the --dccgg-* vars set on
+                // .dccgg-root by Elementor Style controls (popup_header_bg,
+                // future variable-based controls) stop reaching the stage and
+                // its sticky header. Snapshot the current values onto
+                // stage.style at portal time so variable-based overrides
+                // continue to apply post-portal.
+                try {
+                    const rootStyle = getComputedStyle(root);
+                    for (let i = 0; i < rootStyle.length; i++) {
+                        const name = rootStyle[i];
+                        if (name.indexOf('--dccgg-') === 0) {
+                            const val = rootStyle.getPropertyValue(name);
+                            if (val) stage.style.setProperty(name, val);
+                        }
                     }
-                }
-            } catch (_) { /* getComputedStyle is universally supported; defensive only */ }
+                } catch (_) { /* getComputedStyle is universally supported; defensive only */ }
+            }
             state = root.__dccggModal = {
                 stage: stage,
                 overlay: overlay,
@@ -2007,6 +2089,12 @@
             const off = detectStickyTopOffset();
             state.stage.style.setProperty('--dccgg-detail-top-offset', off + 'px');
             state.overlay.style.setProperty('--dccgg-detail-top-offset', off + 'px');
+            // v0.9.7.23: track the visual viewport so an iOS auto-zoom /
+            // pinch-zoom pan can't leave the popup's top edge above the
+            // visible screen (fixed boxes anchor to the layout viewport).
+            const vv = window.visualViewport;
+            const vvTop = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
+            state.stage.style.setProperty('--dccgg-vv-top', vvTop + 'px');
         };
         stampOffset();
         if (state.onResize) window.removeEventListener('resize', state.onResize);
@@ -2016,6 +2104,15 @@
             resizeT = setTimeout(stampOffset, 80);
         };
         window.addEventListener('resize', state.onResize);
+        if (window.visualViewport) {
+            if (state.onVV) {
+                window.visualViewport.removeEventListener('resize', state.onVV);
+                window.visualViewport.removeEventListener('scroll', state.onVV);
+            }
+            state.onVV = state.onResize;
+            window.visualViewport.addEventListener('resize', state.onVV);
+            window.visualViewport.addEventListener('scroll', state.onVV);
+        }
         document.documentElement.classList.add('dccgg-detail-open');
         document.body.classList.add('dccgg-detail-open');
         // Force a layout flush so the closed-state CSS commits before we
@@ -2059,6 +2156,11 @@
         if (state.onResize) {
             window.removeEventListener('resize', state.onResize);
             state.onResize = null;
+        }
+        if (state.onVV && window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', state.onVV);
+            window.visualViewport.removeEventListener('scroll', state.onVV);
+            state.onVV = null;
         }
         state.onKey = null;
         state.onOverlayClick = null;
@@ -2181,7 +2283,12 @@
         p.className = 'dccgg-fx ' + cls;
         p.style.left = x + 'px';
         p.style.top  = y + 'px';
-        document.body.appendChild(p);
+        // v0.9.7.23: when the FAB hub is an open top-layer <dialog>, body
+        // children paint BEHIND it regardless of z-index — parent effects
+        // into the dialog instead. .dccgg-fx is position:fixed and the open
+        // dialog keeps transform:none, so the viewport coordinates hold.
+        const topDlg = document.querySelector('dialog.dccgg-wrapper[open]');
+        (topDlg || document.body).appendChild(p);
         return p;
     }
 
@@ -2578,6 +2685,17 @@
                 caption.textContent = btn.dataset.qrCaption || value;
                 canvas.innerHTML = '';
                 canvas.appendChild(renderQrSvg(value));
+                // v0.9.7.23: when the FAB hub is an open top-layer <dialog>,
+                // a root-level sibling would paint BEHIND it no matter its
+                // z-index. Move the QR overlay + dialog inside the hub so
+                // they share its top-layer stacking context (position:fixed
+                // still resolves against the viewport — the open hub keeps
+                // transform:none).
+                const topDlg = root.querySelector('dialog.dccgg-wrapper[open]');
+                if (topDlg && !topDlg.contains(dialog)) {
+                    topDlg.appendChild(overlay);
+                    topDlg.appendChild(dialog);
+                }
                 overlay.hidden = false;
                 dialog.hidden = false;
                 document.addEventListener('keydown', escClose);
