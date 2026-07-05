@@ -32,20 +32,32 @@ final class Cache_Integration
     }
 
     /**
+     * Register the request-time exclusion filter. Called from Plugin::boot()
+     * on every request (so SpeedyCache versions that consult the filter at
+     * serve time always see our URL, and the exclusion self-heals if
+     * SpeedyCache's settings are reset without a plugin reactivation) and
+     * from add_speedycache_exclusion() during activation.
+     */
+    public static function register_runtime_filter(): void
+    {
+        add_filter('speedycache_exclude_urls', static function ($urls) {
+            $urls = is_array($urls) ? $urls : [];
+            $pattern = self::ajax_exclusion_pattern();
+            if (!in_array($pattern, $urls, true)) {
+                $urls[] = $pattern;
+            }
+            return $urls;
+        });
+    }
+
+    /**
      * @return string One of: 'success', 'not_installed', 'failed'.
      */
     public static function add_speedycache_exclusion(): string
     {
         $pattern = self::ajax_exclusion_pattern();
 
-        // Register the runtime filter so any version that consults it at request time picks up our URL.
-        add_filter('speedycache_exclude_urls', static function ($urls) use ($pattern) {
-            $urls = is_array($urls) ? $urls : [];
-            if (!in_array($pattern, $urls, true)) {
-                $urls[] = $pattern;
-            }
-            return $urls;
-        });
+        self::register_runtime_filter();
 
         $any_found = false;
         $any_updated = false;

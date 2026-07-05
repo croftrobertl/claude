@@ -41,6 +41,11 @@ final class Plugin
         add_action('wp_ajax_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
         add_action('wp_ajax_nopriv_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
 
+        // Request-time SpeedyCache exclusion — belt-and-braces alongside the
+        // option-write done at activation, and self-heals if SpeedyCache's
+        // settings are ever reset without a plugin reactivation.
+        Cache_Integration::register_runtime_filter();
+
         // Best-effort cache invalidation when MotoPress finishes syncing iCal feeds.
         // Hook name is a best guess; transients also expire on TTL as a safety net.
         add_action('mphb_after_sync_ical', ['\\MPHBAC\\Cache', 'flush_all']);

@@ -24,6 +24,7 @@ $delete_for_current_site = static function () use ($wpdb): void {
             $like_timeout
         )
     );
+    delete_option('mphbac_cache_gen');
 };
 
 if (function_exists('is_multisite') && is_multisite()) {

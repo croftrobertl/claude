@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.4
+Stable tag: 0.10.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,14 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.10.5 =
+Full-plugin review pass — four correctness/robustness fixes, no visual changes.
+
+* Fixed stale "today" under full-page caching. The widget's server-rendered HTML (including the today marker and the date inputs' minimum dates) can be served from SpeedyCache / Endurance Page Cache for hours; a page cached yesterday highlighted the wrong today column, started the default window a day early, and let the pickers select a past check-in. The script now recomputes today client-side in the property's timezone (US/Eastern, carried in the widget config) and re-stamps the four date inputs' min attributes on load, falling back to the server value on browsers without timezone support.
+* The SpeedyCache request-time exclusion filter is now registered on every pageload. Previously it was only registered during the activation request (effectively dead code), leaving just the settings-write to protect the AJAX endpoint; if SpeedyCache's settings were reset, the exclusion silently vanished until the plugin was reactivated. Now it self-heals.
+* Cache invalidation is now generation-based. Booking/sync-triggered flushes bump a counter that salts every cache key — O(1), and it keeps working even if an external object cache (e.g. SpeedyCache Pro's object caching or Redis) is enabled later, where the old SQL-only delete couldn't reach the stored transients. The SQL cleanup remains for reclaiming options-table rows; uninstall removes the counter.
+* The Book Now availability-verification request now has the same 15-second timeout as the grid loader. Previously a stalled connection left the confirm button disabled forever; now it re-enables with the "dates unavailable" message so the guest can retry.
 
 = 0.10.4 =
 * Added a "View Cottage Page" button at the top of the cottage info popup, just under the cottage name. The popup title was already a link to the cottage page, but its thin underline didn't read as clickable; the button makes it obvious. Both the button and the title now open the cottage page in a new tab (so the calendar stays open underneath). The button reuses the same per-cottage URL as the title link (MotoPress permalink by default, or the per-cottage "Title link URL" override) and is styled to match the Book Now button. Its label is editable/translatable under the widget's Strings settings ("Info popup: view-cottage button"). Cottages with no title URL show no button and keep a plain-text title.

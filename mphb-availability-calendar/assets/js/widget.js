@@ -166,6 +166,21 @@
         var config = {};
         try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { config = {}; }
 
+        // The page (and its data-config) may be served from a full-page cache
+        // for hours, so the server-baked "today" can be stale — wrong is-today
+        // highlight, default window starting a day early, and date pickers
+        // allowing a past check-in. Recompute today in the property timezone
+        // client-side; fall back to the baked value if Intl or the timezone
+        // lookup is unavailable. 'en-CA' formats as YYYY-MM-DD.
+        try {
+            var tzToday = new Intl.DateTimeFormat('en-CA', {
+                timeZone: config.tz || 'America/New_York',
+                year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+            if (/^\d{4}-\d{2}-\d{2}$/.test(tzToday)) config.today = tzToday;
+        } catch (e) { /* keep the server-baked value */ }
+        refreshDateMins(root, config);
+
         var state = {
             from: null,
             to: null,
@@ -186,6 +201,21 @@
         wireResize(root, config, state);
 
         request(root, config, state); // initial client-side render
+    }
+
+    // Re-stamp the date inputs' min attributes from the (possibly corrected)
+    // config.today — the server-baked values go stale under full-page caching.
+    // The booking-sheet checkout min mirrors the server-side "+minNights" offset.
+    function refreshDateMins(root, config) {
+        var today = config.today;
+        if (!today) return;
+        var minN = Math.max(1, parseInt(config.minNights, 10) || 2);
+        [['.mphbac-input-checkin', today], ['.mphbac-input-checkout', today],
+         ['.mphbac-sheet-checkin', today], ['.mphbac-sheet-checkout', addDays(today, minN)]]
+            .forEach(function (pair) {
+                var el = root.querySelector(pair[0]);
+                if (el) el.min = pair[1];
+            });
     }
 
     function deviceBucket() {
@@ -1150,11 +1180,22 @@
             body.append('to', addDays(co, -1));
             body.append('room_type_ids[]', String(context.roomTypeId));
 
+            // Same 15s ceiling as the grid request() — without it a stalled
+            // connection never rejects, and the confirm button (disabled by
+            // the click handler) stays dead until the visitor reloads. The
+            // abort lands in .catch below, which re-enables the button and
+            // shows the unavailable message.
+            var controller = new AbortController();
+            var timeoutHandle = setTimeout(function () {
+                try { controller.abort(); } catch (e) { /* ignore */ }
+            }, 15000);
+
             fetch(config.ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: body,
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
             }).then(function (r) {
                 return r.json();
             }).then(function (json) {
@@ -1182,6 +1223,8 @@
             }).catch(function () {
                 confirmBtn.disabled = false;
                 showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
+            }).finally(function () {
+                clearTimeout(timeoutHandle);
             });
         }
 

@@ -1078,6 +1078,7 @@ final class Widget extends Widget_Base
             'daysMobile'     => $days_mobile,
             'showPast'       => $settings['show_past'] === 'yes',
             'today'          => $today->format('Y-m-d'),
+            'tz'             => Data_Provider::TZ,
             'popupEnabled'   => $popup_enabled,
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
