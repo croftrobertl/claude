@@ -54,7 +54,6 @@ final class Config
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
-            'more_options'      => __('More ways to choose', 'dcc-cottage-selector'),
             'compare_btn'       => /* translators: %d: number of cottages selected */ __('Compare %d cottages', 'dcc-cottage-selector'),
 
             // No-match "what it misses" tags

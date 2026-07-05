@@ -1456,10 +1456,23 @@ class Selector_Widget extends Widget_Base
 
         // Publish this design for Mini Entries to mirror (the Elementor save hook is
         // the authoritative refresh; this keeps the registry fresh on front-end views).
+        // The post id must be the document that CONTAINS the widget — get_the_ID()
+        // alone would return the host page when the Selector renders via a global
+        // template/shortcode, and a wrong id poisons the mirror's CSS scope.
         if (($settings['share_design'] ?? '') === 'yes') {
+            $post_id = 0;
+            if (class_exists('\Elementor\Plugin')) {
+                $doc = \Elementor\Plugin::$instance->documents->get_current();
+                if ($doc) {
+                    $post_id = (int) $doc->get_main_id();
+                }
+            }
+            if ($post_id <= 0 && is_singular()) {
+                $post_id = (int) get_the_ID();
+            }
             self::publish_design(
                 (string) ($settings['design_name'] ?? ''),
-                (int) get_the_ID(),
+                $post_id,
                 (string) $this->get_id(),
                 $settings
             );

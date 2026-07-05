@@ -825,7 +825,14 @@
 
     // Close either dropdown when pressing outside it (mousedown fires before any
     // click-driven re-render, so the live target can be inspected safely).
-    document.addEventListener('mousedown', function (e) {
+    // Self-removing: initSelector runs on every Mini-Entry pop-up open, so a
+    // permanent document listener per init would accumulate; once this widget's
+    // root leaves the DOM (pop-up closed), the handler unhooks itself.
+    document.addEventListener('mousedown', function onDocDown(e) {
+      if (!document.documentElement.contains(root)) {
+        document.removeEventListener('mousedown', onDocDown);
+        return;
+      }
       var inside = e.target.closest;
       // Compare picker: state-driven, so close it via re-render.
       if (state.compareOpen && !(inside && e.target.closest('.dccs-cmp-select'))) {

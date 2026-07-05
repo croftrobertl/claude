@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.0
+Stable tag: 0.12.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,8 @@ tool:
 
 * **Quick finder (default)** — a step-through wizard, one tappable question per
   screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
-  pet-friendly? ground floor? largest?), then a review screen and the top matches.
+  pet-friendly? ground floor? screened porch? largest?), then a review screen and
+  the top matches.
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
 * **Compare** (mode menu, or tick cottages on the results) — choose from a
@@ -79,10 +80,10 @@ even when the widgets live on different pages:
 Unlike the mirror, this is a one-time snapshot — editing the Selector afterward does
 NOT change the copied Mini Entry, so you're free to adjust it per page.
 
-= The seven meaningful differences =
+= The eight meaningful differences =
 
 Square footage · pullout couch · desk/workspace · floor level · studio vs.
-1-bedroom · dining table for 2 vs. 4 · pet policy.
+1-bedroom · dining table for 2 vs. 4 · pet policy · screened-in porch.
 
 = How it works =
 
@@ -93,7 +94,7 @@ The widget opens on a **start screen** with the heading, a short intro, and a
 choice of Quick finder, Weigh priorities, or Compare; picking one enters that mode.
 The default Quick finder is a **step-through wizard**: one question per screen so a
 guest never scrolls to find their results. Each step shows a clickable progress
-stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
+stepper ("Step 3 of 8") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question a **Review** screen lists all
@@ -158,7 +159,7 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Wizard: each step shows one question with nothing pre-selected; **Next** is
   disabled until an answer is tapped and never advances on its own. The clickable
   stepper and a low-key Back link jump to earlier answers.
-* The Review screen lists all 7 answers with Edit links; "See my matches" shows
+* The Review screen lists all 8 answers with Edit links; "See my matches" shows
   the top 3 with full names ("Cottage 34: Coconut Cottage"); the **Edit answers**
   button returns to the answers to change them.
 * Answering **Pet-friendly = Yes** returns only Cottage 34: Coconut Cottage.
@@ -181,6 +182,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.12.1 =
+* Review pass (fixes only, no new features):
+* Uninstalling the plugin now removes the design-mirror registry it stores, leaving
+  nothing behind in the database.
+* A shared Selector rendered through a global template/shortcode can no longer register
+  its design under the wrong page (which could quietly drop the mirrored pop-up's
+  typography/border styling).
+* Plugged a small memory leak where each Mini Entry pop-up open left a stale page-level
+  event listener behind.
+* Cleanup: removed one unused translatable string; readme corrected to the current 8
+  quick-finder questions / 8 meaningful differences.
 
 = 0.12.0 =
 * New: one-time copy of a Cottage Selector's design into a Mini Entry that stays editable

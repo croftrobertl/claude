@@ -57,7 +57,7 @@ class Mini_Entry_Widget extends Selector_Widget
 
         $options = ['' => __('— None —', 'dcc-cottage-selector')];
         foreach (Data::all() as $c) {
-            $options[(string) $c['id']] = sprintf('%s (#%s)', (string) ($c['name'] ?? ''), (string) $c['id']);
+            $options[(string) ($c['id'] ?? '')] = sprintf('%s (#%s)', (string) ($c['name'] ?? ''), (string) ($c['id'] ?? ''));
         }
 
         $this->add_control('current', [

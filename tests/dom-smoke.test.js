@@ -695,6 +695,37 @@ function configWith(overrides) {
   ok('JS toggles .is-atend on scroll/overflow', /is-atend/.test(js) && /addEventListener\('scroll'/.test(js));
 })();
 
+// ---- 26b. The per-widget document listener self-removes once the widget is gone ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
+  const node = w.document.createElement('div');
+  node.className = 'dccs-entry dccs-entry';
+  node.dataset.entry = JSON.stringify(entry);
+  node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+  w.document.body.appendChild(node);
+  w.DCCS.bootAll(w.document);
+
+  // Open + close the pop-up a few times (each open runs initSelector on a fresh root).
+  for (let i = 0; i < 3; i++) {
+    node.querySelector('.dccs-entry-btn').click();
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  }
+  ok('repeated open/close leaves no modal behind', !w.document.querySelector('.dccs-modal'));
+  // A page mousedown after closing must not throw from stale handlers rerendering
+  // detached roots (the handlers detect the disconnected root and unhook).
+  let threw = false;
+  try {
+    w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+    w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+  } catch (e) { threw = true; }
+  ok('page mousedown after pop-up close is inert (no stale-handler errors)', !threw);
+  const src = fs.readFileSync(path.join(JS, 'selector.js'), 'utf8');
+  ok('document mousedown handler self-removes when its root is detached',
+    /onDocDown[\s\S]{0,200}documentElement\.contains\(root\)[\s\S]{0,120}removeEventListener\('mousedown', onDocDown\)/.test(src));
+})();
+
 // ---- 27. Text-code export/import helpers (editor-io.js pure functions) ----
 (function () {
   // Load editor-io.js into a bare jsdom window (no `elementor`), so the editor glue
