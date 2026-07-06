@@ -30,6 +30,27 @@ naming needs the network-policy allowlist to propagate on session start).
   places.json. Videos stream from Drive — no download, repo stays flat.
 - bundle.js already renders `type:'drive'` as a /preview iframe.
 
+## 3. Offload heavy media off GitHub Pages (deploy reliability)
+- The repo is ~8.4 GB — roughly 8× GitHub Pages' 1 GB soft limit. Symptom:
+  ~9-min builds and intermittent `Deployment failed, try again later.`
+  transients (one such failure emailed the user; superseded by later
+  successful runs, but the site is living on the edge).
+- Split media by size:
+  - **Keep on Pages (~250 MB):** app shell (index.html, bundle.js/css,
+    vendor/, service-worker.js, manifest), places.json, PWA icons, and the
+    small thumbnails referenced by each media entry's `src`.
+  - **Move off Pages (~8 GB):** the 2049px full-size photos (`full` field)
+    and the re-encoded short clips / self-hosted videos (`url` field).
+- Host options: GitHub Releases (free, 2 GB/file, unlimited assets — attach
+  a tarball or per-file assets to a `media-v1` release) or Cloudflare R2
+  (no egress fees, real CDN). Releases is the zero-new-infra choice.
+- Repoint `full` and self-hosted `url` fields in places.json to the new
+  host. Drive-embedded GoPro videos (`type:'drive'`) are already off-repo —
+  no change. Keep `src` (thumbnail) local so the grid still renders instantly.
+- After repointing, `git rm` the moved originals from `tour-data/media/`,
+  commit, and confirm the Pages build drops back under the limit and deploys
+  fast. Bump `service-worker.js` CACHE_VERSION so clients refetch places.json.
+
 ## Data artifacts (all in tour-data/data/)
 - places.json (app copy is tour-data/places.json) — 196 venue clusters.
 - joined_gps.json — guid → real GPS (from the filename+datetime join).
