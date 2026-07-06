@@ -1,142 +1,147 @@
-// Croatia trip — vanilla-JS app. Mounts into #dcc-tour, fetches stops.json +
-// media-manifest.json (paths resolved relative to the script's own URL), draws a
-// Leaflet map with one pin per stop, and renders a side panel with the active stop.
-// Works standalone at the GitHub Pages URL and embedded inside the WP plugin's div.
+// Croatia trip — venue-level map app. Reads places.json (196 GPS venue
+// clusters + narrative chapters), renders every place as a Leaflet marker in a
+// clustering group so pins merge when zoomed out and break into individual
+// venues as you zoom in. Clicking a place shows its photos/videos + the
+// chapter's story in the side panel. Works standalone (GitHub Pages) and
+// embedded in the WordPress loader. Vanilla JS, no build step.
 
 (function () {
   'use strict';
 
-  // Resolve own base URL so the same bundle works at /tour-data/ AND when
-  // injected into a WordPress page where document.baseURI is something else.
   const scriptEl = document.currentScript ||
                    [...document.scripts].find(s => /bundle\.js(?:\?|$)/.test(s.src));
   const baseURL = scriptEl ? new URL('./', scriptEl.src).href : './';
   const root = document.getElementById('dcc-tour') || document.querySelector('.dcc-tour-root');
-  if (!root) { console.warn('[dcc-tour] no mount element found'); return; }
+  if (!root) { console.warn('[dcc-tour] no mount element'); return; }
 
   const titleEl = root.querySelector('.dcc-tour-title');
   const subtitleEl = root.querySelector('.dcc-tour-subtitle');
   const panelEl = root.querySelector('.dcc-tour-panel') || root.querySelector('#dcc-tour-panel');
   const mapEl = root.querySelector('.dcc-tour-map') || root.querySelector('#dcc-tour-map');
 
-  let map = null;
-  let markers = {};
-  let activeId = null;
-  let mediaByStop = {};
+  let map = null, clusterGroup = null;
+  let chaptersById = {};
+  let lightboxFulls = [], lightboxIdx = -1;
 
-  Promise.all([
-    fetch(baseURL + 'stops.json').then(r => r.json()),
-    fetch(baseURL + 'media-manifest.json').then(r => r.json()).catch(() => ({ by_stop: {} })),
-  ]).then(([data, manifest]) => {
-    mediaByStop = manifest.by_stop || {};
+  fetch(baseURL + 'places.json').then(r => r.json()).then(data => {
     if (titleEl && data.trip) titleEl.textContent = data.trip.name || 'Trip';
     if (subtitleEl && data.trip) subtitleEl.textContent = data.trip.subtitle || '';
-    initMap(data.stops);
-    if (data.stops && data.stops.length) selectStop(data.stops[0]);
+    (data.chapters || []).forEach(c => { chaptersById[c.id] = c; });
+    initMap(data.places || []);
+    renderIntro(data);
   }).catch(err => {
     console.error('[dcc-tour] load failed', err);
-    if (panelEl) {
-      panelEl.innerHTML = '<div class="dcc-tour-placeholder">Tour data could not be loaded.</div>';
-    }
+    if (panelEl) panelEl.innerHTML = '<div class="dcc-tour-placeholder">Tour data could not be loaded.</div>';
   });
 
-  function initMap(stops) {
+  function initMap(places) {
     if (!window.L || !mapEl) return;
-    // Filter to Croatia-area stops for default view; flight bookends are pinned but not framed.
-    const croatiaStops = stops.filter(s => !s.is_bookend);
-    const focusStops = croatiaStops.length ? croatiaStops : stops;
-
     map = L.map(mapEl, { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19, attribution: '&copy; OpenStreetMap',
     }).addTo(map);
 
-    const bounds = L.latLngBounds(focusStops.map(s => s.geo));
-    map.fitBounds(bounds.pad(0.18));
+    clusterGroup = L.markerClusterGroup
+      ? L.markerClusterGroup({ maxClusterRadius: 45, spiderfyOnMaxZoom: true, showCoverageOnHover: false })
+      : L.layerGroup();
 
-    stops.forEach(stop => {
-      const m = L.marker(stop.geo, { title: stop.name });
-      m.addTo(map);
-      m.on('click', () => selectStop(stop));
-      markers[stop.id] = m;
+    const latlngs = [];
+    places.forEach(place => {
+      const label = place.venue || (place.city + ' · a spot we stopped');
+      const m = L.marker([place.lat, place.lng], { title: label });
+      m.on('click', () => selectPlace(place));
+      clusterGroup.addLayer(m);
+      latlngs.push([place.lat, place.lng]);
     });
+    map.addLayer(clusterGroup);
+    if (latlngs.length) map.fitBounds(L.latLngBounds(latlngs).pad(0.1));
+    else map.setView([42.64, 18.11], 11);
   }
 
-  function selectStop(stop) {
-    activeId = stop.id;
-    Object.entries(markers).forEach(([id, m]) => {
-      const icon = m._icon;
-      if (icon) icon.classList.toggle('dcc-tour-pin-active', id === stop.id);
-    });
-    renderPanel(stop);
-  }
-
-  function renderPanel(stop) {
+  function renderIntro(data) {
     if (!panelEl) return;
-    const venues = (stop.venues || []).map(v => {
-      const note = v.note ? ' — ' + escapeHtml(v.note) : '';
-      return '<li>' + escapeHtml(v.name) + note + '</li>';
-    }).join('');
-    const dateLabel = formatDateRange(stop.date_start, stop.date_end);
-    const media = renderMedia(stop.id);
-    const ext = stop.external_url
-      ? '<p><a href="' + escapeAttr(stop.external_url) + '" target="_blank" rel="noopener">More info →</a></p>'
-      : '';
+    const named = data.named_count || 0;
+    const total = (data.places || []).length;
+    const chapters = (data.chapters || []).filter(c => c.summary)
+      .map(c => '<li><button class="dcc-tour-chip" data-chapter="' + escapeAttr(c.id) + '">' +
+                escapeHtml(c.name) + '</button></li>').join('');
+    panelEl.innerHTML =
+      '<div class="dcc-tour-stop-card">' +
+        '<h2>' + escapeHtml(data.trip ? data.trip.name : 'The trip') + '</h2>' +
+        '<p class="dcc-tour-stop-subtitle">' + escapeHtml(data.trip ? data.trip.subtitle : '') + '</p>' +
+        '<p>Tap any pin on the map to see the photos and videos taken there. ' +
+        'Pins cluster when you zoom out and split into individual spots as you zoom in — ' +
+        total + ' places in all. Jump to a chapter:</p>' +
+        '<ul class="dcc-tour-chapters">' + chapters + '</ul>' +
+      '</div>';
+    panelEl.querySelectorAll('.dcc-tour-chip').forEach(btn => {
+      btn.addEventListener('click', () => flyToChapter(btn.getAttribute('data-chapter')));
+    });
+  }
 
+  function flyToChapter(id) {
+    const c = chaptersById[id];
+    if (c && c.geo && map) {
+      map.flyTo(c.geo, 15, { duration: 0.8 });
+      renderChapterCard(c);
+    }
+  }
+
+  function renderChapterCard(c) {
+    if (!panelEl) return;
     panelEl.innerHTML =
       '<article class="dcc-tour-stop-card">' +
-        '<h2>' + escapeHtml(stop.name) + '</h2>' +
-        '<p class="dcc-tour-stop-subtitle">' + escapeHtml(stop.subtitle || '') +
-        (dateLabel ? ' · ' + escapeHtml(dateLabel) : '') + '</p>' +
-        (stop.summary ? '<p>' + escapeHtml(stop.summary) + '</p>' : '') +
-        (venues ? '<ul class="dcc-tour-venues">' + venues + '</ul>' : '') +
-        ext +
-        media +
+        '<h2>' + escapeHtml(c.name) + '</h2>' +
+        (c.subtitle ? '<p class="dcc-tour-stop-subtitle">' + escapeHtml(c.subtitle) + '</p>' : '') +
+        (c.summary ? '<p>' + escapeHtml(c.summary) + '</p>' : '') +
+        '<p class="dcc-tour-hint">Tap the pins in this area to open each spot’s photos.</p>' +
       '</article>';
   }
 
-  // Lightbox state: list of full-size photo URLs currently in the active stop's panel,
-  // plus the index being shown. We rebuild it whenever a stop renders.
-  let lightboxFulls = [];
-  let lightboxIdx = -1;
+  function selectPlace(place) {
+    if (!panelEl) return;
+    if (map) map.flyTo([place.lat, place.lng], Math.max(map.getZoom(), 16), { duration: 0.6 });
+    const ch = chaptersById[place.chapter];
+    const heading = place.venue || (place.city || 'A stop on the trip');
+    const sub = place.venue ? escapeHtml(place.city) : ('near ' + place.lat.toFixed(4) + ', ' + place.lng.toFixed(4));
+    const chapterLine = ch ? '<p class="dcc-tour-chapter-tag">' + escapeHtml(ch.name) + '</p>' : '';
+    const media = renderMedia(place.media || []);
+    panelEl.innerHTML =
+      '<article class="dcc-tour-stop-card">' +
+        chapterLine +
+        '<h2>' + escapeHtml(heading) + '</h2>' +
+        '<p class="dcc-tour-stop-subtitle">' + sub + ' · ' + (place.count || 0) + ' item' + (place.count === 1 ? '' : 's') + '</p>' +
+        media +
+        '<p><button class="dcc-tour-chip" id="dcc-back">← Back to overview</button></p>' +
+      '</article>';
+    const back = panelEl.querySelector('#dcc-back');
+    if (back) back.addEventListener('click', () => fetch(baseURL + 'places.json').then(r => r.json()).then(renderIntro));
+  }
 
-  function renderMedia(stopId) {
-    const items = mediaByStop[stopId] || [];
-    // Refresh the lightbox source list each time a stop renders.
-    // Only untyped entries are photos; typed ones (self_hosted/drive/youtube) are videos.
-    lightboxFulls = items
-      .filter(i => !i.type && (i.full || i.src))
-      .map(i => resolveUrl(i.full || i.src));
+  function renderMedia(items) {
+    lightboxFulls = items.filter(i => !i.type && (i.full || i.src)).map(i => resolveUrl(i.full || i.src));
     lightboxIdx = -1;
-    if (!items.length) {
-      return '<div class="dcc-tour-placeholder" style="margin-top:1rem;">Photos coming soon.</div>';
-    }
+    if (!items.length) return '<div class="dcc-tour-placeholder" style="margin-top:1rem;">No media here.</div>';
     const html = items.map(item => {
-      if (item.type === 'youtube') {
-        return '<iframe loading="lazy" allowfullscreen ' +
-          'style="grid-column: 1 / -1; height:220px; border:0; border-radius:6px;" ' +
-          'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
-      }
       if (item.type === 'drive') {
-        // Google Drive's built-in player; the file must be shared "anyone with the link".
         return '<iframe loading="lazy" allowfullscreen allow="autoplay" ' +
-          'style="grid-column: 1 / -1; height:220px; border:0; border-radius:6px;" ' +
+          'style="grid-column:1/-1;height:220px;border:0;border-radius:6px;" ' +
           'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>';
       }
+      if (item.type === 'youtube') {
+        return '<iframe loading="lazy" allowfullscreen ' +
+          'style="grid-column:1/-1;height:220px;border:0;border-radius:6px;" ' +
+          'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
+      }
       if (item.type === 'self_hosted') {
-        // If url isn't yet linked (transitional state during media buildout),
-        // degrade to the poster as a still image rather than a broken <video>.
         if (!item.url && item.poster) {
-          return '<img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) +
-                 '" alt="video preview" style="opacity:0.85;" />';
+          return '<img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video preview" style="opacity:.85;" />';
         }
         if (!item.url) return '';
         const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
         return '<video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
-               ' controls preload="metadata" style="grid-column: 1 / -1; height:auto; max-height:360px; background:#000;"></video>';
+               ' controls preload="metadata" style="grid-column:1/-1;height:auto;max-height:360px;background:#000;"></video>';
       }
-      // photo — src=thumb for the grid, full kept on data-full for future lightbox
       const src = item.src || item.url;
       const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
       return '<img loading="lazy" src="' + escapeAttr(resolveUrl(src)) + '" alt=""' + full + ' />';
@@ -150,21 +155,18 @@
   }
 
   // ===== Lightbox =====
-  // Delegated click handler: any <img> with data-full inside the panel opens the lightbox.
   document.addEventListener('click', (e) => {
     const img = e.target.closest('.dcc-tour-media img[data-full]');
     if (!img) return;
-    const url = img.getAttribute('data-full');
-    const idx = lightboxFulls.indexOf(url);
+    const idx = lightboxFulls.indexOf(img.getAttribute('data-full'));
     openLightbox(idx >= 0 ? idx : 0);
   });
   document.addEventListener('keydown', (e) => {
     if (lightboxIdx < 0) return;
     if (e.key === 'Escape') closeLightbox();
     else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
-    else if (e.key === 'ArrowLeft')  showLightbox(lightboxIdx - 1);
+    else if (e.key === 'ArrowLeft') showLightbox(lightboxIdx - 1);
   });
-
   function ensureLightboxEl() {
     let el = document.getElementById('dcc-tour-lightbox');
     if (el) return el;
@@ -177,19 +179,14 @@
       '<img class="dcc-tour-lightbox-img" alt="" />' +
       '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>';
     el.addEventListener('click', (e) => {
-      if (e.target === el) closeLightbox();
-      else if (e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
+      if (e.target === el || e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
       else if (e.target.classList.contains('prev')) showLightbox(lightboxIdx - 1);
       else if (e.target.classList.contains('next')) showLightbox(lightboxIdx + 1);
     });
     document.body.appendChild(el);
     return el;
   }
-  function openLightbox(idx) {
-    if (!lightboxFulls.length) return;
-    ensureLightboxEl();
-    showLightbox(idx);
-  }
+  function openLightbox(idx) { if (lightboxFulls.length) { ensureLightboxEl(); showLightbox(idx); } }
   function showLightbox(idx) {
     if (!lightboxFulls.length) return;
     const n = lightboxFulls.length;
@@ -206,18 +203,8 @@
     document.body.classList.remove('dcc-tour-noscroll');
   }
 
-  function formatDateRange(startISO, endISO) {
-    if (!startISO) return '';
-    const s = new Date(startISO), e = endISO ? new Date(endISO) : null;
-    const opts = { month: 'short', day: 'numeric' };
-    if (!e || sameDay(s, e)) return s.toLocaleDateString(undefined, opts);
-    return s.toLocaleDateString(undefined, opts) + ' – ' + e.toLocaleDateString(undefined, opts);
-  }
-  function sameDay(a, b) {
-    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  }
   function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function escapeAttr(s) { return escapeHtml(s); }
 })();

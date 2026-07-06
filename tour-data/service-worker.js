@@ -3,17 +3,19 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or stops.json change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v6';
+const CACHE_VERSION = 'dcc-tour-v7';
 const SHELL = [
   './',
   'index.html',
   'bundle.js',
   'bundle.css',
-  'stops.json',
-  'media-manifest.json',
+  'places.json',
   'manifest.webmanifest',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'vendor/leaflet.js',
+  'vendor/leaflet.css',
+  'vendor/leaflet.markercluster.js',
+  'vendor/MarkerCluster.css',
+  'vendor/MarkerCluster.Default.css',
 ];
 
 self.addEventListener('install', event => {

@@ -4,12 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Croatia 2025 · Croft family tour</title>
-  <meta name="description" content="Cavtat &amp; Dubrovnik, September 2025 — an interactive tour with photos, videos, and the day-by-day itinerary." />
+  <meta name="description" content="Cavtat &amp; Dubrovnik, September 2025 — an interactive venue-level map with photos, videos, and the day-by-day story." />
   <meta name="theme-color" content="#0f6dbf" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="vendor/leaflet.css" />
+  <link rel="stylesheet" href="vendor/MarkerCluster.css" />
+  <link rel="stylesheet" href="vendor/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="bundle.css" />
 </head>
 <body>
@@ -18,19 +20,18 @@
       <h1 class="dcc-tour-title"></h1>
       <p class="dcc-tour-subtitle"></p>
     </header>
-    <div class="dcc-tour-map" id="dcc-tour-map" role="application" aria-label="Croatia trip map"></div>
+    <div class="dcc-tour-map" id="dcc-tour-map" role="application" aria-label="Croatia trip venue map"></div>
     <aside class="dcc-tour-panel" id="dcc-tour-panel" aria-live="polite"></aside>
     <noscript>
-      <p style="padding:1em;background:#fdd;">This tour needs JavaScript. The full itinerary is in <a href="stops.json">stops.json</a>.</p>
+      <p style="padding:1em;background:#fdd;">This tour needs JavaScript. The itinerary is in <a href="places.json">places.json</a>.</p>
     </noscript>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="vendor/leaflet.js"></script>
+  <script src="vendor/leaflet.markercluster.js"></script>
   <script src="bundle.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js').catch(() => {});
-      });
+      window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(() => {}));
     }
   </script>
 </body>
