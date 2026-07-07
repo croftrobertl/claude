@@ -38,7 +38,7 @@
     }
 
     add('desk', crit.wDesk > 0, c.desk);
-    add('space', crit.wantLargest || crit.wSpace > 0, Number(c.squareFeet) >= 336);
+    add('space', crit.wSpace > 0, Number(c.squareFeet) >= 336);
     add('pet', crit.wPet > 0, c.petAllowed);
     add('ground', crit.wFewerStairs > 0, DCCS.score.isGround(c));
     add('studio', crit.wStudio > 0, c.layoutType === 'Studio');

@@ -98,7 +98,7 @@
   function defaultState(config) {
     // Quick answers start UNSET ('') so no option is pre-highlighted; a step is
     // "answered" once the guest taps something ('either' = an explicit skip).
-    var quick = { desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '', largest: '' };
+    var quick = { desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
     if (config.presetQuick) { Object.keys(config.presetQuick).forEach(function (k) { quick[k] = config.presetQuick[k]; }); }
     return {
       mode: config.startMode || 'quick',
@@ -157,7 +157,6 @@
     if (p.has('pet')) { state.quick.pet = TRUE[p.get('pet')] ? 'yes' : 'either'; }
     if (p.has('ground')) { state.quick.ground = TRUE[p.get('ground')] ? 'yes' : 'either'; }
     if (p.has('porch')) { state.quick.screenedporch = TRUE[p.get('porch')] ? 'yes' : 'either'; }
-    if (p.has('largest')) { state.quick.largest = TRUE[p.get('largest')] ? 'yes' : 'either'; }
     if (p.has('desk')) { state.quick.desk = normYesNoLevel(p.get('desk')); }
     if (p.has('pullout')) { state.quick.pullout = normYesNoLevel(p.get('pullout')); }
     if (p.has('layout')) { state.quick.layout = p.get('layout'); }
@@ -196,7 +195,7 @@
         if (Number(w[g]) === 3) { whard.push(WEIGHT_HARD[g]); }
       });
       return {
-        hard: whard, wantLargest: false,
+        hard: whard,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
         wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
         wScreenedPorch: w.screenedporch
@@ -216,18 +215,13 @@
     if (q.pet === 'yes') { hard.push('pet'); }
     if (q.ground === 'yes') { hard.push('ground'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
-    // 'largest' is comparative, not a binary feature — keep it a soft ranking signal
-    // (wantLargest / wSpace below) rather than a hard filter, so it floats the biggest
-    // cottages to the top without excluding anyone.
     return {
       hard: hard,
-      wantLargest: q.largest === 'yes',
       wDesk: q.desk === 'yes' ? 2 : 0,
       wPullout: q.pullout === 'yes' ? 2 : 0,
-      wSpace: q.largest === 'yes' ? 2 : 0,
       wStudio: q.layout === 'studio' ? 2 : 0,
       wOneBed: q.layout === 'onebed' ? 2 : 0,
-      wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0
+      wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0
     };
   }
 
@@ -245,7 +239,7 @@
       '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + inner + '</button>';
   }
 
-  // The wizard's 8 questions (the meaningful differences), in natural order.
+  // The wizard's 7 questions (the meaningful differences), in natural order.
   // Each option is [stringKey, value]; the last is always "No preference".
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
@@ -255,8 +249,7 @@
     { group: 'dining', qKey: 'q_dining', shortKey: 'diff_diningSeats', opts: [['opt_seats2', '2'], ['opt_seats4', '4'], ['opt_either', 'either']] },
     { group: 'pet', qKey: 'q_pet', shortKey: 'diff_petAllowed', opts: YND },
     { group: 'ground', qKey: 'q_ground', shortKey: 'diff_floorLevel', opts: YND },
-    { group: 'screenedporch', qKey: 'q_screenedporch', shortKey: 'diff_screenedPorch', opts: YND },
-    { group: 'largest', qKey: 'q_largest', shortKey: 'short_largest', opts: YND }
+    { group: 'screenedporch', qKey: 'q_screenedporch', shortKey: 'diff_screenedPorch', opts: YND }
   ];
 
   // The Weigh-priorities wizard: one priority per step, answered Low/Med/High.

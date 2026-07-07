@@ -264,7 +264,7 @@ class Selector_Widget extends Widget_Base
             'submit', 'restart', 'next', 'back', 'view', 'compare',
             'edit_answers', 'compare_select', 'mode_quick', 'mode_weights', 'mode_compare',
             // Questions + answers (declared in register_qa_icon_controls()).
-            'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_screenedporch', 'q_largest',
+            'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_screenedporch',
             'ans_yes', 'ans_no', 'ans_either', 'ans_studio', 'ans_onebed', 'ans_2', 'ans_4',
             'lvl_1', 'lvl_2', 'lvl_3',
         ];
@@ -291,7 +291,6 @@ class Selector_Widget extends Widget_Base
             'q_pet'      => __('Question: pet-friendly', 'dcc-cottage-selector'),
             'q_ground'   => __('Question: ground floor', 'dcc-cottage-selector'),
             'q_screenedporch' => __('Question: screened porch', 'dcc-cottage-selector'),
-            'q_largest'  => __('Question: largest space', 'dcc-cottage-selector'),
             'w_question' => __('Question: Weigh priorities (all)', 'dcc-cottage-selector'),
         ];
         $answers = [
@@ -389,7 +388,6 @@ class Selector_Widget extends Widget_Base
             'q_pet'       => __('Question: pet-friendly', 'dcc-cottage-selector'),
             'q_ground'    => __('Question: ground floor', 'dcc-cottage-selector'),
             'q_screenedporch' => __('Question: screened porch', 'dcc-cottage-selector'),
-            'q_largest'   => __('Question: largest space', 'dcc-cottage-selector'),
             // Weigh priorities — the question template + the priority rows
             'w_question'  => __('Weigh priorities question (use %s)', 'dcc-cottage-selector'),
             'w_workspace' => __('Priority: Workspace', 'dcc-cottage-selector'),

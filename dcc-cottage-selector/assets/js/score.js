@@ -61,7 +61,6 @@
     var s = 0;
     var sqft = Number(c.squareFeet) || 0;
 
-    if (crit.wantLargest) { s += sqft / 100; }
     s += (sqft / 100) * (crit.wSpace || 0) * 0.5;
     s += (c.desk ? 1 : 0) * (crit.wDesk || 0);
     s += (c.pulloutCouch ? 1 : 0) * (crit.wPullout || 0);

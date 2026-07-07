@@ -92,7 +92,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
-  ok('progress reads Step 1 of 8', /1\b.*\b8/.test(progress(root)));
+  ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
   ok('no answer preselected', !activeChip(root));
   ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
@@ -131,10 +131,10 @@ function enter(root, mode) {
   enter(root, 'quick');
   clickAnswer(root, 'yes');
   ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === 'yes');
-  ok('still on step 1 (no auto-advance)', /1\b.*\b8/.test(progress(root)));
+  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
   ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
   clickNext(root);
-  ok('Next advances to step 2', /2\b.*\b8/.test(progress(root)));
+  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
   ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
   ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
@@ -147,7 +147,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, 'yes');
   root.querySelector('.dccs-back').click();
-  ok('Back returns to step 1', /1\b.*\b8/.test(progress(root)));
+  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
   ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === 'yes');
 })();
 
@@ -158,11 +158,11 @@ function enter(root, mode) {
   enter(root, 'quick');
   answerNext(root, 'yes');     // step 1
   answerNext(root, 'no');      // step 2 -> now on step 3
-  ok('on step 3', /3\b.*\b8/.test(progress(root)));
+  ok('on step 3', /3\b.*\b7/.test(progress(root)));
   var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
   ok('answered steps are clickable dots', !!dot);
   dot.click();
-  ok('stepper dot jumps to step 1', /1\b.*\b8/.test(progress(root)));
+  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
 })();
 
 // ---- 5. Review step + edit returns to where you came from ----
@@ -171,7 +171,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   stepThrough(root, 'either');
-  ok('review lists all 8 answers', root.querySelectorAll('.dccs-review-list li').length === 8);
+  ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
   const reviewBtns = root.querySelectorAll('.dccs-tail-nav > button');
   ok('review: Restart is left, Submit is right',
@@ -179,9 +179,9 @@ function enter(root, mode) {
     reviewBtns[0].classList.contains('dccs-reset') &&
     reviewBtns[1].classList.contains('dccs-see-matches'));
   root.querySelector('.dccs-edit[data-step="3"]').click();
-  ok('edit jumps to that question (step 4)', /4\b.*\b8/.test(progress(root)));
+  ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
   clickNext(root);
-  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 8);
+  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 7);
 })();
 
 // ---- 6. See matches -> results, full names, recap, edit-answers ----
@@ -253,17 +253,16 @@ function enter(root, mode) {
   ok('deeplink porch=true -> only The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
 
-// ---- 8c. Screened-porch question appears as the 8th Quick-Match step ----
+// ---- 8c. Screened-porch question appears as the last (7th) Quick-Match step ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 6)
-  ok('step 7 of 8 is the screened-porch question', /7\b.*\b8/.test(progress(root)) &&
+  ok('step 7 of 7 is the screened-porch question', /7\b.*\b7/.test(progress(root)) &&
     /porch/i.test(root.querySelector('.dccs-step-q').textContent));
-  clickAnswer(root, 'yes'); clickNext(root);
-  stepThrough(root, 'either');                                  // answer the last step (largest)
+  clickAnswer(root, 'yes'); clickNext(root);                    // last step -> review
   root.querySelector('.dccs-see-matches').click();
   ok('answering porch=Yes narrows to The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
@@ -668,20 +667,6 @@ function configWith(overrides) {
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   ok('wizard-nav is set to nowrap', /\.dccs-wizard-nav\s*\{[^}]*flex-wrap:\s*nowrap/.test(css));
   ok('Back/Next are equal-flex (1 1 0)', /\.dccs-back[\s\S]*?\.dccs-next[\s\S]*?flex:\s*1 1 0/.test(css));
-})();
-
-// ---- 25. "Largest = Yes" ranks big cottages first but does NOT filter the count ----
-(function () {
-  const w = freshDom();
-  const root = mountSelector(w);
-  enter(root, 'quick');
-  for (var i = 0; i < 7; i++) { answerNext(root, 'either'); }   // advance to the "largest" step
-  ok('count is all 8 before answering largest', /\b8\b/.test(countText(root)));
-  clickAnswer(root, 'yes');                                     // largest = Yes (comparative)
-  ok('answering largest=Yes does NOT narrow the count', /\b8\b/.test(countText(root)));
-  clickNext(root);                                              // last step -> review
-  root.querySelector('.dccs-see-matches').click();              // -> results
-  ok('largest cottages (#22/#23) rank first', /Cottage 2[23]:/.test(cardNames(root)[0]));
 })();
 
 // ---- 26. Compare checklist has a scroll-more cue (fade/chevron + JS toggle) ----

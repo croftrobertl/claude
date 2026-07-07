@@ -43,8 +43,6 @@ final class Config
             'q_pet'             => __('Do you need a pet-friendly cottage?', 'dcc-cottage-selector'),
             'q_ground'          => __('Ground floor only?', 'dcc-cottage-selector'),
             'q_screenedporch'   => __('Do you want a private screened-in porch?', 'dcc-cottage-selector'),
-            'q_largest'         => __('Want the largest space available?', 'dcc-cottage-selector'),
-            'short_largest'     => __('Most space', 'dcc-cottage-selector'),
 
             // Wizard flow
             'wiz_progress'      => /* translators: %1$d: current step, %2$d: total steps */ __('Step %1$d of %2$d', 'dcc-cottage-selector'),
