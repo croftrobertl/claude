@@ -38,6 +38,16 @@ final class Plugin
         // reliable there, so force-enqueue it on the preview hook.
         add_action('elementor/preview/enqueue_scripts', ['\\MPHBAC\\Widget', 'enqueue_for_preview']);
 
+        // Keep our client-render script + stylesheet out of aggressive
+        // JS/CSS combine+defer optimizers (SpeedyCache Pro, etc.). widget.js
+        // draws the grid on load; if it's folded into a combined bundle that a
+        // sibling script breaks — or a stale/deferred bundle that never runs in
+        // the Elementor editor preview — the gray loading skeleton is never
+        // replaced. Tagging our assets with the opt-out attributes optimizers
+        // honor keeps them as their own reliably-executed files.
+        add_filter('script_loader_tag', ['\\MPHBAC\\Widget', 'keep_script_unoptimized'], 10, 2);
+        add_filter('style_loader_tag', ['\\MPHBAC\\Widget', 'keep_style_unoptimized'], 10, 2);
+
         add_action('wp_ajax_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
         add_action('wp_ajax_nopriv_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
 

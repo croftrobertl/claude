@@ -87,6 +87,42 @@ final class Widget extends Widget_Base
         wp_enqueue_script('mphbac-widget');
     }
 
+    /**
+     * Attributes JS optimizers (SpeedyCache Pro, WP Rocket, LiteSpeed, Cloudflare
+     * Rocket Loader, …) honor to skip a script from combine/defer/minify. Applied
+     * to our handle only. The grid is client-rendered, so if widget.js is swept
+     * into a combined bundle that a sibling script breaks (a throw aborts the
+     * rest of the bundle), init() never runs and the loading skeleton stays gray.
+     */
+    public static function keep_script_unoptimized(string $tag, string $handle): string
+    {
+        if ($handle !== 'mphbac-widget') {
+            return $tag;
+        }
+        return str_replace(
+            '<script ',
+            '<script data-no-optimize="1" data-no-minify="1" data-no-defer="1" data-no-combine="1" data-cfasync="false" ',
+            $tag
+        );
+    }
+
+    /**
+     * Same intent as keep_script_unoptimized() for the stylesheet: keep the day
+     * cells' color rules out of a stale/mis-combined CSS bundle that would render
+     * them flat gray instead of green/red.
+     */
+    public static function keep_style_unoptimized(string $tag, string $handle): string
+    {
+        if ($handle !== 'mphbac-widget') {
+            return $tag;
+        }
+        return str_replace(
+            '<link ',
+            '<link data-no-optimize="1" data-no-minify="1" ',
+            $tag
+        );
+    }
+
     protected function register_controls(): void
     {
         $this->register_content_controls();

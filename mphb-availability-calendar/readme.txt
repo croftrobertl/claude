@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.5
+Stable tag: 0.10.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,20 @@ Yes. It only requires free Elementor core.
 
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
+= The calendar shows gray shimmer bars instead of the green/red day cells =
+
+The grid is drawn by the plugin's JavaScript on load; the gray shimmer rows are just placeholders it replaces once it runs. If they never fill in (most often in the Elementor editor preview), a JavaScript optimizer — commonly SpeedyCache Pro's "Combine JS" or "Defer JS" — is preventing the plugin's script from running by folding it into a shared/deferred bundle.
+
+As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt-out attributes optimizers honor, which resolves this automatically for most setups. If your optimizer doesn't recognize those attributes, add the plugin's script to your optimizer's JavaScript exclusion list manually. In SpeedyCache Pro this is Settings → Optimization → the "Exclude JS" / "Exclude from Combine" / "Exclude from Defer" fields; paste:
+
+`mphb-availability-calendar/assets/js/widget.js`
+
+Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
+
 == Changelog ==
+
+= 0.10.6 =
+* Fixed the calendar showing gray shimmer placeholder rows (never filling in with the green/red day cells) in the Elementor editor preview, and potentially for live visitors, when SpeedyCache Pro's Combine JS / Defer JS optimization is enabled. The grid is drawn by the plugin's JavaScript on load; when that script was folded into a combined bundle, a stale/deferred bundle in the preview iframe — or an unrelated script erroring earlier in the same bundle — could stop the grid from ever rendering. The plugin's script and stylesheet are now tagged with the standard opt-out attributes (data-no-optimize / data-no-combine / data-no-defer / data-no-minify / data-cfasync) that SpeedyCache and other optimizers honor, so they load as their own reliable files. If your optimizer doesn't recognize these attributes, see the new FAQ entry for the one-line manual exclusion.
 
 = 0.10.5 =
 Full-plugin review pass — four correctness/robustness fixes, no visual changes.
