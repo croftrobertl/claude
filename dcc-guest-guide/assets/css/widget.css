@@ -568,6 +568,47 @@
 .dccgg-root.is-detail .dccgg-menu {
     display: none;
 }
+
+/* v0.9.7.24: Elementor editor preview — reveal the clicked section's
+   detail INLINE (in the canvas flow) instead of as a position:fixed
+   overlay portaled to the iframe <body>, which the editing surface hid.
+   shouldUseDetailModal() returns false in the editor so the modal path
+   (body.dccgg-detail-open …) never runs; this promotes the otherwise-
+   hidden absolute stage into normal flow so the host sees and edits the
+   guide items in place. Mirrors the split-pane inline-reveal treatment.
+   Front-end visitors are unaffected — the class is only on the editor
+   iframe body. */
+body.elementor-editor-preview .dccgg-root.is-detail .dccgg-stage {
+    position: relative;
+    inset: auto;
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: none;
+}
+
+/* v0.9.7.24: in FAB mode the hub wrapper is a native <dialog>, which the
+   UA stylesheet renders display:none until showModal(). In the editor the
+   host can't click the FAB to open it, so the entire guide would be
+   invisible in the canvas. Force it visible and in-flow for editing only.
+   Harmless when FAB is off (no dialog.dccgg-wrapper exists). */
+body.elementor-editor-preview dialog.dccgg-wrapper {
+    display: block;
+    position: static;
+    inset: auto;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    max-height: none;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    overflow: visible;
+}
+body.elementor-editor-preview dialog.dccgg-wrapper::backdrop {
+    display: none;
+}
 .dccgg-menu {
     transition: opacity var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);

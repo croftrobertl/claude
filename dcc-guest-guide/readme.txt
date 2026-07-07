@@ -70,6 +70,25 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.24 =
+
+**Editor fix: clicking a Menu Hub section now shows its guide items in
+the Elementor editor preview.** In stage-swap reveal mode the detail
+card opens as a `position: fixed` modal portaled to the page `<body>`.
+That works on the live site, but inside the Elementor editing canvas
+(an iframe with its own transformed/overflow-managed surface) the modal
+rendered where the host couldn't see it — so clicking a section
+appeared to do nothing and there was nothing to edit.
+
+Now, when running inside the editor preview only, the widget reveals
+the clicked section's detail **inline** in the canvas flow (the same
+treatment split-pane layout already uses) instead of as a fixed
+overlay. The section's guide items appear right in place; the Back
+button returns to the hub. Front-end visitors are unaffected — they
+still get the animated popup. Also hardens the editor against FAB mode:
+the hub `<dialog>` (which is `display:none` until opened) is forced
+visible and in-flow in the editor so its content is always editable.
+
 = 0.9.7.23 =
 
 **Definitive fix for the recurring "popup overflows the top of the

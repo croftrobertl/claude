@@ -1824,6 +1824,13 @@
     function shouldUseDetailModal(root) {
         const config = (root.__dccgg && root.__dccgg.config) || {};
         if ((config.revealMode || 'stage') !== 'stage') return false;
+        // v0.9.7.24: in the Elementor editor preview a position:fixed modal
+        // portaled to the canvas-iframe <body> is unreliable/invisible
+        // inside the editing surface, so the host clicked a section and saw
+        // nothing to edit. Fall back to an inline reveal (the stage renders
+        // in normal flow, paired with the editor CSS below) so the clicked
+        // section's guide items appear right in place.
+        if (isElementorEditorPreview()) return false;
         const widgetEl = root.closest('.elementor-widget');
         if (widgetEl && widgetEl.classList.contains('dccgg-layout-split-pane')) return false;
         return true;
