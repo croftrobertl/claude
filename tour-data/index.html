@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Croatia 2025 · Croft family tour</title>
-  <meta name="description" content="Cavtat &amp; Dubrovnik, September 2025 — an interactive venue-level map with photos, videos, and the day-by-day story." />
+  <title>Croatia 2025 · Croft family trip</title>
+  <meta name="description" content="Cavtat &amp; Dubrovnik, September 2025 — our trip, day by day: every photo, video, and clip where it was taken." />
   <meta name="theme-color" content="#0f6dbf" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -16,14 +16,9 @@
 </head>
 <body>
   <div id="dcc-tour" class="dcc-tour-root">
-    <header class="dcc-tour-header">
-      <h1 class="dcc-tour-title"></h1>
-      <p class="dcc-tour-subtitle"></p>
-    </header>
-    <div class="dcc-tour-map" id="dcc-tour-map" role="application" aria-label="Croatia trip venue map"></div>
-    <aside class="dcc-tour-panel" id="dcc-tour-panel" aria-live="polite"></aside>
+    <div class="dcc-tour-placeholder">Loading the trip…</div>
     <noscript>
-      <p style="padding:1em;background:#fdd;">This tour needs JavaScript. The itinerary is in <a href="places.json">places.json</a>.</p>
+      <p style="padding:1em;background:#fdd;">This archive needs JavaScript. The data is in <a href="trip.json">trip.json</a>.</p>
     </noscript>
   </div>
   <script src="vendor/leaflet.js"></script>

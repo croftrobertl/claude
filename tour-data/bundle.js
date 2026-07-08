@@ -1,9 +1,8 @@
-// Croatia trip — venue-level map app. Reads places.json (196 GPS venue
-// clusters + narrative chapters), renders every place as a Leaflet marker in a
-// clustering group so pins merge when zoomed out and break into individual
-// venues as you zoom in. Clicking a place shows its photos/videos + the
-// chapter's story in the side panel. Works standalone (GitHub Pages) and
-// embedded in the WordPress loader. Vanilla JS, no build step.
+// Croatia trip — day-by-day archive. Reads trip.json (a flat list of every
+// photo/video/clip, each with its OWN place label + timestamp, grouped into
+// days). Primary view is the day-by-day story; a secondary map shows where that
+// day's shots were taken, with dynamic clustering. Works standalone (static
+// host) and embedded in the WordPress/Elementor loader. Vanilla JS, no build.
 
 (function () {
   'use strict';
@@ -14,147 +13,171 @@
   const root = document.getElementById('dcc-tour') || document.querySelector('.dcc-tour-root');
   if (!root) { console.warn('[dcc-tour] no mount element'); return; }
 
-  const titleEl = root.querySelector('.dcc-tour-title');
-  const subtitleEl = root.querySelector('.dcc-tour-subtitle');
-  const panelEl = root.querySelector('.dcc-tour-panel') || root.querySelector('#dcc-tour-panel');
-  const mapEl = root.querySelector('.dcc-tour-map') || root.querySelector('#dcc-tour-map');
-
   let map = null, clusterGroup = null;
-  let chaptersById = {};
+  let DATA = null, curDay = 0;
   let lightboxFulls = [], lightboxIdx = -1;
+  const markersByPlace = {};
 
-  fetch(baseURL + 'places.json').then(r => r.json()).then(data => {
-    if (titleEl && data.trip) titleEl.textContent = data.trip.name || 'Trip';
-    if (subtitleEl && data.trip) subtitleEl.textContent = data.trip.subtitle || '';
-    (data.chapters || []).forEach(c => { chaptersById[c.id] = c; });
-    initMap(data.places || []);
-    renderIntro(data);
+  fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
+    DATA = data;
+    buildShell();
+    initMap();
+    selectDay(0);
   }).catch(err => {
     console.error('[dcc-tour] load failed', err);
-    if (panelEl) panelEl.innerHTML = '<div class="dcc-tour-placeholder">Tour data could not be loaded.</div>';
+    root.innerHTML = '<div class="dcc-tour-placeholder">Tour data could not be loaded.</div>';
   });
 
-  function initMap(places) {
-    if (!window.L || !mapEl) return;
-    map = L.map(mapEl, { scrollWheelZoom: true });
+  // ---- layout ----
+  function buildShell() {
+    const t = DATA.trip || {};
+    root.innerHTML = '';
+    root.classList.add('dcc-tour-flat');
+    const header = el('header', 'dcc-tour-header',
+      '<h1 class="dcc-tour-title">' + escapeHtml(t.name || 'Our trip') + '</h1>' +
+      '<p class="dcc-tour-subtitle">' + escapeHtml(t.subtitle || '') + '</p>');
+    const nav = el('nav', 'dcc-tour-daynav');
+    nav.setAttribute('aria-label', 'Days');
+    DATA.days.forEach((d, i) => {
+      const b = document.createElement('button');
+      b.className = 'dcc-tour-daychip';
+      b.dataset.day = i;
+      b.innerHTML = '<span class="d-n">Day ' + d.index + '</span>' +
+                    '<span class="d-d">' + escapeHtml(d.short) + '</span>' +
+                    '<span class="d-c">' + d.count + '</span>';
+      b.addEventListener('click', () => selectDay(i));
+      nav.appendChild(b);
+    });
+    const body = el('div', 'dcc-tour-body');
+    const story = el('section', 'dcc-tour-story');
+    story.setAttribute('aria-live', 'polite');
+    const mapwrap = el('aside', 'dcc-tour-mapwrap');
+    const mapdiv = document.createElement('div');
+    mapdiv.className = 'dcc-tour-map';
+    mapdiv.setAttribute('role', 'application');
+    mapdiv.setAttribute('aria-label', 'Map of the day');
+    mapwrap.appendChild(mapdiv);
+    body.appendChild(story); body.appendChild(mapwrap);
+    root.appendChild(header); root.appendChild(nav); root.appendChild(body);
+    root._story = story; root._mapdiv = mapdiv; root._nav = nav;
+  }
+
+  function initMap() {
+    if (!window.L || !root._mapdiv) return;
+    map = L.map(root._mapdiv, { scrollWheelZoom: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap',
     }).addTo(map);
-
     clusterGroup = L.markerClusterGroup
-      ? L.markerClusterGroup({ maxClusterRadius: 45, spiderfyOnMaxZoom: true, showCoverageOnHover: false })
+      ? L.markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false })
       : L.layerGroup();
-
-    const latlngs = [];
-    places.forEach(place => {
-      const label = place.venue || (place.city + ' · a spot we stopped');
-      const m = L.marker([place.lat, place.lng], { title: label });
-      m.on('click', () => selectPlace(place));
-      clusterGroup.addLayer(m);
-      latlngs.push([place.lat, place.lng]);
-    });
     map.addLayer(clusterGroup);
-    if (latlngs.length) map.fitBounds(L.latLngBounds(latlngs).pad(0.1));
-    else map.setView([42.64, 18.11], 11);
   }
 
-  function renderIntro(data) {
-    if (!panelEl) return;
-    const named = data.named_count || 0;
-    const total = (data.places || []).length;
-    const chapters = (data.chapters || []).filter(c => c.summary)
-      .map(c => '<li><button class="dcc-tour-chip" data-chapter="' + escapeAttr(c.id) + '">' +
-                escapeHtml(c.name) + '</button></li>').join('');
-    panelEl.innerHTML =
-      '<div class="dcc-tour-stop-card">' +
-        '<h2>' + escapeHtml(data.trip ? data.trip.name : 'The trip') + '</h2>' +
-        '<p class="dcc-tour-stop-subtitle">' + escapeHtml(data.trip ? data.trip.subtitle : '') + '</p>' +
-        '<p>Tap any pin on the map to see the photos and videos taken there. ' +
-        'Pins cluster when you zoom out and split into individual spots as you zoom in — ' +
-        total + ' places in all. Jump to a chapter:</p>' +
-        '<ul class="dcc-tour-chapters">' + chapters + '</ul>' +
+  // ---- day selection ----
+  function selectDay(i) {
+    if (!DATA || i < 0 || i >= DATA.days.length) return;
+    curDay = i;
+    root._nav.querySelectorAll('.dcc-tour-daychip').forEach((b, j) =>
+      b.classList.toggle('active', j === i));
+    const active = root._nav.querySelector('.dcc-tour-daychip.active');
+    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    renderDay(DATA.days[i]);
+    showDayOnMap(DATA.days[i]);
+  }
+
+  function renderDay(day) {
+    const story = root._story;
+    lightboxFulls = []; lightboxIdx = -1;
+    for (const k in markersByPlace) delete markersByPlace[k];
+
+    let html = '<div class="dcc-tour-dayhead">' +
+      '<div class="dcc-tour-daynum">Day ' + day.index + ' / ' + DATA.day_count + '</div>' +
+      '<h2>' + escapeHtml(day.label) + '</h2>' +
+      (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
+      (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
+      '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
+        day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
       '</div>';
-    panelEl.querySelectorAll('.dcc-tour-chip').forEach(btn => {
-      btn.addEventListener('click', () => flyToChapter(btn.getAttribute('data-chapter')));
+
+    day.places.forEach((p, pi) => {
+      const anchor = 'place-' + pi;
+      const time = p.from === p.to ? p.from : (p.from + '–' + p.to);
+      html += '<section class="dcc-tour-place" id="' + anchor + '">' +
+        '<div class="dcc-tour-place-head">' +
+          '<h3>' + escapeHtml(p.name) + '</h3>' +
+          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + ' · ' + p.count + '</span>' +
+        '</div>' +
+        '<div class="dcc-tour-media">' + p.items.map(renderItem).join('') + '</div>' +
+        '</section>';
     });
+
+    html += '<div class="dcc-tour-daynavbtns">' +
+      (curDay > 0 ? '<button class="dcc-tour-chip" id="dcc-prev">← ' + escapeHtml(DATA.days[curDay-1].short) + '</button>' : '<span></span>') +
+      (curDay < DATA.day_count-1 ? '<button class="dcc-tour-chip" id="dcc-next">' + escapeHtml(DATA.days[curDay+1].short) + ' →</button>' : '<span></span>') +
+      '</div>';
+
+    story.innerHTML = html;
+    story.scrollTop = 0;
+    const prev = story.querySelector('#dcc-prev'), next = story.querySelector('#dcc-next');
+    if (prev) prev.addEventListener('click', () => selectDay(curDay - 1));
+    if (next) next.addEventListener('click', () => selectDay(curDay + 1));
   }
 
-  function flyToChapter(id) {
-    const c = chaptersById[id];
-    if (c && c.geo && map) {
-      map.flyTo(c.geo, 15, { duration: 0.8 });
-      renderChapterCard(c);
+  function renderItem(item) {
+    if (item.type === 'drive') {
+      return '<div class="dcc-tour-cell wide"><iframe loading="lazy" allowfullscreen allow="autoplay" ' +
+        'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>' + cap(item) + '</div>';
     }
+    if (item.type === 'self_hosted') {
+      if (!item.url && item.poster)
+        return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video" style="opacity:.85" />' + cap(item) + '</div>';
+      if (!item.url) return '';
+      const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
+      return '<div class="dcc-tour-cell wide"><video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
+             ' controls preload="none"></video>' + cap(item) + '</div>';
+    }
+    // photo
+    const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
+    if (item.full) lightboxFulls.push(resolveUrl(item.full));
+    return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + '</div>';
+  }
+  function cap(item) {
+    return '<span class="dcc-tour-cell-time">' + escapeHtml(item.time || '') + '</span>';
   }
 
-  function renderChapterCard(c) {
-    if (!panelEl) return;
-    panelEl.innerHTML =
-      '<article class="dcc-tour-stop-card">' +
-        '<h2>' + escapeHtml(c.name) + '</h2>' +
-        (c.subtitle ? '<p class="dcc-tour-stop-subtitle">' + escapeHtml(c.subtitle) + '</p>' : '') +
-        (c.summary ? '<p>' + escapeHtml(c.summary) + '</p>' : '') +
-        '<p class="dcc-tour-hint">Tap the pins in this area to open each spot’s photos.</p>' +
-      '</article>';
-  }
-
-  function selectPlace(place) {
-    if (!panelEl) return;
-    if (map) map.flyTo([place.lat, place.lng], Math.max(map.getZoom(), 16), { duration: 0.6 });
-    const ch = chaptersById[place.chapter];
-    const heading = place.venue || (place.city || 'A stop on the trip');
-    const sub = place.venue ? escapeHtml(place.city) : ('near ' + place.lat.toFixed(4) + ', ' + place.lng.toFixed(4));
-    const chapterLine = ch ? '<p class="dcc-tour-chapter-tag">' + escapeHtml(ch.name) + '</p>' : '';
-    const media = renderMedia(place.media || []);
-    panelEl.innerHTML =
-      '<article class="dcc-tour-stop-card">' +
-        chapterLine +
-        '<h2>' + escapeHtml(heading) + '</h2>' +
-        '<p class="dcc-tour-stop-subtitle">' + sub + ' · ' + (place.count || 0) + ' item' + (place.count === 1 ? '' : 's') + '</p>' +
-        media +
-        '<p><button class="dcc-tour-chip" id="dcc-back">← Back to overview</button></p>' +
-      '</article>';
-    const back = panelEl.querySelector('#dcc-back');
-    if (back) back.addEventListener('click', () => fetch(baseURL + 'places.json').then(r => r.json()).then(renderIntro));
-  }
-
-  function renderMedia(items) {
-    lightboxFulls = items.filter(i => !i.type && (i.full || i.src)).map(i => resolveUrl(i.full || i.src));
-    lightboxIdx = -1;
-    if (!items.length) return '<div class="dcc-tour-placeholder" style="margin-top:1rem;">No media here.</div>';
-    const html = items.map(item => {
-      if (item.type === 'drive') {
-        return '<iframe loading="lazy" allowfullscreen allow="autoplay" ' +
-          'style="grid-column:1/-1;height:220px;border:0;border-radius:6px;" ' +
-          'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>';
-      }
-      if (item.type === 'youtube') {
-        return '<iframe loading="lazy" allowfullscreen ' +
-          'style="grid-column:1/-1;height:220px;border:0;border-radius:6px;" ' +
-          'src="https://www.youtube-nocookie.com/embed/' + escapeAttr(item.id) + '"></iframe>';
-      }
-      if (item.type === 'self_hosted') {
-        if (!item.url && item.poster) {
-          return '<img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video preview" style="opacity:.85;" />';
-        }
-        if (!item.url) return '';
-        const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
-        return '<video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
-               ' controls preload="metadata" style="grid-column:1/-1;height:auto;max-height:360px;background:#000;"></video>';
-      }
-      const src = item.src || item.url;
-      const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
-      return '<img loading="lazy" src="' + escapeAttr(resolveUrl(src)) + '" alt=""' + full + ' />';
-    }).join('');
-    return '<div class="dcc-tour-media">' + html + '</div>';
+  // ---- map ----
+  function showDayOnMap(day) {
+    if (!map || !clusterGroup) return;
+    clusterGroup.clearLayers();
+    const pts = [];
+    day.places.forEach((p, pi) => {
+      if (p.lat == null) return;
+      const m = L.marker([p.lat, p.lng], { title: p.name });
+      m.on('click', () => {
+        const sec = root._story.querySelector('#place-' + pi);
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      clusterGroup.addLayer(m);
+      markersByPlace[pi] = m;
+      pts.push([p.lat, p.lng]);
+    });
+    if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2), { animate: false });
+    else map.setView([42.64, 18.11], 11);
+    setTimeout(() => map.invalidateSize(), 60);
   }
 
   function resolveUrl(p) {
+    if (!p) return '';
     if (/^https?:/i.test(p)) return p;
     return baseURL + p.replace(/^\.?\//, '');
   }
+  function el(tag, cls, html) {
+    const e = document.createElement(tag); e.className = cls;
+    if (html != null) e.innerHTML = html; return e;
+  }
 
-  // ===== Lightbox =====
+  // ===== Lightbox (photos) =====
   document.addEventListener('click', (e) => {
     const img = e.target.closest('.dcc-tour-media img[data-full]');
     if (!img) return;
