@@ -549,7 +549,9 @@ class Selector_Widget extends Widget_Base
         $this->var_color('color_accent', __('Accent', 'dcc-cottage-selector'), '--dccs-accent', $inherited);
         $this->var_color('color_accent_text', __('Accent text', 'dcc-cottage-selector'), '--dccs-accent-text');
         $this->var_color('color_accent2', __('Secondary accent', 'dcc-cottage-selector'), '--dccs-accent-2', $inherited);
-        $this->var_color('color_surface', __('Card background', 'dcc-cottage-selector'), '--dccs-surface');
+        $this->var_color('color_surface', __('Other surfaces (chips, table & pop-ups)', 'dcc-cottage-selector'), '--dccs-surface', [
+            'description' => __('Background for answer chips, the compare table and the pop-up. Result cards, buttons and menus have their own settings below.', 'dcc-cottage-selector'),
+        ]);
         $this->var_color('color_bg', __('Widget background', 'dcc-cottage-selector'), '--dccs-bg');
         $this->var_color('color_text', __('Text', 'dcc-cottage-selector'), '--dccs-text', $inherited);
         $this->var_color('color_muted', __('Muted text', 'dcc-cottage-selector'), '--dccs-muted');
@@ -557,9 +559,43 @@ class Selector_Widget extends Widget_Base
         $this->var_color('color_good', __('Positive highlight', 'dcc-cottage-selector'), '--dccs-good');
         $this->var_color('color_diff', __('Compare “differs” highlight', 'dcc-cottage-selector'), '--dccs-diff');
 
+        // Result-card background (own control, split out of the generic surface).
+        $this->add_control('results_bg_heading', [
+            'label'     => __('Results', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+        $this->var_color('color_results_bg', __('Results background', 'dcc-cottage-selector'), '--dccs-results-bg', [
+            'description' => __('Background of the result cards on the matches screen.', 'dcc-cottage-selector'),
+        ]);
+
+        // Every button and menu trigger (Next / Back / Submit, the landing choices,
+        // Compare, edit links, and the two dropdown trigger bars + panels).
+        $this->add_control('btn_bg_heading', [
+            'label'     => __('Buttons & menus', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+        $this->var_color('color_btn_bg', __('Button background', 'dcc-cottage-selector'), '--dccs-btn-bg', [
+            'description' => __('Applies to every button and menu trigger. Individual buttons with their own Style section (View cottage, Edit answers) can still override this.', 'dcc-cottage-selector'),
+        ]);
+        $this->var_color('color_btn_bg_hover', __('Button background (hover)', 'dcc-cottage-selector'), '--dccs-btn-bg-hover');
+
+        // The individual selectable items inside the two dropdown menus.
+        $this->add_control('item_bg_heading', [
+            'label'     => __('Drop-down menu items', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+        $this->var_color('color_item_bg', __('Item background', 'dcc-cottage-selector'), '--dccs-item-bg');
+        $this->var_color('color_item_text', __('Item text', 'dcc-cottage-selector'), '--dccs-item-text');
+        $this->var_color('color_item_bg_hover', __('Item background (hover)', 'dcc-cottage-selector'), '--dccs-item-bg-hover');
+        $this->var_color('color_item_text_hover', __('Item text (hover)', 'dcc-cottage-selector'), '--dccs-item-text-hover');
+
         $this->add_group_control(Group_Control_Typography::get_type(), [
-            'name'     => 'base_typography',
-            'selector' => self::SEL,
+            'name'      => 'base_typography',
+            'selector'  => self::SEL,
+            'separator' => 'before',
         ]);
 
         $this->end_controls_section();
@@ -617,23 +653,16 @@ class Selector_Widget extends Widget_Base
             'name'     => 'modetab_typography',
             'selector' => self::SEL . '.dccs-modeselect-trigger, ' . self::SEL . '.dccs-modetab',
         ]);
-        $this->add_control('modebar_bg', [
-            'label'     => __('Control background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [
-                self::SEL . '.dccs-modeselect-trigger' => 'background-color: {{VALUE}};',
-                self::SEL . '.dccs-modeselect-list'    => 'background-color: {{VALUE}};',
-            ],
-        ]);
-
+        // Background is set globally in Colors → Buttons & menus; item colors in
+        // Colors → Drop-down menu items. This section keeps the trigger text and the
+        // selected-item state.
         $this->start_controls_tabs('modetab_tabs');
         $this->start_controls_tab('modetab_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
         $this->add_control('modetab_color', [
-            'label'     => __('Text', 'dcc-cottage-selector'),
+            'label'     => __('Trigger text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
                 self::SEL . '.dccs-modeselect-trigger' => 'color: {{VALUE}};',
-                self::SEL . '.dccs-modetab'            => 'color: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -960,17 +989,14 @@ class Selector_Widget extends Widget_Base
             'selectors'  => [self::SEL . '.dccs-primary' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
 
+        // Button background (normal + hover) is set globally in Colors → Buttons &
+        // menus; this section keeps the primary button's text color and typography.
         $this->start_controls_tabs('btn_tabs');
         $this->start_controls_tab('btn_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
         $this->add_control('btn_color', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-primary' => 'color: {{VALUE}};'],
-        ]);
-        $this->add_control('btn_bg', [
-            'label'     => __('Background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccs-primary' => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('btn_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
@@ -980,14 +1006,6 @@ class Selector_Widget extends Widget_Base
             'selectors' => [
                 self::SEL . '.dccs-primary:hover'         => 'color: {{VALUE}};',
                 self::SEL . '.dccs-primary:focus-visible' => 'color: {{VALUE}};',
-            ],
-        ]);
-        $this->add_control('btn_bg_hover', [
-            'label'     => __('Background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [
-                self::SEL . '.dccs-primary:hover'         => 'background-color: {{VALUE}};',
-                self::SEL . '.dccs-primary:focus-visible' => 'background-color: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -1011,11 +1029,7 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_control('card_bg', [
-            'label'     => __('Background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccs-card' => 'background-color: {{VALUE}};'],
-        ]);
+        // Card background is set in Colors → Results background.
         $this->add_group_control(Group_Control_Border::get_type(), [
             'name'     => 'card_border',
             'selector' => self::SEL . '.dccs-card',
@@ -1117,20 +1131,13 @@ class Selector_Widget extends Widget_Base
             'name'     => 'cmpmenu_typography',
             'selector' => self::SEL . '.dccs-cmp-trigger, ' . self::SEL . '.dccs-cmp-option',
         ]);
-        $this->add_control('cmpmenu_bg', [
-            'label'     => __('Control background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [
-                self::SEL . '.dccs-cmp-trigger' => 'background-color: {{VALUE}};',
-                self::SEL . '.dccs-cmp-list'    => 'background-color: {{VALUE}};',
-            ],
-        ]);
+        // Background is set globally in Colors → Buttons & menus; option colors in
+        // Colors → Drop-down menu items. This section keeps the trigger text.
         $this->add_control('cmpmenu_color', [
-            'label'     => __('Text', 'dcc-cottage-selector'),
+            'label'     => __('Trigger text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
                 self::SEL . '.dccs-cmp-trigger' => 'color: {{VALUE}};',
-                self::SEL . '.dccs-cmp-option'  => 'color: {{VALUE}};',
             ],
         ]);
         // The picker hugs its label; this places that compact button left / centre /
@@ -1171,8 +1178,6 @@ class Selector_Widget extends Widget_Base
      */
     private function add_dropdown_shape_effects(string $prefix, string $trigger, string $panel, string $item): void
     {
-        $hover = $item . ':hover, ' . $item . ':focus-visible';
-
         $this->add_control($prefix . '_shape_heading', [
             'label'     => __('Shape', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
@@ -1219,16 +1224,7 @@ class Selector_Widget extends Widget_Base
             'name'     => $prefix . '_panel_shadow',
             'selector' => $panel,
         ]);
-        $this->add_control($prefix . '_item_hover_color', [
-            'label'     => __('Item hover text', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [$hover => 'color: {{VALUE}};'],
-        ]);
-        $this->add_control($prefix . '_item_hover_bg', [
-            'label'     => __('Item hover background', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [$hover => 'background-color: {{VALUE}};'],
-        ]);
+        // Item hover colors are set globally in Colors → Drop-down menu items.
         $this->add_responsive_control($prefix . '_transition', [
             'label'      => __('Hover transition speed', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
@@ -1372,6 +1368,13 @@ class Selector_Widget extends Widget_Base
             'color_border'      => '--dccs-border',
             'color_good'        => '--dccs-good',
             'color_diff'        => '--dccs-diff',
+            'color_results_bg'    => '--dccs-results-bg',
+            'color_btn_bg'        => '--dccs-btn-bg',
+            'color_btn_bg_hover'  => '--dccs-btn-bg-hover',
+            'color_item_bg'       => '--dccs-item-bg',
+            'color_item_text'     => '--dccs-item-text',
+            'color_item_bg_hover' => '--dccs-item-bg-hover',
+            'color_item_text_hover' => '--dccs-item-text-hover',
         ];
         foreach ($colors as $key => $var) {
             $v = $settings[$key] ?? '';

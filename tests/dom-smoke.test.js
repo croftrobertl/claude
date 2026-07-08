@@ -746,5 +746,32 @@ function configWith(overrides) {
   ok('Mini Entry exposes an import control', /'import_text'[\s\S]*?'mode'\s*=>\s*'import'/.test(mini));
 })();
 
+// ---- 29. "Card background" split into Results / Button / Drop-down-item colors ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
+
+  // New Colors controls exist and write their CSS variables.
+  ok('new Results background control present', /'color_results_bg'[\s\S]{0,120}--dccs-results-bg/.test(sel));
+  ok('new Button background + hover controls present',
+    /'color_btn_bg'[\s\S]{0,120}--dccs-btn-bg\b/.test(sel) && /'color_btn_bg_hover'[\s\S]{0,140}--dccs-btn-bg-hover/.test(sel));
+  ok('new Drop-down item controls present',
+    /'color_item_bg'[\s\S]{0,120}--dccs-item-bg\b/.test(sel) && /'color_item_text'[\s\S]{0,120}--dccs-item-text\b/.test(sel));
+
+  // The duplicate per-section Background controls are gone (consolidated).
+  ok('duplicate background controls removed',
+    !/'card_bg'/.test(sel) && !/'btn_bg'/.test(sel) && !/'modebar_bg'/.test(sel) &&
+    !/'cmpmenu_bg'/.test(sel) && !/_item_hover_bg/.test(sel));
+
+  // CSS consumes the new vars with baked fallbacks so the look is unchanged when unset.
+  ok('cards read --dccs-results-bg with a surface fallback',
+    /\.dccs-card\s*\{[\s\S]*?var\(--dccs-results-bg,\s*var\(--dccs-surface\)\)/.test(css));
+  ok('primary button reads --dccs-btn-bg with an accent fallback',
+    /\.dccs-primary\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-accent\)\)/.test(css));
+  ok('dropdown items read --dccs-item-bg / --dccs-item-text',
+    /var\(--dccs-item-bg,\s*transparent\)/.test(css) && /var\(--dccs-item-text,\s*var\(--dccs-text\)\)/.test(css));
+  ok('button hover honours --dccs-btn-bg-hover', /var\(--dccs-btn-bg-hover,/.test(css));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

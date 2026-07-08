@@ -59,13 +59,13 @@
 .dccs-root.dccs-root .dccs-landing-choice {
   display: flex; align-items: center; justify-content: center; gap: 0.5em; width: 100%;
   min-height: 56px; padding: 14px 20px; cursor: pointer; text-transform: none;
-  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-surface);
+  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
   color: var(--dccs-text); font-weight: 700; font-size: 1.05rem;
   transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 .dccs-root.dccs-root .dccs-landing-choice:hover,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible {
-  border-color: var(--dccs-accent); background: var(--dccs-bg); transform: translateY(-1px);
+  border-color: var(--dccs-accent); background: var(--dccs-btn-bg-hover, var(--dccs-bg)); transform: translateY(-1px);
 }
 
 /* Match-count pill + chips */
@@ -85,13 +85,13 @@
 .dccs-root.dccs-root .dccs-modeselect-trigger {
   width: 100%; min-height: 46px; padding: 10px 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-surface);
+  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-btn-bg, var(--dccs-surface));
   color: var(--dccs-text); font-weight: 700; font-size: 0.95rem; text-transform: none; line-height: 1.2;
 }
 .dccs-root.dccs-root .dccs-caret { font-size: 0.8em; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-modeselect-list {
   display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
-  background: var(--dccs-surface); border: 1px solid var(--dccs-border); border-radius: 14px;
+  background: var(--dccs-btn-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border); border-radius: 14px;
   box-shadow: 0 12px 30px rgba(20,28,40,0.18);
   /* Cap height + scroll so the menu can't run off a short viewport (overflow:auto
      still clips children to the rounded panel). */
@@ -100,7 +100,7 @@
 .dccs-root.dccs-root .dccs-modeselect.is-open .dccs-modeselect-list { display: block; }
 .dccs-root.dccs-root .dccs-modetab {
   display: block; width: 100%; text-align: var(--dccs-menu-align, center); min-height: 46px; padding: 12px 16px; cursor: pointer;
-  border: 0; background: transparent; color: var(--dccs-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+  border: 0; background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text)); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
 }
 .dccs-root.dccs-root .dccs-modetab + .dccs-modetab { border-top: 1px solid var(--dccs-border); }
 .dccs-root.dccs-root .dccs-modetab.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); }
@@ -202,12 +202,12 @@
 .dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset {
   flex: 1 1 0; min-width: 0; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
-  background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
   white-space: normal; overflow-wrap: anywhere;
 }
 .dccs-root.dccs-root .dccs-primary {
   min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--dccs-accent); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
+  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
   box-shadow: 0 6px 16px rgba(15,109,191,0.32);
   white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
 }
@@ -222,7 +222,7 @@
 .dccs-root.dccs-root .dccs-review-a { flex: 1 1 30%; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-edit {
   margin-left: auto; min-height: 36px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--dccs-border); background: var(--dccs-surface); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
+  border: 1px solid var(--dccs-border); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
 }
 
 /* Results head + open-compare button */
@@ -231,7 +231,7 @@
 }
 .dccs-root.dccs-root .dccs-open-compare {
   min-height: 40px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--dccs-accent); background: var(--dccs-surface); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
 }
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
 /* Compare mode: the button that opens the comparison popup, centred under the checklist. */
@@ -265,14 +265,14 @@
 .dccs-root.dccs-root .dccs-cmp-trigger {
   width: 100%; min-height: 46px; padding: 10px 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-surface);
+  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-btn-bg, var(--dccs-surface));
   color: var(--dccs-text); font-weight: 700; font-size: 0.95rem; text-transform: none;
 }
 .dccs-root.dccs-root .dccs-cmp-list {
   display: none; position: absolute; left: 50%; transform: translateX(-50%); top: calc(100% + 6px); z-index: 20;
   min-width: 100%; width: -moz-max-content; width: max-content; max-width: min(90vw, 360px);
   max-height: 230px; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-surface);
+  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
   box-shadow: 0 12px 30px rgba(20, 28, 40, 0.18);
 }
 .dccs-root.dccs-root .dccs-cmp-select.is-open .dccs-cmp-list { display: block; }
@@ -280,6 +280,7 @@
   display: flex; align-items: center; gap: 10px; padding: 11px 14px; min-height: 44px; cursor: pointer;
   border-bottom: 1px solid var(--dccs-border); font-size: 0.92rem; text-transform: none;
   overflow-wrap: anywhere;
+  background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 18px; height: 18px; flex: 0 0 auto; }
@@ -295,7 +296,7 @@
   opacity: 1; transition: opacity 0.15s ease;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6675' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat center bottom 5px / 16px 16px,
-    linear-gradient(to top, var(--dccs-surface), rgba(255, 255, 255, 0));
+    linear-gradient(to top, var(--dccs-btn-bg, var(--dccs-surface)), rgba(255, 255, 255, 0));
 }
 .dccs-root.dccs-root .dccs-cmp-list.is-atend::after { opacity: 0; }
 
@@ -306,11 +307,41 @@
 .dccs-root.dccs-root .dccs-modetab:hover,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-cmp-option:hover,
-.dccs-root.dccs-root .dccs-cmp-option:focus-within { background: var(--dccs-bg); }
+.dccs-root.dccs-root .dccs-cmp-option:focus-within {
+  background: var(--dccs-item-bg-hover, var(--dccs-bg));
+  color: var(--dccs-item-text-hover, var(--dccs-item-text, var(--dccs-text)));
+}
 /* Keep the selected mode pill on its accent colour when hovered (unless overridden). */
 .dccs-root.dccs-root .dccs-modetab.is-active:hover,
 .dccs-root.dccs-root .dccs-modetab.is-active:focus-visible {
   background: var(--dccs-accent); color: var(--dccs-accent-text);
+}
+
+/* "Button background (hover)" override for every button + menu trigger. When unset it
+   falls through to the normal button background, so the baked look is unchanged; a set
+   value recolors all of them. Per-button Style sections (View cottage, Edit answers)
+   carry the {{WRAPPER}} prefix and still win. Grouped by baked normal background. */
+.dccs-root.dccs-root .dccs-primary:hover,
+.dccs-root.dccs-root .dccs-primary:focus-visible,
+.dccs-root.dccs-root .dccs-reset:hover,
+.dccs-root.dccs-root .dccs-reset:focus-visible,
+.dccs-root.dccs-root .dccs-see-matches:hover,
+.dccs-root.dccs-root .dccs-see-matches:focus-visible,
+.dccs-root.dccs-root .dccs-edit-answers:hover,
+.dccs-root.dccs-root .dccs-edit-answers:focus-visible,
+.dccs-root.dccs-root .dccs-view:hover,
+.dccs-root.dccs-root .dccs-view:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-accent)));
+}
+.dccs-root.dccs-root .dccs-open-compare:hover,
+.dccs-root.dccs-root .dccs-open-compare:focus-visible,
+.dccs-root.dccs-root .dccs-edit:hover,
+.dccs-root.dccs-root .dccs-edit:focus-visible,
+.dccs-root.dccs-root .dccs-modeselect-trigger:hover,
+.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
+.dccs-root.dccs-root .dccs-cmp-trigger:hover,
+.dccs-root.dccs-root .dccs-cmp-trigger:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-surface)));
 }
 
 /* Compare table — pinned attribute column + ‹ › paging */
@@ -339,7 +370,7 @@
 .dccs-root.dccs-root .dccs-results { margin-top: 18px; }
 .dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; }
 .dccs-root.dccs-root .dccs-card {
-  background: var(--dccs-surface); border: 1px solid var(--dccs-border);
+  background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border);
   border-radius: var(--dccs-radius); padding: 14px; margin-bottom: 12px;
 }
 .dccs-root.dccs-root .dccs-card.is-highlight { border-color: var(--dccs-accent); box-shadow: 0 0 0 2px rgba(15,109,191,0.18); }
@@ -354,13 +385,13 @@
 .dccs-root.dccs-root .dccs-card-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .dccs-root.dccs-root .dccs-view {
   display: inline-block; min-height: 44px; line-height: 28px; padding: 8px 18px;
-  background: var(--dccs-accent); color: var(--dccs-accent-text);
+  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text);
   border-radius: 999px; text-decoration: none; font-weight: 600;
 }
 .dccs-root.dccs-root .dccs-cmp-toggle { margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 
 .dccs-root.dccs-root .dccs-empty {
-  background: var(--dccs-surface); border: 1px dashed var(--dccs-accent-2);
+  background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);
   border-radius: var(--dccs-radius); padding: 16px;
 }
 .dccs-root.dccs-root .dccs-empty h3 { margin: 0 0 6px; }

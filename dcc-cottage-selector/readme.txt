@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,20 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.14.0 =
+* Colors panel: the single "Card background" control is split into clearer, purpose-named
+  controls. Style → Colors now has "Results background" (result cards), "Button background"
+  + hover (every button and the two drop-down trigger bars/panels), and "Drop-down menu
+  items" (background + text, normal + hover). The leftover neutral fill is renamed
+  "Other surfaces (chips, table & pop-ups)".
+* Consolidated the duplicate Background pickers that used to live in the Result cards,
+  Buttons, Mode switcher and Compare picker sections — each background now has one home
+  in Colors. Those sections keep their typography, borders, spacing and text colors.
+* Note: if you had previously set a card, button or menu background in one of those
+  sections, re-pick it once in the new Colors controls after updating. With nothing set
+  the widget looks exactly as before.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.13.0 =
 * Quick finder: removed the "Want the largest space available?" question — it was

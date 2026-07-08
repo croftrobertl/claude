@@ -57,6 +57,8 @@ namespace {
         'not_a_string'        => ['x' => 1],         // ignored (non-scalar, non str_)
         'color_accent'        => '#123456',          // -> --dccs-accent
         'color_text'          => '',                 // unset -> dropped
+        'color_btn_bg'        => '#abcdef',          // -> --dccs-btn-bg (split-out palette)
+        'color_results_bg'    => '#fafafa',          // -> --dccs-results-bg
         'corner_radius'       => ['size' => 14, 'unit' => 'px'], // -> --dccs-radius: 14px
     ];
 
@@ -72,6 +74,8 @@ namespace {
     ok('icon sides captured', ($snap['iconSides']['view'] ?? null) === 'right');
     ok('icon sides default to left', ($snap['iconSides']['questions'] ?? null) === 'left');
     ok('cssVars capture a set colour', ($snap['cssVars']['--dccs-accent'] ?? null) === '#123456');
+    ok('cssVars capture the split-out button background', ($snap['cssVars']['--dccs-btn-bg'] ?? null) === '#abcdef');
+    ok('cssVars capture the split-out results background', ($snap['cssVars']['--dccs-results-bg'] ?? null) === '#fafafa');
     ok('cssVars format a slider as size+unit', ($snap['cssVars']['--dccs-radius'] ?? null) === '14px');
     ok('cssVars drop unset colours', !array_key_exists('--dccs-text', $snap['cssVars']));
 
