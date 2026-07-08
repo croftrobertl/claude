@@ -97,7 +97,7 @@
    "venue": "Mount Srđ summit (upper cable car)",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 283,
+   "count": 314,
    "media": [
     {
      "src": "media/dubrovnik-old-town/D4D32903-7921-46FE-A1ED-EFC073D705AF-thumb.jpg",
@@ -1282,15 +1282,35 @@
     },
     {
      "type": "drive",
-     "id": "1yRKUFpbFUsQcs2DyQwFQa4UIlgPjttSo"
+     "id": "1ciiSzfIfX6zU0sPAF1VfThWvfUMP3DR7"
     },
     {
      "type": "drive",
-     "id": "1hv6XfqBa5a9BlwOCN0NJLqqlZmT9_9zw"
+     "id": "1iimzdsuBTI59vVyZZh0MYB6zayOIagKQ"
     },
     {
      "type": "drive",
-     "id": "14VbDMjsy1EtEnZizk9xyYBussVWKdo8u"
+     "id": "1fV6ClX1YXbwKHAbKm1Q8hN8Rwe5ol1p4"
+    },
+    {
+     "type": "drive",
+     "id": "1Wa5azv5Yt935YIt95Af7gSt8j8x4A_mQ"
+    },
+    {
+     "type": "drive",
+     "id": "1ob_ocSQhldyVMyOcDqUInHR0Ip5g9ars"
+    },
+    {
+     "type": "drive",
+     "id": "1-s6I52qYyLyUYFeCCtD5p40zb3S6a9_K"
+    },
+    {
+     "type": "drive",
+     "id": "1atzWENAfMVenagLQkRJqMLrconqXYYQq"
+    },
+    {
+     "type": "drive",
+     "id": "1aPG40ev6Vj7Lhpa1fGLCxj_6VgpjpfVn"
     },
     {
      "type": "drive",
@@ -1298,43 +1318,147 @@
     },
     {
      "type": "drive",
-     "id": "1n9r-AmX0XqM_QxHqPWLo1x71PlHBCpMA"
+     "id": "1OMoKRSZorwoVflU3dQ863uAT6qwX5IKi"
     },
     {
      "type": "drive",
-     "id": "12cGNTlYuOUVh8uQIS-pbjvXGdwdecXnG"
+     "id": "14soPH10v6ihxFp6VXlG5W9YWgmUJ6xjB"
     },
     {
      "type": "drive",
-     "id": "1qGu7vrdesCmujndhtQpNfxxq2beKcrIN"
+     "id": "1u_1FHLciF2S2h0OHeFiiOaN02iTLilvw"
     },
     {
      "type": "drive",
-     "id": "1lMpbd7atC0L7Ub70sdRHAKkaLLWnfXCo"
+     "id": "1g34xcgi_bTQfsoacpRJys-L2uBr8dRna"
     },
     {
      "type": "drive",
-     "id": "1htdBc3_hA6AmhihZVzPRQsiAmqiXherB"
+     "id": "1orF-NMdsehwea4-frJsCeTCTaHQVtMcp"
     },
     {
      "type": "drive",
-     "id": "1X8XMgzywCHhvAtjAbYn9XnlzPenowGYj"
+     "id": "1vOJel1G7tlQXZ4kZ_5UfdBALXoqQnbdc"
     },
     {
      "type": "drive",
-     "id": "1FCXofo6AwtS0eO4XCSCe5OIl6P4x6LBy"
+     "id": "1p8cv6h3fxHj0946sdgxTYdPcwJ4eFLzM"
     },
     {
      "type": "drive",
-     "id": "1Kvc7W6zpMBCdAvFTM1qDJXQ3UQFAQm2T"
+     "id": "1Si_YK79MZxu4DzXRVW2pwRgwc2YOQ7RG"
     },
     {
      "type": "drive",
-     "id": "1ZTuKKDe12tpKESWqkB_k0YurhBezRewq"
+     "id": "1i5MwXhxYeeCRE8YL3rCQ0C4APanhpLjQ"
     },
     {
      "type": "drive",
-     "id": "1rjg6dogb32tdRVizfTVWF1nyDTK45AGw"
+     "id": "1awc-VaJdX6BJcjCoXOnUK_yj2bJvPQ_1"
+    },
+    {
+     "type": "drive",
+     "id": "1vMGfv_VbmD34J1D6Fim3rZ2IIYZJQa1d"
+    },
+    {
+     "type": "drive",
+     "id": "1BGTWEF8RZ9lxhhzz30q8B1qyJaQE4JWt"
+    },
+    {
+     "type": "drive",
+     "id": "1C4sqfOqY-U7IcmMJ27DnxKoMZth6ZFV7"
+    },
+    {
+     "type": "drive",
+     "id": "14D-YY2NcChD-DWtNVQnC4I5vkV5ZJGg5"
+    },
+    {
+     "type": "drive",
+     "id": "1FZkFRohj5qIYTmTs4v1SrYaaJRaH8V_q"
+    },
+    {
+     "type": "drive",
+     "id": "1Vozl7Oi8cDc5lwAoQQg0uHt9sgqGlDW0"
+    },
+    {
+     "type": "drive",
+     "id": "1LuSZZ7sonHe43KSu5XJ5QQxsxoddExFM"
+    },
+    {
+     "type": "drive",
+     "id": "18AzcOgVlsoYo9CHYeqEjRhocg9XXrkLt"
+    },
+    {
+     "type": "drive",
+     "id": "1i-oG7c2NISOLcSy4TLz2hGugLX0UpT0b"
+    },
+    {
+     "type": "drive",
+     "id": "15yWKLeM6iN6Ri0ar9paNpZVQePjSk4l2"
+    },
+    {
+     "type": "drive",
+     "id": "1igugaizQ2txOdQP9dTgYFddw9rKCCiH4"
+    },
+    {
+     "type": "drive",
+     "id": "1nz4p901OR-BI99Wg5eS9j8p-If0IuZ2d"
+    },
+    {
+     "type": "drive",
+     "id": "1V0dGUDe-HpjHgLeboH5BGa_5rWcmOoE-"
+    },
+    {
+     "type": "drive",
+     "id": "1HHsrhsZuVD6hBp-z_ROZu9cgpcQug2fT"
+    },
+    {
+     "type": "drive",
+     "id": "13TUNuhuyQnMErfbY0UnXKxnr7PJUqJGd"
+    },
+    {
+     "type": "drive",
+     "id": "1n49W2Kkesw7_yhGFxL_3l5RJfbZgKLXa"
+    },
+    {
+     "type": "drive",
+     "id": "1lz7AdLCgnc4EqnqGfd1QsUU09_qjjcM6"
+    },
+    {
+     "type": "drive",
+     "id": "1zLHU9u9JGDXYUdp76WoVq4Y1qU-ylXY2"
+    },
+    {
+     "type": "drive",
+     "id": "1fC8Mv4XVC7k59k1KS45cJU-L7jDvY1je"
+    },
+    {
+     "type": "drive",
+     "id": "1d3aBQYyposwkPG_Pg8mG1Xz8Oeezp_rs"
+    },
+    {
+     "type": "drive",
+     "id": "1Ybg8IQXM-4NLQjXeEWpjVJ6nRGS_mnqV"
+    },
+    {
+     "type": "drive",
+     "id": "1ciPrTcPkVTBYyKk-Bc3dyWNwVOZkqNoX"
+    },
+    {
+     "type": "drive",
+     "id": "1ZIbsC3E_AMNlgfm6hAAj-zjTvdqqTeZn"
+    },
+    {
+     "type": "drive",
+     "id": "1ehxVtFYO6Iw3UDIaEAQX5odMhrVd32XJ"
+    },
+    {
+     "type": "drive",
+     "id": "1xjFw-Fe6qlKQ8E2poubbaOvdr9rIHTeL"
+    },
+    {
+     "type": "drive",
+     "id": "13D7CwK4eZmOQgwrSVmQ19aBbSTd9eA7d"
     }
    ]
   },
@@ -1345,7 +1469,7 @@
    "venue": "Lapad Bay & beach",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 125,
+   "count": 121,
    "media": [
     {
      "src": "media/dubrovnik-old-town/D4E0C730-DF85-45C6-A5A8-CA9DFF3C1D14-thumb.jpg",
@@ -1872,22 +1996,6 @@
     {
      "type": "drive",
      "id": "1oH6fdxQ9GEBo2z_ekuzb3_cue8RctuIm"
-    },
-    {
-     "type": "drive",
-     "id": "1CO1o05ui2MYI2RerHjF_XL4nT57NM-xU"
-    },
-    {
-     "type": "drive",
-     "id": "19hZVJSfMcvXyuciPpU34fRR4X1ydz_P0"
-    },
-    {
-     "type": "drive",
-     "id": "1UUgT8oh-TkZtOb4eaGRNp8jzl4uE4SYf"
-    },
-    {
-     "type": "drive",
-     "id": "1FcoNvPd51E1XyxR7cNkToVMnC6aRzr6s"
     }
    ]
   },
@@ -1898,7 +2006,7 @@
    "venue": "Stradun (Old Town main street)",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 115,
+   "count": 126,
    "media": [
     {
      "src": "media/dubrovnik-old-town/7A89C300-DD67-4A1C-8EE7-149F286545AA-thumb.jpg",
@@ -2369,6 +2477,34 @@
     },
     {
      "type": "drive",
+     "id": "191_9LHEV2k9dUDCJsJ4ToMSgTv62bJyr"
+    },
+    {
+     "type": "drive",
+     "id": "1-NjfOfrm4c25g0aXKk63N9JSrKWicfJH"
+    },
+    {
+     "type": "drive",
+     "id": "15EM7ZsFRRc1MK3TKCowLexhY_x1Xt0og"
+    },
+    {
+     "type": "drive",
+     "id": "1RqmHLCwz9y-os7utVxVhtrbr7mhHba3f"
+    },
+    {
+     "type": "drive",
+     "id": "1oSl5bOvDbiMaINuf5pZE7E7S0zczN4gf"
+    },
+    {
+     "type": "drive",
+     "id": "1cTiGxTTnOaLWsUc7k59ixa0hkL4xc5Kx"
+    },
+    {
+     "type": "drive",
+     "id": "1rXQh4OSo2p4S_6MBnzMIoNDtctsHqJoN"
+    },
+    {
+     "type": "drive",
      "id": "1THriKcXpspz0wColFrGFO266K7azuDV9"
     },
     {
@@ -2382,6 +2518,22 @@
     {
      "type": "drive",
      "id": "107sjKplP6FE6_b5zDFb5X7YAVqh7W2A7"
+    },
+    {
+     "type": "drive",
+     "id": "1dFpmiITb8JCE_sFYC_o31cl0n0IXOyfv"
+    },
+    {
+     "type": "drive",
+     "id": "1ScbIs2YTQQyeygTVh20fGqReDIvHmX8l"
+    },
+    {
+     "type": "drive",
+     "id": "1ywLVHlUI7SKQSIG_Vhf7vIpazk8MFKHi"
+    },
+    {
+     "type": "drive",
+     "id": "1KFtunT-eZpcXPjrSK61StmqN9G5iUbjQ"
     }
    ]
   },
@@ -3177,7 +3329,7 @@
    "venue": "Rector's Palace & Cathedral",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 88,
+   "count": 86,
    "media": [
     {
      "type": "self_hosted",
@@ -3567,14 +3719,6 @@
     {
      "type": "drive",
      "id": "1SFOrUXUAuvPl7r9UmQjln-aj3kk9pMGE"
-    },
-    {
-     "type": "drive",
-     "id": "1BbZkgHpDB2T1mWbbrciIJb2Q9yr0NBZB"
-    },
-    {
-     "type": "drive",
-     "id": "1GQSmDEF4fSkoNxmBZf2YAtVeIalj2HIv"
     }
    ]
   },
@@ -4207,7 +4351,7 @@
    "venue": "Pile Gate",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 65,
+   "count": 64,
    "media": [
     {
      "src": "media/dubrovnik-old-town/D5CCAF41-D9D1-4322-97FB-D9D35638D271-thumb.jpg",
@@ -4459,19 +4603,7 @@
     },
     {
      "type": "drive",
-     "id": "1g34xcgi_bTQfsoacpRJys-L2uBr8dRna"
-    },
-    {
-     "type": "drive",
-     "id": "1orF-NMdsehwea4-frJsCeTCTaHQVtMcp"
-    },
-    {
-     "type": "drive",
-     "id": "1ywLVHlUI7SKQSIG_Vhf7vIpazk8MFKHi"
-    },
-    {
-     "type": "drive",
-     "id": "1KFtunT-eZpcXPjrSK61StmqN9G5iUbjQ"
+     "id": "1Vc9Gu2tEJNPzseUE2yDtxa0w_8R2L34f"
     },
     {
      "type": "drive",
@@ -4491,7 +4623,15 @@
     },
     {
      "type": "drive",
-     "id": "1cWWcaiUUrW4N_FyPjwKFp-zKf4YUEFOL"
+     "id": "13GgcqMAUcMsvA88YVhPmQDu7LdcR9Bp7"
+    },
+    {
+     "type": "drive",
+     "id": "19cRto-4UDa5EC1qaTJ9WV4aIOLcGb5Tt"
+    },
+    {
+     "type": "drive",
+     "id": "1hPrqj-MV1A5JZd4XneZtui21k0K-3wv1"
     }
    ]
   },
@@ -4667,18 +4807,6 @@
     {
      "src": "media/dubrovnik-old-town/9A3C8097-4B2E-45B6-902C-F9D7AA06249E-thumb.jpg",
      "full": "media/dubrovnik-old-town/9A3C8097-4B2E-45B6-902C-F9D7AA06249E-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "13D7CwK4eZmOQgwrSVmQ19aBbSTd9eA7d"
-    },
-    {
-     "type": "drive",
-     "id": "19cRto-4UDa5EC1qaTJ9WV4aIOLcGb5Tt"
-    },
-    {
-     "type": "drive",
-     "id": "1hPrqj-MV1A5JZd4XneZtui21k0K-3wv1"
     }
    ]
   },
@@ -4689,7 +4817,7 @@
    "venue": "Naljeskovićeva",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 48,
+   "count": 45,
    "media": [
     {
      "src": "media/dubrovnik-old-town/4632B2A9-32C7-49EC-99E1-03DB07C08B85-thumb.jpg",
@@ -4855,19 +4983,7 @@
     },
     {
      "type": "drive",
-     "id": "1RqmHLCwz9y-os7utVxVhtrbr7mhHba3f"
-    },
-    {
-     "type": "drive",
-     "id": "1oSl5bOvDbiMaINuf5pZE7E7S0zczN4gf"
-    },
-    {
-     "type": "drive",
-     "id": "1cTiGxTTnOaLWsUc7k59ixa0hkL4xc5Kx"
-    },
-    {
-     "type": "drive",
-     "id": "1rXQh4OSo2p4S_6MBnzMIoNDtctsHqJoN"
+     "id": "1cWWcaiUUrW4N_FyPjwKFp-zKf4YUEFOL"
     },
     {
      "type": "drive",
@@ -4902,7 +5018,7 @@
    "venue": "Elaphiti Islands",
    "city": "Grad Dubrovnik",
    "chapter": "elaphiti",
-   "count": 35,
+   "count": 34,
    "media": [
     {
      "src": "media/elaphiti/C0373A73-C42B-4FC0-B02D-C7E87E43879B-thumb.jpg",
@@ -5040,10 +5156,6 @@
      "type": "self_hosted",
      "url": "media/elaphiti/4A618DAB-32CF-4F3A-8A26-E0972172D15C-hd.mp4",
      "poster": "media/elaphiti/4A618DAB-32CF-4F3A-8A26-E0972172D15C-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1B7-Lpwt1csKz_jZWCaMsjhMkjuTQnK7m"
     },
     {
      "type": "drive",
@@ -5193,10 +5305,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/DC7D5919-1E28-47F5-AD06-1003236FC5E0-hd.mp4",
      "poster": "media/dubrovnik-old-town/DC7D5919-1E28-47F5-AD06-1003236FC5E0-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1ESxNREBdG9A_QTzFKi-wGKw9ejmqvcoS"
     }
    ]
   },
@@ -5207,7 +5315,7 @@
    "venue": "By The Way",
    "city": "Cavtat",
    "chapter": "cavtat",
-   "count": 26,
+   "count": 25,
    "media": [
     {
      "src": "media/cavtat/961F03BC-3D57-42EE-A385-F331F268CFC9-thumb.jpg",
@@ -5308,10 +5416,6 @@
     {
      "type": "drive",
      "id": "1N-63BhuaPAtNMXrbejf0U55HQTXd9rOB"
-    },
-    {
-     "type": "drive",
-     "id": "18nGOpKZiCmzLme8U0KkquBWeqlQT87DM"
     }
    ]
   },
@@ -5408,46 +5512,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/7BD951EB-AEAC-4C80-A09A-D718B69BB548-hd.mp4",
      "poster": "media/dubrovnik-old-town/7BD951EB-AEAC-4C80-A09A-D718B69BB548-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1Si_YK79MZxu4DzXRVW2pwRgwc2YOQ7RG"
-    },
-    {
-     "type": "drive",
-     "id": "1i5MwXhxYeeCRE8YL3rCQ0C4APanhpLjQ"
-    },
-    {
-     "type": "drive",
-     "id": "1awc-VaJdX6BJcjCoXOnUK_yj2bJvPQ_1"
-    },
-    {
-     "type": "drive",
-     "id": "1V0dGUDe-HpjHgLeboH5BGa_5rWcmOoE-"
-    },
-    {
-     "type": "drive",
-     "id": "1HHsrhsZuVD6hBp-z_ROZu9cgpcQug2fT"
-    },
-    {
-     "type": "drive",
-     "id": "13TUNuhuyQnMErfbY0UnXKxnr7PJUqJGd"
-    },
-    {
-     "type": "drive",
-     "id": "1n49W2Kkesw7_yhGFxL_3l5RJfbZgKLXa"
-    },
-    {
-     "type": "drive",
-     "id": "1ZIbsC3E_AMNlgfm6hAAj-zjTvdqqTeZn"
-    },
-    {
-     "type": "drive",
-     "id": "1ehxVtFYO6Iw3UDIaEAQX5odMhrVd32XJ"
-    },
-    {
-     "type": "drive",
-     "id": "1xjFw-Fe6qlKQ8E2poubbaOvdr9rIHTeL"
     }
    ]
   },
@@ -5812,7 +5876,7 @@
    "venue": "Sv. Margarita",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 27,
+   "count": 24,
    "media": [
     {
      "src": "media/dubrovnik-old-town/02ADD35A-1F6E-4071-939B-EC09522D8BCD-thumb.jpg",
@@ -5896,18 +5960,6 @@
     {
      "type": "drive",
      "id": "1ntrBI7dAspoq-QHB4JAVfdUaGoe71o1E"
-    },
-    {
-     "type": "drive",
-     "id": "1dFpmiITb8JCE_sFYC_o31cl0n0IXOyfv"
-    },
-    {
-     "type": "drive",
-     "id": "1ScbIs2YTQQyeygTVh20fGqReDIvHmX8l"
-    },
-    {
-     "type": "drive",
-     "id": "13GgcqMAUcMsvA88YVhPmQDu7LdcR9Bp7"
     },
     {
      "type": "drive",
@@ -5999,10 +6051,6 @@
     {
      "src": "media/dubrovnik-old-town/A47A35FE-C761-46DC-A13F-E2DDCFADDFD2-thumb.jpg",
      "full": "media/dubrovnik-old-town/A47A35FE-C761-46DC-A13F-E2DDCFADDFD2-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1Vc9Gu2tEJNPzseUE2yDtxa0w_8R2L34f"
     }
    ]
   },
@@ -6361,7 +6409,7 @@
    "venue": "Sports Pub Mario",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 12,
+   "count": 14,
    "media": [
     {
      "type": "self_hosted",
@@ -6418,6 +6466,14 @@
     {
      "src": "media/dubrovnik-old-town/38708070-9BAA-4F17-A33B-A1544068AF17-thumb.jpg",
      "full": "media/dubrovnik-old-town/38708070-9BAA-4F17-A33B-A1544068AF17-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1B7-Lpwt1csKz_jZWCaMsjhMkjuTQnK7m"
+    },
+    {
+     "type": "drive",
+     "id": "1GjBOqzx7OeVr9uMBhnwflcwe0mmJDE_-"
     }
    ]
   },
@@ -6602,7 +6658,7 @@
    "venue": "Ulica branitelja Dubrovnika",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 18,
+   "count": 14,
    "media": [
     {
      "type": "self_hosted",
@@ -6661,22 +6717,6 @@
     {
      "type": "drive",
      "id": "1fY-XNwt1GwTnKpmwEU-af26RisudsZrQ"
-    },
-    {
-     "type": "drive",
-     "id": "1StMdDBbHUOlzltSgar8-pyI_5TLNWLSD"
-    },
-    {
-     "type": "drive",
-     "id": "1AqqvC8jyD-IWGu-iktofVXz6Re3rjQ-6"
-    },
-    {
-     "type": "drive",
-     "id": "1o7D8dJbkKVMCWtAlBXKMtWYHsiQmZxPX"
-    },
-    {
-     "type": "drive",
-     "id": "1hpkSaOz_G9pWwz2U_CAYc30ZkophiJ43"
     }
    ]
   },
@@ -6734,10 +6774,6 @@
     {
      "src": "media/dbv-airport/9853DBF4-F04D-4CA9-8CB9-050DB39113DA-thumb.jpg",
      "full": "media/dbv-airport/9853DBF4-F04D-4CA9-8CB9-050DB39113DA-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1_ZEdj5KbPS7HGdRWTg0ClTrQMqYRfzrn"
     }
    ]
   },
@@ -6748,7 +6784,7 @@
    "venue": "Ulica branitelja Dubrovnika",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 11,
+   "count": 15,
    "media": [
     {
      "type": "self_hosted",
@@ -6796,6 +6832,22 @@
     {
      "src": "media/dubrovnik-old-town/2C76982C-7542-4107-9D89-908B0B9D7055-thumb.jpg",
      "full": "media/dubrovnik-old-town/2C76982C-7542-4107-9D89-908B0B9D7055-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1StMdDBbHUOlzltSgar8-pyI_5TLNWLSD"
+    },
+    {
+     "type": "drive",
+     "id": "1AqqvC8jyD-IWGu-iktofVXz6Re3rjQ-6"
+    },
+    {
+     "type": "drive",
+     "id": "1o7D8dJbkKVMCWtAlBXKMtWYHsiQmZxPX"
+    },
+    {
+     "type": "drive",
+     "id": "1hpkSaOz_G9pWwz2U_CAYc30ZkophiJ43"
     }
    ]
   },
@@ -6806,7 +6858,7 @@
    "venue": "Lapadska obala",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 11,
+   "count": 12,
    "media": [
     {
      "src": "media/dubrovnik-old-town/C57C979A-5209-4AC0-85B1-7C211CBA00A9-thumb.jpg",
@@ -6857,6 +6909,10 @@
     {
      "src": "media/dubrovnik-old-town/698F2447-BC45-4775-8153-7C2B79A50EFE-thumb.jpg",
      "full": "media/dubrovnik-old-town/698F2447-BC45-4775-8153-7C2B79A50EFE-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1_ZEdj5KbPS7HGdRWTg0ClTrQMqYRfzrn"
     }
    ]
   },
@@ -6908,10 +6964,6 @@
     {
      "src": "media/dubrovnik-old-town/D616F41D-B671-4009-B184-E7BC2BC9B35C-thumb.jpg",
      "full": "media/dubrovnik-old-town/D616F41D-B671-4009-B184-E7BC2BC9B35C-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1xaH6VuWmns5gfYaWkDhKRVNyixaKFisZ"
     }
    ]
   },
@@ -6922,7 +6974,7 @@
    "venue": "Crkva Sv Igracije",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 55,
+   "count": 46,
    "media": [
     {
      "src": "media/dubrovnik-old-town/9D7D07CC-BE0B-4F49-8EF0-A8403FDFE0F5-thumb.jpg",
@@ -6966,6 +7018,22 @@
     {
      "src": "media/unbucketed/1E383622-E233-41DF-B0BB-A480195F275A-thumb.jpg",
      "full": "media/unbucketed/1E383622-E233-41DF-B0BB-A480195F275A-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1qGu7vrdesCmujndhtQpNfxxq2beKcrIN"
+    },
+    {
+     "type": "drive",
+     "id": "1lMpbd7atC0L7Ub70sdRHAKkaLLWnfXCo"
+    },
+    {
+     "type": "drive",
+     "id": "1htdBc3_hA6AmhihZVzPRQsiAmqiXherB"
+    },
+    {
+     "type": "drive",
+     "id": "18nGOpKZiCmzLme8U0KkquBWeqlQT87DM"
     },
     {
      "type": "drive",
@@ -7094,58 +7162,6 @@
     {
      "type": "drive",
      "id": "11avp-qK24eoUQ3Buu-C2GOWbA8bYChgM"
-    },
-    {
-     "type": "drive",
-     "id": "1p8cv6h3fxHj0946sdgxTYdPcwJ4eFLzM"
-    },
-    {
-     "type": "drive",
-     "id": "1vMGfv_VbmD34J1D6Fim3rZ2IIYZJQa1d"
-    },
-    {
-     "type": "drive",
-     "id": "1BGTWEF8RZ9lxhhzz30q8B1qyJaQE4JWt"
-    },
-    {
-     "type": "drive",
-     "id": "1C4sqfOqY-U7IcmMJ27DnxKoMZth6ZFV7"
-    },
-    {
-     "type": "drive",
-     "id": "14D-YY2NcChD-DWtNVQnC4I5vkV5ZJGg5"
-    },
-    {
-     "type": "drive",
-     "id": "1FZkFRohj5qIYTmTs4v1SrYaaJRaH8V_q"
-    },
-    {
-     "type": "drive",
-     "id": "1Vozl7Oi8cDc5lwAoQQg0uHt9sgqGlDW0"
-    },
-    {
-     "type": "drive",
-     "id": "1LuSZZ7sonHe43KSu5XJ5QQxsxoddExFM"
-    },
-    {
-     "type": "drive",
-     "id": "18AzcOgVlsoYo9CHYeqEjRhocg9XXrkLt"
-    },
-    {
-     "type": "drive",
-     "id": "1i-oG7c2NISOLcSy4TLz2hGugLX0UpT0b"
-    },
-    {
-     "type": "drive",
-     "id": "15yWKLeM6iN6Ri0ar9paNpZVQePjSk4l2"
-    },
-    {
-     "type": "drive",
-     "id": "1igugaizQ2txOdQP9dTgYFddw9rKCCiH4"
-    },
-    {
-     "type": "drive",
-     "id": "1nz4p901OR-BI99Wg5eS9j8p-If0IuZ2d"
     }
    ]
   },
@@ -7208,7 +7224,7 @@
    "venue": "Navještenja Marijina",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 10,
+   "count": 14,
    "media": [
     {
      "src": "media/dubrovnik-old-town/664683D7-C419-4EA0-82A0-D2A6D1C906E8-thumb.jpg",
@@ -7251,6 +7267,22 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/7FBA5F13-EAEF-4C68-A29B-DD2D9F9CD1B7-hd.mp4",
      "poster": "media/dubrovnik-old-town/7FBA5F13-EAEF-4C68-A29B-DD2D9F9CD1B7-poster.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1CO1o05ui2MYI2RerHjF_XL4nT57NM-xU"
+    },
+    {
+     "type": "drive",
+     "id": "19hZVJSfMcvXyuciPpU34fRR4X1ydz_P0"
+    },
+    {
+     "type": "drive",
+     "id": "1UUgT8oh-TkZtOb4eaGRNp8jzl4uE4SYf"
+    },
+    {
+     "type": "drive",
+     "id": "1FcoNvPd51E1XyxR7cNkToVMnC6aRzr6s"
     }
    ]
   },
@@ -7299,30 +7331,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/391E4C3A-CAD3-49E4-AEEB-42BD4AC5D7A8-hd.mp4",
      "poster": "media/dubrovnik-old-town/391E4C3A-CAD3-49E4-AEEB-42BD4AC5D7A8-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1lz7AdLCgnc4EqnqGfd1QsUU09_qjjcM6"
-    },
-    {
-     "type": "drive",
-     "id": "1zLHU9u9JGDXYUdp76WoVq4Y1qU-ylXY2"
-    },
-    {
-     "type": "drive",
-     "id": "1fC8Mv4XVC7k59k1KS45cJU-L7jDvY1je"
-    },
-    {
-     "type": "drive",
-     "id": "1d3aBQYyposwkPG_Pg8mG1Xz8Oeezp_rs"
-    },
-    {
-     "type": "drive",
-     "id": "1Ybg8IQXM-4NLQjXeEWpjVJ6nRGS_mnqV"
-    },
-    {
-     "type": "drive",
-     "id": "1ciPrTcPkVTBYyKk-Bc3dyWNwVOZkqNoX"
     }
    ]
   },
@@ -7422,46 +7430,6 @@
      "type": "self_hosted",
      "url": "media/elaphiti/8F5B7641-6E14-4CEA-B48E-E21882927B46-hd.mp4",
      "poster": "media/elaphiti/8F5B7641-6E14-4CEA-B48E-E21882927B46-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1XLV02ucWt5MhQ2CGJ0_cHmaW0QsqK_hn"
-    },
-    {
-     "type": "drive",
-     "id": "1ZcUyFAgr2_I-3wqewucX52xkp1i-VDUs"
-    },
-    {
-     "type": "drive",
-     "id": "1_Xx3s_zP_D89loCFfYoIC5mmqQk8YU6N"
-    },
-    {
-     "type": "drive",
-     "id": "1PVDSOg02K1c1d2X8SyXLUeWVyxix3lOb"
-    },
-    {
-     "type": "drive",
-     "id": "1UdjSBUsY2gUkONoDvXxYli_efkqLW1Jh"
-    },
-    {
-     "type": "drive",
-     "id": "1rv-t-3897uPUGscoDsKkUxWMo2i6Dob4"
-    },
-    {
-     "type": "drive",
-     "id": "1cVa0-KPrJAExNbQeXCBZYuwPVZy7aQbh"
-    },
-    {
-     "type": "drive",
-     "id": "19uX8_h3XSD8JfKElH8MbkYA1nIbRIgdu"
-    },
-    {
-     "type": "drive",
-     "id": "1NKC8_TgNFZVU2hV3NFQfnAdJPKunh1TW"
-    },
-    {
-     "type": "drive",
-     "id": "1WYxCFa5X2JdGMqjKFwOj9raBwy0RFkMk"
     }
    ]
   },
@@ -7749,7 +7717,7 @@
    "venue": "Od Sorte",
    "city": "Grad Dubrovnik",
    "chapter": "dubrovnik-old-town",
-   "count": 7,
+   "count": 9,
    "media": [
     {
      "src": "media/dubrovnik-old-town/5F1B3BE3-EC78-4CD2-A4BF-8087B8973DBE-thumb.jpg",
@@ -7780,6 +7748,14 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/26503BA2-6AC5-44B1-9F82-953B11020E46-hd.mp4",
      "poster": "media/dubrovnik-old-town/26503BA2-6AC5-44B1-9F82-953B11020E46-poster.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1BbZkgHpDB2T1mWbbrciIJb2Q9yr0NBZB"
+    },
+    {
+     "type": "drive",
+     "id": "1GQSmDEF4fSkoNxmBZf2YAtVeIalj2HIv"
     }
    ]
   },
@@ -7819,14 +7795,6 @@
     {
      "src": "media/dubrovnik-old-town/28DE712E-BF54-4540-A0EC-F19E246AA152-thumb.jpg",
      "full": "media/dubrovnik-old-town/28DE712E-BF54-4540-A0EC-F19E246AA152-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1atzWENAfMVenagLQkRJqMLrconqXYYQq"
-    },
-    {
-     "type": "drive",
-     "id": "1aPG40ev6Vj7Lhpa1fGLCxj_6VgpjpfVn"
     }
    ]
   },
@@ -7899,18 +7867,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/3C1ADBF7-B9E6-40B6-BB8F-A74056038270-hd.mp4",
      "poster": "media/dubrovnik-old-town/3C1ADBF7-B9E6-40B6-BB8F-A74056038270-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1ciiSzfIfX6zU0sPAF1VfThWvfUMP3DR7"
-    },
-    {
-     "type": "drive",
-     "id": "1aVEwlDi3hHlKws4bBIE1BDJgTzqZbK7m"
-    },
-    {
-     "type": "drive",
-     "id": "1syhVoNatVoiOLNHPJg0lDNtkGIZULBDP"
     }
    ]
   },
@@ -8214,7 +8170,7 @@
    "venue": "Uz Giman",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 6,
+   "count": 14,
    "media": [
     {
      "type": "self_hosted",
@@ -8241,6 +8197,38 @@
     {
      "src": "media/dubrovnik-old-town/A5F5AC17-D50E-4FDE-8CB7-F12AD742AFD9-thumb.jpg",
      "full": "media/dubrovnik-old-town/A5F5AC17-D50E-4FDE-8CB7-F12AD742AFD9-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1aVEwlDi3hHlKws4bBIE1BDJgTzqZbK7m"
+    },
+    {
+     "type": "drive",
+     "id": "1yRKUFpbFUsQcs2DyQwFQa4UIlgPjttSo"
+    },
+    {
+     "type": "drive",
+     "id": "1hv6XfqBa5a9BlwOCN0NJLqqlZmT9_9zw"
+    },
+    {
+     "type": "drive",
+     "id": "14VbDMjsy1EtEnZizk9xyYBussVWKdo8u"
+    },
+    {
+     "type": "drive",
+     "id": "1syhVoNatVoiOLNHPJg0lDNtkGIZULBDP"
+    },
+    {
+     "type": "drive",
+     "id": "1FnkK86GI2oZETwZYXr1p0wZ-Fe8kvGYf"
+    },
+    {
+     "type": "drive",
+     "id": "1n9r-AmX0XqM_QxHqPWLo1x71PlHBCpMA"
+    },
+    {
+     "type": "drive",
+     "id": "12cGNTlYuOUVh8uQIS-pbjvXGdwdecXnG"
     }
    ]
   },
@@ -8443,7 +8431,7 @@
    "venue": "La Villa",
    "city": "Grad Dubrovnik",
    "chapter": "elaphiti",
-   "count": 12,
+   "count": 8,
    "media": [
     {
      "src": "media/elaphiti/17720057-4B27-4329-96DC-B2F6321F3A24-thumb.jpg",
@@ -8467,18 +8455,6 @@
     },
     {
      "type": "drive",
-     "id": "1A--ianqsmi4tTlAM5nf7NarPTKRTAJ3p"
-    },
-    {
-     "type": "drive",
-     "id": "15HKSFfS523QPzygh6owot1D-EgIq3iA8"
-    },
-    {
-     "type": "drive",
-     "id": "12JBEdQU7gEWQJ7dWmF9zjMSseqINwhwa"
-    },
-    {
-     "type": "drive",
      "id": "1BW5I2AKtv_b0kQaooo8NK04TqaqqYS_Z"
     },
     {
@@ -8488,10 +8464,6 @@
     {
      "type": "drive",
      "id": "1dXzS9rFSXUA9M4DqsE7DCjFqVbQ9cbGg"
-    },
-    {
-     "type": "drive",
-     "id": "1Fb4ydT9i7Kt84LQ8iglV8TPHSPtI4urj"
     }
    ]
   },
@@ -8698,14 +8670,6 @@
     {
      "src": "media/dubrovnik-old-town/BBD4AB7A-BDDE-49B2-B699-92CF3588FBCE-thumb.jpg",
      "full": "media/dubrovnik-old-town/BBD4AB7A-BDDE-49B2-B699-92CF3588FBCE-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1Wa5azv5Yt935YIt95Af7gSt8j8x4A_mQ"
-    },
-    {
-     "type": "drive",
-     "id": "1ob_ocSQhldyVMyOcDqUInHR0Ip5g9ars"
     }
    ]
   },
@@ -8787,7 +8751,7 @@
    "venue": "Restaurant Bono",
    "city": "Grad Dubrovnik",
    "chapter": "mount-srd",
-   "count": 3,
+   "count": 9,
    "media": [
     {
      "src": "media/dubrovnik-old-town/93EAB98F-F2B6-4401-BC6D-8C3FD80A64DA-thumb.jpg",
@@ -8801,6 +8765,30 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/78019A21-0538-480F-B2CF-105F67698A6F-hd.mp4",
      "poster": "media/dubrovnik-old-town/78019A21-0538-480F-B2CF-105F67698A6F-poster.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1X8XMgzywCHhvAtjAbYn9XnlzPenowGYj"
+    },
+    {
+     "type": "drive",
+     "id": "1FCXofo6AwtS0eO4XCSCe5OIl6P4x6LBy"
+    },
+    {
+     "type": "drive",
+     "id": "1Kvc7W6zpMBCdAvFTM1qDJXQ3UQFAQm2T"
+    },
+    {
+     "type": "drive",
+     "id": "1ZTuKKDe12tpKESWqkB_k0YurhBezRewq"
+    },
+    {
+     "type": "drive",
+     "id": "1rjg6dogb32tdRVizfTVWF1nyDTK45AGw"
+    },
+    {
+     "type": "drive",
+     "id": "1ESxNREBdG9A_QTzFKi-wGKw9ejmqvcoS"
     }
    ]
   },
@@ -8893,22 +8881,6 @@
     {
      "src": "media/dubrovnik-old-town/BD631C4D-3CE0-496B-8819-DA3A44282B37-thumb.jpg",
      "full": "media/dubrovnik-old-town/BD631C4D-3CE0-496B-8819-DA3A44282B37-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1-s6I52qYyLyUYFeCCtD5p40zb3S6a9_K"
-    },
-    {
-     "type": "drive",
-     "id": "1OMoKRSZorwoVflU3dQ863uAT6qwX5IKi"
-    },
-    {
-     "type": "drive",
-     "id": "14soPH10v6ihxFp6VXlG5W9YWgmUJ6xjB"
-    },
-    {
-     "type": "drive",
-     "id": "1u_1FHLciF2S2h0OHeFiiOaN02iTLilvw"
     }
    ]
   },
@@ -9071,7 +9043,7 @@
    "venue": "Kalamota sea side foot path",
    "city": "Grad Dubrovnik",
    "chapter": "elaphiti",
-   "count": 9,
+   "count": 5,
    "media": [
     {
      "src": "media/elaphiti/96F35AF6-FDE8-404D-BFE7-11033FDD7FC2-thumb.jpg",
@@ -9084,10 +9056,6 @@
     },
     {
      "type": "drive",
-     "id": "1GjBOqzx7OeVr9uMBhnwflcwe0mmJDE_-"
-    },
-    {
-     "type": "drive",
      "id": "1zBL5LI-UlRRXxcoxRxospy3ctv19FCem"
     },
     {
@@ -9097,18 +9065,6 @@
     {
      "type": "drive",
      "id": "1nZFazeuQO-CbFULDEB3Cp02Fde7LrIl6"
-    },
-    {
-     "type": "drive",
-     "id": "191_9LHEV2k9dUDCJsJ4ToMSgTv62bJyr"
-    },
-    {
-     "type": "drive",
-     "id": "1-NjfOfrm4c25g0aXKk63N9JSrKWicfJH"
-    },
-    {
-     "type": "drive",
-     "id": "15EM7ZsFRRc1MK3TKCowLexhY_x1Xt0og"
     }
    ]
   },
@@ -9289,10 +9245,6 @@
     {
      "src": "media/dubrovnik-old-town/6D827398-D5B8-435A-B449-0B964BDB7B13-thumb.jpg",
      "full": "media/dubrovnik-old-town/6D827398-D5B8-435A-B449-0B964BDB7B13-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1iimzdsuBTI59vVyZZh0MYB6zayOIagKQ"
     }
    ]
   },
@@ -9312,10 +9264,6 @@
     {
      "src": "media/dubrovnik-old-town/E989B696-01CD-415B-9B92-7CB1EF3D3C5B-thumb.jpg",
      "full": "media/dubrovnik-old-town/E989B696-01CD-415B-9B92-7CB1EF3D3C5B-full.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1vOJel1G7tlQXZ4kZ_5UfdBALXoqQnbdc"
     }
    ]
   },
@@ -9473,10 +9421,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/0F53B158-3C4E-434C-B8D9-2A73209E3D5E-hd.mp4",
      "poster": "media/dubrovnik-old-town/0F53B158-3C4E-434C-B8D9-2A73209E3D5E-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1fV6ClX1YXbwKHAbKm1Q8hN8Rwe5ol1p4"
     }
    ]
   },
@@ -9608,11 +9552,19 @@
    "venue": "Franjevački samostan",
    "city": "Dubrovačko-neretvanska županija",
    "chapter": "elaphiti",
-   "count": 1,
+   "count": 3,
    "media": [
     {
      "src": "media/elaphiti/F71744A4-836F-488C-9649-FB13EFEF8D15-thumb.jpg",
      "full": "media/elaphiti/F71744A4-836F-488C-9649-FB13EFEF8D15-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1Fb4ydT9i7Kt84LQ8iglV8TPHSPtI4urj"
+    },
+    {
+     "type": "drive",
+     "id": "1xaH6VuWmns5gfYaWkDhKRVNyixaKFisZ"
     }
    ]
   },
@@ -10083,10 +10035,6 @@
      "type": "self_hosted",
      "url": "media/dubrovnik-old-town/39076E88-266D-4E8B-B9C6-C51967840E9E-hd.mp4",
      "poster": "media/dubrovnik-old-town/39076E88-266D-4E8B-B9C6-C51967840E9E-poster.jpg"
-    },
-    {
-     "type": "drive",
-     "id": "1FnkK86GI2oZETwZYXr1p0wZ-Fe8kvGYf"
     }
    ]
   },
@@ -10430,11 +10378,63 @@
    "venue": "Restaurant Dubrovnik",
    "city": "Dubrovačko-neretvanska županija",
    "chapter": "elaphiti",
-   "count": 1,
+   "count": 14,
    "media": [
     {
      "src": "media/elaphiti/DDA5C47D-3932-4EAC-894F-289B3F378B5E-thumb.jpg",
      "full": "media/elaphiti/DDA5C47D-3932-4EAC-894F-289B3F378B5E-full.jpg"
+    },
+    {
+     "type": "drive",
+     "id": "1XLV02ucWt5MhQ2CGJ0_cHmaW0QsqK_hn"
+    },
+    {
+     "type": "drive",
+     "id": "1ZcUyFAgr2_I-3wqewucX52xkp1i-VDUs"
+    },
+    {
+     "type": "drive",
+     "id": "1_Xx3s_zP_D89loCFfYoIC5mmqQk8YU6N"
+    },
+    {
+     "type": "drive",
+     "id": "1PVDSOg02K1c1d2X8SyXLUeWVyxix3lOb"
+    },
+    {
+     "type": "drive",
+     "id": "1UdjSBUsY2gUkONoDvXxYli_efkqLW1Jh"
+    },
+    {
+     "type": "drive",
+     "id": "1rv-t-3897uPUGscoDsKkUxWMo2i6Dob4"
+    },
+    {
+     "type": "drive",
+     "id": "1cVa0-KPrJAExNbQeXCBZYuwPVZy7aQbh"
+    },
+    {
+     "type": "drive",
+     "id": "19uX8_h3XSD8JfKElH8MbkYA1nIbRIgdu"
+    },
+    {
+     "type": "drive",
+     "id": "1NKC8_TgNFZVU2hV3NFQfnAdJPKunh1TW"
+    },
+    {
+     "type": "drive",
+     "id": "1WYxCFa5X2JdGMqjKFwOj9raBwy0RFkMk"
+    },
+    {
+     "type": "drive",
+     "id": "1A--ianqsmi4tTlAM5nf7NarPTKRTAJ3p"
+    },
+    {
+     "type": "drive",
+     "id": "15HKSFfS523QPzygh6owot1D-EgIq3iA8"
+    },
+    {
+     "type": "drive",
+     "id": "12JBEdQU7gEWQJ7dWmF9zjMSseqINwhwa"
     }
    ]
   },
