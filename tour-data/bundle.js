@@ -35,7 +35,8 @@
     root.classList.add('dcc-tour-flat');
     const header = el('header', 'dcc-tour-header',
       '<h1 class="dcc-tour-title">' + escapeHtml(t.name || 'Our trip') + '</h1>' +
-      '<p class="dcc-tour-subtitle">' + escapeHtml(t.subtitle || '') + '</p>');
+      '<p class="dcc-tour-subtitle">' + escapeHtml(t.subtitle || '') + '</p>' +
+      tripStatsHTML());
     const nav = el('nav', 'dcc-tour-daynav');
     nav.setAttribute('aria-label', 'Days');
     DATA.days.forEach((d, i) => {
@@ -60,6 +61,32 @@
     body.appendChild(story); body.appendChild(mapwrap);
     root.appendChild(header); root.appendChild(nav); root.appendChild(body);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav;
+  }
+
+  function fmt(n) { return Math.round(n).toLocaleString(); }
+  function tripStatsHTML() {
+    const h = DATA.health; if (!h) return '';
+    const srd = (h.climb_m / 412).toFixed(1);       // Mount Srđ = 412 m
+    const eiffel = (h.climb_m / 330).toFixed(1);    // Eiffel Tower = 330 m
+    return '<div class="dcc-tour-tripstats">' +
+      tile(fmt(h.steps), 'steps', h.watch) +
+      tile(h.dist + ' ' + (h.dist_unit || ''), 'walked', 'across ' + DATA.day_count + ' days') +
+      tile('≈' + fmt(h.flights) + ' flights', 'climbed', 'like Mount Srđ ×' + srd + ' · Eiffel ×' + eiffel) +
+      '</div>';
+  }
+  function tile(big, label, sub) {
+    return '<div class="dcc-tour-tile"><span class="t-big">' + escapeHtml(big) + '</span>' +
+      '<span class="t-lab">' + escapeHtml(label) + '</span>' +
+      (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
+  }
+  function healthRibbonHTML(h) {
+    if (!h) return '';
+    const bits = [];
+    if (h.steps) bits.push('<b>' + fmt(h.steps) + '</b> steps');
+    if (h.dist) bits.push('<b>' + h.dist + '</b> ' + (DATA.health.dist_unit || ''));
+    if (h.climb_m) bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b>');
+    if (h.alt_max != null) bits.push('up to <b>' + h.alt_max + ' m</b>');
+    return bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
   function initMap() {
@@ -98,6 +125,7 @@
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
       '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
         day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
+      healthRibbonHTML(day.health) +
       '</div>';
 
     day.places.forEach((p, pi) => {
@@ -143,7 +171,8 @@
     return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + '</div>';
   }
   function cap(item) {
-    return '<span class="dcc-tour-cell-time">' + escapeHtml(item.time || '') + '</span>';
+    const alt = item.alt != null ? ' · ' + item.alt + ' m' : '';
+    return '<span class="dcc-tour-cell-time">' + escapeHtml((item.time || '') + alt) + '</span>';
   }
 
   // ---- map ----
