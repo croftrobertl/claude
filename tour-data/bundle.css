@@ -151,6 +151,46 @@
 
 .dcc-tour-daynavbtns { display: flex; justify-content: space-between; margin: 1.25rem 0 0.5rem; }
 
+/* ---- trip overview: signature climbs (#3) + staircase (#4) ---- */
+.dcc-tour-overview { padding: 0 1.5rem; }
+.dcc-tour-climbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 0.5rem; }
+.dcc-tour-climbs .lab { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dcc-tour-secondary); font-weight: 700; margin-right: 4px; }
+.dcc-tour-climbs .climb { font-size: 0.8rem; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 999px; padding: 3px 10px; }
+.dcc-tour-climbs .climb b { color: var(--dcc-tour-primary); font-variant-numeric: tabular-nums; }
+.dcc-tour-stair { margin-bottom: 0.5rem; }
+.dcc-tour-stair .cap { font-size: 0.72rem; color: var(--dcc-tour-muted); margin-bottom: 3px; }
+.dcc-tour-stair .stair-svg { width: 100%; height: 92px; display: block; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 8px; }
+.dcc-tour-stair .tread { fill: color-mix(in srgb, var(--dcc-tour-primary) 22%, transparent); cursor: pointer; transition: fill 0.15s; }
+.dcc-tour-stair .tread:hover { fill: color-mix(in srgb, var(--dcc-tour-primary) 40%, transparent); }
+.dcc-tour-stair .tread.on { fill: var(--dcc-tour-primary); }
+.dcc-tour-stair .riser { stroke: var(--dcc-tour-primary); stroke-width: 1.5; opacity: 0.8; }
+
+/* ---- #6 elevation sparkline ---- */
+.dcc-tour-spark { display: flex; align-items: center; gap: 8px; margin-top: 0.5rem; }
+.dcc-tour-spark svg { width: 100%; max-width: 340px; height: 46px; }
+.dcc-tour-spark .a { fill: color-mix(in srgb, var(--dcc-tour-primary) 14%, transparent); stroke: none; }
+.dcc-tour-spark .l { fill: none; stroke: var(--dcc-tour-primary); stroke-width: 1.5; }
+.dcc-tour-spark .peak { fill: var(--dcc-tour-secondary); }
+.dcc-tour-spark .pk { font-size: 0.7rem; color: var(--dcc-tour-muted); white-space: nowrap; }
+
+/* ---- #7 per-place cumulative ---- */
+.dcc-tour-place-cum { display: block; font-size: 0.72rem; color: var(--dcc-tour-primary); font-variant-numeric: tabular-nums; margin-top: 1px; }
+
+/* ---- #10 replay ---- */
+.dcc-tour-replay { margin-top: 0.6rem; }
+.dcc-tour-place.replay-on { outline: 2px solid var(--dcc-tour-primary); outline-offset: 3px; border-radius: 8px; }
+.dcc-tour-mapwrap { position: sticky; top: 4.25rem; }
+.dcc-tour-hud {
+  position: absolute; right: 10px; top: 10px; z-index: 500;
+  background: rgba(10,30,55,0.9); color: #fff; border-radius: 10px; padding: 8px 12px;
+  min-width: 150px; box-shadow: 0 4px 16px rgba(0,0,0,.3); backdrop-filter: blur(3px);
+}
+.dcc-tour-hud .hud-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dcc-tour-hud #hud-time { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dcc-tour-hud #hud-stop { background: rgba(255,255,255,.15); color: #fff; border: 0; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; }
+.dcc-tour-hud #hud-place { font-size: 0.82rem; opacity: 0.9; margin: 2px 0; }
+.dcc-tour-hud .hud-stats { display: flex; gap: 10px; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: #bfe0ff; }
+
 .dcc-tour-placeholder {
   background: var(--dcc-tour-card-bg); border-radius: var(--dcc-tour-radius);
   padding: 1.5rem; text-align: center; color: var(--dcc-tour-muted);

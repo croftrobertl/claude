@@ -59,8 +59,11 @@
     mapdiv.setAttribute('aria-label', 'Map of the day');
     mapwrap.appendChild(mapdiv);
     body.appendChild(story); body.appendChild(mapwrap);
-    root.appendChild(header); root.appendChild(nav); root.appendChild(body);
+    const overview = el('div', 'dcc-tour-overview', overviewHTML());
+    root.appendChild(header); root.appendChild(nav); root.appendChild(overview); root.appendChild(body);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav;
+    overview.querySelectorAll('.tread').forEach(r =>
+      r.addEventListener('click', () => selectDay(+r.getAttribute('data-day'))));
   }
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
@@ -89,6 +92,68 @@
     return bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
+  // ---- #3 signature climbs + #4 trip staircase ----
+  function overviewHTML() {
+    let html = '';
+    const sc = DATA.signature_climbs || [];
+    if (sc.length) {
+      html += '<div class="dcc-tour-climbs"><span class="lab">Signature climbs</span>' +
+        sc.map(c => '<span class="climb">' + escapeHtml(c.emoji) + ' ' + escapeHtml(c.name) +
+          ' <b>' + c.max_alt + ' m</b></span>').join('') + '</div>';
+    }
+    html += staircaseHTML();
+    return html;
+  }
+  function staircaseHTML() {
+    const days = DATA.days, W = 900, H = 92, pad = 4;
+    let cum = 0; const cums = days.map(d => (cum += (d.health && d.health.climb_m) || 0));
+    const total = cum || 1;
+    const bw = (W - pad * 2) / days.length;
+    let steps = '', hit = '';
+    days.forEach((d, i) => {
+      const y0 = i ? cums[i-1] : 0, y1 = cums[i];
+      const x = pad + i * bw;
+      const yA = H - (y0 / total) * (H - 14), yB = H - (y1 / total) * (H - 14);
+      steps += '<rect class="tread" x="' + x.toFixed(1) + '" y="' + yB.toFixed(1) +
+        '" width="' + bw.toFixed(1) + '" height="' + (H - yB).toFixed(1) + '" data-day="' + i + '"></rect>';
+      steps += '<line x1="' + x.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + (x+bw).toFixed(1) +
+        '" y2="' + yB.toFixed(1) + '" class="riser"/>';
+    });
+    return '<div class="dcc-tour-stair"><div class="cap">Climb over the trip · tap a step for that day · ' +
+      Math.round(total) + ' m total</div>' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="stair-svg">' + steps + hit + '</svg></div>';
+  }
+  function interp(curve, minute) {   // cumulative value at minute-of-day
+    if (!curve || !curve.length) return null;
+    if (minute <= curve[0][0]) return curve[0][1];
+    for (let i = 1; i < curve.length; i++) {
+      if (minute <= curve[i][0]) return curve[i-1][1];
+    }
+    return curve[curve.length-1][1];
+  }
+  function cumClimb(elev, minute) {  // positive gain up to minute
+    if (!elev) return 0; let c = 0, prev = null;
+    for (const [m, a] of elev) { if (m > minute) break; if (prev != null && a - prev >= 5) c += a - prev; prev = a; }
+    return Math.round(c);
+  }
+  // #6 elevation sparkline with a peak marker
+  function elevSparkHTML(elev) {
+    if (!elev || elev.length < 2) return '';
+    const W = 320, H = 46, pad = 3;
+    const xs = elev.map(p => p[0]), ys = elev.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), ymax = Math.max(...ys, 1);
+    const X = m => pad + (x1 === x0 ? 0 : (m - x0) / (x1 - x0)) * (W - pad*2);
+    const Y = a => H - pad - (a / ymax) * (H - pad*2);
+    let d = '', dots = '';
+    elev.forEach((p, i) => { d += (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1) + ' '; });
+    const peak = elev[ys.indexOf(ymax)];
+    dots = '<circle cx="' + X(peak[0]).toFixed(1) + '" cy="' + Y(peak[1]).toFixed(1) + '" r="3" class="peak"/>';
+    const area = 'M' + X(x0).toFixed(1) + ' ' + H + ' ' + d.replace(/^M/, 'L') + 'L' + X(x1).toFixed(1) + ' ' + H + 'Z';
+    return '<div class="dcc-tour-spark"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+      '<path class="a" d="' + area + '"/><path class="l" d="' + d + '"/>' + dots + '</svg>' +
+      '<span class="pk">peak ' + peak[1] + ' m</span></div>';
+  }
+
   function initMap() {
     if (!window.L || !root._mapdiv) return;
     map = L.map(root._mapdiv, { scrollWheelZoom: false });
@@ -104,9 +169,12 @@
   // ---- day selection ----
   function selectDay(i) {
     if (!DATA || i < 0 || i >= DATA.days.length) return;
+    if (typeof stopReplay === 'function') stopReplay();
     curDay = i;
     root._nav.querySelectorAll('.dcc-tour-daychip').forEach((b, j) =>
       b.classList.toggle('active', j === i));
+    const ov = root.querySelector('.dcc-tour-overview');
+    if (ov) ov.querySelectorAll('.tread').forEach((r, j) => r.classList.toggle('on', j === i));
     const active = root._nav.querySelector('.dcc-tour-daychip.active');
     if (active) active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     renderDay(DATA.days[i]);
@@ -126,15 +194,28 @@
       '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
         day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
       healthRibbonHTML(day.health) +
+      (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
+      (day.health && (day.health.stepcurve || day.health.elev) ?
+        '<button class="dcc-tour-chip dcc-tour-replay" id="dcc-replay">▶ Replay this day</button>' : '') +
       '</div>';
 
+    const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
     day.places.forEach((p, pi) => {
       const anchor = 'place-' + pi;
       const time = p.from === p.to ? p.from : (p.from + '–' + p.to);
+      let cum = '';
+      const mn = toMin(p.from);
+      if (mn != null && day.health) {
+        const st = interp(day.health.stepcurve, mn), cl = cumClimb(day.health.elev, mn);
+        const bits = [];
+        if (st != null) bits.push('≈' + fmt(st) + ' steps');
+        if (cl) bits.push('↑' + cl + ' m');
+        if (bits.length) cum = '<span class="dcc-tour-place-cum">' + bits.join(' · ') + ' by now</span>';
+      }
       html += '<section class="dcc-tour-place" id="' + anchor + '">' +
         '<div class="dcc-tour-place-head">' +
           '<h3>' + escapeHtml(p.name) + '</h3>' +
-          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + ' · ' + p.count + '</span>' +
+          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + ' · ' + p.count + cum + '</span>' +
         '</div>' +
         '<div class="dcc-tour-media">' + p.items.map(renderItem).join('') + '</div>' +
         '</section>';
@@ -150,6 +231,45 @@
     const prev = story.querySelector('#dcc-prev'), next = story.querySelector('#dcc-next');
     if (prev) prev.addEventListener('click', () => selectDay(curDay - 1));
     if (next) next.addEventListener('click', () => selectDay(curDay + 1));
+    const rb = story.querySelector('#dcc-replay');
+    if (rb) rb.addEventListener('click', () => startReplay(day));
+  }
+
+  // ---- #10 replay the day ----
+  let replayTimer = null;
+  function stopReplay() {
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    const h = document.getElementById('dcc-hud'); if (h) h.remove();
+    if (root._story) root._story.querySelectorAll('.replay-on').forEach(s => s.classList.remove('replay-on'));
+  }
+  function startReplay(day) {
+    stopReplay();
+    const places = day.places.filter(p => p.lat != null);
+    if (!places.length || !map) return;
+    const hud = document.createElement('div');
+    hud.id = 'dcc-hud'; hud.className = 'dcc-tour-hud';
+    hud.innerHTML = '<div class="hud-row"><b id="hud-time"></b><button id="hud-stop" aria-label="Stop">✕</button></div>' +
+      '<div id="hud-place"></div><div class="hud-stats"><span id="hud-steps"></span><span id="hud-alt"></span></div>';
+    root._mapdiv.parentNode.appendChild(hud);
+    hud.querySelector('#hud-stop').addEventListener('click', stopReplay);
+    let i = 0;
+    const tick = () => {
+      if (i >= places.length) { stopReplay(); return; }
+      const p = places[i], pi = day.places.indexOf(p);
+      map.flyTo([p.lat, p.lng], 16, { duration: 0.9 });
+      root._story.querySelectorAll('.dcc-tour-place').forEach(s => s.classList.remove('replay-on'));
+      const sec = root._story.querySelector('#place-' + pi);
+      if (sec) { sec.classList.add('replay-on'); sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      const mn = (p.from || '').split(':'), minute = mn.length === 2 ? +mn[0]*60 + +mn[1] : 0;
+      const st = interp(day.health && day.health.stepcurve, minute);
+      document.getElementById('hud-time').textContent = p.from;
+      document.getElementById('hud-place').textContent = p.name;
+      document.getElementById('hud-steps').textContent = st != null ? fmt(st) + ' steps' : '';
+      document.getElementById('hud-alt').textContent = '↑' + cumClimb(day.health && day.health.elev, minute) + ' m';
+      i++;
+    };
+    tick();
+    replayTimer = setInterval(tick, 1700);
   }
 
   function renderItem(item) {
