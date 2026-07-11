@@ -290,3 +290,43 @@
 .dcc-tour-legchip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 999px; padding: 3px 10px 3px 6px; font-size: 0.74rem; color: var(--dcc-tour-muted); cursor: pointer; }
 .dcc-tour-legchip span { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
 .dcc-tour-legchip:hover { border-color: var(--dcc-tour-primary); color: var(--dcc-tour-text); }
+
+/* ===== Phase 3: Highlights reel + Print ===== */
+.dcc-tour-highlights { margin: 0.6rem 0 1rem; }
+.dcc-tour-highlights .hl-lab { font-size: 0.8rem; font-weight: 700; color: var(--dcc-tour-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.hl-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+.dcc-tour-hl { position: relative; flex: 0 0 auto; width: 160px; height: 120px; border: 0; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--dcc-tour-border); scroll-snap-align: start; box-shadow: var(--dcc-tour-shadow); }
+.dcc-tour-hl img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
+.dcc-tour-hl:hover img { transform: scale(1.06); }
+.dcc-tour-hl .hl-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 8px 4px; font-size: 0.68rem; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.75)); text-align: left; }
+
+.dcc-tour-printbtn { margin-left: auto; }
+.dcc-tour-printmenu { position: absolute; z-index: 30; margin-top: 4px; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 10px; box-shadow: var(--dcc-tour-shadow); overflow: hidden; }
+.dcc-tour-printmenu button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); padding: 10px 16px; cursor: pointer; white-space: nowrap; }
+.dcc-tour-printmenu button:last-child { border-bottom: 0; }
+.dcc-tour-printmenu button:hover { background: rgba(15,109,191,0.07); }
+.dcc-tour-printmenu small { color: var(--dcc-tour-muted); }
+
+/* print output container — hidden on screen, shown only when printing */
+#dcc-print { display: none; }
+
+@media print {
+  body.dcc-tour-printing > *:not(#dcc-print) { display: none !important; }
+  body.dcc-tour-printing #dcc-print { display: block; }
+  #dcc-print { font-family: var(--dcc-tour-font); color: #111; }
+  .p-cover { text-align: center; padding: 30vh 0 0; page-break-after: always; }
+  .p-cover h1 { font-size: 2.4rem; margin: 0 0 0.3rem; color: #0f6dbf; }
+  .p-cover p { margin: 0.2rem 0; color: #333; }
+  .p-cover .p-sub { color: #666; font-size: 0.9rem; margin-top: 1rem; }
+  .p-day { page-break-before: always; }
+  .p-day:first-child { page-break-before: avoid; }
+  .p-dayhead h2 { font-size: 1.3rem; color: #0f6dbf; margin: 0 0 2px; }
+  .p-dayhead .p-meta { font-size: 0.8rem; color: #555; margin-bottom: 8px; }
+  .p-place h3 { font-size: 0.95rem; margin: 10px 0 5px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
+  .p-place h3 small { color: #777; font-weight: 400; }
+  .p-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .p-fig { margin: 0; break-inside: avoid; }
+  .p-fig img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; display: block; }
+  .p-fig figcaption { font-size: 0.6rem; color: #777; margin-top: 1px; }
+  @page { margin: 12mm; }
+}
