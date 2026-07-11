@@ -243,7 +243,7 @@
   "lng": 18.2587
  },
  "1EphM-mFMPcud8aiavTrb2WpkRvi1_LiO": {
-  "place": "Dubrovnik Airport (DBV), Čilipi",
+  "place": "Dubrovnik Airport (DBV)",
   "kind": "clip",
   "file": "",
   "date": "2025-09-11",
@@ -782,6 +782,15 @@
   "lat": 42.655444,
   "lng": 18.082164
  },
+ "22310437-8C1F-4910-B26A-BAC17EB4CE73": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/22310437-8C1F-4910-B26A-BAC17EB4CE73-hd.mp4",
+  "date": "2025-09-12",
+  "time": "17:14",
+  "lat": 42.6553,
+  "lng": 18.0821
+ },
  "7C4B47F2-EF66-4060-9B0E-14FF5C80AF64": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
   "kind": "video",
@@ -970,6 +979,24 @@
   "time": "18:54",
   "lat": 42.655486,
   "lng": 18.08155
+ },
+ "B2DC12AB-0026-4F25-A613-2FF8685A43DD": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/mount-srd/B2DC12AB-0026-4F25-A613-2FF8685A43DD-hd.mp4",
+  "date": "2025-09-12",
+  "time": "20:30",
+  "lat": 42.6553,
+  "lng": 18.0821
+ },
+ "3D90E20C-AEB0-465B-AF39-E129BC1BEB52": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/mount-srd/3D90E20C-AEB0-465B-AF39-E129BC1BEB52-hd.mp4",
+  "date": "2025-09-12",
+  "time": "20:30",
+  "lat": 42.6553,
+  "lng": 18.0821
  },
  "8D36AEB6-BF33-4F52-83B3-EB99FC3EFEB4": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
@@ -1268,14 +1295,104 @@
   "lat": 42.558597,
   "lng": 18.263006
  },
- "22310437-8C1F-4910-B26A-BAC17EB4CE73": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/22310437-8C1F-4910-B26A-BAC17EB4CE73-hd.mp4",
+ "D8EBBBE6-DDDE-4DE0-BB27-022C8AE05D0B": {
+  "place": "dm",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/D8EBBBE6-DDDE-4DE0-BB27-022C8AE05D0B-full.jpg",
   "date": "2025-09-12",
-  "time": "17:14",
-  "lat": 42.6553,
-  "lng": 18.0821
+  "time": "17:32",
+  "lat": 42.655261,
+  "lng": 18.076444
+ },
+ "027E2760-ACF6-46BD-B75D-9E2AE33B6C62": {
+  "place": "dm",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/027E2760-ACF6-46BD-B75D-9E2AE33B6C62-full.jpg",
+  "date": "2025-09-12",
+  "time": "17:32",
+  "lat": 42.655261,
+  "lng": 18.076444
+ },
+ "B2C3656E-423D-413F-821E-CD4BAF035DC3": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/B2C3656E-423D-413F-821E-CD4BAF035DC3-hd.mp4",
+  "date": "2025-09-12",
+  "time": "17:49",
+  "lat": 42.6552,
+  "lng": 18.0758
+ },
+ "516E01B6-8601-42B8-B27B-588285232DCC": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/516E01B6-8601-42B8-B27B-588285232DCC-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:44",
+  "lat": 42.655614,
+  "lng": 18.076367
+ },
+ "15069FF6-6283-44D7-A57A-9568E6714E1C": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/15069FF6-6283-44D7-A57A-9568E6714E1C-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:45",
+  "lat": 42.655558,
+  "lng": 18.076325
+ },
+ "5838C7D0-84F4-49EF-B645-E733F751972C": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/5838C7D0-84F4-49EF-B645-E733F751972C-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:45",
+  "lat": 42.655567,
+  "lng": 18.076319
+ },
+ "9F708F11-E8E8-4DCF-96FD-66F7B86A3A65": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/9F708F11-E8E8-4DCF-96FD-66F7B86A3A65-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:45",
+  "lat": 42.655647,
+  "lng": 18.076197
+ },
+ "B46FC7FE-920B-46FA-A5E1-6B03AA2EB2B3": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/B46FC7FE-920B-46FA-A5E1-6B03AA2EB2B3-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:49",
+  "lat": 42.655553,
+  "lng": 18.076294
+ },
+ "D6A9D232-1AB8-4C4E-B3A8-BA173657817E": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/D6A9D232-1AB8-4C4E-B3A8-BA173657817E-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:49",
+  "lat": 42.655558,
+  "lng": 18.076275
+ },
+ "5E70B185-7AFC-4690-8B94-83290FF3FFCE": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/mount-srd/5E70B185-7AFC-4690-8B94-83290FF3FFCE-full.jpg",
+  "date": "2025-09-12",
+  "time": "20:50",
+  "lat": 42.655342,
+  "lng": 18.076478
+ },
+ "D48A2B78-FD9A-4AC2-9A9F-9E718B1A8B8F": {
+  "place": "Charlie Burger, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/mount-srd/D48A2B78-FD9A-4AC2-9A9F-9E718B1A8B8F-hd.mp4",
+  "date": "2025-09-12",
+  "time": "20:57",
+  "lat": 42.6558,
+  "lng": 18.0762
  },
  "DD39E537-C8E6-4D51-9071-4501C0C6BAF5": {
   "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
@@ -1393,123 +1510,6 @@
   "time": "19:23",
   "lat": 42.6547,
   "lng": 18.0819
- },
- "B2DC12AB-0026-4F25-A613-2FF8685A43DD": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/mount-srd/B2DC12AB-0026-4F25-A613-2FF8685A43DD-hd.mp4",
-  "date": "2025-09-12",
-  "time": "20:30",
-  "lat": 42.6553,
-  "lng": 18.0821
- },
- "3D90E20C-AEB0-465B-AF39-E129BC1BEB52": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/mount-srd/3D90E20C-AEB0-465B-AF39-E129BC1BEB52-hd.mp4",
-  "date": "2025-09-12",
-  "time": "20:30",
-  "lat": 42.6553,
-  "lng": 18.0821
- },
- "D8EBBBE6-DDDE-4DE0-BB27-022C8AE05D0B": {
-  "place": "dm",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/D8EBBBE6-DDDE-4DE0-BB27-022C8AE05D0B-full.jpg",
-  "date": "2025-09-12",
-  "time": "17:32",
-  "lat": 42.655261,
-  "lng": 18.076444
- },
- "027E2760-ACF6-46BD-B75D-9E2AE33B6C62": {
-  "place": "dm",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/027E2760-ACF6-46BD-B75D-9E2AE33B6C62-full.jpg",
-  "date": "2025-09-12",
-  "time": "17:32",
-  "lat": 42.655261,
-  "lng": 18.076444
- },
- "B2C3656E-423D-413F-821E-CD4BAF035DC3": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/B2C3656E-423D-413F-821E-CD4BAF035DC3-hd.mp4",
-  "date": "2025-09-12",
-  "time": "17:49",
-  "lat": 42.6552,
-  "lng": 18.0758
- },
- "516E01B6-8601-42B8-B27B-588285232DCC": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/516E01B6-8601-42B8-B27B-588285232DCC-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:44",
-  "lat": 42.655614,
-  "lng": 18.076367
- },
- "15069FF6-6283-44D7-A57A-9568E6714E1C": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/15069FF6-6283-44D7-A57A-9568E6714E1C-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:45",
-  "lat": 42.655558,
-  "lng": 18.076325
- },
- "5838C7D0-84F4-49EF-B645-E733F751972C": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/5838C7D0-84F4-49EF-B645-E733F751972C-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:45",
-  "lat": 42.655567,
-  "lng": 18.076319
- },
- "9F708F11-E8E8-4DCF-96FD-66F7B86A3A65": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/9F708F11-E8E8-4DCF-96FD-66F7B86A3A65-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:45",
-  "lat": 42.655647,
-  "lng": 18.076197
- },
- "B46FC7FE-920B-46FA-A5E1-6B03AA2EB2B3": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/B46FC7FE-920B-46FA-A5E1-6B03AA2EB2B3-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:49",
-  "lat": 42.655553,
-  "lng": 18.076294
- },
- "D6A9D232-1AB8-4C4E-B3A8-BA173657817E": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/D6A9D232-1AB8-4C4E-B3A8-BA173657817E-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:49",
-  "lat": 42.655558,
-  "lng": 18.076275
- },
- "5E70B185-7AFC-4690-8B94-83290FF3FFCE": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "photo",
-  "file": "media/mount-srd/5E70B185-7AFC-4690-8B94-83290FF3FFCE-full.jpg",
-  "date": "2025-09-12",
-  "time": "20:50",
-  "lat": 42.655342,
-  "lng": 18.076478
- },
- "D48A2B78-FD9A-4AC2-9A9F-9E718B1A8B8F": {
-  "place": "Charlie Burger, Lapad, Dubrovnik",
-  "kind": "video",
-  "file": "media/mount-srd/D48A2B78-FD9A-4AC2-9A9F-9E718B1A8B8F-hd.mp4",
-  "date": "2025-09-12",
-  "time": "20:57",
-  "lat": 42.6558,
-  "lng": 18.0762
  },
  "4C555679-29DF-4CFC-AF40-209737BCD34C": {
   "place": "Ulica uz Giman",
@@ -1672,6 +1672,15 @@
   "time": "11:00",
   "lat": 42.6548,
   "lng": 18.083
+ },
+ "DC7797E2-1226-4D97-AED3-E34D6A242144": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/DC7797E2-1226-4D97-AED3-E34D6A242144-hd.mp4",
+  "date": "2025-09-13",
+  "time": "11:01",
+  "lat": 42.6546,
+  "lng": 18.0832
  },
  "A6731F09-ED4E-4109-9600-49AE29A36AE6": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
@@ -1906,15 +1915,6 @@
   "time": "22:13",
   "lat": 42.6549,
   "lng": 18.0828
- },
- "DC7797E2-1226-4D97-AED3-E34D6A242144": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/DC7797E2-1226-4D97-AED3-E34D6A242144-hd.mp4",
-  "date": "2025-09-13",
-  "time": "11:01",
-  "lat": 42.6546,
-  "lng": 18.0832
  },
  "6AD9475F-16E0-4076-A68A-E3950C67EC37": {
   "place": "Port of Gruž (Luka Gruž), Dubrovnik",
@@ -3302,6 +3302,15 @@
   "lat": 42.6548,
   "lng": 18.083
  },
+ "8A666EBD-27C8-448C-B439-2EC7DE044653": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/mount-srd/8A666EBD-27C8-448C-B439-2EC7DE044653-hd.mp4",
+  "date": "2025-09-14",
+  "time": "23:33",
+  "lat": 42.655,
+  "lng": 18.0824
+ },
  "C3E77B4F-A6D2-4A49-9198-6B1BFE865EA1": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
   "kind": "video",
@@ -4003,15 +4012,6 @@
   "time": "22:37",
   "lat": 42.6548,
   "lng": 18.0815
- },
- "8A666EBD-27C8-448C-B439-2EC7DE044653": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/mount-srd/8A666EBD-27C8-448C-B439-2EC7DE044653-hd.mp4",
-  "date": "2025-09-14",
-  "time": "23:33",
-  "lat": 42.655,
-  "lng": 18.0824
  },
  "427E81FF-B299-48A0-B569-D19D656DB005": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
@@ -5084,15 +5084,6 @@
   "lat": 42.6248,
   "lng": 18.1199
  },
- "1CO1o05ui2MYI2RerHjF_XL4nT57NM-xU": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "clip",
-  "file": "",
-  "date": "2025-09-16",
-  "time": "12:15",
-  "lat": 42.622,
-  "lng": 18.1202
- },
  "19hZVJSfMcvXyuciPpU34fRR4X1ydz_P0": {
   "place": "Lokrum Island (Otok Lokrum)",
   "kind": "clip",
@@ -5120,51 +5111,6 @@
   "lat": 42.625,
   "lng": 18.1208
  },
- "DABCDC02-5F94-43E5-AC03-1393E543A9B0": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/DABCDC02-5F94-43E5-AC03-1393E543A9B0-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:32",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "6FA58E21-EA38-4387-8019-9AE0C7655930": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/6FA58E21-EA38-4387-8019-9AE0C7655930-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:33",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "9919D523-923F-4F49-B67D-510655F01E43": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/9919D523-923F-4F49-B67D-510655F01E43-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:33",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "8DB9277B-0561-43FB-96E0-03677F9B63B3": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/8DB9277B-0561-43FB-96E0-03677F9B63B3-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:33",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "CB2688FA-ED8A-4D46-B08B-B412F93F67DF": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/CB2688FA-ED8A-4D46-B08B-B412F93F67DF-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:33",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
  "D680BCF4-6AC5-4691-A150-EA53073B4A97": {
   "place": "Lokrum Island (Otok Lokrum)",
   "kind": "photo",
@@ -5173,186 +5119,6 @@
   "time": "13:34",
   "lat": 42.624247,
   "lng": 18.120033
- },
- "63DABE41-F32E-4144-8798-91488EA6A79A": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/63DABE41-F32E-4144-8798-91488EA6A79A-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:35",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "6763EB62-3593-48A4-8738-4C7DD48441FF": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/6763EB62-3593-48A4-8738-4C7DD48441FF-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:35",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "D6569FBF-461D-4BF9-B7A5-873D9B0CFCBD": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/D6569FBF-461D-4BF9-B7A5-873D9B0CFCBD-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:38",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "4F72FDED-FDAA-4E42-B376-39B763970BEC": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/4F72FDED-FDAA-4E42-B376-39B763970BEC-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:39",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "2BF42E2A-2FB0-4D78-BC97-BE9A14F5B076": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/2BF42E2A-2FB0-4D78-BC97-BE9A14F5B076-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:42",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "22AACC1D-33D6-4A3C-A60C-74E935810DB7": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/22AACC1D-33D6-4A3C-A60C-74E935810DB7-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:42",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "AFDAA7A0-BC5C-4A36-89DD-CD06D1F69453": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/AFDAA7A0-BC5C-4A36-89DD-CD06D1F69453-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:42",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "F897FB82-4B92-4149-AFAE-B36E659A7D0D": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/F897FB82-4B92-4149-AFAE-B36E659A7D0D-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:42",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "C7DA683B-9DF7-4710-B297-26761F99068C": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/C7DA683B-9DF7-4710-B297-26761F99068C-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:42",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "23DF6171-C127-4E01-943F-597B779715B4": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/23DF6171-C127-4E01-943F-597B779715B4-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:43",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "ABC95198-D43D-410F-B08E-F9B43D488D98": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/ABC95198-D43D-410F-B08E-F9B43D488D98-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:43",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "45A3F7CC-0063-4369-BE38-56A612755B19": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/45A3F7CC-0063-4369-BE38-56A612755B19-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:43",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "B42A0228-F836-4267-9B60-3F28C6961EC9": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/B42A0228-F836-4267-9B60-3F28C6961EC9-full.jpg",
-  "date": "2025-09-16",
-  "time": "13:43",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "963E42FA-95D9-48FC-9D4A-0131A11A9EB6": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/963E42FA-95D9-48FC-9D4A-0131A11A9EB6-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:44",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "442F3419-545A-4685-83EF-801468354E74": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/442F3419-545A-4685-83EF-801468354E74-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:45",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "5077C5C4-43CE-4483-BCF2-920E701D1D43": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/5077C5C4-43CE-4483-BCF2-920E701D1D43-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:47",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "711817F7-11E1-4AF2-A78F-DA42575EF248": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/711817F7-11E1-4AF2-A78F-DA42575EF248-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:49",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "77D7E4A4-637C-4303-AE1B-29DE8F901AD4": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/77D7E4A4-637C-4303-AE1B-29DE8F901AD4-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:52",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "48F7C763-0CE7-4708-A285-F9B25679A351": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/48F7C763-0CE7-4708-A285-F9B25679A351-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:54",
-  "lat": 42.62435,
-  "lng": 18.12126
- },
- "AF5A1A37-ACB2-4BB7-A65B-252C445331DE": {
-  "place": "Lokrum Island (Otok Lokrum)",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/AF5A1A37-ACB2-4BB7-A65B-252C445331DE-hd.mp4",
-  "date": "2025-09-16",
-  "time": "13:54",
-  "lat": 42.62435,
-  "lng": 18.12126
  },
  "114F26E0-F4D2-4F13-A83C-93FA759BC25A": {
   "place": "Lokrum Island (Otok Lokrum)",
@@ -6263,6 +6029,51 @@
   "lat": 42.623608,
   "lng": 18.119661
  },
+ "DABCDC02-5F94-43E5-AC03-1393E543A9B0": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/DABCDC02-5F94-43E5-AC03-1393E543A9B0-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:32",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "6FA58E21-EA38-4387-8019-9AE0C7655930": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/6FA58E21-EA38-4387-8019-9AE0C7655930-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:33",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "9919D523-923F-4F49-B67D-510655F01E43": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/9919D523-923F-4F49-B67D-510655F01E43-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:33",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "8DB9277B-0561-43FB-96E0-03677F9B63B3": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/8DB9277B-0561-43FB-96E0-03677F9B63B3-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:33",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "CB2688FA-ED8A-4D46-B08B-B412F93F67DF": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/CB2688FA-ED8A-4D46-B08B-B412F93F67DF-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:33",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
  "8C3EC500-6B8B-41A9-8A07-98B52B3B5E27": {
   "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
   "kind": "video",
@@ -6271,6 +6082,42 @@
   "time": "13:34",
   "lat": 42.6232,
   "lng": 18.1195
+ },
+ "63DABE41-F32E-4144-8798-91488EA6A79A": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/63DABE41-F32E-4144-8798-91488EA6A79A-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:35",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "6763EB62-3593-48A4-8738-4C7DD48441FF": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/6763EB62-3593-48A4-8738-4C7DD48441FF-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:35",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "D6569FBF-461D-4BF9-B7A5-873D9B0CFCBD": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/D6569FBF-461D-4BF9-B7A5-873D9B0CFCBD-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:38",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "4F72FDED-FDAA-4E42-B376-39B763970BEC": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/4F72FDED-FDAA-4E42-B376-39B763970BEC-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:39",
+  "lat": 42.62435,
+  "lng": 18.12126
  },
  "73F74DF9-FDA8-4A86-81EE-B6CA72F54F27": {
   "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
@@ -6560,14 +6407,104 @@
   "lat": 42.623283,
   "lng": 18.119508
  },
- "8072F4D1-7949-4973-A0B0-0BE2217A902E": {
-  "place": "Ulica Branitelja Dubrovnika",
+ "2BF42E2A-2FB0-4D78-BC97-BE9A14F5B076": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
   "kind": "photo",
-  "file": "media/dubrovnik-old-town/8072F4D1-7949-4973-A0B0-0BE2217A902E-full.jpg",
+  "file": "media/dubrovnik-old-town/2BF42E2A-2FB0-4D78-BC97-BE9A14F5B076-full.jpg",
   "date": "2025-09-16",
-  "time": "13:15",
-  "lat": 42.645492,
-  "lng": 18.097214
+  "time": "13:42",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "22AACC1D-33D6-4A3C-A60C-74E935810DB7": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/22AACC1D-33D6-4A3C-A60C-74E935810DB7-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:42",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "AFDAA7A0-BC5C-4A36-89DD-CD06D1F69453": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/AFDAA7A0-BC5C-4A36-89DD-CD06D1F69453-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:42",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "F897FB82-4B92-4149-AFAE-B36E659A7D0D": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/F897FB82-4B92-4149-AFAE-B36E659A7D0D-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:42",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "C7DA683B-9DF7-4710-B297-26761F99068C": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/C7DA683B-9DF7-4710-B297-26761F99068C-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:42",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "23DF6171-C127-4E01-943F-597B779715B4": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/23DF6171-C127-4E01-943F-597B779715B4-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:43",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "ABC95198-D43D-410F-B08E-F9B43D488D98": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/ABC95198-D43D-410F-B08E-F9B43D488D98-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:43",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "45A3F7CC-0063-4369-BE38-56A612755B19": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/45A3F7CC-0063-4369-BE38-56A612755B19-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:43",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "B42A0228-F836-4267-9B60-3F28C6961EC9": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/B42A0228-F836-4267-9B60-3F28C6961EC9-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:43",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "963E42FA-95D9-48FC-9D4A-0131A11A9EB6": {
+  "place": "Plaža Lokrum, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/963E42FA-95D9-48FC-9D4A-0131A11A9EB6-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:44",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "1CO1o05ui2MYI2RerHjF_XL4nT57NM-xU": {
+  "place": "Lokrum Rocks, Lokrum (Otok Lokrum)",
+  "kind": "clip",
+  "file": "",
+  "date": "2025-09-16",
+  "time": "12:15",
+  "lat": 42.622,
+  "lng": 18.1202
  },
  "185DDB48-5CC4-41D0-A99E-B11CD8735A46": {
   "place": "Lokrum Rocks, Lokrum (Otok Lokrum)",
@@ -7009,6 +6946,69 @@
   "time": "14:46",
   "lat": 42.6222,
   "lng": 18.120417
+ },
+ "8072F4D1-7949-4973-A0B0-0BE2217A902E": {
+  "place": "Ulica Branitelja Dubrovnika",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/8072F4D1-7949-4973-A0B0-0BE2217A902E-full.jpg",
+  "date": "2025-09-16",
+  "time": "13:15",
+  "lat": 42.645492,
+  "lng": 18.097214
+ },
+ "442F3419-545A-4685-83EF-801468354E74": {
+  "place": "Benedictine Monastery of St. Mary, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/442F3419-545A-4685-83EF-801468354E74-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:45",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "5077C5C4-43CE-4483-BCF2-920E701D1D43": {
+  "place": "Lokrum Reserve, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/5077C5C4-43CE-4483-BCF2-920E701D1D43-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:47",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "711817F7-11E1-4AF2-A78F-DA42575EF248": {
+  "place": "Lokrum Reserve, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/711817F7-11E1-4AF2-A78F-DA42575EF248-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:49",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "77D7E4A4-637C-4303-AE1B-29DE8F901AD4": {
+  "place": "Lokrum Reserve, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/77D7E4A4-637C-4303-AE1B-29DE8F901AD4-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:52",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "48F7C763-0CE7-4708-A285-F9B25679A351": {
+  "place": "Lokrum Reserve, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/48F7C763-0CE7-4708-A285-F9B25679A351-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:54",
+  "lat": 42.62435,
+  "lng": 18.12126
+ },
+ "AF5A1A37-ACB2-4BB7-A65B-252C445331DE": {
+  "place": "Lokrum Reserve, Lokrum (Otok Lokrum)",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/AF5A1A37-ACB2-4BB7-A65B-252C445331DE-hd.mp4",
+  "date": "2025-09-16",
+  "time": "13:54",
+  "lat": 42.62435,
+  "lng": 18.12126
  },
  "536A8AD2-3750-4876-AEB0-36F5F7F6E5DA": {
   "place": "The Gardens of Maximilian",
@@ -7532,258 +7532,6 @@
   "lat": 42.581722,
   "lng": 18.221369
  },
- "A5485FD9-44C6-4B6A-87E7-71482C12AD7B": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/A5485FD9-44C6-4B6A-87E7-71482C12AD7B-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:22",
-  "lat": 42.581722,
-  "lng": 18.222547
- },
- "F1379D71-D39D-42B9-A8DF-6822AF3CD748": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/F1379D71-D39D-42B9-A8DF-6822AF3CD748-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:23",
-  "lat": 42.581731,
-  "lng": 18.222467
- },
- "D922807C-72FA-42B5-B7FF-CBA2B2C187C2": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/D922807C-72FA-42B5-B7FF-CBA2B2C187C2-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:23",
-  "lat": 42.581725,
-  "lng": 18.222458
- },
- "686F795E-95DE-4F70-B409-5222666CC57C": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/686F795E-95DE-4F70-B409-5222666CC57C-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:23",
-  "lat": 42.581725,
-  "lng": 18.222458
- },
- "ADF6C9E4-3B80-4E2A-A5D4-5A25FDB84899": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/ADF6C9E4-3B80-4E2A-A5D4-5A25FDB84899-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:23",
-  "lat": 42.581725,
-  "lng": 18.222458
- },
- "00E2F61A-98E5-4306-BD95-4E0BC30B6231": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/00E2F61A-98E5-4306-BD95-4E0BC30B6231-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:37",
-  "lat": 42.581628,
-  "lng": 18.222819
- },
- "8A6E29E4-82A5-4C2B-BAF5-B7DBA6D41D06": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/8A6E29E4-82A5-4C2B-BAF5-B7DBA6D41D06-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:37",
-  "lat": 42.581619,
-  "lng": 18.222825
- },
- "186B6A94-9839-4FB5-B10B-F29F9B10F5B3": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/186B6A94-9839-4FB5-B10B-F29F9B10F5B3-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:38",
-  "lat": 42.581631,
-  "lng": 18.222814
- },
- "60029D10-6C38-4C67-8CB0-A557A33170F8": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/60029D10-6C38-4C67-8CB0-A557A33170F8-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:47",
-  "lat": 42.581581,
-  "lng": 18.223083
- },
- "B65452FA-8746-4A3D-8C99-0EE14ACD55D6": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/B65452FA-8746-4A3D-8C99-0EE14ACD55D6-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581833,
-  "lng": 18.223372
- },
- "D178340D-3A90-46AC-BBFA-E97255A29B8E": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/D178340D-3A90-46AC-BBFA-E97255A29B8E-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581828,
-  "lng": 18.22335
- },
- "A0F96D66-CAB7-4C0A-A90C-EBD09F303465": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/A0F96D66-CAB7-4C0A-A90C-EBD09F303465-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581828,
-  "lng": 18.22335
- },
- "832EE048-C957-4537-A41A-71A3501707F4": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/832EE048-C957-4537-A41A-71A3501707F4-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581828,
-  "lng": 18.22335
- },
- "F6B3B5DB-C687-414D-A929-EA45E21CA3B7": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/F6B3B5DB-C687-414D-A929-EA45E21CA3B7-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581828,
-  "lng": 18.22335
- },
- "0479C638-720E-4F8F-BCB6-BE3803FF1507": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/0479C638-720E-4F8F-BCB6-BE3803FF1507-full.jpg",
-  "date": "2025-09-17",
-  "time": "18:49",
-  "lat": 42.581847,
-  "lng": 18.223342
- },
- "07257AC1-48E3-4210-87D1-05C4F5E38E33": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/07257AC1-48E3-4210-87D1-05C4F5E38E33-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:04",
-  "lat": 42.581678,
-  "lng": 18.223433
- },
- "1A60CF4C-8E74-40C7-B63B-0E0590710FFF": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/1A60CF4C-8E74-40C7-B63B-0E0590710FFF-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:05",
-  "lat": 42.581678,
-  "lng": 18.223464
- },
- "81582537-4F13-4BE9-AA61-F5B52495764A": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/81582537-4F13-4BE9-AA61-F5B52495764A-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:36",
-  "lat": 42.58165,
-  "lng": 18.223331
- },
- "8BD7C945-2D5B-4CDE-91ED-35CEF2022BC5": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/8BD7C945-2D5B-4CDE-91ED-35CEF2022BC5-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:36",
-  "lat": 42.58165,
-  "lng": 18.223339
- },
- "1B144BB5-E229-4B3D-A007-ACF764A9CB13": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/1B144BB5-E229-4B3D-A007-ACF764A9CB13-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:36",
-  "lat": 42.581664,
-  "lng": 18.223294
- },
- "02B4D514-40AD-43D6-AAA5-9B78EB152989": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/02B4D514-40AD-43D6-AAA5-9B78EB152989-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:37",
-  "lat": 42.581683,
-  "lng": 18.223367
- },
- "0B2C4165-DEF4-471B-9337-87DCF100E5D2": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/0B2C4165-DEF4-471B-9337-87DCF100E5D2-full.jpg",
-  "date": "2025-09-17",
-  "time": "19:37",
-  "lat": 42.581664,
-  "lng": 18.223408
- },
- "C87A3FB8-065D-4AC6-9E75-C4FCCEFEEEB7": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/C87A3FB8-065D-4AC6-9E75-C4FCCEFEEEB7-full.jpg",
-  "date": "2025-09-17",
-  "time": "20:33",
-  "lat": 42.581772,
-  "lng": 18.222881
- },
- "69DE73D5-6AC3-42DC-B38C-8408B777D45F": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/69DE73D5-6AC3-42DC-B38C-8408B777D45F-full.jpg",
-  "date": "2025-09-17",
-  "time": "20:55",
-  "lat": 42.581733,
-  "lng": 18.223167
- },
- "57129360-BB45-47ED-AF5C-9095E1A1FBAA": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/57129360-BB45-47ED-AF5C-9095E1A1FBAA-full.jpg",
-  "date": "2025-09-17",
-  "time": "20:56",
-  "lat": 42.581711,
-  "lng": 18.223231
- },
- "09F1624C-825C-41EF-B360-FCA2AF2CB498": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/09F1624C-825C-41EF-B360-FCA2AF2CB498-full.jpg",
-  "date": "2025-09-17",
-  "time": "20:56",
-  "lat": 42.581661,
-  "lng": 18.223269
- },
- "0E1D6378-B42E-4FE9-99B7-6E638A9241FE": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/0E1D6378-B42E-4FE9-99B7-6E638A9241FE-full.jpg",
-  "date": "2025-09-17",
-  "time": "21:02",
-  "lat": 42.581658,
-  "lng": 18.223453
- },
- "167FE246-32CA-49A0-ABC9-05FA13B57E3B": {
-  "place": "Tiha Bay (Uvala Tiha), Cavtat",
-  "kind": "photo",
-  "file": "media/cavtat/167FE246-32CA-49A0-ABC9-05FA13B57E3B-full.jpg",
-  "date": "2025-09-17",
-  "time": "21:03",
-  "lat": 42.581653,
-  "lng": 18.223456
- },
  "35DE7EE1-9124-4780-A6BB-824584680F34": {
   "place": "Lokrum Island (Otok Lokrum)",
   "kind": "photo",
@@ -8144,6 +7892,51 @@
   "lat": 42.585408,
   "lng": 18.230244
  },
+ "A5485FD9-44C6-4B6A-87E7-71482C12AD7B": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/A5485FD9-44C6-4B6A-87E7-71482C12AD7B-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:22",
+  "lat": 42.581722,
+  "lng": 18.222547
+ },
+ "F1379D71-D39D-42B9-A8DF-6822AF3CD748": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/F1379D71-D39D-42B9-A8DF-6822AF3CD748-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:23",
+  "lat": 42.581731,
+  "lng": 18.222467
+ },
+ "D922807C-72FA-42B5-B7FF-CBA2B2C187C2": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/D922807C-72FA-42B5-B7FF-CBA2B2C187C2-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:23",
+  "lat": 42.581725,
+  "lng": 18.222458
+ },
+ "686F795E-95DE-4F70-B409-5222666CC57C": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/686F795E-95DE-4F70-B409-5222666CC57C-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:23",
+  "lat": 42.581725,
+  "lng": 18.222458
+ },
+ "ADF6C9E4-3B80-4E2A-A5D4-5A25FDB84899": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/ADF6C9E4-3B80-4E2A-A5D4-5A25FDB84899-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:23",
+  "lat": 42.581725,
+  "lng": 18.222458
+ },
  "F1110BC9-47EB-428A-B17C-9AE9973BA5E3": {
   "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
   "kind": "photo",
@@ -8179,6 +7972,213 @@
   "time": "18:29",
   "lat": 42.585406,
   "lng": 18.230366
+ },
+ "00E2F61A-98E5-4306-BD95-4E0BC30B6231": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/00E2F61A-98E5-4306-BD95-4E0BC30B6231-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:37",
+  "lat": 42.581628,
+  "lng": 18.222819
+ },
+ "8A6E29E4-82A5-4C2B-BAF5-B7DBA6D41D06": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/8A6E29E4-82A5-4C2B-BAF5-B7DBA6D41D06-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:37",
+  "lat": 42.581619,
+  "lng": 18.222825
+ },
+ "186B6A94-9839-4FB5-B10B-F29F9B10F5B3": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/186B6A94-9839-4FB5-B10B-F29F9B10F5B3-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:38",
+  "lat": 42.581631,
+  "lng": 18.222814
+ },
+ "60029D10-6C38-4C67-8CB0-A557A33170F8": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/60029D10-6C38-4C67-8CB0-A557A33170F8-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:47",
+  "lat": 42.581581,
+  "lng": 18.223083
+ },
+ "B65452FA-8746-4A3D-8C99-0EE14ACD55D6": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/B65452FA-8746-4A3D-8C99-0EE14ACD55D6-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581833,
+  "lng": 18.223372
+ },
+ "D178340D-3A90-46AC-BBFA-E97255A29B8E": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/D178340D-3A90-46AC-BBFA-E97255A29B8E-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581828,
+  "lng": 18.22335
+ },
+ "A0F96D66-CAB7-4C0A-A90C-EBD09F303465": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/A0F96D66-CAB7-4C0A-A90C-EBD09F303465-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581828,
+  "lng": 18.22335
+ },
+ "832EE048-C957-4537-A41A-71A3501707F4": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/832EE048-C957-4537-A41A-71A3501707F4-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581828,
+  "lng": 18.22335
+ },
+ "F6B3B5DB-C687-414D-A929-EA45E21CA3B7": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/F6B3B5DB-C687-414D-A929-EA45E21CA3B7-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581828,
+  "lng": 18.22335
+ },
+ "0479C638-720E-4F8F-BCB6-BE3803FF1507": {
+  "place": "Plaža Cavtat, Tiha Bay (Uvala Tiha), Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/0479C638-720E-4F8F-BCB6-BE3803FF1507-full.jpg",
+  "date": "2025-09-17",
+  "time": "18:49",
+  "lat": 42.581847,
+  "lng": 18.223342
+ },
+ "07257AC1-48E3-4210-87D1-05C4F5E38E33": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/07257AC1-48E3-4210-87D1-05C4F5E38E33-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:04",
+  "lat": 42.581678,
+  "lng": 18.223433
+ },
+ "1A60CF4C-8E74-40C7-B63B-0E0590710FFF": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/1A60CF4C-8E74-40C7-B63B-0E0590710FFF-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:05",
+  "lat": 42.581678,
+  "lng": 18.223464
+ },
+ "81582537-4F13-4BE9-AA61-F5B52495764A": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/81582537-4F13-4BE9-AA61-F5B52495764A-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:36",
+  "lat": 42.58165,
+  "lng": 18.223331
+ },
+ "8BD7C945-2D5B-4CDE-91ED-35CEF2022BC5": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/8BD7C945-2D5B-4CDE-91ED-35CEF2022BC5-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:36",
+  "lat": 42.58165,
+  "lng": 18.223339
+ },
+ "1B144BB5-E229-4B3D-A007-ACF764A9CB13": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/1B144BB5-E229-4B3D-A007-ACF764A9CB13-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:36",
+  "lat": 42.581664,
+  "lng": 18.223294
+ },
+ "02B4D514-40AD-43D6-AAA5-9B78EB152989": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/02B4D514-40AD-43D6-AAA5-9B78EB152989-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:37",
+  "lat": 42.581683,
+  "lng": 18.223367
+ },
+ "0B2C4165-DEF4-471B-9337-87DCF100E5D2": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/0B2C4165-DEF4-471B-9337-87DCF100E5D2-full.jpg",
+  "date": "2025-09-17",
+  "time": "19:37",
+  "lat": 42.581664,
+  "lng": 18.223408
+ },
+ "C87A3FB8-065D-4AC6-9E75-C4FCCEFEEEB7": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/C87A3FB8-065D-4AC6-9E75-C4FCCEFEEEB7-full.jpg",
+  "date": "2025-09-17",
+  "time": "20:33",
+  "lat": 42.581772,
+  "lng": 18.222881
+ },
+ "69DE73D5-6AC3-42DC-B38C-8408B777D45F": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/69DE73D5-6AC3-42DC-B38C-8408B777D45F-full.jpg",
+  "date": "2025-09-17",
+  "time": "20:55",
+  "lat": 42.581733,
+  "lng": 18.223167
+ },
+ "57129360-BB45-47ED-AF5C-9095E1A1FBAA": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/57129360-BB45-47ED-AF5C-9095E1A1FBAA-full.jpg",
+  "date": "2025-09-17",
+  "time": "20:56",
+  "lat": 42.581711,
+  "lng": 18.223231
+ },
+ "09F1624C-825C-41EF-B360-FCA2AF2CB498": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/09F1624C-825C-41EF-B360-FCA2AF2CB498-full.jpg",
+  "date": "2025-09-17",
+  "time": "20:56",
+  "lat": 42.581661,
+  "lng": 18.223269
+ },
+ "0E1D6378-B42E-4FE9-99B7-6E638A9241FE": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/0E1D6378-B42E-4FE9-99B7-6E638A9241FE-full.jpg",
+  "date": "2025-09-17",
+  "time": "21:02",
+  "lat": 42.581658,
+  "lng": 18.223453
+ },
+ "167FE246-32CA-49A0-ABC9-05FA13B57E3B": {
+  "place": "Ludo More Restaurant, Cavtat",
+  "kind": "photo",
+  "file": "media/cavtat/167FE246-32CA-49A0-ABC9-05FA13B57E3B-full.jpg",
+  "date": "2025-09-17",
+  "time": "21:03",
+  "lat": 42.581653,
+  "lng": 18.223456
  },
  "8ED4CD7F-A135-4834-B6AC-168FB95772C9": {
   "place": "Holiday House Miljanic",
@@ -9837,22 +9837,13 @@
   "lng": 17.9275
  },
  "C48F2DB0-2B77-40B4-86AC-B2F11EBDD74C": {
-  "place": "Stradun, Old City (Stari Grad), Dubrovnik",
+  "place": "Maskeron, Stradun, Old City (Stari Grad), Dubrovnik",
   "kind": "video",
   "file": "media/elaphiti/C48F2DB0-2B77-40B4-86AC-B2F11EBDD74C-hd.mp4",
   "date": "2025-09-20",
   "time": "08:36",
   "lat": 42.6416,
   "lng": 18.1074
- },
- "50B43085-97F5-4380-9BFF-3B3D19A670E8": {
-  "place": "Stradun, Old City (Stari Grad), Dubrovnik",
-  "kind": "photo",
-  "file": "media/elaphiti/50B43085-97F5-4380-9BFF-3B3D19A670E8-full.jpg",
-  "date": "2025-09-20",
-  "time": "08:55",
-  "lat": 42.641175,
-  "lng": 18.110072
  },
  "86CF8BB9-409B-438C-8A2E-F319C1237CA4": {
   "place": "Natural Organic Store",
@@ -9871,6 +9862,15 @@
   "time": "08:41",
   "lat": 42.6417,
   "lng": 18.1101
+ },
+ "50B43085-97F5-4380-9BFF-3B3D19A670E8": {
+  "place": "Stradun, Old City (Stari Grad), Dubrovnik",
+  "kind": "photo",
+  "file": "media/elaphiti/50B43085-97F5-4380-9BFF-3B3D19A670E8-full.jpg",
+  "date": "2025-09-20",
+  "time": "08:55",
+  "lat": 42.641175,
+  "lng": 18.110072
  },
  "E80A9E6A-4BB3-4037-A4A5-9921580F0462": {
   "place": "Između polača",
@@ -12932,6 +12932,42 @@
   "lat": 42.655,
   "lng": 18.0829
  },
+ "0C7CCBD9-235A-41F0-A78A-44E65F484E55": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/0C7CCBD9-235A-41F0-A78A-44E65F484E55-full.jpg",
+  "date": "2025-09-23",
+  "time": "12:18",
+  "lat": 42.654549,
+  "lng": 18.081788
+ },
+ "6521B6A4-D1BB-4F52-9196-49064643C7FA": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/6521B6A4-D1BB-4F52-9196-49064643C7FA-full.jpg",
+  "date": "2025-09-23",
+  "time": "12:18",
+  "lat": 42.654549,
+  "lng": 18.081788
+ },
+ "1D7258BF-9CEF-48CF-9B83-2DD65DF9C847": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "photo",
+  "file": "media/dubrovnik-old-town/1D7258BF-9CEF-48CF-9B83-2DD65DF9C847-full.jpg",
+  "date": "2025-09-23",
+  "time": "12:18",
+  "lat": 42.654549,
+  "lng": 18.081788
+ },
+ "0B4C90AF-E8E8-4E2B-A9AC-2877411791F4": {
+  "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/0B4C90AF-E8E8-4E2B-A9AC-2877411791F4-hd.mp4",
+  "date": "2025-09-23",
+  "time": "12:18",
+  "lat": 42.654549,
+  "lng": 18.081788
+ },
  "06446EEE-EF4A-443B-8854-7820D6B95D0F": {
   "place": "Dalmatinska Ulica, Lapad, Dubrovnik",
   "kind": "photo",
@@ -12958,42 +12994,6 @@
   "time": "12:34",
   "lat": 42.654903,
   "lng": 18.082942
- },
- "0C7CCBD9-235A-41F0-A78A-44E65F484E55": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/0C7CCBD9-235A-41F0-A78A-44E65F484E55-full.jpg",
-  "date": "2025-09-23",
-  "time": "12:18",
-  "lat": 42.654549,
-  "lng": 18.081788
- },
- "6521B6A4-D1BB-4F52-9196-49064643C7FA": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/6521B6A4-D1BB-4F52-9196-49064643C7FA-full.jpg",
-  "date": "2025-09-23",
-  "time": "12:18",
-  "lat": 42.654549,
-  "lng": 18.081788
- },
- "1D7258BF-9CEF-48CF-9B83-2DD65DF9C847": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "photo",
-  "file": "media/dubrovnik-old-town/1D7258BF-9CEF-48CF-9B83-2DD65DF9C847-full.jpg",
-  "date": "2025-09-23",
-  "time": "12:18",
-  "lat": 42.654549,
-  "lng": 18.081788
- },
- "0B4C90AF-E8E8-4E2B-A9AC-2877411791F4": {
-  "place": "Lapad Elementary School (Osnovna škola Lapad), Dubrovnik",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/0B4C90AF-E8E8-4E2B-A9AC-2877411791F4-hd.mp4",
-  "date": "2025-09-23",
-  "time": "12:18",
-  "lat": 42.654549,
-  "lng": 18.081788
  },
  "6A6A18CA-2736-4DE7-8A4B-833B8C6E5DFA": {
   "place": "Šetalište kralja Zvonimira, Lapad, Dubrovnik",
@@ -13174,15 +13174,6 @@
   "time": "18:47",
   "lat": 42.641142,
   "lng": 18.11103
- },
- "858855AB-E625-4016-903E-2117450C5A66": {
-  "place": "Stradun, Old City (Stari Grad), Dubrovnik",
-  "kind": "video",
-  "file": "media/dubrovnik-old-town/858855AB-E625-4016-903E-2117450C5A66-hd.mp4",
-  "date": "2025-09-23",
-  "time": "20:49",
-  "lat": 42.6416,
-  "lng": 18.1075
  },
  "A50C6946-F6BC-417F-9261-6C6245174CCD": {
   "place": "Monument of Marin Držić",
@@ -13552,6 +13543,15 @@
   "time": "21:33",
   "lat": 42.6408,
   "lng": 18.1106
+ },
+ "858855AB-E625-4016-903E-2117450C5A66": {
+  "place": "Maskeron, Stradun, Old City (Stari Grad), Dubrovnik",
+  "kind": "video",
+  "file": "media/dubrovnik-old-town/858855AB-E625-4016-903E-2117450C5A66-hd.mp4",
+  "date": "2025-09-23",
+  "time": "20:49",
+  "lat": 42.6416,
+  "lng": 18.1075
  },
  "B38718F1-0B62-4FE9-BA2C-BCCB37283AEB": {
   "place": "Maskeron, Stradun, Old City (Stari Grad), Dubrovnik",
