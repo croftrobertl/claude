@@ -60,36 +60,152 @@
     mapwrap.appendChild(mapdiv);
     body.appendChild(story); body.appendChild(mapwrap);
     const overview = el('div', 'dcc-tour-overview', overviewHTML());
-    root.appendChild(header); root.appendChild(nav); root.appendChild(overview); root.appendChild(body);
+    const controls = buildControls();
+    root.appendChild(header); root.appendChild(nav); root.appendChild(controls);
+    root.appendChild(overview); root.appendChild(body);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav;
     overview.querySelectorAll('.tread').forEach(r =>
       r.addEventListener('click', () => selectDay(+r.getAttribute('data-day'))));
+    animateCounts(header);
+  }
+
+  // ---- #6 date search + location filter ----
+  function buildControls() {
+    const wrap = el('div', 'dcc-tour-controls');
+    const first = DATA.days[0].date, last = DATA.days[DATA.days.length - 1].date;
+    wrap.innerHTML =
+      '<label class="dcc-tour-ctl"><span>Jump to date</span>' +
+      '<input type="date" id="dcc-datepick" min="' + first + '" max="' + last + '" value="' + first + '"></label>' +
+      '<label class="dcc-tour-ctl dcc-tour-ctl-search"><span>Find a place</span>' +
+      '<input type="search" id="dcc-placesearch" placeholder="e.g. Lokrum, Stradun, Cavtat…" autocomplete="off"></label>' +
+      '<div class="dcc-tour-results" id="dcc-results" hidden></div>';
+    // date jump
+    wrap.querySelector('#dcc-datepick').addEventListener('change', e => {
+      const idx = DATA.days.findIndex(d => d.date === e.target.value);
+      if (idx >= 0) selectDay(idx);
+    });
+    // place search across all days
+    const idx = [];
+    DATA.days.forEach((d, di) => d.places.forEach((p, pi) =>
+      idx.push({ di, pi, name: p.name, short: d.short, count: p.count, key: p.name.toLowerCase() })));
+    const inp = wrap.querySelector('#dcc-placesearch');
+    const res = wrap.querySelector('#dcc-results');
+    inp.addEventListener('input', () => {
+      const q = inp.value.trim().toLowerCase();
+      if (!q) { res.hidden = true; res.innerHTML = ''; return; }
+      const hits = idx.filter(x => x.key.includes(q)).slice(0, 12);
+      res.hidden = !hits.length;
+      res.innerHTML = hits.map(h =>
+        '<button class="dcc-tour-result" data-di="' + h.di + '" data-pi="' + h.pi + '">' +
+        escapeHtml(h.name) + ' <span>' + escapeHtml(h.short) + ' · ' + h.count + '</span></button>').join('');
+    });
+    res.addEventListener('click', e => {
+      const b = e.target.closest('.dcc-tour-result'); if (!b) return;
+      res.hidden = true; inp.value = '';
+      selectDay(+b.dataset.di);
+      setTimeout(() => {
+        const sec = root._story.querySelector('#place-' + b.dataset.pi);
+        if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
+      }, 80);
+    });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) res.hidden = true; });
+    return wrap;
+  }
+  function fmtDur(s) {
+    if (!s && s !== 0) return '';
+    const m = Math.floor(s / 60), ss = Math.round(s % 60);
+    return m + ':' + String(ss).padStart(2, '0');
+  }
+  function mapsLink(lat, lng, cls) {
+    if (lat == null || lng == null) return '';
+    return '<a class="' + (cls || 'dcc-tour-maplink') + '" href="https://www.google.com/maps?q=' +
+      lat + ',' + lng + '" target="_blank" rel="noopener" title="Open in Google Maps" ' +
+      'onclick="event.stopPropagation()">📍</a>';
   }
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
+  function shortName(s) { return String(s || '').split(/[,(]/)[0].trim(); }
   function tripStatsHTML() {
     const h = DATA.health; if (!h) return '';
+    const s = DATA.stats || {};
     const srd = (h.climb_m / 412).toFixed(1);       // Mount Srđ = 412 m
-    const eiffel = (h.climb_m / 330).toFixed(1);    // Eiffel Tower = 330 m
+    let sup = '';
+    if (s.most_active_day) {
+      sup = '<div class="dcc-tour-superlatives">' +
+        '<span>🔥 Busiest day <b>' + escapeHtml(s.most_active_day.label) + '</b> · ' + s.most_active_day.count + ' shots</span>' +
+        '<span>📍 Most captured <b>' + escapeHtml(shortName(s.most_visited.name)) + '</b> · ' + s.most_visited.count + '</span>' +
+        (s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
+        '</div>';
+    }
     return '<div class="dcc-tour-tripstats">' +
-      tile(fmt(h.steps), 'steps', h.watch) +
-      tile(h.dist + ' ' + (h.dist_unit || ''), 'walked', 'across ' + DATA.day_count + ' days') +
-      tile('≈' + fmt(h.flights) + ' flights', 'climbed', 'like Mount Srđ ×' + srd + ' · Eiffel ×' + eiffel) +
-      '</div>';
+      statTile(h.steps, '', 'steps', h.watch) +
+      statTile(parseFloat(h.dist), ' ' + (h.dist_unit || ''), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
+      statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
+      (s.total_locations ? statTile(s.total_locations, '', 'places', 'visited & named') : '') +
+      (s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
+      (s.photos != null ? statTile(s.photos + s.videos + s.clips, '', 'photos & videos',
+        s.photos + ' photos · ' + s.videos + ' videos · ' + s.clips + ' clips') : '') +
+      '</div>' + sup;
+  }
+  function statTile(num, suffix, label, sub, dec) {
+    num = num || 0; dec = dec || 0;
+    const shown = dec ? Number(num).toFixed(dec) : fmt(num);
+    return '<div class="dcc-tour-tile"><span class="t-big" data-count="' + num + '" data-dec="' + dec +
+      '" data-suffix="' + escapeAttr(suffix || '') + '">' + escapeHtml(shown) + escapeHtml(suffix || '') + '</span>' +
+      '<span class="t-lab">' + escapeHtml(label) + '</span>' +
+      (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
   }
   function tile(big, label, sub) {
     return '<div class="dcc-tour-tile"><span class="t-big">' + escapeHtml(big) + '</span>' +
       '<span class="t-lab">' + escapeHtml(label) + '</span>' +
       (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
   }
-  function healthRibbonHTML(h) {
-    if (!h) return '';
+  // count-up animation for the hero numbers
+  function animateCounts(scope) {
+    (scope || document).querySelectorAll('.t-big[data-count]').forEach(elm => {
+      const target = parseFloat(elm.getAttribute('data-count')) || 0;
+      const dec = +elm.getAttribute('data-dec') || 0;
+      const suffix = elm.getAttribute('data-suffix') || '';
+      if (target <= 0) return;
+      const dur = 900, t0 = performance.now();
+      const step = now => {
+        const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        const v = target * e;
+        elm.textContent = (dec ? v.toFixed(dec) : fmt(v)) + suffix;
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  function healthRibbonHTML(day) {
+    const h = day.health || {};
     const bits = [];
     if (h.steps) bits.push('<b>' + fmt(h.steps) + '</b> steps');
-    if (h.dist) bits.push('<b>' + h.dist + '</b> ' + (DATA.health.dist_unit || ''));
-    if (h.climb_m) bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b>');
+    if (day.walk_km) bits.push('<b>' + day.walk_km + ' km</b> traveled');
+    if (h.climb_m) {
+      const flights = Math.round(h.climb_m / 3);
+      bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b> ≈ ' + flights + ' flights');
+    }
     if (h.alt_max != null) bits.push('up to <b>' + h.alt_max + ' m</b>');
-    return bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
+    let out = bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
+    // stairs-as-a-story
+    if (h.climb_m && h.climb_m >= 40) {
+      const srd = (h.climb_m / 412);
+      const tale = srd >= 0.25
+        ? 'That\'s like climbing <b>Mount Srđ ×' + srd.toFixed(srd < 1 ? 2 : 1) + '</b> — on foot.'
+        : 'About <b>' + Math.round(h.climb_m / 3) + ' flights</b> of stairs.';
+      out += '<p class="dcc-tour-stairtale">🪜 ' + tale + '</p>';
+    }
+    return out;
+  }
+  function weatherHTML(w) {
+    if (!w) return '';
+    const bits = [];
+    if (w.icon || w.desc) bits.push((w.icon || '') + ' ' + escapeHtml(w.desc || ''));
+    if (w.tmax != null) bits.push('🌡 ' + Math.round(w.tmax) + '°' + (w.tmin != null ? ' / ' + Math.round(w.tmin) + '°' : '') + 'C');
+    if (w.wind != null) bits.push('💨 ' + Math.round(w.wind) + ' km/h');
+    if (w.precip) bits.push('💧 ' + w.precip + ' mm');
+    return bits.length ? '<p class="dcc-tour-weather">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
   // ---- #3 signature climbs + #4 trip staircase ----
@@ -193,7 +309,8 @@
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
       '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
         day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
-      healthRibbonHTML(day.health) +
+      weatherHTML(day.weather) +
+      healthRibbonHTML(day) +
       (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
       (day.health && (day.health.stepcurve || day.health.elev) ?
         '<button class="dcc-tour-chip dcc-tour-replay" id="dcc-replay">▶ Replay this day</button>' : '') +
@@ -210,12 +327,13 @@
         const bits = [];
         if (st != null) bits.push('≈' + fmt(st) + ' steps');
         if (cl) bits.push('↑' + cl + ' m');
-        if (bits.length) cum = '<span class="dcc-tour-place-cum">' + bits.join(' · ') + ' by now</span>';
+        if (bits.length) cum = ' <span class="dcc-tour-place-cum">· ' + bits.join(' · ') + ' by now</span>';
       }
+      const spent = p.mins ? ' · ' + (p.mins >= 60 ? (p.mins/60).toFixed(1) + ' h' : p.mins + ' min') + ' here' : '';
       html += '<section class="dcc-tour-place" id="' + anchor + '">' +
         '<div class="dcc-tour-place-head">' +
-          '<h3>' + escapeHtml(p.name) + '</h3>' +
-          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + ' · ' + p.count + cum + '</span>' +
+          '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
+          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
         '</div>' +
         '<div class="dcc-tour-media">' + p.items.map(renderItem).join('') + '</div>' +
         '</section>';
@@ -273,22 +391,25 @@
   }
 
   function renderItem(item) {
+    const extras = mapsLink(item.lat, item.lng, 'dcc-tour-maplink cell');
     if (item.type === 'drive') {
       return '<div class="dcc-tour-cell wide"><iframe loading="lazy" allowfullscreen allow="autoplay" ' +
-        'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>' + cap(item) + '</div>';
+        'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>' +
+        '<span class="dcc-tour-badge">▶ clip</span>' + cap(item) + extras + '</div>';
     }
     if (item.type === 'self_hosted') {
+      const durb = item.dur ? '<span class="dcc-tour-badge">▶ ' + fmtDur(item.dur) + '</span>' : '<span class="dcc-tour-badge">▶ video</span>';
       if (!item.url && item.poster)
-        return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video" style="opacity:.85" />' + cap(item) + '</div>';
+        return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video" style="opacity:.85" />' + durb + cap(item) + extras + '</div>';
       if (!item.url) return '';
       const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
       return '<div class="dcc-tour-cell wide"><video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
-             ' controls preload="none"></video>' + cap(item) + '</div>';
+             ' controls preload="none"></video>' + durb + cap(item) + extras + '</div>';
     }
     // photo
     const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
     if (item.full) lightboxFulls.push(resolveUrl(item.full));
-    return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + '</div>';
+    return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + extras + '</div>';
   }
   function cap(item) {
     const alt = item.alt != null ? ' · ' + item.alt + ' m' : '';

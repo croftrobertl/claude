@@ -221,3 +221,42 @@
 .dcc-tour-lightbox-nav.prev { left: 1rem; top: 50%; transform: translateY(-50%); }
 .dcc-tour-lightbox-nav.next { right: 1rem; top: 50%; transform: translateY(-50%); }
 .dcc-tour-lightbox-close:hover, .dcc-tour-lightbox-nav:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* ===== Phase 1 additions ===== */
+/* superlatives under the hero tiles */
+.dcc-tour-superlatives { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 0.6rem; font-size: 0.82rem; color: var(--dcc-tour-muted); }
+.dcc-tour-superlatives b { color: var(--dcc-tour-text); }
+
+/* date + place search controls */
+.dcc-tour-controls { position: relative; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 0.6rem 1.5rem 0.2rem; }
+.dcc-tour-ctl { display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dcc-tour-muted); }
+.dcc-tour-ctl input { font: inherit; font-size: 0.9rem; text-transform: none; letter-spacing: normal; padding: 7px 10px; border: 1px solid var(--dcc-tour-border); border-radius: 8px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
+.dcc-tour-ctl input:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
+.dcc-tour-ctl-search { flex: 1; min-width: 200px; }
+.dcc-tour-ctl-search input { width: 100%; }
+.dcc-tour-results { position: absolute; z-index: 20; top: 100%; left: 1.5rem; right: 1.5rem; max-height: 320px; overflow-y: auto; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 10px; box-shadow: var(--dcc-tour-shadow); }
+.dcc-tour-result { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; padding: 9px 13px; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); cursor: pointer; }
+.dcc-tour-result:last-child { border-bottom: 0; }
+.dcc-tour-result:hover { background: rgba(15,109,191,0.07); }
+.dcc-tour-result span { color: var(--dcc-tour-muted); font-size: 0.78rem; white-space: nowrap; }
+
+/* weather strip */
+.dcc-tour-weather { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--dcc-tour-muted); }
+
+/* stairs-as-a-story */
+.dcc-tour-stairtale { margin: 0.4rem 0 0; font-size: 0.86rem; color: var(--dcc-tour-text); background: rgba(240,128,128,0.10); border-left: 3px solid var(--dcc-tour-secondary); padding: 6px 10px; border-radius: 0 8px 8px 0; }
+.dcc-tour-stairtale b { color: var(--dcc-tour-primary); }
+
+/* Google Maps links */
+.dcc-tour-maplink { text-decoration: none; font-size: 0.8rem; opacity: 0.55; transition: opacity 0.12s, transform 0.12s; }
+.dcc-tour-maplink:hover { opacity: 1; transform: scale(1.15); }
+.dcc-tour-maplink.head { margin-left: 6px; font-size: 0.85rem; vertical-align: middle; }
+.dcc-tour-maplink.cell { position: absolute; right: 5px; bottom: 5px; background: rgba(0,0,0,0.55); border-radius: 6px; padding: 1px 5px; opacity: 0.75; }
+.dcc-tour-cell.wide .dcc-tour-maplink.cell { right: 8px; bottom: 8px; }
+
+/* video / clip duration badge */
+.dcc-tour-badge { position: absolute; left: 6px; top: 6px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.66rem; font-weight: 600; padding: 2px 6px; border-radius: 5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* flash a place when jumped to from search */
+.dcc-tour-flash { animation: dcc-flash 1.6s ease-out; }
+@keyframes dcc-flash { 0% { background: rgba(15,109,191,0.16); } 100% { background: transparent; } }
