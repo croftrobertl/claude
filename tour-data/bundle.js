@@ -46,7 +46,7 @@
       b.innerHTML = '<span class="d-n">Day ' + d.index + '</span>' +
                     '<span class="d-d">' + escapeHtml(d.short) + '</span>' +
                     '<span class="d-c">' + d.count + '</span>';
-      b.addEventListener('click', () => selectDay(i));
+      b.addEventListener('click', () => { setMode('story'); selectDay(i); });
       nav.appendChild(b);
     });
     const body = el('div', 'dcc-tour-body');
@@ -61,13 +61,163 @@
     body.appendChild(story); body.appendChild(mapwrap);
     const overview = el('div', 'dcc-tour-overview', overviewHTML());
     const controls = buildControls();
-    root.appendChild(header); root.appendChild(nav); root.appendChild(controls);
-    root.appendChild(overview); root.appendChild(body);
-    root._story = story; root._mapdiv = mapdiv; root._nav = nav;
+    const modeToggle = buildModeToggle();
+    const mapmode = buildMapMode();
+    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(nav); root.appendChild(controls);
+    root.appendChild(overview); root.appendChild(body); root.appendChild(mapmode);
+    root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode;
     overview.querySelectorAll('.tread').forEach(r =>
       r.addEventListener('click', () => selectDay(+r.getAttribute('data-day'))));
     animateCounts(header);
   }
+
+  // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
+  function dayColor(i) { return 'hsl(' + Math.round(i * 360 / Math.max(DATA.day_count, 1)) + ' 72% 45%)'; }
+  let curMode = 'story';
+  function setMode(m) {
+    curMode = m;
+    root.classList.toggle('dcc-tour-mapmode-on', m === 'map');
+    root.querySelectorAll('.dcc-tour-modebtn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+    if (m === 'map') initMapMode();
+  }
+  function buildModeToggle() {
+    const w = el('div', 'dcc-tour-modes');
+    w.innerHTML =
+      '<button class="dcc-tour-modebtn active" data-mode="story">📖 Story</button>' +
+      '<button class="dcc-tour-modebtn" data-mode="map">🗺 Map</button>';
+    w.querySelectorAll('.dcc-tour-modebtn').forEach(b =>
+      b.addEventListener('click', () => setMode(b.dataset.mode)));
+    return w;
+  }
+  function buildMapMode() {
+    const w = el('section', 'dcc-tour-mapmode');
+    const legend = DATA.days.map((d, i) =>
+      '<button class="dcc-tour-legchip" data-day="' + i + '"><span style="background:' + dayColor(i) + '"></span>' +
+      escapeHtml(d.short) + '</button>').join('');
+    w.innerHTML =
+      '<div class="dcc-tour-mm-bar">' +
+        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-path" checked> Path</label>' +
+        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-heat"> Heatmap</label>' +
+        '<button class="dcc-tour-chip" id="mm-boat">⛵ Play the Elaphiti boat day</button>' +
+        '<span class="dcc-tour-mm-range"><span id="mm-range-lab"></span>' +
+          '<input type="range" id="mm-lo" min="0" max="' + (DATA.day_count-1) + '" value="0">' +
+          '<input type="range" id="mm-hi" min="0" max="' + (DATA.day_count-1) + '" value="' + (DATA.day_count-1) + '"></span>' +
+      '</div>' +
+      '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
+        '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>' +
+      '<div class="dcc-tour-mm-legend">' + legend + '</div>';
+    return w;
+  }
+  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmInit = false;
+  let mmRange = [0, 0];
+  function initMapMode() {
+    if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); return; }
+    mmInit = true;
+    mmRange = [0, DATA.day_count - 1];
+    mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
+    mmMarkers = L.layerGroup().addTo(mmMap);
+    mmPathLayer = L.layerGroup().addTo(mmMap);
+    const m = root._mapmode;
+    m.querySelector('#mm-path').addEventListener('change', renderMapMode);
+    m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
+    m.querySelector('#mm-boat').addEventListener('click', mmPlayBoat);
+    const lo = m.querySelector('#mm-lo'), hi = m.querySelector('#mm-hi');
+    const onSlide = () => {
+      let a = +lo.value, b = +hi.value; if (a > b) { const t = a; a = b; b = t; }
+      mmRange = [a, b]; renderMapMode();
+    };
+    lo.addEventListener('input', onSlide); hi.addEventListener('input', onSlide);
+    m.querySelectorAll('.dcc-tour-legchip').forEach(c => c.addEventListener('click', () => {
+      const di = +c.dataset.day; lo.value = di; hi.value = di; onSlide();
+      const d = DATA.days[di]; if (d.places.some(p => p.lat != null)) fitToDays(di, di);
+    }));
+    // whole-trip bounds
+    renderMapMode(true);
+    setTimeout(() => mmMap.invalidateSize(), 80);
+  }
+  function daysInRange() {
+    const out = [];
+    for (let i = mmRange[0]; i <= mmRange[1]; i++) out.push(i);
+    return out;
+  }
+  function fitToDays(a, b) {
+    const pts = [];
+    for (let i = a; i <= b; i++) DATA.days[i].places.forEach(p => { if (p.lat != null) pts.push([p.lat, p.lng]); });
+    if (pts.length) mmMap.fitBounds(L.latLngBounds(pts).pad(0.15), { animate: true });
+  }
+  function renderMapMode(fit) {
+    if (!mmMap) return;
+    mmMarkers.clearLayers(); mmPathLayer.clearLayers();
+    const showPath = root._mapmode.querySelector('#mm-path').checked;
+    const showHeat = root._mapmode.querySelector('#mm-heat').checked;
+    const heatPts = [], allPts = [];
+    root._mapmode.querySelector('#mm-range-lab').textContent =
+      DATA.days[mmRange[0]].short + ' – ' + DATA.days[mmRange[1]].short;
+    daysInRange().forEach(di => {
+      const d = DATA.days[di], col = dayColor(di), line = [];
+      d.places.forEach((p, pi) => {
+        if (p.lat == null) return;
+        allPts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
+        const r = Math.min(20, 5 + Math.sqrt(p.count) * 1.6);
+        const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: col, fillOpacity: 0.85 });
+        mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
+        mk.on('click', () => openMapSidebar(di, pi));
+        mmMarkers.addLayer(mk);
+        p.items.forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
+      });
+      if (showPath && line.length > 1)
+        mmPathLayer.addLayer(L.polyline(line, { color: col, weight: 2.5, opacity: 0.7, dashArray: '4 5' }));
+    });
+    if (mmHeat) { mmMap.removeLayer(mmHeat); mmHeat = null; }
+    if (showHeat && window.L && L.heatLayer)
+      mmHeat = L.heatLayer(heatPts, { radius: 22, blur: 18, maxZoom: 15 }).addTo(mmMap);
+    if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(allPts).pad(0.12), { animate: false });
+  }
+  function openMapSidebar(di, pi) {
+    const d = DATA.days[di], p = d.places[pi];
+    const side = root._mapmode.querySelector('#dcc-mm-side');
+    lightboxFulls = []; const thumbs = [];
+    p.items.forEach(it => {
+      let img = null;
+      if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
+      else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
+    });
+    side.hidden = false;
+    side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
+      '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
+      '<p class="dcc-tour-mm-meta">' + escapeHtml(d.label) + ' · ' + escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to) +
+        ' · ' + p.count + ' shots</p>' +
+      '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
+      '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
+    side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
+    side.querySelector('[data-openday]').addEventListener('click', () => { setMode('story'); selectDay(di); });
+    mmMap.panTo([p.lat, p.lng], { animate: true });
+  }
+  function mmPlayBoat() {
+    const di = DATA.days.findIndex(d => /elaphiti/i.test(d.area || '') || d.date === '2025-09-20');
+    if (di < 0) return;
+    const d = DATA.days[di];
+    const seq = [];
+    d.places.forEach((p, pi) => p.items.forEach(it => { if (it.lat != null) seq.push({ lat: it.lat, lng: it.lng, t: it.time, name: p.name, pi }); }));
+    seq.sort((a, b) => (a.t || '').localeCompare(b.t || ''));
+    if (!seq.length) return;
+    mmRange = [di, di]; root._mapmode.querySelector('#mm-lo').value = di; root._mapmode.querySelector('#mm-hi').value = di;
+    renderMapMode();
+    const trace = L.polyline([], { color: dayColor(di), weight: 4 }).addTo(mmPathLayer);
+    const dot = L.circleMarker(seq[0], { radius: 8, color: '#fff', weight: 2, fillColor: dayColor(di), fillOpacity: 1 }).addTo(mmPathLayer);
+    let i = 0;
+    if (mmBoatTimer) clearInterval(mmBoatTimer);
+    mmMap.setView([seq[0].lat, seq[0].lng], 12);
+    mmBoatTimer = setInterval(() => {
+      if (i >= seq.length) { clearInterval(mmBoatTimer); mmBoatTimer = null; return; }
+      const s = seq[i]; trace.addLatLng([s.lat, s.lng]); dot.setLatLng([s.lat, s.lng]);
+      dot.bindTooltip(escapeHtml(s.name) + ' · ' + escapeHtml(s.t || ''), { direction: 'top' }).openTooltip();
+      mmMap.panTo([s.lat, s.lng], { animate: true, duration: 0.4 });
+      i++;
+    }, 550);
+  }
+  let mmBoatTimer = null;
 
   // ---- #6 date search + location filter ----
   function buildControls() {
@@ -82,7 +232,7 @@
     // date jump
     wrap.querySelector('#dcc-datepick').addEventListener('change', e => {
       const idx = DATA.days.findIndex(d => d.date === e.target.value);
-      if (idx >= 0) selectDay(idx);
+      if (idx >= 0) { setMode('story'); selectDay(idx); }
     });
     // place search across all days
     const idx = [];
@@ -102,7 +252,7 @@
     res.addEventListener('click', e => {
       const b = e.target.closest('.dcc-tour-result'); if (!b) return;
       res.hidden = true; inp.value = '';
-      selectDay(+b.dataset.di);
+      setMode('story'); selectDay(+b.dataset.di);
       setTimeout(() => {
         const sec = root._story.querySelector('#place-' + b.dataset.pi);
         if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }

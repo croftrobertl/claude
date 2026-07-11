@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or stops.json change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v9';
+const CACHE_VERSION = 'dcc-tour-v10';
 const SHELL = [
   './',
   'index.html',
@@ -14,6 +14,7 @@ const SHELL = [
   'vendor/leaflet.js',
   'vendor/leaflet.css',
   'vendor/leaflet.markercluster.js',
+  'vendor/leaflet-heat.js',
   'vendor/MarkerCluster.css',
   'vendor/MarkerCluster.Default.css',
 ];
