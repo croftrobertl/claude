@@ -378,6 +378,16 @@
             var sw = el.swiper;
             if (!sw) return;
             try {
+                // Full re-measure sequence: a slider (Stratum Advanced Slider,
+                // Elementor carousel) that initialized while the popup content
+                // was display:none has a 0-width layout, stale nav state, and a
+                // stale active index. updateSize/updateSlides/updateSlidesClasses
+                // recompute geometry; navigation.update fixes the disappearing
+                // prev arrow (#6); slideTo(activeIndex, 0) re-syncs the index so
+                // the first slide's click/lightbox binding fires on first tap (#7).
+                if (sw.updateSize) sw.updateSize();
+                if (sw.updateSlides) sw.updateSlides();
+                if (sw.updateSlidesClasses) sw.updateSlidesClasses();
                 sw.update();
                 if (sw.navigation && sw.navigation.update) {
                     sw.navigation.update();
@@ -387,6 +397,9 @@
                 }
                 if (sw.lazy && sw.lazy.load) {
                     sw.lazy.load();
+                }
+                if (typeof sw.activeIndex === 'number' && sw.slideTo) {
+                    sw.slideTo(sw.activeIndex, 0);
                 }
             } catch (e) { /* swiper threw on update — ignore, next one */ }
         });
@@ -401,6 +414,28 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var viewBtn = sheet.querySelector('.mphbac-info-view-link');
+        var scrollCue = sheet.querySelector('.mphbac-info-scrollcue');
+        var scrollCueBtn = sheet.querySelector('.mphbac-info-scrollcue-btn');
+
+        // Toggle the "scroll for more" cue based on whether the popup has
+        // unseen content below the fold. The sheet itself is the scroll
+        // container (overflow-y:auto). Hidden entirely when scrolled to the
+        // bottom so the fade + chevron disappear once the user reaches the end.
+        function updateScrollCue() {
+            if (!scrollCue) return;
+            var more = (sheet.scrollHeight - sheet.scrollTop - sheet.clientHeight) > 24;
+            scrollCue.hidden = !more;
+            sheet.classList.toggle('mphbac-has-more', more);
+        }
+        if (scrollCueBtn) {
+            scrollCueBtn.addEventListener('click', function () {
+                var by = Math.round(sheet.clientHeight * 0.7);
+                try { sheet.scrollBy({ top: by, behavior: 'smooth' }); }
+                catch (e) { sheet.scrollTop += by; }
+            });
+        }
+        sheet.addEventListener('scroll', updateScrollCue, { passive: true });
+        window.addEventListener('resize', updateScrollCue);
 
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
@@ -564,12 +599,35 @@
                 // defined starting point and the trap below activates.
                 if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
             });
+            // Second re-measure once the slide-in transition settles and the
+            // popup is at full width. The refreshSwipers above runs mid-
+            // transition, so sliders that initialized while hidden still hold
+            // stale measurements then; this pass (transitionend, with a timer
+            // fallback) fixes the disappearing arrow (#6) and the dead first
+            // slide (#7), and shows the scroll cue once content height is final.
+            var settled = false;
+            var settle = function () {
+                if (settled) return;
+                settled = true;
+                refreshSwipers(bodyEl);
+                try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+                updateScrollCue();
+            };
+            sheet.addEventListener('transitionend', function te(e) {
+                if (e.target === sheet && (e.propertyName === 'transform' || e.propertyName === 'opacity')) {
+                    sheet.removeEventListener('transitionend', te);
+                    settle();
+                }
+            });
+            setTimeout(settle, 380);
             document.addEventListener('keydown', onKeydown);
         }
 
         function closeInfo() {
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
+            sheet.classList.remove('mphbac-has-more');
+            if (scrollCue) scrollCue.hidden = true;
             document.documentElement.classList.remove('mphbac-info-open');
             document.body.classList.remove('mphbac-info-open');
             setTimeout(function () {

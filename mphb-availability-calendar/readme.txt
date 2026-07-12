@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.6
+Stable tag: 0.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.11.0 =
+* The "View Cottage Page" button in the cottage info popup now has its own full style section in the Elementor panel (Style → Cottage Page Button): editable icon (with position, size, spacing, and color), typography, text and background colors for normal and hover states, border, border radius, and padding. Its baked default is now a filled blue rounded pill instead of the old square, near-invisible box. (The button is moved out to the page body when the popup opens, so its styles use portal-proof selectors that also outrank the theme's link styling — the reason the old background was invisible.)
+* All widget buttons now render in true Title Case (first letter of each word capitalized, the rest lowercased) — e.g. "BOOK NOW" and "book now" both display "Book Now".
+* The cottage info popup now keeps a visible scrollbar (where the browser/OS allows) and adds a "scroll for more" chevron cue with a bottom fade that appears whenever there's more content below and disappears once you reach the end — so it's obvious there's more to scroll, including on iOS where the scrollbar auto-hides.
+* Fixed slider widgets inside the cottage info popup (e.g. Stratum Advanced Slider): the "back" navigation arrow no longer disappears a moment after each slide (it now stays visible, dimmed at the first slide), and the first photo now opens/enlarges on the first tap instead of requiring another photo to be opened first. Both were caused by the slider initializing while the popup was hidden (zero width); the popup now re-measures the slider once it's fully open.
 
 = 0.10.6 =
 * Fixed the calendar showing gray shimmer placeholder rows (never filling in with the green/red day cells) in the Elementor editor preview, and potentially for live visitors, when SpeedyCache Pro's Combine JS / Defer JS optimization is enabled. The grid is drawn by the plugin's JavaScript on load; when that script was folded into a combined bundle, a stale/deferred bundle in the preview iframe — or an unrelated script erroring earlier in the same bundle — could stop the grid from ever rendering. The plugin's script and stylesheet are now tagged with the standard opt-out attributes (data-no-optimize / data-no-combine / data-no-defer / data-no-minify / data-cfasync) that SpeedyCache and other optimizers honor, so they load as their own reliable files. If your optimizer doesn't recognize these attributes, see the new FAQ entry for the one-line manual exclusion.

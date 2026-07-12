@@ -17,6 +17,27 @@ final class Widget extends Widget_Base
         return self::$cached_room_types ??= Data_Provider::list_room_types();
     }
 
+    /**
+     * True Title Case for button labels: lowercase every letter, then
+     * uppercase the first letter of each word. "BOOK NOW" / "book now" both
+     * render "Book Now". Server-side so there's no flash and no JS/CSS needed.
+     */
+    private static function tc(string $s): string
+    {
+        return function_exists('mb_convert_case')
+            ? mb_convert_case($s, MB_CASE_TITLE, 'UTF-8')
+            : ucwords(strtolower($s));
+    }
+
+    /**
+     * Portal-proof selector for the "View Cottage Page" button. When the info
+     * popup opens, widget.js moves the whole sheet to <body> to escape
+     * transformed Elementor ancestors — so {{WRAPPER}}-scoped controls no
+     * longer match this button. A global, doubled-class selector both survives
+     * the move and outranks Bravada's theme <a> styling.
+     */
+    private const VSEL = '.mphbac-info-view-link.mphbac-info-view-link';
+
     public function get_name(): string
     {
         return 'mphbac_calendar';
@@ -139,6 +160,7 @@ final class Widget extends Widget_Base
         $this->register_nav_style_controls();
         $this->register_legend_style_controls();
         $this->register_cell_style_controls();
+        $this->register_view_button_style_controls();
     }
 
     private function register_info_controls(): void
@@ -976,6 +998,141 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
+    private function register_view_button_style_controls(): void
+    {
+        $this->start_controls_section('section_style_view_button', [
+            'label' => __('Cottage Page Button', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('view_icon', [
+            'label'       => __('Icon', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::ICONS,
+            'description' => __('Icon shown on the "View Cottage Page" button. Clear it to show text only.', 'mphb-availability-calendar'),
+            'default'     => ['value' => 'fas fa-external-link-alt', 'library' => 'fa-solid'],
+        ]);
+
+        $this->add_control('view_icon_position', [
+            'label'     => __('Icon position', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::SELECT,
+            'default'   => 'after',
+            'options'   => [
+                'before' => __('Before text', 'mphb-availability-calendar'),
+                'after'  => __('After text', 'mphb-availability-calendar'),
+            ],
+            'condition' => ['view_icon[value]!' => ''],
+        ]);
+
+        $this->add_responsive_control('view_icon_gap', [
+            'label'      => __('Icon spacing', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em'],
+            'range'      => [
+                'px' => ['min' => 0, 'max' => 24, 'step' => 1],
+                'em' => ['min' => 0, 'max' => 2, 'step' => 0.1],
+            ],
+            'selectors'  => [self::VSEL => 'gap: {{SIZE}}{{UNIT}};'],
+            'condition'  => ['view_icon[value]!' => ''],
+        ]);
+
+        $this->add_control('view_icon_size', [
+            'label'      => __('Icon size', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', 'em'],
+            'range'      => [
+                'px' => ['min' => 8, 'max' => 40, 'step' => 1],
+                'em' => ['min' => 0.5, 'max' => 3, 'step' => 0.1],
+            ],
+            'selectors'  => [
+                self::VSEL . ' .mphbac-view-icon'     => 'font-size: {{SIZE}}{{UNIT}};',
+                self::VSEL . ' .mphbac-view-icon svg' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+            ],
+            'condition'  => ['view_icon[value]!' => ''],
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'view_typography',
+                'selector' => self::VSEL,
+            ]
+        );
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Border::get_type(),
+            [
+                'name'     => 'view_border',
+                'selector' => self::VSEL,
+            ]
+        );
+
+        $this->add_control('view_radius', [
+            'label'      => __('Border radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', '%'],
+            'selectors'  => [
+                self::VSEL => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('view_padding', [
+            'label'      => __('Padding', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [
+                self::VSEL => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->start_controls_tabs('view_color_tabs');
+
+        $this->start_controls_tab('view_tab_normal', [
+            'label' => __('Normal', 'mphb-availability-calendar'),
+        ]);
+        $this->add_control('view_text_color', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::VSEL => 'color: {{VALUE}};'],
+        ]);
+        $this->add_control('view_bg_color', [
+            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::VSEL => 'background-color: {{VALUE}};'],
+        ]);
+        $this->add_control('view_icon_color', [
+            'label'     => __('Icon color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::VSEL . ' .mphbac-view-icon' => 'color: {{VALUE}};'],
+            'condition' => ['view_icon[value]!' => ''],
+        ]);
+        $this->end_controls_tab();
+
+        $this->start_controls_tab('view_tab_hover', [
+            'label' => __('Hover', 'mphb-availability-calendar'),
+        ]);
+        $this->add_control('view_text_color_hover', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::VSEL . ':hover'         => 'color: {{VALUE}};',
+                self::VSEL . ':focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('view_bg_color_hover', [
+            'label'     => __('Background color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::VSEL . ':hover'         => 'background-color: {{VALUE}};',
+                self::VSEL . ':focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+
+        $this->end_controls_tabs();
+
+        $this->end_controls_section();
+    }
+
     /**
      * @return array<int,string>
      */
@@ -1190,8 +1347,8 @@ final class Widget extends Widget_Base
                            autocomplete="off">
                 </label>
                 <div class="mphbac-filter-actions">
-                    <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html($settings['str_apply']); ?></button>
-                    <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html($settings['str_reset']); ?></button>
+                    <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html(self::tc($settings['str_apply'])); ?></button>
+                    <button type="button" class="mphbac-btn mphbac-btn-reset"><?php echo esc_html(self::tc($settings['str_reset'])); ?></button>
                 </div>
                 <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
             </div>
@@ -1213,7 +1370,7 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-nav-btn mphbac-nav-today"
                             title="<?php echo esc_attr($settings['str_today_hint']); ?>"
                             aria-label="<?php echo esc_attr($settings['str_today_hint']); ?>"
-                            hidden><?php echo esc_html($settings['str_today']); ?></button>
+                            hidden><?php echo esc_html(self::tc($settings['str_today'])); ?></button>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
                 </div>
             <?php endif; ?>
@@ -1245,15 +1402,32 @@ final class Widget extends Widget_Base
                     <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
-                        <a class="mphbac-btn mphbac-btn-primary mphbac-info-view-link" target="_blank" rel="noopener noreferrer" hidden><?php echo esc_html($settings['str_view_cottage']); ?></a>
+                        <?php
+                        $view_icon_html = '';
+                        if (!empty($settings['view_icon']['value'])) {
+                            ob_start();
+                            \Elementor\Icons_Manager::render_icon($settings['view_icon'], ['aria-hidden' => 'true']);
+                            $view_icon_html = '<span class="mphbac-view-icon">' . ob_get_clean() . '</span>';
+                        }
+                        $view_label = '<span class="mphbac-view-label">' . esc_html(self::tc($settings['str_view_cottage'])) . '</span>';
+                        $view_inner = (($settings['view_icon_position'] ?? 'after') === 'before')
+                            ? $view_icon_html . $view_label
+                            : $view_label . $view_icon_html;
+                        ?>
+                        <a class="mphbac-info-view-link" target="_blank" rel="noopener noreferrer" hidden><?php
+                            echo $view_inner; // phpcs:ignore WordPress.Security.EscapeOutput — label esc_html'd above, icon is first-party Elementor render
+                        ?></a>
                     </div>
                     <div class="mphbac-info-body"></div>
+                    <div class="mphbac-info-scrollcue" hidden aria-hidden="true">
+                        <button type="button" class="mphbac-info-scrollcue-btn" tabindex="-1">&#8964;</button>
+                    </div>
                 </div>
             <?php endif; ?>
 
             <div class="mphbac-empty" hidden>
                 <p><?php echo esc_html($settings['str_empty']); ?></p>
-                <button type="button" class="mphbac-btn mphbac-btn-reset-empty"><?php echo esc_html($settings['str_reset']); ?></button>
+                <button type="button" class="mphbac-btn mphbac-btn-reset-empty"><?php echo esc_html(self::tc($settings['str_reset'])); ?></button>
             </div>
 
             <?php if ($popup_enabled) : ?>
@@ -1281,8 +1455,8 @@ final class Widget extends Widget_Base
                         <p class="mphbac-sheet-error" role="alert" hidden></p>
                     </div>
                     <div class="mphbac-sheet-actions">
-                        <button type="button" class="mphbac-btn mphbac-sheet-cancel"><?php echo esc_html($settings['str_book_cancel']); ?></button>
-                        <button type="button" class="mphbac-btn mphbac-btn-primary mphbac-sheet-confirm"><?php echo esc_html($settings['str_book_confirm']); ?></button>
+                        <button type="button" class="mphbac-btn mphbac-sheet-cancel"><?php echo esc_html(self::tc($settings['str_book_cancel'])); ?></button>
+                        <button type="button" class="mphbac-btn mphbac-btn-primary mphbac-sheet-confirm"><?php echo esc_html(self::tc($settings['str_book_confirm'])); ?></button>
                     </div>
                 </div>
             <?php endif; ?>
