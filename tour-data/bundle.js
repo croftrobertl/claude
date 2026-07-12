@@ -58,8 +58,28 @@
     mapdiv.setAttribute('role', 'application');
     mapdiv.setAttribute('aria-label', 'Map of the day');
     mapwrap.appendChild(mapdiv);
+    // mobile: map is collapsed behind a tap bar so day photos come first
+    const maptoggle = document.createElement('button');
+    maptoggle.type = 'button';
+    maptoggle.className = 'dcc-tour-maptoggle';
+    maptoggle.textContent = '🗺  Show map';
+    maptoggle.setAttribute('aria-expanded', 'false');
+    maptoggle.addEventListener('click', () => {
+      const open = mapwrap.classList.toggle('open');
+      maptoggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      maptoggle.textContent = open ? '🗺  Hide map' : '🗺  Show map';
+      if (open && map) setTimeout(() => { map.invalidateSize(); showDayOnMap(DATA.days[curDay]); }, 70);
+    });
+    mapwrap.insertBefore(maptoggle, mapdiv);
     body.appendChild(story); body.appendChild(mapwrap);
-    const overview = el('div', 'dcc-tour-overview', overviewHTML());
+    // trip overview (climbs + staircase): collapsed on mobile, open on desktop
+    const overview = el('div', 'dcc-tour-overview');
+    const ovd = document.createElement('details');
+    ovd.className = 'dcc-tour-ovcollapse';
+    if (window.matchMedia('(min-width:801px)').matches) ovd.open = true;
+    ovd.innerHTML = '<summary>📈 Trip overview · climbs &amp; elevation</summary>' +
+      '<div class="ov-body">' + overviewHTML() + '</div>';
+    overview.appendChild(ovd);
     const controls = buildControls();
     const modeToggle = buildModeToggle();
     const mapmode = buildMapMode();

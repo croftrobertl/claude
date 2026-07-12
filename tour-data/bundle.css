@@ -108,7 +108,8 @@
 @media (max-width: 800px) {
   .dcc-tour-body { grid-template-columns: 1fr; }
   .dcc-tour-mapwrap { position: static; order: -1; }
-  .dcc-tour-map { height: 300px; }
+  .dcc-tour-map { height: 0; transition: height 0.2s ease; }
+  .dcc-tour-mapwrap.open .dcc-tour-map { height: 300px; margin-top: 8px; }
   .dcc-tour-story { max-height: none; overflow: visible; }
 }
 
@@ -329,4 +330,76 @@
   .p-fig img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; display: block; }
   .p-fig figcaption { font-size: 0.6rem; color: #777; margin-top: 1px; }
   @page { margin: 12mm; }
+}
+
+/* ===== Mobile-first UI optimization (Option A) ===== */
+/* map collapse toggle — mobile only */
+.dcc-tour-maptoggle { display: none; }
+
+/* trip overview: summary hidden on desktop (always open); body always shown */
+.dcc-tour-ovcollapse > summary { display: none; }
+@media (min-width: 801px) { .dcc-tour-ovcollapse > .ov-body { display: block !important; } }
+
+@media (max-width: 800px) {
+  .dcc-tour-maptoggle { display: block; width: 100%; min-height: 44px; margin-bottom: 2px;
+    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg);
+    color: var(--dcc-tour-primary); font: inherit; font-weight: 600; border-radius: 10px; cursor: pointer; }
+
+  /* overview accordion */
+  .dcc-tour-ovcollapse > summary { display: block; list-style: none; cursor: pointer; min-height: 44px;
+    line-height: 42px; font-size: 0.9rem; font-weight: 600; color: var(--dcc-tour-primary);
+    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 10px; padding: 0 14px; }
+  .dcc-tour-ovcollapse > summary::-webkit-details-marker { display: none; }
+  .dcc-tour-ovcollapse > summary::after { content: ' ▾'; float: right; }
+  .dcc-tour-ovcollapse[open] > summary::after { content: ' ▴'; }
+  .dcc-tour-ovcollapse[open] .ov-body { margin-top: 8px; }
+
+  /* hero stats: one horizontal scroll row */
+  .dcc-tour-tripstats { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .dcc-tour-tile { min-width: 108px; scroll-snap-align: start; }
+  .dcc-tour-superlatives { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    font-size: 0.8rem; padding-bottom: 2px; }
+  .dcc-tour-superlatives span { white-space: nowrap; }
+
+  /* day chips: bigger, cleaner tap targets */
+  .dcc-tour-daynav { padding: 0.6rem 1rem; gap: 8px; }
+  .dcc-tour-daychip { min-width: 64px; min-height: 48px; padding: 8px 12px; justify-content: center; }
+  .dcc-tour-daychip .d-d { font-size: 0.98rem; }
+
+  /* readability bumps */
+  .dcc-tour-daymeta { font-size: 0.88rem; }
+  .dcc-tour-weather, .dcc-tour-health { font-size: 0.92rem; }
+  .dcc-tour-cell-time { font-size: 0.7rem; }
+  .dcc-tour-place-head h3 { font-size: 1.08rem; }
+
+  /* place header stacks instead of colliding */
+  .dcc-tour-place-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .dcc-tour-place-meta { white-space: normal; }
+
+  /* controls + buttons: 44px hit areas */
+  .dcc-tour-ctl { flex: 1; }
+  .dcc-tour-ctl input { min-height: 44px; }
+  .dcc-tour-modebtn, .dcc-tour-printbtn { min-height: 44px; padding: 9px 16px; }
+  .dcc-tour-legchip { min-height: 40px; }
+  .dcc-tour-result { min-height: 46px; align-items: center; }
+  .dcc-tour-mm-tog { min-height: 40px; }
+  .dcc-tour-chip { min-height: 42px; }
+
+  /* slightly taller media cells for a stronger feed */
+  .dcc-tour-cell img { height: 132px; }
+}
+
+@media (max-width: 480px) {
+  .dcc-tour-media { grid-template-columns: repeat(2, 1fr); }
+  .dcc-tour-header { padding: 1rem 1rem 0.25rem; }
+  .dcc-tour-controls, .dcc-tour-overview, .dcc-tour-modes,
+  .dcc-tour-body { padding-left: 1rem; padding-right: 1rem; }
+}
+
+/* touch devices: keep affordances visible + fingers-friendly */
+@media (hover: none) {
+  .dcc-tour-maplink { opacity: 1; }
+  .dcc-tour-maplink.cell { padding: 4px 7px; font-size: 0.9rem; }
+  .dcc-tour-badge { padding: 3px 7px; }
 }
