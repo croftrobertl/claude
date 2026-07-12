@@ -15,7 +15,7 @@
 
   let map = null, clusterGroup = null;
   let DATA = null, curDay = 0;
-  let lightboxFulls = [], lightboxIdx = -1;
+  let lightboxFulls = [], lightboxMeta = [], lightboxIdx = -1;
   const markersByPlace = {};
 
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
@@ -133,9 +133,12 @@
     updateTopbar();
   }
   function setView(v) {
+    curMode = v;
     root.dataset.view = v;
-    root.querySelectorAll('.dcc-tour-tabbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    root.querySelectorAll('.dcc-tour-tabbtn, .dcc-tour-modebtn[data-view]')
+      .forEach(b => b.classList.toggle('active', b.dataset.view === v));
     if (v === 'map') initMapMode();
+    else if (v === 'stats') animateCounts(root);
     window.scrollTo({ top: 0 });
   }
   function updateTopbar() {
@@ -175,20 +178,16 @@
   // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
   function dayColor(i) { return 'hsl(' + Math.round(i * 360 / Math.max(DATA.day_count, 1)) + ' 72% 45%)'; }
   let curMode = 'story';
-  function setMode(m) {
-    curMode = m;
-    root.classList.toggle('dcc-tour-mapmode-on', m === 'map');
-    root.querySelectorAll('.dcc-tour-modebtn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
-    if (m === 'map') initMapMode();
-  }
+  function setMode(m) { setView(m); }   // unified — desktop + mobile share the view model
   function buildModeToggle() {
     const w = el('div', 'dcc-tour-modes');
     w.innerHTML =
-      '<button class="dcc-tour-modebtn active" data-mode="story">📖 Story</button>' +
-      '<button class="dcc-tour-modebtn" data-mode="map">🗺 Map</button>' +
-      '<button class="dcc-tour-modebtn dcc-tour-printbtn" id="dcc-printbtn">🖨 Print / PDF</button>';
-    w.querySelectorAll('.dcc-tour-modebtn[data-mode]').forEach(b =>
-      b.addEventListener('click', () => setMode(b.dataset.mode)));
+      '<button class="dcc-tour-modebtn active" data-view="story">📖 Story</button>' +
+      '<button class="dcc-tour-modebtn" data-view="map">🗺 Map</button>' +
+      '<button class="dcc-tour-modebtn" data-view="stats">📊 Stats</button>' +
+      '<button class="dcc-tour-modebtn dcc-tour-printbtn" id="dcc-printbtn">🖨 Print</button>';
+    w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
+      b.addEventListener('click', () => setView(b.dataset.view)));
     w.querySelector('#dcc-printbtn').addEventListener('click', e => { e.stopPropagation(); openPrintMenu(); });
     return w;
   }
@@ -280,10 +279,10 @@
   function openMapSidebar(di, pi) {
     const d = DATA.days[di], p = d.places[pi];
     const side = root._mapmode.querySelector('#dcc-mm-side');
-    lightboxFulls = []; const thumbs = [];
+    lightboxFulls = []; lightboxMeta = []; const thumbs = [];
     p.items.forEach(it => {
       let img = null;
-      if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
+      if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time }); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
       else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
     });
     side.hidden = false;
@@ -641,7 +640,7 @@
 
   function renderDay(day) {
     const story = root._story;
-    lightboxFulls = []; lightboxIdx = -1;
+    lightboxFulls = []; lightboxMeta = []; lightboxIdx = -1;
     for (const k in markersByPlace) delete markersByPlace[k];
 
     let html = '<div class="dcc-tour-dayhead">' +
@@ -752,7 +751,7 @@
     }
     // photo
     const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
-    if (item.full) lightboxFulls.push(resolveUrl(item.full));
+    if (item.full) { lightboxFulls.push(resolveUrl(item.full)); lightboxMeta.push({ p: item.place, t: item.time }); }
     return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + extras + '</div>';
   }
   function cap(item) {
@@ -799,10 +798,19 @@
     if (hl) { openLightbox(Math.max(0, lightboxFulls.indexOf(hl.getAttribute('data-full')))); }
   });
   document.addEventListener('keydown', (e) => {
-    if (lightboxIdx < 0) return;
-    if (e.key === 'Escape') closeLightbox();
-    else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
-    else if (e.key === 'ArrowLeft') showLightbox(lightboxIdx - 1);
+    if (lightboxIdx >= 0) {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
+      else if (e.key === 'ArrowLeft') showLightbox(lightboxIdx - 1);
+      return;
+    }
+    // day navigation with arrow keys (when browsing the story, not typing)
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+    if (DATA && (!root.dataset.view || root.dataset.view === 'story')) {
+      if (e.key === 'ArrowRight' && curDay < DATA.day_count - 1) selectDay(curDay + 1);
+      else if (e.key === 'ArrowLeft' && curDay > 0) selectDay(curDay - 1);
+    }
   });
   function ensureLightboxEl() {
     let el = document.getElementById('dcc-tour-lightbox');
@@ -812,14 +820,25 @@
     el.className = 'dcc-tour-lightbox';
     el.innerHTML =
       '<button class="dcc-tour-lightbox-close" aria-label="Close">&times;</button>' +
+      '<div class="dcc-tour-lightbox-count" aria-hidden="true"></div>' +
       '<button class="dcc-tour-lightbox-nav prev" aria-label="Previous">&#8249;</button>' +
       '<img class="dcc-tour-lightbox-img" alt="" />' +
-      '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>';
+      '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>' +
+      '<div class="dcc-tour-lightbox-cap"></div>';
     el.addEventListener('click', (e) => {
       if (e.target === el || e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
       else if (e.target.classList.contains('prev')) showLightbox(lightboxIdx - 1);
       else if (e.target.classList.contains('next')) showLightbox(lightboxIdx + 1);
     });
+    // swipe (mobile) to move through photos
+    let sx = null, sy = null;
+    const img = el.querySelector('.dcc-tour-lightbox-img');
+    img.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    img.addEventListener('touchend', e => {
+      if (sx == null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) showLightbox(lightboxIdx + (dx < 0 ? 1 : -1));
+      sx = sy = null;
+    }, { passive: true });
     document.body.appendChild(el);
     return el;
   }
@@ -831,6 +850,10 @@
     const el = ensureLightboxEl();
     el.classList.add('open');
     el.querySelector('.dcc-tour-lightbox-img').src = lightboxFulls[lightboxIdx];
+    const meta = lightboxMeta[lightboxIdx] || {};
+    const cap = [meta.p, meta.t].filter(Boolean).join(' · ');
+    el.querySelector('.dcc-tour-lightbox-cap').textContent = cap;
+    el.querySelector('.dcc-tour-lightbox-count').textContent = (lightboxIdx + 1) + ' / ' + n;
     document.body.classList.add('dcc-tour-noscroll');
   }
   function closeLightbox() {

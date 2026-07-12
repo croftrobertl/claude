@@ -268,9 +268,28 @@
 .dcc-tour-modebtn.active { background: var(--dcc-tour-primary); color: #fff; border-color: var(--dcc-tour-primary); }
 
 .dcc-tour-mapmode { display: none; padding: 0.6rem 1.5rem 1.5rem; }
-.dcc-tour-mapmode-on .dcc-tour-mapmode { display: block; }
-.dcc-tour-mapmode-on .dcc-tour-body,
-.dcc-tour-mapmode-on .dcc-tour-overview { display: none; }
+/* unified Story / Map / Stats view model (all widths) */
+.dcc-tour-root[data-view="map"] .dcc-tour-mapmode { display: block; }
+.dcc-tour-root[data-view="story"] .dcc-tour-tripstats,
+.dcc-tour-root[data-view="story"] .dcc-tour-superlatives,
+.dcc-tour-root[data-view="story"] .dcc-tour-overview { display: none; }
+.dcc-tour-root[data-view="stats"] .dcc-tour-daynav,
+.dcc-tour-root[data-view="stats"] .dcc-tour-controls,
+.dcc-tour-root[data-view="stats"] .dcc-tour-body { display: none; }
+.dcc-tour-root[data-view="map"] .dcc-tour-tripstats,
+.dcc-tour-root[data-view="map"] .dcc-tour-superlatives,
+.dcc-tour-root[data-view="map"] .dcc-tour-overview,
+.dcc-tour-root[data-view="map"] .dcc-tour-daynav,
+.dcc-tour-root[data-view="map"] .dcc-tour-controls,
+.dcc-tour-root[data-view="map"] .dcc-tour-body { display: none; }
+
+/* desktop: segmented sticky tab bar */
+@media (min-width: 801px) {
+  .dcc-tour-modes { position: sticky; top: 0; z-index: 22; gap: 4px; padding: 0.5rem 1.5rem;
+    background: color-mix(in srgb, var(--dcc-tour-bg) 90%, transparent); backdrop-filter: blur(6px); }
+  .dcc-tour-modebtn { min-height: 40px; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-overview { padding-top: 0.75rem; }
+}
 
 .dcc-tour-mm-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
 .dcc-tour-mm-tog { font-size: 0.85rem; color: var(--dcc-tour-text); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -481,3 +500,21 @@
   .dcc-tour-printmenu.mobile { position: fixed; left: 12px; right: 12px; bottom: 78px; z-index: 61; }
   .dcc-tour-printmenu.mobile button { min-height: 52px; }
 }
+
+/* ===== quick polish ===== */
+.dcc-tour-lightbox-cap { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom,0px));
+  text-align: center; color: #fff; font-size: 0.9rem; background: linear-gradient(transparent, rgba(0,0,0,0.6)); pointer-events: none; }
+.dcc-tour-lightbox-count { position: fixed; top: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.85);
+  font-size: 0.82rem; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* tactile feedback on tap/press */
+.dcc-tour-modebtn:active, .dcc-tour-tabbtn:active, .dcc-tour-chip:active, .dcc-tour-daychip:active,
+.tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active, .dcc-tour-hl:active,
+.dcc-tour-result:active, .dcc-tour-maptoggle:active { transform: scale(0.97); }
+.dcc-tour-modebtn, .dcc-tour-tabbtn, .dcc-tour-chip, .dcc-tour-daychip, .tb-arrow,
+.sheet-day, .dcc-tour-hl { transition: transform 0.08s ease, border-color 0.15s, background 0.15s, color 0.15s; }
+
+/* gentle fade-in when a day loads */
+@keyframes dcc-fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.dcc-tour-dayhead { animation: dcc-fadein 0.28s ease both; }
+@media (prefers-reduced-motion: reduce) { .dcc-tour-dayhead { animation: none; } }
