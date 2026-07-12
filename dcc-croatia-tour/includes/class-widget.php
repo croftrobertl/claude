@@ -155,19 +155,12 @@ final class Widget extends Widget_Base
             'bundleUrl' => $bundle,
         ];
 
-        // The loader fetches bundle.js/css from the bundle URL and mounts the same
-        // app that the standalone GitHub Pages site uses. Shell markup only here —
-        // the JS app paints the map and panel client-side, identical in both surfaces.
+        // The loader fetches bundle.js/css (and vendored Leaflet) from the bundle URL
+        // and mounts the same app that the standalone site uses. bundle.js replaces
+        // this element's contents entirely, so only a placeholder is rendered here.
         ?>
         <div class="dcc-tour-root" data-dcc-tour-config="<?php echo esc_attr(wp_json_encode($config)); ?>">
-            <header class="dcc-tour-header">
-                <h1 class="dcc-tour-title"></h1>
-                <p class="dcc-tour-subtitle"></p>
-            </header>
-            <div class="dcc-tour-map" role="application" aria-label="<?php echo esc_attr__('Croatia trip map', 'dcc-croatia-tour'); ?>"></div>
-            <aside class="dcc-tour-panel" aria-live="polite">
-                <div class="dcc-tour-placeholder"><?php echo esc_html__('Loading tour…', 'dcc-croatia-tour'); ?></div>
-            </aside>
+            <div class="dcc-tour-placeholder"><?php echo esc_html__('Loading the trip…', 'dcc-croatia-tour'); ?></div>
         </div>
         <?php
     }

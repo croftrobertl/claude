@@ -7,8 +7,6 @@
 (function () {
   'use strict';
 
-  const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-  const LEAFLET_JS  = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
   const loadedBundles = new Set();
 
   function mount(root) {
@@ -25,11 +23,15 @@
 
     // The bundle expects to find its mount via #dcc-tour or .dcc-tour-root. The WP
     // shell only sets the class, not the id — bundle.js handles both.
+    // Everything (incl. Leaflet + plugins) loads from the bundle's own vendor/
+    // folder so the widget is self-contained and survives a private-hosting move.
     Promise.all([
       loadCSS(bundleUrl + 'bundle.css'),
-      loadCSS(LEAFLET_CSS),
-      loadJS(LEAFLET_JS),
-    ]).then(() => {
+      loadCSS(bundleUrl + 'vendor/leaflet.css'),
+      loadJS(bundleUrl + 'vendor/leaflet.js'),
+    ]).then(() =>
+      loadJS(bundleUrl + 'vendor/leaflet-heat.js')   // needs L — load after leaflet.js
+    ).then(() => {
       // bundle.js mounts into the first .dcc-tour-root once, on script load. Loading it
       // a second time would double-mount, so guard per bundleUrl. Known limitation: only
       // one tour instance per page — fine for a single-page family site.
