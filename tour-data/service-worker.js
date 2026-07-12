@@ -1,9 +1,9 @@
 // Croatia tour PWA service worker. Caches the app shell + tour data so the
 // installed home-screen version works offline. Photos cache lazily as the user
-// views them. Bump CACHE_VERSION whenever bundle.js/css or stops.json change in
+// views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v15';
+const CACHE_VERSION = 'dcc-tour-v16';
 const SHELL = [
   './',
   'index.html',
@@ -13,10 +13,7 @@ const SHELL = [
   'manifest.webmanifest',
   'vendor/leaflet.js',
   'vendor/leaflet.css',
-  'vendor/leaflet.markercluster.js',
   'vendor/leaflet-heat.js',
-  'vendor/MarkerCluster.css',
-  'vendor/MarkerCluster.Default.css',
 ];
 
 self.addEventListener('install', event => {

@@ -13,16 +13,23 @@
   const root = document.getElementById('dcc-tour') || document.querySelector('.dcc-tour-root');
   if (!root) { console.warn('[dcc-tour] no mount element'); return; }
 
-  let map = null, clusterGroup = null;
+  let map = null;
   let DATA = null, curDay = 0;
   let lightboxFulls = [], lightboxMeta = [], lightboxIdx = -1;
   const markersByPlace = {};
 
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
     DATA = data;
+    const initialHash = location.hash;   // capture before selectDay/updateHash rewrites it
     buildShell();
     initMap();
     selectDay(0);
+    if (initialHash.length > 1) applyHash(initialHash);
+    window.addEventListener('hashchange', () => applyHash());  // pasted links in the same tab
+    // if the window grows past the mobile breakpoint, bring the story map up
+    const mq = window.matchMedia('(min-width: 801px)');
+    const onMq = () => { if (mq.matches && !map) { initMap(); if (map) showDayOnMap(DATA.days[curDay]); } };
+    if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
   }).catch(err => {
     console.error('[dcc-tour] load failed', err);
     root.innerHTML = '<div class="dcc-tour-placeholder">Tour data could not be loaded.</div>';
@@ -48,7 +55,7 @@
                     '<span class="d-n">Day ' + d.index + '</span>' +
                     '<span class="d-d">' + escapeHtml(d.short) + '</span>' +
                     '<span class="d-c">' + d.count + '</span>';
-      b.addEventListener('click', () => { setMode('story'); selectDay(i); });
+      b.addEventListener('click', () => { setView('story'); selectDay(i); });
       nav.appendChild(b);
     });
     const body = el('div', 'dcc-tour-body');
@@ -60,19 +67,6 @@
     mapdiv.setAttribute('role', 'application');
     mapdiv.setAttribute('aria-label', 'Map of the day');
     mapwrap.appendChild(mapdiv);
-    // mobile: map is collapsed behind a tap bar so day photos come first
-    const maptoggle = document.createElement('button');
-    maptoggle.type = 'button';
-    maptoggle.className = 'dcc-tour-maptoggle';
-    maptoggle.textContent = '🗺  Show map';
-    maptoggle.setAttribute('aria-expanded', 'false');
-    maptoggle.addEventListener('click', () => {
-      const open = mapwrap.classList.toggle('open');
-      maptoggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      maptoggle.textContent = open ? '🗺  Hide map' : '🗺  Show map';
-      if (open && map) setTimeout(() => { map.invalidateSize(); showDayOnMap(DATA.days[curDay]); }, 70);
-    });
-    mapwrap.insertBefore(maptoggle, mapdiv);
     body.appendChild(story); body.appendChild(mapwrap);
     // trip overview (climbs + staircase): collapsed on mobile, open on desktop
     const overview = el('div', 'dcc-tour-overview');
@@ -96,7 +90,7 @@
 
   // ---- Option B: native app shell (mobile) — bottom tabs, day top-bar, sheet, swipe ----
   function tabBtn(v, icon, label) {
-    return '<button class="dcc-tour-tabbtn" data-view="' + v + '"><span class="ti">' + icon +
+    return '<button class="dcc-tour-tabbtn" role="tab" aria-selected="' + (v === 'story') + '" data-view="' + v + '"><span class="ti">' + icon +
       '</span><span>' + label + '</span></button>';
   }
   function buildAppShell() {
@@ -106,20 +100,24 @@
       '<button class="tb-day" id="dcc-tb-day" aria-haspopup="dialog">' +
         '<span class="tb-daynum" id="dcc-tb-num"></span>' +
         '<span class="tb-daylabel" id="dcc-tb-lab"></span></button>' +
-      '<button class="tb-arrow tb-next" aria-label="Next day">›</button>';
+      '<button class="tb-arrow tb-next" aria-label="Next day">›</button>' +
+      '<button class="tb-arrow tb-rand" aria-label="Random memory">🎲</button>';
     tb.querySelector('.tb-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
     tb.querySelector('.tb-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
+    tb.querySelector('.tb-rand').addEventListener('click', randomMemory);
     tb.querySelector('#dcc-tb-day').addEventListener('click', openDaySheet);
 
     const bar = el('nav', 'dcc-tour-tabbar');
     bar.setAttribute('aria-label', 'Sections');
-    bar.innerHTML = tabBtn('story', '📖', 'Story') + tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats') +
+    bar.setAttribute('role', 'tablist');
+    bar.innerHTML = tabBtn('story', '📖', 'Story') + tabBtn('gallery', '🖼', 'Photos') +
+      tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats') +
       '<button class="dcc-tour-tabbtn tb-print"><span class="ti">🖨</span><span>Print</span></button>';
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
     bar.querySelector('.tb-print').addEventListener('click', openMobilePrint);
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
-    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel"><div class="sheet-handle"></div>' +
+    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day"><div class="sheet-handle"></div>' +
       '<h4>Jump to a day</h4><div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
@@ -137,13 +135,77 @@
     updateTopbar();
   }
   function setView(v) {
-    curMode = v;
     root.dataset.view = v;
     root.querySelectorAll('.dcc-tour-tabbtn, .dcc-tour-modebtn[data-view]')
-      .forEach(b => b.classList.toggle('active', b.dataset.view === v));
+      .forEach(b => {
+        const on = b.dataset.view === v;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
     if (v === 'map') initMapMode();
     else if (v === 'stats') animateCounts(root);
+    else if (v === 'gallery') buildGallery();
+    else if (v === 'story') renderDay(DATA.days[curDay]);  // rebuild the day's own lightbox set
+    updateHash();
     window.scrollTo({ top: 0 });
+  }
+  // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>, #v=map|stats|gallery ----
+  function updateHash() {
+    if (!DATA) return;
+    const v = root.dataset.view || 'story';
+    history.replaceState(null, '', v === 'story' ? '#d=' + (curDay + 1) : '#v=' + v);
+  }
+  function findDayByGuid(g) {
+    for (let di = 0; di < DATA.days.length; di++)
+      for (const p of DATA.days[di].places)
+        for (const it of p.items)
+          if (((it.full || it.src || it.url || it.poster || '') + (it.id || '')).includes(g)) return di;
+    return -1;
+  }
+  function applyHash(hash) {
+    const m = {};
+    (hash || location.hash).slice(1).split('&').forEach(kv => {
+      const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
+    });
+    if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { setView(m.v); return; }
+    let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
+    if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
+    if (di != null && di !== curDay) selectDay(di);
+    if (m.p != null) setTimeout(() => {
+      const sec = root._story.querySelector('#place-' + (+m.p));
+      if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
+    }, 150);
+    if (m.ph) setTimeout(() => {
+      const i = lightboxFulls.findIndex(u => u.indexOf(m.ph) >= 0);
+      if (i >= 0) openLightbox(i);
+    }, 250);
+  }
+  // ---- share helpers ----
+  function shareUrl(extra) { return location.href.split('#')[0] + '#' + extra; }
+  function doShare(url, title) {
+    if (navigator.share) { navigator.share({ url: url, title: title || 'Croatia 2025' }).catch(() => {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(url).then(() => toast('Link copied ✓'), () => toast(url));
+    else toast(url);
+  }
+  function toast(msg) {
+    let t = document.getElementById('dcc-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'dcc-toast'; t.className = 'dcc-tour-toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  // ---- 🎲 random memory ----
+  function randomMemory() {
+    const pool = [];
+    DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it => { if (it.full) pool.push({ di, it }); })));
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    setView('story');
+    if (pick.di !== curDay) selectDay(pick.di);
+    setTimeout(() => {
+      const i = lightboxFulls.indexOf(resolveUrl(pick.it.full));
+      if (i >= 0) openLightbox(i);
+    }, 260);
   }
   function updateTopbar() {
     if (!root._topbar) return;
@@ -157,7 +219,11 @@
   function closeDaySheet() { const s = root._sheet; if (s) { s.classList.remove('open'); setTimeout(() => { s.hidden = true; }, 220); } }
   function attachSwipe(elm) {
     if (!elm) return; let x0 = null, y0 = null;
-    elm.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+    elm.addEventListener('touchstart', e => {
+      // don't hijack horizontally-scrolling strips
+      if (e.target.closest('.hl-strip, .dcc-tour-tripstats, .dcc-tour-superlatives')) { x0 = y0 = null; return; }
+      const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY;
+    }, { passive: true });
     elm.addEventListener('touchend', e => {
       if (x0 == null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.8) {
@@ -181,17 +247,19 @@
 
   // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
   function dayColor(i) { return 'hsl(' + Math.round(i * 360 / Math.max(DATA.day_count, 1)) + ' 72% 45%)'; }
-  let curMode = 'story';
-  function setMode(m) { setView(m); }   // unified — desktop + mobile share the view model
   function buildModeToggle() {
     const w = el('div', 'dcc-tour-modes');
+    w.setAttribute('role', 'tablist');
     w.innerHTML =
-      '<button class="dcc-tour-modebtn active" data-view="story">📖 Story</button>' +
-      '<button class="dcc-tour-modebtn" data-view="map">🗺 Map</button>' +
-      '<button class="dcc-tour-modebtn" data-view="stats">📊 Stats</button>' +
+      '<button class="dcc-tour-modebtn active" role="tab" aria-selected="true" data-view="story">📖 Story</button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">🖼 Photos</button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">🗺 Map</button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">📊 Stats</button>' +
+      '<button class="dcc-tour-modebtn" id="dcc-random" title="Show me a random memory">🎲</button>' +
       '<button class="dcc-tour-modebtn dcc-tour-printbtn" id="dcc-printbtn">🖨 Print</button>';
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
+    w.querySelector('#dcc-random').addEventListener('click', randomMemory);
     w.querySelector('#dcc-printbtn').addEventListener('click', e => { e.stopPropagation(); openPrintMenu(); });
     return w;
   }
@@ -297,7 +365,7 @@
       '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
       '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
-    side.querySelector('[data-openday]').addEventListener('click', () => { setMode('story'); selectDay(di); });
+    side.querySelector('[data-openday]').addEventListener('click', () => { setView('story'); selectDay(di); });
     mmMap.panTo([p.lat, p.lng], { animate: true });
   }
   function mmPlayBoat() {
@@ -325,6 +393,57 @@
   }
   let mmBoatTimer = null;
 
+  // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
+  let galItems = null, galCur = null, galRendered = 0;
+  const galFilter = { kind: 'all', q: '' };
+  function buildGallery() {
+    if (!galItems) {
+      galItems = [];
+      DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it =>
+        galItems.push({ it, short: d.short, place: it.place || p.name }))));
+      const g = el('section', 'dcc-tour-gallery');
+      g.innerHTML = '<div class="dcc-tour-gal-bar">' +
+        [['all', 'All'], ['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k =>
+          '<button class="dcc-tour-galchip' + (k[0] === 'all' ? ' active' : '') + '" data-kind="' + k[0] + '">' + k[1] + '</button>').join('') +
+        '<input type="search" id="dcc-galq" placeholder="filter by place…" autocomplete="off">' +
+        '<span class="dcc-tour-gal-count" id="dcc-galcount"></span></div>' +
+        '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
+        '<div id="dcc-galmore" class="dcc-tour-galmore">loading more…</div>';
+      root.appendChild(g);
+      g.querySelectorAll('.dcc-tour-galchip').forEach(b => b.addEventListener('click', () => {
+        g.querySelectorAll('.dcc-tour-galchip').forEach(x => x.classList.toggle('active', x === b));
+        galFilter.kind = b.dataset.kind; renderGallery();
+      }));
+      let deb = null;
+      g.querySelector('#dcc-galq').addEventListener('input', e => {
+        clearTimeout(deb); deb = setTimeout(() => { galFilter.q = e.target.value.trim().toLowerCase(); renderGallery(); }, 150);
+      });
+      if ('IntersectionObserver' in window)
+        new IntersectionObserver(en => { if (en[0].isIntersecting) renderGalleryChunk(); })
+          .observe(g.querySelector('#dcc-galmore'));
+    }
+    renderGallery();
+  }
+  function renderGallery() {
+    galCur = galItems.filter(x => (galFilter.kind === 'all' || x.it.kind === galFilter.kind) &&
+      (!galFilter.q || (x.place || '').toLowerCase().indexOf(galFilter.q) >= 0));
+    galRendered = 0;
+    lightboxFulls = []; lightboxMeta = [];   // gallery owns the lightbox set while open
+    document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
+    document.getElementById('dcc-galgrid').innerHTML = '';
+    renderGalleryChunk();
+  }
+  function renderGalleryChunk() {
+    if (!galCur || root.dataset.view !== 'gallery') return;
+    const grid = document.getElementById('dcc-galgrid');
+    const end = Math.min(galRendered + 200, galCur.length);
+    let html = '';
+    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it);
+    grid.insertAdjacentHTML('beforeend', html);
+    galRendered = end;
+    document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
+  }
+
   // ---- #3 per-day Highlights Reel (auto-picked; family stars can override later) ----
   function dayHighlights(day) {
     const byPlace = {};
@@ -351,6 +470,7 @@
       const thumb = resolveUrl(it.src || it.full || it.poster);
       const full = it.full ? ' data-full="' + escapeAttr(resolveUrl(it.full)) + '"' : '';
       return '<button class="dcc-tour-hl"' + full + '><img loading="lazy" src="' + escapeAttr(thumb) + '" alt="">' +
+        (it.full ? '' : '<span class="hl-vid">▶</span>') +
         '<span class="hl-cap">' + escapeHtml(shortName(pk.name)) + ' · ' + escapeHtml(pk.time || '') + '</span></button>';
     }).join('');
     return '<div class="dcc-tour-highlights"><div class="hl-lab">✨ Highlights of the day</div>' +
@@ -365,14 +485,20 @@
   }
   function printImg(it) {
     const src = it.full || it.src || it.poster;
-    if (!src) return '';
+    if (!src) {
+      if (it.type === 'drive') // GoPro clips have no local frame — print a caption card
+        return '<figure class="p-fig"><div class="p-clipbox">▶ GoPro clip</div>' +
+          '<figcaption>' + escapeHtml((it.place || '') + (it.time ? ' · ' + it.time : '')) + '</figcaption></figure>';
+      return '';
+    }
     return '<figure class="p-fig"><img src="' + escapeAttr(resolveUrl(src)) + '" alt="">' +
       '<figcaption>' + escapeHtml((it.place || '') + (it.time ? ' · ' + it.time : '')) + '</figcaption></figure>';
   }
   function printDay(day) {
     let h = '<section class="p-day"><header class="p-dayhead"><h2>' + escapeHtml(day.label) + '</h2>' +
       '<div class="p-meta">' + (day.area ? escapeHtml(day.area) + ' · ' : '') + day.count + ' photos & videos' +
-      (day.weather ? ' · ' + escapeHtml((day.weather.icon || '') + ' ' + (day.weather.desc || '') + ' ' + Math.round(day.weather.tmax) + '°C') : '') +
+      (day.weather ? ' · ' + escapeHtml((day.weather.icon || '') + ' ' + (day.weather.desc || '') +
+        (day.weather.tmax != null ? ' ' + Math.round(day.weather.tmax) + '°C' : '')) : '') +
       (day.walk_km ? ' · ' + day.walk_km + ' km' : '') +
       (day.health && day.health.climb_m ? ' · climbed ' + fmt(day.health.climb_m) + ' m' : '') + '</div></header>';
     day.places.forEach(p => {
@@ -426,7 +552,7 @@
     // date jump
     wrap.querySelector('#dcc-datepick').addEventListener('change', e => {
       const idx = DATA.days.findIndex(d => d.date === e.target.value);
-      if (idx >= 0) { setMode('story'); setView('story'); selectDay(idx); }
+      if (idx >= 0) { setView('story'); selectDay(idx); }
     });
     // place search across all days
     const idx = [];
@@ -446,7 +572,7 @@
     res.addEventListener('click', e => {
       const b = e.target.closest('.dcc-tour-result'); if (!b) return;
       res.hidden = true; inp.value = '';
-      setMode('story'); setView('story'); selectDay(+b.dataset.di);
+      setView('story'); selectDay(+b.dataset.di);
       setTimeout(() => {
         const sec = root._story.querySelector('#place-' + b.dataset.pi);
         if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
@@ -625,15 +751,12 @@
   }
 
   function initMap() {
-    if (!window.L || !root._mapdiv) return;
+    if (map || !window.L || !root._mapdiv) return;
+    if (root._mapdiv.offsetParent === null) return;   // hidden (mobile app shell) — skip until visible
     map = L.map(root._mapdiv, { scrollWheelZoom: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap',
     }).addTo(map);
-    clusterGroup = L.markerClusterGroup
-      ? L.markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true, showCoverageOnHover: false })
-      : L.layerGroup();
-    map.addLayer(clusterGroup);
   }
 
   // ---- day selection ----
@@ -650,6 +773,7 @@
     renderDay(DATA.days[i]);
     showDayOnMap(DATA.days[i]);
     if (typeof updateTopbar === 'function') updateTopbar();
+    updateHash();
   }
 
   function renderDay(day) {
@@ -669,9 +793,11 @@
       weatherHTML(day.weather) +
       healthRibbonHTML(day) +
       (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
+      '<div class="dcc-tour-dayactions">' +
       (day.health && (day.health.stepcurve || day.health.elev) ?
         '<button class="dcc-tour-chip dcc-tour-replay" id="dcc-replay">▶ Replay this day</button>' : '') +
-      '</div>';
+      '<button class="dcc-tour-chip" id="dcc-shareday">↗ Share this day</button>' +
+      '</div></div>';
 
     html += highlightsHTML(day);
 
@@ -710,6 +836,8 @@
     if (next) next.addEventListener('click', () => selectDay(curDay + 1));
     const rb = story.querySelector('#dcc-replay');
     if (rb) rb.addEventListener('click', () => startReplay(day));
+    const sb = story.querySelector('#dcc-shareday');
+    if (sb) sb.addEventListener('click', () => doShare(shareUrl('d=' + day.index), day.label));
   }
 
   // ---- #10 replay the day ----
@@ -781,7 +909,8 @@
   // ---- map: the day's route (numbered stops + connecting path) ----
   let dayLayer = null;
   function showDayOnMap(day) {
-    if (!map) return;
+    if (!map) initMap();
+    if (!map) return;   // story map hidden (mobile) — no work
     if (dayLayer) map.removeLayer(dayLayer);
     dayLayer = L.layerGroup().addTo(map);
     for (const k in markersByPlace) delete markersByPlace[k];
@@ -863,10 +992,18 @@
     el.innerHTML =
       '<button class="dcc-tour-lightbox-close" aria-label="Close">&times;</button>' +
       '<div class="dcc-tour-lightbox-count" aria-hidden="true"></div>' +
+      '<div class="dcc-tour-lightbox-actions">' +
+        '<a class="lb-act" id="dcc-lb-dl" download title="Download this photo">⬇</a>' +
+        '<button class="lb-act" id="dcc-lb-share" title="Share this photo">↗</button></div>' +
       '<button class="dcc-tour-lightbox-nav prev" aria-label="Previous">&#8249;</button>' +
       '<img class="dcc-tour-lightbox-img" alt="" />' +
       '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>' +
       '<div class="dcc-tour-lightbox-cap"></div>';
+    el.querySelector('#dcc-lb-share').addEventListener('click', () => {
+      const u = lightboxFulls[lightboxIdx] || '';
+      const g = (u.match(/([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})/i) || [])[1];
+      doShare(g ? shareUrl('ph=' + g) : u, 'A photo from Croatia 2025');
+    });
     el.addEventListener('click', (e) => {
       if (e.target === el || e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
       else if (e.target.classList.contains('prev')) showLightbox(lightboxIdx - 1);
@@ -890,19 +1027,24 @@
     const n = lightboxFulls.length;
     lightboxIdx = ((idx % n) + n) % n;
     const el = ensureLightboxEl();
+    const wasOpen = el.classList.contains('open');
     el.classList.add('open');
     el.querySelector('.dcc-tour-lightbox-img').src = lightboxFulls[lightboxIdx];
     const meta = lightboxMeta[lightboxIdx] || {};
     const cap = [meta.p, meta.t].filter(Boolean).join(' · ');
     el.querySelector('.dcc-tour-lightbox-cap').textContent = cap;
     el.querySelector('.dcc-tour-lightbox-count').textContent = (lightboxIdx + 1) + ' / ' + n;
+    el.querySelector('#dcc-lb-dl').href = lightboxFulls[lightboxIdx];
+    if (!wasOpen) { lbPrevFocus = document.activeElement; el.querySelector('.dcc-tour-lightbox-close').focus(); }
     document.body.classList.add('dcc-tour-noscroll');
   }
+  let lbPrevFocus = null;
   function closeLightbox() {
     lightboxIdx = -1;
     const el = document.getElementById('dcc-tour-lightbox');
     if (el) el.classList.remove('open');
     document.body.classList.remove('dcc-tour-noscroll');
+    if (lbPrevFocus && lbPrevFocus.focus) { try { lbPrevFocus.focus(); } catch (e) {} lbPrevFocus = null; }
   }
 
   function escapeHtml(s) {

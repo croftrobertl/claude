@@ -107,9 +107,6 @@
 }
 @media (max-width: 800px) {
   .dcc-tour-body { grid-template-columns: 1fr; }
-  .dcc-tour-mapwrap { position: static; order: -1; }
-  .dcc-tour-map { height: 0; transition: height 0.2s ease; }
-  .dcc-tour-mapwrap.open .dcc-tour-map { height: 300px; margin-top: 8px; }
   .dcc-tour-story { max-height: none; overflow: visible; }
 }
 
@@ -352,18 +349,11 @@
 }
 
 /* ===== Mobile-first UI optimization (Option A) ===== */
-/* map collapse toggle — mobile only */
-.dcc-tour-maptoggle { display: none; }
-
 /* trip overview: summary hidden on desktop (always open); body always shown */
 .dcc-tour-ovcollapse > summary { display: none; }
 @media (min-width: 801px) { .dcc-tour-ovcollapse > .ov-body { display: block !important; } }
 
 @media (max-width: 800px) {
-  .dcc-tour-maptoggle { display: block; width: 100%; min-height: 44px; margin-bottom: 2px;
-    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg);
-    color: var(--dcc-tour-primary); font: inherit; font-weight: 600; border-radius: 10px; cursor: pointer; }
-
   /* overview accordion */
   .dcc-tour-ovcollapse > summary { display: block; list-style: none; cursor: pointer; min-height: 44px;
     line-height: 42px; font-size: 0.9rem; font-weight: 600; color: var(--dcc-tour-primary);
@@ -510,9 +500,10 @@
 /* tactile feedback on tap/press */
 .dcc-tour-modebtn:active, .dcc-tour-tabbtn:active, .dcc-tour-chip:active, .dcc-tour-daychip:active,
 .tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active, .dcc-tour-hl:active,
-.dcc-tour-result:active, .dcc-tour-maptoggle:active { transform: scale(0.97); }
+.dcc-tour-result:active { transform: scale(0.97); }
 .dcc-tour-modebtn, .dcc-tour-tabbtn, .dcc-tour-chip, .dcc-tour-daychip, .tb-arrow,
 .sheet-day, .dcc-tour-hl { transition: transform 0.08s ease, border-color 0.15s, background 0.15s, color 0.15s; }
+.dcc-tour-galchip:active, .lb-act:active, .tb-rand:active { transform: scale(0.95); }
 
 /* gentle fade-in when a day loads */
 @keyframes dcc-fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -561,3 +552,41 @@
   }
   .dcc-tour-map { background: #223042; }
 }
+
+/* ===== Gallery ("Photos") view ===== */
+.dcc-tour-gallery { display: none; padding: 0.6rem 1.5rem 2rem; }
+.dcc-tour-root[data-view="gallery"] .dcc-tour-gallery { display: block; }
+.dcc-tour-root[data-view="gallery"] .dcc-tour-tripstats,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-superlatives,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-overview,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-daynav,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-controls,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-body,
+.dcc-tour-root[data-view="gallery"] .dcc-tour-mapmode { display: none; }
+.dcc-tour-gal-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; position: sticky; top: 0; z-index: 15; padding: 8px 0; background: color-mix(in srgb, var(--dcc-tour-bg) 92%, transparent); backdrop-filter: blur(6px); }
+.dcc-tour-galchip { border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer; min-height: 38px; }
+.dcc-tour-galchip.active { background: var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); color: #fff; }
+#dcc-galq { flex: 1; min-width: 140px; font: inherit; font-size: 0.9rem; padding: 8px 12px; border: 1px solid var(--dcc-tour-border); border-radius: 999px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); min-height: 38px; }
+#dcc-galq:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
+.dcc-tour-gal-count { font-size: 0.8rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+.dcc-tour-galmore { text-align: center; color: var(--dcc-tour-muted); font-size: 0.8rem; padding: 14px 0 4px; }
+@media (max-width: 800px) {
+  .dcc-tour-root[data-view="gallery"] .dcc-tour-header,
+  .dcc-tour-root[data-view="gallery"] .dcc-tour-topbar { display: none; }
+  .dcc-tour-gallery { padding: 0.5rem 0.8rem 2rem; }
+}
+
+/* ===== share / download / toast / misc polish ===== */
+.dcc-tour-dayactions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.6rem; }
+.dcc-tour-dayactions .dcc-tour-chip { margin-top: 0; }
+.dcc-tour-toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(8px); z-index: 90;
+  background: rgba(17,24,32,0.92); color: #fff; font-size: 0.86rem; padding: 10px 18px; border-radius: 999px;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; max-width: 86vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dcc-tour-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.dcc-tour-lightbox-actions { position: fixed; top: 10px; right: 56px; display: flex; gap: 8px; z-index: 2; }
+.lb-act { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
+  background: rgba(255,255,255,0.14); color: #fff; font-size: 1.05rem; cursor: pointer; text-decoration: none; }
+.lb-act:hover { background: rgba(255,255,255,0.28); }
+.hl-vid { position: absolute; right: 6px; top: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; padding: 2px 7px; border-radius: 5px; pointer-events: none; }
+.p-clipbox { height: 130px; display: flex; align-items: center; justify-content: center; border: 1px dashed #bbb; border-radius: 4px; color: #666; font-size: 0.8rem; }
+@media (max-width: 800px) { .dcc-tour-replay { display: none; } .tb-rand { font-size: 1.05rem; } }
