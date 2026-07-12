@@ -403,3 +403,81 @@
   .dcc-tour-maplink.cell { padding: 4px 7px; font-size: 0.9rem; }
   .dcc-tour-badge { padding: 3px 7px; }
 }
+
+/* ===== Option B: native app shell (mobile only) ===== */
+.dcc-tour-topbar, .dcc-tour-tabbar, .dcc-tour-sheet { display: none; }
+
+@media (max-width: 800px) {
+  /* replace desktop nav with the app shell */
+  .dcc-tour-modes { display: none; }
+  .dcc-tour-daynav { display: none; }
+  .dcc-tour-mapwrap { display: none; }        /* per-day side map -> Map tab */
+  .dcc-tour-root { padding-bottom: 70px; }     /* room for the tab bar */
+
+  /* sticky day top-bar */
+  .dcc-tour-topbar { display: flex; align-items: center; gap: 6px; position: sticky; top: 0; z-index: 25;
+    padding: 8px 10px; background: color-mix(in srgb, var(--dcc-tour-bg) 92%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--dcc-tour-border); }
+  .tb-arrow { flex: 0 0 auto; width: 44px; height: 44px; border: 1px solid var(--dcc-tour-border);
+    background: var(--dcc-tour-card-bg); color: var(--dcc-tour-primary); font-size: 1.5rem; line-height: 1;
+    border-radius: 12px; cursor: pointer; }
+  .tb-arrow:disabled { opacity: 0.35; }
+  .tb-day { flex: 1; min-height: 44px; border: 0; background: none; font: inherit; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+  .tb-daynum { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dcc-tour-secondary); }
+  .tb-daylabel { font-size: 0.98rem; font-weight: 700; color: var(--dcc-tour-primary); }
+
+  /* view switching (Story / Map / Stats) */
+  .dcc-tour-root[data-view="story"] .dcc-tour-header,
+  .dcc-tour-root[data-view="story"] .dcc-tour-overview,
+  .dcc-tour-root[data-view="story"] .dcc-tour-controls,
+  .dcc-tour-root[data-view="story"] .dcc-tour-mapmode { display: none; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-body,
+  .dcc-tour-root[data-view="stats"] .dcc-tour-mapmode,
+  .dcc-tour-root[data-view="stats"] .dcc-tour-topbar { display: none; }
+  .dcc-tour-root[data-view="map"] .dcc-tour-header,
+  .dcc-tour-root[data-view="map"] .dcc-tour-overview,
+  .dcc-tour-root[data-view="map"] .dcc-tour-controls,
+  .dcc-tour-root[data-view="map"] .dcc-tour-body,
+  .dcc-tour-root[data-view="map"] .dcc-tour-topbar { display: none; }
+  .dcc-tour-root[data-view="map"] .dcc-tour-mapmode { display: block; }
+  /* stats view: overview fully open */
+  .dcc-tour-root[data-view="stats"] .dcc-tour-ovcollapse > summary { display: none; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-ovcollapse > .ov-body { display: block; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-header { padding-top: 0.75rem; }
+
+  /* bottom tab bar */
+  .dcc-tour-tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--dcc-tour-card-bg); border-top: 1px solid var(--dcc-tour-border);
+    padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
+  .dcc-tour-tabbtn { flex: 1; min-height: 56px; border: 0; background: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font: inherit; font-size: 0.66rem; color: var(--dcc-tour-muted); }
+  .dcc-tour-tabbtn .ti { font-size: 1.3rem; line-height: 1; }
+  .dcc-tour-tabbtn.active { color: var(--dcc-tour-primary); }
+  .dcc-tour-tabbtn.active .ti { transform: translateY(-1px); }
+
+  /* day-picker bottom sheet */
+  .dcc-tour-sheet { display: block; position: fixed; inset: 0; z-index: 60; }
+  .dcc-tour-sheet[hidden] { display: none; }
+  .dcc-tour-sheet .sheet-bd { position: absolute; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.2s; }
+  .dcc-tour-sheet.open .sheet-bd { opacity: 1; }
+  .dcc-tour-sheet .sheet-panel { position: absolute; left: 0; right: 0; bottom: 0; max-height: 78vh; overflow-y: auto;
+    background: var(--dcc-tour-bg); border-radius: 16px 16px 0 0;
+    padding: 8px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(100%); transition: transform 0.22s ease; }
+  .dcc-tour-sheet.open .sheet-panel { transform: translateY(0); }
+  .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dcc-tour-border); margin: 6px auto 10px; }
+  .sheet-panel h4 { margin: 0 0 10px; font-size: 0.95rem; }
+  .sheet-days { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sheet-day { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
+    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 10px;
+    padding: 10px 12px; min-height: 62px; font: inherit; cursor: pointer; position: relative; }
+  .sheet-day b { color: var(--dcc-tour-primary); font-size: 0.9rem; }
+  .sheet-day .sd-area { font-size: 0.72rem; color: var(--dcc-tour-muted); }
+  .sheet-day .sd-c { position: absolute; top: 8px; right: 10px; font-size: 0.7rem; color: var(--dcc-tour-muted); }
+
+  /* print action sheet */
+  .dcc-tour-printmenu.mobile { position: fixed; left: 12px; right: 12px; bottom: 78px; z-index: 61; }
+  .dcc-tour-printmenu.mobile button { min-height: 52px; }
+}

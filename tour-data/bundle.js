@@ -89,6 +89,87 @@
     overview.querySelectorAll('.tread').forEach(r =>
       r.addEventListener('click', () => selectDay(+r.getAttribute('data-day'))));
     animateCounts(header);
+    buildAppShell();
+  }
+
+  // ---- Option B: native app shell (mobile) — bottom tabs, day top-bar, sheet, swipe ----
+  function tabBtn(v, icon, label) {
+    return '<button class="dcc-tour-tabbtn" data-view="' + v + '"><span class="ti">' + icon +
+      '</span><span>' + label + '</span></button>';
+  }
+  function buildAppShell() {
+    const tb = el('div', 'dcc-tour-topbar');
+    tb.innerHTML =
+      '<button class="tb-arrow tb-prev" aria-label="Previous day">‹</button>' +
+      '<button class="tb-day" id="dcc-tb-day" aria-haspopup="dialog">' +
+        '<span class="tb-daynum" id="dcc-tb-num"></span>' +
+        '<span class="tb-daylabel" id="dcc-tb-lab"></span></button>' +
+      '<button class="tb-arrow tb-next" aria-label="Next day">›</button>';
+    tb.querySelector('.tb-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
+    tb.querySelector('.tb-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
+    tb.querySelector('#dcc-tb-day').addEventListener('click', openDaySheet);
+
+    const bar = el('nav', 'dcc-tour-tabbar');
+    bar.setAttribute('aria-label', 'Sections');
+    bar.innerHTML = tabBtn('story', '📖', 'Story') + tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats') +
+      '<button class="dcc-tour-tabbtn tb-print"><span class="ti">🖨</span><span>Print</span></button>';
+    bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    bar.querySelector('.tb-print').addEventListener('click', openMobilePrint);
+
+    const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
+    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel"><div class="sheet-handle"></div>' +
+      '<h4>Jump to a day</h4><div class="sheet-days">' +
+      DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '"><b>Day ' + d.index + '</b>' +
+        '<span>' + escapeHtml(d.short) + '</span><span class="sd-area">' + escapeHtml(d.area || '') + '</span>' +
+        '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
+    sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
+    sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
+
+    root.insertBefore(tb, root.firstChild); root.appendChild(bar); root.appendChild(sheet);
+    root._topbar = tb; root._sheet = sheet;
+    root.dataset.view = 'story';
+    root.querySelector('.dcc-tour-tabbtn[data-view="story"]').classList.add('active');
+    attachSwipe(root._story);
+    updateTopbar();
+  }
+  function setView(v) {
+    root.dataset.view = v;
+    root.querySelectorAll('.dcc-tour-tabbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    if (v === 'map') initMapMode();
+    window.scrollTo({ top: 0 });
+  }
+  function updateTopbar() {
+    if (!root._topbar) return;
+    const d = DATA.days[curDay];
+    root._topbar.querySelector('#dcc-tb-num').textContent = 'Day ' + d.index + ' / ' + DATA.day_count;
+    root._topbar.querySelector('#dcc-tb-lab').textContent = d.short + (d.area ? ' · ' + shortName(d.area) : '') + '  ▾';
+    root._topbar.querySelector('.tb-prev').disabled = curDay <= 0;
+    root._topbar.querySelector('.tb-next').disabled = curDay >= DATA.day_count - 1;
+  }
+  function openDaySheet() { const s = root._sheet; if (s) { s.hidden = false; requestAnimationFrame(() => s.classList.add('open')); } }
+  function closeDaySheet() { const s = root._sheet; if (s) { s.classList.remove('open'); setTimeout(() => { s.hidden = true; }, 220); } }
+  function attachSwipe(elm) {
+    if (!elm) return; let x0 = null, y0 = null;
+    elm.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+    elm.addEventListener('touchend', e => {
+      if (x0 == null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.8) {
+        if (dx < 0 && curDay < DATA.day_count - 1) selectDay(curDay + 1);
+        else if (dx > 0 && curDay > 0) selectDay(curDay - 1);
+      }
+      x0 = y0 = null;
+    }, { passive: true });
+  }
+  function openMobilePrint() {
+    let m = document.getElementById('dcc-printmenu'); if (m) { m.remove(); return; }
+    m = document.createElement('div'); m.id = 'dcc-printmenu'; m.className = 'dcc-tour-printmenu mobile';
+    m.innerHTML = '<button data-scope="day">🖨 This day (' + escapeHtml(DATA.days[curDay].short) + ')</button>' +
+      '<button data-scope="trip">📖 Whole trip <small>(large)</small></button>';
+    root.appendChild(m);
+    m.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; m.remove(); printView(b.dataset.scope); });
+    setTimeout(() => document.addEventListener('click', function off(ev) {
+      if (!m.contains(ev.target) && !ev.target.closest('.tb-print')) { m.remove(); document.removeEventListener('click', off); }
+    }), 0);
   }
 
   // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
@@ -342,7 +423,7 @@
     // date jump
     wrap.querySelector('#dcc-datepick').addEventListener('change', e => {
       const idx = DATA.days.findIndex(d => d.date === e.target.value);
-      if (idx >= 0) { setMode('story'); selectDay(idx); }
+      if (idx >= 0) { setMode('story'); setView('story'); selectDay(idx); }
     });
     // place search across all days
     const idx = [];
@@ -362,7 +443,7 @@
     res.addEventListener('click', e => {
       const b = e.target.closest('.dcc-tour-result'); if (!b) return;
       res.hidden = true; inp.value = '';
-      setMode('story'); selectDay(+b.dataset.di);
+      setMode('story'); setView('story'); selectDay(+b.dataset.di);
       setTimeout(() => {
         const sec = root._story.querySelector('#place-' + b.dataset.pi);
         if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
@@ -555,6 +636,7 @@
     if (active) active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     renderDay(DATA.days[i]);
     showDayOnMap(DATA.days[i]);
+    if (typeof updateTopbar === 'function') updateTopbar();
   }
 
   function renderDay(day) {
