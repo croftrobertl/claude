@@ -108,6 +108,14 @@ class Selector_Widget extends Widget_Base
             'return_value' => 'yes',
         ]);
 
+        $this->add_control('show_review', [
+            'label'        => __('Show “Review your answers” step', 'dcc-cottage-selector'),
+            'description'  => __('When off, the quiz jumps straight to the matches after the last question (the results “Edit answers” button is hidden too).', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SWITCHER,
+            'default'      => 'yes',
+            'return_value' => 'yes',
+        ]);
+
         $this->add_control('start_mode', [
             'label'   => __('Starting mode', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::SELECT,
@@ -233,7 +241,6 @@ class Selector_Widget extends Widget_Base
             'view'           => __('View cottage button', 'dcc-cottage-selector'),
             'compare'        => __('Compare chip (result card)', 'dcc-cottage-selector'),
             'edit_answers'   => __('Edit answers button', 'dcc-cottage-selector'),
-            'compare_select' => __('Compare picker button', 'dcc-cottage-selector'),
             'mode_quick'     => __('Landing choice: Quick finder', 'dcc-cottage-selector'),
             'mode_weights'   => __('Landing choice: Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'   => __('Landing choice: Compare', 'dcc-cottage-selector'),
@@ -262,7 +269,7 @@ class Selector_Widget extends Widget_Base
         return [
             // Buttons + landing choices (declared in register_icon_controls()).
             'submit', 'restart', 'next', 'back', 'view', 'compare',
-            'edit_answers', 'compare_select', 'mode_quick', 'mode_weights', 'mode_compare',
+            'edit_answers', 'mode_quick', 'mode_weights', 'mode_compare',
             // Questions + answers (declared in register_qa_icon_controls()).
             'w_question', 'q_desk', 'q_pullout', 'q_layout', 'q_dining', 'q_pet', 'q_ground', 'q_screenedporch',
             'ans_yes', 'ans_no', 'ans_either', 'ans_studio', 'ans_onebed', 'ans_2', 'ans_4',
@@ -342,8 +349,8 @@ class Selector_Widget extends Widget_Base
             'reset'           => __('Reset button', 'dcc-cottage-selector'),
             'edit_answers'    => __('Edit answers button', 'dcc-cottage-selector'),
             'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
-            'compare_select'  => __('Compare picker button', 'dcc-cottage-selector'),
             'compare_prompt'  => __('Compare subheader', 'dcc-cottage-selector'),
+            'compare_need_two' => __('Compare “pick 2” tip', 'dcc-cottage-selector'),
             'count_zero_hint' => __('Zero-match note', 'dcc-cottage-selector'),
         ];
 
@@ -440,14 +447,14 @@ class Selector_Widget extends Widget_Base
 
         $defaults = Config::strings();
         $fields = [
-            'badge_spacious' => __('Badge: Spacious Retreat', 'dcc-cottage-selector'),
-            'badge_work'     => __('Badge: Work-Friendly Hideaway', 'dcc-cottage-selector'),
-            'badge_compact'  => __('Badge: Compact Escape', 'dcc-cottage-selector'),
-            'badge_pet'      => __('Badge: Pet Stay Cottage', 'dcc-cottage-selector'),
-            'badge_ground'   => __('Badge: Easy-Access Ground Floor', 'dcc-cottage-selector'),
-            'badge_upstairs' => __('Badge: Upstairs Quiet View', 'dcc-cottage-selector'),
-            'badge_suite'    => __('Badge: Suite-Style Comfort', 'dcc-cottage-selector'),
-            'badge_porch'    => __('Badge: Private Porch Retreat', 'dcc-cottage-selector'),
+            'badge_spacious' => __('Badge: 1-Bedroom (largest)', 'dcc-cottage-selector'),
+            'badge_work'     => __('Badge: Work desk', 'dcc-cottage-selector'),
+            'badge_compact'  => __('Badge: Studio layout', 'dcc-cottage-selector'),
+            'badge_pet'      => __('Badge: Pet-friendly', 'dcc-cottage-selector'),
+            'badge_ground'   => __('Badge: Ground floor', 'dcc-cottage-selector'),
+            'badge_upstairs' => __('Badge: Upstairs', 'dcc-cottage-selector'),
+            'badge_suite'    => __('Badge: 1-Bedroom suite', 'dcc-cottage-selector'),
+            'badge_porch'    => __('Badge: Screened porch', 'dcc-cottage-selector'),
         ];
         foreach ($fields as $key => $label) {
             $this->add_control('str_' . $key, [
@@ -972,9 +979,17 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
+        // The green default that separates the navigation/action buttons (Next, Back,
+        // Edit answers, Restart, See matches) from the accent-blue answer selections.
+        // The global "Button background" (Colors) still overrides this when set.
+        $this->var_color('color_action', __('Action button color (Next / Back / Restart …)', 'dcc-cottage-selector'), '--dccs-action', [
+            'description' => __('Default background for the navigation & action buttons, kept distinct from the answer buttons.', 'dcc-cottage-selector'),
+        ]);
+
         $this->add_group_control(Group_Control_Typography::get_type(), [
-            'name'     => 'btn_typography',
-            'selector' => self::SEL . '.dccs-primary',
+            'name'      => 'btn_typography',
+            'selector'  => self::SEL . '.dccs-primary',
+            'separator' => 'before',
         ]);
         $this->add_responsive_control('btn_radius', [
             'label'      => __('Button radius', 'dcc-cottage-selector'),
@@ -1127,44 +1142,34 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
+        // The compare picker is an always-visible checklist (no trigger). Row/option
+        // colors come from Colors → Drop-down menu items; the panel background from
+        // Colors → Buttons & menus. This section styles the checklist box + rows.
         $this->add_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'cmpmenu_typography',
-            'selector' => self::SEL . '.dccs-cmp-trigger, ' . self::SEL . '.dccs-cmp-option',
+            'selector' => self::SEL . '.dccs-cmp-option',
         ]);
-        // Background is set globally in Colors → Buttons & menus; option colors in
-        // Colors → Drop-down menu items. This section keeps the trigger text.
-        $this->add_control('cmpmenu_color', [
-            'label'     => __('Trigger text', 'dcc-cottage-selector'),
-            'type'      => Controls_Manager::COLOR,
-            'selectors' => [
-                self::SEL . '.dccs-cmp-trigger' => 'color: {{VALUE}};',
-            ],
+        $this->add_group_control(Group_Control_Border::get_type(), [
+            'name'     => 'cmpmenu_panel_border',
+            'selector' => self::SEL . '.dccs-cmp-list',
         ]);
-        // The picker hugs its label; this places that compact button left / centre /
-        // right (defaults to centred in selector.css).
-        $this->add_responsive_control('cmpmenu_align', [
-            'label'   => __('Picker alignment', 'dcc-cottage-selector'),
-            'type'    => Controls_Manager::CHOOSE,
-            'options' => [
-                'left'   => ['title' => __('Left', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-left'],
-                'center' => ['title' => __('Center', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-center'],
-                'right'  => ['title' => __('Right', 'dcc-cottage-selector'), 'icon' => 'eicon-h-align-right'],
-            ],
-            'selectors_dictionary' => [
-                'left'   => 'margin-left: 0; margin-right: auto;',
-                'center' => 'margin-left: auto; margin-right: auto;',
-                'right'  => 'margin-left: auto; margin-right: 0;',
-            ],
-            'selectors' => [self::SEL . '.dccs-cmp-select' => '{{VALUE}}'],
+        $this->add_responsive_control('cmpmenu_panel_radius', [
+            'label'      => __('Checklist corner radius', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range'      => ['px' => ['min' => 0, 'max' => 40], '%' => ['min' => 0, 'max' => 50]],
+            'selectors'  => [self::SEL . '.dccs-cmp-list' => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_icon_side_control('compare_select');
-
-        $this->add_dropdown_shape_effects(
-            'cmpmenu',
-            self::SEL . '.dccs-cmp-trigger',
-            self::SEL . '.dccs-cmp-list',
-            self::SEL . '.dccs-cmp-option'
-        );
+        $this->add_responsive_control('cmpmenu_item_padding', [
+            'label'      => __('Row padding', 'dcc-cottage-selector'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [self::SEL . '.dccs-cmp-option' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
+        ]);
+        $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
+            'name'     => 'cmpmenu_panel_shadow',
+            'selector' => self::SEL . '.dccs-cmp-list',
+        ]);
 
         $this->end_controls_section();
     }
@@ -1268,7 +1273,7 @@ class Selector_Widget extends Widget_Base
     private static function collect_icon_sides(array $settings): array
     {
         $sides = [];
-        foreach (['edit_answers', 'view', 'questions', 'answers', 'compare_select'] as $key) {
+        foreach (['edit_answers', 'view', 'questions', 'answers'] as $key) {
             $sides[$key] = ($settings['icon_side_' . $key] ?? 'left') === 'right' ? 'right' : 'left';
         }
         return $sides;
@@ -1337,6 +1342,7 @@ class Selector_Widget extends Widget_Base
             'startMode'        => (string) $start,
             'enabledModes'     => array_values($enabled),
             'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
+            'showReview'       => ($settings['show_review'] ?? 'yes') === 'yes',
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
             'cssVars'          => self::collect_css_vars($settings),
@@ -1368,6 +1374,7 @@ class Selector_Widget extends Widget_Base
             'color_border'      => '--dccs-border',
             'color_good'        => '--dccs-good',
             'color_diff'        => '--dccs-diff',
+            'color_action'        => '--dccs-action',
             'color_results_bg'    => '--dccs-results-bg',
             'color_btn_bg'        => '--dccs-btn-bg',
             'color_btn_bg_hover'  => '--dccs-btn-bg-hover',
@@ -1410,6 +1417,7 @@ class Selector_Widget extends Widget_Base
             'startMode'    => $snap['startMode'] ?? 'quick',
             'enabledModes' => $snap['enabledModes'] ?? ['quick', 'weights', 'compare'],
             'showHeading'  => $snap['showHeading'] ?? true,
+            'showReview'   => $snap['showReview'] ?? true,
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
             'cssVars'      => $snap['cssVars'] ?? [],

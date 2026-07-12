@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.14.0
+Stable tag: 0.15.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,24 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.15.0 =
+* Distinct button colors: the navigation & action buttons (Next, Back, Edit answers,
+  Restart, See matches) now default to a green that reads differently from the accent-blue
+  answer selections, so guests can tell “pick an answer” apart from “move on”. A new
+  “Action button color” control (Style → Buttons) lets you change that green.
+* New toggle (Content): “Show ‘Review your answers’ step”. When off, the quiz jumps
+  straight to the matches after the last question (the results “Edit answers” button is
+  hidden with it).
+* Clearer badge labels by default: Layout: Studio, Layout: 1-Bedroom, 1-Bedroom Suite,
+  Work Desk, Pet-Friendly, Ground Floor, Upstairs, Screened Porch. Each is still editable
+  under Content → Badge labels.
+* Compare mode is easier to use: the cottage picker is now an always-visible checklist
+  (no tap-to-open menu that hid the “Compare” button), with larger rows/checkboxes and a
+  “pick at least 2” tip. Your compare selections now reset whenever you switch modes.
+* The bottom Match-Quiz buttons (Edit answers, Restart, See matches) are slightly smaller
+  to match the other buttons.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.14.0 =
 * Colors panel: the single "Card background" control is split into clearer, purpose-named

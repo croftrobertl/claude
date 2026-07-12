@@ -107,8 +107,7 @@ final class Config
             'floor_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
             'floor_second'      => __('Second Floor', 'dcc-cottage-selector'),
             'compare_prompt'    => __('Select 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
-            'compare_select'    => __('Select cottages to compare', 'dcc-cottage-selector'),
-            'compare_selected'  => /* translators: %d: number of cottages selected */ __('%d selected', 'dcc-cottage-selector'),
+            'compare_need_two'  => __('Tip: check at least 2 cottages, then tap “Compare”.', 'dcc-cottage-selector'),
             'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d–%2$d of %3$d', 'dcc-cottage-selector'),
             'cmp_prev'          => __('Previous cottages', 'dcc-cottage-selector'),
             'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),
@@ -128,15 +127,15 @@ final class Config
             'empty_sub'         => __('Your next best matches are below. Changing the choices in red will bring more matches.', 'dcc-cottage-selector'),
             'empty_sub_one'     => __('Your next best match is below. Changing the choices in red will bring more matches.', 'dcc-cottage-selector'),
 
-            // Badges
-            'badge_spacious'    => __('Spacious Retreat', 'dcc-cottage-selector'),
-            'badge_work'        => __('Work-Friendly Hideaway', 'dcc-cottage-selector'),
-            'badge_compact'     => __('Compact Escape', 'dcc-cottage-selector'),
-            'badge_pet'         => __('Pet Stay Cottage', 'dcc-cottage-selector'),
-            'badge_ground'      => __('Easy-Access Ground Floor', 'dcc-cottage-selector'),
-            'badge_upstairs'    => __('Upstairs Quiet View', 'dcc-cottage-selector'),
-            'badge_suite'       => __('Suite-Style Comfort', 'dcc-cottage-selector'),
-            'badge_porch'       => __('Private Porch Retreat', 'dcc-cottage-selector'),
+            // Badges — factual labels describing what each badge actually marks.
+            'badge_spacious'    => __('Layout: 1-Bedroom', 'dcc-cottage-selector'),
+            'badge_work'        => __('Work Desk', 'dcc-cottage-selector'),
+            'badge_compact'     => __('Layout: Studio', 'dcc-cottage-selector'),
+            'badge_pet'         => __('Pet-Friendly', 'dcc-cottage-selector'),
+            'badge_ground'      => __('Ground Floor', 'dcc-cottage-selector'),
+            'badge_upstairs'    => __('Upstairs', 'dcc-cottage-selector'),
+            'badge_suite'       => __('1-Bedroom Suite', 'dcc-cottage-selector'),
+            'badge_porch'       => __('Screened Porch', 'dcc-cottage-selector'),
 
             // "Why this fits" reason fragments (assembled by JS from data keys)
             'why_desk'          => __('a dedicated desk for getting work done', 'dcc-cottage-selector'),

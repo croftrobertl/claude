@@ -283,7 +283,8 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   root.querySelector('.dccs-modetab[data-mode="compare"]').click();
-  ok('compare shows a multiselect dropdown', !!root.querySelector('.dccs-cmp-trigger') && root.querySelectorAll('.dccs-cmp-option').length === 8);
+  ok('compare shows an always-visible checklist (no dropdown trigger)',
+    !root.querySelector('.dccs-cmp-trigger') && !!root.querySelector('.dccs-cmp-list') && root.querySelectorAll('.dccs-cmp-option').length === 8);
   ok('compare options use full names', /^Cottage \d+: /.test(root.querySelector('.dccs-cmp-option').textContent.trim()));
   root.querySelector('.dccs-modetab[data-mode="weights"]').click();
   ok('weights mode is now a wizard', !!root.querySelector('.dccs-chips-wizard') && root.querySelector('.dccs-next').disabled === true);
@@ -512,15 +513,30 @@ function enter(root, mode) {
     cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
 })();
 
-// ---- 19. Compare picker closes on an outside click ----
+// ---- 19. Compare checklist is always visible + resets when switching modes ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'compare');
-  root.querySelector('.dccs-cmp-trigger').click();
-  ok('compare dropdown opens on the trigger', !!root.querySelector('.dccs-cmp-select.is-open'));
-  w.document.body.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
-  ok('compare dropdown closes on an outside click', !root.querySelector('.dccs-cmp-select.is-open'));
+  // The checklist and its options are on screen immediately — no tap-to-open step,
+  // and the "Compare" button is present in the same view (never hidden by a panel).
+  ok('checklist + options visible with no dropdown interaction',
+    root.querySelectorAll('.dccs-cmp-option').length === 8 && !root.querySelector('.dccs-cmp-trigger'));
+  ok('a "pick 2" tip shows while fewer than 2 are ticked', !!root.querySelector('.dccs-compare-note'));
+
+  // Tick two cottages, then leave and return to Compare — the picks must reset.
+  function tick(i) {
+    var b = root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]')[i];
+    b.checked = true; b.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  tick(0); tick(1);
+  ok('compare button enables after ticking 2', root.querySelector('.dccs-open-compare').disabled === false);
+  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  const anyChecked = Array.prototype.some.call(
+    root.querySelectorAll('.dccs-cmp-option input[type="checkbox"][data-cmp]'), c => c.checked);
+  ok('compare selections reset after switching modes',
+    !anyChecked && !!root.querySelector('.dccs-open-compare[disabled]'));
 })();
 
 // ---- 20. Compare subheader uses the new "Select 2 or more..." wording ----
@@ -766,11 +782,59 @@ function configWith(overrides) {
   // CSS consumes the new vars with baked fallbacks so the look is unchanged when unset.
   ok('cards read --dccs-results-bg with a surface fallback',
     /\.dccs-card\s*\{[\s\S]*?var\(--dccs-results-bg,\s*var\(--dccs-surface\)\)/.test(css));
-  ok('primary button reads --dccs-btn-bg with an accent fallback',
-    /\.dccs-primary\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-accent\)\)/.test(css));
+  ok('primary button reads --dccs-btn-bg with an action fallback',
+    /\.dccs-primary\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-action\)\)/.test(css));
   ok('dropdown items read --dccs-item-bg / --dccs-item-text',
     /var\(--dccs-item-bg,\s*transparent\)/.test(css) && /var\(--dccs-item-text,\s*var\(--dccs-text\)\)/.test(css));
   ok('button hover honours --dccs-btn-bg-hover', /var\(--dccs-btn-bg-hover,/.test(css));
+})();
+
+// ---- 30. Distinct action-button color + smaller tail buttons ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
+  ok('a distinct --dccs-action green is defined', /--dccs-action:\s*#/.test(css));
+  ok('tail buttons fall back to --dccs-action (distinct from accent answers)',
+    /\.dccs-edit-answers,[\s\S]*?\.dccs-reset\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-action\)\)/.test(css));
+  ok('tail buttons are smaller (min-height 40px, 0.9rem)',
+    /\.dccs-reset\s*\{[\s\S]*?min-height:\s*40px[\s\S]*?font-size:\s*0\.9rem/.test(css));
+  ok('answer chips stay on the accent (not action) when selected',
+    /\.dccs-chip\.is-active\s*\{[\s\S]*?var\(--dccs-accent\)/.test(css));
+  ok('an editable Action button color control exists', /'color_action'[\s\S]{0,120}--dccs-action/.test(sel));
+})();
+
+// ---- 31. Review step toggle (show_review / showReview) ----
+(function () {
+  const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
+  ok('show_review SWITCHER control exists', /'show_review'[\s\S]{0,400}SWITCHER/.test(sel));
+  ok('showReview flows into the snapshot', /'showReview'\s*=>/.test(sel));
+
+  // Default (review on): the quiz stops at the review step before results.
+  const w1 = freshDom();
+  const r1 = mountSelector(w1);
+  enter(r1, 'quick');
+  stepThrough(r1, 'either');
+  ok('review step shows by default', !!r1.querySelector('.dccs-review-list'));
+
+  // Toggled off: after the last question the quiz jumps straight to the matches,
+  // with no review list and no results "Edit answers" button.
+  const w2 = freshDom();
+  const r2 = mountSelector(w2, configWith({ showReview: false }));
+  enter(r2, 'quick');
+  stepThrough(r2, 'either');
+  ok('review step skipped when showReview=false',
+    !r2.querySelector('.dccs-review-list') && r2.querySelectorAll('.dccs-card').length >= 1);
+  ok('Edit-answers button hidden when review is off', !r2.querySelector('.dccs-edit-answers'));
+})();
+
+// ---- 32. Factual badge label defaults ----
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  ok('badge_compact default is "Layout: Studio"', S.badge_compact === 'Layout: Studio');
+  ok('badge_spacious default is "Layout: 1-Bedroom"', S.badge_spacious === 'Layout: 1-Bedroom');
+  ok('badge_suite default is "1-Bedroom Suite"', S.badge_suite === '1-Bedroom Suite');
+  ok('badge_pet default is "Pet-Friendly"', S.badge_pet === 'Pet-Friendly');
+  ok('badge_porch default is "Screened Porch"', S.badge_porch === 'Screened Porch');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

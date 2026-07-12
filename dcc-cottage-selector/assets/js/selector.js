@@ -113,8 +113,7 @@
       step: 0,
       stage: 'landing',
       editReturn: null,
-      // Transient UI state for the compare dropdown + the compare window offset.
-      compareOpen: false,
+      // Transient UI state: the compare table's paging window offset.
       cmpStart: 0
     };
   }
@@ -458,13 +457,13 @@
     return html;
   }
 
-  /** Compare mode: a scrollable multiselect dropdown + a button that opens the
-      comparison table in the same popup used from the wizard results. */
+  /** Compare mode: an always-visible checklist of cottages + a button that opens the
+      comparison table in the same popup used from the wizard results. The checklist is
+      shown open (no tap-to-expand dropdown) so the "Compare" button below it is never
+      hidden — friendlier for guests who aren't comfortable with fiddly menus. */
   function renderCompare(config, st) {
     var S = config.strings;
     var n = st.compareIds.length;
-    var open = !!st.compareOpen;
-    var label = n ? fmt(S.compare_selected, n) : S.compare_select;
     var list = config.cottages.map(function (c) {
       var on = st.compareIds.indexOf(String(c.id)) !== -1;
       return '<label class="dccs-cmp-option">' +
@@ -476,15 +475,13 @@
     // .dccs-open-compare class so the existing click handler opens the shared popup.
     var canCompare = n >= 2;
     var btnLabel = canCompare ? fmt(S.compare_btn, n) : S.mode_compare;
+    var note = canCompare ? '' : '<p class="dccs-compare-note">' + esc(S.compare_need_two) + '</p>';
     var btn = '<div class="dccs-compare-actions">' +
       '<button type="button" class="dccs-open-compare"' + (canCompare ? '' : ' disabled') + '>' +
-      esc(btnLabel) + '</button></div>';
+      esc(btnLabel) + '</button>' + note + '</div>';
 
     return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
-      '<div class="dccs-cmp-select' + (open ? ' is-open' : '') + '">' +
-      '<button type="button" class="dccs-cmp-trigger" aria-haspopup="true" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-      '<span>' + withIcon(config, 'compare_select', 'compare_select', esc(label)) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
-      '<div class="dccs-cmp-list" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div></div>' +
+      '<div class="dccs-cmp-list dccs-cmp-static" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div>' +
       btn + '</div>';
   }
 
@@ -558,8 +555,12 @@
   function wizardResultsTail(config, st, emptyState) {
     if (st.mode !== 'quick' && st.mode !== 'weights') { return ''; }
     var S = config.strings;
-    return '<div class="dccs-wizard-nav dccs-tail-nav">' +
-      '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
+    // "Edit answers" jumps to the review step; if that step is disabled there is no
+    // edit screen to reach, so the button is omitted and only Restart remains.
+    var editBtn = (config.showReview !== false)
+      ? '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>'
+      : '';
+    return '<div class="dccs-wizard-nav dccs-tail-nav">' + editBtn +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
@@ -747,8 +748,16 @@
     function trackLen() { return wizardTrack(state, config.strings).questions.length; }
     function advance() {
       if (state.editReturn) { state.stage = state.editReturn; state.editReturn = null; }
-      else if ((state.step | 0) >= trackLen() - 1) { state.stage = 'review'; }
+      // After the last question: show the review step, or (when the owner disabled it)
+      // jump straight to the matches.
+      else if ((state.step | 0) >= trackLen() - 1) { state.stage = (config.showReview !== false) ? 'review' : 'results'; }
       else { state.step = (state.step | 0) + 1; }
+    }
+    // Switching to/from any mode starts that mode fresh AND clears the compare picks
+    // (the owner asked that a mode change never carry a stale comparison set forward).
+    function resetForMode(st) {
+      st.step = 0; st.stage = 'q'; st.editReturn = null;
+      st.compareIds = []; st.cmpStart = 0;
     }
 
     root.addEventListener('click', function (e) {
@@ -793,17 +802,16 @@
       // --- landing screen: choose a mode and leave the landing ---
       if (cl.contains('dccs-landing-choice')) {
         state.mode = t.dataset.mode;
-        state.step = 0; state.stage = 'q'; state.editReturn = null;
+        resetForMode(state);
         rerender(); focusStep(); return;
       }
       if (cl.contains('dccs-modetab')) {
         state.mode = t.dataset.mode;
-        state.step = 0; state.stage = 'q'; state.editReturn = null; // fresh start in the new mode
+        resetForMode(state); // fresh start in the new mode
         rerender(); focusStep(); return;
       }
       // --- compare ---
       if (cl.contains('dccs-open-compare')) { openCompareModal(config, state, t); return; }
-      if (cl.contains('dccs-cmp-trigger')) { state.compareOpen = !state.compareOpen; rerender(); return; }
       if (cl.contains('dccs-cmp-prev') || cl.contains('dccs-cmp-next')) {
         if (t.disabled) { return; }
         state.cmpStart = (state.cmpStart | 0) + (cl.contains('dccs-cmp-next') ? 1 : -1);
@@ -825,11 +833,6 @@
       if (!document.documentElement.contains(root)) {
         document.removeEventListener('mousedown', onDocDown);
         return;
-      }
-      var inside = e.target.closest;
-      // Compare picker: state-driven, so close it via re-render.
-      if (state.compareOpen && !(inside && e.target.closest('.dccs-cmp-select'))) {
-        state.compareOpen = false; rerender(); return;
       }
       var open = root.querySelector('.dccs-modeselect.is-open');
       if (!open) { return; }

@@ -16,6 +16,10 @@
   --dccs-gap: 10px;
   --dccs-good: #2e9e6b;
   --dccs-diff: #fff4e0;
+  /* Navigation / action buttons (Next, Back, Edit answers, Restart, See matches)
+     use a distinct green by default so they read differently from the accent-blue
+     answer selections. Overridden by the global "Button background" control. */
+  --dccs-action: #1f7a54;
 
   box-sizing: border-box;
   color: var(--dccs-text);
@@ -153,7 +157,6 @@
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-modetab,
 .dccs-root.dccs-root .dccs-modeselect-trigger,
-.dccs-root.dccs-root .dccs-cmp-trigger,
 .dccs-root.dccs-root .dccs-cmp-option,
 .dccs-root.dccs-root .dccs-view {
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -180,7 +183,6 @@
 .dccs-root.dccs-root .dccs-view:focus-visible,
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
 .dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
-.dccs-root.dccs-root .dccs-cmp-trigger:focus-visible,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible,
 .dccs-root.dccs-root .dccs-matrix-nav button:focus-visible,
@@ -201,14 +203,14 @@
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset {
-  flex: 1 1 0; min-width: 0; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
-  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+  flex: 1 1 0; min-width: 0; min-height: 40px; padding: 8px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
+  background: var(--dccs-btn-bg, var(--dccs-action)); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.9rem; text-transform: none; line-height: 1.2;
   white-space: normal; overflow-wrap: anywhere;
 }
 .dccs-root.dccs-root .dccs-primary {
   min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
-  box-shadow: 0 6px 16px rgba(15,109,191,0.32);
+  background: var(--dccs-btn-bg, var(--dccs-action)); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
+  box-shadow: 0 6px 16px rgba(20,28,40,0.18);
   white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
 }
 .dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
@@ -255,35 +257,25 @@
   background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent);
 }
 
-/* Compare — multiselect dropdown */
-/* The picker sizes to its label and centres itself; the panel is a popover so it
-   can be wider than the button (to fit cottage names) without stretching it. */
-.dccs-root.dccs-root .dccs-cmp-select {
-  position: relative; width: -moz-fit-content; width: fit-content; max-width: 100%;
-  margin: 0 auto 14px; text-align: left;
-}
-.dccs-root.dccs-root .dccs-cmp-trigger {
-  width: 100%; min-height: 46px; padding: 10px 16px; cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-btn-bg, var(--dccs-surface));
-  color: var(--dccs-text); font-weight: 700; font-size: 0.95rem; text-transform: none;
-}
+/* Compare — an always-visible cottage checklist (no tap-to-open dropdown), so the
+   "Compare" button below it is never hidden. Big rows + checkboxes for easy tapping;
+   the list scrolls internally only if it exceeds the height cap. */
 .dccs-root.dccs-root .dccs-cmp-list {
-  display: none; position: absolute; left: 50%; transform: translateX(-50%); top: calc(100% + 6px); z-index: 20;
-  min-width: 100%; width: -moz-max-content; width: max-content; max-width: min(90vw, 360px);
-  max-height: 230px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  margin: 0 auto 12px; max-width: 100%;
+  max-height: 360px; overflow-y: auto; -webkit-overflow-scrolling: touch;
   border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
-  box-shadow: 0 12px 30px rgba(20, 28, 40, 0.18);
+  box-shadow: 0 2px 8px rgba(20, 28, 40, 0.06);
 }
-.dccs-root.dccs-root .dccs-cmp-select.is-open .dccs-cmp-list { display: block; }
 .dccs-root.dccs-root .dccs-cmp-option {
-  display: flex; align-items: center; gap: 10px; padding: 11px 14px; min-height: 44px; cursor: pointer;
-  border-bottom: 1px solid var(--dccs-border); font-size: 0.92rem; text-transform: none;
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; min-height: 50px; cursor: pointer;
+  border-bottom: 1px solid var(--dccs-border); font-size: 0.98rem; text-transform: none;
   overflow-wrap: anywhere;
   background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
-.dccs-root.dccs-root .dccs-cmp-option input { width: 18px; height: 18px; flex: 0 0 auto; }
+.dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+/* Hint shown under the Compare button while fewer than 2 cottages are ticked. */
+.dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
 
 /* "More cottages below" cue: a soft fade + down chevron pinned to the bottom of the
    scrollable checklist so it's clear the list scrolls. A sticky pseudo-element keeps
@@ -302,8 +294,7 @@
 
 /* Default hover/focus feedback for both dropdown menus. Kept at low specificity so
    the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */
-.dccs-root.dccs-root .dccs-modeselect-trigger:hover,
-.dccs-root.dccs-root .dccs-cmp-trigger:hover { border-color: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-modeselect-trigger:hover { border-color: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-modetab:hover,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-cmp-option:hover,
@@ -328,7 +319,9 @@
 .dccs-root.dccs-root .dccs-see-matches:hover,
 .dccs-root.dccs-root .dccs-see-matches:focus-visible,
 .dccs-root.dccs-root .dccs-edit-answers:hover,
-.dccs-root.dccs-root .dccs-edit-answers:focus-visible,
+.dccs-root.dccs-root .dccs-edit-answers:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-action)));
+}
 .dccs-root.dccs-root .dccs-view:hover,
 .dccs-root.dccs-root .dccs-view:focus-visible {
   background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-accent)));
@@ -338,9 +331,7 @@
 .dccs-root.dccs-root .dccs-edit:hover,
 .dccs-root.dccs-root .dccs-edit:focus-visible,
 .dccs-root.dccs-root .dccs-modeselect-trigger:hover,
-.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
-.dccs-root.dccs-root .dccs-cmp-trigger:hover,
-.dccs-root.dccs-root .dccs-cmp-trigger:focus-visible {
+.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible {
   background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-surface)));
 }
 
@@ -443,13 +434,11 @@
 .dccs-modal-content .dccs-compare-modal { padding: 4px; }
 .dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }
 
-/* Inside the popup the dropdown panels must flow in the scrollable content. When
-   absolutely positioned they are laid out against their .dccs-cmp-select /
-   .dccs-modeselect parent, not the scroll box, so they overflow the modal and get
-   clipped (the compare checklist could only show its first row). Scoped with the
-   doubled .dccs-root so it outranks the base (0,3,0) dropdown rules. */
-.dccs-modal-content .dccs-root.dccs-root .dccs-cmp-select { width: 100%; }
-.dccs-modal-content .dccs-root.dccs-root .dccs-cmp-list,
+/* Inside the popup the mode-switcher panel must flow in the scrollable content. When
+   absolutely positioned it is laid out against its .dccs-modeselect parent, not the
+   scroll box, so it overflows the modal and gets clipped. Scoped with the doubled
+   .dccs-root so it outranks the base (0,3,0) dropdown rules. (The compare checklist is
+   already in-flow, so it needs no override here.) */
 .dccs-modal-content .dccs-root.dccs-root .dccs-modeselect-list {
   position: static; transform: none; left: auto; right: auto; top: auto;
   width: auto; min-width: 0; max-width: 100%; margin-top: 8px;
