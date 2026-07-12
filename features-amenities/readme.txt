@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.3
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,9 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.8.0 =
+* New "Icon Edge Spacing" control (Style → Section Headers) sets the horizontal gap between a section header's icon and the left edge of the header. Defaults to 5px, added on top of the header's existing padding, and is responsive (separate desktop/tablet/mobile values). The section icon stays left-aligned and the title stays centered. Existing widget instances pick up the 5px default automatically.
 
 = 1.7.3 =
 * Default state of the "Enable Search Bar" toggle (Content → Search) flipped from ON to OFF. Freshly-dropped widget instances now start with the search bar hidden; flip the toggle on to reveal it. Existing widget instances already placed on pages are unaffected — they keep whatever value they had saved (almost always ON, since that was the previous default).

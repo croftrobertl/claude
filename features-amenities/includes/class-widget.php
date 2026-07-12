@@ -466,6 +466,18 @@ class Widget extends Widget_Base {
 			]
 		);
 		$this->add_responsive_control(
+			'header_icon_edge_gap',
+			[
+				'label'       => esc_html__( 'Icon Edge Spacing', 'features-amenities' ),
+				'type'        => Controls_Manager::SLIDER,
+				'size_units'  => [ 'px', 'em' ],
+				'range'       => [ 'px' => [ 'min' => 0, 'max' => 60 ], 'em' => [ 'min' => 0, 'max' => 4, 'step' => 0.1 ] ],
+				'default'     => [ 'unit' => 'px', 'size' => 5 ],
+				'description' => esc_html__( 'Extra space between the section icon and the left edge of the header, added on top of the header padding. Defaults to 5px.', 'features-amenities' ),
+				'selectors'   => [ self::SEL . '.fal-section-icon' => 'margin-left: {{SIZE}}{{UNIT}};' ],
+			]
+		);
+		$this->add_responsive_control(
 			'header_margin_bottom',
 			[
 				'label'      => esc_html__( 'Spacing Below Header', 'features-amenities' ),

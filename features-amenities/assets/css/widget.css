@@ -68,7 +68,7 @@
 .fal-section-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
 .fal-hh-none .fal-section-header:hover { transform: none; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
 .fal-section-title { font-weight: 600; font-size: 1.2em; flex: 1; text-align: center; }
-.fal-section-icon  { color: var(--fal-primary); font-size: 1.2em; }
+.fal-section-icon  { color: var(--fal-primary); font-size: 1.2em; margin-left: 5px; }
 
 .fal-amenities { display: grid; gap: var(--fal-density-gap); }
 .fal-layout-grid .fal-amenities { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
