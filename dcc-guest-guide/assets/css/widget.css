@@ -623,33 +623,28 @@ body.elementor-editor-preview dialog.dccgg-wrapper::backdrop {
    moved .dccgg-stage out from under .dccgg-reveal-stage, which is what
    was making the modal blow past the viewport edges. */
 body.dccgg-detail-open .dccgg-stage {
-    /* v0.9.7.21: replace the v0.9.7.17 top+bottom-pinned layout with a
-       centered + max-height + overflow-y:auto layout. The popup now sits
-       vertically centered in the visible viewport (below any sticky theme
-       header, accounted for via --dccgg-detail-top-offset), shrinks to
-       content height when content is short, and caps at the available
-       viewport height with internal scroll when content is taller.
-       Centering uses the fixed + margin:auto pattern: with all four
-       insets set, `margin: auto` distributes free space evenly on every
-       side, which centers the box without needing transform translates
-       (and so leaves transform free for the open/close scale animation).
-       v0.9.7.23: --dccgg-vv-top (visualViewport.offsetTop, stamped by
-       showDetailModal) keeps the top edge inside the VISIBLE viewport
-       when iOS has auto-zoomed or the guest pinch-zoomed. */
+    /* v0.9.7.25: DESKTOP = centered card. Rebuilt on the same mechanism
+       the DCC Availability Calendar popup uses (proven stable on iOS):
+       centre with top:50% + translate(-50%,-50%) — NOT the old
+       top+bottom+margin:auto four-inset trick — and cap the height with a
+       STATIC unit (svh) so the box can never grow when the mobile toolbar
+       hides. The earlier approach combined dynamic dvh + a JS-restamped
+       --dccgg-vv-top top offset, which recomputed the popup's position on
+       every visual-viewport move (i.e. the instant the guest tapped or
+       scrolled and the iOS toolbar slid) — that was the "looks right, then
+       jumps and overflows the top" bug. No JS positioning now; the layout
+       is entirely declarative and self-limiting. */
     position: fixed;
-    top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px));
-    left: 0;
-    right: 0;
-    bottom: 0;
-    margin: auto;
+    top: 50%;
+    left: 50%;
     width: min(720px, calc(100vw - 32px));
     max-width: 900px;
-    height: -moz-fit-content;
-    height: fit-content;
-    max-height: calc(100vh - var(--dccgg-detail-top-offset, 0px) - 32px);
-    max-height: calc(100dvh - var(--dccgg-detail-top-offset, 0px) - 32px);
+    max-height: 85vh;   /* fallback */
+    max-height: 85dvh;  /* excludes browser chrome */
+    max-height: 85svh;  /* smallest viewport — never grows on toolbar hide (wins) */
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     z-index: 10010;
     background: var(--dccgg-detail-bg, #ffffff);
     color: var(--dccgg-text, #111111);
@@ -658,7 +653,7 @@ body.dccgg-detail-open .dccgg-stage {
     padding: 24px;
     opacity: 0;
     visibility: hidden;
-    transform: scale(0.96);
+    transform: translate(-50%, -50%) scale(0.96);
     transform-origin: 50% 50%;
     transition: opacity 0.25s ease,
                 transform 0.25s ease,
@@ -668,7 +663,7 @@ body.dccgg-detail-open .dccgg-stage.is-modal-open {
     visibility: visible;
     pointer-events: auto;
     opacity: 1;
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .dccgg-detail-overlay {
@@ -1384,17 +1379,15 @@ dialog.dccgg-wrapper::backdrop {
 /* FAB modal mode: collapse the wrapper offscreen until opened */
 .dccgg-fab--yes .dccgg-wrapper {
     position: fixed;
-    /* v0.9.7.21: centered + max-height + overflow-y:auto, mirroring the
-       v0.9.7.21 detail-popup change. Same margin:auto centering pattern
-       so the wrapper sits in the middle of the visible viewport (below
-       a sticky theme header), shrinks to content when short, and caps
-       at the available viewport height with internal scroll when
-       content is taller. Replaces v0.9.7.19's top+bottom-pinned
-       layout for consistency between the two modal types.
-       v0.9.7.23: --dccgg-vv-top (visualViewport.offsetTop, stamped by
-       wireFab) keeps the top edge inside the VISIBLE viewport when iOS
-       has auto-zoomed or the guest pinch-zoomed. */
-    top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px));
+    /* v0.9.7.25: DESKTOP hub = centered card. margin:auto four-inset
+       centering is kept (NOT translate) because in FAB mode a detail
+       popup opened from the hub stays inside this top-layer <dialog>; a
+       transform on the open wrapper would make it the containing block
+       for that fixed-position detail sheet. The fragile parts are gone:
+       the JS-restamped --dccgg-vv-top top offset and the dynamic dvh cap
+       (which grew when the iOS toolbar hid) are replaced by a plain,
+       static 85svh cap that can't overflow or grow. */
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
@@ -1403,10 +1396,12 @@ dialog.dccgg-wrapper::backdrop {
     max-width: 900px;
     height: -moz-fit-content;
     height: fit-content;
-    max-height: calc(100vh - var(--dccgg-detail-top-offset, 0px) - 32px);
-    max-height: calc(100dvh - var(--dccgg-detail-top-offset, 0px) - 32px);
+    max-height: 85vh;   /* fallback */
+    max-height: 85dvh;  /* excludes browser chrome */
+    max-height: 85svh;  /* smallest viewport — never grows on toolbar hide (wins) */
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     transform: scale(0.96);
     transform-origin: 50% 50%;
     opacity: 0;
@@ -1853,23 +1848,30 @@ dialog.dccgg-wrapper::backdrop {
 /* ---- Mobile bottom-sheet variant of the detail modal ---- */
 @media (max-width: 600px) {
     body.dccgg-detail-open .dccgg-stage {
-        /* v0.9.7: bottom sheet covers the full visible viewport below the
-           sticky header. Slides up from translateY(100%) → 0 on open.
-           v0.9.7.22: explicitly reset margin/height inherited from the
-           v0.9.7.21 desktop centered-card rule. Without these resets the
-           desktop `margin: auto` + `height: fit-content` keep applying on
-           mobile, shrinking the sheet to its content and re-centering it
-           inside the top:8+offset → bottom:0 rectangle instead of filling
-           it like a true bottom sheet. */
+        /* v0.9.7.25: MOBILE = bottom sheet, rebuilt to match the proven
+           DCC Availability Calendar popup. The sheet is anchored ONLY to
+           the bottom (no `top`), sized by its content up to a STATIC
+           max-height of 90svh, and scrolls internally. Because the top
+           edge is never pinned and the cap is a static unit, the popup
+           physically cannot overflow the top of the viewport and cannot
+           grow/jump when the iOS toolbar shows or hides — the exact
+           failure the top+bottom+dvh+--dccgg-vv-top layout produced on
+           the guest's first scroll. `bottom: env(safe-area-inset-bottom)`
+           lifts it clear of the iOS home-indicator / floating toolbar
+           (needs viewport-fit=cover, ensured in boot(); falls back to 0).
+           Slides up from translateY(100%). */
         left: 0;
         right: 0;
-        top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px) + 8px);
-        bottom: 0;
+        top: auto;
+        bottom: env(safe-area-inset-bottom, 0px);
         margin: 0;
         width: 100%;
         max-width: 100%;
         height: auto;
-        max-height: none;
+        max-height: 90vh;   /* fallback */
+        max-height: 90dvh;  /* excludes browser chrome */
+        max-height: 90svh;  /* smallest viewport — never grows on toolbar hide (wins) */
+        overscroll-behavior: contain;
         border-radius: 16px 16px 0 0;
         padding: 16px;
         transform: translateY(100%);
@@ -1899,24 +1901,28 @@ dialog.dccgg-wrapper::backdrop {
        close-X tucked under the URL bar rather than as the intended
        full-coverage bottom sheet. */
     .dccgg-fab--yes .dccgg-wrapper {
+        /* v0.9.7.25: MOBILE hub = bottom sheet, same proven layout as the
+           detail popup. Bottom-anchored only (no `top`), static 90svh cap,
+           internal scroll — cannot overflow the top or grow when the iOS
+           toolbar hides. Replaces the top+bottom+--dccgg-vv-top layout. */
         left: 0;
         right: 0;
         margin: 0;
         width: 100%;
         max-width: 100%;
-        top: calc(var(--dccgg-vv-top, 0px) + var(--dccgg-detail-top-offset, 0px) + 8px);
-        bottom: 0;
+        top: auto;
+        bottom: env(safe-area-inset-bottom, 0px);
         height: auto;
-        max-height: none;
+        max-height: 90vh;   /* fallback */
+        max-height: 90dvh;  /* excludes browser chrome */
+        max-height: 90svh;  /* smallest viewport — never grows on toolbar hide (wins) */
+        overscroll-behavior: contain;
         border-radius: 16px 16px 0 0;
         padding: 16px;
-        transform: translateY(20px) scale(1);
+        transform: translateY(100%);
     }
     .dccgg-fab--yes .dccgg-wrapper.is-open {
-        /* v0.9.7.23: `none`, not translateY(0) scale(1) — see the desktop
-           .is-open rule. Keeps the open hub from becoming the containing
-           block that clips the fixed-position detail stage inside it. */
-        transform: none;
+        transform: translateY(0);
     }
     /* v0.9.7.23: iOS Safari auto-zooms the whole page when a form field
        with font-size < 16px receives focus — and the zoom PERSISTS after

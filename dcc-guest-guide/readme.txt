@@ -70,6 +70,48 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.25 =
+
+**The detail popup no longer overflows the top of the mobile viewport —
+rebuilt on the proven DCC Availability Calendar popup pattern.** Earlier
+releases (0.9.7.17 through 0.9.7.24) kept adjusting the popup's geometry
+and the overflow kept returning, most visibly as: the popup opens
+correctly sized, then the instant you tap/scroll it grows, its top goes
+above the screen, it stops scrolling, and — because it now fills the
+viewport — you can't tap outside to dismiss it.
+
+Root cause (two compounding mechanisms):
+
+1. The popup pinned its top AND bottom and centered with `margin: auto`,
+   with its height capped by the DYNAMIC `dvh` unit. When the iOS toolbar
+   hides on first scroll, `dvh` grows, so the box grew too.
+2. v0.9.7.23 added JavaScript that re-wrote the popup's top position on
+   every visual-viewport movement (`--dccgg-vv-top`). Tapping/scrolling
+   moves the visual viewport, which re-ran that code and shoved the top
+   off-screen.
+
+Fix — the popup is now positioned entirely in CSS, matching the
+Availability Calendar sheet that already works on the same devices:
+
+* **Mobile: a bottom-anchored sheet.** Anchored only to the bottom (no
+  `top`), capped at a STATIC `90svh` (`svh` = small-viewport-height, the
+  viewport at its *smallest*, so it never grows when the toolbar hides),
+  with internal scroll. With the top edge never pinned and the height
+  cap static, the popup physically cannot overflow the top or jump.
+* **Desktop: a centered card** via `translate(-50%,-50%)`, capped at
+  `85svh` — no more `margin:auto` four-inset centering.
+* **All viewport-tracking JavaScript removed** — no `--dccgg-vv-top`
+  stamping, no `visualViewport` / resize listeners re-positioning the
+  popup. Nothing recomputes position on scroll, so nothing can jump.
+* `bottom: env(safe-area-inset-bottom)` + `viewport-fit=cover` (added to
+  the page's viewport meta on boot, idempotent) lift the sheet clear of
+  the iOS home indicator / floating toolbar. `overscroll-behavior:
+  contain` keeps inner scrolling from chaining to the page.
+
+The same treatment is applied to the FAB menu-hub popup, which shared
+the identical layout. Front-end and editor behavior are otherwise
+unchanged.
+
 = 0.9.7.24 =
 
 **Editor fix: clicking a Menu Hub section now shows its guide items in

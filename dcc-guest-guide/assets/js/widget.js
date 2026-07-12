@@ -140,8 +140,23 @@
         fn();
     }
 
+    // v0.9.7.25: append `viewport-fit=cover` to the page's viewport meta so
+    // env(safe-area-inset-bottom) returns a real value on iOS. The mobile
+    // popups anchor their bottom edge at `bottom: env(safe-area-inset-bottom)`
+    // to clear the iOS home-indicator / floating toolbar; without this the
+    // env() resolves to 0 and the bottom edge hides behind the toolbar.
+    // Idempotent, mirrors the DCC Availability Calendar's ensureViewportFitCover.
+    function ensureViewportFitCover() {
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) return;
+        const content = meta.getAttribute('content') || '';
+        if (content.indexOf('viewport-fit') >= 0) return;
+        meta.setAttribute('content', content + (content ? ', ' : '') + 'viewport-fit=cover');
+    }
+
     // -- Boot --------------------------------------------------------------
     function initAll() {
+        ensureViewportFitCover();
         document.querySelectorAll('.dccgg-root').forEach(init);
         wireGlobalCmdK();
         wireGlobalArrowKeys();
@@ -1640,8 +1655,6 @@
         if (!fab || !wrapper || !overlay) return;
 
         let lastTrigger = null;
-        let onResize = null;
-        let resizeT = null;
 
         const trap = (e) => {
             if (e.key === 'Escape') { close(); return; }
@@ -1662,49 +1675,21 @@
         const isDialog = wrapper.tagName === 'DIALOG'
             && typeof wrapper.showModal === 'function';
 
-        // v0.9.7.19: stamp the sticky-header offset on the wrapper so the
-        // CSS `top: calc(var(--dccgg-detail-top-offset) + …)` lands below
-        // any sticky theme nav. Without this the wrapper centered itself
-        // over the visual viewport and overflowed past the URL bar — the
-        // close X went out of reach on mobile.
-        // v0.9.7.23: also stamp the visual-viewport offset. When iOS has
-        // auto-zoomed (sub-16px input focus) or the guest pinch-zoomed,
-        // fixed/top-layer boxes anchor to the LAYOUT viewport while the
-        // guest sees only the panned visual viewport — the popup's top
-        // edge can sit above the visible screen. --dccgg-vv-top feeds the
-        // mobile top calc so the popup follows the visible top instead.
-        const stampOffset = () => {
-            const off = detectStickyTopOffset();
-            wrapper.style.setProperty('--dccgg-detail-top-offset', off + 'px');
-            const vv = window.visualViewport;
-            const vvTop = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
-            wrapper.style.setProperty('--dccgg-vv-top', vvTop + 'px');
-        };
-        let onVV = null;
-
+        // v0.9.7.25: the hub wrapper is now positioned entirely in CSS
+        // (centered card on desktop, bottom sheet capped at 90svh on
+        // mobile — same proven layout as the detail popup). The old JS
+        // sticky-offset + visual-viewport stamping is gone: a static svh
+        // cap can't overflow, so nothing has to track the viewport, and
+        // re-stamping the top on every viewport move was itself the source
+        // of the "jumps and overflows the top" bug.
         const open = () => {
             lastTrigger = document.activeElement;
-            stampOffset();
             if (isDialog) {
                 // ::backdrop supplies the dimming layer; keep the legacy
                 // overlay element hidden so we don't double-darken.
                 try { wrapper.showModal(); } catch (_) { /* already open */ }
             } else {
                 overlay.hidden = false;
-            }
-            if (onResize) window.removeEventListener('resize', onResize);
-            onResize = () => {
-                clearTimeout(resizeT);
-                resizeT = setTimeout(stampOffset, 80);
-            };
-            window.addEventListener('resize', onResize);
-            if (window.visualViewport && !onVV) {
-                onVV = () => {
-                    clearTimeout(resizeT);
-                    resizeT = setTimeout(stampOffset, 80);
-                };
-                window.visualViewport.addEventListener('resize', onVV);
-                window.visualViewport.addEventListener('scroll', onVV);
             }
             requestAnimationFrame(() => {
                 if (!isDialog) overlay.classList.add('is-open');
@@ -1719,16 +1704,6 @@
             wrapper.classList.remove('is-open');
             overlay.classList.remove('is-open');
             document.removeEventListener('keydown', trap);
-            if (onResize) {
-                window.removeEventListener('resize', onResize);
-                onResize = null;
-            }
-            if (onVV && window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', onVV);
-                window.visualViewport.removeEventListener('scroll', onVV);
-                onVV = null;
-            }
-            clearTimeout(resizeT);
             setTimeout(() => {
                 overlay.hidden = true;
                 // Let the fade-out finish before the dialog leaves the top
@@ -2089,37 +2064,13 @@
         }
         state.lastTrigger = document.activeElement;
         state.overlay.hidden = false;
-        // v0.9.7: stamp the sticky-header offset so the modal's top edge
-        // sits just below the theme header. Re-measure on resize so a
-        // hide-on-scroll header that changes height still aligns.
-        const stampOffset = () => {
-            const off = detectStickyTopOffset();
-            state.stage.style.setProperty('--dccgg-detail-top-offset', off + 'px');
-            state.overlay.style.setProperty('--dccgg-detail-top-offset', off + 'px');
-            // v0.9.7.23: track the visual viewport so an iOS auto-zoom /
-            // pinch-zoom pan can't leave the popup's top edge above the
-            // visible screen (fixed boxes anchor to the layout viewport).
-            const vv = window.visualViewport;
-            const vvTop = vv ? Math.max(0, Math.round(vv.offsetTop)) : 0;
-            state.stage.style.setProperty('--dccgg-vv-top', vvTop + 'px');
-        };
-        stampOffset();
-        if (state.onResize) window.removeEventListener('resize', state.onResize);
-        let resizeT = null;
-        state.onResize = () => {
-            clearTimeout(resizeT);
-            resizeT = setTimeout(stampOffset, 80);
-        };
-        window.addEventListener('resize', state.onResize);
-        if (window.visualViewport) {
-            if (state.onVV) {
-                window.visualViewport.removeEventListener('resize', state.onVV);
-                window.visualViewport.removeEventListener('scroll', state.onVV);
-            }
-            state.onVV = state.onResize;
-            window.visualViewport.addEventListener('resize', state.onVV);
-            window.visualViewport.addEventListener('scroll', state.onVV);
-        }
+        // v0.9.7.25: the detail popup is now positioned entirely in CSS
+        // (centered card on desktop, bottom sheet capped at 90svh on
+        // mobile — see widget.css). No JS sticky-offset or visual-viewport
+        // stamping: those recomputed the popup's top on every viewport
+        // move and were the direct cause of the "jumps and overflows the
+        // top after the first tap/scroll" bug. A static svh cap can't
+        // overflow, so nothing needs to track the viewport.
         document.documentElement.classList.add('dccgg-detail-open');
         document.body.classList.add('dccgg-detail-open');
         // Force a layout flush so the closed-state CSS commits before we
@@ -2159,15 +2110,6 @@
         if (state.onKey) document.removeEventListener('keydown', state.onKey);
         if (state.onOverlayClick && state.overlay) {
             state.overlay.removeEventListener('click', state.onOverlayClick);
-        }
-        if (state.onResize) {
-            window.removeEventListener('resize', state.onResize);
-            state.onResize = null;
-        }
-        if (state.onVV && window.visualViewport) {
-            window.visualViewport.removeEventListener('resize', state.onVV);
-            window.visualViewport.removeEventListener('scroll', state.onVV);
-            state.onVV = null;
         }
         state.onKey = null;
         state.onOverlayClick = null;
