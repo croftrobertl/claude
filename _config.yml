@@ -1,0 +1,19 @@
+# GitHub Pages (Jekyll) config — controls what the PUBLIC site publishes.
+# Only the tour-data/ archive app should be reachable at
+# https://croftrobertl.github.io/claude/tour-data/ . Everything listed here is
+# kept OUT of the built site (it still lives in the repo — see the privacy note
+# in the project chat: full protection requires the repo going private and/or
+# moving to gated hosting on doracanalcourt.com).
+exclude:
+  # ops docs / other-project source (NOT trip content)
+  - CLAUDE.md
+  - SITE-CONTEXT.md
+  - SITE_CONTEXT.md
+  - README.md
+  - mphb-availability-calendar
+  - dcc-croatia-tour
+  # pipeline + raw per-item GPS inputs (app never fetches these)
+  - tour-data/tools
+  - tour-data/data/place-names.csv
+  - tour-data/data/place-names.json
+  - tour-data/data-local
