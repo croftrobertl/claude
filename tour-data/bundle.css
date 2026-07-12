@@ -518,3 +518,46 @@
 @keyframes dcc-fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .dcc-tour-dayhead { animation: dcc-fadein 0.28s ease both; }
 @media (prefers-reduced-motion: reduce) { .dcc-tour-dayhead { animation: none; } }
+
+/* ===== playable video/clip cells (poster + tap to play) ===== */
+.dcc-tour-play-cell { cursor: pointer; background: #000; }
+.dcc-tour-play-cell img.noimg { display: none; }
+.dcc-tour-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 1.7rem; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.7); pointer-events: none; }
+.dcc-tour-play-cell.activated .dcc-tour-play, .dcc-tour-play-cell.activated .dcc-tour-badge { display: none; }
+.dcc-tour-play-cell.wide { cursor: default; }
+.dcc-tour-play-cell.wide video, .dcc-tour-play-cell.wide iframe { width: 100%; display: block; }
+.dcc-tour-play-cell.wide video { max-height: 460px; background: #000; }
+.dcc-tour-play-cell.wide iframe { height: 300px; border: 0; }
+
+/* ===== day cover hero ===== */
+.dcc-tour-daycover { border-radius: var(--dcc-tour-radius); overflow: hidden; margin-bottom: 0.8rem; box-shadow: var(--dcc-tour-shadow); }
+.dcc-tour-daycover img { width: 100%; height: 210px; object-fit: cover; display: block; }
+@media (max-width: 800px) { .dcc-tour-daycover img { height: 168px; } }
+
+/* ===== day-chip thumbnails (desktop strip) ===== */
+.dcc-tour-daychip { min-width: 78px; }
+.dcc-tour-daychip .d-thumb { width: 100%; height: 34px; object-fit: cover; border-radius: 6px; margin-bottom: 3px; display: block; }
+.dcc-tour-daychip.active .d-thumb { outline: 2px solid #fff; outline-offset: -2px; }
+
+/* ===== numbered route pins on the day map ===== */
+.dcc-tour-numpin { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  background: var(--dcc-tour-primary); color: #fff; border: 2px solid #fff; border-radius: 50%;
+  font-size: 0.72rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+@media (max-width: 800px) {
+  /* day-picker sheet: cover thumbnail + text row */
+  .sheet-day { flex-direction: row; align-items: center; gap: 10px; }
+  .sheet-day .sd-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; }
+  .sheet-day .sd-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .sheet-day .sd-txt > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ===== dark mode (auto) ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dcc-tour-bg: #14171a; --dcc-tour-card-bg: #1e2226; --dcc-tour-text: #e8ecf0;
+    --dcc-tour-muted: #98a2ac; --dcc-tour-border: #2b3138; --dcc-tour-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  }
+  .dcc-tour-map { background: #223042; }
+}

@@ -43,7 +43,9 @@
       const b = document.createElement('button');
       b.className = 'dcc-tour-daychip';
       b.dataset.day = i;
-      b.innerHTML = '<span class="d-n">Day ' + d.index + '</span>' +
+      const cv = coverSrc(d);
+      b.innerHTML = (cv ? '<img class="d-thumb" loading="lazy" src="' + escapeAttr(cv) + '" alt="">' : '') +
+                    '<span class="d-n">Day ' + d.index + '</span>' +
                     '<span class="d-d">' + escapeHtml(d.short) + '</span>' +
                     '<span class="d-c">' + d.count + '</span>';
       b.addEventListener('click', () => { setMode('story'); selectDay(i); });
@@ -119,8 +121,10 @@
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
     sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel"><div class="sheet-handle"></div>' +
       '<h4>Jump to a day</h4><div class="sheet-days">' +
-      DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '"><b>Day ' + d.index + '</b>' +
-        '<span>' + escapeHtml(d.short) + '</span><span class="sd-area">' + escapeHtml(d.area || '') + '</span>' +
+      DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
+        (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
+        '<span class="sd-txt"><b>Day ' + d.index + '</b>' +
+        '<span>' + escapeHtml(d.short) + '</span><span class="sd-area">' + escapeHtml(d.area || '') + '</span></span>' +
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
@@ -465,6 +469,16 @@
 
   function fmt(n) { return Math.round(n).toLocaleString(); }
   function shortName(s) { return String(s || '').split(/[,(]/)[0].trim(); }
+  // a representative "cover" thumbnail for a day (middle shot of its biggest place)
+  function coverSrc(day) {
+    let best = null, bestN = -1;
+    (day.places || []).forEach(p => {
+      const imgs = p.items.filter(it => it.full || it.poster);
+      if (imgs.length > bestN) { bestN = imgs.length; best = imgs; }
+    });
+    if (best && best.length) { const it = best[Math.floor(best.length / 2)]; return resolveUrl(it.src || it.full || it.poster); }
+    return '';
+  }
   function tripStatsHTML() {
     const h = DATA.health; if (!h) return '';
     const s = DATA.stats || {};
@@ -643,7 +657,9 @@
     lightboxFulls = []; lightboxMeta = []; lightboxIdx = -1;
     for (const k in markersByPlace) delete markersByPlace[k];
 
-    let html = '<div class="dcc-tour-dayhead">' +
+    const cov = coverSrc(day);
+    let html = (cov ? '<div class="dcc-tour-daycover"><img loading="eager" src="' + escapeAttr(cov) + '" alt=""></div>' : '') +
+      '<div class="dcc-tour-dayhead">' +
       '<div class="dcc-tour-daynum">Day ' + day.index + ' / ' + DATA.day_count + '</div>' +
       '<h2>' + escapeHtml(day.label) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
@@ -735,19 +751,22 @@
 
   function renderItem(item) {
     const extras = mapsLink(item.lat, item.lng, 'dcc-tour-maplink cell');
+    // GoPro clips (Drive): show a poster frame, load the player on tap
     if (item.type === 'drive') {
-      return '<div class="dcc-tour-cell wide"><iframe loading="lazy" allowfullscreen allow="autoplay" ' +
-        'src="https://drive.google.com/file/d/' + escapeAttr(item.id) + '/preview"></iframe>' +
-        '<span class="dcc-tour-badge">▶ clip</span>' + cap(item) + extras + '</div>';
+      const thumb = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.id) + '&sz=w400';
+      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-clip="' + escapeAttr(item.id) + '">' +
+        '<img loading="lazy" src="' + escapeAttr(thumb) + '" alt="clip" onerror="this.classList.add(\'noimg\')">' +
+        '<span class="dcc-tour-play">▶</span><span class="dcc-tour-badge">clip</span>' + cap(item) + extras + '</div>';
     }
+    // self-hosted videos: show the poster frame, load the video on tap
     if (item.type === 'self_hosted') {
-      const durb = item.dur ? '<span class="dcc-tour-badge">▶ ' + fmtDur(item.dur) + '</span>' : '<span class="dcc-tour-badge">▶ video</span>';
-      if (!item.url && item.poster)
-        return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.poster)) + '" alt="video" style="opacity:.85" />' + durb + cap(item) + extras + '</div>';
-      if (!item.url) return '';
-      const poster = item.poster ? ' poster="' + escapeAttr(resolveUrl(item.poster)) + '"' : '';
-      return '<div class="dcc-tour-cell wide"><video src="' + escapeAttr(resolveUrl(item.url)) + '"' + poster +
-             ' controls preload="none"></video>' + durb + cap(item) + extras + '</div>';
+      const durb = '<span class="dcc-tour-badge">' + (item.dur ? fmtDur(item.dur) : 'video') + '</span>';
+      const posterUrl = item.poster ? resolveUrl(item.poster) : '';
+      if (!item.url)
+        return posterUrl ? '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' + durb + cap(item) + extras + '</div>' : '';
+      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-vsrc="' + escapeAttr(resolveUrl(item.url)) + '" data-poster="' + escapeAttr(posterUrl) + '">' +
+        (posterUrl ? '<img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' : '') +
+        '<span class="dcc-tour-play">▶</span>' + durb + cap(item) + extras + '</div>';
     }
     // photo
     const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
@@ -759,22 +778,26 @@
     return '<span class="dcc-tour-cell-time">' + escapeHtml((item.time || '') + alt) + '</span>';
   }
 
-  // ---- map ----
+  // ---- map: the day's route (numbered stops + connecting path) ----
+  let dayLayer = null;
   function showDayOnMap(day) {
-    if (!map || !clusterGroup) return;
-    clusterGroup.clearLayers();
-    const pts = [];
+    if (!map) return;
+    if (dayLayer) map.removeLayer(dayLayer);
+    dayLayer = L.layerGroup().addTo(map);
+    for (const k in markersByPlace) delete markersByPlace[k];
+    const pts = [], line = [];
     day.places.forEach((p, pi) => {
       if (p.lat == null) return;
-      const m = L.marker([p.lat, p.lng], { title: p.name });
+      pts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
+      const icon = L.divIcon({ className: 'dcc-tour-numpin', html: String(pi + 1), iconSize: [26, 26], iconAnchor: [13, 13] });
+      const m = L.marker([p.lat, p.lng], { title: p.name, icon });
       m.on('click', () => {
         const sec = root._story.querySelector('#place-' + pi);
         if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-      clusterGroup.addLayer(m);
-      markersByPlace[pi] = m;
-      pts.push([p.lat, p.lng]);
+      m.addTo(dayLayer); markersByPlace[pi] = m;
     });
+    if (line.length > 1) L.polyline(line, { color: '#0f6dbf', weight: 3, opacity: 0.55, dashArray: '3 6' }).addTo(dayLayer);
     if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2), { animate: false });
     else map.setView([42.64, 18.11], 11);
     setTimeout(() => map.invalidateSize(), 60);
@@ -792,11 +815,30 @@
 
   // ===== Lightbox (photos) =====
   document.addEventListener('click', (e) => {
+    if (e.target.closest('.dcc-tour-maplink')) return;
+    const cell = e.target.closest('.dcc-tour-play-cell');
+    if (cell && !cell.dataset.activated) { activateMedia(cell); return; }
     const img = e.target.closest('.dcc-tour-media img[data-full]');
     if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); return; }
     const hl = e.target.closest('.dcc-tour-hl[data-full]');
     if (hl) { openLightbox(Math.max(0, lightboxFulls.indexOf(hl.getAttribute('data-full')))); }
   });
+  function activateMedia(cell) {
+    cell.dataset.activated = '1';
+    cell.classList.add('wide', 'activated');
+    while (cell.firstChild) cell.removeChild(cell.firstChild);
+    if (cell.dataset.vsrc) {
+      const v = document.createElement('video');
+      v.src = cell.dataset.vsrc; if (cell.dataset.poster) v.poster = cell.dataset.poster;
+      v.controls = true; v.autoplay = true; v.setAttribute('playsinline', '');
+      cell.appendChild(v);
+    } else if (cell.dataset.clip) {
+      const f = document.createElement('iframe');
+      f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(cell.dataset.clip) + '/preview';
+      f.allow = 'autoplay'; f.allowFullscreen = true;
+      cell.appendChild(f);
+    }
+  }
   document.addEventListener('keydown', (e) => {
     if (lightboxIdx >= 0) {
       if (e.key === 'Escape') closeLightbox();
