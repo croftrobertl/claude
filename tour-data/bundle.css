@@ -158,7 +158,8 @@
   gap: 1rem;
   padding: 0.5rem 1.5rem 1.5rem;
 }
-.dcc-tour-story { max-height: 80vh; overflow-y: auto; padding-right: 4px; }
+.dcc-tour-story { max-height: 80vh; overflow-y: auto; padding-right: 4px; min-width: 0; }
+.dcc-tour-place, .dcc-tour-media { min-width: 0; }
 .dcc-tour-mapwrap { position: sticky; top: 4.25rem; align-self: start; }
 .dcc-tour-map {
   height: 80vh;
@@ -168,7 +169,7 @@
   background: #c8d8e8;
 }
 @media (max-width: 800px) {
-  .dcc-tour-body { grid-template-columns: 1fr; }
+  .dcc-tour-body { grid-template-columns: minmax(0, 1fr); }  /* minmax(0,…) not 1fr — plain 1fr's auto min lets the media grid overflow the viewport */
   .dcc-tour-story { max-height: none; overflow: visible; }
 }
 
@@ -442,11 +443,26 @@
   .dcc-tour-daychip { min-width: 64px; min-height: 48px; padding: 8px 12px; justify-content: center; }
   .dcc-tour-daychip .d-d { font-size: 0.98rem; }
 
-  /* readability bumps */
-  .dcc-tour-daymeta { font-size: 0.88rem; }
-  .dcc-tour-weather, .dcc-tour-health { font-size: 0.92rem; }
-  .dcc-tour-cell-time { font-size: 0.7rem; }
-  .dcc-tour-place-head h3 { font-size: 1.08rem; }
+  /* ── mobile type scale: read at a held-phone distance, editorial-sized ── */
+  .dcc-tour-daynum { font-size: 0.8rem; letter-spacing: 0.1em; }
+  .dcc-tour-dayhead h2 { font-size: 2.1rem; line-height: 1.1; }
+  .dcc-tour-area { font-size: 1.12rem; }
+  .dcc-tour-daystory { font-size: 1.16rem; line-height: 1.72; margin-top: 0.75rem; }
+  .dcc-tour-daymeta { font-size: 0.98rem; }
+  .dcc-tour-weather, .dcc-tour-health { font-size: 1rem; }
+  .dcc-tour-stairtale { font-size: 0.98rem; }
+  .dcc-tour-cell-time { font-size: 0.72rem; }
+  .dcc-tour-place-head h3 { font-size: 1.42rem; }
+  .dcc-tour-place-meta { font-size: 0.92rem; }
+  .dcc-tour-place-cum { font-size: 0.82rem; }
+  .dcc-tour-chip { font-size: 0.98rem; }
+  /* app-shell chrome scales up with the content */
+  .tb-daylabel { font-size: 1.18rem; }
+  .tb-daynum { font-size: 0.72rem; }
+  .dcc-tour-tabbtn { font-size: 0.72rem; }
+  .dcc-tour-tabbtn .ti { font-size: 1.42rem; }
+  .sheet-day b { font-size: 1.02rem; }
+  .sheet-day .sd-area { font-size: 0.82rem; }
 
   /* place header stacks instead of colliding */
   .dcc-tour-place-head { flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -467,9 +483,16 @@
 
 @media (max-width: 480px) {
   .dcc-tour-media { grid-template-columns: repeat(2, 1fr); }
-  .dcc-tour-header { padding: 1rem 1rem 0.25rem; }
+  /* a wider editorial margin narrows the reading column (paired with the larger
+     type above this is a comfortable ~35-char measure, book-like) */
+  .dcc-tour-header { padding: 1rem 1.35rem 0.25rem; }
   .dcc-tour-controls, .dcc-tour-overview, .dcc-tour-modes,
-  .dcc-tour-body { padding-left: 1rem; padding-right: 1rem; }
+  .dcc-tour-body { padding-left: 1.35rem; padding-right: 1.35rem; }
+  .dcc-tour-gallery { padding-left: 1.1rem; padding-right: 1.1rem; }
+  /* the narrated day card carries its own inset — trim it so the story text
+     isn't double-indented against the new page margin */
+  .dcc-tour-dayhead { padding: 1rem 1rem; }
+  .dcc-tour-title { font-size: 2rem; }
 }
 
 /* touch devices: keep affordances visible + fingers-friendly */
