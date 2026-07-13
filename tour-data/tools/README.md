@@ -45,6 +45,13 @@ and shot counts. You can:
   spots (still on their raw auto-label — the gold-outlined ones);
 - click any thumbnail to preview the full photo / play the video or clip.
 
+**No server? Use the standalone build.** Opening `name-tool.html` straight from
+disk (file://) shows *“couldn't auto-load the data”* — browsers block its data
+fetches without a web server. Instead use **`name-tool-standalone.html`**, which
+has the data baked in and works when double-clicked (previews load from the
+public site, so stay online for thumbnails). Regenerate it after any naming
+change with `python3 make_standalone_nametool.py`.
+
 When done, click **⭳ Download names JSON** → it saves `croatia-names-v3.json`.
 Drop that file over `pipeline/croatia-names-v3.json` and run the rebuild order
 above (starting at `apply_names_v3.py`). The tool seeds from the current file, so

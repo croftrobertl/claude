@@ -107,7 +107,9 @@
 
 <script>
 "use strict";
-const MEDIA = "../../";                 // media/ lives at tour-data/ root; tool is 2 levels down
+// media base: relative to tour-data/ when served locally; the standalone build
+// overrides this with the public site URL so previews load with data embedded.
+const MEDIA = window.__MEDIA_BASE__ || "../../";
 const driveThumb = id => "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w400";
 const drivePreview = id => "https://drive.google.com/file/d/" + encodeURIComponent(id) + "/preview";
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -120,6 +122,8 @@ let dirty = false;   // unsaved edits since the last download
 // ---------- data loading ----------
 async function tryFetch(name){ const r = await fetch(name); if(!r.ok) throw new Error(name+" "+r.status); return r.json(); }
 async function boot(){
+  // standalone build: data is embedded, no server needed
+  if (window.__EMBEDDED__) { const d = window.__EMBEDDED__; init(d.items, d.cmap, d.names); return; }
   try {
     const [items, cmap, names] = await Promise.all([
       tryFetch("flat_items_labeled.json"),
