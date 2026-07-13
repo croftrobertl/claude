@@ -495,6 +495,10 @@
   .dcc-tour-place-chevron { font-size: 1.15rem; }
   .dcc-tour-idx-all, .dcc-tour-idx-chip { min-height: 40px; font-size: 0.9rem; }
 
+  /* the date/search controls row is redundant on phones — day + place finding
+     both live in the day sheet (tap the day label). Hidden here, kept on desktop. */
+  .dcc-tour-controls { display: none !important; }
+
   /* controls + buttons: 44px hit areas */
   .dcc-tour-ctl { flex: 1; }
   .dcc-tour-ctl input { min-height: 44px; }
@@ -601,6 +605,17 @@
   .dcc-tour-sheet.open .sheet-panel { transform: translateY(0); }
   .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dcc-tour-border); margin: 6px auto 10px; }
   .sheet-panel h4 { margin: 0 0 10px; font-size: 0.95rem; }
+  /* in-sheet place search (the discoverable search on phones) */
+  .sheet-search { width: 100%; min-height: 46px; font: inherit; font-size: 1rem; padding: 10px 14px; margin-bottom: 10px;
+    border: 1px solid var(--dcc-tour-border); border-radius: 12px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
+  .sheet-search:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
+  .sheet-results { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+  .sheet-result { display: flex; flex-direction: column; gap: 1px; text-align: left; width: 100%; min-height: 48px; justify-content: center;
+    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  .sheet-result .sr-name { color: var(--dcc-tour-text); font-size: 1rem; }
+  .sheet-result .sr-meta { color: var(--dcc-tour-muted); font-size: 0.8rem; }
+  .sheet-result:hover, .sheet-result:active { border-color: var(--dcc-tour-primary); }
+  .sheet-noresult { color: var(--dcc-tour-muted); font-size: 0.9rem; padding: 6px 2px; }
   .sheet-days { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .sheet-day { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
     border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 10px;

@@ -117,8 +117,11 @@
     bar.querySelector('.tb-print').addEventListener('click', openMobilePrint);
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
-    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day"><div class="sheet-handle"></div>' +
-      '<h4>Jump to a day</h4><div class="sheet-days">' +
+    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day or place"><div class="sheet-handle"></div>' +
+      '<h4>Jump to a day or place</h4>' +
+      '<input type="search" class="sheet-search" id="dcc-sheet-search" placeholder="Search places — Lokrum, Stradun…" autocomplete="off">' +
+      '<div class="sheet-results" id="dcc-sheet-results" hidden></div>' +
+      '<div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
         '<span class="sd-txt"><b>Day ' + d.index + '</b>' +
@@ -126,6 +129,25 @@
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
+    // in-sheet place search — the one discoverable search on mobile
+    const ssearch = sheet.querySelector('#dcc-sheet-search');
+    const sres = sheet.querySelector('#dcc-sheet-results');
+    const sdays = sheet.querySelector('.sheet-days');
+    ssearch.addEventListener('input', () => {
+      const q = ssearch.value.trim().toLowerCase();
+      if (!q) { sres.hidden = true; sres.innerHTML = ''; sdays.style.display = ''; return; }
+      const hits = placeIndex().filter(x => x.key.includes(q)).slice(0, 20);
+      sdays.style.display = 'none'; sres.hidden = false;
+      sres.innerHTML = hits.length ? hits.map(h =>
+        '<button class="sheet-result" data-di="' + h.di + '" data-pi="' + h.pi + '">' +
+        '<span class="sr-name">' + escapeHtml(h.name) + '</span>' +
+        '<span class="sr-meta">' + escapeHtml(h.short) + ' · ' + plur(h.count, 'shot') + '</span></button>').join('')
+        : '<p class="sheet-noresult">No places match that search.</p>';
+    });
+    sres.addEventListener('click', e => {
+      const b = e.target.closest('.sheet-result'); if (!b) return;
+      closeDaySheet(); jumpToPlace(+b.dataset.di, +b.dataset.pi);
+    });
 
     root.insertBefore(tb, root.firstChild); root.appendChild(bar); root.appendChild(sheet);
     root._topbar = tb; root._sheet = sheet;
@@ -215,7 +237,14 @@
     root._topbar.querySelector('.tb-prev').disabled = curDay <= 0;
     root._topbar.querySelector('.tb-next').disabled = curDay >= DATA.day_count - 1;
   }
-  function openDaySheet() { const s = root._sheet; if (s) { s.hidden = false; requestAnimationFrame(() => s.classList.add('open')); } }
+  function openDaySheet() {
+    const s = root._sheet; if (!s) return;
+    // always open on the day list, not a stale search
+    const q = s.querySelector('#dcc-sheet-search'); if (q) q.value = '';
+    const sr = s.querySelector('#dcc-sheet-results'); if (sr) { sr.hidden = true; sr.innerHTML = ''; }
+    const sd = s.querySelector('.sheet-days'); if (sd) sd.style.display = '';
+    s.hidden = false; requestAnimationFrame(() => s.classList.add('open'));
+  }
   function closeDaySheet() { const s = root._sheet; if (s) { s.classList.remove('open'); setTimeout(() => { s.hidden = true; }, 220); } }
   function attachSwipe(elm) {
     if (!elm) return; let x0 = null, y0 = null;
@@ -539,6 +568,38 @@
     }), 0);
   }
 
+  // shared place index + jump helper (used by desktop search AND the mobile sheet)
+  let PLACE_INDEX = null;
+  function placeIndex() {
+    if (!PLACE_INDEX) {
+      PLACE_INDEX = [];
+      DATA.days.forEach((d, di) => d.places.forEach((p, pi) =>
+        PLACE_INDEX.push({ di, pi, name: p.name, short: d.short, count: p.count, key: p.name.toLowerCase() })));
+    }
+    return PLACE_INDEX;
+  }
+  function jumpToPlace(di, pi) {
+    setView('story');
+    selectDay(di);
+    setTimeout(() => {
+      const sec = root._story.querySelector('#place-' + pi);
+      if (!sec) return;
+      setPlaceOpen(sec, true);   // reveal it if collapsed (mobile default)
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      sec.classList.add('dcc-tour-flash');
+      setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600);
+    }, 90);
+  }
+  function plur(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  // day-card counts: only the kinds that exist, no redundant "N items" sum
+  function dayCountLabel(day) {
+    const k = day.kinds || {}, parts = [];
+    if (k.photo) parts.push(plur(k.photo, 'photo'));
+    if (k.video) parts.push(plur(k.video, 'video'));
+    if (k.clip) parts.push(plur(k.clip, 'clip'));
+    return parts.length ? parts.join(' · ') : plur(day.count || 0, 'item');
+  }
+
   // ---- #6 date search + location filter ----
   function buildControls() {
     const wrap = el('div', 'dcc-tour-controls');
@@ -555,9 +616,7 @@
       if (idx >= 0) { setView('story'); selectDay(idx); }
     });
     // place search across all days
-    const idx = [];
-    DATA.days.forEach((d, di) => d.places.forEach((p, pi) =>
-      idx.push({ di, pi, name: p.name, short: d.short, count: p.count, key: p.name.toLowerCase() })));
+    const idx = placeIndex();
     const inp = wrap.querySelector('#dcc-placesearch');
     const res = wrap.querySelector('#dcc-results');
     inp.addEventListener('input', () => {
@@ -572,11 +631,7 @@
     res.addEventListener('click', e => {
       const b = e.target.closest('.dcc-tour-result'); if (!b) return;
       res.hidden = true; inp.value = '';
-      setView('story'); selectDay(+b.dataset.di);
-      setTimeout(() => {
-        const sec = root._story.querySelector('#place-' + b.dataset.pi);
-        if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
-      }, 80);
+      jumpToPlace(+b.dataset.di, +b.dataset.pi);
     });
     document.addEventListener('click', e => { if (!wrap.contains(e.target)) res.hidden = true; });
     return wrap;
@@ -788,8 +843,7 @@
       '<h2>' + escapeHtml(day.label) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
-      '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
-        day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
+      '<p class="dcc-tour-daymeta">' + dayCountLabel(day) + '</p>' +
       weatherHTML(day.weather) +
       healthRibbonHTML(day) +
       (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
@@ -1002,6 +1056,7 @@
     if (hl) { openLightbox(Math.max(0, lightboxFulls.indexOf(hl.getAttribute('data-full')))); }
   });
   // keyboard: place headers are role=button, so activate on Enter/Space
+  // (arrow-key day navigation already lives in the lightbox keydown handler)
   document.addEventListener('keydown', (e) => {
     const head = e.target.closest && e.target.closest('.dcc-tour-place-head');
     if (head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); head.click(); }
