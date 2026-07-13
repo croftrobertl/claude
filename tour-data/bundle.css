@@ -190,8 +190,27 @@
 
 /* ---- place section ---- */
 .dcc-tour-place { margin-bottom: 1.25rem; scroll-margin-top: 0.5rem; }
-.dcc-tour-place-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--dcc-tour-border); }
+.dcc-tour-place-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--dcc-tour-border); cursor: pointer; user-select: none; }
+.dcc-tour-place-htext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dcc-tour-place-head h3 { margin: 0; font-size: 1.25rem; color: var(--dcc-tour-text); }
+.dcc-tour-place-head:hover h3 { color: var(--dcc-tour-accent-deep); }
+.dcc-tour-place-head:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 3px; border-radius: 3px; }
+.dcc-tour-place-chevron { flex: 0 0 auto; color: var(--dcc-tour-muted); font-size: 0.95rem; line-height: 1; transition: transform 0.18s ease, color 0.15s; }
+.dcc-tour-place-head:hover .dcc-tour-place-chevron { color: var(--dcc-tour-primary); }
+/* collapsed: hide the media, rotate the chevron, drop the rule to read as a list */
+.dcc-tour-place[data-open="0"] .dcc-tour-media { display: none; }
+.dcc-tour-place[data-open="0"] .dcc-tour-place-chevron { transform: rotate(-90deg); }
+.dcc-tour-place[data-open="0"] .dcc-tour-place-head { margin-bottom: 0; border-bottom-color: transparent; }
+
+/* place index / jump bar (table of contents for the day) */
+.dcc-tour-places-index { display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1.1rem; }
+.dcc-tour-idx-all { flex: 0 0 auto; font: inherit; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--dcc-tour-border); background: transparent; color: var(--dcc-tour-muted); border-radius: 999px; padding: 6px 13px; white-space: nowrap; }
+.dcc-tour-idx-all:hover { border-color: var(--dcc-tour-primary); color: var(--dcc-tour-accent-deep); }
+.dcc-tour-idx-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 3px; -webkit-overflow-scrolling: touch; }
+.dcc-tour-idx-chip { flex: 0 0 auto; font: inherit; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); border-radius: 999px; padding: 6px 13px; white-space: nowrap; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.dcc-tour-idx-chip b { color: var(--dcc-tour-accent-deep); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.dcc-tour-idx-chip:hover { border-color: var(--dcc-tour-primary); }
+.dcc-tour-idx-all:active, .dcc-tour-idx-chip:active { transform: scale(0.96); }
 .dcc-tour-place-meta { flex: 0 0 auto; font-size: 0.78rem; color: var(--dcc-tour-muted); white-space: nowrap; }
 
 /* ---- media grid ---- */
@@ -470,9 +489,11 @@
   .dcc-tour-hl { width: 220px; height: 165px; }
   .dcc-tour-hl .hl-cap { font-size: 0.76rem; padding: 14px 10px 6px; }
 
-  /* place header stacks instead of colliding */
-  .dcc-tour-place-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+  /* place header: text block (name over meta) + chevron; bigger tap target */
+  .dcc-tour-place-head { align-items: center; gap: 0.6rem; min-height: 48px; }
   .dcc-tour-place-meta { white-space: normal; }
+  .dcc-tour-place-chevron { font-size: 1.15rem; }
+  .dcc-tour-idx-all, .dcc-tour-idx-chip { min-height: 40px; font-size: 0.9rem; }
 
   /* controls + buttons: 44px hit areas */
   .dcc-tour-ctl { flex: 1; }

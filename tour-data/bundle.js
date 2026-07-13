@@ -801,6 +801,20 @@
 
     html += highlightsHTML(day);
 
+    // Places default collapsed on phones (a big single-column day then reads as
+    // a tappable itinerary) and open on desktop. The index bar below is a table
+    // of contents: each chip scrolls to and opens its place.
+    const placesOpenDefault = !window.matchMedia('(max-width: 800px)').matches;
+    if (day.places.length > 1) {
+      html += '<nav class="dcc-tour-places-index" aria-label="Places this day">' +
+        '<button type="button" class="dcc-tour-idx-all" data-allopen="' + (placesOpenDefault ? '1' : '0') + '">' +
+          (placesOpenDefault ? 'Collapse all' : 'Expand all') + '</button>' +
+        '<div class="dcc-tour-idx-chips">' +
+        day.places.map((p, pi) => '<button type="button" class="dcc-tour-idx-chip" data-goto="' + pi + '">' +
+          '<b>' + (pi + 1) + '</b> ' + escapeHtml(shortName(p.name)) + '</button>').join('') +
+        '</div></nav>';
+    }
+
     const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
     day.places.forEach((p, pi) => {
       const anchor = 'place-' + pi;
@@ -815,12 +829,16 @@
         if (bits.length) cum = ' <span class="dcc-tour-place-cum">· ' + bits.join(' · ') + ' by now</span>';
       }
       const spent = p.mins ? ' · ' + (p.mins >= 60 ? (p.mins/60).toFixed(1) + ' h' : p.mins + ' min') + ' here' : '';
-      html += '<section class="dcc-tour-place" id="' + anchor + '">' +
-        '<div class="dcc-tour-place-head">' +
-          '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
-          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
+      const openAttr = placesOpenDefault ? '1' : '0';
+      html += '<section class="dcc-tour-place" id="' + anchor + '" data-open="' + openAttr + '">' +
+        '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
+          '<div class="dcc-tour-place-htext">' +
+            '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
+            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
+          '</div>' +
+          '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
-        '<div class="dcc-tour-media">' + p.items.map(renderItem).join('') + '</div>' +
+        '<div class="dcc-tour-media" id="media-' + pi + '">' + p.items.map(renderItem).join('') + '</div>' +
         '</section>';
     });
 
@@ -942,15 +960,51 @@
     if (html != null) e.innerHTML = html; return e;
   }
 
-  // ===== Lightbox (photos) =====
+  // ---- collapsible place sections + jump-to-place index ----
+  function setPlaceOpen(sec, open) {
+    if (!sec) return;
+    sec.dataset.open = open ? '1' : '0';
+    const head = sec.querySelector('.dcc-tour-place-head');
+    if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  // ===== Lightbox (photos) + place navigation =====
   document.addEventListener('click', (e) => {
     if (e.target.closest('.dcc-tour-maplink')) return;
+    // Expand all / Collapse all
+    const idxAll = e.target.closest('.dcc-tour-idx-all');
+    if (idxAll) {
+      const open = idxAll.dataset.allopen !== '1';
+      root._story.querySelectorAll('.dcc-tour-place').forEach(s => setPlaceOpen(s, open));
+      idxAll.dataset.allopen = open ? '1' : '0';
+      idxAll.textContent = open ? 'Collapse all' : 'Expand all';
+      return;
+    }
+    // index chip → open that place and scroll to it
+    const chip = e.target.closest('.dcc-tour-idx-chip');
+    if (chip) {
+      const sec = root._story.querySelector('#place-' + chip.dataset.goto);
+      if (sec) { setPlaceOpen(sec, true); sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      return;
+    }
+    // tap a place header → toggle its photos
+    const phead = e.target.closest('.dcc-tour-place-head');
+    if (phead) {
+      const sec = phead.closest('.dcc-tour-place');
+      setPlaceOpen(sec, sec.dataset.open !== '1');
+      return;
+    }
     const cell = e.target.closest('.dcc-tour-play-cell');
     if (cell && !cell.dataset.activated) { activateMedia(cell); return; }
     const img = e.target.closest('.dcc-tour-media img[data-full]');
     if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); return; }
     const hl = e.target.closest('.dcc-tour-hl[data-full]');
     if (hl) { openLightbox(Math.max(0, lightboxFulls.indexOf(hl.getAttribute('data-full')))); }
+  });
+  // keyboard: place headers are role=button, so activate on Enter/Space
+  document.addEventListener('keydown', (e) => {
+    const head = e.target.closest && e.target.closest('.dcc-tour-place-head');
+    if (head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); head.click(); }
   });
   function activateMedia(cell) {
     cell.dataset.activated = '1';
