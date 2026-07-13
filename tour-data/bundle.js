@@ -926,7 +926,7 @@
       });
       m.addTo(dayLayer); markersByPlace[pi] = m;
     });
-    if (line.length > 1) L.polyline(line, { color: '#0f6dbf', weight: 3, opacity: 0.55, dashArray: '3 6' }).addTo(dayLayer);
+    if (line.length > 1) L.polyline(line, { color: '#7d5411', weight: 3, opacity: 0.6, dashArray: '3 6' }).addTo(dayLayer);
     if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2), { animate: false });
     else map.setView([42.64, 18.11], 11);
     setTimeout(() => map.invalidateSize(), 60);

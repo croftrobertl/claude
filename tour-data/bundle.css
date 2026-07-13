@@ -1,15 +1,76 @@
-/* Croatia trip — day-by-day archive styles. Standalone + WP/Elementor loader. */
+/* Croatia trip — day-by-day archive styles. Standalone + WP/Elementor loader.
+   Look: "Classical" editorial design system (Claude Design redesign) — Cormorant
+   Garamond headings over Lora body on a warm near-white ground, a single gold
+   accent applied as stroke (outlines, rules, underlines) rather than fill, and
+   photographs matted like tipped-in plates. Fonts are self-hosted under
+   vendor/fonts/ so the archive stays offline-capable and CDN-free (same reason
+   Leaflet is vendored). */
+@font-face {
+  font-family: "Cormorant Garamond"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url(vendor/fonts/cormorant-600-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "Cormorant Garamond"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url(vendor/fonts/cormorant-600-latinext.woff2) format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: "Lora"; font-style: normal; font-weight: 400 600; font-display: swap;
+  src: url(vendor/fonts/lora-400-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "Lora"; font-style: normal; font-weight: 400 600; font-display: swap;
+  src: url(vendor/fonts/lora-400-latinext.woff2) format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: "Lora"; font-style: italic; font-weight: 400 600; font-display: swap;
+  src: url(vendor/fonts/lora-italic-400-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "Lora"; font-style: italic; font-weight: 400 600; font-display: swap;
+  src: url(vendor/fonts/lora-italic-400-latinext.woff2) format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 :root {
-  --dcc-tour-primary: #0f6dbf;
-  --dcc-tour-secondary: #f08080;
-  --dcc-tour-bg: #f8f9fa;
-  --dcc-tour-card-bg: #ffffff;
-  --dcc-tour-text: #111111;
-  --dcc-tour-muted: #6c757d;
-  --dcc-tour-border: #e6e8eb;
-  --dcc-tour-shadow: 0 6px 24px rgba(15, 109, 191, 0.10);
-  --dcc-tour-radius: 12px;
-  --dcc-tour-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Classical mono palette: one warm gold accent. Large headings may sit in the
+     accent (>=3:1 on this ground); small/paragraph accent text uses the deep
+     ramp step (--dcc-tour-secondary / -accent-deep). */
+  --dcc-tour-primary: #b68235;          /* accent — strokes, large headings, links */
+  --dcc-tour-secondary: #7d5411;        /* accent-700 — small kicker labels, deep accent */
+  --dcc-tour-accent-deep: #7d5411;      /* accent text on tinted fills */
+  --dcc-tour-accent-tint: color-mix(in srgb, var(--dcc-tour-primary) 13%, transparent);
+  --dcc-tour-bg: #f3f2f2;               /* warm near-white ground */
+  --dcc-tour-surface: #eae9e9;          /* plate mats */
+  --dcc-tour-card-bg: #f8f4f4;          /* quiet raised surfaces (neutral-100) */
+  --dcc-tour-text: #201f1d;
+  --dcc-tour-muted: #736f6a;
+  --dcc-tour-border: #d7d3d3;           /* hairline (neutral-300) */
+  --dcc-tour-shadow: 0 3px 12px color-mix(in srgb, #2d2b2b 13%, transparent); /* a whisper */
+  --dcc-tour-radius: 4px;
+  --dcc-tour-font: "Lora", Georgia, "Times New Roman", serif;
+  --dcc-tour-font-head: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+}
+
+/* Headings set in Cormorant; the bigger the text the lighter the color reads.
+   Small uppercase kickers stay in Lora (Cormorant thins out at caption sizes). */
+.dcc-tour-root.dcc-tour-root .dcc-tour-title,
+.dcc-tour-root.dcc-tour-root .dcc-tour-subtitle,
+.dcc-tour-root.dcc-tour-root .dcc-tour-dayhead h2,
+.dcc-tour-root.dcc-tour-root .dcc-tour-area,
+.dcc-tour-root.dcc-tour-root .dcc-tour-place-head h3,
+.dcc-tour-root.dcc-tour-root .dcc-tour-mm-side h3,
+.dcc-tour-root.dcc-tour-root .sheet-panel h4,
+.dcc-tour-root.dcc-tour-root .dcc-tour-tile .t-big,
+.dcc-tour-root.dcc-tour-root .tb-daylabel,
+.dcc-tour-root.dcc-tour-root .sheet-day b {
+  font-family: var(--dcc-tour-font-head);
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
 .dcc-tour-root,
@@ -86,8 +147,9 @@
 .dcc-tour-daychip .d-d { font-size: 0.9rem; font-weight: 600; }
 .dcc-tour-daychip .d-c { font-size: 0.62rem; color: var(--dcc-tour-muted); }
 .dcc-tour-daychip:hover { border-color: var(--dcc-tour-primary); }
-.dcc-tour-daychip.active { background: var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); color: #fff; }
-.dcc-tour-daychip.active .d-n, .dcc-tour-daychip.active .d-c { color: rgba(255,255,255,.85); }
+.dcc-tour-daychip.active { background: var(--dcc-tour-accent-tint); border-color: var(--dcc-tour-primary); color: var(--dcc-tour-accent-deep); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
+.dcc-tour-daychip.active .d-n, .dcc-tour-daychip.active .d-c { color: color-mix(in srgb, var(--dcc-tour-accent-deep) 75%, transparent); }
+.dcc-tour-daychip.active .d-d { color: var(--dcc-tour-accent-deep); }
 
 /* ---- body: story (primary) + map (secondary) ---- */
 .dcc-tour-body {
@@ -119,16 +181,16 @@
   box-shadow: var(--dcc-tour-shadow);
   margin-bottom: 1rem;
 }
-.dcc-tour-daynum { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dcc-tour-secondary); }
-.dcc-tour-dayhead h2 { margin: 0.15rem 0 0; color: var(--dcc-tour-primary); font-size: 1.4rem; }
+.dcc-tour-daynum { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dcc-tour-secondary); }
+.dcc-tour-dayhead h2 { margin: 0.15rem 0 0; color: var(--dcc-tour-primary); font-size: 1.65rem; }
 .dcc-tour-area { margin: 0.15rem 0 0; font-weight: 600; color: var(--dcc-tour-text); }
-.dcc-tour-daystory { margin: 0.5rem 0 0; line-height: 1.55; }
+.dcc-tour-daystory { margin: 0.6rem 0 0; line-height: 1.6; text-align: justify; hyphens: auto; }
 .dcc-tour-daymeta { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--dcc-tour-muted); }
 
 /* ---- place section ---- */
 .dcc-tour-place { margin-bottom: 1.25rem; scroll-margin-top: 0.5rem; }
-.dcc-tour-place-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; }
-.dcc-tour-place-head h3 { margin: 0; font-size: 1.02rem; color: var(--dcc-tour-text); }
+.dcc-tour-place-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--dcc-tour-border); }
+.dcc-tour-place-head h3 { margin: 0; font-size: 1.25rem; color: var(--dcc-tour-text); }
 .dcc-tour-place-meta { flex: 0 0 auto; font-size: 0.78rem; color: var(--dcc-tour-muted); white-space: nowrap; }
 
 /* ---- media grid ---- */
@@ -196,10 +258,10 @@
 }
 .dcc-tour-chip {
   font: inherit; cursor: pointer; border: 1px solid var(--dcc-tour-primary);
-  background: #fff; color: var(--dcc-tour-primary); border-radius: 999px;
+  background: transparent; color: var(--dcc-tour-accent-deep); border-radius: 999px;
   padding: 5px 14px; font-size: 0.85rem; transition: background 0.15s, color 0.15s;
 }
-.dcc-tour-chip:hover { background: var(--dcc-tour-primary); color: #fff; }
+.dcc-tour-chip:hover { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); }
 
 /* ===== Lightbox ===== */
 .dcc-tour-noscroll { overflow: hidden; }
@@ -209,7 +271,9 @@
   z-index: 9999; padding: 1rem; touch-action: none;
 }
 .dcc-tour-lightbox.open { display: flex; }
-.dcc-tour-lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
+.dcc-tour-lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 2px;
+  border: 7px solid var(--dcc-tour-surface); background: var(--dcc-tour-surface); box-shadow: 0 12px 44px rgba(0, 0, 0, 0.55); }
+@media (max-width: 800px) { .dcc-tour-lightbox-img { border-width: 5px; } }
 .dcc-tour-lightbox-close, .dcc-tour-lightbox-nav {
   position: absolute; background: rgba(255, 255, 255, 0.12); color: #fff; border: 0;
   font-size: 2rem; line-height: 1; width: 48px; height: 48px; border-radius: 50%;
@@ -235,14 +299,14 @@
 .dcc-tour-results { position: absolute; z-index: 20; top: 100%; left: 1.5rem; right: 1.5rem; max-height: 320px; overflow-y: auto; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 10px; box-shadow: var(--dcc-tour-shadow); }
 .dcc-tour-result { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; padding: 9px 13px; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); cursor: pointer; }
 .dcc-tour-result:last-child { border-bottom: 0; }
-.dcc-tour-result:hover { background: rgba(15,109,191,0.07); }
+.dcc-tour-result:hover { background: var(--dcc-tour-accent-tint); }
 .dcc-tour-result span { color: var(--dcc-tour-muted); font-size: 0.78rem; white-space: nowrap; }
 
 /* weather strip */
 .dcc-tour-weather { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--dcc-tour-muted); }
 
 /* stairs-as-a-story */
-.dcc-tour-stairtale { margin: 0.4rem 0 0; font-size: 0.86rem; color: var(--dcc-tour-text); background: rgba(240,128,128,0.10); border-left: 3px solid var(--dcc-tour-secondary); padding: 6px 10px; border-radius: 0 8px 8px 0; }
+.dcc-tour-stairtale { margin: 0.4rem 0 0; font-size: 0.86rem; color: var(--dcc-tour-text); background: var(--dcc-tour-accent-tint); border-left: 3px solid var(--dcc-tour-secondary); padding: 6px 10px; border-radius: 0 8px 8px 0; }
 .dcc-tour-stairtale b { color: var(--dcc-tour-primary); }
 
 /* Google Maps links */
@@ -257,12 +321,13 @@
 
 /* flash a place when jumped to from search */
 .dcc-tour-flash { animation: dcc-flash 1.6s ease-out; }
-@keyframes dcc-flash { 0% { background: rgba(15,109,191,0.16); } 100% { background: transparent; } }
+@keyframes dcc-flash { 0% { background: var(--dcc-tour-accent-tint); } 100% { background: transparent; } }
 
 /* ===== Phase 2: Map Mode ===== */
 .dcc-tour-modes { display: flex; gap: 6px; padding: 0.4rem 1.5rem 0; }
-.dcc-tour-modebtn { border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); font: inherit; font-size: 0.9rem; font-weight: 600; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
-.dcc-tour-modebtn.active { background: var(--dcc-tour-primary); color: #fff; border-color: var(--dcc-tour-primary); }
+.dcc-tour-modebtn { border: 1px solid var(--dcc-tour-border); background: transparent; color: var(--dcc-tour-muted); font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.98rem; font-weight: 600; padding: 6px 18px; border-radius: 999px; cursor: pointer; }
+.dcc-tour-modebtn:hover { color: var(--dcc-tour-text); border-color: color-mix(in srgb, var(--dcc-tour-text) 30%, transparent); }
+.dcc-tour-modebtn.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-primary); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
 
 .dcc-tour-mapmode { display: none; padding: 0.6rem 1.5rem 1.5rem; }
 /* unified Story / Map / Stats view model (all widths) */
@@ -321,7 +386,7 @@
 .dcc-tour-printmenu { position: absolute; z-index: 30; margin-top: 4px; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 10px; box-shadow: var(--dcc-tour-shadow); overflow: hidden; }
 .dcc-tour-printmenu button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); padding: 10px 16px; cursor: pointer; white-space: nowrap; }
 .dcc-tour-printmenu button:last-child { border-bottom: 0; }
-.dcc-tour-printmenu button:hover { background: rgba(15,109,191,0.07); }
+.dcc-tour-printmenu button:hover { background: var(--dcc-tour-accent-tint); }
 .dcc-tour-printmenu small { color: var(--dcc-tour-muted); }
 
 /* print output container — hidden on screen, shown only when printing */
@@ -330,14 +395,15 @@
 @media print {
   body.dcc-tour-printing > *:not(#dcc-print) { display: none !important; }
   body.dcc-tour-printing #dcc-print { display: block; }
-  #dcc-print { font-family: var(--dcc-tour-font); color: #111; }
+  #dcc-print { font-family: var(--dcc-tour-font); color: #201f1d; }
+  #dcc-print h1, #dcc-print h2, #dcc-print h3 { font-family: var(--dcc-tour-font-head); font-weight: 600; }
   .p-cover { text-align: center; padding: 30vh 0 0; page-break-after: always; }
-  .p-cover h1 { font-size: 2.4rem; margin: 0 0 0.3rem; color: #0f6dbf; }
+  .p-cover h1 { font-size: 3rem; margin: 0 0 0.3rem; color: #7d5411; }
   .p-cover p { margin: 0.2rem 0; color: #333; }
   .p-cover .p-sub { color: #666; font-size: 0.9rem; margin-top: 1rem; }
   .p-day { page-break-before: always; }
   .p-day:first-child { page-break-before: avoid; }
-  .p-dayhead h2 { font-size: 1.3rem; color: #0f6dbf; margin: 0 0 2px; }
+  .p-dayhead h2 { font-size: 1.5rem; color: #7d5411; margin: 0 0 2px; }
   .p-dayhead .p-meta { font-size: 0.8rem; color: #555; margin-bottom: 8px; }
   .p-place h3 { font-size: 0.95rem; margin: 10px 0 5px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
   .p-place h3 small { color: #777; font-weight: 400; }
@@ -463,7 +529,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     font: inherit; font-size: 0.66rem; color: var(--dcc-tour-muted); }
   .dcc-tour-tabbtn .ti { font-size: 1.3rem; line-height: 1; }
-  .dcc-tour-tabbtn.active { color: var(--dcc-tour-primary); }
+  .dcc-tour-tabbtn.active { color: var(--dcc-tour-secondary); }
   .dcc-tour-tabbtn.active .ti { transform: translateY(-1px); }
 
   /* day-picker bottom sheet */
@@ -522,18 +588,20 @@
 .dcc-tour-play-cell.wide iframe { height: 300px; border: 0; }
 
 /* ===== day cover hero ===== */
-.dcc-tour-daycover { border-radius: var(--dcc-tour-radius); overflow: hidden; margin-bottom: 0.8rem; box-shadow: var(--dcc-tour-shadow); }
+/* matted like a tipped-in book plate: a thin surface mat inside a hairline edge */
+.dcc-tour-daycover { border-radius: var(--dcc-tour-radius); overflow: hidden; margin-bottom: 0.9rem;
+  box-shadow: var(--dcc-tour-shadow); border: 6px solid var(--dcc-tour-surface); outline: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-surface); }
 .dcc-tour-daycover img { width: 100%; height: 210px; object-fit: cover; display: block; }
 @media (max-width: 800px) { .dcc-tour-daycover img { height: 168px; } }
 
 /* ===== day-chip thumbnails (desktop strip) ===== */
 .dcc-tour-daychip { min-width: 78px; }
 .dcc-tour-daychip .d-thumb { width: 100%; height: 34px; object-fit: cover; border-radius: 6px; margin-bottom: 3px; display: block; }
-.dcc-tour-daychip.active .d-thumb { outline: 2px solid #fff; outline-offset: -2px; }
+.dcc-tour-daychip.active .d-thumb { outline: 2px solid var(--dcc-tour-primary); outline-offset: -2px; }
 
 /* ===== numbered route pins on the day map ===== */
 .dcc-tour-numpin { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;
-  background: var(--dcc-tour-primary); color: #fff; border: 2px solid #fff; border-radius: 50%;
+  background: var(--dcc-tour-secondary); color: #fff; border: 2px solid #fff; border-radius: 50%;
   font-size: 0.72rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 
 @media (max-width: 800px) {
@@ -547,10 +615,16 @@
 /* ===== dark mode (auto) ===== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --dcc-tour-bg: #14171a; --dcc-tour-card-bg: #1e2226; --dcc-tour-text: #e8ecf0;
-    --dcc-tour-muted: #98a2ac; --dcc-tour-border: #2b3138; --dcc-tour-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    /* colophon page: a warm near-black below neutral-900, gold lifted to the
+       light ramp steps so the accent still reads on a dark ground */
+    --dcc-tour-primary: #e1ad66;          /* accent-400 */
+    --dcc-tour-secondary: #e1ad66;
+    --dcc-tour-accent-deep: #facb8d;      /* accent-300 — accent text on dark */
+    --dcc-tour-bg: #1a1917; --dcc-tour-surface: #232120; --dcc-tour-card-bg: #232120;
+    --dcc-tour-text: #f3f2f2; --dcc-tour-muted: #a6a19b; --dcc-tour-border: #3a3633;
+    --dcc-tour-shadow: 0 3px 14px rgba(0,0,0,0.55);
   }
-  .dcc-tour-map { background: #223042; }
+  .dcc-tour-map { background: #2b2724; }
 }
 
 /* ===== Gallery ("Photos") view ===== */
@@ -564,8 +638,8 @@
 .dcc-tour-root[data-view="gallery"] .dcc-tour-body,
 .dcc-tour-root[data-view="gallery"] .dcc-tour-mapmode { display: none; }
 .dcc-tour-gal-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; position: sticky; top: 0; z-index: 15; padding: 8px 0; background: color-mix(in srgb, var(--dcc-tour-bg) 92%, transparent); backdrop-filter: blur(6px); }
-.dcc-tour-galchip { border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer; min-height: 38px; }
-.dcc-tour-galchip.active { background: var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); color: #fff; }
+.dcc-tour-galchip { border: 1px solid var(--dcc-tour-border); background: transparent; color: var(--dcc-tour-muted); font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer; min-height: 38px; }
+.dcc-tour-galchip.active { background: var(--dcc-tour-accent-tint); border-color: var(--dcc-tour-primary); color: var(--dcc-tour-accent-deep); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
 #dcc-galq { flex: 1; min-width: 140px; font: inherit; font-size: 0.9rem; padding: 8px 12px; border: 1px solid var(--dcc-tour-border); border-radius: 999px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); min-height: 38px; }
 #dcc-galq:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
 .dcc-tour-gal-count { font-size: 0.8rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
