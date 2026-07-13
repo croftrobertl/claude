@@ -22,6 +22,35 @@ python3 tour-data/tools/embed_places.py --write                  # 7. write name
 *Steps 3–4 skip gracefully (keeping trip.json's existing health data) if
 `data-local/trip_health.csv` is absent.
 
+## Refining location names — `name-tool.html`
+
+An in-browser tool for reviewing and renaming every location. It reads the same
+files the pipeline uses and exports a fresh `croatia-names-v3.json`.
+
+```bash
+# serve tour-data/ so the tool can load its data + show photo/video previews
+cd tour-data && python3 -m http.server 8000
+# then open:  http://localhost:8000/tools/pipeline/name-tool.html
+```
+
+Each **spot** (a GPS cluster of shots) is one card: its editable name, a preview
+grid (photos, video posters, and GoPro clips), coordinates with a Google-Maps
+link, a *“🔎 name on map”* link that searches your current name near those
+coordinates (handy for getting the real place name right), the date/time range,
+and shot counts. You can:
+
+- rename a spot (applies to all its shots), or expand **Edit individual photos**
+  to give one shot its own name (a per-photo override) or mark it deleted;
+- filter by chapter, search by name/coords, sort, or show **only un-refined**
+  spots (still on their raw auto-label — the gold-outlined ones);
+- click any thumbnail to preview the full photo / play the video or clip.
+
+When done, click **⭳ Download names JSON** → it saves `croatia-names-v3.json`.
+Drop that file over `pipeline/croatia-names-v3.json` and run the rebuild order
+above (starting at `apply_names_v3.py`). The tool seeds from the current file, so
+naming is fully resumable across sessions. (`Load a JSON…` merges an older
+download back in if needed.)
+
 ## What lives where
 
 **`pipeline/` (committed — the canonical rebuild inputs):**
