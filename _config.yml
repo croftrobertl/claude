@@ -17,3 +17,4 @@ exclude:
   - tour-data/data/place-names.csv
   - tour-data/data/place-names.json
   - tour-data/data-local
+  - dcc-croatia-tour.zip
