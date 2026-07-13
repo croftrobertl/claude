@@ -463,6 +463,12 @@
   .dcc-tour-tabbtn .ti { font-size: 1.42rem; }
   .sheet-day b { font-size: 1.02rem; }
   .sheet-day .sd-area { font-size: 0.82rem; }
+  /* more air between place sections + a larger highlights reel */
+  .dcc-tour-place { margin-bottom: 1.85rem; }
+  .dcc-tour-place-head { margin-top: 0.4rem; }
+  .dcc-tour-highlights .hl-lab { font-size: 0.85rem; }
+  .dcc-tour-hl { width: 220px; height: 165px; }
+  .dcc-tour-hl .hl-cap { font-size: 0.76rem; padding: 14px 10px 6px; }
 
   /* place header stacks instead of colliding */
   .dcc-tour-place-head { flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -482,7 +488,14 @@
 }
 
 @media (max-width: 480px) {
-  .dcc-tour-media { grid-template-columns: repeat(2, 1fr); }
+  /* single-column immersive photo feed: each photo full-width at its natural
+     aspect (uncropped); video/clip tiles keep a cinematic 16:9 box — with the
+     poster absolutely filling it — so a lone tile never collapses to no height
+     the way a grid cell used to borrow height from its row neighbour */
+  .dcc-tour-media { grid-template-columns: 1fr; gap: 12px; }
+  .dcc-tour-cell:not(.wide) img { height: auto; }
+  .dcc-tour-play-cell:not(.activated) { aspect-ratio: 16 / 9; }
+  .dcc-tour-play-cell:not(.activated) img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   /* a wider editorial margin narrows the reading column (paired with the larger
      type above this is a comfortable ~35-char measure, book-like) */
   .dcc-tour-header { padding: 1rem 1.35rem 0.25rem; }
@@ -610,12 +623,7 @@
 .dcc-tour-play-cell.wide video { max-height: 460px; background: #000; }
 .dcc-tour-play-cell.wide iframe { height: 300px; border: 0; }
 
-/* ===== day cover hero ===== */
-/* matted like a tipped-in book plate: a thin surface mat inside a hairline edge */
-.dcc-tour-daycover { border-radius: var(--dcc-tour-radius); overflow: hidden; margin-bottom: 0.9rem;
-  box-shadow: var(--dcc-tour-shadow); border: 6px solid var(--dcc-tour-surface); outline: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-surface); }
-.dcc-tour-daycover img { width: 100%; height: 210px; object-fit: cover; display: block; }
-@media (max-width: 800px) { .dcc-tour-daycover img { height: 168px; } }
+/* (day-cover hero removed — days open straight on the day card) */
 
 /* ===== day-chip thumbnails (desktop strip) ===== */
 .dcc-tour-daychip { min-width: 78px; }

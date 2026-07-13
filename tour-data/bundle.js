@@ -660,13 +660,15 @@
   function healthRibbonHTML(day) {
     const h = day.health || {};
     const bits = [];
-    if (h.steps) bits.push('<b>' + fmt(h.steps) + '</b> steps');
-    if (day.walk_km) bits.push('<b>' + day.walk_km + ' km</b> traveled');
+    // a non-breaking space glues each number to its unit so a unit never orphans
+    // onto their own line in the narrow mobile column
+    if (h.steps) bits.push('<b>' + fmt(h.steps) + '</b> steps');
+    if (day.walk_km) bits.push('<b>' + day.walk_km + ' km</b> traveled');
     if (h.climb_m) {
       const flights = Math.round(h.climb_m / 3);
-      bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b> ≈ ' + flights + ' flights');
+      bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b> ≈ ' + flights + ' flights');
     }
-    if (h.alt_max != null) bits.push('up to <b>' + h.alt_max + ' m</b>');
+    if (h.alt_max != null) bits.push('up to <b>' + h.alt_max + ' m</b>');
     let out = bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
     // stairs-as-a-story
     if (h.climb_m && h.climb_m >= 40) {
@@ -683,8 +685,8 @@
     const bits = [];
     if (w.icon || w.desc) bits.push((w.icon || '') + ' ' + escapeHtml(w.desc || ''));
     if (w.tmax != null) bits.push('🌡 ' + Math.round(w.tmax) + '°' + (w.tmin != null ? ' / ' + Math.round(w.tmin) + '°' : '') + 'C');
-    if (w.wind != null) bits.push('💨 ' + Math.round(w.wind) + ' km/h');
-    if (w.precip) bits.push('💧 ' + w.precip + ' mm');
+    if (w.wind != null) bits.push('💨 ' + Math.round(w.wind) + ' km/h');
+    if (w.precip) bits.push('💧 ' + w.precip + ' mm');
     return bits.length ? '<p class="dcc-tour-weather">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
@@ -781,14 +783,12 @@
     lightboxFulls = []; lightboxMeta = []; lightboxIdx = -1;
     for (const k in markersByPlace) delete markersByPlace[k];
 
-    const cov = coverSrc(day);
-    let html = (cov ? '<div class="dcc-tour-daycover"><img loading="eager" src="' + escapeAttr(cov) + '" alt=""></div>' : '') +
-      '<div class="dcc-tour-dayhead">' +
+    let html = '<div class="dcc-tour-dayhead">' +
       '<div class="dcc-tour-daynum">Day ' + day.index + ' / ' + DATA.day_count + '</div>' +
       '<h2>' + escapeHtml(day.label) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
-      '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
+      '<p class="dcc-tour-daymeta">' + day.count + ' items · ' +
         day.kinds.photo + ' photos · ' + day.kinds.video + ' videos · ' + day.kinds.clip + ' clips</p>' +
       weatherHTML(day.weather) +
       healthRibbonHTML(day) +
@@ -810,15 +810,15 @@
       if (mn != null && day.health) {
         const st = interp(day.health.stepcurve, mn), cl = cumClimb(day.health.elev, mn);
         const bits = [];
-        if (st != null) bits.push('≈' + fmt(st) + ' steps');
-        if (cl) bits.push('↑' + cl + ' m');
+        if (st != null) bits.push('≈' + fmt(st) + ' steps');
+        if (cl) bits.push('↑' + cl + ' m');
         if (bits.length) cum = ' <span class="dcc-tour-place-cum">· ' + bits.join(' · ') + ' by now</span>';
       }
-      const spent = p.mins ? ' · ' + (p.mins >= 60 ? (p.mins/60).toFixed(1) + ' h' : p.mins + ' min') + ' here' : '';
+      const spent = p.mins ? ' · ' + (p.mins >= 60 ? (p.mins/60).toFixed(1) + ' h' : p.mins + ' min') + ' here' : '';
       html += '<section class="dcc-tour-place" id="' + anchor + '">' +
         '<div class="dcc-tour-place-head">' +
           '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
-          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
+          '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
         '</div>' +
         '<div class="dcc-tour-media">' + p.items.map(renderItem).join('') + '</div>' +
         '</section>';
