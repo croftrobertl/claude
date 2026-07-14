@@ -393,47 +393,6 @@
 .dcc-tour-legchip span { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
 .dcc-tour-legchip:hover { border-color: var(--dcc-tour-primary); color: var(--dcc-tour-text); }
 
-/* ===== Phase 3: Highlights reel + Print ===== */
-.dcc-tour-highlights { margin: 0.6rem 0 1rem; }
-.dcc-tour-highlights .hl-lab { font-size: 0.8rem; font-weight: 700; color: var(--dcc-tour-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.hl-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
-.dcc-tour-hl { position: relative; flex: 0 0 auto; width: 160px; height: 120px; border: 0; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--dcc-tour-border); scroll-snap-align: start; box-shadow: var(--dcc-tour-shadow); }
-.dcc-tour-hl img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
-.dcc-tour-hl:hover img { transform: scale(1.06); }
-.dcc-tour-hl .hl-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 8px 4px; font-size: 0.68rem; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.75)); text-align: left; }
-
-.dcc-tour-printbtn { margin-left: auto; }
-.dcc-tour-printmenu { position: absolute; z-index: 30; margin-top: 4px; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: 10px; box-shadow: var(--dcc-tour-shadow); overflow: hidden; }
-.dcc-tour-printmenu button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); padding: 10px 16px; cursor: pointer; white-space: nowrap; }
-.dcc-tour-printmenu button:last-child { border-bottom: 0; }
-.dcc-tour-printmenu button:hover { background: var(--dcc-tour-accent-tint); }
-.dcc-tour-printmenu small { color: var(--dcc-tour-muted); }
-
-/* print output container — hidden on screen, shown only when printing */
-#dcc-print { display: none; }
-
-@media print {
-  body.dcc-tour-printing > *:not(#dcc-print) { display: none !important; }
-  body.dcc-tour-printing #dcc-print { display: block; }
-  #dcc-print { font-family: var(--dcc-tour-font); color: #201f1d; }
-  #dcc-print h1, #dcc-print h2, #dcc-print h3 { font-family: var(--dcc-tour-font-head); font-weight: 600; }
-  .p-cover { text-align: center; padding: 30vh 0 0; page-break-after: always; }
-  .p-cover h1 { font-size: 3rem; margin: 0 0 0.3rem; color: #7d5411; }
-  .p-cover p { margin: 0.2rem 0; color: #333; }
-  .p-cover .p-sub { color: #666; font-size: 0.9rem; margin-top: 1rem; }
-  .p-day { page-break-before: always; }
-  .p-day:first-child { page-break-before: avoid; }
-  .p-dayhead h2 { font-size: 1.5rem; color: #7d5411; margin: 0 0 2px; }
-  .p-dayhead .p-meta { font-size: 0.8rem; color: #555; margin-bottom: 8px; }
-  .p-place h3 { font-size: 0.95rem; margin: 10px 0 5px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
-  .p-place h3 small { color: #777; font-weight: 400; }
-  .p-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-  .p-fig { margin: 0; break-inside: avoid; }
-  .p-fig img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; display: block; }
-  .p-fig figcaption { font-size: 0.6rem; color: #777; margin-top: 1px; }
-  @page { margin: 12mm; }
-}
-
 /* ===== Mobile-first UI optimization (Option A) ===== */
 /* trip overview: summary hidden on desktop (always open); body always shown */
 .dcc-tour-ovcollapse > summary { display: none; }
@@ -482,12 +441,9 @@
   .dcc-tour-tabbtn .ti { font-size: 1.42rem; }
   .sheet-day b { font-size: 1.02rem; }
   .sheet-day .sd-area { font-size: 0.82rem; }
-  /* more air between place sections + a larger highlights reel */
+  /* more air between place sections */
   .dcc-tour-place { margin-bottom: 1.85rem; }
   .dcc-tour-place-head { margin-top: 0.4rem; }
-  .dcc-tour-highlights .hl-lab { font-size: 0.85rem; }
-  .dcc-tour-hl { width: 220px; height: 165px; }
-  .dcc-tour-hl .hl-cap { font-size: 0.76rem; padding: 14px 10px 6px; }
 
   /* place header: text block (name over meta) + chevron; bigger tap target */
   .dcc-tour-place-head { align-items: center; gap: 0.6rem; min-height: 48px; }
@@ -502,7 +458,7 @@
   /* controls + buttons: 44px hit areas */
   .dcc-tour-ctl { flex: 1; }
   .dcc-tour-ctl input { min-height: 44px; }
-  .dcc-tour-modebtn, .dcc-tour-printbtn { min-height: 44px; padding: 9px 16px; }
+  .dcc-tour-modebtn { min-height: 44px; padding: 9px 16px; }
   .dcc-tour-legchip { min-height: 40px; }
   .dcc-tour-result { min-height: 46px; align-items: center; }
   .dcc-tour-mm-tog { min-height: 40px; }
@@ -624,9 +580,6 @@
   .sheet-day .sd-area { font-size: 0.72rem; color: var(--dcc-tour-muted); }
   .sheet-day .sd-c { position: absolute; top: 8px; right: 10px; font-size: 0.7rem; color: var(--dcc-tour-muted); }
 
-  /* print action sheet */
-  .dcc-tour-printmenu.mobile { position: fixed; left: 12px; right: 12px; bottom: 78px; z-index: 61; }
-  .dcc-tour-printmenu.mobile button { min-height: 52px; }
 }
 
 /* ===== quick polish ===== */
@@ -637,10 +590,10 @@
 
 /* tactile feedback on tap/press */
 .dcc-tour-modebtn:active, .dcc-tour-tabbtn:active, .dcc-tour-chip:active, .dcc-tour-daychip:active,
-.tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active, .dcc-tour-hl:active,
+.tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active,
 .dcc-tour-result:active { transform: scale(0.97); }
 .dcc-tour-modebtn, .dcc-tour-tabbtn, .dcc-tour-chip, .dcc-tour-daychip, .tb-arrow,
-.sheet-day, .dcc-tour-hl { transition: transform 0.08s ease, border-color 0.15s, background 0.15s, color 0.15s; }
+.sheet-day { transition: transform 0.08s ease, border-color 0.15s, background 0.15s, color 0.15s; }
 .dcc-tour-galchip:active, .lb-act:active, .tb-rand:active { transform: scale(0.95); }
 
 /* gentle fade-in when a day loads */
@@ -728,6 +681,4 @@
 .lb-act { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
   background: rgba(255,255,255,0.14); color: #fff; font-size: 1.05rem; cursor: pointer; text-decoration: none; }
 .lb-act:hover { background: rgba(255,255,255,0.28); }
-.hl-vid { position: absolute; right: 6px; top: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; padding: 2px 7px; border-radius: 5px; pointer-events: none; }
-.p-clipbox { height: 130px; display: flex; align-items: center; justify-content: center; border: 1px dashed #bbb; border-radius: 4px; color: #666; font-size: 0.8rem; }
 @media (max-width: 800px) { .dcc-tour-replay { display: none; } .tb-rand { font-size: 1.05rem; } }

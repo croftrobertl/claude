@@ -111,10 +111,8 @@
     bar.setAttribute('aria-label', 'Sections');
     bar.setAttribute('role', 'tablist');
     bar.innerHTML = tabBtn('story', '📖', 'Story') + tabBtn('gallery', '🖼', 'Photos') +
-      tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats') +
-      '<button class="dcc-tour-tabbtn tb-print"><span class="ti">🖨</span><span>Print</span></button>';
+      tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats');
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-    bar.querySelector('.tb-print').addEventListener('click', openMobilePrint);
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
     sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day or place"><div class="sheet-handle"></div>' +
@@ -250,7 +248,7 @@
     if (!elm) return; let x0 = null, y0 = null;
     elm.addEventListener('touchstart', e => {
       // don't hijack horizontally-scrolling strips
-      if (e.target.closest('.hl-strip, .dcc-tour-tripstats, .dcc-tour-superlatives')) { x0 = y0 = null; return; }
+      if (e.target.closest('.dcc-tour-tripstats, .dcc-tour-superlatives')) { x0 = y0 = null; return; }
       const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY;
     }, { passive: true });
     elm.addEventListener('touchend', e => {
@@ -261,17 +259,6 @@
       }
       x0 = y0 = null;
     }, { passive: true });
-  }
-  function openMobilePrint() {
-    let m = document.getElementById('dcc-printmenu'); if (m) { m.remove(); return; }
-    m = document.createElement('div'); m.id = 'dcc-printmenu'; m.className = 'dcc-tour-printmenu mobile';
-    m.innerHTML = '<button data-scope="day">🖨 This day (' + escapeHtml(DATA.days[curDay].short) + ')</button>' +
-      '<button data-scope="trip">📖 Whole trip <small>(large)</small></button>';
-    root.appendChild(m);
-    m.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; m.remove(); printView(b.dataset.scope); });
-    setTimeout(() => document.addEventListener('click', function off(ev) {
-      if (!m.contains(ev.target) && !ev.target.closest('.tb-print')) { m.remove(); document.removeEventListener('click', off); }
-    }), 0);
   }
 
   // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
@@ -284,12 +271,10 @@
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">🖼 Photos</button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">🗺 Map</button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">📊 Stats</button>' +
-      '<button class="dcc-tour-modebtn" id="dcc-random" title="Show me a random memory">🎲</button>' +
-      '<button class="dcc-tour-modebtn dcc-tour-printbtn" id="dcc-printbtn">🖨 Print</button>';
+      '<button class="dcc-tour-modebtn" id="dcc-random" title="Show me a random memory">🎲</button>';
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
     w.querySelector('#dcc-random').addEventListener('click', randomMemory);
-    w.querySelector('#dcc-printbtn').addEventListener('click', e => { e.stopPropagation(); openPrintMenu(); });
     return w;
   }
   function buildMapMode() {
@@ -471,101 +456,6 @@
     grid.insertAdjacentHTML('beforeend', html);
     galRendered = end;
     document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
-  }
-
-  // ---- #3 per-day Highlights Reel (auto-picked; family stars can override later) ----
-  function dayHighlights(day) {
-    const byPlace = {};
-    day.places.forEach((p, pi) => p.items.forEach(it => {
-      if (it.full || it.poster) (byPlace[pi] = byPlace[pi] || []).push({ it, pi, name: p.name, time: it.time });
-    }));
-    const groups = Object.keys(byPlace).map(pi => ({ pi: +pi, items: byPlace[pi] }))
-      .sort((a, b) => b.items.length - a.items.length);
-    const picks = [];
-    // one representative (middle-of-visit) from each of the biggest places
-    for (const g of groups) { if (picks.length >= 8) break; picks.push(g.items[Math.floor(g.items.length / 2)]); }
-    // top up from the largest place if the day was quiet
-    if (picks.length < 5 && groups[0]) {
-      for (const c of groups[0].items) { if (picks.length >= 5) break; if (!picks.includes(c)) picks.push(c); }
-    }
-    picks.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-    return picks;
-  }
-  function highlightsHTML(day) {
-    const picks = dayHighlights(day);
-    if (picks.length < 3) return '';
-    const cells = picks.map(pk => {
-      const it = pk.it;
-      const thumb = resolveUrl(it.src || it.full || it.poster);
-      const full = it.full ? ' data-full="' + escapeAttr(resolveUrl(it.full)) + '"' : '';
-      return '<button class="dcc-tour-hl"' + full + '><img loading="lazy" src="' + escapeAttr(thumb) + '" alt="">' +
-        (it.full ? '' : '<span class="hl-vid">▶</span>') +
-        '<span class="hl-cap">' + escapeHtml(shortName(pk.name)) + ' · ' + escapeHtml(pk.time || '') + '</span></button>';
-    }).join('');
-    return '<div class="dcc-tour-highlights"><div class="hl-lab">✨ Highlights of the day</div>' +
-      '<div class="hl-strip">' + cells + '</div></div>';
-  }
-
-  // ---- #9 print / PDF keepsake ----
-  function ensurePrintEl() {
-    let e = document.getElementById('dcc-print');
-    if (!e) { e = document.createElement('div'); e.id = 'dcc-print'; document.body.appendChild(e); }
-    return e;
-  }
-  function printImg(it) {
-    const src = it.full || it.src || it.poster;
-    if (!src) {
-      if (it.type === 'drive') // GoPro clips have no local frame — print a caption card
-        return '<figure class="p-fig"><div class="p-clipbox">▶ GoPro clip</div>' +
-          '<figcaption>' + escapeHtml((it.place || '') + (it.time ? ' · ' + it.time : '')) + '</figcaption></figure>';
-      return '';
-    }
-    return '<figure class="p-fig"><img src="' + escapeAttr(resolveUrl(src)) + '" alt="">' +
-      '<figcaption>' + escapeHtml((it.place || '') + (it.time ? ' · ' + it.time : '')) + '</figcaption></figure>';
-  }
-  function printDay(day) {
-    let h = '<section class="p-day"><header class="p-dayhead"><h2>' + escapeHtml(day.label) + '</h2>' +
-      '<div class="p-meta">' + (day.area ? escapeHtml(day.area) + ' · ' : '') + day.count + ' photos & videos' +
-      (day.weather ? ' · ' + escapeHtml((day.weather.icon || '') + ' ' + (day.weather.desc || '') +
-        (day.weather.tmax != null ? ' ' + Math.round(day.weather.tmax) + '°C' : '')) : '') +
-      (day.walk_km ? ' · ' + day.walk_km + ' km' : '') +
-      (day.health && day.health.climb_m ? ' · climbed ' + fmt(day.health.climb_m) + ' m' : '') + '</div></header>';
-    day.places.forEach(p => {
-      const imgs = p.items.map(printImg).join('');
-      if (!imgs) return;
-      h += '<div class="p-place"><h3>' + escapeHtml(p.name) + ' <small>' +
-        escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to) + '</small></h3>' +
-        '<div class="p-grid">' + imgs + '</div></div>';
-    });
-    return h + '</section>';
-  }
-  function printView(scope) {
-    const cont = ensurePrintEl();
-    const t = DATA.trip || {};
-    const days = scope === 'trip' ? DATA.days : [DATA.days[curDay]];
-    let cover = '';
-    if (scope === 'trip') cover = '<div class="p-cover"><h1>' + escapeHtml(t.name || 'Our trip') + '</h1>' +
-      '<p>' + escapeHtml(t.subtitle || '') + '</p><p class="p-sub">' +
-      DATA.days[0].label + ' – ' + DATA.days[DATA.day_count - 1].label + ' · ' +
-      DATA.item_count + ' photos & videos · ' + DATA.day_count + ' days</p></div>';
-    cont.innerHTML = cover + days.map(printDay).join('');
-    document.body.classList.add('dcc-tour-printing');
-    const done = () => { document.body.classList.remove('dcc-tour-printing'); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    // give images a moment to begin loading before the print dialog
-    setTimeout(() => window.print(), 400);
-  }
-  function openPrintMenu() {
-    let m = document.getElementById('dcc-printmenu');
-    if (m) { m.remove(); return; }
-    m = document.createElement('div'); m.id = 'dcc-printmenu'; m.className = 'dcc-tour-printmenu';
-    m.innerHTML = '<button data-scope="day">🖨 This day (' + escapeHtml(DATA.days[curDay].short) + ')</button>' +
-      '<button data-scope="trip">📖 Whole trip <small>(large)</small></button>';
-    root.querySelector('.dcc-tour-modes').appendChild(m);
-    m.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; m.remove(); printView(b.dataset.scope); });
-    setTimeout(() => document.addEventListener('click', function off(ev) {
-      if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', off); }
-    }), 0);
   }
 
   // shared place index + jump helper (used by desktop search AND the mobile sheet)
@@ -853,8 +743,6 @@
       '<button class="dcc-tour-chip" id="dcc-shareday">↗ Share this day</button>' +
       '</div></div>';
 
-    html += highlightsHTML(day);
-
     // Places default collapsed on phones (a big single-column day then reads as
     // a tappable itinerary) and open on desktop. The index bar below is a table
     // of contents: each chip scrolls to and opens its place.
@@ -1051,9 +939,7 @@
     const cell = e.target.closest('.dcc-tour-play-cell');
     if (cell && !cell.dataset.activated) { activateMedia(cell); return; }
     const img = e.target.closest('.dcc-tour-media img[data-full]');
-    if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); return; }
-    const hl = e.target.closest('.dcc-tour-hl[data-full]');
-    if (hl) { openLightbox(Math.max(0, lightboxFulls.indexOf(hl.getAttribute('data-full')))); }
+    if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); }
   });
   // keyboard: place headers are role=button, so activate on Enter/Space
   // (arrow-key day navigation already lives in the lightbox keydown handler)
