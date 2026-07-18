@@ -174,6 +174,7 @@
         b.classList.toggle('active', on);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
+    if (v !== 'map') mmStopPlay();
     if (v === 'map') initMapMode();
     else if (v === 'stats') animateCounts(root);
     else if (v === 'gallery') buildGallery();
@@ -309,6 +310,8 @@
     if (!n) return null;
     let deg = Math.atan2(sy, sx) * 180 / Math.PI; return (deg + 360) % 360;
   }
+  const PLAY_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
+  const PAUSE_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
   let mmColorMode = 'day';   // 'day' | 'person' | 'alt'
   function placeColor(p, di) {
     if (mmColorMode === 'person') return PERSON_COLORS[placeDominantPerson(p)] || NO_COLOR;
@@ -351,7 +354,18 @@
         '</span>' +
         '<span class="dcc-tour-mm-stats" id="mm-range-stats"></span>' +
       '</div>' +
+      '<div class="dcc-tour-mm-play">' +
+        '<button class="dcc-tour-mm-playbtn" id="mm-play" aria-label="Play the whole trip" title="Play the whole trip">' + PLAY_GLYPH + '</button>' +
+        '<input type="range" class="dcc-tour-mm-scrub" id="mm-scrub" min="0" max="0" value="0" step="1" aria-label="Scrub through the trip">' +
+        '<span class="dcc-tour-mm-speeds" role="group" aria-label="Playback speed">' +
+          '<button class="mm-spd active" data-spd="1">1×</button>' +
+          '<button class="mm-spd" data-spd="2">2×</button>' +
+          '<button class="mm-spd" data-spd="4">4×</button>' +
+        '</span>' +
+        '<span class="dcc-tour-mm-playlabel" id="mm-playlabel"></span>' +
+      '</div>' +
       '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
+        '<figure class="dcc-tour-mm-moment" id="mm-moment" hidden></figure>' +
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>' +
       '<div class="dcc-tour-mm-legend" id="mm-legend"></div>';
     return w;
@@ -384,6 +398,16 @@
       mmColorMode = b.dataset.mode;
       m.querySelectorAll('.mm-cb').forEach(x => x.classList.toggle('active', x === b));
       renderMapLegend(); renderMapMode();
+    }));
+    // Play / scrub the whole trip
+    const scrub = m.querySelector('#mm-scrub');
+    scrub.max = Math.max(0, buildPlaySeq().length - 1);
+    scrub.addEventListener('input', () => { mmStopPlay(); mmRenderPlayhead(+scrub.value); });
+    m.querySelector('#mm-play').addEventListener('click', () => { mmPlayTimer ? mmStopPlay() : mmStartPlay(); });
+    m.querySelectorAll('.mm-spd').forEach(b => b.addEventListener('click', () => {
+      mmPlaySpeed = +b.dataset.spd;
+      m.querySelectorAll('.mm-spd').forEach(x => x.classList.toggle('active', x === b));
+      if (mmPlayTimer) { mmStopPlay(); mmStartPlay(); }   // restart at the new speed, same spot
     }));
     renderMapLegend();
     renderMapMode(true);   // whole-trip bounds
@@ -490,6 +514,69 @@
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
     side.querySelector('[data-openday]').addEventListener('click', () => { setView('story'); selectDay(di); });
     mmMap.panTo([p.lat, p.lng], { animate: true });
+  }
+
+  // ---- Play / scrub the whole trip: a moving marker walks the chapters in order,
+  //      pinning the current day·place and popping that moment's photo. (A + B) ----
+  const MM_PLAY_MS = 90000;   // whole-trip run at 1× ≈ 90 s
+  let mmSeq = null, mmPlayIdx = 0, mmPlayTimer = null, mmPlaySpeed = 1;
+  let mmPlayLayer = null;
+  function buildPlaySeq() {
+    if (mmSeq) return mmSeq;
+    const seq = [];
+    DATA.days.forEach((d, di) => d.places.forEach((p, pi) => {
+      if (p.lat == null) return;
+      seq.push({ lat: p.lat, lng: p.lng, di, pi, p, day: d });
+    }));
+    mmSeq = seq; return seq;
+  }
+  function mmPlayGlyph(playing) {
+    const btn = root._mapmode && root._mapmode.querySelector('#mm-play');
+    if (!btn) return;
+    btn.innerHTML = playing ? PAUSE_GLYPH : PLAY_GLYPH;
+    btn.classList.toggle('playing', playing);
+    btn.setAttribute('aria-label', playing ? 'Pause' : 'Play the whole trip');
+  }
+  function mmRenderPlayhead(idx) {
+    const seq = buildPlaySeq(); if (!seq.length) return;
+    mmPlayIdx = Math.max(0, Math.min(seq.length - 1, idx));
+    const m = seq[mmPlayIdx];
+    if (!mmPlayLayer) mmPlayLayer = L.layerGroup().addTo(mmMap);
+    mmPlayLayer.clearLayers();
+    // the trail travelled so far, then the glowing playhead on top
+    const trail = seq.slice(0, mmPlayIdx + 1).map(s => [s.lat, s.lng]);
+    if (trail.length > 1) mmPlayLayer.addLayer(L.polyline(trail, { color: '#b68235', weight: 3, opacity: 0.75 }));
+    mmPlayLayer.addLayer(L.circleMarker([m.lat, m.lng], { radius: 10, color: '#7d5411', weight: 3, fillColor: '#f4da62', fillOpacity: 0.95, className: 'mm-playhead' }));
+    // label + moment card (the photo that pops up)
+    const lab = root._mapmode.querySelector('#mm-playlabel');
+    if (lab) lab.textContent = 'Day ' + m.day.index + ' · ' + m.p.name + ' · ' + (m.p.from === m.p.to ? m.p.from : m.p.from + '–' + m.p.to);
+    const mo = root._mapmode.querySelector('#mm-moment');
+    if (mo) {
+      const rep = m.p.items.find(it => it.full) || m.p.items.find(it => it.poster) || m.p.items[0];
+      const img = rep && rep.full ? resolveUrl(rep.src || rep.full) : (rep && rep.poster ? resolveUrl(rep.poster) : '');
+      mo.innerHTML = (img ? '<img src="' + escapeAttr(img) + '" alt="">' : '') +
+        '<figcaption>' + escapeHtml(m.p.name) + ' · ' + plur(m.p.count, 'shot') + '</figcaption>';
+      mo.hidden = false;
+    }
+    const scrub = root._mapmode.querySelector('#mm-scrub');
+    if (scrub && +scrub.value !== mmPlayIdx) scrub.value = mmPlayIdx;
+    // keep the playhead comfortably in view without fighting the user's zoom
+    if (!mmMap.getBounds().pad(-0.2).contains([m.lat, m.lng])) mmMap.panTo([m.lat, m.lng], { animate: true });
+  }
+  function mmStopPlay() {
+    if (mmPlayTimer) { clearInterval(mmPlayTimer); mmPlayTimer = null; }
+    mmPlayGlyph(false);
+  }
+  function mmStartPlay() {
+    const seq = buildPlaySeq(); if (!seq.length) return;
+    if (mmPlayIdx >= seq.length - 1) mmPlayIdx = 0;   // replay from the start
+    mmPlayGlyph(true);
+    mmRenderPlayhead(mmPlayIdx);
+    const per = Math.max(90, MM_PLAY_MS / seq.length / mmPlaySpeed);
+    mmPlayTimer = setInterval(() => {
+      if (mmPlayIdx >= seq.length - 1) { mmStopPlay(); return; }
+      mmRenderPlayhead(mmPlayIdx + 1);
+    }, per);
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----

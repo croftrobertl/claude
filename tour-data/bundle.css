@@ -435,6 +435,30 @@
 .mm-altscale { display: inline-block; width: 160px; height: 10px; border-radius: 999px; border: 1px solid var(--dcc-tour-border); }
 .mm-altlab { font-size: 0.72rem; color: var(--dcc-tour-muted); }
 
+/* Play / scrub the whole trip (Phase 3) */
+.dcc-tour-mm-play { display: flex; align-items: center; gap: 12px; margin: 2px 0 10px; }
+.dcc-tour-mm-playbtn { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--dcc-tour-primary);
+  background: var(--dcc-tour-primary); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  transition: background .15s, box-shadow .15s; }
+.dcc-tour-mm-playbtn:hover { background: var(--dcc-tour-accent-deep); }
+.dcc-tour-mm-playbtn.playing { box-shadow: 0 0 0 3px var(--dcc-tour-accent-tint); }
+.dcc-tour-mm-playbtn:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 2px; }
+.dcc-tour-mm-scrub { flex: 1 1 auto; min-width: 120px; accent-color: var(--dcc-tour-primary); cursor: pointer; }
+.dcc-tour-mm-speeds { flex: none; display: inline-flex; border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); overflow: hidden; }
+.mm-spd { font: inherit; font-size: 0.78rem; border: 0; border-left: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); padding: 5px 9px; cursor: pointer; }
+.mm-spd:first-child { border-left: 0; }
+.mm-spd:hover { color: var(--dcc-tour-text); }
+.mm-spd.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
+.dcc-tour-mm-playlabel { flex: 1 1 100%; order: 9; font-size: 0.8rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; min-height: 1em; }
+/* the moment card that pops the current place's photo, bottom-left over the map */
+.dcc-tour-mm-moment { position: absolute; left: 10px; bottom: 10px; z-index: 480; width: min(150px, 40%); margin: 0;
+  background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius);
+  box-shadow: var(--dcc-tour-shadow); overflow: hidden; pointer-events: none; }
+.dcc-tour-mm-moment img { display: block; width: 100%; height: 96px; object-fit: cover; }
+.dcc-tour-mm-moment figcaption { padding: 5px 8px; font-size: 0.72rem; color: var(--dcc-tour-text); line-height: 1.25; }
+.mm-playhead { animation: dcc-mm-pulse 1.4s ease-in-out infinite; transform-origin: center; }
+@keyframes dcc-mm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
 /* ===== Mobile-first UI optimization (Option A) ===== */
 /* trip overview: summary hidden on desktop (always open); body always shown */
 .dcc-tour-ovcollapse > summary { display: none; }
