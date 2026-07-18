@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,10 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
 
 == Changelog ==
+
+= 1.9.0 =
+* Fixed: the accordion arrow (▼) rendered black on the live site even when the header appeared correct in the Elementor editor. The arrow is a CSS pseudo-element that previously had no color binding, so it inherited the live theme's dark text color. It now follows the "Icon Color" control (Style → Section Headers), so setting that color (e.g. white) applies to the arrow on the live page too. Baked default matches the section icon color.
+* New "Accordion Arrow Edge Spacing" control (Style → Section Headers) sets the horizontal gap between the accordion arrow (▼) and the right edge of the header. Defaults to 5px, added on top of the header padding, responsive per device — mirroring the "Icon Edge Spacing" control on the left icon.
 
 = 1.8.0 =
 * New "Icon Edge Spacing" control (Style → Section Headers) sets the horizontal gap between a section header's icon and the left edge of the header. Defaults to 5px, added on top of the header's existing padding, and is responsive (separate desktop/tablet/mobile values). The section icon stays left-aligned and the title stays centered. Existing widget instances pick up the 5px default automatically.

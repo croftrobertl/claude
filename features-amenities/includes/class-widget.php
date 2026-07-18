@@ -423,9 +423,13 @@ class Widget extends Widget_Base {
 		$this->add_control(
 			'header_icon_color',
 			[
-				'label'     => esc_html__( 'Icon Color', 'features-amenities' ),
-				'type'      => Controls_Manager::COLOR,
-				'selectors' => [ self::SEL . '.fal-section-icon, ' . self::SEL . '.fal-section-icon svg' => 'color: {{VALUE}}; fill: {{VALUE}};' ],
+				'label'       => esc_html__( 'Icon Color', 'features-amenities' ),
+				'type'        => Controls_Manager::COLOR,
+				'description' => esc_html__( 'Colors the section icon and the accordion arrow (▼).', 'features-amenities' ),
+				'selectors'   => [
+					self::SEL . '.fal-section-icon, ' . self::SEL . '.fal-section-icon svg' => 'color: {{VALUE}}; fill: {{VALUE}};',
+					self::SEL . '.fal-section-header::after'                                 => 'color: {{VALUE}};',
+				],
 			]
 		);
 		$this->add_responsive_control(
@@ -475,6 +479,18 @@ class Widget extends Widget_Base {
 				'default'     => [ 'unit' => 'px', 'size' => 5 ],
 				'description' => esc_html__( 'Extra space between the section icon and the left edge of the header, added on top of the header padding. Defaults to 5px.', 'features-amenities' ),
 				'selectors'   => [ self::SEL . '.fal-section-icon' => 'margin-left: {{SIZE}}{{UNIT}};' ],
+			]
+		);
+		$this->add_responsive_control(
+			'header_arrow_edge_gap',
+			[
+				'label'       => esc_html__( 'Accordion Arrow Edge Spacing', 'features-amenities' ),
+				'type'        => Controls_Manager::SLIDER,
+				'size_units'  => [ 'px', 'em' ],
+				'range'       => [ 'px' => [ 'min' => 0, 'max' => 60 ], 'em' => [ 'min' => 0, 'max' => 4, 'step' => 0.1 ] ],
+				'default'     => [ 'unit' => 'px', 'size' => 5 ],
+				'description' => esc_html__( 'Extra space between the accordion arrow (▼) and the right edge of the header, added on top of the header padding. Defaults to 5px. Only visible where the accordion arrow shows.', 'features-amenities' ),
+				'selectors'   => [ self::SEL . '.fal-section-header::after' => 'margin-right: {{SIZE}}{{UNIT}};' ],
 			]
 		);
 		$this->add_responsive_control(
