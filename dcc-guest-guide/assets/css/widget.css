@@ -650,7 +650,10 @@ body.dccgg-detail-open .dccgg-stage {
     color: var(--dccgg-text, #111111);
     border-radius: 16px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
-    padding: 24px;
+    /* v0.9.7.26: zero padding on the scroll container so the sticky header
+       sits flush at the popup's top edge. Content insets come from the
+       inner .dccgg-detail; the header full-bleeds over them. */
+    padding: 0;
     opacity: 0;
     visibility: hidden;
     transform: translate(-50%, -50%) scale(0.96);
@@ -664,6 +667,71 @@ body.dccgg-detail-open .dccgg-stage.is-modal-open {
     pointer-events: auto;
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
+}
+
+/* v0.9.7.26 — Popup chrome cleanup (items 2, 3, 4 from the host's list).
+   In the OPEN popup the .dccgg-stage is the single frame (bg + radius +
+   shadow); flatten the inner .dccgg-detail card so there's no nested
+   border/gap, and let the sticky header sit flush at the very top. */
+body.dccgg-detail-open .dccgg-stage > .dccgg-detail {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* Solid, opaque fallback so scrolled content can never show through the
+       detail body or the area around the header. */
+    background: var(--dccgg-detail-bg, #ffffff);
+    padding-top: 0;
+}
+/* Full-bleed, fully opaque sticky header. Negative horizontal margins equal
+   to the detail's side padding make it span edge-to-edge so nothing is
+   visible beside or behind it as content scrolls under; the rounded top
+   merges it into the popup frame and closes the gap that used to sit above
+   it. (Items 2 + 3.) */
+body.dccgg-detail-open .dccgg-detail-header {
+    margin-left: calc(-1 * var(--dccgg-detail-pad-x, 24px));
+    margin-right: calc(-1 * var(--dccgg-detail-pad-x, 24px));
+    padding-left: var(--dccgg-detail-pad-x, 24px);
+    padding-right: var(--dccgg-detail-pad-x, 24px);
+    padding-top: 14px;
+    border-radius: 16px 16px 0 0;
+    background: var(--dccgg-popup-header-bg, var(--dccgg-detail-bg, #ffffff));
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Custom always-visible scrollbar (item 4). Native scrollbars auto-hide —
+   iOS Safari force-hides them entirely — so the popup draws its own slim
+   rail that is always visible and reflects scroll POSITION (which is why
+   the old progress bar could be removed, item 5). The rail is a sticky,
+   zero-height anchor pinned to the top of the scroll container; its track
+   and thumb are absolutely positioned against it and sized/moved by JS
+   (wireDetailScrollbar). z-index sits BELOW the header (4) so the opaque
+   header naturally hides the rail's top — the bar visually spans just the
+   content region. */
+body.dccgg-detail-open .dccgg-stage { scrollbar-width: none; }
+body.dccgg-detail-open .dccgg-stage::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.dccgg-scrollrail {
+    position: sticky;
+    top: 0;
+    height: 0;
+    z-index: 3;
+    pointer-events: none;
+    display: none;
+}
+body.dccgg-detail-open .dccgg-scrollrail { display: block; }
+.dccgg-scrollrail[hidden] { display: none; }
+.dccgg-scrollrail-track,
+.dccgg-scrollrail-thumb {
+    position: absolute;
+    top: 0;
+    right: 3px;
+    width: 5px;
+    border-radius: 5px;
+}
+.dccgg-scrollrail-track { background: rgba(0, 0, 0, 0.10); }
+.dccgg-scrollrail-thumb {
+    min-height: 28px;
+    background: rgba(0, 0, 0, 0.38);
+    will-change: transform, height;
 }
 
 .dccgg-detail-overlay {
@@ -1046,6 +1114,10 @@ body.dccgg-detail-open {
 
 /* -------- Detail stage -------- */
 .dccgg-stage > .dccgg-detail {
+    /* --dccgg-detail-pad-x exposes the horizontal content padding so the
+       modal's full-bleed header (v0.9.7.26) can cancel it with a matching
+       negative margin regardless of the density setting. */
+    --dccgg-detail-pad-x: 24px;
     background: var(--dccgg-detail-bg);
     border: 1px solid var(--dccgg-tile-border);
     border-radius: 16px;
@@ -1833,17 +1905,9 @@ dialog.dccgg-wrapper::backdrop {
 }
 }
 
-/* ---- Reading progress bar (top of detail) ---- */
-.dccgg-progress-bar {
-    position: sticky;
-    top: 0;
-    left: 0;
-    height: 3px;
-    width: 0;
-    background: var(--dccgg-primary);
-    z-index: 5;
-    transition: width 80ms linear;
-}
+/* v0.9.7.26: the reading progress bar was removed — the always-visible
+   custom scrollbar (.dccgg-scrollrail) now conveys both "there's more
+   below" and how far the guest has scrolled. */
 
 /* ---- Mobile bottom-sheet variant of the detail modal ---- */
 @media (max-width: 600px) {
@@ -1868,26 +1932,36 @@ dialog.dccgg-wrapper::backdrop {
         width: 100%;
         max-width: 100%;
         height: auto;
-        max-height: 90vh;   /* fallback */
-        max-height: 90dvh;  /* excludes browser chrome */
-        max-height: 90svh;  /* smallest viewport — never grows on toolbar hide (wins) */
+        /* v0.9.7.26: raise the sheet so a tall popup sits just below the
+           iOS status bar / notch (~8px gap) instead of only reaching 90%.
+           Still a static, self-limiting cap (svh) anchored to the bottom,
+           so it can't overflow or grow on toolbar hide. */
+        max-height: 92vh;                                                /* fallback */
+        max-height: calc(100dvh - 40px);                                 /* excludes browser chrome */
+        max-height: calc(100svh - env(safe-area-inset-top, 0px) - 8px);  /* near top, clears notch (wins) */
         overscroll-behavior: contain;
         border-radius: 16px 16px 0 0;
-        padding: 16px;
+        padding: 0;
         transform: translateY(100%);
         box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
     }
     body.dccgg-detail-open .dccgg-stage.is-modal-open {
         transform: translateY(0);
     }
-    body.dccgg-detail-open .dccgg-stage::before {
+    /* v0.9.7.26: the grab-handle pill moves from the stage onto the sticky
+       header. The stage now has zero padding and the header sits flush at
+       the sheet's top edge (opaque, full-bleed — see the modal-header rules
+       outside this media query), so a pill on the stage would float above
+       the header in transparent space. On the header it rides the opaque
+       bar and stays put while content scrolls underneath. */
+    body.dccgg-detail-open .dccgg-detail-header::before {
         content: '';
         display: block;
         width: 40px;
         height: 4px;
         background: var(--dccgg-muted, #888);
         border-radius: 2px;
-        margin: 4px auto 12px;
+        margin: 0 auto 10px;
         opacity: 0.5;
     }
     /* v0.9.7.19: FAB wrapper becomes a full-width bottom sheet on phones,
@@ -2339,7 +2413,7 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-density-compact .dccgg-menu { --dccgg-gap: 12px; }
 .dccgg-density-compact .dccgg-tile-icon { width: 44px; height: 44px; font-size: 1.2em; }
-.dccgg-density-compact .dccgg-detail { padding: 16px; }
+.dccgg-density-compact .dccgg-detail { padding: 16px; --dccgg-detail-pad-x: 16px; }
 
 .dccgg-density-comfy .dccgg-tile {
     padding: calc(var(--dccgg-tile-padding, 24px) * 1.4);
@@ -2347,7 +2421,7 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-density-comfy .dccgg-menu { --dccgg-gap: 28px; }
 .dccgg-density-comfy .dccgg-tile-icon { width: 72px; height: 72px; font-size: 1.7em; }
-.dccgg-density-comfy .dccgg-detail { padding: 32px; }
+.dccgg-density-comfy .dccgg-detail { padding: 32px; --dccgg-detail-pad-x: 32px; }
 
 /* ---- Video poster (click to play) ---- */
 .dccgg-video-poster {
@@ -3035,7 +3109,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
     .dccgg-root .dccgg-toc,
-    .dccgg-root .dccgg-progress-bar,
+    .dccgg-root .dccgg-scrollrail,
     .dccgg-root .dccgg-shrink-sentinel,
     .dccgg-root .dccgg-sheet-backdrop,
     .dccgg-root .dccgg-search-mic,

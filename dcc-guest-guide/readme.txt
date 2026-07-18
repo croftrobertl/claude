@@ -70,6 +70,38 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.26 =
+
+**Detail popup chrome polish (five host-requested refinements).**
+
+1. **Popup opens near the top.** On phones the bottom sheet now rises to
+   just below the status bar / notch (an ~8px gap) instead of stopping at
+   90% height, giving much more reading room. Still a static, bottom-
+   anchored `svh` cap, so it keeps the v0.9.7.25 guarantee that it can't
+   overflow the top or grow when the iOS toolbar hides.
+
+2. **Header/navigation is now fully opaque.** Content no longer shows
+   through behind the sticky Back/nav/title bar while scrolling. The inner
+   detail card is flattened in the open popup so the sheet is a single
+   opaque frame, and the header carries a solid background.
+
+3. **No more gap above the header.** The header is now full-bleed
+   (edge-to-edge) and sits flush at the very top of the popup with a
+   rounded top that merges into the frame, so there's no transparent strip
+   above it where scrolling items used to peek through. The mobile grab-
+   handle pill moved onto the header so it rides the opaque bar.
+
+4. **Always-visible scrollbar.** The popup draws its own slim scrollbar
+   that is always visible (native scrollbars auto-hide, and iOS Safari
+   force-hides them). It shows both that there's more to scroll and how far
+   down you are. Sits under the opaque header so it spans just the content.
+
+5. **Reading progress bar removed.** With the always-visible scrollbar now
+   showing scroll position, the separate top progress bar was redundant.
+
+Positioning/sizing mirrors the DCC Availability Calendar (v0.11.0) cottage
+info popup.
+
 = 0.9.7.25 =
 
 **The detail popup no longer overflows the top of the mobile viewport —

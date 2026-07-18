@@ -3338,7 +3338,6 @@ final class Widget extends Widget_Base
                         </div>
                     <?php endif; ?>
                     <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
-                    <div class="dccgg-progress-bar" aria-hidden="true"></div>
                     <div class="dccgg-detail-header">
                         <div class="dccgg-detail-header-actions">
                             <button type="button" class="dccgg-btn dccgg-back">

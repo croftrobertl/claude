@@ -203,7 +203,7 @@
         wirePeek(root);
         wireSheetDrag(root);
         wireToc(root);
-        wireProgressBar(root);
+        wireDetailScrollbar(root);
         wireSectionNav(root, config);
         wireWizard(root);
         wireShrinkHeader(root);
@@ -1859,8 +1859,6 @@
         // detail's shrunk header doesn't flash on reopen.
         details.forEach(d => d.classList.remove('is-shrunk'));
         if (activeDetail) {
-            const bar = activeDetail.querySelector('.dccgg-progress-bar');
-            if (bar) bar.style.width = '0%';
             if (typeof clearHighlights === 'function') clearHighlights(activeDetail);
         }
 
@@ -2084,6 +2082,13 @@
                 || state.stage.querySelector('button, [href], input, [tabindex]:not([tabindex="-1"])');
             if (focusTarget && typeof focusTarget.focus === 'function') {
                 try { focusTarget.focus({ preventScroll: true }); } catch (_) { focusTarget.focus(); }
+            }
+            // v0.9.7.26: refresh the custom scrollbar now that this section's
+            // content is laid out (scrollHeight differs per section). A second
+            // pass after 300ms catches late reflow (web fonts, lazy images).
+            if (typeof state.stage.__dccggScrollUpdate === 'function') {
+                state.stage.__dccggScrollUpdate();
+                setTimeout(state.stage.__dccggScrollUpdate, 300);
             }
         });
         // Re-bind handlers in case we're reopening during a pending close.
@@ -3484,30 +3489,40 @@
         });
     }
 
-    // -- Reading progress bar --------------------------------------------
-    function wireProgressBar(root) {
+    // -- Custom always-visible scrollbar (v0.9.7.26) ----------------------
+    // Native scrollbars auto-hide (iOS Safari force-hides them), so the
+    // popup draws its own slim rail that is ALWAYS visible and reflects
+    // scroll position — doubling as the "there's more below / how far you've
+    // scrolled" cue that replaces the removed reading-progress bar. The rail
+    // is a sticky, zero-height anchor pinned to the top of the scroll
+    // container (.dccgg-stage); its track + thumb are absolutely positioned
+    // and sized/moved here. CSS hides the rail unless body.dccgg-detail-open.
+    function wireDetailScrollbar(root) {
         const stage = root.querySelector('.dccgg-stage');
         if (!stage) return;
+        let rail = stage.querySelector(':scope > .dccgg-scrollrail');
+        if (!rail) {
+            rail = document.createElement('div');
+            rail.className = 'dccgg-scrollrail';
+            rail.setAttribute('aria-hidden', 'true');
+            rail.innerHTML = '<div class="dccgg-scrollrail-track"></div>'
+                           + '<div class="dccgg-scrollrail-thumb"></div>';
+            stage.insertBefore(rail, stage.firstChild);
+        }
+        const track = rail.querySelector('.dccgg-scrollrail-track');
+        const thumb = rail.querySelector('.dccgg-scrollrail-thumb');
         const update = () => {
-            const detail = stage.querySelector('.dccgg-detail:not([hidden])');
-            if (!detail) return;
-            const bar = detail.querySelector('.dccgg-progress-bar');
-            if (!bar) return;
-            // v0.9.5: in modal mode the stage itself is the scrollable
-            // container (overflow-y: auto), so progress tracks stage scroll;
-            // outside the modal, fall back to viewport-relative geometry.
-            let pct;
-            if (stage.scrollHeight > stage.clientHeight + 4) {
-                const total = Math.max(1, stage.scrollHeight - stage.clientHeight);
-                pct = (stage.scrollTop / total) * 100;
-            } else {
-                const r = detail.getBoundingClientRect();
-                const vh = window.innerHeight;
-                const total = Math.max(1, r.height - vh);
-                const scrolled = Math.min(total, Math.max(0, -r.top));
-                pct = (scrolled / total) * 100;
-            }
-            bar.style.width = pct.toFixed(1) + '%';
+            const sh = stage.scrollHeight, ch = stage.clientHeight, st = stage.scrollTop;
+            track.style.height = ch + 'px';
+            // Hide the rail when everything already fits (nothing to scroll).
+            if (sh - ch <= 2) { rail.hidden = true; return; }
+            rail.hidden = false;
+            const thumbH = Math.max(28, Math.round(ch * ch / sh));
+            const travel = ch - thumbH;
+            const denom = sh - ch;
+            const t = denom > 0 ? st / denom : 0;
+            thumb.style.height = thumbH + 'px';
+            thumb.style.transform = 'translateY(' + Math.round(t * travel) + 'px)';
         };
         let pending = false;
         const onScroll = () => {
@@ -3515,12 +3530,11 @@
             pending = true;
             requestAnimationFrame(() => { update(); pending = false; });
         };
-        window.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('resize', onScroll);
         stage.addEventListener('scroll', onScroll, { passive: true });
-        // Update once on entering detail
-        const mo = new MutationObserver(update);
-        mo.observe(root, { attributes: true, attributeFilter: ['class'] });
+        window.addEventListener('resize', onScroll);
+        // Expose so showDetailModal can refresh geometry the moment a section
+        // opens (content — and therefore scrollHeight — differs per section).
+        stage.__dccggScrollUpdate = update;
     }
 
     // -- Welcome Pack + Export/Import editor hooks (v0.6) ------------------
