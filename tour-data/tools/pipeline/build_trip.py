@@ -12,6 +12,8 @@ SP = PIPE
 
 items_path = f"{SP}/flat_items_named.json" if _os.path.exists(f"{SP}/flat_items_named.json") else f"{SP}/flat_items_labeled.json"
 items = json.load(open(items_path))
+# per-item extras (who shot it + camera compass heading), keyed by media GUID
+ITEM_META = json.load(open(f"{SP}/item_meta.json")) if _os.path.exists(f"{SP}/item_meta.json") else {}
 trip = json.load(open(f"{ROOT}/trip.json"))["trip"]   # carry forward existing trip metadata
 
 AREA = {"orl-mco":"Orlando, FL","lgw":"London Gatwick","dbv-airport":"Dubrovnik Airport",
@@ -28,6 +30,14 @@ def media_obj(it):
         o["type"] = "self_hosted"; o["url"] = it["url"]; o["poster"] = it["poster"]
     else:  # clip
         o["type"] = "drive"; o["id"] = it["id"]
+    # who shot it: clips are all GoPro; photos/videos come from item_meta by GUID
+    meta = ITEM_META.get(it.get("id"), {})
+    person = "GoPro" if it["kind"] == "clip" else meta.get("person")
+    if person: o["person"] = person
+    if meta.get("heading") is not None: o["heading"] = meta["heading"]
+    # city for grouping/sorting — the trailing component of the place name
+    pl = o["place"]
+    o["city"] = pl.rsplit(",", 1)[-1].strip() if "," in pl else pl
     return o
 
 byday = defaultdict(list)
