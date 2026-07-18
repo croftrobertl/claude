@@ -459,6 +459,32 @@
 .mm-playhead { animation: dcc-mm-pulse 1.4s ease-in-out infinite; transform-origin: center; }
 @keyframes dcc-mm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 
+/* "Through their eyes" global photographer filter (Phase 4) */
+.dcc-tour-filterbar { display: flex; align-items: center; gap: 10px; margin: 0 1.5rem 12px; padding: 8px 14px;
+  background: var(--dcc-tour-accent-tint); border: 1px solid var(--dcc-tour-primary); border-radius: var(--dcc-tour-radius); }
+.dcc-fb-dot { width: 12px; height: 12px; border-radius: 999px; flex: none; box-shadow: 0 0 0 2px #fff inset; }
+.dcc-fb-txt { font-size: 0.86rem; color: var(--dcc-tour-text); }
+.dcc-fb-txt b { color: var(--dcc-tour-accent-deep); }
+.dcc-fb-clear { margin-left: auto; flex: none; font: inherit; font-size: 0.8rem; cursor: pointer;
+  background: transparent; color: var(--dcc-tour-accent-deep); border: 1px solid var(--dcc-tour-primary); border-radius: var(--dcc-tour-radius); padding: 4px 10px; }
+.dcc-fb-clear:hover { background: var(--dcc-tour-primary); color: #fff; }
+/* person chips in the Photos gallery bar */
+.dcc-tour-gal-sep { width: 1px; align-self: stretch; background: var(--dcc-tour-border); margin: 0 2px; }
+.dcc-tour-personchips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.dcc-personchip { font: inherit; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); border: 1px solid var(--dcc-tour-border); border-radius: 999px; padding: 5px 11px; }
+.dcc-personchip .pc-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+.dcc-personchip:hover { color: var(--dcc-tour-text); border-color: var(--dcc-tour-primary); }
+.dcc-personchip.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-primary); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
+/* clickable person legend on the map */
+.mm-legend-person .dcc-tour-legseg { cursor: pointer; }
+.mm-legend-person .dcc-tour-legseg.sel { border-color: var(--dcc-tour-primary); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); background: var(--dcc-tour-accent-tint); }
+/* dimmed day rail chips + empty state + stats note */
+.dcc-tour-daychip.dimmed { opacity: 0.34; }
+.dcc-tour-empty { color: var(--dcc-tour-muted); font-style: italic; padding: 18px 2px; }
+.dcc-tour-statsnote { margin: 10px 1.5rem 0; font-size: 0.8rem; color: var(--dcc-tour-muted); }
+.dcc-tour-statsnote b { color: var(--dcc-tour-accent-deep); }
+
 /* ===== Mobile-first UI optimization (Option A) ===== */
 /* trip overview: summary hidden on desktop (always open); body always shown */
 .dcc-tour-ovcollapse > summary { display: none; }

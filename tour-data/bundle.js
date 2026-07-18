@@ -78,8 +78,9 @@
     overview.appendChild(ovd);
     const controls = buildControls();
     const modeToggle = buildModeToggle();
+    const filterbar = buildFilterBar();
     const mapmode = buildMapMode();
-    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(nav); root.appendChild(controls);
+    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(filterbar); root.appendChild(nav); root.appendChild(controls);
     root.appendChild(overview); root.appendChild(body); root.appendChild(mapmode);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode;
     overview.querySelectorAll('.tread').forEach(r =>
@@ -178,7 +179,14 @@
     if (v === 'map') initMapMode();
     else if (v === 'stats') animateCounts(root);
     else if (v === 'gallery') buildGallery();
-    else if (v === 'story') renderDay(DATA.days[curDay]);  // rebuild the day's own lightbox set
+    else if (v === 'story') {
+      // under a person filter, don't land on a day they didn't shoot
+      if (personFilter && dayVisibleCount(DATA.days[curDay]) === 0) {
+        const j = DATA.days.findIndex(d => dayVisibleCount(d) > 0);
+        if (j >= 0) { selectDay(j); return; }
+      }
+      renderDay(DATA.days[curDay]);  // rebuild the day's own lightbox set
+    }
     updateHash();
     window.scrollTo({ top: 0 });
   }
@@ -281,6 +289,58 @@
   const PERSONS = ['Rob', 'Erica', 'Alice', 'GoPro'];
   const PERSON_COLORS = { Rob: '#3a7ca5', Erica: '#c76b6b', Alice: '#7a9e5e', GoPro: '#6b5b95' };
   const NO_COLOR = '#b0aaa2';
+
+  // ---- global "through their eyes" filter: limit the whole app to one person ----
+  let personFilter = null;                 // null = everyone; else 'Rob'|'Erica'|'Alice'|'GoPro'
+  function itemPasses(it) { return !personFilter || it.person === personFilter; }
+  function placeItems(p) { return personFilter ? p.items.filter(itemPasses) : p.items; }
+  function placeCount(p) { return personFilter ? placeItems(p).length : p.count; }
+  function dayVisibleCount(d) { return personFilter ? d.places.reduce((s, p) => s + placeCount(p), 0) : d.count; }
+  function setPersonFilter(name) {
+    personFilter = (name === personFilter || !name) ? null : name;
+    mmSeq = null;                           // rebuild the play sequence for the new scope
+    syncFilterUI();
+    refreshHeaderStats();                   // the trip-stat tiles live in the always-visible header
+    // refresh whatever view is showing so it reflects the new scope
+    const v = root.dataset.view || 'story';
+    if (v === 'story') {
+      // if the current day has nothing by this person, hop to the first day that does
+      if (personFilter && dayVisibleCount(DATA.days[curDay]) === 0) {
+        const j = DATA.days.findIndex(d => dayVisibleCount(d) > 0);
+        if (j >= 0) { selectDay(j); return; }
+      }
+      renderDay(DATA.days[curDay]); showDayOnMap(DATA.days[curDay]);
+    }
+    else if (v === 'gallery') renderGallery();
+    else if (v === 'map') { mmStopPlay(); if (mmMap) { const s = root._mapmode.querySelector('#mm-scrub'); if (s) s.max = Math.max(0, buildPlaySeq().length - 1); mmPlayIdx = 0; renderMapLegend(); renderMapMode(); if (mmPlayLayer) mmPlayLayer.clearLayers(); const mo = root._mapmode.querySelector('#mm-moment'); if (mo) mo.hidden = true; const lab = root._mapmode.querySelector('#mm-playlabel'); if (lab) lab.textContent = ''; } }
+  }
+  function refreshHeaderStats() {
+    const hd = root.querySelector('.dcc-tour-header'); if (!hd) return;
+    hd.innerHTML = '<h1 class="dcc-tour-title">' + escapeHtml((DATA.trip || {}).name || 'Our trip') + '</h1>' +
+      '<p class="dcc-tour-subtitle">' + escapeHtml((DATA.trip || {}).subtitle || '') + '</p>' + tripStatsHTML();
+    animateCounts(hd);
+  }
+  // keep the banner + every person chip/legend in sync with personFilter
+  function syncFilterUI() {
+    const banner = root.querySelector('#dcc-filterbar');
+    if (banner) {
+      banner.hidden = !personFilter;
+      if (personFilter) {
+        banner.querySelector('.dcc-fb-who').textContent = personFilter;
+        banner.querySelector('.dcc-fb-dot').style.background = PERSON_COLORS[personFilter] || NO_COLOR;
+      }
+    }
+    root.querySelectorAll('.dcc-personchip').forEach(c =>
+      c.classList.toggle('active', c.dataset.person === (personFilter || 'all')));
+    root.querySelectorAll('.mm-legend-person .dcc-tour-legseg').forEach(seg =>
+      seg.classList.toggle('sel', seg.dataset.person === personFilter));
+    // day rail: reflect each day's count under the active filter, dim empty days
+    if (root._nav) root._nav.querySelectorAll('.dcc-tour-daychip').forEach((b, i) => {
+      const n = dayVisibleCount(DATA.days[i]);
+      const c = b.querySelector('.d-c'); if (c) c.textContent = n;
+      b.classList.toggle('dimmed', !!personFilter && n === 0);
+    });
+  }
   function lerpHex(h1, h2, f) {
     const p = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)];
     const c1 = p(h1), c2 = p(h2), m = i => Math.round(c1[i] + (c2[i] - c1[i]) * f);
@@ -331,6 +391,16 @@
       b.addEventListener('click', () => setView(b.dataset.view)));
     w.querySelector('#dcc-random').addEventListener('click', randomMemory);
     return w;
+  }
+  // dismissible banner shown whenever a "through their eyes" filter is active
+  function buildFilterBar() {
+    const b = el('div', 'dcc-tour-filterbar');
+    b.id = 'dcc-filterbar'; b.hidden = true;
+    b.innerHTML = '<span class="dcc-fb-dot" aria-hidden="true"></span>' +
+      '<span class="dcc-fb-txt">Through <b class="dcc-fb-who"></b>’s eyes — showing only their shots</span>' +
+      '<button class="dcc-fb-clear" type="button">Show everyone ✕</button>';
+    b.querySelector('.dcc-fb-clear').addEventListener('click', () => setPersonFilter(null));
+    return b;
   }
   function buildMapMode() {
     const w = el('section', 'dcc-tour-mapmode');
@@ -429,9 +499,13 @@
       }));
     } else if (mmColorMode === 'person') {
       el.className = 'dcc-tour-mm-legend mm-legend-person';
+      // clickable: tap a photographer to see the trip "through their eyes"
       el.innerHTML = PERSONS.map(pn =>
-        '<span class="dcc-tour-legseg"><span class="seg-sw" style="background:' + PERSON_COLORS[pn] + '"></span>' +
-        '<span class="seg-n">' + escapeHtml(pn) + '</span></span>').join('');
+        '<button class="dcc-tour-legseg' + (personFilter === pn ? ' sel' : '') + '" data-person="' + pn + '" title="Through ' + escapeAttr(pn) + '’s eyes">' +
+        '<span class="seg-sw" style="background:' + PERSON_COLORS[pn] + '"></span>' +
+        '<span class="seg-n">' + escapeHtml(pn) + '</span></button>').join('');
+      el.querySelectorAll('.dcc-tour-legseg').forEach(seg =>
+        seg.addEventListener('click', () => setPersonFilter(seg.dataset.person)));
     } else {  // alt
       el.className = 'dcc-tour-mm-legend mm-legend-alt';
       el.innerHTML = '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
@@ -459,9 +533,9 @@
     // range readout (days · places · shots) + dim legend segments outside the range
     const rdays = daysInRange();
     let rPlaces = 0, rShots = 0;
-    rdays.forEach(di => DATA.days[di].places.forEach(p => { rPlaces++; rShots += p.count; }));
+    rdays.forEach(di => DATA.days[di].places.forEach(p => { const c = placeCount(p); if (c) { rPlaces++; rShots += c; } }));
     const statsEl = root._mapmode.querySelector('#mm-range-stats');
-    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots';
+    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots' + (personFilter ? ' · ' + escapeHtml(personFilter) : '');
     root._mapmode.querySelectorAll('.dcc-tour-legseg').forEach(seg => {
       const i = +seg.dataset.day; seg.classList.toggle('out', i < mmRange[0] || i > mmRange[1]);
     });
@@ -469,13 +543,15 @@
       const d = DATA.days[di], col = dayColor(di), line = [];
       d.places.forEach((p, pi) => {
         if (p.lat == null) return;
+        const pc = placeCount(p);
+        if (personFilter && pc === 0) return;   // this person didn't shoot here
         allPts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
-        const r = Math.min(20, 5 + Math.sqrt(p.count) * 1.6);
+        const r = Math.min(20, 5 + Math.sqrt(pc) * 1.6);
         const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
         mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
         mk.on('click', () => openMapSidebar(di, pi));
         mmMarkers.addLayer(mk);
-        p.items.forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
+        placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
         // compass "facing" ray: which way the cameras pointed at this spot
         if (showFacing) {
           const h = placeMeanHeading(p);
@@ -499,7 +575,8 @@
     const d = DATA.days[di], p = d.places[pi];
     const side = root._mapmode.querySelector('#dcc-mm-side');
     lightboxFulls = []; lightboxMeta = []; const thumbs = [];
-    p.items.forEach(it => {
+    const items = placeItems(p);
+    items.forEach(it => {
       let img = null;
       if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time }); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
       else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
@@ -508,7 +585,7 @@
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
       '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
       '<p class="dcc-tour-mm-meta">' + escapeHtml(d.label) + ' · ' + escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to) +
-        ' · ' + p.count + ' shots</p>' +
+        ' · ' + items.length + ' shots' + (personFilter ? ' by ' + escapeHtml(personFilter) : '') + '</p>' +
       '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
       '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
@@ -526,6 +603,7 @@
     const seq = [];
     DATA.days.forEach((d, di) => d.places.forEach((p, pi) => {
       if (p.lat == null) return;
+      if (personFilter && placeCount(p) === 0) return;   // walk only where this person shot
       seq.push({ lat: p.lat, lng: p.lng, di, pi, p, day: d });
     }));
     mmSeq = seq; return seq;
@@ -552,10 +630,11 @@
     if (lab) lab.textContent = 'Day ' + m.day.index + ' · ' + m.p.name + ' · ' + (m.p.from === m.p.to ? m.p.from : m.p.from + '–' + m.p.to);
     const mo = root._mapmode.querySelector('#mm-moment');
     if (mo) {
-      const rep = m.p.items.find(it => it.full) || m.p.items.find(it => it.poster) || m.p.items[0];
+      const its = placeItems(m.p);
+      const rep = its.find(it => it.full) || its.find(it => it.poster) || its[0];
       const img = rep && rep.full ? resolveUrl(rep.src || rep.full) : (rep && rep.poster ? resolveUrl(rep.poster) : '');
       mo.innerHTML = (img ? '<img src="' + escapeAttr(img) + '" alt="">' : '') +
-        '<figcaption>' + escapeHtml(m.p.name) + ' · ' + plur(m.p.count, 'shot') + '</figcaption>';
+        '<figcaption>' + escapeHtml(m.p.name) + ' · ' + plur(its.length, 'shot') + '</figcaption>';
       mo.hidden = false;
     }
     const scrub = root._mapmode.querySelector('#mm-scrub');
@@ -591,6 +670,12 @@
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
         [['all', 'All'], ['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k =>
           '<button class="dcc-tour-galchip' + (k[0] === 'all' ? ' active' : '') + '" data-kind="' + k[0] + '">' + k[1] + '</button>').join('') +
+        '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
+        '<span class="dcc-tour-personchips" role="group" aria-label="Shot by">' +
+          '<button class="dcc-personchip active" data-person="all">Everyone</button>' +
+          PERSONS.map(pn => '<button class="dcc-personchip" data-person="' + pn + '">' +
+            '<span class="pc-dot" style="background:' + PERSON_COLORS[pn] + '"></span>' + escapeHtml(pn) + '</button>').join('') +
+        '</span>' +
         '<input type="search" id="dcc-galq" placeholder="filter by place…" autocomplete="off">' +
         '<span class="dcc-tour-gal-count" id="dcc-galcount"></span></div>' +
         '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
@@ -600,6 +685,8 @@
         g.querySelectorAll('.dcc-tour-galchip').forEach(x => x.classList.toggle('active', x === b));
         galFilter.kind = b.dataset.kind; renderGallery();
       }));
+      g.querySelectorAll('.dcc-personchip').forEach(b => b.addEventListener('click', () =>
+        setPersonFilter(b.dataset.person === 'all' ? null : b.dataset.person)));
       let deb = null;
       g.querySelector('#dcc-galq').addEventListener('input', e => {
         clearTimeout(deb); deb = setTimeout(() => { galFilter.q = e.target.value.trim().toLowerCase(); renderGallery(); }, 150);
@@ -612,6 +699,7 @@
   }
   function renderGallery() {
     galCur = galItems.filter(x => (galFilter.kind === 'all' || x.it.kind === galFilter.kind) &&
+      itemPasses(x.it) &&
       (!galFilter.q || (x.place || '').toLowerCase().indexOf(galFilter.q) >= 0));
     galRendered = 0;
     lightboxFulls = []; lightboxMeta = [];   // gallery owns the lightbox set while open
@@ -722,27 +810,52 @@
     if (best && best.length) { const it = best[Math.floor(best.length / 2)]; return resolveUrl(it.src || it.full || it.poster); }
     return '';
   }
+  // media stats for the active photographer (recomputed from the filtered items)
+  function personMediaStats() {
+    let photos = 0, videos = 0, clips = 0, locs = 0, best = { count: -1 }, bestDay = { count: -1 };
+    DATA.days.forEach(d => {
+      let dc = 0;
+      d.places.forEach(p => {
+        const its = placeItems(p); if (!its.length) return;
+        locs++;
+        its.forEach(it => { if (it.kind === 'photo') photos++; else if (it.kind === 'video') videos++; else clips++; });
+        if (its.length > best.count) best = { name: p.name, count: its.length };
+        dc += its.length;
+      });
+      if (dc > bestDay.count) bestDay = { label: d.label, count: dc };
+    });
+    return { photos, videos, clips, locs, best, bestDay };
+  }
   function tripStatsHTML() {
     const h = DATA.health; if (!h) return '';
     const s = DATA.stats || {};
     const srd = (h.climb_m / 412).toFixed(1);       // Mount Srđ = 412 m
+    // per-photographer media stats override the baked-in trip totals when filtered
+    const ps = personFilter ? personMediaStats() : null;
+    const photos = ps ? ps.photos : s.photos, videos = ps ? ps.videos : s.videos, clips = ps ? ps.clips : s.clips;
+    const totalLoc = ps ? ps.locs : s.total_locations;
+    const busiest = ps ? ps.bestDay : s.most_active_day;
+    const captured = ps ? ps.best : s.most_visited;
     let sup = '';
-    if (s.most_active_day) {
+    if (busiest && busiest.count > 0) {
       sup = '<div class="dcc-tour-superlatives">' +
-        '<span>🔥 Busiest day <b>' + escapeHtml(s.most_active_day.label) + '</b> · ' + s.most_active_day.count + ' shots</span>' +
-        '<span>📍 Most captured <b>' + escapeHtml(shortName(s.most_visited.name)) + '</b> · ' + s.most_visited.count + '</span>' +
-        (s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
+        '<span>🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots</span>' +
+        (captured ? '<span>📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '</span>' : '') +
+        (!personFilter && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
         '</div>';
     }
+    const note = personFilter ?
+      '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personFilter) +
+        '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
     return '<div class="dcc-tour-tripstats">' +
       statTile(h.steps, '', 'steps', h.watch) +
       statTile(parseFloat(h.dist), ' ' + (h.dist_unit || ''), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
       statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
-      (s.total_locations ? statTile(s.total_locations, '', 'places', 'visited & named') : '') +
-      (s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
-      (s.photos != null ? statTile(s.photos + s.videos + s.clips, '', 'photos & videos',
-        s.photos + ' photos · ' + s.videos + ' videos · ' + s.clips + ' clips') : '') +
-      '</div>' + sup;
+      (totalLoc ? statTile(totalLoc, '', 'places', personFilter ? 'shot by ' + personFilter : 'visited & named') : '') +
+      (!personFilter && s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
+      (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
+        photos + ' photos · ' + videos + ' videos · ' + clips + ' clips') : '') +
+      '</div>' + sup + note;
   }
   function statTile(num, suffix, label, sub, dec) {
     num = num || 0; dec = dec || 0;
@@ -905,7 +1018,7 @@
       '<h2>' + escapeHtml(day.label) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
-      '<p class="dcc-tour-daymeta">' + dayCountLabel(day) + '</p>' +
+      '<p class="dcc-tour-daymeta">' + (personFilter ? plur(dayVisibleCount(day), 'shot') + ' by ' + escapeHtml(personFilter) : dayCountLabel(day)) + '</p>' +
       weatherHTML(day.weather) +
       healthRibbonHTML(day) +
       (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
@@ -919,19 +1032,25 @@
     // a tappable itinerary) and open on desktop. The index bar below is a table
     // of contents: each chip scrolls to and opens its place.
     const placesOpenDefault = !window.matchMedia('(max-width: 800px)').matches;
-    if (day.places.length > 1) {
+    // which places have anything to show under the current filter
+    const shownPlaces = day.places.map((p, pi) => ({ p, pi })).filter(x => !personFilter || placeCount(x.p) > 0);
+    if (personFilter && !shownPlaces.length) {
+      html += '<p class="dcc-tour-empty">No shots by ' + escapeHtml(personFilter) + ' on this day.</p>';
+    }
+    if (shownPlaces.length > 1) {
       html += '<nav class="dcc-tour-places-index" aria-label="Places this day">' +
         '<button type="button" class="dcc-tour-idx-all" data-allopen="' + (placesOpenDefault ? '1' : '0') + '">' +
           (placesOpenDefault ? 'Collapse all' : 'Expand all') + '</button>' +
         '<div class="dcc-tour-idx-chips">' +
-        day.places.map((p, pi) => '<button type="button" class="dcc-tour-idx-chip" data-goto="' + pi + '">' +
+        shownPlaces.map(({ p, pi }) => '<button type="button" class="dcc-tour-idx-chip" data-goto="' + pi + '">' +
           '<b>' + (pi + 1) + '</b> ' + escapeHtml(shortName(p.name)) + '</button>').join('') +
         '</div></nav>';
     }
 
     const toMin = t => { const a = (t || '').split(':'); return a.length === 2 ? +a[0]*60 + +a[1] : null; };
-    day.places.forEach((p, pi) => {
+    shownPlaces.forEach(({ p, pi }) => {
       const anchor = 'place-' + pi;
+      const its = placeItems(p);
       const time = p.from === p.to ? p.from : (p.from + '–' + p.to);
       let cum = '';
       const mn = toMin(p.from);
@@ -948,11 +1067,11 @@
         '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
           '<div class="dcc-tour-place-htext">' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
-            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + plur(p.count, 'shot') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
+            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + plur(its.length, 'shot') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
-        '<div class="dcc-tour-media" id="media-' + pi + '">' + p.items.map(renderItem).join('') + '</div>' +
+        '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(renderItem).join('') + '</div>' +
         '</section>';
     });
 
@@ -1049,6 +1168,7 @@
     const pts = [], line = [];
     day.places.forEach((p, pi) => {
       if (p.lat == null) return;
+      if (personFilter && placeCount(p) === 0) return;   // hide places this person didn't shoot
       pts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
       const icon = L.divIcon({ className: 'dcc-tour-numpin', html: String(pi + 1), iconSize: [26, 26], iconAnchor: [13, 13] });
       const m = L.marker([p.lat, p.lng], { title: p.name, icon });
