@@ -384,6 +384,7 @@
 
 .dcc-tour-mm-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
 .dcc-tour-mm-tog { font-size: 0.85rem; color: var(--dcc-tour-text); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.dcc-tour-mm-tog[hidden] { display: none; }   /* author display:inline-flex would otherwise beat [hidden] */
 .dcc-tour-mm-range { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mm-dl { font-size: 0.78rem; color: var(--dcc-tour-muted); display: inline-flex; align-items: center; gap: 5px; }
 .mm-daysel { font: inherit; font-size: 0.85rem; color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); padding: 6px 8px; cursor: pointer; }
@@ -458,6 +459,12 @@
 .dcc-tour-mm-moment figcaption { padding: 5px 8px; font-size: 0.72rem; color: var(--dcc-tour-text); line-height: 1.25; }
 .mm-playhead { animation: dcc-mm-pulse 1.4s ease-in-out infinite; transform-origin: center; }
 @keyframes dcc-mm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* saved-spot ★ markers + their legend key */
+.mm-saved-pin { text-align: center; line-height: 16px; font-size: 15px; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 1px 1px rgba(0,0,0,.35); }
+.mm-saved-key { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; width: 100%; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--dcc-tour-border); }
+.mm-saved-keyitem { font-size: 0.72rem; color: var(--dcc-tour-muted); display: inline-flex; align-items: center; gap: 4px; }
+.mm-saved-star { font-size: 0.95rem; line-height: 1; }
 
 /* "Through their eyes" global photographer filter (Phase 4) */
 .dcc-tour-filterbar { display: flex; align-items: center; gap: 10px; margin: 0 1.5rem 12px; padding: 8px 14px;

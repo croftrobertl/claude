@@ -418,6 +418,8 @@
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-facing"> Facing</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-heat"> Heatmap</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-sat"> Satellite</label>' +
+        '<label class="dcc-tour-mm-tog" id="mm-track-lab" hidden><input type="checkbox" id="mm-track"> GPS track</label>' +
+        '<label class="dcc-tour-mm-tog" id="mm-saved-lab" hidden><input type="checkbox" id="mm-saved"> Saved spots</label>' +
         '<span class="dcc-tour-mm-range">' +
           '<label class="mm-dl">From <select class="mm-daysel" id="mm-lo">' + dayOpts + '</select></label>' +
           '<label class="mm-dl">to <select class="mm-daysel" id="mm-hi">' + dayOpts + '</select></label>' +
@@ -455,6 +457,11 @@
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
     m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else mmMap.removeLayer(mmSat); });
+    m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
+    m.querySelector('#mm-saved').addEventListener('change', e => toggleSaved(e.target.checked));
+    // reveal the optional-overlay toggles only when their data ships with the bundle
+    loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-lab').hidden = false; }).catch(() => {});
+    loadJSON('saved.json').then(d => { mmSavedData = d; m.querySelector('#mm-saved-lab').hidden = false; }).catch(() => {});
     const lo = m.querySelector('#mm-lo'), hi = m.querySelector('#mm-hi');
     hi.value = DATA.day_count - 1;
     const onRange = () => {
@@ -511,6 +518,14 @@
       el.innerHTML = '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
         ALT_STOPS[0][1] + ',' + ALT_STOPS[1][1] + ',' + ALT_STOPS[2][1] + ')"></span>' +
         '<span class="mm-altlab">0 m (sea)</span><span class="mm-altlab">~200 m</span><span class="mm-altlab">' + ALT_MAX + ' m (Srđ)</span>';
+    }
+    // saved-spots key (only while that overlay is on): ★ per wishlist
+    if (mmSavedLayer && mmSavedData) {
+      const present = SAVED_LISTS.filter(l => mmSavedData.some(s => s.l === l));
+      el.insertAdjacentHTML('beforeend',
+        '<span class="mm-saved-key">' + present.map(l =>
+          '<span class="mm-saved-keyitem"><span class="mm-saved-star" style="color:' + SAVED_COLORS[l] + '">★</span>' +
+          escapeHtml(l) + '</span>').join('') + '</span>');
     }
   }
   function daysInRange() {
@@ -656,6 +671,41 @@
       if (mmPlayIdx >= seq.length - 1) { mmStopPlay(); return; }
       mmRenderPlayhead(mmPlayIdx + 1);
     }, per);
+  }
+
+  // ---- optional map overlays: the Google saved-place wishlist + the GPS breadcrumb ----
+  const SAVED_LISTS = ['Want to go', 'Favorite places', 'Dubrovnik Pass – Free', 'Dubrovnik Pass – Discount'];
+  const SAVED_COLORS = { 'Want to go': '#b68235', 'Favorite places': '#c0392b', 'Dubrovnik Pass – Free': '#2e8b57', 'Dubrovnik Pass – Discount': '#6b5b95' };
+  let mmSavedData = null, mmSavedLayer = null, mmTrackData = null, mmTrackLayer = null;
+  function loadJSON(name) { return fetch(baseURL + name).then(r => r.ok ? r.json() : Promise.reject(r.status)); }
+  function toggleSaved(on) {
+    if (!on) { if (mmSavedLayer) { mmMap.removeLayer(mmSavedLayer); mmSavedLayer = null; } renderMapLegend(); return; }
+    const draw = () => {
+      mmSavedLayer = L.layerGroup().addTo(mmMap);
+      mmSavedData.forEach(s => {
+        const col = SAVED_COLORS[s.l] || NO_COLOR;
+        const icon = L.divIcon({ className: 'mm-saved-pin', html: '<span style="color:' + col + '">★</span>', iconSize: [16, 16], iconAnchor: [8, 8] });
+        L.marker([s.lat, s.lng], { icon, title: s.n })
+          .bindTooltip(escapeHtml(s.n) + (s.l ? ' · ' + escapeHtml(s.l) : ''), { direction: 'top' })
+          .addTo(mmSavedLayer);
+      });
+      renderMapLegend();
+    };
+    if (mmSavedData) draw();
+    else loadJSON('saved.json').then(d => { mmSavedData = d; draw(); })
+      .catch(() => { const t = root._mapmode.querySelector('#mm-saved'); if (t) t.checked = false; });
+  }
+  function toggleTrack(on) {
+    if (!on) { if (mmTrackLayer) { mmMap.removeLayer(mmTrackLayer); mmTrackLayer = null; } return; }
+    const draw = () => {
+      mmTrackLayer = L.layerGroup().addTo(mmMap);
+      mmTrackData.forEach(d => {
+        if (d.pts.length > 1) mmTrackLayer.addLayer(L.polyline(d.pts, { color: '#1f6f9c', weight: 2.5, opacity: 0.7 }));
+      });
+    };
+    if (mmTrackData) draw();
+    else loadJSON('track.json').then(d => { mmTrackData = d; draw(); })
+      .catch(() => { const t = root._mapmode.querySelector('#mm-track'); if (t) t.checked = false; });
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
