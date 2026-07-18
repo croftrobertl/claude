@@ -462,6 +462,7 @@
 /* "Through their eyes" global photographer filter (Phase 4) */
 .dcc-tour-filterbar { display: flex; align-items: center; gap: 10px; margin: 0 1.5rem 12px; padding: 8px 14px;
   background: var(--dcc-tour-accent-tint); border: 1px solid var(--dcc-tour-primary); border-radius: var(--dcc-tour-radius); }
+.dcc-tour-filterbar[hidden] { display: none; }   /* author display:flex would otherwise beat [hidden] */
 .dcc-fb-dot { width: 12px; height: 12px; border-radius: 999px; flex: none; box-shadow: 0 0 0 2px #fff inset; }
 .dcc-fb-txt { font-size: 0.86rem; color: var(--dcc-tour-text); }
 .dcc-fb-txt b { color: var(--dcc-tour-accent-deep); }
@@ -757,6 +758,14 @@
 #dcc-galq:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
 .dcc-tour-gal-count { font-size: 0.8rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
 .dcc-tour-galmore { text-align: center; color: var(--dcc-tour-muted); font-size: 0.8rem; padding: 14px 0 4px; }
+/* sort dropdown + grouped section headers (Phase 5) */
+.dcc-tour-galsort { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--dcc-tour-muted); }
+.dcc-tour-galsort select { font: inherit; font-size: 0.85rem; color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); padding: 7px 9px; min-height: 38px; cursor: pointer; }
+.dcc-tour-galsort select:hover { border-color: var(--dcc-tour-primary); }
+.dcc-tour-galsort select:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 1px; }
+.dcc-tour-galgroup { grid-column: 1 / -1; margin: 14px 0 2px; padding-bottom: 6px; font-family: var(--dcc-tour-font-head);
+  font-size: 1.25rem; font-weight: 600; color: var(--dcc-tour-accent-deep); border-bottom: 1px solid var(--dcc-tour-border); }
+.dcc-tour-galgroup:first-child { margin-top: 0; }
 @media (max-width: 800px) {
   .dcc-tour-root[data-view="gallery"] .dcc-tour-header,
   .dcc-tour-root[data-view="gallery"] .dcc-tour-topbar { display: none; }

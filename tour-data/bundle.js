@@ -659,13 +659,50 @@
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
-  let galItems = null, galCur = null, galRendered = 0;
+  let galItems = null, galCur = null, galRendered = 0, galLastGroup = null;
   const galFilter = { kind: 'all', q: '' };
+  const galSort = { key: 'time' };
+  // sort keys: time/altitude reorder flat; day/place/city/person add group headers
+  const GAL_SORTS = [['time', 'Time'], ['day', 'Day'], ['place', 'Place'], ['city', 'City'], ['person', 'Photographer'], ['alt', 'Altitude']];
+  const GAL_GROUPED = { day: 1, place: 1, city: 1, person: 1 };
+  function tcmp(a, b) { a = a || ''; b = b || ''; return a < b ? -1 : a > b ? 1 : 0; }
+  function cmpStr(a, b) { return String(a || '~').localeCompare(String(b || '~')); }
+  function personOrder(pn) { const i = PERSONS.indexOf(pn); return i < 0 ? 99 : i; }
+  function galSortCmp(a, b) {
+    switch (galSort.key) {
+      case 'alt': { const av = a.it.alt, bv = b.it.alt;
+        if (av == null && bv == null) return (a.di - b.di) || tcmp(a.it.time, b.it.time);
+        if (av == null) return 1; if (bv == null) return -1;
+        return (bv - av) || (a.di - b.di); }                      // highest first
+      case 'place': return cmpStr(a.place, b.place) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
+      case 'city': return cmpStr(a.it.city, b.it.city) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
+      case 'person': return (personOrder(a.it.person) - personOrder(b.it.person)) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
+      default: return (a.di - b.di) || tcmp(a.it.time, b.it.time); // time + day
+    }
+  }
+  function galGroupKey(x) {
+    switch (galSort.key) {
+      case 'day': return 'd' + x.di;
+      case 'place': return 'p:' + x.place;
+      case 'city': return 'c:' + (x.it.city || '');
+      case 'person': return 'w:' + (x.it.person || '');
+    }
+    return null;
+  }
+  function galGroupLabel(x) {
+    switch (galSort.key) {
+      case 'day': return x.dayLabel;
+      case 'place': return x.place;
+      case 'city': return x.it.city || 'Unknown';
+      case 'person': return x.it.person || 'Unattributed';
+    }
+    return '';
+  }
   function buildGallery() {
     if (!galItems) {
       galItems = [];
-      DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it =>
-        galItems.push({ it, short: d.short, place: it.place || p.name }))));
+      DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it =>
+        galItems.push({ it, di, short: d.short, dayLabel: d.label, place: it.place || p.name }))));
       const g = el('section', 'dcc-tour-gallery');
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
         [['all', 'All'], ['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k =>
@@ -676,6 +713,9 @@
           PERSONS.map(pn => '<button class="dcc-personchip" data-person="' + pn + '">' +
             '<span class="pc-dot" style="background:' + PERSON_COLORS[pn] + '"></span>' + escapeHtml(pn) + '</button>').join('') +
         '</span>' +
+        '<label class="dcc-tour-galsort">Sort by <select id="dcc-galsort">' +
+          GAL_SORTS.map(s => '<option value="' + s[0] + '">' + s[1] + '</option>').join('') +
+        '</select></label>' +
         '<input type="search" id="dcc-galq" placeholder="filter by place…" autocomplete="off">' +
         '<span class="dcc-tour-gal-count" id="dcc-galcount"></span></div>' +
         '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
@@ -687,6 +727,7 @@
       }));
       g.querySelectorAll('.dcc-personchip').forEach(b => b.addEventListener('click', () =>
         setPersonFilter(b.dataset.person === 'all' ? null : b.dataset.person)));
+      g.querySelector('#dcc-galsort').addEventListener('change', e => { galSort.key = e.target.value; renderGallery(); });
       let deb = null;
       g.querySelector('#dcc-galq').addEventListener('input', e => {
         clearTimeout(deb); deb = setTimeout(() => { galFilter.q = e.target.value.trim().toLowerCase(); renderGallery(); }, 150);
@@ -701,7 +742,8 @@
     galCur = galItems.filter(x => (galFilter.kind === 'all' || x.it.kind === galFilter.kind) &&
       itemPasses(x.it) &&
       (!galFilter.q || (x.place || '').toLowerCase().indexOf(galFilter.q) >= 0));
-    galRendered = 0;
+    galCur.sort(galSortCmp);
+    galRendered = 0; galLastGroup = null;
     lightboxFulls = []; lightboxMeta = [];   // gallery owns the lightbox set while open
     document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
     document.getElementById('dcc-galgrid').innerHTML = '';
@@ -711,8 +753,19 @@
     if (!galCur || root.dataset.view !== 'gallery') return;
     const grid = document.getElementById('dcc-galgrid');
     const end = Math.min(galRendered + 200, galCur.length);
+    const grouped = !!GAL_GROUPED[galSort.key];
     let html = '';
-    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it);
+    for (let i = galRendered; i < end; i++) {
+      const x = galCur[i];
+      if (grouped) {
+        const gk = galGroupKey(x);
+        if (gk !== galLastGroup) {
+          galLastGroup = gk;
+          html += '<h3 class="dcc-tour-galgroup">' + escapeHtml(galGroupLabel(x)) + '</h3>';
+        }
+      }
+      html += renderItem(x.it);
+    }
     grid.insertAdjacentHTML('beforeend', html);
     galRendered = end;
     document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
