@@ -88,9 +88,21 @@
     buildAppShell();
   }
 
+  // ---- monoline icon set (editorial line-art; inherits currentColor) ----
+  function svgIcon(name) {
+    const s = {
+      story:   '<circle cx="6" cy="6" r="1.7"/><circle cx="6" cy="18" r="1.7"/><line x1="6" y1="7.7" x2="6" y2="16.3"/><line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="18" x2="17" y2="18"/>',
+      gallery: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M4 17l5-5 4 4 3-3 4 4"/>',
+      map:     '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><line x1="9" y1="4" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="20"/>',
+      stats:   '<line x1="4" y1="20" x2="20" y2="20"/><line x1="7" y1="20" x2="7" y2="12"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="17" y1="20" x2="17" y2="15"/>',
+      dice:    '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.15" fill="currentColor" stroke="none"/>'
+    }[name] || '';
+    return '<svg class="dcc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + s + '</svg>';
+  }
+
   // ---- Option B: native app shell (mobile) — bottom tabs, day top-bar, sheet, swipe ----
-  function tabBtn(v, icon, label) {
-    return '<button class="dcc-tour-tabbtn" role="tab" aria-selected="' + (v === 'story') + '" data-view="' + v + '"><span class="ti">' + icon +
+  function tabBtn(v, label) {
+    return '<button class="dcc-tour-tabbtn" role="tab" aria-selected="' + (v === 'story') + '" data-view="' + v + '"><span class="ti">' + svgIcon(v) +
       '</span><span>' + label + '</span></button>';
   }
   function buildAppShell() {
@@ -101,7 +113,7 @@
         '<span class="tb-daynum" id="dcc-tb-num"></span>' +
         '<span class="tb-daylabel" id="dcc-tb-lab"></span></button>' +
       '<button class="tb-arrow tb-next" aria-label="Next day">›</button>' +
-      '<button class="tb-arrow tb-rand" aria-label="Random memory">🎲</button>';
+      '<button class="tb-arrow tb-rand" aria-label="Random memory">' + svgIcon('dice') + '</button>';
     tb.querySelector('.tb-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
     tb.querySelector('.tb-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
     tb.querySelector('.tb-rand').addEventListener('click', randomMemory);
@@ -110,8 +122,8 @@
     const bar = el('nav', 'dcc-tour-tabbar');
     bar.setAttribute('aria-label', 'Sections');
     bar.setAttribute('role', 'tablist');
-    bar.innerHTML = tabBtn('story', '📖', 'Story') + tabBtn('gallery', '🖼', 'Photos') +
-      tabBtn('map', '🗺', 'Map') + tabBtn('stats', '📊', 'Stats');
+    bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Photos') +
+      tabBtn('map', 'Map') + tabBtn('stats', 'Stats');
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
@@ -267,11 +279,11 @@
     const w = el('div', 'dcc-tour-modes');
     w.setAttribute('role', 'tablist');
     w.innerHTML =
-      '<button class="dcc-tour-modebtn active" role="tab" aria-selected="true" data-view="story">📖 Story</button>' +
-      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">🖼 Photos</button>' +
-      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">🗺 Map</button>' +
-      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">📊 Stats</button>' +
-      '<button class="dcc-tour-modebtn" id="dcc-random" title="Show me a random memory">🎲</button>';
+      '<button class="dcc-tour-modebtn active" role="tab" aria-selected="true" data-view="story">' + svgIcon('story') + '<span>Timeline</span></button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">' + svgIcon('gallery') + '<span>Photos</span></button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">' + svgIcon('map') + '<span>Map</span></button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">' + svgIcon('stats') + '<span>Stats</span></button>' +
+      '<button class="dcc-tour-modebtn dcc-tour-modebtn-icon" id="dcc-random" title="Show me a random memory" aria-label="Random memory">' + svgIcon('dice') + '</button>';
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
     w.querySelector('#dcc-random').addEventListener('click', randomMemory);
@@ -279,24 +291,30 @@
   }
   function buildMapMode() {
     const w = el('section', 'dcc-tour-mapmode');
+    const dayOpts = DATA.days.map((d, i) =>
+      '<option value="' + i + '">' + escapeHtml('Day ' + d.index + ' · ' + d.short) + '</option>').join('');
+    // compact color-key strip: one segment per day (dims when outside the range)
     const legend = DATA.days.map((d, i) =>
-      '<button class="dcc-tour-legchip" data-day="' + i + '"><span style="background:' + dayColor(i) + '"></span>' +
-      escapeHtml(d.short) + '</button>').join('');
+      '<button class="dcc-tour-legseg" data-day="' + i + '" title="' + escapeAttr(d.short + (d.area ? ' · ' + shortName(d.area) : '')) + '">' +
+      '<span class="seg-sw" style="background:' + dayColor(i) + '"></span>' +
+      '<span class="seg-n">' + escapeHtml(String(d.index)) + '</span></button>').join('');
     w.innerHTML =
       '<div class="dcc-tour-mm-bar">' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-path" checked> Path</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-heat"> Heatmap</label>' +
-        '<button class="dcc-tour-chip" id="mm-boat">⛵ Play the Elaphiti boat day</button>' +
-        '<span class="dcc-tour-mm-range"><span id="mm-range-lab"></span>' +
-          '<input type="range" id="mm-lo" min="0" max="' + (DATA.day_count-1) + '" value="0">' +
-          '<input type="range" id="mm-hi" min="0" max="' + (DATA.day_count-1) + '" value="' + (DATA.day_count-1) + '"></span>' +
+        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-sat"> Satellite</label>' +
+        '<span class="dcc-tour-mm-range">' +
+          '<label class="mm-dl">From <select class="mm-daysel" id="mm-lo">' + dayOpts + '</select></label>' +
+          '<label class="mm-dl">to <select class="mm-daysel" id="mm-hi">' + dayOpts + '</select></label>' +
+        '</span>' +
+        '<span class="dcc-tour-mm-stats" id="mm-range-stats"></span>' +
       '</div>' +
       '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>' +
-      '<div class="dcc-tour-mm-legend">' + legend + '</div>';
+      '<div class="dcc-tour-mm-legend" id="mm-legend">' + legend + '</div>';
     return w;
   }
-  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmInit = false;
+  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmInit = false;
   let mmRange = [0, 0];
   function initMapMode() {
     if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); return; }
@@ -304,20 +322,22 @@
     mmRange = [0, DATA.day_count - 1];
     mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
+    mmSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri' });
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
-    m.querySelector('#mm-boat').addEventListener('click', mmPlayBoat);
+    m.querySelector('#mm-sat').addEventListener('change', e => { if (e.target.checked) mmSat.addTo(mmMap); else mmMap.removeLayer(mmSat); });
     const lo = m.querySelector('#mm-lo'), hi = m.querySelector('#mm-hi');
-    const onSlide = () => {
+    hi.value = DATA.day_count - 1;
+    const onRange = () => {
       let a = +lo.value, b = +hi.value; if (a > b) { const t = a; a = b; b = t; }
       mmRange = [a, b]; renderMapMode();
     };
-    lo.addEventListener('input', onSlide); hi.addEventListener('input', onSlide);
-    m.querySelectorAll('.dcc-tour-legchip').forEach(c => c.addEventListener('click', () => {
-      const di = +c.dataset.day; lo.value = di; hi.value = di; onSlide();
+    lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
+    m.querySelectorAll('.dcc-tour-legseg').forEach(c => c.addEventListener('click', () => {
+      const di = +c.dataset.day; lo.value = di; hi.value = di; onRange();
       const d = DATA.days[di]; if (d.places.some(p => p.lat != null)) fitToDays(di, di);
     }));
     // whole-trip bounds
@@ -340,8 +360,15 @@
     const showPath = root._mapmode.querySelector('#mm-path').checked;
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
     const heatPts = [], allPts = [];
-    root._mapmode.querySelector('#mm-range-lab').textContent =
-      DATA.days[mmRange[0]].short + ' – ' + DATA.days[mmRange[1]].short;
+    // range readout (days · places · shots) + dim legend segments outside the range
+    const rdays = daysInRange();
+    let rPlaces = 0, rShots = 0;
+    rdays.forEach(di => DATA.days[di].places.forEach(p => { rPlaces++; rShots += p.count; }));
+    const statsEl = root._mapmode.querySelector('#mm-range-stats');
+    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots';
+    root._mapmode.querySelectorAll('.dcc-tour-legseg').forEach(seg => {
+      const i = +seg.dataset.day; seg.classList.toggle('out', i < mmRange[0] || i > mmRange[1]);
+    });
     daysInRange().forEach(di => {
       const d = DATA.days[di], col = dayColor(di), line = [];
       d.places.forEach((p, pi) => {
@@ -382,30 +409,6 @@
     side.querySelector('[data-openday]').addEventListener('click', () => { setView('story'); selectDay(di); });
     mmMap.panTo([p.lat, p.lng], { animate: true });
   }
-  function mmPlayBoat() {
-    const di = DATA.days.findIndex(d => /elaphiti/i.test(d.area || '') || d.date === '2025-09-20');
-    if (di < 0) return;
-    const d = DATA.days[di];
-    const seq = [];
-    d.places.forEach((p, pi) => p.items.forEach(it => { if (it.lat != null) seq.push({ lat: it.lat, lng: it.lng, t: it.time, name: p.name, pi }); }));
-    seq.sort((a, b) => (a.t || '').localeCompare(b.t || ''));
-    if (!seq.length) return;
-    mmRange = [di, di]; root._mapmode.querySelector('#mm-lo').value = di; root._mapmode.querySelector('#mm-hi').value = di;
-    renderMapMode();
-    const trace = L.polyline([], { color: dayColor(di), weight: 4 }).addTo(mmPathLayer);
-    const dot = L.circleMarker(seq[0], { radius: 8, color: '#fff', weight: 2, fillColor: dayColor(di), fillOpacity: 1 }).addTo(mmPathLayer);
-    let i = 0;
-    if (mmBoatTimer) clearInterval(mmBoatTimer);
-    mmMap.setView([seq[0].lat, seq[0].lng], 12);
-    mmBoatTimer = setInterval(() => {
-      if (i >= seq.length) { clearInterval(mmBoatTimer); mmBoatTimer = null; return; }
-      const s = seq[i]; trace.addLatLng([s.lat, s.lng]); dot.setLatLng([s.lat, s.lng]);
-      dot.bindTooltip(escapeHtml(s.name) + ' · ' + escapeHtml(s.t || ''), { direction: 'top' }).openTooltip();
-      mmMap.panTo([s.lat, s.lng], { animate: true, duration: 0.4 });
-      i++;
-    }, 550);
-  }
-  let mmBoatTimer = null;
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
   let galItems = null, galCur = null, galRendered = 0;
@@ -775,8 +778,8 @@
       html += '<section class="dcc-tour-place" id="' + anchor + '" data-open="' + openAttr + '">' +
         '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
           '<div class="dcc-tour-place-htext">' +
-            '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
-            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + p.count + ' shots' + cum + '</span>' +
+            '<h3>' + escapeHtml(p.name) + '</h3>' +
+            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + plur(p.count, 'shot') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +

@@ -195,12 +195,12 @@
 
 /* ---- place section ---- */
 .dcc-tour-place { margin-bottom: 1.25rem; scroll-margin-top: 0.5rem; }
-.dcc-tour-place-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--dcc-tour-border); cursor: pointer; user-select: none; }
+.dcc-tour-place-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--dcc-tour-border); cursor: pointer; user-select: none; }
 .dcc-tour-place-htext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dcc-tour-place-head h3 { margin: 0; font-size: 1.25rem; color: var(--dcc-tour-text); }
 .dcc-tour-place-head:hover h3 { color: var(--dcc-tour-accent-deep); }
 .dcc-tour-place-head:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 3px; border-radius: 3px; }
-.dcc-tour-place-chevron { flex: 0 0 auto; color: var(--dcc-tour-muted); font-size: 0.95rem; line-height: 1; transition: transform 0.18s ease, color 0.15s; }
+.dcc-tour-place-chevron { flex: 0 0 auto; color: var(--dcc-tour-muted); font-size: 1.5rem; line-height: 1; margin-top: 1px; transition: transform 0.18s ease, color 0.15s; }
 .dcc-tour-place-head:hover .dcc-tour-place-chevron { color: var(--dcc-tour-primary); }
 /* collapsed: hide the media, rotate the chevron, drop the rule to read as a list */
 .dcc-tour-place[data-open="0"] .dcc-tour-media { display: none; }
@@ -338,6 +338,7 @@
 .dcc-tour-maplink { text-decoration: none; font-size: 0.8rem; opacity: 0.55; transition: opacity 0.12s, transform 0.12s; }
 .dcc-tour-maplink:hover { opacity: 1; transform: scale(1.15); }
 .dcc-tour-maplink.head { margin-left: 6px; font-size: 0.85rem; vertical-align: middle; }
+.dcc-tour-maplink.meta { font-size: 0.92rem; margin-left: 3px; opacity: 0.7; vertical-align: -1px; }
 .dcc-tour-maplink.cell { position: absolute; right: 5px; bottom: 5px; background: rgba(0,0,0,0.55); border-radius: 6px; padding: 1px 5px; opacity: 0.75; }
 .dcc-tour-cell.wide .dcc-tour-maplink.cell { right: 8px; bottom: 8px; }
 
@@ -350,7 +351,10 @@
 
 /* ===== Phase 2: Map Mode ===== */
 .dcc-tour-modes { display: flex; gap: 6px; padding: 0.4rem 1.5rem 0; }
-.dcc-tour-modebtn { border: 1px solid var(--dcc-tour-border); background: transparent; color: var(--dcc-tour-muted); font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.98rem; font-weight: 600; padding: 6px 18px; border-radius: 999px; cursor: pointer; }
+.dcc-tour-modebtn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--dcc-tour-border); background: transparent; color: var(--dcc-tour-muted); font: inherit; font-family: var(--dcc-tour-font-head); font-size: 0.98rem; font-weight: 600; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+.dcc-tour-modebtn-icon { padding: 6px 11px; }
+/* monoline icons inherit currentColor + size to the text */
+.dcc-ic { width: 1.15em; height: 1.15em; flex: none; vertical-align: -0.16em; }
 .dcc-tour-modebtn:hover { color: var(--dcc-tour-text); border-color: color-mix(in srgb, var(--dcc-tour-text) 30%, transparent); }
 .dcc-tour-modebtn.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-primary); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
 
@@ -380,9 +384,12 @@
 
 .dcc-tour-mm-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
 .dcc-tour-mm-tog { font-size: 0.85rem; color: var(--dcc-tour-text); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.dcc-tour-mm-range { display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 240px; font-size: 0.78rem; color: var(--dcc-tour-muted); }
-.dcc-tour-mm-range input[type=range] { flex: 1; min-width: 80px; }
-#mm-range-lab { min-width: 96px; font-variant-numeric: tabular-nums; }
+.dcc-tour-mm-range { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mm-dl { font-size: 0.78rem; color: var(--dcc-tour-muted); display: inline-flex; align-items: center; gap: 5px; }
+.mm-daysel { font: inherit; font-size: 0.85rem; color: var(--dcc-tour-text); background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); padding: 6px 8px; cursor: pointer; }
+.mm-daysel:hover { border-color: var(--dcc-tour-primary); }
+.mm-daysel:focus-visible { outline: 2px solid var(--dcc-tour-primary); outline-offset: 1px; }
+.dcc-tour-mm-stats { font-size: 0.78rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; margin-left: auto; }
 
 /* range sliders in gold (not browser blue), on a hairline track */
 .dcc-tour-root input[type=range] { -webkit-appearance: none; appearance: none; height: 3px; background: var(--dcc-tour-border); border-radius: 999px; cursor: pointer; }
@@ -397,14 +404,24 @@
 .dcc-tour-mm-side { position: absolute; top: 10px; right: 10px; bottom: 10px; width: min(340px, 82%); z-index: 500; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); box-shadow: var(--dcc-tour-shadow); padding: 12px 14px; overflow-y: auto; }
 .dcc-tour-mm-side h3 { margin: 0 6px 2px 0; font-size: 1rem; color: var(--dcc-tour-text); display: inline; }
 .dcc-tour-mm-meta { margin: 4px 0 10px; font-size: 0.78rem; color: var(--dcc-tour-muted); }
-.dcc-tour-mm-close { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 1.5rem; line-height: 1; color: var(--dcc-tour-muted); cursor: pointer; }
-.dcc-tour-mm-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 4px; margin-bottom: 10px; }
-.dcc-tour-mm-grid img { height: 72px; }
+/* close stays pinned to the popup's top-right while its content scrolls (#11) */
+.dcc-tour-mm-close { position: sticky; top: 0; float: right; margin: -4px -4px 0 8px; z-index: 3;
+  width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--dcc-tour-card-bg);
+  font-size: 1.5rem; line-height: 28px; text-align: center; color: var(--dcc-tour-muted); cursor: pointer; }
+.dcc-tour-mm-close:hover { color: var(--dcc-tour-primary); }
+/* masonry photo grid — overrides the mobile single-column .dcc-tour-media rule (#6) */
+.dcc-tour-mm-side .dcc-tour-mm-grid { display: block; column-count: 2; column-gap: 6px; grid-template-columns: none; margin-bottom: 10px; clear: both; }
+.dcc-tour-mm-side .dcc-tour-mm-grid img { width: 100%; height: auto; margin: 0 0 6px; border-radius: var(--dcc-tour-radius); display: block; break-inside: avoid; }
 
-.dcc-tour-mm-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-.dcc-tour-legchip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: 999px; padding: 3px 10px 3px 6px; font-size: 0.74rem; color: var(--dcc-tour-muted); cursor: pointer; }
-.dcc-tour-legchip span { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-.dcc-tour-legchip:hover { border-color: var(--dcc-tour-primary); color: var(--dcc-tour-text); }
+/* compact color-key strip: one small segment per day, dims outside the range (#12) */
+.dcc-tour-mm-legend { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.dcc-tour-legseg { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--dcc-tour-border);
+  background: var(--dcc-tour-card-bg); border-radius: var(--dcc-tour-radius); padding: 2px 6px 2px 4px; cursor: pointer;
+  transition: opacity .15s, border-color .15s; }
+.dcc-tour-legseg .seg-sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.dcc-tour-legseg .seg-n { font-size: 0.7rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+.dcc-tour-legseg:hover { border-color: var(--dcc-tour-primary); }
+.dcc-tour-legseg.out { opacity: 0.38; }
 
 /* ===== Mobile-first UI optimization (Option A) ===== */
 /* trip overview: summary hidden on desktop (always open); body always shown */
@@ -458,10 +475,10 @@
   .dcc-tour-place { margin-bottom: 1.85rem; }
   .dcc-tour-place-head { margin-top: 0.4rem; }
 
-  /* place header: text block (name over meta) + chevron; bigger tap target */
-  .dcc-tour-place-head { align-items: center; gap: 0.6rem; min-height: 48px; }
+  /* place header: text block (name over meta) + chevron aligned to the title row */
+  .dcc-tour-place-head { align-items: flex-start; gap: 0.6rem; min-height: 48px; }
   .dcc-tour-place-meta { white-space: normal; }
-  .dcc-tour-place-chevron { font-size: 1.15rem; }
+  .dcc-tour-place-chevron { font-size: 1.9rem; margin-top: 2px; padding: 0 4px; }
   .dcc-tour-idx-all, .dcc-tour-idx-chip { min-height: 40px; font-size: 0.9rem; }
 
   /* the date/search controls row is redundant on phones — day + place finding
@@ -517,7 +534,8 @@
   .dcc-tour-modes { display: none; }
   .dcc-tour-daynav { display: none; }
   .dcc-tour-mapwrap { display: none; }        /* per-day side map -> Map tab */
-  .dcc-tour-root { padding-bottom: 70px; }     /* room for the tab bar */
+  /* doubled class so it outranks the base `.dcc-tour-root.dcc-tour-root{padding:0}` */
+  .dcc-tour-root.dcc-tour-root { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }  /* clear the fixed tab bar incl. the home indicator */
 
   /* sticky day top-bar */
   .dcc-tour-topbar { display: flex; align-items: center; gap: 6px; position: sticky; top: 0; z-index: 25;
