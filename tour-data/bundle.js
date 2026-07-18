@@ -275,6 +275,46 @@
 
   // ---- #7/#10/#11 Map Mode: full-trip interactive map ----
   function dayColor(i) { return 'hsl(' + Math.round(i * 360 / Math.max(DATA.day_count, 1)) + ' 72% 45%)'; }
+
+  // ---- who shot it: four legible, editorial hues ----
+  const PERSONS = ['Rob', 'Erica', 'Alice', 'GoPro'];
+  const PERSON_COLORS = { Rob: '#3a7ca5', Erica: '#c76b6b', Alice: '#7a9e5e', GoPro: '#6b5b95' };
+  const NO_COLOR = '#b0aaa2';
+  function lerpHex(h1, h2, f) {
+    const p = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)];
+    const c1 = p(h1), c2 = p(h2), m = i => Math.round(c1[i] + (c2[i] - c1[i]) * f);
+    return 'rgb(' + m(0) + ',' + m(1) + ',' + m(2) + ')';
+  }
+  const ALT_MAX = 412;  // Mount Srđ
+  const ALT_STOPS = [[0, '#2b7a9b'], [0.5, '#6a9a5b'], [1, '#c9992e']];  // sea → hills → peak
+  function altColor(m) {
+    const t = Math.max(0, Math.min(1, (m || 0) / ALT_MAX));
+    let a = ALT_STOPS[0], b = ALT_STOPS[ALT_STOPS.length - 1];
+    for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
+    return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
+  }
+  function placeDominantPerson(p) {
+    const c = {}; p.items.forEach(it => { if (it.person) c[it.person] = (c[it.person] || 0) + 1; });
+    let best = null, n = -1; for (const k in c) if (c[k] > n) { n = c[k]; best = k; }
+    return best;
+  }
+  function placeMeanAlt(p) {
+    const a = p.items.map(it => it.alt).filter(x => x != null);
+    return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  }
+  // circular mean of the camera headings at a place (which way people faced)
+  function placeMeanHeading(p) {
+    let sx = 0, sy = 0, n = 0;
+    p.items.forEach(it => { if (it.heading != null) { const r = it.heading * Math.PI / 180; sx += Math.cos(r); sy += Math.sin(r); n++; } });
+    if (!n) return null;
+    let deg = Math.atan2(sy, sx) * 180 / Math.PI; return (deg + 360) % 360;
+  }
+  let mmColorMode = 'day';   // 'day' | 'person' | 'alt'
+  function placeColor(p, di) {
+    if (mmColorMode === 'person') return PERSON_COLORS[placeDominantPerson(p)] || NO_COLOR;
+    if (mmColorMode === 'alt') { const a = placeMeanAlt(p); return a != null ? altColor(a) : NO_COLOR; }
+    return dayColor(di);
+  }
   function buildModeToggle() {
     const w = el('div', 'dcc-tour-modes');
     w.setAttribute('role', 'tablist');
@@ -293,14 +333,16 @@
     const w = el('section', 'dcc-tour-mapmode');
     const dayOpts = DATA.days.map((d, i) =>
       '<option value="' + i + '">' + escapeHtml('Day ' + d.index + ' · ' + d.short) + '</option>').join('');
-    // compact color-key strip: one segment per day (dims when outside the range)
-    const legend = DATA.days.map((d, i) =>
-      '<button class="dcc-tour-legseg" data-day="' + i + '" title="' + escapeAttr(d.short + (d.area ? ' · ' + shortName(d.area) : '')) + '">' +
-      '<span class="seg-sw" style="background:' + dayColor(i) + '"></span>' +
-      '<span class="seg-n">' + escapeHtml(String(d.index)) + '</span></button>').join('');
     w.innerHTML =
       '<div class="dcc-tour-mm-bar">' +
+        '<span class="dcc-tour-mm-colorby" role="group" aria-label="Color markers by">' +
+          '<span class="mm-cb-lab">Color</span>' +
+          '<button class="mm-cb active" data-mode="day">Day</button>' +
+          '<button class="mm-cb" data-mode="person">Who</button>' +
+          '<button class="mm-cb" data-mode="alt">Altitude</button>' +
+        '</span>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-path" checked> Path</label>' +
+        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-facing"> Facing</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-heat"> Heatmap</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-sat"> Satellite</label>' +
         '<span class="dcc-tour-mm-range">' +
@@ -311,7 +353,7 @@
       '</div>' +
       '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>' +
-      '<div class="dcc-tour-mm-legend" id="mm-legend">' + legend + '</div>';
+      '<div class="dcc-tour-mm-legend" id="mm-legend"></div>';
     return w;
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmInit = false;
@@ -336,13 +378,42 @@
       mmRange = [a, b]; renderMapMode();
     };
     lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
-    m.querySelectorAll('.dcc-tour-legseg').forEach(c => c.addEventListener('click', () => {
-      const di = +c.dataset.day; lo.value = di; hi.value = di; onRange();
-      const d = DATA.days[di]; if (d.places.some(p => p.lat != null)) fitToDays(di, di);
+    m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
+    // Color by: Day / Who / Altitude
+    m.querySelectorAll('.mm-cb').forEach(b => b.addEventListener('click', () => {
+      mmColorMode = b.dataset.mode;
+      m.querySelectorAll('.mm-cb').forEach(x => x.classList.toggle('active', x === b));
+      renderMapLegend(); renderMapMode();
     }));
-    // whole-trip bounds
-    renderMapMode(true);
+    renderMapLegend();
+    renderMapMode(true);   // whole-trip bounds
     setTimeout(() => mmMap.invalidateSize(), 80);
+  }
+  // legend adapts to the color mode; also the day/person selector
+  function renderMapLegend() {
+    const el = root._mapmode.querySelector('#mm-legend');
+    const lo = root._mapmode.querySelector('#mm-lo'), hi = root._mapmode.querySelector('#mm-hi');
+    if (mmColorMode === 'day') {
+      el.className = 'dcc-tour-mm-legend';
+      el.innerHTML = DATA.days.map((d, i) =>
+        '<button class="dcc-tour-legseg" data-day="' + i + '" title="' + escapeAttr(d.short + (d.area ? ' · ' + shortName(d.area) : '')) + '">' +
+        '<span class="seg-sw" style="background:' + dayColor(i) + '"></span><span class="seg-n">' + d.index + '</span></button>').join('');
+      el.querySelectorAll('.dcc-tour-legseg').forEach(c => c.addEventListener('click', () => {
+        const di = +c.dataset.day; lo.value = di; hi.value = di; mmRange = [di, di];
+        if (DATA.days[di].places.some(p => p.lat != null)) fitToDays(di, di);
+        renderMapMode();
+      }));
+    } else if (mmColorMode === 'person') {
+      el.className = 'dcc-tour-mm-legend mm-legend-person';
+      el.innerHTML = PERSONS.map(pn =>
+        '<span class="dcc-tour-legseg"><span class="seg-sw" style="background:' + PERSON_COLORS[pn] + '"></span>' +
+        '<span class="seg-n">' + escapeHtml(pn) + '</span></span>').join('');
+    } else {  // alt
+      el.className = 'dcc-tour-mm-legend mm-legend-alt';
+      el.innerHTML = '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
+        ALT_STOPS[0][1] + ',' + ALT_STOPS[1][1] + ',' + ALT_STOPS[2][1] + ')"></span>' +
+        '<span class="mm-altlab">0 m (sea)</span><span class="mm-altlab">~200 m</span><span class="mm-altlab">' + ALT_MAX + ' m (Srđ)</span>';
+    }
   }
   function daysInRange() {
     const out = [];
@@ -359,6 +430,7 @@
     mmMarkers.clearLayers(); mmPathLayer.clearLayers();
     const showPath = root._mapmode.querySelector('#mm-path').checked;
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
+    const showFacing = root._mapmode.querySelector('#mm-facing').checked;
     const heatPts = [], allPts = [];
     // range readout (days · places · shots) + dim legend segments outside the range
     const rdays = daysInRange();
@@ -375,11 +447,21 @@
         if (p.lat == null) return;
         allPts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
         const r = Math.min(20, 5 + Math.sqrt(p.count) * 1.6);
-        const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: col, fillOpacity: 0.85 });
+        const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
         mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
         mk.on('click', () => openMapSidebar(di, pi));
         mmMarkers.addLayer(mk);
         p.items.forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
+        // compass "facing" ray: which way the cameras pointed at this spot
+        if (showFacing) {
+          const h = placeMeanHeading(p);
+          if (h != null) {
+            const rad = h * Math.PI / 180, dd = 0.0011;
+            const tip = [p.lat + dd * Math.cos(rad), p.lng + dd * Math.sin(rad) / Math.cos(p.lat * Math.PI / 180)];
+            mmPathLayer.addLayer(L.polyline([[p.lat, p.lng], tip], { color: '#7d5411', weight: 2, opacity: 0.85 }));
+            mmPathLayer.addLayer(L.circleMarker(tip, { radius: 2.6, weight: 0, fillColor: '#7d5411', fillOpacity: 0.9 }));
+          }
+        }
       });
       if (showPath && line.length > 1)
         mmPathLayer.addLayer(L.polyline(line, { color: col, weight: 2.5, opacity: 0.7, dashArray: '4 5' }));

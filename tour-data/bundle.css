@@ -423,6 +423,18 @@
 .dcc-tour-legseg:hover { border-color: var(--dcc-tour-primary); }
 .dcc-tour-legseg.out { opacity: 0.38; }
 
+/* Color-by segmented control */
+.dcc-tour-mm-colorby { display: inline-flex; align-items: center; border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); overflow: hidden; }
+.dcc-tour-mm-colorby .mm-cb-lab { font-size: 0.75rem; color: var(--dcc-tour-muted); padding: 0 8px; }
+.mm-cb { font: inherit; font-size: 0.82rem; border: 0; border-left: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-muted); padding: 6px 11px; cursor: pointer; }
+.mm-cb:hover { color: var(--dcc-tour-text); }
+.mm-cb.active { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); box-shadow: inset 0 0 0 1px var(--dcc-tour-primary); }
+/* person legend (non-interactive swatches) + altitude scale */
+.mm-legend-person .dcc-tour-legseg { cursor: default; }
+.mm-legend-alt { align-items: center; gap: 8px; }
+.mm-altscale { display: inline-block; width: 160px; height: 10px; border-radius: 999px; border: 1px solid var(--dcc-tour-border); }
+.mm-altlab { font-size: 0.72rem; color: var(--dcc-tour-muted); }
+
 /* ===== Mobile-first UI optimization (Option A) ===== */
 /* trip overview: summary hidden on desktop (always open); body always shown */
 .dcc-tour-ovcollapse > summary { display: none; }
