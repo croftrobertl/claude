@@ -70,6 +70,37 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.27 =
+
+**Fable 5 hotspot audit — automated regression tests + two fixes.**
+
+* **New: automated popup regression suite** (`tests/` at the repo root,
+  not shipped in the plugin zip). Drives the real `widget.js` +
+  `widget.css` in headless Chromium at phone and desktop viewports and
+  asserts every failure mode that shipped between v0.9.7.17 and
+  v0.9.7.26: popup fully on-screen and near the top, internal scroll
+  without the frame jumping, opaque flush header, always-visible
+  scrollrail, transformed-Elementor-ancestor cases, FAB-hub dialog
+  cases, and zero JS errors. Run `node tests/popup.test.js` before
+  every release. 21 assertions, all passing on this build.
+* **Fix (found by the new suite on its first run): a section detail
+  opened from inside the FAB hub was invisible.** Chrome treats a modal
+  `<dialog>` as the containing block for fixed-position descendants
+  (contrary to the v0.9.7.23 assumption), and the hub's
+  `overflow-y: auto` paint-clipped the detail card into the collapsed
+  hub strip. While a detail is open inside the hub, the hub's overflow
+  is now visible (the card's geometry was already viewport-correct) and
+  the dim overlay is stretched to keep covering the full screen.
+* **Fix: the AI "daily" usage cap is now a true calendar-day cap.** The
+  counter's fixed 24-hour expiry was re-stamped on every question,
+  making it a sliding window that steady usage could extend
+  indefinitely. It now expires at the site's local midnight.
+
+Audit result otherwise: no high-severity findings — endpoints are nonce-
+protected and rate-limited, output is escaped, AI answers render as
+plain text, assets load only on pages using the widget, and external
+API calls are transient-cached.
+
 = 0.9.7.26 =
 
 **Detail popup chrome polish (five host-requested refinements).**

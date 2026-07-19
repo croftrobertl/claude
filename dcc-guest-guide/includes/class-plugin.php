@@ -651,7 +651,16 @@ final class Plugin
             wp_send_json_error(['message' => __('AI returned an empty answer.', 'dcc-guest-guide')], 502);
         }
         set_transient($rl_key, $rl_count + 1, 15 * MINUTE_IN_SECONDS);
-        set_transient('dccgg_ai_daily', $daily_count + 1, DAY_IN_SECONDS);
+        // v0.9.7.27: expire the daily counter at the site's local midnight
+        // instead of DAY_IN_SECONDS. The fixed 24h TTL was re-stamped on
+        // every increment, turning the "daily" cap into a sliding window
+        // that steady usage could extend indefinitely — under-delivering
+        // the configured quota. Anchoring to midnight makes it a true
+        // calendar-day cap that resets when the day does.
+        $now = current_datetime();
+        $midnight = $now->modify('tomorrow')->setTime(0, 0, 0);
+        $ttl = max(MINUTE_IN_SECONDS, $midnight->getTimestamp() - $now->getTimestamp());
+        set_transient('dccgg_ai_daily', $daily_count + 1, $ttl);
         wp_send_json_success(['answer' => $answer]);
     }
 

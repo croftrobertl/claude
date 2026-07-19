@@ -746,6 +746,29 @@ body.dccgg-detail-open .dccgg-scrollrail { display: block; }
     opacity: 1;
 }
 
+/* v0.9.7.27 — detail opened from inside the FAB hub <dialog>.
+   Caught by tests/popup.test.js scenario C: Chrome treats a modal dialog
+   as the CONTAINING BLOCK for fixed-position descendants (the v0.9.7.23
+   comment claiming otherwise was wrong), and its overflow-y:auto then
+   paint-clips them to the dialog's box. When a detail opens, .dccgg-menu
+   hides, the hub collapses to a strip, and the detail card was clipped
+   into it — invisible. While a detail is open inside the hub:
+   1. lift the clip (overflow: visible) so the stage can paint at its
+      viewport-anchored position — the geometry already lands correctly
+      because the hub dialog is itself viewport-anchored;
+   2. stretch the dim overlay far past the (dialog-relative) inset:0 box
+      so it still covers the whole screen. Fixed boxes don't create
+      scrollable overflow, so the oversize is safe. */
+body.dccgg-detail-open dialog.dccgg-wrapper[open] {
+    overflow: visible;
+}
+body.dccgg-detail-open dialog.dccgg-wrapper[open] .dccgg-detail-overlay {
+    top: -100vh;
+    right: -100vw;
+    bottom: -100vh;
+    left: -100vw;
+}
+
 html.dccgg-detail-open,
 body.dccgg-detail-open {
     overflow: hidden;
