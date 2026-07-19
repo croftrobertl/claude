@@ -198,6 +198,14 @@
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next,
 .dccs-root.dccs-root .dccs-nav-spacer { flex: 1 1 0; min-width: 0; }
+/* Keep the short Back/Next labels on one line at every step. Without this they inherit
+   overflow-wrap:anywhere from .dccs-primary and, at a hair-narrow 50% column, "← Back"
+   can break onto two lines on a single step — making that step's buttons taller than
+   the rest. nowrap guarantees identical button height across all steps. */
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next {
+  white-space: nowrap; overflow-wrap: normal; word-break: keep-all;
+}
 /* Tail / review nav: two equal buttons on one row, styled like the cottage CTA. */
 .dccs-root.dccs-root .dccs-tail-nav { flex-wrap: nowrap; }
 .dccs-root.dccs-root .dccs-edit-answers,
@@ -258,39 +266,41 @@
 }
 
 /* Compare — an always-visible cottage checklist (no tap-to-open dropdown), so the
-   "Compare" button below it is never hidden. Big rows + checkboxes for easy tapping;
-   the list scrolls internally only if it exceeds the height cap. */
+   "Compare" button below it is never hidden. Big rows + checkboxes for easy tapping.
+   The list is capped near ~5 rows so it scrolls. Native scrollbars auto-hide (and iOS
+   ignores ::-webkit-scrollbar styling), so we hide the native bar and draw our own
+   always-visible high-contrast bar (.dccs-cmp-bar) positioned by JS — that way guests
+   can always see there are more cottages than fit. */
+.dccs-root.dccs-root .dccs-cmp-scroller { position: relative; margin: 0 auto 12px; max-width: 100%; }
 .dccs-root.dccs-root .dccs-cmp-list {
-  margin: 0 auto 12px; max-width: 100%;
-  max-height: 360px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  max-height: 264px; overflow-y: auto; -webkit-overflow-scrolling: touch;
   border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
   box-shadow: 0 2px 8px rgba(20, 28, 40, 0.06);
+  scrollbar-width: none; /* Firefox: hide native, we draw our own */
 }
+.dccs-root.dccs-root .dccs-cmp-list::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* Custom always-visible scrollbar track + thumb, overlaid on the list's right edge. */
+.dccs-root.dccs-root .dccs-cmp-bar {
+  position: absolute; top: 8px; bottom: 8px; right: 6px; width: 12px;
+  border-radius: 999px; background: var(--dccs-bg); border: 1px solid var(--dccs-border);
+}
+.dccs-root.dccs-root .dccs-cmp-bar-thumb {
+  position: absolute; left: 1px; right: 1px; top: 0; min-height: 34px;
+  border-radius: 999px; background: var(--dccs-accent); cursor: grab; touch-action: none;
+}
+.dccs-root.dccs-root .dccs-cmp-bar-thumb:active { cursor: grabbing; }
 .dccs-root.dccs-root .dccs-cmp-option {
-  display: flex; align-items: center; gap: 12px; padding: 12px 16px; min-height: 50px; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; padding: 12px 26px 12px 16px; min-height: 50px; cursor: pointer;
   border-bottom: 1px solid var(--dccs-border); font-size: 0.98rem; text-transform: none;
   overflow-wrap: anywhere;
   background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+/* Plain-language "the list scrolls" cue above the checklist. */
+.dccs-root.dccs-root .dccs-cmp-count { margin: 0 0 6px; font-size: 0.88rem; color: var(--dccs-muted); text-align: center; }
 /* Hint shown under the Compare button while fewer than 2 cottages are ticked. */
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
-
-/* "More cottages below" cue: a soft fade + down chevron pinned to the bottom of the
-   scrollable checklist so it's clear the list scrolls. A sticky pseudo-element keeps
-   it at the bottom of the scroll viewport; its negative margin cancels its own height
-   so it never inflates the scroll area. JS adds .is-atend to hide it at the end. */
-.dccs-root.dccs-root .dccs-cmp-list::after {
-  content: ''; display: block; position: sticky; bottom: 0;
-  height: 34px; margin-top: -34px; pointer-events: none;
-  border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;
-  opacity: 1; transition: opacity 0.15s ease;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6675' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat center bottom 5px / 16px 16px,
-    linear-gradient(to top, var(--dccs-btn-bg, var(--dccs-surface)), rgba(255, 255, 255, 0));
-}
-.dccs-root.dccs-root .dccs-cmp-list.is-atend::after { opacity: 0; }
 
 /* Default hover/focus feedback for both dropdown menus. Kept at low specificity so
    the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.15.0
+Stable tag: 0.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,8 +18,8 @@ tool:
 
 * **Quick finder (default)** — a step-through wizard, one tappable question per
   screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
-  pet-friendly? ground floor? screened porch?), then a review screen and the top
-  matches.
+  pet-friendly? ground floor? screened porch?), then straight to the top matches.
+  An optional "Review your answers" step can be switched on in the editor.
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
 * **Compare** (mode menu, or tick cottages on the results) — choose from a
@@ -97,10 +97,11 @@ guest never scrolls to find their results. Each step shows a clickable progress
 stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
-both edit earlier answers. After the last question a **Review** screen lists all
-answers (each editable) before "See my matches" reveals the **Top 3**. The
-**Edit answers** button on the results returns to those answers to change them.
-Answers are never remembered — every page load starts fresh.
+both edit earlier answers. After the last question the guest goes straight to the
+**Top 3** (an optional **Review your answers** step can be enabled in the editor to
+add a confirm-first screen). The **Edit answers** button on the results always opens
+that review screen on demand, so answers can be changed even when the forced step is
+off. Answers are never remembered — every page load starts fresh.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
 (pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
@@ -182,6 +183,19 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.16.0 =
+* Review step is now OFF by default — the quiz goes straight to the matches after the
+  last question. The "Show 'Review your answers' step" toggle (Content) still turns it
+  back on. The results "Edit answers" button stays and opens the review screen on
+  demand, so answers can still be changed without the forced step.
+* Compare picker: removed the small, hard-to-see down-arrow and added an always-visible
+  high-contrast scrollbar beside the cottage checklist, plus a "scroll to see all N
+  cottages" line — so guests always know there are more cottages to pick. The list now
+  shows ~5 cottages and scrolls; drag the bar or swipe to see the rest.
+* Fixed the Match-Quiz Back/Next buttons growing taller on a single step (they could
+  wrap onto two lines at a narrow width) — they're now a consistent height on every step.
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.15.0 =
 * Distinct button colors: the navigation & action buttons (Next, Back, Edit answers,

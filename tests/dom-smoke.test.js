@@ -683,17 +683,32 @@ function configWith(overrides) {
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   ok('wizard-nav is set to nowrap', /\.dccs-wizard-nav\s*\{[^}]*flex-wrap:\s*nowrap/.test(css));
   ok('Back/Next are equal-flex (1 1 0)', /\.dccs-back[\s\S]*?\.dccs-next[\s\S]*?flex:\s*1 1 0/.test(css));
+  // Back/Next labels must never wrap, or a single step's buttons grow taller than the rest.
+  ok('Back/Next labels are white-space:nowrap (equal height every step)',
+    /\.dccs-wizard-nav\s+\.dccs-back,\s*\.dccs-root\.dccs-root\s+\.dccs-wizard-nav\s+\.dccs-next\s*\{[^}]*white-space:\s*nowrap/.test(css));
 })();
 
-// ---- 26. Compare checklist has a scroll-more cue (fade/chevron + JS toggle) ----
+// ---- 26. Compare checklist has an always-visible custom scrollbar (no tiny chevron) ----
 (function () {
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   const js = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
-  // jsdom has no layout (scrollHeight/clientHeight are 0), so assert the wiring exists.
-  ok('checklist has a sticky scroll-more cue pseudo-element',
-    /\.dccs-cmp-list::after\s*\{[\s\S]*?position:\s*sticky/.test(css));
-  ok('cue is hidden at the end via .is-atend', /\.dccs-cmp-list\.is-atend::after\s*\{[^}]*opacity:\s*0/.test(css));
-  ok('JS toggles .is-atend on scroll/overflow', /is-atend/.test(js) && /addEventListener\('scroll'/.test(js));
+  // The old tiny down-arrow cue is gone; a custom always-visible scrollbar replaces it.
+  ok('old chevron cue removed (no .is-atend / ::after cue)',
+    !/\.dccs-cmp-list::after/.test(css) && !/is-atend/.test(css) && !/is-atend/.test(js));
+  ok('native scrollbar hidden so we can draw our own',
+    /\.dccs-cmp-list\s*\{[\s\S]*?scrollbar-width:\s*none/.test(css) && /::-webkit-scrollbar\s*\{[^}]*display:\s*none/.test(css));
+  ok('custom scrollbar track + thumb styled', /\.dccs-cmp-bar\s*\{/.test(css) && /\.dccs-cmp-bar-thumb\s*\{/.test(css));
+  ok('JS sizes/positions the custom scrollbar', /function wireCmpScrollbar/.test(js) && /wireCmpScrollbar\(root\)/.test(js));
+
+  // The checklist markup carries the scroller wrapper, the bar, and the count cue.
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  ok('compare renders the scroller + custom bar + thumb',
+    !!root.querySelector('.dccs-cmp-scroller .dccs-cmp-list') &&
+    !!root.querySelector('.dccs-cmp-bar .dccs-cmp-bar-thumb'));
+  ok('compare shows a "scroll to see all N" count cue',
+    /\ball 8 cottages\b/i.test(root.querySelector('.dccs-cmp-count').textContent));
 })();
 
 // ---- 26b. The per-widget document listener self-removes once the widget is gone ----
@@ -806,25 +821,31 @@ function configWith(overrides) {
 // ---- 31. Review step toggle (show_review / showReview) ----
 (function () {
   const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
-  ok('show_review SWITCHER control exists', /'show_review'[\s\S]{0,400}SWITCHER/.test(sel));
-  ok('showReview flows into the snapshot', /'showReview'\s*=>/.test(sel));
+  ok('show_review SWITCHER control exists', /'show_review'[\s\S]{0,500}SWITCHER/.test(sel));
+  ok('show_review now defaults OFF (empty default)',
+    /'show_review'[\s\S]{0,500}'default'\s*=>\s*''/.test(sel));
+  ok('snapshot fallback for show_review is off',
+    /\$settings\['show_review'\]\s*\?\?\s*''/.test(sel));
 
-  // Default (review on): the quiz stops at the review step before results.
+  // showReview: true -> the forced review step appears after the last question.
   const w1 = freshDom();
-  const r1 = mountSelector(w1);
+  const r1 = mountSelector(w1, configWith({ showReview: true }));
   enter(r1, 'quick');
   stepThrough(r1, 'either');
-  ok('review step shows by default', !!r1.querySelector('.dccs-review-list'));
+  ok('review step shows when showReview=true', !!r1.querySelector('.dccs-review-list'));
 
-  // Toggled off: after the last question the quiz jumps straight to the matches,
-  // with no review list and no results "Edit answers" button.
+  // showReview: false (the new default) -> straight to matches, no forced review step.
   const w2 = freshDom();
   const r2 = mountSelector(w2, configWith({ showReview: false }));
   enter(r2, 'quick');
   stepThrough(r2, 'either');
   ok('review step skipped when showReview=false',
     !r2.querySelector('.dccs-review-list') && r2.querySelectorAll('.dccs-card').length >= 1);
-  ok('Edit-answers button hidden when review is off', !r2.querySelector('.dccs-edit-answers'));
+  // But "Edit answers" STAYS on results and opens the review screen on demand.
+  const edit = r2.querySelector('.dccs-edit-answers');
+  ok('Edit-answers still present on results when review is off', !!edit);
+  edit.click();
+  ok('Edit-answers opens the review screen on demand', !!r2.querySelector('.dccs-review-list'));
 })();
 
 // ---- 32. Factual badge label defaults ----

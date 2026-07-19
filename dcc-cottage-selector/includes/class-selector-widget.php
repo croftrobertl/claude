@@ -110,9 +110,9 @@ class Selector_Widget extends Widget_Base
 
         $this->add_control('show_review', [
             'label'        => __('Show “Review your answers” step', 'dcc-cottage-selector'),
-            'description'  => __('When off, the quiz jumps straight to the matches after the last question (the results “Edit answers” button is hidden too).', 'dcc-cottage-selector'),
+            'description'  => __('Off by default: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). Turn on to add a review-and-confirm step before results.', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
+            'default'      => '',
             'return_value' => 'yes',
         ]);
 
@@ -351,6 +351,7 @@ class Selector_Widget extends Widget_Base
             'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
             'compare_prompt'  => __('Compare subheader', 'dcc-cottage-selector'),
             'compare_need_two' => __('Compare “pick 2” tip', 'dcc-cottage-selector'),
+            'compare_scroll_all' => __('Compare “scroll to see all” cue', 'dcc-cottage-selector'),
             'count_zero_hint' => __('Zero-match note', 'dcc-cottage-selector'),
         ];
 
@@ -1342,7 +1343,7 @@ class Selector_Widget extends Widget_Base
             'startMode'        => (string) $start,
             'enabledModes'     => array_values($enabled),
             'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
-            'showReview'       => ($settings['show_review'] ?? 'yes') === 'yes',
+            'showReview'       => ($settings['show_review'] ?? '') === 'yes',
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
             'cssVars'          => self::collect_css_vars($settings),
@@ -1417,7 +1418,7 @@ class Selector_Widget extends Widget_Base
             'startMode'    => $snap['startMode'] ?? 'quick',
             'enabledModes' => $snap['enabledModes'] ?? ['quick', 'weights', 'compare'],
             'showHeading'  => $snap['showHeading'] ?? true,
-            'showReview'   => $snap['showReview'] ?? true,
+            'showReview'   => $snap['showReview'] ?? false,
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
             'cssVars'      => $snap['cssVars'] ?? [],

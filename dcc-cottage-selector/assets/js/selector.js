@@ -480,9 +480,17 @@
       '<button type="button" class="dccs-open-compare"' + (canCompare ? '' : ' disabled') + '>' +
       esc(btnLabel) + '</button>' + note + '</div>';
 
-    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' +
+    // A plain-language cue that the list holds every cottage and scrolls — reassuring
+    // for guests who might not notice the scrollbar. %d = total cottages.
+    var count = '<p class="dccs-cmp-count">' + esc(fmt(S.compare_scroll_all, config.cottages.length)) + '</p>';
+    // The list scrolls internally; an always-visible custom scrollbar (.dccs-cmp-bar,
+    // positioned by wireCmpScrollbar) sits on its right edge so guests can see there's
+    // more to scroll — reliable even on iOS, where native scrollbars auto-hide.
+    var scroller = '<div class="dccs-cmp-scroller">' +
       '<div class="dccs-cmp-list dccs-cmp-static" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div>' +
-      btn + '</div>';
+      '<div class="dccs-cmp-bar" aria-hidden="true"><div class="dccs-cmp-bar-thumb"></div></div></div>';
+    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' + count +
+      scroller + btn + '</div>';
   }
 
   /** The "Compare N cottages" button, shown once 2+ cards are ticked. */
@@ -555,12 +563,11 @@
   function wizardResultsTail(config, st, emptyState) {
     if (st.mode !== 'quick' && st.mode !== 'weights') { return ''; }
     var S = config.strings;
-    // "Edit answers" jumps to the review step; if that step is disabled there is no
-    // edit screen to reach, so the button is omitted and only Restart remains.
-    var editBtn = (config.showReview !== false)
-      ? '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>'
-      : '';
-    return '<div class="dccs-wizard-nav dccs-tail-nav">' + editBtn +
+    // "Edit answers" always appears on results and opens the review screen on demand —
+    // even when the forced review STEP (config.showReview) is turned off. That keeps a
+    // full edit path from results without making review a mandatory extra step.
+    return '<div class="dccs-wizard-nav dccs-tail-nav">' +
+      '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
@@ -721,22 +728,46 @@
       renderSelector(root, config, state, { crit: crit, res: res });
       root.appendChild(live);
       announce(live, config, state, res);
-      wireCmpScrollCue(root);
+      wireCmpScrollbar(root);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
     }
 
-    // Toggle the "more cottages below" fade/chevron on the Compare checklist: show it
-    // while there's more to scroll, hide it (.is-atend) once the list reaches its end
-    // or doesn't overflow. The list is rebuilt each render, so we (re)bind every time.
-    function wireCmpScrollCue(r) {
+    // Size + position the custom always-visible compare scrollbar to mirror the list's
+    // scroll state, and let guests drag the thumb. Re-bound each render (the list is
+    // rebuilt every time). No-op when there's nothing to scroll.
+    function wireCmpScrollbar(r) {
       var list = r.querySelector('.dccs-cmp-list');
-      if (!list) { return; }
-      function upd() {
-        var more = (list.scrollHeight - list.clientHeight - list.scrollTop) > 2;
-        list.classList.toggle('is-atend', !more);
+      var bar = r.querySelector('.dccs-cmp-bar');
+      if (!list || !bar) { return; }
+      var thumb = bar.querySelector('.dccs-cmp-bar-thumb');
+      function layout() {
+        var ratio = list.scrollHeight ? list.clientHeight / list.scrollHeight : 1;
+        if (ratio >= 1) { bar.style.display = 'none'; return; }
+        bar.style.display = 'block';
+        var trackH = bar.clientHeight;
+        var th = Math.max(34, Math.round(trackH * ratio));
+        var maxTop = trackH - th;
+        var range = list.scrollHeight - list.clientHeight;
+        thumb.style.height = th + 'px';
+        thumb.style.top = (range ? (list.scrollTop / range) * maxTop : 0) + 'px';
       }
-      list.addEventListener('scroll', upd, { passive: true });
-      upd();
+      list.addEventListener('scroll', layout, { passive: true });
+      var startY = 0, startTop = 0, drag = false;
+      thumb.addEventListener('pointerdown', function (e) {
+        drag = true; startY = e.clientY; startTop = parseFloat(thumb.style.top) || 0;
+        if (thumb.setPointerCapture) { thumb.setPointerCapture(e.pointerId); }
+        e.preventDefault();
+      });
+      thumb.addEventListener('pointermove', function (e) {
+        if (!drag) { return; }
+        var trackH = bar.clientHeight, th = thumb.offsetHeight, maxTop = trackH - th;
+        var top = Math.min(maxTop, Math.max(0, startTop + (e.clientY - startY)));
+        list.scrollTop = maxTop ? (top / maxTop) * (list.scrollHeight - list.clientHeight) : 0;
+      });
+      function end() { drag = false; }
+      thumb.addEventListener('pointerup', end);
+      thumb.addEventListener('pointercancel', end);
+      layout();
     }
     rerender();
 
