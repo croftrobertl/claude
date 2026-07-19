@@ -1400,6 +1400,14 @@ final class Widget extends Widget_Base
                 <div class="mphbac-info-overlay" hidden></div>
                 <div class="mphbac-info-sheet<?php echo $info_full_width ? ' mphbac-info-sheet--full' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
                     <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
+                    <?php // Custom always-visible scroll indicator. iOS Safari hides native
+                    // scrollbars and ignores ::-webkit-scrollbar, so we draw our own:
+                    // a sticky right-edge track whose thumb widget.js sizes + positions
+                    // from scrollTop/scrollHeight. hidden until JS finds it's scrollable. ?>
+                    <div class="mphbac-info-scrollbar" aria-hidden="true" hidden>
+                        <div class="mphbac-info-scrollbar-track"></div>
+                        <div class="mphbac-info-scrollbar-thumb"></div>
+                    </div>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
                         <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
                         <?php
@@ -1419,9 +1427,6 @@ final class Widget extends Widget_Base
                         ?></a>
                     </div>
                     <div class="mphbac-info-body"></div>
-                    <div class="mphbac-info-scrollcue" hidden aria-hidden="true">
-                        <button type="button" class="mphbac-info-scrollcue-btn" tabindex="-1">&#8964;</button>
-                    </div>
                 </div>
             <?php endif; ?>
 

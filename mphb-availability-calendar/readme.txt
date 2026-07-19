@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.0
+Stable tag: 0.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.12.0 =
+* Cottage info popup: removed the floating down-arrow "scroll for more" button. It hovered over the content and lingered almost to the end, which looked bad and didn't help scrolling.
+* Cottage info popup: replaced the down-arrow with a custom always-visible scrollbar drawn by the plugin (a slim indicator on the right edge that shows how much content there is and how far you've scrolled). This is the real fix for the earlier "scrollbar keeps hiding" report: iPhone/iPad Safari auto-hides native scrollbars and ignores the CSS that would keep them visible, so a native scrollbar simply can't be forced to stay on iOS — a custom one can, and it now behaves the same on iOS, Android, and desktop.
+* Cottage info popup photo slider (Stratum Advanced Slider): reworked the fix for the disappearing "back" arrow. The previous attempt tried to keep the arrow visible via CSS aimed at guessed class names; this version re-initializes the slider's own navigation once the popup is fully open, which restores the arrow reliably regardless of how the slider names its buttons.
+* Cottage info popup photo slider: reworked the fix for the first photo not enlarging on the first tap. The popup now rebuilds the slider's looped slides after it opens so a real (non-duplicate) slide is in the first position, so its tap-to-enlarge works immediately instead of only after you've opened another photo. (Best-effort without on-device testing — please verify on your phone; if it still misbehaves, sharing the live URL will let me target it exactly.)
 
 = 0.11.0 =
 * The "View Cottage Page" button in the cottage info popup now has its own full style section in the Elementor panel (Style → Cottage Page Button): editable icon (with position, size, spacing, and color), typography, text and background colors for normal and hover states, border, border radius, and padding. Its baked default is now a filled blue rounded pill instead of the old square, near-invisible box. (The button is moved out to the page body when the popup opens, so its styles use portal-proof selectors that also outrank the theme's link styling — the reason the old background was invisible.)

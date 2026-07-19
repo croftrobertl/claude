@@ -647,88 +647,61 @@
        and stay pinned at the top while the body content scrolls. */
     display: flex;
     flex-direction: column;
-    /* Keep a visible scrollbar so it's obvious there's more to scroll.
-       Works on desktop + Android Chrome; iOS Safari uses auto-hiding overlay
-       scrollbars that ignore this, which is why the JS scroll-cue below
-       exists as the cross-device affordance. */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
+    /* Hide the NATIVE scrollbar on every engine — we draw our own custom
+       always-visible one below (.mphbac-info-scrollbar). This is the whole
+       reason the previous "always-visible scrollbar" attempt failed: iOS
+       Safari auto-hides native overlay scrollbars and ignores the styling
+       hooks, so a native bar can't be forced to stay visible there. */
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* old Edge */
 }
 .mphbac-info-sheet::-webkit-scrollbar {
-    width: 10px;
-    -webkit-appearance: none;
-}
-.mphbac-info-sheet::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 6px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+    width: 0;
+    height: 0;
+    display: none;                  /* WebKit / Blink */
 }
 
-/* "Scroll for more" cue — a sticky down-chevron pill pinned to the bottom of
-   the open popup with a fade, shown only while there's more content below
-   (JS toggles .mphbac-has-more on the sheet). The cross-device affordance
-   for iOS, where the scrollbar above is auto-hidden by the OS. */
-.mphbac-info-scrollcue {
+/* Custom always-visible scrollbar. The sheet itself is the scroll container;
+   this element is a sticky, zero-height flex child pinned to the top-right so
+   it rides along in view as the body scrolls. widget.js sizes the track and
+   thumb from scrollHeight/clientHeight and moves the thumb from scrollTop, so
+   it behaves identically on iOS, Android, and desktop. Indicator-only
+   (pointer-events:none) — touch/wheel scrolling is unchanged; it shows how
+   much content there is and how far down you are. Hidden by JS when the
+   content fits without scrolling. */
+.mphbac-info-scrollbar {
     position: sticky;
-    bottom: 0;
-    align-self: stretch;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    height: 0;
+    top: 0;
+    align-self: flex-end;
+    order: -1;                      /* keep it visually first / at the top */
+    flex: 0 0 auto;
+    width: 5px;
+    height: 0;                      /* consumes no vertical space in the column */
+    margin-right: -0.55em;          /* sit in the sheet's right padding gutter */
+    z-index: 11;
     pointer-events: none;
-    z-index: 9;
 }
-.mphbac-info-scrollcue[hidden] {
+.mphbac-info-scrollbar[hidden] {
     display: none;
 }
-.mphbac-info-scrollcue::before {
-    content: "";
+.mphbac-info-scrollbar-track {
     position: absolute;
-    left: 0;
+    top: 0;
     right: 0;
-    bottom: 0;
-    height: 3.2em;
-    background: linear-gradient(to top, #fff 15%, rgba(255, 255, 255, 0));
-    pointer-events: none;
+    width: 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.08);
+    /* height set inline by widget.js */
 }
-.mphbac-info-scrollcue-btn {
-    position: relative;
-    pointer-events: auto;
-    margin-bottom: 0.5em;
-    width: 2.1em;
-    height: 2.1em;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(15, 109, 191, 0.92);
-    color: #fff;
-    font-size: 1.1em;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.mphbac-info-sheet.mphbac-has-more .mphbac-info-scrollcue-btn {
-    opacity: 1;
-    transform: translateY(0);
-    animation: mphbac-scrollcue-bob 1.6s ease-in-out infinite;
-}
-.mphbac-info-scrollcue-btn:focus-visible {
-    outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
-    outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-    .mphbac-info-sheet.mphbac-has-more .mphbac-info-scrollcue-btn {
-        animation: none;
-    }
-}
-@keyframes mphbac-scrollcue-bob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(3px); }
+.mphbac-info-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    min-height: 28px;
+    border-radius: 3px;
+    background: rgba(15, 109, 191, 0.55);
+    /* height + translateY set inline by widget.js */
 }
 .mphbac-info-close--floating {
     position: sticky;

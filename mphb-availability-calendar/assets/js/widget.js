@@ -405,6 +405,49 @@
         });
     }
 
+    // Heavier, class-agnostic repair for sliders (Stratum Advanced Slider and
+    // any Swiper) that initialized while the popup was display:none at zero
+    // width. Run ONCE after the popup is fully open and full width.
+    //
+    //  - navigation.destroy()+init(): re-attaches Swiper's OWN prev/next
+    //    element refs and recomputes their disabled/hidden/lock state in the
+    //    now-correct width. This is why targeting arrow *class names* in CSS
+    //    failed — Swiper drives visibility off internal element refs, not a
+    //    class we can predict. Re-initing the module is the reliable fix for
+    //    the "back arrow vanishes after a second" bug.
+    //  - loopDestroy()+loopCreate(): rebuilds loop-mode clone slides in the
+    //    correct geometry and puts a REAL (non-clone) slide in the first
+    //    visible position. The first slide's lightbox/click binding lives on
+    //    the original slide, not its clone, so this is what makes the first
+    //    photo enlarge on the first tap instead of needing a prior interaction.
+    function reinitSwipers(container) {
+        if (!container) return;
+        var swiperEls = container.querySelectorAll('.swiper, .swiper-container');
+        swiperEls.forEach(function (el) {
+            var sw = el.swiper;
+            if (!sw) return;
+            try {
+                if (sw.params && sw.params.loop && sw.loopDestroy && sw.loopCreate) {
+                    sw.loopDestroy();
+                    sw.loopCreate();
+                }
+                if (sw.navigation && sw.navigation.destroy && sw.navigation.init) {
+                    sw.navigation.destroy();
+                    sw.navigation.init();
+                    if (sw.navigation.update) sw.navigation.update();
+                }
+                sw.update();
+                // Land on the first real slide so its (original, bound) DOM is
+                // the one showing — resolves the dead-first-photo case.
+                if (sw.params && sw.params.loop && sw.slideToLoop) {
+                    sw.slideToLoop(0, 0, false);
+                } else if (sw.slideTo) {
+                    sw.slideTo(sw.activeIndex || 0, 0, false);
+                }
+            } catch (e) { /* slider refused re-init — leave it as-is */ }
+        });
+    }
+
     function wireInfoPopup(root, config) {
         var sheet = root.querySelector('.mphbac-info-sheet');
         var overlay = root.querySelector('.mphbac-info-overlay');
@@ -414,28 +457,37 @@
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
         var viewBtn = sheet.querySelector('.mphbac-info-view-link');
-        var scrollCue = sheet.querySelector('.mphbac-info-scrollcue');
-        var scrollCueBtn = sheet.querySelector('.mphbac-info-scrollcue-btn');
+        var scrollbar = sheet.querySelector('.mphbac-info-scrollbar');
+        var scrollTrack = sheet.querySelector('.mphbac-info-scrollbar-track');
+        var scrollThumb = sheet.querySelector('.mphbac-info-scrollbar-thumb');
+        var SCROLLBAR_INSET = 8; // px gap top/bottom so the thumb doesn't touch edges
 
-        // Toggle the "scroll for more" cue based on whether the popup has
-        // unseen content below the fold. The sheet itself is the scroll
-        // container (overflow-y:auto). Hidden entirely when scrolled to the
-        // bottom so the fade + chevron disappear once the user reaches the end.
-        function updateScrollCue() {
-            if (!scrollCue) return;
-            var more = (sheet.scrollHeight - sheet.scrollTop - sheet.clientHeight) > 24;
-            scrollCue.hidden = !more;
-            sheet.classList.toggle('mphbac-has-more', more);
+        // Size + position the custom always-visible scrollbar. iOS Safari hides
+        // native scrollbars and ignores their styling, so we draw our own: the
+        // sheet is the scroll container, and we map scrollTop/scrollHeight onto
+        // a sticky right-edge track + thumb. Hidden when the content fits (no
+        // scroll needed). Indicator only — scrolling itself is untouched.
+        function updateScrollbar() {
+            if (!scrollbar || !scrollThumb) return;
+            var ch = sheet.clientHeight;
+            var sh = sheet.scrollHeight;
+            var st = sheet.scrollTop;
+            if (sh - ch <= 2) { scrollbar.hidden = true; return; }
+            scrollbar.hidden = false;
+            var trackH = Math.max(0, ch - SCROLLBAR_INSET * 2);
+            var thumbH = Math.max(28, Math.round(trackH * ch / sh));
+            var frac = st / (sh - ch);
+            if (frac < 0) { frac = 0; } else if (frac > 1) { frac = 1; }
+            var offset = SCROLLBAR_INSET + frac * (trackH - thumbH);
+            if (scrollTrack) {
+                scrollTrack.style.height = trackH + 'px';
+                scrollTrack.style.transform = 'translateY(' + SCROLLBAR_INSET + 'px)';
+            }
+            scrollThumb.style.height = thumbH + 'px';
+            scrollThumb.style.transform = 'translateY(' + offset + 'px)';
         }
-        if (scrollCueBtn) {
-            scrollCueBtn.addEventListener('click', function () {
-                var by = Math.round(sheet.clientHeight * 0.7);
-                try { sheet.scrollBy({ top: by, behavior: 'smooth' }); }
-                catch (e) { sheet.scrollTop += by; }
-            });
-        }
-        sheet.addEventListener('scroll', updateScrollCue, { passive: true });
-        window.addEventListener('resize', updateScrollCue);
+        sheet.addEventListener('scroll', updateScrollbar, { passive: true });
+        window.addEventListener('resize', updateScrollbar);
 
         var lastTrigger = null;
         // When the popup opens we MOVE (not clone) the cottage's hidden
@@ -599,19 +651,21 @@
                 // defined starting point and the trap below activates.
                 if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
             });
-            // Second re-measure once the slide-in transition settles and the
-            // popup is at full width. The refreshSwipers above runs mid-
-            // transition, so sliders that initialized while hidden still hold
-            // stale measurements then; this pass (transitionend, with a timer
-            // fallback) fixes the disappearing arrow (#6) and the dead first
-            // slide (#7), and shows the scroll cue once content height is final.
+            // Once the slide-in transition settles and the popup is at full
+            // width, do the heavier slider repair. refreshSwipers above runs
+            // mid-transition (still wrong width), so a slider that initialized
+            // while hidden needs a real re-init here: reinitSwipers re-attaches
+            // nav + rebuilds loop clones, fixing the disappearing back arrow
+            // and the dead first photo. Then size the custom scrollbar now that
+            // content height is final.
             var settled = false;
             var settle = function () {
                 if (settled) return;
                 settled = true;
                 refreshSwipers(bodyEl);
+                reinitSwipers(bodyEl);
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
-                updateScrollCue();
+                updateScrollbar();
             };
             sheet.addEventListener('transitionend', function te(e) {
                 if (e.target === sheet && (e.propertyName === 'transform' || e.propertyName === 'opacity')) {
@@ -620,14 +674,20 @@
                 }
             });
             setTimeout(settle, 380);
+            // Images finishing load change the scroll height — keep the
+            // scrollbar in sync as they arrive.
+            bodyEl.querySelectorAll('img').forEach(function (img) {
+                if (img.complete) return;
+                img.addEventListener('load', updateScrollbar, { once: true });
+                img.addEventListener('error', updateScrollbar, { once: true });
+            });
             document.addEventListener('keydown', onKeydown);
         }
 
         function closeInfo() {
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
-            sheet.classList.remove('mphbac-has-more');
-            if (scrollCue) scrollCue.hidden = true;
+            if (scrollbar) scrollbar.hidden = true;
             document.documentElement.classList.remove('mphbac-info-open');
             document.body.classList.remove('mphbac-info-open');
             setTimeout(function () {
