@@ -1,9 +1,10 @@
 /**
  * Two-phase scoring pipeline for the Dora Canal cottage selector.
  *
- * Pure, side-effect-free functions operating ONLY on data keys — no display
- * strings live here. Exposed on the global DCCS namespace so labels.js and
- * selector.js can use them without a build step.
+ * Functions operate ONLY on data keys — no display strings live here. The single
+ * side effect is the per-render duplicateOf display flag (set by dedupe, cleared
+ * by run). Exposed on the global DCCS namespace so labels.js and selector.js can
+ * use them without a build step.
  *
  * Phase 1 — Binary Exclusion (hard filters): pet → only #34; ground-floor-only
  *   → drop #23; table-for-4 → only #22. If ≤3 cottages survive, return them and
@@ -28,7 +29,6 @@
     pet:      { test: function (c) { return c.petAllowed === true; }, tag: 'tag_pet' },
     ground:   { test: function (c) { return isGround(c); }, tag: 'tag_upstairs' },
     dining4:  { test: function (c) { return Number(c.diningSeats) >= 4; }, tag: 'tag_dining' },
-    dining2:  { test: function (c) { return Number(c.diningSeats) < 4; }, tag: 'tag_dining2' },
     porch:    { test: function (c) { return c.screenedPorch === true; }, tag: 'tag_porch' },
     desk:     { test: function (c) { return c.desk === true; }, tag: 'tag_desk' },
     pullout:  { test: function (c) { return c.pulloutCouch === true; }, tag: 'tag_pullout' },
@@ -105,6 +105,11 @@
    * @returns {{results: Array, excluded: Array, bypassed: boolean, empty: boolean}}
    */
   function run(cottages, crit) {
+    // dedupe() marks duplicateOf on the shared cottage objects for the CURRENT
+    // display list. Clear all marks at the start of every run so a pair flagged in
+    // one render can't leak a stale "identical to Cottage X" note into a later
+    // render where X isn't on screen.
+    cottages.forEach(function (c) { delete c.duplicateOf; });
     var p1 = phase1(cottages, crit);
     var pool = p1.pool;
 

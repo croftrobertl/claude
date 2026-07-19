@@ -231,7 +231,7 @@
 .dccs-root.dccs-root .dccs-review-q { flex: 1 1 40%; font-weight: 600; }
 .dccs-root.dccs-root .dccs-review-a { flex: 1 1 30%; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-edit {
-  margin-left: auto; min-height: 36px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  margin-left: auto; min-height: 44px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--dccs-border); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
 }
 
@@ -239,9 +239,11 @@
 .dccs-root.dccs-root .dccs-results-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
 }
+/* Main compare CTA: full 48px like the wizard's primary buttons (it deliberately
+   does NOT share the shrunken tail-button sizing — it's a primary action). */
 .dccs-root.dccs-root .dccs-open-compare {
-  min-height: 40px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--dccs-accent); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-weight: 700; font-size: 0.9rem;
+  min-height: 48px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-weight: 700; font-size: 0.95rem;
 }
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
 /* Compare mode: the button that opens the comparison popup, centred under the checklist. */
@@ -389,7 +391,13 @@
   background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text);
   border-radius: 999px; text-decoration: none; font-weight: 600;
 }
-.dccs-root.dccs-root .dccs-cmp-toggle { margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+/* "Add to compare" on result cards: min 44px tap area (was a 19px-tall strip —
+   the smallest target in the widget, hardest for less-dexterous guests to hit). */
+.dccs-root.dccs-root .dccs-cmp-toggle {
+  margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; min-height: 44px; padding: 6px 10px; border-radius: 10px;
+}
+.dccs-root.dccs-root .dccs-cmp-toggle input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
 
 .dccs-root.dccs-root .dccs-empty {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);

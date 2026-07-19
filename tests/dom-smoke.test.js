@@ -858,5 +858,42 @@ function configWith(overrides) {
   ok('badge_porch default is "Screened Porch"', S.badge_porch === 'Screened Porch');
 })();
 
+// ---- 33. Audit fixes: space claim, dup-note leak, dining "two", tap targets ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  const DCCS = w.DCCS;
+  const cfg = JSON.parse(CONFIG);
+
+  // (1) "most square footage" reason only on the actual largest (400 sq ft) cottages.
+  const c340 = cfg.cottages.find(c => c.id === '31');
+  const c400 = cfg.cottages.find(c => c.id === '22');
+  const crit = { wSpace: 3, hard: [] };
+  ok('340 sq ft cottage never claims "most square footage"', !DCCS.labels.whyFits(c340, crit).includes('space'));
+  ok('400 sq ft cottage still gets the space reason', DCCS.labels.whyFits(c400, crit).includes('space'));
+
+  // (2) duplicateOf cleared on every run — no stale note across renders.
+  DCCS.score.dedupe(cfg.cottages.filter(c => c.id === '31' || c.id === '32'), cfg.diffFields);
+  ok('dedupe marks the twin pair', cfg.cottages.find(c => c.id === '31').duplicateOf === '32');
+  DCCS.score.run(cfg.cottages, { hard: [] });
+  ok('run() clears stale duplicateOf flags', !cfg.cottages.some(c => c.duplicateOf));
+
+  // (3) answering "table for two" no longer excludes the 4-seat Boathouse.
+  enter(root, 'quick');
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // desk/pullout/layout
+  answerNext(root, '2');                                                              // dining: two
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pet/ground/porch
+  const sm = root.querySelector('.dccs-see-matches'); if (sm) { sm.click(); }
+  ok('dining=two keeps The Boathouse in the matches',
+    cardNames(root).some(n => /Cottage 22/.test(n)));
+  ok('dining2 hard filter fully removed', !('dining2' in DCCS.score.FEATURES));
+
+  // (4+5) tap-target sizes baked into the stylesheet.
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  ok('card compare toggle has a 44px tap area', /\.dccs-cmp-toggle\s*\{[\s\S]*?min-height:\s*44px/.test(css));
+  ok('review Edit buttons are 44px', /\.dccs-edit\s*\{[\s\S]*?min-height:\s*44px/.test(css));
+  ok('compare CTA is 48px like the primary buttons', /\.dccs-open-compare\s*\{[\s\S]*?min-height:\s*48px/.test(css));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

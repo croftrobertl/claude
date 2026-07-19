@@ -38,7 +38,10 @@
     }
 
     add('desk', crit.wDesk > 0, c.desk);
-    add('space', crit.wSpace > 0, Number(c.squareFeet) >= 336);
+    // 'space' renders "the most square footage of the bunch", so only the actual
+    // largest cottages (400 sq ft) may claim it — NOT the ≥336 "more room" tier,
+    // which would show a false superlative on six of the eight cottages.
+    add('space', crit.wSpace > 0, Number(c.squareFeet) >= 400);
     add('pet', crit.wPet > 0, c.petAllowed);
     add('ground', crit.wFewerStairs > 0, DCCS.score.isGround(c));
     add('studio', crit.wStudio > 0, c.layoutType === 'Studio');

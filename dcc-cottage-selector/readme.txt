@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.0
+Stable tag: 0.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,21 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.17.0 =
+* Fixed a false claim on result cards: "the most square footage of the bunch" showed on
+  336–340 sq ft cottages (in 4,256 of the 21,870 possible answer combinations). Only the
+  two 400 sq ft cottages now earn that line.
+* Fixed a stale "identical to Cottage X" note that could stick to a cottage's card in
+  later searches even when its twin wasn't on screen.
+* Answering "Table for two" no longer eliminates The Boathouse (the only 4-seat
+  cottage) — a 4-top serves two guests fine, so "two" now behaves like "No preference".
+  This also matches the documented scoring design and reduces "No Perfect Matches"
+  outcomes. (Answering "four" still filters, as before.)
+* Bigger tap targets: the "Compare" checkbox on result cards grew from a 19px strip to a
+  44px area with a larger checkbox; review-screen "Edit" buttons 36→44px; the "Compare N
+  cottages" button 40→48px (matching the main wizard buttons).
+* Clear SpeedyCache + Elementor → Regenerate Files & Data after updating.
 
 = 0.16.0 =
 * Review step is now OFF by default — the quiz goes straight to the matches after the

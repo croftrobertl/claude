@@ -58,7 +58,6 @@ final class Config
             'tag_pet'           => __('Not pet-friendly', 'dcc-cottage-selector'),
             'tag_upstairs'      => __('Upstairs', 'dcc-cottage-selector'),
             'tag_dining'        => __('No table for 4', 'dcc-cottage-selector'),
-            'tag_dining2'       => __('Larger table only', 'dcc-cottage-selector'),
             'tag_porch'         => __('No screened porch', 'dcc-cottage-selector'),
             'tag_desk'          => __('No desk', 'dcc-cottage-selector'),
             'tag_pullout'       => __('No pullout couch', 'dcc-cottage-selector'),

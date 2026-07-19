@@ -210,7 +210,9 @@
     if (q.layout === 'studio') { hard.push('studio'); }
     if (q.layout === 'onebed') { hard.push('onebed'); }
     if (q.dining === 4 || q.dining === '4') { hard.push('dining4'); }
-    if (q.dining === 2 || q.dining === '2') { hard.push('dining2'); }
+    // "Table for two" is NOT a constraint: a 4-seat table serves two guests fine, and
+    // excluding the only 4-top cottage (#22, the largest) misdirected couples who just
+    // meant "we don't need four". Answering "two" now behaves like "No preference".
     if (q.pet === 'yes') { hard.push('pet'); }
     if (q.ground === 'yes') { hard.push('ground'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
@@ -509,7 +511,7 @@
     if (res.empty) {
       // Drop the least-essential must-haves (one at a time, in order) until the
       // closest options surface. Style preferences relax before policy ones.
-      var relaxOrder = ['moreroom', 'desk', 'pullout', 'studio', 'onebed', 'dining2', 'porch', 'dining4', 'ground', 'pet'];
+      var relaxOrder = ['moreroom', 'desk', 'pullout', 'studio', 'onebed', 'porch', 'dining4', 'ground', 'pet'];
       var relaxed = (crit.hard || []).slice();
       var fallback = null;
       for (var i = 0; i < relaxOrder.length && relaxed.length; i++) {
