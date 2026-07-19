@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v26';
+const CACHE_VERSION = 'dcc-tour-v27';
 const SHELL = [
   './',
   'index.html',
@@ -66,7 +66,8 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_VERSION).then(c => c.put(req, copy));
         }
         return res;
-      }).catch(() => cached)
+      // offline + uncached: hand navigations the cached shell; anything else a real network error
+      }).catch(() => req.mode === 'navigate' ? caches.match('index.html') : Response.error())
     )
   );
 });

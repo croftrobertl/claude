@@ -211,7 +211,11 @@
     if (m.v && ['map', 'stats', 'gallery'].indexOf(m.v) >= 0) { setView(m.v); return; }
     let di = m.d ? Math.min(Math.max((parseInt(m.d, 10) || 1) - 1, 0), DATA.day_count - 1) : null;
     if (m.ph && di == null) { const f = findDayByGuid(m.ph); if (f >= 0) di = f; }
-    if (di != null && di !== curDay) selectDay(di);
+    if (di != null) {
+      // a day link always means the Timeline — switch views if the panel is hidden
+      if (root.dataset.view && root.dataset.view !== 'story') setView('story');
+      if (di !== curDay) selectDay(di);
+    }
     if (m.p != null) setTimeout(() => {
       const sec = root._story.querySelector('#place-' + (+m.p));
       if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
@@ -231,14 +235,14 @@
   }
   function toast(msg) {
     let t = document.getElementById('dcc-toast');
-    if (!t) { t = document.createElement('div'); t.id = 'dcc-toast'; t.className = 'dcc-tour-toast'; document.body.appendChild(t); }
+    if (!t) { t = document.createElement('div'); t.id = 'dcc-toast'; t.className = 'dcc-tour-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
     t.textContent = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
   }
   // ---- 🎲 random memory ----
   function randomMemory() {
     const pool = [];
-    DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it => { if (it.full) pool.push({ di, it }); })));
+    DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it => { if (it.full && itemPasses(it)) pool.push({ di, it }); })));
     if (!pool.length) return;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     setView('story');
@@ -410,9 +414,9 @@
       '<div class="dcc-tour-mm-bar">' +
         '<span class="dcc-tour-mm-colorby" role="group" aria-label="Color markers by">' +
           '<span class="mm-cb-lab">Color</span>' +
-          '<button class="mm-cb active" data-mode="day">Day</button>' +
-          '<button class="mm-cb" data-mode="person">Who</button>' +
-          '<button class="mm-cb" data-mode="alt">Altitude</button>' +
+          '<button class="mm-cb active" data-mode="day" aria-pressed="true">Day</button>' +
+          '<button class="mm-cb" data-mode="person" aria-pressed="false">Who</button>' +
+          '<button class="mm-cb" data-mode="alt" aria-pressed="false">Altitude</button>' +
         '</span>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-path" checked> Path</label>' +
         '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-facing"> Facing</label>' +
@@ -430,9 +434,9 @@
         '<button class="dcc-tour-mm-playbtn" id="mm-play" aria-label="Play the whole trip" title="Play the whole trip">' + PLAY_GLYPH + '</button>' +
         '<input type="range" class="dcc-tour-mm-scrub" id="mm-scrub" min="0" max="0" value="0" step="1" aria-label="Scrub through the trip">' +
         '<span class="dcc-tour-mm-speeds" role="group" aria-label="Playback speed">' +
-          '<button class="mm-spd active" data-spd="1">1×</button>' +
-          '<button class="mm-spd" data-spd="2">2×</button>' +
-          '<button class="mm-spd" data-spd="4">4×</button>' +
+          '<button class="mm-spd active" data-spd="1" aria-pressed="true">1×</button>' +
+          '<button class="mm-spd" data-spd="2" aria-pressed="false">2×</button>' +
+          '<button class="mm-spd" data-spd="4" aria-pressed="false">4×</button>' +
         '</span>' +
         '<span class="dcc-tour-mm-playlabel" id="mm-playlabel"></span>' +
       '</div>' +
@@ -473,7 +477,7 @@
     // Color by: Day / Who / Altitude
     m.querySelectorAll('.mm-cb').forEach(b => b.addEventListener('click', () => {
       mmColorMode = b.dataset.mode;
-      m.querySelectorAll('.mm-cb').forEach(x => x.classList.toggle('active', x === b));
+      m.querySelectorAll('.mm-cb').forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
       renderMapLegend(); renderMapMode();
     }));
     // Play / scrub the whole trip
@@ -483,7 +487,7 @@
     m.querySelector('#mm-play').addEventListener('click', () => { mmPlayTimer ? mmStopPlay() : mmStartPlay(); });
     m.querySelectorAll('.mm-spd').forEach(b => b.addEventListener('click', () => {
       mmPlaySpeed = +b.dataset.spd;
-      m.querySelectorAll('.mm-spd').forEach(x => x.classList.toggle('active', x === b));
+      m.querySelectorAll('.mm-spd').forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
       if (mmPlayTimer) { mmStopPlay(); mmStartPlay(); }   // restart at the new speed, same spot
     }));
     renderMapLegend();
@@ -1379,6 +1383,9 @@
     el = document.createElement('div');
     el.id = 'dcc-tour-lightbox';
     el.className = 'dcc-tour-lightbox';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', 'Photo viewer');
     el.innerHTML =
       '<button class="dcc-tour-lightbox-close" aria-label="Close">&times;</button>' +
       '<div class="dcc-tour-lightbox-count" aria-hidden="true"></div>' +
@@ -1425,6 +1432,11 @@
     el.querySelector('.dcc-tour-lightbox-cap').textContent = cap;
     el.querySelector('.dcc-tour-lightbox-count').textContent = (lightboxIdx + 1) + ' / ' + n;
     el.querySelector('#dcc-lb-dl').href = lightboxFulls[lightboxIdx];
+    // warm the neighbours so next/prev is instant instead of a full-res fetch
+    [lightboxIdx + 1, lightboxIdx - 1].forEach(k => {
+      const u = lightboxFulls[((k % n) + n) % n];
+      if (u && u !== lightboxFulls[lightboxIdx]) { const im = new Image(); im.decoding = 'async'; im.src = u; }
+    });
     if (!wasOpen) { lbPrevFocus = document.activeElement; el.querySelector('.dcc-tour-lightbox-close').focus(); }
     document.body.classList.add('dcc-tour-noscroll');
   }
