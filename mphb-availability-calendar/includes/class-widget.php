@@ -1261,6 +1261,55 @@ final class Widget extends Widget_Base
             Data_Provider::ST_PAST   => (string) ($settings['str_legend_past'] ?? ''),
         ];
 
+        // Embed the default window's availability so widget.js can paint the
+        // grid instantly on load instead of showing the skeleton for a full
+        // admin-ajax round-trip (which boots all of WP — typically 0.5–1.5s on
+        // shared hosting). The window covers the LARGEST per-device day count
+        // so every device can slice its own range from it. The JS treats this
+        // as a fast first paint only: it corrects "past" days locally when the
+        // page came from a stale full-page cache, then silently revalidates
+        // via AJAX and re-renders only if the data actually changed.
+        // get_availability() is transient-cached, so on warm cache this adds
+        // ~no server time; failure degrades to the old AJAX-only flow.
+        $initial = null;
+        try {
+            $type_ids  = array_map(static fn($r) => (int) $r['id'], $rooms);
+            $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
+            $max_days  = max($days_desktop, $days_tablet, $days_mobile);
+            $init_to   = $base_from->modify('+' . ($max_days - 1) . ' days');
+            $init_avail = Data_Provider::get_availability($type_ids, $base_from, $init_to);
+            if (!empty($init_avail)) {
+                // Mirror Ajax::handle()'s all-booked forward scan so the
+                // "booked through {date}" hint is right on first paint too.
+                $booked_through = null;
+                $any_avail = false;
+                foreach ($init_avail as $type_avail) {
+                    foreach ($type_avail as $status) {
+                        if ($status === Data_Provider::ST_AVAIL) {
+                            $any_avail = true;
+                            break 2;
+                        }
+                    }
+                }
+                if (!$any_avail) {
+                    $next = Data_Provider::find_first_availability($type_ids, $init_to->modify('+1 day'));
+                    if ($next !== null) {
+                        $booked_through = $next->modify('-1 day')->format('Y-m-d');
+                    }
+                }
+                $initial = [
+                    'rooms'         => $rooms,
+                    'availability'  => $init_avail,
+                    'from'          => $base_from->format('Y-m-d'),
+                    'to'            => $init_to->format('Y-m-d'),
+                    'bookedThrough' => $booked_through,
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: initial availability embed failed: ' . $e->getMessage());
+            $initial = null;
+        }
+
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
             'action'         => MPHBAC_AJAX_ACTION,
@@ -1276,6 +1325,7 @@ final class Widget extends Widget_Base
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
+            'initial'        => $initial,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => [
                 'desktop' => max(320, min(1600, (int) ($settings['info_popup_max_width']        ?? 1200))),

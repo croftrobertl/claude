@@ -11,6 +11,10 @@ final class Ajax
 {
     public const MAX_RANGE_DAYS = 95;
 
+    /** Accepted request window around today (see the clamp in handle()). */
+    public const CLAMP_PAST_DAYS   = 400;
+    public const CLAMP_FUTURE_DAYS = 730;
+
     public static function handle(): void
     {
         // No nonce check: this endpoint returns public, read-only availability
@@ -54,6 +58,25 @@ final class Ajax
             wp_send_json_error(['message' => __('Check-out must be on or after check-in.', 'mphb-availability-calendar')], 400);
         }
 
+        // Clamp the range to a sane window around today. Every unique
+        // (ids, from, to) triple writes a transient row to the options table,
+        // so without a clamp an unauthenticated client scripting arbitrary
+        // dates (years 0001–9999) could flood portal_options — a real cost on
+        // shared hosting. One year back / two years forward comfortably covers
+        // every legitimate use (past-day display and long-lead bookings).
+        $today    = Data_Provider::today();
+        $min_from = $today->modify('-' . self::CLAMP_PAST_DAYS . ' days');
+        $max_to   = $today->modify('+' . self::CLAMP_FUTURE_DAYS . ' days');
+        if ($to < $min_from || $from > $max_to) {
+            wp_send_json_error(['message' => __('Invalid date range.', 'mphb-availability-calendar')], 400);
+        }
+        if ($from < $min_from) {
+            $from = $min_from;
+        }
+        if ($to > $max_to) {
+            $to = $max_to;
+        }
+
         $diff_days = (int) $from->diff($to)->format('%a');
         if ($diff_days > self::MAX_RANGE_DAYS) {
             $to = $from->modify('+' . self::MAX_RANGE_DAYS . ' days');
@@ -62,10 +85,29 @@ final class Ajax
         // Resolve the room list once and reuse — the response payload needs
         // it for titles/abbrev/number, and an empty room_type_ids request
         // also needs it to know which IDs to query availability for.
-        $rooms = Data_Provider::list_room_types();
+        $rooms     = Data_Provider::list_room_types();
+        $valid_ids = array_map(static fn($t) => (int) $t['id'], $rooms);
         if (empty($room_type_ids)) {
-            $room_type_ids = array_map(static fn($t) => (int) $t['id'], $rooms);
+            $room_type_ids = $valid_ids;
+        } else {
+            // Drop IDs that aren't real accommodation types — same
+            // options-table-flood concern as the date clamp (every bogus ID
+            // combination would otherwise mint its own transient), plus it
+            // saves the per-ID room lookup queries for garbage input.
+            $room_type_ids = array_values(array_intersect($room_type_ids, $valid_ids));
+            if (empty($room_type_ids)) {
+                wp_send_json_error(['message' => __('Unknown accommodation type.', 'mphb-availability-calendar')], 400);
+            }
         }
+
+        // Only echo back the cottages that were actually requested. Previously
+        // this returned every accommodation type, so a widget configured to
+        // show a subset would have rendered rows (as fully booked, no less)
+        // for cottages it was told to hide.
+        $rooms = array_values(array_filter(
+            $rooms,
+            static fn($t) => in_array((int) $t['id'], $room_type_ids, true)
+        ));
 
         $availability = Data_Provider::get_availability($room_type_ids, $from, $to);
 

@@ -126,6 +126,11 @@ final class Data_Provider
     public static function get_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
     {
         $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
+        // Canonical order: the ID list is salted into the cache key, so sorting
+        // makes [1065,1067] and [1067,1065] share one transient — and gives the
+        // result map a deterministic key order, which the client relies on to
+        // byte-compare the page-embedded payload against the AJAX revalidate.
+        sort($room_type_ids);
         if (empty($room_type_ids) || $from > $to) {
             return [];
         }
@@ -147,9 +152,12 @@ final class Data_Provider
     /**
      * MotoPress booking post statuses that occupy a room. A "confirmed" booking
      * is a real reservation (iCal imports also land as confirmed); "pending" is
-     * a checkout in progress that holds the room. Cancelled/abandoned do not.
+     * a checkout in progress that holds the room; "pending-user" is the hold
+     * MotoPress places when its confirmation mode is set to email-confirmation
+     * (not the site's current mode, but included so a settings change can't
+     * silently show held rooms as available). Cancelled/abandoned do not block.
      */
-    private const BLOCKING_STATUSES = ['confirmed', 'pending', 'pending-payment'];
+    private const BLOCKING_STATUSES = ['confirmed', 'pending', 'pending-user', 'pending-payment'];
 
     /**
      * Cap for the forward "next availability" scan used by the all-booked hint.

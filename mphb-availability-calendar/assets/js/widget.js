@@ -159,6 +159,151 @@
         }
     }
 
+    // Client-side availability cache. Filled two ways: every AJAX response is
+    // stored on arrival, and scheduleAdjacentPrefetch() quietly fetches the
+    // next/previous nav windows during idle time. A nav click whose window is
+    // already here renders instantly with no spinner. TTL is kept well under
+    // the server's 15-min transient TTL so entries can't outlive the data
+    // they mirror by much.
+    var prefetchCache = Object.create(null); // key -> { data, ts }
+    var PREFETCH_TTL_MS = 5 * 60 * 1000;
+    var PREFETCH_MAX_ENTRIES = 16;
+
+    function prefetchKey(config, from, to) {
+        return (config.roomTypeIds || []).join(',') + '|' + from + '|' + to;
+    }
+
+    function trimPrefetchCache() {
+        var keys = Object.keys(prefetchCache);
+        if (keys.length <= PREFETCH_MAX_ENTRIES) return;
+        keys.sort(function (a, b) { return prefetchCache[a].ts - prefetchCache[b].ts; });
+        while (keys.length > PREFETCH_MAX_ENTRIES) {
+            delete prefetchCache[keys.shift()];
+        }
+    }
+
+    // Content signature of a grid payload. Used to skip the re-render when a
+    // silent revalidate returns byte-identical data (the common case), so the
+    // instant first paint isn't followed by a pointless DOM rebuild. The
+    // server sorts type IDs and iterates days ascending, making key order
+    // deterministic on both the embedded and AJAX paths.
+    function dataSig(data) {
+        return JSON.stringify([data.rooms, data.availability, data.from, data.to, data.bookedThrough || null]);
+    }
+
+    function fetchAvailability(config, from, to) {
+        var body = new URLSearchParams();
+        body.append('action', config.action || 'mphbac_query');
+        body.append('from', from);
+        body.append('to', to);
+        (config.roomTypeIds || []).forEach(function (id) {
+            body.append('room_type_ids[]', String(id));
+        });
+        return fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: body,
+            headers: { 'Accept': 'application/json' }
+        }).then(function (r) { return r.json(); }).then(function (json) {
+            return (json && json.success && json.data) ? json.data : null;
+        });
+    }
+
+    function prefetchWindow(config, from, to) {
+        var key = prefetchKey(config, from, to);
+        var hit = prefetchCache[key];
+        if (hit && Date.now() - hit.ts < PREFETCH_TTL_MS) return;
+        fetchAvailability(config, from, to).then(function (data) {
+            if (data) {
+                prefetchCache[key] = { data: data, ts: Date.now() };
+                trimPrefetchCache();
+            }
+        }).catch(function () { /* prefetch is best-effort */ });
+    }
+
+    // After a grid renders, warm the two adjacent nav windows during idle so
+    // arrow clicks / swipes paint from local cache with zero wait. Skipped for
+    // filtered views — custom ranges rarely repeat, so prefetching them would
+    // be wasted requests.
+    function scheduleAdjacentPrefetch(config, state) {
+        if (state.filtered) return;
+        var span = daysBetween(state.from, state.to) + 1;
+        var nextFrom = addDays(state.to, 1);
+        var nextTo = addDays(state.to, span);
+        var prevFrom = addDays(state.from, -span);
+        var prevTo = addDays(state.from, -1);
+        var run = function () {
+            prefetchWindow(config, nextFrom, nextTo);
+            prefetchWindow(config, prevFrom, prevTo);
+        };
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(run, { timeout: 3000 });
+        } else {
+            setTimeout(run, 800);
+        }
+    }
+
+    // Instant first paint from the availability the server embedded in
+    // data-config. Slices the device's window out of the (larger) embedded
+    // range and corrects "past" locally — a page served from a stale
+    // full-page cache carries yesterday's notion of today. Returns true when
+    // it painted; the caller then still fires a SILENT revalidate so a stale
+    // embed (booking landed after the page was cached) self-corrects within
+    // a second, without flashing the skeleton first.
+    function tryRenderEmbedded(root, config, state) {
+        var ini = config.initial;
+        if (!ini || !ini.rooms || !ini.availability || !ini.from || !ini.to) return false;
+        if (state.filtered) return false;
+        if (!(ini.from <= state.from && state.to <= ini.to)) return false; // cache too stale to cover today's window
+        var days = buildDayList(state.from, state.to);
+        var today = config.today || '';
+        var avail = {};
+        var ok = true;
+        Object.keys(ini.availability).forEach(function (tid) {
+            var src = ini.availability[tid];
+            var out = {};
+            days.forEach(function (day) {
+                var s = src[day];
+                if (!s) { ok = false; return; }
+                out[day] = (today && day < today) ? 'past' : s;
+            });
+            avail[tid] = out;
+        });
+        if (!ok) return false;
+        // Hint parity with the AJAX path: bookedThrough is null unless the
+        // sliced window is entirely booked (matching Ajax::handle()'s gate —
+        // this must mirror it exactly or the revalidate's signature never
+        // matches and every load re-renders). When it IS all booked, find the
+        // first opening in the REST of the embedded range so the "booked
+        // through" date reflects reality, not the slice edge; past the
+        // embedded range, fall back to the server's forward-scan result.
+        var bookedThrough = null;
+        var windowHasAvail = days.some(function (day) {
+            return Object.keys(avail).some(function (tid) { return avail[tid][day] === 'available'; });
+        });
+        if (!windowHasAvail) {
+            bookedThrough = ini.bookedThrough || null;
+            var rest = buildDayList(addDays(state.to, 1), ini.to);
+            for (var i = 0; i < rest.length; i++) {
+                var anyAvail = false;
+                for (var t = 0; t < ini.rooms.length; t++) {
+                    if ((ini.availability[ini.rooms[t].id] || {})[rest[i]] === 'available') { anyAvail = true; break; }
+                }
+                if (anyAvail) { bookedThrough = addDays(rest[i], -1); break; }
+            }
+        }
+        var data = {
+            rooms: ini.rooms,
+            availability: avail,
+            from: state.from,
+            to: state.to,
+            bookedThrough: bookedThrough
+        };
+        state.lastSig = dataSig(data);
+        renderGrid(root, data, state, config);
+        return true;
+    }
+
     function init(root) {
         if (!root || root.dataset.mphbacInit === '1') return;
         root.dataset.mphbacInit = '1';
@@ -187,7 +332,8 @@
             filtered: false,
             bucket: deviceBucket(),
             lastRequest: 0,
-            pending: null
+            pending: null,
+            lastSig: null
         };
         applyDefaultWindow(config, state);
 
@@ -200,7 +346,12 @@
         }
         wireResize(root, config, state);
 
-        request(root, config, state); // initial client-side render
+        // Instant first paint from the server-embedded availability when it
+        // covers this device's window, then a silent AJAX revalidate (no
+        // skeleton, re-render only on change). Falls back to the plain
+        // skeleton-then-AJAX flow when the embed is missing or too stale.
+        var painted = tryRenderEmbedded(root, config, state);
+        request(root, config, state, painted ? { silent: true } : null);
     }
 
     // Re-stamp the date inputs' min attributes from the (possibly corrected)
@@ -788,11 +939,35 @@
         if (status) status.textContent = message || '';
     }
 
-    function request(root, config, state) {
+    function request(root, config, state, opts) {
+        var silent = !!(opts && opts.silent);
+
+        // Local-cache fast path: if this exact window was prefetched (or
+        // recently fetched), render it immediately — no spinner, no network.
+        // Entries are at most PREFETCH_TTL_MS old, well inside the server's
+        // own 15-minute cache window, so freshness is equivalent to an AJAX
+        // hit. Skipped for silent revalidates, whose entire job is to check
+        // the server.
+        if (!silent) {
+            var cacheHit = prefetchCache[prefetchKey(config, state.from, state.to)];
+            if (cacheHit && Date.now() - cacheHit.ts < PREFETCH_TTL_MS) {
+                if (state.controller) {
+                    try { state.controller.abort(); } catch (e) { /* ignore */ }
+                    state.controller = null;
+                }
+                root.classList.remove('is-loading');
+                setStatus(root, '');
+                state.lastSig = dataSig(cacheHit.data);
+                renderGrid(root, cacheHit.data, state, config);
+                scheduleAdjacentPrefetch(config, state);
+                return;
+            }
+        }
+
         var now = Date.now();
         if (now - state.lastRequest < REQUEST_THROTTLE_MS) {
             clearTimeout(state.pending);
-            state.pending = setTimeout(function () { request(root, config, state); }, REQUEST_THROTTLE_MS);
+            state.pending = setTimeout(function () { request(root, config, state, opts); }, REQUEST_THROTTLE_MS);
             return;
         }
         state.lastRequest = now;
@@ -823,8 +998,10 @@
             }
         }, timeoutMs);
 
-        root.classList.add('is-loading');
-        setStatus(root, (config.strings && config.strings.loading) || 'Loading availability…');
+        if (!silent) {
+            root.classList.add('is-loading');
+            setStatus(root, (config.strings && config.strings.loading) || 'Loading availability…');
+        }
 
         var body = new URLSearchParams();
         body.append('action', config.action || 'mphbac_query');
@@ -847,16 +1024,29 @@
             root.classList.remove('is-loading');
             setStatus(root, '');
             if (!json || !json.success || !json.data) {
-                showError(root);
+                // A failed SILENT revalidate keeps the already-painted
+                // embedded grid — flipping to the error state would replace
+                // good (≤15-min-old) data with nothing.
+                if (!silent) showError(root);
                 return;
             }
+            prefetchCache[prefetchKey(config, state.from, state.to)] = { data: json.data, ts: Date.now() };
+            trimPrefetchCache();
+            var sig = dataSig(json.data);
+            if (silent && sig === state.lastSig) {
+                // Revalidate confirmed the embedded paint — nothing to redraw.
+                scheduleAdjacentPrefetch(config, state);
+                return;
+            }
+            state.lastSig = sig;
             renderGrid(root, json.data, state, config);
+            scheduleAdjacentPrefetch(config, state);
         }).catch(function (err) {
             if (err && err.name === 'AbortError') return; // expected — newer request superseded this one
             if (controller !== state.controller) return;
             root.classList.remove('is-loading');
             setStatus(root, '');
-            showError(root);
+            if (!silent) showError(root);
         }).finally(function () {
             clearTimeout(timeoutHandle);
         });

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.0
+Stable tag: 0.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.13.0 =
+* Instant first paint: the calendar grid now appears immediately on page load instead of showing the gray loading skeleton while waiting for the AJAX request (typically 0.5–1.5s on shared hosting). The page embeds the default window's availability; the widget paints from it instantly, then quietly re-checks the server in the background and only redraws if a booking changed. Pages served from a stale full-page cache self-correct: past days are fixed locally and the background check refreshes the rest.
+* Instant navigation: after each render, the widget quietly prefetches the next and previous pages of days during browser idle time, so the arrow buttons and swipe gestures now usually render instantly from local cache instead of showing a spinner.
+* Endpoint hardening: the availability AJAX endpoint now rejects room-type IDs that aren't real accommodation types and clamps requested dates to a sane window (400 days back to 2 years ahead). Previously, scripted requests with arbitrary dates or IDs could each mint a new cache row in the database — a slow-bloat risk on shared hosting.
+* Fixed a latent bug found during review: the AJAX response returned ALL accommodation types regardless of which were requested, so a widget configured to show a subset of cottages would have rendered rows (marked fully booked) for cottages it was told to hide. Unnoticed because the live widget shows all 8.
+* Future-proofing: bookings with MotoPress's "pending-user" status (email-confirmation mode) now count as blocking. The site currently uses admin-confirmation mode, which was already covered — this removes a trap if the confirmation mode is ever changed.
 
 = 0.12.0 =
 * Cottage info popup: removed the floating down-arrow "scroll for more" button. It hovered over the content and lingered almost to the end, which looked bad and didn't help scrolling.
