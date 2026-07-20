@@ -713,32 +713,42 @@
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
-  let galItems = null, galCur = null, galRendered = 0, galLastGroup = null;
-  const galFilter = { kind: 'all', q: '' };
-  const galSort = { key: 'time' };
-  // sort keys: time/altitude reorder flat; day/place/city/person add group headers
+  let galItems = null, galCur = null, galRendered = 0, galEl = null;
+  let galPlaceOpts = [], galCityOpts = [];   // [segment, count] facet options
+  const galFilter = { kind: 'all', cities: new Set(), places: new Set() };
+  const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // 1 asc, -1 desc; alt defaults high→low
   const GAL_SORTS = [['time', 'Time'], ['day', 'Day'], ['place', 'Place'], ['city', 'City'], ['person', 'Photographer'], ['alt', 'Altitude']];
-  const GAL_GROUPED = { day: 1, place: 1, city: 1, person: 1 };
+  const GAL_GROUPED = { day: 1, place: 1, city: 1, person: 1 };   // these render as accordions
+  const GAL_DIRECTIONAL = { time: 1, alt: 1 };                     // these get a ↑/↓ toggle
+  // which comma-segments are real towns/islands/travel-cities (vs neighborhoods/venues) —
+  // classified client-side so the City facet stays coarse while Place stays specific
+  const CITY_SET = new Set(['Dubrovnik', 'Cavtat', 'Čilipi', 'Gruda', 'Srebreno', 'Plat', 'Kupari',
+    'Lokrum (Otok Lokrum)', 'Šipan', 'Suđurađ', 'Lopud', 'Elaphiti Islands', 'Orlando', 'London']);
+  function placeSegs(pl) { return (pl || '').split(',').map(s => s.trim()).filter(Boolean); }
+  function cityOf(x) { for (const s of x.segs) if (CITY_SET.has(s)) return s; return x.it.city || '—'; }
   function tcmp(a, b) { a = a || ''; b = b || ''; return a < b ? -1 : a > b ? 1 : 0; }
   function cmpStr(a, b) { return String(a || '~').localeCompare(String(b || '~')); }
   function personOrder(pn) { const i = PERSONS.indexOf(pn); return i < 0 ? 99 : i; }
+  function chrono(a, b) { return (a.di - b.di) || tcmp(a.it.time, b.it.time); }
   function galSortCmp(a, b) {
-    switch (galSort.key) {
-      case 'alt': { const av = a.it.alt, bv = b.it.alt;
-        if (av == null && bv == null) return (a.di - b.di) || tcmp(a.it.time, b.it.time);
-        if (av == null) return 1; if (bv == null) return -1;
-        return (bv - av) || (a.di - b.di); }                      // highest first
-      case 'place': return cmpStr(a.place, b.place) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
-      case 'city': return cmpStr(a.it.city, b.it.city) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
-      case 'person': return (personOrder(a.it.person) - personOrder(b.it.person)) || (a.di - b.di) || tcmp(a.it.time, b.it.time);
-      default: return (a.di - b.di) || tcmp(a.it.time, b.it.time); // time + day
+    const k = galSort.key;
+    if (k === 'alt') {
+      const av = a.it.alt, bv = b.it.alt;
+      if (av == null && bv == null) return chrono(a, b);
+      if (av == null) return 1; if (bv == null) return -1;   // no-altitude items sink to the end
+      return galSort.dir.alt * (av - bv) || chrono(a, b);
     }
+    if (k === 'place') return cmpStr(a.place, b.place) || chrono(a, b);
+    if (k === 'city') return cmpStr(cityOf(a), cityOf(b)) || chrono(a, b);
+    if (k === 'person') return (personOrder(a.it.person) - personOrder(b.it.person)) || chrono(a, b);
+    if (k === 'time') return galSort.dir.time * chrono(a, b);
+    return chrono(a, b);   // day
   }
   function galGroupKey(x) {
     switch (galSort.key) {
       case 'day': return 'd' + x.di;
       case 'place': return 'p:' + x.place;
-      case 'city': return 'c:' + (x.it.city || '');
+      case 'city': return 'c:' + cityOf(x);
       case 'person': return 'w:' + (x.it.person || '');
     }
     return null;
@@ -747,17 +757,45 @@
     switch (galSort.key) {
       case 'day': return x.dayLabel;
       case 'place': return x.place;
-      case 'city': return x.it.city || 'Unknown';
+      case 'city': return cityOf(x);
       case 'person': return x.it.person || 'Unattributed';
     }
     return '';
   }
+  function facetHTML(kind, label, opts) {
+    return '<div class="dcc-tour-facet" data-facet="' + kind + '">' +
+      '<button type="button" class="facet-btn" aria-expanded="false">' + label +
+        '<span class="facet-n" hidden></span><span class="facet-caret" aria-hidden="true">▾</span></button>' +
+      '<div class="facet-panel" hidden>' +
+        '<input type="search" class="facet-search" placeholder="search ' + label.toLowerCase() + '…" autocomplete="off">' +
+        '<div class="facet-list">' + opts.map(o =>
+          '<label class="facet-opt"><input type="checkbox" value="' + escapeAttr(o[0]) + '">' +
+          '<span class="facet-lab">' + escapeHtml(o[0]) + '</span><span class="facet-c">' + o[1] + '</span></label>').join('') +
+        '</div><div class="facet-foot"><button type="button" class="facet-clear">Clear</button></div>' +
+      '</div></div>';
+  }
+  function closeAllFacets() {
+    if (!galEl) return;
+    galEl.querySelectorAll('.facet-panel').forEach(p => p.hidden = true);
+    galEl.querySelectorAll('.facet-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  }
   function buildGallery() {
     if (!galItems) {
       galItems = [];
-      DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it =>
-        galItems.push({ it, di, short: d.short, dayLabel: d.label, place: it.place || p.name }))));
-      const g = el('section', 'dcc-tour-gallery');
+      DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it => {
+        const place = it.place || p.name;
+        galItems.push({ it, di, dayLabel: d.label, place, segs: placeSegs(place) });
+      })));
+      // facet options: every segment for Place, the city-classified subset for City
+      const pc = new Map(), cc = new Map();
+      galItems.forEach(x => x.segs.forEach(s => {
+        pc.set(s, (pc.get(s) || 0) + 1);
+        if (CITY_SET.has(s)) cc.set(s, (cc.get(s) || 0) + 1);
+      }));
+      galPlaceOpts = [...pc.entries()].sort((a, b) => cmpStr(a[0], b[0]));
+      galCityOpts = [...cc.entries()].sort((a, b) => cmpStr(a[0], b[0]));
+
+      const g = el('section', 'dcc-tour-gallery'); galEl = g;
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
         [['all', 'All'], ['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k =>
           '<button class="dcc-tour-galchip' + (k[0] === 'all' ? ' active' : '') + '" data-kind="' + k[0] + '">' + k[1] + '</button>').join('') +
@@ -767,10 +805,14 @@
           PERSONS.map(pn => '<button class="dcc-personchip" data-person="' + pn + '">' +
             '<span class="pc-dot" style="background:' + PERSON_COLORS[pn] + '"></span>' + escapeHtml(pn) + '</button>').join('') +
         '</span>' +
+        '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
+        facetHTML('city', 'City', galCityOpts) +
+        facetHTML('place', 'Place', galPlaceOpts) +
         '<label class="dcc-tour-galsort">Sort by <select id="dcc-galsort">' +
           GAL_SORTS.map(s => '<option value="' + s[0] + '">' + s[1] + '</option>').join('') +
         '</select></label>' +
-        '<input type="search" id="dcc-galq" placeholder="filter by place…" autocomplete="off">' +
+        '<button type="button" class="dcc-tour-galdir" id="dcc-galdir" hidden aria-label="Sort direction">↓</button>' +
+        '<button type="button" class="dcc-tour-galexpand" id="dcc-galexpand" hidden>Expand all</button>' +
         '<span class="dcc-tour-gal-count" id="dcc-galcount"></span></div>' +
         '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
         '<div id="dcc-galmore" class="dcc-tour-galmore">loading more…</div>';
@@ -781,10 +823,54 @@
       }));
       g.querySelectorAll('.dcc-personchip').forEach(b => b.addEventListener('click', () =>
         setPersonFilter(b.dataset.person === 'all' ? null : b.dataset.person)));
+      // City / Place facet dropdowns (scroll list + search + multi-select)
+      g.querySelectorAll('.dcc-tour-facet').forEach(fac => {
+        const set = fac.dataset.facet === 'city' ? galFilter.cities : galFilter.places;
+        const btn = fac.querySelector('.facet-btn'), panel = fac.querySelector('.facet-panel');
+        const badge = fac.querySelector('.facet-n'), search = fac.querySelector('.facet-search');
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const wasClosed = panel.hidden; closeAllFacets();
+          if (wasClosed) {
+            panel.hidden = false; btn.setAttribute('aria-expanded', 'true');
+            // nudge the panel left so it never spills past the right edge on narrow screens
+            panel.style.left = '0px';
+            const r = fac.getBoundingClientRect(), over = (r.left + panel.offsetWidth) - (document.documentElement.clientWidth - 8);
+            if (over > 0) panel.style.left = (-Math.min(over, r.left - 8)) + 'px';
+            search.focus();
+          }
+        });
+        panel.addEventListener('click', e => e.stopPropagation());
+        search.addEventListener('input', e => {
+          const q = e.target.value.trim().toLowerCase();
+          fac.querySelectorAll('.facet-opt').forEach(o =>
+            o.style.display = o.querySelector('.facet-lab').textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none');
+        });
+        fac.querySelector('.facet-list').addEventListener('change', e => {
+          if (e.target.type !== 'checkbox') return;
+          if (e.target.checked) set.add(e.target.value); else set.delete(e.target.value);
+          badge.hidden = !set.size; badge.textContent = set.size; renderGallery();
+        });
+        fac.querySelector('.facet-clear').addEventListener('click', () => {
+          set.clear(); fac.querySelectorAll('.facet-opt input').forEach(c => c.checked = false);
+          badge.hidden = true; renderGallery();
+        });
+      });
+      document.addEventListener('click', closeAllFacets);
       g.querySelector('#dcc-galsort').addEventListener('change', e => { galSort.key = e.target.value; renderGallery(); });
-      let deb = null;
-      g.querySelector('#dcc-galq').addEventListener('input', e => {
-        clearTimeout(deb); deb = setTimeout(() => { galFilter.q = e.target.value.trim().toLowerCase(); renderGallery(); }, 150);
+      g.querySelector('#dcc-galdir').addEventListener('click', () => {
+        const k = galSort.key; if (GAL_DIRECTIONAL[k]) { galSort.dir[k] = -galSort.dir[k]; renderGallery(); }
+      });
+      const grid = g.querySelector('#dcc-galgrid');
+      grid.addEventListener('click', e => {
+        const head = e.target.closest('.galacc-head'); if (!head) return;
+        toggleAcc(head.closest('.galacc'));
+      });
+      g.querySelector('#dcc-galexpand').addEventListener('click', () => {
+        const secs = [...grid.querySelectorAll('.galacc')];
+        const open = secs.some(s => s.dataset.open !== '1');   // if any closed, expand all; else collapse all
+        secs.forEach(s => setAcc(s, open));
+        g.querySelector('#dcc-galexpand').textContent = open ? 'Collapse all' : 'Expand all';
       });
       if ('IntersectionObserver' in window)
         new IntersectionObserver(en => { if (en[0].isIntersecting) renderGalleryChunk(); })
@@ -792,38 +878,74 @@
     }
     renderGallery();
   }
+  function itemMatchesFacets(x) {
+    if (galFilter.cities.size && !x.segs.some(s => galFilter.cities.has(s))) return false;
+    if (galFilter.places.size && !x.segs.some(s => galFilter.places.has(s))) return false;
+    return true;
+  }
   function renderGallery() {
     galCur = galItems.filter(x => (galFilter.kind === 'all' || x.it.kind === galFilter.kind) &&
-      itemPasses(x.it) &&
-      (!galFilter.q || (x.place || '').toLowerCase().indexOf(galFilter.q) >= 0));
+      itemPasses(x.it) && itemMatchesFacets(x));
     galCur.sort(galSortCmp);
-    galRendered = 0; galLastGroup = null;
-    lightboxFulls = []; lightboxMeta = [];   // gallery owns the lightbox set while open
+    // lightbox spans the whole filtered+sorted photo set (built up front, not per-chunk)
+    lightboxFulls = []; lightboxMeta = [];
+    galCur.forEach(x => { const it = x.it; if (it.full) { lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place, t: it.time }); } });
     document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
-    document.getElementById('dcc-galgrid').innerHTML = '';
-    renderGalleryChunk();
+    // direction toggle only for flat sorts
+    const dir = document.getElementById('dcc-galdir');
+    if (GAL_DIRECTIONAL[galSort.key]) { dir.hidden = false; const d = galSort.dir[galSort.key];
+      dir.textContent = d > 0 ? '↑' : '↓';
+      dir.title = galSort.key === 'alt' ? (d > 0 ? 'Low → high' : 'High → low') : (d > 0 ? 'Oldest → newest' : 'Newest → oldest');
+    } else dir.hidden = true;
+    const grid = document.getElementById('dcc-galgrid'), more = document.getElementById('dcc-galmore');
+    const exp = document.getElementById('dcc-galexpand');
+    if (GAL_GROUPED[galSort.key]) { more.style.display = 'none'; exp.hidden = false; exp.textContent = 'Expand all'; renderGalleryGrouped(grid); }
+    else { exp.hidden = true; grid.className = 'dcc-tour-media dcc-tour-gal-grid'; grid.innerHTML = ''; galRendered = 0; renderGalleryChunk(); }
   }
   function renderGalleryChunk() {
-    if (!galCur || root.dataset.view !== 'gallery') return;
+    if (!galCur || root.dataset.view !== 'gallery' || GAL_GROUPED[galSort.key]) return;
     const grid = document.getElementById('dcc-galgrid');
     const end = Math.min(galRendered + 200, galCur.length);
-    const grouped = !!GAL_GROUPED[galSort.key];
     let html = '';
-    for (let i = galRendered; i < end; i++) {
-      const x = galCur[i];
-      if (grouped) {
-        const gk = galGroupKey(x);
-        if (gk !== galLastGroup) {
-          galLastGroup = gk;
-          html += '<h3 class="dcc-tour-galgroup">' + escapeHtml(galGroupLabel(x)) + '</h3>';
-        }
-      }
-      html += renderItem(x.it);
-    }
+    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it, false);
     grid.insertAdjacentHTML('beforeend', html);
     galRendered = end;
     document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
   }
+  // grouped view: collapsible accordion sections, items rendered lazily on first open
+  function renderGalleryGrouped(grid) {
+    const groups = []; let cur = null;
+    galCur.forEach(x => {
+      const key = galGroupKey(x);
+      if (!cur || cur.key !== key) { cur = { key, label: galGroupLabel(x), items: [] }; groups.push(cur); }
+      cur.items.push(x);
+    });
+    grid._groups = groups;
+    grid.className = 'dcc-tour-gal-acc';
+    grid.innerHTML = groups.map((gp, gi) =>
+      '<section class="galacc" data-open="0" data-gi="' + gi + '">' +
+        '<button type="button" class="galacc-head" aria-expanded="false">' +
+          '<span class="galacc-chev" aria-hidden="true">▸</span>' +
+          '<span class="galacc-lab">' + escapeHtml(gp.label) + '</span>' +
+          '<span class="galacc-n">' + gp.items.length + '</span></button>' +
+        '<div class="galacc-body dcc-tour-media" hidden></div>' +
+      '</section>').join('');
+  }
+  function setAcc(sec, open) {
+    sec.dataset.open = open ? '1' : '0';
+    sec.querySelector('.galacc-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+    const body = sec.querySelector('.galacc-body');
+    if (open) {
+      if (!body._rendered) {
+        const grid = document.getElementById('dcc-galgrid');
+        const gp = grid._groups[+sec.dataset.gi];
+        body.innerHTML = gp.items.map(x => renderItem(x.it, false)).join('');
+        body._rendered = true;
+      }
+      body.hidden = false;
+    } else body.hidden = true;
+  }
+  function toggleAcc(sec) { setAcc(sec, sec.dataset.open !== '1'); }
 
   // shared place index + jump helper (used by desktop search AND the mobile sheet)
   let PLACE_INDEX = null;
@@ -1235,7 +1357,8 @@
     replayTimer = setInterval(tick, 1700);
   }
 
-  function renderItem(item) {
+  function renderItem(item, collect) {
+    collect = collect !== false;   // story view collects lightbox entries as it renders; gallery pre-builds them
     const extras = mapsLink(item.lat, item.lng, 'dcc-tour-maplink cell');
     // GoPro clips (Drive): show a poster frame, load the player on tap
     if (item.type === 'drive') {
@@ -1256,7 +1379,7 @@
     }
     // photo
     const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
-    if (item.full) { lightboxFulls.push(resolveUrl(item.full)); lightboxMeta.push({ p: item.place, t: item.time }); }
+    if (item.full && collect) { lightboxFulls.push(resolveUrl(item.full)); lightboxMeta.push({ p: item.place, t: item.time }); }
     return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + extras + '</div>';
   }
   function cap(item) {
