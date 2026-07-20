@@ -18,6 +18,56 @@
   let lightboxFulls = [], lightboxMeta = [], lightboxIdx = -1;
   const markersByPlace = {};
 
+  // ---- units (task 8): default Imperial; a header toggle flips distance,
+  //      elevation and temperature everywhere, live ----
+  let unitSys = 'imperial';                 // 'imperial' | 'metric'
+  const imp = () => unitSys === 'imperial';
+  // distance is stored in the data two ways: km (walk_km / trip_walk_km) and mi
+  // (the Apple Watch dist). Helpers below take the source unit and format for display.
+  function distFromKm(km, dec) { dec = dec == null ? 1 : dec; return (imp() ? km * 0.621371 : km).toFixed(dec) + ' ' + distUnit(); }
+  function distNumFromKm(km, dec) { dec = dec == null ? 1 : dec; return +((imp() ? km * 0.621371 : km).toFixed(dec)); }
+  function distNumFromMi(mi, dec) { dec = dec == null ? 1 : dec; return +((imp() ? mi : mi * 1.60934).toFixed(dec)); }
+  function distUnit() { return imp() ? 'mi' : 'km'; }
+  // elevation / altitude is stored in metres
+  function elevNumFromM(m) { return Math.round(imp() ? m * 3.28084 : m); }
+  function elevFromM(m) { return fmt(elevNumFromM(m)) + ' ' + elevUnit(); }
+  function elevUnit() { return imp() ? 'ft' : 'm'; }
+  // temperature is stored in °C
+  function tempFromC(c) { return Math.round(imp() ? c * 9 / 5 + 32 : c) + '°' + (imp() ? 'F' : 'C'); }
+  function toggleUnits() { unitSys = imp() ? 'metric' : 'imperial'; applyUnits(); }
+  function unitToggleHTML(cls) {
+    return '<button class="dcc-unit-toggle ' + (cls || '') + '" id="dcc-units-' + (cls || 'x') + '" role="switch" ' +
+      'aria-checked="' + (imp() ? 'false' : 'true') + '" title="Switch measurements (imperial / metric)" aria-label="Switch between imperial and metric units">' +
+      '<span class="uni-opt uni-imp' + (imp() ? ' on' : '') + '">mi·ft·°F</span>' +
+      '<span class="uni-opt uni-met' + (imp() ? '' : ' on') + '">km·m·°C</span></button>';
+  }
+  // re-render everything that shows a converted number after a units flip
+  function applyUnits() {
+    refreshHeaderStats();
+    const ovb = root.querySelector('.dcc-tour-overview .ov-body');
+    if (ovb) { ovb.innerHTML = overviewHTML(); bindClimbChart(root.querySelector('.dcc-tour-overview')); }
+    const cur = curDay;
+    if (root.querySelector('.dcc-tour-daychip.active')) {
+      const ov = root.querySelector('.dcc-tour-overview');
+      if (ov) ov.querySelectorAll('.tread').forEach((r, j) => r.classList.toggle('on', j === cur));
+    }
+    const v = root.dataset.view || 'story';
+    if (v === 'story') renderDay(DATA.days[curDay]);
+    else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
+    if (mmMap) renderMapMode();
+    root.querySelectorAll('.dcc-unit-toggle').forEach(btn => {
+      btn.setAttribute('aria-checked', imp() ? 'false' : 'true');
+      const i = btn.querySelector('.uni-imp'), m = btn.querySelector('.uni-met');
+      if (i) i.classList.toggle('on', imp()); if (m) m.classList.toggle('on', !imp());
+    });
+  }
+  // ---- date labels (task 10): show the calendar date, never "Day N" ----
+  const _MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const _DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  function _ymd(d) { const a = (d.date || '').split('-').map(Number); return { y: a[0], m: a[1], dd: a[2] }; }
+  function dDate(d) { const { m, dd } = _ymd(d); return (_MON[m - 1] || '') + ' ' + dd; }          // "Sep 10"
+  function dWeekday(d) { const { y, m, dd } = _ymd(d); return _DOW[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()] || ''; }
+
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
     DATA = data;
     const initialHash = location.hash;   // capture before selectDay/updateHash rewrites it
@@ -25,6 +75,7 @@
     initMap();
     selectDay(0);
     if (initialHash.length > 1) applyHash(initialHash);
+    else setView('map');   // task 6: Map is the default tab
     window.addEventListener('hashchange', () => applyHash());  // pasted links in the same tab
     // if the window grows past the mobile breakpoint, bring the story map up
     const mq = window.matchMedia('(min-width: 801px)');
@@ -52,8 +103,8 @@
       b.dataset.day = i;
       const cv = coverSrc(d);
       b.innerHTML = (cv ? '<img class="d-thumb" loading="lazy" src="' + escapeAttr(cv) + '" alt="">' : '') +
-                    '<span class="d-n">Day ' + d.index + '</span>' +
-                    '<span class="d-d">' + escapeHtml(d.short) + '</span>' +
+                    '<span class="d-n">' + escapeHtml(dDate(d)) + '</span>' +
+                    '<span class="d-d">' + escapeHtml(dWeekday(d)) + '</span>' +
                     '<span class="d-c">' + d.count + '</span>';
       b.addEventListener('click', () => { setView('story'); selectDay(i); });
       nav.appendChild(b);
@@ -67,7 +118,15 @@
     mapdiv.setAttribute('role', 'application');
     mapdiv.setAttribute('aria-label', 'Map of the day');
     mapwrap.appendChild(mapdiv);
-    body.appendChild(story); body.appendChild(mapwrap);
+    // task 5: draggable divider so the reader can give the map more or less room
+    const divider = el('div', 'dcc-tour-divider');
+    divider.setAttribute('role', 'separator');
+    divider.setAttribute('aria-orientation', 'vertical');
+    divider.setAttribute('tabindex', '0');
+    divider.setAttribute('aria-label', 'Drag to resize the map column');
+    divider.innerHTML = '<span class="dcc-tour-divgrip" aria-hidden="true"></span>';
+    body.appendChild(story); body.appendChild(divider); body.appendChild(mapwrap);
+    bindDivider(divider, body);
     // trip overview (climbs + staircase): collapsed on mobile, open on desktop
     const overview = el('div', 'dcc-tour-overview');
     const ovd = document.createElement('details');
@@ -79,13 +138,42 @@
     const controls = buildControls();
     const modeToggle = buildModeToggle();
     const mapmode = buildMapMode();
+    const statsviz = el('div', 'dcc-tour-statsviz');   // task 3: extra data-viz, Stats view only
     root.appendChild(header); root.appendChild(modeToggle); root.appendChild(nav); root.appendChild(controls);
-    root.appendChild(overview); root.appendChild(body); root.appendChild(mapmode);
-    root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode;
-    overview.querySelectorAll('.tread').forEach(r =>
-      r.addEventListener('click', () => selectDay(+r.getAttribute('data-day'))));
+    root.appendChild(overview); root.appendChild(statsviz); root.appendChild(body); root.appendChild(mapmode);
+    root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode; root._statsviz = statsviz;
+    bindClimbChart(overview);
     animateCounts(header);
     buildAppShell();
+  }
+
+  // task 5: drag (or arrow-key) the divider to set the map column width, stored
+  // in the --dcc-map-w custom property the body grid reads. Desktop only.
+  function bindDivider(divider, body) {
+    const MIN = 240;                                  // never shrink the map below this
+    const clampW = w => {
+      const bw = body.getBoundingClientRect().width || 900;
+      return Math.max(MIN, Math.min(bw - 320, w));    // and always leave room for the story
+    };
+    const setW = w => { root.style.setProperty('--dcc-map-w', clampW(w) + 'px'); if (map) setTimeout(() => map.invalidateSize(), 0); };
+    let dragging = false;
+    const move = e => {
+      if (!dragging) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      setW(body.getBoundingClientRect().right - x);
+      e.preventDefault();
+    };
+    const up = () => { dragging = false; document.body.classList.remove('dcc-tour-resizing'); };
+    divider.addEventListener('pointerdown', e => { dragging = true; document.body.classList.add('dcc-tour-resizing'); divider.setPointerCapture && divider.setPointerCapture(e.pointerId); });
+    divider.addEventListener('pointermove', move);
+    divider.addEventListener('pointerup', up);
+    divider.addEventListener('pointercancel', up);
+    divider.addEventListener('keydown', e => {
+      const cur = parseFloat(getComputedStyle(root).getPropertyValue('--dcc-map-w')) ||
+        body.querySelector('.dcc-tour-mapwrap').getBoundingClientRect().width;
+      if (e.key === 'ArrowLeft') { setW(cur + 40); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { setW(cur - 40); e.preventDefault(); }
+    });
   }
 
   // ---- monoline icon set (editorial line-art; inherits currentColor) ----
@@ -113,10 +201,10 @@
         '<span class="tb-daynum" id="dcc-tb-num"></span>' +
         '<span class="tb-daylabel" id="dcc-tb-lab"></span></button>' +
       '<button class="tb-arrow tb-next" aria-label="Next day">›</button>' +
-      '<button class="tb-arrow tb-rand" aria-label="Random memory">' + svgIcon('dice') + '</button>';
+      unitToggleHTML('unit-mob');
     tb.querySelector('.tb-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
     tb.querySelector('.tb-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
-    tb.querySelector('.tb-rand').addEventListener('click', randomMemory);
+    tb.querySelector('.dcc-unit-toggle').addEventListener('click', toggleUnits);
     tb.querySelector('#dcc-tb-day').addEventListener('click', openDaySheet);
 
     const bar = el('nav', 'dcc-tour-tabbar');
@@ -134,7 +222,7 @@
       '<div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
-        '<span class="sd-txt"><b>Day ' + d.index + '</b>' +
+        '<span class="sd-txt"><b>' + escapeHtml(dDate(d)) + '</b>' +
         '<span>' + escapeHtml(d.short) + '</span><span class="sd-area">' + escapeHtml(d.area || '') + '</span></span>' +
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
@@ -176,7 +264,7 @@
       });
     if (v !== 'map') mmStopPlay();
     if (v === 'map') initMapMode();
-    else if (v === 'stats') animateCounts(root);
+    else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
     else if (v === 'gallery') buildGallery();
     else if (v === 'story') {
       // under a person filter, don't land on a day they didn't shoot
@@ -238,23 +326,10 @@
     t.textContent = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
   }
-  // ---- 🎲 random memory ----
-  function randomMemory() {
-    const pool = [];
-    DATA.days.forEach((d, di) => d.places.forEach(p => p.items.forEach(it => { if (it.full && itemPasses(it)) pool.push({ di, it }); })));
-    if (!pool.length) return;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    setView('story');
-    if (pick.di !== curDay) selectDay(pick.di);
-    setTimeout(() => {
-      const i = lightboxFulls.indexOf(resolveUrl(pick.it.full));
-      if (i >= 0) openLightbox(i);
-    }, 260);
-  }
   function updateTopbar() {
     if (!root._topbar) return;
     const d = DATA.days[curDay];
-    root._topbar.querySelector('#dcc-tb-num').textContent = 'Day ' + d.index + ' / ' + DATA.day_count;
+    root._topbar.querySelector('#dcc-tb-num').textContent = dDate(d);
     root._topbar.querySelector('#dcc-tb-lab').textContent = d.short + (d.area ? ' · ' + shortName(d.area) : '') + '  ▾';
     root._topbar.querySelector('.tb-prev').disabled = curDay <= 0;
     root._topbar.querySelector('.tb-next').disabled = curDay >= DATA.day_count - 1;
@@ -388,16 +463,16 @@
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">' + svgIcon('gallery') + '<span>Photos</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">' + svgIcon('map') + '<span>Map</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">' + svgIcon('stats') + '<span>Stats</span></button>' +
-      '<button class="dcc-tour-modebtn dcc-tour-modebtn-icon" id="dcc-random" title="Show me a random memory" aria-label="Random memory">' + svgIcon('dice') + '</button>';
+      '<span class="dcc-tour-modespacer"></span>' + unitToggleHTML('unit-desk');
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
-    w.querySelector('#dcc-random').addEventListener('click', randomMemory);
+    w.querySelector('.dcc-unit-toggle').addEventListener('click', toggleUnits);
     return w;
   }
   function buildMapMode() {
     const w = el('section', 'dcc-tour-mapmode');
     const dayOpts = DATA.days.map((d, i) =>
-      '<option value="' + i + '">' + escapeHtml('Day ' + d.index + ' · ' + d.short) + '</option>').join('');
+      '<option value="' + i + '">' + escapeHtml(d.label) + '</option>').join('');
     // layer toggles collapse into one "Layers ▾" dropdown (facet styling, like Photos)
     const layerOpt = (id, label, checked, hid) =>
       '<label class="facet-opt"' + (hid ? ' id="' + hid + '" hidden' : '') + '><input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>' +
@@ -413,11 +488,11 @@
         '<div class="dcc-tour-facet dcc-tour-mm-layers" data-facet="layers">' +
           '<button type="button" class="facet-btn" aria-expanded="false">Layers<span class="facet-caret" aria-hidden="true">▾</span></button>' +
           '<div class="facet-panel" hidden><div class="facet-list">' +
-            layerOpt('mm-path', 'Path', true) +
-            layerOpt('mm-facing', 'Facing', false) +
+            layerOpt('mm-path', 'Path', false) +
+            layerOpt('mm-facing', 'Facing', true) +
             layerOpt('mm-heat', 'Heatmap', false) +
             layerOpt('mm-sat', 'Satellite', true) +
-            layerOpt('mm-track', 'GPS track', false, 'mm-track-opt') +
+            layerOpt('mm-track', 'GPS track', true, 'mm-track-opt') +
             layerOpt('mm-saved', 'Saved spots', false, 'mm-saved-opt') +
           '</div></div>' +
         '</div>' +
@@ -475,7 +550,8 @@
     m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
     m.querySelector('#mm-saved').addEventListener('change', e => toggleSaved(e.target.checked));
     // reveal the optional-overlay toggles only when their data ships with the bundle
-    loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-opt').hidden = false; }).catch(() => {});
+    loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-opt').hidden = false;
+      if (m.querySelector('#mm-track').checked) toggleTrack(true); }).catch(() => {});
     loadJSON('saved.json').then(d => { mmSavedData = d; m.querySelector('#mm-saved-opt').hidden = false; }).catch(() => {});
     // Layers ▾ dropdown open/close
     const lf = m.querySelector('.dcc-tour-mm-layers'), lfb = lf.querySelector('.facet-btn'), lfp = lf.querySelector('.facet-panel');
@@ -544,7 +620,7 @@
       el.className = 'dcc-tour-mm-legend mm-legend-alt';
       el.innerHTML = showAll + '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
         ALT_STOPS[0][1] + ',' + ALT_STOPS[1][1] + ',' + ALT_STOPS[2][1] + ')"></span>' +
-        '<span class="mm-altlab">0 m (sea)</span><span class="mm-altlab">~200 m</span><span class="mm-altlab">' + ALT_MAX + ' m (Srđ)</span>';
+        '<span class="mm-altlab">0 ' + elevUnit() + ' (sea)</span><span class="mm-altlab">~' + elevFromM(200) + '</span><span class="mm-altlab">' + elevFromM(ALT_MAX) + ' (Srđ)</span>';
     }
     el.querySelector('.mm-showall').addEventListener('click', mmShowAll);
     // saved-spots key (only while that overlay is on): ★ per wishlist
@@ -1106,7 +1182,7 @@
       sup = '<div class="dcc-tour-superlatives">' +
         '<span>🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots</span>' +
         (captured ? '<span>📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '</span>' : '') +
-        (!personOn() && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
+        (!personOn() && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + distFromKm(s.longest_walk_day.km) + '</span>' : '') +
         '</div>';
     }
     const note = personOn() ?
@@ -1114,10 +1190,10 @@
         '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
     return '<div class="dcc-tour-tripstats">' +
       statTile(h.steps, '', 'steps', h.watch) +
-      statTile(parseFloat(h.dist), ' ' + (h.dist_unit || ''), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
+      statTile(distNumFromMi(h.dist, 1), ' ' + distUnit(), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
       statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
       (totalLoc ? statTile(totalLoc, '', 'places', personOn() ? 'shot by ' + personLabel() : 'visited & named') : '') +
-      (!personOn() && s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
+      (!personOn() && s.trip_walk_km ? statTile(distNumFromKm(s.trip_walk_km, 1), ' ' + distUnit(), 'traveled', 'foot · boat · road', 1) : '') +
       (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
         photos + ' photos · ' + videos + ' videos · ' + clips + ' clips') : '') +
       '</div>' + sup + note;
@@ -1158,12 +1234,12 @@
     // a non-breaking space glues each number to its unit so a unit never orphans
     // onto their own line in the narrow mobile column
     if (h.steps) bits.push('<b>' + fmt(h.steps) + '</b> steps');
-    if (day.walk_km) bits.push('<b>' + day.walk_km + ' km</b> traveled');
+    if (day.walk_km) bits.push('<b>' + distFromKm(day.walk_km) + '</b> traveled');
     if (h.climb_m) {
       const flights = Math.round(h.climb_m / 3);
-      bits.push('climbed <b>' + fmt(h.climb_m) + ' m</b> ≈ ' + flights + ' flights');
+      bits.push('climbed <b>' + elevFromM(h.climb_m) + '</b> ≈ ' + flights + ' flights');
     }
-    if (h.alt_max != null) bits.push('up to <b>' + h.alt_max + ' m</b>');
+    if (h.alt_max != null) bits.push('up to <b>' + elevFromM(h.alt_max) + '</b>');
     let out = bits.length ? '<p class="dcc-tour-health">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
     // stairs-as-a-story
     if (h.climb_m && h.climb_m >= 40) {
@@ -1179,9 +1255,9 @@
     if (!w) return '';
     const bits = [];
     if (w.icon || w.desc) bits.push((w.icon || '') + ' ' + escapeHtml(w.desc || ''));
-    if (w.tmax != null) bits.push('🌡 ' + Math.round(w.tmax) + '°' + (w.tmin != null ? ' / ' + Math.round(w.tmin) + '°' : '') + 'C');
-    if (w.wind != null) bits.push('💨 ' + Math.round(w.wind) + ' km/h');
-    if (w.precip) bits.push('💧 ' + w.precip + ' mm');
+    if (w.tmax != null) bits.push('🌡 ' + tempFromC(w.tmax) + (w.tmin != null ? ' / ' + tempFromC(w.tmin) : ''));
+    if (w.wind != null) bits.push('💨 ' + (imp() ? Math.round(w.wind * 0.621371) + ' mph' : Math.round(w.wind) + ' km/h'));
+    if (w.precip) bits.push('💧 ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm'));
     return bits.length ? '<p class="dcc-tour-weather">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
@@ -1190,31 +1266,62 @@
     let html = '';
     const sc = DATA.signature_climbs || [];
     if (sc.length) {
-      html += '<div class="dcc-tour-climbs"><span class="lab">Signature climbs</span>' +
+      html += '<div class="dcc-tour-climbs"><span class="lab">Compare to</span>' +
         sc.map(c => '<span class="climb">' + escapeHtml(c.emoji) + ' ' + escapeHtml(c.name) +
-          ' <b>' + c.max_alt + ' m</b></span>').join('') + '</div>';
+          ' <b>' + elevFromM(c.max_alt) + '</b></span>').join('') + '</div>';
     }
     html += staircaseHTML();
     return html;
   }
+  // Task 1: cumulative-climb bar chart with a labelled Y axis (elevation), an X
+  // axis (dates) and a per-bar hover tooltip. Each bar's height is the running
+  // total climbed through that day; the tooltip breaks out that day's own gain.
   function staircaseHTML() {
-    const days = DATA.days, W = 900, H = 92, pad = 4;
+    const days = DATA.days;
     let cum = 0; const cums = days.map(d => (cum += (d.health && d.health.climb_m) || 0));
     const total = cum || 1;
-    const bw = (W - pad * 2) / days.length;
-    let steps = '', hit = '';
-    days.forEach((d, i) => {
-      const y0 = i ? cums[i-1] : 0, y1 = cums[i];
-      const x = pad + i * bw;
-      const yA = H - (y0 / total) * (H - 14), yB = H - (y1 / total) * (H - 14);
-      steps += '<rect class="tread" x="' + x.toFixed(1) + '" y="' + yB.toFixed(1) +
-        '" width="' + bw.toFixed(1) + '" height="' + (H - yB).toFixed(1) + '" data-day="' + i + '"></rect>';
-      steps += '<line x1="' + x.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + (x+bw).toFixed(1) +
-        '" y2="' + yB.toFixed(1) + '" class="riser"/>';
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => ({ f, m: total * f }));
+    const yaxis = ticks.map(t => '<span class="stair-ytick" style="bottom:' + (t.f * 100).toFixed(1) + '%">' + elevFromM(t.m) + '</span>').join('');
+    const grid = ticks.map(t => '<span class="stair-gline" style="bottom:' + (t.f * 100).toFixed(1) + '%"></span>').join('');
+    const bars = days.map((d, i) => {
+      const hpct = (cums[i] / total) * 100, dayClimb = (d.health && d.health.climb_m) || 0;
+      return '<button type="button" class="tread" data-day="' + i + '" data-date="' + escapeAttr(d.label) +
+        '" data-climb="' + Math.round(dayClimb) + '" data-cum="' + Math.round(cums[i]) +
+        '" style="height:' + hpct.toFixed(1) + '%" aria-label="' + escapeAttr(dDate(d) + ': ' + elevFromM(cums[i]) + ' climbed by now') + '"></button>';
+    }).join('');
+    const step = Math.max(1, Math.ceil(days.length / 6));
+    const xaxis = days.map((d, i) => '<span class="stair-xtick">' + (i % step === 0 ? escapeHtml(dDate(d)) : '') + '</span>').join('');
+    return '<div class="dcc-tour-stair">' +
+      '<div class="cap">Climb over the trip · <b>' + elevFromM(total) + '</b> total · hover a day</div>' +
+      '<div class="stair-grid">' +
+        '<div class="stair-ylabel">Cumulative climb (' + elevUnit() + ')</div>' +
+        '<div class="stair-yaxis">' + yaxis + '</div>' +
+        '<div class="stair-area">' + grid + '<div class="stair-bars">' + bars + '</div>' +
+          '<div class="stair-tip" hidden></div></div>' +
+        '<div class="stair-corner"></div><div class="stair-xaxis">' + xaxis + '</div>' +
+      '</div></div>';
+  }
+  function bindClimbChart(scope) {
+    if (!scope) return;
+    const tip = scope.querySelector('.stair-tip'), area = scope.querySelector('.stair-area');
+    scope.querySelectorAll('.tread').forEach(r => {
+      r.addEventListener('click', () => selectDay(+r.dataset.day));
+      const show = () => {
+        if (!tip || !area) return;
+        tip.innerHTML = '<b>' + escapeHtml(r.dataset.date) + '</b>' +
+          '<span>+' + elevFromM(+r.dataset.climb) + ' that day</span>' +
+          '<span class="tip-cum">' + elevFromM(+r.dataset.cum) + ' total by now</span>';
+        tip.hidden = false;
+        const br = r.getBoundingClientRect(), ar = area.getBoundingClientRect();
+        const tw = tip.offsetWidth || 120;
+        let left = br.left - ar.left + br.width / 2 - tw / 2;
+        tip.style.left = Math.max(2, Math.min(ar.width - tw - 2, left)) + 'px';
+      };
+      r.addEventListener('mouseenter', show);
+      r.addEventListener('focus', show);
+      r.addEventListener('mouseleave', () => { if (tip) tip.hidden = true; });
+      r.addEventListener('blur', () => { if (tip) tip.hidden = true; });
     });
-    return '<div class="dcc-tour-stair"><div class="cap">Climb over the trip · tap a step for that day · ' +
-      Math.round(total) + ' m total</div>' +
-      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="stair-svg">' + steps + hit + '</svg></div>';
   }
   function interp(curve, minute) {   // cumulative value at minute-of-day
     if (!curve || !curve.length) return null;
@@ -1228,6 +1335,166 @@
     if (!elev) return 0; let c = 0, prev = null;
     for (const [m, a] of elev) { if (m > minute) break; if (prev != null && a - prev >= 5) c += a - prev; prev = a; }
     return Math.round(c);
+  }
+
+  // ============================================================
+  //  Task 3 — extra Stats visualisations (all from data already in trip.json)
+  // ============================================================
+  let vizCumData = null;   // cumulative-per-day arrays for the synchronized timeline
+  function renderStatsViz() {
+    const host = root._statsviz; if (!host) return;
+    host.innerHTML =
+      vizTimelineHTML() +
+      '<div class="viz-grid2">' + vizWhoHTML() + vizClockHTML() + '</div>' +
+      vizWeatherHTML() +
+      vizCompassHTML();
+    bindVizTimeline(host);
+  }
+  // ---- 1) synchronized cumulative timeline (the flagship) ----
+  function vizTimelineHTML() {
+    const days = DATA.days;
+    let cs = 0, cw = 0, ctr = 0, ccl = 0, cpl = 0, cph = 0, cvi = 0, ccp = 0;
+    vizCumData = days.map(d => {
+      const h = d.health || {};
+      cs += h.steps || 0; cw += h.dist || 0; ctr += d.walk_km || 0; ccl += h.climb_m || 0;
+      let ph = 0, vi = 0, cp = 0, pl = 0;
+      d.places.forEach(p => { if (p.items.length) pl++; p.items.forEach(it => { if (it.kind === 'photo') ph++; else if (it.kind === 'video') vi++; else cp++; }); });
+      cpl += pl; cph += ph; cvi += vi; ccp += cp;
+      return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: cpl, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
+    });
+    const n = days.length, step = Math.max(1, Math.ceil(n / 6));
+    const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? escapeHtml(dDate(d)) : '') + '</span>').join('');
+    return '<div class="viz-card viz-timeline">' +
+      '<div class="viz-h"><h4>The trip, adding up</h4>' +
+        '<span class="viz-sub">Drag across the days — every number is the running total up to that point.</span></div>' +
+      '<div class="tl-day" id="tl-day"></div>' +
+      '<div class="tl-readout" id="tl-readout"></div>' +
+      '<input type="range" class="tl-scrub" id="tl-scrub" min="0" max="' + (n - 1) + '" value="' + (n - 1) + '" step="1" aria-label="Scrub through the trip by day">' +
+      '<div class="tl-axis">' + axis + '</div></div>';
+  }
+  function bindVizTimeline(host) {
+    const sc = host.querySelector('#tl-scrub'); if (!sc || !vizCumData) return;
+    const upd = () => updateTimelineReadout(+sc.value);
+    sc.addEventListener('input', upd);
+    upd();
+  }
+  function updateTimelineReadout(idx) {
+    if (!vizCumData) return;
+    const c = vizCumData[Math.max(0, Math.min(vizCumData.length - 1, idx))];
+    const dayEl = root.querySelector('#tl-day'), out = root.querySelector('#tl-readout');
+    if (dayEl) dayEl.innerHTML = '<b>' + escapeHtml(c.label) + '</b>' + (c.area ? '<span> · ' + escapeHtml(c.area) + '</span>' : '');
+    if (!out) return;
+    const flights = Math.round(c.climbM / 3);
+    const spf = (DATA.health && DATA.health.flights) ? (DATA.health.stair_steps / DATA.health.flights) : 16;
+    const stairs = Math.round(flights * spf);
+    const t = (v, l) => '<div class="tl-stat"><span class="tl-v">' + v + '</span><span class="tl-l">' + l + '</span></div>';
+    out.innerHTML =
+      t(fmt(c.steps), 'steps') +
+      t(fmt(flights), 'flights climbed') +
+      t(fmt(stairs), 'stairs') +
+      t(distNumFromMi(c.walkMi, 1) + ' ' + distUnit(), 'walked (watch)') +
+      t(distNumFromKm(c.travelKm, 0) + ' ' + distUnit(), 'traveled') +
+      t(fmt(c.places), 'places') +
+      t(fmt(c.photos), 'photos') +
+      t(fmt(c.videos), 'videos') +
+      t(fmt(c.clips), 'clips');
+  }
+  // ---- 2) who shot what — donut + per-day contribution ----
+  function vizWhoHTML() {
+    const days = DATA.days, tot = {}; PERSONS.forEach(p => tot[p] = 0);
+    const perDay = days.map(d => { const c = {}; PERSONS.forEach(p => c[p] = 0);
+      d.places.forEach(p => p.items.forEach(it => { if (c[it.person] != null) c[it.person]++; })); return c; });
+    let grand = 0; PERSONS.forEach(p => grand += tot[p]);
+    days.forEach((d, i) => PERSONS.forEach(p => { tot[p] += perDay[i][p]; }));
+    grand = 0; PERSONS.forEach(p => grand += tot[p]); grand = grand || 1;
+    const R = 42, C = 2 * Math.PI * R; let off = 0;
+    const arcs = PERSONS.filter(p => tot[p] > 0).map(p => {
+      const len = tot[p] / grand * C;
+      const s = '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="' + PERSON_COLORS[p] + '" stroke-width="15" ' +
+        'stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 60 60)"/>';
+      off += len; return s;
+    }).join('');
+    const legend = PERSONS.filter(p => tot[p] > 0).map(p =>
+      '<div class="who-leg"><span class="who-sw" style="background:' + PERSON_COLORS[p] + '"></span>' +
+      '<span class="who-nm">' + escapeHtml(p) + '</span><span class="who-ct">' + fmt(tot[p]) +
+      ' · ' + Math.round(tot[p] / grand * 100) + '%</span></div>').join('');
+    const maxDay = Math.max(1, ...perDay.map(c => PERSONS.reduce((s, p) => s + c[p], 0)));
+    const cols = days.map((d, i) => {
+      const dt = PERSONS.reduce((s, p) => s + perDay[i][p], 0);
+      const segs = PERSONS.filter(p => perDay[i][p] > 0).map(p =>
+        '<span class="who-seg" style="flex:' + perDay[i][p] + ';background:' + PERSON_COLORS[p] + '"></span>').join('');
+      return '<div class="who-col" title="' + escapeAttr(dDate(d) + ' · ' + dt + ' shots') + '">' +
+        '<div class="who-stack" style="height:' + (dt / maxDay * 100).toFixed(1) + '%">' + segs + '</div></div>';
+    }).join('');
+    return '<div class="viz-card viz-who">' +
+      '<div class="viz-h"><h4>Who shot what</h4><span class="viz-sub">' + fmt(grand) + ' photos, videos &amp; clips</span></div>' +
+      '<div class="who-top"><svg class="who-donut" viewBox="0 0 120 120" aria-hidden="true">' + arcs +
+        '<text x="60" y="56" class="who-c1">' + fmt(grand) + '</text><text x="60" y="72" class="who-c2">shots</text></svg>' +
+        '<div class="who-legend">' + legend + '</div></div>' +
+      '<div class="who-days">' + cols + '</div>' +
+      '<div class="who-daysx"><span>' + escapeHtml(dDate(days[0])) + '</span><span>' + escapeHtml(dDate(days[days.length - 1])) + '</span></div>' +
+      '</div>';
+  }
+  // ---- 3) time-of-day rhythm — when shots were taken ----
+  function vizClockHTML() {
+    const hours = new Array(24).fill(0);
+    DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it => {
+      const t = (it.time || '').split(':'); if (t.length === 2) { const h = +t[0]; if (h >= 0 && h < 24) hours[h]++; }
+    })));
+    const max = Math.max(1, ...hours), peak = hours.indexOf(max);
+    const hl = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? 'a' : 'p');
+    const bars = hours.map((v, h) =>
+      '<div class="clk-col' + (h === peak ? ' peak' : '') + '" title="' + escapeAttr(hl(h) + ' · ' + v + ' shots') + '">' +
+        '<div class="clk-bar" style="height:' + (v / max * 100).toFixed(1) + '%"></div>' +
+        '<span class="clk-x">' + (h % 6 === 0 ? hl(h) : '') + '</span></div>').join('');
+    return '<div class="viz-card viz-clock">' +
+      '<div class="viz-h"><h4>Time of day</h4><span class="viz-sub">Busiest around <b>' + hl(peak) + 'm</b></span></div>' +
+      '<div class="clk-bars">' + bars + '</div></div>';
+  }
+  // ---- 4) weather ribbon — the daily high across the trip (data has no lows) ----
+  function vizWeatherHTML() {
+    const days = DATA.days, ws = days.map(d => d.weather).filter(w => w && w.tmax != null);
+    if (!ws.length) return '';
+    const lo = Math.min(...ws.map(w => w.tmax)) - 1, hi = Math.max(...ws.map(w => w.tmax));
+    const span = (hi - lo) || 1;
+    const cells = days.map(d => {
+      const w = d.weather;
+      if (!w || w.tmax == null) return '<div class="wx-cell wx-empty"><span class="wx-d">' + escapeHtml(dDate(d)) + '</span></div>';
+      const fill = Math.max(6, (w.tmax - lo) / span * 100);
+      return '<div class="wx-cell" title="' + escapeAttr(dDate(d) + ' · ' + (w.desc || '') + (w.precip ? ' · ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm') + ' rain' : '')) + '">' +
+        '<span class="wx-ic">' + (w.icon || '') + '</span>' +
+        '<span class="wx-hi">' + tempFromC(w.tmax) + '</span>' +
+        '<div class="wx-track"><div class="wx-fill" style="height:' + fill.toFixed(1) + '%"></div></div>' +
+        (w.precip ? '<span class="wx-rain">💧</span>' : '<span class="wx-rain"></span>') +
+        '<span class="wx-d">' + escapeHtml(dDate(d)) + '</span></div>';
+    }).join('');
+    return '<div class="viz-card viz-weather">' +
+      '<div class="viz-h"><h4>Weather across the trip</h4><span class="viz-sub">daily high' +
+        (imp() ? ' (°F)' : ' (°C)') + ' · 💧 = rain</span></div>' +
+      '<div class="wx-ribbon">' + cells + '</div></div>';
+  }
+  // ---- 5) camera compass — which way the cameras pointed ----
+  function vizCompassHTML() {
+    const bins = 16, counts = new Array(bins).fill(0); let total = 0;
+    DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it => {
+      if (it.heading != null) { const b = ((Math.round(it.heading / (360 / bins)) % bins) + bins) % bins; counts[b]++; total++; }
+    })));
+    if (!total) return '';
+    const max = Math.max(...counts), cx = 80, cy = 80, maxR = 62;
+    const pt = (ang, r) => (cx + r * Math.sin(ang * Math.PI / 180)).toFixed(1) + ' ' + (cy - r * Math.cos(ang * Math.PI / 180)).toFixed(1);
+    const petals = counts.map((v, b) => {
+      if (!v) return '';
+      const a = b * (360 / bins), half = (360 / bins) / 2 * 0.82, r = 10 + v / max * (maxR - 10);
+      return '<path class="cmp-petal" d="M ' + pt(a, 0) + ' L ' + pt(a - half, r) + ' L ' + pt(a, r + 3) + ' L ' + pt(a + half, r) + ' Z"></path>';
+    }).join('');
+    const rings = [maxR, maxR * 0.66, maxR * 0.33].map(r => '<circle cx="80" cy="80" r="' + r.toFixed(1) + '" class="cmp-ring"/>').join('');
+    const dirs = [['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([lab, a]) =>
+      '<text class="cmp-dir" x="' + pt(a, maxR + 10).split(' ')[0] + '" y="' + pt(a, maxR + 10).split(' ')[1] + '">' + lab + '</text>').join('');
+    return '<div class="viz-card viz-compass">' +
+      '<div class="viz-h"><h4>Camera compass</h4><span class="viz-sub">' + fmt(total) + ' shots with a heading</span></div>' +
+      '<svg class="cmp-svg" viewBox="0 0 160 160" aria-label="Directions the cameras faced">' +
+        rings + petals + dirs + '</svg>' +
+      '<p class="viz-note">Which way we pointed the lens — longer petals = more shots facing that way.</p></div>';
   }
   // #6 elevation sparkline with a peak marker
   function elevSparkHTML(elev) {
@@ -1244,7 +1511,7 @@
     const area = 'M' + X(x0).toFixed(1) + ' ' + H + ' ' + d.replace(/^M/, 'L') + 'L' + X(x1).toFixed(1) + ' ' + H + 'Z';
     return '<div class="dcc-tour-spark"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
       '<path class="a" d="' + area + '"/><path class="l" d="' + d + '"/>' + dots + '</svg>' +
-      '<span class="pk">peak ' + peak[1] + ' m</span></div>';
+      '<span class="pk">peak ' + elevFromM(peak[1]) + '</span></div>';
   }
 
   function initMap() {
@@ -1279,8 +1546,8 @@
     for (const k in markersByPlace) delete markersByPlace[k];
 
     let html = '<div class="dcc-tour-dayhead">' +
-      '<div class="dcc-tour-daynum">Day ' + day.index + ' / ' + DATA.day_count + '</div>' +
-      '<h2>' + escapeHtml(day.label) + '</h2>' +
+      '<div class="dcc-tour-daynum">' + escapeHtml(dWeekday(day)) + '</div>' +
+      '<h2>' + escapeHtml(dDate(day)) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
       '<p class="dcc-tour-daymeta">' + (personOn() ? plur(dayVisibleCount(day), 'shot') + ' by ' + escapeHtml(personLabel()) : dayCountLabel(day)) + '</p>' +
@@ -1419,7 +1686,7 @@
     return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + extras + '</div>';
   }
   function cap(item) {
-    const alt = item.alt != null ? ' · ' + item.alt + ' m' : '';
+    const alt = item.alt != null ? ' · ' + elevFromM(item.alt) : '';
     return '<span class="dcc-tour-cell-time">' + escapeHtml((item.time || '') + alt) + '</span>';
   }
 
