@@ -93,6 +93,7 @@
       <option value="auto">Sort: needs review first</option>
     </select>
     <label class="chk"><input type="checkbox" id="onlyauto"> only un-refined</label>
+    <button class="ghost" id="expandall" title="Open every spot's individual-photo editor at once">▼ Expand all photos</button>
     <button class="ghost" id="import">Load a JSON…</button>
     <button class="act" id="export">⭳ Download names JSON</button>
   </div>
@@ -255,6 +256,7 @@ function render(){
   const frag = document.createDocumentFragment();
   list.forEach(c=>{ try{ frag.appendChild(cardEl(c)); }catch(err){ console.error("card failed", c.key||c.oid, err); } });
   wrap.appendChild(frag);
+  const ea = $("#expandall"); if(ea) ea.textContent = "▼ Expand all photos";   // fresh cards start collapsed
 }
 function cardEl(c){
   const card = document.createElement("div");
@@ -389,6 +391,14 @@ function bindControls(){
   $("#sort").addEventListener("change", render);
   $("#onlyauto").addEventListener("change", render);
   $("#export").addEventListener("click", download);
+  // open (or close) every visible spot's individual-photo editor in one click.
+  // setting details.open fires its toggle listener, which lazily fills the editor.
+  $("#expandall").addEventListener("click", ()=>{
+    const dets = [...document.querySelectorAll("#list details.items")];
+    const open = dets.some(d=>!d.open);   // any still closed → expand all; else collapse all
+    dets.forEach(d=> d.open = open);
+    $("#expandall").textContent = open ? "▲ Collapse all photos" : "▼ Expand all photos";
+  });
   $("#import").addEventListener("click", ()=> $("#filein").click());
   $("#filein").addEventListener("change", e=>{
     const f=e.target.files[0]; if(!f) return;
