@@ -969,7 +969,28 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .cmp-petal { fill: color-mix(in srgb, var(--dcc-tour-primary) 55%, transparent); stroke: var(--dcc-tour-primary); stroke-width: 0.6; stroke-linejoin: round; }
 .cmp-dir { text-anchor: middle; dominant-baseline: middle; font-size: 9px; font-weight: 700; fill: var(--dcc-tour-muted); }
 
+/* 6) how we got around */
+.tv-there { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 0.8rem;
+  background: var(--dcc-tour-accent-tint); border-radius: 10px; }
+.tv-there-ic { font-size: 1.4rem; line-height: 1; }
+.tv-there-tx { display: flex; flex-direction: column; min-width: 0; }
+.tv-there-tx > b { font-size: 0.82rem; color: var(--dcc-tour-text); }
+.tv-there-tx > span { font-size: 0.75rem; color: var(--dcc-tour-muted); }
+.tv-there-tx b { color: var(--dcc-tour-primary); }
+.tv-around-lab { font-size: 0.78rem; color: var(--dcc-tour-text); margin-bottom: 5px; }
+.tv-around-lab b { color: var(--dcc-tour-primary); font-variant-numeric: tabular-nums; }
+.tv-bar { display: flex; height: 20px; border-radius: 6px; overflow: hidden; gap: 2px; background: var(--dcc-tour-card-bg); }
+.tv-seg { display: block; min-width: 2px; border-radius: 3px; }
+.tv-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 0.7rem; }
+.tv-leg { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+.tv-sw { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.tv-ic { font-size: 0.9rem; }
+.tv-nm { color: var(--dcc-tour-text); font-weight: 600; }
+.tv-val { color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; }
+.tv-val b { color: var(--dcc-tour-text); }
+
 @media (max-width: 800px) {
   .viz-grid2 { grid-template-columns: 1fr; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-statsviz { padding: 0.25rem 1.35rem 2rem; }
+  .tv-legend { flex-direction: column; gap: 6px; }
 }

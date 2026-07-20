@@ -1193,7 +1193,9 @@
       statTile(distNumFromMi(h.dist, 1), ' ' + distUnit(), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
       statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
       (totalLoc ? statTile(totalLoc, '', 'places', personOn() ? 'shot by ' + personLabel() : 'visited & named') : '') +
-      (!personOn() && s.trip_walk_km ? statTile(distNumFromKm(s.trip_walk_km, 1), ' ' + distUnit(), 'traveled', 'foot · boat · road', 1) : '') +
+      (!personOn() ? (() => { const tm = travelModes(), g = tm.ground || 1;
+        return statTile(distNumFromKm(tm.ground, 0), ' ' + distUnit(), 'traveled on the ground',
+          '🚌 ' + Math.round(tm.road / g * 100) + '% · 🥾 ' + Math.round(tm.walk / g * 100) + '% · ⛵ ' + Math.round(tm.boat / g * 100) + '%', 0); })() : '') +
       (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
         photos + ' photos · ' + videos + ' videos · ' + clips + ' clips') : '') +
       '</div>' + sup + note;
@@ -1345,6 +1347,7 @@
     const host = root._statsviz; if (!host) return;
     host.innerHTML =
       vizTimelineHTML() +
+      vizTravelHTML() +
       '<div class="viz-grid2">' + vizWhoHTML() + vizClockHTML() + '</div>' +
       vizWeatherHTML() +
       vizCompassHTML();
@@ -1495,6 +1498,68 @@
       '<svg class="cmp-svg" viewBox="0 0 160 160" aria-label="Directions the cameras faced">' +
         rings + petals + dirs + '</svg>' +
       '<p class="viz-note">Which way we pointed the lens — longer petals = more shots facing that way.</p></div>';
+  }
+
+  // ---- 6) how we got around — estimated distance by travel mode (Q10) ----
+  //  Four buckets: plane (getting there) vs road (bus/car) / boat / walking
+  //  (getting around). The GPS breadcrumb has no per-point timestamps, so this
+  //  is a day/leg-level estimate from place names, geography and the watch —
+  //  NOT a speed-based classification. Walking is the one real sensor (watch).
+  const _AIR = { MCO: [28.4312, -81.3081], LGW: [51.1537, -0.1821], DBV: [42.5613, 18.2622] };
+  const _HUB = [42.655, 18.081], _CAVTAT = [42.5797, 18.2119];
+  const _OLDPORT = [42.6407, 18.1107], _LOKRUM = [42.6248, 18.1210], _GRUZ = [42.6626, 18.0857];
+  function _hav(a, b) {
+    const R = 6371, dl = (b[0] - a[0]) * Math.PI / 180, dg = (b[1] - a[1]) * Math.PI / 180,
+      la1 = a[0] * Math.PI / 180, la2 = b[0] * Math.PI / 180;
+    const x = Math.sin(dl / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dg / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  let _travel = null;
+  function travelModes() {
+    if (_travel) return _travel;
+    const ROADF = 1.25;   // roads wind ~25% longer than a straight line
+    const plane = (_hav(_AIR.MCO, _AIR.LGW) + _hav(_AIR.LGW, _AIR.DBV)) * 2;   // there + back
+    const cavtatDays = DATA.days.filter(d => /^Cavtat/.test(d.area || '')).length;
+    const road = cavtatDays * _hav(_HUB, _CAVTAT) * ROADF * 2 + _hav(_AIR.DBV, _HUB) * ROADF * 2;
+    let boat = 0;
+    if (DATA.days.some(d => d.places.some(p => /Lokrum/.test(p.name || '')))) boat += _hav(_OLDPORT, _LOKRUM) * 2;
+    const el = DATA.days.find(d => /Elaphiti/.test(d.area || ''));
+    if (el) {   // one waypoint per island, in visit order, out from & back to Gruž
+      const isl = n => { const m = (n || '').match(/Koločep|Lopud|Šipan|Suđurađ/); return m ? (/Suđurađ/.test(m[0]) ? 'Šipan' : m[0]) : null; };
+      const order = [], acc = {};
+      el.places.forEach(p => { if (p.lat == null) return; const is = isl(p.name); if (!is) return; if (!acc[is]) { acc[is] = [[], []]; order.push(is); } acc[is][0].push(p.lat); acc[is][1].push(p.lng); });
+      const wp = order.map(is => [acc[is][0].reduce((a, b) => a + b, 0) / acc[is][0].length, acc[is][1].reduce((a, b) => a + b, 0) / acc[is][1].length]);
+      const route = [_GRUZ, ...wp, _GRUZ];
+      for (let i = 1; i < route.length; i++) boat += _hav(route[i - 1], route[i]);
+    }
+    const walk = (DATA.health && DATA.health.dist ? DATA.health.dist : 0) * 1.60934;
+    _travel = { plane, road, boat, walk, ground: road + boat + walk, cavtatDays };
+    return _travel;
+  }
+  const TRAVEL_META = {
+    walk: { c: '#7a9e5e', ic: '🥾', label: 'Walking' },
+    road: { c: '#c98a3a', ic: '🚌', label: 'Road (bus / car)' },
+    boat: { c: '#3a7ca5', ic: '⛵', label: 'Boat' },
+  };
+  function vizTravelHTML() {
+    const tm = travelModes(), g = tm.ground || 1;
+    const order = ['walk', 'road', 'boat'].sort((a, b) => tm[b] - tm[a]);
+    const bar = order.map(k => '<span class="tv-seg" style="flex:' + tm[k].toFixed(2) + ';background:' + TRAVEL_META[k].c + '" title="' + escapeAttr(TRAVEL_META[k].label + ' · ' + distFromKm(tm[k])) + '"></span>').join('');
+    const legend = order.map(k =>
+      '<div class="tv-leg"><span class="tv-sw" style="background:' + TRAVEL_META[k].c + '"></span>' +
+      '<span class="tv-ic">' + TRAVEL_META[k].ic + '</span>' +
+      '<span class="tv-nm">' + TRAVEL_META[k].label + '</span>' +
+      '<span class="tv-val"><b>' + distFromKm(tm[k]) + '</b> · ' + Math.round(tm[k] / g * 100) + '%</span></div>').join('');
+    return '<div class="viz-card viz-travel">' +
+      '<div class="viz-h"><h4>How we got around</h4><span class="viz-sub">estimated distance by mode</span></div>' +
+      '<div class="tv-there"><span class="tv-there-ic">✈️</span>' +
+        '<div class="tv-there-tx"><b>Getting there</b>' +
+        '<span>Orlando → London → Dubrovnik &amp; back · ~<b>' + distFromKm(tm.plane, 0) + '</b> round trip</span></div></div>' +
+      '<div class="tv-around-lab">Getting around · <b>' + distFromKm(tm.ground, 0) + '</b> on the ground</div>' +
+      '<div class="tv-bar">' + bar + '</div>' +
+      '<div class="tv-legend">' + legend + '</div>' +
+      '<p class="viz-note">Estimated from place names, geography and the watch (walking is watch-measured; there are no per-point GPS timestamps to read speed from). Short in-town bus hops that shadow a walked route aren’t split out separately.</p>' +
+      '</div>';
   }
   // #6 elevation sparkline with a peak marker
   function elevSparkHTML(elev) {
