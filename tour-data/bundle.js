@@ -68,6 +68,24 @@
   function dDate(d) { const { m, dd } = _ymd(d); return (_MON[m - 1] || '') + ' ' + dd; }          // "Sep 10"
   function dWeekday(d) { const { y, m, dd } = _ymd(d); return _DOW[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()] || ''; }
 
+  // ---- horizontal-scroll affordance (tasks 5/10/11/12/13): a slim always-on
+  //      scrollbar (styled in CSS) plus an edge fade that appears only while
+  //      there is more content to scroll toward ----
+  function updateHScroll(el) {
+    const more = el.scrollWidth - el.clientWidth > 2;
+    el.classList.toggle('more-r', more && el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    el.classList.toggle('more-l', more && el.scrollLeft > 2);
+  }
+  function enhanceHScroll(el) {
+    if (!el) return;
+    el.classList.add('dcc-hscroll');
+    if (!el._hsBound) { el._hsBound = true; el.addEventListener('scroll', () => updateHScroll(el), { passive: true }); }
+    requestAnimationFrame(() => updateHScroll(el));
+  }
+  function enhanceAllHScroll() {
+    root.querySelectorAll('.dcc-tour-mm-legend, .dcc-tour-idx-chips, .dcc-tour-tripstats, .dcc-tour-superlatives, .wx-ribbon').forEach(enhanceHScroll);
+  }
+
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
     DATA = data;
     const initialHash = location.hash;   // capture before selectDay/updateHash rewrites it
@@ -131,7 +149,8 @@
     const overview = el('div', 'dcc-tour-overview');
     const ovd = document.createElement('details');
     ovd.className = 'dcc-tour-ovcollapse';
-    if (window.matchMedia('(min-width:801px)').matches) ovd.open = true;
+    ovd.open = true;   // task 15: the overview only appears in Stats view (summary hidden there),
+                       // so keep it open — a collapsed <details> was hiding the climb chart on mobile
     ovd.innerHTML = '<summary>📈 Trip overview · climbs &amp; elevation</summary>' +
       '<div class="ov-body">' + overviewHTML() + '</div>';
     overview.appendChild(ovd);
@@ -145,6 +164,8 @@
     bindClimbChart(overview);
     animateCounts(header);
     buildAppShell();
+    enhanceAllHScroll();
+    window.addEventListener('resize', enhanceAllHScroll);
   }
 
   // task 5: drag (or arrow-key) the divider to set the map column width, stored
@@ -347,7 +368,7 @@
     if (!elm) return; let x0 = null, y0 = null;
     elm.addEventListener('touchstart', e => {
       // don't hijack horizontally-scrolling strips
-      if (e.target.closest('.dcc-tour-tripstats, .dcc-tour-superlatives')) { x0 = y0 = null; return; }
+      if (e.target.closest('.dcc-tour-tripstats, .dcc-tour-superlatives, .dcc-tour-places-index, .dcc-tour-idx-chips')) { x0 = y0 = null; return; }
       const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY;
     }, { passive: true });
     elm.addEventListener('touchend', e => {
@@ -404,6 +425,7 @@
     hd.innerHTML = '<h1 class="dcc-tour-title">' + escapeHtml((DATA.trip || {}).name || 'Our trip') + '</h1>' +
       '<p class="dcc-tour-subtitle">' + escapeHtml((DATA.trip || {}).subtitle || '') + '</p>' + tripStatsHTML();
     animateCounts(hd);
+    enhanceAllHScroll();
   }
   // keep every person control (Photos dropdown + map legend + day rail) in sync
   function syncFilterUI() {
@@ -472,7 +494,7 @@
   function buildMapMode() {
     const w = el('section', 'dcc-tour-mapmode');
     const dayOpts = DATA.days.map((d, i) =>
-      '<option value="' + i + '">' + escapeHtml(d.label) + '</option>').join('');
+      '<option value="' + i + '">' + escapeHtml(d.short) + '</option>').join('');
     // layer toggles collapse into one "Layers ▾" dropdown (facet styling, like Photos)
     const layerOpt = (id, label, checked, hid) =>
       '<label class="facet-opt"' + (hid ? ' id="' + hid + '" hidden' : '') + '><input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>' +
@@ -533,13 +555,15 @@
     if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); return; }
     mmInit = true;
     mmRange = [0, DATA.day_count - 1];
-    mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
+    // cap zoom at 18 so Esri never serves its "Map data not yet available"
+    // placeholder tile (its imagery/reference layers run out past ~18 here) — task 3
+    mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 18 });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, maxNativeZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18 }),
     ]).addTo(mmMap);
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
@@ -623,6 +647,7 @@
         '<span class="mm-altlab">0 ' + elevUnit() + ' (sea)</span><span class="mm-altlab">~' + elevFromM(200) + '</span><span class="mm-altlab">' + elevFromM(ALT_MAX) + ' (Srđ)</span>';
     }
     el.querySelector('.mm-showall').addEventListener('click', mmShowAll);
+    enhanceHScroll(el);
     // saved-spots key (only while that overlay is on): ★ per wishlist
     if (mmSavedLayer && mmSavedData) {
       const present = SAVED_LISTS.filter(l => mmSavedData.some(s => s.l === l));
@@ -719,7 +744,7 @@
 
   // ---- Play / scrub the whole trip: a moving marker walks the chapters in order,
   //      pinning the current day·place and popping that moment's photo. (A + B) ----
-  const MM_PLAY_MS = 90000;   // whole-trip run at 1× ≈ 90 s
+  const MM_STEP_MS = 1900;   // 1× dwell per stop — slow enough to read the place & let tiles load
   let mmSeq = null, mmPlayIdx = 0, mmPlayTimer = null, mmPlaySpeed = 1;
   let mmPlayLayer = null;
   function buildPlaySeq() {
@@ -775,7 +800,7 @@
     if (mmPlayIdx >= seq.length - 1) mmPlayIdx = 0;   // replay from the start
     mmPlayGlyph(true);
     mmRenderPlayhead(mmPlayIdx);
-    const per = Math.max(90, MM_PLAY_MS / seq.length / mmPlaySpeed);
+    const per = Math.max(320, MM_STEP_MS / mmPlaySpeed);   // 1×=1.9s, 2×≈0.95s, 4×≈0.48s per stop
     mmPlayTimer = setInterval(() => {
       if (mmPlayIdx >= seq.length - 1) { mmStopPlay(); return; }
       mmRenderPlayhead(mmPlayIdx + 1);
@@ -1352,6 +1377,7 @@
       vizWeatherHTML() +
       vizCompassHTML();
     bindVizTimeline(host);
+    enhanceHScroll(host.querySelector('.wx-ribbon'));
   }
   // ---- 1) synchronized cumulative timeline (the flagship) ----
   function vizTimelineHTML() {
@@ -1622,7 +1648,6 @@
       '<div class="dcc-tour-dayactions">' +
       (day.health && (day.health.stepcurve || day.health.elev) ?
         '<button class="dcc-tour-chip dcc-tour-replay" id="dcc-replay">▶ Replay this day</button>' : '') +
-      '<button class="dcc-tour-chip" id="dcc-shareday">↗ Share this day</button>' +
       '</div></div>';
 
     // Places default collapsed on phones (a big single-column day then reads as
@@ -1679,13 +1704,12 @@
 
     story.innerHTML = html;
     story.scrollTop = 0;
+    enhanceHScroll(story.querySelector('.dcc-tour-idx-chips'));
     const prev = story.querySelector('#dcc-prev'), next = story.querySelector('#dcc-next');
     if (prev) prev.addEventListener('click', () => selectDay(curDay - 1));
     if (next) next.addEventListener('click', () => selectDay(curDay + 1));
     const rb = story.querySelector('#dcc-replay');
     if (rb) rb.addEventListener('click', () => startReplay(day));
-    const sb = story.querySelector('#dcc-shareday');
-    if (sb) sb.addEventListener('click', () => doShare(shareUrl('d=' + day.index), day.label));
   }
 
   // ---- #10 replay the day ----

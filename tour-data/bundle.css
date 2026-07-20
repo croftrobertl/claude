@@ -288,8 +288,10 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-stair .tread.on { background: color-mix(in srgb, var(--dcc-tour-primary) 62%, transparent); }
 .dcc-tour-stair .stair-tip {
   position: absolute; bottom: 6px; z-index: 5; pointer-events: none;
-  background: var(--dcc-tour-text, #1a1a1a); color: #fff; padding: 5px 8px; border-radius: 7px;
-  font-size: 0.68rem; line-height: 1.35; box-shadow: 0 4px 14px rgba(0,0,0,0.22); white-space: nowrap;
+  /* theme-aware so the text never turns invisible in dark mode (was white-on-var(--text)) */
+  background: var(--dcc-tour-card-bg, #fff); color: var(--dcc-tour-text, #1a1a1a);
+  border: 1px solid var(--dcc-tour-border); padding: 5px 8px; border-radius: 7px;
+  font-size: 0.68rem; line-height: 1.35; box-shadow: 0 6px 16px rgba(0,0,0,0.28); white-space: nowrap;
   display: flex; flex-direction: column;
 }
 .dcc-tour-stair .stair-tip b { font-size: 0.72rem; }
@@ -894,10 +896,10 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   font: inherit; line-height: 1; align-self: center;
 }
 .dcc-unit-toggle .uni-opt {
-  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.02em; padding: 5px 9px; border-radius: 999px;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.02em; padding: 5px 9px; border-radius: 999px;
   color: var(--dcc-tour-muted); white-space: nowrap; transition: background 0.15s, color 0.15s;
 }
-.dcc-unit-toggle .uni-opt.on { background: var(--dcc-tour-primary); color: #fff; }
+.dcc-unit-toggle .uni-opt.on { background: var(--dcc-tour-primary); color: #fff; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
 .dcc-unit-toggle:hover { border-color: var(--dcc-tour-primary); }
 .dcc-unit-toggle.unit-mob { padding: 1px; }
 .dcc-unit-toggle.unit-mob .uni-opt { font-size: 0.6rem; padding: 4px 7px; }
@@ -993,4 +995,34 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .viz-grid2 { grid-template-columns: 1fr; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-statsviz { padding: 0.25rem 1.35rem 2rem; }
   .tv-legend { flex-direction: column; gap: 6px; }
+}
+
+/* ============================================================
+   Horizontal-scroll affordance (tasks 5/10/11/12/13):
+   a slim always-on scrollbar + an edge fade shown only while
+   there is more to scroll toward (classes toggled in JS)
+   ============================================================ */
+.dcc-hscroll { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--dcc-tour-primary) 45%, transparent) transparent; }
+.dcc-hscroll::-webkit-scrollbar { height: 7px; -webkit-appearance: none; }
+.dcc-hscroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--dcc-tour-primary) 42%, transparent); border-radius: 4px; }
+.dcc-hscroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--dcc-tour-primary) 68%, transparent); }
+.dcc-hscroll::-webkit-scrollbar-track { background: color-mix(in srgb, var(--dcc-tour-border) 35%, transparent); border-radius: 4px; }
+.dcc-hscroll.more-r { -webkit-mask-image: linear-gradient(90deg, #000 84%, transparent 99%); mask-image: linear-gradient(90deg, #000 84%, transparent 99%); }
+.dcc-hscroll.more-l { -webkit-mask-image: linear-gradient(90deg, transparent 1%, #000 14%); mask-image: linear-gradient(90deg, transparent 1%, #000 14%); }
+.dcc-hscroll.more-l.more-r { -webkit-mask-image: linear-gradient(90deg, transparent 1%, #000 12%, #000 86%, transparent 99%); mask-image: linear-gradient(90deg, transparent 1%, #000 12%, #000 86%, transparent 99%); }
+/* the map legend keeps a sticky "Show all" at its left, so never fade that edge */
+.dcc-tour-mm-legend.more-l:not(.more-r), .dcc-tour-mm-legend.more-l.more-r { -webkit-mask-image: linear-gradient(90deg, #000 84%, transparent 99%); mask-image: linear-gradient(90deg, #000 84%, transparent 99%); }
+.dcc-tour-mm-legend.more-l:not(.more-r) { -webkit-mask-image: none; mask-image: none; }
+
+/* task 6: make the sticky "Show all" chip opaque so day chips can't show through it */
+.mm-showall {
+  background: linear-gradient(var(--dcc-tour-accent-tint), var(--dcc-tour-accent-tint)), var(--dcc-tour-card-bg) !important;
+  box-shadow: 4px 0 6px -3px rgba(0,0,0,0.22); z-index: 3;
+}
+
+/* task 7: keep the map From/To filter on one row on mobile (compact date labels) */
+@media (max-width: 800px) {
+  .dcc-tour-mm-range { flex-wrap: nowrap; gap: 6px; }
+  .mm-dl { gap: 3px; font-size: 0.72rem; white-space: nowrap; }
+  .mm-daysel { font-size: 0.76rem; padding: 5px 6px; }
 }
