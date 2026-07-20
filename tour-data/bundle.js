@@ -78,9 +78,8 @@
     overview.appendChild(ovd);
     const controls = buildControls();
     const modeToggle = buildModeToggle();
-    const filterbar = buildFilterBar();
     const mapmode = buildMapMode();
-    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(filterbar); root.appendChild(nav); root.appendChild(controls);
+    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(nav); root.appendChild(controls);
     root.appendChild(overview); root.appendChild(body); root.appendChild(mapmode);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode;
     overview.querySelectorAll('.tread').forEach(r =>
@@ -181,7 +180,7 @@
     else if (v === 'gallery') buildGallery();
     else if (v === 'story') {
       // under a person filter, don't land on a day they didn't shoot
-      if (personFilter && dayVisibleCount(DATA.days[curDay]) === 0) {
+      if (personOn() && dayVisibleCount(DATA.days[curDay]) === 0) {
         const j = DATA.days.findIndex(d => dayVisibleCount(d) > 0);
         if (j >= 0) { selectDay(j); return; }
       }
@@ -294,22 +293,29 @@
   const PERSON_COLORS = { Rob: '#3a7ca5', Erica: '#c76b6b', Alice: '#7a9e5e', GoPro: '#6b5b95' };
   const NO_COLOR = '#b0aaa2';
 
-  // ---- global "through their eyes" filter: limit the whole app to one person ----
-  let personFilter = null;                 // null = everyone; else 'Rob'|'Erica'|'Alice'|'GoPro'
-  function itemPasses(it) { return !personFilter || it.person === personFilter; }
-  function placeItems(p) { return personFilter ? p.items.filter(itemPasses) : p.items; }
-  function placeCount(p) { return personFilter ? placeItems(p).length : p.count; }
-  function dayVisibleCount(d) { return personFilter ? d.places.reduce((s, p) => s + placeCount(p), 0) : d.count; }
+  // ---- global photographer filter (multi-select): limit the whole app to chosen people ----
+  let personFilter = new Set();            // empty = everyone; else any of 'Rob'|'Erica'|'Alice'|'GoPro'
+  function personOn() { return personFilter.size > 0; }
+  function personLabel() { return [...personFilter].join(', '); }
+  function itemPasses(it) { return !personFilter.size || personFilter.has(it.person); }
+  function placeItems(p) { return personFilter.size ? p.items.filter(itemPasses) : p.items; }
+  function placeCount(p) { return personFilter.size ? placeItems(p).length : p.count; }
+  function dayVisibleCount(d) { return personFilter.size ? d.places.reduce((s, p) => s + placeCount(p), 0) : d.count; }
+  // toggle one person (null = clear all); then refresh every view
   function setPersonFilter(name) {
-    personFilter = (name === personFilter || !name) ? null : name;
+    if (!name) personFilter.clear();
+    else if (personFilter.has(name)) personFilter.delete(name);
+    else personFilter.add(name);
+    applyPersonFilter();
+  }
+  function applyPersonFilter() {
     mmSeq = null;                           // rebuild the play sequence for the new scope
     syncFilterUI();
     refreshHeaderStats();                   // the trip-stat tiles live in the always-visible header
-    // refresh whatever view is showing so it reflects the new scope
     const v = root.dataset.view || 'story';
     if (v === 'story') {
-      // if the current day has nothing by this person, hop to the first day that does
-      if (personFilter && dayVisibleCount(DATA.days[curDay]) === 0) {
+      // if the current day has nothing by these people, hop to the first day that does
+      if (personOn() && dayVisibleCount(DATA.days[curDay]) === 0) {
         const j = DATA.days.findIndex(d => dayVisibleCount(d) > 0);
         if (j >= 0) { selectDay(j); return; }
       }
@@ -324,25 +330,17 @@
       '<p class="dcc-tour-subtitle">' + escapeHtml((DATA.trip || {}).subtitle || '') + '</p>' + tripStatsHTML();
     animateCounts(hd);
   }
-  // keep the banner + every person chip/legend in sync with personFilter
+  // keep every person control (Photos dropdown + map legend + day rail) in sync
   function syncFilterUI() {
-    const banner = root.querySelector('#dcc-filterbar');
-    if (banner) {
-      banner.hidden = !personFilter;
-      if (personFilter) {
-        banner.querySelector('.dcc-fb-who').textContent = personFilter;
-        banner.querySelector('.dcc-fb-dot').style.background = PERSON_COLORS[personFilter] || NO_COLOR;
-      }
-    }
-    root.querySelectorAll('.dcc-personchip').forEach(c =>
-      c.classList.toggle('active', c.dataset.person === (personFilter || 'all')));
+    root.querySelectorAll('.dcc-personopt input').forEach(cb => cb.checked = personFilter.has(cb.value));
+    const pb = root.querySelector('#dcc-person-badge');
+    if (pb) { pb.hidden = !personOn(); pb.textContent = personFilter.size; }
     root.querySelectorAll('.mm-legend-person .dcc-tour-legseg').forEach(seg =>
-      seg.classList.toggle('sel', seg.dataset.person === personFilter));
-    // day rail: reflect each day's count under the active filter, dim empty days
+      seg.classList.toggle('sel', personFilter.has(seg.dataset.person)));
     if (root._nav) root._nav.querySelectorAll('.dcc-tour-daychip').forEach((b, i) => {
       const n = dayVisibleCount(DATA.days[i]);
       const c = b.querySelector('.d-c'); if (c) c.textContent = n;
-      b.classList.toggle('dimmed', !!personFilter && n === 0);
+      b.classList.toggle('dimmed', personOn() && n === 0);
     });
   }
   function lerpHex(h1, h2, f) {
@@ -396,34 +394,33 @@
     w.querySelector('#dcc-random').addEventListener('click', randomMemory);
     return w;
   }
-  // dismissible banner shown whenever a "through their eyes" filter is active
-  function buildFilterBar() {
-    const b = el('div', 'dcc-tour-filterbar');
-    b.id = 'dcc-filterbar'; b.hidden = true;
-    b.innerHTML = '<span class="dcc-fb-dot" aria-hidden="true"></span>' +
-      '<span class="dcc-fb-txt">Through <b class="dcc-fb-who"></b>’s eyes — showing only their shots</span>' +
-      '<button class="dcc-fb-clear" type="button">Show everyone ✕</button>';
-    b.querySelector('.dcc-fb-clear').addEventListener('click', () => setPersonFilter(null));
-    return b;
-  }
   function buildMapMode() {
     const w = el('section', 'dcc-tour-mapmode');
     const dayOpts = DATA.days.map((d, i) =>
       '<option value="' + i + '">' + escapeHtml('Day ' + d.index + ' · ' + d.short) + '</option>').join('');
+    // layer toggles collapse into one "Layers ▾" dropdown (facet styling, like Photos)
+    const layerOpt = (id, label, checked, hid) =>
+      '<label class="facet-opt"' + (hid ? ' id="' + hid + '" hidden' : '') + '><input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>' +
+        '<span class="facet-lab">' + label + '</span></label>';
     w.innerHTML =
       '<div class="dcc-tour-mm-bar">' +
         '<span class="dcc-tour-mm-colorby" role="group" aria-label="Color markers by">' +
-          '<span class="mm-cb-lab">Color</span>' +
+          '<span class="mm-cb-lab">Color by:</span>' +
           '<button class="mm-cb active" data-mode="day" aria-pressed="true">Day</button>' +
           '<button class="mm-cb" data-mode="person" aria-pressed="false">Who</button>' +
           '<button class="mm-cb" data-mode="alt" aria-pressed="false">Altitude</button>' +
         '</span>' +
-        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-path" checked> Path</label>' +
-        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-facing"> Facing</label>' +
-        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-heat"> Heatmap</label>' +
-        '<label class="dcc-tour-mm-tog"><input type="checkbox" id="mm-sat"> Satellite</label>' +
-        '<label class="dcc-tour-mm-tog" id="mm-track-lab" hidden><input type="checkbox" id="mm-track"> GPS track</label>' +
-        '<label class="dcc-tour-mm-tog" id="mm-saved-lab" hidden><input type="checkbox" id="mm-saved"> Saved spots</label>' +
+        '<div class="dcc-tour-facet dcc-tour-mm-layers" data-facet="layers">' +
+          '<button type="button" class="facet-btn" aria-expanded="false">Layers<span class="facet-caret" aria-hidden="true">▾</span></button>' +
+          '<div class="facet-panel" hidden><div class="facet-list">' +
+            layerOpt('mm-path', 'Path', true) +
+            layerOpt('mm-facing', 'Facing', false) +
+            layerOpt('mm-heat', 'Heatmap', false) +
+            layerOpt('mm-sat', 'Satellite', true) +
+            layerOpt('mm-track', 'GPS track', false, 'mm-track-opt') +
+            layerOpt('mm-saved', 'Saved spots', false, 'mm-saved-opt') +
+          '</div></div>' +
+        '</div>' +
         '<span class="dcc-tour-mm-range">' +
           '<label class="mm-dl">From <select class="mm-daysel" id="mm-lo">' + dayOpts + '</select></label>' +
           '<label class="mm-dl">to <select class="mm-daysel" id="mm-hi">' + dayOpts + '</select></label>' +
@@ -440,21 +437,35 @@
         '</span>' +
         '<span class="dcc-tour-mm-playlabel" id="mm-playlabel"></span>' +
       '</div>' +
+      '<div class="dcc-tour-mm-divider" aria-hidden="true"></div>' +      // task 10: separate controls from map/legend
+      '<div class="dcc-tour-mm-legend" id="mm-legend"></div>' +          // task 8: legend above the map
       '<div class="dcc-tour-mm-wrap"><div class="dcc-tour-mm-map" id="dcc-mm-map"></div>' +
+        '<button class="dcc-tour-mm-fs" id="mm-fs" type="button" title="Full screen" aria-label="Full screen">⛶</button>' +
         '<figure class="dcc-tour-mm-moment" id="mm-moment" hidden></figure>' +
-        '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>' +
-      '<div class="dcc-tour-mm-legend" id="mm-legend"></div>';
+        '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>';
     return w;
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmInit = false;
   let mmRange = [0, 0];
+  let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
+  function toggleMapFullscreen() {
+    const wrap = root._mapmode.querySelector('.dcc-tour-mm-wrap');
+    if (document.fullscreenElement) { document.exitFullscreen && document.exitFullscreen(); return; }
+    if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => { wrap.classList.toggle('mm-fs-fallback'); mmMap && setTimeout(() => mmMap.invalidateSize(), 120); });
+    else { wrap.classList.toggle('mm-fs-fallback'); mmMap && setTimeout(() => mmMap.invalidateSize(), 120); }
+  }
   function initMapMode() {
     if (mmInit) { setTimeout(() => mmMap.invalidateSize(), 60); return; }
     mmInit = true;
     mmRange = [0, DATA.day_count - 1];
     mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
-    mmSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri' });
+    // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
+    mmSat = L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+    ]).addTo(mmMap);
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
     const m = root._mapmode;
@@ -464,13 +475,20 @@
     m.querySelector('#mm-track').addEventListener('change', e => toggleTrack(e.target.checked));
     m.querySelector('#mm-saved').addEventListener('change', e => toggleSaved(e.target.checked));
     // reveal the optional-overlay toggles only when their data ships with the bundle
-    loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-lab').hidden = false; }).catch(() => {});
-    loadJSON('saved.json').then(d => { mmSavedData = d; m.querySelector('#mm-saved-lab').hidden = false; }).catch(() => {});
+    loadJSON('track.json').then(d => { mmTrackData = d; m.querySelector('#mm-track-opt').hidden = false; }).catch(() => {});
+    loadJSON('saved.json').then(d => { mmSavedData = d; m.querySelector('#mm-saved-opt').hidden = false; }).catch(() => {});
+    // Layers ▾ dropdown open/close
+    const lf = m.querySelector('.dcc-tour-mm-layers'), lfb = lf.querySelector('.facet-btn'), lfp = lf.querySelector('.facet-panel');
+    lfb.addEventListener('click', e => { e.stopPropagation(); const wc = lfp.hidden; lfp.hidden = !wc; lfb.setAttribute('aria-expanded', wc ? 'true' : 'false'); });
+    lfp.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('click', () => { lfp.hidden = true; lfb.setAttribute('aria-expanded', 'false'); });
+    m.querySelector('#mm-fs').addEventListener('click', toggleMapFullscreen);
+    document.addEventListener('fullscreenchange', () => { if (mmMap) setTimeout(() => mmMap.invalidateSize(), 120); });
     const lo = m.querySelector('#mm-lo'), hi = m.querySelector('#mm-hi');
     hi.value = DATA.day_count - 1;
     const onRange = () => {
       let a = +lo.value, b = +hi.value; if (a > b) { const t = a; a = b; b = t; }
-      mmRange = [a, b]; renderMapMode();
+      mmRange = [a, b]; mmIsolateDay = null; renderMapLegend(); renderMapMode();   // manual range overrides a legend isolate
     };
     lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
     m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
@@ -494,35 +512,41 @@
     renderMapMode(true);   // whole-trip bounds
     setTimeout(() => mmMap.invalidateSize(), 80);
   }
-  // legend adapts to the color mode; also the day/person selector
+  function mmShowAll() {
+    mmIsolateDay = null; personFilter.clear();
+    syncFilterUI(); refreshHeaderStats();
+    renderMapLegend(); renderMapMode(true);
+  }
+  // horizontal scroll strip above the map: a "Show all" reset + the colour key for the mode
   function renderMapLegend() {
     const el = root._mapmode.querySelector('#mm-legend');
-    const lo = root._mapmode.querySelector('#mm-lo'), hi = root._mapmode.querySelector('#mm-hi');
+    const showAll = '<button class="dcc-tour-legchip mm-showall" type="button">Show all</button>';
     if (mmColorMode === 'day') {
       el.className = 'dcc-tour-mm-legend';
-      el.innerHTML = DATA.days.map((d, i) =>
+      el.innerHTML = showAll + DATA.days.map((d, i) =>
         '<button class="dcc-tour-legseg" data-day="' + i + '" title="' + escapeAttr(d.short + (d.area ? ' · ' + shortName(d.area) : '')) + '">' +
         '<span class="seg-sw" style="background:' + dayColor(i) + '"></span><span class="seg-n">' + d.index + '</span></button>').join('');
-      el.querySelectorAll('.dcc-tour-legseg').forEach(c => c.addEventListener('click', () => {
-        const di = +c.dataset.day; lo.value = di; hi.value = di; mmRange = [di, di];
-        if (DATA.days[di].places.some(p => p.lat != null)) fitToDays(di, di);
-        renderMapMode();
+      el.querySelectorAll('.dcc-tour-legseg[data-day]').forEach(c => c.addEventListener('click', () => {
+        const di = +c.dataset.day;
+        mmIsolateDay = (mmIsolateDay === di) ? null : di;   // tap again to un-isolate
+        if (mmIsolateDay != null && DATA.days[di].places.some(p => p.lat != null)) fitToDays(di, di);
+        renderMapMode(mmIsolateDay == null);
       }));
     } else if (mmColorMode === 'person') {
       el.className = 'dcc-tour-mm-legend mm-legend-person';
-      // clickable: tap a photographer to see the trip "through their eyes"
-      el.innerHTML = PERSONS.map(pn =>
-        '<button class="dcc-tour-legseg' + (personFilter === pn ? ' sel' : '') + '" data-person="' + pn + '" title="Through ' + escapeAttr(pn) + '’s eyes">' +
+      el.innerHTML = showAll + PERSONS.map(pn =>
+        '<button class="dcc-tour-legseg' + (personFilter.has(pn) ? ' sel' : '') + '" data-person="' + pn + '" title="Only ' + escapeAttr(pn) + '’s shots">' +
         '<span class="seg-sw" style="background:' + PERSON_COLORS[pn] + '"></span>' +
         '<span class="seg-n">' + escapeHtml(pn) + '</span></button>').join('');
-      el.querySelectorAll('.dcc-tour-legseg').forEach(seg =>
+      el.querySelectorAll('.dcc-tour-legseg[data-person]').forEach(seg =>
         seg.addEventListener('click', () => setPersonFilter(seg.dataset.person)));
     } else {  // alt
       el.className = 'dcc-tour-mm-legend mm-legend-alt';
-      el.innerHTML = '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
+      el.innerHTML = showAll + '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
         ALT_STOPS[0][1] + ',' + ALT_STOPS[1][1] + ',' + ALT_STOPS[2][1] + ')"></span>' +
         '<span class="mm-altlab">0 m (sea)</span><span class="mm-altlab">~200 m</span><span class="mm-altlab">' + ALT_MAX + ' m (Srđ)</span>';
     }
+    el.querySelector('.mm-showall').addEventListener('click', mmShowAll);
     // saved-spots key (only while that overlay is on): ★ per wishlist
     if (mmSavedLayer && mmSavedData) {
       const present = SAVED_LISTS.filter(l => mmSavedData.some(s => s.l === l));
@@ -537,6 +561,8 @@
     for (let i = mmRange[0]; i <= mmRange[1]; i++) out.push(i);
     return out;
   }
+  // days actually shown: a legend-isolated single day, else the From/To range
+  function effectiveDays() { return mmIsolateDay != null ? [mmIsolateDay] : daysInRange(); }
   function fitToDays(a, b) {
     const pts = [];
     for (let i = a; i <= b; i++) DATA.days[i].places.forEach(p => { if (p.lat != null) pts.push([p.lat, p.lng]); });
@@ -549,21 +575,23 @@
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
     const showFacing = root._mapmode.querySelector('#mm-facing').checked;
     const heatPts = [], allPts = [];
-    // range readout (days · places · shots) + dim legend segments outside the range
-    const rdays = daysInRange();
+    // range readout (days · places · shots) + reflect isolate/range in the legend
+    const rdays = effectiveDays(), shownSet = new Set(rdays);
     let rPlaces = 0, rShots = 0;
     rdays.forEach(di => DATA.days[di].places.forEach(p => { const c = placeCount(p); if (c) { rPlaces++; rShots += c; } }));
     const statsEl = root._mapmode.querySelector('#mm-range-stats');
-    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots' + (personFilter ? ' · ' + escapeHtml(personFilter) : '');
-    root._mapmode.querySelectorAll('.dcc-tour-legseg').forEach(seg => {
-      const i = +seg.dataset.day; seg.classList.toggle('out', i < mmRange[0] || i > mmRange[1]);
+    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots' + (personOn() ? ' · ' + escapeHtml(personLabel()) : '');
+    root._mapmode.querySelectorAll('.dcc-tour-legseg[data-day]').forEach(seg => {
+      const i = +seg.dataset.day;
+      seg.classList.toggle('out', !shownSet.has(i));
+      seg.classList.toggle('sel', mmIsolateDay === i);
     });
-    daysInRange().forEach(di => {
+    rdays.forEach(di => {
       const d = DATA.days[di], col = dayColor(di), line = [];
       d.places.forEach((p, pi) => {
         if (p.lat == null) return;
         const pc = placeCount(p);
-        if (personFilter && pc === 0) return;   // this person didn't shoot here
+        if (personOn() && pc === 0) return;   // these people didn't shoot here
         allPts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
         const r = Math.min(20, 5 + Math.sqrt(pc) * 1.6);
         const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
@@ -571,14 +599,14 @@
         mk.on('click', () => openMapSidebar(di, pi));
         mmMarkers.addLayer(mk);
         placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
-        // compass "facing" ray: which way the cameras pointed at this spot
+        // compass "facing": a small rim chevron pointing where the cameras looked (task 5)
         if (showFacing) {
           const h = placeMeanHeading(p);
           if (h != null) {
-            const rad = h * Math.PI / 180, dd = 0.0011;
-            const tip = [p.lat + dd * Math.cos(rad), p.lng + dd * Math.sin(rad) / Math.cos(p.lat * Math.PI / 180)];
-            mmPathLayer.addLayer(L.polyline([[p.lat, p.lng], tip], { color: '#7d5411', weight: 2, opacity: 0.85 }));
-            mmPathLayer.addLayer(L.circleMarker(tip, { radius: 2.6, weight: 0, fillColor: '#7d5411', fillOpacity: 0.9 }));
+            const sz = r + 6;
+            const icon = L.divIcon({ className: 'mm-face', iconSize: [sz * 2, sz * 2], iconAnchor: [sz, sz],
+              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(h) + 'deg)"><span class="mm-face-chev"></span></span>' });
+            mmPathLayer.addLayer(L.marker([p.lat, p.lng], { icon, interactive: false, keyboard: false }));
           }
         }
       });
@@ -588,6 +616,7 @@
     if (mmHeat) { mmMap.removeLayer(mmHeat); mmHeat = null; }
     if (showHeat && window.L && L.heatLayer)
       mmHeat = L.heatLayer(heatPts, { radius: 22, blur: 18, maxZoom: 15 }).addTo(mmMap);
+    if (mmTrackLayer) drawTrack();   // keep the GPS track clipped to the shown days (task 7)
     if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(allPts).pad(0.12), { animate: false });
   }
   function openMapSidebar(di, pi) {
@@ -604,7 +633,7 @@
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
       '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
       '<p class="dcc-tour-mm-meta">' + escapeHtml(d.label) + ' · ' + escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to) +
-        ' · ' + items.length + ' shots' + (personFilter ? ' by ' + escapeHtml(personFilter) : '') + '</p>' +
+        ' · ' + items.length + ' shots' + (personOn() ? ' by ' + escapeHtml(personLabel()) : '') + '</p>' +
       '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
       '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
@@ -622,7 +651,7 @@
     const seq = [];
     DATA.days.forEach((d, di) => d.places.forEach((p, pi) => {
       if (p.lat == null) return;
-      if (personFilter && placeCount(p) === 0) return;   // walk only where this person shot
+      if (personOn() && placeCount(p) === 0) return;   // walk only where these people shot
       seq.push({ lat: p.lat, lng: p.lng, di, pi, p, day: d });
     }));
     mmSeq = seq; return seq;
@@ -701,25 +730,35 @@
   }
   function toggleTrack(on) {
     if (!on) { if (mmTrackLayer) { mmMap.removeLayer(mmTrackLayer); mmTrackLayer = null; } return; }
-    const draw = () => {
-      mmTrackLayer = L.layerGroup().addTo(mmMap);
-      mmTrackData.forEach(d => {
-        if (d.pts.length > 1) mmTrackLayer.addLayer(L.polyline(d.pts, { color: '#1f6f9c', weight: 2.5, opacity: 0.7 }));
-      });
-    };
-    if (mmTrackData) draw();
-    else loadJSON('track.json').then(d => { mmTrackData = d; draw(); })
+    if (mmTrackData) drawTrack();
+    else loadJSON('track.json').then(d => { mmTrackData = d; drawTrack(); })
       .catch(() => { const t = root._mapmode.querySelector('#mm-track'); if (t) t.checked = false; });
+  }
+  // draw the GPS breadcrumb, clipped to the days currently shown (task 7)
+  function drawTrack() {
+    if (!mmTrackData || !mmMap) return;
+    if (mmTrackLayer) mmMap.removeLayer(mmTrackLayer);
+    mmTrackLayer = L.layerGroup().addTo(mmMap);
+    const dates = new Set(effectiveDays().map(i => DATA.days[i].date));
+    mmTrackData.forEach(d => {
+      if (dates.has(d.date) && d.pts.length > 1)
+        mmTrackLayer.addLayer(L.polyline(d.pts, { color: '#1f6f9c', weight: 2.5, opacity: 0.7 }));
+    });
   }
 
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
   let galItems = null, galCur = null, galRendered = 0, galEl = null;
   let galPlaceOpts = [], galCityOpts = [];   // [segment, count] facet options
-  const galFilter = { kind: 'all', cities: new Set(), places: new Set() };
-  const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // 1 asc, -1 desc; alt defaults high→low
-  const GAL_SORTS = [['time', 'Time'], ['day', 'Day'], ['place', 'Place'], ['city', 'City'], ['person', 'Photographer'], ['alt', 'Altitude']];
+  const galFilter = { kinds: new Set(), cities: new Set(), places: new Set() };   // kinds empty = all
+  const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // direction folded into the Sort menu
+  // Sort menu: [key, dir|null, label] — direction is baked in so there's no separate ↑/↓ button
+  const GAL_SORTS = [
+    ['time', 1, 'Time — oldest'], ['time', -1, 'Time — newest'],
+    ['day', null, 'Day'], ['place', null, 'Place'], ['city', null, 'City'], ['person', null, 'Photographer'],
+    ['alt', -1, 'Altitude — high'], ['alt', 1, 'Altitude — low'],
+  ];
   const GAL_GROUPED = { day: 1, place: 1, city: 1, person: 1 };   // these render as accordions
-  const GAL_DIRECTIONAL = { time: 1, alt: 1 };                     // these get a ↑/↓ toggle
+  const galSortVal = s => s[1] == null ? s[0] : s[0] + (s[1] > 0 ? '-asc' : '-desc');
   // which comma-segments are real towns/islands/travel-cities (vs neighborhoods/venues) —
   // classified client-side so the City facet stays coarse while Place stays specific
   const CITY_SET = new Set(['Dubrovnik', 'Cavtat', 'Čilipi', 'Gruda', 'Srebreno', 'Plat', 'Kupari',
@@ -762,17 +801,24 @@
     }
     return '';
   }
-  function facetHTML(kind, label, opts) {
+  // opts: [{v, n, label?, dot?}]. opt: {search, optClass, badgeId}
+  function facetHTML(kind, label, opts, opt) {
+    opt = opt || {};
     return '<div class="dcc-tour-facet" data-facet="' + kind + '">' +
       '<button type="button" class="facet-btn" aria-expanded="false">' + label +
-        '<span class="facet-n" hidden></span><span class="facet-caret" aria-hidden="true">▾</span></button>' +
+        '<span class="facet-n"' + (opt.badgeId ? ' id="' + opt.badgeId + '"' : '') + ' hidden></span>' +
+        '<span class="facet-caret" aria-hidden="true">▾</span></button>' +
       '<div class="facet-panel" hidden>' +
-        '<input type="search" class="facet-search" placeholder="search ' + label.toLowerCase() + '…" autocomplete="off">' +
+        (opt.search === false ? '' : '<input type="search" class="facet-search" placeholder="search ' + label.toLowerCase() + '…" autocomplete="off">') +
         '<div class="facet-list">' + opts.map(o =>
-          '<label class="facet-opt"><input type="checkbox" value="' + escapeAttr(o[0]) + '">' +
-          '<span class="facet-lab">' + escapeHtml(o[0]) + '</span><span class="facet-c">' + o[1] + '</span></label>').join('') +
+          '<label class="facet-opt' + (opt.optClass ? ' ' + opt.optClass : '') + '"><input type="checkbox" value="' + escapeAttr(o.v) + '">' +
+          (o.dot ? '<span class="facet-dot" style="background:' + o.dot + '"></span>' : '') +
+          '<span class="facet-lab">' + escapeHtml(o.label || o.v) + '</span><span class="facet-c">' + o.n + '</span></label>').join('') +
         '</div><div class="facet-foot"><button type="button" class="facet-clear">Clear</button></div>' +
       '</div></div>';
+  }
+  function facetSet(kind) {
+    return kind === 'type' ? galFilter.kinds : kind === 'city' ? galFilter.cities : kind === 'place' ? galFilter.places : null;
   }
   function closeAllFacets() {
     if (!galEl) return;
@@ -786,46 +832,37 @@
         const place = it.place || p.name;
         galItems.push({ it, di, dayLabel: d.label, place, segs: placeSegs(place) });
       })));
-      // facet options: every segment for Place, the city-classified subset for City
-      const pc = new Map(), cc = new Map();
-      galItems.forEach(x => x.segs.forEach(s => {
-        pc.set(s, (pc.get(s) || 0) + 1);
-        if (CITY_SET.has(s)) cc.set(s, (cc.get(s) || 0) + 1);
-      }));
-      galPlaceOpts = [...pc.entries()].sort((a, b) => cmpStr(a[0], b[0]));
-      galCityOpts = [...cc.entries()].sort((a, b) => cmpStr(a[0], b[0]));
+      // facet options: every segment for Place, the city-classified subset for City,
+      // plus type + photographer counts
+      const pc = new Map(), cc = new Map(), kindCount = {}, personCount = {};
+      galItems.forEach(x => {
+        kindCount[x.it.kind] = (kindCount[x.it.kind] || 0) + 1;
+        if (x.it.person) personCount[x.it.person] = (personCount[x.it.person] || 0) + 1;
+        x.segs.forEach(s => { pc.set(s, (pc.get(s) || 0) + 1); if (CITY_SET.has(s)) cc.set(s, (cc.get(s) || 0) + 1); });
+      });
+      galPlaceOpts = [...pc.entries()].sort((a, b) => cmpStr(a[0], b[0])).map(o => ({ v: o[0], n: o[1] }));
+      galCityOpts = [...cc.entries()].sort((a, b) => cmpStr(a[0], b[0])).map(o => ({ v: o[0], n: o[1] }));
+      const typeOpts = [['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k => ({ v: k[0], label: k[1], n: kindCount[k[0]] || 0 }));
+      const personOpts = PERSONS.map(pn => ({ v: pn, n: personCount[pn] || 0, dot: PERSON_COLORS[pn] }));
 
       const g = el('section', 'dcc-tour-gallery'); galEl = g;
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
-        [['all', 'All'], ['photo', 'Photos'], ['video', 'Videos'], ['clip', 'Clips']].map(k =>
-          '<button class="dcc-tour-galchip' + (k[0] === 'all' ? ' active' : '') + '" data-kind="' + k[0] + '">' + k[1] + '</button>').join('') +
-        '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
-        '<span class="dcc-tour-personchips" role="group" aria-label="Shot by">' +
-          '<button class="dcc-personchip active" data-person="all">Everyone</button>' +
-          PERSONS.map(pn => '<button class="dcc-personchip" data-person="' + pn + '">' +
-            '<span class="pc-dot" style="background:' + PERSON_COLORS[pn] + '"></span>' + escapeHtml(pn) + '</button>').join('') +
-        '</span>' +
+        facetHTML('type', 'Type', typeOpts, { search: false }) +
+        facetHTML('person', 'Photographer', personOpts, { search: false, optClass: 'dcc-personopt', badgeId: 'dcc-person-badge' }) +
         '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
         facetHTML('city', 'City', galCityOpts) +
         facetHTML('place', 'Place', galPlaceOpts) +
         '<label class="dcc-tour-galsort">Sort by <select id="dcc-galsort">' +
-          GAL_SORTS.map(s => '<option value="' + s[0] + '">' + s[1] + '</option>').join('') +
+          GAL_SORTS.map(s => '<option value="' + galSortVal(s) + '">' + s[2] + '</option>').join('') +
         '</select></label>' +
-        '<button type="button" class="dcc-tour-galdir" id="dcc-galdir" hidden aria-label="Sort direction">↓</button>' +
         '<button type="button" class="dcc-tour-galexpand" id="dcc-galexpand" hidden>Expand all</button>' +
         '<span class="dcc-tour-gal-count" id="dcc-galcount"></span></div>' +
         '<div class="dcc-tour-media dcc-tour-gal-grid" id="dcc-galgrid"></div>' +
         '<div id="dcc-galmore" class="dcc-tour-galmore">loading more…</div>';
       root.appendChild(g);
-      g.querySelectorAll('.dcc-tour-galchip').forEach(b => b.addEventListener('click', () => {
-        g.querySelectorAll('.dcc-tour-galchip').forEach(x => x.classList.toggle('active', x === b));
-        galFilter.kind = b.dataset.kind; renderGallery();
-      }));
-      g.querySelectorAll('.dcc-personchip').forEach(b => b.addEventListener('click', () =>
-        setPersonFilter(b.dataset.person === 'all' ? null : b.dataset.person)));
-      // City / Place facet dropdowns (scroll list + search + multi-select)
+      // Type / Photographer / City / Place — all facet dropdowns (scroll list + multi-select)
       g.querySelectorAll('.dcc-tour-facet').forEach(fac => {
-        const set = fac.dataset.facet === 'city' ? galFilter.cities : galFilter.places;
+        const kind = fac.dataset.facet;
         const btn = fac.querySelector('.facet-btn'), panel = fac.querySelector('.facet-panel');
         const badge = fac.querySelector('.facet-n'), search = fac.querySelector('.facet-search');
         btn.addEventListener('click', e => {
@@ -833,33 +870,38 @@
           const wasClosed = panel.hidden; closeAllFacets();
           if (wasClosed) {
             panel.hidden = false; btn.setAttribute('aria-expanded', 'true');
-            // nudge the panel left so it never spills past the right edge on narrow screens
-            panel.style.left = '0px';
+            panel.style.left = '0px';   // keep the panel inside the viewport on narrow screens
             const r = fac.getBoundingClientRect(), over = (r.left + panel.offsetWidth) - (document.documentElement.clientWidth - 8);
             if (over > 0) panel.style.left = (-Math.min(over, r.left - 8)) + 'px';
-            search.focus();
+            if (search) search.focus();
           }
         });
         panel.addEventListener('click', e => e.stopPropagation());
-        search.addEventListener('input', e => {
+        if (search) search.addEventListener('input', e => {
           const q = e.target.value.trim().toLowerCase();
           fac.querySelectorAll('.facet-opt').forEach(o =>
             o.style.display = o.querySelector('.facet-lab').textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none');
         });
         fac.querySelector('.facet-list').addEventListener('change', e => {
           if (e.target.type !== 'checkbox') return;
+          if (kind === 'person') { setPersonFilter(e.target.value); return; }   // global; badge+checks synced elsewhere
+          const set = facetSet(kind);
           if (e.target.checked) set.add(e.target.value); else set.delete(e.target.value);
           badge.hidden = !set.size; badge.textContent = set.size; renderGallery();
         });
         fac.querySelector('.facet-clear').addEventListener('click', () => {
-          set.clear(); fac.querySelectorAll('.facet-opt input').forEach(c => c.checked = false);
+          if (kind === 'person') { setPersonFilter(null); return; }
+          const set = facetSet(kind); set.clear();
+          fac.querySelectorAll('.facet-opt input').forEach(c => c.checked = false);
           badge.hidden = true; renderGallery();
         });
       });
       document.addEventListener('click', closeAllFacets);
-      g.querySelector('#dcc-galsort').addEventListener('change', e => { galSort.key = e.target.value; renderGallery(); });
-      g.querySelector('#dcc-galdir').addEventListener('click', () => {
-        const k = galSort.key; if (GAL_DIRECTIONAL[k]) { galSort.dir[k] = -galSort.dir[k]; renderGallery(); }
+      g.querySelector('#dcc-galsort').addEventListener('change', e => {
+        const val = e.target.value, key = val.replace(/-(asc|desc)$/, '');
+        galSort.key = key;
+        if (val.endsWith('-asc')) galSort.dir[key] = 1; else if (val.endsWith('-desc')) galSort.dir[key] = -1;
+        renderGallery();
       });
       const grid = g.querySelector('#dcc-galgrid');
       grid.addEventListener('click', e => {
@@ -884,19 +926,13 @@
     return true;
   }
   function renderGallery() {
-    galCur = galItems.filter(x => (galFilter.kind === 'all' || x.it.kind === galFilter.kind) &&
+    galCur = galItems.filter(x => (!galFilter.kinds.size || galFilter.kinds.has(x.it.kind)) &&
       itemPasses(x.it) && itemMatchesFacets(x));
     galCur.sort(galSortCmp);
     // lightbox spans the whole filtered+sorted photo set (built up front, not per-chunk)
     lightboxFulls = []; lightboxMeta = [];
     galCur.forEach(x => { const it = x.it; if (it.full) { lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place, t: it.time }); } });
     document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
-    // direction toggle only for flat sorts
-    const dir = document.getElementById('dcc-galdir');
-    if (GAL_DIRECTIONAL[galSort.key]) { dir.hidden = false; const d = galSort.dir[galSort.key];
-      dir.textContent = d > 0 ? '↑' : '↓';
-      dir.title = galSort.key === 'alt' ? (d > 0 ? 'Low → high' : 'High → low') : (d > 0 ? 'Oldest → newest' : 'Newest → oldest');
-    } else dir.hidden = true;
     const grid = document.getElementById('dcc-galgrid'), more = document.getElementById('dcc-galmore');
     const exp = document.getElementById('dcc-galexpand');
     if (GAL_GROUPED[galSort.key]) { more.style.display = 'none'; exp.hidden = false; exp.textContent = 'Expand all'; renderGalleryGrouped(grid); }
@@ -1060,7 +1096,7 @@
     const s = DATA.stats || {};
     const srd = (h.climb_m / 412).toFixed(1);       // Mount Srđ = 412 m
     // per-photographer media stats override the baked-in trip totals when filtered
-    const ps = personFilter ? personMediaStats() : null;
+    const ps = personOn() ? personMediaStats() : null;
     const photos = ps ? ps.photos : s.photos, videos = ps ? ps.videos : s.videos, clips = ps ? ps.clips : s.clips;
     const totalLoc = ps ? ps.locs : s.total_locations;
     const busiest = ps ? ps.bestDay : s.most_active_day;
@@ -1070,18 +1106,18 @@
       sup = '<div class="dcc-tour-superlatives">' +
         '<span>🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots</span>' +
         (captured ? '<span>📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '</span>' : '') +
-        (!personFilter && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
+        (!personOn() && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + s.longest_walk_day.km + ' km</span>' : '') +
         '</div>';
     }
-    const note = personFilter ?
-      '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personFilter) +
+    const note = personOn() ?
+      '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personLabel()) +
         '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
     return '<div class="dcc-tour-tripstats">' +
       statTile(h.steps, '', 'steps', h.watch) +
       statTile(parseFloat(h.dist), ' ' + (h.dist_unit || ''), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
       statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
-      (totalLoc ? statTile(totalLoc, '', 'places', personFilter ? 'shot by ' + personFilter : 'visited & named') : '') +
-      (!personFilter && s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
+      (totalLoc ? statTile(totalLoc, '', 'places', personOn() ? 'shot by ' + personLabel() : 'visited & named') : '') +
+      (!personOn() && s.trip_walk_km ? statTile(s.trip_walk_km, ' km', 'traveled', 'foot · boat · road', 1) : '') +
       (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
         photos + ' photos · ' + videos + ' videos · ' + clips + ' clips') : '') +
       '</div>' + sup + note;
@@ -1247,7 +1283,7 @@
       '<h2>' + escapeHtml(day.label) + '</h2>' +
       (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
-      '<p class="dcc-tour-daymeta">' + (personFilter ? plur(dayVisibleCount(day), 'shot') + ' by ' + escapeHtml(personFilter) : dayCountLabel(day)) + '</p>' +
+      '<p class="dcc-tour-daymeta">' + (personOn() ? plur(dayVisibleCount(day), 'shot') + ' by ' + escapeHtml(personLabel()) : dayCountLabel(day)) + '</p>' +
       weatherHTML(day.weather) +
       healthRibbonHTML(day) +
       (day.health && day.health.elev ? elevSparkHTML(day.health.elev) : '') +
@@ -1262,9 +1298,9 @@
     // of contents: each chip scrolls to and opens its place.
     const placesOpenDefault = !window.matchMedia('(max-width: 800px)').matches;
     // which places have anything to show under the current filter
-    const shownPlaces = day.places.map((p, pi) => ({ p, pi })).filter(x => !personFilter || placeCount(x.p) > 0);
-    if (personFilter && !shownPlaces.length) {
-      html += '<p class="dcc-tour-empty">No shots by ' + escapeHtml(personFilter) + ' on this day.</p>';
+    const shownPlaces = day.places.map((p, pi) => ({ p, pi })).filter(x => !personOn() || placeCount(x.p) > 0);
+    if (personOn() && !shownPlaces.length) {
+      html += '<p class="dcc-tour-empty">No shots by ' + escapeHtml(personLabel()) + ' on this day.</p>';
     }
     if (shownPlaces.length > 1) {
       html += '<nav class="dcc-tour-places-index" aria-label="Places this day">' +
@@ -1398,7 +1434,7 @@
     const pts = [], line = [];
     day.places.forEach((p, pi) => {
       if (p.lat == null) return;
-      if (personFilter && placeCount(p) === 0) return;   // hide places this person didn't shoot
+      if (personOn() && placeCount(p) === 0) return;   // hide places these people didn't shoot
       pts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
       const icon = L.divIcon({ className: 'dcc-tour-numpin', html: String(pi + 1), iconSize: [26, 26], iconAnchor: [13, 13] });
       const m = L.marker([p.lat, p.lng], { title: p.name, icon });
