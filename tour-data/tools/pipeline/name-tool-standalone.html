@@ -22,6 +22,11 @@
   .stats{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:.82rem}
   .stats b{color:var(--accent-deep);font-variant-numeric:tabular-nums}
   .bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .bar3{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+  .bar3[hidden]{display:none}
+  .fr-arrow{color:var(--muted)}
+  .fr-count{color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+  #fr-go:disabled{opacity:.45;cursor:not-allowed}
   input,select,button{font:inherit}
   .ctl{padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
   #q{flex:1;min-width:180px}
@@ -94,8 +99,17 @@
     </select>
     <label class="chk"><input type="checkbox" id="onlyauto"> only un-refined</label>
     <button class="ghost" id="expandall" title="Open every spot's individual-photo editor at once">▼ Expand all photos</button>
+    <button class="ghost" id="fr-toggle" title="Correct one location name everywhere at once">🔤 Find &amp; replace</button>
     <button class="ghost" id="import">Load a JSON…</button>
     <button class="act" id="export">⭳ Download names JSON</button>
+  </div>
+  <div class="bar3" id="fr-bar" hidden>
+    <input id="fr-find" class="ctl" placeholder="Find text in names…" autocomplete="off">
+    <span class="fr-arrow" aria-hidden="true">→</span>
+    <input id="fr-repl" class="ctl" placeholder="Replace with…" autocomplete="off">
+    <label class="chk"><input type="checkbox" id="fr-case"> match case</label>
+    <span class="fr-count" id="fr-count">Type a word to find</span>
+    <button class="act" id="fr-go" disabled>Replace all</button>
   </div>
 </header>
 
@@ -351,6 +365,42 @@ function fillItems(c, box){
   });
 }
 
+// ---------- find & replace across ALL names (sections + photo overrides) ----------
+const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function frScan(){
+  const find = $("#fr-find").value, cs = $("#fr-case").checked;
+  const re = (find && !cs) ? new RegExp(escapeRegExp(find), "gi") : null;
+  const count = v => (v==null || !find) ? 0 : (cs ? v.split(find).length-1 : (v.match(re)||[]).length);
+  let secN=0, secOcc=0, phN=0, phOcc=0;
+  Object.values(state.groups).forEach(v=>{ const c=count(v); if(c){ secN++; secOcc+=c; } });
+  Object.values(state.itemNames).forEach(v=>{ const c=count(v); if(c){ phN++; phOcc+=c; } });
+  return { secN, secOcc, phN, phOcc, total: secOcc+phOcc };
+}
+function frUpdate(){
+  const find = $("#fr-find").value, go = $("#fr-go"), lbl = $("#fr-count");
+  if(!find){ lbl.textContent = "Type a word to find"; go.disabled = true; return; }
+  const r = frScan();
+  lbl.textContent = r.total
+    ? `${r.secOcc} in ${r.secN} section${r.secN!==1?"s":""} · ${r.phOcc} in ${r.phN} photo${r.phN!==1?"s":""}`
+    : "no matches";
+  go.disabled = r.total === 0;
+}
+function frReplaceAll(){
+  const find = $("#fr-find").value; if(!find || $("#fr-go").disabled) return;
+  const repl = $("#fr-repl").value, cs = $("#fr-case").checked;
+  const re = cs ? null : new RegExp(escapeRegExp(find), "gi");
+  let occ=0, names=0;
+  const apply = obj => Object.keys(obj).forEach(k=>{
+    const v = obj[k]; if(v==null) return;
+    const c = cs ? v.split(find).length-1 : (v.match(re)||[]).length;
+    if(c){ obj[k] = cs ? v.split(find).join(repl) : v.replace(re, repl); occ += c; names++; }
+  });
+  apply(state.groups); apply(state.itemNames);
+  if(occ){ dirty = true; render(); toast(`Replaced ${occ} occurrence${occ!==1?"s":""} across ${names} name${names!==1?"s":""}`); }
+  else toast("No matches to replace");
+  frUpdate();
+}
+
 // ---------- preview lightbox ----------
 function preview(it){
   if(!it) return;
@@ -399,6 +449,15 @@ function bindControls(){
     dets.forEach(d=> d.open = open);
     $("#expandall").textContent = open ? "▲ Collapse all photos" : "▼ Expand all photos";
   });
+  // find & replace across every section + photo-override name
+  $("#fr-toggle").addEventListener("click", ()=>{
+    const bar = $("#fr-bar"); bar.hidden = !bar.hidden;
+    if(!bar.hidden){ frUpdate(); $("#fr-find").focus(); }
+  });
+  $("#fr-find").addEventListener("input", frUpdate);
+  $("#fr-case").addEventListener("change", frUpdate);
+  $("#fr-go").addEventListener("click", frReplaceAll);
+  ["#fr-find","#fr-repl"].forEach(s=> $(s).addEventListener("keydown", e=>{ if(e.key==="Enter") frReplaceAll(); }));
   $("#import").addEventListener("click", ()=> $("#filein").click());
   $("#filein").addEventListener("change", e=>{
     const f=e.target.files[0]; if(!f) return;
