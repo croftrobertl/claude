@@ -297,6 +297,9 @@
     }
     updateHash();
     window.scrollTo({ top: 0 });
+    // strips measured while their view was hidden read 0 width; recompute the
+    // scroll-fade hints now that this view is visible
+    requestAnimationFrame(enhanceAllHScroll);
   }
   // ---- deep links: #d=<day>, #d=<day>&p=<place>, #d=<day>&ph=<guid>, #ph=<guid>, #v=map|stats|gallery ----
   function updateHash() {
@@ -336,7 +339,7 @@
   // ---- share helpers ----
   function shareUrl(extra) { return location.href.split('#')[0] + '#' + extra; }
   function doShare(url, title) {
-    if (navigator.share) { navigator.share({ url: url, title: title || 'Croatia 2025' }).catch(() => {}); return; }
+    if (navigator.share) { navigator.share({ url: url, title: title || 'Crofts in Croatia' }).catch(() => {}); return; }
     if (navigator.clipboard && navigator.clipboard.writeText)
       navigator.clipboard.writeText(url).then(() => toast('Link copied ✓'), () => toast(url));
     else toast(url);
@@ -1914,7 +1917,7 @@
     el.querySelector('#dcc-lb-share').addEventListener('click', () => {
       const u = lightboxFulls[lightboxIdx] || '';
       const g = (u.match(/([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})/i) || [])[1];
-      doShare(g ? shareUrl('ph=' + g) : u, 'A photo from Croatia 2025');
+      doShare(g ? shareUrl('ph=' + g) : u, 'A photo from Crofts in Croatia');
     });
     el.addEventListener('click', (e) => {
       if (e.target === el || e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
