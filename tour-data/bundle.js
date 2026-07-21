@@ -24,7 +24,7 @@
   const imp = () => unitSys === 'imperial';
   // distance is stored in the data two ways: km (walk_km / trip_walk_km) and mi
   // (the Apple Watch dist). Helpers below take the source unit and format for display.
-  function distFromKm(km, dec) { dec = dec == null ? 1 : dec; return (imp() ? km * 0.621371 : km).toFixed(dec) + ' ' + distUnit(); }
+  function distFromKm(km, dec) { dec = dec == null ? 1 : dec; return (imp() ? km * 0.621371 : km).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' ' + distUnit(); }
   function distNumFromKm(km, dec) { dec = dec == null ? 1 : dec; return +((imp() ? km * 0.621371 : km).toFixed(dec)); }
   function distNumFromMi(mi, dec) { dec = dec == null ? 1 : dec; return +((imp() ? mi : mi * 1.60934).toFixed(dec)); }
   function distUnit() { return imp() ? 'mi' : 'km'; }
@@ -681,8 +681,9 @@
     const heatPts = [], allPts = [];
     // range readout (days · places · shots) + reflect isolate/range in the legend
     const rdays = effectiveDays(), shownSet = new Set(rdays);
-    let rPlaces = 0, rShots = 0;
-    rdays.forEach(di => DATA.days[di].places.forEach(p => { const c = placeCount(p); if (c) { rPlaces++; rShots += c; } }));
+    let rShots = 0; const rPlaceSet = new Set();
+    rdays.forEach(di => DATA.days[di].places.forEach(p => { const c = placeCount(p); if (c) { rPlaceSet.add(p.name); rShots += c; } }));
+    const rPlaces = rPlaceSet.size;   // unique places, consistent with the "places" tile (not per-day stops)
     const statsEl = root._mapmode.querySelector('#mm-range-stats');
     if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots' + (personOn() ? ' · ' + escapeHtml(personLabel()) : '');
     root._mapmode.querySelectorAll('.dcc-tour-legseg[data-day]').forEach(seg => {
@@ -1385,14 +1386,15 @@
   // ---- 1) synchronized cumulative timeline (the flagship) ----
   function vizTimelineHTML() {
     const days = DATA.days;
-    let cs = 0, cw = 0, ctr = 0, ccl = 0, cpl = 0, cph = 0, cvi = 0, ccp = 0;
+    let cs = 0, cw = 0, ctr = 0, ccl = 0, cph = 0, cvi = 0, ccp = 0;
+    const seenPlaces = new Set();   // unique places, so the running total matches the "places" tile (188, not 280 stops)
     vizCumData = days.map(d => {
       const h = d.health || {};
       cs += h.steps || 0; cw += h.dist || 0; ctr += d.walk_km || 0; ccl += h.climb_m || 0;
-      let ph = 0, vi = 0, cp = 0, pl = 0;
-      d.places.forEach(p => { if (p.items.length) pl++; p.items.forEach(it => { if (it.kind === 'photo') ph++; else if (it.kind === 'video') vi++; else cp++; }); });
-      cpl += pl; cph += ph; cvi += vi; ccp += cp;
-      return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: cpl, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
+      let ph = 0, vi = 0, cp = 0;
+      d.places.forEach(p => { if (p.items.length) seenPlaces.add(p.name); p.items.forEach(it => { if (it.kind === 'photo') ph++; else if (it.kind === 'video') vi++; else cp++; }); });
+      cph += ph; cvi += vi; ccp += cp;
+      return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: seenPlaces.size, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
     });
     const n = days.length, step = Math.max(1, Math.ceil(n / 6));
     const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? escapeHtml(dDate(d)) : '') + '</span>').join('');
