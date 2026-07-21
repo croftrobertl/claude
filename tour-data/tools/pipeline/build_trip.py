@@ -49,15 +49,18 @@ for i, d in enumerate(sorted(byday), 1):
     its = sorted(byday[d], key=lambda x: x.get("datetime") or "")
     dobj = dt.datetime.strptime(d, "%Y-%m-%d")
     area = AREA.get(Counter(x["chapter"] for x in its).most_common(1)[0][0], "")
-    # group by place, ordered by first appearance
-    order, groups = [], defaultdict(list)
+    # group into CONTIGUOUS chronological runs of the same place name, so a spot
+    # passed through more than once in a day is listed once per visit (with its
+    # own tight time window) instead of one lump spanning the whole day. `its` is
+    # already sorted by datetime, so runs fall in date→time→name order.
+    runs = []
     for it in its:
         pl = it.get("place") or "En route"
-        if pl not in groups: order.append(pl)
-        groups[pl].append(it)
+        if not runs or runs[-1][0] != pl:
+            runs.append((pl, []))
+        runs[-1][1].append(it)
     places = []
-    for pl in order:
-        g = groups[pl]
+    for pl, g in runs:
         coords = [(x["lat"], x["lng"]) for x in g if x.get("lat") is not None]
         p = {"name": pl, "count": len(g),
              "from": (g[0].get("datetime") or "")[11:16],
