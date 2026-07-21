@@ -2,91 +2,163 @@
  "2025-09-10": {
   "tmax": 27.8,
   "icon": "🌧️",
-  "desc": "Heavy rain"
+  "desc": "Heavy rain",
+  "tmin": 22.5,
+  "precip": 7,
+  "wind": 17,
+  "winddir": 14
  },
  "2025-09-11": {
   "tmax": 24.7,
   "icon": "🌧️",
-  "desc": "Heavy rain"
+  "desc": "Heavy rain",
+  "tmin": 11.1,
+  "precip": 0.5,
+  "wind": 27,
+  "winddir": 240
  },
  "2025-09-12": {
   "tmax": 25.9,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 17.1,
+  "precip": 0.3,
+  "wind": 11,
+  "winddir": 317
  },
  "2025-09-13": {
   "tmax": 27.9,
   "icon": "⛅",
-  "desc": "Partly cloudy"
+  "desc": "Partly cloudy",
+  "tmin": 17.5,
+  "precip": 0,
+  "wind": 8,
+  "winddir": 6
  },
  "2025-09-14": {
   "tmax": 26.9,
   "icon": "🌦️",
-  "desc": "Drizzle"
+  "desc": "Drizzle",
+  "tmin": 17.4,
+  "precip": 1.2,
+  "wind": 11,
+  "winddir": 15
  },
  "2025-09-15": {
   "tmax": 26.4,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 16.7,
+  "precip": 0,
+  "wind": 8,
+  "winddir": 7
  },
  "2025-09-16": {
-  "tmax": 27.0,
+  "tmax": 27,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 15.6,
+  "precip": 0,
+  "wind": 11,
+  "winddir": 54
  },
  "2025-09-17": {
   "tmax": 27.7,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 18.3,
+  "precip": 0,
+  "wind": 17,
+  "winddir": 42
  },
  "2025-09-18": {
   "tmax": 26.9,
   "icon": "☀️",
-  "desc": "Clear"
+  "desc": "Clear",
+  "tmin": 15.4,
+  "precip": 0,
+  "wind": 18,
+  "winddir": 33
  },
  "2025-09-19": {
-  "tmax": 27.0,
+  "tmax": 27,
   "icon": "☀️",
-  "desc": "Clear"
+  "desc": "Clear",
+  "tmin": 15.5,
+  "precip": 0,
+  "wind": 11,
+  "winddir": 13
  },
  "2025-09-20": {
   "tmax": 26.9,
   "icon": "☀️",
-  "desc": "Clear"
+  "desc": "Clear",
+  "tmin": 16.5,
+  "precip": 0,
+  "wind": 18,
+  "winddir": 39
  },
  "2025-09-21": {
   "tmax": 27.3,
   "icon": "☀️",
-  "desc": "Clear"
+  "desc": "Clear",
+  "tmin": 16.8,
+  "precip": 0,
+  "wind": 10,
+  "winddir": 49
  },
  "2025-09-22": {
   "tmax": 26.6,
   "icon": "☀️",
-  "desc": "Clear"
+  "desc": "Clear",
+  "tmin": 14.4,
+  "precip": 0,
+  "wind": 14,
+  "winddir": 82
  },
  "2025-09-23": {
   "tmax": 26.3,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 15.5,
+  "precip": 0,
+  "wind": 12,
+  "winddir": 68
  },
  "2025-09-24": {
   "tmax": 25.1,
   "icon": "🌦️",
-  "desc": "Light rain"
+  "desc": "Light rain",
+  "tmin": 16.5,
+  "precip": 3.8,
+  "wind": 21,
+  "winddir": 122
  },
  "2025-09-25": {
   "tmax": 23.5,
   "icon": "🌧️",
-  "desc": "Heavy drizzle"
+  "desc": "Heavy drizzle",
+  "tmin": 17.1,
+  "precip": 2.8,
+  "wind": 15,
+  "winddir": 149
  },
  "2025-09-26": {
   "tmax": 23.9,
   "icon": "☁️",
-  "desc": "Overcast"
+  "desc": "Overcast",
+  "tmin": 15.7,
+  "precip": 0,
+  "wind": 9,
+  "winddir": 14
  },
  "2025-09-27": {
   "tmax": 23.5,
   "icon": "🌦️",
-  "desc": "Light drizzle"
+  "desc": "Light drizzle",
+  "tmin": 15.1,
+  "precip": 1.2,
+  "wind": 11,
+  "winddir": 70
  }
 }
