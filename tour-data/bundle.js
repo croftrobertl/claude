@@ -68,22 +68,47 @@
   function dDate(d) { const { m, dd } = _ymd(d); return (_MON[m - 1] || '') + ' ' + dd; }          // "Sep 10"
   function dWeekday(d) { const { y, m, dd } = _ymd(d); return _DOW[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()] || ''; }
 
-  // ---- horizontal-scroll affordance (tasks 5/10/11/12/13): a slim always-on
-  //      scrollbar (styled in CSS) plus an edge fade that appears only while
-  //      there is more content to scroll toward ----
-  function updateHScroll(el) {
-    const more = el.scrollWidth - el.clientWidth > 2;
-    el.classList.toggle('more-r', more && el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
-    el.classList.toggle('more-l', more && el.scrollLeft > 2);
+  // ---- horizontal-scroll affordance (task 9): an ALWAYS-VISIBLE custom
+  //      scrollbar (a real track + draggable thumb rendered under each strip),
+  //      since native scrollbars auto-hide on mobile and the edge fade was too
+  //      subtle. The rail shows only when the strip actually overflows. ----
+  function updateRail(el) {
+    const rail = el._rail; if (!rail) return;
+    const over = el.scrollWidth - el.clientWidth > 2;
+    rail.style.display = over ? 'block' : 'none';
+    if (!over) return;
+    const railW = rail.clientWidth || el.clientWidth || 1;
+    const tw = Math.max(28, railW * el.clientWidth / el.scrollWidth);
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const tl = maxScroll > 0 ? (railW - tw) * (el.scrollLeft / maxScroll) : 0;
+    rail._thumb.style.width = tw + 'px';
+    rail._thumb.style.transform = 'translateX(' + tl.toFixed(1) + 'px)';
   }
-  function enhanceHScroll(el) {
+  function enhanceHScroll(el, mount) {
     if (!el) return;
     el.classList.add('dcc-hscroll');
-    if (!el._hsBound) { el._hsBound = true; el.addEventListener('scroll', () => updateHScroll(el), { passive: true }); }
-    requestAnimationFrame(() => updateHScroll(el));
+    mount = mount || el;
+    if (!el._rail && mount.parentNode) {
+      const rail = document.createElement('div'); rail.className = 'dcc-rail';
+      const thumb = document.createElement('div'); thumb.className = 'dcc-rail-thumb';
+      rail.appendChild(thumb); rail._thumb = thumb; el._rail = rail;
+      mount.parentNode.insertBefore(rail, mount.nextSibling);
+      el.addEventListener('scroll', () => updateRail(el), { passive: true });
+      // drag the thumb (pointer capture keeps it tracking outside the rail; no leaked listeners)
+      let sx = 0, sl = 0, drag = false;
+      thumb.addEventListener('pointerdown', e => { drag = true; sx = e.clientX; sl = el.scrollLeft; thumb.setPointerCapture(e.pointerId); document.body.classList.add('dcc-rail-dragging'); e.preventDefault(); e.stopPropagation(); });
+      thumb.addEventListener('pointermove', e => { if (!drag) return; const ratio = el.scrollWidth / (rail.clientWidth || 1); el.scrollLeft = sl + (e.clientX - sx) * ratio; });
+      const end = e => { if (!drag) return; drag = false; try { thumb.releasePointerCapture(e.pointerId); } catch (_) {} document.body.classList.remove('dcc-rail-dragging'); };
+      thumb.addEventListener('pointerup', end); thumb.addEventListener('pointercancel', end);
+      // click the track to jump there
+      rail.addEventListener('pointerdown', e => { if (e.target === thumb) return; const r = rail.getBoundingClientRect(); const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); el.scrollLeft = frac * (el.scrollWidth - el.clientWidth); });
+    }
+    requestAnimationFrame(() => updateRail(el));
   }
   function enhanceAllHScroll() {
-    root.querySelectorAll('.dcc-tour-mm-legend, .dcc-tour-idx-chips, .dcc-tour-tripstats, .dcc-tour-superlatives, .wx-ribbon').forEach(enhanceHScroll);
+    root.querySelectorAll('.dcc-tour-mm-legend, .dcc-tour-tripstats, .dcc-tour-superlatives, .wx-ribbon').forEach(el => enhanceHScroll(el));
+    // idx-chips lives inside a flex row — mount its rail after that row so it sits below, full width
+    root.querySelectorAll('.dcc-tour-idx-chips').forEach(el => enhanceHScroll(el, el.closest('.dcc-tour-places-index') || el));
   }
 
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
@@ -243,8 +268,8 @@
       '<div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
-        '<span class="sd-txt"><b>' + escapeHtml(dDate(d)) + '</b>' +
-        '<span>' + escapeHtml(d.short) + '</span><span class="sd-area">' + escapeHtml(d.area || '') + '</span></span>' +
+        '<span class="sd-txt"><b>' + escapeHtml(dWeekday(d).slice(0, 3) + ' · ' + dDate(d)) + '</b>' +
+        '<span class="sd-area">' + escapeHtml(d.area || '') + '</span></span>' +
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
@@ -570,6 +595,10 @@
     ]).addTo(mmMap);
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
+    // task 6: hide the facing arrows when zoomed out (they clutter the whole-trip view)
+    const FACE_MIN_ZOOM = 13;
+    const syncFaceZoom = () => mmMap.getContainer().classList.toggle('mm-lowzoom', mmMap.getZoom() < FACE_MIN_ZOOM);
+    mmMap.on('zoomend', syncFaceZoom); syncFaceZoom();
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
@@ -589,11 +618,18 @@
     document.addEventListener('fullscreenchange', () => { if (mmMap) setTimeout(() => mmMap.invalidateSize(), 120); });
     const lo = m.querySelector('#mm-lo'), hi = m.querySelector('#mm-hi');
     hi.value = DATA.day_count - 1;
+    // task 4: never offer an out-of-order range — disable "to" days before "from" (and vice-versa)
+    const syncRangeBounds = () => {
+      const a = +lo.value, b = +hi.value;
+      hi.querySelectorAll('option').forEach(o => o.disabled = +o.value < a);
+      lo.querySelectorAll('option').forEach(o => o.disabled = +o.value > b);
+    };
     const onRange = () => {
       let a = +lo.value, b = +hi.value; if (a > b) { const t = a; a = b; b = t; }
-      mmRange = [a, b]; mmIsolateDay = null; renderMapLegend(); renderMapMode();   // manual range overrides a legend isolate
+      mmRange = [a, b]; mmIsolateDay = null; syncRangeBounds(); renderMapLegend(); renderMapMode();
     };
     lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
+    syncRangeBounds();
     m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
     // Color by: Day / Who / Altitude
     m.querySelectorAll('.mm-cb').forEach(b => b.addEventListener('click', () => {
@@ -685,7 +721,7 @@
     rdays.forEach(di => DATA.days[di].places.forEach(p => { const c = placeCount(p); if (c) { rPlaceSet.add(p.name); rShots += c; } }));
     const rPlaces = rPlaceSet.size;   // unique places, consistent with the "places" tile (not per-day stops)
     const statsEl = root._mapmode.querySelector('#mm-range-stats');
-    if (statsEl) statsEl.textContent = rdays.length + ' days · ' + rPlaces + ' places · ' + fmt(rShots) + ' shots' + (personOn() ? ' · ' + escapeHtml(personLabel()) : '');
+    if (statsEl) statsEl.textContent = plur(rdays.length, 'day') + ' · ' + plur(rPlaces, 'place') + ' · ' + fmt(rShots) + (rShots === 1 ? ' shot' : ' shots') + (personOn() ? ' · ' + escapeHtml(personLabel()) : '');
     root._mapmode.querySelectorAll('.dcc-tour-legseg[data-day]').forEach(seg => {
       const i = +seg.dataset.day;
       seg.classList.toggle('out', !shownSet.has(i));
@@ -704,13 +740,15 @@
         mk.on('click', () => openMapSidebar(di, pi));
         mmMarkers.addLayer(mk);
         placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
-        // compass "facing": a small rim chevron pointing where the cameras looked (task 5)
+        // compass "facing": a high-contrast arrow INSIDE the circle pointing where the
+        // cameras looked. Auto-hidden when zoomed out (CSS on .mm-lowzoom) to declutter. (task 6)
         if (showFacing) {
           const h = placeMeanHeading(p);
           if (h != null) {
-            const sz = r + 6;
-            const icon = L.divIcon({ className: 'mm-face', iconSize: [sz * 2, sz * 2], iconAnchor: [sz, sz],
-              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(h) + 'deg)"><span class="mm-face-chev"></span></span>' });
+            const sz = Math.max(10, Math.round(r * 1.6));
+            const icon = L.divIcon({ className: 'mm-face', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
+              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(h) + 'deg)">' +
+                '<svg viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" aria-hidden="true"><path d="M12 3 L18 20 L12 16 L6 20 Z"/></svg></span>' });
             mmPathLayer.addLayer(L.marker([p.lat, p.lng], { icon, interactive: false, keyboard: false }));
           }
         }
@@ -779,15 +817,19 @@
     if (trail.length > 1) mmPlayLayer.addLayer(L.polyline(trail, { color: '#b68235', weight: 3, opacity: 0.75 }));
     mmPlayLayer.addLayer(L.circleMarker([m.lat, m.lng], { radius: 10, color: '#7d5411', weight: 3, fillColor: '#f4da62', fillOpacity: 0.95, className: 'mm-playhead' }));
     // label + moment card (the photo that pops up)
+    // task 3: the verbose inline label overflowed on mobile — the moment card
+    // below carries the same info (now incl. date + time), so keep the label empty
     const lab = root._mapmode.querySelector('#mm-playlabel');
-    if (lab) lab.textContent = 'Day ' + m.day.index + ' · ' + m.p.name + ' · ' + (m.p.from === m.p.to ? m.p.from : m.p.from + '–' + m.p.to);
+    if (lab) lab.textContent = '';
     const mo = root._mapmode.querySelector('#mm-moment');
     if (mo) {
       const its = placeItems(m.p);
       const rep = its.find(it => it.full) || its.find(it => it.poster) || its[0];
       const img = rep && rep.full ? resolveUrl(rep.src || rep.full) : (rep && rep.poster ? resolveUrl(rep.poster) : '');
+      const time = m.p.from === m.p.to ? m.p.from : m.p.from + '–' + m.p.to;
       mo.innerHTML = (img ? '<img src="' + escapeAttr(img) + '" alt="">' : '') +
-        '<figcaption>' + escapeHtml(m.p.name) + ' · ' + plur(its.length, 'shot') + '</figcaption>';
+        '<figcaption><b>' + escapeHtml(m.p.name) + '</b>' +
+        '<span>' + escapeHtml(dDate(m.day) + ' · ' + time + ' · ' + plur(its.length, 'shot')) + '</span></figcaption>';
       mo.hidden = false;
     }
     const scrub = root._mapmode.querySelector('#mm-scrub');
@@ -1396,8 +1438,8 @@
       cph += ph; cvi += vi; ccp += cp;
       return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: seenPlaces.size, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
     });
-    const n = days.length, step = Math.max(1, Math.ceil(n / 6));
-    const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? escapeHtml(dDate(d)) : '') + '</span>').join('');
+    const n = days.length, step = Math.max(1, Math.ceil(n / 4));
+    const axis = days.map((d, i) => '<span class="tl-tick">' + (i % step === 0 || i === n - 1 ? 'Day ' + d.index : '') + '</span>').join('');
     return '<div class="viz-card viz-timeline">' +
       '<div class="viz-h"><h4>The trip, adding up</h4>' +
         '<span class="viz-sub">Drag across the days — every number is the running total up to that point.</span></div>' +
@@ -1709,7 +1751,7 @@
 
     story.innerHTML = html;
     story.scrollTop = 0;
-    enhanceHScroll(story.querySelector('.dcc-tour-idx-chips'));
+    { const ic = story.querySelector('.dcc-tour-idx-chips'); if (ic) enhanceHScroll(ic, ic.closest('.dcc-tour-places-index') || ic); }
     const prev = story.querySelector('#dcc-prev'), next = story.querySelector('#dcc-next');
     if (prev) prev.addEventListener('click', () => selectDay(curDay - 1));
     if (next) next.addEventListener('click', () => selectDay(curDay + 1));
