@@ -1334,7 +1334,7 @@
     if (w.icon || w.desc) bits.push((w.icon || '') + ' ' + escapeHtml(w.desc || ''));
     if (w.tmax != null) bits.push('🌡 ' + tempFromC(w.tmax) + (w.tmin != null ? ' / ' + tempFromC(w.tmin) : ''));
     if (w.wind != null) bits.push('💨 ' + (imp() ? Math.round(w.wind * 0.621371) + ' mph' : Math.round(w.wind) + ' km/h'));
-    if (w.precip) bits.push('💧 ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm'));
+    if (w.precip >= 0.1) bits.push('💧 ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm'));
     return bits.length ? '<p class="dcc-tour-weather">' + bits.join(' &nbsp;·&nbsp; ') + '</p>' : '';
   }
 
@@ -1536,7 +1536,7 @@
   function vizWeatherHTML() {
     const days = DATA.days, ws = days.map(d => d.weather).filter(w => w && w.tmax != null);
     if (!ws.length) return '';
-    const hasLow = ws.some(w => w.tmin != null), hasWind = ws.some(w => w.wind != null), hasRain = ws.some(w => w.precip);
+    const hasLow = ws.some(w => w.tmin != null), hasWind = ws.some(w => w.wind != null), hasRain = ws.some(w => w.precip >= 0.1);
     const lo = Math.min(...ws.map(w => w.tmin != null ? w.tmin : w.tmax)) - 1, hi = Math.max(...ws.map(w => w.tmax));
     const span = (hi - lo) || 1;
     const cells = days.map(d => {
@@ -1547,12 +1547,12 @@
         ? '<div class="wx-range" style="top:' + (100 - top).toFixed(1) + '%;bottom:' + ((w.tmin - lo) / span * 100).toFixed(1) + '%"></div>'
         : '<div class="wx-fill" style="height:' + Math.max(6, top).toFixed(1) + '%"></div>';
       const extras =
-        (w.precip ? '<span class="wx-x">💧' + (imp() ? (w.precip / 25.4).toFixed(2) : w.precip) + '</span>' : '') +
+        (w.precip >= 0.1 ? '<span class="wx-x">💧' + (imp() ? (w.precip / 25.4).toFixed(2) : w.precip) + '</span>' : '') +
         (w.wind != null ? '<span class="wx-x">💨' + (imp() ? Math.round(w.wind * 0.621371) : Math.round(w.wind)) + '</span>' : '');
       const detail = dWeekday(d).slice(0, 3) + ' · ' + dDate(d) + ' · ' + (w.desc || '') +
         ' · H ' + tempFromC(w.tmax) + (w.tmin != null ? ' / L ' + tempFromC(w.tmin) : '') +
         (w.wind != null ? ' · 💨 ' + windFromKmh(w.wind) + (w.winddir != null ? ' ' + windDirName(w.winddir) : '') : '') +
-        (w.precip ? ' · 💧 ' + precipFromMm(w.precip) : '');
+        (w.precip >= 0.1 ? ' · 💧 ' + precipFromMm(w.precip) : '');
       return '<div class="wx-cell" title="' + escapeAttr(detail) + '">' +
         '<span class="wx-ic">' + (w.icon || '') + '</span>' +
         '<span class="wx-hi">' + tempFromC(w.tmax) + '</span>' +
