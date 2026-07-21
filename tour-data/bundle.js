@@ -34,6 +34,10 @@
   function elevUnit() { return imp() ? 'ft' : 'm'; }
   // temperature is stored in °C
   function tempFromC(c) { return Math.round(imp() ? c * 9 / 5 + 32 : c) + '°' + (imp() ? 'F' : 'C'); }
+  function windFromKmh(kmh) { return imp() ? Math.round(kmh * 0.621371) + ' mph' : Math.round(kmh) + ' km/h'; }
+  function precipFromMm(mm) { return imp() ? (mm / 25.4).toFixed(2) + ' in' : mm + ' mm'; }
+  const _WDIR = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  function windDirName(deg) { return _WDIR[Math.round((deg % 360) / 45) % 8]; }
   function toggleUnits() { unitSys = imp() ? 'metric' : 'imperial'; applyUnits(); }
   function unitToggleHTML(cls) {
     return '<button class="dcc-unit-toggle ' + (cls || '') + '" id="dcc-units-' + (cls || 'x') + '" role="switch" ' +
@@ -1527,26 +1531,41 @@
       '<div class="viz-h"><h4>Time of day</h4><span class="viz-sub">Busiest around <b>' + hl(peak) + 'm</b></span></div>' +
       '<div class="clk-bars">' + bars + '</div></div>';
   }
-  // ---- 4) weather ribbon — the daily high across the trip (data has no lows) ----
+  // ---- 4) weather ribbon — daily conditions across the trip. Shows high (and
+  //      low / precip / wind when those fields are present — see tools/fetch_weather.py) ----
   function vizWeatherHTML() {
     const days = DATA.days, ws = days.map(d => d.weather).filter(w => w && w.tmax != null);
     if (!ws.length) return '';
-    const lo = Math.min(...ws.map(w => w.tmax)) - 1, hi = Math.max(...ws.map(w => w.tmax));
+    const hasLow = ws.some(w => w.tmin != null), hasWind = ws.some(w => w.wind != null), hasRain = ws.some(w => w.precip);
+    const lo = Math.min(...ws.map(w => w.tmin != null ? w.tmin : w.tmax)) - 1, hi = Math.max(...ws.map(w => w.tmax));
     const span = (hi - lo) || 1;
     const cells = days.map(d => {
       const w = d.weather;
       if (!w || w.tmax == null) return '<div class="wx-cell wx-empty"><span class="wx-d">' + escapeHtml(dDate(d)) + '</span></div>';
-      const fill = Math.max(6, (w.tmax - lo) / span * 100);
-      return '<div class="wx-cell" title="' + escapeAttr(dDate(d) + ' · ' + (w.desc || '') + (w.precip ? ' · ' + (imp() ? (w.precip / 25.4).toFixed(2) + ' in' : w.precip + ' mm') + ' rain' : '')) + '">' +
+      const top = (w.tmax - lo) / span * 100;
+      const bar = w.tmin != null
+        ? '<div class="wx-range" style="top:' + (100 - top).toFixed(1) + '%;bottom:' + ((w.tmin - lo) / span * 100).toFixed(1) + '%"></div>'
+        : '<div class="wx-fill" style="height:' + Math.max(6, top).toFixed(1) + '%"></div>';
+      const extras =
+        (w.precip ? '<span class="wx-x">💧' + (imp() ? (w.precip / 25.4).toFixed(2) : w.precip) + '</span>' : '') +
+        (w.wind != null ? '<span class="wx-x">💨' + (imp() ? Math.round(w.wind * 0.621371) : Math.round(w.wind)) + '</span>' : '');
+      const detail = dWeekday(d).slice(0, 3) + ' · ' + dDate(d) + ' · ' + (w.desc || '') +
+        ' · H ' + tempFromC(w.tmax) + (w.tmin != null ? ' / L ' + tempFromC(w.tmin) : '') +
+        (w.wind != null ? ' · 💨 ' + windFromKmh(w.wind) + (w.winddir != null ? ' ' + windDirName(w.winddir) : '') : '') +
+        (w.precip ? ' · 💧 ' + precipFromMm(w.precip) : '');
+      return '<div class="wx-cell" title="' + escapeAttr(detail) + '">' +
         '<span class="wx-ic">' + (w.icon || '') + '</span>' +
         '<span class="wx-hi">' + tempFromC(w.tmax) + '</span>' +
-        '<div class="wx-track"><div class="wx-fill" style="height:' + fill.toFixed(1) + '%"></div></div>' +
-        (w.precip ? '<span class="wx-rain">💧</span>' : '<span class="wx-rain"></span>') +
+        (w.tmin != null ? '<span class="wx-lo">' + tempFromC(w.tmin) + '</span>' : '') +
+        '<div class="wx-track">' + bar + '</div>' +
+        (extras ? '<span class="wx-xs">' + extras + '</span>' : '') +
         '<span class="wx-d">' + escapeHtml(dDate(d)) + '</span></div>';
     }).join('');
+    const bits = ['daily high' + (hasLow ? ' / low' : '') + (imp() ? ' (°F)' : ' (°C)')];
+    if (hasRain) bits.push('💧 ' + (imp() ? 'in' : 'mm') + ' rain');
+    if (hasWind) bits.push('💨 ' + (imp() ? 'mph' : 'km/h') + ' wind');
     return '<div class="viz-card viz-weather">' +
-      '<div class="viz-h"><h4>Weather across the trip</h4><span class="viz-sub">daily high' +
-        (imp() ? ' (°F)' : ' (°C)') + ' · 💧 = rain</span></div>' +
+      '<div class="viz-h"><h4>Weather across the trip</h4><span class="viz-sub">' + bits.join(' · ') + '</span></div>' +
       '<div class="wx-ribbon">' + cells + '</div></div>';
   }
   // ---- 5) camera compass — which way the cameras pointed ----

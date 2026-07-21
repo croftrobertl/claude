@@ -961,12 +961,15 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 
 /* 4) weather ribbon */
 .wx-ribbon { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 3px; }
-.wx-cell { flex: 1 0 42px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.wx-cell { flex: 1 0 46px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
 .wx-ic { font-size: 1rem; line-height: 1.1; }
 .wx-hi { font-size: 0.68rem; font-weight: 700; color: var(--dcc-tour-text); font-variant-numeric: tabular-nums; }
-.wx-track { position: relative; width: 6px; height: 46px; background: var(--dcc-tour-border); border-radius: 3px; overflow: hidden; }
+.wx-lo { font-size: 0.62rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; margin-top: -1px; }
+.wx-track { position: relative; width: 6px; height: 42px; background: var(--dcc-tour-border); border-radius: 3px; overflow: hidden; }
 .wx-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 3px; background: linear-gradient(180deg, #e8804d, #f0c05a); }
-.wx-rain { font-size: 0.6rem; min-height: 0.9em; line-height: 1; }
+.wx-range { position: absolute; left: 0; right: 0; border-radius: 3px; background: linear-gradient(180deg, #e8804d, #6ea8c4); }
+.wx-xs { display: flex; flex-direction: column; align-items: center; gap: 0; line-height: 1.15; min-height: 0.9em; }
+.wx-x { font-size: 0.55rem; color: var(--dcc-tour-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wx-d { font-size: 0.55rem; color: var(--dcc-tour-muted); white-space: nowrap; }
 .wx-cell.wx-empty { opacity: 0.4; justify-content: flex-end; }
 
