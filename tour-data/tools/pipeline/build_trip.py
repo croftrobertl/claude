@@ -12,6 +12,19 @@ SP = PIPE
 
 items_path = f"{SP}/flat_items_named.json" if _os.path.exists(f"{SP}/flat_items_named.json") else f"{SP}/flat_items_labeled.json"
 items = json.load(open(items_path))
+# GoPro clock ran on UTC; convert each clip to the LOCAL time where it was
+# filmed (Croatia CEST +2, London BST +1, Orlando EDT -4). Fixes GoPro clips
+# that were ~2h behind and therefore mis-sorted/mis-grouped in the timeline.
+GOPRO_OFFSET_H = {"orl-mco": -4, "lgw": 1}   # everything else defaults to +2 (Croatia)
+for it in items:
+    if it.get("kind") == "clip" and it.get("datetime"):
+        off = GOPRO_OFFSET_H.get(it.get("chapter"), 2)
+        try:
+            d = dt.datetime.strptime(it["datetime"][:19], "%Y-%m-%dT%H:%M:%S") + dt.timedelta(hours=off)
+            it["datetime"] = d.strftime("%Y-%m-%dT%H:%M:%S")
+            it["date"] = d.strftime("%Y-%m-%d")
+        except Exception:
+            pass
 # per-item extras (who shot it + camera compass heading), keyed by media GUID
 ITEM_META = json.load(open(f"{SP}/item_meta.json")) if _os.path.exists(f"{SP}/item_meta.json") else {}
 trip = json.load(open(f"{ROOT}/trip.json"))["trip"]   # carry forward existing trip metadata
