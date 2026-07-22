@@ -775,6 +775,8 @@
       let img = null;
       if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time }); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
       else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
+      // GoPro clips (Drive): no local still, so preview the Drive-generated frame
+      else if (it.type === 'drive' && it.id) thumbs.push('<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" style="opacity:.85" onerror="this.remove()">');
     });
     side.hidden = false;
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
