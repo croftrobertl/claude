@@ -49,7 +49,7 @@
   function applyUnits() {
     refreshHeaderStats();
     const ovb = root.querySelector('.dcc-tour-overview .ov-body');
-    if (ovb) { ovb.innerHTML = overviewHTML(); bindClimbChart(root.querySelector('.dcc-tour-overview')); }
+    if (ovb) { ovb.innerHTML = overviewHTML(); bindClimbChart(root.querySelector('.dcc-tour-overview')); bindVizTimeline(root.querySelector('.dcc-tour-overview')); }
     const cur = curDay;
     if (root.querySelector('.dcc-tour-daychip.active')) {
       const ov = root.querySelector('.dcc-tour-overview');
@@ -191,6 +191,7 @@
     root.appendChild(overview); root.appendChild(statsviz); root.appendChild(body); root.appendChild(mapmode);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode; root._statsviz = statsviz;
     bindClimbChart(overview);
+    bindVizTimeline(overview);
     animateCounts(header);
     buildAppShell();
     enhanceAllHScroll();
@@ -479,8 +480,11 @@
   }
   const ALT_MAX = 412;  // Mount Srđ
   const ALT_STOPS = [[0, '#2b7a9b'], [0.5, '#6a9a5b'], [1, '#c9992e']];  // sea → hills → peak
+  // gamma < 1 stretches the low end so the stairs/hills/cliffs we actually climbed
+  // (mostly < 100 m) spread across the ramp instead of all reading as sea-level blue
+  const ALT_GAMMA = 0.42;
   function altColor(m) {
-    const t = Math.max(0, Math.min(1, (m || 0) / ALT_MAX));
+    const t = Math.pow(Math.max(0, Math.min(1, (m || 0) / ALT_MAX)), ALT_GAMMA);
     let a = ALT_STOPS[0], b = ALT_STOPS[ALT_STOPS.length - 1];
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
@@ -685,8 +689,10 @@
         seg.addEventListener('click', () => setPersonFilter(seg.dataset.person)));
     } else {  // alt
       el.className = 'dcc-tour-mm-legend mm-legend-alt';
-      el.innerHTML = showAll + '<span class="mm-altscale" style="background:linear-gradient(90deg,' +
-        ALT_STOPS[0][1] + ',' + ALT_STOPS[1][1] + ',' + ALT_STOPS[2][1] + ')"></span>' +
+      // sample altColor across elevation so the legend gradient matches the
+      // gamma-stretched marker colours (axis stays linear in elevation)
+      const grad = Array.from({ length: 9 }, (_, i) => { const f = i / 8; return altColor(f * ALT_MAX) + ' ' + (f * 100).toFixed(0) + '%'; }).join(',');
+      el.innerHTML = showAll + '<span class="mm-altscale" style="background:linear-gradient(90deg,' + grad + ')"></span>' +
         '<span class="mm-altlab">0 ' + elevUnit() + ' (sea)</span><span class="mm-altlab">~' + elevFromM(200) + '</span><span class="mm-altlab">' + elevFromM(ALT_MAX) + ' (Srđ)</span>';
     }
     el.querySelector('.mm-showall').addEventListener('click', mmShowAll);
@@ -821,7 +827,10 @@
     // the trail travelled so far, then the glowing playhead on top
     const trail = seq.slice(0, mmPlayIdx + 1).map(s => [s.lat, s.lng]);
     if (trail.length > 1) mmPlayLayer.addLayer(L.polyline(trail, { color: '#b68235', weight: 3, opacity: 0.75 }));
-    mmPlayLayer.addLayer(L.circleMarker([m.lat, m.lng], { radius: 10, color: '#7d5411', weight: 3, fillColor: '#f4da62', fillOpacity: 0.95, className: 'mm-playhead' }));
+    // highlight the spot now being shown: a pulsing halo ring under an enlarged
+    // glowing playhead, so the current place clearly stands out as it steps along
+    mmPlayLayer.addLayer(L.circleMarker([m.lat, m.lng], { radius: 20, stroke: false, fillColor: '#f4da62', fillOpacity: 0.28, className: 'mm-playhalo', interactive: false }));
+    mmPlayLayer.addLayer(L.circleMarker([m.lat, m.lng], { radius: 13, color: '#7d5411', weight: 3, fillColor: '#f4da62', fillOpacity: 0.98, className: 'mm-playhead' }));
     // label + moment card (the photo that pops up)
     // task 3: the verbose inline label overflowed on mobile — the moment card
     // below carries the same info (now incl. date + time), so keep the label empty
@@ -1226,6 +1235,11 @@
       if (imgs.length > bestN) { bestN = imgs.length; best = imgs; }
     });
     if (best && best.length) { const it = best[Math.floor(best.length / 2)]; return resolveUrl(it.src || it.full || it.poster); }
+    // fallback for a day with only GoPro clips (e.g. Sep 10) — use a clip's Drive frame
+    for (const p of (day.places || [])) {
+      const clip = p.items.find(it => it.type === 'drive' && it.id);
+      if (clip) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(clip.id) + '&sz=w400';
+    }
     return '';
   }
   // media stats for the active photographer (recomputed from the filtered items)
@@ -1342,7 +1356,9 @@
 
   // ---- #3 signature climbs + #4 trip staircase ----
   function overviewHTML() {
-    let html = '';
+    // the "adding up" running-total summary leads, above the climb chart (a more
+    // specific stat) and the rest of the Stats view
+    let html = vizTimelineHTML();
     const sc = DATA.signature_climbs || [];
     if (sc.length) {
       html += '<div class="dcc-tour-climbs"><span class="lab">Compare to</span>' +
@@ -1422,13 +1438,13 @@
   let vizCumData = null;   // cumulative-per-day arrays for the synchronized timeline
   function renderStatsViz() {
     const host = root._statsviz; if (!host) return;
+    // vizTimeline now leads the `overview` block (above the climb chart); the rest
+    // of the specific visualisations render here, below it.
     host.innerHTML =
-      vizTimelineHTML() +
       vizTravelHTML() +
       '<div class="viz-grid2">' + vizWhoHTML() + vizClockHTML() + '</div>' +
       vizWeatherHTML() +
       vizCompassHTML();
-    bindVizTimeline(host);
     enhanceHScroll(host.querySelector('.wx-ribbon'));
   }
   // ---- 1) synchronized cumulative timeline (the flagship) ----
@@ -1455,6 +1471,7 @@
       '<div class="tl-axis">' + axis + '</div></div>';
   }
   function bindVizTimeline(host) {
+    host = host || root;
     const sc = host.querySelector('#tl-scrub'); if (!sc || !vizCumData) return;
     const upd = () => updateTimelineReadout(+sc.value);
     sc.addEventListener('input', upd);
@@ -1676,7 +1693,7 @@
   function initMap() {
     if (map || !window.L || !root._mapdiv) return;
     if (root._mapdiv.offsetParent === null) return;   // hidden (mobile app shell) — skip until visible
-    map = L.map(root._mapdiv, { scrollWheelZoom: false });
+    map = L.map(root._mapdiv, { scrollWheelZoom: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap',
     }).addTo(map);

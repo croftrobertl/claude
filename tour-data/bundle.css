@@ -537,6 +537,8 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-mm-moment figcaption span { display: block; color: var(--dcc-tour-muted); font-size: 0.66rem; margin-top: 1px; font-variant-numeric: tabular-nums; }
 .mm-playhead { animation: dcc-mm-pulse 1.4s ease-in-out infinite; transform-origin: center; }
 @keyframes dcc-mm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+.mm-playhalo { animation: dcc-mm-halo 1.6s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes dcc-mm-halo { 0%,100% { opacity: 0.28; transform: scale(0.82); } 50% { opacity: 0.5; transform: scale(1.15); } }
 
 /* saved-spot ★ markers + their legend key */
 .mm-saved-pin { text-align: center; line-height: 16px; font-size: 15px; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 1px 1px rgba(0,0,0,.35); }
