@@ -3316,7 +3316,12 @@ final class Widget extends Widget_Base
                 $wizard    = ($sec['wizard_mode'] ?? '') === 'yes';
                 $procedure = ($sec['procedure_mode'] ?? '') === 'yes' && !$wizard;
                 $checklist = ($sec['checklist_mode'] ?? '') === 'yes' && !$wizard;
-                $show_toc  = count($items) >= 4 && !$procedure && !$wizard;
+                // v0.9.7.28: the in-popup TOC sidebar is disabled by host
+                // request — on the narrow popup it crowded the content and
+                // threw the section-title / item-title centering off. The
+                // print-only table of contents (render_print_toc) is separate
+                // and unaffected. Filterable so it can be re-enabled per-site.
+                $show_toc  = (bool) apply_filters('dccgg_show_detail_toc', false, $key, count($items));
                 $prev_key  = $idx > 0 ? trim((string) ($valid_sections[$idx - 1]['section_key'] ?? '')) : '';
                 $next_key  = $idx < $section_count - 1 ? trim((string) ($valid_sections[$idx + 1]['section_key'] ?? '')) : '';
                 $bg_url    = (string) ($sec['section_bg_image']['url'] ?? '');
@@ -3596,38 +3601,50 @@ final class Widget extends Widget_Base
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
         <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?><?php echo $checkable ? ' dccgg-item--checkable' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>"<?php if ($checkable) : ?> data-checkable="1" data-check-key="<?php echo esc_attr($section_key . ':' . $item_idx); ?>"<?php endif; ?>>
+            <?php
+            // v0.9.7.28: three-slot title — leading icon(s), centered text,
+            // trailing controls — each wrapped so the CSS grid (1fr auto 1fr
+            // in .dccgg-item-title) can left-align the emoji/icon while the
+            // title stays ABSOLUTELY centered regardless of icon width or how
+            // many trailing controls are present. Empty lead/tail spans still
+            // hold their 1fr columns, so the center never shifts.
+            ?>
             <h3 class="dccgg-item-title">
-                <?php if ($checkable) : ?>
-                    <button type="button" class="dccgg-item-check" aria-pressed="false" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Mark "%s" as done', 'dcc-guest-guide'), $title)); ?>">
-                        <span class="dccgg-item-check-box" aria-hidden="true">
-                            <i class="fas fa-check"></i>
+                <span class="dccgg-item-title-lead">
+                    <?php if ($checkable) : ?>
+                        <button type="button" class="dccgg-item-check" aria-pressed="false" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Mark "%s" as done', 'dcc-guest-guide'), $title)); ?>">
+                            <span class="dccgg-item-check-box" aria-hidden="true">
+                                <i class="fas fa-check"></i>
+                            </span>
+                        </button>
+                    <?php endif; ?>
+                    <?php if ($emoji !== '') : ?>
+                        <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
+                    <?php else :
+                        \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+                    endif; ?>
+                </span>
+                <span class="dccgg-item-title-text"><?php echo esc_html($title); ?></span>
+                <span class="dccgg-item-title-tail">
+                    <?php if ($badge !== '') : ?>
+                        <span class="dccgg-item-badge"><?php echo esc_html($badge); ?></span>
+                    <?php endif; ?>
+                    <?php if ($read_time !== '') : ?>
+                        <span class="dccgg-read-time" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: read time string */ __('Estimated read time: %s', 'dcc-guest-guide'), $read_time)); ?>">
+                            <i class="fas fa-clock" aria-hidden="true"></i> <?php echo esc_html($read_time); ?>
                         </span>
-                    </button>
-                <?php endif; ?>
-                <?php if ($emoji !== '') : ?>
-                    <span class="dccgg-emoji-icon" aria-hidden="true"><?php echo esc_html($emoji); ?></span>
-                <?php else :
-                    \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
-                endif; ?>
-                <span><?php echo esc_html($title); ?></span>
-                <?php if ($badge !== '') : ?>
-                    <span class="dccgg-item-badge"><?php echo esc_html($badge); ?></span>
-                <?php endif; ?>
-                <?php if ($read_time !== '') : ?>
-                    <span class="dccgg-read-time" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: read time string */ __('Estimated read time: %s', 'dcc-guest-guide'), $read_time)); ?>">
-                        <i class="fas fa-clock" aria-hidden="true"></i> <?php echo esc_html($read_time); ?>
-                    </span>
-                <?php endif; ?>
-                <?php if ($tts_supported_text !== '') : ?>
-                    <button type="button" class="dccgg-item-tts" aria-label="<?php echo esc_attr__('Read this item aloud', 'dcc-guest-guide'); ?>" hidden>
-                        <i class="fas fa-volume-up" aria-hidden="true"></i>
-                    </button>
-                <?php endif; ?>
-                <?php if (($strings['enable_problem_report'] ?? '') === 'yes' && ($strings['enable_per_item_report'] ?? '') === 'yes') : ?>
-                    <button type="button" class="dccgg-item-report" data-report-section="<?php echo esc_attr($section_key); ?>" data-report-item="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')); ?>">
-                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                    </button>
-                <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($tts_supported_text !== '') : ?>
+                        <button type="button" class="dccgg-item-tts" aria-label="<?php echo esc_attr__('Read this item aloud', 'dcc-guest-guide'); ?>" hidden>
+                            <i class="fas fa-volume-up" aria-hidden="true"></i>
+                        </button>
+                    <?php endif; ?>
+                    <?php if (($strings['enable_problem_report'] ?? '') === 'yes' && ($strings['enable_per_item_report'] ?? '') === 'yes') : ?>
+                        <button type="button" class="dccgg-item-report" data-report-section="<?php echo esc_attr($section_key); ?>" data-report-item="<?php echo esc_attr($title); ?>" aria-label="<?php echo esc_attr($strings['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')); ?>">
+                            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                        </button>
+                    <?php endif; ?>
+                </span>
             </h3>
 
             <div class="dccgg-item-content-wrap<?php echo $read_more ? ' dccgg-collapsible' : ''; ?>">

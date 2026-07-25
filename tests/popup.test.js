@@ -252,6 +252,72 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario E: item-title centering + more-button single row -------
+    // v0.9.7.28 requests. Renders one open detail with the real item-title
+    // markup (leading emoji + centered text + a trailing control) and a
+    // popup ⋯ menu whose "more button text" is two emoji.
+    {
+        console.log('\nE. Desktop / item-title centering + horizontal more-button');
+        const errors = [];
+        const item = `<article class="dccgg-item">
+            <h3 class="dccgg-item-title">
+                <span class="dccgg-item-title-lead"><span class="dccgg-emoji-icon">☕</span></span>
+                <span class="dccgg-item-title-text">Coffee</span>
+                <span class="dccgg-item-title-tail"><button class="dccgg-item-report" type="button" aria-label="Report">!</button></span>
+            </h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Use our coffee maker.</p></div></div>
+        </article>`;
+        const detail = `<div class="dccgg-detail is-shrunk" data-key="clubhouse">
+            <span class="dccgg-shrink-sentinel"></span>
+            <div class="dccgg-detail-header">
+                <div class="dccgg-detail-header-actions"><button class="dccgg-btn dccgg-back">Back</button></div>
+                <div class="dccgg-detail-header-titlebar">
+                    <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
+                    <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-icon">🏦</span><span class="dccgg-detail-title-text">Clubhouse</span></h2>
+                    <details class="dccgg-more dccgg-more--popup"><summary class="dccgg-more-summary--text"><span class="dccgg-more-summary-text">🧭🛎️</span></summary><div class="dccgg-more-popover"></div></details>
+                </div>
+            </div>
+            <div class="dccgg-detail-layout"><div class="dccgg-detail-items">${item.repeat(6)}</div></div>
+        </div>`;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head>
+            <body class="dccgg-detail-open"><div class="dccgg-root is-detail">
+            <div class="dccgg-stage is-modal-open" style="visibility:visible;opacity:1">${detail}</div>
+            </div></body></html>`;
+        const ctx = await browser.newContext({ viewport: DESKTOP });
+        const page = await ctx.newPage();
+        page.on('pageerror', (e) => errors.push(String(e)));
+        await page.setContent(html, { waitUntil: 'load' });
+
+        // (Req 1) Title text centered in the item row regardless of the emoji.
+        const t = await page.evaluate(() => {
+            const row = document.querySelector('.dccgg-item-title').getBoundingClientRect();
+            const text = document.querySelector('.dccgg-item-title-text').getBoundingClientRect();
+            const emoji = document.querySelector('.dccgg-emoji-icon').getBoundingClientRect();
+            return {
+                rowCenter: (row.left + row.right) / 2,
+                textCenter: (text.left + text.right) / 2,
+                emojiRight: emoji.right,
+                textLeft: text.left,
+                rowLeft: row.left,
+                emojiLeft: emoji.left,
+            };
+        });
+        check('item title text absolutely centered', Math.abs(t.textCenter - t.rowCenter) <= 8, `Δ=${(t.textCenter - t.rowCenter).toFixed(1)}px`);
+        check('emoji left-aligned (left of title)', t.emojiRight <= t.textLeft && (t.emojiLeft - t.rowLeft) < 24, `emojiLeft-rowLeft=${(t.emojiLeft - t.rowLeft).toFixed(1)}`);
+
+        // (Req 2) The two-emoji ⋯ button stays one row (not the 44×44 circle
+        // that wrapped it vertically) and is wider than it is tall.
+        const m = await page.evaluate(() => {
+            const s = document.querySelector('.dccgg-more-summary--text').getBoundingClientRect();
+            const line = parseFloat(getComputedStyle(document.querySelector('.dccgg-more-summary--text')).lineHeight) || 20;
+            return { w: s.width, h: s.height, line };
+        });
+        check('more-button on a single row (not stacked)', m.h < m.line * 1.8, `h=${m.h.toFixed(1)} line=${m.line.toFixed(1)}`);
+        check('more-button expanded horizontally (w>h)', m.w > m.h, `w=${m.w.toFixed(1)} h=${m.h.toFixed(1)}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

@@ -70,6 +70,31 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.28 =
+
+**Detail-popup alignment polish (two host requests).**
+
+1. **Guide-item titles are now absolutely centered, emoji/icon left-
+   aligned.** Each item title is a 3-column grid (equal side columns
+   flanking an auto-width center), so the emoji sits at the left edge and
+   the title stays dead-centered no matter the icon width or how many
+   trailing controls (speaker, badge, report) are present.
+
+2. **In-popup Guide-Items sidebar (TOC) removed** — on the narrow popup
+   it crowded the content and skewed the title centering. (The print
+   table of contents is separate and unchanged; re-enable per-site with
+   the `dccgg_show_detail_toc` filter.) With it gone, the section title
+   and the item titles line up centered.
+
+3. **"More button text" now expands horizontally.** The ⋯ menu button was
+   locked to a fixed 44×44 circle, which wrapped multi-glyph button text
+   (e.g. two emoji) onto two stacked rows. A text summary now sizes to its
+   content and stays on one row.
+
+Regression suite (`tests/popup.test.js`) extended with assertions for
+item-title centering and the single-row more-button; 26 assertions, all
+passing.
+
 = 0.9.7.27 =
 
 **Fable 5 hotspot audit — automated regression tests + two fixes.**

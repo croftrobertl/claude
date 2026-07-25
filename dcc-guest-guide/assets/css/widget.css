@@ -97,7 +97,7 @@
     border-color: var(--dccgg-primary);
     color: #fff;
 }
-.dccgg-item--checkable[data-checked="1"] .dccgg-item-title > span:not(.dccgg-emoji-icon) {
+.dccgg-item--checkable[data-checked="1"] .dccgg-item-title-text {
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--dccgg-text, #111) 40%, transparent);
     opacity: 0.65;
@@ -1230,16 +1230,40 @@ body.dccgg-detail-open {
     padding-top: 24px;
     border-top: 1px solid var(--dccgg-tile-border);
 }
+/* v0.9.7.28: three-column grid so the title text is ABSOLUTELY centered in
+   the row while the emoji/icon stays left-aligned. Equal 1fr side columns
+   flank the auto-width center column, so neither the leading icon nor the
+   trailing controls (speaker, badge, report…) can pull the title off-center.
+   The leading and trailing groups are wrapped (see Widget::render()) so each
+   stays a single horizontal row inside its column. */
 .dccgg-item-title {
     margin: 0 0 8px;
     font-size: 1.15em;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 10px;
     color: var(--dccgg-text);
 }
-.dccgg-item-title > span:not(.dccgg-item-badge) {
-    flex: 1 1 auto;
+.dccgg-item-title-lead {
+    grid-column: 1;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.dccgg-item-title-text {
+    grid-column: 2;
+    min-width: 0;
+    text-align: center;
+}
+.dccgg-item-title-tail {
+    grid-column: 3;
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
 }
 .dccgg-item-badge {
@@ -3444,6 +3468,19 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-detail-header-titlebar .dccgg-more         { justify-self: end; }
 .dccgg-detail-titlebar-spacer                     { display: block; min-width: 1px; }
 
+/* v0.9.7.28: the base `.dccgg-more > summary` (specificity 0,1,1) forces a
+   fixed 44×44 circle, which squeezed multi-glyph "more button text" (e.g. two
+   emoji) onto two stacked lines. The combined selector below (0,2,1) outranks
+   it so a text summary sizes to its content and stays on one row. */
+.dccgg-more > summary.dccgg-more-summary--text {
+    width: auto;
+    height: auto;
+    min-width: 0;
+    white-space: nowrap;
+    flex-direction: row;
+    border-radius: 6px;
+}
+.dccgg-more-summary-text { white-space: nowrap; }
 .dccgg-more-summary--text {
     padding: 6px 12px;
     border-radius: 6px;
