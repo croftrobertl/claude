@@ -283,9 +283,9 @@
     const sres = sheet.querySelector('#dcc-sheet-results');
     const sdays = sheet.querySelector('.sheet-days');
     ssearch.addEventListener('input', () => {
-      const q = ssearch.value.trim().toLowerCase();
+      const q = ssearch.value.trim();
       if (!q) { sres.hidden = true; sres.innerHTML = ''; sdays.style.display = ''; return; }
-      const hits = placeIndex().filter(x => x.key.includes(q)).slice(0, 20);
+      const hits = searchPlaces(q, 20);
       sdays.style.display = 'none'; sres.hidden = false;
       sres.innerHTML = hits.length ? hits.map(h =>
         '<button class="sheet-result" data-di="' + h.di + '" data-pi="' + h.pi + '">' +
@@ -537,6 +537,8 @@
         '<span class="facet-lab">' + label + '</span></label>';
     w.innerHTML =
       '<div class="dcc-tour-mm-bar">' +
+        '<div class="dcc-tour-ctl-search dcc-tour-mm-search"><input type="search" id="mm-search" placeholder="Find a place — e.g. srd, beach, stradun…" autocomplete="off">' +
+          '<div class="dcc-tour-results" id="mm-search-results" hidden></div></div>' +
         '<span class="dcc-tour-mm-colorby" role="group" aria-label="Color markers by">' +
           '<span class="mm-cb-lab">Color by:</span>' +
           '<button class="mm-cb active" data-mode="day" aria-pressed="true">Day</button>' +
@@ -638,6 +640,13 @@
     };
     lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
     syncRangeBounds();
+    // Find-a-place search: fuzzy/diacritic pick pans the map + opens that place
+    attachPlaceSearch(m.querySelector('#mm-search'), m.querySelector('#mm-search-results'), h => {
+      if (h.di < mmRange[0] || h.di > mmRange[1]) { lo.value = 0; hi.value = DATA.day_count - 1; onRange(); }
+      else if (mmIsolateDay != null && mmIsolateDay !== h.di) { mmIsolateDay = null; renderMapLegend(); renderMapMode(); }
+      if (h.lat != null) mmMap.setView([h.lat, h.lng], Math.max(mmMap.getZoom() || 13, 15), { animate: true });
+      openMapSidebar(h.di, h.pi);
+    });
     m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
     // Color by: Day / Who / Altitude
     m.querySelectorAll('.mm-cb').forEach(b => b.addEventListener('click', () => {
@@ -911,7 +920,7 @@
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
   let galItems = null, galCur = null, galRendered = 0, galEl = null;
   let galPlaceOpts = [], galCityOpts = [];   // [segment, count] facet options
-  const galFilter = { kinds: new Set(), cities: new Set(), places: new Set() };   // kinds empty = all
+  const galFilter = { kinds: new Set(), cities: new Set(), places: new Set(), exactPlace: null };   // kinds empty = all; exactPlace = full name from the Find-a-place search
   const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // direction folded into the Sort menu
   // Sort menu: [key, dir|null, label] — direction is baked in so there's no separate ↑/↓ button
   const GAL_SORTS = [
@@ -1009,6 +1018,9 @@
 
       const g = el('section', 'dcc-tour-gallery'); galEl = g;
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
+        '<div class="dcc-tour-ctl-search dcc-tour-galsearch"><input type="search" id="dcc-galsearch" placeholder="Find a place — e.g. srd, beach, stradun…" autocomplete="off">' +
+          '<div class="dcc-tour-results" id="dcc-galresults" hidden></div>' +
+          '<button type="button" class="dcc-tour-galsearch-clear" id="dcc-galsearch-clear" hidden aria-label="Clear place filter">&times;</button></div>' +
         facetHTML('type', 'Type', typeOpts, { search: false }) +
         facetHTML('person', 'Photographer', personOpts, { search: false, optClass: 'dcc-personopt', badgeId: 'dcc-person-badge' }) +
         '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
@@ -1040,9 +1052,9 @@
         });
         panel.addEventListener('click', e => e.stopPropagation());
         if (search) search.addEventListener('input', e => {
-          const q = e.target.value.trim().toLowerCase();
+          const q = foldStr(e.target.value.trim());
           fac.querySelectorAll('.facet-opt').forEach(o =>
-            o.style.display = o.querySelector('.facet-lab').textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none');
+            o.style.display = foldStr(o.querySelector('.facet-lab').textContent).indexOf(q) >= 0 ? '' : 'none');
         });
         fac.querySelector('.facet-list').addEventListener('change', e => {
           if (e.target.type !== 'checkbox') return;
@@ -1079,10 +1091,17 @@
       if ('IntersectionObserver' in window)
         new IntersectionObserver(en => { if (en[0].isIntersecting) renderGalleryChunk(); })
           .observe(g.querySelector('#dcc-galmore'));
+      // Find-a-place search: fuzzy/diacritic pick filters the grid to that exact place
+      const gsearch = g.querySelector('#dcc-galsearch'), gres = g.querySelector('#dcc-galresults'), gclear = g.querySelector('#dcc-galsearch-clear');
+      const clearGalPlace = () => { galFilter.exactPlace = null; gclear.hidden = true; gsearch.value = ''; renderGallery(); };
+      attachPlaceSearch(gsearch, gres, h => { galFilter.exactPlace = h.name; gsearch.value = h.name; gclear.hidden = false; renderGallery(); }, { clearOnPick: false });
+      gsearch.addEventListener('input', () => { if (galFilter.exactPlace && gsearch.value !== galFilter.exactPlace) { galFilter.exactPlace = null; gclear.hidden = true; renderGallery(); } });
+      gclear.addEventListener('click', clearGalPlace);
     }
     renderGallery();
   }
   function itemMatchesFacets(x) {
+    if (galFilter.exactPlace && x.it.place !== galFilter.exactPlace) return false;
     if (galFilter.cities.size && !x.segs.some(s => galFilter.cities.has(s))) return false;
     if (galFilter.places.size && !x.segs.some(s => galFilter.places.has(s))) return false;
     return true;
@@ -1151,9 +1170,112 @@
     if (!PLACE_INDEX) {
       PLACE_INDEX = [];
       DATA.days.forEach((d, di) => d.places.forEach((p, pi) =>
-        PLACE_INDEX.push({ di, pi, name: p.name, short: d.short, count: p.count, key: p.name.toLowerCase() })));
+        PLACE_INDEX.push({ di, pi, name: p.name, short: d.short, count: p.count,
+          key: p.name.toLowerCase(), blob: searchBlob(p.name), lat: p.lat, lng: p.lng })));
     }
     return PLACE_INDEX;
+  }
+
+  // ---- fuzzy, diacritic-insensitive, "semantic" place search (shared by all tabs) ----
+  // Serbo-Croatian names are full of diacritics US keyboards can't type and are hard
+  // to spell, so match on a folded (accent-stripped) form, tolerate typos, and expand
+  // English<->Croatian geographic synonyms so "beach"/"old town"/"port" find the place.
+  function foldStr(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // strip combining accents (č,š,ž,ć…)
+      .replace(/đ/g, 'd').replace(/Đ/g, 'd')              // đ has no NFD decomposition
+      .toLowerCase().trim();
+  }
+  const SYN_GROUPS = [
+    ['beach', 'plaza', 'plaz'], ['old town', 'oldtown', 'stari grad', 'old city'],
+    ['port', 'harbor', 'harbour', 'luka', 'dock'], ['island', 'isle', 'otok'],
+    ['reef', 'greben'], ['gate', 'vrata'], ['church', 'crkva'], ['cathedral', 'katedrala'],
+    ['monastery', 'samostan'], ['fort', 'fortress', 'tvrdava', 'utvrda', 'citadel'],
+    ['tower', 'kula'], ['square', 'trg'], ['bridge', 'most'], ['bay', 'cove', 'uvala', 'zaljev'],
+    ['hill', 'brdo'], ['mountain', 'mount', 'gora'], ['cave', 'grotto', 'spilja'],
+    ['restaurant', 'konoba', 'tavern', 'restoran'], ['channel', 'kanal'], ['palace', 'palaca'],
+    ['garden', 'vrt'], ['walls', 'zidine'], ['lighthouse', 'svjetionik'], ['spring', 'izvor'],
+  ];
+  function searchBlob(name) {
+    const b = foldStr(name).replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();   // punctuation → spaces so tokens are clean
+    const extra = [];
+    for (const grp of SYN_GROUPS) if (grp.some(t => b.includes(foldStr(t)))) extra.push(...grp);
+    return (b + ' ' + extra.map(foldStr).join(' ')).trim();
+  }
+  function lev(a, b) {   // classic Levenshtein for typo tolerance on short tokens
+    const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
+    for (let i = 1; i <= m; i++) {
+      cur[0] = i;
+      for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c); }
+      const t = prev; prev = cur; cur = t;
+    }
+    return prev[n];
+  }
+  function isSubseq(hay, needle) { let i = 0; for (let j = 0; j < hay.length && i < needle.length; j++) if (hay[j] === needle[i]) i++; return i === needle.length; }
+  function scoreTok(blob, nameF, q) {
+    if (nameF.includes(q)) { let s = 200 - (nameF.length - q.length); if (nameF.startsWith(q)) s += 40; if (new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nameF)) s += 25; return s; }
+    if (blob.includes(q)) return 120 - (blob.length - q.length) * 0.05;
+    let best = -1;
+    for (const t of blob.split(/\s+/)) {
+      if (!t) continue;
+      if (t.startsWith(q)) { best = Math.max(best, 95 - (t.length - q.length)); continue; }
+      if (q.length >= 3) { const d = lev(t, q); if (d <= Math.max(1, Math.floor(q.length / 4))) best = Math.max(best, 72 - d * 15); }
+    }
+    if (best >= 0) return best;
+    if (q.length >= 3 && isSubseq(nameF, q)) return 40;
+    return -1;
+  }
+  function scorePlace(blob, name, q) {
+    const nameF = foldStr(name);
+    const words = q.split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return scoreTok(blob, nameF, q);
+    // multi-word: reward a full-phrase hit, else every word must match somewhere
+    if (nameF.includes(q)) return 240 - (nameF.length - q.length);
+    if (blob.includes(q)) return 150 - (blob.length - q.length) * 0.05;
+    let sum = 0; for (const w of words) { const s = scoreTok(blob, nameF, w); if (s <= 0) return -1; sum += s; }
+    return sum / words.length + 20;
+  }
+  function searchPlaces(query, limit) {
+    const q = foldStr(query); if (!q) return [];
+    const scored = [];
+    for (const p of placeIndex()) { const s = scorePlace(p.blob, p.name, q); if (s > 0) scored.push({ p, s }); }
+    scored.sort((a, b) => b.s - a.s || a.p.name.length - b.p.name.length || a.p.di - b.p.di);
+    return scored.slice(0, limit || 10).map(x => x.p);
+  }
+  // wire a text input + results panel into a predictive dropdown; onPick(hit) does the tab's action
+  function attachPlaceSearch(inp, res, onPick, opts) {
+    opts = opts || {};
+    let hits = [];
+    const render = () => {
+      const q = inp.value.trim();
+      if (!q) { res.hidden = true; res.innerHTML = ''; hits = []; return; }
+      hits = searchPlaces(q, 10);
+      res.hidden = false;
+      res.innerHTML = hits.length
+        ? hits.map((h, i) => '<button type="button" class="dcc-tour-result" data-i="' + i + '">' +
+            escapeHtml(h.name) + ' <span>' + escapeHtml(h.short) + ' · ' + h.count + '</span></button>').join('')
+        : '<div class="dcc-tour-noresult">No match — try fewer letters</div>';
+    };
+    inp.addEventListener('input', render);
+    inp.addEventListener('focus', () => { if (inp.value.trim()) render(); });
+    inp.addEventListener('keydown', e => {
+      const btns = [...res.querySelectorAll('.dcc-tour-result')]; if (!btns.length) return;
+      let ci = btns.findIndex(b => b.classList.contains('active'));
+      if (e.key === 'ArrowDown') { e.preventDefault(); ci = Math.min(btns.length - 1, ci + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); ci = Math.max(0, ci < 0 ? 0 : ci - 1); }
+      else if (e.key === 'Enter') { e.preventDefault(); (btns[ci] || btns[0]).click(); return; }
+      else if (e.key === 'Escape') { res.hidden = true; return; }
+      else return;
+      btns.forEach(b => b.classList.remove('active')); if (btns[ci]) { btns[ci].classList.add('active'); btns[ci].scrollIntoView({ block: 'nearest' }); }
+    });
+    res.addEventListener('click', e => {
+      const b = e.target.closest('.dcc-tour-result'); if (!b) return;
+      const h = hits[+b.dataset.i]; if (!h) return;
+      res.hidden = true; if (opts.clearOnPick !== false) inp.value = '';
+      onPick(h);
+    });
+    document.addEventListener('click', e => { if (!res.contains(e.target) && e.target !== inp) res.hidden = true; });
   }
   function jumpToPlace(di, pi) {
     setView('story');
@@ -1192,25 +1314,10 @@
       const idx = DATA.days.findIndex(d => d.date === e.target.value);
       if (idx >= 0) { setView('story'); selectDay(idx); }
     });
-    // place search across all days
-    const idx = placeIndex();
+    // fuzzy, diacritic-insensitive place search across all days
     const inp = wrap.querySelector('#dcc-placesearch');
     const res = wrap.querySelector('#dcc-results');
-    inp.addEventListener('input', () => {
-      const q = inp.value.trim().toLowerCase();
-      if (!q) { res.hidden = true; res.innerHTML = ''; return; }
-      const hits = idx.filter(x => x.key.includes(q)).slice(0, 12);
-      res.hidden = !hits.length;
-      res.innerHTML = hits.map(h =>
-        '<button class="dcc-tour-result" data-di="' + h.di + '" data-pi="' + h.pi + '">' +
-        escapeHtml(h.name) + ' <span>' + escapeHtml(h.short) + ' · ' + h.count + '</span></button>').join('');
-    });
-    res.addEventListener('click', e => {
-      const b = e.target.closest('.dcc-tour-result'); if (!b) return;
-      res.hidden = true; inp.value = '';
-      jumpToPlace(+b.dataset.di, +b.dataset.pi);
-    });
-    document.addEventListener('click', e => { if (!wrap.contains(e.target)) res.hidden = true; });
+    attachPlaceSearch(inp, res, h => jumpToPlace(h.di, h.pi));
     return wrap;
   }
   function fmtDur(s) {

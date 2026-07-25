@@ -376,6 +376,15 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-result:last-child { border-bottom: 0; }
 .dcc-tour-result:hover { background: var(--dcc-tour-accent-tint); }
 .dcc-tour-result span { color: var(--dcc-tour-muted); font-size: 0.78rem; white-space: nowrap; }
+.dcc-tour-result.active { background: var(--dcc-tour-accent-tint); }
+.dcc-tour-noresult { padding: 10px 13px; color: var(--dcc-tour-muted); font-size: 0.84rem; }
+/* Find-a-place search in the Photos + Map bars: results anchor to the input box */
+.dcc-tour-galsearch, .dcc-tour-mm-search { position: relative; flex: 1 1 210px; min-width: 170px; }
+.dcc-tour-galsearch input, .dcc-tour-mm-search input { width: 100%; }
+.dcc-tour-galsearch .dcc-tour-results, .dcc-tour-mm-search .dcc-tour-results { left: 0; right: 0; }
+.dcc-tour-mm-search .dcc-tour-results { z-index: 1200; }   /* clear Leaflet panes/controls */
+.dcc-tour-galsearch-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; font-size: 1.15rem; line-height: 1; color: var(--dcc-tour-muted); cursor: pointer; padding: 2px 6px; }
+.dcc-tour-galsearch-clear:hover { color: var(--dcc-tour-text); }
 
 /* weather strip */
 .dcc-tour-weather { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--dcc-tour-muted); }
