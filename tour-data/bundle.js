@@ -550,6 +550,7 @@
           '<div class="facet-panel" hidden><div class="facet-list">' +
             layerOpt('mm-path', 'Path', false) +
             layerOpt('mm-facing', 'Facing', true) +
+            layerOpt('mm-labels', 'Place labels', true) +
             layerOpt('mm-heat', 'Heatmap', false) +
             layerOpt('mm-sat', 'Satellite', true) +
             layerOpt('mm-track', 'GPS track', true, 'mm-track-opt') +
@@ -580,7 +581,7 @@
         '<aside class="dcc-tour-mm-side" id="dcc-mm-side" hidden></aside></div>';
     return w;
   }
-  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmInit = false;
+  let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
   let mmRange = [0, 0];
   let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
   function toggleMapFullscreen() {
@@ -603,12 +604,13 @@
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18 }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 18 }),
     ]).addTo(mmMap);
+    mmLabelLayer = L.layerGroup().addTo(mmMap);   // curated place labels (below markers)
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
     // task 6: hide the facing arrows when zoomed out (they clutter the whole-trip view)
     const FACE_MIN_ZOOM = 13;
     const syncFaceZoom = () => mmMap.getContainer().classList.toggle('mm-lowzoom', mmMap.getZoom() < FACE_MIN_ZOOM);
-    mmMap.on('zoomend', syncFaceZoom); syncFaceZoom();
+    mmMap.on('zoomend', () => { syncFaceZoom(); renderMapLabels(); }); syncFaceZoom();
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
@@ -648,6 +650,7 @@
       openMapSidebar(h.di, h.pi);
     });
     m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
+    m.querySelector('#mm-labels').addEventListener('change', renderMapLabels);
     // Color by: Day / Who / Altitude
     m.querySelectorAll('.mm-cb').forEach(b => b.addEventListener('click', () => {
       mmColorMode = b.dataset.mode;
@@ -727,8 +730,54 @@
     for (let i = a; i <= b; i++) DATA.days[i].places.forEach(p => { if (p.lat != null) pts.push([p.lat, p.lng]); });
     if (pts.length) mmMap.fitBounds(L.latLngBounds(pts).pad(0.15), { animate: true });
   }
+  // curated place labels: fill the gaps Esri satellite leaves — bodies of water,
+  // town neighbourhoods, islands, channels — plus English names for the old town,
+  // ports and airport (we can't rewrite Esri's baked-in tile labels, only add ours).
+  // Area anchors are the centroid of the places we visited there; a few features we
+  // only passed through are hand-placed (approx.). Bigger features show first; the
+  // finer ones fade in as you zoom. Toggle via the Layers "Place labels" checkbox.
+  let MM_LABELS = null;
+  function mapLabelFeatures() {
+    if (MM_LABELS) return MM_LABELS;
+    const pts = [];
+    DATA.days.forEach(d => d.places.forEach(p => { if (p.lat != null) pts.push({ f: foldStr(p.name), lat: p.lat, lng: p.lng }); }));
+    const centroid = tok => { const f = foldStr(tok), m = pts.filter(p => p.f.includes(f)); return m.length ? [m.reduce((s, p) => s + p.lat, 0) / m.length, m.reduce((s, p) => s + p.lng, 0) / m.length] : null; };
+    const derived = [
+      ['Old City (Stari Grad), Dubrovnik', 'Old City · Stari Grad', 'area', 12],
+      ['Lapad', 'Lapad', 'area', 12], ['Gruž', 'Gruž', 'area', 13], ['Pile', 'Pile', 'area', 13],
+      ['Ploče', 'Ploče', 'area', 13], ['Montovjerna', 'Montovjerna', 'area', 14],
+      ['Cavtat', 'Cavtat', 'town', 11],
+      ['Lokrum (Otok Lokrum)', 'Lokrum', 'island', 12], ['Šipan', 'Šipan', 'island', 11],
+      ['Koločep', 'Koločep · Kalamota', 'island', 12], ['Lopud', 'Lopud', 'island', 12],
+      ['Pile Bay', 'Pile Bay', 'water', 14], ['Old City Port', 'Old City Port', 'water', 14],
+      ['Lokrum Channel', 'Lokrum Channel', 'water', 13], ['Tiha Bay', 'Tiha Bay', 'water', 13],
+      ['Mount Srđ', 'Mount Srđ', 'peak', 12],
+    ];
+    const feats = [];
+    for (const [tok, label, cls, minZoom] of derived) { const c = centroid(tok); if (c) feats.push({ lat: c[0], lng: c[1], label, cls, minZoom }); }
+    for (const [lat, lng, label, cls, minZoom] of [
+      [42.6625, 18.0610, 'Babin Kuk', 'area', 13],
+      [42.6560, 18.0470, 'Grebeni Reefs', 'water', 13],
+      [42.5614, 18.2682, 'Dubrovnik Airport', 'poi', 11],
+    ]) feats.push({ lat, lng, label, cls, minZoom });
+    MM_LABELS = feats;
+    return feats;
+  }
+  function renderMapLabels() {
+    if (!mmLabelLayer) return;
+    mmLabelLayer.clearLayers();
+    const cb = root._mapmode.querySelector('#mm-labels');
+    if (cb && !cb.checked) return;
+    const z = mmMap.getZoom();
+    mapLabelFeatures().forEach(f => {
+      if (z < f.minZoom) return;
+      const icon = L.divIcon({ className: 'mm-label mm-label-' + f.cls, html: '<span>' + escapeHtml(f.label) + '</span>' });
+      mmLabelLayer.addLayer(L.marker([f.lat, f.lng], { icon, interactive: false, keyboard: false }));
+    });
+  }
   function renderMapMode(fit) {
     if (!mmMap) return;
+    renderMapLabels();
     mmMarkers.clearLayers(); mmPathLayer.clearLayers();
     const showPath = root._mapmode.querySelector('#mm-path').checked;
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
