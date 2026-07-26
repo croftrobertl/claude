@@ -2160,9 +2160,11 @@
     if (cell.dataset.vsrc) {
       const v = document.createElement('video');
       v.src = cell.dataset.vsrc; if (cell.dataset.poster) v.poster = cell.dataset.poster;
-      v.controls = true; v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', '');
+      v.controls = true; v.playsInline = true; v.setAttribute('playsinline', '');
+      v.setAttribute('controlslist', 'nodownload noplaybackrate'); v.disablePictureInPicture = true;
       v.className = 'dcc-tour-vplayer';
       stage.appendChild(v);
+      v.play().catch(() => {});   // start immediately (within the tap gesture) so it doesn't sit paused/dark
     } else if (cell.dataset.clip) {
       const f = document.createElement('iframe');
       f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(cell.dataset.clip) + '/preview';
