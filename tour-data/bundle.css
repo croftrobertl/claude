@@ -374,7 +374,7 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 /* date + place search controls */
 .dcc-tour-controls { position: relative; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 0.6rem 1.5rem 0.2rem; }
 .dcc-tour-ctl { display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dcc-tour-muted); }
-.dcc-tour-ctl input { font: inherit; font-size: 0.9rem; text-transform: none; letter-spacing: normal; padding: 7px 10px; border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
+.dcc-tour-ctl input { font: inherit; font-size: 16px; text-transform: none; letter-spacing: normal; padding: 7px 10px; border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
 .dcc-tour-ctl input:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
 .dcc-tour-ctl-search { flex: 1; min-width: 200px; }
 .dcc-tour-ctl-search input { width: 100%; }
@@ -385,13 +385,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-result span { color: var(--dcc-tour-muted); font-size: 0.78rem; white-space: nowrap; }
 .dcc-tour-result.active { background: var(--dcc-tour-accent-tint); }
 .dcc-tour-noresult { padding: 10px 13px; color: var(--dcc-tour-muted); font-size: 0.84rem; }
-/* Find-a-place search in the Photos + Map bars: results anchor to the input box */
-.dcc-tour-galsearch, .dcc-tour-mm-search { position: relative; flex: 1 1 210px; min-width: 170px; }
-.dcc-tour-galsearch input, .dcc-tour-mm-search input { width: 100%; }
-.dcc-tour-galsearch .dcc-tour-results, .dcc-tour-mm-search .dcc-tour-results { left: 0; right: 0; }
-.dcc-tour-mm-search .dcc-tour-results { z-index: 1200; }   /* clear Leaflet panes/controls */
-.dcc-tour-galsearch-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; font-size: 1.15rem; line-height: 1; color: var(--dcc-tour-muted); cursor: pointer; padding: 2px 6px; }
-.dcc-tour-galsearch-clear:hover { color: var(--dcc-tour-text); }
 
 /* weather strip */
 .dcc-tour-weather { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--dcc-tour-muted); }
@@ -867,7 +860,7 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .facet-panel { position: absolute; z-index: 40; top: calc(100% + 5px); left: 0; width: min(320px, 88vw);
   background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); box-shadow: var(--dcc-tour-shadow); padding: 8px; }
 .facet-panel[hidden] { display: none; }
-.facet-search { width: 100%; box-sizing: border-box; font: inherit; font-size: 0.85rem; padding: 7px 10px; margin-bottom: 6px;
+.facet-search { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 7px 10px; margin-bottom: 6px;
   border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-bg); color: var(--dcc-tour-text); }
 .facet-search:focus { outline: 2px solid var(--dcc-tour-primary); outline-offset: -1px; }
 .facet-list { max-height: 264px; overflow-y: auto; }

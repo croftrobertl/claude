@@ -540,8 +540,6 @@
         '<span class="facet-lab">' + label + '</span></label>';
     w.innerHTML =
       '<div class="dcc-tour-mm-bar">' +
-        '<div class="dcc-tour-ctl-search dcc-tour-mm-search"><input type="search" id="mm-search" placeholder="Find a place — e.g. srd, beach, stradun…" autocomplete="off">' +
-          '<div class="dcc-tour-results" id="mm-search-results" hidden></div></div>' +
         '<span class="dcc-tour-mm-colorby" role="group" aria-label="Color markers by">' +
           '<span class="mm-cb-lab">Color by:</span>' +
           '<button class="mm-cb active" data-mode="day" aria-pressed="true">Day</button>' +
@@ -645,13 +643,6 @@
     };
     lo.addEventListener('change', onRange); hi.addEventListener('change', onRange);
     syncRangeBounds();
-    // Find-a-place search: fuzzy/diacritic pick pans the map + opens that place
-    attachPlaceSearch(m.querySelector('#mm-search'), m.querySelector('#mm-search-results'), h => {
-      if (h.di < mmRange[0] || h.di > mmRange[1]) { lo.value = 0; hi.value = DATA.day_count - 1; onRange(); }
-      else if (mmIsolateDay != null && mmIsolateDay !== h.di) { mmIsolateDay = null; renderMapLegend(); renderMapMode(); }
-      if (h.lat != null) mmMap.setView([h.lat, h.lng], Math.max(mmMap.getZoom() || 13, 15), { animate: true });
-      openMapSidebar(h.di, h.pi);
-    });
     m.querySelector('#mm-facing').addEventListener('change', renderMapMode);
     m.querySelector('#mm-labels').addEventListener('change', renderMapLabels);
     // Color by: Day / Who / Altitude
@@ -973,7 +964,7 @@
   // ---- Gallery ("Photos") view: every item in one filterable, chunk-rendered grid ----
   let galItems = null, galCur = null, galRendered = 0, galEl = null;
   let galPlaceOpts = [], galCityOpts = [];   // [segment, count] facet options
-  const galFilter = { kinds: new Set(), cities: new Set(), places: new Set(), exactPlace: null };   // kinds empty = all; exactPlace = full name from the Find-a-place search
+  const galFilter = { kinds: new Set(), cities: new Set(), places: new Set() };   // kinds empty = all
   const galSort = { key: 'time', dir: { time: 1, alt: -1 } };   // direction folded into the Sort menu
   // Sort menu: [key, dir|null, label] — direction is baked in so there's no separate ↑/↓ button
   const GAL_SORTS = [
@@ -1071,9 +1062,6 @@
 
       const g = el('section', 'dcc-tour-gallery'); galEl = g;
       g.innerHTML = '<div class="dcc-tour-gal-bar">' +
-        '<div class="dcc-tour-ctl-search dcc-tour-galsearch"><input type="search" id="dcc-galsearch" placeholder="Find a place — e.g. srd, beach, stradun…" autocomplete="off">' +
-          '<div class="dcc-tour-results" id="dcc-galresults" hidden></div>' +
-          '<button type="button" class="dcc-tour-galsearch-clear" id="dcc-galsearch-clear" hidden aria-label="Clear place filter">&times;</button></div>' +
         facetHTML('type', 'Type', typeOpts, { search: false }) +
         facetHTML('person', 'Photographer', personOpts, { search: false, optClass: 'dcc-personopt', badgeId: 'dcc-person-badge' }) +
         '<span class="dcc-tour-gal-sep" aria-hidden="true"></span>' +
@@ -1144,17 +1132,10 @@
       if ('IntersectionObserver' in window)
         new IntersectionObserver(en => { if (en[0].isIntersecting) renderGalleryChunk(); })
           .observe(g.querySelector('#dcc-galmore'));
-      // Find-a-place search: fuzzy/diacritic pick filters the grid to that exact place
-      const gsearch = g.querySelector('#dcc-galsearch'), gres = g.querySelector('#dcc-galresults'), gclear = g.querySelector('#dcc-galsearch-clear');
-      const clearGalPlace = () => { galFilter.exactPlace = null; gclear.hidden = true; gsearch.value = ''; renderGallery(); };
-      attachPlaceSearch(gsearch, gres, h => { galFilter.exactPlace = h.name; gsearch.value = h.name; gclear.hidden = false; renderGallery(); }, { clearOnPick: false });
-      gsearch.addEventListener('input', () => { if (galFilter.exactPlace && gsearch.value !== galFilter.exactPlace) { galFilter.exactPlace = null; gclear.hidden = true; renderGallery(); } });
-      gclear.addEventListener('click', clearGalPlace);
     }
     renderGallery();
   }
   function itemMatchesFacets(x) {
-    if (galFilter.exactPlace && x.it.place !== galFilter.exactPlace) return false;
     if (galFilter.cities.size && !x.segs.some(s => galFilter.cities.has(s))) return false;
     if (galFilter.places.size && !x.segs.some(s => galFilter.places.has(s))) return false;
     return true;
