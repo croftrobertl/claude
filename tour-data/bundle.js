@@ -266,10 +266,8 @@
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
     const sheet = el('div', 'dcc-tour-sheet'); sheet.hidden = true;
-    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day or place"><div class="sheet-handle"></div>' +
-      '<h4>Jump to a day or place</h4>' +
-      '<input type="search" class="sheet-search" id="dcc-sheet-search" placeholder="Search places — Lokrum, Stradun…" autocomplete="off">' +
-      '<div class="sheet-results" id="dcc-sheet-results" hidden></div>' +
+    sheet.innerHTML = '<div class="sheet-bd"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a day"><div class="sheet-handle"></div>' +
+      '<h4>Jump to a day</h4>' +
       '<div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
@@ -278,25 +276,6 @@
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
-    // in-sheet place search — the one discoverable search on mobile
-    const ssearch = sheet.querySelector('#dcc-sheet-search');
-    const sres = sheet.querySelector('#dcc-sheet-results');
-    const sdays = sheet.querySelector('.sheet-days');
-    ssearch.addEventListener('input', () => {
-      const q = ssearch.value.trim();
-      if (!q) { sres.hidden = true; sres.innerHTML = ''; sdays.style.display = ''; return; }
-      const hits = searchPlaces(q, 20);
-      sdays.style.display = 'none'; sres.hidden = false;
-      sres.innerHTML = hits.length ? hits.map(h =>
-        '<button class="sheet-result" data-di="' + h.di + '" data-pi="' + h.pi + '">' +
-        '<span class="sr-name">' + escapeHtml(h.name) + '</span>' +
-        '<span class="sr-meta">' + escapeHtml(h.short) + ' · ' + plur(h.count, 'shot') + '</span></button>').join('')
-        : '<p class="sheet-noresult">No places match that search.</p>';
-    });
-    sres.addEventListener('click', e => {
-      const b = e.target.closest('.sheet-result'); if (!b) return;
-      closeDaySheet(); jumpToPlace(+b.dataset.di, +b.dataset.pi);
-    });
 
     root.insertBefore(tb, root.firstChild); root.appendChild(bar); root.appendChild(sheet);
     root._topbar = tb; root._sheet = sheet;
@@ -390,10 +369,6 @@
   }
   function openDaySheet() {
     const s = root._sheet; if (!s) return;
-    // always open on the day list, not a stale search
-    const q = s.querySelector('#dcc-sheet-search'); if (q) q.value = '';
-    const sr = s.querySelector('#dcc-sheet-results'); if (sr) { sr.hidden = true; sr.innerHTML = ''; }
-    const sd = s.querySelector('.sheet-days'); if (sd) sd.style.display = '';
     s.hidden = false; requestAnimationFrame(() => s.classList.add('open'));
   }
   function closeDaySheet() { const s = root._sheet; if (s) { s.classList.remove('open'); setTimeout(() => { s.hidden = true; }, 220); } }
@@ -1198,130 +1173,14 @@
   }
   function toggleAcc(sec) { setAcc(sec, sec.dataset.open !== '1'); }
 
-  // shared place index + jump helper (used by desktop search AND the mobile sheet)
-  let PLACE_INDEX = null;
-  function placeIndex() {
-    if (!PLACE_INDEX) {
-      PLACE_INDEX = [];
-      DATA.days.forEach((d, di) => d.places.forEach((p, pi) =>
-        PLACE_INDEX.push({ di, pi, name: p.name, short: d.short, count: p.count,
-          key: p.name.toLowerCase(), blob: searchBlob(p.name), lat: p.lat, lng: p.lng })));
-    }
-    return PLACE_INDEX;
-  }
-
-  // ---- fuzzy, diacritic-insensitive, "semantic" place search (shared by all tabs) ----
-  // Serbo-Croatian names are full of diacritics US keyboards can't type and are hard
-  // to spell, so match on a folded (accent-stripped) form, tolerate typos, and expand
-  // English<->Croatian geographic synonyms so "beach"/"old town"/"port" find the place.
+  // fold to an accent-stripped, lowercase form so Serbo-Croatian diacritics
+  // (č,š,ž,ć,đ) US keyboards can't type still match — used by the Photos City/Place
+  // filter search and the map place-label matching.
   function foldStr(s) {
     return String(s || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // strip combining accents (č,š,ž,ć…)
       .replace(/đ/g, 'd').replace(/Đ/g, 'd')              // đ has no NFD decomposition
       .toLowerCase().trim();
-  }
-  const SYN_GROUPS = [
-    ['beach', 'plaza', 'plaz'], ['old town', 'oldtown', 'stari grad', 'old city'],
-    ['port', 'harbor', 'harbour', 'luka', 'dock'], ['island', 'isle', 'otok'],
-    ['reef', 'greben'], ['gate', 'vrata'], ['church', 'crkva'], ['cathedral', 'katedrala'],
-    ['monastery', 'samostan'], ['fort', 'fortress', 'tvrdava', 'utvrda', 'citadel'],
-    ['tower', 'kula'], ['square', 'trg'], ['bridge', 'most'], ['bay', 'cove', 'uvala', 'zaljev'],
-    ['hill', 'brdo'], ['mountain', 'mount', 'gora'], ['cave', 'grotto', 'spilja'],
-    ['restaurant', 'konoba', 'tavern', 'restoran'], ['channel', 'kanal'], ['palace', 'palaca'],
-    ['garden', 'vrt'], ['walls', 'zidine'], ['lighthouse', 'svjetionik'], ['spring', 'izvor'],
-  ];
-  function searchBlob(name) {
-    const b = foldStr(name).replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();   // punctuation → spaces so tokens are clean
-    const extra = [];
-    for (const grp of SYN_GROUPS) if (grp.some(t => b.includes(foldStr(t)))) extra.push(...grp);
-    return (b + ' ' + extra.map(foldStr).join(' ')).trim();
-  }
-  function lev(a, b) {   // classic Levenshtein for typo tolerance on short tokens
-    const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
-    let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
-    for (let i = 1; i <= m; i++) {
-      cur[0] = i;
-      for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c); }
-      const t = prev; prev = cur; cur = t;
-    }
-    return prev[n];
-  }
-  function isSubseq(hay, needle) { let i = 0; for (let j = 0; j < hay.length && i < needle.length; j++) if (hay[j] === needle[i]) i++; return i === needle.length; }
-  function scoreTok(blob, nameF, q) {
-    if (nameF.includes(q)) { let s = 200 - (nameF.length - q.length); if (nameF.startsWith(q)) s += 40; if (new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nameF)) s += 25; return s; }
-    if (blob.includes(q)) return 120 - (blob.length - q.length) * 0.05;
-    let best = -1;
-    for (const t of blob.split(/\s+/)) {
-      if (!t) continue;
-      if (t.startsWith(q)) { best = Math.max(best, 95 - (t.length - q.length)); continue; }
-      if (q.length >= 3) { const d = lev(t, q); if (d <= Math.max(1, Math.floor(q.length / 4))) best = Math.max(best, 72 - d * 15); }
-    }
-    if (best >= 0) return best;
-    if (q.length >= 3 && isSubseq(nameF, q)) return 40;
-    return -1;
-  }
-  function scorePlace(blob, name, q) {
-    const nameF = foldStr(name);
-    const words = q.split(/\s+/).filter(Boolean);
-    if (words.length <= 1) return scoreTok(blob, nameF, q);
-    // multi-word: reward a full-phrase hit, else every word must match somewhere
-    if (nameF.includes(q)) return 240 - (nameF.length - q.length);
-    if (blob.includes(q)) return 150 - (blob.length - q.length) * 0.05;
-    let sum = 0; for (const w of words) { const s = scoreTok(blob, nameF, w); if (s <= 0) return -1; sum += s; }
-    return sum / words.length + 20;
-  }
-  function searchPlaces(query, limit) {
-    const q = foldStr(query); if (!q) return [];
-    const scored = [];
-    for (const p of placeIndex()) { const s = scorePlace(p.blob, p.name, q); if (s > 0) scored.push({ p, s }); }
-    scored.sort((a, b) => b.s - a.s || a.p.name.length - b.p.name.length || a.p.di - b.p.di);
-    return scored.slice(0, limit || 10).map(x => x.p);
-  }
-  // wire a text input + results panel into a predictive dropdown; onPick(hit) does the tab's action
-  function attachPlaceSearch(inp, res, onPick, opts) {
-    opts = opts || {};
-    let hits = [];
-    const render = () => {
-      const q = inp.value.trim();
-      if (!q) { res.hidden = true; res.innerHTML = ''; hits = []; return; }
-      hits = searchPlaces(q, 10);
-      res.hidden = false;
-      res.innerHTML = hits.length
-        ? hits.map((h, i) => '<button type="button" class="dcc-tour-result" data-i="' + i + '">' +
-            escapeHtml(h.name) + ' <span>' + escapeHtml(h.short) + ' · ' + h.count + '</span></button>').join('')
-        : '<div class="dcc-tour-noresult">No match — try fewer letters</div>';
-    };
-    inp.addEventListener('input', render);
-    inp.addEventListener('focus', () => { if (inp.value.trim()) render(); });
-    inp.addEventListener('keydown', e => {
-      const btns = [...res.querySelectorAll('.dcc-tour-result')]; if (!btns.length) return;
-      let ci = btns.findIndex(b => b.classList.contains('active'));
-      if (e.key === 'ArrowDown') { e.preventDefault(); ci = Math.min(btns.length - 1, ci + 1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); ci = Math.max(0, ci < 0 ? 0 : ci - 1); }
-      else if (e.key === 'Enter') { e.preventDefault(); (btns[ci] || btns[0]).click(); return; }
-      else if (e.key === 'Escape') { res.hidden = true; return; }
-      else return;
-      btns.forEach(b => b.classList.remove('active')); if (btns[ci]) { btns[ci].classList.add('active'); btns[ci].scrollIntoView({ block: 'nearest' }); }
-    });
-    res.addEventListener('click', e => {
-      const b = e.target.closest('.dcc-tour-result'); if (!b) return;
-      const h = hits[+b.dataset.i]; if (!h) return;
-      res.hidden = true; if (opts.clearOnPick !== false) inp.value = '';
-      onPick(h);
-    });
-    document.addEventListener('click', e => { if (!res.contains(e.target) && e.target !== inp) res.hidden = true; });
-  }
-  function jumpToPlace(di, pi) {
-    setView('story');
-    selectDay(di);
-    setTimeout(() => {
-      const sec = root._story.querySelector('#place-' + pi);
-      if (!sec) return;
-      setPlaceOpen(sec, true);   // reveal it if collapsed (mobile default)
-      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      sec.classList.add('dcc-tour-flash');
-      setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600);
-    }, 90);
   }
   function plur(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
   // day-card counts: only the kinds that exist, no redundant "N items" sum
@@ -1339,19 +1198,12 @@
     const first = DATA.days[0].date, last = DATA.days[DATA.days.length - 1].date;
     wrap.innerHTML =
       '<label class="dcc-tour-ctl"><span>Jump to date</span>' +
-      '<input type="date" id="dcc-datepick" min="' + first + '" max="' + last + '" value="' + first + '"></label>' +
-      '<label class="dcc-tour-ctl dcc-tour-ctl-search"><span>Find a place</span>' +
-      '<input type="search" id="dcc-placesearch" placeholder="e.g. Lokrum, Stradun, Cavtat…" autocomplete="off"></label>' +
-      '<div class="dcc-tour-results" id="dcc-results" hidden></div>';
+      '<input type="date" id="dcc-datepick" min="' + first + '" max="' + last + '" value="' + first + '"></label>';
     // date jump
     wrap.querySelector('#dcc-datepick').addEventListener('change', e => {
       const idx = DATA.days.findIndex(d => d.date === e.target.value);
       if (idx >= 0) { setView('story'); selectDay(idx); }
     });
-    // fuzzy, diacritic-insensitive place search across all days
-    const inp = wrap.querySelector('#dcc-placesearch');
-    const res = wrap.querySelector('#dcc-results');
-    attachPlaceSearch(inp, res, h => jumpToPlace(h.di, h.pi));
     return wrap;
   }
   function fmtDur(s) {

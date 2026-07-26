@@ -376,15 +376,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-tour-ctl { display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dcc-tour-muted); }
 .dcc-tour-ctl input { font: inherit; font-size: 16px; text-transform: none; letter-spacing: normal; padding: 7px 10px; border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
 .dcc-tour-ctl input:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
-.dcc-tour-ctl-search { flex: 1; min-width: 200px; }
-.dcc-tour-ctl-search input { width: 100%; }
-.dcc-tour-results { position: absolute; z-index: 20; top: 100%; left: 1.5rem; right: 1.5rem; max-height: 320px; overflow-y: auto; background: var(--dcc-tour-card-bg); border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); box-shadow: var(--dcc-tour-shadow); }
-.dcc-tour-result { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--dcc-tour-border); background: none; padding: 9px 13px; font: inherit; font-size: 0.9rem; color: var(--dcc-tour-text); cursor: pointer; }
-.dcc-tour-result:last-child { border-bottom: 0; }
-.dcc-tour-result:hover { background: var(--dcc-tour-accent-tint); }
-.dcc-tour-result span { color: var(--dcc-tour-muted); font-size: 0.78rem; white-space: nowrap; }
-.dcc-tour-result.active { background: var(--dcc-tour-accent-tint); }
-.dcc-tour-noresult { padding: 10px 13px; color: var(--dcc-tour-muted); font-size: 0.84rem; }
 
 /* weather strip */
 .dcc-tour-weather { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--dcc-tour-muted); }
@@ -642,7 +633,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .dcc-tour-ctl input { min-height: 44px; }
   .dcc-tour-modebtn { min-height: 44px; padding: 9px 16px; }
   .dcc-tour-legchip { min-height: 40px; }
-  .dcc-tour-result { min-height: 46px; align-items: center; }
   .dcc-tour-mm-tog { min-height: 40px; }
   .dcc-tour-chip { min-height: 42px; }
 
@@ -744,17 +734,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .dcc-tour-sheet.open .sheet-panel { transform: translateY(0); }
   .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dcc-tour-border); margin: 6px auto 10px; }
   .sheet-panel h4 { margin: 0 0 10px; font-size: 0.95rem; }
-  /* in-sheet place search (the discoverable search on phones) */
-  .sheet-search { width: 100%; min-height: 46px; font: inherit; font-size: 1rem; padding: 10px 14px; margin-bottom: 10px;
-    border: 1px solid var(--dcc-tour-border); border-radius: var(--dcc-tour-radius); background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
-  .sheet-search:focus { outline: 2px solid var(--dcc-tour-primary); border-color: var(--dcc-tour-primary); }
-  .sheet-results { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
-  .sheet-result { display: flex; flex-direction: column; gap: 1px; text-align: left; width: 100%; min-height: 48px; justify-content: center;
-    border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: var(--dcc-tour-radius); padding: 8px 14px; font: inherit; cursor: pointer; }
-  .sheet-result .sr-name { color: var(--dcc-tour-text); font-size: 1rem; }
-  .sheet-result .sr-meta { color: var(--dcc-tour-muted); font-size: 0.8rem; }
-  .sheet-result:hover, .sheet-result:active { border-color: var(--dcc-tour-primary); }
-  .sheet-noresult { color: var(--dcc-tour-muted); font-size: 0.9rem; padding: 6px 2px; }
   .sheet-days { display: grid; grid-template-columns: 1fr; gap: 8px; }  /* task 7: one column on mobile — no horizontal scroll */
   .sheet-day { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
     border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg); border-radius: var(--dcc-tour-radius);
@@ -773,8 +752,7 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 
 /* tactile feedback on tap/press */
 .dcc-tour-modebtn:active, .dcc-tour-tabbtn:active, .dcc-tour-chip:active, .dcc-tour-daychip:active,
-.tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active,
-.dcc-tour-result:active { transform: scale(0.97); }
+.tb-arrow:active, .sheet-day:active, .dcc-tour-legchip:active { transform: scale(0.97); }
 .dcc-tour-modebtn, .dcc-tour-tabbtn, .dcc-tour-chip, .dcc-tour-daychip, .tb-arrow,
 .sheet-day { transition: transform 0.08s ease, border-color 0.15s, background 0.15s, color 0.15s; }
 .lb-act:active, .tb-rand:active { transform: scale(0.95); }
