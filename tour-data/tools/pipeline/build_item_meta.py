@@ -40,6 +40,53 @@ else:
             if v.get("person"):
                 meta.setdefault(g, {})["person"] = v["person"]
 
+# ---- refine person by CAMERA MODEL (who physically shot it), overriding the
+#      contributor tag where they disagree. The contributor = whose library/shared
+#      album the photo came from, which is wrong for photos shared between family
+#      members; the EXIF camera model is the true device. Model comes from the
+#      bundle3 manifest, joined to our items on capture time (exact local second,
+#      falling back to minute + rounded GPS). Trip-verified device map:
+#        iPhone 16 → Rob · iPhone 14 Pro Max → Erica · iPhone 14 Plus → Alice
+import datetime as _dt
+MODEL2P = {"iPhone 16": "Rob", "iPhone 14 Pro Max": "Erica", "iPhone 14 Plus": "Alice"}
+man_path = os.path.join(LOCAL, "bundle3-manifest.csv")
+if os.path.exists(man_path) and os.path.exists(jg_path):
+    by_sec, by_min = {}, {}
+    with open(man_path, newline="") as fh:
+        for row in csv.DictReader(fh):
+            model = (row.get("camera_model") or "").strip()
+            if not model or model == "?":
+                continue
+            dt = (row.get("capture_datetime") or "")[:19]
+            if dt:
+                by_sec.setdefault(dt, set()).add(model)
+            la, lo = row.get("gps_lat"), row.get("gps_lng")
+            if len(dt) >= 16 and la and lo:
+                try:
+                    by_min.setdefault(dt[:16] + "|%.4f,%.4f" % (float(la), float(lo)), set()).add(model)
+                except ValueError:
+                    pass
+    retag = 0
+    for guid, e in json.load(open(jg_path)).items():
+        if guid not in meta:
+            continue
+        try:
+            d = _dt.datetime.strptime((e.get("datetime") or "")[:19], "%Y-%m-%dT%H:%M:%S") + _dt.timedelta(hours=2)
+        except Exception:
+            continue
+        models = by_sec.get(d.strftime("%Y:%m:%d %H:%M:%S"))
+        if not models and e.get("lat") is not None:
+            models = by_min.get(d.strftime("%Y:%m:%d %H:%M") + "|%.4f,%.4f" % (float(e["lat"]), float(e["lng"])))
+        if not models:
+            continue
+        persons = {MODEL2P[m] for m in models if m in MODEL2P}
+        if len(persons) == 1:
+            p = next(iter(persons))
+            if meta.get(guid, {}).get("person") != p:
+                meta.setdefault(guid, {})["person"] = p
+                retag += 1
+    print(f"device retag: {retag} person tags overridden by camera model")
+
 # ---- heading, from EXIF GPSImgDirection on the full-res copies ----
 fulls = glob.glob(os.path.join(ROOT, "media", "**", "*-full.jpg"), recursive=True)
 if fulls:

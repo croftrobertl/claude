@@ -489,8 +489,11 @@
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
   }
+  // dot colour in "Color by Who": the dominant shooter AMONG THE VISIBLE items, so
+  // filtering to one person paints their dots that person's colour (a place has many
+  // shooters; unfiltered, the dot still shows whoever shot the most there).
   function placeDominantPerson(p) {
-    const c = {}; p.items.forEach(it => { if (it.person) c[it.person] = (c[it.person] || 0) + 1; });
+    const c = {}; placeItems(p).forEach(it => { if (it.person) c[it.person] = (c[it.person] || 0) + 1; });
     let best = null, n = -1; for (const k in c) if (c[k] > n) { n = c[k]; best = k; }
     return best;
   }
@@ -757,6 +760,7 @@
     for (const [tok, label, cls, minZoom] of derived) { const c = centroid(tok); if (c) feats.push({ lat: c[0], lng: c[1], label, cls, minZoom }); }
     for (const [lat, lng, label, cls, minZoom] of [
       [42.6625, 18.0610, 'Babin Kuk', 'area', 13],
+      [42.6438, 18.1035, 'Pile-Kono', 'area', 14],
       [42.6560, 18.0470, 'Grebeni Reefs', 'water', 13],
       [42.5614, 18.2682, 'Dubrovnik Airport', 'poi', 11],
     ]) feats.push({ lat, lng, label, cls, minZoom });
