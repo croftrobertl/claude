@@ -2000,7 +2000,7 @@
     // GoPro clips (Drive): show a poster frame, load the player on tap
     if (item.type === 'drive') {
       const thumb = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.id) + '&sz=w400';
-      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-clip="' + escapeAttr(item.id) + '">' +
+      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-clip="' + escapeAttr(item.id) + '" data-cap="' + escapeAttr([item.place, item.time].filter(Boolean).join(' · ')) + '">' +
         '<img loading="lazy" src="' + escapeAttr(thumb) + '" alt="clip" onerror="this.classList.add(\'noimg\')">' +
         '<span class="dcc-tour-play">▶</span><span class="dcc-tour-badge">clip</span>' + cap(item) + extras + '</div>';
     }
@@ -2010,7 +2010,7 @@
       const posterUrl = item.poster ? resolveUrl(item.poster) : '';
       if (!item.url)
         return posterUrl ? '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' + durb + cap(item) + extras + '</div>' : '';
-      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-vsrc="' + escapeAttr(resolveUrl(item.url)) + '" data-poster="' + escapeAttr(posterUrl) + '">' +
+      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-vsrc="' + escapeAttr(resolveUrl(item.url)) + '" data-poster="' + escapeAttr(posterUrl) + '" data-cap="' + escapeAttr([item.place, item.time].filter(Boolean).join(' · ')) + '">' +
         (posterUrl ? '<img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' : '') +
         '<span class="dcc-tour-play">▶</span>' + durb + cap(item) + extras + '</div>';
     }
@@ -2096,7 +2096,7 @@
       return;
     }
     const cell = e.target.closest('.dcc-tour-play-cell');
-    if (cell && !cell.dataset.activated) { activateMedia(cell); return; }
+    if (cell) { openMediaViewer(cell); return; }   // videos/clips open large in the media viewer
     const img = e.target.closest('.dcc-tour-media img[data-full]');
     if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); }
   });
@@ -2106,23 +2106,8 @@
     const head = e.target.closest && e.target.closest('.dcc-tour-place-head');
     if (head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); head.click(); }
   });
-  function activateMedia(cell) {
-    cell.dataset.activated = '1';
-    cell.classList.add('wide', 'activated');
-    while (cell.firstChild) cell.removeChild(cell.firstChild);
-    if (cell.dataset.vsrc) {
-      const v = document.createElement('video');
-      v.src = cell.dataset.vsrc; if (cell.dataset.poster) v.poster = cell.dataset.poster;
-      v.controls = true; v.autoplay = true; v.setAttribute('playsinline', '');
-      cell.appendChild(v);
-    } else if (cell.dataset.clip) {
-      const f = document.createElement('iframe');
-      f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(cell.dataset.clip) + '/preview';
-      f.allow = 'autoplay'; f.allowFullscreen = true;
-      cell.appendChild(f);
-    }
-  }
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('dcc-tour-vlightbox')?.classList.contains('open')) { closeMediaViewer(); return; }
     if (lightboxIdx >= 0) {
       if (e.key === 'Escape') closeLightbox();
       else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
@@ -2137,6 +2122,59 @@
       else if (e.key === 'ArrowLeft' && curDay > 0) selectDay(curDay - 1);
     }
   });
+  // crisp themed icons (emoji rendered inconsistently across phones)
+  const ICON_DL = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v11m0 0l-4.5-4.5M12 14l4.5-4.5M4.5 20h15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_SHARE = '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v7h14v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_CLOSE = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+  // ---- video / clip viewer: opens the clip large in a full-screen overlay so the
+  //      footage is actually visible; native controls have room and auto-hide during
+  //      playback (tap the video to bring them back), instead of the cramped inline
+  //      player where the control chrome blacked out the tiny frame. ----
+  function ensureMediaViewer() {
+    let el = document.getElementById('dcc-tour-vlightbox');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'dcc-tour-vlightbox';
+    el.className = 'dcc-tour-lightbox dcc-tour-vlightbox';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Video viewer');
+    el.innerHTML =
+      '<button class="dcc-tour-lightbox-close" aria-label="Close">' + ICON_CLOSE + '</button>' +
+      '<div class="dcc-tour-vstage"></div>' +
+      '<div class="dcc-tour-lightbox-cap"></div>';
+    el.addEventListener('click', e => { if (e.target === el || e.target.closest('.dcc-tour-lightbox-close')) closeMediaViewer(); });
+    document.body.appendChild(el);
+    return el;
+  }
+  function closeMediaViewer() {
+    const el = document.getElementById('dcc-tour-vlightbox');
+    if (!el) return;
+    el.classList.remove('open');
+    el.querySelector('.dcc-tour-vstage').innerHTML = '';   // detach the player to stop playback
+    if (!document.getElementById('dcc-tour-lightbox')?.classList.contains('open')) document.body.classList.remove('dcc-tour-noscroll');
+  }
+  function openMediaViewer(cell) {
+    const el = ensureMediaViewer();
+    const stage = el.querySelector('.dcc-tour-vstage');
+    stage.innerHTML = '';
+    if (cell.dataset.vsrc) {
+      const v = document.createElement('video');
+      v.src = cell.dataset.vsrc; if (cell.dataset.poster) v.poster = cell.dataset.poster;
+      v.controls = true; v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', '');
+      v.className = 'dcc-tour-vplayer';
+      stage.appendChild(v);
+    } else if (cell.dataset.clip) {
+      const f = document.createElement('iframe');
+      f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(cell.dataset.clip) + '/preview';
+      f.allow = 'autoplay; fullscreen'; f.allowFullscreen = true;
+      f.className = 'dcc-tour-vplayer dcc-tour-vplayer-iframe';
+      stage.appendChild(f);
+    } else return;
+    el.querySelector('.dcc-tour-lightbox-cap').textContent = cell.dataset.cap || '';
+    el.classList.add('open');
+    document.body.classList.add('dcc-tour-noscroll');
+  }
+
   function ensureLightboxEl() {
     let el = document.getElementById('dcc-tour-lightbox');
     if (el) return el;
@@ -2147,11 +2185,11 @@
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-label', 'Photo viewer');
     el.innerHTML =
-      '<button class="dcc-tour-lightbox-close" aria-label="Close">&times;</button>' +
+      '<button class="dcc-tour-lightbox-close" aria-label="Close">' + ICON_CLOSE + '</button>' +
       '<div class="dcc-tour-lightbox-count" aria-hidden="true"></div>' +
       '<div class="dcc-tour-lightbox-actions">' +
-        '<a class="lb-act" id="dcc-lb-dl" download title="Download this photo">⬇</a>' +
-        '<button class="lb-act" id="dcc-lb-share" title="Share this photo">↗</button></div>' +
+        '<a class="lb-act" id="dcc-lb-dl" download aria-label="Download this photo" title="Download this photo">' + ICON_DL + '</a>' +
+        '<button class="lb-act" id="dcc-lb-share" aria-label="Share this photo" title="Share this photo">' + ICON_SHARE + '</button></div>' +
       '<button class="dcc-tour-lightbox-nav prev" aria-label="Previous">&#8249;</button>' +
       '<img class="dcc-tour-lightbox-img" alt="" />' +
       '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>' +
