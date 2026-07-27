@@ -34,6 +34,17 @@ AREA = {"orl-mco":"Orlando, FL","lgw":"London Gatwick","dbv-airport":"Dubrovnik 
         "mount-srd":"Dubrovnik · Lapad & Gruž","soline":"Župa Dubrovačka",
         "elaphiti":"Elaphiti Islands"}
 
+# The travel-day airport/flight legs have no embedded GPS (no satellite lock in the
+# terminals / at altitude), so those places would get no map pin. Give them a
+# reference coordinate by name — checked most-specific first so the trans-Atlantic
+# leg doesn't match the Orlando-airport key. Place-level only: we don't fake GPS on
+# the individual items. The map's default view still frames just Croatia (see app).
+GEO_FALLBACK = [
+    ("In-flight: Orlando International Airport (MCO)", 47.3436, -48.8979),  # mid-Atlantic (great-circle midpoint MCO→LGW)
+    ("Orlando International Airport (MCO)", 28.4312, -81.3081),
+    ("London Gatwick Airport (LGW)", 51.1537, -0.1821),
+]
+
 def media_obj(it):
     o = {"kind": it["kind"], "time": (it.get("datetime") or "")[11:16], "place": it.get("place") or "En route"}
     if it.get("lat") is not None: o["lat"] = round(it["lat"], 6); o["lng"] = round(it["lng"], 6)
@@ -82,6 +93,11 @@ for i, d in enumerate(sorted(byday), 1):
         if coords:
             p["lat"] = round(sum(c[0] for c in coords)/len(coords), 6)
             p["lng"] = round(sum(c[1] for c in coords)/len(coords), 6)
+        else:
+            for key, la, lo in GEO_FALLBACK:   # airport/flight legs with no embedded GPS
+                if key in pl:
+                    p["lat"] = la; p["lng"] = lo
+                    break
         places.append(p)
     days.append({
         "date": d, "index": i,

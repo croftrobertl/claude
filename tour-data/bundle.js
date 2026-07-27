@@ -697,10 +697,17 @@
   }
   // days actually shown: a legend-isolated single day, else the From/To range
   function effectiveDays() { return mmIsolateDay != null ? [mmIsolateDay] : daysInRange(); }
+  // the trip's Croatia footprint — used to keep the default/whole-trip map view
+  // framed on Croatia even though the Orlando/London airport legs are now pinned
+  const CRO_BOUNDS = { latMin: 42, latMax: 43.6, lngMin: 16, lngMax: 19.6 };
+  const inCroatia = pt => pt[0] >= CRO_BOUNDS.latMin && pt[0] <= CRO_BOUNDS.latMax && pt[1] >= CRO_BOUNDS.lngMin && pt[1] <= CRO_BOUNDS.lngMax;
+  // fit to the Croatia points when any exist (so the far airport pins don't blow the
+  // view out to the Atlantic); if a selection is ONLY airports, fit to those.
+  const fitPts = pts => { const cro = pts.filter(inCroatia); return cro.length ? cro : pts; };
   function fitToDays(a, b) {
     const pts = [];
     for (let i = a; i <= b; i++) DATA.days[i].places.forEach(p => { if (p.lat != null) pts.push([p.lat, p.lng]); });
-    if (pts.length) mmMap.fitBounds(L.latLngBounds(pts).pad(0.15), { animate: true });
+    if (pts.length) mmMap.fitBounds(L.latLngBounds(fitPts(pts)).pad(0.15), { animate: true });
   }
   // curated place labels: fill the gaps Esri satellite leaves — bodies of water,
   // town neighbourhoods, islands, channels — plus English names for the old town,
@@ -801,7 +808,7 @@
     if (showHeat && window.L && L.heatLayer)
       mmHeat = L.heatLayer(heatPts, { radius: 22, blur: 18, maxZoom: 15 }).addTo(mmMap);
     if (mmTrackLayer) drawTrack();   // keep the GPS track clipped to the shown days (task 7)
-    if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(allPts).pad(0.12), { animate: false });
+    if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(fitPts(allPts)).pad(0.12), { animate: false });
   }
   function openMapSidebar(di, pi) {
     const d = DATA.days[di], p = d.places[pi];
