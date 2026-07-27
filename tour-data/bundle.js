@@ -815,12 +815,24 @@
     const side = root._mapmode.querySelector('#dcc-mm-side');
     lightboxFulls = []; lightboxMeta = []; const thumbs = [];
     const items = placeItems(p);
+    // each thumb is tappable: photos open the lightbox (data-lb = index into
+    // lightboxFulls), videos/clips open the large media viewer (.mm-play-wrap)
     items.forEach(it => {
-      let img = null;
-      if (it.full) { img = resolveUrl(it.src || it.full); lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time }); thumbs.push('<img loading="lazy" src="' + escapeAttr(img) + '" data-full="' + escapeAttr(resolveUrl(it.full)) + '">'); }
-      else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
-      // GoPro clips (Drive): no local still, so preview the Drive-generated frame
-      else if (it.type === 'drive' && it.id) thumbs.push('<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" style="opacity:.85" onerror="this.remove()">');
+      const cap = escapeAttr([it.place || p.name, it.time].filter(Boolean).join(' · '));
+      if (it.full) {
+        const lb = lightboxFulls.length;
+        lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time });
+        thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.src || it.full)) + '" data-lb="' + lb + '">');
+      } else if (it.type === 'self_hosted' && it.url) {
+        const poster = it.poster ? resolveUrl(it.poster) : '';
+        thumbs.push('<span class="mm-play-wrap" data-vsrc="' + escapeAttr(resolveUrl(it.url)) + '" data-poster="' + escapeAttr(poster) + '" data-cap="' + cap + '">' +
+          (poster ? '<img loading="lazy" src="' + escapeAttr(poster) + '">' : '') + '<span class="mm-play-badge">▶</span></span>');
+      } else if (it.type === 'drive' && it.id) {   // GoPro clip: Drive-generated frame + play badge
+        thumbs.push('<span class="mm-play-wrap" data-clip="' + escapeAttr(it.id) + '" data-cap="' + cap + '">' +
+          '<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" onerror="this.closest(\'.mm-play-wrap\').remove()"><span class="mm-play-badge">▶</span></span>');
+      } else if (it.poster) {
+        thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
+      }
     });
     side.hidden = false;
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
@@ -831,6 +843,12 @@
       '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
     side.querySelector('[data-openday]').addEventListener('click', () => { setView('story'); selectDay(di); });
+    side.querySelector('.dcc-tour-mm-grid').addEventListener('click', e => {
+      const play = e.target.closest('.mm-play-wrap');
+      if (play) { openMediaViewer({ dataset: play.dataset }); return; }
+      const ph = e.target.closest('img[data-lb]');
+      if (ph) openLightbox(+ph.dataset.lb);
+    });
     mmMap.panTo([p.lat, p.lng], { animate: true });
   }
 

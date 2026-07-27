@@ -473,6 +473,12 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 /* masonry photo grid — overrides the mobile single-column .dcc-tour-media rule (#6) */
 .dcc-tour-mm-side .dcc-tour-mm-grid { display: block; column-count: 2; column-gap: 6px; grid-template-columns: none; margin-bottom: 10px; clear: both; }
 .dcc-tour-mm-side .dcc-tour-mm-grid img { width: 100%; height: auto; margin: 0 0 6px; border-radius: var(--dcc-tour-radius); display: block; break-inside: avoid; }
+/* every thumb is tappable → larger view; videos/clips get a play badge */
+.dcc-tour-mm-side .dcc-tour-mm-grid img[data-lb], .dcc-tour-mm-side .dcc-tour-mm-grid .mm-play-wrap { cursor: pointer; }
+.dcc-tour-mm-side .dcc-tour-mm-grid .mm-play-wrap { position: relative; display: block; margin: 0 0 6px; break-inside: avoid; }
+.dcc-tour-mm-side .dcc-tour-mm-grid .mm-play-wrap img { margin: 0; opacity: 0.9; }
+.dcc-tour-mm-side .dcc-tour-mm-grid .mm-play-badge { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1.5rem; text-shadow: 0 1px 5px rgba(0,0,0,0.75); pointer-events: none; }
 
 /* subtle separator between the map controls and the map/legend (task 10) */
 .dcc-tour-mm-divider { height: 1px; background: var(--dcc-tour-border); margin: 4px 0 10px; }
