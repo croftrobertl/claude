@@ -140,8 +140,10 @@
     root.classList.add('dcc-tour-flat');
     const header = el('header', 'dcc-tour-header',
       '<h1 class="dcc-tour-title">' + escapeHtml(t.name || 'Our trip') + '</h1>' +
-      '<p class="dcc-tour-subtitle">' + escapeHtml(t.subtitle || '') + '</p>' +
-      tripStatsHTML());
+      '<p class="dcc-tour-subtitle">' + escapeHtml(t.subtitle || '') + '</p>');
+    // trip-stat tiles live in their own strip BELOW the tab selector (Stats view only),
+    // so the tab selector always sits right under the heading — same spot on every tab
+    const tripstats = el('div', 'dcc-tour-tripstats-wrap', tripStatsHTML());
     const nav = el('nav', 'dcc-tour-daynav');
     nav.setAttribute('aria-label', 'Days');
     DATA.days.forEach((d, i) => {
@@ -187,7 +189,7 @@
     const modeToggle = buildModeToggle();
     const mapmode = buildMapMode();
     const statsviz = el('div', 'dcc-tour-statsviz');   // task 3: extra data-viz, Stats view only
-    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(nav); root.appendChild(controls);
+    root.appendChild(header); root.appendChild(modeToggle); root.appendChild(tripstats); root.appendChild(nav); root.appendChild(controls);
     root.appendChild(overview); root.appendChild(statsviz); root.appendChild(body); root.appendChild(mapmode);
     root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode; root._statsviz = statsviz;
     bindClimbChart(overview);
@@ -431,8 +433,9 @@
   function refreshHeaderStats() {
     const hd = root.querySelector('.dcc-tour-header'); if (!hd) return;
     hd.innerHTML = '<h1 class="dcc-tour-title">' + escapeHtml((DATA.trip || {}).name || 'Our trip') + '</h1>' +
-      '<p class="dcc-tour-subtitle">' + escapeHtml((DATA.trip || {}).subtitle || '') + '</p>' + tripStatsHTML();
-    animateCounts(hd);
+      '<p class="dcc-tour-subtitle">' + escapeHtml((DATA.trip || {}).subtitle || '') + '</p>';
+    const ts = root.querySelector('.dcc-tour-tripstats-wrap');
+    if (ts) { ts.innerHTML = tripStatsHTML(); animateCounts(ts); }
     enhanceAllHScroll();
   }
   // keep every person control (Photos dropdown + map legend + day rail) in sync

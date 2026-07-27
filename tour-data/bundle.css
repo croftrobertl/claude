@@ -102,6 +102,8 @@
 .dcc-tour-subtitle { margin: 0.25rem 0 0; color: var(--dcc-tour-muted); font-size: 1rem; }
 
 /* ---- trip stat tiles (hero) ---- */
+/* the tiles sit in their own strip below the tab selector; match the page inset */
+.dcc-tour-tripstats-wrap { padding: 0 1.5rem; }
 .dcc-tour-tripstats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 0.9rem; }
 .dcc-tour-tile {
   display: flex; flex-direction: column; gap: 1px;
@@ -582,6 +584,7 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .dcc-tour-ovcollapse[open] .ov-body { margin-top: 8px; }
 
   /* hero stats: one horizontal scroll row */
+  .dcc-tour-tripstats-wrap { padding: 0 1.35rem; }
   .dcc-tour-tripstats { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
   .dcc-tour-tile { min-width: 108px; scroll-snap-align: start; }
