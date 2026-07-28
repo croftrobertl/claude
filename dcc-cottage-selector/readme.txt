@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.0
+Stable tag: 0.17.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,11 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.17.1 =
+* Renamed the Elementor widget category to "Dora Canal Court". The Cottage Selector now
+  appears under that heading in the Elementor widget panel. Widgets already placed on
+  your pages are unaffected — only the panel grouping changes.
 
 = 0.17.0 =
 * Fixed a false claim on result cards: "the most square footage of the bunch" showed on

@@ -47,7 +47,7 @@ class Selector_Widget extends Widget_Base
 
     public function get_categories(): array
     {
-        return ['claude-code'];
+        return ['dora-canal-court'];
     }
 
     public function get_keywords(): array

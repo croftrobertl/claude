@@ -82,9 +82,9 @@ final class Plugin
     public function register_category(\Elementor\Elements_Manager $elements_manager): void
     {
         $elements_manager->add_category(
-            'claude-code',
+            'dora-canal-court',
             [
-                'title' => __('Claude Code', 'dcc-cottage-selector'),
+                'title' => __('Dora Canal Court', 'dcc-cottage-selector'),
                 'icon'  => 'fa fa-plug',
             ]
         );
