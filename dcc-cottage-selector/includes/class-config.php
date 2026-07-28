@@ -171,6 +171,12 @@ final class Config
             }
         }
 
+        // These defaults must mirror the widget's own defaults (see
+        // Selector_Widget::design_snapshot()). Callers that build a config WITHOUT a
+        // widget — notably the [dcc_selector_entry] shortcode's pop-up — would
+        // otherwise omit the keys entirely, and selector.js reads a missing key as
+        // "on" (`config.showReview !== false`). That silently gave the shortcode
+        // pop-up the review step the widget skips. $extra still overrides both.
         return array_merge([
             'cottages'     => Data::all(),
             'diffFields'   => Data::DIFF_FIELDS,
@@ -178,6 +184,8 @@ final class Config
             'startMode'    => 'quick',
             'enabledModes' => ['quick', 'weights', 'compare'],
             'highlight'    => '',
+            'showHeading'  => true,
+            'showReview'   => false,
         ], $extra);
     }
 }

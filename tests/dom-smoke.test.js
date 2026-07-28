@@ -58,6 +58,10 @@ function answerNext(root, value) { clickAnswer(root, value); clickNext(root); }
 function stepThrough(root, value) {
   for (var k = 0; k < 12 && root.querySelector('.dccs-chips-wizard'); k++) { answerNext(root, value); }
 }
+// The review step is OFF by default (see Config::build), so "See my matches" only
+// exists when a test explicitly enables it. Click it when present, else we're already
+// on results.
+function seeMatches(root) { var b = root.querySelector('.dccs-see-matches'); if (b) { b.click(); } }
 function toResults(root, value) {
   stepThrough(root, value || 'either');
   var b = root.querySelector('.dccs-see-matches');
@@ -168,7 +172,7 @@ function enter(root, mode) {
 // ---- 5. Review step + edit returns to where you came from ----
 (function () {
   const w = freshDom();
-  const root = mountSelector(w);
+  const root = mountSelector(w, configWith({ showReview: true }));   // review is off by default
   enter(root, 'quick');
   stepThrough(root, 'either');
   ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
@@ -191,7 +195,7 @@ function enter(root, mode) {
   enter(root, 'quick');
   clickAnswer(root, 'yes'); clickNext(root);   // desk = yes
   stepThrough(root, 'either');
-  root.querySelector('.dccs-see-matches').click();
+  seeMatches(root);
   ok('results region shown', !!root.querySelector('.dccs-results'));
   ok('cottage names include their number', cardNames(root).every(function (n) { return /^Cottage \d+: /.test(n); }));
   ok('no "What you’re looking for" recap on results', !root.querySelector('.dccs-recap'));
@@ -204,11 +208,12 @@ function enter(root, mode) {
   const w = freshDom();
   const cfg = JSON.parse(CONFIG);
   cfg.icons = { submit: '<i class="dccs-test-ico"></i>', view: '<i class="dccs-test-ico"></i>' };
+  cfg.showReview = true;                       // the Submit button lives on the review step
   const root = mountSelector(w, JSON.stringify(cfg));
   enter(root, 'quick');
   stepThrough(root, 'either');
   ok('Submit button carries its icon', !!root.querySelector('.dccs-see-matches .dccs-ico .dccs-test-ico'));
-  root.querySelector('.dccs-see-matches').click();
+  seeMatches(root);
   ok('View-cottage links carry their icon', !!root.querySelector('.dccs-view .dccs-ico .dccs-test-ico'));
 })();
 
@@ -263,7 +268,7 @@ function enter(root, mode) {
   ok('step 7 of 7 is the screened-porch question', /7\b.*\b7/.test(progress(root)) &&
     /porch/i.test(root.querySelector('.dccs-step-q').textContent));
   clickAnswer(root, 'yes'); clickNext(root);                    // last step -> review
-  root.querySelector('.dccs-see-matches').click();
+  seeMatches(root);
   ok('answering porch=Yes narrows to The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
 
@@ -321,13 +326,13 @@ function enter(root, mode) {
 // ---- 10b. Weigh-priorities runs as a step -> review -> results wizard ----
 (function () {
   const w = freshDom();
-  const root = mountSelector(w);
+  const root = mountSelector(w, configWith({ showReview: true }));   // review is off by default
   enter(root, 'weights');
   ok('weights starts at Step 1 of 9', /1\b.*\b9/.test(progress(root)));
   ok('nothing preselected, Next disabled', !activeChip(root) && root.querySelector('.dccs-next').disabled === true);
   stepThrough(root, '2');                                   // medium for all 9
   ok('weights review lists all 9 priorities', root.querySelectorAll('.dccs-review-list li').length === 9);
-  root.querySelector('.dccs-see-matches').click();
+  seeMatches(root);
   ok('weights results are ranked cards', root.querySelectorAll('.dccs-card').length >= 1);
 })();
 
@@ -407,7 +412,7 @@ function enter(root, mode) {
   // Drive to results: the cottage is still highlighted once they get there.
   enter(modalRoot, 'quick');
   stepThrough(modalRoot, 'either');
-  modalRoot.querySelector('.dccs-see-matches').click();
+  seeMatches(modalRoot);
   const hc = modalRoot.querySelector('.dccs-card.is-highlight');
   ok('highlighted cottage #31 surfaces once results are reached',
     !!hc && hc.querySelector('h4').textContent.indexOf('Cottage 31: Hibiscus Hut') !== -1);
@@ -508,7 +513,7 @@ function enter(root, mode) {
   ok('marking pet High drops the count to 1', /\b1\b/.test(countText(root)));
   clickNext(root);
   stepThrough(root, '1');
-  root.querySelector('.dccs-see-matches').click();
+  seeMatches(root);
   ok('a High priority filters results to the matching cottage',
     cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 34: Coconut Cottage');
 })();

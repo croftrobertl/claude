@@ -106,6 +106,30 @@ namespace {
     $reg3 = get_option(Selector_Widget::DESIGN_OPTION, []);
     ok('a real change updates the registry', ($reg3['Main']['overrides']['string_overrides']['heading'] ?? null) === 'Changed');
 
+    // ---- Mini Entry parity with the Cottage Selector ----------------------------
+    // Mini_Entry_Widget subclasses Selector_Widget, so it must land in the SAME
+    // Elementor category without redeclaring it.
+    require DCCS_DIR . 'includes/class-mini-entry-widget.php';
+    $selCats  = (new \ReflectionClass(Selector_Widget::class))->newInstanceWithoutConstructor()->get_categories();
+    $miniRef  = new \ReflectionClass(\DCCS\Mini_Entry_Widget::class);
+    $miniCats = $miniRef->newInstanceWithoutConstructor()->get_categories();
+    ok('Mini Entry shares the Selector\'s Elementor category', $miniCats === $selCats);
+    ok('category is the branded slug, not a leftover working name', $selCats === ['dora-canal-court']);
+    ok('Mini Entry inherits the category (no duplicated slug to drift)',
+        $miniRef->getMethod('get_categories')->getDeclaringClass()->getName() === Selector_Widget::class);
+
+    // The [dcc_selector_entry] shortcode builds its pop-up config WITHOUT a widget,
+    // via Config::build(). selector.js reads a MISSING key as "on"
+    // (`config.showReview !== false`), so any default the widget sets must also be
+    // present here or the shortcode pop-up silently behaves differently.
+    $shortcodeCfg = \DCCS\Config::build([], ['highlight' => '22', 'startMode' => 'quick']);
+    $widgetCfg    = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]));
+    foreach (['showReview', 'showHeading'] as $key) {
+        ok("shortcode pop-up config declares $key (no silent JS default)", array_key_exists($key, $shortcodeCfg));
+        ok("shortcode $key matches the widget default", ($shortcodeCfg[$key] ?? null) === ($widgetCfg[$key] ?? null));
+    }
+    ok('review step is off by default on both paths', ($shortcodeCfg['showReview'] ?? null) === false);
+
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);
 }

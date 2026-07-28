@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.1
+Stable tag: 0.17.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -130,6 +130,7 @@ buttons) is configurable in the Elementor editor.
 2. Activate it.
 3. Drop the **Cottage Selector** widget on a page (Elementor), or place the
    **Mini Entry** widget / `[dcc_selector_entry]` shortcode on each cottage page.
+   Both widgets live under the **Dora Canal Court** category in the widget panel.
 
 == Caching (SpeedyCache / HostGator) ==
 
@@ -184,10 +185,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 
 == Changelog ==
 
+= 0.17.2 =
+* Fixed: the [dcc_selector_entry] shortcode's pop-up still showed the "Review your
+  answers" step even though it is off by default (the Elementor widget already skipped
+  it). Both the widget and the shortcode now follow the same default.
+
 = 0.17.1 =
-* Renamed the Elementor widget category to "Dora Canal Court". The Cottage Selector now
-  appears under that heading in the Elementor widget panel. Widgets already placed on
-  your pages are unaffected — only the panel grouping changes.
+* Renamed the Elementor widget category to "Dora Canal Court". Both the Cottage Selector
+  and the Mini Entry appear under that heading in the Elementor widget panel. Widgets
+  already placed on your pages are unaffected — only the panel grouping changes.
 
 = 0.17.0 =
 * Fixed a false claim on result cards: "the most square footage of the bunch" showed on
