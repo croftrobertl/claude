@@ -2,9 +2,9 @@
 
 Pertinent site, stack, and lessons-learned reference for building WordPress
 plugins and Elementor widgets for **doracanalcourt.com**. Paste this (or a
-relevant section) at the start of a Claude session when starting a new
+relevant section) at the start of a working session when starting a new
 project for this site. The plugin-specific notes for the MPHB Availability
-Calendar live in `CLAUDE.md` inside that plugin's repo — this file is the
+Calendar live in `PROJECT-NOTES.md` inside that plugin's repo — this file is the
 generic cross-cutting one.
 
 ---
@@ -271,8 +271,8 @@ to install.
 ### 8.2. Widget category
 
 Register a category once via `elementor/elements/categories_registered`
-and reuse the slug for every plugin's widgets. We use `claude-code`
-("Claude Code") for this site.
+and reuse the slug for every plugin's widgets. We use `dcc-widgets`
+("Dora Canal Court") for this site.
 
 ### 8.3. Widget registration
 
@@ -576,8 +576,8 @@ Conventions to copy:
 ## 14. Existing plugin: MPHB Availability Calendar
 
 Lives in `mphb-availability-calendar/`. One Elementor widget under the
-"Claude Code" category that displays a mobile-friendly multi-property
-availability grid for MotoPress accommodations. See its own `CLAUDE.md`
+"Dora Canal Court" category that displays a mobile-friendly multi-property
+availability grid for MotoPress accommodations. See its own `PROJECT-NOTES.md`
 for full architecture. Useful patterns to copy:
 
 - `\MPHBAC\Data_Provider::list_room_types()` returns `[id, title, abbrev, number]`
@@ -596,7 +596,7 @@ for full architecture. Useful patterns to copy:
 
 1. Copy the file layout in Section 13.
 2. Pick a 4-6 char unique prefix; replace `YOURNS_`/`yourns_` everywhere.
-3. Set widget category to `claude-code` to keep all our widgets together.
+3. Set widget category to `dcc-widgets` to keep all our widgets together.
 4. Bake visual defaults into `assets/css/widget.css`; let Elementor controls
    be override-only.
 5. Use `.my-widget.my-widget` doubled-class wrapper to defeat Bravada.

@@ -364,7 +364,7 @@ Google Cloud Console and rotate if unrestricted.
 Only one administrator account. The `mphb_customer` role is the MotoPress guest role —
 these are booking guests who registered. No unexpected admin accounts found.
 
-**Note:** The `claude` subscriber account (ID 88) is likely your Claude Code session
+**Note:** The `claude` subscriber account (ID 88) is a leftover integration/session
 account. Subscriber has no meaningful WP permissions.
 
 ### wp-config.php
@@ -442,15 +442,15 @@ Plugins in snapshot zip with version-risk notes:
 
 ---
 
-## 11. Gotchas for future Claude Code sessions
+## 11. Gotchas for future development sessions
 
 - **Table prefix is `portal_`**, not the default `wp_`. All raw SQL must use this prefix.
 - **Two table sets in the DB:** `portal_` (live) and `wpstg0_` (WP Staging, inactive).
   Any analysis must filter to `portal_` only.
 - **MotoPress availability:** read from `portal_mphb_reserved_room` posts + `portal_mphb_blocks`,
-  **not** from the PHP API. See CLAUDE.md invariants.
+  **not** from the PHP API. See PROJECT-NOTES.md invariants.
 - **Checkout page:** MotoPress checkout is at page ID 1399 (slug: `/submit-booking/`).
-- **mphb_availability-calendar widget category slug:** `claude-code` — don't change it.
+- **mphb_availability-calendar widget category slug:** `dcc-widgets` — keep it stable so all site widgets stay grouped.
 - **No child theme** — all Bravada customizations via Elementor kit + Angie snippets.
 - **SpeedyCache has 526 options** — it's heavily configured. Don't reset settings without
   capturing the current config first.

@@ -72,7 +72,7 @@ directory.
 
 ## 2. API keys stored in the database
 
-Three AI service API keys live in `portal_options` (Anthropic Claude,
+Three AI service API keys live in `portal_options` (Anthropic,
 OpenAI, Google AI). If the database has ever been exported or shared,
 those keys should be rotated.
 
@@ -90,7 +90,7 @@ each is restricted to `doracanalcourt.com` referrer.
 
 ## 3. mphb-availability-calendar plugin status
 
-For Claude Code's reference, not yours — but useful to know what was changed
+Reference notes on what was changed
 in this session:
 
 - v0.9.7: dead-code sweep + info-popup keyboard focus-trap parity

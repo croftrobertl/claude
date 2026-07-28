@@ -55,7 +55,7 @@ final class Widget extends Widget_Base
 
     public function get_categories(): array
     {
-        return ['claude-code'];
+        return ['dcc-widgets'];
     }
 
     public function get_keywords(): array
@@ -1218,8 +1218,8 @@ final class Widget extends Widget_Base
             }
             // Title link: explicit URL override wins; otherwise the
             // cottage's accommodation page (the cottage IS the mphb_room_type
-            // post, so $cid == accommodation post ID per the CLAUDE.md
-            // invariant). Skip when neither resolves to a usable URL.
+            // post, so $cid == accommodation post ID). Skip when neither
+            // resolves to a usable URL.
             $title_url_override = trim((string) ($row['ci_title_url'] ?? ''));
             if ($title_url_override !== '') {
                 $info_title_urls[$cid] = esc_url($title_url_override);

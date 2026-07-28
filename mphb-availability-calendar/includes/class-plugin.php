@@ -108,9 +108,9 @@ final class Plugin
     public function register_category(\Elementor\Elements_Manager $elements_manager): void
     {
         $elements_manager->add_category(
-            'claude-code',
+            'dcc-widgets',
             [
-                'title' => __('Claude Code', 'mphb-availability-calendar'),
+                'title' => __('Dora Canal Court', 'mphb-availability-calendar'),
                 'icon'  => 'fa fa-plug',
             ]
         );

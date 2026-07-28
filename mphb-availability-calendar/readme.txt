@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.13.0
+Stable tag: 0.13.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ A mobile-friendly Elementor widget that shows multi-property availability for Mo
 
 == Description ==
 
-This plugin adds a single Elementor widget — **MPHB Availability Calendar** — under a new "Claude Code" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
+This plugin adds a single Elementor widget — **MPHB Availability Calendar** — under a new "Dora Canal Court" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
 
 * Reads MotoPress's already-synced bookings directly from the database. No extra iCal HTTP fetches, no new cron jobs.
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
@@ -29,7 +29,7 @@ This plugin adds a single Elementor widget — **MPHB Availability Calendar** �
 
 1. Zip the `mphb-availability-calendar` folder.
 2. In WordPress: Plugins → Add New → Upload Plugin → choose the zip → Install Now → Activate.
-3. Edit any page or template with Elementor. Find the **MPHB Availability Calendar** widget under the "Claude Code" category and drag it onto a full-width section.
+3. Edit any page or template with Elementor. Find the **MPHB Availability Calendar** widget under the "Dora Canal Court" category and drag it onto a full-width section.
 
 Requires Elementor and MotoPress Hotel Booking to be active.
 
@@ -62,6 +62,10 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.13.1 =
+* The Elementor widget category is now "Dora Canal Court" (slug `dcc-widgets`). This is editor-panel grouping only — Elementor stores the widget type, not its category, on saved pages, so every existing placed widget, saved configuration, and style override keeps working with no migration step.
+* Naming cleanup across the plugin source and readme so the distributed files carry only project-specific terminology.
 
 = 0.13.0 =
 * Instant first paint: the calendar grid now appears immediately on page load instead of showing the gray loading skeleton while waiting for the AJAX request (typically 0.5–1.5s on shared hosting). The page embeds the default window's availability; the widget paints from it instantly, then quietly re-checks the server in the background and only redraws if a booking changed. Pages served from a stale full-page cache self-correct: past days are fixed locally and the background check refreshes the rest.
@@ -103,7 +107,7 @@ Full-plugin review pass — four correctness/robustness fixes, no visual changes
 * Reverted the v0.10.0 mobile filter-row layout. On phones (≤600 px) the Check-in / Check-out date fields and the SHOW / RESET buttons each stack on their own full-width, centered row again, exactly as they did before v0.10.0. The single-row layout introduced in v0.10.0 crowded the row — the labels wrapped to two lines and the date inputs were crushed. The cottage `#N` column polish from v0.9.8 / v0.9.9 is unchanged.
 
 = 0.10.1 =
-* Display-name rename only. The plugin row in WP-Admin → Plugins → Installed Plugins and the draggable widget tile in Elementor's editor panel now both read "DCC Availability Calendar." No functional change — every internal identifier stays the same (folder name, main file, text domain `mphb-availability-calendar`, widget slug `mphbac_calendar`, PHP namespace `MPHBAC\`, CSS class prefix `mphbac-`, transient prefix `mphbac_`, AJAX action `mphbac_query`, Elementor category slug `claude-code`, all constants), so existing Elementor pages, saved widget configs, translations, and CSS overrides keep working without any migration step.
+* Display-name rename only. The plugin row in WP-Admin → Plugins → Installed Plugins and the draggable widget tile in Elementor's editor panel now both read "DCC Availability Calendar." No functional change — every internal identifier stays the same (folder name, main file, text domain `mphb-availability-calendar`, widget slug `mphbac_calendar`, PHP namespace `MPHBAC\`, CSS class prefix `mphbac-`, transient prefix `mphbac_`, AJAX action `mphbac_query`, all constants), so existing Elementor pages, saved widget configs, translations, and CSS overrides keep working without any migration step.
 
 = 0.10.0 =
 * Desktop and tablet now honor the "Number only" row-label setting — only the `#N` shows, centered with tabular figures, while the column stays the same width as today's two-line layout (use the existing Cottage column width control to narrow it if desired). Previously the abbrev still rendered above the `#N` on desktop/tablet, ignoring the toggle. Mobile behavior is unchanged. The full cottage name remains in the cell's accessible name (tooltip + screen reader) and tapping any cottage cell still opens its info popup with the full record.

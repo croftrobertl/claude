@@ -1,6 +1,6 @@
-# CLAUDE.md
+# Project notes
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Developer guidance for working with the code in this repository.
 
 ## Site context
 
@@ -37,7 +37,7 @@ find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
 ( cd $(git rev-parse --show-toplevel) && zip -r mphb-availability-calendar.zip mphb-availability-calendar )
 ```
 
-There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` and the plan in `/root/.claude/plans/` for the manual smoke-test checklist.
+There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` for the manual smoke-test checklist.
 
 ## Architecture
 
@@ -72,7 +72,7 @@ These are deliberate decisions from the design conversation. Don't "fix" them wi
 - **Availability is read directly from MotoPress's DB, not its PHP API.** `MPHB()->getRoomRepository()->getAvailableRooms()` proved unreliable (ignores the room-type filter in 6.x). `Data_Provider::query_occupied_room_days()` reads the real storage: `mphb_reserved_room` posts (`_mphb_room_id` meta) joined to their parent `mphb_booking` post (which carries `mphb_check_in_date` / `mphb_check_out_date` and a `post_status` in `Data_Provider::BLOCKING_STATUSES`), plus the `{prefix}mphb_blocks` table for manual host blocks. A cottage-day is "booked" only when every physical room of that type is occupied. All SQL is `$wpdb->prepare`'d; the two queries are wrapped in `try/catch (\Throwable)` with `MPHBAC:` error logging.
 - **Book Now flow uses a hidden form POST to MotoPress's checkout page** (`MPHB()->settings()->pages()->getCheckoutPageUrl()`, default `/submit-booking/`). The POST body matches MotoPress's own cottage-page form exactly: `mphb_room_type_id`, `mphb_check_in_date`, `mphb_check_out_date`, `mphb_rooms_details[ID]=1`, `mphb_is_direct_booking=1`. No nonce field — MotoPress doesn't CSRF-protect this submission. Don't switch to `MPHB()->reservationRequest()` PHP-side unless you have a specific reason; the form-POST path is documented behavior and identical to what MotoPress's own UI does. Popup can be disabled globally via the `enable_popup` Elementor toggle.
 - **Every visible string must be translatable.** Text domain is `mphb-availability-calendar`. The site uses Loco Translate. Use `__()`, `esc_html__()`, `esc_attr__()` etc. — never echo a raw user-facing string.
-- **The Elementor widget category is `claude-code`** ("Claude Code"). It's registered in `Plugin::register_category()`. Don't change the slug — existing widgets reference it.
+- **The Elementor widget category is `dcc-widgets`** ("Dora Canal Court"). It's registered in `Plugin::register_category()`. Changing the slug is safe for already-placed widgets (Elementor persists `widgetType`, not the category, in saved page data) — the category only controls which panel group the widget appears under while editing. Keep it stable anyway so all site widgets stay grouped together.
 - **SpeedyCache exclusion is auto-managed.** `Cache_Integration::on_activate()` runs on plugin activation and adds `/wp-admin/admin-ajax.php?action=mphbac_query` to SpeedyCache's exclusion list (filter + option write). The user does not configure this manually.
 
 ## Cache layer
@@ -124,5 +124,5 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Git workflow
 
-- Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
+- Active branch: `claude/review-shared-chat-bExtl` (existing remote ref; renaming it is optional). Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
