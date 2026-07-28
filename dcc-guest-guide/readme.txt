@@ -73,8 +73,8 @@ After upload + activation:
 = 0.9.7.29 =
 
 **Branding cleanup.** The Elementor panel category the widget appears
-under is renamed from "Claude Code" to **Dora Canal Court** (slug
-`dcc-widgets`). The category slug only groups widgets in the editor
+under is now **Dora Canal Court** (slug `dcc-widgets`). The category
+slug only groups widgets in the editor
 panel — page data stores the widget type — so widgets already placed on
 pages are unaffected and need no re-save. Developer-tooling references
 were also removed from this readme.
