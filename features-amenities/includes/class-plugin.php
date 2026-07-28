@@ -28,9 +28,9 @@ class Plugin {
 
 	public function register_category( $elements_manager ): void {
 		$elements_manager->add_category(
-			'claude-code',
+			'dcc-widgets',
 			[
-				'title' => __( 'Claude Code', 'features-amenities' ),
+				'title' => __( 'Dora Canal Court', 'features-amenities' ),
 				'icon'  => 'fa fa-plug',
 			]
 		);

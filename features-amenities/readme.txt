@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.9.0
+Stable tag: 1.9.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Adds a single Elementor widget that renders a sectioned, searchable, optionally-
 
 == Description ==
 
-Provides an Elementor widget under the "Claude Code" category that displays a list of Section Headers and Amenity/Feature items. Originally derived from an Angie Code snippet and rebuilt as a standalone plugin so it can be installed once and reused across pages.
+Provides an Elementor widget under the "Dora Canal Court" category that displays a list of Section Headers and Amenity/Feature items. Built as a standalone plugin so it can be installed once and reused across pages.
 
 Features:
 
@@ -33,9 +33,12 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 
 1. Zip the `features-amenities` folder.
 2. Upload it via WP Admin → Plugins → Add New → Upload Plugin.
-3. Activate. The widget appears in Elementor under "Claude Code" → "Features & Amenities".
+3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.9.1 =
+* Renamed the Elementor panel category to "Dora Canal Court" (slug `dcc-widgets`). Widgets already placed on pages are unaffected — the category controls only where the widget is listed in the Elementor panel, not any saved content.
 
 = 1.9.0 =
 * Fixed: the accordion arrow (▼) rendered black on the live site even when the header appeared correct in the Elementor editor. The arrow is a CSS pseudo-element that previously had no color binding, so it inherited the live theme's dark text color. It now follows the "Icon Color" control (Style → Section Headers), so setting that color (e.g. white) applies to the arrow on the live page too. Baked default matches the section icon color.

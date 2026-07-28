@@ -28,7 +28,7 @@ class Widget extends Widget_Base {
 	}
 
 	public function get_categories() {
-		return [ 'claude-code', 'general' ];
+		return [ 'dcc-widgets', 'general' ];
 	}
 
 	public function get_keywords() {
