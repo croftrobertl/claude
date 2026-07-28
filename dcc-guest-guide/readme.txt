@@ -15,7 +15,7 @@ auto dark mode. Cmd-K search. Per-item QR code, share links, copy buttons.
 
 == Description ==
 
-This plugin adds a single Elementor widget under the **Claude Code** category:
+This plugin adds a single Elementor widget under the **Dora Canal Court** category:
 **DCC Guest Guide**. It lets you build a sectioned guest guide with a menu hub
 of tiles that open into detailed content cards.
 
@@ -70,6 +70,19 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.29 =
+
+**Branding cleanup.** The Elementor panel category the widget appears
+under is renamed from "Claude Code" to **Dora Canal Court** (slug
+`dcc-widgets`). The category slug only groups widgets in the editor
+panel — page data stores the widget type — so widgets already placed on
+pages are unaffected and need no re-save. Developer-tooling references
+were also removed from this readme.
+
+Note: the MPHB Availability Calendar plugin registers the same shared
+category and needs the identical rename to keep both widgets grouped
+under one panel heading.
+
 = 0.9.7.28 =
 
 **Detail-popup alignment polish (two host requests).**
@@ -97,7 +110,7 @@ passing.
 
 = 0.9.7.27 =
 
-**Fable 5 hotspot audit — automated regression tests + two fixes.**
+**Code audit — automated regression tests + two fixes.**
 
 * **New: automated popup regression suite** (`tests/` at the repo root,
   not shipped in the plugin zip). Drives the real `widget.js` +
@@ -1594,7 +1607,7 @@ New features:
 Note on the Welcome Pack: tested against Elementor 3.5+ editor model API.
 If the panel button reports "could not resolve active widget model" in the
 browser console, your Elementor version may have shifted the model paths —
-file an issue and Claude will adapt.
+file an issue and the plugin will be updated to match.
 
 = 0.1.0 =
 * Initial release.

@@ -912,10 +912,13 @@ final class Plugin
     {
         // Shared with MPHB Availability Calendar; add_category is idempotent so
         // it's safe to register from both plugins regardless of activation order.
+        // The category slug only groups widgets in the Elementor panel — page
+        // data stores the widget type, so renaming it never affects widgets
+        // already placed on a page.
         $elements_manager->add_category(
-            'claude-code',
+            'dcc-widgets',
             [
-                'title' => __('Claude Code', 'dcc-guest-guide'),
+                'title' => __('Dora Canal Court', 'dcc-guest-guide'),
                 'icon'  => 'fa fa-plug',
             ]
         );

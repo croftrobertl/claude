@@ -25,7 +25,7 @@ final class Widget extends Widget_Base
     public function get_name(): string { return 'dccgg_guide'; }
     public function get_title(): string { return __('DCC Guest Guide', 'dcc-guest-guide'); }
     public function get_icon(): string { return 'eicon-info-circle-o'; }
-    public function get_categories(): array { return ['claude-code']; }
+    public function get_categories(): array { return ['dcc-widgets']; }
     public function get_keywords(): array { return ['guide', 'guest', 'info', 'wifi', 'help', 'faq']; }
     public function get_script_depends(): array { return ['dccgg-widget']; }
     public function get_style_depends(): array { return ['dccgg-widget']; }
@@ -2133,7 +2133,7 @@ final class Widget extends Widget_Base
     // generic .dccgg-btn / --dccgg-primary baselines from
     // register_button_style_controls() and register_color_controls() still
     // apply when no override is set. No defaults — baked-in look stays in
-    // widget.css; controls are override-only (CLAUDE.md invariant).
+    // widget.css; controls are override-only (project invariant).
     private function register_popup_back_style_controls(): void
     {
         $this->start_controls_section('section_style_popup_back', [
