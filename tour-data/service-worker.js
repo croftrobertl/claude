@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v57';
+const CACHE_VERSION = 'dcc-tour-v58';
 const SHELL = [
   './',
   'index.html',
@@ -18,6 +18,8 @@ const SHELL = [
   // editorial type survives offline and never hits a CDN
   'vendor/fonts/cormorant-600-latin.woff2',
   'vendor/fonts/cormorant-600-latinext.woff2',
+  'vendor/fonts/cinzel-latin.woff2',
+  'vendor/fonts/cinzel-latinext.woff2',
   'vendor/fonts/lora-400-latin.woff2',
   'vendor/fonts/lora-400-latinext.woff2',
   'vendor/fonts/lora-italic-400-latin.woff2',
