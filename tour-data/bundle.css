@@ -81,9 +81,9 @@
 .dcc-tour-root.dcc-tour-root .tb-daylabel,
 .dcc-tour-root.dcc-tour-root .sheet-day b {
   font-family: var(--dcc-tour-font-head);
-  font-weight: 600;
-  /* Cinzel is an all-caps inscriptional face — uppercase the text and give it the
-     open tracking carved capitals want (overrides the old tight Cormorant value). */
+  /* Cinzel is an all-caps inscriptional face — regular weight (400) matches the
+     thin carved strokes of the street sign; uppercase with open caps tracking. */
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.035em;
 }
