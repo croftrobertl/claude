@@ -682,7 +682,10 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   /* the narrated day card carries its own inset — trim it so the story text
      isn't double-indented against the new page margin */
   .dcc-tour-dayhead { padding: 1rem 1rem; }
-  .dcc-tour-title { font-size: 2rem; }
+  /* keep the carved-caps title + subtitle each on a single row on phones: scale the
+     type to the viewport and tighten the caps tracking so they never wrap */
+  .dcc-tour-root.dcc-tour-root .dcc-tour-title { font-size: clamp(1.1rem, 6vw, 1.9rem); letter-spacing: 0.02em; white-space: nowrap; }
+  .dcc-tour-root.dcc-tour-root .dcc-tour-subtitle { font-size: clamp(0.62rem, 3.3vw, 0.95rem); letter-spacing: 0.006em; white-space: nowrap; }
 }
 
 /* touch devices: keep affordances visible + fingers-friendly */
@@ -717,14 +720,12 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .tb-daylabel { font-size: 0.98rem; font-weight: 700; color: var(--dcc-tour-primary); }
 
   /* view switching (Story / Map / Stats) */
-  .dcc-tour-root[data-view="story"] .dcc-tour-header,
   .dcc-tour-root[data-view="story"] .dcc-tour-overview,
   .dcc-tour-root[data-view="story"] .dcc-tour-controls,
   .dcc-tour-root[data-view="story"] .dcc-tour-mapmode { display: none; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-body,
   .dcc-tour-root[data-view="stats"] .dcc-tour-mapmode,
   .dcc-tour-root[data-view="stats"] .dcc-tour-topbar { display: none; }
-  .dcc-tour-root[data-view="map"] .dcc-tour-header,
   .dcc-tour-root[data-view="map"] .dcc-tour-overview,
   .dcc-tour-root[data-view="map"] .dcc-tour-controls,
   .dcc-tour-root[data-view="map"] .dcc-tour-body,
@@ -894,7 +895,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .galacc-body { padding: 2px 0 14px; }
 .galacc-body[hidden] { display: none; }
 @media (max-width: 800px) {
-  .dcc-tour-root[data-view="gallery"] .dcc-tour-header,
   .dcc-tour-root[data-view="gallery"] .dcc-tour-topbar { display: none; }
   .dcc-tour-gallery { padding: 0.5rem 0.8rem 2rem; }
   /* keep Type + Photographer on row 1 and City + Place + Sort together on row 2 */
