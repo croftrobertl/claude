@@ -279,7 +279,10 @@
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
 
-    root.insertBefore(tb, root.firstChild); root.appendChild(bar); root.appendChild(sheet);
+    // place the sticky day-selector just BELOW the header (not above it), so the
+    // site header leads the Timeline tab like it does on Photos/Map/Stats
+    const hdr = root.querySelector('.dcc-tour-header');
+    root.insertBefore(tb, hdr ? hdr.nextSibling : root.firstChild); root.appendChild(bar); root.appendChild(sheet);
     root._topbar = tb; root._sheet = sheet;
     root.dataset.view = 'story';
     root.querySelector('.dcc-tour-tabbtn[data-view="story"]').classList.add('active');
