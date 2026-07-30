@@ -49,6 +49,8 @@
 }
 
 :root {
+  color-scheme: light;   /* always light — ignore the OS/browser dark preference so
+                            native controls, scrollbars and form fields stay light */
   /* Classical mono palette: one warm gold accent. Large headings may sit in the
      accent (>=3:1 on this ground); small/paragraph accent text uses the deep
      ramp step (--dcc-tour-secondary / -accent-deep). */
@@ -818,20 +820,9 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .sheet-day .sd-txt > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
-/* ===== dark mode (auto) ===== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* colophon page: a warm near-black below neutral-900, gold lifted to the
-       light ramp steps so the accent still reads on a dark ground */
-    --dcc-tour-primary: #e1ad66;          /* accent-400 */
-    --dcc-tour-secondary: #e1ad66;
-    --dcc-tour-accent-deep: #facb8d;      /* accent-300 — accent text on dark */
-    --dcc-tour-bg: #1a1917; --dcc-tour-surface: #232120; --dcc-tour-card-bg: #232120;
-    --dcc-tour-text: #f3f2f2; --dcc-tour-muted: #a6a19b; --dcc-tour-border: #3a3633;
-    --dcc-tour-shadow: 0 3px 14px rgba(0,0,0,0.55);
-  }
-  .dcc-tour-map { background: #2b2724; }
-}
+/* Dark mode intentionally removed — the archive always renders in its light
+   editorial palette, regardless of the OS/browser colour-scheme preference
+   (see `color-scheme: light` on :root). */
 
 /* ===== Gallery ("Photos") view ===== */
 .dcc-tour-gallery { display: none; padding: 0.6rem 1.5rem 2rem; }
