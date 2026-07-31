@@ -15,6 +15,9 @@ PIPE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(PIPE))
 MEDIA_BASE = "https://croftrobertl.github.io/claude/tour-data/"
 ING = json.load(open(os.path.join(ROOT, "data-local", "new_items_ingest.json")))
+_extra_path = os.path.join(ROOT, "data-local", "extra_items_ingest.json")
+if os.path.exists(_extra_path):
+    ING = ING + json.load(open(_extra_path))   # + quarantined-for-review + iMovie conclusion videos
 
 def to_item(r):
     it = {"id": r["key"], "kind": r["kind"], "place": "", "chapter": "unbucketed",
