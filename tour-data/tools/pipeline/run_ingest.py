@@ -47,7 +47,8 @@ def main():
     if "--kind" in a:  kind = a[a.index("--kind")+1]
     if "--limit" in a: limit = int(a[a.index("--limit")+1])
     if "--key" in a:   keys = set(a[i+1] for i,x in enumerate(a) if x == "--key")
-    items = json.load(open(os.path.join(ROOT, "data-local", "new_items_ingest.json")))
+    src_file = a[a.index("--file")+1] if "--file" in a else os.path.join(ROOT, "data-local", "new_items_ingest.json")
+    items = json.load(open(src_file if os.path.isabs(src_file) else os.path.join(ROOT, src_file)))
     if kind: items = [r for r in items if r["kind"] == kind]
     if keys: items = [r for r in items if r["key"] in keys]
 
