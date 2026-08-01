@@ -194,7 +194,7 @@
     root._story = story; root._mapdiv = mapdiv; root._nav = nav; root._mapmode = mapmode; root._statsviz = statsviz;
     bindClimbChart(overview);
     bindVizTimeline(overview);
-    animateCounts(header);
+    animateCounts(header); wireTips();
     buildAppShell();
     enhanceAllHScroll();
     window.addEventListener('resize', enhanceAllHScroll);
@@ -1295,33 +1295,66 @@
     let sup = '';
     if (busiest && busiest.count > 0) {
       sup = '<div class="dcc-tour-superlatives">' +
-        '<span>🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots</span>' +
-        (captured ? '<span>📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '</span>' : '') +
-        (!personOn() && s.longest_walk_day ? '<span>🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + distFromKm(s.longest_walk_day.km) + '</span>' : '') +
+        '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The single day with the most photos, videos and clips taken.') + '">🔥 Busiest day <b>' + escapeHtml(busiest.label) + '</b> · ' + busiest.count + ' shots<span class="t-info" aria-hidden="true">ⓘ</span></span>' +
+        (captured ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The place with the most photos and videos across the whole trip.') + '">📍 Most captured <b>' + escapeHtml(shortName(captured.name)) + '</b> · ' + captured.count + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
+        (!personOn() && s.longest_walk_day ? '<span class="sup-tip" tabindex="0" data-tip="' + escapeAttr('The day we covered the most ground between photo spots: straight-line distances between consecutive geotagged shots, counting only hops under 3 km (so drives, boats and flights are skipped). A rough “how far we roamed” estimate from photo GPS — not on-foot miles. For actual walking, see the “walked” tile.') + '">🥾 Longest day <b>' + escapeHtml(s.longest_walk_day.label) + '</b> · ' + distFromKm(s.longest_walk_day.km) + '<span class="t-info" aria-hidden="true">ⓘ</span></span>' : '') +
         '</div>';
     }
     const note = personOn() ?
       '<p class="dcc-tour-statsnote">Photo &amp; place counts show only <b>' + escapeHtml(personLabel()) +
         '</b>’s shots. Steps, distance &amp; climb are trip-wide (from one watch).</p>' : '';
     return '<div class="dcc-tour-tripstats">' +
-      statTile(h.steps, '', 'steps', h.watch) +
-      statTile(distNumFromMi(h.dist, 1), ' ' + distUnit(), 'walked', 'by watch · ' + DATA.day_count + ' days', 1) +
-      statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd) +
-      (totalLoc ? statTile(totalLoc, '', 'places', personOn() ? 'shot by ' + personLabel() : 'visited & named') : '') +
+      statTile(h.steps, '', 'steps', '', 0,
+        'Total steps recorded on ' + h.watch + ' across the whole trip (Apple Health).') +
+      statTile(distNumFromMi(h.dist, 1), ' ' + distUnit(), 'walked', '', 1,
+        'Walking + running distance from ' + h.watch + ' — the only truly sensor-measured distance here — summed over the trip.') +
+      statTile(h.flights, '', 'flights climbed', '≈ Mount Srđ ×' + srd, 0,
+        'Flights of stairs climbed, from ' + h.watch + '. For scale, that’s about ' + srd + '× the height of Mount Srđ, the hill above Dubrovnik.') +
+      (totalLoc ? statTile(totalLoc, '', 'places', personOn() ? 'shot by ' + personLabel() : 'visited & named', 0,
+        'How many distinct places we named across the trip — every geotagged photo and video was assigned to a location.') : '') +
       (!personOn() ? (() => { const tm = travelModes(), g = tm.ground || 1;
         return statTile(distNumFromKm(tm.ground, 0), ' ' + distUnit(), 'traveled on the ground',
-          '🚌 ' + Math.round(tm.road / g * 100) + '% · 🥾 ' + Math.round(tm.walk / g * 100) + '% · ⛵ ' + Math.round(tm.boat / g * 100) + '%', 0); })() : '') +
+          '🚌 ' + Math.round(tm.road / g * 100) + '% · 🥾 ' + Math.round(tm.walk / g * 100) + '% · ⛵ ' + Math.round(tm.boat / g * 100) + '%', 0,
+          'Estimated total distance on the ground (flights excluded), split into bus/car vs walking vs boat. Inferred from place names, geography and the watch — only the walking share is sensor-measured.'); })() : '') +
       (photos != null ? statTile(photos + videos + clips, '', 'photos & videos',
-        photos + ' photos · ' + videos + ' videos · ' + clips + ' clips') : '') +
+        photos + ' photos · ' + videos + ' videos · ' + clips + ' clips', 0,
+        'Every photo, video and GoPro clip placed in the archive. The two closing montage videos on the Conclusion day aren’t counted.') : '') +
       '</div>' + sup + note;
   }
-  function statTile(num, suffix, label, sub, dec) {
+  function statTile(num, suffix, label, sub, dec, tip) {
     num = num || 0; dec = dec || 0;
     const shown = dec ? Number(num).toFixed(dec) : fmt(num);
-    return '<div class="dcc-tour-tile"><span class="t-big" data-count="' + num + '" data-dec="' + dec +
+    return '<div class="dcc-tour-tile' + (tip ? ' has-tip' : '') + '"' +
+      (tip ? ' tabindex="0" data-tip="' + escapeAttr(tip) + '"' : '') + '>' +
+      '<span class="t-big" data-count="' + num + '" data-dec="' + dec +
       '" data-suffix="' + escapeAttr(suffix || '') + '">' + escapeHtml(shown) + escapeHtml(suffix || '') + '</span>' +
-      '<span class="t-lab">' + escapeHtml(label) + '</span>' +
+      '<span class="t-lab">' + escapeHtml(label) + (tip ? '<span class="t-info" aria-hidden="true">ⓘ</span>' : '') + '</span>' +
       (sub ? '<span class="t-sub">' + escapeHtml(sub) + '</span>' : '') + '</div>';
+  }
+  // Shared, JS-positioned tooltip popover (lives on <body> so the stats row's
+  // horizontal scroll can't clip it). Shows on hover and on tap/click.
+  let _tipsWired = false;
+  function tipPop() {
+    let p = document.querySelector('.dcc-tour-tip-pop');
+    if (!p) { p = el('div', 'dcc-tour-tip-pop'); p.setAttribute('role', 'tooltip'); document.body.appendChild(p); }
+    return p;
+  }
+  function showTip(target) {
+    const txt = target.getAttribute('data-tip'); if (!txt) return;
+    const p = tipPop(); p.textContent = txt; p.style.display = 'block';
+    const r = target.getBoundingClientRect(), pr = p.getBoundingClientRect();
+    let left = Math.max(8, Math.min(r.left + r.width / 2 - pr.width / 2, window.innerWidth - pr.width - 8));
+    let top = r.top - pr.height - 8; if (top < 8) top = r.bottom + 8;
+    p.style.left = left + 'px'; p.style.top = top + 'px'; p.classList.add('show');
+  }
+  function hideTip() { const p = document.querySelector('.dcc-tour-tip-pop'); if (p) { p.classList.remove('show'); p.style.display = 'none'; } }
+  function wireTips() {
+    if (_tipsWired) return; _tipsWired = true;
+    document.addEventListener('mouseover', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); });
+    document.addEventListener('mouseout', e => { const t = e.target.closest('[data-tip]'); if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) hideTip(); });
+    document.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); else hideTip(); });
+    window.addEventListener('scroll', hideTip, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
   }
   function tile(big, label, sub) {
     return '<div class="dcc-tour-tile"><span class="t-big">' + escapeHtml(big) + '</span>' +

@@ -130,6 +130,19 @@
 .dcc-tour-tile .t-big { font-size: 1.25rem; font-weight: 700; color: var(--dcc-tour-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .dcc-tour-tile .t-lab { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dcc-tour-muted); }
 .dcc-tour-tile .t-sub { font-size: 0.72rem; color: var(--dcc-tour-muted); margin-top: 1px; }
+/* ---- stat tooltips (methodology + data source) ---- */
+.dcc-tour-tile.has-tip, .dcc-tour-superlatives .sup-tip { cursor: help; }
+.dcc-tour-superlatives .sup-tip { display: inline-flex; align-items: baseline; gap: 2px; }
+.t-info { font-size: 0.62em; opacity: 0.5; margin-left: 0.3em; }
+.dcc-tour-tip-pop {
+  position: fixed; z-index: 1000; display: none; max-width: 260px;
+  font-family: var(--dcc-tour-font-body, system-ui, -apple-system, sans-serif);
+  text-transform: none; letter-spacing: normal; font-weight: 400; text-align: left;
+  font-size: 0.74rem; line-height: 1.42; color: #f5f3ee;
+  background: #23303c; padding: 0.55rem 0.7rem; border-radius: 9px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28); opacity: 0; transition: opacity 0.12s; pointer-events: none;
+}
+.dcc-tour-tip-pop.show { opacity: 1; }
 
 /* ---- per-day health ribbon ---- */
 .dcc-tour-health {
