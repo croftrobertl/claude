@@ -92,7 +92,7 @@ final class Widget extends Widget_Base
             'default'     => ['url' => DCC_TOUR_DEFAULT_BUNDLE_URL],
             'placeholder' => DCC_TOUR_DEFAULT_BUNDLE_URL,
             'show_external' => false,
-            'description' => __('URL of the published tour-data/ folder. Defaults to GitHub Pages.', 'dcc-croatia-tour'),
+            'description' => __('URL of the published croatia/ folder. Defaults to GitHub Pages.', 'dcc-croatia-tour'),
         ]);
 
         $this->end_controls_section();

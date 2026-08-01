@@ -24,7 +24,7 @@ define('DCC_TOUR_URL', plugin_dir_url(__FILE__));
 // Default origin of the standalone tour bundle (index.html + bundle.js/css + JSON).
 // The Elementor widget exposes this as an overrideable control so the same plugin
 // can point at staging or a fork without code changes.
-define('DCC_TOUR_DEFAULT_BUNDLE_URL', 'https://croftrobertl.github.io/claude/tour-data/');
+define('DCC_TOUR_DEFAULT_BUNDLE_URL', 'https://croftrobertl.github.io/claude/croatia/');
 
 // Lazy autoloader — Elementor's Widget_Base is only resolvable after Elementor boots,
 // so we must not eagerly require class-widget.php at plugin load time.
