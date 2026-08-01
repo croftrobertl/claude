@@ -14,7 +14,7 @@ import json, os
 
 PIPE = os.path.dirname(os.path.abspath(__file__))
 # public base where media/ is served (used only for photo/video/clip previews)
-MEDIA_BASE = "https://croftrobertl.github.io/claude/tour-data/"
+MEDIA_BASE = "https://croftrobertl.github.io/claude/croatia/"
 
 # only the item fields the tool actually reads — keeps the file ~40% smaller
 KEEP = ("id", "kind", "place", "lat", "lng", "datetime", "chapter",

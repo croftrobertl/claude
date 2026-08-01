@@ -13,7 +13,7 @@ from math import radians, sin, cos, asin, sqrt
 
 PIPE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(PIPE))
-MEDIA_BASE = "https://croftrobertl.github.io/claude/tour-data/"
+MEDIA_BASE = "https://croftrobertl.github.io/claude/croatia/"
 ING = json.load(open(os.path.join(ROOT, "data-local", "new_items_ingest.json")))
 _extra_path = os.path.join(ROOT, "data-local", "extra_items_ingest.json")
 if os.path.exists(_extra_path):
