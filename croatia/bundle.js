@@ -277,8 +277,7 @@
       '<div class="sheet-days">' +
       DATA.days.map((d, i) => '<button class="sheet-day" data-day="' + i + '">' +
         (coverSrc(d) ? '<img class="sd-thumb" loading="lazy" src="' + escapeAttr(coverSrc(d)) + '" alt="">' : '') +
-        '<span class="sd-txt"><b>' + escapeHtml(dWeekday(d).slice(0, 3) + ' · ' + dDate(d)) + '</b>' +
-        '<span class="sd-area">' + escapeHtml(d.area || '') + '</span></span>' +
+        '<span class="sd-txt"><b>' + escapeHtml(dWeekday(d).slice(0, 3) + ' · ' + dDate(d)) + '</b></span>' +
         '<span class="sd-c">' + d.count + '</span></button>').join('') + '</div></div>';
     sheet.querySelector('.sheet-bd').addEventListener('click', closeDaySheet);
     sheet.querySelectorAll('.sheet-day').forEach(b => b.addEventListener('click', () => { closeDaySheet(); setView('story'); selectDay(+b.dataset.day); }));
@@ -371,8 +370,9 @@
   function updateTopbar() {
     if (!root._topbar) return;
     const d = DATA.days[curDay];
-    root._topbar.querySelector('#dcc-tb-num').textContent = dDate(d);
-    root._topbar.querySelector('#dcc-tb-lab').textContent = d.short + (d.area ? ' · ' + shortName(d.area) : '') + '  ▾';
+    // weekday as the small eyebrow, the date once below — no duplicated day number, no (misleading) single area
+    root._topbar.querySelector('#dcc-tb-num').textContent = dWeekday(d);
+    root._topbar.querySelector('#dcc-tb-lab').textContent = dDate(d) + '  ▾';
     root._topbar.querySelector('.tb-prev').disabled = curDay <= 0;
     root._topbar.querySelector('.tb-next').disabled = curDay >= DATA.day_count - 1;
   }
@@ -1102,7 +1102,7 @@
         if (search) search.addEventListener('input', e => {
           const q = foldStr(e.target.value.trim());
           fac.querySelectorAll('.facet-opt').forEach(o =>
-            o.style.display = foldStr(o.querySelector('.facet-lab').textContent).indexOf(q) >= 0 ? '' : 'none');
+            o.style.display = fuzzyMatch(q, foldStr(o.querySelector('.facet-lab').textContent)) ? '' : 'none');
         });
         fac.querySelector('.facet-list').addEventListener('change', e => {
           if (e.target.type !== 'checkbox') return;
@@ -1207,6 +1207,32 @@
   // fold to an accent-stripped, lowercase form so Serbo-Croatian diacritics
   // (č,š,ž,ć,đ) US keyboards can't type still match — used by the Photos City/Place
   // filter search and the map place-label matching.
+  // Levenshtein edit distance (typo tolerance / approximate string matching)
+  function editDist(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++)
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[n];
+  }
+  // query chars appear in order within text (e.g. "dbrv" matches "dubrovnik")
+  function isSubseq(q, t) { let i = 0; for (const c of t) { if (c === q[i]) i++; if (i === q.length) break; } return i === q.length; }
+  // one forgiving matcher: diacritic-folded partial + subsequence + typo tolerance.
+  // (q and t must already be foldStr'd, so accents and case don't matter.)
+  function fuzzyMatch(q, t) {
+    if (!q) return true;
+    if (t.indexOf(q) >= 0) return true;                 // substring / partial match
+    if (q.length < 3) return false;                     // don't over-match 1-2 char queries
+    if (isSubseq(q, t)) return true;                    // approximate / ordered subsequence
+    const tol = q.length <= 5 ? 1 : q.length <= 8 ? 2 : 3;   // allowed typos scale with length
+    if (editDist(q, t) <= tol) return true;             // whole-string typo tolerance
+    return t.split(/[^a-z0-9]+/).some(w => w.length >= 3 && editDist(q, w) <= tol);   // per-word
+  }
   function foldStr(s) {
     return String(s || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // strip combining accents (č,š,ž,ć…)
@@ -1781,7 +1807,6 @@
     let html = '<div class="dcc-tour-dayhead">' +
       '<div class="dcc-tour-daynum">' + escapeHtml(dWeekday(day)) + '</div>' +
       '<h2>' + escapeHtml(dDate(day)) + '</h2>' +
-      (day.area ? '<p class="dcc-tour-area">' + escapeHtml(day.area) + '</p>' : '') +
       (day.story ? '<p class="dcc-tour-daystory">' + escapeHtml(day.story) + '</p>' : '') +
       '<p class="dcc-tour-daymeta">' + (personOn() ? plur(dayVisibleCount(day), 'shot') + ' by ' + escapeHtml(personLabel()) : dayCountLabel(day)) + '</p>' +
       weatherHTML(day.weather) +
