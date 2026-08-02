@@ -1090,3 +1090,21 @@ body.dcc-rail-dragging { user-select: none; cursor: grabbing; }
   .mm-dl { gap: 3px; font-size: 0.72rem; white-space: nowrap; }
   .mm-daysel { font-size: 0.76rem; padding: 5px 6px; }
 }
+
+/* ===== hidden "Matrix rain" easter egg (sits BEHIND all content) ===== */
+#dcc-matrix { position: fixed; inset: 0; z-index: 0; display: none; pointer-events: none; background: #000; }
+html.dcc-matrix-on, html.dcc-matrix-on body { background: #000 !important; }
+html.dcc-matrix-on .dcc-tour-root {
+  position: relative; z-index: 1; background: transparent;
+  --dcc-tour-bg: transparent;
+  --dcc-tour-surface: rgba(0, 18, 4, 0.55);
+  --dcc-tour-card-bg: rgba(2, 14, 4, 0.62);
+  --dcc-tour-text: #bdffc6;
+  --dcc-tour-muted: #63c26e;
+  --dcc-tour-border: rgba(0, 255, 70, 0.30);
+  --dcc-tour-primary: #46e05a;
+  --dcc-tour-secondary: #8dff9f;
+  --dcc-tour-accent-deep: #8dff9f;
+  --dcc-tour-accent-tint: rgba(0, 255, 70, 0.12);
+  --dcc-tour-shadow: 0 3px 16px rgba(0, 40, 0, 0.5);
+}

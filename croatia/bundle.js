@@ -2186,4 +2186,61 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function escapeAttr(s) { return escapeHtml(s); }
+
+  // ===== hidden "Matrix rain" easter egg — falls BEHIND the content =====
+  // toggle: tap the site title 5× quickly, or Ctrl+M on a desktop; Esc also exits.
+  const MTX_GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾚﾛﾜﾝ0123456789'.split('');
+  const MTX_F = 16;
+  let mtxCanvas = null, mtxCtx = null, mtxRAF = 0, mtxDrops = [], mtxOn = false;
+  function mtxResize() {
+    if (!mtxCanvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    mtxCanvas.width = Math.floor(innerWidth * dpr); mtxCanvas.height = Math.floor(innerHeight * dpr);
+    mtxCanvas.style.width = innerWidth + 'px'; mtxCanvas.style.height = innerHeight + 'px';
+    mtxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mtxDrops = Array.from({ length: Math.ceil(innerWidth / MTX_F) }, () => Math.floor(Math.random() * -40));
+    mtxCtx.fillStyle = '#000'; mtxCtx.fillRect(0, 0, innerWidth, innerHeight);
+  }
+  function mtxStep() {
+    const c = mtxCtx, w = innerWidth, h = innerHeight;
+    c.fillStyle = 'rgba(0,0,0,0.075)'; c.fillRect(0, 0, w, h);          // fade previous frame → trails
+    c.textAlign = 'center'; c.font = MTX_F + 'px monospace';
+    for (let i = 0; i < mtxDrops.length; i++) {
+      const x = i * MTX_F + MTX_F / 2, y = mtxDrops[i] * MTX_F;
+      c.fillStyle = '#c9ffd0'; c.fillText(MTX_GLYPHS[(Math.random() * MTX_GLYPHS.length) | 0], x, y);            // bright leading glyph
+      c.fillStyle = 'rgba(0,220,60,0.5)'; c.fillText(MTX_GLYPHS[(Math.random() * MTX_GLYPHS.length) | 0], x, y - MTX_F);
+      if (y > h && Math.random() > 0.975) mtxDrops[i] = 0; else mtxDrops[i]++;
+    }
+    mtxRAF = requestAnimationFrame(mtxStep);
+  }
+  function mtxStart() {
+    if (mtxOn) return; mtxOn = true;
+    if (!mtxCanvas) {
+      mtxCanvas = document.createElement('canvas'); mtxCanvas.id = 'dcc-matrix'; mtxCanvas.setAttribute('aria-hidden', 'true');
+      document.body.insertBefore(mtxCanvas, document.body.firstChild);
+      mtxCtx = mtxCanvas.getContext('2d');
+      window.addEventListener('resize', () => { if (mtxOn) mtxResize(); });
+    }
+    mtxCanvas.style.display = 'block';
+    document.documentElement.classList.add('dcc-matrix-on');
+    mtxResize(); mtxStep();
+  }
+  function mtxStop() {
+    if (!mtxOn) return; mtxOn = false;
+    if (mtxRAF) { cancelAnimationFrame(mtxRAF); mtxRAF = 0; }
+    document.documentElement.classList.remove('dcc-matrix-on');
+    if (mtxCanvas) mtxCanvas.style.display = 'none';
+  }
+  function mtxToggle() { mtxOn ? mtxStop() : mtxStart(); }
+  let mtxTaps = 0, mtxTapT = 0;
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest || !e.target.closest('.dcc-tour-title')) return;
+    const now = Date.now();
+    mtxTaps = (now - mtxTapT < 1500) ? mtxTaps + 1 : 1; mtxTapT = now;
+    if (mtxTaps >= 5) { mtxTaps = 0; mtxToggle(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'm' || e.key === 'M')) { e.preventDefault(); mtxToggle(); }
+    else if (e.key === 'Escape' && mtxOn) mtxStop();
+  });
 })();
