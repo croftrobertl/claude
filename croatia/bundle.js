@@ -15,7 +15,7 @@
 
   let map = null;
   let DATA = null, curDay = 0;
-  let lightboxFulls = [], lightboxMeta = [], lightboxIdx = -1;
+  let viewerItems = [], viewerIdx = -1;   // unified list of ALL media (photos+videos+clips) in the active view
   const markersByPlace = {};
 
   // ---- units (task 8): default Imperial; a header toggle flips distance,
@@ -117,6 +117,10 @@
 
   fetch(baseURL + 'trip.json').then(r => r.json()).then(data => {
     DATA = data;
+    // stamp each media item with its day's date so the viewer caption can show it
+    (DATA.days || []).forEach(d => (d.places || []).forEach(p => (p.items || []).forEach(it => {
+      it._date = d.date; it._dlabel = dDate(d);
+    })));
     const initialHash = location.hash;   // capture before selectDay/updateHash rewrites it
     buildShell();
     initMap();
@@ -346,8 +350,8 @@
       if (sec) { sec.scrollIntoView({ block: 'start' }); sec.classList.add('dcc-tour-flash'); setTimeout(() => sec.classList.remove('dcc-tour-flash'), 1600); }
     }, 150);
     if (m.ph) setTimeout(() => {
-      const i = lightboxFulls.findIndex(u => u.indexOf(m.ph) >= 0);
-      if (i >= 0) openLightbox(i);
+      const i = viewerItems.findIndex(v => (v.full || v.src || v.url || v.id || '').indexOf(m.ph) >= 0);
+      if (i >= 0) openViewer(i);
     }, 250);
   }
   // ---- share helpers ----
@@ -816,22 +820,21 @@
   function openMapSidebar(di, pi) {
     const d = DATA.days[di], p = d.places[pi];
     const side = root._mapmode.querySelector('#dcc-mm-side');
-    lightboxFulls = []; lightboxMeta = []; const thumbs = [];
+    viewerItems = []; const thumbs = [];
     const items = placeItems(p);
-    // each thumb is tappable: photos open the lightbox (data-lb = index into
-    // lightboxFulls), videos/clips open the large media viewer (.mm-play-wrap)
+    // every media thumb is tappable via data-vi (index into the shared viewer list)
     items.forEach(it => {
-      const cap = escapeAttr([it.place || p.name, it.time].filter(Boolean).join(' · '));
       if (it.full) {
-        const lb = lightboxFulls.length;
-        lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place || p.name, t: it.time });
-        thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.src || it.full)) + '" data-lb="' + lb + '">');
+        const vi = viewerItems.length; viewerItems.push(viewerMeta(it, p.name));
+        thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.src || it.full)) + '" data-vi="' + vi + '">');
       } else if (it.type === 'self_hosted' && it.url) {
+        const vi = viewerItems.length; viewerItems.push(viewerMeta(it, p.name));
         const poster = it.poster ? resolveUrl(it.poster) : '';
-        thumbs.push('<span class="mm-play-wrap" data-vsrc="' + escapeAttr(resolveUrl(it.url)) + '" data-poster="' + escapeAttr(poster) + '" data-cap="' + cap + '">' +
+        thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '">' +
           (poster ? '<img loading="lazy" src="' + escapeAttr(poster) + '">' : '') + '<span class="mm-play-badge">▶</span></span>');
       } else if (it.type === 'drive' && it.id) {   // GoPro clip: Drive-generated frame + play badge
-        thumbs.push('<span class="mm-play-wrap" data-clip="' + escapeAttr(it.id) + '" data-cap="' + cap + '">' +
+        const vi = viewerItems.length; viewerItems.push(viewerMeta(it, p.name));
+        thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '">' +
           '<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" onerror="this.closest(\'.mm-play-wrap\').remove()"><span class="mm-play-badge">▶</span></span>');
       } else if (it.poster) {
         thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
@@ -847,10 +850,8 @@
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
     side.querySelector('[data-openday]').addEventListener('click', () => { setView('story'); selectDay(di); });
     side.querySelector('.dcc-tour-mm-grid').addEventListener('click', e => {
-      const play = e.target.closest('.mm-play-wrap');
-      if (play) { openMediaViewer({ dataset: play.dataset }); return; }
-      const ph = e.target.closest('img[data-lb]');
-      if (ph) openLightbox(+ph.dataset.lb);
+      const cell = e.target.closest('[data-vi]');
+      if (cell) openViewer(+cell.dataset.vi);
     });
     mmMap.panTo([p.lat, p.lng], { animate: true });
   }
@@ -1150,9 +1151,8 @@
     galCur = galItems.filter(x => (!galFilter.kinds.size || galFilter.kinds.has(x.it.kind)) &&
       itemPasses(x.it) && itemMatchesFacets(x));
     galCur.sort(galSortCmp);
-    // lightbox spans the whole filtered+sorted photo set (built up front, not per-chunk)
-    lightboxFulls = []; lightboxMeta = [];
-    galCur.forEach(x => { const it = x.it; if (it.full) { lightboxFulls.push(resolveUrl(it.full)); lightboxMeta.push({ p: it.place, t: it.time }); } });
+    // the viewer spans the whole filtered+sorted set — all photos, videos AND clips
+    viewerItems = galCur.map((x, i) => { x._vi = i; return viewerMeta(x.it); });
     document.getElementById('dcc-galcount').textContent = galCur.length.toLocaleString() + ' items';
     const grid = document.getElementById('dcc-galgrid'), more = document.getElementById('dcc-galmore');
     const exp = document.getElementById('dcc-galexpand');
@@ -1164,7 +1164,7 @@
     const grid = document.getElementById('dcc-galgrid');
     const end = Math.min(galRendered + 200, galCur.length);
     let html = '';
-    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it, false);
+    for (let i = galRendered; i < end; i++) html += renderItem(galCur[i].it, i);
     grid.insertAdjacentHTML('beforeend', html);
     galRendered = end;
     document.getElementById('dcc-galmore').style.display = galRendered < galCur.length ? '' : 'none';
@@ -1196,7 +1196,7 @@
       if (!body._rendered) {
         const grid = document.getElementById('dcc-galgrid');
         const gp = grid._groups[+sec.dataset.gi];
-        body.innerHTML = gp.items.map(x => renderItem(x.it, false)).join('');
+        body.innerHTML = gp.items.map(x => renderItem(x.it, x._vi)).join('');
         body._rendered = true;
       }
       body.hidden = false;
@@ -1775,7 +1775,7 @@
 
   function renderDay(day) {
     const story = root._story;
-    lightboxFulls = []; lightboxMeta = []; lightboxIdx = -1;
+    viewerItems = []; viewerIdx = -1;
     for (const k in markersByPlace) delete markersByPlace[k];
 
     let html = '<div class="dcc-tour-dayhead">' +
@@ -1835,7 +1835,7 @@
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
-        '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(renderItem).join('') + '</div>' +
+        '<div class="dcc-tour-media" id="media-' + pi + '">' + its.map(it => renderItem(it)).join('') + '</div>' +
         '</section>';
     });
 
@@ -1891,13 +1891,21 @@
     replayTimer = setInterval(tick, 1700);
   }
 
-  function renderItem(item, collect) {
-    collect = collect !== false;   // story view collects lightbox entries as it renders; gallery pre-builds them
+  function renderItem(item, vi) {
     const extras = mapsLink(item.lat, item.lng, 'dcc-tour-maplink cell');
+    // claim this item's slot in the shared viewer list: story builds it inline
+    // (vi undefined), gallery pre-builds the list and passes the index.
+    const viewable = (item.type === 'drive' && item.id) ||
+                     (item.type === 'self_hosted' && item.url) ||
+                     (item.type !== 'drive' && item.type !== 'self_hosted' && item.full);
+    let idx = -1;
+    if (viewable) { idx = (vi === undefined) ? viewerItems.push(viewerMeta(item)) - 1 : vi; }
+    const viAttr = idx >= 0 ? ' data-vi="' + idx + '"' : '';
     // GoPro clips (Drive): show a poster frame, load the player on tap
     if (item.type === 'drive') {
+      if (!item.id) return '';
       const thumb = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.id) + '&sz=w400';
-      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-clip="' + escapeAttr(item.id) + '" data-cap="' + escapeAttr([item.place, item.time].filter(Boolean).join(' · ')) + '">' +
+      return '<div class="dcc-tour-cell dcc-tour-play-cell"' + viAttr + '>' +
         '<img loading="lazy" src="' + escapeAttr(thumb) + '" alt="clip" onerror="this.classList.add(\'noimg\')">' +
         '<span class="dcc-tour-play">▶</span><span class="dcc-tour-badge">clip</span>' + cap(item) + extras + '</div>';
     }
@@ -1907,14 +1915,12 @@
       const posterUrl = item.poster ? resolveUrl(item.poster) : '';
       if (!item.url)
         return posterUrl ? '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' + durb + cap(item) + extras + '</div>' : '';
-      return '<div class="dcc-tour-cell dcc-tour-play-cell" data-vsrc="' + escapeAttr(resolveUrl(item.url)) + '" data-poster="' + escapeAttr(posterUrl) + '" data-cap="' + escapeAttr([item.place, item.time].filter(Boolean).join(' · ')) + '">' +
+      return '<div class="dcc-tour-cell dcc-tour-play-cell"' + viAttr + '>' +
         (posterUrl ? '<img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' : '') +
         '<span class="dcc-tour-play">▶</span>' + durb + cap(item) + extras + '</div>';
     }
     // photo
-    const full = item.full ? ' data-full="' + escapeAttr(resolveUrl(item.full)) + '"' : '';
-    if (item.full && collect) { lightboxFulls.push(resolveUrl(item.full)); lightboxMeta.push({ p: item.place, t: item.time }); }
-    return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + full + ' />' + cap(item) + extras + '</div>';
+    return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + viAttr + ' />' + cap(item) + extras + '</div>';
   }
   function cap(item) {
     const alt = item.alt != null ? ' · ' + elevFromM(item.alt) : '';
@@ -1952,6 +1958,20 @@
     if (!p) return '';
     if (/^https?:/i.test(p)) return p;
     return baseURL + p.replace(/^\.?\//, '');
+  }
+  // one viewer entry per media item (photo/video/clip), carrying its day's date
+  function viewerMeta(it, place) {
+    return {
+      kind: it.kind,
+      full: it.full ? resolveUrl(it.full) : '',
+      src: resolveUrl(it.src || it.full || it.poster || ''),
+      url: it.url ? resolveUrl(it.url) : '',
+      poster: it.poster ? resolveUrl(it.poster) : '',
+      id: it.id || '',
+      place: it.place || place || '',
+      time: it.time || '',
+      date: it._dlabel || (it._date ? dDate({ date: it._date }) : '')
+    };
   }
   function el(tag, cls, html) {
     const e = document.createElement(tag); e.className = cls;
@@ -1992,10 +2012,10 @@
       setPlaceOpen(sec, sec.dataset.open !== '1');
       return;
     }
-    const cell = e.target.closest('.dcc-tour-play-cell');
-    if (cell) { openMediaViewer(cell); return; }   // videos/clips open large in the media viewer
-    const img = e.target.closest('.dcc-tour-media img[data-full]');
-    if (img) { openLightbox(Math.max(0, lightboxFulls.indexOf(img.getAttribute('data-full')))); }
+    // any media cell (photo/video/clip) opens the unified viewer at its index.
+    // (the map sidebar has its own handler, so skip cells inside it here.)
+    const media = e.target.closest('[data-vi]');
+    if (media && !media.closest('#dcc-mm-side')) { openViewer(+media.dataset.vi); }
   });
   // keyboard: place headers are role=button, so activate on Enter/Space
   // (arrow-key day navigation already lives in the lightbox keydown handler)
@@ -2004,11 +2024,10 @@
     if (head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); head.click(); }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('dcc-tour-vlightbox')?.classList.contains('open')) { closeMediaViewer(); return; }
-    if (lightboxIdx >= 0) {
-      if (e.key === 'Escape') closeLightbox();
-      else if (e.key === 'ArrowRight') showLightbox(lightboxIdx + 1);
-      else if (e.key === 'ArrowLeft') showLightbox(lightboxIdx - 1);
+    if (viewerIdx >= 0) {
+      if (e.key === 'Escape') closeViewer();
+      else if (e.key === 'ArrowRight') showViewer(viewerIdx + 1);
+      else if (e.key === 'ArrowLeft') showViewer(viewerIdx - 1);
       return;
     }
     // day navigation with arrow keys (when browsing the story, not typing)
@@ -2028,122 +2047,114 @@
   //      footage is actually visible; native controls have room and auto-hide during
   //      playback (tap the video to bring them back), instead of the cramped inline
   //      player where the control chrome blacked out the tiny frame. ----
-  function ensureMediaViewer() {
-    let el = document.getElementById('dcc-tour-vlightbox');
+  function ensureViewerEl() {
+    let el = document.getElementById('dcc-tour-viewer');
     if (el) return el;
     el = document.createElement('div');
-    el.id = 'dcc-tour-vlightbox';
-    el.className = 'dcc-tour-lightbox dcc-tour-vlightbox';
-    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Video viewer');
-    el.innerHTML =
-      '<button class="dcc-tour-lightbox-close" aria-label="Close">' + ICON_CLOSE + '</button>' +
-      '<div class="dcc-tour-vstage"></div>' +
-      '<div class="dcc-tour-lightbox-cap"></div>';
-    el.addEventListener('click', e => { if (e.target === el || e.target.closest('.dcc-tour-lightbox-close')) closeMediaViewer(); });
-    document.body.appendChild(el);
-    return el;
-  }
-  function closeMediaViewer() {
-    const el = document.getElementById('dcc-tour-vlightbox');
-    if (!el) return;
-    el.classList.remove('open');
-    el.querySelector('.dcc-tour-vstage').innerHTML = '';   // detach the player to stop playback
-    if (!document.getElementById('dcc-tour-lightbox')?.classList.contains('open')) document.body.classList.remove('dcc-tour-noscroll');
-  }
-  function openMediaViewer(cell) {
-    const el = ensureMediaViewer();
-    const stage = el.querySelector('.dcc-tour-vstage');
-    stage.innerHTML = '';
-    if (cell.dataset.vsrc) {
-      const v = document.createElement('video');
-      v.src = cell.dataset.vsrc; if (cell.dataset.poster) v.poster = cell.dataset.poster;
-      v.controls = true; v.playsInline = true; v.setAttribute('playsinline', '');
-      v.setAttribute('controlslist', 'nodownload noplaybackrate'); v.disablePictureInPicture = true;
-      v.className = 'dcc-tour-vplayer';
-      stage.appendChild(v);
-      v.play().catch(() => {});   // start immediately (within the tap gesture) so it doesn't sit paused/dark
-    } else if (cell.dataset.clip) {
-      const f = document.createElement('iframe');
-      f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(cell.dataset.clip) + '/preview';
-      f.allow = 'autoplay; fullscreen'; f.allowFullscreen = true;
-      f.className = 'dcc-tour-vplayer dcc-tour-vplayer-iframe';
-      stage.appendChild(f);
-    } else return;
-    el.querySelector('.dcc-tour-lightbox-cap').textContent = cell.dataset.cap || '';
-    el.classList.add('open');
-    document.body.classList.add('dcc-tour-noscroll');
-  }
-
-  function ensureLightboxEl() {
-    let el = document.getElementById('dcc-tour-lightbox');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'dcc-tour-lightbox';
+    el.id = 'dcc-tour-viewer';
     el.className = 'dcc-tour-lightbox';
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Photo viewer');
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Media viewer');
     el.innerHTML =
       '<button class="dcc-tour-lightbox-close" aria-label="Close">' + ICON_CLOSE + '</button>' +
       '<div class="dcc-tour-lightbox-count" aria-hidden="true"></div>' +
       '<div class="dcc-tour-lightbox-actions">' +
-        '<a class="lb-act" id="dcc-lb-dl" download aria-label="Download this photo" title="Download this photo">' + ICON_DL + '</a>' +
-        '<button class="lb-act" id="dcc-lb-share" aria-label="Share this photo" title="Share this photo">' + ICON_SHARE + '</button></div>' +
+        '<a class="lb-act" id="dcc-v-dl" download aria-label="Download" title="Download">' + ICON_DL + '</a>' +
+        '<button class="lb-act" id="dcc-v-share" aria-label="Share" title="Share">' + ICON_SHARE + '</button></div>' +
       '<button class="dcc-tour-lightbox-nav prev" aria-label="Previous">&#8249;</button>' +
-      '<img class="dcc-tour-lightbox-img" alt="" />' +
+      '<div class="dcc-tour-vstage"></div>' +
       '<button class="dcc-tour-lightbox-nav next" aria-label="Next">&#8250;</button>' +
       '<div class="dcc-tour-lightbox-cap"></div>';
-    el.querySelector('#dcc-lb-share').addEventListener('click', () => {
-      const u = lightboxFulls[lightboxIdx] || '';
-      const g = (u.match(/([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})/i) || [])[1];
-      doShare(g ? shareUrl('ph=' + g) : u, 'A photo from Crofts in Croatia');
+    el.querySelector('#dcc-v-share').addEventListener('click', () => {
+      const it = viewerItems[viewerIdx]; if (!it) return;
+      const src = it.full || it.url || '';
+      const g = (src.match(/([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})/i) || [])[1];
+      doShare(g ? shareUrl('ph=' + g) : (src || location.href), 'From Crofts in Croatia');
     });
     el.addEventListener('click', (e) => {
-      if (e.target === el || e.target.classList.contains('dcc-tour-lightbox-close')) closeLightbox();
-      else if (e.target.classList.contains('prev')) showLightbox(lightboxIdx - 1);
-      else if (e.target.classList.contains('next')) showLightbox(lightboxIdx + 1);
+      if (e.target === el || e.target.closest('.dcc-tour-lightbox-close')) closeViewer();
+      else if (e.target.closest('.prev')) showViewer(viewerIdx - 1);
+      else if (e.target.closest('.next')) showViewer(viewerIdx + 1);
     });
-    // swipe (mobile) to move through photos
+    // swipe (mobile) to move through the whole media set
     let sx = null, sy = null;
-    const img = el.querySelector('.dcc-tour-lightbox-img');
-    img.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
-    img.addEventListener('touchend', e => {
+    const stage = el.querySelector('.dcc-tour-vstage');
+    stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    stage.addEventListener('touchend', e => {
       if (sx == null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
-      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) showLightbox(lightboxIdx + (dx < 0 ? 1 : -1));
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) showViewer(viewerIdx + (dx < 0 ? 1 : -1));
       sx = sy = null;
     }, { passive: true });
     document.body.appendChild(el);
     return el;
   }
-  function openLightbox(idx) { if (lightboxFulls.length) { ensureLightboxEl(); showLightbox(idx); } }
-  function showLightbox(idx) {
-    if (!lightboxFulls.length) return;
-    const n = lightboxFulls.length;
-    lightboxIdx = ((idx % n) + n) % n;
-    const el = ensureLightboxEl();
-    const wasOpen = el.classList.contains('open');
-    el.classList.add('open');
-    el.querySelector('.dcc-tour-lightbox-img').src = lightboxFulls[lightboxIdx];
-    const meta = lightboxMeta[lightboxIdx] || {};
-    const cap = [meta.p, meta.t].filter(Boolean).join(' · ');
-    el.querySelector('.dcc-tour-lightbox-cap').textContent = cap;
-    el.querySelector('.dcc-tour-lightbox-count').textContent = (lightboxIdx + 1) + ' / ' + n;
-    el.querySelector('#dcc-lb-dl').href = lightboxFulls[lightboxIdx];
-    // warm the neighbours so next/prev is instant instead of a full-res fetch
-    [lightboxIdx + 1, lightboxIdx - 1].forEach(k => {
-      const u = lightboxFulls[((k % n) + n) % n];
-      if (u && u !== lightboxFulls[lightboxIdx]) { const im = new Image(); im.decoding = 'async'; im.src = u; }
-    });
-    if (!wasOpen) { lbPrevFocus = document.activeElement; el.querySelector('.dcc-tour-lightbox-close').focus(); }
+  function posterOverlay(url) {
+    const ov = el('div', 'dcc-tour-vpo', '<span class="dcc-tour-vpo-play">▶</span>');
+    if (url) ov.style.backgroundImage = 'url("' + String(url).replace(/["\\]/g, '') + '")';
+    return ov;
+  }
+  function openViewer(idx) { if (viewerItems.length) { ensureViewerEl(); showViewer(idx); } }
+  let vwPrevFocus = null;
+  function showViewer(idx) {
+    if (!viewerItems.length) return;
+    const n = viewerItems.length;
+    viewerIdx = ((idx % n) + n) % n;
+    const it = viewerItems[viewerIdx];
+    const el0 = ensureViewerEl();
+    const wasOpen = el0.classList.contains('open');
+    const stage = el0.querySelector('.dcc-tour-vstage');
+    stage.innerHTML = '';
+    const dl = el0.querySelector('#dcc-v-dl');
+    dl.style.display = ''; dl.removeAttribute('target');
+    if (it.kind === 'video' && it.url) {
+      const v = document.createElement('video');
+      v.src = it.url; v.controls = true; v.playsInline = true; v.setAttribute('playsinline', '');
+      v.setAttribute('controlslist', 'nodownload noplaybackrate'); v.disablePictureInPicture = true;
+      v.className = 'dcc-tour-vplayer';
+      stage.appendChild(v);
+      // custom poster/play overlay that hides the moment playback begins
+      const ov = posterOverlay(it.poster); stage.appendChild(ov);
+      const hide = () => ov.classList.add('hide');
+      v.addEventListener('playing', hide); v.addEventListener('play', hide);
+      ov.addEventListener('click', () => { v.play().catch(() => {}); });
+      v.play().catch(() => {});
+      dl.href = it.url;
+    } else if (it.kind === 'clip' && it.id) {
+      // load the Drive player inside the opening gesture so it can start itself;
+      // the overlay hides as soon as the player is in.
+      const ov = posterOverlay('https://drive.google.com/thumbnail?id=' + encodeURIComponent(it.id) + '&sz=w800');
+      stage.appendChild(ov);
+      const load = () => {
+        if (stage.querySelector('iframe')) return;
+        const f = document.createElement('iframe');
+        f.src = 'https://drive.google.com/file/d/' + encodeURIComponent(it.id) + '/preview';
+        f.allow = 'autoplay; fullscreen'; f.allowFullscreen = true;
+        f.className = 'dcc-tour-vplayer dcc-tour-vplayer-iframe';
+        stage.insertBefore(f, ov); ov.classList.add('hide');
+      };
+      ov.addEventListener('click', load); load();
+      dl.href = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(it.id); dl.target = '_blank';
+    } else {   // photo (or any still)
+      const im = document.createElement('img'); im.className = 'dcc-tour-vphoto'; im.alt = '';
+      im.src = it.full || it.src; stage.appendChild(im);
+      dl.href = it.full || it.src;
+      // warm the neighbouring photos so next/prev is instant
+      [viewerIdx + 1, viewerIdx - 1].forEach(k => {
+        const v = viewerItems[((k % n) + n) % n];
+        if (v && v.kind === 'photo' && v.full && v.full !== it.full) { const p = new Image(); p.decoding = 'async'; p.src = v.full; }
+      });
+    }
+    el0.querySelector('.dcc-tour-lightbox-cap').textContent = [it.place, it.date, it.time].filter(Boolean).join(' · ');
+    el0.querySelector('.dcc-tour-lightbox-count').textContent = (viewerIdx + 1) + ' / ' + n;
+    el0.classList.add('open');
+    if (!wasOpen) { vwPrevFocus = document.activeElement; el0.querySelector('.dcc-tour-lightbox-close').focus(); }
     document.body.classList.add('dcc-tour-noscroll');
   }
-  let lbPrevFocus = null;
-  function closeLightbox() {
-    lightboxIdx = -1;
-    const el = document.getElementById('dcc-tour-lightbox');
-    if (el) el.classList.remove('open');
+  function closeViewer() {
+    viewerIdx = -1;
+    const el0 = document.getElementById('dcc-tour-viewer');
+    if (el0) { el0.querySelector('.dcc-tour-vstage').innerHTML = ''; el0.classList.remove('open'); }   // detach player → stop playback
     document.body.classList.remove('dcc-tour-noscroll');
-    if (lbPrevFocus && lbPrevFocus.focus) { try { lbPrevFocus.focus(); } catch (e) {} lbPrevFocus = null; }
+    if (vwPrevFocus && vwPrevFocus.focus) { try { vwPrevFocus.focus(); } catch (e) {} vwPrevFocus = null; }
   }
 
   function escapeHtml(s) {
