@@ -1108,3 +1108,5 @@ html.dcc-matrix-on .dcc-tour-root {
   --dcc-tour-accent-tint: rgba(0, 255, 70, 0.12);
   --dcc-tour-shadow: 0 3px 16px rgba(0, 40, 0, 0.5);
 }
+/* the hidden toggle taps the header: manipulation kills iOS double-tap-zoom so rapid taps count */
+.dcc-tour-header { touch-action: manipulation; }

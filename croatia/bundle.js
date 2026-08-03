@@ -2234,7 +2234,7 @@
   function mtxToggle() { mtxOn ? mtxStop() : mtxStart(); }
   let mtxTaps = 0, mtxTapT = 0;
   document.addEventListener('click', (e) => {
-    if (!e.target.closest || !e.target.closest('.dcc-tour-title')) return;
+    if (!e.target.closest || !e.target.closest('.dcc-tour-header')) return;   // title or subtitle
     const now = Date.now();
     mtxTaps = (now - mtxTapT < 1500) ? mtxTaps + 1 : 1; mtxTapT = now;
     if (mtxTaps >= 5) { mtxTaps = 0; mtxToggle(); }
