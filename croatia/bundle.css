@@ -971,16 +971,19 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 }
 .dcc-music-toggle .mus-ico {
   display: inline-flex; align-items: center; justify-content: center; min-width: 1.9em;
-  font-size: 0.66rem; padding: 5px 9px; border-radius: 999px;
+  padding: 4px 9px; border-radius: 999px;
   color: var(--dcc-tour-muted); transition: background 0.15s, color 0.15s;
 }
+.dcc-music-toggle .mus-ico svg { width: 13px; height: 13px; display: block; }
 .dcc-music-toggle:hover { border-color: var(--dcc-tour-primary); }
+.dcc-music-toggle .mus-play { display: inline-flex; }
 .dcc-music-toggle .mus-pause { display: none; }
 .dcc-music-toggle.playing .mus-play { display: none; }
-.dcc-music-toggle.playing .mus-pause { display: inline; }
-.dcc-music-toggle.playing .mus-ico { background: var(--dcc-tour-primary); color: #fff; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
-.dcc-music-toggle.unit-mob { padding: 1px; }
-.dcc-music-toggle.unit-mob .mus-ico { font-size: 0.6rem; padding: 4px 7px; min-width: 1.8em; }
+.dcc-music-toggle.playing .mus-pause { display: inline-flex; }
+.dcc-music-toggle.playing .mus-ico { background: var(--dcc-tour-primary); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+/* mobile keeps the identical desktop metrics (no size-down) so it matches the
+   desktop button and stays on-theme */
+.dcc-music-toggle.unit-mob { padding: 2px; }
 /* mobile top-bar tool cluster (unit toggle + music button), right-aligned */
 .tb-tools { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 

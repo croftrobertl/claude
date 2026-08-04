@@ -58,7 +58,7 @@
     const v = root.dataset.view || 'story';
     if (v === 'story') renderDay(DATA.days[curDay]);
     else if (v === 'stats') { renderStatsViz(); animateCounts(root); }
-    if (mmMap) renderMapMode();
+    if (mmMap) { renderMapLegend(); renderMapMode(); }   // altitude legend carries m/ft — rebuild it too
     root.querySelectorAll('.dcc-unit-toggle').forEach(btn => {
       btn.setAttribute('aria-checked', imp() ? 'false' : 'true');
       const i = btn.querySelector('.uni-imp'), m = btn.querySelector('.uni-met');
@@ -112,10 +112,13 @@
     };
   })();
   function musicToggleHTML(cls) {
+    // use the themed SVG play/pause glyphs (same as the map's player) so the icon
+    // renders identically on every device — plain "▶/❚❚" text turns into off-theme
+    // colour emoji on many phones, which is why the mobile button looked wrong.
     return '<button class="dcc-music-toggle ' + (cls || '') + '" type="button" aria-pressed="false" ' +
       'title="Play music" aria-label="Play or pause background music">' +
-      '<span class="mus-ico" aria-hidden="true"><span class="mus-play">▶</span>' +
-      '<span class="mus-pause">❚❚</span></span></button>';
+      '<span class="mus-ico" aria-hidden="true"><span class="mus-play">' + PLAY_GLYPH + '</span>' +
+      '<span class="mus-pause">' + PAUSE_GLYPH + '</span></span></button>';
   }
 
   // ---- date labels (task 10): show the calendar date, never "Day N" ----
