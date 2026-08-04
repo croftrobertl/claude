@@ -739,13 +739,16 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   .dcc-tour-root[data-view="story"] .dcc-tour-controls,
   .dcc-tour-root[data-view="story"] .dcc-tour-mapmode { display: none; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-body,
-  .dcc-tour-root[data-view="stats"] .dcc-tour-mapmode,
-  .dcc-tour-root[data-view="stats"] .dcc-tour-topbar { display: none; }
+  .dcc-tour-root[data-view="stats"] .dcc-tour-mapmode { display: none; }
   .dcc-tour-root[data-view="map"] .dcc-tour-overview,
   .dcc-tour-root[data-view="map"] .dcc-tour-controls,
-  .dcc-tour-root[data-view="map"] .dcc-tour-body,
-  .dcc-tour-root[data-view="map"] .dcc-tour-topbar { display: none; }
+  .dcc-tour-root[data-view="map"] .dcc-tour-body { display: none; }
   .dcc-tour-root[data-view="map"] .dcc-tour-mapmode { display: block; }
+  /* the top bar stays on every tab so the unit + music toggles are always
+     reachable; only the day-nav (arrows + date) is Timeline-specific */
+  .dcc-tour-root:not([data-view="story"]) .tb-prev,
+  .dcc-tour-root:not([data-view="story"]) .tb-next,
+  .dcc-tour-root:not([data-view="story"]) .tb-day { display: none; }
   /* stats view: overview fully open */
   .dcc-tour-root[data-view="stats"] .dcc-tour-ovcollapse > summary { display: none; }
   .dcc-tour-root[data-view="stats"] .dcc-tour-ovcollapse > .ov-body { display: block; }
@@ -899,7 +902,6 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .galacc-body { padding: 2px 0 14px; }
 .galacc-body[hidden] { display: none; }
 @media (max-width: 800px) {
-  .dcc-tour-root[data-view="gallery"] .dcc-tour-topbar { display: none; }
   .dcc-tour-gallery { padding: 0.5rem 0.8rem 2rem; }
   /* keep Type + Photographer on row 1 and City + Place + Sort together on row 2 */
   .dcc-tour-gal-bar .dcc-tour-gal-sep { flex-basis: 100%; width: 0; height: 0; margin: 0; background: none; }
@@ -959,6 +961,28 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .dcc-unit-toggle:hover { border-color: var(--dcc-tour-primary); }
 .dcc-unit-toggle.unit-mob { padding: 1px; }
 .dcc-unit-toggle.unit-mob .uni-opt { font-size: 0.6rem; padding: 4px 7px; }
+
+/* play/pause music button — mirrors the unit-toggle box metrics so it is the
+   same size and lines up beside it (desktop mode bar + mobile top bar) */
+.dcc-music-toggle {
+  display: inline-flex; align-items: stretch; padding: 2px; cursor: pointer;
+  border: 1px solid var(--dcc-tour-border); border-radius: 999px; background: var(--dcc-tour-card-bg);
+  font: inherit; line-height: 1; align-self: center; color: var(--dcc-tour-primary);
+}
+.dcc-music-toggle .mus-ico {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.9em;
+  font-size: 0.66rem; padding: 5px 9px; border-radius: 999px;
+  color: var(--dcc-tour-muted); transition: background 0.15s, color 0.15s;
+}
+.dcc-music-toggle:hover { border-color: var(--dcc-tour-primary); }
+.dcc-music-toggle .mus-pause { display: none; }
+.dcc-music-toggle.playing .mus-play { display: none; }
+.dcc-music-toggle.playing .mus-pause { display: inline; }
+.dcc-music-toggle.playing .mus-ico { background: var(--dcc-tour-primary); color: #fff; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+.dcc-music-toggle.unit-mob { padding: 1px; }
+.dcc-music-toggle.unit-mob .mus-ico { font-size: 0.6rem; padding: 4px 7px; min-width: 1.8em; }
+/* mobile top-bar tool cluster (unit toggle + music button), right-aligned */
+.tb-tools { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
 /* stats viz container: only visible on the Stats tab */
 .dcc-tour-statsviz { display: none; }

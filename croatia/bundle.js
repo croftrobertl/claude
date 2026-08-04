@@ -65,6 +65,59 @@
       if (i) i.classList.toggle('on', imp()); if (m) m.classList.toggle('on', !imp());
     });
   }
+  // ---- background music: two self-hosted, lazy-loaded songs ----
+  // regular mode -> "Far Away Places" (manual only, via the play/pause button)
+  // matrix mode  -> "Masters of the Universe" (auto-plays + loops while matrix is on)
+  // A video/clip on screen suppresses whichever song is playing until it closes;
+  // photos never suppress it. Files load only on first play (preload="none").
+  const MUSIC = (function () {
+    let regEl = null, mtxEl = null;
+    let wantReg = false;    // user asked the regular song to play (play/pause button)
+    let wantMtx = false;    // matrix song wanted (set true whenever matrix mode starts)
+    let mtxMode = false;    // matrix easter-egg active
+    let videoOpen = false;  // a video/clip is on screen -> mute music until it closes
+    function make(file, vol) {
+      const a = new Audio();
+      a.src = baseURL + 'audio/' + file;
+      a.loop = true; a.preload = 'none'; a.volume = vol;
+      return a;
+    }
+    function activeEl() {
+      return mtxMode ? (mtxEl || (mtxEl = make('masters-of-the-universe.mp3', 0.7)))
+                     : (regEl || (regEl = make('far-away-places.mp3', 0.6)));
+    }
+    function want() { return mtxMode ? wantMtx : wantReg; }
+    function updateBtns(playing) {
+      root.querySelectorAll('.dcc-music-toggle').forEach(function (b) {
+        b.classList.toggle('playing', !!playing);
+        b.setAttribute('aria-pressed', playing ? 'true' : 'false');
+        b.title = playing ? 'Pause music' : 'Play music';
+      });
+    }
+    function sync() {
+      const other = mtxMode ? regEl : mtxEl;        // pause the off-mode song
+      if (other) other.pause();
+      const shouldPlay = want() && !videoOpen;
+      const a = activeEl();
+      if (shouldPlay) a.play().catch(function () {}); else a.pause();
+      updateBtns(shouldPlay);
+    }
+    return {
+      // play/pause button: toggles intent for the current mode's song
+      toggle: function () { if (mtxMode) wantMtx = !wantMtx; else wantReg = !wantReg; sync(); },
+      // matrix on -> auto-play its song; matrix off -> fall back to regular intent
+      setMatrix: function (on) { mtxMode = on; if (on) wantMtx = true; sync(); },
+      // a video/clip opened (true) or closed (false)
+      setVideoOpen: function (on) { if (videoOpen === on) return; videoOpen = on; sync(); }
+    };
+  })();
+  function musicToggleHTML(cls) {
+    return '<button class="dcc-music-toggle ' + (cls || '') + '" type="button" aria-pressed="false" ' +
+      'title="Play music" aria-label="Play or pause background music">' +
+      '<span class="mus-ico" aria-hidden="true"><span class="mus-play">▶</span>' +
+      '<span class="mus-pause">❚❚</span></span></button>';
+  }
+
   // ---- date labels (task 10): show the calendar date, never "Day N" ----
   const _MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const _DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -258,16 +311,17 @@
         '<span class="tb-daynum" id="dcc-tb-num"></span>' +
         '<span class="tb-daylabel" id="dcc-tb-lab"></span></button>' +
       '<button class="tb-arrow tb-next" aria-label="Next day">›</button>' +
-      unitToggleHTML('unit-mob');
+      '<div class="tb-tools">' + unitToggleHTML('unit-mob') + musicToggleHTML('unit-mob') + '</div>';
     tb.querySelector('.tb-prev').addEventListener('click', () => { if (curDay > 0) selectDay(curDay - 1); });
     tb.querySelector('.tb-next').addEventListener('click', () => { if (curDay < DATA.day_count - 1) selectDay(curDay + 1); });
     tb.querySelector('.dcc-unit-toggle').addEventListener('click', toggleUnits);
+    tb.querySelector('.dcc-music-toggle').addEventListener('click', () => MUSIC.toggle());
     tb.querySelector('#dcc-tb-day').addEventListener('click', openDaySheet);
 
     const bar = el('nav', 'dcc-tour-tabbar');
     bar.setAttribute('aria-label', 'Sections');
     bar.setAttribute('role', 'tablist');
-    bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Photos') +
+    bar.innerHTML = tabBtn('story', 'Timeline') + tabBtn('gallery', 'Media') +
       tabBtn('map', 'Map') + tabBtn('stats', 'Stats');
     bar.querySelectorAll('.dcc-tour-tabbtn[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
@@ -506,13 +560,14 @@
     w.setAttribute('role', 'tablist');
     w.innerHTML =
       '<button class="dcc-tour-modebtn active" role="tab" aria-selected="true" data-view="story">' + svgIcon('story') + '<span>Timeline</span></button>' +
-      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">' + svgIcon('gallery') + '<span>Photos</span></button>' +
+      '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="gallery">' + svgIcon('gallery') + '<span>Media</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="map">' + svgIcon('map') + '<span>Map</span></button>' +
       '<button class="dcc-tour-modebtn" role="tab" aria-selected="false" data-view="stats">' + svgIcon('stats') + '<span>Stats</span></button>' +
-      '<span class="dcc-tour-modespacer"></span>' + unitToggleHTML('unit-desk');
+      '<span class="dcc-tour-modespacer"></span>' + unitToggleHTML('unit-desk') + musicToggleHTML('unit-desk');
     w.querySelectorAll('.dcc-tour-modebtn[data-view]').forEach(b =>
       b.addEventListener('click', () => setView(b.dataset.view)));
     w.querySelector('.dcc-unit-toggle').addEventListener('click', toggleUnits);
+    w.querySelector('.dcc-music-toggle').addEventListener('click', () => MUSIC.toggle());
     return w;
   }
   function buildMapMode() {
@@ -2124,6 +2179,7 @@
     const n = viewerItems.length;
     viewerIdx = ((idx % n) + n) % n;
     const it = viewerItems[viewerIdx];
+    MUSIC.setVideoOpen(it.kind === 'video' || it.kind === 'clip');   // mute music on video/clip, not photos
     const el0 = ensureViewerEl();
     const wasOpen = el0.classList.contains('open');
     const stage = el0.querySelector('.dcc-tour-vstage');
@@ -2176,6 +2232,7 @@
   }
   function closeViewer() {
     viewerIdx = -1;
+    MUSIC.setVideoOpen(false);   // video/clip closed -> resume any suppressed song
     const el0 = document.getElementById('dcc-tour-viewer');
     if (el0) { el0.querySelector('.dcc-tour-vstage').innerHTML = ''; el0.classList.remove('open'); }   // detach player → stop playback
     document.body.classList.remove('dcc-tour-noscroll');
@@ -2224,12 +2281,14 @@
     mtxCanvas.style.display = 'block';
     document.documentElement.classList.add('dcc-matrix-on');
     mtxResize(); mtxStep();
+    MUSIC.setMatrix(true);    // auto-play + loop "Masters of the Universe"
   }
   function mtxStop() {
     if (!mtxOn) return; mtxOn = false;
     if (mtxRAF) { cancelAnimationFrame(mtxRAF); mtxRAF = 0; }
     document.documentElement.classList.remove('dcc-matrix-on');
     if (mtxCanvas) mtxCanvas.style.display = 'none';
+    MUSIC.setMatrix(false);   // stop matrix song; regular stays off unless user toggled it
   }
   function mtxToggle() { mtxOn ? mtxStop() : mtxStart(); }
   let mtxTaps = 0, mtxTapT = 0;
