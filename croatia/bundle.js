@@ -626,6 +626,22 @@
     return w;
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
+  let mmPts = [];
+  // Overlapping spots (places we revisited sit at nearly the same point and can't
+  // all be clicked): on click, gather every marker within ~22px and, if more than
+  // one, show a menu to pick which one to open. Otherwise open it directly.
+  function pickMarker(di, pi, clickLL) {
+    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(mmMap.latLngToLayerPoint(clickLL)) <= 22);
+    if (near.length <= 1) { openMapSidebar(di, pi); return; }
+    const html = '<div class="mm-pick"><b>' + near.length + ' spots here</b>' +
+      near.map((o, i) => '<button class="mm-pick-b" data-i="' + i + '">' +
+        escapeHtml(o.p.name) + ' · ' + escapeHtml(o.d.short) + ' · ' + placeCount(o.p) + '</button>').join('') + '</div>';
+    const pop = L.popup({ maxHeight: 240, className: 'mm-pick-pop' }).setLatLng(clickLL).setContent(html).openOn(mmMap);
+    setTimeout(() => {
+      pop.getElement().querySelectorAll('.mm-pick-b').forEach(b =>
+        b.addEventListener('click', () => { const o = near[+b.dataset.i]; mmMap.closePopup(pop); openMapSidebar(o.di, o.pi); }));
+    }, 0);
+  }
   let mmRange = [0, 0];
   let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
   function toggleMapFullscreen() {
@@ -640,13 +656,13 @@
     mmRange = [0, DATA.day_count - 1];
     // cap zoom at 18 so Esri never serves its "Map data not yet available"
     // placeholder tile (its imagery/reference layers run out past ~18 here) — task 3
-    mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 24 });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 24, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
+    mmMap = L.map('dcc-mm-map', { scrollWheelZoom: true, maxZoom: 21 });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mmMap);
     // satellite = a hybrid (imagery + roads + place/boundary labels), ON by default (task 6)
     mmSat = L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 24, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 24, maxNativeZoom: 18 }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 24, maxNativeZoom: 18 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18, attribution: 'Imagery &copy; Esri' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
     ]).addTo(mmMap);
     mmLabelLayer = L.layerGroup().addTo(mmMap);   // curated place labels (below markers)
     mmMarkers = L.layerGroup().addTo(mmMap);
@@ -823,7 +839,7 @@
   function renderMapMode(fit) {
     if (!mmMap) return;
     renderMapLabels();
-    mmMarkers.clearLayers(); mmPathLayer.clearLayers();
+    mmMarkers.clearLayers(); mmPathLayer.clearLayers(); mmPts = [];
     const showPath = root._mapmode.querySelector('#mm-path').checked;
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
     const showFacing = root._mapmode.querySelector('#mm-facing').checked;
@@ -850,7 +866,8 @@
         const r = Math.min(20, 5 + Math.sqrt(pc) * 1.6);
         const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
         mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
-        mk.on('click', () => openMapSidebar(di, pi));
+        mmPts.push({ di, pi, p, d, ll: [p.lat, p.lng] });
+        mk.on('click', (e) => pickMarker(di, pi, e.latlng));
         mmMarkers.addLayer(mk);
         placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
         // compass "facing": a high-contrast arrow INSIDE the circle pointing where the
