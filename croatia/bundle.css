@@ -1137,8 +1137,11 @@ html.dcc-matrix-on .dcc-tour-root {
 }
 /* the hidden toggle taps the header: manipulation kills iOS double-tap-zoom so rapid taps count */
 .dcc-tour-header { touch-action: manipulation; }
-.mm-pick { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
-.mm-pick b { font-size: 0.8rem; margin-bottom: 2px; }
-.mm-pick-b { text-align: left; border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg);
-  border-radius: var(--dcc-tour-radius); padding: 6px 8px; font: inherit; font-size: 0.8rem; cursor: pointer; }
-.mm-pick-b:hover { border-color: var(--dcc-tour-primary); color: var(--dcc-tour-primary); }
+.mm-pick { display: flex; flex-direction: column; gap: 7px; }
+.mm-pick-b { display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  border: 1px solid var(--dcc-tour-border); background: var(--dcc-tour-card-bg);
+  border-radius: var(--dcc-tour-radius); padding: 10px 12px; font: inherit; }
+.mm-pick-b b { font-size: 0.92rem; color: var(--dcc-tour-namecol-text, #111); }
+.mm-pick-b span { font-size: 0.78rem; color: var(--dcc-tour-muted); }
+.mm-pick-b:hover { border-color: var(--dcc-tour-primary); }
+.mm-pick-b:hover b { color: var(--dcc-tour-primary); }

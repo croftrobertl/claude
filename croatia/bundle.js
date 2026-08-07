@@ -632,16 +632,24 @@
   // one, show a menu to pick which one to open. Otherwise open it directly.
   function pickMarker(di, pi, clickLL) {
     const cp = mmMap.latLngToLayerPoint(clickLL);
-    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(cp) <= 40);
+    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(cp) <= 45);
     if (near.length <= 1) { openMapSidebar(di, pi); return; }
-    const html = '<div class="mm-pick"><b>' + near.length + ' spots here</b>' +
-      near.map((o, i) => '<button class="mm-pick-b" data-i="' + i + '">' +
-        escapeHtml(o.p.name) + ' · ' + escapeHtml(o.d.short) + ' · ' + placeCount(o.p) + '</button>').join('') + '</div>';
-    const pop = L.popup({ maxHeight: 240, className: 'mm-pick-pop' }).setLatLng(clickLL).setContent(html).openOn(mmMap);
-    setTimeout(() => {
-      pop.getElement().querySelectorAll('.mm-pick-b').forEach(b =>
-        b.addEventListener('click', () => { const o = near[+b.dataset.i]; mmMap.closePopup(pop); openMapSidebar(o.di, o.pi); }));
-    }, 0);
+    // render the chooser into the same side panel openMapSidebar uses — a plain
+    // DOM panel, so it survives mobile taps (a Leaflet popup got dismissed by the
+    // synthetic "ghost click" that follows a touch)
+    const side = root._mapmode.querySelector('#dcc-mm-side');
+    viewerItems = []; side.hidden = false;
+    side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
+      '<h3>' + near.length + ' spots here</h3>' +
+      '<p class="dcc-tour-mm-meta">Several places overlap — pick one to see its photos</p>' +
+      '<div class="mm-pick">' + near.map((o, i) => {
+        const c = placeCount(o.p);
+        return '<button class="mm-pick-b" data-i="' + i + '"><b>' + escapeHtml(o.p.name) + '</b>' +
+          '<span>' + escapeHtml(o.d.short) + ' · ' + c + (c === 1 ? ' shot' : ' shots') + '</span></button>';
+      }).join('') + '</div>';
+    side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
+    side.querySelectorAll('.mm-pick-b').forEach(b =>
+      b.addEventListener('click', () => { const o = near[+b.dataset.i]; openMapSidebar(o.di, o.pi); }));
   }
   let mmRange = [0, 0];
   let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
