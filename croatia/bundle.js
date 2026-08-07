@@ -631,7 +631,8 @@
   // all be clicked): on click, gather every marker within ~22px and, if more than
   // one, show a menu to pick which one to open. Otherwise open it directly.
   function pickMarker(di, pi, clickLL) {
-    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(mmMap.latLngToLayerPoint(clickLL)) <= 22);
+    const cp = mmMap.latLngToLayerPoint(clickLL);
+    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(cp) <= 40);
     if (near.length <= 1) { openMapSidebar(di, pi); return; }
     const html = '<div class="mm-pick"><b>' + near.length + ' spots here</b>' +
       near.map((o, i) => '<button class="mm-pick-b" data-i="' + i + '">' +
