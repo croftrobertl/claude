@@ -626,14 +626,21 @@
     return w;
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
-  let mmPts = [];
+  let mmPts = [], mmTapAt = 0;
   // Overlapping spots (places we revisited sit at nearly the same point and can't
   // all be clicked): on click, gather every marker within ~22px and, if more than
   // one, show a menu to pick which one to open. Otherwise open it directly.
-  function pickMarker(di, pi, clickLL) {
-    const cp = mmMap.latLngToLayerPoint(clickLL);
-    const near = mmPts.filter(o => mmMap.latLngToLayerPoint(o.ll).distanceTo(cp) <= 45);
-    if (near.length <= 1) { openMapSidebar(di, pi); return; }
+  // Resolve a tap (on a marker OR near one) to the spot(s) under it. Uses screen
+  // pixels so it works at any zoom, and a map-level handler (below) means you don't
+  // have to hit a tiny marker dead-on — tapping near a cluster is enough.
+  function showSpotsAt(clickLL) {
+    if (!mmMap) return;
+    const cp = mmMap.latLngToContainerPoint(clickLL);
+    const near = mmPts
+      .map(o => ({ o, d: mmMap.latLngToContainerPoint(o.ll).distanceTo(cp) }))
+      .filter(x => x.d <= 34).sort((a, b) => a.d - b.d).map(x => x.o);
+    if (!near.length) return;
+    if (near.length === 1) { openMapSidebar(near[0].di, near[0].pi); return; }
     // render the chooser into the same side panel openMapSidebar uses — a plain
     // DOM panel, so it survives mobile taps (a Leaflet popup got dismissed by the
     // synthetic "ghost click" that follows a touch)
@@ -673,6 +680,9 @@
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
     ]).addTo(mmMap);
+    // tapping near (not necessarily dead-on) a marker resolves the spot(s) there;
+    // the flag skips this when a marker's own click already handled the same tap
+    mmMap.on('click', (e) => { if (Date.now() - mmTapAt < 400) return; showSpotsAt(e.latlng); });
     mmLabelLayer = L.layerGroup().addTo(mmMap);   // curated place labels (below markers)
     mmMarkers = L.layerGroup().addTo(mmMap);
     mmPathLayer = L.layerGroup().addTo(mmMap);
@@ -876,7 +886,7 @@
         const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
         mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
         mmPts.push({ di, pi, p, d, ll: [p.lat, p.lng] });
-        mk.on('click', (e) => pickMarker(di, pi, e.latlng));
+        mk.on('click', (e) => { mmTapAt = Date.now(); showSpotsAt(e.latlng); });
         mmMarkers.addLayer(mk);
         placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
         // compass "facing": a high-contrast arrow INSIDE the circle pointing where the
@@ -918,11 +928,11 @@
         const vi = viewerItems.length; viewerItems.push(viewerMeta(it, p.name));
         const poster = it.poster ? resolveUrl(it.poster) : '';
         thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '">' +
-          (poster ? '<img loading="lazy" src="' + escapeAttr(poster) + '">' : '') + '<span class="mm-play-badge">▶</span></span>');
+          (poster ? '<img loading="lazy" src="' + escapeAttr(poster) + '">' : '') + '<span class="mm-play-badge"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span></span>');
       } else if (it.type === 'drive' && it.id) {   // GoPro clip: Drive-generated frame + play badge
         const vi = viewerItems.length; viewerItems.push(viewerMeta(it, p.name));
         thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '">' +
-          '<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" onerror="this.closest(\'.mm-play-wrap\').remove()"><span class="mm-play-badge">▶</span></span>');
+          '<img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" onerror="this.closest(\'.mm-play-wrap\').remove()"><span class="mm-play-badge"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span></span>');
       } else if (it.poster) {
         thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
       }
@@ -2019,7 +2029,7 @@
       const thumb = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.id) + '&sz=w400';
       return '<div class="dcc-tour-cell dcc-tour-play-cell"' + viAttr + '>' +
         '<img loading="lazy" src="' + escapeAttr(thumb) + '" alt="clip" onerror="this.classList.add(\'noimg\')">' +
-        '<span class="dcc-tour-play">▶</span><span class="dcc-tour-badge">clip</span>' + cap(item) + extras + '</div>';
+        '<span class="dcc-tour-play"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span><span class="dcc-tour-badge">clip</span>' + cap(item) + extras + '</div>';
     }
     // self-hosted videos: show the poster frame, load the video on tap
     if (item.type === 'self_hosted') {
@@ -2029,7 +2039,7 @@
         return posterUrl ? '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' + durb + cap(item) + extras + '</div>' : '';
       return '<div class="dcc-tour-cell dcc-tour-play-cell"' + viAttr + '>' +
         (posterUrl ? '<img loading="lazy" src="' + escapeAttr(posterUrl) + '" alt="video">' : '') +
-        '<span class="dcc-tour-play">▶</span>' + durb + cap(item) + extras + '</div>';
+        '<span class="dcc-tour-play"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span>' + durb + cap(item) + extras + '</div>';
     }
     // photo
     return '<div class="dcc-tour-cell"><img loading="lazy" src="' + escapeAttr(resolveUrl(item.src || item.full)) + '" alt=""' + viAttr + ' />' + cap(item) + extras + '</div>';
@@ -2200,7 +2210,7 @@
     return el;
   }
   function posterOverlay(url) {
-    const ov = el('div', 'dcc-tour-vpo', '<span class="dcc-tour-vpo-play">▶</span>');
+    const ov = el('div', 'dcc-tour-vpo', '<span class="dcc-tour-vpo-play dcc-pbtn">' + PLAY_GLYPH + '</span>');
     if (url) ov.style.backgroundImage = 'url("' + String(url).replace(/["\\]/g, '') + '")';
     return ov;
   }
