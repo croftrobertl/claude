@@ -873,14 +873,17 @@
         // compass "facing": a high-contrast arrow INSIDE the circle pointing where the
         // cameras looked. Auto-hidden when zoomed out (CSS on .mm-lowzoom) to declutter. (task 6)
         if (showFacing) {
-          const h = placeMeanHeading(p);
-          if (h != null) {
-            const sz = Math.max(10, Math.round(r * 1.6));
-            const icon = L.divIcon({ className: 'mm-face', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
-              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(h) + 'deg)">' +
+          // one arrow per individual photo/video/clip that recorded a compass
+          // heading, at its own GPS point, so you can see each shot's direction
+          const sz = 16;
+          placeItems(p).forEach(it => {
+            if (it.heading == null) return;
+            const lat = it.lat != null ? it.lat : p.lat, lng = it.lng != null ? it.lng : p.lng;
+            const icon = L.divIcon({ className: 'mm-face mm-face-item', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
+              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(it.heading) + 'deg)">' +
                 '<svg viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" aria-hidden="true"><path d="M12 3 L18 20 L12 16 L6 20 Z"/></svg></span>' });
-            mmPathLayer.addLayer(L.marker([p.lat, p.lng], { icon, interactive: false, keyboard: false }));
-          }
+            mmPathLayer.addLayer(L.marker([lat, lng], { icon, interactive: false, keyboard: false }));
+          });
         }
       });
       if (showPath && line.length > 1)
