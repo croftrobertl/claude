@@ -895,13 +895,17 @@
           // one arrow per individual photo/video/clip that recorded a compass
           // heading, at its own GPS point, so you can see each shot's direction
           const sz = 16;
+          const box = 26;   // bigger hit target than the 16px arrow, for easy tapping
           placeItems(p).forEach(it => {
             if (it.heading == null) return;
             const lat = it.lat != null ? it.lat : p.lat, lng = it.lng != null ? it.lng : p.lng;
-            const icon = L.divIcon({ className: 'mm-face mm-face-item', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
+            const icon = L.divIcon({ className: 'mm-face mm-face-item', iconSize: [box, box], iconAnchor: [box / 2, box / 2],
               html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(it.heading) + 'deg)">' +
                 '<svg viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" aria-hidden="true"><path d="M12 3 L18 20 L12 16 L6 20 Z"/></svg></span>' });
-            mmPathLayer.addLayer(L.marker([lat, lng], { icon, interactive: false, keyboard: false }));
+            // tapping an arrow opens THAT shot (in the place's viewer, so you can swipe on)
+            const am = L.marker([lat, lng], { icon, keyboard: false, riseOnHover: true, title: (it.time || '') + ' · ' + p.name });
+            am.on('click', (e) => { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); mmTapAt = Date.now(); openPlaceItem(p, it); });
+            mmPathLayer.addLayer(am);
           });
         }
       });
@@ -913,6 +917,18 @@
       mmHeat = L.heatLayer(heatPts, { radius: 22, blur: 18, maxZoom: 15 }).addTo(mmMap);
     if (mmTrackLayer) drawTrack();   // keep the GPS track clipped to the shown days (task 7)
     if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(fitPts(allPts)).pad(0.12), { animate: false });
+  }
+  // open one specific item (from a tapped facing arrow) in the media viewer,
+  // seeded with the whole place's media so prev/next still walks the spot
+  function openPlaceItem(p, it) {
+    viewerItems = []; let idx = 0;
+    placeItems(p).forEach(m => {
+      const viewable = m.full || (m.type === 'self_hosted' && m.url) || (m.type === 'drive' && m.id) || m.poster;
+      if (!viewable) return;
+      if (m === it) idx = viewerItems.length;
+      viewerItems.push(viewerMeta(m, p.name));
+    });
+    if (viewerItems.length) openViewer(idx);
   }
   function openMapSidebar(di, pi) {
     const d = DATA.days[di], p = d.places[pi];

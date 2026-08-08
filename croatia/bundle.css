@@ -538,7 +538,7 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
 .mm-showall { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-primary); position: sticky; left: 0; }
 .dcc-tour-legchip:hover { border-color: var(--dcc-tour-primary); }
 /* facing: a small rim chevron rotated to the mean camera heading (task 5) */
-.mm-face { pointer-events: none; background: none; border: 0; }
+.mm-face { pointer-events: auto; cursor: pointer; background: none; border: 0; }
 .mm-face-rot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 /* white arrow with a dark outline so it reads on satellite imagery, and a soft
    glow so it stays visible against light circle fills too */
