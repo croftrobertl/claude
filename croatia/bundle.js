@@ -656,16 +656,24 @@
     const c = {}; group.forEach(r => c[r.color] = (c[r.color] || 0) + 1);
     return Object.keys(c).sort((a, b) => c[b] - c[a])[0] || NO_COLOR;
   }
+  const MM_FAN_MAX = 12;   // clusters bigger than this open a thumbnail grid, not a ring
   function mmClusterBubble(group, centerLL) {
     const n = group.length, sz = n < 10 ? 34 : n < 50 ? 40 : n < 200 ? 48 : 56;
     const icon = L.divIcon({ className: 'mm-cl', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
       html: '<span class="mm-cl-inner" style="background:' + mmDominantColor(group) + ';width:' + sz + 'px;height:' + sz + 'px">' + fmt(n) + '</span>' });
     const mk = L.marker(centerLL, { icon, keyboard: false });
-    mk.on('click', (e) => { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); mmSpiderfy(group, centerLL); });
+    const key = centerLL[0].toFixed(5) + ',' + centerLL[1].toFixed(5);
+    mk.on('click', (e) => {
+      if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+      if (group.length > MM_FAN_MAX) { mmCloseFan(); mmOpenClusterGrid(group); return; }
+      if (mmSpiderKey === key) mmCloseFan();          // tap the same bubble again -> close
+      else mmSpiderfy(group, centerLL, key);
+    });
     return mk;
   }
+  function mmCloseFan() { if (mmSpiderLayer) mmSpiderLayer.clearLayers(); mmSpiderKey = null; }
   // fan a group's pins out in a ring around the centre, with connector legs
-  function mmSpiderfy(group, centerLL) {
+  function mmSpiderfy(group, centerLL, key) {
     if (!mmSpiderLayer) return;
     mmSpiderLayer.clearLayers();
     const showFacing = root._mapmode.querySelector('#mm-facing').checked;
@@ -677,7 +685,33 @@
       mmSpiderLayer.addLayer(L.polyline([centerLL, ll], { color: '#666', weight: 1, opacity: 0.55, interactive: false }));
       mmSpiderLayer.addLayer(mmItemMarker(rec, ll, showFacing));
     });
-    mmSpiderKey = true;
+    mmSpiderKey = key || true;
+  }
+  // big-cluster alternative: a scrollable thumbnail grid (like the place popup),
+  // seeded so tapping a thumb previews it with prev/next across the cluster
+  function mmOpenClusterGrid(group) {
+    const side = root._mapmode.querySelector('#dcc-mm-side');
+    viewerItems = []; const thumbs = [];
+    group.forEach(rec => {
+      const it = rec.it, vi = viewerItems.length;
+      const meta = viewerMeta(it, rec.p.name);
+      meta.mapRef = { di: rec.di, pi: rec.pi, place: rec.p.name, count: placeCount(rec.p) };
+      viewerItems.push(meta);
+      if (it.full) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.src || it.full)) + '" data-vi="' + vi + '">');
+      else if (it.type === 'self_hosted' && it.url) thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '">' + (it.poster ? '<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '">' : '') + '<span class="mm-play-badge"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span></span>');
+      else if (it.type === 'drive' && it.id) thumbs.push('<span class="mm-play-wrap" data-vi="' + vi + '"><img loading="lazy" src="https://drive.google.com/thumbnail?id=' + escapeAttr(it.id) + '&sz=w400" onerror="this.closest(\'.mm-play-wrap\').remove()"><span class="mm-play-badge"><span class="dcc-pbtn">' + PLAY_GLYPH + '</span></span></span>');
+      else if (it.poster) thumbs.push('<img loading="lazy" src="' + escapeAttr(resolveUrl(it.poster)) + '" style="opacity:.85">');
+    });
+    const days = []; group.forEach(r => { if (days.indexOf(r.d.short) < 0) days.push(r.d.short); });
+    side.hidden = false;
+    side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
+      '<h3>' + group.length + ' shots here</h3>' +
+      '<p class="dcc-tour-mm-meta">' + escapeHtml(days.length === 1 ? days[0] : days.length + ' days') + ' · tap any to view</p>' +
+      '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>';
+    side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
+    side.querySelector('.dcc-tour-mm-grid').addEventListener('click', e => {
+      const cell = e.target.closest('[data-vi]'); if (cell) openViewer(+cell.dataset.vi);
+    });
   }
   // grid-accelerated pixel clustering of mmAllItems at the current zoom
   function mmRenderMarkers() {
@@ -744,6 +778,8 @@
     // re-cluster the pins whenever the view changes; collapse any open fan first
     mmMap.on('movestart zoomstart', () => { if (mmSpiderLayer) mmSpiderLayer.clearLayers(); mmSpiderKey = null; });
     mmMap.on('moveend zoomend', () => { if (mmMap && root.dataset.view === 'map') mmRenderMarkers(); });
+    // tap empty map (not a pin/cluster — those stopPropagation) closes an open fan
+    mmMap.on('click', () => { if (mmSpiderKey) mmCloseFan(); });
     // task 6: hide the facing arrows when zoomed out (they clutter the whole-trip view)
     const FACE_MIN_ZOOM = 13;
     const syncFaceZoom = () => mmMap.getContainer().classList.toggle('mm-lowzoom', mmMap.getZoom() < FACE_MIN_ZOOM);
@@ -2278,20 +2314,20 @@
     dl.style.display = ''; dl.removeAttribute('target');
     if (it.kind === 'video' && it.url) {
       const v = document.createElement('video');
+      // do NOT autoplay: only buffer/stream once the user taps play (poster shows first)
       v.src = it.url; v.controls = true; v.playsInline = true; v.setAttribute('playsinline', '');
       v.setAttribute('controlslist', 'nodownload noplaybackrate'); v.disablePictureInPicture = true;
-      v.className = 'dcc-tour-vplayer';
+      v.preload = 'none'; v.className = 'dcc-tour-vplayer';
       stage.appendChild(v);
-      // custom poster/play overlay that hides the moment playback begins
+      // poster + play button; hides the moment playback actually begins
       const ov = posterOverlay(it.poster); stage.appendChild(ov);
       const hide = () => ov.classList.add('hide');
       v.addEventListener('playing', hide); v.addEventListener('play', hide);
       ov.addEventListener('click', () => { v.play().catch(() => {}); });
-      v.play().catch(() => {});
       dl.href = it.url;
     } else if (it.kind === 'clip' && it.id) {
-      // load the Drive player inside the opening gesture so it can start itself;
-      // the overlay hides as soon as the player is in.
+      // show the poster + play button; the Drive player is only injected (and thus
+      // only starts streaming) when the user taps play — no autoplay on open
       const ov = posterOverlay('https://drive.google.com/thumbnail?id=' + encodeURIComponent(it.id) + '&sz=w800');
       stage.appendChild(ov);
       const load = () => {
@@ -2302,7 +2338,7 @@
         f.className = 'dcc-tour-vplayer dcc-tour-vplayer-iframe';
         stage.insertBefore(f, ov); ov.classList.add('hide');
       };
-      ov.addEventListener('click', load); load();
+      ov.addEventListener('click', load);
       dl.href = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(it.id); dl.target = '_blank';
     } else {   // photo (or any still)
       const im = document.createElement('img'); im.className = 'dcc-tour-vphoto'; im.alt = '';
