@@ -537,15 +537,21 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   border: 1px solid var(--dcc-tour-border); border-radius: 999px; padding: 4px 12px; background: var(--dcc-tour-card-bg); color: var(--dcc-tour-text); }
 .mm-showall { background: var(--dcc-tour-accent-tint); color: var(--dcc-tour-accent-deep); border-color: var(--dcc-tour-primary); position: sticky; left: 0; }
 .dcc-tour-legchip:hover { border-color: var(--dcc-tour-primary); }
-/* facing: a small rim chevron rotated to the mean camera heading (task 5) */
-.mm-face { pointer-events: auto; cursor: pointer; background: none; border: 0; }
-.mm-face-rot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-/* white arrow with a dark outline so it reads on satellite imagery, and a soft
-   glow so it stays visible against light circle fills too */
-.mm-face svg { display: block; filter: drop-shadow(0 0 1px rgba(0,0,0,0.55)); }
-.mm-face svg path { fill: #ffffff; stroke: #2b2b2b; stroke-width: 2; stroke-linejoin: round; }
-/* task 6: hide the facing arrows entirely when the map is zoomed out */
-.mm-lowzoom .mm-face { display: none; }
+/* per-item pin: a colour-coded dot (colour = Color-by) + optional direction arrow */
+.mm-pin { background: none; border: 0; cursor: pointer; }
+.mm-pin-dot { position: absolute; left: 50%; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.45); box-sizing: border-box; }
+.mm-pin-vid .mm-pin-dot { border-radius: 3px; }   /* videos/clips read as rounded squares */
+/* the arrow orbits the dot, pointing outward in the camera heading */
+.mm-pin-arrow { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.mm-pin-arrow svg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -160%); display: block;
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.6)); }
+.mm-pin-arrow svg path { fill: #fff; stroke: #2b2b2b; stroke-width: 2; stroke-linejoin: round; }
+/* cluster bubble: colour-coded count, tap to fan out */
+.mm-cl { background: none; border: 0; cursor: pointer; }
+.mm-cl-inner { display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; border: 2px solid rgba(255,255,255,0.92);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4); font-size: 0.82rem; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 /* curated place labels over the satellite: strong halo so they read on any imagery */
 .mm-label { background: none; border: 0; pointer-events: none; white-space: nowrap; }
 .mm-label span { display: inline-block; transform: translate(-50%, -50%); font-family: var(--dcc-tour-sans, sans-serif); font-weight: 600; letter-spacing: 0.02em;
@@ -801,6 +807,11 @@ body.dcc-tour-resizing { cursor: col-resize; user-select: none; }
   text-align: center; color: #fff; font-size: 0.9rem; background: linear-gradient(transparent, rgba(0,0,0,0.6)); pointer-events: none; }
 .dcc-tour-lightbox-count { position: fixed; top: 20px; left: 16px; color: rgba(255,255,255,0.9);
   font-size: 0.82rem; font-variant-numeric: tabular-nums; pointer-events: none; z-index: 3; }
+/* "See all N shots here" chip inside the viewer caption (map-opened items) */
+.dcc-tour-lb-place { display: block; width: fit-content; margin: 8px auto 0; pointer-events: auto; cursor: pointer;
+  font: inherit; font-size: 0.82rem; font-weight: 600; color: #fff;
+  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.5); border-radius: 999px; padding: 5px 13px; }
+.dcc-tour-lb-place:hover { background: rgba(255,255,255,0.28); }
 
 /* tactile feedback on tap/press */
 .dcc-tour-modebtn:active, .dcc-tour-tabbtn:active, .dcc-tour-chip:active, .dcc-tour-daychip:active,

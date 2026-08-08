@@ -626,37 +626,94 @@
     return w;
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
-  let mmPts = [], mmTapAt = 0;
-  // Overlapping spots (places we revisited sit at nearly the same point and can't
-  // all be clicked): on click, gather every marker within ~22px and, if more than
-  // one, show a menu to pick which one to open. Otherwise open it directly.
-  // Resolve a tap (on a marker OR near one) to the spot(s) under it. Uses screen
-  // pixels so it works at any zoom, and a map-level handler (below) means you don't
-  // have to hit a tiny marker dead-on — tapping near a cluster is enough.
-  function showSpotsAt(clickLL) {
-    if (!mmMap) return;
-    const cp = mmMap.latLngToContainerPoint(clickLL);
-    const near = mmPts
-      .map(o => ({ o, d: mmMap.latLngToContainerPoint(o.ll).distanceTo(cp) }))
-      .filter(x => x.d <= 34).sort((a, b) => a.d - b.d).map(x => x.o);
-    if (!near.length) return;
-    if (near.length === 1) { openMapSidebar(near[0].di, near[0].pi); return; }
-    // render the chooser into the same side panel openMapSidebar uses — a plain
-    // DOM panel, so it survives mobile taps (a Leaflet popup got dismissed by the
-    // synthetic "ghost click" that follows a touch)
-    const side = root._mapmode.querySelector('#dcc-mm-side');
-    viewerItems = []; side.hidden = false;
-    side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
-      '<h3>' + near.length + ' spots here</h3>' +
-      '<p class="dcc-tour-mm-meta">Several places overlap — pick one to see its photos</p>' +
-      '<div class="mm-pick">' + near.map((o, i) => {
-        const c = placeCount(o.p);
-        return '<button class="mm-pick-b" data-i="' + i + '"><b>' + escapeHtml(o.p.name) + '</b>' +
-          '<span>' + escapeHtml(o.d.short) + ' · ' + c + (c === 1 ? ' shot' : ' shots') + '</span></button>';
-      }).join('') + '</div>';
-    side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
-    side.querySelectorAll('.mm-pick-b').forEach(b =>
-      b.addEventListener('click', () => { const o = near[+b.dataset.i]; openMapSidebar(o.di, o.pi); }));
+  let mmSpiderLayer = null, mmSpiderKey = null, mmAllItems = [];
+  // per-ITEM colour (unlike placeColor, which averaged a whole place) so each
+  // photo/video/clip dot follows the current Color-by mode
+  function mmItemColor(it, di) {
+    if (mmColorMode === 'person') return PERSON_COLORS[it.person] || NO_COLOR;
+    if (mmColorMode === 'alt') return it.alt != null ? altColor(it.alt) : NO_COLOR;
+    return dayColor(di);
+  }
+  // ---- per-item pins with pixel-grid clustering + tap-to-fan-out ----
+  // one pin per photo/video/clip at its own GPS point (colour = Color-by, plus a
+  // direction arrow when Facing is on); nearby pins collapse into a count bubble,
+  // tapping a bubble fans its pins out in a ring so you can tap the exact one.
+  function mmPinIcon(rec, showFacing) {
+    const arrow = (showFacing && rec.heading != null)
+      ? '<span class="mm-pin-arrow" style="transform:rotate(' + Math.round(rec.heading) + 'deg)">' +
+        '<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M12 2 L18 20 L12 15 L6 20 Z"/></svg></span>' : '';
+    return L.divIcon({ className: 'mm-pin' + (rec.it.kind && rec.it.kind !== 'photo' ? ' mm-pin-vid' : ''),
+      iconSize: [26, 26], iconAnchor: [13, 13],
+      html: '<span class="mm-pin-dot" style="background:' + rec.color + '"></span>' + arrow });
+  }
+  function mmItemMarker(rec, ll, showFacing) {
+    const mk = L.marker(ll, { icon: mmPinIcon(rec, showFacing), keyboard: false,
+      title: (rec.it.time || '') + ' · ' + rec.p.name });
+    mk.on('click', (e) => { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); openDayItem(rec.di, rec.pi, rec.it); });
+    return mk;
+  }
+  function mmDominantColor(group) {
+    const c = {}; group.forEach(r => c[r.color] = (c[r.color] || 0) + 1);
+    return Object.keys(c).sort((a, b) => c[b] - c[a])[0] || NO_COLOR;
+  }
+  function mmClusterBubble(group, centerLL) {
+    const n = group.length, sz = n < 10 ? 34 : n < 50 ? 40 : n < 200 ? 48 : 56;
+    const icon = L.divIcon({ className: 'mm-cl', iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2],
+      html: '<span class="mm-cl-inner" style="background:' + mmDominantColor(group) + ';width:' + sz + 'px;height:' + sz + 'px">' + fmt(n) + '</span>' });
+    const mk = L.marker(centerLL, { icon, keyboard: false });
+    mk.on('click', (e) => { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); mmSpiderfy(group, centerLL); });
+    return mk;
+  }
+  // fan a group's pins out in a ring around the centre, with connector legs
+  function mmSpiderfy(group, centerLL) {
+    if (!mmSpiderLayer) return;
+    mmSpiderLayer.clearLayers();
+    const showFacing = root._mapmode.querySelector('#mm-facing').checked;
+    const cpt = mmMap.latLngToContainerPoint(centerLL);
+    const n = group.length, rad = Math.min(150, 34 + n * 5.5);
+    group.forEach((rec, i) => {
+      const ang = (2 * Math.PI * i / n) - Math.PI / 2;
+      const ll = mmMap.containerPointToLatLng(L.point(cpt.x + rad * Math.cos(ang), cpt.y + rad * Math.sin(ang)));
+      mmSpiderLayer.addLayer(L.polyline([centerLL, ll], { color: '#666', weight: 1, opacity: 0.55, interactive: false }));
+      mmSpiderLayer.addLayer(mmItemMarker(rec, ll, showFacing));
+    });
+    mmSpiderKey = true;
+  }
+  // grid-accelerated pixel clustering of mmAllItems at the current zoom
+  function mmRenderMarkers() {
+    if (!mmMap || !mmMarkers || !mmMap._loaded) return;
+    mmMarkers.clearLayers(); if (mmSpiderLayer) mmSpiderLayer.clearLayers(); mmSpiderKey = null;
+    const showFacing = root._mapmode.querySelector('#mm-facing').checked;
+    const R = 40, recs = mmAllItems.map(o => { const pt = mmMap.latLngToContainerPoint([o.lat, o.lng]); o._x = pt.x; o._y = pt.y; o._used = false; return o; });
+    const cells = new Map();
+    recs.forEach(o => { o._gx = Math.floor(o._x / R); o._gy = Math.floor(o._y / R); const k = o._gx + ':' + o._gy; let a = cells.get(k); if (!a) { a = []; cells.set(k, a); } a.push(o); });
+    recs.forEach(o => {
+      if (o._used) return; o._used = true; const group = [o];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        const a = cells.get((o._gx + dx) + ':' + (o._gy + dy)); if (!a) continue;
+        a.forEach(q => { if (q._used) return; if (Math.hypot(q._x - o._x, q._y - o._y) <= R) { q._used = true; group.push(q); } });
+      }
+      if (group.length === 1) mmMarkers.addLayer(mmItemMarker(o, [o.lat, o.lng], showFacing));
+      else {
+        let sx = 0, sy = 0; group.forEach(g => { sx += g.lat; sy += g.lng; });
+        mmMarkers.addLayer(mmClusterBubble(group, [sx / group.length, sy / group.length]));
+      }
+    });
+  }
+  // open a tapped item in the media viewer, seeded with that whole DAY's media
+  // (time order) so prev/next walks the day; keep a ref for the "all shots here" link
+  function openDayItem(di, pi, it) {
+    const d = DATA.days[di]; viewerItems = []; let idx = 0;
+    d.places.forEach((pp, ppi) => {
+      (personOn() ? placeItems(pp) : pp.items).forEach(m => {
+        const viewable = m.full || (m.type === 'self_hosted' && m.url) || (m.type === 'drive' && m.id) || m.poster;
+        if (!viewable) return;
+        if (m === it) idx = viewerItems.length;
+        const meta = viewerMeta(m, pp.name); meta.mapRef = { di: di, pi: ppi, place: pp.name, count: placeCount(pp) };
+        viewerItems.push(meta);
+      });
+    });
+    if (viewerItems.length) openViewer(idx);
   }
   let mmRange = [0, 0];
   let mmIsolateDay = null;   // legend day-tap isolates one day (separate from the From/To range)
@@ -680,12 +737,13 @@
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 18 }),
     ]).addTo(mmMap);
-    // tapping near (not necessarily dead-on) a marker resolves the spot(s) there;
-    // the flag skips this when a marker's own click already handled the same tap
-    mmMap.on('click', (e) => { if (Date.now() - mmTapAt < 400) return; showSpotsAt(e.latlng); });
     mmLabelLayer = L.layerGroup().addTo(mmMap);   // curated place labels (below markers)
-    mmMarkers = L.layerGroup().addTo(mmMap);
-    mmPathLayer = L.layerGroup().addTo(mmMap);
+    mmPathLayer = L.layerGroup().addTo(mmMap);    // day-route lines (below the pins)
+    mmMarkers = L.layerGroup().addTo(mmMap);      // item pins + cluster bubbles
+    mmSpiderLayer = L.layerGroup().addTo(mmMap);  // fanned-out pins + their legs (on top)
+    // re-cluster the pins whenever the view changes; collapse any open fan first
+    mmMap.on('movestart zoomstart', () => { if (mmSpiderLayer) mmSpiderLayer.clearLayers(); mmSpiderKey = null; });
+    mmMap.on('moveend zoomend', () => { if (mmMap && root.dataset.view === 'map') mmRenderMarkers(); });
     // task 6: hide the facing arrows when zoomed out (they clutter the whole-trip view)
     const FACE_MIN_ZOOM = 13;
     const syncFaceZoom = () => mmMap.getContainer().classList.toggle('mm-lowzoom', mmMap.getZoom() < FACE_MIN_ZOOM);
@@ -858,10 +916,9 @@
   function renderMapMode(fit) {
     if (!mmMap) return;
     renderMapLabels();
-    mmMarkers.clearLayers(); mmPathLayer.clearLayers(); mmPts = [];
+    mmMarkers.clearLayers(); mmPathLayer.clearLayers(); if (mmSpiderLayer) mmSpiderLayer.clearLayers();
     const showPath = root._mapmode.querySelector('#mm-path').checked;
     const showHeat = root._mapmode.querySelector('#mm-heat').checked;
-    const showFacing = root._mapmode.querySelector('#mm-facing').checked;
     const heatPts = [], allPts = [];
     // range readout (days · places · shots) + reflect isolate/range in the legend
     const rdays = effectiveDays(), shownSet = new Set(rdays);
@@ -875,60 +932,35 @@
       seg.classList.toggle('out', !shownSet.has(i));
       seg.classList.toggle('sel', mmIsolateDay === i);
     });
+    // build the flat per-item list (each photo/video/clip at its own GPS point),
+    // plus the day-route lines; the pins themselves are drawn by mmRenderMarkers()
+    mmAllItems = [];
     rdays.forEach(di => {
       const d = DATA.days[di], col = dayColor(di), line = [];
       d.places.forEach((p, pi) => {
         if (p.lat == null) return;
-        const pc = placeCount(p);
-        if (personOn() && pc === 0) return;   // these people didn't shoot here
+        if (personOn() && placeCount(p) === 0) return;   // these people didn't shoot here
         allPts.push([p.lat, p.lng]); line.push([p.lat, p.lng]);
-        const r = Math.min(20, 5 + Math.sqrt(pc) * 1.6);
-        const mk = L.circleMarker([p.lat, p.lng], { radius: r, color: '#fff', weight: 1.5, fillColor: placeColor(p, di), fillOpacity: 0.85 });
-        mk.bindTooltip(escapeHtml(p.name) + ' · ' + d.short, { direction: 'top' });
-        mmPts.push({ di, pi, p, d, ll: [p.lat, p.lng] });
-        mk.on('click', (e) => { mmTapAt = Date.now(); showSpotsAt(e.latlng); });
-        mmMarkers.addLayer(mk);
-        placeItems(p).forEach(it => { if (it.lat != null) heatPts.push([it.lat, it.lng, 0.6]); });
-        // compass "facing": a high-contrast arrow INSIDE the circle pointing where the
-        // cameras looked. Auto-hidden when zoomed out (CSS on .mm-lowzoom) to declutter. (task 6)
-        if (showFacing) {
-          // one arrow per individual photo/video/clip that recorded a compass
-          // heading, at its own GPS point, so you can see each shot's direction
-          const sz = 16;
-          const box = 26;   // bigger hit target than the 16px arrow, for easy tapping
-          placeItems(p).forEach(it => {
-            if (it.heading == null) return;
-            const lat = it.lat != null ? it.lat : p.lat, lng = it.lng != null ? it.lng : p.lng;
-            const icon = L.divIcon({ className: 'mm-face mm-face-item', iconSize: [box, box], iconAnchor: [box / 2, box / 2],
-              html: '<span class="mm-face-rot" style="transform:rotate(' + Math.round(it.heading) + 'deg)">' +
-                '<svg viewBox="0 0 24 24" width="' + sz + '" height="' + sz + '" aria-hidden="true"><path d="M12 3 L18 20 L12 16 L6 20 Z"/></svg></span>' });
-            // tapping an arrow opens THAT shot (in the place's viewer, so you can swipe on)
-            const am = L.marker([lat, lng], { icon, keyboard: false, riseOnHover: true, title: (it.time || '') + ' · ' + p.name });
-            am.on('click', (e) => { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); mmTapAt = Date.now(); openPlaceItem(p, it); });
-            mmPathLayer.addLayer(am);
-          });
-        }
+        placeItems(p).forEach(it => {
+          const viewable = it.full || (it.type === 'self_hosted' && it.url) || (it.type === 'drive' && it.id) || it.poster;
+          if (!viewable) return;
+          const lat = it.lat != null ? it.lat : p.lat, lng = it.lng != null ? it.lng : p.lng;
+          heatPts.push([lat, lng, 0.6]);
+          mmAllItems.push({ it: it, p: p, d: d, di: di, pi: pi, lat: lat, lng: lng, heading: it.heading, color: mmItemColor(it, di) });
+        });
       });
       if (showPath && line.length > 1)
         mmPathLayer.addLayer(L.polyline(line, { color: col, weight: 2.5, opacity: 0.7, dashArray: '4 5' }));
     });
+    // set the view BEFORE projecting pins — latLngToContainerPoint needs a map
+    // that already has a centre/zoom. (fitBounds fires moveend -> mmRenderMarkers,
+    // but we also render directly so a no-fit re-render still repaints.)
+    if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(fitPts(allPts)).pad(0.12), { animate: false });
+    if (mmMap._loaded) mmRenderMarkers();
     if (mmHeat) { mmMap.removeLayer(mmHeat); mmHeat = null; }
     if (showHeat && window.L && L.heatLayer)
       mmHeat = L.heatLayer(heatPts, { radius: 22, blur: 18, maxZoom: 15 }).addTo(mmMap);
     if (mmTrackLayer) drawTrack();   // keep the GPS track clipped to the shown days (task 7)
-    if (fit && allPts.length) mmMap.fitBounds(L.latLngBounds(fitPts(allPts)).pad(0.12), { animate: false });
-  }
-  // open one specific item (from a tapped facing arrow) in the media viewer,
-  // seeded with the whole place's media so prev/next still walks the spot
-  function openPlaceItem(p, it) {
-    viewerItems = []; let idx = 0;
-    placeItems(p).forEach(m => {
-      const viewable = m.full || (m.type === 'self_hosted' && m.url) || (m.type === 'drive' && m.id) || m.poster;
-      if (!viewable) return;
-      if (m === it) idx = viewerItems.length;
-      viewerItems.push(viewerMeta(m, p.name));
-    });
-    if (viewerItems.length) openViewer(idx);
   }
   function openMapSidebar(di, pi) {
     const d = DATA.days[di], p = d.places[pi];
@@ -2282,7 +2314,16 @@
         if (v && v.kind === 'photo' && v.full && v.full !== it.full) { const p = new Image(); p.decoding = 'async'; p.src = v.full; }
       });
     }
-    el0.querySelector('.dcc-tour-lightbox-cap').textContent = [it.place, it.date, it.time].filter(Boolean).join(' · ');
+    const cap = el0.querySelector('.dcc-tour-lightbox-cap');
+    cap.textContent = [it.place, it.date, it.time].filter(Boolean).join(' · ');
+    // map-opened items get a link to that place's full popup (all shots + Open day)
+    if (it.mapRef) {
+      const a = document.createElement('button');
+      a.className = 'dcc-tour-lb-place'; a.type = 'button';
+      a.textContent = '▦ See all ' + it.mapRef.count + (it.mapRef.count === 1 ? ' shot' : ' shots') + ' here';
+      a.addEventListener('click', (e) => { e.stopPropagation(); const r = it.mapRef; closeViewer(); openMapSidebar(r.di, r.pi); });
+      cap.appendChild(a);
+    }
     el0.querySelector('.dcc-tour-lightbox-count').textContent = (viewerIdx + 1) + ' / ' + n;
     el0.classList.add('open');
     if (!wasOpen) { vwPrevFocus = document.activeElement; el0.querySelector('.dcc-tour-lightbox-close').focus(); }
