@@ -1277,7 +1277,7 @@ final class Widget extends Widget_Base
             $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
             $max_days  = max($days_desktop, $days_tablet, $days_mobile);
             $init_to   = $base_from->modify('+' . ($max_days - 1) . ' days');
-            $init_avail = Data_Provider::get_availability($type_ids, $base_from, $init_to);
+            $init_avail = Data_Provider::get_availability($type_ids, $base_from, $init_to, $init_age);
             if (!empty($init_avail)) {
                 // Mirror Ajax::handle()'s all-booked forward scan so the
                 // "booked through {date}" hint is right on first paint too.
@@ -1303,6 +1303,15 @@ final class Widget extends Widget_Base
                     'from'          => $base_from->format('Y-m-d'),
                     'to'            => $init_to->format('Y-m-d'),
                     'bookedThrough' => $booked_through,
+                    // Freshness metadata for the client's revalidate decision.
+                    // dataAge: how stale this availability already was when
+                    // baked in. renderedAt: when this HTML was produced — under
+                    // full-page caching the same HTML can be served for hours,
+                    // and comparing it to the visitor's clock is what reveals
+                    // that. Both are needed: fresh data in an old page is stale.
+                    'dataAge'    => (int) ($init_age ?? 0),
+                    'renderedAt' => time(),
+                    'ttl'        => Cache::DEFAULT_TTL,
                 ];
             }
         } catch (\Throwable $e) {

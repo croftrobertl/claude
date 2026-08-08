@@ -29,18 +29,29 @@ final class Cache
     }
 
     /**
+     * Stored payloads are wrapped as ['__v' => value, '__t' => unix_time] so
+     * readers can tell how old a hit is — the client uses that age to decide
+     * whether the page-embedded availability is fresh enough to skip its
+     * background revalidate (one fewer admin-ajax round-trip). Entries written
+     * by < 0.14.0 lack the wrapper; they simply fail the shape check and get
+     * recomputed once, so no key-version bump or migration is needed.
+     *
      * @template T
      * @param callable():T $producer
+     * @param int|null     $age  Out-param: seconds since this value was computed
+     *                           (0 on a miss/fresh compute).
      * @return T
      */
-    public static function get_or_set(string $key, callable $producer, int $ttl = self::DEFAULT_TTL)
+    public static function get_or_set(string $key, callable $producer, int $ttl = self::DEFAULT_TTL, ?int &$age = null)
     {
         $cached = get_transient($key);
-        if ($cached !== false) {
-            return $cached;
+        if (is_array($cached) && array_key_exists('__v', $cached) && array_key_exists('__t', $cached)) {
+            $age = max(0, time() - (int) $cached['__t']);
+            return $cached['__v'];
         }
         $value = $producer();
-        set_transient($key, $value, $ttl);
+        $age   = 0;
+        set_transient($key, ['__v' => $value, '__t' => time()], $ttl);
         return $value;
     }
 

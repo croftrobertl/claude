@@ -169,6 +169,25 @@
     var PREFETCH_TTL_MS = 5 * 60 * 1000;
     var PREFETCH_MAX_ENTRIES = 16;
 
+    // Speculative prefetch only pays off when the endpoint is quick.
+    // admin-ajax.php boots WordPress and every active plugin on every call; on
+    // shared hosting that can run into seconds, and firing two extra requests
+    // for a nav the visitor may never perform would then cost far more server
+    // time than it saves. So latency is measured on every real request and
+    // prefetching stays disabled until the endpoint demonstrates it is fast.
+    // Starts at null (unknown) = off, so a slow site never pays the cost.
+    var PREFETCH_MAX_LATENCY_MS = 800;
+    var lastLatencyMs = null;
+
+    // Add ?mphbac_debug=1 to any page URL to have the endpoint return its
+    // internal timing breakdown, logged to the browser console. Off by default
+    // so normal visitors never carry the extra payload.
+    var DEBUG = (function () {
+        try {
+            return window.location.search.indexOf('mphbac_debug=1') >= 0;
+        } catch (e) { return false; }
+    }());
+
     function prefetchKey(config, from, to) {
         return (config.roomTypeIds || []).join(',') + '|' + from + '|' + to;
     }
@@ -227,6 +246,8 @@
     // be wasted requests.
     function scheduleAdjacentPrefetch(config, state) {
         if (state.filtered) return;
+        // Unknown or slow endpoint — don't speculate. (See lastLatencyMs.)
+        if (lastLatencyMs === null || lastLatencyMs > PREFETCH_MAX_LATENCY_MS) return;
         var span = daysBetween(state.from, state.to) + 1;
         var nextFrom = addDays(state.to, 1);
         var nextTo = addDays(state.to, span);
@@ -304,6 +325,48 @@
         return true;
     }
 
+    // The page-embedded availability is only trustworthy without a revalidate
+    // when BOTH the data was fresh when it was baked in AND the HTML itself is
+    // recent. Full-page caching (SpeedyCache) can serve identical markup for
+    // hours, so page age is measured against the visitor's clock — a negative
+    // result means the two clocks disagree, and we revalidate rather than
+    // guess. Total staleness = age of the data at bake time + age of the page.
+    var EMBED_FRESH_MAX_S = 300;
+
+    function embedIsFresh(config) {
+        var ini = config.initial;
+        if (!ini || typeof ini.renderedAt !== 'number') return false;
+        var ttl = typeof ini.ttl === 'number' ? ini.ttl : 900;
+        var dataAge = typeof ini.dataAge === 'number' ? ini.dataAge : ttl;
+        var pageAge = (Date.now() / 1000) - ini.renderedAt;
+        if (!(pageAge >= 0)) return false;
+        return (dataAge + pageAge) < Math.min(EMBED_FRESH_MAX_S, ttl);
+    }
+
+    // Run fn once the widget is at (or near) the viewport. On a homepage where
+    // the calendar sits below the fold this keeps its admin-ajax traffic off
+    // the critical path entirely — the request happens only if the visitor
+    // actually scrolls down to it. rootMargin starts the fetch slightly early
+    // so data is usually in place by the time the grid is on screen.
+    // IntersectionObserver fires immediately for an already-visible element,
+    // so an above-the-fold calendar is not delayed. A display:none widget
+    // never fires, which is the behavior we want — no fetch for a hidden grid.
+    function whenVisible(el, fn) {
+        if (!window.IntersectionObserver) { fn(); return; }
+        var fired = false;
+        var obs = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (!entries[i].isIntersecting) continue;
+                if (fired) return;
+                fired = true;
+                try { obs.disconnect(); } catch (e) { /* ignore */ }
+                fn();
+                return;
+            }
+        }, { rootMargin: '300px 0px' });
+        obs.observe(el);
+    }
+
     function init(root) {
         if (!root || root.dataset.mphbacInit === '1') return;
         root.dataset.mphbacInit = '1';
@@ -346,12 +409,22 @@
         }
         wireResize(root, config, state);
 
-        // Instant first paint from the server-embedded availability when it
-        // covers this device's window, then a silent AJAX revalidate (no
-        // skeleton, re-render only on change). Falls back to the plain
-        // skeleton-then-AJAX flow when the embed is missing or too stale.
+        // Instant first paint from the server-embedded availability, which
+        // costs no network at all — so it runs immediately even for a calendar
+        // far below the fold.
         var painted = tryRenderEmbedded(root, config, state);
-        request(root, config, state, painted ? { silent: true } : null);
+
+        // Everything past this point may hit admin-ajax.php, which on shared
+        // hosting boots all of WordPress per call. So: skip it outright when
+        // the embed is provably fresh, and otherwise defer until the widget is
+        // near the viewport. A below-the-fold calendar that is never scrolled
+        // to now issues zero requests.
+        if (painted && embedIsFresh(config)) {
+            return; // zero network on load
+        }
+        whenVisible(root, function () {
+            request(root, config, state, painted ? { silent: true } : null);
+        });
     }
 
     // Re-stamp the date inputs' min attributes from the (possibly corrected)
@@ -1010,7 +1083,9 @@
         (config.roomTypeIds || []).forEach(function (id) {
             body.append('room_type_ids[]', String(id));
         });
+        if (DEBUG) body.append('debug', '1');
 
+        var startedAt = Date.now();
         fetch(config.ajaxUrl, {
             method: 'POST',
             credentials: 'same-origin',
@@ -1018,9 +1093,18 @@
             headers: { 'Accept': 'application/json' },
             signal: controller.signal
         }).then(function (r) {
+            // Round-trip latency gates the speculative prefetch below.
+            lastLatencyMs = Date.now() - startedAt;
             return r.json();
         }).then(function (json) {
             if (controller !== state.controller) return; // superseded
+            if (json && json.data && json.data.timing && window.console) {
+                // Only present when profiling was requested (POST debug=1 or
+                // WP_DEBUG). bootMs >> queryMs means the cost is the WordPress
+                // bootstrap, not this plugin's query.
+                console.log('[mphbac] server timing', json.data.timing,
+                    'roundTripMs', lastLatencyMs);
+            }
             root.classList.remove('is-loading');
             setStatus(root, '');
             if (!json || !json.success || !json.data) {

@@ -17,6 +17,15 @@ final class Ajax
 
     public static function handle(): void
     {
+        // Wall-clock at the moment OUR code first runs. Compared against
+        // WordPress's own request-start constant, this separates "WordPress +
+        // every active plugin booting" from "this plugin doing work" — the
+        // distinction that decides whether a slow endpoint is fixable here at
+        // all. Returned in the payload only when the caller asks for it.
+        $t_enter = microtime(true);
+        $boot_ms = defined('WP_START_TIMESTAMP')
+            ? max(0.0, ($t_enter - WP_START_TIMESTAMP) * 1000)
+            : -1.0;
         // No nonce check: this endpoint returns public, read-only availability
         // data and performs no state-changing actions, so there is no CSRF
         // surface to protect. Requiring a nonce here breaks page caching —
@@ -109,7 +118,9 @@ final class Ajax
             static fn($t) => in_array((int) $t['id'], $room_type_ids, true)
         ));
 
-        $availability = Data_Provider::get_availability($room_type_ids, $from, $to);
+        $t_query = microtime(true);
+        $availability = Data_Provider::get_availability($room_type_ids, $from, $to, $data_age);
+        $query_ms = (microtime(true) - $t_query) * 1000;
 
         // When every visible day is booked across every requested cottage,
         // scan forward to find the real through-date so the "all cottages
@@ -139,13 +150,34 @@ final class Ajax
             }
         }
 
-        wp_send_json_success([
+        $payload = [
             'rooms'         => array_values($rooms),
             'availability'  => $availability,
             'from'          => $from->format('Y-m-d'),
             'to'            => $to->format('Y-m-d'),
             'bookedThrough' => $booked_through,
-        ]);
+        ];
+
+        // Opt-in profiling (POST debug=1, or WP_DEBUG). Kept out of normal
+        // responses so the payload stays small and no internals leak.
+        //   bootMs   - WordPress + all active plugins loading, BEFORE our code.
+        //   queryMs  - this plugin's availability lookup.
+        //   handleMs - everything this plugin did in the request.
+        //   cacheHit - true when availability came from the transient.
+        // If bootMs dwarfs queryMs, the latency is the WordPress bootstrap on
+        // admin-ajax.php, which no amount of query tuning here can fix — the
+        // remedy is making fewer requests, which the client now does.
+        if (!empty($_POST['debug']) || (defined('WP_DEBUG') && WP_DEBUG)) {
+            $payload['timing'] = [
+                'bootMs'   => round($boot_ms, 1),
+                'queryMs'  => round($query_ms, 1),
+                'handleMs' => round((microtime(true) - $t_enter) * 1000, 1),
+                'cacheHit' => ($data_age ?? 0) > 0,
+                'dataAgeS' => (int) ($data_age ?? 0),
+            ];
+        }
+
+        wp_send_json_success($payload);
     }
 
     private static function parse_date(string $value): ?DateTimeImmutable

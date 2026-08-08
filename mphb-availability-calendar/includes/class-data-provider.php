@@ -123,8 +123,9 @@ final class Data_Provider
      * @param DateTimeImmutable $to   inclusive, midnight ET
      * @return array<int, array<string,string>> [ room_type_id => [ 'YYYY-MM-DD' => status ] ]
      */
-    public static function get_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
+    public static function get_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to, ?int &$age = null): array
     {
+        $age = 0;
         $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
         // Canonical order: the ID list is salted into the cache key, so sorting
         // makes [1065,1067] and [1067,1065] share one transient — and gives the
@@ -145,7 +146,8 @@ final class Data_Provider
         return Cache::get_or_set(
             $cache_key,
             static fn(): array => self::query_availability($room_type_ids, $from, $to),
-            Cache::DEFAULT_TTL
+            Cache::DEFAULT_TTL,
+            $age
         );
     }
 
@@ -205,12 +207,12 @@ final class Data_Provider
     {
         $today = self::today();
 
-        // Map every physical room of every requested cottage type.
-        $rooms_of_type = [];   // type_id => int[]
+        // Map every physical room of every requested cottage type — one query
+        // for all types, not one per type.
+        $rooms_of_type = self::rooms_for_types($room_type_ids);
         $type_of_room  = [];   // room_id => type_id
-        foreach ($room_type_ids as $type_id) {
-            $rooms_of_type[$type_id] = self::room_ids_for_type($type_id);
-            foreach ($rooms_of_type[$type_id] as $rid) {
+        foreach ($rooms_of_type as $type_id => $rids) {
+            foreach ($rids as $rid) {
                 $type_of_room[$rid] = $type_id;
             }
         }
@@ -250,26 +252,67 @@ final class Data_Provider
         return $result;
     }
 
+    /** Per-request memo for rooms_for_types(): type_id => int[] room IDs. */
+    private static array $room_cache = [];
+
     /**
-     * @return int[]
+     * Resolve the physical rooms of every requested cottage type in ONE query.
+     *
+     * This previously ran a separate WP_Query meta lookup per type — 8 queries
+     * per availability cache-miss on this site, each carrying full WP_Query
+     * overhead. One IN() query returns the same mapping.
+     *
+     * @param int[] $room_type_ids
+     * @return array<int,int[]> type_id => room IDs (every requested type is present)
      */
-    private static function room_ids_for_type(int $room_type_id): array
+    private static function rooms_for_types(array $room_type_ids): array
     {
-        static $cache = [];
-        if (isset($cache[$room_type_id])) {
-            return $cache[$room_type_id];
+        global $wpdb;
+
+        $out     = [];
+        $missing = [];
+        foreach ($room_type_ids as $type_id) {
+            if (isset(self::$room_cache[$type_id])) {
+                $out[$type_id] = self::$room_cache[$type_id];
+            } else {
+                $out[$type_id] = [];
+                $missing[]     = $type_id;
+            }
         }
-        $ids = get_posts([
-            'post_type'      => 'mphb_room',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-            'meta_query'     => [
-                ['key' => 'mphb_room_type_id', 'value' => $room_type_id, 'compare' => '='],
-            ],
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        ]);
-        return $cache[$room_type_id] = array_map('intval', (array) $ids);
+        if (empty($missing)) {
+            return $out;
+        }
+
+        // Seed every missing type as empty first, so a type with no rooms is
+        // still memoized (and treated as fully booked) rather than re-queried.
+        foreach ($missing as $type_id) {
+            self::$room_cache[$type_id] = [];
+        }
+
+        try {
+            $ph  = implode(',', array_fill(0, count($missing), '%d'));
+            $sql = "SELECT pm.meta_value AS type_id, p.ID AS room_id
+                    FROM {$wpdb->posts} p
+                    INNER JOIN {$wpdb->postmeta} pm
+                        ON pm.post_id = p.ID AND pm.meta_key = 'mphb_room_type_id'
+                    WHERE p.post_type = 'mphb_room'
+                      AND p.post_status = 'publish'
+                      AND CAST(pm.meta_value AS UNSIGNED) IN ($ph)";
+            $rows = $wpdb->get_results($wpdb->prepare($sql, $missing));
+            foreach ((array) $rows as $row) {
+                $type_id = (int) $row->type_id;
+                if (isset(self::$room_cache[$type_id])) {
+                    self::$room_cache[$type_id][] = (int) $row->room_id;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: rooms_for_types query failed: ' . $e->getMessage());
+        }
+
+        foreach ($missing as $type_id) {
+            $out[$type_id] = self::$room_cache[$type_id];
+        }
+        return $out;
     }
 
     /**
@@ -310,8 +353,9 @@ final class Data_Provider
                       AND bk.post_status IN ($status_ph)
                       AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
                       AND ci.meta_value <= %s
-                      AND co.meta_value > %s
-                    ORDER BY rr.ID";
+                      AND co.meta_value > %s";
+            // No ORDER BY: results are folded into a keyed map, so ordering is
+            // irrelevant — and sorting them only added a filesort.
             $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
             $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
             foreach ((array) $rows as $row) {

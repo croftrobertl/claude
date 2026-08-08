@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.13.1
+Stable tag: 0.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.14.0 =
+* Lazy loading: the calendar no longer contacts the server while the page is loading. It draws itself instantly from data embedded in the page, and only checks the server for updates once the calendar is actually scrolled near. A calendar below the fold that a visitor never scrolls to now makes no requests at all.
+* Skips the update check entirely when the embedded data is provably fresh (recently generated data in a recently generated page), so a normal page view can complete with zero calls to the calendar endpoint.
+* The prefetch added in 0.13.0 now only runs when the server has measurably proven itself fast (under 800ms). On slower hosting it stays switched off instead of firing two extra background requests per page load — it was costing far more than it saved.
+* Availability caching now records when each cached entry was computed, so the calendar can tell genuinely fresh data from data that merely came out of a cache. (Entries saved by earlier versions are simply recalculated once; no action needed.)
+* Faster cache rebuilds: the cottage-to-room lookup now runs as a single database query instead of one per cottage, and a needless sort was removed from the bookings query.
+* Added optional profiling: adding `?mphbac_debug=1` to any page URL makes the calendar log the server's own timing breakdown to the browser console — how long WordPress itself took to start up versus how long this plugin's work took.
 
 = 0.13.1 =
 * The Elementor widget category is now "Dora Canal Court" (slug `dcc-widgets`). This is editor-panel grouping only — Elementor stores the widget type, not its category, on saved pages, so every existing placed widget, saved configuration, and style override keeps working with no migration step.
