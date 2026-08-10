@@ -995,9 +995,29 @@ body.mphbac-info-open {
     padding-bottom: 0.7em;
     border-bottom: 1px solid var(--mphbac-color-frame);
 }
+/* Popup titles (cottage info + Book Now). These were <h3> until 0.15.0 and
+   were switched to <div> because they ship empty in the HTML — JS fills them
+   when a popup opens — which trips "empty heading" accessibility checks.
+
+   The theme styled those h3s, so the tag change had to be made invisible.
+   Measured on the live site with a popup OPEN (the only state that renders;
+   closed popups are display:none) by diffing the real h3 against a div of
+   this class in the same position:
+       font-size   h3 25px   vs  div 20.7px   <- the only real difference
+       line-height h3 45px   vs  div 39.3px   <- follows from font-size:
+                                                 45/25 == 39.3/21.85 == 1.8,
+                                                 an inherited unitless ratio
+       margins     identical (the theme's h3 margin rule is scoped to an
+                   ancestor the popup leaves behind when it is portaled to
+                   <body> on open)
+   So pinning font-size alone reproduces the previous rendering exactly, and
+   line-height resolves to 45px on its own. Do not "restore" the old 1.15em
+   here — that was never what rendered; the theme's h3 rule overrode it.
+   The Elementor "Popup Titles" section layers on top of this (doubled-class
+   selector, so it wins) for anyone who wants to restyle these. */
 .mphbac-sheet-title {
     margin: 0;
-    font-size: 1.15em;
+    font-size: 25px;
     font-weight: 700;
     color: var(--mphbac-color-header);
     flex: 1;

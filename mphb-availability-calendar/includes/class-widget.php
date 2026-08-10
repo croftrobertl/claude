@@ -38,6 +38,16 @@ final class Widget extends Widget_Base
      */
     private const VSEL = '.mphbac-info-view-link.mphbac-info-view-link';
 
+    /**
+     * Portal-proof selector for the two popup titles. Both popups are moved to
+     * <body> when opened, so a {{WRAPPER}}-scoped selector stops matching at
+     * exactly the moment the title becomes visible. Global + doubled class
+     * survives the move and outranks theme rules. Same trade-off as VSEL: it
+     * styles every calendar instance on the page, which is correct here since
+     * the popups are a single shared UI.
+     */
+    private const TSEL = '.mphbac-sheet-title.mphbac-sheet-title';
+
     public function get_name(): string
     {
         return 'mphbac_calendar';
@@ -161,6 +171,51 @@ final class Widget extends Widget_Base
         $this->register_legend_style_controls();
         $this->register_cell_style_controls();
         $this->register_view_button_style_controls();
+        $this->register_popup_title_style_controls();
+    }
+
+    /**
+     * Style controls for the two popup titles. Every control is empty by
+     * default, so an untouched widget renders exactly as the baked CSS
+     * dictates — setting one is opt-in and overrides the baked value.
+     */
+    private function register_popup_title_style_controls(): void
+    {
+        $this->start_controls_section('section_style_popup_title', [
+            'label' => __('Popup Titles', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('popup_title_intro', [
+            'type'            => Controls_Manager::RAW_HTML,
+            'raw'             => esc_html__('Styles the title at the top of the cottage info popup and the Book Now popup. Leave everything empty to keep the current appearance. Note: these titles are shared by both popups.', 'mphb-availability-calendar'),
+            'content_classes' => 'elementor-descriptor',
+        ]);
+
+        $this->add_group_control(
+            \Elementor\Group_Control_Typography::get_type(),
+            [
+                'name'     => 'popup_title_typography',
+                'selector' => self::TSEL,
+            ]
+        );
+
+        $this->add_control('popup_title_color', [
+            'label'     => __('Text color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::TSEL => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_responsive_control('popup_title_margin', [
+            'label'      => __('Margin', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em'],
+            'selectors'  => [
+                self::TSEL => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->end_controls_section();
     }
 
     private function register_info_controls(): void
@@ -1468,7 +1523,13 @@ final class Widget extends Widget_Base
                         <div class="mphbac-info-scrollbar-thumb"></div>
                     </div>
                     <div class="mphbac-sheet-header mphbac-sheet-header--info">
-                        <h3 class="mphbac-sheet-title" id="mphbac-info-title"></h3>
+                        <?php // Not a heading element: it is empty in the served HTML (JS
+                        // fills it when a popup opens), which trips "empty heading"
+                        // accessibility checks. A div carries the identical look because
+                        // .mphbac-sheet-title pins every property that differs — see the
+                        // font-size note in widget.css. aria-labelledby below still names
+                        // the dialog from this id; a div is a valid name source. ?>
+                        <div class="mphbac-sheet-title" id="mphbac-info-title"></div>
                         <?php
                         $view_icon_html = '';
                         if (!empty($settings['view_icon']['value'])) {
@@ -1498,7 +1559,8 @@ final class Widget extends Widget_Base
                 <div class="mphbac-sheet-overlay" hidden></div>
                 <div class="mphbac-sheet" role="dialog" aria-modal="true" aria-labelledby="mphbac-sheet-title" hidden>
                     <div class="mphbac-sheet-header">
-                        <h3 class="mphbac-sheet-title" id="mphbac-sheet-title"></h3>
+                        <?php // See the note on the info-popup title above — same reasoning. ?>
+                        <div class="mphbac-sheet-title" id="mphbac-sheet-title"></div>
                         <button type="button" class="mphbac-sheet-close" aria-label="<?php echo esc_attr($settings['str_book_close']); ?>">&times;</button>
                     </div>
                     <div class="mphbac-sheet-body">

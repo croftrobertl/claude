@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.14.0
+Stable tag: 0.15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.15.0 =
+* Accessibility: the two popup titles (cottage info popup and Book Now popup) are no longer `<h3>` elements. They ship empty in the page HTML — JavaScript fills them when a popup opens — which made accessibility checkers report "empty heading". They are now `<div>` elements, so no empty headings appear in the DOM. Both popups still announce their title correctly to screen readers (the dialogs reference these elements by ID, which is unchanged).
+* The change is visually identical. The site theme had been styling those `<h3>`s and overriding the plugin's own rule, so the tag change required carrying that styling over. Computed styles were measured on the live site with a popup open, and the one property that actually differed (font size) is now pinned in the plugin's CSS; line spacing follows from it automatically.
+* New Elementor style section: **Popup Titles** — typography, text color, and margin for both popup titles. Previously these had no controls at all: their size and spacing came from the theme's global heading styles, and their color was a side effect of the "Weekday background color" setting. Every control is empty by default, so an untouched widget looks exactly as it did before; setting one now overrides the theme instead of requiring site-wide heading edits.
 
 = 0.14.0 =
 * Lazy loading: the calendar no longer contacts the server while the page is loading. It draws itself instantly from data embedded in the page, and only checks the server for updates once the calendar is actually scrolled near. A calendar below the fold that a visitor never scrolls to now makes no requests at all.
