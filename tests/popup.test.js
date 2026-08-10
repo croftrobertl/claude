@@ -318,6 +318,75 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario F: header/button polish under a HOSTILE theme ----------
+    // v0.9.7.30 requests. The surrounding theme here deliberately shouts on
+    // buttons and sizes h2/h3 independently — the exact conditions that
+    // produced ALL-CAPS buttons and a too-small section title on the live
+    // site. The detail is rendered in .is-shrunk (scrolled) state, which is
+    // when the section title used to shrink further.
+    {
+        console.log('\nF. Header + button polish vs. an overriding theme');
+        const errors = [];
+        const THEME = `h2 { font-size: 1.1rem; } h3 { font-size: 1.6rem; }
+            button, .dccgg-btn { text-transform: uppercase; letter-spacing: .12em; }`;
+        const item = `<article class="dccgg-item"><h3 class="dccgg-item-title">
+            <span class="dccgg-item-title-lead"><span class="dccgg-emoji-icon">🌐</span></span>
+            <span class="dccgg-item-title-text">Wifi Name: "topoftheworld"</span>
+            <span class="dccgg-item-title-tail"></span></h3>
+            <button type="button" class="dccgg-btn dccgg-copy">Copy password</button></article>`;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${THEME}${CSS}</style></head>
+            <body class="dccgg-detail-open"><div class="dccgg-root is-detail">
+            <div class="dccgg-stage is-modal-open" style="visibility:visible;opacity:1">
+            <div class="dccgg-detail is-shrunk"><div class="dccgg-detail-header">
+              <div class="dccgg-detail-header-titlebar"><span class="dccgg-detail-titlebar-spacer"></span>
+                <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-icon">📶</span><span class="dccgg-detail-title-text">Internet</span></h2>
+                <details class="dccgg-more"><summary class="dccgg-more-summary--text">🧭🛎️</summary></details></div>
+              <div class="dccgg-detail-header-actions"><button class="dccgg-btn dccgg-back">Back</button>
+                <div class="dccgg-section-nav"><button class="dccgg-section-prev">‹</button><button class="dccgg-section-next">›</button></div></div>
+            </div><div class="dccgg-detail-layout"><div class="dccgg-detail-items">${item}</div></div></div>
+            </div></div>
+            <dialog class="dccgg-report-dialog" open style="width:340px">
+              <div class="dccgg-report-head"><h3>Ask for assistance or report issues</h3>
+              <button class="dccgg-report-close">&times;</button></div>
+              <div class="dccgg-report-body"></div></dialog></body></html>`;
+        const ctx = await browser.newContext({ viewport: DESKTOP });
+        const page = await ctx.newPage();
+        page.on('pageerror', (e) => errors.push(String(e)));
+        await page.setContent(html, { waitUntil: 'load' });
+
+        const r = await page.evaluate(() => {
+            const cs = (e) => getComputedStyle(e);
+            const head = document.querySelector('.dccgg-report-head').getBoundingClientRect();
+            const x = document.querySelector('.dccgg-report-close').getBoundingClientRect();
+            return {
+                detailTitlePx: parseFloat(cs(document.querySelector('.dccgg-detail-title')).fontSize),
+                itemTitlePx: parseFloat(cs(document.querySelector('.dccgg-item-title')).fontSize),
+                backTransform: cs(document.querySelector('.dccgg-back')).textTransform,
+                copyTransform: cs(document.querySelector('.dccgg-copy')).textTransform,
+                backSpacing: cs(document.querySelector('.dccgg-back')).letterSpacing,
+                titleRowTop: document.querySelector('.dccgg-detail-header-titlebar').getBoundingClientRect().top,
+                actionsRowTop: document.querySelector('.dccgg-detail-header-actions').getBoundingClientRect().top,
+                xFromTop: x.top - head.top,
+                xFromRight: head.right - x.right,
+            };
+        });
+        // (1) Buttons render as authored, not ALL CAPS, despite the theme.
+        check('Back button not uppercased by theme', r.backTransform === 'none', r.backTransform);
+        check('Copy button not uppercased by theme', r.copyTransform === 'none', r.copyTransform);
+        check('button letter-spacing reset', r.backSpacing === 'normal', r.backSpacing);
+        // (2) Section title matches item title even while shrunk.
+        check('section title == item title size', Math.abs(r.detailTitlePx - r.itemTitlePx) < 0.5,
+            `${r.detailTitlePx}px vs ${r.itemTitlePx}px`);
+        // (3) Title row sits above the Back / prev-next row.
+        check('title row above Back/arrows row', r.titleRowTop < r.actionsRowTop,
+            `title=${r.titleRowTop.toFixed(0)} actions=${r.actionsRowTop.toFixed(0)}`);
+        // (4) Report dialog × sits in the corner, not nudged in/down.
+        check('report × near top-right corner', r.xFromTop <= 12 && r.xFromRight <= 12,
+            `top=${r.xFromTop.toFixed(1)} right=${r.xFromRight.toFixed(1)}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

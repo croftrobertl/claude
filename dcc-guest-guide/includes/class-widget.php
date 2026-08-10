@@ -3344,6 +3344,23 @@ final class Widget extends Widget_Base
                     <?php endif; ?>
                     <span class="dccgg-shrink-sentinel" aria-hidden="true"></span>
                     <div class="dccgg-detail-header">
+                        <?php // v0.9.7.9: title row wrapped in a 1fr/auto/1fr grid so the title stays centered whether the right cell holds the ⋯ menu or an invisible spacer.
+                        // v0.9.7.30: this row now renders FIRST, above Back / prev-next, per host request — the section title and the support (⋯) button share the top row. Markup order matches visual order, so tab order and screen-reader order stay correct, and the <h2> now precedes the controls that act on it.
+                        $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
+                        <div class="dccgg-detail-header-titlebar">
+                            <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
+                            <h2 class="dccgg-detail-title">
+                                <span class="dccgg-detail-title-icon">
+                                    <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
+                                </span>
+                                <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
+                            </h2>
+                            <?php if ($show_popup_more) : ?>
+                                <?php $this->render_more_menu($s, 'popup', $key); ?>
+                            <?php else : ?>
+                                <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
+                            <?php endif; ?>
+                        </div>
                         <div class="dccgg-detail-header-actions">
                             <button type="button" class="dccgg-btn dccgg-back">
                                 <i class="fas fa-arrow-left" aria-hidden="true"></i> <?php echo esc_html($label_back); ?>
@@ -3360,23 +3377,7 @@ final class Widget extends Widget_Base
                             <?php else : ?>
                                 <span class="dccgg-section-nav-spacer" aria-hidden="true"></span>
                             <?php endif; ?>
-                            <?php // v0.9.7: More menu moved to the hub toolbar (see render() above). v0.9.7.9: optionally also rendered inside row 2 below when enable_popup_more_menu=yes. ?>
-                        </div>
-                        <?php // v0.9.7.9: row 2 wrapped in a 1fr/auto/1fr grid so the title stays centered whether the right cell holds the ⋯ menu or an invisible spacer.
-                        $show_popup_more = ($s['enable_popup_more_menu'] ?? '') === 'yes' && ($s['enable_detail_more_menu'] ?? '') === 'yes'; ?>
-                        <div class="dccgg-detail-header-titlebar">
-                            <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
-                            <h2 class="dccgg-detail-title">
-                                <span class="dccgg-detail-title-icon">
-                                    <?php \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']); ?>
-                                </span>
-                                <span class="dccgg-detail-title-text"><?php echo esc_html($title); ?></span>
-                            </h2>
-                            <?php if ($show_popup_more) : ?>
-                                <?php $this->render_more_menu($s, 'popup', $key); ?>
-                            <?php else : ?>
-                                <span class="dccgg-detail-titlebar-spacer" aria-hidden="true"></span>
-                            <?php endif; ?>
+                            <?php // v0.9.7: More menu moved to the hub toolbar (see render() above). v0.9.7.9: optionally also rendered inside the title row above when enable_popup_more_menu=yes. ?>
                         </div>
                         <?php // v0.9.7.10: checklist progress moved INSIDE the sticky header (was a sibling below) so it stays visible as the guest scrolls long checklists.
                         if ($checklist) : ?>

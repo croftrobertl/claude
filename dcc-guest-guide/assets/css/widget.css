@@ -1731,6 +1731,35 @@ dialog.dccgg-wrapper::backdrop {
     box-sizing: border-box;
 }
 
+/* v0.9.7.30: button labels render as authored ("Back", "Copy password")
+   rather than ALL CAPS. The plugin never set text-transform on buttons —
+   the shouting comes from the site theme's button styles, so this has to
+   win on specificity the same way the line-height defense above does.
+   letter-spacing is reset too: themes usually pair wide tracking with
+   uppercase, which looks wrong once the caps are gone. Deliberately NOT
+   applied to badges, section labels, wizard counters or tile counts,
+   whose uppercase treatment is the plugin's own and intentional. */
+.dccgg-root.dccgg-root .dccgg-btn,
+.dccgg-root.dccgg-root .dccgg-btn-text,
+.dccgg-root.dccgg-root .dccgg-quick-action,
+.dccgg-root.dccgg-root .dccgg-back,
+.dccgg-root.dccgg-root .dccgg-read-more,
+.dccgg-root.dccgg-root .dccgg-copy,
+.dccgg-root.dccgg-root .dccgg-qa-copy,
+.dccgg-root.dccgg-root .dccgg-tile,
+.dccgg-root.dccgg-root .dccgg-search-still-stuck,
+.dccgg-root.dccgg-root .dccgg-ai-button,
+.dccgg-root.dccgg-root .dccgg-report-dialog button,
+.dccgg-root.dccgg-root .dccgg-wizard-actions button {
+    text-transform: none;
+    letter-spacing: normal;
+}
+/* The report dialog is portalled to <body>, outside .dccgg-root. */
+.dccgg-report-dialog.dccgg-report-dialog button {
+    text-transform: none;
+    letter-spacing: normal;
+}
+
 /* ---- Visible focus rings ---- */
 .dccgg-root .dccgg-tile:focus-visible,
 .dccgg-root .dccgg-btn:focus-visible,
@@ -2587,9 +2616,12 @@ dialog.dccgg-wrapper::backdrop {
     padding-bottom: 4px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
+/* v0.9.7.30: the section title no longer shrinks on scroll. It used to drop
+   to 1.05em, which (together with the theme winning on the bare h2) is what
+   made "Internet" read as small next to the item titles. It now holds the
+   same size as an item title in every scroll state. */
 .dccgg-detail.is-shrunk .dccgg-detail-title {
-    font-size: 1.05em;
-    transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+    font-size: var(--dccgg-section-title-size, 1.15em);
 }
 /* v0.9.7.10: tighten the checklist progress bar when the header is in
    shrunk mode so it doesn't dominate vertical space while scrolling. */
@@ -2598,6 +2630,16 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-detail-title {
     transition: font-size var(--dccgg-transition-duration) var(--dccgg-transition-easing);
+}
+/* v0.9.7.30: match the section title to the item title exactly. Both are
+   declared here at the same specificity-defended size, computed from the
+   widget root (rem-based) rather than each element's own parent — an em
+   value would resolve against different ancestors and drift apart. This is
+   also what stops a theme's h2/h3 rules from sizing the two independently,
+   which is what the host was seeing. */
+.dccgg-root.dccgg-root .dccgg-detail-title,
+.dccgg-root.dccgg-root .dccgg-item-title {
+    font-size: var(--dccgg-section-title-size, 1.15rem);
 }
 @media (prefers-reduced-motion: reduce) {
     .dccgg-detail-header,
@@ -2728,15 +2770,35 @@ dialog.dccgg-wrapper::backdrop {
     background: var(--dccgg-detail-bg, #fff);
 }
 .dccgg-report-dialog::backdrop { background: rgba(0,0,0,0.55); }
+/* v0.9.7.30: the × is pinned to the dialog's top-right corner. It used to be
+   a flex sibling of the heading with align-items:center, so a heading that
+   wrapped to two lines pushed the × down to the vertical middle and the
+   row's 20px padding held it well inside the corner. Absolute positioning
+   makes its placement independent of how the heading wraps; the heading
+   reserves right-hand room so long titles never run under the button. */
 .dccgg-report-head {
+    position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 10%, transparent);
 }
-.dccgg-report-head h3 { margin: 0; font-size: 1.05em; font-weight: 700; }
+.dccgg-report-head h3 {
+    margin: 0;
+    font-size: 1.05em;
+    font-weight: 700;
+    padding-right: 36px;
+}
 .dccgg-report-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent; border: 0; cursor: pointer;
     font-size: 1.5em; color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
     line-height: 1;

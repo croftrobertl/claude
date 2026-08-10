@@ -70,6 +70,37 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.30 =
+
+**Popup header and button polish (four host requests).**
+
+1. **Buttons render as authored, not ALL CAPS.** "Back", "Copy password"
+   and friends no longer shout. The plugin never set uppercase on
+   buttons — the site theme did — so the fix overrides the theme at the
+   same specificity the plugin already uses to defend inputs and
+   buttons. Wide letter-spacing (which themes pair with uppercase) is
+   reset too. Badges, section labels, wizard counters and tile counts
+   keep their intentional uppercase.
+
+2. **The section title now matches the item-title size.** It also no
+   longer shrinks while scrolling. Both titles are sized from the widget
+   root at the same defended specificity, so a theme's independent
+   h2/h3 rules can no longer size them differently.
+
+3. **Section title and support (⋯) button moved to the top row**, above
+   Back and the prev/next arrows. Markup order matches the new visual
+   order, so tab order and screen-reader order stay correct and the
+   heading precedes the controls acting on it.
+
+4. **Report dialog × moved into the top-right corner.** It was a flex
+   sibling of the heading, so a heading wrapping to two lines pushed it
+   to the vertical middle and the row padding held it inside the corner.
+   It is now pinned to the corner regardless of how the heading wraps.
+
+Regression suite extended with a scenario that renders the popup inside
+a deliberately hostile theme (uppercase buttons, independent h2/h3
+sizing) and asserts all four; 33 assertions, all passing.
+
 = 0.9.7.29 =
 
 **Branding cleanup.** The Elementor panel category the widget appears
