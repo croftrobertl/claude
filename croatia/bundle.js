@@ -1165,7 +1165,7 @@
   // which comma-segments are real towns/islands/travel-cities (vs neighborhoods/venues) —
   // classified client-side so the City facet stays coarse while Place stays specific
   const CITY_SET = new Set(['Dubrovnik', 'Cavtat', 'Čilipi', 'Gruda', 'Srebreno', 'Plat', 'Kupari',
-    'Lokrum (Otok Lokrum)', 'Šipan', 'Suđurađ', 'Lopud', 'Elaphiti Islands', 'Orlando', 'London']);
+    'Lokrum (Otok Lokrum)', 'Šipan', 'Suđurađ', 'Lopud', 'Elaphiti Islands', 'Orlando', 'London', 'The Matrix']);
   function placeSegs(pl) { return (pl || '').split(',').map(s => s.trim()).filter(Boolean); }
   function cityOf(x) { for (const s of x.segs) if (CITY_SET.has(s)) return s; return x.it.city || '—'; }
   function tcmp(a, b) { a = a || ''; b = b || ''; return a < b ? -1 : a > b ? 1 : 0; }
@@ -1479,7 +1479,7 @@
     DATA.days.forEach(d => {
       let dc = 0;
       d.places.forEach(p => {
-        const its = placeItems(p); if (!its.length) return;
+        const its = placeItems(p).filter(it => !it.nonstat); if (!its.length) return;
         locs++;
         its.forEach(it => { if (it.kind === 'photo') photos++; else if (it.kind === 'video') videos++; else clips++; });
         if (its.length > best.count) best = { name: p.name, count: its.length };
@@ -1720,7 +1720,7 @@
       const h = d.health || {};
       cs += h.steps || 0; cw += h.dist || 0; ctr += d.walk_km || 0; ccl += h.climb_m || 0;
       let ph = 0, vi = 0, cp = 0;
-      d.places.forEach(p => { if (p.items.length) seenPlaces.add(p.name); p.items.forEach(it => { if (it.kind === 'photo') ph++; else if (it.kind === 'video') vi++; else cp++; }); });
+      d.places.forEach(p => { const si = p.items.filter(it => !it.nonstat); if (si.length) seenPlaces.add(p.name); si.forEach(it => { if (it.kind === 'photo') ph++; else if (it.kind === 'video') vi++; else cp++; }); });
       cph += ph; cvi += vi; ccp += cp;
       return { steps: cs, walkMi: cw, travelKm: ctr, climbM: ccl, places: seenPlaces.size, photos: cph, videos: cvi, clips: ccp, label: d.label, area: d.area || '' };
     });
