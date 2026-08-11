@@ -90,6 +90,7 @@ class Selector_Widget extends Widget_Base
         $this->register_button_style_controls();
         $this->register_card_style_controls();
         $this->register_viewbtn_style_controls();
+        $this->register_comparebtn_style_controls();
         $this->register_cmpmenu_style_controls();
         $this->register_compare_style_controls();
     }
@@ -661,9 +662,9 @@ class Selector_Widget extends Widget_Base
             'name'     => 'modetab_typography',
             'selector' => self::SEL . '.dccs-modeselect-trigger, ' . self::SEL . '.dccs-modetab',
         ]);
-        // Background is set globally in Colors → Buttons & menus; item colors in
-        // Colors → Drop-down menu items. This section keeps the trigger text and the
-        // selected-item state.
+        // Normal/Hover style the closed switcher BUTTON itself; "Selected" styles the
+        // highlighted option inside the open drop-down. Leaving a color empty falls back
+        // to the global Colors → Buttons & menus values.
         $this->start_controls_tabs('modetab_tabs');
         $this->start_controls_tab('modetab_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
         $this->add_control('modetab_color', [
@@ -671,6 +672,31 @@ class Selector_Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
                 self::SEL . '.dccs-modeselect-trigger' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('modetab_bg', [
+            'label'     => __('Trigger background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccs-modeselect-trigger' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+        $this->end_controls_tab();
+        $this->start_controls_tab('modetab_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
+        $this->add_control('modetab_color_hover', [
+            'label'     => __('Trigger text', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccs-modeselect-trigger:hover'         => 'color: {{VALUE}};',
+                self::SEL . '.dccs-modeselect-trigger:focus-visible' => 'color: {{VALUE}};',
+            ],
+        ]);
+        $this->add_control('modetab_bg_hover', [
+            'label'     => __('Trigger background', 'dcc-cottage-selector'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [
+                self::SEL . '.dccs-modeselect-trigger:hover'         => 'background-color: {{VALUE}};',
+                self::SEL . '.dccs-modeselect-trigger:focus-visible' => 'background-color: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -971,6 +997,17 @@ class Selector_Widget extends Widget_Base
     private function register_viewbtn_style_controls(): void
     {
         $this->add_button_style_section('style_viewbtn', __('View cottage button', 'dcc-cottage-selector'), self::SEL . '.dccs-view', 'view');
+    }
+
+    /**
+     * Dedicated styling for the "Compare N cottages" button. This is ONE element
+     * (.dccs-open-compare) rendered in two places — the Compare-mode CTA under the
+     * cottage checklist, and the button that appears under the Matching Quiz results
+     * once two or more cards are ticked — so these controls govern both.
+     */
+    private function register_comparebtn_style_controls(): void
+    {
+        $this->add_button_style_section('style_comparebtn', __('Compare button', 'dcc-cottage-selector'), self::SEL . '.dccs-open-compare');
     }
 
     private function register_button_style_controls(): void

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.2
+Stable tag: 0.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -184,6 +184,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.18.0 =
+* New: **Style → Compare button** styles the "Compare N cottages" button — background,
+  text, hover background and hover text, plus typography, border, corner radius and
+  padding. It is one button rendered in two places (the Compare-mode call to action and
+  the one that appears under your quiz results), so these controls govern both.
+* **Style → Mode switcher** gained the missing trigger colors: a Normal background and a
+  new Hover tab with hover text + hover background. Previously only the trigger's text
+  color was editable and its background came from the global Colors section.
 
 = 0.17.2 =
 * Fixed: the [dcc_selector_entry] shortcode's pop-up still showed the "Review your

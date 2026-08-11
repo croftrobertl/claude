@@ -900,5 +900,48 @@ function configWith(overrides) {
   ok('compare CTA is 48px like the primary buttons', /\.dccs-open-compare\s*\{[\s\S]*?min-height:\s*48px/.test(css));
 })();
 
+// ---- 34. Style controls exist for the mode switcher + the Compare button ----
+(function () {
+  const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
+
+  // Mode switcher trigger: background + both hover states (text was already there).
+  ok('mode switcher has a trigger background control',
+    /'modetab_bg'[\s\S]{0,220}\.dccs-modeselect-trigger'\s*=>\s*'background-color/.test(sel));
+  ok('mode switcher has a Hover tab', /start_controls_tab\('modetab_hover'/.test(sel));
+  ok('mode switcher has hover text + hover background controls',
+    /'modetab_color_hover'[\s\S]{0,320}:hover'\s*=>\s*'color/.test(sel) &&
+    /'modetab_bg_hover'[\s\S]{0,320}:hover'\s*=>\s*'background-color/.test(sel));
+
+  // Compare button: a dedicated section built from the shared per-button helper,
+  // which supplies Normal/Hover x text/background.
+  ok('a Compare button style section is registered',
+    /add_button_style_section\('style_comparebtn'[\s\S]{0,160}\.dccs-open-compare'/.test(sel) &&
+    /register_comparebtn_style_controls\(\);/.test(sel));
+
+  // Both rendered instances must keep the same class, or one control set can't cover
+  // both the Compare-mode CTA and the results button.
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  for (const i of [0, 1]) {
+    const cb = root.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  const inCompareMode = root.querySelector('.dccs-open-compare');
+  ok('Compare-mode CTA uses .dccs-open-compare', !!inCompareMode && !inCompareMode.closest('.dccs-results-compare'));
+
+  const w2 = freshDom();
+  const root2 = mountSelector(w2);
+  enter(root2, 'quick');
+  toResults(root2, 'either');
+  for (const i of [0, 1]) {
+    const cb = root2.querySelectorAll('.dccs-card input[data-cmp]')[i];
+    cb.checked = true; cb.dispatchEvent(new w2.Event('change', { bubbles: true }));
+  }
+  const inResults = root2.querySelector('.dccs-open-compare');
+  ok('quiz-results button reuses .dccs-open-compare (one control set covers both)',
+    !!inResults && !!inResults.closest('.dccs-results-compare'));
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
