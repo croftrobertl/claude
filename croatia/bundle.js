@@ -1766,7 +1766,7 @@
   function vizWhoHTML() {
     const days = DATA.days, tot = {}; PERSONS.forEach(p => tot[p] = 0);
     const perDay = days.map(d => { const c = {}; PERSONS.forEach(p => c[p] = 0);
-      d.places.forEach(p => p.items.forEach(it => { if (c[it.person] != null) c[it.person]++; })); return c; });
+      d.places.forEach(p => p.items.forEach(it => { if (!it.nonstat && c[it.person] != null) c[it.person]++; })); return c; });
     let grand = 0; PERSONS.forEach(p => grand += tot[p]);
     days.forEach((d, i) => PERSONS.forEach(p => { tot[p] += perDay[i][p]; }));
     grand = 0; PERSONS.forEach(p => grand += tot[p]); grand = grand || 1;
@@ -1802,6 +1802,7 @@
   function vizClockHTML() {
     const hours = new Array(24).fill(0);
     DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it => {
+      if (it.nonstat) return;
       const t = (it.time || '').split(':'); if (t.length === 2) { const h = +t[0]; if (h >= 0 && h < 24) hours[h]++; }
     })));
     const max = Math.max(1, ...hours), peak = hours.indexOf(max);
@@ -1855,7 +1856,7 @@
   function vizCompassHTML() {
     const bins = 16, counts = new Array(bins).fill(0); let total = 0;
     DATA.days.forEach(d => d.places.forEach(p => p.items.forEach(it => {
-      if (it.heading != null) { const b = ((Math.round(it.heading / (360 / bins)) % bins) + bins) % bins; counts[b]++; total++; }
+      if (!it.nonstat && it.heading != null) { const b = ((Math.round(it.heading / (360 / bins)) % bins) + bins) % bins; counts[b]++; total++; }
     })));
     if (!total) return '';
     const max = Math.max(...counts), cx = 80, cy = 80, maxR = 62;
