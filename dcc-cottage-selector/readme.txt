@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.18.0
+Stable tag: 0.19.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -79,6 +79,32 @@ even when the widgets live on different pages:
 
 Unlike the mirror, this is a one-time snapshot — editing the Selector afterward does
 NOT change the copied Mini Entry, so you're free to adjust it per page.
+
+= Site preset for new widgets =
+
+A freshly dropped Cottage Selector or Mini Entry already matches the site: the
+heading and intro, every question and answer label, the priority names, button
+labels, Font Awesome icons, the palette (accent, backgrounds, borders, drop-down
+item colors), the per-element colors (mode switcher, chips, compare button, matrix
+header, progress) and the enabled modes are all preset. Everything stays fully
+editable per widget — the preset is only the starting point.
+
+The preset is defined in one place, `includes/class-preset-defaults.php`, so it can
+be re-captured from a live widget later without touching ~90 control definitions.
+
+Three things are deliberately NOT preset, because they identify one specific
+instance rather than describing a look:
+
+* **Share this design / Design name** — presetting these would make every new
+  Selector publish itself as the shared design source and overwrite the registry
+  entry the Mini Entries mirror.
+* **Mirror design from** — points at one specific named design.
+* **This cottage / Selector page URL** — identify a particular cottage or page.
+
+Note that preset values are literal text, so a new widget starts in the wording
+captured from the site rather than the translated defaults. Translations still apply
+to anything the preset does not cover, and Loco Translate can still localize
+everything a widget has not overridden.
 
 = The eight meaningful differences =
 
@@ -184,6 +210,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.0 =
+* New widgets now start from the site's own configuration instead of the generic
+  factory look: headings, questions, answer wording, button labels, icons, palette,
+  per-element colors and the enabled modes are preset from the live design. See
+  "Site preset for new widgets" above.
+* Existing widgets are untouched — Elementor stores a widget's own settings and those
+  always win over control defaults, so anything already on a page keeps rendering
+  exactly as before.
 
 = 0.18.0 =
 * New: **Style → Compare button** styles the "Compare N cottages" button — background,

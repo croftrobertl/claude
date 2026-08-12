@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Cottage Selector
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Mobile-first decision tool that helps guests choose among the 8 Dora Canal Court cottages by focusing only on their real differences. Adds two Elementor widgets (a full Selector and a compact cross-sell Mini-Entry) plus a [dcc_selector_entry] shortcode. Pure static data, fully client-rendered — no MotoPress dependency.
- * Version:           0.18.0
+ * Version:           0.19.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCCS_VERSION', '0.18.0');
+define('DCCS_VERSION', '0.19.0');
 define('DCCS_FILE', __FILE__);
 define('DCCS_DIR', plugin_dir_path(__FILE__));
 define('DCCS_URL', plugin_dir_url(__FILE__));

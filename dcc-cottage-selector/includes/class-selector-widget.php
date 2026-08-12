@@ -67,6 +67,57 @@ class Selector_Widget extends Widget_Base
         return ['dccs-selector'];
     }
 
+    /**
+     * Seed every control with the site preset (see Preset_Defaults) as it is
+     * registered, so a NEW widget starts from the site's configuration rather than
+     * the generic factory look. Routing this through one place keeps the preset out
+     * of ~90 individual control definitions.
+     *
+     * Saved widgets are unaffected: Elementor merges stored settings over control
+     * defaults and stored values win, so a default only ever fills a key the widget
+     * never saved.
+     *
+     * The parameter types are intentionally left off to stay compatible with
+     * Controls_Stack::add_control()'s signature across Elementor versions (PHP
+     * allows a child to widen a parameter type, not to narrow it).
+     *
+     * @param string              $id
+     * @param array<string,mixed> $args
+     * @param array<string,mixed> $options
+     */
+    public function add_control($id, $args = [], $options = [])
+    {
+        return parent::add_control($id, Preset_Defaults::apply((string) $id, (array) $args), $options);
+    }
+
+    /**
+     * @param string              $id
+     * @param array<string,mixed> $args
+     * @param array<string,mixed> $options
+     */
+    public function add_responsive_control($id, $args = [], $options = [])
+    {
+        return parent::add_responsive_control($id, Preset_Defaults::apply((string) $id, (array) $args), $options);
+    }
+
+    /**
+     * Group controls (typography, box-shadow …) hold their defaults in
+     * `fields_options`, not in a top-level `default`, so they are merged here.
+     *
+     * @param string              $type
+     * @param array<string,mixed> $args
+     */
+    public function add_group_control($type, $args = [])
+    {
+        $args = (array) $args;
+        $fields = Preset_Defaults::group_fields((string) ($args['name'] ?? ''));
+        if ($fields) {
+            $args['fields_options'] = array_replace_recursive($fields, $args['fields_options'] ?? []);
+        }
+
+        return parent::add_group_control($type, $args);
+    }
+
     protected function register_controls(): void
     {
         $this->register_content_controls();

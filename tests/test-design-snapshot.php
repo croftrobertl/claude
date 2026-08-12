@@ -18,6 +18,13 @@ namespace {
     if (!function_exists('wp_json_encode')) {
         function wp_json_encode($data) { return json_encode($data); }
     }
+    // register_controls() renders labels/descriptions through the escaping helpers.
+    if (!function_exists('esc_html__')) {
+        function esc_html__($t, $d = null) { return $t; }
+        function esc_attr__($t, $d = null) { return $t; }
+        function esc_html($t) { return $t; }
+        function esc_attr($t) { return $t; }
+    }
 
     // In-memory options store so publish_design()/get_option() can round-trip.
     $GLOBALS['__opts'] = [];
@@ -27,8 +34,38 @@ namespace {
 
 // Minimal Elementor base so the widget class can load (design_snapshot et al. are
 // static and never touch the parent; the Icons_Manager guard is class_exists()'d).
+// The control methods RECORD what register_controls() registers, which lets the
+// preset-defaults test below check every preset key against a real control.
 namespace Elementor {
-    class Widget_Base {}
+    class Controls_Manager {
+        const TAB_CONTENT = 'content'; const TAB_STYLE = 'style';
+        const TEXT = 'text'; const TEXTAREA = 'textarea'; const COLOR = 'color';
+        const SELECT = 'select'; const SWITCHER = 'switcher'; const SLIDER = 'slider';
+        const DIMENSIONS = 'dimensions'; const CHOOSE = 'choose'; const ICONS = 'icons';
+        const RAW_HTML = 'raw_html'; const HEADING = 'heading'; const SELECT2 = 'select2';
+        const WYSIWYG = 'wysiwyg'; const NUMBER = 'number'; const URL = 'url';
+        const MEDIA = 'media'; const REPEATER = 'repeater'; const HIDDEN = 'hidden';
+        const ALERT = 'alert'; const POPOVER_TOGGLE = 'popover_toggle';
+    }
+    class Group_Control_Typography { public static function get_type() { return 'typography'; } }
+    class Group_Control_Border { public static function get_type() { return 'border'; } }
+    class Group_Control_Box_Shadow { public static function get_type() { return 'box_shadow'; } }
+    class Base_Data_Control { public function get_type() { return 'x'; } }
+    class Widget_Base {
+        public $__ctrls = [];
+        public $__gfields = [];
+        public function add_control($id, $args = [], $o = []) { $this->__ctrls[$id] = true; }
+        public function add_responsive_control($id, $args = [], $o = []) { $this->__ctrls[$id] = true; }
+        public function add_group_control($t, $args = []) {
+            foreach ((array) ($args['fields_options'] ?? []) as $f => $fa) {
+                $this->__gfields[($args['name'] ?? '') . '_' . $f] = true;
+            }
+        }
+        public function start_controls_section($i, $a = []) {} public function end_controls_section() {}
+        public function start_controls_tabs($i, $a = []) {} public function end_controls_tabs() {}
+        public function start_controls_tab($i, $a = []) {} public function end_controls_tab() {}
+        public function get_settings_for_display($k = null) { return []; }
+    }
 }
 
 namespace {
@@ -129,6 +166,47 @@ namespace {
         ok("shortcode $key matches the widget default", ($shortcodeCfg[$key] ?? null) === ($widgetCfg[$key] ?? null));
     }
     ok('review step is off by default on both paths', ($shortcodeCfg['showReview'] ?? null) === false);
+
+    // ---- Site preset defaults (Preset_Defaults) --------------------------------
+    require_once DCCS_DIR . 'includes/class-preset-defaults.php';
+    require_once DCCS_DIR . 'includes/class-control-design-io.php';
+    require_once DCCS_DIR . 'includes/class-mini-entry-widget.php';
+    $preset = \DCCS\Preset_Defaults::map();
+    ok('preset defines a non-trivial set of defaults', count($preset) > 50);
+    ok('preset carries the site heading + palette',
+        ($preset['str_heading'] ?? null) === 'Cottage Wizard' &&
+        ($preset['color_accent'] ?? null) === '#002E7A');
+    ok('preset carries the enabled modes', ($preset['enabled_modes'] ?? null) === ['quick', 'compare']);
+
+    // Instance-specific wiring must never be preset: design_name/share_design would make
+    // every new Selector republish itself as the shared source and clobber the registry.
+    foreach (['share_design', 'design_name', 'mirror_source', 'current', 'selector_url'] as $k) {
+        ok("preset excludes instance-specific '$k'", !array_key_exists($k, $preset));
+    }
+
+    // Every preset key must correspond to a control that is actually registered,
+    // otherwise a typo/renamed control would silently do nothing.
+    $reg = [];
+    foreach (['DCCS\Selector_Widget', 'DCCS\Mini_Entry_Widget'] as $cls) {
+        $r = new \ReflectionClass($cls);
+        $w = $r->newInstanceWithoutConstructor();
+        $m = $r->getMethod('register_controls');
+        $m->setAccessible(true);
+        $m->invoke($w);
+        $reg += $w->__ctrls + $w->__gfields;
+    }
+    $orphans = array_values(array_diff(array_keys($preset), array_keys($reg)));
+    ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
+        $orphans === []);
+
+    // apply() must override an inline default (the factory strings) but leave
+    // unrelated controls untouched.
+    $applied = \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Find your perfect cottage']);
+    ok('preset overrides a factory inline default', $applied['default'] === 'Cottage Wizard');
+    $untouched = \DCCS\Preset_Defaults::apply('some_other_control', ['default' => 'keep me']);
+    ok('preset leaves non-preset controls alone', $untouched['default'] === 'keep me');
+    ok('group-control presets are exposed as fields_options',
+        (\DCCS\Preset_Defaults::group_fields('chip_typography')['text_transform']['default'] ?? null) === 'capitalize');
 
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);
