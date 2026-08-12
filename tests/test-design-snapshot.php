@@ -51,12 +51,19 @@ namespace Elementor {
     class Group_Control_Border { public static function get_type() { return 'border'; } }
     class Group_Control_Box_Shadow { public static function get_type() { return 'box_shadow'; } }
     class Base_Data_Control { public function get_type() { return 'x'; } }
+    // NOTE: these three signatures mirror Elementor\Controls_Stack EXACTLY, including
+    // `final` on add_group_control()/add_responsive_control() and the required
+    // `array $args`. v0.19.0 shipped overrides of the final ones, which is a fatal
+    // "Cannot override final method" as soon as the widget class is autoloaded — it
+    // took down every front-end page carrying the widget. Keeping the real modifiers
+    // here means any future attempt to override them fails this test file outright
+    // instead of reaching a live site.
     class Widget_Base {
         public $__ctrls = [];
         public $__gfields = [];
-        public function add_control($id, $args = [], $o = []) { $this->__ctrls[$id] = true; }
-        public function add_responsive_control($id, $args = [], $o = []) { $this->__ctrls[$id] = true; }
-        public function add_group_control($t, $args = []) {
+        public function add_control($id, array $args, $o = []) { $this->__ctrls[$id] = true; }
+        final public function add_responsive_control($id, array $args, $o = []) { $this->__ctrls[$id] = true; }
+        final public function add_group_control($t, array $args = [], array $o = []) {
             foreach ((array) ($args['fields_options'] ?? []) as $f => $fa) {
                 $this->__gfields[($args['name'] ?? '') . '_' . $f] = true;
             }
@@ -166,6 +173,30 @@ namespace {
         ok("shortcode $key matches the widget default", ($shortcodeCfg[$key] ?? null) === ($widgetCfg[$key] ?? null));
     }
     ok('review step is off by default on both paths', ($shortcodeCfg['showReview'] ?? null) === false);
+
+    // ---- Never override an Elementor `final` method ----------------------------
+    // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
+    // final; declaring them in a subclass is a fatal error at class-declaration time,
+    // which takes down every front-end page that autoloads the widget. v0.19.0 shipped
+    // exactly that. This list is from Elementor's controls-stack / widget-base /
+    // element-base sources.
+    $elementorFinal = [
+        'add_group_control', 'add_responsive_control', 'remove_responsive_control',
+        'update_responsive_control', 'start_injection', 'end_injection', 'get_injection_point',
+        'start_popover', 'end_popover', 'get_class_name', 'get_config', 'get_control_index',
+        'get_control_key', 'get_section_controls', 'get_style_controls', 'get_tabs_controls',
+        'get_frontend_settings_keys', 'get_position_info', 'print_text_editor',
+        'print_unescaped_setting', 'enqueue_scripts', 'enqueue_styles',
+    ];
+    foreach (['DCCS\Selector_Widget', 'DCCS\Mini_Entry_Widget'] as $cls) {
+        $declared = [];
+        foreach ((new \ReflectionClass($cls))->getMethods() as $meth) {
+            if ($meth->getDeclaringClass()->getName() === $cls) { $declared[] = $meth->getName(); }
+        }
+        $clash = array_values(array_intersect($declared, $elementorFinal));
+        ok(basename(str_replace('\\', '/', $cls)) . ' overrides no Elementor final method'
+            . ($clash ? ' [' . implode(', ', $clash) . ']' : ''), $clash === []);
+    }
 
     // ---- Site preset defaults (Preset_Defaults) --------------------------------
     require_once DCCS_DIR . 'includes/class-preset-defaults.php';

@@ -68,54 +68,51 @@ class Selector_Widget extends Widget_Base
     }
 
     /**
-     * Seed every control with the site preset (see Preset_Defaults) as it is
-     * registered, so a NEW widget starts from the site's configuration rather than
-     * the generic factory look. Routing this through one place keeps the preset out
-     * of ~90 individual control definitions.
+     * Register a control seeded with the site preset (see Preset_Defaults), so a NEW
+     * widget starts from the site's configuration rather than the generic factory
+     * look. Routing every registration through these three wrappers keeps the preset
+     * out of ~90 individual control definitions.
+     *
+     * These are deliberately OUR OWN methods rather than overrides of Elementor's
+     * add_control() / add_responsive_control() / add_group_control(): the latter two
+     * are declared `final` in Controls_Stack, so overriding them is a fatal
+     * "Cannot override final method" the moment this class is autoloaded.
      *
      * Saved widgets are unaffected: Elementor merges stored settings over control
      * defaults and stored values win, so a default only ever fills a key the widget
      * never saved.
      *
-     * The parameter types are intentionally left off to stay compatible with
-     * Controls_Stack::add_control()'s signature across Elementor versions (PHP
-     * allows a child to widen a parameter type, not to narrow it).
-     *
-     * @param string              $id
      * @param array<string,mixed> $args
      * @param array<string,mixed> $options
      */
-    public function add_control($id, $args = [], $options = [])
+    protected function preset_control(string $id, array $args = [], array $options = []): void
     {
-        return parent::add_control($id, Preset_Defaults::apply((string) $id, (array) $args), $options);
+        $this->add_control($id, Preset_Defaults::apply($id, $args), $options);
     }
 
     /**
-     * @param string              $id
      * @param array<string,mixed> $args
      * @param array<string,mixed> $options
      */
-    public function add_responsive_control($id, $args = [], $options = [])
+    protected function preset_responsive_control(string $id, array $args = [], array $options = []): void
     {
-        return parent::add_responsive_control($id, Preset_Defaults::apply((string) $id, (array) $args), $options);
+        $this->add_responsive_control($id, Preset_Defaults::apply($id, $args), $options);
     }
 
     /**
      * Group controls (typography, box-shadow …) hold their defaults in
      * `fields_options`, not in a top-level `default`, so they are merged here.
      *
-     * @param string              $type
      * @param array<string,mixed> $args
      */
-    public function add_group_control($type, $args = [])
+    protected function preset_group_control(string $type, array $args = []): void
     {
-        $args = (array) $args;
         $fields = Preset_Defaults::group_fields((string) ($args['name'] ?? ''));
         if ($fields) {
             $args['fields_options'] = array_replace_recursive($fields, $args['fields_options'] ?? []);
         }
 
-        return parent::add_group_control($type, $args);
+        $this->add_group_control($type, $args);
     }
 
     protected function register_controls(): void
@@ -153,14 +150,14 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
-        $this->add_control('show_heading', [
+        $this->preset_control('show_heading', [
             'label'        => __('Show heading', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SWITCHER,
             'default'      => 'yes',
             'return_value' => 'yes',
         ]);
 
-        $this->add_control('show_review', [
+        $this->preset_control('show_review', [
             'label'        => __('Show “Review your answers” step', 'dcc-cottage-selector'),
             'description'  => __('Off by default: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). Turn on to add a review-and-confirm step before results.', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SWITCHER,
@@ -168,7 +165,7 @@ class Selector_Widget extends Widget_Base
             'return_value' => 'yes',
         ]);
 
-        $this->add_control('start_mode', [
+        $this->preset_control('start_mode', [
             'label'   => __('Starting mode', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::SELECT,
             'default' => 'quick',
@@ -179,7 +176,7 @@ class Selector_Widget extends Widget_Base
             ],
         ]);
 
-        $this->add_control('enabled_modes', [
+        $this->preset_control('enabled_modes', [
             'label'    => __('Enabled modes', 'dcc-cottage-selector'),
             'type'     => Controls_Manager::SELECT2,
             'multiple' => true,
@@ -207,7 +204,7 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
-        $this->add_control('share_design', [
+        $this->preset_control('share_design', [
             'label'        => __('Share this design', 'dcc-cottage-selector'),
             'description'  => __('Publish this widget\'s full design + text under a name so Mini Entry widgets can mirror it.', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SWITCHER,
@@ -215,7 +212,7 @@ class Selector_Widget extends Widget_Base
             'default'      => '',
         ]);
 
-        $this->add_control('design_name', [
+        $this->preset_control('design_name', [
             'label'       => __('Design name', 'dcc-cottage-selector'),
             'description' => __('A short label Mini Entries pick from (e.g. "Main"). Save the page to publish it.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::TEXT,
@@ -226,13 +223,13 @@ class Selector_Widget extends Widget_Base
         // One-time copy (as opposed to the live mirror above): export this Selector's
         // TEXT as a code to paste into a Mini Entry. The visual design is copied
         // separately with Elementor's native right-click Copy → Paste Style.
-        $this->add_control('copy_hint', [
+        $this->preset_control('copy_hint', [
             'type'            => Controls_Manager::RAW_HTML,
             'raw'             => esc_html__('To copy the LOOK: right-click this widget → Copy, then right-click a Mini Entry → Paste Style. To copy the TEXT: use the button below.', 'dcc-cottage-selector'),
             'content_classes' => 'elementor-descriptor',
         ]);
 
-        $this->add_control('export_text', [
+        $this->preset_control('export_text', [
             'label'       => __('Export text', 'dcc-cottage-selector'),
             'type'        => Control_Design_IO::TYPE,
             'mode'        => 'export',
@@ -298,7 +295,7 @@ class Selector_Widget extends Widget_Base
             'mode_compare'   => __('Landing choice: Compare', 'dcc-cottage-selector'),
         ];
         foreach ($buttons as $key => $label) {
-            $this->add_control('icon_' . $key, [
+            $this->preset_control('icon_' . $key, [
                 'label'       => $label,
                 'type'        => Controls_Manager::ICONS,
                 'skin'        => 'inline',
@@ -306,7 +303,7 @@ class Selector_Widget extends Widget_Base
             ]);
         }
 
-        $this->add_control('icons_note', [
+        $this->preset_control('icons_note', [
             'type'            => Controls_Manager::RAW_HTML,
             'raw'             => esc_html__('Leave a picker empty for no icon. You can also type an emoji directly into a label under “Text & labels”.', 'dcc-cottage-selector'),
             'content_classes' => 'elementor-descriptor',
@@ -365,7 +362,7 @@ class Selector_Widget extends Widget_Base
             'lvl_3'      => __('Answer: High', 'dcc-cottage-selector'),
         ];
         foreach (array_merge($questions, $answers) as $key => $label) {
-            $this->add_control('icon_' . $key, [
+            $this->preset_control('icon_' . $key, [
                 'label'       => $label,
                 'type'        => Controls_Manager::ICONS,
                 'skin'        => 'inline',
@@ -408,7 +405,7 @@ class Selector_Widget extends Widget_Base
         ];
 
         foreach ($editable as $key => $label) {
-            $this->add_control('str_' . $key, [
+            $this->preset_control('str_' . $key, [
                 'label'       => $label,
                 'type'        => $key === 'intro' ? Controls_Manager::TEXTAREA : Controls_Manager::TEXT,
                 'default'     => $defaults[$key] ?? '',
@@ -416,7 +413,7 @@ class Selector_Widget extends Widget_Base
             ]);
         }
 
-        $this->add_control('strings_note', [
+        $this->preset_control('strings_note', [
             'type'            => Controls_Manager::RAW_HTML,
             'raw'             => esc_html__('All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector).', 'dcc-cottage-selector'),
             'content_classes' => 'elementor-descriptor',
@@ -475,7 +472,7 @@ class Selector_Widget extends Widget_Base
         // Config string — only a typed value overrides it. This preserves Loco
         // translations for the many question/answer strings.
         foreach ($fields as $key => $label) {
-            $this->add_control('str_' . $key, [
+            $this->preset_control('str_' . $key, [
                 'label'       => $label,
                 'type'        => Controls_Manager::TEXT,
                 'placeholder' => $defaults[$key] ?? '',
@@ -510,7 +507,7 @@ class Selector_Widget extends Widget_Base
             'badge_porch'    => __('Badge: Screened porch', 'dcc-cottage-selector'),
         ];
         foreach ($fields as $key => $label) {
-            $this->add_control('str_' . $key, [
+            $this->preset_control('str_' . $key, [
                 'label'       => $label,
                 'type'        => Controls_Manager::TEXT,
                 'placeholder' => $defaults[$key] ?? '',
@@ -524,7 +521,7 @@ class Selector_Widget extends Widget_Base
     /** Shorthand: a COLOR control that drives a CSS custom property on the root. */
     private function var_color(string $id, string $label, string $var, array $args = []): void
     {
-        $this->add_control($id, array_merge([
+        $this->preset_control($id, array_merge([
             'label'     => $label,
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::ROOT => $var . ': {{VALUE}};'],
@@ -539,7 +536,7 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_responsive_control('align', [
+        $this->preset_responsive_control('align', [
             'label'   => __('Text alignment', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::CHOOSE,
             'options' => [
@@ -550,7 +547,7 @@ class Selector_Widget extends Widget_Base
             'selectors' => [self::ROOT => '--dccs-align: {{VALUE}};'],
         ]);
 
-        $this->add_responsive_control('content_max_width', [
+        $this->preset_responsive_control('content_max_width', [
             'label'      => __('Maximum width', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
@@ -558,14 +555,14 @@ class Selector_Widget extends Widget_Base
             'selectors'  => [self::ROOT => 'max-width: {{SIZE}}{{UNIT}};'],
         ]);
 
-        $this->add_responsive_control('root_padding', [
+        $this->preset_responsive_control('root_padding', [
             'label'      => __('Padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em', 'rem'],
             'selectors'  => [self::ROOT => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
 
-        $this->add_responsive_control('corner_radius', [
+        $this->preset_responsive_control('corner_radius', [
             'label'      => __('Corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
@@ -573,7 +570,7 @@ class Selector_Widget extends Widget_Base
             'selectors'  => [self::ROOT => '--dccs-radius: {{SIZE}}{{UNIT}};'],
         ]);
 
-        $this->add_responsive_control('section_gap', [
+        $this->preset_responsive_control('section_gap', [
             'label'      => __('Element spacing', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
@@ -592,7 +589,7 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_control('inherit_theme', [
+        $this->preset_control('inherit_theme', [
             'label'        => __('Match site theme colors', 'dcc-cottage-selector'),
             'description'  => __('Use the theme\'s global colors instead of the built-in palette.', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SWITCHER,
@@ -620,7 +617,7 @@ class Selector_Widget extends Widget_Base
         $this->var_color('color_diff', __('Compare “differs” highlight', 'dcc-cottage-selector'), '--dccs-diff');
 
         // Result-card background (own control, split out of the generic surface).
-        $this->add_control('results_bg_heading', [
+        $this->preset_control('results_bg_heading', [
             'label'     => __('Results', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
@@ -631,7 +628,7 @@ class Selector_Widget extends Widget_Base
 
         // Every button and menu trigger (Next / Back / Submit, the landing choices,
         // Compare, edit links, and the two dropdown trigger bars + panels).
-        $this->add_control('btn_bg_heading', [
+        $this->preset_control('btn_bg_heading', [
             'label'     => __('Buttons & menus', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
@@ -642,7 +639,7 @@ class Selector_Widget extends Widget_Base
         $this->var_color('color_btn_bg_hover', __('Button background (hover)', 'dcc-cottage-selector'), '--dccs-btn-bg-hover');
 
         // The individual selectable items inside the two dropdown menus.
-        $this->add_control('item_bg_heading', [
+        $this->preset_control('item_bg_heading', [
             'label'     => __('Drop-down menu items', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
@@ -652,7 +649,7 @@ class Selector_Widget extends Widget_Base
         $this->var_color('color_item_bg_hover', __('Item background (hover)', 'dcc-cottage-selector'), '--dccs-item-bg-hover');
         $this->var_color('color_item_text_hover', __('Item text (hover)', 'dcc-cottage-selector'), '--dccs-item-text-hover');
 
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'      => 'base_typography',
             'selector'  => self::SEL,
             'separator' => 'before',
@@ -669,21 +666,21 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_control('heading_color', [
+        $this->preset_control('heading_color', [
             'label'     => __('Heading color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-heading' => 'color: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'heading_typography',
             'selector' => self::SEL . '.dccs-heading',
         ]);
-        $this->add_control('intro_color', [
+        $this->preset_control('intro_color', [
             'label'     => __('Intro color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-intro' => 'color: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'intro_typography',
             'selector' => self::SEL . '.dccs-intro',
         ]);
@@ -699,7 +696,7 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_responsive_control('menu_align', [
+        $this->preset_responsive_control('menu_align', [
             'label'   => __('Option alignment', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::CHOOSE,
             'options' => [
@@ -709,7 +706,7 @@ class Selector_Widget extends Widget_Base
             ],
             'selectors' => [self::ROOT => '--dccs-menu-align: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'modetab_typography',
             'selector' => self::SEL . '.dccs-modeselect-trigger, ' . self::SEL . '.dccs-modetab',
         ]);
@@ -718,14 +715,14 @@ class Selector_Widget extends Widget_Base
         // to the global Colors → Buttons & menus values.
         $this->start_controls_tabs('modetab_tabs');
         $this->start_controls_tab('modetab_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
-        $this->add_control('modetab_color', [
+        $this->preset_control('modetab_color', [
             'label'     => __('Trigger text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
                 self::SEL . '.dccs-modeselect-trigger' => 'color: {{VALUE}};',
             ],
         ]);
-        $this->add_control('modetab_bg', [
+        $this->preset_control('modetab_bg', [
             'label'     => __('Trigger background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -734,7 +731,7 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('modetab_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
-        $this->add_control('modetab_color_hover', [
+        $this->preset_control('modetab_color_hover', [
             'label'     => __('Trigger text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -742,7 +739,7 @@ class Selector_Widget extends Widget_Base
                 self::SEL . '.dccs-modeselect-trigger:focus-visible' => 'color: {{VALUE}};',
             ],
         ]);
-        $this->add_control('modetab_bg_hover', [
+        $this->preset_control('modetab_bg_hover', [
             'label'     => __('Trigger background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -752,12 +749,12 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('modetab_active', ['label' => __('Selected', 'dcc-cottage-selector')]);
-        $this->add_control('modetab_color_active', [
+        $this->preset_control('modetab_color_active', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-modetab.is-active' => 'color: {{VALUE}};'],
         ]);
-        $this->add_control('modetab_bg_active', [
+        $this->preset_control('modetab_bg_active', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-modetab.is-active' => 'background-color: {{VALUE}};'],
@@ -783,38 +780,38 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_responsive_control('dot_height', [
+        $this->preset_responsive_control('dot_height', [
             'label'      => __('Step bar thickness', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
             'range'      => ['px' => ['min' => 2, 'max' => 16]],
             'selectors'  => [self::ROOT => '--dccs-dot-h: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_control('dot_done_color', [
+        $this->preset_control('dot_done_color', [
             'label'     => __('Completed step color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-step-dot.is-done' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('dot_idle_color', [
+        $this->preset_control('dot_idle_color', [
             'label'     => __('Upcoming step color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-step-dot' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'progress_label_typography',
             'selector' => self::SEL . '.dccs-progress-label',
         ]);
-        $this->add_control('progress_label_color', [
+        $this->preset_control('progress_label_color', [
             'label'     => __('Progress label color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-progress-label' => 'color: {{VALUE}};'],
         ]);
-        $this->add_control('count_bg', [
+        $this->preset_control('count_bg', [
             'label'     => __('Match-count background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-count' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('count_color', [
+        $this->preset_control('count_color', [
             'label'     => __('Match-count text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-count' => 'color: {{VALUE}};'],
@@ -831,21 +828,21 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'question_typography',
             'selector' => self::SEL . '.dccs-step-q',
         ]);
-        $this->add_control('question_color', [
+        $this->preset_control('question_color', [
             'label'     => __('Question color', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-step-q' => 'color: {{VALUE}};'],
         ]);
-        $this->add_control('question_bg', [
+        $this->preset_control('question_bg', [
             'label'     => __('Question background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-step-q' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_responsive_control('question_align', [
+        $this->preset_responsive_control('question_align', [
             'label'   => __('Question alignment', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::CHOOSE,
             'options' => [
@@ -857,7 +854,7 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->add_icon_side_control('questions');
 
-        $this->add_responsive_control('answer_align', [
+        $this->preset_responsive_control('answer_align', [
             'label'   => __('Answer alignment', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::CHOOSE,
             'options' => [
@@ -868,21 +865,21 @@ class Selector_Widget extends Widget_Base
             'selectors' => [self::ROOT => '--dccs-answer-align: {{VALUE}};'],
         ]);
         $this->add_icon_side_control('answers');
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'chip_typography',
             'selector' => self::SEL . '.dccs-chip',
         ]);
-        $this->add_group_control(Group_Control_Border::get_type(), [
+        $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => 'chip_border',
             'selector' => self::SEL . '.dccs-chip',
         ]);
-        $this->add_responsive_control('chip_radius', [
+        $this->preset_responsive_control('chip_radius', [
             'label'      => __('Answer radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [self::SEL . '.dccs-chip' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control('chip_padding', [
+        $this->preset_responsive_control('chip_padding', [
             'label'      => __('Answer padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
@@ -891,19 +888,19 @@ class Selector_Widget extends Widget_Base
 
         $this->start_controls_tabs('chip_tabs');
         $this->start_controls_tab('chip_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
-        $this->add_control('chip_color', [
+        $this->preset_control('chip_color', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-chip' => 'color: {{VALUE}};'],
         ]);
-        $this->add_control('chip_bg', [
+        $this->preset_control('chip_bg', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-chip' => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('chip_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
-        $this->add_control('chip_color_hover', [
+        $this->preset_control('chip_color_hover', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -911,7 +908,7 @@ class Selector_Widget extends Widget_Base
                 self::SEL . '.dccs-chip:focus-visible' => 'color: {{VALUE}};',
             ],
         ]);
-        $this->add_control('chip_bg_hover', [
+        $this->preset_control('chip_bg_hover', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -921,17 +918,17 @@ class Selector_Widget extends Widget_Base
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('chip_selected', ['label' => __('Selected', 'dcc-cottage-selector')]);
-        $this->add_control('chip_color_active', [
+        $this->preset_control('chip_color_active', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-chip.is-active' => 'color: {{VALUE}};'],
         ]);
-        $this->add_control('chip_bg_active', [
+        $this->preset_control('chip_bg_active', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-chip.is-active' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('chip_border_active', [
+        $this->preset_control('chip_border_active', [
             'label'     => __('Border', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-chip.is-active' => 'border-color: {{VALUE}};'],
@@ -952,7 +949,7 @@ class Selector_Widget extends Widget_Base
     /** A Left/Right select controlling which side of the label an icon sits on. */
     private function add_icon_side_control(string $key): void
     {
-        $this->add_control('icon_side_' . $key, [
+        $this->preset_control('icon_side_' . $key, [
             'label'   => __('Icon side', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::SELECT,
             'default' => 'left',
@@ -971,27 +968,27 @@ class Selector_Widget extends Widget_Base
             $this->add_icon_side_control($side_key);
         }
 
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => $id . '_typography',
             'selector' => $sel,
         ]);
-        $this->add_group_control(Group_Control_Border::get_type(), [
+        $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => $id . '_border',
             'selector' => $sel,
         ]);
-        $this->add_responsive_control($id . '_radius', [
+        $this->preset_responsive_control($id . '_radius', [
             'label'      => __('Corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [$sel => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control($id . '_padding', [
+        $this->preset_responsive_control($id . '_padding', [
             'label'      => __('Padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
             'selectors'  => [$sel => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control($id . '_align', [
+        $this->preset_responsive_control($id . '_align', [
             'label'   => __('Text alignment', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::CHOOSE,
             'options' => [
@@ -1004,19 +1001,19 @@ class Selector_Widget extends Widget_Base
 
         $this->start_controls_tabs($id . '_tabs');
         $this->start_controls_tab($id . '_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
-        $this->add_control($id . '_color', [
+        $this->preset_control($id . '_color', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [$sel => 'color: {{VALUE}};'],
         ]);
-        $this->add_control($id . '_bg', [
+        $this->preset_control($id . '_bg', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [$sel => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab($id . '_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
-        $this->add_control($id . '_color_hover', [
+        $this->preset_control($id . '_color_hover', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -1024,7 +1021,7 @@ class Selector_Widget extends Widget_Base
                 $sel . ':focus-visible' => 'color: {{VALUE}};',
             ],
         ]);
-        $this->add_control($id . '_bg_hover', [
+        $this->preset_control($id . '_bg_hover', [
             'label'     => __('Background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -1075,18 +1072,18 @@ class Selector_Widget extends Widget_Base
             'description' => __('Default background for the navigation & action buttons, kept distinct from the answer buttons.', 'dcc-cottage-selector'),
         ]);
 
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'      => 'btn_typography',
             'selector'  => self::SEL . '.dccs-primary',
             'separator' => 'before',
         ]);
-        $this->add_responsive_control('btn_radius', [
+        $this->preset_responsive_control('btn_radius', [
             'label'      => __('Button radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [self::SEL . '.dccs-primary' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control('btn_padding', [
+        $this->preset_responsive_control('btn_padding', [
             'label'      => __('Button padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
@@ -1097,14 +1094,14 @@ class Selector_Widget extends Widget_Base
         // menus; this section keeps the primary button's text color and typography.
         $this->start_controls_tabs('btn_tabs');
         $this->start_controls_tab('btn_normal', ['label' => __('Normal', 'dcc-cottage-selector')]);
-        $this->add_control('btn_color', [
+        $this->preset_control('btn_color', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-primary' => 'color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
         $this->start_controls_tab('btn_hover', ['label' => __('Hover', 'dcc-cottage-selector')]);
-        $this->add_control('btn_color_hover', [
+        $this->preset_control('btn_color_hover', [
             'label'     => __('Text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -1115,7 +1112,7 @@ class Selector_Widget extends Widget_Base
         $this->end_controls_tab();
         $this->end_controls_tabs();
 
-        $this->add_control('link_color', [
+        $this->preset_control('link_color', [
             'label'     => __('Back link', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'separator' => 'before',
@@ -1134,46 +1131,46 @@ class Selector_Widget extends Widget_Base
         ]);
 
         // Card background is set in Colors → Results background.
-        $this->add_group_control(Group_Control_Border::get_type(), [
+        $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => 'card_border',
             'selector' => self::SEL . '.dccs-card',
         ]);
-        $this->add_responsive_control('card_radius', [
+        $this->preset_responsive_control('card_radius', [
             'label'      => __('Radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [self::SEL . '.dccs-card' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control('card_padding', [
+        $this->preset_responsive_control('card_padding', [
             'label'      => __('Padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
             'selectors'  => [self::SEL . '.dccs-card' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
+        $this->preset_group_control(Group_Control_Box_Shadow::get_type(), [
             'name'     => 'card_shadow',
             'selector' => self::SEL . '.dccs-card',
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'card_title_typography',
             'selector' => self::SEL . '.dccs-card h4',
         ]);
-        $this->add_control('badge_bg', [
+        $this->preset_control('badge_bg', [
             'label'     => __('Badge background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'separator' => 'before',
             'selectors' => [self::SEL . '.dccs-badge' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('badge_color', [
+        $this->preset_control('badge_color', [
             'label'     => __('Badge text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-badge' => 'color: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'badge_typography',
             'selector' => self::SEL . '.dccs-badge',
         ]);
-        $this->add_responsive_control('badge_radius', [
+        $this->preset_responsive_control('badge_radius', [
             'label'      => __('Badge radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
@@ -1192,26 +1189,26 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_STYLE,
         ]);
 
-        $this->add_control('matrix_head_bg', [
+        $this->preset_control('matrix_head_bg', [
             'label'     => __('Header background', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-matrix thead th' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('matrix_head_color', [
+        $this->preset_control('matrix_head_color', [
             'label'     => __('Header text', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-matrix thead th' => 'color: {{VALUE}};'],
         ]);
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'matrix_typography',
             'selector' => self::SEL . '.dccs-matrix td, ' . self::SEL . '.dccs-matrix th',
         ]);
-        $this->add_control('matrix_diff_bg', [
+        $this->preset_control('matrix_diff_bg', [
             'label'     => __('“Differs” cell highlight', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [self::SEL . '.dccs-matrix td.is-diff' => 'background-color: {{VALUE}};'],
         ]);
-        $this->add_control('matrix_border', [
+        $this->preset_control('matrix_border', [
             'label'     => __('Cell borders', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
@@ -1234,28 +1231,28 @@ class Selector_Widget extends Widget_Base
         // The compare picker is an always-visible checklist (no trigger). Row/option
         // colors come from Colors → Drop-down menu items; the panel background from
         // Colors → Buttons & menus. This section styles the checklist box + rows.
-        $this->add_group_control(Group_Control_Typography::get_type(), [
+        $this->preset_group_control(Group_Control_Typography::get_type(), [
             'name'     => 'cmpmenu_typography',
             'selector' => self::SEL . '.dccs-cmp-option',
         ]);
-        $this->add_group_control(Group_Control_Border::get_type(), [
+        $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => 'cmpmenu_panel_border',
             'selector' => self::SEL . '.dccs-cmp-list',
         ]);
-        $this->add_responsive_control('cmpmenu_panel_radius', [
+        $this->preset_responsive_control('cmpmenu_panel_radius', [
             'label'      => __('Checklist corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
             'range'      => ['px' => ['min' => 0, 'max' => 40], '%' => ['min' => 0, 'max' => 50]],
             'selectors'  => [self::SEL . '.dccs-cmp-list' => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control('cmpmenu_item_padding', [
+        $this->preset_responsive_control('cmpmenu_item_padding', [
             'label'      => __('Row padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
             'selectors'  => [self::SEL . '.dccs-cmp-option' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
+        $this->preset_group_control(Group_Control_Box_Shadow::get_type(), [
             'name'     => 'cmpmenu_panel_shadow',
             'selector' => self::SEL . '.dccs-cmp-list',
         ]);
@@ -1272,54 +1269,54 @@ class Selector_Widget extends Widget_Base
      */
     private function add_dropdown_shape_effects(string $prefix, string $trigger, string $panel, string $item): void
     {
-        $this->add_control($prefix . '_shape_heading', [
+        $this->preset_control($prefix . '_shape_heading', [
             'label'     => __('Shape', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
         ]);
-        $this->add_responsive_control($prefix . '_trigger_radius', [
+        $this->preset_responsive_control($prefix . '_trigger_radius', [
             'label'      => __('Trigger corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
             'range'      => ['px' => ['min' => 0, 'max' => 100], '%' => ['min' => 0, 'max' => 50]],
             'selectors'  => [$trigger => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control($prefix . '_panel_radius', [
+        $this->preset_responsive_control($prefix . '_panel_radius', [
             'label'      => __('Menu panel corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
             'range'      => ['px' => ['min' => 0, 'max' => 100], '%' => ['min' => 0, 'max' => 50]],
             'selectors'  => [$panel => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control($prefix . '_item_radius', [
+        $this->preset_responsive_control($prefix . '_item_radius', [
             'label'      => __('Item corner radius', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px', '%'],
             'range'      => ['px' => ['min' => 0, 'max' => 60], '%' => ['min' => 0, 'max' => 50]],
             'selectors'  => [$item => 'border-radius: {{SIZE}}{{UNIT}};'],
         ]);
-        $this->add_responsive_control($prefix . '_item_padding', [
+        $this->preset_responsive_control($prefix . '_item_padding', [
             'label'      => __('Item padding', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
             'selectors'  => [$item => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};'],
         ]);
-        $this->add_group_control(Group_Control_Border::get_type(), [
+        $this->preset_group_control(Group_Control_Border::get_type(), [
             'name'     => $prefix . '_trigger_border',
             'selector' => $trigger,
         ]);
 
-        $this->add_control($prefix . '_fx_heading', [
+        $this->preset_control($prefix . '_fx_heading', [
             'label'     => __('Effects', 'dcc-cottage-selector'),
             'type'      => Controls_Manager::HEADING,
             'separator' => 'before',
         ]);
-        $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
+        $this->preset_group_control(Group_Control_Box_Shadow::get_type(), [
             'name'     => $prefix . '_panel_shadow',
             'selector' => $panel,
         ]);
         // Item hover colors are set globally in Colors → Drop-down menu items.
-        $this->add_responsive_control($prefix . '_transition', [
+        $this->preset_responsive_control($prefix . '_transition', [
             'label'      => __('Hover transition speed', 'dcc-cottage-selector'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['ms'],

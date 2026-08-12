@@ -60,21 +60,21 @@ class Mini_Entry_Widget extends Selector_Widget
             $options[(string) ($c['id'] ?? '')] = sprintf('%s (#%s)', (string) ($c['name'] ?? ''), (string) ($c['id'] ?? ''));
         }
 
-        $this->add_control('current', [
+        $this->preset_control('current', [
             'label'   => __('This cottage', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::SELECT,
             'default' => '',
             'options' => $options,
         ]);
 
-        $this->add_control('selector_url', [
+        $this->preset_control('selector_url', [
             'label'       => __('Selector page URL', 'dcc-cottage-selector'),
             'description' => __('Leave blank to open the selector in a pop-up on this page.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::URL,
             'options'     => ['url'],
         ]);
 
-        $this->add_control('copy', [
+        $this->preset_control('copy', [
             'label'       => __('Prompt text', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::TEXTAREA,
             'default'     => self::default_copy(),
@@ -92,7 +92,7 @@ class Mini_Entry_Widget extends Selector_Widget
             }
         }
 
-        $this->add_control('mirror_source', [
+        $this->preset_control('mirror_source', [
             'label'       => __('Mirror design from', 'dcc-cottage-selector'),
             'description' => __('Match a Cottage Selector that has "Share this design" turned on. Save that Selector first to populate this list. (Live + locked: this widget\'s own controls hide while mirroring.)', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::SELECT,
@@ -103,7 +103,7 @@ class Mini_Entry_Widget extends Selector_Widget
         // One-time copy (independent afterward), used when NOT mirroring: paste a text
         // code exported from a Cottage Selector to fill this widget's own text fields.
         // For the LOOK, use Elementor's right-click Paste Style onto this widget.
-        $this->add_control('import_text', [
+        $this->preset_control('import_text', [
             'label'       => __('Import text', 'dcc-cottage-selector'),
             'type'        => Control_Design_IO::TYPE,
             'mode'        => 'import',

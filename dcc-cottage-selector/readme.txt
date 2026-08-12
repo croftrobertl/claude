@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.0
+Stable tag: 0.19.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -210,6 +210,16 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.1 =
+* **Critical fix.** 0.19.0 crashed the front end with "There has been a critical error
+  on this website" on any page containing the Selector or Mini Entry. The site preset
+  was applied by overriding Elementor's add_responsive_control() and
+  add_group_control(), which Elementor declares `final` — overriding them is a fatal
+  PHP error the moment the widget class loads. WP Admin was unaffected because those
+  pages never load the widget class. The preset now runs through the plugin's own
+  wrapper methods and touches no Elementor API. Nothing else changed: new widgets still
+  start from the site preset and saved widgets still render exactly as before.
 
 = 0.19.0 =
 * New widgets now start from the site's own configuration instead of the generic
