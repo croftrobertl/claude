@@ -128,18 +128,70 @@ final class Plugin
      * saved document that has "Share this design" on, so mirroring Mini Entries pick
      * up the change automatically. Writes are deduped by hash in publish_design().
      *
+     * NEVER call $document->get_elements_data() from here. Elementor's
+     * Document::get_elements_data() does this in the editor:
+     *
+     *     if ( Plugin::$instance->editor->is_edit_mode() ) {
+     *         if ( empty( $elements ) && empty( $autosave_elements ) ) {
+     *             $elements = $this->convert_to_elementor();   // starts with $this->save( [] )
+     *
+     * and Document::save() ends by firing 'elementor/document/after_save'. On a page
+     * with NO Elementor content, opening the editor therefore ran:
+     *
+     *     get_elements_data() -> convert_to_elementor() -> save([]) -> after_save
+     *       -> this handler -> get_elements_data() -> ...
+     *
+     * save([]) carries no 'elements' key, so save_elements() never runs and
+     * _elementor_data stays empty — the `empty( $elements )` guard never flips and the
+     * recursion never terminates. PHP died of stack/memory exhaustion and Elementor
+     * showed "There has been a critical error on this website". Pages that already had
+     * containers/widgets were fine because non-empty data skips convert_to_elementor()
+     * entirely, and the front end was fine because none of this runs outside edit mode.
+     *
+     * The elements are already in $data — that IS the payload being saved — so read
+     * them from there and touch the document only for its id.
+     *
      * @param \Elementor\Core\Base\Document $document
+     * @param mixed                         $data Elementor passes the saved payload.
      */
-    public function republish_designs($document, array $data): void
+    public function republish_designs($document, $data = []): void
     {
-        if (!is_object($document) || !method_exists($document, 'get_elements_data')) {
+        // Belt and braces: even with the recursive call gone, publish_design() writes an
+        // option, and an option write can wake other plugins that save documents.
+        static $busy = false;
+        if ($busy) {
             return;
         }
+
+        if (!is_object($document) || !is_array($data)) {
+            return;
+        }
+
+        // convert_to_elementor()'s save([]) — and any settings-only save — has no
+        // elements. Nothing to publish, and this is the re-entrant call we must not
+        // answer by asking the document for its elements.
+        if (!isset($data['elements']) || !is_array($data['elements'])) {
+            return;
+        }
+
+        // Autosaves are drafts. Mirroring Mini Entries should follow the design that was
+        // actually saved, not one the editor is still typing.
+        $status = $data['settings']['post_status'] ?? '';
+        if ($status === 'autosave') {
+            return;
+        }
+
         $post_id = method_exists($document, 'get_main_id') ? (int) $document->get_main_id() : 0;
         if ($post_id <= 0) {
             return;
         }
-        $this->walk_elements($document->get_elements_data(), $post_id);
+
+        $busy = true;
+        try {
+            $this->walk_elements($data['elements'], $post_id);
+        } finally {
+            $busy = false;
+        }
     }
 
     /**

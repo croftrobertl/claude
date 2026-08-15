@@ -188,14 +188,17 @@ final class Preset_Defaults
     /**
      * Master switch for the preset.
      *
-     * DISABLED pending diagnosis: applying the preset is the only change between
-     * 0.18.0 (whose Elementor editor worked) and 0.19.x (whose editor throws a fatal
-     * on the page holding the widgets, while the front end renders fine). With this
-     * off, control registration is byte-for-byte what 0.18.0 did, which restores the
-     * editor; saved widgets were already unaffected either way.
+     * Still OFF, but NOT because of the editor fatal it was blamed for in 0.19.2.
+     * That fatal was diagnosed in 0.19.5: the 'elementor/document/after_save' handler
+     * in Plugin::republish_designs() recursed through Document::get_elements_data()
+     * whenever an EMPTY page was opened in the editor. It had been there since 0.11.0
+     * and had nothing to do with the preset — 0.19.2's reasoning ("the preset is the
+     * only change since 0.18.0") was mistaken because 0.18.0's editor had only ever
+     * been opened on pages that already had content.
      *
-     * Re-enable once the fatal is understood, either by flipping this default back or
-     * from the theme's functions.php:
+     * The preset is left off only so the recursion fix ships as a single, isolated
+     * change. Turn it back on either by flipping this default or, to try it without
+     * reinstalling, from the theme's functions.php:
      *
      *     add_filter('dccs_preset_defaults_enabled', '__return_true');
      */

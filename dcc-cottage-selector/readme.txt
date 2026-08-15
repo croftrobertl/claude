@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.4
+Stable tag: 0.19.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,11 +82,11 @@ NOT change the copied Mini Entry, so you're free to adjust it per page.
 
 = Site preset for new widgets (currently OFF) =
 
-**Status: disabled in 0.19.2.** Applying the preset is the only difference between
-0.18.0 and 0.19.x, and 0.19.x throws a fatal error in the Elementor editor on pages
-holding the widget, so the preset is switched off until that is diagnosed. The
-captured values are still in `includes/class-preset-defaults.php` and it can be turned
-back on with:
+**Status: still disabled, but exonerated.** 0.19.2 switched the preset off on the
+theory that it caused the Elementor editor fatal. It did not — 0.19.5 traced that
+crash to the design-mirroring save hook (see the changelog) and fixed it there. The
+preset stays off for one release only so the crash fix ships on its own. The captured
+values are in `includes/class-preset-defaults.php` and it can be turned back on with:
 
     add_filter('dccs_preset_defaults_enabled', '__return_true');
 
@@ -220,6 +220,27 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.5 =
+* **Critical fix — the Elementor editor crash is solved.** Opening a page that had
+  **no containers or widgets on it yet** in the Elementor editor produced "There has
+  been a critical error on this website". Pages that already had content opened fine,
+  and the live site was never affected.
+* Cause: the design-mirroring hook (`elementor/document/after_save`) asked the
+  document for its elements. In the editor, Elementor's `get_elements_data()` reacts
+  to an empty document by calling `convert_to_elementor()`, which begins by calling
+  `save([])`, which fires `after_save` — straight back into the handler. That save
+  carries no elements, so the document stays empty and the loop never ends; PHP ran
+  out of stack and died. The handler now reads the elements from the payload
+  Elementor already hands it and never calls back into the document.
+* This bug shipped in **0.11.0** and was present in every release since, including
+  0.18.0. It was only ever reachable by opening an empty page in the editor, which is
+  why 0.19.2 mis-attributed it to the site preset.
+* Design mirroring is otherwise unchanged, with two small improvements: autosaves no
+  longer publish a half-typed design over the saved one, and a malformed hook payload
+  from another plugin is ignored instead of raising a type error.
+* The site preset remains off so this fix ships on its own; it was not the cause and
+  can be re-enabled with `add_filter('dccs_preset_defaults_enabled', '__return_true');`
 
 = 0.19.4 =
 * Fixes the **duplicate "Dora Canal Court" category** in the Elementor widget panel.

@@ -201,6 +201,69 @@ namespace {
             . ($clash ? ' [' . implode(', ', $clash) . ']' : ''), $clash === []);
     }
 
+    // ---- after_save must never re-enter Document::get_elements_data() -----------
+    // Elementor's get_elements_data(), in edit mode on a document with no elements,
+    // calls convert_to_elementor(), whose first statement is save([]) — and save()
+    // ends by firing 'elementor/document/after_save'. A handler that answers by
+    // calling get_elements_data() therefore recurses forever: save([]) carries no
+    // 'elements' key, so save_elements() never runs, _elementor_data stays empty, and
+    // the `empty( $elements )` guard never flips. That was the "critical error" on any
+    // page opened in the editor with nothing on it (v0.11.0–v0.19.4).
+    //
+    // The trap document throws if the elements are read from it, so the recursion can
+    // only come back as a failure here rather than as a white screen on the site.
+    require_once DCCS_DIR . 'includes/class-plugin.php';
+    $trapDoc = new class {
+        public function get_main_id() { return 123; }
+        public function get_elements_data() {
+            throw new \RuntimeException('after_save handler re-entered get_elements_data()');
+        }
+    };
+    $plugin = \DCCS\Plugin::instance();
+    $selectorEl = [[
+        'elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => 'deadbee',
+        'settings' => ['share_design' => 'yes', 'design_name' => 'FromPayload', 'str_heading' => 'Payload'],
+    ]];
+
+    $threw = '';
+    try {
+        // The exact re-entrant call: convert_to_elementor()'s save([]).
+        $plugin->republish_designs($trapDoc, []);
+        // A settings-only save — also no 'elements' key.
+        $plugin->republish_designs($trapDoc, ['settings' => ['post_status' => 'publish']]);
+        // A real editor save carrying the tree.
+        $plugin->republish_designs($trapDoc, ['elements' => $selectorEl]);
+    } catch (\Throwable $e) {
+        $threw = $e->getMessage();
+    }
+    ok('after_save never reads elements off the document' . ($threw ? " [$threw]" : ''), $threw === '');
+
+    $reg4 = get_option(Selector_Widget::DESIGN_OPTION, []);
+    ok('after_save publishes from the payload Elementor passes', isset($reg4['FromPayload']));
+    ok('the published entry is scoped to the saved document', ($reg4['FromPayload']['post_id'] ?? null) === 123);
+
+    // An autosave is a draft; mirroring must follow the saved design, not the draft.
+    $plugin->republish_designs($trapDoc, [
+        'elements' => [[
+            'elType' => 'widget', 'widgetType' => 'dccs_selector', 'id' => 'deadbee',
+            'settings' => ['share_design' => 'yes', 'design_name' => 'FromAutosave'],
+        ]],
+        'settings' => ['post_status' => 'autosave'],
+    ]);
+    ok('autosaves do not publish a design', !isset(get_option(Selector_Widget::DESIGN_OPTION, [])['FromAutosave']));
+
+    // Elementor is not the only thing that can fire the action; a one-argument or
+    // non-array call must not be an ArgumentCountError/TypeError fatal.
+    $survived = true;
+    try {
+        $plugin->republish_designs($trapDoc);
+        $plugin->republish_designs($trapDoc, null);
+        $plugin->republish_designs(null, ['elements' => $selectorEl]);
+    } catch (\Throwable $e) {
+        $survived = false;
+    }
+    ok('a malformed after_save payload is ignored, not fatal', $survived);
+
     // ---- Site preset defaults (Preset_Defaults) --------------------------------
     require_once DCCS_DIR . 'includes/class-preset-defaults.php';
     require_once DCCS_DIR . 'includes/class-control-design-io.php';
