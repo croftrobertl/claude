@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.1
+Stable tag: 0.19.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,7 +80,17 @@ even when the widgets live on different pages:
 Unlike the mirror, this is a one-time snapshot — editing the Selector afterward does
 NOT change the copied Mini Entry, so you're free to adjust it per page.
 
-= Site preset for new widgets =
+= Site preset for new widgets (currently OFF) =
+
+**Status: disabled in 0.19.2.** Applying the preset is the only difference between
+0.18.0 and 0.19.x, and 0.19.x throws a fatal error in the Elementor editor on pages
+holding the widget, so the preset is switched off until that is diagnosed. The
+captured values are still in `includes/class-preset-defaults.php` and it can be turned
+back on with:
+
+    add_filter('dccs_preset_defaults_enabled', '__return_true');
+
+When enabled it works as follows.
 
 A freshly dropped Cottage Selector or Mini Entry already matches the site: the
 heading and intro, every question and answer label, the priority names, button
@@ -210,6 +220,17 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.2 =
+* Fixes a fatal error that broke the **Elementor editor** on pages containing the
+  widget (the front end was unaffected). The site preset introduced in 0.19.0 is the
+  only difference from 0.18.0, so applying it is switched off until the cause is
+  identified; control registration is now byte-for-byte what 0.18.0 did, which is the
+  last version whose editor was known good. Everything else from 0.18–0.19 is intact,
+  and saved widgets were never affected either way.
+* The captured preset itself is kept in `includes/class-preset-defaults.php` so it can
+  be switched back on once diagnosed:
+  `add_filter('dccs_preset_defaults_enabled', '__return_true');`
 
 = 0.19.1 =
 * **Critical fix.** 0.19.0 crashed the front end with "There has been a critical error

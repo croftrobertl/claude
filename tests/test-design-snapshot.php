@@ -202,6 +202,16 @@ namespace {
     require_once DCCS_DIR . 'includes/class-preset-defaults.php';
     require_once DCCS_DIR . 'includes/class-control-design-io.php';
     require_once DCCS_DIR . 'includes/class-mini-entry-widget.php';
+    // The preset is currently DISABLED (see Preset_Defaults::enabled()) pending
+    // diagnosis of the Elementor-editor fatal, so apply() must be a pure no-op and
+    // control registration must match 0.18.0 exactly.
+    ok('preset is disabled by default', \DCCS\Preset_Defaults::enabled() === false);
+    ok('apply() is a no-op while disabled',
+        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory']) === ['default' => 'Factory']);
+    ok('apply() adds nothing to a bare control while disabled',
+        \DCCS\Preset_Defaults::apply('color_accent', []) === []);
+    ok('group_fields() is empty while disabled', \DCCS\Preset_Defaults::group_fields('chip_typography') === []);
+
     $preset = \DCCS\Preset_Defaults::map();
     ok('preset defines a non-trivial set of defaults', count($preset) > 50);
     ok('preset carries the site heading + palette',
@@ -232,12 +242,10 @@ namespace {
 
     // apply() must override an inline default (the factory strings) but leave
     // unrelated controls untouched.
-    $applied = \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Find your perfect cottage']);
-    ok('preset overrides a factory inline default', $applied['default'] === 'Cottage Wizard');
-    $untouched = \DCCS\Preset_Defaults::apply('some_other_control', ['default' => 'keep me']);
-    ok('preset leaves non-preset controls alone', $untouched['default'] === 'keep me');
-    ok('group-control presets are exposed as fields_options',
-        (\DCCS\Preset_Defaults::group_fields('chip_typography')['text_transform']['default'] ?? null) === 'capitalize');
+    // The map itself is kept intact so the preset can be re-enabled once the editor
+    // fatal is diagnosed; only its APPLICATION is switched off.
+    ok('map still holds the captured site wording', ($preset['str_q_desk'] ?? null) === 'Do you need a computer desk?');
+    ok('map still holds the captured icons', is_array($preset['icon_submit'] ?? null));
 
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);

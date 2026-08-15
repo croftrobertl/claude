@@ -141,6 +141,10 @@ final class Preset_Defaults
      */
     public static function group_fields(string $group): array
     {
+        if (!self::enabled()) {
+            return [];
+        }
+
         $map = [
             'chip_typography' => [
                 'typography'     => ['default' => 'custom'],
@@ -169,11 +173,38 @@ final class Preset_Defaults
      */
     public static function apply(string $id, array $args): array
     {
+        if (!self::enabled()) {
+            return $args;
+        }
+
         $map = self::map();
         if (array_key_exists($id, $map)) {
             $args['default'] = $map[$id];
         }
 
         return $args;
+    }
+
+    /**
+     * Master switch for the preset.
+     *
+     * DISABLED pending diagnosis: applying the preset is the only change between
+     * 0.18.0 (whose Elementor editor worked) and 0.19.x (whose editor throws a fatal
+     * on the page holding the widgets, while the front end renders fine). With this
+     * off, control registration is byte-for-byte what 0.18.0 did, which restores the
+     * editor; saved widgets were already unaffected either way.
+     *
+     * Re-enable once the fatal is understood, either by flipping this default back or
+     * from the theme's functions.php:
+     *
+     *     add_filter('dccs_preset_defaults_enabled', '__return_true');
+     */
+    public static function enabled(): bool
+    {
+        $enabled = false;
+
+        return function_exists('apply_filters')
+            ? (bool) apply_filters('dccs_preset_defaults_enabled', $enabled)
+            : $enabled;
     }
 }
