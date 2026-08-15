@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.3
+Stable tag: 0.19.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -220,6 +220,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.4 =
+* Fixes the **duplicate "Dora Canal Court" category** in the Elementor widget panel.
+  The Cottage Selector and Mini Entry sat in a second section with the same name as
+  the one holding DCC Availability Calendar, DCC Guest Guide, and Features &
+  Amenities. Elementor groups the panel by category *slug*, not by the displayed
+  title, and 0.17.1 had changed this plugin's slug to a prettier `dora-canal-court`
+  while the sibling plugins kept `claude-code` — identical titles, two sections.
+  Both widgets are back on the shared `claude-code` slug, so all five now appear
+  under one "Dora Canal Court" heading. The displayed title is unchanged.
+* Category slugs only drive grouping in the editor panel, so widgets already placed
+  on pages are unaffected — nothing needs to be re-added or restyled.
 
 = 0.19.3 =
 * The "Edit Answers" and "Restart" buttons under the results list were 40px tall —

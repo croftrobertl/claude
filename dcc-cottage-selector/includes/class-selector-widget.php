@@ -47,7 +47,8 @@ class Selector_Widget extends Widget_Base
 
     public function get_categories(): array
     {
-        return ['dora-canal-court'];
+        // Shared with the other DCC plugins — see Plugin::register_category().
+        return ['claude-code'];
     }
 
     public function get_keywords(): array
