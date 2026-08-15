@@ -1,0 +1,483 @@
+/* Dora Canal Cottage Selector — mobile-first styles.
+   Custom-property driven; doubled-class selectors (.dccs-root.dccs-root) reach
+   (0,4,0) specificity to survive the Bravada Elementor-kit resets. Style
+   controls are override-only — the baked look lives here. */
+
+.dccs-root.dccs-root {
+  --dccs-accent: #0f6dbf;
+  --dccs-accent-2: #f08080;
+  --dccs-accent-text: #ffffff;
+  --dccs-surface: #ffffff;
+  --dccs-bg: #f6f8fb;
+  --dccs-text: #1a2330;
+  --dccs-muted: #5b6675;
+  --dccs-border: #dfe5ec;
+  --dccs-radius: 12px;
+  --dccs-gap: 10px;
+  --dccs-good: #2e9e6b;
+  --dccs-diff: #fff4e0;
+  /* Navigation / action buttons (Next, Back, Edit answers, Restart, See matches)
+     use a distinct green by default so they read differently from the accent-blue
+     answer selections. Overridden by the global "Button background" control. */
+  --dccs-action: #1f7a54;
+
+  box-sizing: border-box;
+  color: var(--dccs-text);
+  background: var(--dccs-bg);
+  padding: 16px;
+  border-radius: var(--dccs-radius);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.dccs-root.dccs-root *,
+.dccs-root.dccs-root *::before,
+.dccs-root.dccs-root *::after { box-sizing: border-box; }
+
+/* Optional: inherit the site/Elementor global palette (matches sibling plugins'
+   .gguide-inherit-theme / .mphbac-inherit-theme), falling back to the baked
+   brand colors when the theme doesn't define globals. */
+.dccs-root.dccs-root.dccs-inherit-theme {
+  --dccs-accent: var(--e-global-color-primary, #0f6dbf);
+  --dccs-accent-2: var(--e-global-color-secondary, #f08080);
+  --dccs-text: var(--e-global-color-text, #1a2330);
+}
+
+/* Screen-reader-only live region. */
+.dccs-root.dccs-root .dccs-sr-only {
+  position: absolute !important; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+.dccs-root.dccs-root .dccs-head { margin-bottom: 14px; text-align: var(--dccs-align, center); }
+.dccs-root.dccs-root .dccs-heading { margin: 0 0 6px; font-size: 1.4rem; line-height: 1.2; }
+.dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
+.dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
+
+/* Landing / start screen — heading + intro + the three mode choices. */
+.dccs-root.dccs-root .dccs-landing { text-align: var(--dccs-align, center); }
+.dccs-root.dccs-root .dccs-landing-choices {
+  display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 18px auto 0;
+}
+.dccs-root.dccs-root .dccs-landing-choice {
+  display: flex; align-items: center; justify-content: center; gap: 0.5em; width: 100%;
+  min-height: 56px; padding: 14px 20px; cursor: pointer; text-transform: none;
+  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
+  color: var(--dccs-text); font-weight: 700; font-size: 1.05rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.dccs-root.dccs-root .dccs-landing-choice:hover,
+.dccs-root.dccs-root .dccs-landing-choice:focus-visible {
+  border-color: var(--dccs-accent); background: var(--dccs-btn-bg-hover, var(--dccs-bg)); transform: translateY(-1px);
+}
+
+/* Match-count pill + chips */
+.dccs-root.dccs-root .dccs-count {
+  font-weight: 700; color: var(--dccs-accent); font-size: 0.95rem;
+  margin: 0 0 12px; padding: 6px 12px; border-radius: 999px;
+  background: rgba(15,109,191,0.1); display: inline-block;
+}
+.dccs-root.dccs-root .dccs-count-note {
+  margin: -6px 0 12px; font-size: 0.85rem; color: var(--dccs-muted, #6b7280);
+}
+
+.dccs-root.dccs-root .dccs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Mode switcher (dropdown) ---- */
+.dccs-root.dccs-root .dccs-modeselect { position: relative; max-width: 340px; margin: 0 auto 16px; }
+.dccs-root.dccs-root .dccs-modeselect-trigger {
+  width: 100%; min-height: 46px; padding: 10px 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--dccs-border); border-radius: 999px; background: var(--dccs-btn-bg, var(--dccs-surface));
+  color: var(--dccs-text); font-weight: 700; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+}
+.dccs-root.dccs-root .dccs-caret { font-size: 0.8em; color: var(--dccs-muted); }
+.dccs-root.dccs-root .dccs-modeselect-list {
+  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
+  background: var(--dccs-btn-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border); border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(20,28,40,0.18);
+  /* Cap height + scroll so the menu can't run off a short viewport (overflow:auto
+     still clips children to the rounded panel). */
+  max-height: min(60vh, 320px); overflow-y: auto;
+}
+.dccs-root.dccs-root .dccs-modeselect.is-open .dccs-modeselect-list { display: block; }
+.dccs-root.dccs-root .dccs-modetab {
+  display: block; width: 100%; text-align: var(--dccs-menu-align, center); min-height: 46px; padding: 12px 16px; cursor: pointer;
+  border: 0; background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text)); font-weight: 600; font-size: 0.95rem; text-transform: none; line-height: 1.2;
+}
+.dccs-root.dccs-root .dccs-modetab + .dccs-modetab { border-top: 1px solid var(--dccs-border); }
+.dccs-root.dccs-root .dccs-modetab.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); }
+
+/* ---- Wizard ---- */
+.dccs-root.dccs-root .dccs-wizard { display: flex; flex-direction: column; min-height: 300px; }
+.dccs-root.dccs-root .dccs-progress-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;
+}
+.dccs-root.dccs-root .dccs-progress-label { font-weight: 600; color: var(--dccs-muted); font-size: 0.9rem; }
+.dccs-root.dccs-root .dccs-nav-spacer { flex: 0 0 auto; }
+
+/* Clickable stepper dots — buttons and spans must render identically (the theme
+   inflates bare buttons, so reset them hard and change colour only, not size). */
+.dccs-root.dccs-root .dccs-stepper { display: flex; gap: 6px; margin-bottom: 18px; align-items: center; }
+.dccs-root.dccs-root .dccs-step-dot {
+  display: block; flex: 1 1 0; height: var(--dccs-dot-h, 6px); min-height: 0; padding: 0; margin: 0; border: 0;
+  border-radius: 999px; background: var(--dccs-border); box-shadow: none; -webkit-appearance: none; appearance: none; cursor: default;
+}
+.dccs-root.dccs-root button.dccs-step-dot { cursor: pointer; font-size: 0; line-height: 0; }
+/* Bravada resets <button> at (0,3,1) with min-height:44px; the completed dots are
+   buttons, so restate the bar geometry at (0,4,1) to keep them thin like the spans. */
+.dccs-root.dccs-root .dccs-stepper button.dccs-step-dot {
+  height: var(--dccs-dot-h, 6px); min-height: 0; padding: 0; flex: 1 1 0;
+}
+.dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.5; }
+
+.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; text-align: var(--dccs-question-align, center); }
+.dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
+.dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; align-items: center; }
+.dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
+  width: 100%; min-height: 52px; font-size: 1.05rem; font-weight: 600;
+  text-align: var(--dccs-answer-align, center); padding: 12px 18px;
+}
+/* Optional leading icon/emoji on buttons, answers and badges (admin-set in Elementor).
+   inline-flex keeps it on the text baseline so the parent's text-align still centers. */
+.dccs-root.dccs-root .dccs-ico { display: inline-flex; align-items: center; line-height: 0; margin-inline-end: 0.45em; vertical-align: -0.1em; }
+/* Side modifiers: the icon sits before (left) or after (right) the label. */
+.dccs-root.dccs-root .dccs-ico-left { margin-inline-end: 0.45em; margin-inline-start: 0; }
+.dccs-root.dccs-root .dccs-ico-right { margin-inline-start: 0.45em; margin-inline-end: 0; }
+.dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
+.dccs-root.dccs-root .dccs-ico:empty { display: none; }
+
+/* Motion: smooth hover transitions + a subtle lift on the action buttons. */
+.dccs-root.dccs-root .dccs-primary,
+.dccs-root.dccs-root .dccs-chip,
+.dccs-root.dccs-root .dccs-reset,
+.dccs-root.dccs-root .dccs-see-matches,
+.dccs-root.dccs-root .dccs-edit-answers,
+.dccs-root.dccs-root .dccs-modetab,
+.dccs-root.dccs-root .dccs-modeselect-trigger,
+.dccs-root.dccs-root .dccs-cmp-option,
+.dccs-root.dccs-root .dccs-view {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.dccs-root.dccs-root .dccs-primary:hover,
+.dccs-root.dccs-root .dccs-reset:hover,
+.dccs-root.dccs-root .dccs-see-matches:hover,
+.dccs-root.dccs-root .dccs-edit-answers:hover { transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .dccs-root.dccs-root * { transition: none !important; }
+  .dccs-root.dccs-root .dccs-primary:hover,
+  .dccs-root.dccs-root .dccs-reset:hover,
+  .dccs-root.dccs-root .dccs-see-matches:hover,
+  .dccs-root.dccs-root .dccs-landing-choice:hover,
+  .dccs-root.dccs-root .dccs-edit-answers:hover { transform: none; }
+}
+
+/* Consistent keyboard focus ring (Bravada strips default outlines on buttons). */
+.dccs-root.dccs-root .dccs-chip:focus-visible,
+.dccs-root.dccs-root .dccs-primary:focus-visible,
+.dccs-root.dccs-root .dccs-reset:focus-visible,
+.dccs-root.dccs-root .dccs-see-matches:focus-visible,
+.dccs-root.dccs-root .dccs-edit-answers:focus-visible,
+.dccs-root.dccs-root .dccs-view:focus-visible,
+.dccs-root.dccs-root .dccs-open-compare:focus-visible,
+.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
+.dccs-root.dccs-root .dccs-modetab:focus-visible,
+.dccs-root.dccs-root .dccs-landing-choice:focus-visible,
+.dccs-root.dccs-root .dccs-matrix-nav button:focus-visible,
+.dccs-modal .dccs-modal-close:focus-visible {
+  outline: 2px solid var(--dccs-accent); outline-offset: 2px;
+}
+
+/* Paired button rows never wrap: each button takes half the width and shrinks,
+   with long labels wrapping to two lines inside the button. */
+.dccs-root.dccs-root .dccs-wizard-nav {
+  display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch; justify-content: space-between; margin-top: auto; padding-top: 18px;
+}
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next,
+.dccs-root.dccs-root .dccs-nav-spacer { flex: 1 1 0; min-width: 0; }
+/* Keep the short Back/Next labels on one line at every step. Without this they inherit
+   overflow-wrap:anywhere from .dccs-primary and, at a hair-narrow 50% column, "← Back"
+   can break onto two lines on a single step — making that step's buttons taller than
+   the rest. nowrap guarantees identical button height across all steps. */
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
+.dccs-root.dccs-root .dccs-wizard-nav .dccs-next {
+  white-space: nowrap; overflow-wrap: normal; word-break: keep-all;
+}
+/* Tail / review nav: two equal buttons on one row, styled like the cottage CTA. */
+.dccs-root.dccs-root .dccs-tail-nav { flex-wrap: nowrap; }
+.dccs-root.dccs-root .dccs-edit-answers,
+.dccs-root.dccs-root .dccs-see-matches,
+.dccs-root.dccs-root .dccs-reset {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
+  background: var(--dccs-btn-bg, var(--dccs-action)); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.9rem; text-transform: none; line-height: 1.2;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.dccs-root.dccs-root .dccs-primary {
+  min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--dccs-btn-bg, var(--dccs-action)); color: var(--dccs-accent-text); font-weight: 700; font-size: 1rem;
+  box-shadow: 0 6px 16px rgba(20,28,40,0.18);
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
+}
+.dccs-root.dccs-root .dccs-primary[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* Review list */
+.dccs-root.dccs-root .dccs-review-list { list-style: none; margin: 0 0 4px; padding: 0; }
+.dccs-root.dccs-root .dccs-review-list li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--dccs-border);
+}
+.dccs-root.dccs-root .dccs-review-q { flex: 1 1 40%; font-weight: 600; }
+.dccs-root.dccs-root .dccs-review-a { flex: 1 1 30%; color: var(--dccs-muted); }
+.dccs-root.dccs-root .dccs-edit {
+  margin-left: auto; min-height: 44px; padding: 4px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dccs-border); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-size: 0.85rem; font-weight: 600;
+}
+
+/* Results head + open-compare button */
+.dccs-root.dccs-root .dccs-results-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+/* Main compare CTA: full 48px like the wizard's primary buttons (it deliberately
+   does NOT share the shrunken tail-button sizing — it's a primary action). */
+.dccs-root.dccs-root .dccs-open-compare {
+  min-height: 48px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent); font-weight: 700; font-size: 0.95rem;
+}
+.dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
+/* Compare mode: the button that opens the comparison popup, centred under the checklist. */
+.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
+/* On the results screen the same button sits below the cards (where the recap used to be),
+   separated from the cards above and the edit/restart nav below. */
+.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; }
+
+/* "What it misses" tags */
+.dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dccs-root.dccs-root .dccs-miss {
+  background: rgba(240,128,128,0.18); color: #a8322e; border: 1px solid rgba(240,128,128,0.5);
+  border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600;
+}
+.dccs-root.dccs-root .dccs-chip {
+  min-height: 44px; padding: 8px 16px; border-radius: 999px;
+  border: 1px solid var(--dccs-border); background: var(--dccs-surface);
+  color: var(--dccs-text); cursor: pointer; font-size: 0.95rem; line-height: 1.1;
+}
+.dccs-root.dccs-root .dccs-chip.is-active {
+  background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent);
+}
+
+/* Compare — an always-visible cottage checklist (no tap-to-open dropdown), so the
+   "Compare" button below it is never hidden. Big rows + checkboxes for easy tapping.
+   The list is capped near ~5 rows so it scrolls. Native scrollbars auto-hide (and iOS
+   ignores ::-webkit-scrollbar styling), so we hide the native bar and draw our own
+   always-visible high-contrast bar (.dccs-cmp-bar) positioned by JS — that way guests
+   can always see there are more cottages than fit. */
+.dccs-root.dccs-root .dccs-cmp-scroller { position: relative; margin: 0 auto 12px; max-width: 100%; }
+.dccs-root.dccs-root .dccs-cmp-list {
+  max-height: 264px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--dccs-border); border-radius: 14px; background: var(--dccs-btn-bg, var(--dccs-surface));
+  box-shadow: 0 2px 8px rgba(20, 28, 40, 0.06);
+  scrollbar-width: none; /* Firefox: hide native, we draw our own */
+}
+.dccs-root.dccs-root .dccs-cmp-list::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* Custom always-visible scrollbar track + thumb, overlaid on the list's right edge. */
+.dccs-root.dccs-root .dccs-cmp-bar {
+  position: absolute; top: 8px; bottom: 8px; right: 6px; width: 12px;
+  border-radius: 999px; background: var(--dccs-bg); border: 1px solid var(--dccs-border);
+}
+.dccs-root.dccs-root .dccs-cmp-bar-thumb {
+  position: absolute; left: 1px; right: 1px; top: 0; min-height: 34px;
+  border-radius: 999px; background: var(--dccs-accent); cursor: grab; touch-action: none;
+}
+.dccs-root.dccs-root .dccs-cmp-bar-thumb:active { cursor: grabbing; }
+.dccs-root.dccs-root .dccs-cmp-option {
+  display: flex; align-items: center; gap: 12px; padding: 12px 26px 12px 16px; min-height: 50px; cursor: pointer;
+  border-bottom: 1px solid var(--dccs-border); font-size: 0.98rem; text-transform: none;
+  overflow-wrap: anywhere;
+  background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
+}
+.dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
+.dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+/* Plain-language "the list scrolls" cue above the checklist. */
+.dccs-root.dccs-root .dccs-cmp-count { margin: 0 0 6px; font-size: 0.88rem; color: var(--dccs-muted); text-align: center; }
+/* Hint shown under the Compare button while fewer than 2 cottages are ticked. */
+.dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
+
+/* Default hover/focus feedback for both dropdown menus. Kept at low specificity so
+   the Elementor hover controls (which carry the {{WRAPPER}} prefix) always win. */
+.dccs-root.dccs-root .dccs-modeselect-trigger:hover { border-color: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-modetab:hover,
+.dccs-root.dccs-root .dccs-modetab:focus-visible,
+.dccs-root.dccs-root .dccs-cmp-option:hover,
+.dccs-root.dccs-root .dccs-cmp-option:focus-within {
+  background: var(--dccs-item-bg-hover, var(--dccs-bg));
+  color: var(--dccs-item-text-hover, var(--dccs-item-text, var(--dccs-text)));
+}
+/* Keep the selected mode pill on its accent colour when hovered (unless overridden). */
+.dccs-root.dccs-root .dccs-modetab.is-active:hover,
+.dccs-root.dccs-root .dccs-modetab.is-active:focus-visible {
+  background: var(--dccs-accent); color: var(--dccs-accent-text);
+}
+
+/* "Button background (hover)" override for every button + menu trigger. When unset it
+   falls through to the normal button background, so the baked look is unchanged; a set
+   value recolors all of them. Per-button Style sections (View cottage, Edit answers)
+   carry the {{WRAPPER}} prefix and still win. Grouped by baked normal background. */
+.dccs-root.dccs-root .dccs-primary:hover,
+.dccs-root.dccs-root .dccs-primary:focus-visible,
+.dccs-root.dccs-root .dccs-reset:hover,
+.dccs-root.dccs-root .dccs-reset:focus-visible,
+.dccs-root.dccs-root .dccs-see-matches:hover,
+.dccs-root.dccs-root .dccs-see-matches:focus-visible,
+.dccs-root.dccs-root .dccs-edit-answers:hover,
+.dccs-root.dccs-root .dccs-edit-answers:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-action)));
+}
+.dccs-root.dccs-root .dccs-view:hover,
+.dccs-root.dccs-root .dccs-view:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-accent)));
+}
+.dccs-root.dccs-root .dccs-open-compare:hover,
+.dccs-root.dccs-root .dccs-open-compare:focus-visible,
+.dccs-root.dccs-root .dccs-edit:hover,
+.dccs-root.dccs-root .dccs-edit:focus-visible,
+.dccs-root.dccs-root .dccs-modeselect-trigger:hover,
+.dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-surface)));
+}
+
+/* Compare table — pinned attribute column + ‹ › paging */
+.dccs-root.dccs-root .dccs-matrix-nav { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; margin-bottom: 10px; }
+.dccs-root.dccs-root .dccs-matrix-nav button {
+  width: 32px; height: 32px; flex: 0 0 auto; padding: 0; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--dccs-accent); background: var(--dccs-accent); color: var(--dccs-accent-text); font-size: 18px; line-height: 1;
+}
+.dccs-root.dccs-root .dccs-matrix-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
+.dccs-root.dccs-root .dccs-matrix-pos { font-size: 0.85rem; font-weight: 600; color: var(--dccs-muted); white-space: nowrap; }
+.dccs-root.dccs-root .dccs-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.dccs-root.dccs-root .dccs-matrix { border-collapse: collapse; width: 100%; background: var(--dccs-surface); }
+.dccs-root.dccs-root .dccs-matrix th,
+.dccs-root.dccs-root .dccs-matrix td {
+  border: 1px solid var(--dccs-border); padding: 10px; text-align: left; font-size: 0.9rem; vertical-align: top;
+}
+.dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; font-size: 0.8rem; padding: 8px 6px; }
+.dccs-root.dccs-root .dccs-cmp-th-num { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
+.dccs-root.dccs-root .dccs-cmp-th-name { display: block; font-weight: 700; line-height: 1.2; }
+.dccs-root.dccs-root .dccs-matrix tbody th { position: sticky; left: 0; background: var(--dccs-surface); z-index: 1; }
+.dccs-root.dccs-root .dccs-matrix thead th.dccs-corner { left: 0; z-index: 3; background: var(--dccs-accent); }
+.dccs-root.dccs-root .dccs-matrix td.is-diff { background: var(--dccs-diff); font-weight: 600; }
+
+/* Results */
+.dccs-root.dccs-root .dccs-results { margin-top: 18px; }
+.dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; }
+.dccs-root.dccs-root .dccs-card {
+  background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border);
+  border-radius: var(--dccs-radius); padding: 14px; margin-bottom: 12px;
+}
+.dccs-root.dccs-root .dccs-card.is-highlight { border-color: var(--dccs-accent); box-shadow: 0 0 0 2px rgba(15,109,191,0.18); }
+.dccs-root.dccs-root .dccs-card-head h4 { margin: 0 0 8px; font-size: 1.05rem; }
+.dccs-root.dccs-root .dccs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dccs-root.dccs-root .dccs-badge {
+  background: rgba(15,109,191,0.1); color: var(--dccs-accent);
+  border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600;
+}
+.dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; }
+.dccs-root.dccs-root .dccs-dup { margin: 0 0 8px; font-size: 0.82rem; color: var(--dccs-muted); font-style: italic; }
+.dccs-root.dccs-root .dccs-card-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.dccs-root.dccs-root .dccs-view {
+  display: inline-block; min-height: 44px; line-height: 28px; padding: 8px 18px;
+  background: var(--dccs-btn-bg, var(--dccs-accent)); color: var(--dccs-accent-text);
+  border-radius: 999px; text-decoration: none; font-weight: 600;
+}
+/* "Add to compare" on result cards: min 44px tap area (was a 19px-tall strip —
+   the smallest target in the widget, hardest for less-dexterous guests to hit). */
+.dccs-root.dccs-root .dccs-cmp-toggle {
+  margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; min-height: 44px; padding: 6px 10px; border-radius: 10px;
+}
+.dccs-root.dccs-root .dccs-cmp-toggle input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+
+.dccs-root.dccs-root .dccs-empty {
+  background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);
+  border-radius: var(--dccs-radius); padding: 16px;
+}
+.dccs-root.dccs-root .dccs-empty h3 { margin: 0 0 6px; }
+
+.dccs-root.dccs-root .dccs-rank {
+  font-size: 0.78rem; font-weight: 700; color: var(--dccs-accent);
+  background: rgba(15,109,191,0.1); border-radius: 999px; padding: 2px 8px; vertical-align: middle;
+}
+
+.dccs-root.dccs-root .dccs-loading { color: var(--dccs-muted); padding: 20px; text-align: center; }
+.dccs-root.dccs-root .dccs-unavailable { color: var(--dccs-muted); padding: 16px; }
+.dccs-root.dccs-root .dccs-noscript ul,
+.dccs-root.dccs-root .dccs-noscript { margin: 0; }
+
+/* Mini entry */
+.dccs-entry.dccs-entry { margin: 12px 0; }
+.dccs-entry.dccs-entry .dccs-entry-btn {
+  display: inline-block; min-height: 44px; padding: 10px 18px; cursor: pointer;
+  border: 1px solid #0f6dbf; background: rgba(15,109,191,0.08); color: #0f6dbf;
+  border-radius: 999px; font-weight: 600; font-size: 0.95rem; line-height: 1.2;
+}
+
+/* Modal — constrained to the viewport with an internal scroll area */
+.dccs-modal {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(20,28,40,0.55);
+  display: flex; align-items: center; justify-content: center; padding: 12px;
+}
+.dccs-modal-box {
+  position: relative; width: 100%; max-width: 760px; margin: 0 auto;
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+/* min-height:0 lets the scroll area shrink inside the flex-column box so it scrolls
+   within the viewport instead of overflowing it. */
+.dccs-modal-content { overflow: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
+/* Body-level scope host for the Mini-Entry popup (see openModal): the overlay is its only,
+   fixed-positioned child, so the host adds no layout. */
+.dccs-modal-host { position: static; }
+/* The card must fill the box so the close button (pinned to the box) sits inside it. */
+.dccs-modal-content .dccs-in-modal { padding-top: 46px; max-width: none; margin: 0; }
+.dccs-modal .dccs-modal-close {
+  position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0;
+  width: 36px; height: 36px; border-radius: 999px; border: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--dccs-text) !important; color: var(--dccs-surface) !important; font-size: 22px; line-height: 1; cursor: pointer;
+  -webkit-appearance: none; appearance: none; box-shadow: none; -webkit-tap-highlight-color: transparent;
+}
+.dccs-modal-content .dccs-compare-modal { padding: 4px; }
+.dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }
+
+/* Inside the popup the mode-switcher panel must flow in the scrollable content. When
+   absolutely positioned it is laid out against its .dccs-modeselect parent, not the
+   scroll box, so it overflows the modal and gets clipped. Scoped with the doubled
+   .dccs-root so it outranks the base (0,3,0) dropdown rules. (The compare checklist is
+   already in-flow, so it needs no override here.) */
+.dccs-modal-content .dccs-root.dccs-root .dccs-modeselect-list {
+  position: static; transform: none; left: auto; right: auto; top: auto;
+  width: auto; min-width: 0; max-width: 100%; margin-top: 8px;
+  box-shadow: none; max-height: 50vh;
+}
+
+@media (min-width: 640px) {
+  .dccs-root.dccs-root { padding: 22px; }
+  .dccs-root.dccs-root .dccs-heading { font-size: 1.7rem; }
+}
+
+/* Small phones: stop the results header + compare button from cramping. */
+@media (max-width: 480px) {
+  .dccs-root.dccs-root .dccs-results-head { flex-direction: column; align-items: stretch; }
+  .dccs-root.dccs-root .dccs-open-compare { width: 100%; }
+  /* Tighter compare-table cells so more fits before horizontal scroll kicks in. */
+  .dccs-root.dccs-root .dccs-matrix th,
+  .dccs-root.dccs-root .dccs-matrix td { padding: 6px 5px; font-size: 0.82rem; }
+  .dccs-root.dccs-root .dccs-matrix thead th { font-size: 0.72rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dccs-root.dccs-root * { transition: none !important; animation: none !important; }
+}

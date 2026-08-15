@@ -1,2 +1,7 @@
 mphb-availability-calendar.zip
+dcc-cottage-selector.zip
+# Diagnostic/bisect builds (rebuildable from history, e.g. `git archive <tag>`).
+dcc-cottage-selector-*.zip
 .DS_Store
+node_modules/
+package-lock.json
