@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.2
+Stable tag: 0.19.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -220,6 +220,12 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.3 =
+* The "Edit Answers" and "Restart" buttons under the results list were 40px tall —
+  under the 44px minimum comfortable tap target on a phone. They are now 44px, matching
+  every other button in the widget. "See Matches" on the review step shares the same
+  rule and grows with them.
 
 = 0.19.2 =
 * Fixes a fatal error that broke the **Elementor editor** on pages containing the

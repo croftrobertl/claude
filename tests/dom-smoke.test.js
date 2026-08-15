@@ -816,8 +816,10 @@ function configWith(overrides) {
   ok('a distinct --dccs-action green is defined', /--dccs-action:\s*#/.test(css));
   ok('tail buttons fall back to --dccs-action (distinct from accent answers)',
     /\.dccs-edit-answers,[\s\S]*?\.dccs-reset\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-action\)\)/.test(css));
-  ok('tail buttons are smaller (min-height 40px, 0.9rem)',
-    /\.dccs-reset\s*\{[\s\S]*?min-height:\s*40px[\s\S]*?font-size:\s*0\.9rem/.test(css));
+  // Still visually secondary to .dccs-primary (48px / 1rem), but never below the
+  // 44px minimum tap target — the lighter weight now comes from the font size alone.
+  ok('tail buttons are secondary but still a 44px tap target',
+    /\.dccs-reset\s*\{[\s\S]*?min-height:\s*44px[\s\S]*?font-size:\s*0\.9rem/.test(css));
   ok('answer chips stay on the accent (not action) when selected',
     /\.dccs-chip\.is-active\s*\{[\s\S]*?var\(--dccs-accent\)/.test(css));
   ok('an editable Action button color control exists', /'color_action'[\s\S]{0,120}--dccs-action/.test(sel));

@@ -211,7 +211,7 @@
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset {
-  flex: 1 1 0; min-width: 0; min-height: 40px; padding: 8px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px; cursor: pointer; text-align: center;
   background: var(--dccs-btn-bg, var(--dccs-action)); color: var(--dccs-accent-text); font-weight: 600; font-size: 0.9rem; text-transform: none; line-height: 1.2;
   white-space: normal; overflow-wrap: anywhere;
 }
