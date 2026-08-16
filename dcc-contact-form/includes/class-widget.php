@@ -51,11 +51,16 @@ final class Widget extends Widget_Base
 
     public function get_script_depends(): array
     {
+        // IMPORTANT: this runs generically in the Elementor editor preview
+        // (enqueue_widgets_scripts) with NO placed-instance data, so
+        // get_settings_for_display() would receive null settings and fatal.
+        // Gate the reCAPTCHA dependency on the site-wide config only — it is
+        // harmless to register api.js whenever keys are present (the badge is
+        // hidden either way, and only forms with the toggle on actually call
+        // grecaptcha). The per-instance toggle still governs whether a token is
+        // required at submit time (enforced server-side in Form_Handler).
         $deps = ['dcc-contact-form'];
-        // Add Google's reCAPTCHA api.js only when this instance has the captcha
-        // enabled and the site keys are configured.
-        $settings = $this->get_settings_for_display();
-        if (($settings['spam_recaptcha'] ?? 'yes') === 'yes' && Settings::recaptcha_configured()) {
+        if (Settings::recaptcha_configured()) {
             $deps[] = 'dcc-recaptcha-api';
         }
         return $deps;

@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,13 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.0.1 =
+* Fix: opening any page in the Elementor editor failed with a 500 error.
+  Widget::get_script_depends() called get_settings_for_display(), which
+  Elementor invokes generically (with null settings) in the editor preview,
+  throwing a TypeError. The reCAPTCHA script dependency is now gated on the
+  site-wide key configuration only, never on per-instance settings.
 
 = 1.0.0 =
 * Initial release. Native Elementor widget, AJAX + non-JS submission, four-layer
