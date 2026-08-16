@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,17 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.0.2 =
+* Style: field labels now render true black (#000), overriding the theme's
+  default gray label color; the Elementor label-color control also defaults to
+  black.
+* Style: the submit button is no longer forced ALL-CAPS by the theme — it shows
+  the button text as authored ("Send Message"). Blue pill styling unchanged.
+* Style: Email + Phone reliably share one 50/50 row. The columns are now held by
+  max-width instead of a calc() flex-basis, which Safari/iOS ignored inside the
+  `flex` shorthand (causing the fields to stack full-width). Name and Message
+  remain full-width. No functional changes.
 
 = 1.0.1 =
 * Fix: opening any page in the Elementor editor failed with a 500 error.

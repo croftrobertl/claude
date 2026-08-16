@@ -382,6 +382,7 @@ final class Widget extends Widget_Base
         $this->add_control('label_color', [
             'label'     => __('Color', 'dcc-contact-form'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#000000',
             'selectors' => ['{{WRAPPER}} .dcc-label' => 'color: {{VALUE}};'],
         ]);
         $this->add_group_control(Group_Control_Typography::get_type(), [
