@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.5
+Stable tag: 0.19.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,17 +80,18 @@ even when the widgets live on different pages:
 Unlike the mirror, this is a one-time snapshot — editing the Selector afterward does
 NOT change the copied Mini Entry, so you're free to adjust it per page.
 
-= Site preset for new widgets (currently OFF) =
+= Site preset for new widgets (ON) =
 
-**Status: still disabled, but exonerated.** 0.19.2 switched the preset off on the
-theory that it caused the Elementor editor fatal. It did not — 0.19.5 traced that
-crash to the design-mirroring save hook (see the changelog) and fixed it there. The
-preset stays off for one release only so the crash fix ships on its own. The captured
-values are in `includes/class-preset-defaults.php` and it can be turned back on with:
+**Status: on, since 0.19.6.** It was switched off in 0.19.2 on the theory that it
+caused the Elementor editor crash. It did not — 0.19.5 traced that crash to the
+design-mirroring save hook and fixed it there — so the preset is back on. If you ever
+want it off without reinstalling, add this to your theme's functions.php:
 
-    add_filter('dccs_preset_defaults_enabled', '__return_true');
+    add_filter('dccs_preset_defaults_enabled', '__return_false');
 
-When enabled it works as follows.
+Turning it off (or on) only affects widgets you add **afterward**: Elementor stores a
+widget's settings on the page and stored values always beat control defaults, so
+widgets already placed keep exactly the look they have.
 
 A freshly dropped Cottage Selector or Mini Entry already matches the site: the
 heading and intro, every question and answer label, the priority names, button
@@ -220,6 +221,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.19.6 =
+* **The site preset is back on.** Every preset setting and style captured in 0.19.0 —
+  the heading and intro, all questions and answer labels, priority names, button
+  labels, the eight Font Awesome icons, the full palette, the per-element colors
+  (mode switcher, chips, compare button, matrix header, progress) and the enabled
+  modes — is applied again to newly added widgets. 0.19.2 had switched it off on the
+  theory that it caused the Elementor editor crash; 0.19.5 proved otherwise by finding
+  and fixing the real cause in the design-mirroring save hook.
+* Widgets already on your pages are unaffected, as always: Elementor stores each
+  widget's settings on the page and stored values beat control defaults. The preset
+  only decides where a NEWLY dropped Selector or Mini Entry starts.
+* New guards so a hand-captured preset can't quietly break a control: the test suite
+  now checks every preset value against the type of the control it feeds (a color
+  string can't land on a slider, a slider array can't land on a color picker) and
+  confirms every preset drop-down value is one of that drop-down's own options. All
+  86 preset values pass.
 
 = 0.19.5 =
 * **Critical fix — the Elementor editor crash is solved.** Opening a page that had

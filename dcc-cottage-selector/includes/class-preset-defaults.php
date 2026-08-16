@@ -186,25 +186,30 @@ final class Preset_Defaults
     }
 
     /**
-     * Master switch for the preset.
+     * Master switch for the preset. ON since 0.19.6.
      *
-     * Still OFF, but NOT because of the editor fatal it was blamed for in 0.19.2.
-     * That fatal was diagnosed in 0.19.5: the 'elementor/document/after_save' handler
-     * in Plugin::republish_designs() recursed through Document::get_elements_data()
-     * whenever an EMPTY page was opened in the editor. It had been there since 0.11.0
-     * and had nothing to do with the preset — 0.19.2's reasoning ("the preset is the
-     * only change since 0.18.0") was mistaken because 0.18.0's editor had only ever
-     * been opened on pages that already had content.
+     * History, so nobody switches this off again for the wrong reason: 0.19.2 disabled
+     * the preset believing it caused a fatal in the Elementor editor. It did not. The
+     * real cause — found in 0.19.5 — was Plugin::republish_designs() recursing through
+     * Document::get_elements_data() whenever an EMPTY page was opened in the editor,
+     * a bug that had been present since 0.11.0. 0.19.2's reasoning ("the preset is the
+     * only change since 0.18.0") only looked right because 0.18.0's editor had never
+     * been opened on an empty page. With that fixed and confirmed on the live site, the
+     * preset is back on.
      *
-     * The preset is left off only so the recursion fix ships as a single, isolated
-     * change. Turn it back on either by flipping this default or, to try it without
-     * reinstalling, from the theme's functions.php:
+     * The genuine preset-related fatal was a different bug, fixed in 0.19.1: 0.19.0
+     * applied the preset by overriding Elementor's add_responsive_control() and
+     * add_group_control(), which are `final`. The preset now goes through this plugin's
+     * own preset_control()/preset_responsive_control()/preset_group_control() wrappers
+     * and touches no Elementor API; test-design-snapshot.php fails if that regresses.
      *
-     *     add_filter('dccs_preset_defaults_enabled', '__return_true');
+     * Can still be switched off site-side without reinstalling:
+     *
+     *     add_filter('dccs_preset_defaults_enabled', '__return_false');
      */
     public static function enabled(): bool
     {
-        $enabled = false;
+        $enabled = true;
 
         return function_exists('apply_filters')
             ? (bool) apply_filters('dccs_preset_defaults_enabled', $enabled)

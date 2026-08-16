@@ -61,11 +61,13 @@ namespace Elementor {
     class Widget_Base {
         public $__ctrls = [];
         public $__gfields = [];
-        public function add_control($id, array $args, $o = []) { $this->__ctrls[$id] = true; }
-        final public function add_responsive_control($id, array $args, $o = []) { $this->__ctrls[$id] = true; }
+        // The args are kept, not just the id, so the preset test can check each preset
+        // VALUE against the control TYPE it will be handed to.
+        public function add_control($id, array $args, $o = []) { $this->__ctrls[$id] = $args; }
+        final public function add_responsive_control($id, array $args, $o = []) { $this->__ctrls[$id] = $args; }
         final public function add_group_control($t, array $args = [], array $o = []) {
             foreach ((array) ($args['fields_options'] ?? []) as $f => $fa) {
-                $this->__gfields[($args['name'] ?? '') . '_' . $f] = true;
+                $this->__gfields[($args['name'] ?? '') . '_' . $f] = $fa;
             }
         }
         public function start_controls_section($i, $a = []) {} public function end_controls_section() {}
@@ -268,15 +270,20 @@ namespace {
     require_once DCCS_DIR . 'includes/class-preset-defaults.php';
     require_once DCCS_DIR . 'includes/class-control-design-io.php';
     require_once DCCS_DIR . 'includes/class-mini-entry-widget.php';
-    // The preset is currently DISABLED (see Preset_Defaults::enabled()) pending
-    // diagnosis of the Elementor-editor fatal, so apply() must be a pure no-op and
-    // control registration must match 0.18.0 exactly.
-    ok('preset is disabled by default', \DCCS\Preset_Defaults::enabled() === false);
-    ok('apply() is a no-op while disabled',
-        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory']) === ['default' => 'Factory']);
-    ok('apply() adds nothing to a bare control while disabled',
-        \DCCS\Preset_Defaults::apply('color_accent', []) === []);
-    ok('group_fields() is empty while disabled', \DCCS\Preset_Defaults::group_fields('chip_typography') === []);
+    // The preset is ON (0.19.6). It must actually reach the controls, and — because it
+    // OVERRIDES inline defaults by design — it must override them rather than defer.
+    ok('preset is enabled by default', \DCCS\Preset_Defaults::enabled() === true);
+    ok('apply() overrides an inline factory default',
+        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === 'Cottage Wizard');
+    ok('apply() seeds a control that had no default',
+        \DCCS\Preset_Defaults::apply('color_accent', [])['default'] === '#002E7A');
+    ok('apply() leaves the rest of the control args intact',
+        \DCCS\Preset_Defaults::apply('color_accent', ['label' => 'L', 'type' => 'color'])['label'] === 'L');
+    ok('apply() ignores a control the preset says nothing about',
+        \DCCS\Preset_Defaults::apply('not_in_preset', ['default' => 'keep']) === ['default' => 'keep']);
+    ok('group_fields() feeds typography groups',
+        (\DCCS\Preset_Defaults::group_fields('chip_typography')['typography']['default'] ?? null) === 'custom');
+    ok('group_fields() is empty for an unknown group', \DCCS\Preset_Defaults::group_fields('nope') === []);
 
     $preset = \DCCS\Preset_Defaults::map();
     ok('preset defines a non-trivial set of defaults', count($preset) > 50);
@@ -306,12 +313,64 @@ namespace {
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
 
-    // apply() must override an inline default (the factory strings) but leave
-    // unrelated controls untouched.
-    // The map itself is kept intact so the preset can be re-enabled once the editor
-    // fatal is diagnosed; only its APPLICATION is switched off.
     ok('map still holds the captured site wording', ($preset['str_q_desk'] ?? null) === 'Do you need a computer desk?');
     ok('map still holds the captured icons', is_array($preset['icon_submit'] ?? null));
+
+    // Now that the preset is live, every value is handed to Elementor as a control
+    // DEFAULT — so its SHAPE has to match what that control type expects. A colour
+    // string parked on a SLIDER (or a slider array on a COLOR) is not a PHP error; it
+    // surfaces as a broken or dead control in the editor panel, which is exactly the
+    // kind of damage a preset captured by hand can do. Check each value against the
+    // type of the control it targets.
+    $shapeOk = function ($type, $v) {
+        switch ($type) {
+            case 'color':
+            case 'text':
+            case 'textarea':
+            case 'wysiwyg':
+            case 'select':
+            case 'switcher':
+                return is_string($v);
+            case 'slider':
+                return is_array($v) && array_key_exists('size', $v) && array_key_exists('unit', $v);
+            case 'dimensions':
+                return is_array($v) && isset($v['unit'])
+                    && isset($v['top'], $v['right'], $v['bottom'], $v['left']);
+            case 'icons':
+                return is_array($v) && array_key_exists('value', $v) && array_key_exists('library', $v);
+            case 'select2':
+                return is_array($v) || is_string($v);
+            default:
+                return true;   // group fields and anything exotic: shape is the group's business
+        }
+    };
+    $badShape = [];
+    foreach ($preset as $key => $value) {
+        $args = $reg[$key] ?? null;
+        if (!is_array($args)) {
+            continue;   // group-control field; covered by the orphan check above
+        }
+        $type = (string) ($args['type'] ?? 'text');
+        if (!$shapeOk($type, $value)) {
+            $badShape[] = "$key($type)";
+        }
+    }
+    ok('every preset value matches its control type' . ($badShape ? ' [' . implode(', ', $badShape) . ']' : ''),
+        $badShape === []);
+
+    // A SELECT default that isn't one of its own options renders as a blank dropdown.
+    $badOption = [];
+    foreach ($preset as $key => $value) {
+        $args = $reg[$key] ?? null;
+        if (!is_array($args) || ($args['type'] ?? '') !== 'select' || !isset($args['options'])) {
+            continue;
+        }
+        if (!array_key_exists((string) $value, (array) $args['options'])) {
+            $badOption[] = $key;
+        }
+    }
+    ok('every preset SELECT value is one of that control\'s options'
+        . ($badOption ? ' [' . implode(', ', $badOption) . ']' : ''), $badOption === []);
 
     echo "\n$pass passed, $fail failed\n";
     exit($fail ? 1 : 0);
