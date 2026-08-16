@@ -1,5 +1,5 @@
 /**
- * DCC Checkout Customizations — checkout page behaviour (vanilla JS, no deps).
+ * DCC Custom Checkout — checkout page behaviour (vanilla JS, no deps).
  *
  * Part A (item 13) — keep "Cottage N:" on line 1, wrap the name below.
  * Part B (items 11/12/14) — tidy the required markers on every label.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall handler for DCC Checkout Customizations.
+ * Uninstall handler for DCC Custom Checkout.
  *
  * This plugin stores no options and creates no tables — it only adds CSS/JS and
  * hooks. The one thing it writes is per-booking dog info saved to `mphb_booking`

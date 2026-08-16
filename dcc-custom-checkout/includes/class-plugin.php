@@ -59,7 +59,7 @@ final class Plugin
         printf(
             '<div class="notice notice-error"><p>%s</p></div>',
             esc_html__(
-                'DCC Checkout Customizations requires the MotoPress Hotel Booking plugin to be active.',
+                'DCC Custom Checkout requires the MotoPress Hotel Booking plugin to be active.',
                 'dcc-checkout'
             )
         );

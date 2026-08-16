@@ -1,9 +1,9 @@
-=== DCC Checkout Customizations ===
+=== DCC Custom Checkout ===
 Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,11 @@ going live.
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.1 =
+* Renamed the plugin to "DCC Custom Checkout" (folder, main file, and display
+  name). No behaviour change. Internal prefixes (DCC_Checkout\, dcc_checkout_)
+  and text-domain (dcc-checkout) are unchanged.
 
 = 0.1.0 =
 * Initial build: Parts A–D. Pet-fee PHP drafted against MotoPress's documented
