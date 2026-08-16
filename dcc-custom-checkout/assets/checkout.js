@@ -36,7 +36,12 @@
     ready(init);
 
     function init() {
-        var root = document.querySelector('.mphb-checkout');
+        // The real MotoPress checkout container is the form itself,
+        // `.mphb_sc_checkout-form` (there is NO bare `.mphb-checkout` in this
+        // build). Fall back to the wrapper / legacy class defensively.
+        var root = document.querySelector('.mphb_sc_checkout-form') ||
+                   document.querySelector('.mphb_sc_checkout-wrapper') ||
+                   document.querySelector('.mphb-checkout');
         if (!root) {
             return;
         }
@@ -188,7 +193,9 @@
                 return;
             }
             inputs.push(el);
-            var row = el.closest('.mphb-checkout-field, .mphb-field, p, li, tr, div');
+            // Live: Guest-2 custom fields sit in the customer section, each
+            // wrapped like `.mphb-customer-*.mphb-text-control`.
+            var row = el.closest('.mphb-text-control, [class*="mphb-customer-"], .mphb-checkout-field, .mphb-field, p, li, tr, div');
             if (row && rows.indexOf(row) === -1) {
                 rows.push(row);
             }
@@ -445,12 +452,14 @@
     }
 
     // DCC-VERIFY: provisional — confirm against live MotoPress.
-    // Best-guess service-row wrapper. Class names are confirmed on staging;
-    // we prefer the outermost recognizable service container. If the markup
+    // Live map (v0.1.2): each service row is `.mphb_sc_checkout-service` inside
+    // the list `.mphb_sc_checkout-services-list`; hide the service item, not the
+    // bare input. The remaining fallbacks stay for resilience. If the markup
     // differs, adjust the selector list below (isolated: nothing else depends
     // on the internal structure, only on getting the right element to hide).
     function serviceRowWrapper(input) {
-        return input.closest('.mphb-services-list__item')
+        return input.closest('.mphb_sc_checkout-service')
+            || input.closest('.mphb_sc_checkout-services-list__item')
             || input.closest('.mphb-service')
             || input.closest('li')
             || input.closest('.mphb-checkout-field')
@@ -525,7 +534,7 @@
             var byFor = root.querySelector('label[for="' + esc(input.id) + '"]');
             if (byFor) { return byFor; }
         }
-        var wrap = input.closest('.dcc_checkout-pet__field, .mphb-checkout-field, .mphb-field, p, li, div');
+        var wrap = input.closest('.dcc_checkout-pet__field, .mphb-text-control, [class*="mphb-customer-"], .mphb-checkout-field, .mphb-field, p, li, div');
         if (wrap) {
             var inWrap = wrap.querySelector('label');
             if (inWrap) { return inWrap; }
@@ -562,9 +571,11 @@
     }
 
     function setupSubmit(root, validators) {
-        var form = root.closest('form') ||
-            document.querySelector('form.mphb_sc_checkout-form, form.mphb-checkout-form') ||
-            root.querySelector('form');
+        // `root` is normally the <form> itself (.mphb_sc_checkout-form).
+        var form = (root.tagName === 'FORM') ? root :
+            (root.closest('form') ||
+             document.querySelector('form.mphb_sc_checkout-form') ||
+             root.querySelector('form'));
         if (!form) {
             return;
         }

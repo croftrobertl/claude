@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,16 @@ going live.
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.2 =
+* Fix: the plugin scoped everything to `.mphb-checkout`, which does not exist in
+  this MotoPress build, so nothing applied. Re-scoped the CSS and the JS root to
+  the real checkout form `.mphb_sc_checkout-form`, and corrected the inner
+  selectors verified live: buttons (input.button / button.mphb-apply-coupon-code-button),
+  service rows (.mphb_sc_checkout-service in .mphb_sc_checkout-services-list),
+  guests select (select.mphb_sc_checkout-guests-chooser), guest-2 customer-field
+  wrappers (.mphb-text-control / .mphb-customer-*), and upload helper text.
+  No behaviour change to Parts B/C/D logic; Part D server hooks stay provisional.
 
 = 0.1.1 =
 * Renamed the plugin to "DCC Custom Checkout" (folder, main file, and display
