@@ -42,8 +42,11 @@ final class Pet_Service
         // Backstop validation, before MotoPress processes the checkout POST.
         add_action('wp_loaded', [$this, 'validate_submission'], 1);
 
+        // DCC-VERIFY: provisional — confirm against live MotoPress.
         // Persist the captured dog info to the booking. `mphb_booking_placed` is
         // the primary hook; extra candidates are harmless if they don't exist.
+        // Confirm which hook fires (and that it passes the Booking object) on a
+        // staging test booking, then trim this list to the real one.
         foreach (['mphb_booking_placed', 'mphb_booking_created', 'mphb_after_create_booking'] as $hook) {
             add_action($hook, [$this, 'save_booking_meta'], 10, 1);
         }
@@ -51,8 +54,10 @@ final class Pet_Service
         // Admin: surface the dog info on the booking edit screen.
         add_action('add_meta_boxes', [$this, 'add_meta_box']);
 
+        // DCC-VERIFY: provisional — confirm against live MotoPress.
         // Email: append the dog info to the booking notification. Candidate
-        // filters — whichever MotoPress/Notifier exposes will fire.
+        // filters — whichever MotoPress/Notifier exposes will fire. Confirm the
+        // real filter name + signature on staging, then trim to the real one.
         foreach (['mphb_email_message', 'mphb_booking_details_email', 'mphb_email_footer_text'] as $filter) {
             add_filter($filter, [$this, 'append_to_email'], 20, 2);
         }
@@ -127,6 +132,11 @@ final class Pet_Service
      * --------------------------------------------------------------------- */
 
     /**
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * Reads the dog fields from the just-submitted $_POST and stores them on the
+     * booking. Verify the hook delivers a Booking with getId() (or a raw ID) on
+     * staging; resolve_booking_id() already tolerates both.
+     *
      * @param mixed $booking A MotoPress Booking object (getId()) or a booking ID.
      */
     public function save_booking_meta($booking): void
@@ -229,6 +239,7 @@ final class Pet_Service
      * --------------------------------------------------------------------- */
 
     /**
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
      * Append the dog info to the notification email body. Registered against
      * several candidate MotoPress/Notifier filters; only the one that exists
      * fires. Reads the values from the just-submitted POST.

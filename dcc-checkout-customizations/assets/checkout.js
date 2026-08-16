@@ -444,8 +444,11 @@
         return root.querySelector('input[value="' + esc(String(id)) + '"]');
     }
 
+    // DCC-VERIFY: provisional — confirm against live MotoPress.
     // Best-guess service-row wrapper. Class names are confirmed on staging;
-    // we prefer the outermost recognizable service container.
+    // we prefer the outermost recognizable service container. If the markup
+    // differs, adjust the selector list below (isolated: nothing else depends
+    // on the internal structure, only on getting the right element to hide).
     function serviceRowWrapper(input) {
         return input.closest('.mphb-services-list__item')
             || input.closest('.mphb-service')
@@ -493,8 +496,11 @@
      * Shared helpers
      * ===================================================================== */
 
+    // DCC-VERIFY: provisional — confirm against live MotoPress.
     // Locate a Checkout Fields input/select by its numeric field ID. The exact
     // name/id pattern is confirmed on staging; we try the most specific first.
+    // If the addon's naming differs, tighten the selector list below (isolated:
+    // only the guest-2 lookup relies on this).
     function findFieldById(root, id) {
         var sels = [
             '[name="mphb_field_' + id + '"]',
