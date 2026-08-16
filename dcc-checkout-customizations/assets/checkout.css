@@ -1,0 +1,314 @@
+/**
+ * DCC Checkout Customizations — checkout page styling.
+ *
+ * Matches the "DCC Contact Form" look: Raleway, gold pill fields (2px #f4da62,
+ * 30px radius), blue pill buttons (#006bcf), black labels, centered field text.
+ *
+ * Everything is scoped to `.mphb-checkout`. Bravada's Elementor kit resets
+ * inputs/buttons at (0,3,1) specificity, so field/button rules use `!important`
+ * to win reliably without brittle selector stacking. Colours are kept as CSS
+ * custom properties so they can be retuned in one place.
+ */
+
+.mphb-checkout {
+    --dcc-gold: #f4da62;
+    --dcc-blue: #006bcf;
+    --dcc-blue-hover: #0059ac;
+    --dcc-label: #000000;
+    --dcc-required: #c62828;
+    --dcc-muted: #6b7280;
+    --dcc-field-radius: 30px;
+    --dcc-field-border: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 1/8 — Field & dropdown labels to solid black.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout label,
+.mphb-checkout .mphb-coupon-code-title,
+.mphb-checkout .mphb-booking-details-title,
+.mphb-checkout .mphb-room-details-title,
+.mphb-checkout .mphb-gateway-chooser label,
+.mphb-checkout .mphb-checkout-field label {
+    color: var(--dcc-label) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 10 — Centre the text inside inputs and selects (labels are centred).
+ * Item 4  — Give <select> the same gold pill as the text inputs, plus a
+ *           custom dropdown arrow so removing the native chrome looks intentional.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout input[type="text"],
+.mphb-checkout input[type="email"],
+.mphb-checkout input[type="tel"],
+.mphb-checkout input[type="number"],
+.mphb-checkout input[type="url"],
+.mphb-checkout input[type="date"],
+.mphb-checkout textarea,
+.mphb-checkout select {
+    text-align: center !important;
+    font-family: "Raleway", sans-serif;
+}
+
+.mphb-checkout select,
+.mphb-checkout select.mphb_checkout-guests-chooser {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: #ffffff !important;
+    border: var(--dcc-field-border) solid var(--dcc-gold) !important;
+    border-radius: var(--dcc-field-radius) !important;
+    /* Match the text inputs' vertical rhythm. */
+    height: auto !important;
+    min-height: 44px;
+    padding: 10px 40px 10px 20px !important; /* extra right padding for the arrow */
+    line-height: 1.3;
+    /* Custom caret (inline SVG data-URI — no external asset). */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23006bcf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>') !important;
+    background-repeat: no-repeat !important;
+    background-position: right 16px center !important;
+    background-size: 14px 14px !important;
+    /* Centre the selected value while leaving room for the caret. */
+    text-align: center;
+    text-align-last: center;
+}
+
+.mphb-checkout select::-ms-expand {
+    display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 5 — Buttons: kill the uppercase transform, keep the blue pill.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout button,
+.mphb-checkout input[type="submit"],
+.mphb-checkout .button,
+.mphb-checkout .mphb-coupon-apply,
+.mphb-checkout .mphb_sc_checkout-submit-button {
+    text-transform: none !important;
+    background-color: var(--dcc-blue) !important;
+    border-color: var(--dcc-blue) !important;
+    color: #ffffff !important;
+    border-radius: var(--dcc-field-radius) !important;
+    font-family: "Raleway", sans-serif;
+}
+
+.mphb-checkout button:hover,
+.mphb-checkout input[type="submit"]:hover,
+.mphb-checkout .button:hover,
+.mphb-checkout .mphb-coupon-apply:hover,
+.mphb-checkout .mphb_sc_checkout-submit-button:hover {
+    background-color: var(--dcc-blue-hover) !important;
+    border-color: var(--dcc-blue-hover) !important;
+    color: #ffffff !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 6 — Upload helper text was 20px/700, competing with "Total". Calm it.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout span.mphb-max-upload-file,
+.mphb-checkout .mphb-max-upload-file,
+.mphb-checkout .mphb-accepted-file-types,
+.mphb-checkout .mphb-file-field-description {
+    display: inline-block;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: var(--dcc-muted) !important;
+    line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 7 — Unify the four section headers (three were 25px/700, one 30.4px)
+ *          and underline all four.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout .mphb-booking-details-title,
+.mphb-checkout .mphb-room-number,
+.mphb-checkout .mphb-customer-details-title,
+.mphb-checkout .mphb-price-breakdown-title {
+    font-size: 25px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 9 — The file field's inner "Choose File" button has square corners and
+ *          gets clipped by the pill. Round its left corners to sit flush.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout input[type="file"] {
+    text-align: left !important; /* file inputs read better left-aligned */
+}
+
+.mphb-checkout input[type="file"]::file-selector-button {
+    border-top-left-radius: var(--dcc-field-radius) !important;
+    border-bottom-left-radius: var(--dcc-field-radius) !important;
+    border-top-right-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    margin-right: 12px;
+    padding: 8px 16px;
+    border: none;
+    background-color: var(--dcc-blue);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.mphb-checkout input[type="file"]::-webkit-file-upload-button {
+    border-top-left-radius: var(--dcc-field-radius) !important;
+    border-bottom-left-radius: var(--dcc-field-radius) !important;
+    border-top-right-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    margin-right: 12px;
+    padding: 8px 16px;
+    border: none;
+    background-color: var(--dcc-blue);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 13 — Keep "Cottage N:" on the first line and wrap the name below.
+ *           JS inserts a <br> after the colon; this just makes the cell wrap
+ *           cleanly and not stretch the layout.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout tr.mphb-price-breakdown-booking > td {
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+.mphb-checkout .dcc_checkout-cottage-label {
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+ * Part B — Required markers (items 11, 12, 14).
+ * The JS wraps the visible label text in .dcc_checkout-label-text (which carries
+ * the underline) and leaves the marker outside it, un-underlined and hugging the
+ * last letter.
+ * ------------------------------------------------------------------------- */
+.mphb-checkout abbr[title],
+.mphb-checkout abbr {
+    text-decoration: none !important;
+    cursor: default;
+    border-bottom: 0 !important;
+}
+
+.mphb-checkout .dcc_checkout-req,
+.mphb-checkout .required,
+.mphb-checkout abbr.required {
+    color: var(--dcc-required) !important;
+    text-decoration: none !important;
+    cursor: default;
+    font-weight: 700;
+    margin-left: 1px;
+}
+
+/* Only the visible words are underlined, never the marker or trailing space. */
+.mphb-checkout .dcc_checkout-label-text {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* Labels that already carried no underline shouldn't gain one. */
+.mphb-checkout label.dcc_checkout-no-underline .dcc_checkout-label-text {
+    text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Part C — Second-guest rows (hidden until 2 guests).
+ * ------------------------------------------------------------------------- */
+.dcc_checkout-guest2-hidden {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Part D — "Traveling with a dog?" pet block.
+ * ------------------------------------------------------------------------- */
+.dcc_checkout-pet {
+    margin: 18px 0;
+    padding: 16px 18px;
+    border: var(--dcc-field-border) solid var(--dcc-gold);
+    border-radius: 16px;
+    background: #fffdf5;
+}
+
+.dcc_checkout-pet__legend {
+    font-weight: 700;
+    color: var(--dcc-label);
+    margin: 0 0 10px;
+    display: block;
+}
+
+.dcc_checkout-pet__toggle {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.dcc_checkout-pet__toggle label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dcc_checkout-pet__fields {
+    margin-top: 14px;
+    display: grid;
+    gap: 12px;
+}
+
+.dcc_checkout-pet__fields.dcc_checkout-is-hidden {
+    display: none;
+}
+
+.dcc_checkout-pet__field label {
+    display: block;
+    color: var(--dcc-label);
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.dcc_checkout-pet__field input[type="text"],
+.dcc_checkout-pet__field select {
+    width: 100%;
+    text-align: center !important;
+    text-align-last: center;
+    border: var(--dcc-field-border) solid var(--dcc-gold) !important;
+    border-radius: var(--dcc-field-radius) !important;
+    background-color: #ffffff !important;
+    min-height: 44px;
+    padding: 10px 20px !important;
+}
+
+.dcc_checkout-pet__note {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--dcc-muted);
+}
+
+/* Invalid highlight shared by pet + guest-2 client validation. */
+.dcc_checkout-invalid input,
+.dcc_checkout-invalid select,
+input.dcc_checkout-invalid,
+select.dcc_checkout-invalid {
+    border-color: var(--dcc-required) !important;
+    box-shadow: 0 0 0 1px var(--dcc-required);
+}
+
+/* ---------------------------------------------------------------------------
+ * Error banner (shown after a server-side rejection redirect).
+ * ------------------------------------------------------------------------- */
+.dcc_checkout-error-banner {
+    margin: 0 0 20px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 2px solid var(--dcc-required);
+    background: #fdecea;
+    color: #611a15;
+    font-weight: 600;
+}
