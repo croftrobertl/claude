@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,8 +37,9 @@ Part C — Second guest, conditional on guest count
     and validated on submit. A server-side backstop blocks a 2-guest submission
     that leaves any of the three blank, so the client rule can't be bypassed.
 
-Part D — Cottage 34 pet flow + per-night pet fee (native MotoPress Services)
-  * Applies to Cottage 34 (accommodation type ID 1607) only.
+Part D — Pet flow + per-night pet fee (native MotoPress Services)
+  * Applies to the accommodations selected on the settings page (default:
+    Cottage 34, type ID 1607), and only when the pet fee is enabled.
   * The three native pet-service selectors are hidden and replaced by a
     "Traveling with a dog?" toggle (No default / Yes).
   * "Yes" reveals three required info fields: Dog type, Size, Hair length.
@@ -52,29 +53,37 @@ Part D — Cottage 34 pet flow + per-night pet fee (native MotoPress Services)
     that is missing the required info, or that attaches a pet service when the
     toggle said "No".
   * Dog type / Size / Hair are saved to booking meta (shown in a "Pet Details"
-    box on the admin booking screen) and appended to the notification email.
+    box on the admin booking screen) and exposed to emails via the tag
+    %dcc_dog_details% (add it to your MotoPress email template to include it).
+
+== Admin settings ==
+
+WP Admin → "DCC Custom Checkout":
+  * Enable pet fee — master on/off. When off, the dog toggle/fields never render
+    and no pet service is applied on any cottage.
+  * Applies to accommodations — multi-select of accommodation types (default
+    Cottage 34). The dog flow shows only for a booking whose accommodation is
+    selected here AND when the pet fee is enabled. Cottages whose three pet
+    Services aren't enabled in MotoPress are flagged (best-effort).
+  * Service IDs (17712/17711/14926) and night thresholds (2–6 / 7–29 / 30+),
+    global across all pet accommodations.
+
+Reminder: for each cottage added, the three pet-fee Services must also be enabled
+for that accommodation type in MotoPress (Bookings → Accommodation Types →
+cottage → Services).
 
 == Configuration (filters) ==
 
-All site-specific IDs/thresholds are filterable — no admin page:
+Settings above are stored in the option `dcc_checkout_settings`. Each value is
+also filterable for snippet-level overrides:
 
-  dcc_checkout_cottage_type_id      (default 1607)
+  dcc_checkout_pet_fee_enabled      (bool)
+  dcc_checkout_pet_accommodations   (int[]; default [1607])
   dcc_checkout_pet_service_ids      (default daily 17712 / weekly 17711 / monthly 14926)
   dcc_checkout_bucket_thresholds    (default min_daily 2 / min_weekly 7 / min_monthly 30)
-  dcc_checkout_guest2_field_ids     (default first 8312 / last 8313 / phone 8314)
+  dcc_checkout_guest2_field_names   (default mphb_guest2_first_name / _last_name / _phone)
   dcc_checkout_guests_selector      (default select[name^="mphb_room_details"][name*="[adults]"])
   dcc_checkout_page_id / dcc_checkout_is_checkout_page (enqueue detection overrides)
-
-== Staging verification (Part D) ==
-
-The exact MotoPress hook names for (a) reading reserved services, (b) forcing the
-bucket service server-side, and (c) saving booking meta / injecting email content
-vary by MotoPress version and are to be confirmed on staging against the installed
-build. They are wired defensively (candidate hooks that don't exist simply never
-fire). The reject-on-mismatch validation reads $_POST directly and does NOT depend
-on any MotoPress internal hook, so the anti-tamper safety property holds regardless.
-Verify + tune the pet-fee behaviour with real test bookings on Cottage 34 before
-going live.
 
 == Requirements ==
 
@@ -82,6 +91,24 @@ going live.
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.3 =
+* Fix (guest-2): target the fields by NAME (mphb_guest2_first_name/last_name/
+  phone) instead of by Checkout Fields post ID, which isn't in the markup. JS
+  hides/shows + requires the row (input.closest('.mphb-text-control')); PHP
+  enforces required-when-adults>=2 by reading the posted names.
+* Fix (dog-info save): the previous creation hooks did not exist. Now stash the
+  dog values on wp_loaded and persist to booking meta on the real creation hook
+  mphb_booking_create_before_set_status (+ mphb_create_booking_by_user fallback).
+* Fix (dog-info email): the previous email filters did not exist. Now register a
+  %dcc_dog_details% tag via mphb_email_booking_tags / mphb_email_booking_details_tags
+  and supply its value from booking meta via mphb_email_replace_tag.
+* New: admin settings page "DCC Custom Checkout" — enable pet fee on/off, choose
+  which accommodations it applies to (multi-select, default Cottage 34), and set
+  the service IDs + night thresholds. Config is now settings-backed (option
+  dcc_checkout_settings) with the same values still filterable.
+* Verified-live selectors from v0.1.2 retained; the styling, dog toggle, native
+  service ticking, and end-to-end pet fee are unchanged.
 
 = 0.1.2 =
 * Fix: the plugin scoped everything to `.mphb-checkout`, which does not exist in

@@ -183,19 +183,26 @@
             return null;
         }
 
-        var fieldIds = CFG.guest2FieldIds || [];
+        // Guest-2 fields are targeted by NAME (verified live):
+        // input[name="mphb_guest2_first_name|last_name|phone"], each inside a
+        // <p class="mphb-customer-guest2-* mphb-text-control">. The post ID is
+        // not in the markup.
+        var names = CFG.guest2FieldNames || [];
         var inputs = [];
         var rows = [];
 
-        fieldIds.forEach(function (id) {
-            var el = findFieldById(root, id);
-            if (!el) {
+        var candidates = Array.prototype.slice.call(
+            root.querySelectorAll('input[name^="mphb_guest2_"]')
+        );
+        // Keep only the configured names (defensive), else fall back to all
+        // mphb_guest2_* inputs found.
+        candidates.forEach(function (el) {
+            if (names.length && names.indexOf(el.name) === -1) {
                 return;
             }
             inputs.push(el);
-            // Live: Guest-2 custom fields sit in the customer section, each
-            // wrapped like `.mphb-customer-*.mphb-text-control`.
-            var row = el.closest('.mphb-text-control, [class*="mphb-customer-"], .mphb-checkout-field, .mphb-field, p, li, tr, div');
+            var row = el.closest('.mphb-text-control') ||
+                el.closest('[class*="mphb-customer-"], p, li, tr, div');
             if (row && rows.indexOf(row) === -1) {
                 rows.push(row);
             }
@@ -244,9 +251,26 @@
      * ===================================================================== */
 
     function setupPetFlow(root) {
+        // Master switch (admin setting). When off, nothing renders and no
+        // service is applied — the native MotoPress UI is left untouched.
+        if (!CFG.petFeeEnabled) {
+            return null;
+        }
+
         var ids = (CFG.serviceIdList || []).map(Number);
         if (!ids.length) {
             return null;
+        }
+
+        // Honor the configured accommodations list when the room-type id is
+        // discoverable in the form; otherwise fall back to native-service
+        // presence below (services only exist on pet accommodations anyway).
+        var petAcc = (CFG.petAccommodations || []).map(Number);
+        if (petAcc.length) {
+            var rts = getRoomTypeIds(root);
+            if (rts.length && !rts.some(function (id) { return petAcc.indexOf(id) !== -1; })) {
+                return null; // not a configured pet accommodation
+            }
         }
 
         // Locate the native service checkboxes for our three pet services.
@@ -451,12 +475,9 @@
         return root.querySelector('input[value="' + esc(String(id)) + '"]');
     }
 
-    // DCC-VERIFY: provisional — confirm against live MotoPress.
-    // Live map (v0.1.2): each service row is `.mphb_sc_checkout-service` inside
-    // the list `.mphb_sc_checkout-services-list`; hide the service item, not the
-    // bare input. The remaining fallbacks stay for resilience. If the markup
-    // differs, adjust the selector list below (isolated: nothing else depends
-    // on the internal structure, only on getting the right element to hide).
+    // Verified live (staging): each service row is `.mphb_sc_checkout-service`
+    // inside `.mphb_sc_checkout-services-list`; hide the service item, not the
+    // bare input. The remaining fallbacks stay for resilience across versions.
     function serviceRowWrapper(input) {
         return input.closest('.mphb_sc_checkout-service')
             || input.closest('.mphb_sc_checkout-services-list__item')
@@ -501,33 +522,20 @@
         return Date.UTC(+m[1], +m[2] - 1, +m[3]);
     }
 
+    // Accommodation (room type) IDs referenced by hidden inputs in the form.
+    function getRoomTypeIds(root) {
+        var out = [];
+        var els = root.querySelectorAll('input[name*="room_type_id"]');
+        Array.prototype.forEach.call(els, function (el) {
+            var v = parseInt(el.value, 10);
+            if (v) { out.push(v); }
+        });
+        return out;
+    }
+
     /* ===================================================================== *
      * Shared helpers
      * ===================================================================== */
-
-    // DCC-VERIFY: provisional — confirm against live MotoPress.
-    // Locate a Checkout Fields input/select by its numeric field ID. The exact
-    // name/id pattern is confirmed on staging; we try the most specific first.
-    // If the addon's naming differs, tighten the selector list below (isolated:
-    // only the guest-2 lookup relies on this).
-    function findFieldById(root, id) {
-        var sels = [
-            '[name="mphb_field_' + id + '"]',
-            '[name*="[' + id + ']"]',
-            '[name*="_' + id + '"]',
-            '#mphb_field_' + id,
-            '[id*="' + id + '"]',
-            '[name*="' + id + '"]'
-        ];
-        for (var i = 0; i < sels.length; i++) {
-            var el = null;
-            try { el = root.querySelector(sels[i]); } catch (e) { el = null; }
-            if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) {
-                return el;
-            }
-        }
-        return null;
-    }
 
     function findLabelFor(input, root) {
         if (input.id) {

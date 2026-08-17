@@ -37,20 +37,20 @@ final class Guest_Fields
             return;
         }
 
-        // If we can locate the three guest-2 field values and any is blank,
-        // block the booking. If the field names can't be found (MotoPress
-        // markup differs from what we expect), we defer to the client-side
-        // guard rather than risk a false rejection — this is verified on staging.
+        // Guest-2 fields are posted by NAME (verified live). Enforce required
+        // only for fields actually present in the POST — if the owner hasn't
+        // enabled them in Checkout Fields, they won't render or submit, and we
+        // must not reject on their absence.
         $missing_any = false;
         $found_any   = false;
 
-        foreach (Config::guest2_field_ids() as $field_id) {
-            $value = $this->find_posted_field_value((int) $field_id);
-            if ($value === null) {
-                continue; // Field key not located in this POST shape.
+        foreach (Config::guest2_field_names() as $name) {
+            if (!isset($_POST[$name])) {
+                continue; // Field not rendered / not submitted.
             }
             $found_any = true;
-            if (trim((string) $value) === '') {
+            $value     = sanitize_text_field(wp_unslash($_POST[$name])); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            if (trim($value) === '') {
                 $missing_any = true;
             }
         }
@@ -81,43 +81,5 @@ final class Guest_Fields
         };
         $walk(Checkout_Request::room_details());
         return $max;
-    }
-
-    /**
-     * Best-effort lookup of a Checkout Fields value by its numeric field ID.
-     *
-     * The addon submits custom fields under keys that embed the field ID
-     * (e.g. `mphb_field_8312` or `mphb[8312]`). We scan $_POST recursively for a
-     * key whose string form contains the ID and return the scalar leaf value.
-     * Returns null when no such key exists.
-     */
-    private function find_posted_field_value(int $field_id): ?string
-    {
-        $needle = (string) $field_id;
-        $result = null;
-
-        $walk = static function ($data, $parent_key = '') use (&$walk, &$result, $needle): void {
-            if ($result !== null || !is_array($data)) {
-                return;
-            }
-            foreach ($data as $key => $value) {
-                $key_str = (string) $key;
-                if (is_scalar($value) && strpos($key_str, $needle) !== false) {
-                    $result = (string) $value;
-                    return;
-                }
-                if (is_array($value)) {
-                    $walk($value, $key_str);
-                    if ($result !== null) {
-                        return;
-                    }
-                }
-            }
-        };
-
-        // Scan the full POST (custom fields may sit outside mphb_room_details).
-        $walk(wp_unslash($_POST)); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-
-        return $result === null ? null : sanitize_text_field($result);
     }
 }

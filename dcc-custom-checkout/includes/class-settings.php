@@ -1,0 +1,255 @@
+<?php
+namespace DCC_Checkout;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Admin settings page: "DCC Custom Checkout".
+ *
+ * Controls the pet-fee feature — master on/off, which accommodations it applies
+ * to, the three service IDs, and the night-bucket thresholds. Uses the WordPress
+ * Settings API; stores everything in the single option Config::OPTION.
+ */
+final class Settings
+{
+    private const MENU_SLUG   = 'dcc-custom-checkout';
+    private const GROUP       = 'dcc_checkout_settings_group';
+
+    public function register(): void
+    {
+        add_action('admin_menu', [$this, 'add_menu']);
+        add_action('admin_init', [$this, 'register_settings']);
+    }
+
+    public function add_menu(): void
+    {
+        add_menu_page(
+            __('DCC Custom Checkout', 'dcc-checkout'),
+            __('DCC Custom Checkout', 'dcc-checkout'),
+            'manage_options',
+            self::MENU_SLUG,
+            [$this, 'render_page'],
+            'dashicons-pets',
+            58
+        );
+    }
+
+    public function register_settings(): void
+    {
+        register_setting(self::GROUP, Config::OPTION, [
+            'type'              => 'array',
+            'sanitize_callback' => [$this, 'sanitize'],
+            'default'           => Config::defaults(),
+        ]);
+    }
+
+    /**
+     * Validate + normalize the posted settings into the stored shape.
+     *
+     * @param mixed $input
+     */
+    public function sanitize($input): array
+    {
+        $defaults = Config::defaults();
+        $input    = is_array($input) ? $input : [];
+        $out      = [];
+
+        $out['pet_fee_enabled'] = empty($input['pet_fee_enabled']) ? 0 : 1;
+
+        $acc = $input['pet_accommodations'] ?? [];
+        if (!is_array($acc)) {
+            $acc = [];
+        }
+        $out['pet_accommodations'] = array_values(array_unique(array_filter(array_map('intval', $acc))));
+        if (empty($out['pet_accommodations'])) {
+            $out['pet_accommodations'] = $defaults['pet_accommodations'];
+        }
+
+        foreach (['service_daily', 'service_weekly', 'service_monthly', 'min_daily', 'min_weekly', 'min_monthly'] as $key) {
+            $val       = isset($input[$key]) ? (int) $input[$key] : (int) $defaults[$key];
+            $out[$key] = $val > 0 ? $val : (int) $defaults[$key];
+        }
+
+        // Fresh reads should reflect the new values immediately.
+        Config::flush_cache();
+
+        return $out;
+    }
+
+    public function render_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        $s = Config::settings();
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__('DCC Custom Checkout', 'dcc-checkout'); ?></h1>
+
+            <form method="post" action="options.php">
+                <?php settings_fields(self::GROUP); ?>
+
+                <h2><?php echo esc_html__('Pet fee', 'dcc-checkout'); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php echo esc_html__('Enable pet fee', 'dcc-checkout'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="<?php echo esc_attr(Config::OPTION); ?>[pet_fee_enabled]" value="1" <?php checked(1, (int) $s['pet_fee_enabled']); ?> />
+                                <?php echo esc_html__('Show the "Traveling with a dog?" flow and apply the per-night pet fee.', 'dcc-checkout'); ?>
+                            </label>
+                            <p class="description"><?php echo esc_html__('When off, the dog toggle/fields never render and no pet service is applied on any cottage.', 'dcc-checkout'); ?></p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><?php echo esc_html__('Applies to accommodations', 'dcc-checkout'); ?></th>
+                        <td>
+                            <?php $this->render_accommodations_field($s['pet_accommodations']); ?>
+                            <p class="description">
+                                <?php echo esc_html__('The dog flow shows only when the booking\'s accommodation is selected here AND the pet fee is enabled. Default: Cottage 34.', 'dcc-checkout'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <h2><?php echo esc_html__('Services &amp; night buckets', 'dcc-checkout'); ?></h2>
+                <p class="description" style="max-width:640px">
+                    <?php echo esc_html__('These native MotoPress Service IDs are applied by length of stay. They are global across every pet accommodation. The fee itself (amount, taxed/untaxed) is configured on the Service in MotoPress — this plugin only ticks the right one.', 'dcc-checkout'); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <?php
+                    $this->number_row(__('Daily service ID', 'dcc-checkout'), 'service_daily', (int) $s['service_daily'], __('Applied for stays in the "daily" bucket.', 'dcc-checkout'));
+                    $this->number_row(__('Weekly service ID', 'dcc-checkout'), 'service_weekly', (int) $s['service_weekly'], '');
+                    $this->number_row(__('Monthly service ID', 'dcc-checkout'), 'service_monthly', (int) $s['service_monthly'], '');
+                    $this->number_row(__('Daily bucket: minimum nights', 'dcc-checkout'), 'min_daily', (int) $s['min_daily'], __('e.g. 2 → daily applies from 2 nights up to (weekly − 1).', 'dcc-checkout'));
+                    $this->number_row(__('Weekly bucket: minimum nights', 'dcc-checkout'), 'min_weekly', (int) $s['min_weekly'], '');
+                    $this->number_row(__('Monthly bucket: minimum nights', 'dcc-checkout'), 'min_monthly', (int) $s['min_monthly'], '');
+                    ?>
+                </table>
+
+                <?php submit_button(); ?>
+            </form>
+
+            <hr>
+            <h2><?php echo esc_html__('Reminder', 'dcc-checkout'); ?></h2>
+            <p style="max-width:640px">
+                <?php echo esc_html__('For every cottage you add above, the three pet-fee Services must also be enabled for that accommodation type in MotoPress: Bookings → Accommodation Types → (cottage) → Services. Without that, ticking the service has no effect for that cottage.', 'dcc-checkout'); ?>
+            </p>
+            <p style="max-width:640px">
+                <?php
+                echo esc_html__('To show the captured dog info in confirmation emails, add the tag %dcc_dog_details% to your MotoPress email template (Bookings → Settings → Emails). It is always visible on the booking edit screen regardless.', 'dcc-checkout');
+                ?>
+            </p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Multi-select of published mphb_room_type posts.
+     *
+     * @param int[] $selected
+     */
+    private function render_accommodations_field(array $selected): void
+    {
+        $selected = array_map('intval', $selected);
+        $rooms    = get_posts([
+            'post_type'      => 'mphb_room_type',
+            'post_status'    => 'publish',
+            'numberposts'    => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'suppress_filters' => false,
+        ]);
+
+        if (empty($rooms)) {
+            echo '<p>' . esc_html__('No accommodation types found.', 'dcc-checkout') . '</p>';
+            return;
+        }
+
+        echo '<select name="' . esc_attr(Config::OPTION) . '[pet_accommodations][]" multiple size="8" style="min-width:320px">';
+        foreach ($rooms as $room) {
+            $id      = (int) $room->ID;
+            $missing = $this->accommodation_missing_services($id);
+            $label   = $room->post_title . ' (#' . $id . ')';
+            if ($missing === true) {
+                /* translators: appended to a cottage name when the pet services aren't enabled on it. */
+                $label .= ' — ' . __('⚠ pet services not enabled', 'dcc-checkout');
+            }
+            printf(
+                '<option value="%d"%s>%s</option>',
+                $id,
+                selected(in_array($id, $selected, true), true, false),
+                esc_html($label)
+            );
+        }
+        echo '</select>';
+        echo '<p class="description">' . esc_html__('Hold Ctrl/Cmd to select multiple.', 'dcc-checkout') . '</p>';
+    }
+
+    private function number_row(string $label, string $key, int $value, string $desc): void
+    {
+        printf(
+            '<tr><th scope="row"><label for="dcc_%1$s">%2$s</label></th><td>'
+            . '<input type="number" min="0" step="1" id="dcc_%1$s" name="%3$s[%1$s]" value="%4$d" class="small-text" />',
+            esc_attr($key),
+            esc_html($label),
+            esc_attr(Config::OPTION),
+            (int) $value
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+        echo '</td></tr>';
+    }
+
+    /**
+     * Best-effort check: are all three pet Services enabled on this accommodation
+     * type? Returns true (missing), false (present), or null (couldn't determine).
+     *
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * MotoPress stores per-accommodation service enablement in a way that varies
+     * by version; we read the room type's own service list via the public API
+     * when available and never warn unless we can positively determine absence
+     * (so we can't produce a false alarm). Confirm the accessor on staging.
+     */
+    private function accommodation_missing_services(int $room_type_id): ?bool
+    {
+        $service_ids = Config::pet_service_id_list();
+        if (empty($service_ids) || !function_exists('MPHB')) {
+            return null;
+        }
+
+        try {
+            $repo = MPHB()->getRoomTypeRepository();
+            if (!$repo || !method_exists($repo, 'findById')) {
+                return null;
+            }
+            $room_type = $repo->findById($room_type_id);
+            if (!$room_type || !method_exists($room_type, 'getServices')) {
+                return null; // Can't read services → don't guess.
+            }
+            $enabled = [];
+            foreach ((array) $room_type->getServices() as $service) {
+                if (is_object($service) && method_exists($service, 'getId')) {
+                    $enabled[] = (int) $service->getId();
+                } elseif (is_numeric($service)) {
+                    $enabled[] = (int) $service;
+                }
+            }
+            if (empty($enabled)) {
+                return null; // Empty could mean "unreadable"; stay silent.
+            }
+            foreach ($service_ids as $sid) {
+                if (!in_array($sid, $enabled, true)) {
+                    return true; // At least one pet service is missing.
+                }
+            }
+            return false;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+}

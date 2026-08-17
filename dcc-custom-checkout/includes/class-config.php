@@ -6,37 +6,118 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Central, filterable configuration.
+ * Central configuration.
  *
- * Every site-specific ID or threshold lives here so the plugin never hard-codes
- * a magic number in business logic. Each value is exposed through a
- * `dcc_checkout_*` filter, so the owner can retune from a snippet without
- * editing the plugin.
+ * Values are read from the admin settings option (see Settings) merged over
+ * sensible defaults, and each is still exposed through a `dcc_checkout_*` filter
+ * so the owner can override from a snippet. Business logic never hard-codes a
+ * magic number — it calls a method here.
  */
 final class Config
 {
+    /** Option key the Settings page writes to. */
+    public const OPTION = 'dcc_checkout_settings';
+
+    /** In-request cache of the merged settings array. */
+    private static ?array $cache = null;
+
     /**
-     * Accommodation (room type) ID for Cottage 34 — Coconut Cottage.
-     * The pet flow (Part D) applies to this cottage only.
+     * Default settings. These match the live doracanalcourt.com configuration
+     * and are what a fresh install runs with before anything is saved.
      */
-    public static function cottage_type_id(): int
+    public static function defaults(): array
     {
-        return (int) apply_filters('dcc_checkout_cottage_type_id', 1607);
+        return [
+            'pet_fee_enabled'   => 1,
+            'pet_accommodations' => [1607],           // Cottage 34 — Coconut Cottage
+            'service_daily'     => 17712,             // 2–6 nights   · $25/night
+            'service_weekly'    => 17711,             // 7–29 nights  · $20/night
+            'service_monthly'   => 14926,             // 30+ nights   · $10/night
+            'min_daily'         => 2,
+            'min_weekly'        => 7,
+            'min_monthly'       => 30,
+        ];
     }
 
     /**
+     * Merged settings (saved option over defaults), cached per request.
+     */
+    public static function settings(): array
+    {
+        if (self::$cache === null) {
+            $saved = get_option(self::OPTION, []);
+            if (!is_array($saved)) {
+                $saved = [];
+            }
+            self::$cache = array_merge(self::defaults(), $saved);
+        }
+        return self::$cache;
+    }
+
+    /** Clear the per-request cache (used after a settings save). */
+    public static function flush_cache(): void
+    {
+        self::$cache = null;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Pet fee — feature flag + which accommodations it applies to
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Master on/off for the pet flow. When off, the toggle/fields never render
+     * and no pet service is applied anywhere.
+     */
+    public static function pet_fee_enabled(): bool
+    {
+        $enabled = !empty(self::settings()['pet_fee_enabled']);
+        return (bool) apply_filters('dcc_checkout_pet_fee_enabled', $enabled);
+    }
+
+    /**
+     * Accommodation (room type) IDs the pet fee applies to.
+     *
+     * @return int[]
+     */
+    public static function pet_accommodations(): array
+    {
+        $ids = self::settings()['pet_accommodations'] ?? [1607];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        /** @var int[] $ids */
+        $ids = apply_filters('dcc_checkout_pet_accommodations', $ids);
+        return is_array($ids) ? array_values(array_map('intval', $ids)) : [];
+    }
+
+    /**
+     * Back-compat: the first pet accommodation (was "Cottage 34" only).
+     */
+    public static function cottage_type_id(): int
+    {
+        $ids = self::pet_accommodations();
+        return $ids[0] ?? 1607;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Pet services + night buckets
+     * --------------------------------------------------------------------- */
+
+    /**
      * Native MotoPress Service IDs for the per-night pet fee, keyed by
-     * length-of-stay bucket. All three are "Per Day · Per Accommodation" and
-     * intentionally untaxed (see readme). Only ever ONE is applied at a time.
+     * length-of-stay bucket. Global across all pet accommodations. Only ever ONE
+     * is applied at a time; all three are untaxed.
      *
      * @return array{daily:int,weekly:int,monthly:int}
      */
     public static function pet_service_ids(): array
     {
+        $s   = self::settings();
         $ids = apply_filters('dcc_checkout_pet_service_ids', [
-            'daily'   => 17712, // 2–6 nights   · $25/night
-            'weekly'  => 17711, // 7–29 nights  · $20/night
-            'monthly' => 14926, // 30+ nights   · $10/night
+            'daily'   => (int) $s['service_daily'],
+            'weekly'  => (int) $s['service_weekly'],
+            'monthly' => (int) $s['service_monthly'],
         ]);
         return [
             'daily'   => (int) ($ids['daily'] ?? 17712),
@@ -57,18 +138,16 @@ final class Config
 
     /**
      * Length-of-stay bucket thresholds (in nights).
-     * daily:   min_daily   .. (min_weekly - 1)
-     * weekly:  min_weekly  .. (min_monthly - 1)
-     * monthly: min_monthly .. ∞
      *
      * @return array{min_daily:int,min_weekly:int,min_monthly:int}
      */
     public static function bucket_thresholds(): array
     {
+        $s = self::settings();
         $t = apply_filters('dcc_checkout_bucket_thresholds', [
-            'min_daily'   => 2,
-            'min_weekly'  => 7,
-            'min_monthly' => 30,
+            'min_daily'   => (int) $s['min_daily'],
+            'min_weekly'  => (int) $s['min_weekly'],
+            'min_monthly' => (int) $s['min_monthly'],
         ]);
         return [
             'min_daily'   => (int) ($t['min_daily'] ?? 2),
@@ -98,23 +177,38 @@ final class Config
         return 0;
     }
 
+    /* --------------------------------------------------------------------- *
+     * Second guest
+     * --------------------------------------------------------------------- */
+
     /**
-     * Checkout Fields addon field IDs for the second guest.
+     * The second-guest field input NAMES (verified live). The Checkout Fields
+     * post IDs are NOT in the markup, so we target by name.
      *
-     * @return array{first_name:int,last_name:int,phone:int}
+     * @return array{first_name:string,last_name:string,phone:string}
      */
-    public static function guest2_field_ids(): array
+    public static function guest2_field_names(): array
     {
-        $ids = apply_filters('dcc_checkout_guest2_field_ids', [
-            'first_name' => 8312,
-            'last_name'  => 8313,
-            'phone'      => 8314,
+        $names = apply_filters('dcc_checkout_guest2_field_names', [
+            'first_name' => 'mphb_guest2_first_name',
+            'last_name'  => 'mphb_guest2_last_name',
+            'phone'      => 'mphb_guest2_phone',
         ]);
         return [
-            'first_name' => (int) ($ids['first_name'] ?? 8312),
-            'last_name'  => (int) ($ids['last_name'] ?? 8313),
-            'phone'      => (int) ($ids['phone'] ?? 8314),
+            'first_name' => (string) ($names['first_name'] ?? 'mphb_guest2_first_name'),
+            'last_name'  => (string) ($names['last_name'] ?? 'mphb_guest2_last_name'),
+            'phone'      => (string) ($names['phone'] ?? 'mphb_guest2_phone'),
         ];
+    }
+
+    /**
+     * Flat list of the three second-guest field names.
+     *
+     * @return string[]
+     */
+    public static function guest2_field_name_list(): array
+    {
+        return array_values(self::guest2_field_names());
     }
 
     /**
@@ -127,6 +221,10 @@ final class Config
             'select[name^="mphb_room_details"][name*="[adults]"]'
         );
     }
+
+    /* --------------------------------------------------------------------- *
+     * Booking meta
+     * --------------------------------------------------------------------- */
 
     /**
      * Booking meta keys used to persist the captured dog info.

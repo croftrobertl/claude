@@ -34,6 +34,9 @@ final class Plugin
             return;
         }
 
+        // Admin settings page (pet-fee on/off + which accommodations).
+        (new Settings())->register();
+
         // Front-end: conditional CSS/JS on the checkout page only.
         (new Assets())->register();
 
