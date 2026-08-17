@@ -131,7 +131,8 @@
 .mphb_sc_checkout-form .mphb-booking-details-title,
 .mphb_sc_checkout-form .mphb-room-number,
 .mphb_sc_checkout-form .mphb-customer-details-title,
-.mphb_sc_checkout-form .mphb-price-breakdown-title {
+.mphb_sc_checkout-form .mphb-price-breakdown-title,
+.mphb_sc_checkout-form .dcc_checkout-section-title {
     font-size: 25px !important;
     font-weight: 700 !important;
     line-height: 1.3 !important;
@@ -223,10 +224,17 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Part C — Second-guest rows (hidden until 2 guests).
+ * Parts C/D — the conditional "Guest #2 Information" / "Pet Information"
+ * sections. Hide/show is at the section level; the legacy per-row class is kept
+ * as a harmless fallback.
  * ------------------------------------------------------------------------- */
+.dcc_checkout-section-hidden,
 .dcc_checkout-guest2-hidden {
     display: none !important;
+}
+
+.mphb_sc_checkout-form .dcc_checkout-section {
+    margin-top: 24px;
 }
 
 /* ---------------------------------------------------------------------------

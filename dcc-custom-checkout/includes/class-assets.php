@@ -92,6 +92,10 @@ final class Assets
             'guest2FieldNames' => Config::guest2_field_name_list(),
             // Native dog Checkout Field names the toggle shows/hides + requires.
             'dogFieldNames'    => Config::dog_field_name_list(),
+            'sectionTitles'    => [
+                'guest2' => Config::guest2_section_title(),
+                'pet'    => Config::pet_section_title(),
+            ],
             'guestsSelector'   => Config::guests_selector(),
             'requiredColor'    => '#c62828',
             'i18n'            => [

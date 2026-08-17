@@ -44,6 +44,10 @@ final class Config
             'dog_field_type'    => 'mphb_dog_type',
             'dog_field_size'    => 'mphb_dog_size',
             'dog_field_hair'    => 'mphb_dog_hair',
+            // Titles for the two conditional sections inserted after "Your
+            // Information" (Guest #2 Information / Pet Information).
+            'guest2_section_title' => 'Guest #2 Information',
+            'pet_section_title'    => 'Pet Information',
         ];
     }
 
@@ -217,6 +221,28 @@ final class Config
     public static function guest2_field_name_list(): array
     {
         return array_values(self::guest2_field_names());
+    }
+
+    /**
+     * Title of the conditional "Guest #2 Information" section.
+     */
+    public static function guest2_section_title(): string
+    {
+        return (string) apply_filters(
+            'dcc_checkout_guest2_section_title',
+            (string) self::settings()['guest2_section_title']
+        );
+    }
+
+    /**
+     * Title of the conditional "Pet Information" section.
+     */
+    public static function pet_section_title(): string
+    {
+        return (string) apply_filters(
+            'dcc_checkout_pet_section_title',
+            (string) self::settings()['pet_section_title']
+        );
     }
 
     /**

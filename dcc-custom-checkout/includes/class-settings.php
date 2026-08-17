@@ -77,6 +77,11 @@ final class Settings
             $out[$key] = $name !== '' ? $name : (string) $defaults[$key];
         }
 
+        foreach (['guest2_section_title', 'pet_section_title'] as $key) {
+            $title     = isset($input[$key]) ? sanitize_text_field($input[$key]) : '';
+            $out[$key] = $title !== '' ? $title : (string) $defaults[$key];
+        }
+
         // Fresh reads should reflect the new values immediately.
         Config::flush_cache();
 
@@ -144,6 +149,17 @@ final class Settings
                     $this->text_row(__('Dog type — field name', 'dcc-checkout'), 'dog_field_type', (string) $s['dog_field_type'], __('Text field.', 'dcc-checkout'));
                     $this->text_row(__('Dog size — field name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs.', 'dcc-checkout'));
                     $this->text_row(__('Dog hair — field name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long.', 'dcc-checkout'));
+                    ?>
+                </table>
+
+                <h2><?php echo esc_html__('Section titles', 'dcc-checkout'); ?></h2>
+                <p class="description" style="max-width:640px">
+                    <?php echo esc_html__('Headings for the two conditional sections shown after "Your Information".', 'dcc-checkout'); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <?php
+                    $this->text_row(__('Guest #2 section title', 'dcc-checkout'), 'guest2_section_title', (string) $s['guest2_section_title'], '');
+                    $this->text_row(__('Pet section title', 'dcc-checkout'), 'pet_section_title', (string) $s['pet_section_title'], '');
                     ?>
                 </table>
 

@@ -33,6 +33,30 @@
         }
     }
 
+    function insertAfter(node, ref) {
+        if (ref && ref.parentNode) {
+            ref.parentNode.insertBefore(node, ref.nextSibling);
+        }
+    }
+
+    // Build a titled section mirroring MotoPress's customer-details section and
+    // MOVE the given field rows into it. Reuses `mphb-customer-details-title` on
+    // the <h3> so the existing 25px/underlined header styling applies. Returns
+    // the section, or null when there are no rows (don't render an empty header).
+    function buildFieldSection(sectionClass, titleText, rows) {
+        if (!rows.length) {
+            return null;
+        }
+        var section = document.createElement('section');
+        section.className = 'mphb-checkout-section dcc_checkout-section ' + sectionClass;
+        var h3 = document.createElement('h3');
+        h3.className = 'mphb-customer-details-title dcc_checkout-section-title';
+        h3.textContent = titleText;
+        section.appendChild(h3);
+        rows.forEach(function (r) { section.appendChild(r); }); // moves rows in
+        return section;
+    }
+
     ready(init);
 
     function init() {
@@ -212,6 +236,19 @@
             return null;
         }
 
+        // Move the guest-2 rows into their own titled section, inserted right
+        // after "Your Information". Falls back to toggling the rows in place if
+        // the customer-details section isn't found.
+        var titles = CFG.sectionTitles || {};
+        var customerDetails = root.querySelector('.mphb-customer-details');
+        var section = customerDetails
+            ? buildFieldSection('dcc_checkout-guest2-section', titles.guest2 || 'Guest #2 Information', rows)
+            : null;
+        if (section) {
+            insertAfter(section, customerDetails);
+        }
+        var visTargets = section ? [section] : rows;
+
         function guestCount() {
             var n = 0;
             selects.forEach(function (s) { n = Math.max(n, parseInt(s.value, 10) || 0); });
@@ -220,7 +257,7 @@
 
         function evaluate() {
             var show = guestCount() >= 2;
-            rows.forEach(function (r) { r.classList.toggle('dcc_checkout-guest2-hidden', !show); });
+            visTargets.forEach(function (t) { t.classList.toggle('dcc_checkout-section-hidden', !show); });
             inputs.forEach(function (inp) {
                 setRequired(inp, show, root);
                 if (!show) { inp.classList.remove('dcc_checkout-invalid'); }
@@ -318,6 +355,19 @@
             if (row && dogRows.indexOf(row) === -1) { dogRows.push(row); }
         });
 
+        // Move the dog rows into a "Pet Information" section, placed after the
+        // Guest #2 section (or after "Your Information"). The toggle + note stay
+        // in the services area; only the three info fields move here.
+        var petAnchor = root.querySelector('.dcc_checkout-guest2-section') ||
+            root.querySelector('.mphb-customer-details');
+        var petSection = petAnchor
+            ? buildFieldSection('dcc_checkout-pet-section', (CFG.sectionTitles || {}).pet || 'Pet Information', dogRows)
+            : null;
+        if (petSection) {
+            insertAfter(petSection, petAnchor);
+        }
+        var dogVisTargets = petSection ? [petSection] : dogRows;
+
         function bucketId() {
             return serviceForNights(getNights(root));
         }
@@ -336,8 +386,8 @@
         }
 
         function showDogFields(yes) {
-            dogRows.forEach(function (r) {
-                r.classList.toggle('dcc_checkout-guest2-hidden', !yes);
+            dogVisTargets.forEach(function (t) {
+                t.classList.toggle('dcc_checkout-section-hidden', !yes);
             });
             dogInputs.forEach(function (inp) {
                 setRequired(inp, yes, root);

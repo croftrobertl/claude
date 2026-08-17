@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,6 +109,19 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.6 =
+* New: two conditional titled sections after "Your Information" —
+  "Guest #2 Information" (guest-2 fields, shown at 2 guests) and
+  "Pet Information" (dog fields, shown when the dog toggle = Yes). The plugin
+  moves the native field rows into these sections (still inside the form, so
+  MotoPress submission/saving is unchanged) and hides/shows + requires them at
+  the SECTION level. Empty sections aren't rendered. The pet toggle + note stay
+  in the services area.
+* Section headers reuse `.mphb-customer-details-title` plus a new
+  `.dcc_checkout-section-title` (added to the item-7 header rule) so they match
+  (25px, underlined). Editable titles on the settings page (+ filters
+  dcc_checkout_guest2_section_title / dcc_checkout_pet_section_title).
 
 = 0.1.5 =
 * Root-cause fix: MotoPress submits a NORMALIZED payload and DROPS bespoke,
