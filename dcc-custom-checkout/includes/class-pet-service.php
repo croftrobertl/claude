@@ -58,10 +58,12 @@ final class Pet_Service
         add_action('add_meta_boxes', [$this, 'add_meta_box']);
 
         // Email: register the %dcc_dog_details% tag and supply its value from the
-        // saved booking meta. Add it to both the general and booking-details tag
-        // sets so it resolves wherever the template places it.
+        // saved booking meta. `mphb_email_booking_tags` expects a numeric array of
+        // tag ARRAYS (name/description); MotoPress's EmailTemplater::setupTags()
+        // does $tag['name'] on each element, so a string element fatals. Register
+        // on this one filter only (the *_details_tags group's format is not
+        // verified identical).
         add_filter('mphb_email_booking_tags', [$this, 'register_email_tag'], 10, 1);
-        add_filter('mphb_email_booking_details_tags', [$this, 'register_email_tag'], 10, 1);
         add_filter('mphb_email_replace_tag', [$this, 'replace_email_tag'], 10, 3);
     }
 
@@ -265,13 +267,22 @@ final class Pet_Service
     /**
      * Register the %dcc_dog_details% tag so it's available in booking emails.
      *
-     * @param mixed $tags Tag map (name => description) provided by MotoPress.
+     * MotoPress's EmailTemplater::setupTags() iterates $tags as a NUMERIC array
+     * of tag arrays and calls $tag['name'] / $tag['description'] on each element.
+     * We must append a properly-shaped array — a string element causes a fatal
+     * TypeError on `init` (site-down). The tag name carries NO `%` (MotoPress
+     * adds the delimiters itself).
+     *
+     * @param mixed $tags Numeric array of tag arrays provided by MotoPress.
      * @return mixed
      */
     public function register_email_tag($tags)
     {
         if (is_array($tags)) {
-            $tags[self::EMAIL_TAG] = __('Dog details (DCC): type, size, hair length.', 'dcc-checkout');
+            $tags[] = [
+                'name'        => self::EMAIL_TAG, // 'dcc_dog_details'
+                'description' => __('Dog details (DCC): type, size, hair length.', 'dcc-checkout'),
+            ];
         }
         return $tags;
     }

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,15 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.4 =
+* CRITICAL fix: the email-tag registration added a string element to
+  mphb_email_booking_tags, but MotoPress's EmailTemplater::setupTags() treats it
+  as a numeric array of tag arrays and does $tag['name'] on each element — a
+  string there fataled on init (whole site down on activation). Now appends a
+  properly-shaped ['name' => 'dcc_dog_details', 'description' => …] array, and
+  registers on mphb_email_booking_tags only (dropped the unverified
+  mphb_email_booking_details_tags hook).
 
 = 0.1.3 =
 * Fix (guest-2): target the fields by NAME (mphb_guest2_first_name/last_name/
