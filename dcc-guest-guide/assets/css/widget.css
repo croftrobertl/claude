@@ -1741,6 +1741,7 @@ dialog.dccgg-wrapper::backdrop {
    whose uppercase treatment is the plugin's own and intentional. */
 .dccgg-root.dccgg-root .dccgg-btn,
 .dccgg-root.dccgg-root .dccgg-btn-text,
+.dccgg-root.dccgg-root .dccgg-more-item,
 .dccgg-root.dccgg-root .dccgg-quick-action,
 .dccgg-root.dccgg-root .dccgg-back,
 .dccgg-root.dccgg-root .dccgg-read-more,
@@ -2806,7 +2807,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
 .dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }
 .dccgg-report-body select,
-.dccgg-report-body textarea,
 .dccgg-report-body input[type="email"] {
     width: 100%;
     padding: 10px 12px;
@@ -2817,8 +2817,20 @@ dialog.dccgg-wrapper::backdrop {
     font: inherit;
     box-sizing: border-box;
 }
-.dccgg-report-body textarea { resize: vertical; min-height: 100px; }
-.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; }
+/* v0.9.7.31: the description textarea no longer carries the plugin's own
+   border / background / padding. The name, cottage and phone fields are not
+   styled by the plugin at all, so they inherit the site theme's field
+   styling (the gold pill) — which left the textarea as the odd one out.
+   Dropping the visual overrides lets the theme dress it identically; only
+   structural properties the theme has no opinion on are kept. */
+.dccgg-report-body textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    resize: vertical;
+    min-height: 100px;
+}
+.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; text-align: center; }
 /* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
    paint behind the top-layer dialog in Chrome, so the error message
    needs to live inside the dialog itself. */
@@ -2865,16 +2877,35 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25);
     transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
-@media (hover: hover) {
-    .dccgg-report-foot .dccgg-btn-send:hover,
-    .dccgg-report-foot .dccgg-btn-send:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-primary, #0f6dbf) 85%, #000);
-        box-shadow: 0 4px 10px rgba(15, 109, 191, 0.35);
-        outline: none;
-    }
+/* v0.9.7.31: Send and Cancel hold their normal-state look on hover and on
+   keyboard focus — no darkening, no shadow lift, and nothing the theme
+   might add either. The dialog portals to <body>, outside .dccgg-root, so
+   the self-doubled dialog class supplies the specificity that the usual
+   .dccgg-root.dccgg-root defense provides elsewhere. :focus-visible is
+   pinned alongside :hover so keyboard users see the same flat treatment;
+   the buttons stay reachable because the dialog's own focus ring is
+   untouched. */
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:hover,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:focus-visible {
+    background: var(--dccgg-primary, #0f6dbf) !important;
+    border-color: var(--dccgg-primary, #0f6dbf) !important;
+    color: var(--dccgg-btn-txt, #ffffff) !important;
+    box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25) !important;
+    transform: none !important;
 }
-.dccgg-report-foot .dccgg-btn-send:active {
-    transform: translateY(1px);
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-cancel:hover,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-cancel:focus-visible {
+    background: transparent !important;
+    border-color: color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent) !important;
+    color: var(--dccgg-text, #111) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+/* The 1px press nudge predates v0.9.7.31 and is intentional feedback, so it
+   has to outrank the pinned hover rule above (a press always coincides with
+   hover). Same doubled-dialog specificity + !important, declared later. */
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:active {
+    transform: translateY(1px) !important;
 }
 .dccgg-report-foot .dccgg-btn-send:disabled {
     opacity: 0.6;

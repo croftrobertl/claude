@@ -70,6 +70,32 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.31 =
+
+**Report-a-problem polish (four host requests).**
+
+1. **"Report a problem" in the more menu renders as authored, not ALL
+   CAPS.** Same cause as the v0.9.7.30 buttons — the theme, not the
+   plugin — so the menu items were added to the same specificity-defended
+   override. Covers the more menu in both the Sections (Menu Hub) toolbar
+   and the Guide Items detail card, which share one template.
+
+2. **Report dialog privacy note is center-aligned.**
+
+3. **The description field now matches the other fields' gold pill.** The
+   name, cottage and phone fields are not styled by the plugin at all, so
+   they inherit the site theme's field styling; the textarea carried the
+   plugin's own border / background / padding, which made it the odd one
+   out. Those visual overrides are dropped so the theme dresses it
+   identically — verified identical to the text inputs (border, radius,
+   background and padding all match).
+
+4. **Send and Cancel hold their normal look on hover.** No darkening, no
+   shadow lift, and nothing a theme adds either — pinned with enough
+   weight to beat a theme's !important hover rule. Keyboard focus gets
+   the same flat treatment. The existing 1px press nudge on Send is
+   deliberately preserved.
+
 = 0.9.7.30 =
 
 **Popup header and button polish (four host requests).**
