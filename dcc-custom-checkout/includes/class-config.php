@@ -36,6 +36,14 @@ final class Config
             'min_daily'         => 2,
             'min_weekly'        => 7,
             'min_monthly'       => 30,
+            // Native MotoPress Checkout Field NAMES for the dog info. The owner
+            // creates these fields (Bookings → Settings → Checkout Fields); the
+            // plugin shows/hides + requires them by the dog toggle. MotoPress
+            // submits them inside customer_fields and saves them to booking meta
+            // under the same names — that is where the email tag reads from.
+            'dog_field_type'    => 'mphb_dog_type',
+            'dog_field_size'    => 'mphb_dog_size',
+            'dog_field_hair'    => 'mphb_dog_hair',
         ];
     }
 
@@ -223,21 +231,53 @@ final class Config
     }
 
     /* --------------------------------------------------------------------- *
-     * Booking meta
+     * Dog info — native Checkout Field names + booking meta keys
      * --------------------------------------------------------------------- */
 
     /**
-     * Booking meta keys used to persist the captured dog info.
+     * The native Checkout Field NAMES for the three dog info fields.
      *
-     * @return array{type:string,size:string,hair:string,applied:string}
+     * @return array{type:string,size:string,hair:string}
      */
-    public static function pet_meta_keys(): array
+    public static function dog_field_names(): array
     {
+        $s     = self::settings();
+        $names = apply_filters('dcc_checkout_dog_field_names', [
+            'type' => (string) $s['dog_field_type'],
+            'size' => (string) $s['dog_field_size'],
+            'hair' => (string) $s['dog_field_hair'],
+        ]);
         return [
-            'type'    => '_dcc_checkout_dog_type',
-            'size'    => '_dcc_checkout_dog_size',
-            'hair'    => '_dcc_checkout_dog_hair',
-            'applied' => '_dcc_checkout_pet_service_id',
+            'type' => (string) ($names['type'] ?? 'mphb_dog_type'),
+            'size' => (string) ($names['size'] ?? 'mphb_dog_size'),
+            'hair' => (string) ($names['hair'] ?? 'mphb_dog_hair'),
+        ];
+    }
+
+    /**
+     * Flat list of the three dog field names.
+     *
+     * @return string[]
+     */
+    public static function dog_field_name_list(): array
+    {
+        return array_values(self::dog_field_names());
+    }
+
+    /**
+     * Booking meta keys the dog info is stored under. MotoPress saves a checkout
+     * field to meta under its field name, so by default the meta keys equal the
+     * field names; filterable in case a version prefixes them.
+     *
+     * @return array{type:string,size:string,hair:string}
+     */
+    public static function dog_meta_keys(): array
+    {
+        $keys = apply_filters('dcc_checkout_dog_meta_keys', self::dog_field_names());
+        return [
+            'type' => (string) ($keys['type'] ?? 'mphb_dog_type'),
+            'size' => (string) ($keys['size'] ?? 'mphb_dog_size'),
+            'hair' => (string) ($keys['hair'] ?? 'mphb_dog_hair'),
         ];
     }
 }

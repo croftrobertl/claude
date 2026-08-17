@@ -294,13 +294,29 @@
 
         var block = buildPetBlock();
 
-        // Insert the pet block where the (now hidden) services were.
+        // Insert the toggle block where the (now hidden) services were.
         var anchor = serviceRowWrapper(serviceInputs[ids[0]]);
         if (anchor && anchor.parentNode) {
             anchor.parentNode.insertBefore(block.el, anchor);
         } else {
             root.appendChild(block.el);
         }
+
+        // The dog info fields are NATIVE MotoPress Checkout Fields (created by
+        // the owner; names set in settings). We locate them by name and drive
+        // them from the toggle — same pattern as guest-2. They may not exist yet
+        // (owner hasn't created them) — then the toggle just ticks the service.
+        var dogNames = CFG.dogFieldNames || [];
+        var dogInputs = [];
+        var dogRows = [];
+        dogNames.forEach(function (name) {
+            var el = root.querySelector('[name="' + esc(name) + '"]');
+            if (!el) { return; }
+            dogInputs.push(el);
+            var row = el.closest('.mphb-text-control') ||
+                el.closest('[class*="mphb-customer-"], p, li, tr, div');
+            if (row && dogRows.indexOf(row) === -1) { dogRows.push(row); }
+        });
 
         function bucketId() {
             return serviceForNights(getNights(root));
@@ -319,30 +335,36 @@
             });
         }
 
-        function onToggle() {
-            var yes = block.isYes();
-            block.fields.classList.toggle('dcc_checkout-is-hidden', !yes);
-            block.infoInputs.forEach(function (inp) {
+        function showDogFields(yes) {
+            dogRows.forEach(function (r) {
+                r.classList.toggle('dcc_checkout-guest2-hidden', !yes);
+            });
+            dogInputs.forEach(function (inp) {
                 setRequired(inp, yes, root);
                 if (!yes) { inp.classList.remove('dcc_checkout-invalid'); }
             });
+        }
+
+        function onToggle() {
+            var yes = block.isYes();
+            showDogFields(yes);
             applyService(yes);
         }
 
         block.radios.forEach(function (r) { r.addEventListener('change', onToggle); });
-        onToggle(); // default No → make sure all three services are unchecked
+        onToggle(); // default No → hide dog fields + uncheck all services
 
         // Re-assert once after MotoPress's own checkout JS has initialized, in
         // case it reset the service checkboxes during its first render.
         setTimeout(function () { if (block.isYes()) { applyService(true); } }, 800);
 
-        // Validator: when "Yes", all three info fields are required.
+        // Validator: when "Yes", the present native dog fields are required.
         return function () {
             if (!block.isYes()) {
                 return [];
             }
             var bad = [];
-            block.infoInputs.forEach(function (inp) {
+            dogInputs.forEach(function (inp) {
                 inp.classList.remove('dcc_checkout-invalid');
                 if (!String(inp.value || '').trim()) {
                     bad.push(inp);
@@ -352,6 +374,8 @@
         };
     }
 
+    // Toggle-only block ("Traveling with a dog?"). The info fields themselves are
+    // native MotoPress Checkout Fields, driven separately (see setupPetFlow).
     function buildPetBlock() {
         var wrap = document.createElement('div');
         wrap.className = 'dcc_checkout-pet';
@@ -369,25 +393,6 @@
         toggle.appendChild(yes.label);
         wrap.appendChild(toggle);
 
-        var fields = document.createElement('div');
-        fields.className = 'dcc_checkout-pet__fields dcc_checkout-is-hidden';
-
-        var type = makeTextField('dcc_checkout_dog_type', I18N.dogType || 'Dog type');
-        var size = makeSelectField('dcc_checkout_dog_size', I18N.dogSize || 'Size', [
-            I18N.sizeSmall  || '10–20 lbs',
-            I18N.sizeMedium || '20–30 lbs',
-            I18N.sizeLarge  || '30–40 lbs'
-        ]);
-        var hair = makeSelectField('dcc_checkout_dog_hair', I18N.dogHair || 'Hair length', [
-            I18N.hairShort  || 'Short',
-            I18N.hairMedium || 'Medium',
-            I18N.hairLong   || 'Long'
-        ]);
-        fields.appendChild(type.el);
-        fields.appendChild(size.el);
-        fields.appendChild(hair.el);
-        wrap.appendChild(fields);
-
         if (I18N.petFeeNote) {
             var note = document.createElement('p');
             note.className = 'dcc_checkout-pet__note';
@@ -398,9 +403,7 @@
         return {
             el: wrap,
             radios: [no.input, yes.input],
-            isYes: function () { return yes.input.checked; },
-            fields: fields,
-            infoInputs: [type.input, size.input, hair.input]
+            isYes: function () { return yes.input.checked; }
         };
     }
 
@@ -416,50 +419,6 @@
         label.appendChild(input);
         label.appendChild(span);
         return { label: label, input: input };
-    }
-
-    function makeTextField(name, labelText) {
-        var el = document.createElement('div');
-        el.className = 'dcc_checkout-pet__field';
-        var id = nextId('field');
-        var label = document.createElement('label');
-        label.setAttribute('for', id);
-        label.textContent = labelText;
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.name = name;
-        input.id = id;
-        el.appendChild(label);
-        el.appendChild(input);
-        return { el: el, input: input };
-    }
-
-    function makeSelectField(name, labelText, options) {
-        var el = document.createElement('div');
-        el.className = 'dcc_checkout-pet__field';
-        var id = nextId('field');
-        var label = document.createElement('label');
-        label.setAttribute('for', id);
-        label.textContent = labelText;
-        var select = document.createElement('select');
-        select.name = name;
-        select.id = id;
-
-        var placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = I18N.choose || 'Choose…';
-        select.appendChild(placeholder);
-
-        options.forEach(function (opt) {
-            var o = document.createElement('option');
-            o.value = opt;
-            o.textContent = opt;
-            select.appendChild(o);
-        });
-
-        el.appendChild(label);
-        el.appendChild(select);
-        return { el: el, input: select };
     }
 
     /* ---- native MotoPress service helpers ------------------------------- */

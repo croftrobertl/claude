@@ -31,25 +31,30 @@ final class Guest_Fields
         if (!Checkout_Request::is_checkout_submission()) {
             return;
         }
+        // Never redirect during an AJAX submission — it would break the JSON
+        // response MotoPress expects. Client-side validation is the guard there.
+        if (wp_doing_ajax()) {
+            return;
+        }
 
         // Only enforce when 2+ adults were selected.
         if ($this->posted_adults() < 2) {
             return;
         }
 
-        // Guest-2 fields are posted by NAME (verified live). Enforce required
-        // only for fields actually present in the POST — if the owner hasn't
-        // enabled them in Checkout Fields, they won't render or submit, and we
-        // must not reject on their absence.
+        // Guest-2 fields are NATIVE Checkout Fields, submitted inside
+        // `customer_fields` (MotoPress drops unrecognized top-level inputs).
+        // Enforce required only for fields actually present — if the owner hasn't
+        // enabled them, they won't submit and we must not reject on their absence.
         $missing_any = false;
         $found_any   = false;
 
         foreach (Config::guest2_field_names() as $name) {
-            if (!isset($_POST[$name])) {
+            $value = Checkout_Request::customer_field_value($name);
+            if ($value === null) {
                 continue; // Field not rendered / not submitted.
             }
             $found_any = true;
-            $value     = sanitize_text_field(wp_unslash($_POST[$name])); // phpcs:ignore WordPress.Security.NonceVerification.Missing
             if (trim($value) === '') {
                 $missing_any = true;
             }

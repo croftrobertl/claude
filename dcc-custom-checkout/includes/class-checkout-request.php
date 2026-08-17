@@ -6,53 +6,68 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Read-only helpers over the checkout form submission ($_POST).
+ * Read-only helpers over the checkout submission ($_POST).
  *
- * These are deliberately shape-tolerant: MotoPress's exact `mphb_room_details`
- * array layout varies by version, so instead of assuming a fixed depth we scan
- * recursively for values we care about. This keeps the server-side backstops
- * working even if MotoPress reorganizes its POST structure.
+ * IMPORTANT: MotoPress submits a NORMALIZED payload, not the raw form. At
+ * booking creation the relevant top-level keys are:
+ *   check_in_date, check_out_date, checkout_id, coupon_code,
+ *   customer_fields, lang, room_details
+ * (verified on staging with a hook trace). Earlier code read `mphb_room_details`
+ * / `mphb_check_in_date`, which never existed in the payload, so every
+ * server-side check was silently inert. We now read the real keys and keep the
+ * old `mphb_*` names as fallbacks for resilience across versions.
  *
- * NOTE: The hook used to run the guards (`wp_loaded`, priority 1) and the exact
- * POST signature are expected to be confirmed on staging against the installed
- * MotoPress version. See Guest_Fields::register() / Pet_Service::register().
+ * Custom top-level fields (e.g. our old `dcc_checkout_dog*`) are dropped by
+ * MotoPress entirely — only its own recognized fields survive. That is why the
+ * dog info is captured through NATIVE Checkout Fields (submitted inside
+ * `customer_fields`) rather than bespoke inputs.
  */
 final class Checkout_Request
 {
     /**
-     * Is the current request the final "Submit Booking" POST?
+     * Raw, unslashed room-details array from the POST (or empty array).
+     * Prefers the real `room_details` key; falls back to `mphb_room_details`.
      *
-     * Signature: a POST that carries the reserved-room details array. We keep
-     * this loose (any request with `mphb_room_details`) and rely on the callers
-     * to do the specific work; a false positive simply means we validate an
-     * array that already passes.
+     * @return array<int|string,mixed>
+     */
+    public static function room_details(): array
+    {
+        foreach (['room_details', 'mphb_room_details'] as $key) {
+            if (isset($_POST[$key]) && is_array($_POST[$key])) {
+                return wp_unslash($_POST[$key]); // phpcs:ignore WordPress.Security
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Normalized customer fields array (native Checkout Fields live here).
+     *
+     * @return array<int|string,mixed>
+     */
+    public static function customer_fields(): array
+    {
+        if (isset($_POST['customer_fields']) && is_array($_POST['customer_fields'])) {
+            return wp_unslash($_POST['customer_fields']); // phpcs:ignore WordPress.Security
+        }
+        return [];
+    }
+
+    /**
+     * Is the current request a checkout submission carrying room details?
+     * (Callers that redirect must additionally skip AJAX — see Pet_Service /
+     * Guest_Fields — because a redirect would break an AJAX checkout response.)
      */
     public static function is_checkout_submission(): bool
     {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             return false;
         }
-        // Unslashed copy is used only for existence/shape checks below; each
-        // value that is actually consumed is sanitized at the point of use.
-        return isset($_POST['mphb_room_details']) && is_array($_POST['mphb_room_details']);
+        return self::room_details() !== [];
     }
 
     /**
-     * Raw, unslashed room-details array from the POST (or empty array).
-     *
-     * @return array<int|string,mixed>
-     */
-    public static function room_details(): array
-    {
-        if (!isset($_POST['mphb_room_details']) || !is_array($_POST['mphb_room_details'])) {
-            return [];
-        }
-        return wp_unslash($_POST['mphb_room_details']); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-    }
-
-    /**
-     * The submitted accommodation (room type) IDs, scanned from the room
-     * details. MotoPress commonly submits `room_type_id` per reserved room.
+     * The submitted accommodation (room type) IDs, scanned from the room details.
      *
      * @return int[]
      */
@@ -86,13 +101,31 @@ final class Checkout_Request
     }
 
     /**
+     * Look up a customer field value by its field name (scans `customer_fields`
+     * recursively for a matching key). Returns null when absent.
+     */
+    public static function customer_field_value(string $name): ?string
+    {
+        $result = null;
+        self::walk(self::customer_fields(), static function ($key, $value) use (&$result, $name): void {
+            if ($result !== null) {
+                return;
+            }
+            if (is_scalar($value) && (string) $key === $name) {
+                $result = (string) $value;
+            }
+        });
+        return $result === null ? null : sanitize_text_field($result);
+    }
+
+    /**
      * Compute the number of nights from the submitted check-in / check-out.
      * Returns 0 when the dates are missing or unparseable.
      */
     public static function nights(): int
     {
-        $in  = self::posted_date('mphb_check_in_date');
-        $out = self::posted_date('mphb_check_out_date');
+        $in  = self::posted_date(['check_in_date', 'mphb_check_in_date']);
+        $out = self::posted_date(['check_out_date', 'mphb_check_out_date']);
         if ($in === null || $out === null) {
             return 0;
         }
@@ -101,19 +134,23 @@ final class Checkout_Request
     }
 
     /**
-     * Parse a Y-m-d date field from the POST into a UTC timestamp.
+     * Parse a Y-m-d date field (first matching key) into a UTC timestamp.
+     *
+     * @param string[] $keys
      */
-    private static function posted_date(string $key): ?int
+    private static function posted_date(array $keys): ?int
     {
-        if (empty($_POST[$key])) {
-            return null;
+        foreach ($keys as $key) {
+            if (empty($_POST[$key])) {
+                continue;
+            }
+            $raw = sanitize_text_field(wp_unslash($_POST[$key]));
+            $dt  = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw, new \DateTimeZone('UTC'));
+            if ($dt !== false) {
+                return $dt->getTimestamp();
+            }
         }
-        $raw = sanitize_text_field(wp_unslash($_POST[$key]));
-        $dt  = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw, new \DateTimeZone('UTC'));
-        if ($dt === false) {
-            return null;
-        }
-        return $dt->getTimestamp();
+        return null;
     }
 
     /**
@@ -139,6 +176,9 @@ final class Checkout_Request
     /**
      * Redirect back to the referring checkout page with an error code the
      * front-end script turns into a friendly banner. Always exits.
+     *
+     * Callers MUST NOT invoke this during an AJAX request (it would clobber the
+     * JSON response MotoPress expects) — guard with wp_doing_ajax() first.
      */
     public static function redirect_back_with_error(string $code): void
     {

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,7 +42,11 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     Cottage 34, type ID 1607), and only when the pet fee is enabled.
   * The three native pet-service selectors are hidden and replaced by a
     "Traveling with a dog?" toggle (No default / Yes).
-  * "Yes" reveals three required info fields: Dog type, Size, Hair length.
+  * "Yes" reveals three required info fields: Dog type, Size, Hair length. These
+    are NATIVE MotoPress Checkout Fields the owner creates (see setup below) —
+    MotoPress submits and saves them; the plugin only shows/hides + requires them
+    by the toggle. (MotoPress drops bespoke, non-native inputs from its checkout
+    payload, so native fields are required for the data to reach the server.)
   * The correct native Service is auto-applied by length-of-stay bucket:
       2–6 nights  -> Daily   (ID 17712, $25/night)
       7–29 nights -> Weekly  (ID 17711, $20/night)
@@ -52,9 +56,21 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     rejects a submission whose attached pet service doesn't match the bucket, or
     that is missing the required info, or that attaches a pet service when the
     toggle said "No".
-  * Dog type / Size / Hair are saved to booking meta (shown in a "Pet Details"
-    box on the admin booking screen) and exposed to emails via the tag
-    %dcc_dog_details% (add it to your MotoPress email template to include it).
+  * Dog type / Size / Hair are saved to booking meta by MotoPress (native
+    fields, shown on the admin booking screen) and exposed to emails via the tag
+    %dcc_dog_details% (MotoPress may already list checkout fields in the email
+    booking details, so the tag is a convenience/fallback).
+
+== Setup: dog info fields (one-time, required for Part D data capture) ==
+
+1. Bookings → Settings → Checkout Fields → add three fields, set NOT required:
+     * Dog type  — text            (e.g. name mphb_dog_type)
+     * Dog size  — select: 10–20 lbs / 20–30 lbs / 30–40 lbs   (mphb_dog_size)
+     * Dog hair  — select: Short / Medium / Long               (mphb_dog_hair)
+2. WP Admin → DCC Custom Checkout → "Dog info fields" → enter those exact field
+   names. The toggle then shows/hides + requires them; MotoPress saves them.
+3. (Optional) add %dcc_dog_details% to the email template if the fields don't
+   already appear in the booking details.
 
 == Admin settings ==
 
@@ -82,6 +98,8 @@ also filterable for snippet-level overrides:
   dcc_checkout_pet_service_ids      (default daily 17712 / weekly 17711 / monthly 14926)
   dcc_checkout_bucket_thresholds    (default min_daily 2 / min_weekly 7 / min_monthly 30)
   dcc_checkout_guest2_field_names   (default mphb_guest2_first_name / _last_name / _phone)
+  dcc_checkout_dog_field_names      (default mphb_dog_type / mphb_dog_size / mphb_dog_hair)
+  dcc_checkout_dog_meta_keys        (default = the dog field names)
   dcc_checkout_guests_selector      (default select[name^="mphb_room_details"][name*="[adults]"])
   dcc_checkout_page_id / dcc_checkout_is_checkout_page (enqueue detection overrides)
 
@@ -91,6 +109,22 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.5 =
+* Root-cause fix: MotoPress submits a NORMALIZED payload and DROPS bespoke,
+  non-native inputs, so the old dcc_checkout_dog* fields never reached the server
+  (dog info never saved; %dcc_dog_details% empty). The dog info fields are now
+  NATIVE MotoPress Checkout Fields (owner-created; names set in settings); the
+  toggle shows/hides + requires them, MotoPress saves them, and the email tag
+  reads from that native meta. Removed the custom capture/persist code + the
+  custom "Pet Details" meta box (MotoPress handles both natively now).
+* Fixed the payload keys every server-side check used: room_details (was
+  mphb_room_details), check_in_date/check_out_date (was mphb_*), and customer
+  fields under customer_fields — so the guest-2 and pet backstops actually run.
+  "Has dog" is now inferred server-side from the attached pet Service.
+* Safety: server backstops skip AJAX submissions (a redirect would break an AJAX
+  checkout response); client-side validation remains the primary guard.
+* Settings: new "Dog info fields" section to enter the three native field names.
 
 = 0.1.4 =
 * CRITICAL fix: the email-tag registration added a string element to

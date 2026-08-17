@@ -9,60 +9,35 @@ if (!defined('ABSPATH')) {
  * Part D — pet flow, server side (Cottage 34 and any other pet accommodation
  * configured on the settings page).
  *
- * The browser (assets/checkout.js) renders the "Traveling with a dog?" toggle,
- * hides the native pet-service selectors, and checks the correct native MotoPress
- * Service so pricing stays 100% native. This class:
+ * DESIGN (v0.1.5): the dog info fields are NATIVE MotoPress Checkout Fields (the
+ * owner creates them; their names are set on the settings page). MotoPress
+ * submits them inside `customer_fields` and persists them to booking meta
+ * automatically — so this plugin no longer captures or saves the dog values
+ * itself (the old bespoke inputs were dropped from MotoPress's normalized
+ * payload and never reached the server). What remains here:
  *
- *   1. validate_submission() — recompute nights server-side and reject the POST
- *      if the attached pet service doesn't match the bucket, the required dog
- *      info is missing, or a pet service is attached when the toggle said "No".
- *      (Reads $_POST directly — depends on no MotoPress internal hook.)
- *   2. capture_pending() + persist_booking_meta() — stash the dog values from
- *      $_POST on wp_loaded, then persist them to booking meta on the real
- *      MotoPress creation hook `mphb_booking_create_before_set_status`.
- *   3. render_meta_box() — show the dog info on the admin booking screen.
- *   4. Email tag `%dcc_dog_details%` — registered via `mphb_email_booking_tags`
- *      and filled via `mphb_email_replace_tag`, pulling from the saved meta.
- *
- * Meta-save + email hook names were confirmed against the installed MotoPress on
- * staging (the earlier best-guess hooks did not exist). Signatures are exercised
- * by the staging re-test.
+ *   1. validate_submission() — anti-tamper backstop. "Has dog" is inferred from
+ *      the pet Service attached in room_details (which DOES reach the server);
+ *      if present, the bucket must match and the three native dog fields must
+ *      not be blank. Reads the real payload keys; skips AJAX so it never clobbers
+ *      an AJAX checkout response.
+ *   2. Email tag %dcc_dog_details% — registered via mphb_email_booking_tags and
+ *      filled from the native booking meta via mphb_email_replace_tag. MotoPress
+ *      may already surface the checkout fields in the email booking details, so
+ *      the tag is a convenience/fallback.
  */
 final class Pet_Service
 {
-    private const POST_TOGGLE = 'dcc_checkout_dog';       // 'yes' | 'no'
-    private const POST_TYPE   = 'dcc_checkout_dog_type';  // free text
-    private const POST_SIZE   = 'dcc_checkout_dog_size';  // one of the size options
-    private const POST_HAIR   = 'dcc_checkout_dog_hair';  // one of the hair options
-
-    private const EMAIL_TAG   = 'dcc_dog_details';
-
-    /** Dog values stashed on wp_loaded, persisted on the booking-creation hook. */
-    private ?array $pending = null;
+    private const EMAIL_TAG = 'dcc_dog_details';
 
     public function register(): void
     {
-        // Backstop validation (priority 1), then stash the dog values (priority 5)
-        // — both before MotoPress processes the checkout POST on template_redirect.
+        // Anti-tamper backstop before MotoPress processes the checkout POST.
         add_action('wp_loaded', [$this, 'validate_submission'], 1);
-        add_action('wp_loaded', [$this, 'capture_pending'], 5);
 
-        // Persist the stashed dog info when MotoPress creates the booking.
-        // `mphb_booking_create_before_set_status` is the real creation action
-        // (bookings are created pending, so we can't rely on _confirmed).
-        // `mphb_create_booking_by_user` is registered as a resilient fallback.
-        add_action('mphb_booking_create_before_set_status', [$this, 'persist_booking_meta'], 10, 1);
-        add_action('mphb_create_booking_by_user', [$this, 'persist_booking_meta'], 10, 1);
-
-        // Admin: surface the dog info on the booking edit screen.
-        add_action('add_meta_boxes', [$this, 'add_meta_box']);
-
-        // Email: register the %dcc_dog_details% tag and supply its value from the
-        // saved booking meta. `mphb_email_booking_tags` expects a numeric array of
-        // tag ARRAYS (name/description); MotoPress's EmailTemplater::setupTags()
-        // does $tag['name'] on each element, so a string element fatals. Register
-        // on this one filter only (the *_details_tags group's format is not
-        // verified identical).
+        // Email: register the %dcc_dog_details% tag (properly-shaped array — a
+        // string element fatals MotoPress's EmailTemplater::setupTags()) and
+        // supply its value from the saved booking meta.
         add_filter('mphb_email_booking_tags', [$this, 'register_email_tag'], 10, 1);
         add_filter('mphb_email_replace_tag', [$this, 'replace_email_tag'], 10, 3);
     }
@@ -76,46 +51,43 @@ final class Pet_Service
         if (!Checkout_Request::is_checkout_submission() || !Config::pet_fee_enabled()) {
             return;
         }
+        // Never redirect during an AJAX submission — it would break the JSON
+        // response MotoPress expects. Client-side validation is the guard there.
+        if (wp_doing_ajax()) {
+            return;
+        }
 
-        // Is this submission for one of the configured pet accommodations? Pet
-        // services and the dog toggle only exist there, so any of these signals
-        // qualifies.
+        // Is this submission for a configured pet accommodation? "Has dog" is
+        // inferred from the attached pet Service (present in room_details).
         $type_ids = Checkout_Request::room_type_ids();
         $is_pet   = (bool) array_intersect(Config::pet_accommodations(), $type_ids)
-            || $this->any_pet_service_present()
-            || isset($_POST[self::POST_TOGGLE]);
-
+            || $this->any_pet_service_present();
         if (!$is_pet) {
             return;
         }
 
-        $toggle      = $this->posted_toggle();
+        if (!$this->any_pet_service_present()) {
+            return; // No pet service attached → no-dog booking → nothing to enforce.
+        }
+
+        // A pet service is attached: it must be exactly the bucket service.
         $nights      = Checkout_Request::nights();
         $expected_id = Config::service_id_for_nights($nights);
-        $service_ids = Config::pet_service_id_list();
-
-        if ($toggle === 'yes') {
-            // Required info fields must be present.
-            if (
-                $this->posted_text(self::POST_TYPE) === ''
-                || $this->posted_text(self::POST_SIZE) === ''
-                || $this->posted_text(self::POST_HAIR) === ''
-            ) {
+        if ($expected_id <= 0 || !Checkout_Request::contains_service_id($expected_id)) {
+            Checkout_Request::redirect_back_with_error('pet');
+        }
+        foreach (Config::pet_service_id_list() as $sid) {
+            if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
                 Checkout_Request::redirect_back_with_error('pet');
             }
+        }
 
-            // Exactly the bucket service must be attached, and only it.
-            if ($expected_id <= 0 || !Checkout_Request::contains_service_id($expected_id)) {
-                Checkout_Request::redirect_back_with_error('pet');
-            }
-            foreach ($service_ids as $sid) {
-                if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
-                    Checkout_Request::redirect_back_with_error('pet');
-                }
-            }
-        } else {
-            // Toggle "No": no pet service may be attached.
-            if ($this->any_pet_service_present()) {
+        // Required-when-dog: any native dog field that is present must be filled.
+        // Fields the owner hasn't created won't appear in customer_fields, so we
+        // never reject on their absence (mirrors the guest-2 backstop).
+        foreach (Config::dog_field_name_list() as $name) {
+            $value = Checkout_Request::customer_field_value($name);
+            if ($value !== null && trim($value) === '') {
                 Checkout_Request::redirect_back_with_error('pet');
             }
         }
@@ -132,146 +104,16 @@ final class Pet_Service
     }
 
     /* --------------------------------------------------------------------- *
-     * 2. Capture dog info -> persist to booking meta on creation
-     * --------------------------------------------------------------------- */
-
-    /**
-     * Stash the submitted dog values while $_POST is guaranteed present, so the
-     * creation hook (which fires later in the same request) can persist them
-     * without re-reading $_POST.
-     */
-    public function capture_pending(): void
-    {
-        if (!Checkout_Request::is_checkout_submission() || !Config::pet_fee_enabled()) {
-            return;
-        }
-        if ($this->posted_toggle() !== 'yes') {
-            return;
-        }
-
-        $this->pending = [
-            'type'    => $this->posted_text(self::POST_TYPE),
-            'size'    => $this->posted_text(self::POST_SIZE),
-            'hair'    => $this->posted_text(self::POST_HAIR),
-            'applied' => Config::service_id_for_nights(Checkout_Request::nights()),
-        ];
-    }
-
-    /**
-     * @param mixed $booking A MotoPress Booking object (getId()) or a booking ID.
-     */
-    public function persist_booking_meta($booking): void
-    {
-        $booking_id = $this->resolve_booking_id($booking);
-        if ($booking_id <= 0) {
-            return;
-        }
-
-        // Guard against the two creation hooks both firing for one booking.
-        static $saved = [];
-        if (isset($saved[$booking_id])) {
-            return;
-        }
-
-        $data = $this->pending;
-        if ($data === null) {
-            // Fallback: read straight from $_POST (same request).
-            if ($this->posted_toggle() !== 'yes') {
-                return; // No dog on this booking — nothing to store.
-            }
-            $data = [
-                'type'    => $this->posted_text(self::POST_TYPE),
-                'size'    => $this->posted_text(self::POST_SIZE),
-                'hair'    => $this->posted_text(self::POST_HAIR),
-                'applied' => Config::service_id_for_nights(Checkout_Request::nights()),
-            ];
-        }
-
-        if ($data['type'] === '' && $data['size'] === '' && $data['hair'] === '') {
-            return;
-        }
-
-        $saved[$booking_id] = true;
-        $keys = Config::pet_meta_keys();
-
-        update_post_meta($booking_id, $keys['type'], $data['type']);
-        update_post_meta($booking_id, $keys['size'], $data['size']);
-        update_post_meta($booking_id, $keys['hair'], $data['hair']);
-        if ((int) $data['applied'] > 0) {
-            update_post_meta($booking_id, $keys['applied'], (int) $data['applied']);
-        }
-    }
-
-    /**
-     * MotoPress bookings are `mphb_booking` posts. Accept either the Booking
-     * object (has getId()) or a raw ID.
-     *
-     * @param mixed $booking
-     */
-    private function resolve_booking_id($booking): int
-    {
-        if (is_object($booking) && method_exists($booking, 'getId')) {
-            return (int) $booking->getId();
-        }
-        if (is_numeric($booking)) {
-            return (int) $booking;
-        }
-        return 0;
-    }
-
-    /* --------------------------------------------------------------------- *
-     * 3. Admin booking screen meta box
-     * --------------------------------------------------------------------- */
-
-    public function add_meta_box(): void
-    {
-        add_meta_box(
-            'dcc_checkout_pet_info',
-            __('Pet Details (DCC)', 'dcc-checkout'),
-            [$this, 'render_meta_box'],
-            'mphb_booking',
-            'side',
-            'default'
-        );
-    }
-
-    public function render_meta_box(\WP_Post $post): void
-    {
-        [$type, $size, $hair] = $this->dog_meta($post->ID);
-
-        if ($type === '' && $size === '' && $hair === '') {
-            echo '<p>' . esc_html__('No dog on this booking.', 'dcc-checkout') . '</p>';
-            return;
-        }
-
-        echo '<table class="widefat striped"><tbody>';
-        $this->meta_row(__('Dog type', 'dcc-checkout'), $type);
-        $this->meta_row(__('Size', 'dcc-checkout'), $size);
-        $this->meta_row(__('Hair length', 'dcc-checkout'), $hair);
-        echo '</tbody></table>';
-    }
-
-    private function meta_row(string $label, string $value): void
-    {
-        printf(
-            '<tr><th style="text-align:left">%s</th><td>%s</td></tr>',
-            esc_html($label),
-            esc_html($value !== '' ? $value : '—')
-        );
-    }
-
-    /* --------------------------------------------------------------------- *
-     * 4. Notification email — MotoPress tag system
+     * 2. Notification email — MotoPress tag system
      * --------------------------------------------------------------------- */
 
     /**
      * Register the %dcc_dog_details% tag so it's available in booking emails.
      *
      * MotoPress's EmailTemplater::setupTags() iterates $tags as a NUMERIC array
-     * of tag arrays and calls $tag['name'] / $tag['description'] on each element.
-     * We must append a properly-shaped array — a string element causes a fatal
-     * TypeError on `init` (site-down). The tag name carries NO `%` (MotoPress
-     * adds the delimiters itself).
+     * of tag arrays and calls $tag['name'] / $tag['description'] on each element,
+     * so we must append a properly-shaped array (a string element fatals on
+     * init). The tag name carries NO `%` — MotoPress adds the delimiters.
      *
      * @param mixed $tags Numeric array of tag arrays provided by MotoPress.
      * @return mixed
@@ -288,7 +130,7 @@ final class Pet_Service
     }
 
     /**
-     * Supply the value for %dcc_dog_details% from the booking's saved meta.
+     * Supply the value for %dcc_dog_details% from the booking's native meta.
      *
      * @param mixed $replacement Current replacement value.
      * @param mixed $tag         Tag name being replaced (with or without %…%).
@@ -312,7 +154,6 @@ final class Pet_Service
             return $replacement;
         }
 
-        // Plain-text lines; MotoPress wraps email output as needed.
         $lines = [
             __('Dog type', 'dcc-checkout') . ': ' . $type,
             __('Size', 'dcc-checkout') . ': ' . $size,
@@ -322,13 +163,13 @@ final class Pet_Service
     }
 
     /**
-     * Read the three dog meta values for a booking.
+     * Read the three dog meta values (native Checkout Field meta) for a booking.
      *
      * @return array{0:string,1:string,2:string} [type, size, hair]
      */
     private function dog_meta(int $booking_id): array
     {
-        $keys = Config::pet_meta_keys();
+        $keys = Config::dog_meta_keys();
         return [
             (string) get_post_meta($booking_id, $keys['type'], true),
             (string) get_post_meta($booking_id, $keys['size'], true),
@@ -336,24 +177,20 @@ final class Pet_Service
         ];
     }
 
-    /* --------------------------------------------------------------------- *
-     * POST readers
-     * --------------------------------------------------------------------- */
-
-    private function posted_toggle(): string
+    /**
+     * MotoPress bookings are `mphb_booking` posts. Accept either the Booking
+     * object (has getId()) or a raw ID.
+     *
+     * @param mixed $booking
+     */
+    private function resolve_booking_id($booking): int
     {
-        if (!isset($_POST[self::POST_TOGGLE])) {
-            return 'no';
+        if (is_object($booking) && method_exists($booking, 'getId')) {
+            return (int) $booking->getId();
         }
-        $val = sanitize_text_field(wp_unslash($_POST[self::POST_TOGGLE])); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        return strtolower($val) === 'yes' ? 'yes' : 'no';
-    }
-
-    private function posted_text(string $key): string
-    {
-        if (!isset($_POST[$key])) {
-            return '';
+        if (is_numeric($booking)) {
+            return (int) $booking;
         }
-        return trim(sanitize_text_field(wp_unslash($_POST[$key]))); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        return 0;
     }
 }

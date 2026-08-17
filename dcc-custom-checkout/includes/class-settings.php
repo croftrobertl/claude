@@ -72,6 +72,11 @@ final class Settings
             $out[$key] = $val > 0 ? $val : (int) $defaults[$key];
         }
 
+        foreach (['dog_field_type', 'dog_field_size', 'dog_field_hair'] as $key) {
+            $name      = isset($input[$key]) ? sanitize_key($input[$key]) : '';
+            $out[$key] = $name !== '' ? $name : (string) $defaults[$key];
+        }
+
         // Fresh reads should reflect the new values immediately.
         Config::flush_cache();
 
@@ -127,6 +132,18 @@ final class Settings
                     $this->number_row(__('Daily bucket: minimum nights', 'dcc-checkout'), 'min_daily', (int) $s['min_daily'], __('e.g. 2 → daily applies from 2 nights up to (weekly − 1).', 'dcc-checkout'));
                     $this->number_row(__('Weekly bucket: minimum nights', 'dcc-checkout'), 'min_weekly', (int) $s['min_weekly'], '');
                     $this->number_row(__('Monthly bucket: minimum nights', 'dcc-checkout'), 'min_monthly', (int) $s['min_monthly'], '');
+                    ?>
+                </table>
+
+                <h2><?php echo esc_html__('Dog info fields (native Checkout Fields)', 'dcc-checkout'); ?></h2>
+                <p class="description" style="max-width:640px">
+                    <?php echo esc_html__('The three dog info fields are native MotoPress Checkout Fields you create under Bookings → Settings → Checkout Fields (set them NOT required). Enter their exact field names here so the "Traveling with a dog?" toggle can show/hide and require them. MotoPress saves them to the booking and can show them in emails.', 'dcc-checkout'); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <?php
+                    $this->text_row(__('Dog type — field name', 'dcc-checkout'), 'dog_field_type', (string) $s['dog_field_type'], __('Text field.', 'dcc-checkout'));
+                    $this->text_row(__('Dog size — field name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs.', 'dcc-checkout'));
+                    $this->text_row(__('Dog hair — field name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long.', 'dcc-checkout'));
                     ?>
                 </table>
 
@@ -198,6 +215,22 @@ final class Settings
             esc_html($label),
             esc_attr(Config::OPTION),
             (int) $value
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+        echo '</td></tr>';
+    }
+
+    private function text_row(string $label, string $key, string $value, string $desc): void
+    {
+        printf(
+            '<tr><th scope="row"><label for="dcc_%1$s">%2$s</label></th><td>'
+            . '<input type="text" id="dcc_%1$s" name="%3$s[%1$s]" value="%4$s" class="regular-text" />',
+            esc_attr($key),
+            esc_html($label),
+            esc_attr(Config::OPTION),
+            esc_attr($value)
         );
         if ($desc !== '') {
             echo '<p class="description">' . esc_html($desc) . '</p>';
