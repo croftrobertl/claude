@@ -3,7 +3,7 @@
 // views them. Bump CACHE_VERSION whenever bundle.js/css or the vendor list change in
 // a way that needs an immediate refresh.
 
-const CACHE_VERSION = 'dcc-tour-v84';
+const CACHE_VERSION = 'dcc-tour-v85';
 const SHELL = [
   './',
   'index.html',
@@ -47,11 +47,11 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Never intercept video/audio: let the browser stream them natively with proper
-  // HTTP Range support. Routing media through the SW (and its cache-first path,
-  // which can't store 206 partials) made playback slow/stuttery. Also skip any
-  // request that already carries a Range header.
-  if (/\.(?:mp4|m4v|mov|webm|ogg|ogv|mp3|m4a)(?:$|\?)/i.test(req.url) || req.headers.has('range')) return;
+  // Never intercept VIDEO (or any Range request): let the browser stream natively
+  // with proper HTTP Range support — the SW cache-first path can't store 206
+  // partials and made playback slow/stuttery. Audio (the two theme mp3s) is small
+  // and deliberately NOT bypassed, so it still caches lazily for offline music.
+  if (/\.(?:mp4|m4v|mov|webm|ogv)(?:$|\?)/i.test(req.url) || req.headers.has('range')) return;
 
   // Network-first for the app shell (navigations + HTML/JS/CSS/manifest) and JSON,
   // so code + data updates appear as soon as you're online — no more stale cached

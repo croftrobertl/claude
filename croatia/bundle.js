@@ -531,33 +531,9 @@
     for (let i = 0; i < ALT_STOPS.length - 1; i++) if (t >= ALT_STOPS[i][0] && t <= ALT_STOPS[i + 1][0]) { a = ALT_STOPS[i]; b = ALT_STOPS[i + 1]; break; }
     return lerpHex(a[1], b[1], b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]));
   }
-  // dot colour in "Color by Who": the dominant shooter AMONG THE VISIBLE items, so
-  // filtering to one person paints their dots that person's colour (a place has many
-  // shooters; unfiltered, the dot still shows whoever shot the most there).
-  function placeDominantPerson(p) {
-    const c = {}; placeItems(p).forEach(it => { if (it.person) c[it.person] = (c[it.person] || 0) + 1; });
-    let best = null, n = -1; for (const k in c) if (c[k] > n) { n = c[k]; best = k; }
-    return best;
-  }
-  function placeMeanAlt(p) {
-    const a = p.items.map(it => it.alt).filter(x => x != null);
-    return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
-  }
-  // circular mean of the camera headings at a place (which way people faced)
-  function placeMeanHeading(p) {
-    let sx = 0, sy = 0, n = 0;
-    p.items.forEach(it => { if (it.heading != null) { const r = it.heading * Math.PI / 180; sx += Math.cos(r); sy += Math.sin(r); n++; } });
-    if (!n) return null;
-    let deg = Math.atan2(sy, sx) * 180 / Math.PI; return (deg + 360) % 360;
-  }
   const PLAY_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
   const PAUSE_GLYPH = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
   let mmColorMode = 'day';   // 'day' | 'person' | 'alt'
-  function placeColor(p, di) {
-    if (mmColorMode === 'person') return PERSON_COLORS[placeDominantPerson(p)] || NO_COLOR;
-    if (mmColorMode === 'alt') { const a = placeMeanAlt(p); return a != null ? altColor(a) : NO_COLOR; }
-    return dayColor(di);
-  }
   function buildModeToggle() {
     const w = el('div', 'dcc-tour-modes');
     w.setAttribute('role', 'tablist');
@@ -627,7 +603,7 @@
   }
   let mmMap = null, mmMarkers = null, mmPathLayer = null, mmHeat = null, mmSat = null, mmLabelLayer = null, mmInit = false;
   let mmSpiderLayer = null, mmSpiderKey = null, mmAllItems = [];
-  // per-ITEM colour (unlike placeColor, which averaged a whole place) so each
+  // per-ITEM colour, so each
   // photo/video/clip dot follows the current Color-by mode
   function mmItemColor(it, di) {
     if (mmColorMode === 'person') return PERSON_COLORS[it.person] || NO_COLOR;
@@ -727,6 +703,11 @@
         const a = cells.get((o._gx + dx) + ':' + (o._gy + dy)); if (!a) continue;
         a.forEach(q => { if (q._used) return; if (Math.hypot(q._x - o._x, q._y - o._y) <= R) { q._used = true; group.push(q); } });
       }
+      // viewport culling: skip groups more than ~a screen outside the view, so a
+      // deep zoom doesn't build thousands of off-screen DOM markers (pan/zoom
+      // re-renders via moveend, so culled pins appear as they scroll into view)
+      const size = mmMap.getSize(), pad = Math.max(size.x, size.y);
+      if (o._x < -pad || o._y < -pad || o._x > size.x + pad || o._y > size.y + pad) return;
       if (group.length === 1) mmMarkers.addLayer(mmItemMarker(o, [o.lat, o.lng], showFacing));
       else {
         let sx = 0, sy = 0; group.forEach(g => { sx += g.lat; sy += g.lng; });
@@ -780,10 +761,7 @@
     mmMap.on('moveend zoomend', () => { if (mmMap && root.dataset.view === 'map') mmRenderMarkers(); });
     // tap empty map (not a pin/cluster — those stopPropagation) closes an open fan
     mmMap.on('click', () => { if (mmSpiderKey) mmCloseFan(); });
-    // task 6: hide the facing arrows when zoomed out (they clutter the whole-trip view)
-    const FACE_MIN_ZOOM = 13;
-    const syncFaceZoom = () => mmMap.getContainer().classList.toggle('mm-lowzoom', mmMap.getZoom() < FACE_MIN_ZOOM);
-    mmMap.on('zoomend', () => { syncFaceZoom(); renderMapLabels(); }); syncFaceZoom();
+    mmMap.on('zoomend', renderMapLabels);
     const m = root._mapmode;
     m.querySelector('#mm-path').addEventListener('change', renderMapMode);
     m.querySelector('#mm-heat').addEventListener('change', renderMapMode);
@@ -1024,8 +1002,8 @@
     side.hidden = false;
     side.innerHTML = '<button class="dcc-tour-mm-close" aria-label="Close">&times;</button>' +
       '<h3>' + escapeHtml(p.name) + mapsLink(p.lat, p.lng, 'dcc-tour-maplink head') + '</h3>' +
-      '<p class="dcc-tour-mm-meta">' + escapeHtml(d.label) + ' · ' + escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to) +
-        ' · ' + items.length + ' shots' + (personOn() ? ' by ' + escapeHtml(personLabel()) : '') + '</p>' +
+      '<p class="dcc-tour-mm-meta">' + [escapeHtml(d.label), escapeHtml(p.from === p.to ? p.from : p.from + '–' + p.to),
+        items.length + (items.length === 1 ? ' shot' : ' shots') + (personOn() ? ' by ' + escapeHtml(personLabel()) : '')].filter(Boolean).join(' · ') + '</p>' +
       '<div class="dcc-tour-media dcc-tour-mm-grid">' + thumbs.join('') + '</div>' +
       '<button class="dcc-tour-chip" data-openday="' + di + '">Open this day in Story →</button>';
     side.querySelector('.dcc-tour-mm-close').addEventListener('click', () => { side.hidden = true; });
@@ -1047,6 +1025,7 @@
     const seq = [];
     DATA.days.forEach((d, di) => d.places.forEach((p, pi) => {
       if (p.lat == null) return;
+      if (p.items.length && p.items.every(it => it.nonstat)) return;   // keepsake outliers (e.g. Belgium) stay out of the trip replay
       if (personOn() && placeCount(p) === 0) return;   // walk only where these people shot
       seq.push({ lat: p.lat, lng: p.lng, di, pi, p, day: d });
     }));
@@ -1085,7 +1064,7 @@
       const time = m.p.from === m.p.to ? m.p.from : m.p.from + '–' + m.p.to;
       mo.innerHTML = (img ? '<img src="' + escapeAttr(img) + '" alt="">' : '') +
         '<figcaption><b>' + escapeHtml(m.p.name) + '</b>' +
-        '<span>' + escapeHtml(dDate(m.day) + ' · ' + time + ' · ' + plur(its.length, 'shot')) + '</span></figcaption>';
+        '<span>' + escapeHtml([dDate(m.day), time, plur(its.length, 'shot')].filter(Boolean).join(' · ')) + '</span></figcaption>';
       mo.hidden = false;
     }
     const scrub = root._mapmode.querySelector('#mm-scrub');
@@ -2038,7 +2017,7 @@
         '<div class="dcc-tour-place-head" role="button" tabindex="0" aria-expanded="' + (openAttr === '1' ? 'true' : 'false') + '" aria-controls="media-' + pi + '">' +
           '<div class="dcc-tour-place-htext">' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
-            '<span class="dcc-tour-place-meta">' + escapeHtml(time) + spent + ' · ' + plur(its.length, 'shot') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
+            '<span class="dcc-tour-place-meta">' + [escapeHtml(time) + spent.replace(/^ · /, escapeHtml(time) ? ' · ' : ''), plur(its.length, 'shot')].filter(Boolean).join(' · ') + cum + ' ' + mapsLink(p.lat, p.lng, 'dcc-tour-maplink meta') + '</span>' +
           '</div>' +
           '<span class="dcc-tour-place-chevron" aria-hidden="true">▾</span>' +
         '</div>' +
