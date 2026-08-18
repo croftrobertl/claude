@@ -1741,7 +1741,6 @@ dialog.dccgg-wrapper::backdrop {
    whose uppercase treatment is the plugin's own and intentional. */
 .dccgg-root.dccgg-root .dccgg-btn,
 .dccgg-root.dccgg-root .dccgg-btn-text,
-.dccgg-root.dccgg-root .dccgg-more-item,
 .dccgg-root.dccgg-root .dccgg-quick-action,
 .dccgg-root.dccgg-root .dccgg-back,
 .dccgg-root.dccgg-root .dccgg-read-more,
@@ -1759,47 +1758,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-dialog.dccgg-report-dialog button {
     text-transform: none;
     letter-spacing: normal;
-}
-
-/* v0.9.7.32: no button moves when pressed. The plugin's own two press
-   nudges are removed above; this stops a theme adding one. Deliberately
-   limited to buttons with no hover transform — for .dccgg-section-prev/next,
-   .dccgg-quick-action, .dccgg-fab, .dccgg-tile and .dccgg-gallery-thumb a
-   forced `none` would cancel their hover scale during the press, which is
-   itself a nudge. Hover treatments everywhere are left untouched. */
-.dccgg-root.dccgg-root .dccgg-btn:active,
-.dccgg-root.dccgg-root .dccgg-btn-text:active,
-.dccgg-root.dccgg-root .dccgg-more-item:active,
-.dccgg-root.dccgg-root .dccgg-item-tts:active,
-.dccgg-root.dccgg-root .dccgg-item-report:active,
-.dccgg-root.dccgg-root .dccgg-checklist-reset:active,
-.dccgg-root.dccgg-root .dccgg-search-still-stuck:active,
-.dccgg-root.dccgg-root .dccgg-ai-button:active,
-.dccgg-root.dccgg-root .dccgg-fab-close:active,
-.dccgg-root.dccgg-root .dccgg-qr-close:active,
-.dccgg-root.dccgg-root .dccgg-flip-close:active,
-.dccgg-report-dialog.dccgg-report-dialog button:active {
-    transform: none !important;
-}
-
-/* The three buttons that grow on hover need the press pinned to their hover
-   size rather than to `none`, or the press itself shrinks them. Two cases:
-   with a pointer, :hover:active holds the exact hover scale so a click moves
-   nothing; on touch there is no hover, so plain :active resolves to none and
-   a tap moves nothing either. */
-.dccgg-root.dccgg-root .dccgg-section-prev:active,
-.dccgg-root.dccgg-root .dccgg-section-next:active,
-.dccgg-root.dccgg-root .dccgg-quick-action:active {
-    transform: none !important;
-}
-@media (hover: hover) {
-    .dccgg-root.dccgg-root .dccgg-section-prev:hover:active,
-    .dccgg-root.dccgg-root .dccgg-section-next:hover:active {
-        transform: scale(1.08) !important;
-    }
-    .dccgg-root.dccgg-root .dccgg-quick-action:hover:active {
-        transform: scale(1.1) !important;
-    }
 }
 
 /* ---- Visible focus rings ---- */
@@ -2603,14 +2561,12 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
-/* ---- Section-nav arrows: explicit :active for touch ----
-   v0.9.7.32: the 0.96 press scale is removed (no press nudge). The colour
-   swap stays — it is the only tap feedback these arrows get on touch, where
-   there is no hover state to fall back on. */
+/* ---- Section-nav arrows: explicit :active for touch ---- */
 .dccgg-section-prev:active:not([disabled]),
 .dccgg-section-next:active:not([disabled]) {
     background: var(--dccgg-primary);
     color: var(--dccgg-btn-txt);
+    transform: scale(0.96);
 }
 
 /* =============================================================
@@ -2850,6 +2806,7 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
 .dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }
 .dccgg-report-body select,
+.dccgg-report-body textarea,
 .dccgg-report-body input[type="email"] {
     width: 100%;
     padding: 10px 12px;
@@ -2860,20 +2817,8 @@ dialog.dccgg-wrapper::backdrop {
     font: inherit;
     box-sizing: border-box;
 }
-/* v0.9.7.31: the description textarea no longer carries the plugin's own
-   border / background / padding. The name, cottage and phone fields are not
-   styled by the plugin at all, so they inherit the site theme's field
-   styling (the gold pill) — which left the textarea as the odd one out.
-   Dropping the visual overrides lets the theme dress it identically; only
-   structural properties the theme has no opinion on are kept. */
-.dccgg-report-body textarea {
-    width: 100%;
-    box-sizing: border-box;
-    font: inherit;
-    resize: vertical;
-    min-height: 100px;
-}
-.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; text-align: center; }
+.dccgg-report-body textarea { resize: vertical; min-height: 100px; }
+.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; }
 /* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
    paint behind the top-layer dialog in Chrome, so the error message
    needs to live inside the dialog itself. */
@@ -2920,33 +2865,16 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25);
     transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
-/* v0.9.7.31: Send and Cancel hold their normal-state look on hover and on
-   keyboard focus — no darkening, no shadow lift, and nothing the theme
-   might add either. The dialog portals to <body>, outside .dccgg-root, so
-   the self-doubled dialog class supplies the specificity that the usual
-   .dccgg-root.dccgg-root defense provides elsewhere. :focus-visible is
-   pinned alongside :hover so keyboard users see the same flat treatment;
-   the buttons stay reachable because the dialog's own focus ring is
-   untouched. */
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:hover,
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:focus-visible {
-    background: var(--dccgg-primary, #0f6dbf) !important;
-    border-color: var(--dccgg-primary, #0f6dbf) !important;
-    color: var(--dccgg-btn-txt, #ffffff) !important;
-    box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25) !important;
-    transform: none !important;
+@media (hover: hover) {
+    .dccgg-report-foot .dccgg-btn-send:hover,
+    .dccgg-report-foot .dccgg-btn-send:focus-visible {
+        background: color-mix(in srgb, var(--dccgg-primary, #0f6dbf) 85%, #000);
+        box-shadow: 0 4px 10px rgba(15, 109, 191, 0.35);
+        outline: none;
+    }
 }
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-cancel:hover,
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-cancel:focus-visible {
-    background: transparent !important;
-    border-color: color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent) !important;
-    color: var(--dccgg-text, #111) !important;
-    box-shadow: none !important;
-    transform: none !important;
-}
-/* v0.9.7.32: the 1px press nudge is removed at the host's request. */
-.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:active {
-    transform: none !important;
+.dccgg-report-foot .dccgg-btn-send:active {
+    transform: translateY(1px);
 }
 .dccgg-report-foot .dccgg-btn-send:disabled {
     opacity: 0.6;
