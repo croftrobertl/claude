@@ -2639,7 +2639,13 @@ dialog.dccgg-wrapper::backdrop {
    which is what the host was seeing. */
 .dccgg-root.dccgg-root .dccgg-detail-title,
 .dccgg-root.dccgg-root .dccgg-item-title {
-    font-size: var(--dccgg-section-title-size, 1.15rem);
+    font-size: var(--dccgg-section-title-size, 1.15em);
+}
+/* The compact variant (flip-back / accordion) is deliberately smaller. It is
+   declared at (0,2,0), so the defended rule above would otherwise swallow it
+   — restate it here at matching weight. */
+.dccgg-root.dccgg-root .dccgg-item--compact .dccgg-item-title {
+    font-size: 1em;
 }
 @media (prefers-reduced-motion: reduce) {
     .dccgg-detail-header,

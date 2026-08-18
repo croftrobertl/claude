@@ -70,6 +70,30 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.33 =
+
+**Fix: the detail popup rendered too small on desktop (regression from
+v0.9.7.30).**
+
+Making the section title match the item title in v0.9.7.30 sized both in
+`rem`, which locked them to the browser's 16px root instead of letting
+them scale with the widget's own content font. On a guide inheriting a
+larger font, every title in the popup shrank by roughly 20% — measured
+23px before, 18.4px after. Both are back on `em`, so they scale with the
+content again while still matching each other, in normal and scrolled
+states alike.
+
+Also restores the compact item title (flip-back / accordion), which the
+v0.9.7.30 rule was overriding to full size.
+
+Note: versions 0.9.7.31 and 0.9.7.32 were withdrawn. This release is
+v0.9.7.30 plus the fix above; the numbering skips ahead so the withdrawn
+builds cannot collide with this one in any cache.
+
+Regression suite now asserts the titles scale with the surrounding
+content font, not just that they match each other; 35 assertions, all
+passing.
+
 = 0.9.7.30 =
 
 **Popup header and button polish (four host requests).**

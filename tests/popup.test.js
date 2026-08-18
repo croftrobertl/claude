@@ -334,8 +334,9 @@ async function run() {
             <span class="dccgg-item-title-text">Wifi Name: "topoftheworld"</span>
             <span class="dccgg-item-title-tail"></span></h3>
             <button type="button" class="dccgg-btn dccgg-copy">Copy password</button></article>`;
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${THEME}${CSS}</style></head>
-            <body class="dccgg-detail-open"><div class="dccgg-root is-detail">
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${THEME}${CSS}
+            .elementor-widget{font-size:20px;}</style></head>
+            <body class="dccgg-detail-open"><div class="elementor-widget"><div class="dccgg-root is-detail">
             <div class="dccgg-stage is-modal-open" style="visibility:visible;opacity:1">
             <div class="dccgg-detail is-shrunk"><div class="dccgg-detail-header">
               <div class="dccgg-detail-header-titlebar"><span class="dccgg-detail-titlebar-spacer"></span>
@@ -343,8 +344,11 @@ async function run() {
                 <details class="dccgg-more"><summary class="dccgg-more-summary--text">🧭🛎️</summary></details></div>
               <div class="dccgg-detail-header-actions"><button class="dccgg-btn dccgg-back">Back</button>
                 <div class="dccgg-section-nav"><button class="dccgg-section-prev">‹</button><button class="dccgg-section-next">›</button></div></div>
-            </div><div class="dccgg-detail-layout"><div class="dccgg-detail-items">${item}</div></div></div>
-            </div></div>
+            </div><div class="dccgg-detail-layout"><div class="dccgg-detail-items">${item}
+              <article class="dccgg-item dccgg-item--compact"><h3 class="dccgg-item-title">
+              <span class="dccgg-item-title-text">Compact</span></h3></article>
+            </div></div></div>
+            </div></div></div>
             <dialog class="dccgg-report-dialog" open style="width:340px">
               <div class="dccgg-report-head"><h3>Ask for assistance or report issues</h3>
               <button class="dccgg-report-close">&times;</button></div>
@@ -361,6 +365,7 @@ async function run() {
             return {
                 detailTitlePx: parseFloat(cs(document.querySelector('.dccgg-detail-title')).fontSize),
                 itemTitlePx: parseFloat(cs(document.querySelector('.dccgg-item-title')).fontSize),
+                compactTitlePx: parseFloat(cs(document.querySelector('.dccgg-item--compact .dccgg-item-title')).fontSize),
                 backTransform: cs(document.querySelector('.dccgg-back')).textTransform,
                 copyTransform: cs(document.querySelector('.dccgg-copy')).textTransform,
                 backSpacing: cs(document.querySelector('.dccgg-back')).letterSpacing,
@@ -377,6 +382,15 @@ async function run() {
         // (2) Section title matches item title even while shrunk.
         check('section title == item title size', Math.abs(r.detailTitlePx - r.itemTitlePx) < 0.5,
             `${r.detailTitlePx}px vs ${r.itemTitlePx}px`);
+        // v0.9.7.33: both titles must SCALE with the surrounding content font.
+        // v0.9.7.30 sized them in rem, which matched them to each other but
+        // pinned them to the 16px root — on a widget inheriting a larger font
+        // that shrank the whole popup by ~20%. The fixture's wrapper sets
+        // 20px, so 1.15em = 23px; anything near 18.4px means rem crept back.
+        check('titles scale with content font (em, not rem)', r.itemTitlePx > 21,
+            `${r.itemTitlePx}px — expected ~23px at a 20px content font`);
+        check('compact item title stays smaller', r.compactTitlePx < r.itemTitlePx,
+            `compact=${r.compactTitlePx}px item=${r.itemTitlePx}px`);
         // (3) Title row sits above the Back / prev-next row.
         check('title row above Back/arrows row', r.titleRowTop < r.actionsRowTop,
             `title=${r.titleRowTop.toFixed(0)} actions=${r.actionsRowTop.toFixed(0)}`);
