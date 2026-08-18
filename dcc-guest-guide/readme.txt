@@ -70,28 +70,6 @@ After upload + activation:
 
 == Changelog ==
 
-= 0.9.7.32 =
-
-**Buttons are flat in every state, plugin-wide.**
-
-The 1px press nudge on Send is gone, and every other button now gets the
-same treatment the report dialog's Send and Cancel got in v0.9.7.31:
-hover and press look exactly like the resting state. Covers Back, Copy
-password, read-more, the more-menu items, quick actions, the per-item
-speaker and report buttons, the prev/next section arrows (whose press
-also swapped colour and scaled to 0.96), the checklist Reset, the "still
-stuck" CTA, the AI button, and the dialog buttons. A defensive pin keeps
-a theme from reintroducing a lift or brightness shift on top.
-
-Deliberately unchanged, since these are not plain buttons: the menu-hub
-tile hover effect (pop / lift is an Elementor setting you choose), the
-floating action button, and gallery thumbnails. Keyboard focus rings are
-untouched — flattening hover did not remove the focus outline.
-
-Regression suite extended to press every button under a theme that tries
-to animate them, and to confirm the tile effect and focus ring survive;
-37 assertions, all passing.
-
 = 0.9.7.31 =
 
 **Report-a-problem polish (four host requests).**
