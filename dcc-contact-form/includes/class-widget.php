@@ -472,6 +472,20 @@ final class Widget extends Widget_Base
             'range'      => ['px' => ['min' => 0, 'max' => 60]],
             'selectors'  => ['{{WRAPPER}} .dcc-fields' => 'gap: {{SIZE}}{{UNIT}};'],
         ]);
+        $this->add_responsive_control('form_max_width', [
+            'label'       => __('Form Max Width', 'dcc-contact-form'),
+            'type'        => Controls_Manager::SLIDER,
+            'size_units'  => ['px', '%'],
+            'range'       => [
+                'px' => ['min' => 260, 'max' => 1200],
+                '%'  => ['min' => 20, 'max' => 100],
+            ],
+            'default'     => ['size' => 600, 'unit' => 'px'],
+            'description' => __('The form shrinks to this width and centres, like the old form. Set to 100% for full width.', 'dcc-contact-form'),
+            'selectors'   => [
+                '{{WRAPPER}} .dcc-contact-wrap' => 'max-width: {{SIZE}}{{UNIT}}; margin-left: auto; margin-right: auto;',
+            ],
+        ]);
         $this->end_controls_section();
 
         // ---- Button ----

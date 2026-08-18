@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,12 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.0.3 =
+* Style: placeholder text in inputs and the textarea is now centre-aligned.
+* Style: the form now shrinks to an inline, centred block (like the old form)
+  instead of stretching the full page width, via a new Style → Layout → "Form
+  Max Width" control (default 600px; set to 100% for full width).
 
 = 1.0.2 =
 * Style: field labels now render true black (#000), overriding the theme's
