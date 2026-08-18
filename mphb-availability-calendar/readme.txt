@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.15.1
+Stable tag: 0.15.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.15.2 =
+* Removed the extra letter-spacing from the "Today" navigation button and the cottage-column header label. That spacing existed to keep ALL-CAPS text legible; with those labels now in Title Case (0.15.1) it just read as airy, so both now use normal spacing.
 
 = 0.15.1 =
 * Calendar text that was forced to ALL CAPS now reads as Title Case, matching the site's move away from all-caps styling: the "Today" navigation button ("TODAY" → "Today"), the day-of-week column headers ("MON/TUE/WED" → "Mon/Tue/Wed"), and the cottage-column header label ("COTTAGE" → "Cottage"). Styling only — no wording, layout, or functionality changed.

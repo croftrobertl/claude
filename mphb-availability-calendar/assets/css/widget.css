@@ -250,7 +250,6 @@
     padding: 0 0.85em;
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.5px;
     text-transform: capitalize;
 }
 
@@ -442,7 +441,6 @@
     color: #ffffff;
     font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.5px;
     text-transform: capitalize;
     cursor: default;
     border-right-color: rgba(255, 255, 255, 0.15);
