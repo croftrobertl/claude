@@ -77,7 +77,11 @@
         var validators = [];
         var guest = setupGuestConditional(root); // Part C
         if (guest) { validators.push(guest); }
-        var pet = setupPetFlow(root);            // Part D
+        // The dog Checkout Fields are enabled globally in MotoPress, so they
+        // render on EVERY cottage's checkout. Hide them (not required) on every
+        // checkout by default; only the pet-cottage toggle reveals them.
+        var dog = setupDogFields(root);
+        var pet = setupPetFlow(root, dog);       // Part D
         if (pet) { validators.push(pet); }
 
         setupSubmit(root, validators);
@@ -287,9 +291,11 @@
      * Part D — Cottage 34 pet flow
      * ===================================================================== */
 
-    function setupPetFlow(root) {
-        // Master switch (admin setting). When off, nothing renders and no
-        // service is applied — the native MotoPress UI is left untouched.
+    // `dog` is the handle from setupDogFields (fields already hidden by default);
+    // this flow only REVEALS them via the toggle on a pet cottage.
+    function setupPetFlow(root, dog) {
+        // Master switch (admin setting). When off, the toggle never renders, no
+        // service is applied, and the dog fields stay hidden everywhere.
         if (!CFG.petFeeEnabled) {
             return null;
         }
@@ -339,35 +345,6 @@
             root.appendChild(block.el);
         }
 
-        // The dog info fields are NATIVE MotoPress Checkout Fields (created by
-        // the owner; names set in settings). We locate them by name and drive
-        // them from the toggle — same pattern as guest-2. They may not exist yet
-        // (owner hasn't created them) — then the toggle just ticks the service.
-        var dogNames = CFG.dogFieldNames || [];
-        var dogInputs = [];
-        var dogRows = [];
-        dogNames.forEach(function (name) {
-            var el = root.querySelector('[name="' + esc(name) + '"]');
-            if (!el) { return; }
-            dogInputs.push(el);
-            var row = el.closest('.mphb-text-control') ||
-                el.closest('[class*="mphb-customer-"], p, li, tr, div');
-            if (row && dogRows.indexOf(row) === -1) { dogRows.push(row); }
-        });
-
-        // Move the dog rows into a "Pet Information" section, placed after the
-        // Guest #2 section (or after "Your Information"). The toggle + note stay
-        // in the services area; only the three info fields move here.
-        var petAnchor = root.querySelector('.dcc_checkout-guest2-section') ||
-            root.querySelector('.mphb-customer-details');
-        var petSection = petAnchor
-            ? buildFieldSection('dcc_checkout-pet-section', (CFG.sectionTitles || {}).pet || 'Pet Information', dogRows)
-            : null;
-        if (petSection) {
-            insertAfter(petSection, petAnchor);
-        }
-        var dogVisTargets = petSection ? [petSection] : dogRows;
-
         function bucketId() {
             return serviceForNights(getNights(root));
         }
@@ -385,19 +362,9 @@
             });
         }
 
-        function showDogFields(yes) {
-            dogVisTargets.forEach(function (t) {
-                t.classList.toggle('dcc_checkout-section-hidden', !yes);
-            });
-            dogInputs.forEach(function (inp) {
-                setRequired(inp, yes, root);
-                if (!yes) { inp.classList.remove('dcc_checkout-invalid'); }
-            });
-        }
-
         function onToggle() {
             var yes = block.isYes();
-            showDogFields(yes);
+            if (dog) { dog.show(yes); } // reveal/hide the Pet Information section
             applyService(yes);
         }
 
@@ -410,11 +377,11 @@
 
         // Validator: when "Yes", the present native dog fields are required.
         return function () {
-            if (!block.isYes()) {
+            if (!block.isYes() || !dog) {
                 return [];
             }
             var bad = [];
-            dogInputs.forEach(function (inp) {
+            dog.inputs.forEach(function (inp) {
                 inp.classList.remove('dcc_checkout-invalid');
                 if (!String(inp.value || '').trim()) {
                     bad.push(inp);
@@ -422,6 +389,55 @@
             });
             return bad;
         };
+    }
+
+    // Collect the native dog Checkout Fields (created by the owner; names set in
+    // settings), move them into the "Pet Information" section, and HIDE them —
+    // not required — by default. Runs on EVERY checkout: MotoPress renders these
+    // globally-enabled fields on every cottage, so without this they'd show on
+    // non-pet cottages. Only the pet-cottage toggle (setupPetFlow) reveals them.
+    // Returns { inputs, show(yes) } or null when the fields don't exist.
+    function setupDogFields(root) {
+        var dogNames = CFG.dogFieldNames || [];
+        var inputs = [];
+        var rows = [];
+        dogNames.forEach(function (name) {
+            var el = root.querySelector('[name="' + esc(name) + '"]');
+            if (!el) { return; }
+            inputs.push(el);
+            var row = el.closest('.mphb-text-control') ||
+                el.closest('[class*="mphb-customer-"], p, li, tr, div');
+            if (row && rows.indexOf(row) === -1) { rows.push(row); }
+        });
+        if (!inputs.length) {
+            return null;
+        }
+
+        // Move the dog rows into a "Pet Information" section, placed after the
+        // Guest #2 section (or after "Your Information").
+        var anchor = root.querySelector('.dcc_checkout-guest2-section') ||
+            root.querySelector('.mphb-customer-details');
+        var section = anchor
+            ? buildFieldSection('dcc_checkout-pet-section', (CFG.sectionTitles || {}).pet || 'Pet Information', rows)
+            : null;
+        if (section) {
+            insertAfter(section, anchor);
+        }
+        var targets = section ? [section] : rows;
+
+        function show(yes) {
+            targets.forEach(function (t) {
+                t.classList.toggle('dcc_checkout-section-hidden', !yes);
+            });
+            inputs.forEach(function (inp) {
+                setRequired(inp, yes, root);
+                if (!yes) { inp.classList.remove('dcc_checkout-invalid'); }
+            });
+        }
+
+        show(false); // hidden + not required by default, on every cottage
+
+        return { inputs: inputs, show: show };
     }
 
     // Toggle-only block ("Traveling with a dog?"). The info fields themselves are

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.6
+Stable tag: 0.1.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,6 +109,15 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.7 =
+* Fix: the dog Checkout Fields are enabled globally in MotoPress, so they
+  rendered on EVERY cottage's checkout — including non-pet cottages, where the
+  plugin previously left them alone (the pet flow bails there). The dog fields
+  (and their "Pet Information" section) are now hidden and not-required by
+  default on every checkout; only the "Traveling with a dog?" toggle on a pet
+  cottage reveals them. Non-pet cottages (or pet fee disabled) never show them
+  and can't be blocked by them.
 
 = 0.1.6 =
 * New: two conditional titled sections after "Your Information" —
