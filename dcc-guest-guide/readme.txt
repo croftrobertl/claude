@@ -70,6 +70,25 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.32 =
+
+**No button moves when pressed.**
+
+The Send button's 1px press nudge is removed, along with the only other
+one in the widget — the prev/next section arrows, which scaled down to
+0.96 on press. A defensive rule stops a theme adding a press nudge of
+its own.
+
+Hover treatments are deliberately left exactly as they were: this change
+is only about the press. The arrows and quick actions still grow on
+hover, the menu tiles still pop or lift per the Elementor setting, and
+the arrows keep their colour change on tap — the only feedback they have
+on touch, where there is no hover state.
+
+Regression suite extended to press every button (with the hover
+transition settled first) and confirm none of them shift, while the
+hover effects still apply; 37 assertions, all passing.
+
 = 0.9.7.31 =
 
 **Report-a-problem polish (four host requests).**

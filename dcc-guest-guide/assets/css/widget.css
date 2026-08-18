@@ -1761,6 +1761,47 @@ dialog.dccgg-wrapper::backdrop {
     letter-spacing: normal;
 }
 
+/* v0.9.7.32: no button moves when pressed. The plugin's own two press
+   nudges are removed above; this stops a theme adding one. Deliberately
+   limited to buttons with no hover transform — for .dccgg-section-prev/next,
+   .dccgg-quick-action, .dccgg-fab, .dccgg-tile and .dccgg-gallery-thumb a
+   forced `none` would cancel their hover scale during the press, which is
+   itself a nudge. Hover treatments everywhere are left untouched. */
+.dccgg-root.dccgg-root .dccgg-btn:active,
+.dccgg-root.dccgg-root .dccgg-btn-text:active,
+.dccgg-root.dccgg-root .dccgg-more-item:active,
+.dccgg-root.dccgg-root .dccgg-item-tts:active,
+.dccgg-root.dccgg-root .dccgg-item-report:active,
+.dccgg-root.dccgg-root .dccgg-checklist-reset:active,
+.dccgg-root.dccgg-root .dccgg-search-still-stuck:active,
+.dccgg-root.dccgg-root .dccgg-ai-button:active,
+.dccgg-root.dccgg-root .dccgg-fab-close:active,
+.dccgg-root.dccgg-root .dccgg-qr-close:active,
+.dccgg-root.dccgg-root .dccgg-flip-close:active,
+.dccgg-report-dialog.dccgg-report-dialog button:active {
+    transform: none !important;
+}
+
+/* The three buttons that grow on hover need the press pinned to their hover
+   size rather than to `none`, or the press itself shrinks them. Two cases:
+   with a pointer, :hover:active holds the exact hover scale so a click moves
+   nothing; on touch there is no hover, so plain :active resolves to none and
+   a tap moves nothing either. */
+.dccgg-root.dccgg-root .dccgg-section-prev:active,
+.dccgg-root.dccgg-root .dccgg-section-next:active,
+.dccgg-root.dccgg-root .dccgg-quick-action:active {
+    transform: none !important;
+}
+@media (hover: hover) {
+    .dccgg-root.dccgg-root .dccgg-section-prev:hover:active,
+    .dccgg-root.dccgg-root .dccgg-section-next:hover:active {
+        transform: scale(1.08) !important;
+    }
+    .dccgg-root.dccgg-root .dccgg-quick-action:hover:active {
+        transform: scale(1.1) !important;
+    }
+}
+
 /* ---- Visible focus rings ---- */
 .dccgg-root .dccgg-tile:focus-visible,
 .dccgg-root .dccgg-btn:focus-visible,
@@ -2562,12 +2603,14 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
-/* ---- Section-nav arrows: explicit :active for touch ---- */
+/* ---- Section-nav arrows: explicit :active for touch ----
+   v0.9.7.32: the 0.96 press scale is removed (no press nudge). The colour
+   swap stays — it is the only tap feedback these arrows get on touch, where
+   there is no hover state to fall back on. */
 .dccgg-section-prev:active:not([disabled]),
 .dccgg-section-next:active:not([disabled]) {
     background: var(--dccgg-primary);
     color: var(--dccgg-btn-txt);
-    transform: scale(0.96);
 }
 
 /* =============================================================
@@ -2901,11 +2944,9 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: none !important;
     transform: none !important;
 }
-/* The 1px press nudge predates v0.9.7.31 and is intentional feedback, so it
-   has to outrank the pinned hover rule above (a press always coincides with
-   hover). Same doubled-dialog specificity + !important, declared later. */
+/* v0.9.7.32: the 1px press nudge is removed at the host's request. */
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:active {
-    transform: translateY(1px) !important;
+    transform: none !important;
 }
 .dccgg-report-foot .dccgg-btn-send:disabled {
     opacity: 0.6;

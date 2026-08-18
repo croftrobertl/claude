@@ -387,6 +387,62 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario G: no button moves when pressed (v0.9.7.32) ------------
+    // The theme here tries to add its own press nudge. Every button must sit
+    // perfectly still between hover and press — while KEEPING its hover
+    // treatment (the arrows and quick actions legitimately grow on hover, so
+    // the assertion compares press against the settled hover state, not
+    // against rest). Hover transitions are allowed to finish before sampling,
+    // otherwise the tail of the hover animation reads as movement.
+    {
+        console.log('\nG. No press nudge on any button (hover effects intact)');
+        const errors = [];
+        const THEME = `button:active{transform:translateY(2px) scale(.95) !important;}`;
+        const BTNS = ['dccgg-btn', 'dccgg-more-item', 'dccgg-quick-action', 'dccgg-item-tts',
+                      'dccgg-item-report', 'dccgg-section-prev', 'dccgg-section-next',
+                      'dccgg-checklist-reset', 'dccgg-search-still-stuck', 'dccgg-ai-button'];
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${THEME}${CSS}</style></head>
+            <body><div class="dccgg-root dccgg-hover-lift">
+            ${BTNS.map(c => `<button class="${c}" style="margin:10px">b</button>`).join('')}
+            <div class="dccgg-menu"><div class="dccgg-tile-wrap"><button class="dccgg-tile">Wi-Fi</button></div></div>
+            </div><dialog class="dccgg-report-dialog" open><div class="dccgg-report-foot">
+            <button class="dccgg-btn-cancel">Cancel</button><button class="dccgg-btn-send">Send</button>
+            </div></dialog></body></html>`;
+        const ctx = await browser.newContext({ viewport: DESKTOP });
+        const page = await ctx.newPage();
+        page.on('pageerror', (e) => errors.push(String(e)));
+        await page.setContent(html, { waitUntil: 'load' });
+
+        const tf = (sel) => page.evaluate((x) => getComputedStyle(document.querySelector(x)).transform, sel);
+        const moved = [];
+        for (const c of [...BTNS, 'dccgg-btn-send', 'dccgg-btn-cancel']) {
+            const sel = '.' + c;
+            const box = await page.locator(sel).first().boundingBox();
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            await page.waitForTimeout(700);           // hover transition settles
+            const hover = await tf(sel);
+            await page.mouse.down(); await page.waitForTimeout(400);
+            const press = await tf(sel);
+            await page.mouse.up();
+            await page.mouse.move(5, 5); await page.waitForTimeout(250);
+            if (hover !== press) moved.push(`${c}: ${hover} -> ${press}`);
+        }
+        check('no button moves when pressed', moved.length === 0, moved.join(' | '));
+
+        // The hover treatments themselves must survive — this change was only
+        // ever about the press, and over-reaching here was reverted once.
+        const arrowBox = await page.locator('.dccgg-section-prev').boundingBox();
+        await page.mouse.move(arrowBox.x + arrowBox.width / 2, arrowBox.y + arrowBox.height / 2);
+        await page.waitForTimeout(600);
+        check('arrow hover scale preserved', (await tf('.dccgg-section-prev')) !== 'none');
+        const tileBox = await page.locator('.dccgg-tile').boundingBox();
+        await page.mouse.move(tileBox.x + tileBox.width / 2, tileBox.y + tileBox.height / 2);
+        await page.waitForTimeout(600);
+        check('tile hover lift preserved', (await tf('.dccgg-tile')) !== 'none');
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);
