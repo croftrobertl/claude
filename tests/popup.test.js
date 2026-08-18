@@ -387,6 +387,71 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario G: every button is flat in all states (v0.9.7.32) ------
+    // The theme here adds a hover lift + brightness and a press scale, the
+    // kind of thing that reintroduced movement before. Buttons must not move
+    // or change on hover or press; the tile hover effect (an Elementor
+    // setting) and the keyboard focus ring must survive untouched.
+    {
+        console.log('\nG. Buttons flat on hover + press, tile effect and focus ring intact');
+        const errors = [];
+        const THEME = `button:hover{transform:translateY(-3px) !important;filter:brightness(1.3) !important;}
+                       button:active{transform:scale(.94) !important;}`;
+        const BTNS = ['dccgg-btn', 'dccgg-more-item', 'dccgg-quick-action', 'dccgg-item-tts',
+                      'dccgg-item-report', 'dccgg-section-prev', 'dccgg-section-next',
+                      'dccgg-checklist-reset', 'dccgg-search-still-stuck', 'dccgg-ai-button'];
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${THEME}${CSS}</style></head>
+            <body><div class="dccgg-root dccgg-hover-lift">
+            ${BTNS.map(c => `<button class="${c}" style="margin:8px">b</button>`).join('')}
+            <div class="dccgg-menu"><div class="dccgg-tile-wrap"><button class="dccgg-tile">Wi-Fi</button></div></div>
+            </div><dialog class="dccgg-report-dialog" open><div class="dccgg-report-foot">
+            <button class="dccgg-btn-cancel">Cancel</button><button class="dccgg-btn-send">Send</button>
+            </div></dialog></body></html>`;
+        const ctx = await browser.newContext({ viewport: DESKTOP });
+        const page = await ctx.newPage();
+        page.on('pageerror', (e) => errors.push(String(e)));
+        await page.setContent(html, { waitUntil: 'load' });
+
+        const snap = (sel) => page.evaluate((x) => {
+            const c = getComputedStyle(document.querySelector(x));
+            return JSON.stringify({ bg: c.backgroundColor, color: c.color, tf: c.transform, f: c.filter });
+        }, sel);
+        let moved = [];
+        for (const sel of [...BTNS.map(c => '.' + c), '.dccgg-btn-send', '.dccgg-btn-cancel']) {
+            const normal = await snap(sel);
+            const box = await page.locator(sel).first().boundingBox();
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            await page.waitForTimeout(90);
+            const hover = await snap(sel);
+            await page.mouse.down(); await page.waitForTimeout(90);
+            const press = await snap(sel);
+            await page.mouse.up();
+            if (hover !== normal || press !== normal) moved.push(sel);
+        }
+        check('all buttons static on hover and press', moved.length === 0, moved.join(', '));
+
+        // The tile's hover lift is an Elementor-chosen setting — must survive.
+        const tileBox = await page.locator('.dccgg-tile').boundingBox();
+        await page.mouse.move(tileBox.x + tileBox.width / 2, tileBox.y + tileBox.height / 2);
+        await page.waitForTimeout(250);
+        const tileTf = await page.evaluate(() => getComputedStyle(document.querySelector('.dccgg-tile')).transform);
+        check('tile hover effect preserved', tileTf !== 'none', tileTf);
+
+        // Flattening hover must not have taken the keyboard focus ring with it.
+        // Blur first: the mouse presses above left focus on a clicked button,
+        // and mouse focus deliberately does not match :focus-visible — so a
+        // bare Tab here would land on the NEXT control and read 0.
+        await page.evaluate(() => document.activeElement && document.activeElement.blur());
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(() => {
+            const el = document.activeElement;
+            return { cls: el.className, w: parseFloat(getComputedStyle(el).outlineWidth) };
+        });
+        check('keyboard focus ring intact', ring.w >= 1, `${ring.cls} outline-width=${ring.w}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

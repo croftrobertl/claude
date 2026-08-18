@@ -67,7 +67,7 @@
 @media (hover: hover) {
     .dccgg-checklist-reset:hover,
     .dccgg-checklist-reset:focus-visible {
-        filter: brightness(1.1);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -314,8 +314,7 @@
 @media (hover: hover) {
     .dccgg-search-still-stuck:hover,
     .dccgg-search-still-stuck:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-muted) 8%, transparent);
-        border-color: var(--dccgg-primary);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -342,7 +341,8 @@
     gap: 8px;
 }
 @media (hover: hover) {
-    .dccgg-ai-button:hover { filter: brightness(1.08); }
+    /* v0.9.7.32: flat — hover matches the normal state. */
+    .dccgg-ai-button:hover { filter: none; }
 }
 .dccgg-ai-button:disabled { opacity: 0.6; cursor: wait; }
 .dccgg-ai-privacy { font-size: 0.78em; opacity: 0.75; margin-top: 8px; }
@@ -1128,9 +1128,7 @@ body.dccgg-detail-open {
 @media (hover: hover) {
     .dccgg-quick-action:hover,
     .dccgg-quick-action:focus-visible {
-        background: var(--dccgg-primary);
-        color: #ffffff;
-        transform: scale(1.1);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -1347,7 +1345,7 @@ video.dccgg-media {
 @media (hover: hover) {
     .dccgg-btn:hover,
     .dccgg-btn:focus-visible {
-        filter: brightness(1.1);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -1761,6 +1759,49 @@ dialog.dccgg-wrapper::backdrop {
     letter-spacing: normal;
 }
 
+/* v0.9.7.32: buttons are flat in every interaction state. The rules above
+   removed the plugin's own hover/press treatments; this pins the two
+   properties a theme most often adds on top (a lift/scale transform and a
+   brightness filter) so nothing reintroduces movement on hover, focus or
+   press. None of these buttons carry a transform or filter normally, so
+   forcing `none` cannot alter their resting appearance. Deliberately NOT
+   listed: .dccgg-tile (its hover pop / lift is an Elementor-chosen setting),
+   .dccgg-fab, and .dccgg-gallery-thumb — none of which are plain buttons. */
+.dccgg-root.dccgg-root .dccgg-btn:hover,
+.dccgg-root.dccgg-root .dccgg-btn:focus-visible,
+.dccgg-root.dccgg-root .dccgg-btn:active,
+.dccgg-root.dccgg-root .dccgg-btn-text:hover,
+.dccgg-root.dccgg-root .dccgg-btn-text:active,
+.dccgg-root.dccgg-root .dccgg-more-item:hover,
+.dccgg-root.dccgg-root .dccgg-more-item:active,
+.dccgg-root.dccgg-root .dccgg-quick-action:hover,
+.dccgg-root.dccgg-root .dccgg-quick-action:active,
+.dccgg-root.dccgg-root .dccgg-item-tts:hover,
+.dccgg-root.dccgg-root .dccgg-item-tts:active,
+.dccgg-root.dccgg-root .dccgg-item-report:hover,
+.dccgg-root.dccgg-root .dccgg-item-report:active,
+.dccgg-root.dccgg-root .dccgg-section-prev:hover,
+.dccgg-root.dccgg-root .dccgg-section-prev:active,
+.dccgg-root.dccgg-root .dccgg-section-next:hover,
+.dccgg-root.dccgg-root .dccgg-section-next:active,
+.dccgg-root.dccgg-root .dccgg-checklist-reset:hover,
+.dccgg-root.dccgg-root .dccgg-checklist-reset:active,
+.dccgg-root.dccgg-root .dccgg-search-still-stuck:hover,
+.dccgg-root.dccgg-root .dccgg-search-still-stuck:active,
+.dccgg-root.dccgg-root .dccgg-ai-button:hover,
+.dccgg-root.dccgg-root .dccgg-ai-button:active,
+.dccgg-root.dccgg-root .dccgg-fab-close:hover,
+.dccgg-root.dccgg-root .dccgg-fab-close:active,
+.dccgg-root.dccgg-root .dccgg-qr-close:hover,
+.dccgg-root.dccgg-root .dccgg-qr-close:active,
+.dccgg-root.dccgg-root .dccgg-flip-close:hover,
+.dccgg-root.dccgg-root .dccgg-flip-close:active,
+.dccgg-report-dialog.dccgg-report-dialog button:hover,
+.dccgg-report-dialog.dccgg-report-dialog button:active {
+    transform: none !important;
+    filter: none !important;
+}
+
 /* ---- Visible focus rings ---- */
 .dccgg-root .dccgg-tile:focus-visible,
 .dccgg-root .dccgg-btn:focus-visible,
@@ -1872,8 +1913,7 @@ dialog.dccgg-wrapper::backdrop {
 @media (hover: hover) {
     .dccgg-item-tts:hover,
     .dccgg-item-tts:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-primary) 10%, transparent);
-        color: var(--dccgg-primary);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -2293,10 +2333,8 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-section-next:hover:not([disabled]),
     .dccgg-section-prev:focus-visible,
     .dccgg-section-next:focus-visible {
-        background: var(--dccgg-primary);
-        color: var(--dccgg-btn-txt);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
-        transform: scale(1.08);
     }
 }
 .dccgg-section-prev[disabled],
@@ -2562,12 +2600,12 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
-/* ---- Section-nav arrows: explicit :active for touch ---- */
+/* ---- Section-nav arrows ----
+   v0.9.7.32: the press treatment (colour swap + 0.96 scale) is gone, matching
+   the flat treatment every other button now gets. */
 .dccgg-section-prev:active:not([disabled]),
 .dccgg-section-next:active:not([disabled]) {
-    background: var(--dccgg-primary);
-    color: var(--dccgg-btn-txt);
-    transform: scale(0.96);
+    transform: none;
 }
 
 /* =============================================================
@@ -2728,8 +2766,7 @@ dialog.dccgg-wrapper::backdrop {
 @media (hover: hover) {
     .dccgg-more-item:hover,
     .dccgg-more-item:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
-        color: var(--dccgg-primary);
+        /* v0.9.7.32: flat — hover matches the normal state. */
         outline: none;
     }
 }
@@ -2754,10 +2791,8 @@ dialog.dccgg-wrapper::backdrop {
     transition: background 0.15s ease, color 0.15s ease;
 }
 @media (hover: hover) {
-    .dccgg-item-report:hover {
-        background: color-mix(in srgb, #d54040 12%, transparent);
-        color: #d54040;
-    }
+    /* v0.9.7.32: flat — hover matches the normal state. */
+    .dccgg-item-report:hover { background: transparent; }
 }
 
 /* Report dialog (vanilla <dialog>). */
@@ -2901,11 +2936,10 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: none !important;
     transform: none !important;
 }
-/* The 1px press nudge predates v0.9.7.31 and is intentional feedback, so it
-   has to outrank the pinned hover rule above (a press always coincides with
-   hover). Same doubled-dialog specificity + !important, declared later. */
+/* v0.9.7.32: the 1px press nudge is removed at the host's request — Send is
+   fully static now, like every other button. */
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-foot .dccgg-btn-send:active {
-    transform: translateY(1px) !important;
+    transform: none !important;
 }
 .dccgg-report-foot .dccgg-btn-send:disabled {
     opacity: 0.6;
