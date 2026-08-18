@@ -70,6 +70,31 @@ After upload + activation:
 
 == Changelog ==
 
+= 0.9.7.34 =
+
+**Four host-requested UI fixes.**
+
+1. **Desktop detail popup enlarged.** The centered card was too short and
+   too narrow on desktop. From 769px it is now up to 740px wide with a
+   600px portrait floor (90svh cap); from 1024px, up to 780px wide with a
+   720px floor. All caps are viewport-relative so it can never overflow
+   the screen. The mobile bottom sheet (max-width 600px) and the
+   601–768px tablet band are untouched.
+
+2. **Report dialog privacy note is center-aligned.**
+
+3. **Report dialog description field matches the other fields' gold
+   pill.** The textarea was the only report field without it; it now
+   carries the same #f4da62 border, rounded pill radius and padding, and
+   no longer takes the shared grey field rule.
+
+4. **Send button hover styling removed** (it darkened and lifted a
+   shadow); hover now renders the normal state. Cancel had no hover
+   styling. No other buttons were touched.
+
+Regression suite extended with desktop-size assertions (≥740×600 at
+1280×800); 37 assertions, all passing.
+
 = 0.9.7.33 =
 
 **Fix: the detail popup rendered too small on desktop (regression from

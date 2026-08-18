@@ -248,6 +248,10 @@ async function run() {
         check('card bottom within viewport', s.bottom <= DESKTOP.height + 1, `bottom=${s.bottom.toFixed(1)}`);
         const centerOffset = Math.abs((s.left + s.right) / 2 - DESKTOP.width / 2);
         check('card horizontally centered', centerOffset < 4, `offset=${centerOffset.toFixed(1)}`);
+        // v0.9.7.34: desktop card must be a comfortable portrait size — at
+        // least 740px wide and 600px tall (host: it was too short/narrow).
+        check('card wide enough on desktop (≥740px)', s.width >= 740, `width=${s.width.toFixed(0)}`);
+        check('card tall enough on desktop (≥600px)', s.height >= 600, `height=${s.height.toFixed(0)}`);
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
     }

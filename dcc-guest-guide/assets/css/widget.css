@@ -833,10 +833,29 @@ body.dccgg-detail-open {
     .dccgg-layout-carousel .dccgg-menu {
         grid-template-columns: repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr));
     }
+    /* v0.9.7.34: the centered detail card was too short and too narrow on
+       desktop (base rule: 720px wide, content-height up to 85svh). Widen it
+       and give it a portrait floor so it reads like a tall card rather than
+       a squat strip. Every cap stays viewport-relative, so it can never
+       exceed the screen; mobile (max-width: 600px bottom sheet) and the
+       601–768px tablet band keep the base sizing untouched. */
+    body.dccgg-detail-open .dccgg-stage {
+        width: min(740px, calc(100vw - 48px));
+        min-height: min(600px, 82svh);
+        max-height: 90vh;   /* fallback */
+        max-height: 90dvh;  /* excludes browser chrome */
+        max-height: 90svh;  /* static — never grows on toolbar hide (wins) */
+    }
 }
 
 /* Split-pane (desktop only) */
 @media (min-width: 1024px) {
+    /* v0.9.7.34: full desktop — a touch wider, distinctly taller (portrait
+       on any normal desktop viewport; the svh cap wins on short screens). */
+    body.dccgg-detail-open .dccgg-stage {
+        width: min(780px, calc(100vw - 64px));
+        min-height: min(720px, 85svh);
+    }
     .dccgg-layout-split-pane .dccgg-stage-container {
         display: grid;
         grid-template-columns: 320px 1fr;
@@ -2812,7 +2831,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
 .dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }
 .dccgg-report-body select,
-.dccgg-report-body textarea,
 .dccgg-report-body input[type="email"] {
     width: 100%;
     padding: 10px 12px;
@@ -2823,8 +2841,22 @@ dialog.dccgg-wrapper::backdrop {
     font: inherit;
     box-sizing: border-box;
 }
-.dccgg-report-body textarea { resize: vertical; min-height: 100px; }
-.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; }
+/* v0.9.7.34: the description textarea was the only report field without the
+   gold pill treatment the others get — give it the same border, radius and
+   padding explicitly (dropped from the shared grey rule above). */
+.dccgg-report-body textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    resize: vertical;
+    min-height: 100px;
+    padding: 12px 16px;
+    border: 2px solid #f4da62;
+    border-radius: 24px;
+    background: var(--dccgg-detail-bg, #fff);
+    color: var(--dccgg-text, #111);
+}
+.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; text-align: center; }
 /* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
    paint behind the top-layer dialog in Chrome, so the error message
    needs to live inside the dialog itself. */
@@ -2871,14 +2903,9 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: 0 2px 6px rgba(15, 109, 191, 0.25);
     transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
-@media (hover: hover) {
-    .dccgg-report-foot .dccgg-btn-send:hover,
-    .dccgg-report-foot .dccgg-btn-send:focus-visible {
-        background: color-mix(in srgb, var(--dccgg-primary, #0f6dbf) 85%, #000);
-        box-shadow: 0 4px 10px rgba(15, 109, 191, 0.35);
-        outline: none;
-    }
-}
+/* v0.9.7.34: Send's custom hover (darken + shadow lift) removed at the
+   host's request — hover now renders the normal state. Cancel never had
+   hover styling. Other buttons are deliberately untouched. */
 .dccgg-report-foot .dccgg-btn-send:active {
     transform: translateY(1px);
 }
