@@ -165,7 +165,7 @@ final class Plugin {
             'ambient'     => (bool) $opt['ambient'],
             'egg'         => (bool) $opt['egg'],
             'tapSelector' => (string) $opt['tap_selector'],
-            'tapFallback' => '#site-title',
+            'tapFallback' => '#masthead',
             'tapCount'    => (int) $opt['tap_count'],
             'tapWindow'   => 3000,
             'density'     => (int) $opt['density'],
@@ -173,6 +173,8 @@ final class Plugin {
             'schedule'    => Themes::schedule($opt['schedule']),
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
+            'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
+            'heroEvery'   => [120, 180],
             'preview'      => null,
             'previewLabel' => '',
             'i18n'        => [

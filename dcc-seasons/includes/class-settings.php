@@ -29,7 +29,7 @@ class Settings {
             'enabled'      => 1,
             'ambient'      => 1,
             'egg'          => 1,
-            'tap_selector' => '#branding',
+            'tap_selector' => '#branding, .header-image .entry-title, .entry-title, #site-title',
             'tap_count'    => 5,
             'density'      => 10,
             'opacity'      => 0.35,
@@ -202,7 +202,7 @@ class Settings {
                             <input type="text" class="regular-text code" id="dcc-seasons-tap-selector"
                                    name="<?php echo esc_attr(self::OPTION); ?>[tap_selector]"
                                    value="<?php echo esc_attr($opt['tap_selector']); ?>" />
-                            <p class="description"><?php esc_html_e('CSS selector for the element that counts taps. Default #branding (Bravada header logo); #site-title is tried as a fallback.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Comma-separated CSS selectors. Every VISIBLE match is bound (zero-size elements are skipped — Bravada renders #branding at 0px on this site); all matches share one tap counter. If nothing visible matches, #masthead is used.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>

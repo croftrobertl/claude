@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 2.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,29 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 2.0.0 =
+* FIX (critical): the tap target now accepts a comma-separated selector list
+  and binds every VISIBLE match (Bravada renders #branding at 0px on this
+  site). Zero-size elements are skipped; #masthead is the last resort. New
+  default: `#branding, .header-image .entry-title, .entry-title, #site-title`.
+* FIX: canvas sizing hardened for Chrome zoom / wide monitors — one width
+  source (canvas rect × devicePixelRatio), re-applied on window.resize AND
+  visualViewport resize with a particle re-seed (ambient and egg).
+* Particle overhaul: THE WATERLINE (settle+ripples, floaters, jumping bass,
+  submerged manatee along the bottom ~8%); 20+ motion personalities (sway,
+  flutter, dangle, hang, toss, hop, waddle, dart, twinkle, chatter, grow,
+  vee formations, orbit-pair, burst…); hybrid rendering (emoji + recolorable
+  canvas primitives + ~19 inline SVG sprites, tofu-checked fallbacks).
+* BRAND HERO: the great blue heron glides across every 2–3 minutes in every
+  theme AND on no-theme days. Per-theme heroes: eagle, witch flyby, Santa
+  sleigh, manatee, big bass jump, ducklings, St. Patrick's rainbow moment.
+* Patriot Day rebuilt: NOTHING falls (twinkle + slow glide only), ribbon
+  accent, eagle hero, egg still disabled. MLK Day: dove/olive/heart, gentle.
+* New Year's fireworks now flash the auto-computed year at the burst point.
+* The ambient engine is its own lazy file (engine.js) loaded after idle;
+  the deferred loader stays tiny. All caps unchanged (≤16 particles
+  including ripples, ≤60 egg columns, visibilitychange pause).
 
 = 1.1.0 =
 * Theme preview: `?dcc_season=<theme_key>` forces a theme for the page view

@@ -113,9 +113,14 @@
 			var vw, vh, fontSize, nCols, colW, drops, speeds, colColors;
 
 			function build() {
+				/* One width source: the canvas rect × DPR (Chrome changes
+				 * devicePixelRatio at runtime on zoom). */
+				var r = cv.getBoundingClientRect();
 				var dpr = Math.min(W.devicePixelRatio || 1, 2);
-				vw = W.innerWidth; vh = W.innerHeight;
-				cv.width = vw * dpr; cv.height = vh * dpr;
+				vw = Math.max(1, Math.round(r.width));
+				vh = Math.max(1, Math.round(r.height));
+				cv.width = Math.round(vw * dpr);
+				cv.height = Math.round(vh * dpr);
 				cx.setTransform(dpr, 0, 0, dpr, 0, 0);
 				fontSize = Math.max(16, Math.round(vw / 55));
 				nCols = Math.min(60, Math.ceil(vw / fontSize)); /* hard cap 60 */
@@ -135,9 +140,11 @@
 				resizeTimer = setTimeout(function () { if (isOpen) { build(); } }, 150);
 			}
 			W.addEventListener('resize', onResize);
+			if (W.visualViewport) { W.visualViewport.addEventListener('resize', onResize); }
 			cleanup.push(function () {
 				clearTimeout(resizeTimer);
 				W.removeEventListener('resize', onResize);
+				if (W.visualViewport) { W.visualViewport.removeEventListener('resize', onResize); }
 			});
 
 			var glitchAt = 0, glitchHue = 0;
@@ -184,9 +191,11 @@
 			play();
 		}
 
-		if (opts.reduced) { banner(); } else { rain(); }
+		/* Mount the overlay BEFORE building the rain: sizing reads the live
+		 * canvas rect, which is 0×0 while detached. */
 		ov.appendChild(btn);
 		D.body.appendChild(ov);
+		if (opts.reduced) { banner(); } else { rain(); }
 		try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); }
 	}
 
