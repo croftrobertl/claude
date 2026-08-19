@@ -52,9 +52,12 @@ class Widget extends Widget_Base {
 		if ( post_type_exists( 'mphb_template' ) ) {
 			$query = new \WP_Query(
 				[
-					'post_type'      => 'mphb_template',
-					'posts_per_page' => -1,
-					'post_status'    => 'publish',
+					'post_type'              => 'mphb_template',
+					'posts_per_page'         => -1,
+					'post_status'            => 'publish',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
 				]
 			);
 			if ( $query->have_posts() ) {
@@ -737,7 +740,7 @@ class Widget extends Widget_Base {
 				'size_units'  => [ 'px' ],
 				'range'       => [ 'px' => [ 'min' => 100, 'max' => 600 ] ],
 				'description' => esc_html__( 'Only applies when Menu Layout is set to Grid View.', 'features-amenities' ),
-				'selectors'   => [ self::SEL . '.fal-layout-grid .fal-amenities, ' . '{{WRAPPER}}.fal-layout-grid .fal-amenities' => 'grid-template-columns: repeat(auto-fill, minmax({{SIZE}}{{UNIT}}, 1fr));' ],
+				'selectors'   => [ '{{WRAPPER}}.fal-layout-grid .fal-amenities' => 'grid-template-columns: repeat(auto-fill, minmax({{SIZE}}{{UNIT}}, 1fr));' ],
 			]
 		);
 		$this->end_controls_section();
@@ -751,7 +754,8 @@ class Widget extends Widget_Base {
 			$template_post = get_post( $template_id );
 			if ( $template_post && $template_post->post_type === 'mphb_template' && $template_post->post_status === 'publish' ) {
 				echo '<div class="fal-motopress-template-wrapper">';
-				if ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->documents->get( $template_id ) && \Elementor\Plugin::$instance->documents->get( $template_id )->is_built_with_elementor() ) {
+				$document = class_exists( '\\Elementor\\Plugin' ) ? \Elementor\Plugin::$instance->documents->get( $template_id ) : null;
+				if ( $document && $document->is_built_with_elementor() ) {
 					echo \Elementor\Plugin::instance()->frontend->get_builder_content_for_display( $template_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				} else {
 					echo apply_filters( 'the_content', $template_post->post_content ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -771,23 +775,12 @@ class Widget extends Widget_Base {
 		$enable_search       = 'yes' === ( $settings['enable_search'] ?? '' );
 		$search_placeholder  = $settings['search_placeholder'] ?? __( 'Search amenities...', 'features-amenities' );
 
-		$config = [];
-		if ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
-			$config['raw_items'] = array_map(
-				static function ( $i ) {
-					unset( $i['_id'] );
-					return $i;
-				},
-				$settings['list_items']
-			);
-		}
-
-		echo '<div class="fal-container' . esc_attr( $desktop_accordion . $exclusive_accordion ) . '" data-config="' . esc_attr( wp_json_encode( $config ) ) . '">';
+		echo '<div class="fal-container' . esc_attr( $desktop_accordion . $exclusive_accordion ) . '">';
 
 		if ( $enable_search ) {
 			echo '<div class="fal-search-wrap">';
 			echo '<i class="fas fa-search fal-search-icon" aria-hidden="true"></i>';
-			echo '<input type="text" class="fal-search-input" placeholder="' . esc_attr( $search_placeholder ) . '">';
+			echo '<input type="text" class="fal-search-input" placeholder="' . esc_attr( $search_placeholder ) . '" aria-label="' . esc_attr( $search_placeholder ) . '">';
 			echo '<button class="fal-search-clear" type="button" aria-label="' . esc_attr__( 'Clear search', 'features-amenities' ) . '">';
 			echo '<svg class="fal-search-clear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">';
 			echo '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
@@ -861,7 +854,7 @@ class Widget extends Widget_Base {
 		<#
 		if ( settings.motopress_template_id ) {
 			#>
-			<div style="padding: 20px; background: #e2e3e5; text-align: center;">{{{ elementor.translate( 'Please preview to see MotoPress content.', 'features-amenities' ) }}}</div>
+			<div style="padding: 20px; background: #e2e3e5; text-align: center;"><?php echo esc_html__( 'Please preview to see MotoPress content.', 'features-amenities' ); ?></div>
 			<# return;
 		}
 		if ( ! settings.list_items || settings.list_items.length === 0 ) return;
@@ -870,20 +863,31 @@ class Widget extends Widget_Base {
 		var renderedDefaultIcon = ( defaultIcon && defaultIcon.value ) ? defaultIcon.value : '';
 		var desktopAccordionClass   = ( 'yes' === settings.desktop_accordion )   ? ' desktop-accordion-enabled'   : '';
 		var exclusiveAccordionClass = ( 'yes' === settings.exclusive_accordion ) ? ' exclusive-accordion-enabled' : '';
+		var autoFold = parseInt( settings.auto_fold_words, 10 ) || 0;
 		#>
 		<div class="fal-container{{ desktopAccordionClass }}{{ exclusiveAccordionClass }}">
+		<# if ( 'yes' === settings.enable_search ) { #>
+			<div class="fal-search-wrap">
+				<i class="fas fa-search fal-search-icon" aria-hidden="true"></i>
+				<input type="text" class="fal-search-input" placeholder="{{ settings.search_placeholder }}" aria-label="{{ settings.search_placeholder }}">
+				<button class="fal-search-clear" type="button" aria-label="<?php echo esc_attr__( 'Clear search', 'features-amenities' ); ?>">
+					<svg class="fal-search-clear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+				</button>
+			</div>
+			<div class="fal-search-status" aria-live="polite"></div>
+		<# } #>
 		<#
 		var in_section = false;
 		_.each( settings.list_items, function( item ) {
 			var iconHTML = elementor.helpers.renderIcon( view, item.item_icon, { 'aria-hidden': 'true' }, 'i', 'object' );
-			var renderedIcon = ( iconHTML && iconHTML.value ) ? iconHTML.value : renderedDefaultIcon;
+			var ownIcon  = ( iconHTML && iconHTML.value ) ? iconHTML.value : '';
 
 			if ( item.item_type === 'section' ) {
 				if ( in_section ) #></div></div></div><#
 				#>
 				<div class="fal-section">
 					<div class="fal-section-header elementor-repeater-item-{{ item._id }}">
-						<span class="fal-section-icon">{{{ renderedIcon }}}</span>
+						<span class="fal-section-icon">{{{ ownIcon }}}</span>
 						<span class="fal-section-title">{{{ item.item_text }}}</span>
 					</div>
 					<div class="fal-section-content"><div class="fal-amenities">
@@ -893,13 +897,20 @@ class Widget extends Widget_Base {
 					#><div class="fal-section"><div class="fal-section-content"><div class="fal-amenities"><#
 					in_section = true;
 				}
+				var renderedIcon = ownIcon || renderedDefaultIcon;
+				var isFolded = false;
+				if ( autoFold > 0 && item.item_description ) {
+					var plain = jQuery( '<div>' ).html( item.item_description ).text();
+					isFolded  = plain.trim().split( /\s+/ ).filter( Boolean ).length > autoFold;
+				}
 				#>
 				<div class="fal-amenity elementor-repeater-item-{{ item._id }}">
 					<div class="fal-amenity-icon-wrap"><span class="fal-amenity-icon">{{{ renderedIcon }}}</span></div>
 					<div class="fal-amenity-content">
 						<div class="fal-amenity-title">{{{ item.item_text }}}</div>
 						<# if ( item.item_description ) { #>
-							<div class="fal-amenity-desc-wrap"><div class="fal-amenity-desc">{{{ item.item_description }}}</div></div>
+							<div class="fal-amenity-desc-wrap{{ isFolded ? ' fal-collapsible' : '' }}"><div class="fal-amenity-desc">{{{ item.item_description }}}</div></div>
+							<# if ( isFolded ) { #><button class="fal-read-more" type="button"><?php echo esc_html__( 'Read More', 'features-amenities' ); ?></button><# } #>
 						<# } #>
 					</div>
 				</div>

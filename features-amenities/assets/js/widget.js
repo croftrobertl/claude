@@ -10,7 +10,8 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 				searchInput: '.fal-search-input',
 				searchClear: '.fal-search-clear',
 				amenity:     '.fal-amenity'
-			}
+			},
+			hiddenClass: 'fal-search-hidden'
 		};
 	}
 
@@ -19,7 +20,6 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 		return {
 			$container:    this.$element.find(sel.container),
 			$headers:      this.$element.find(sel.header),
-			$readMores:    this.$element.find(sel.readMore),
 			$searchInputs: this.$element.find(sel.searchInput),
 			$searchClears: this.$element.find(sel.searchClear),
 			$amenities:    this.$element.find(sel.amenity)
@@ -40,9 +40,13 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			root.dataset.falBound = '1';
 		}
 
-		const sel             = this.getSettings('selectors');
-		const reduceMotionMql = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
-		const prefersReduced  = () => !!(reduceMotionMql && reduceMotionMql.matches);
+		const sel              = this.getSettings('selectors');
+		const HIDDEN           = this.getSettings('hiddenClass');
+		const reduceMotionMql  = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+		const prefersReduced   = () => !!(reduceMotionMql && reduceMotionMql.matches);
+		const mobileMql        = window.matchMedia('(max-width: 767px)');
+		const desktopAccordion = this.elements.$container.hasClass('desktop-accordion-enabled');
+		const accordionActive  = () => mobileMql.matches || desktopAccordion;
 
 		// Accordion
 		//
@@ -66,6 +70,7 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			} else {
 				$c.slideUp(300, () => $s.removeClass('is-open'));
 			}
+			$s.find(sel.header).attr('aria-expanded', 'false');
 		};
 		const openSection = ($s) => {
 			const $c = $s.find(sel.content).stop(true, false).hide();
@@ -75,11 +80,11 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			} else {
 				$c.slideDown(300);
 			}
+			$s.find(sel.header).attr('aria-expanded', 'true');
 		};
 
 		this.elements.$headers.on('click', (e) => {
-			const isDesktop = this.elements.$container.hasClass('desktop-accordion-enabled');
-			if (!(window.innerWidth < 768 || isDesktop)) return;
+			if (!accordionActive()) return;
 
 			const $section  = jQuery(e.currentTarget).closest(sel.section);
 			const isOpening = !$section.hasClass('is-open');
@@ -99,12 +104,61 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 			}
 		});
 
-		// Read More
-		this.elements.$readMores.on('click', (e) => {
-			const btn  = e.currentTarget;
-			const wrap = btn.previousElementSibling;
-			wrap.classList.toggle('is-expanded');
-			btn.innerText = wrap.classList.contains('is-expanded') ? 'Read Less' : 'Read More';
+		// Keyboard support for the accordion: headers act like buttons
+		// (Enter or Space toggles) while the accordion is active.
+		this.elements.$headers.on('keydown', (e) => {
+			if (!accordionActive()) return;
+			if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+				e.preventDefault();
+				jQuery(e.currentTarget).trigger('click');
+			}
+		});
+
+		// Give headers button semantics (role, tabindex, aria-expanded,
+		// aria-controls) while the accordion is active, and strip them in
+		// the plain desktop view where clicking does nothing. Synced live
+		// when the viewport crosses the mobile breakpoint.
+		const widgetId = this.$element.attr('data-id') || 'fal';
+		const syncHeaderA11y = () => {
+			const active = accordionActive();
+			this.elements.$headers.each((i, h) => {
+				const $section = jQuery(h).closest(sel.section);
+				const content  = $section.find(sel.content)[0];
+				if (active) {
+					if (content && !content.id) {
+						content.id = 'fal-sec-' + widgetId + '-' + i;
+					}
+					h.setAttribute('role', 'button');
+					h.setAttribute('tabindex', '0');
+					h.setAttribute('aria-expanded', $section.hasClass('is-open') ? 'true' : 'false');
+					if (content) {
+						h.setAttribute('aria-controls', content.id);
+					}
+				} else {
+					h.removeAttribute('role');
+					h.removeAttribute('tabindex');
+					h.removeAttribute('aria-expanded');
+					h.removeAttribute('aria-controls');
+				}
+			});
+		};
+		syncHeaderA11y();
+		if (mobileMql.addEventListener) {
+			mobileMql.addEventListener('change', syncHeaderA11y);
+		} else if (mobileMql.addListener) {
+			mobileMql.addListener(syncHeaderA11y);
+		}
+
+		// Read More — delegated from the container so the buttons keep
+		// working after search highlighting rewrites card innerHTML. The
+		// inline max-height lets descriptions taller than the CSS fallback
+		// cap expand fully while still animating.
+		this.elements.$container.on('click', sel.readMore, (e) => {
+			const btn      = e.currentTarget;
+			const wrap     = btn.previousElementSibling;
+			const expanded = wrap.classList.toggle('is-expanded');
+			wrap.style.maxHeight = expanded ? wrap.scrollHeight + 'px' : '';
+			btn.innerText = expanded ? 'Read Less' : 'Read More';
 		});
 
 		// Search
@@ -135,15 +189,18 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 				const q = input.value.toLowerCase().trim();
 				if (clear) clear.classList.toggle('is-active', q.length > 0);
 
-				// Clear previous marks
+				// Clear previous marks. Only touch innerHTML on cards that
+				// actually contain highlights — reassigning it recreates
+				// every child node, which is wasteful and loses DOM state.
 				items.forEach(item => {
-					const html = item.innerHTML;
-					item.innerHTML = html.replace(/<mark class="fal-hit">|<\/mark>/gi, '');
+					if (item.querySelector('mark.fal-hit')) {
+						item.innerHTML = item.innerHTML.replace(/<mark class="fal-hit">|<\/mark>/gi, '');
+					}
 				});
 
 				if (!q) {
-					items.forEach(i => i.style.display = '');
-					sections.forEach(sec => { sec.style.display = ''; });
+					items.forEach(i => i.classList.remove(HIDDEN));
+					sections.forEach(sec => sec.classList.remove(HIDDEN));
 					sectionsOpenedBySearch.forEach(sec => closeSection(jQuery(sec)));
 					sectionsOpenedBySearch.clear();
 					if (status) status.textContent = '';
@@ -156,7 +213,7 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 				items.forEach(item => {
 					const text = item.innerText.toLowerCase();
 					if (text.includes(q)) {
-						item.style.display = '';
+						item.classList.remove(HIDDEN);
 						// Highlight text nodes safely
 						const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT, null, false);
 						const nodes  = [];
@@ -180,19 +237,19 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 							}
 						});
 					} else {
-						item.style.display = 'none';
+						item.classList.add(HIDDEN);
 					}
 				});
 
 				// Hide sections with zero matches. Do NOT auto-open matched
 				// sections during typing — that's the Enter key's job.
 				sections.forEach(sec => {
-					const visibleItems = sec.querySelectorAll(sel.amenity + ':not([style*="display: none"])');
-					sec.style.display = visibleItems.length ? '' : 'none';
+					const hasVisible = sec.querySelector(sel.amenity + ':not(.' + HIDDEN + ')');
+					sec.classList.toggle(HIDDEN, !hasVisible);
 				});
 
 				if (status) {
-					const count = items.filter(it => it.style.display !== 'none').length;
+					const count = items.filter(it => !it.classList.contains(HIDDEN)).length;
 					status.textContent = formatCount(count);
 				}
 			};
@@ -205,13 +262,13 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 
 			const openMatchedSectionsAndScroll = () => {
 				if (!input.value.trim()) return;
-				const visibleAmenities = items.filter(it => it.style.display !== 'none');
+				const visibleAmenities = items.filter(it => !it.classList.contains(HIDDEN));
 				if (!visibleAmenities.length) return;
 
 				sections.forEach(sec => {
-					if (sec.style.display === 'none') return;
+					if (sec.classList.contains(HIDDEN)) return;
 					if (sec.classList.contains('is-open')) return;
-					const hasMatch = sec.querySelector(sel.amenity + ':not([style*="display: none"])');
+					const hasMatch = sec.querySelector(sel.amenity + ':not(.' + HIDDEN + ')');
 					if (hasMatch) {
 						openSection(jQuery(sec));
 						sectionsOpenedBySearch.add(sec);

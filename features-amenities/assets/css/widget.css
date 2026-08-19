@@ -19,12 +19,15 @@
 	font-size: calc(1em * var(--fal-density-font-scale));
 }
 
-.fal-density-compact { --fal-density-pad: 14px; --fal-density-gap: 14px; --fal-density-font-scale: 0.95; }
-.fal-density-comfy   { --fal-density-pad: 34px; --fal-density-gap: 26px; --fal-density-font-scale: 1.05; }
+/* Density classes sit on the widget wrapper (Elementor prefix_class), so the
+   overrides must target .fal-container itself — a custom property declared on
+   the container would otherwise beat one inherited from the wrapper. */
+.fal-density-compact .fal-container { --fal-density-pad: 14px; --fal-density-gap: 14px; --fal-density-font-scale: 0.95; }
+.fal-density-comfy   .fal-container { --fal-density-pad: 34px; --fal-density-gap: 26px; --fal-density-font-scale: 1.05; }
 .fal-glass-yes .fal-container { --fal-bg: rgba(255, 255, 255, 0.6); --fal-border: rgba(255, 255, 255, 0.4); }
 
 @media (prefers-color-scheme: dark) {
-	.fal-container:not(.fal-is-light) { --fal-bg: rgba(30, 30, 30, 0.95); --fal-border: rgba(255, 255, 255, 0.1); color: #f0f0f0; }
+	.fal-container { --fal-bg: rgba(30, 30, 30, 0.95); --fal-border: rgba(255, 255, 255, 0.1); color: #f0f0f0; }
 }
 
 .fal-search-wrap { position: relative; margin-bottom: 25px; }
@@ -67,6 +70,7 @@
 }
 .fal-section-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
 .fal-hh-none .fal-section-header:hover { transform: none; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+.fal-section-header:focus-visible { outline: 2px solid var(--fal-primary); outline-offset: 2px; }
 .fal-section-title { font-weight: 600; font-size: 1.2em; flex: 1; text-align: center; }
 .fal-section-icon  { color: var(--fal-primary); font-size: 1.2em; margin-left: 5px; }
 /* Accordion arrow (▼) default color + right-edge spacing. Applies only where
@@ -121,6 +125,9 @@
 .fal-container.desktop-accordion-enabled .fal-section.is-open .fal-section-content { display: block; }
 
 mark.fal-hit { background: rgba(14, 154, 175, 0.2); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* Applied by the search filter to cards/sections with no match. */
+.fal-container .fal-search-hidden { display: none !important; }
 
 /* Inherit Theme Styles — strip baked-in palette/typography
    so the active WordPress theme's cascade shows through.

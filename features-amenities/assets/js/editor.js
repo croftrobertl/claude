@@ -26,7 +26,7 @@
 		}
 	}
 
-	function copyToClipboard( text ) {
+	function legacyCopy( text ) {
 		const ta = document.createElement( 'textarea' );
 		ta.value      = text;
 		ta.style.position = 'fixed';
@@ -41,6 +41,18 @@
 		}
 		document.body.removeChild( ta );
 		return ok;
+	}
+
+	// Prefer the async Clipboard API (needs a secure context); fall back to
+	// the legacy textarea/execCommand approach when unavailable or denied.
+	function copyToClipboard( text ) {
+		if ( navigator.clipboard && window.isSecureContext ) {
+			return navigator.clipboard.writeText( text ).then(
+				function () { return true; },
+				function () { return legacyCopy( text ); }
+			);
+		}
+		return Promise.resolve( legacyCopy( text ) );
 	}
 
 	// Elementor repeater rows are Backbone models with idAttribute '_id'.
@@ -150,12 +162,12 @@
 			return c;
 		} );
 
-		const text = JSON.stringify( cleaned, null, 2 );
-		const ok   = copyToClipboard( text );
-
+		const text     = JSON.stringify( cleaned, null, 2 );
 		const original = btn.textContent;
-		btn.textContent = ok ? 'Copied!' : 'Copy failed';
-		setTimeout( function () { btn.textContent = original; }, 2000 );
+		copyToClipboard( text ).then( function ( ok ) {
+			btn.textContent = ok ? 'Copied!' : 'Copy failed';
+			setTimeout( function () { btn.textContent = original; }, 2000 );
+		} );
 	} );
 
 	$( document ).on( 'click', '[data-fal-import]', function ( e ) {

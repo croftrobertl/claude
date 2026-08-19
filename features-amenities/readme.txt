@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.9.1
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,16 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.10.0 =
+* Fixed: Density Mode (Compact / Comfy) had no visible effect — the density variables were declared in a way the container's own defaults always overrode. All three modes now apply their padding, gap, and font scaling.
+* Fixed: with Search and Auto-fold both enabled, typing in the search box detached every "Read More" button's click handler. The buttons are now event-delegated and keep working through search highlighting.
+* Fixed: expanded "Read More" descriptions taller than 1000px were clipped; the expanded height now follows the content.
+* Fixed: the editor preview used a removed Elementor API when a MotoPress Template was selected, which could blank the preview on current Elementor versions.
+* Accessibility: accordion section headers are now keyboard-operable (Tab, then Enter/Space) with button semantics and expanded/collapsed state announced to assistive technology wherever the accordion is active; added a visible focus outline on headers and a label on the search input.
+* Editor preview parity: the preview now shows the search bar and auto-folded descriptions, and section headers without an icon no longer borrow the default amenity icon (matching the live page).
+* Performance: lighter MotoPress template dropdown query and a deduplicated template lookup in render.
+* Cleanup: removed the unused data-config markup payload, a dead dark-mode override hook, and a dead grid selector; search filtering now toggles a CSS class instead of inspecting inline styles; clipboard export prefers the async Clipboard API with a legacy fallback.
 
 = 1.9.1 =
 * Renamed the Elementor panel category to "Dora Canal Court" (slug `dcc-widgets`). Widgets already placed on pages are unaffected — the category controls only where the widget is listed in the Elementor panel, not any saved content.
