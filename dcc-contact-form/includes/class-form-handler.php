@@ -92,18 +92,19 @@ final class Form_Handler
             return ['ok' => false, 'confirmation' => '', 'message' => $message, 'errors' => $errors];
         };
 
-        // Lightweight CSRF guards. A hard nonce check would break under full-page
-        // caching (SpeedyCache stores the nonce in cached HTML; it expires after
-        // ~12-24h and every cached visitor would then be rejected). So the nonce
-        // is enforced only for logged-in users (whose pages are never cached, so
-        // their nonce is always fresh — a failure there is a real CSRF signal),
-        // and a same-origin referer check plus the four spam layers provide the
-        // protection for anonymous, cache-served visitors.
-        $nonce = isset($post['dcc_nonce']) ? (string) wp_unslash($post['dcc_nonce']) : '';
-        if (is_user_logged_in() && !wp_verify_nonce($nonce, self::NONCE_ACTION)) {
-            return $fail(__('Your request could not be verified. Please reload the page and try again.', 'dcc-contact-form'));
-        }
-
+        // Lightweight CSRF posture. A hard nonce check would break under
+        // full-page caching (SpeedyCache stores the nonce in cached HTML; it
+        // expires after ~12-24h and every cached visitor would be rejected).
+        // A nonce failure is also NOT rejected for logged-in users: a cache
+        // layer can serve a logged-in visitor (e.g. the site owner testing the
+        // live form) a page carrying an anonymous visitor's nonce, which never
+        // verifies against their session — rejecting there makes the owner's
+        // own tests fail while real visitors succeed. Instead every submission,
+        // logged-in or not, goes through the same validation: the same-origin
+        // referer check below plus all four spam layers (reCAPTCHA, honeypot,
+        // time-trap, keyword filter). CSRF value on a public contact form is
+        // negligible — the endpoint takes no privileged action on behalf of
+        // the logged-in user.
         $referer = wp_get_referer();
         if ($referer) {
             $ref_host  = wp_parse_url($referer, PHP_URL_HOST);

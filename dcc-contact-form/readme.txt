@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -99,6 +99,14 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.1.1 =
+* Fix: a logged-in user submitting from a cache-served page (whose embedded
+  nonce belongs to an anonymous visitor) is no longer rejected with "Your
+  request could not be verified" — logged-in submissions now go through the
+  same validation path as visitors' (same-origin referer check plus all four
+  spam layers), so the site owner's own logged-in tests behave like real
+  visitor submissions.
 
 = 1.1.0 =
 * Security: reCAPTCHA is now enforced on the non-JS fallback endpoint too —

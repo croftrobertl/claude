@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Contact Form
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Self-contained native Elementor (free) contact form widget for Dora Canal Court. Reproduces the site's single WPForms form — look, email, spam protection (honeypot, time-trap, keyword filter, reCAPTCHA v3), entry storage — with no dependency on WPForms. Vanilla JS, no external libraries, assets load only where the widget is present.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCC_CONTACT_VERSION', '1.1.0');
+define('DCC_CONTACT_VERSION', '1.1.1');
 define('DCC_CONTACT_FILE', __FILE__);
 define('DCC_CONTACT_DIR', plugin_dir_path(__FILE__));
 define('DCC_CONTACT_URL', plugin_dir_url(__FILE__));
