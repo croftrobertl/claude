@@ -1522,10 +1522,17 @@
         // Stitch together section titles + item titles + item plain text.
         const parts = [];
         root.querySelectorAll('.dccgg-detail').forEach(detail => {
-            const title = (detail.querySelector('.dccgg-detail-title span') || {}).textContent || detail.dataset.key || '';
+            // v0.9.7.35: read the real title text. The old '.dccgg-detail-title
+            // span' matched the ICON span (empty for font icons), so sections
+            // fell back to their raw key ('wifi' instead of 'Internet'); and
+            // 'span:last-of-type' on item titles has matched the empty
+            // trailing-controls wrapper since the v0.9.7.28 title grid, so
+            // every item heading sent to the AI was blank.
+            const title = (detail.querySelector('.dccgg-detail-title-text') || {}).textContent || detail.dataset.key || '';
             parts.push('## ' + title.trim());
             detail.querySelectorAll('.dccgg-item').forEach(item => {
-                const itTitle = (item.querySelector('.dccgg-item-title span:last-of-type') || {}).textContent || '';
+                const itTitle = item.dataset.itemTitle
+                    || (item.querySelector('.dccgg-item-title-text') || {}).textContent || '';
                 const body    = (item.querySelector('.dccgg-item-body') || {}).textContent || '';
                 parts.push('### ' + itTitle.trim() + '\n' + body.trim());
             });

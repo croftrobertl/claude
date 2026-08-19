@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.21
+Stable tag: 0.9.7.35
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,23 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.7.35 =
+
+**Fix: AI "Ask anything" search was receiving blank or wrong headings.**
+
+The guide content stitched together for the AI proxy read titles with
+stale selectors: item headings matched the empty trailing-controls span
+introduced by the v0.9.7.28 title grid (so every item heading sent to
+the AI was blank), and section headings matched the icon span (empty for
+font icons), falling back to raw section keys ("wifi" instead of
+"Internet") — the latter since the feature shipped. Titles now come from
+the server-rendered data-item-title attribute and the dedicated
+title-text spans, so the AI sees the guide the way guests do. No visual
+change anywhere.
+
+Also refreshed the stale Stable tag in this readme (it still said
+0.9.7.21).
 
 = 0.9.7.34 =
 
