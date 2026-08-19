@@ -42,15 +42,17 @@ final class Cache
      *                           (0 on a miss/fresh compute).
      * @return T
      */
-    public static function get_or_set(string $key, callable $producer, int $ttl = self::DEFAULT_TTL, ?int &$age = null)
+    public static function get_or_set(string $key, callable $producer, int $ttl = self::DEFAULT_TTL, ?int &$age = null, ?bool &$hit = null)
     {
         $cached = get_transient($key);
         if (is_array($cached) && array_key_exists('__v', $cached) && array_key_exists('__t', $cached)) {
             $age = max(0, time() - (int) $cached['__t']);
+            $hit = true; // explicit: an age of 0s does not imply a miss
             return $cached['__v'];
         }
         $value = $producer();
         $age   = 0;
+        $hit   = false;
         set_transient($key, ['__v' => $value, '__t' => time()], $ttl);
         return $value;
     }

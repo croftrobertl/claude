@@ -1,5 +1,10 @@
 # Dora Canal Court — Developer Context
 
+> ROLE: evergreen developer context and lessons learned. Not the same file as
+> SITE-CONTEXT.md (hyphen), which is the dated DB-snapshot inventory — for
+> current plugin versions / booking counts / option values, trust that snapshot
+> (and its date) over anything numeric here.
+
 Pertinent site, stack, and lessons-learned reference for building WordPress
 plugins and Elementor widgets for **doracanalcourt.com**. Paste this (or a
 relevant section) at the start of a working session when starting a new

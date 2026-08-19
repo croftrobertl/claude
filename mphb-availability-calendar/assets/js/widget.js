@@ -302,7 +302,12 @@
         var windowHasAvail = days.some(function (day) {
             return Object.keys(avail).some(function (tid) { return avail[tid][day] === 'available'; });
         });
-        if (!windowHasAvail) {
+        // any_future mirror: a window of only past days must not compute a
+        // bookedThrough (matches the server's gate in Ajax::handle()).
+        var windowHasFuture = days.some(function (day) {
+            return Object.keys(avail).some(function (tid) { return avail[tid][day] !== 'past'; });
+        });
+        if (!windowHasAvail && windowHasFuture) {
             bookedThrough = ini.bookedThrough || null;
             var rest = buildDayList(addDays(state.to, 1), ini.to);
             for (var i = 0; i < rest.length; i++) {
@@ -367,6 +372,24 @@
         obs.observe(el);
     }
 
+    // Recompute config.today in the property timezone from the visitor's
+    // clock. The page (and its data-config) may be served from a full-page
+    // cache for hours, so the server-baked "today" can be stale — wrong
+    // is-today highlight, default window starting a day early, date pickers
+    // allowing a past check-in. Called at init AND before every request so a
+    // tab left open across midnight ET rolls over too. Falls back to the
+    // baked value if Intl or the timezone lookup is unavailable. 'en-CA'
+    // formats as YYYY-MM-DD.
+    function refreshToday(config) {
+        try {
+            var tzToday = new Intl.DateTimeFormat('en-CA', {
+                timeZone: config.tz || 'America/New_York',
+                year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+            if (/^\d{4}-\d{2}-\d{2}$/.test(tzToday)) config.today = tzToday;
+        } catch (e) { /* keep the current value */ }
+    }
+
     function init(root) {
         if (!root || root.dataset.mphbacInit === '1') return;
         root.dataset.mphbacInit = '1';
@@ -374,19 +397,7 @@
         var config = {};
         try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { config = {}; }
 
-        // The page (and its data-config) may be served from a full-page cache
-        // for hours, so the server-baked "today" can be stale — wrong is-today
-        // highlight, default window starting a day early, and date pickers
-        // allowing a past check-in. Recompute today in the property timezone
-        // client-side; fall back to the baked value if Intl or the timezone
-        // lookup is unavailable. 'en-CA' formats as YYYY-MM-DD.
-        try {
-            var tzToday = new Intl.DateTimeFormat('en-CA', {
-                timeZone: config.tz || 'America/New_York',
-                year: 'numeric', month: '2-digit', day: '2-digit'
-            }).format(new Date());
-            if (/^\d{4}-\d{2}-\d{2}$/.test(tzToday)) config.today = tzToday;
-        } catch (e) { /* keep the server-baked value */ }
+        refreshToday(config);
         refreshDateMins(root, config);
 
         var state = {
@@ -495,6 +506,12 @@
             state.filtered = !!(hasCi || hasCo);
             state.from = hasCi ? checkin.value : baseFrom(config);
             state.to = hasCo ? checkout.value : addDays(state.from, deviceDays(config) - 1);
+            // Typed dates bypass the min attribute (keyboard entry), so a
+            // checkout before the window start can arrive here. An inverted
+            // range 400s server-side and breaks nav spans — clamp instead.
+            if (state.to < state.from) {
+                state.to = state.from;
+            }
             request(root, config, state);
         }
 
@@ -714,6 +731,7 @@
         window.addEventListener('resize', updateScrollbar);
 
         var lastTrigger = null;
+        var closeTimer = null; // pending 200ms close cleanup; cancelled on reopen
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
         // means Elementor's frontend init that ran at page-load keeps its
@@ -773,6 +791,14 @@
         }, { passive: true });
 
         function openInfo(typeId, content, trigger) {
+            // A close may still be mid-flight (200ms slide-out). Cancel its
+            // cleanup so it can't hide the sheet we're about to show; the
+            // portal / movedContent checks below handle whichever state the
+            // interrupted close left behind.
+            if (closeTimer) {
+                clearTimeout(closeTimer);
+                closeTimer = null;
+            }
             lastTrigger = trigger || null;
             // Per-cottage popup title override from the cottage_info
             // repeater's ci_title field, falling back to the MotoPress
@@ -859,7 +885,13 @@
                 sheet.hidden = false;
                 overlay.hidden = false;
             });
-            requestAnimationFrame(function () {
+            // Double rAF, matching the booking sheet: under View Transitions
+            // a single animation-frame callback runs BEFORE the transition's
+            // update callback, i.e. while sheet.hidden is still true — so a
+            // single-rAF focus() was a silent no-op (keyboard focus never
+            // entered the dialog) and is-open landed on a hidden element,
+            // killing the slide-in transition.
+            requestAnimationFrame(function () { requestAnimationFrame(function () {
                 sheet.classList.add('is-open');
                 overlay.classList.add('is-open');
                 // Surgically re-measure every Swiper inside the moved
@@ -874,7 +906,7 @@
                 // Move focus inside the dialog so Tab cycling has a
                 // defined starting point and the trap below activates.
                 if (closeBtn) { try { closeBtn.focus(); } catch (e) { /* ignore */ } }
-            });
+            }); });
             // Once the slide-in transition settles and the popup is at full
             // width, do the heavier slider repair. refreshSwipers above runs
             // mid-transition (still wrong width), so a slider that initialized
@@ -914,7 +946,11 @@
             if (scrollbar) scrollbar.hidden = true;
             document.documentElement.classList.remove('mphbac-info-open');
             document.body.classList.remove('mphbac-info-open');
-            setTimeout(function () {
+            // Tracked so a reopen within the 200ms slide-out can cancel it —
+            // otherwise the timer fires mid-open, hides the just-shown sheet,
+            // and yanks the content back to its hidden slot.
+            closeTimer = setTimeout(function () {
+                closeTimer = null;
                 sheet.hidden = true;
                 overlay.hidden = true;
                 // Move the cottage's content node back to its original
@@ -962,6 +998,14 @@
             if (!focusable.length) return;
             var first = focusable[0];
             var last = focusable[focusable.length - 1];
+            // Focus escaped the dialog (clicked non-interactive popup text,
+            // or the initial focus was lost): pull Tab back inside instead
+            // of letting it walk the page behind the overlay.
+            if (!sheet.contains(document.activeElement)) {
+                e.preventDefault();
+                (e.shiftKey ? last : first).focus();
+                return;
+            }
             if (e.shiftKey && document.activeElement === first) {
                 e.preventDefault(); last.focus();
             } else if (!e.shiftKey && document.activeElement === last) {
@@ -1014,6 +1058,9 @@
 
     function request(root, config, state, opts) {
         var silent = !!(opts && opts.silent);
+        // Keep "today" honest for tabs left open across midnight ET — the
+        // renderGrid past-day normalization and is-today highlight read it.
+        refreshToday(config);
 
         // Local-cache fast path: if this exact window was prefetched (or
         // recently fetched), render it immediately — no spinner, no network.
@@ -1021,9 +1068,20 @@
         // own 15-minute cache window, so freshness is equivalent to an AJAX
         // hit. Skipped for silent revalidates, whose entire job is to check
         // the server.
+        // The window this call is FOR, captured at dispatch. Everything
+        // downstream — the cache write, the stale check, the render — keys
+        // off these, never off state.from/to, which rapid navigation can
+        // move while the response is in flight. Reading state at response
+        // time both rendered the wrong window and poisoned the prefetch
+        // cache under the new window's key.
+        var reqFrom = state.from;
+        var reqTo = state.to;
+
         if (!silent) {
-            var cacheHit = prefetchCache[prefetchKey(config, state.from, state.to)];
+            var cacheHit = prefetchCache[prefetchKey(config, reqFrom, reqTo)];
             if (cacheHit && Date.now() - cacheHit.ts < PREFETCH_TTL_MS) {
+                clearTimeout(state.pending);
+                state.pending = null;
                 if (state.controller) {
                     try { state.controller.abort(); } catch (e) { /* ignore */ }
                     state.controller = null;
@@ -1044,6 +1102,10 @@
             return;
         }
         state.lastRequest = now;
+        // This call is going through — a leftover throttle retry for an older
+        // window would only abort this fetch and re-issue it, so drop it.
+        clearTimeout(state.pending);
+        state.pending = null;
 
         // Abort any in-flight fetch so the latest nav wins. Throttling above
         // coalesces rapid triggers within 250ms; AbortController handles the
@@ -1058,17 +1120,17 @@
         // Ceiling on how long we'll wait for the AJAX response. A hung
         // MotoPress / SpeedyCache misconfig would otherwise leave the
         // spinner running indefinitely. The empty-state has a reset button
-        // so the visitor can retry. Abort with a TimeoutError-named
-        // DOMException so the .catch below can distinguish "timeout"
-        // (show empty-state) from "superseded by next request" (silent).
+        // so the visitor can retry. Timeout is signalled via the timedOut
+        // flag, NOT via an abort reason: engines that predate
+        // AbortController.abort(reason) ignore the argument, and the old
+        // reason-based check then misread every timeout as "superseded" and
+        // left the spinner up forever.
+        var timedOut = false;
         var timeoutMs = 15000;
         var timeoutHandle = setTimeout(function () {
             if (state.controller !== controller) return;
-            try {
-                controller.abort(new DOMException('Request timed out', 'TimeoutError'));
-            } catch (e) {
-                try { controller.abort(); } catch (_) { /* ignore */ }
-            }
+            timedOut = true;
+            try { controller.abort(); } catch (e) { /* ignore */ }
         }, timeoutMs);
 
         if (!silent) {
@@ -1078,8 +1140,8 @@
 
         var body = new URLSearchParams();
         body.append('action', config.action || 'mphbac_query');
-        body.append('from', state.from);
-        body.append('to', state.to);
+        body.append('from', reqFrom);
+        body.append('to', reqTo);
         (config.roomTypeIds || []).forEach(function (id) {
             body.append('room_type_ids[]', String(id));
         });
@@ -1105,17 +1167,27 @@
                 console.log('[mphbac] server timing', json.data.timing,
                     'roundTripMs', lastLatencyMs);
             }
-            root.classList.remove('is-loading');
-            setStatus(root, '');
             if (!json || !json.success || !json.data) {
                 // A failed SILENT revalidate keeps the already-painted
                 // embedded grid — flipping to the error state would replace
                 // good (≤15-min-old) data with nothing.
+                root.classList.remove('is-loading');
+                setStatus(root, '');
                 if (!silent) showError(root);
                 return;
             }
-            prefetchCache[prefetchKey(config, state.from, state.to)] = { data: json.data, ts: Date.now() };
+            // Cache under the window this response is actually FOR.
+            prefetchCache[prefetchKey(config, reqFrom, reqTo)] = { data: json.data, ts: Date.now() };
             trimPrefetchCache();
+            if (reqFrom !== state.from || reqTo !== state.to) {
+                // State moved on while we were in flight (throttled rapid
+                // nav): don't paint an old window over the new one. The
+                // pending throttle retry fetches the current window — and
+                // this response is banked in the cache should it land there.
+                return;
+            }
+            root.classList.remove('is-loading');
+            setStatus(root, '');
             var sig = dataSig(json.data);
             if (silent && sig === state.lastSig) {
                 // Revalidate confirmed the embedded paint — nothing to redraw.
@@ -1126,7 +1198,7 @@
             renderGrid(root, json.data, state, config);
             scheduleAdjacentPrefetch(config, state);
         }).catch(function (err) {
-            if (err && err.name === 'AbortError') return; // expected — newer request superseded this one
+            if (err && err.name === 'AbortError' && !timedOut) return; // superseded by a newer request
             if (controller !== state.controller) return;
             root.classList.remove('is-loading');
             setStatus(root, '');
@@ -1160,6 +1232,26 @@
         var availability = data.availability || {};
         var from = data.from || state.from;
         var to = data.to || state.to;
+
+        // Normalize past days on EVERY render path, not just the embedded
+        // one: server transients (15-min TTL) and the client prefetch cache
+        // (5-min TTL) both bake "past" in at compute time, so data crossing
+        // midnight ET could otherwise render yesterday as green and
+        // clickable for up to 15 minutes. Rebuilt (not mutated) so cached
+        // entries and dataSig() inputs stay untouched.
+        var todayStr = (config && config.today) || '';
+        if (todayStr) {
+            var normalized = {};
+            Object.keys(availability).forEach(function (tid) {
+                var src = availability[tid];
+                var out = {};
+                Object.keys(src).forEach(function (day) {
+                    out[day] = (day < todayStr && src[day] !== 'past') ? 'past' : src[day];
+                });
+                normalized[tid] = out;
+            });
+            availability = normalized;
+        }
 
         var empty = root.querySelector('.mphbac-empty');
         var wrap = root.querySelector('.mphbac-grid-wrap');
@@ -1291,11 +1383,27 @@
             }
             return false;
         }
+        function dayIsPast(day) {
+            for (var i = 0; i < rooms.length; i++) {
+                if ((availability[rooms[i].id] || {})[day] !== 'past') return false;
+            }
+            return true;
+        }
 
-        if (dayHasAvail(days[0])) return null; // normal case — bail
+        // Anchor on the first NON-PAST day. Past days can never be
+        // "available", so judging from days[0] made the hint fire for any
+        // window that merely starts in the past — including fully past
+        // months, which showed a bogus "all booked through X" over a month
+        // that wasn't booked at all.
+        var startIdx = -1;
+        for (var s = 0; s < days.length; s++) {
+            if (!dayIsPast(days[s])) { startIdx = s; break; }
+        }
+        if (startIdx < 0) return null;                 // window is entirely past
+        if (dayHasAvail(days[startIdx])) return null;  // normal case — bail
 
         var firstAvailIdx = -1;
-        for (var i = 1; i < days.length; i++) {
+        for (var i = startIdx + 1; i < days.length; i++) {
             if (dayHasAvail(days[i])) { firstAvailIdx = i; break; }
         }
 
@@ -1408,7 +1516,7 @@
         var cancelBtn = sheet.querySelector('.mphbac-sheet-cancel');
         var closeBtn = sheet.querySelector('.mphbac-sheet-close');
 
-        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false };
+        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false, closeTimer: null };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
         // Portal anchors — same pattern as the info popup. Without this,
@@ -1446,6 +1554,12 @@
 
         function openSheet(typeId, checkin, checkout, trigger) {
             if (!typeId) return;
+            // Cancel a mid-flight close so its 200ms cleanup can't hide the
+            // sheet we're about to show.
+            if (context.closeTimer) {
+                clearTimeout(context.closeTimer);
+                context.closeTimer = null;
+            }
             context.roomTypeId = typeId;
             context.lastTrigger = trigger || null;
             var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
@@ -1497,7 +1611,10 @@
             }
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
-            setTimeout(function () {
+            // Tracked so a reopen within the 200ms slide-out can cancel it
+            // (same double-tap hazard as the info popup's closeTimer).
+            context.closeTimer = setTimeout(function () {
+                context.closeTimer = null;
                 sheet.hidden = true;
                 overlay.hidden = true;
                 // Restore the portaled nodes to their original DOM slots so
@@ -1530,6 +1647,14 @@
             if (!focusable.length) return;
             var first = focusable[0];
             var last = focusable[focusable.length - 1];
+            // Focus escaped the dialog (clicked non-interactive popup text,
+            // or the initial focus was lost): pull Tab back inside instead
+            // of letting it walk the page behind the overlay.
+            if (!sheet.contains(document.activeElement)) {
+                e.preventDefault();
+                (e.shiftKey ? last : first).focus();
+                return;
+            }
             if (e.shiftKey && document.activeElement === first) {
                 e.preventDefault(); last.focus();
             } else if (!e.shiftKey && document.activeElement === last) {
@@ -1551,8 +1676,12 @@
                 return;
             }
             if (nightsBetween(ci, co) < minNights) {
-                showError((config.strings && config.strings.bookMinNights) ||
-                    'Must be a minimum of two nights. Please select new dates.');
+                // {nights} tracks the configurable Minimum nights setting —
+                // the old default hard-coded "two nights" and lied for any
+                // other value. No-op for strings without the placeholder.
+                showError(((config.strings && config.strings.bookMinNights) ||
+                    'Must be a minimum of {nights} nights. Please select new dates.')
+                    .replace('{nights}', String(minNights)));
                 return;
             }
             confirmBtn.disabled = true;

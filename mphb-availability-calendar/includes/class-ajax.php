@@ -119,7 +119,7 @@ final class Ajax
         ));
 
         $t_query = microtime(true);
-        $availability = Data_Provider::get_availability($room_type_ids, $from, $to, $data_age);
+        $availability = Data_Provider::get_availability($room_type_ids, $from, $to, $data_age, $data_hit);
         $query_ms = (microtime(true) - $t_query) * 1000;
 
         // When every visible day is booked across every requested cottage,
@@ -130,16 +130,26 @@ final class Ajax
         // the user is actually staring at an all-booked stretch.
         $booked_through = null;
         if (!empty($room_type_ids)) {
-            $any_avail = false;
+            $any_avail  = false;
+            $any_future = false; // any non-past day in the window
             foreach ($availability as $type_avail) {
                 foreach ($type_avail as $status) {
+                    if ($status !== Data_Provider::ST_PAST) {
+                        $any_future = true;
+                    }
                     if ($status === Data_Provider::ST_AVAIL) {
                         $any_avail = true;
                         break 2;
                     }
                 }
             }
-            if (!$any_avail) {
+            // Scan only when the window actually contains bookable days that
+            // are all taken. A fully past window has no ST_AVAIL either, and
+            // used to trigger a pointless 366-day forward scan plus a bogus
+            // bookedThrough for a month that wasn't booked at all. This gate
+            // is mirrored client-side in tryRenderEmbedded() — keep in sync
+            // (signature-parity invariant).
+            if (!$any_avail && $any_future) {
                 $next = Data_Provider::find_first_availability(
                     $room_type_ids,
                     $to->modify('+1 day')
@@ -172,7 +182,7 @@ final class Ajax
                 'bootMs'   => round($boot_ms, 1),
                 'queryMs'  => round($query_ms, 1),
                 'handleMs' => round((microtime(true) - $t_enter) * 1000, 1),
-                'cacheHit' => ($data_age ?? 0) > 0,
+                'cacheHit' => (bool) ($data_hit ?? false),
                 'dataAgeS' => (int) ($data_age ?? 0),
             ];
         }

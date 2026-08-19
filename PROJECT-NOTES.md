@@ -4,7 +4,7 @@ Developer guidance for working with the code in this repository.
 
 ## Site context
 
-**Read `SITE-CONTEXT.md` at the start of every session.** It contains the full
+**Read `SITE-CONTEXT.md` at the start of every session.** (Note the naming: `SITE-CONTEXT.md` with a hyphen is the dated DB-snapshot inventory; `SITE_CONTEXT.md` with an underscore is the evergreen lessons-learned doc — both are real, they are different files.) It contains the full
 doracanalcourt.com site architecture: installed plugins + versions, MotoPress data
 model (cottage IDs, room type IDs, booking counts), iCal OTA feeds, cache stack,
 security findings, and gotchas that affect every plugin in this repo.
@@ -50,26 +50,27 @@ includes/class-widget.php            # Elementor_Widget_Base subclass; ~all Elem
 includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL fallback)
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
-includes/class-ajax.php              # Nonce-protected admin-ajax.php endpoint (action mphbac_query)
+includes/class-ajax.php              # Public admin-ajax.php endpoint (action mphbac_query) — deliberately nonce-free; see Invariants
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
 
 Request flow when a visitor loads a page containing the widget:
 
-1. `Widget::render()` outputs only the shell — heading, filters, legend, nav, an empty `.mphbac-grid-wrap` with a `.mphbac-loading` placeholder, the popups, and hidden `.mphbac-info-content` divs. It does NOT render the grid.
+1. `Widget::render()` outputs only the shell — heading, filters, legend, nav, a `.mphbac-grid-wrap` holding the `.mphbac-skeleton` shimmer rows, the popups, and hidden `.mphbac-info-content` divs. It does NOT render the grid.
 2. The full settings + cottage IDs (incl. per-device `daysDesktop/daysTablet/daysMobile`) are serialized into a `data-config` JSON attribute on `.mphbac-root`.
 3. `render()` also embeds the default window's availability (`config.initial`, sized to the largest per-device day count) so `widget.js` can **paint the grid instantly** on load — it slices the device's window from the embed, corrects "past" days locally (stale full-page cache), then fires a *silent* AJAX revalidate that re-renders only if the payload signature changed. If the embed is missing/too stale, it falls back to skeleton-then-AJAX.
-4. On load, `assets/js/widget.js` picks the day count for the current device, POSTs to `admin-ajax.php?action=mphbac_query`, and **renders the grid client-side**. It re-renders on filter/nav/swipe and when the viewport crosses a device breakpoint. After each render it idle-prefetches the adjacent nav windows into a client cache (5-min TTL) so arrows/swipes render instantly.
+4. All network is lazy: `widget.js` defers any admin-ajax call behind an IntersectionObserver (`whenVisible`, 300px rootMargin) and skips the revalidate entirely when the embed passes `embedIsFresh()` — a normal page view can make zero calls. When it does fetch, it picks the day count for the current device, POSTs to `admin-ajax.php?action=mphbac_query`, and **renders the grid client-side**, re-rendering on filter/nav/swipe and breakpoint changes. After a render it idle-prefetches the adjacent nav windows into a client cache (5-min TTL) — but only once measured endpoint latency is under 800ms (`lastLatencyMs`); slow hosting never pays for speculation.
 5. `Data_Provider::get_availability()` (transient-cached, IDs sorted for canonical keys) backs the AJAX endpoint — the transient layer hits on repeats. The AJAX endpoint clamps dates to today−400d…today+730d and validates room-type IDs against real accommodation types (options-table flood protection). The grid is intentionally client-rendered so each device shows its own day count. **Signature parity invariant:** the embedded payload and the AJAX response for the same window must serialize identically (same ID sort, same day order, same `bookedThrough` gating) — that's what lets the silent revalidate skip the re-render.
 
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
 
+- **The availability AJAX endpoint is deliberately nonce-free.** It is public, read-only, and side-effect-free; a nonce embedded in full-page-cached HTML expires after ~24h and turned every cached pageload into a 403. Do not "fix" this by adding one. Input is hardened instead (absint + ID whitelist + date clamp).
 - **All "today" math runs in US/Eastern**, not WP's site timezone. The physical cottages are in Florida and cutoffs must match the property clock regardless of visitor locale. See `Data_Provider::TZ` and `Data_Provider::timezone()`.
 - **Never re-fetch iCal URLs.** MotoPress already syncs iCal feeds every 15 minutes; imported reservations land as `mphb_booking` posts (same as direct bookings). Direct iCal HTTP fetches would duplicate work and risk cron conflicts.
-- **Availability is read directly from MotoPress's DB, not its PHP API.** `MPHB()->getRoomRepository()->getAvailableRooms()` proved unreliable (ignores the room-type filter in 6.x). `Data_Provider::query_occupied_room_days()` reads the real storage: `mphb_reserved_room` posts (`_mphb_room_id` meta) joined to their parent `mphb_booking` post (which carries `mphb_check_in_date` / `mphb_check_out_date` and a `post_status` in `Data_Provider::BLOCKING_STATUSES`), plus the `{prefix}mphb_blocks` table for manual host blocks. A cottage-day is "booked" only when every physical room of that type is occupied. All SQL is `$wpdb->prepare`'d; the two queries are wrapped in `try/catch (\Throwable)` with `MPHBAC:` error logging.
+- **Availability is read directly from MotoPress's DB, not its PHP API.** `MPHB()->getRoomRepository()->getAvailableRooms()` proved unreliable (ignores the room-type filter in 6.x). `Data_Provider::query_occupied_room_days()` reads the real storage: `mphb_reserved_room` posts (`_mphb_room_id` meta) joined to their parent `mphb_booking` post (which carries `mphb_check_in_date` / `mphb_check_out_date` and a `post_status` in `Data_Provider::BLOCKING_STATUSES`), plus the `{prefix}mphb_blocks` table for manual host blocks. A cottage-day is "booked" only when every physical room of that type is occupied. All SQL is `$wpdb->prepare`'d; each read checks `$wpdb->last_error` (wpdb never throws) and a failed read raises `Db_Read_Failed` so the bad result is never cached — the endpoint then returns the safe all-booked direction for that request.
 - **Book Now flow uses a hidden form POST to MotoPress's checkout page** (`MPHB()->settings()->pages()->getCheckoutPageUrl()`, default `/submit-booking/`). The POST body matches MotoPress's own cottage-page form exactly: `mphb_room_type_id`, `mphb_check_in_date`, `mphb_check_out_date`, `mphb_rooms_details[ID]=1`, `mphb_is_direct_booking=1`. No nonce field — MotoPress doesn't CSRF-protect this submission. Don't switch to `MPHB()->reservationRequest()` PHP-side unless you have a specific reason; the form-POST path is documented behavior and identical to what MotoPress's own UI does. Popup can be disabled globally via the `enable_popup` Elementor toggle.
 - **Every visible string must be translatable.** Text domain is `mphb-availability-calendar`. The site uses Loco Translate. Use `__()`, `esc_html__()`, `esc_attr__()` etc. — never echo a raw user-facing string.
 - **The Elementor widget category is `dcc-widgets`** ("Dora Canal Court"). It's registered in `Plugin::register_category()`. Changing the slug is safe for already-placed widgets (Elementor persists `widgetType`, not the category, in saved page data) — the category only controls which panel group the widget appears under while editing. Keep it stable anyway so all site widgets stay grouped together.
@@ -78,13 +79,15 @@ These are deliberate decisions from the design conversation. Don't "fix" them wi
 ## Cache layer
 
 - Backed by WP transients, prefix `mphbac_`, default TTL 900 s (15 min — matches MotoPress's iCal sync interval).
-- Keys are `sha1(wp_json_encode($parts))` so they're content-addressed and stable.
+- Keys are `sha1(wp_json_encode($parts))` so they're content-addressed and stable. Availability keys are additionally salted with today's date (ET) because "past" is baked into the stored payload.
+- `Cache::get_or_set()` wraps every stored value as `['__v' => value, '__t' => time()]` and exposes `$age` / `$hit` out-params — the client freshness gate (`config.initial.dataAge`) depends on this envelope. Don't "simplify" it back to raw values.
+- A producer that throws is NOT cached (`Db_Read_Failed` is how Data_Provider vetoes caching after a failed `$wpdb` read — wpdb never throws on its own, it only sets `last_error`).
 - `Cache::flush_all()` is called on `mphb_after_sync_ical`, `mphb_ical_sync_finished`, `mphb_after_create_booking`, and `mphb_booking_status_changed`. If MotoPress changes its hook name, transients still expire on TTL, so worst case is a 15-min staleness window.
 - Deactivation flushes all transients.
 
 ## Adding controls or settings
 
-Every Elementor control is registered inside one of twelve methods in `class-widget.php`, all called from `register_controls()`:
+Every Elementor control is registered inside one of sixteen methods in `class-widget.php`, all called from `register_controls()`:
 
 - `register_content_controls()` — heading + cottage selector
 - `register_display_controls()` — per-device day count (`visible_days`, responsive), per-device day-of-week format (`dow_format`, responsive), label style, legend/past/nav toggles, font size, popup toggle, minimum nights
@@ -100,6 +103,8 @@ Every Elementor control is registered inside one of twelve methods in `class-wid
 - `register_nav_style_controls()` — nav-arrow button + range-label colors
 - `register_legend_style_controls()` — legend text color + typography
 - `register_cell_style_controls()` — calendar cell radius / min-height / gap
+- `register_view_button_style_controls()` — the "View Cottage Page" button (icon, typography, colors) — VSEL, portal-proof
+- `register_popup_title_style_controls()` — the two popup titles (typography/color/margin) — TSEL, portal-proof, all defaults empty
 
 Interactions: tapping a cottage name opens the **info popup** (`.mphbac-info-sheet`) if that cottage has a `cottage_info` row; tapping an available day opens the **booking popup** (`.mphbac-sheet`). The two popups share CSS. Per-cottage info content is server-rendered into hidden `.mphbac-info-content` divs and copied into the popup by `widget.js`.
 

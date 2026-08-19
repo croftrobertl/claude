@@ -30,6 +30,24 @@ final class Widget extends Widget_Base
     }
 
     /**
+     * Resolve a per-device numeric Elementor setting. Elementor stores an
+     * EMPTY STRING (not a missing key) for a device slot the editor never
+     * touched, so a bare `?? $default` never fires and `(int) ''` silently
+     * becomes 0 — which the old clamp then pinned to the floor (the info
+     * popup rendered 320px wide on untouched tablet/mobile slots). Untouched
+     * ('' / null) falls back to the declared per-device default; an explicit
+     * value — including a legitimate 0 — is clamped to [$min, $max].
+     * visible_days always handled this correctly; this is the shared version.
+     */
+    private static function device_number($value, int $default, int $min, int $max): int
+    {
+        if ($value === '' || $value === null) {
+            return $default;
+        }
+        return max($min, min($max, (int) $value));
+    }
+
+    /**
      * Portal-proof selector for the "View Cottage Page" button. When the info
      * popup opens, widget.js moves the whole sheet to <body> to escape
      * transformed Elementor ancestors — so {{WRAPPER}}-scoped controls no
@@ -47,6 +65,19 @@ final class Widget extends Widget_Base
      * the popups are a single shared UI.
      */
     private const TSEL = '.mphbac-sheet-title.mphbac-sheet-title';
+
+    /**
+     * Portal-proof selectors for the Buttons and Filter Fields style
+     * controls. The Book Now popup — which contains .mphbac-btn buttons and
+     * .mphbac-input date fields — is moved to <body> when opened, so
+     * {{WRAPPER}}-scoped (SEL) rules stop matching it in its only visible
+     * state: the editor's button/field settings applied to the filter row but
+     * silently not to the popup. Same pattern and trade-off as VSEL/TSEL:
+     * global doubled class survives the portal; styles every instance on the
+     * page, which is correct for this single-calendar site.
+     */
+    private const BSEL = '.mphbac-btn.mphbac-btn';
+    private const FSEL = '.mphbac-input.mphbac-input';
 
     public function get_name(): string
     {
@@ -764,7 +795,7 @@ final class Widget extends Widget_Base
             'str_book_close'     => [__('Popup close (aria-label)', 'mphb-availability-calendar'), __('Close booking dialog', 'mphb-availability-calendar')],
             'str_book_unavailable' => [__('Popup unavailable message', 'mphb-availability-calendar'), __("These dates aren't all available. Please pick different dates.", 'mphb-availability-calendar')],
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
-            'str_book_min_nights' => [__('Popup minimum-nights message', 'mphb-availability-calendar'), __('Must be a minimum of two nights. Please select new dates.', 'mphb-availability-calendar')],
+            'str_book_min_nights' => [__('Popup minimum-nights message ({nights} is replaced with the Minimum nights setting)', 'mphb-availability-calendar'), __('Must be a minimum of {nights} nights. Please select new dates.', 'mphb-availability-calendar')],
             'str_view_cottage'   => [__('Info popup: view-cottage button', 'mphb-availability-calendar'), __('View Cottage Page', 'mphb-availability-calendar')],
             'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
             'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
@@ -871,20 +902,20 @@ final class Widget extends Widget_Base
         $this->add_control('field_text_color', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.mphbac-input' => 'color: {{VALUE}};'],
+            'selectors' => [self::FSEL => 'color: {{VALUE}};'],
         ]);
 
         $this->add_control('field_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.mphbac-input' => 'background-color: {{VALUE}};'],
+            'selectors' => [self::FSEL => 'background-color: {{VALUE}};'],
         ]);
 
         $this->add_group_control(
             \Elementor\Group_Control_Typography::get_type(),
             [
                 'name'     => 'field_typography',
-                'selector' => self::SEL . '.mphbac-input',
+                'selector' => self::FSEL,
                 // line-height is pinned in widget.css to defeat the theme's
                 // 1px reset, so don't expose a control that can't win.
                 'exclude'  => ['line_height'],
@@ -895,7 +926,7 @@ final class Widget extends Widget_Base
             \Elementor\Group_Control_Border::get_type(),
             [
                 'name'     => 'field_border',
-                'selector' => self::SEL . '.mphbac-input',
+                'selector' => self::FSEL,
             ]
         );
 
@@ -904,7 +935,7 @@ final class Widget extends Widget_Base
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [
-                self::SEL . '.mphbac-input' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+                self::FSEL => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
             ],
         ]);
 
@@ -922,7 +953,7 @@ final class Widget extends Widget_Base
             \Elementor\Group_Control_Typography::get_type(),
             [
                 'name'     => 'button_typography',
-                'selector' => self::SEL . '.mphbac-btn',
+                'selector' => self::BSEL,
             ]
         );
 
@@ -930,7 +961,7 @@ final class Widget extends Widget_Base
             \Elementor\Group_Control_Border::get_type(),
             [
                 'name'     => 'button_border',
-                'selector' => self::SEL . '.mphbac-btn',
+                'selector' => self::BSEL,
             ]
         );
 
@@ -939,7 +970,7 @@ final class Widget extends Widget_Base
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', '%'],
             'selectors'  => [
-                self::SEL . '.mphbac-btn' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+                self::BSEL => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
             ],
         ]);
 
@@ -948,7 +979,7 @@ final class Widget extends Widget_Base
             'type'       => Controls_Manager::DIMENSIONS,
             'size_units' => ['px', 'em'],
             'selectors'  => [
-                self::SEL . '.mphbac-btn' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+                self::BSEL => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
             ],
         ]);
 
@@ -961,13 +992,13 @@ final class Widget extends Widget_Base
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#ffffff',
-            'selectors' => [self::SEL . '.mphbac-btn' => 'color: {{VALUE}};'],
+            'selectors' => [self::BSEL => 'color: {{VALUE}};'],
         ]);
         $this->add_control('button_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0f6dbf',
-            'selectors' => [self::SEL . '.mphbac-btn' => 'background-color: {{VALUE}};'],
+            'selectors' => [self::BSEL => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
 
@@ -978,8 +1009,8 @@ final class Widget extends Widget_Base
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.mphbac-btn:hover'         => 'color: {{VALUE}};',
-                self::SEL . '.mphbac-btn:focus-visible' => 'color: {{VALUE}};',
+                self::BSEL . ':hover'         => 'color: {{VALUE}};',
+                self::BSEL . ':focus-visible' => 'color: {{VALUE}};',
             ],
         ]);
         $this->add_control('button_bg_color_hover', [
@@ -987,8 +1018,8 @@ final class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0a4f8c',
             'selectors' => [
-                self::SEL . '.mphbac-btn:hover'         => 'background-color: {{VALUE}};',
-                self::SEL . '.mphbac-btn:focus-visible' => 'background-color: {{VALUE}};',
+                self::BSEL . ':hover'         => 'background-color: {{VALUE}};',
+                self::BSEL . ':focus-visible' => 'background-color: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -1013,6 +1044,12 @@ final class Widget extends Widget_Base
             'range'      => ['px' => ['min' => 0, 'max' => 16, 'step' => 1]],
             'selectors'  => [
                 self::SEL . '.mphbac-cell-status' => 'border-radius: {{SIZE}}{{UNIT}};',
+                // The loading skeleton reads --mphbac-cell-radius so its
+                // corners match the grid it is standing in for. The skeleton
+                // CSS always consumed this variable; the control just never
+                // set it, so a customized radius visibly "jumped" at the
+                // skeleton-to-grid swap.
+                self::SEL => '--mphbac-cell-radius: {{SIZE}}{{UNIT}};',
             ],
         ]);
 
@@ -1335,18 +1372,24 @@ final class Widget extends Widget_Base
             $init_avail = Data_Provider::get_availability($type_ids, $base_from, $init_to, $init_age);
             if (!empty($init_avail)) {
                 // Mirror Ajax::handle()'s all-booked forward scan so the
-                // "booked through {date}" hint is right on first paint too.
+                // "booked through {date}" hint is right on first paint too —
+                // including its any_future gate: a window of only past days
+                // must not trigger the scan (signature-parity invariant).
                 $booked_through = null;
-                $any_avail = false;
+                $any_avail  = false;
+                $any_future = false;
                 foreach ($init_avail as $type_avail) {
                     foreach ($type_avail as $status) {
+                        if ($status !== Data_Provider::ST_PAST) {
+                            $any_future = true;
+                        }
                         if ($status === Data_Provider::ST_AVAIL) {
                             $any_avail = true;
                             break 2;
                         }
                     }
                 }
-                if (!$any_avail) {
+                if (!$any_avail && $any_future) {
                     $next = Data_Provider::find_first_availability($type_ids, $init_to->modify('+1 day'));
                     if ($next !== null) {
                         $booked_through = $next->modify('-1 day')->format('Y-m-d');
@@ -1392,31 +1435,22 @@ final class Widget extends Widget_Base
             'initial'        => $initial,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => [
-                'desktop' => max(320, min(1600, (int) ($settings['info_popup_max_width']        ?? 1200))),
-                'tablet'  => max(320, min(1600, (int) ($settings['info_popup_max_width_tablet'] ?? 800))),
-                'mobile'  => max(320, min(1600, (int) ($settings['info_popup_max_width_mobile'] ?? 480))),
+                'desktop' => self::device_number($settings['info_popup_max_width']        ?? null, 1200, 320, 1600),
+                'tablet'  => self::device_number($settings['info_popup_max_width_tablet'] ?? null, 800, 320, 1600),
+                'mobile'  => self::device_number($settings['info_popup_max_width_mobile'] ?? null, 480, 320, 1600),
             ],
             'infoTitles'       => $info_titles,
             'infoTitleUrls'    => $info_title_urls,
             'infoPopupSideMargin' => [
-                'desktop' => max(0, min(200, (int) ($settings['info_popup_side_margin']['size']        ?? 32))),
-                'tablet'  => max(0, min(200, (int) ($settings['info_popup_side_margin_tablet']['size'] ?? 20))),
-                'mobile'  => max(0, min(200, (int) ($settings['info_popup_side_margin_mobile']['size'] ?? 12))),
+                'desktop' => self::device_number($settings['info_popup_side_margin']['size']        ?? null, 32, 0, 200),
+                'tablet'  => self::device_number($settings['info_popup_side_margin_tablet']['size'] ?? null, 20, 0, 200),
+                'mobile'  => self::device_number($settings['info_popup_side_margin_mobile']['size'] ?? null, 12, 0, 200),
             ],
             'strings'        => [
-                'empty'         => (string) ($settings['str_empty'] ?? ''),
-                'reset'         => (string) ($settings['str_reset'] ?? ''),
-                'prev'          => (string) ($settings['str_prev_month'] ?? ''),
-                'next'          => (string) ($settings['str_next_month'] ?? ''),
                 'bookHeading'   => (string) ($settings['str_book_heading'] ?? ''),
-                'bookConfirm'   => (string) ($settings['str_book_confirm'] ?? ''),
-                'bookCancel'    => (string) ($settings['str_book_cancel'] ?? ''),
-                'bookClose'     => (string) ($settings['str_book_close'] ?? ''),
                 'bookUnavail'   => (string) ($settings['str_book_unavailable'] ?? ''),
                 'bookInvalid'   => (string) ($settings['str_book_invalid_range'] ?? ''),
                 'bookMinNights' => (string) ($settings['str_book_min_nights'] ?? ''),
-                'checkin'       => (string) ($settings['str_checkin'] ?? ''),
-                'checkout'      => (string) ($settings['str_checkout'] ?? ''),
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),

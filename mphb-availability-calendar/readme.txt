@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.15.2
+Stable tag: 0.16.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ A mobile-friendly Elementor widget that shows multi-property availability for Mo
 
 == Description ==
 
-This plugin adds a single Elementor widget — **MPHB Availability Calendar** — under a new "Dora Canal Court" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
+This plugin adds a single Elementor widget — **DCC Availability Calendar** — under a "Dora Canal Court" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
 
 * Reads MotoPress's already-synced bookings directly from the database. No extra iCal HTTP fetches, no new cron jobs.
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
@@ -29,7 +29,7 @@ This plugin adds a single Elementor widget — **MPHB Availability Calendar** �
 
 1. Zip the `mphb-availability-calendar` folder.
 2. In WordPress: Plugins → Add New → Upload Plugin → choose the zip → Install Now → Activate.
-3. Edit any page or template with Elementor. Find the **MPHB Availability Calendar** widget under the "Dora Canal Court" category and drag it onto a full-width section.
+3. Edit any page or template with Elementor. Find the **DCC Availability Calendar** widget under the "Dora Canal Court" category and drag it onto a full-width section.
 
 Requires Elementor and MotoPress Hotel Booking to be active.
 
@@ -62,6 +62,24 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.16.0 =
+Fixes from a full-codebase review (three independent review passes over the PHP, the JavaScript, and the integration seams).
+
+* Elementor "Buttons" and "Filter Fields" settings now apply inside the Book Now popup. The popup is moved out of the widget when it opens, which silently detached it from wrapper-scoped style rules — so its Book Now/Cancel buttons and date fields ignored the configured colors while the filter row honored them.
+* Fixed per-device fallbacks for "Info popup max width" and "Info popup side margin": device slots never touched in the editor were collapsing to 320px width / 0px margins instead of the documented defaults (Elementor stores an empty string, not a missing value, for untouched slots).
+* Fixed a rapid-navigation race: two arrow clicks (or swipes) within a quarter second could render the wrong month AND store it in the local cache under the wrong key, re-serving the wrong days for up to 5 minutes. Responses are now keyed to the window they were requested for.
+* Midnight correctness: availability cache entries are now salted with the current date (US/Eastern), and every render path re-checks "past" days against the visitor's clock — yesterday can no longer show as green/bookable for up to 15 minutes after midnight.
+* Database failures can no longer be cached as wrong availability. WordPress's database layer reports errors silently rather than throwing; a failed read used to look like "no bookings" and could be cached as all-available for 15 minutes. Failed reads are now detected, logged, never cached, and rendered in the safe direction (booked).
+* Fixed a double-tap glitch: closing a popup and reopening it within 0.2s made the popup vanish while notionally open (the close animation's cleanup timer fired mid-open). Both popups.
+* Browsing to a fully past month no longer shows a bogus "All cottages booked through …" banner (and no longer triggers a needless year-long forward scan on the server).
+* Keyboard/screen-reader access: initial focus now reliably lands inside the cottage info popup on modern browsers (a View Transitions timing quirk was silently dropping it), and both popups now pull Tab back inside the dialog if focus escapes to the page behind the overlay.
+* On older browsers (pre-2022 Safari/Chrome), a request that timed out left the loading spinner up forever; timeouts are now detected explicitly and show the retry state.
+* The minimum-nights rejection message now tracks the "Minimum nights" setting via a {nights} placeholder instead of hard-coding "two nights".
+* Typing a checkout date earlier than the check-in no longer produces an inverted range (server error + broken paging) — the range is clamped.
+* "Cell corner radius" now also applies to the loading skeleton, so a customized radius no longer visibly jumps when the real grid replaces it.
+* Fixed a CSS class collision where the row-label-style flag on the widget root also received the label-span styling (nowrap/clipping could leak into the legend and hint text).
+* Trimmed ~300 bytes of never-used strings from every page's embedded config; removed a dead CSS block; corrected the plugin readme's widget name in the Description/Installation sections ("DCC Availability Calendar").
 
 = 0.15.2 =
 * Removed the extra letter-spacing from the "Today" navigation button and the cottage-column header label. That spacing existed to keep ALL-CAPS text legible; with those labels now in Title Case (0.15.1) it just read as airy, so both now use normal spacing.

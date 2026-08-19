@@ -1,4 +1,7 @@
 # SITE-CONTEXT.md
+> ROLE: point-in-time DB/site SNAPSHOT inventory (plugins, IDs, bookings, options).
+> Not the same file as SITE_CONTEXT.md (underscore), which is the evergreen
+> developer-context / lessons-learned doc. Facts here age from the snapshot date.
 > Snapshot date: 2026-06-23. DB export: doracurt_wp128.sql (150 MB uncompressed).
 > This file contains NO secrets. See the companion SITE-CONTEXT-FULL.md in
 > croftrobertl/dcc-site-snapshot for credential-adjacent details.

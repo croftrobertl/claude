@@ -8,6 +8,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Signals that a $wpdb read inside the availability producer failed, so the
+ * result must not be cached or trusted. Internal to Data_Provider.
+ */
+final class Db_Read_Failed extends \RuntimeException
+{
+}
+
 final class Data_Provider
 {
     public const TZ        = 'America/New_York';
@@ -123,9 +131,10 @@ final class Data_Provider
      * @param DateTimeImmutable $to   inclusive, midnight ET
      * @return array<int, array<string,string>> [ room_type_id => [ 'YYYY-MM-DD' => status ] ]
      */
-    public static function get_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to, ?int &$age = null): array
+    public static function get_availability(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to, ?int &$age = null, ?bool &$hit = null): array
     {
         $age = 0;
+        $hit = false;
         $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
         // Canonical order: the ID list is salted into the cache key, so sorting
         // makes [1065,1067] and [1067,1065] share one transient — and gives the
@@ -137,19 +146,55 @@ final class Data_Provider
         }
 
         $cache_key = Cache::key([
-            'avail_v1',
+            'avail_v2',
             $room_type_ids,
             $from->format('Y-m-d'),
             $to->format('Y-m-d'),
+            // Salt with today's date (ET): "past" is baked into the stored
+            // payload, so without this a window cached at 23:50 still serves
+            // yesterday-as-available for up to 15 min after midnight. A new
+            // day = a new key = a fresh compute; the old entry just expires.
+            self::today()->format('Y-m-d'),
         ]);
 
-        return Cache::get_or_set(
-            $cache_key,
-            static fn(): array => self::query_availability($room_type_ids, $from, $to),
-            Cache::DEFAULT_TTL,
-            $age
-        );
+        try {
+            return Cache::get_or_set(
+                $cache_key,
+                static fn(): array => self::query_availability_checked($room_type_ids, $from, $to),
+                Cache::DEFAULT_TTL,
+                $age,
+                $hit
+            );
+        } catch (Db_Read_Failed $e) {
+            // A DB read failed mid-compute. Nothing was cached (get_or_set
+            // only stores what the producer returns), so the next request
+            // retries. Return the safe direction — an empty map renders as
+            // fully booked, never as falsely available.
+            $age = 0;
+            $hit = false;
+            return [];
+        }
     }
+
+    /**
+     * Runs query_availability() and throws if any underlying $wpdb read
+     * failed. wpdb never throws on SQL errors — it sets $wpdb->last_error and
+     * returns an empty set, which is indistinguishable from "no bookings".
+     * Uncaught, that would CACHE an all-available (or all-booked) lie for the
+     * full TTL. The throw makes get_or_set skip the cache write.
+     */
+    private static function query_availability_checked(array $room_type_ids, DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        self::$db_error = false;
+        $result = self::query_availability($room_type_ids, $from, $to);
+        if (self::$db_error) {
+            throw new Db_Read_Failed('availability DB read failed');
+        }
+        return $result;
+    }
+
+    /** Set by the low-level query helpers when $wpdb reports an error. */
+    private static bool $db_error = false;
 
     /**
      * MotoPress booking post statuses that occupy a room. A "confirmed" booking
@@ -283,34 +328,44 @@ final class Data_Provider
             return $out;
         }
 
-        // Seed every missing type as empty first, so a type with no rooms is
-        // still memoized (and treated as fully booked) rather than re-queried.
-        foreach ($missing as $type_id) {
-            self::$room_cache[$type_id] = [];
-        }
+        $ph  = implode(',', array_fill(0, count($missing), '%d'));
+        $sql = "SELECT pm.meta_value AS type_id, p.ID AS room_id
+                FROM {$wpdb->posts} p
+                INNER JOIN {$wpdb->postmeta} pm
+                    ON pm.post_id = p.ID AND pm.meta_key = 'mphb_room_type_id'
+                WHERE p.post_type = 'mphb_room'
+                  AND p.post_status = 'publish'
+                  AND CAST(pm.meta_value AS UNSIGNED) IN ($ph)";
+        $rows = $wpdb->get_results($wpdb->prepare($sql, $missing));
 
-        try {
-            $ph  = implode(',', array_fill(0, count($missing), '%d'));
-            $sql = "SELECT pm.meta_value AS type_id, p.ID AS room_id
-                    FROM {$wpdb->posts} p
-                    INNER JOIN {$wpdb->postmeta} pm
-                        ON pm.post_id = p.ID AND pm.meta_key = 'mphb_room_type_id'
-                    WHERE p.post_type = 'mphb_room'
-                      AND p.post_status = 'publish'
-                      AND CAST(pm.meta_value AS UNSIGNED) IN ($ph)";
-            $rows = $wpdb->get_results($wpdb->prepare($sql, $missing));
-            foreach ((array) $rows as $row) {
-                $type_id = (int) $row->type_id;
-                if (isset(self::$room_cache[$type_id])) {
-                    self::$room_cache[$type_id][] = (int) $row->room_id;
-                }
+        // wpdb does not throw on SQL errors — it sets last_error and returns
+        // an empty set, indistinguishable from "type has no rooms". A failed
+        // read must NOT be memoized (a zero-room type renders every day as
+        // booked for the rest of the request) and must flag the whole compute
+        // as untrustworthy so it is never written to the transient.
+        if ($wpdb->last_error !== '') {
+            error_log('MPHBAC: rooms_for_types query failed: ' . $wpdb->last_error);
+            self::$db_error = true;
+            foreach ($missing as $type_id) {
+                $out[$type_id] = [];
             }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: rooms_for_types query failed: ' . $e->getMessage());
+            return $out;
         }
 
+        $found = [];
         foreach ($missing as $type_id) {
-            $out[$type_id] = self::$room_cache[$type_id];
+            $found[$type_id] = [];
+        }
+        foreach ((array) $rows as $row) {
+            $type_id = (int) $row->type_id;
+            if (isset($found[$type_id])) {
+                $found[$type_id][] = (int) $row->room_id;
+            }
+        }
+        // Successful read: memoize, including genuinely room-less types.
+        foreach ($found as $type_id => $rids) {
+            self::$room_cache[$type_id] = $rids;
+            $out[$type_id]              = $rids;
         }
         return $out;
     }
@@ -341,48 +396,55 @@ final class Data_Provider
         $to_str     = $to->format('Y-m-d');
         $room_ph    = implode(',', array_fill(0, count($room_ids), '%d'));
 
-        try {
-            $status_ph = implode(',', array_fill(0, count(self::BLOCKING_STATUSES), '%s'));
-            $sql = "SELECT rid.meta_value AS room_id, ci.meta_value AS checkin, co.meta_value AS checkout
-                    FROM {$wpdb->posts} rr
-                    INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id'
-                    INNER JOIN {$wpdb->posts} bk ON bk.ID = rr.post_parent AND bk.post_type = 'mphb_booking'
-                    INNER JOIN {$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date'
-                    INNER JOIN {$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date'
-                    WHERE rr.post_type = 'mphb_reserved_room'
-                      AND bk.post_status IN ($status_ph)
-                      AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
-                      AND ci.meta_value <= %s
-                      AND co.meta_value > %s";
-            // No ORDER BY: results are folded into a keyed map, so ordering is
-            // irrelevant — and sorting them only added a filesort.
-            $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
-            $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
+        // Error handling note: wpdb never throws — a failed query sets
+        // $wpdb->last_error and returns empty, which here would silently mean
+        // "no reservations" and cache every booked day as available for the
+        // full TTL. Each read is therefore checked via last_error and flags
+        // self::$db_error so the compute is discarded instead of cached.
+        $status_ph = implode(',', array_fill(0, count(self::BLOCKING_STATUSES), '%s'));
+        $sql = "SELECT rid.meta_value AS room_id, ci.meta_value AS checkin, co.meta_value AS checkout
+                FROM {$wpdb->posts} rr
+                INNER JOIN {$wpdb->postmeta} rid ON rid.post_id = rr.ID AND rid.meta_key = '_mphb_room_id'
+                INNER JOIN {$wpdb->posts} bk ON bk.ID = rr.post_parent AND bk.post_type = 'mphb_booking'
+                INNER JOIN {$wpdb->postmeta} ci ON ci.post_id = bk.ID AND ci.meta_key = 'mphb_check_in_date'
+                INNER JOIN {$wpdb->postmeta} co ON co.post_id = bk.ID AND co.meta_key = 'mphb_check_out_date'
+                WHERE rr.post_type = 'mphb_reserved_room'
+                  AND bk.post_status IN ($status_ph)
+                  AND CAST(rid.meta_value AS UNSIGNED) IN ($room_ph)
+                  AND ci.meta_value <= %s
+                  AND co.meta_value > %s";
+        // No ORDER BY: results are folded into a keyed map, so ordering is
+        // irrelevant — and sorting them only added a filesort.
+        $params = array_merge(self::BLOCKING_STATUSES, $room_ids, [$to_str, $from_str]);
+        $rows   = $wpdb->get_results($wpdb->prepare($sql, $params));
+        if ($wpdb->last_error !== '') {
+            error_log('MPHBAC: reservation query failed: ' . $wpdb->last_error);
+            self::$db_error = true;
+        } else {
             foreach ((array) $rows as $row) {
                 // A reservation occupies nights [check_in, check_out); checkout day is free.
                 self::mark_days($occupied, (int) $row->room_id, (string) $row->checkin, (string) $row->checkout, false, $from, $to);
             }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: reservation query failed: ' . $e->getMessage());
         }
 
-        try {
-            $blocks_table = $wpdb->prefix . 'mphb_blocks';
-            $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($blocks_table)));
-            if ($exists === $blocks_table) {
-                $sql2 = "SELECT room_id, date_from, date_to FROM $blocks_table
-                         WHERE not_stay_in = 1
-                           AND room_id IN ($room_ph)
-                           AND date_to >= %s AND date_from <= %s";
-                $params2 = array_merge($room_ids, [$from_str, $to_str]);
-                $rows2   = $wpdb->get_results($wpdb->prepare($sql2, $params2));
+        $blocks_table = $wpdb->prefix . 'mphb_blocks';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($blocks_table)));
+        if ($exists === $blocks_table) {
+            $sql2 = "SELECT room_id, date_from, date_to FROM $blocks_table
+                     WHERE not_stay_in = 1
+                       AND room_id IN ($room_ph)
+                       AND date_to >= %s AND date_from <= %s";
+            $params2 = array_merge($room_ids, [$from_str, $to_str]);
+            $rows2   = $wpdb->get_results($wpdb->prepare($sql2, $params2));
+            if ($wpdb->last_error !== '') {
+                error_log('MPHBAC: blocks query failed: ' . $wpdb->last_error);
+                self::$db_error = true;
+            } else {
                 foreach ((array) $rows2 as $row) {
                     // Host blocks span [date_from, date_to] inclusive on both ends.
                     self::mark_days($occupied, (int) $row->room_id, (string) $row->date_from, (string) $row->date_to, true, $from, $to);
                 }
             }
-        } catch (\Throwable $e) {
-            error_log('MPHBAC: blocks query failed: ' . $e->getMessage());
         }
 
         return $occupied;

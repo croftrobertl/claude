@@ -344,9 +344,15 @@
     text-decoration: underline;
 }
 
-.mphbac-label-abbrev,
-.mphbac-label-num,
-.mphbac-label-custom {
+/* Scoped under .mphbac-cell-label — these spans only ever live inside the
+   row-label buttons. Crucially, the ROOT element carries the class
+   mphbac-label-abbrev too (the Row-label-style mode flag), so a bare
+   .mphbac-label-abbrev selector also styled the whole widget root:
+   white-space:nowrap leaked into the legend/hint/empty-state text and the
+   root's overflow:hidden clipped it. */
+.mphbac-cell-label .mphbac-label-abbrev,
+.mphbac-cell-label .mphbac-label-num,
+.mphbac-cell-label .mphbac-label-custom {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1249,13 +1255,6 @@ body.mphbac-info-open {
 }
 
 /* Loading state — the grid is rendered client-side */
-.mphbac-loading {
-    padding: 2.5em 1em;
-    text-align: center;
-    color: #666666;
-    font-size: 0.95em;
-}
-
 .mphbac-root.is-loading .mphbac-grid {
     opacity: 0.5;
     pointer-events: none;
