@@ -24,7 +24,7 @@ final class Form_Handler
             nocache_headers();
         }
 
-        $result = self::process($_POST, true);
+        $result = self::process($_POST);
 
         if ($result['ok']) {
             wp_send_json_success(['confirmation' => $result['confirmation']]);
@@ -43,7 +43,7 @@ final class Form_Handler
      */
     public static function handle_post(): void
     {
-        $result = self::process($_POST, false);
+        $result = self::process($_POST);
 
         $back = wp_get_referer() ?: home_url('/');
         $back = esc_url($back);
@@ -84,11 +84,9 @@ final class Form_Handler
     /* ------------------------------------------------------------------ */
 
     /**
-     * @param bool $is_ajax True for the JS/AJAX path (reCAPTCHA v3 can only run
-     *                      there); the non-JS fallback skips the captcha layer.
      * @return array{ok:bool,confirmation:string,message:string,errors:array<string,string>}
      */
-    public static function process(array $post, bool $is_ajax = true): array
+    public static function process(array $post): array
     {
         $fail = static function (string $message, array $errors = []): array {
             return ['ok' => false, 'confirmation' => '', 'message' => $message, 'errors' => $errors];
@@ -122,9 +120,15 @@ final class Form_Handler
         }
 
         // 1) Honeypot — bots that fill the hidden field get a fake success and
-        //    no email. Recorded as spam for the owner's visibility.
+        //    no email. Recorded as spam for the owner's visibility. The field
+        //    is named innocuously (dcc_contact_code, label "Code") so bots
+        //    can't skip it by pattern-matching "hp"/"honeypot"; dcc_hp is still
+        //    checked for HTML cached before the rename.
         if (!empty($config['spam']['honeypot'])) {
-            $hp = isset($post['dcc_hp']) ? trim((string) wp_unslash($post['dcc_hp'])) : '';
+            $hp = isset($post['dcc_contact_code']) ? trim((string) wp_unslash($post['dcc_contact_code'])) : '';
+            if ($hp === '' && isset($post['dcc_hp'])) {
+                $hp = trim((string) wp_unslash($post['dcc_hp']));
+            }
             if ($hp !== '') {
                 self::store_spam($config, $form_id, 'honeypot', []);
                 return ['ok' => true, 'confirmation' => self::confirmation_html($config), 'message' => '', 'errors' => []];
@@ -169,9 +173,14 @@ final class Form_Handler
             }
         }
 
-        // 5) reCAPTCHA v3 — only when enabled AND keys configured (graceful
-        //    degrade: blank keys skip this layer entirely).
-        if ($is_ajax && !empty($config['spam']['recaptcha']) && Settings::recaptcha_configured()) {
+        // 5) reCAPTCHA v3 — when enabled AND keys configured (graceful degrade:
+        //    blank keys skip this layer entirely). Enforced on BOTH the AJAX
+        //    path and the non-JS admin-post fallback: the fallback URL is
+        //    printed in the form's action attribute, and bots that scrape the
+        //    form POST straight to it — exempting that path would exempt most
+        //    real bot traffic. A genuine no-JS visitor gets the failure
+        //    message (v3 requires JS to mint a token; WPForms behaves the same).
+        if (!empty($config['spam']['recaptcha']) && Settings::recaptcha_configured()) {
             $token = isset($post['dcc_recaptcha']) ? sanitize_text_field((string) wp_unslash($post['dcc_recaptcha'])) : '';
             if (!Recaptcha::verify($token)) {
                 self::store_spam($config, $form_id, 'recaptcha', $rows);

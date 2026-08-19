@@ -56,10 +56,15 @@ final class Settings
         return self::recaptcha_site_key() !== '' && self::recaptcha_secret_key() !== '';
     }
 
+    /**
+     * 0.0–1.0 inclusive; anything outside falls back to 0.4. A threshold of 0
+     * is legitimate: it accepts every submission that carries a VALID token
+     * (the token itself is still verified), regardless of score.
+     */
     public static function recaptcha_threshold(): float
     {
         $t = (float) self::get('recaptcha_threshold');
-        if ($t <= 0 || $t > 1) {
+        if ($t < 0 || $t > 1) {
             $t = 0.4;
         }
         return $t;
@@ -103,9 +108,12 @@ final class Settings
         if (isset($input['recaptcha_secret_key'])) {
             $out['recaptcha_secret_key'] = sanitize_text_field((string) $input['recaptcha_secret_key']);
         }
-        if (isset($input['recaptcha_threshold'])) {
+        // Blank means "use the default"; 0 is a valid explicit choice (accept
+        // any verified token regardless of score) — matching the admin UI's
+        // stated 0.0–1.0 range.
+        if (isset($input['recaptcha_threshold']) && $input['recaptcha_threshold'] !== '') {
             $t = (float) $input['recaptcha_threshold'];
-            $out['recaptcha_threshold'] = ($t > 0 && $t <= 1) ? $t : 0.4;
+            $out['recaptcha_threshold'] = ($t >= 0 && $t <= 1) ? $t : 0.4;
         }
         if (isset($input['min_submit_time'])) {
             $out['min_submit_time'] = max(0, (int) $input['min_submit_time']);

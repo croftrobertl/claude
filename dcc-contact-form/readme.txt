@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,6 +77,11 @@ WP-Admin rather than in the (per-page) Elementor panel.
 entirely and the form still works — the honeypot, time-trap and keyword filter
 remain active. A missing key never breaks the form.
 
+Note: when reCAPTCHA is enabled with keys set, it is enforced on every
+submission path (including the non-JavaScript fallback), so submitting requires
+JavaScript — the same requirement WPForms' v3 integration has. Visitors with JS
+disabled see the captcha failure message rather than a silent bypass.
+
 To turn any individual layer on or off per form, use the **Spam Protection**
 section of the Elementor panel.
 
@@ -94,6 +99,26 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.1.0 =
+* Security: reCAPTCHA is now enforced on the non-JS fallback endpoint too —
+  previously a bot POSTing directly to the form's action URL bypassed the
+  captcha layer entirely. (A genuine no-JS visitor now sees the captcha failure
+  message when reCAPTCHA is enabled; disable the reCAPTCHA toggle to restore a
+  fully no-JS-capable form.)
+* Fix: the Elementor editor preview no longer overwrites the live submission
+  config with unsaved draft settings; the trusted config now only updates on
+  real front-end renders after publishing.
+* Hardening: the honeypot field was renamed to an innocuous name/label so bots
+  can't skip it by pattern-matching ("hp"/"leave this empty"); the old field
+  name is still honoured for cached pages.
+* Hardening: server-side reCAPTCHA verification now also checks the token's
+  action and solve hostname, rejecting tokens minted elsewhere.
+* i18n: client-side validation messages are now translatable
+  (wp_localize_script) instead of hardcoded English.
+* Fix: a reCAPTCHA threshold of 0 is now honoured as entered (accept any
+  verified token) instead of being silently reset to 0.4; a blank field still
+  means the 0.4 default.
 
 = 1.0.3 =
 * Style: placeholder text in inputs and the textarea is now centre-aligned.

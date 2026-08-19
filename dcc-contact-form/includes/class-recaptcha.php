@@ -13,8 +13,12 @@ final class Recaptcha
 {
     private const VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 
+    /** Must match the action passed to grecaptcha.execute() in widget.js. */
+    public const ACTION = 'dcc_contact';
+
     /**
-     * @return bool True when the token verifies and the score meets threshold.
+     * @return bool True when the token verifies, was minted for our action on
+     *              this site, and the score meets the threshold.
      */
     public static function verify(string $token): bool
     {
@@ -42,7 +46,29 @@ final class Recaptcha
             return false;
         }
 
+        // A valid token minted for a different action (or scraped from another
+        // page/site using the same key) must not pass here.
+        if (isset($data['action']) && $data['action'] !== self::ACTION) {
+            return false;
+        }
+        if (isset($data['hostname']) && is_string($data['hostname']) && $data['hostname'] !== '') {
+            if (!self::hostname_matches($data['hostname'])) {
+                return false;
+            }
+        }
+
         $score = isset($data['score']) ? (float) $data['score'] : 0.0;
         return $score >= Settings::recaptcha_threshold();
+    }
+
+    /** Compare Google's reported solve hostname against this site (www-insensitive). */
+    private static function hostname_matches(string $hostname): bool
+    {
+        $home = wp_parse_url(home_url(), PHP_URL_HOST);
+        if (!is_string($home) || $home === '') {
+            return true;
+        }
+        $strip = static fn(string $h): string => preg_replace('/^www\./i', '', strtolower($h)) ?? strtolower($h);
+        return $strip($hostname) === $strip($home);
     }
 }

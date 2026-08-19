@@ -239,7 +239,10 @@
     color: #000;
 }
 
-/* ---- Honeypot + screen-reader-only ---- */
+/* ---- Honeypot + screen-reader-only ----
+ * .dcc-alt is the current honeypot wrapper (innocuous class name); .dcc-hp is
+ * kept so HTML cached before the rename stays hidden. */
+.dcc-alt,
 .dcc-hp {
     position: absolute !important;
     left: -9999px !important;

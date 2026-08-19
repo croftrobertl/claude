@@ -2,11 +2,13 @@
 (function () {
     'use strict';
 
-    var MSG_REQUIRED = 'This field is required.';
-    var MSG_EMAIL = 'Please enter a valid email address.';
-    var MSG_PHONE = 'Please enter a valid phone number.';
-    var MSG_NUMBER = 'Please enter a valid number.';
-    var MSG_GENERIC = 'Something went wrong. Please try again.';
+    /* Translatable strings injected via wp_localize_script; English fallback. */
+    var I18N = window.dccContactI18n || {};
+    var MSG_REQUIRED = I18N.required || 'This field is required.';
+    var MSG_EMAIL = I18N.email || 'Please enter a valid email address.';
+    var MSG_PHONE = I18N.phone || 'Please enter a valid phone number.';
+    var MSG_NUMBER = I18N.number || 'Please enter a valid number.';
+    var MSG_GENERIC = I18N.generic || 'Something went wrong. Please try again.';
 
     function isEmail(v) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);

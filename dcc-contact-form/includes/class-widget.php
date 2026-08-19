@@ -87,6 +87,16 @@ final class Widget extends Widget_Base
             true
         );
 
+        // Client-side validation messages, translatable like the server-side
+        // ones (widget.js falls back to English if this object is absent).
+        wp_localize_script('dcc-contact-form', 'dccContactI18n', [
+            'required' => __('This field is required.', 'dcc-contact-form'),
+            'email'    => __('Please enter a valid email address.', 'dcc-contact-form'),
+            'phone'    => __('Please enter a valid phone number.', 'dcc-contact-form'),
+            'number'   => __('Please enter a valid number.', 'dcc-contact-form'),
+            'generic'  => __('Something went wrong. Please try again.', 'dcc-contact-form'),
+        ]);
+
         if (Settings::recaptcha_configured()) {
             wp_register_script(
                 'dcc-recaptcha-api',
@@ -638,7 +648,17 @@ final class Widget extends Widget_Base
             ],
         ];
 
-        $form_id = Form_Config::save($this->get_id(), $config);
+        // Persist only on real front-end renders. render() also runs inside the
+        // Elementor editor preview with UNSAVED draft settings — writing those
+        // would silently repoint the live, trusted submission config (recipient,
+        // fields, toggles) at a draft the owner may abandon. The config instead
+        // updates on the first front-end render after the page is published,
+        // which necessarily happens before anyone can submit the new markup.
+        $elementor  = \Elementor\Plugin::$instance;
+        $is_preview = $elementor->editor->is_edit_mode() || $elementor->preview->is_preview_mode();
+        $form_id    = $is_preview
+            ? Form_Config::normalize_id($this->get_id())
+            : Form_Config::save($this->get_id(), $config);
 
         $uid      = 'dcc-' . $form_id;
         $submit   = $settings['submit_text'] ?? __('Send Message', 'dcc-contact-form');
@@ -662,9 +682,14 @@ final class Widget extends Widget_Base
                 <input type="hidden" name="dcc_recaptcha" value="">
 
                 <?php if (!empty($config['spam']['honeypot'])) : ?>
-                    <div class="dcc-hp" aria-hidden="true">
-                        <label for="<?php echo esc_attr($uid); ?>-hp"><?php esc_html_e('Leave this field empty', 'dcc-contact-form'); ?></label>
-                        <input type="text" id="<?php echo esc_attr($uid); ?>-hp" name="dcc_hp" tabindex="-1" autocomplete="off">
+                    <?php // Honeypot. Deliberately innocuous name/label so bots
+                          // can't pattern-match "hp"/"honeypot"/"leave empty";
+                          // "code" is not an autofill category, so browsers
+                          // won't fill it for real visitors. aria-hidden +
+                          // tabindex=-1 + off-screen CSS keep humans out. ?>
+                    <div class="dcc-alt" aria-hidden="true">
+                        <label for="<?php echo esc_attr($uid); ?>-code"><?php esc_html_e('Code', 'dcc-contact-form'); ?></label>
+                        <input type="text" id="<?php echo esc_attr($uid); ?>-code" name="dcc_contact_code" tabindex="-1" autocomplete="off">
                     </div>
                 <?php endif; ?>
 

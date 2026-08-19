@@ -54,7 +54,7 @@ final class Form_Config
         return is_array($all) ? $all : [];
     }
 
-    private static function normalize_id(string $form_id): string
+    public static function normalize_id(string $form_id): string
     {
         $form_id = preg_replace('/[^A-Za-z0-9_-]/', '', $form_id) ?? '';
         return substr($form_id, 0, 64);
