@@ -254,6 +254,39 @@ namespace {
     ]);
     ok('autosaves do not publish a design', !isset(get_option(Selector_Widget::DESIGN_OPTION, [])['FromAutosave']));
 
+    // ---- Registry pruning on save --------------------------------------------
+    // A save's payload is the full truth for its document: any registry entry this
+    // document owns but no longer publishes (widget deleted, share turned off, or
+    // design renamed) must be dropped, or the dead name haunts every Mini Entry's
+    // "Mirror design from" dropdown forever. Entries owned by OTHER pages are
+    // untouchable. Note the earlier direct publish_design('Main', 123, …) was
+    // already pruned by the payload save above, which published only 'FromPayload'.
+    ok('a save prunes this page\'s designs the payload no longer publishes',
+        !isset(get_option(Selector_Widget::DESIGN_OPTION, [])['Main']));
+
+    Selector_Widget::publish_design('OtherPage', 999, 'el999', $settings);
+    $plugin->republish_designs($trapDoc, ['elements' => $selectorEl]);
+    $regP = get_option(Selector_Widget::DESIGN_OPTION, []);
+    ok('pruning never touches designs owned by other pages', isset($regP['OtherPage']));
+    ok('the payload\'s own design is kept through a prune', isset($regP['FromPayload']));
+
+    // Renaming: the new name replaces the old one instead of accumulating.
+    $renamedEl = $selectorEl;
+    $renamedEl[0]['settings']['design_name'] = 'RenamedDesign';
+    $plugin->republish_designs($trapDoc, ['elements' => $renamedEl]);
+    $regR = get_option(Selector_Widget::DESIGN_OPTION, []);
+    ok('a renamed design publishes under the new name', isset($regR['RenamedDesign']));
+    ok('…and its old name is pruned', !isset($regR['FromPayload']));
+
+    // Turning "Share this design" off: the save publishes nothing, so the page's
+    // entry disappears (other pages' entries still survive).
+    $offEl = $selectorEl;
+    $offEl[0]['settings']['share_design'] = '';
+    $plugin->republish_designs($trapDoc, ['elements' => $offEl]);
+    $regO = get_option(Selector_Widget::DESIGN_OPTION, []);
+    ok('share turned off prunes the page\'s design', !isset($regO['RenamedDesign']));
+    ok('share turned off leaves other pages\' designs alone', isset($regO['OtherPage']));
+
     // Elementor is not the only thing that can fire the action; a one-argument or
     // non-array call must not be an ArgumentCountError/TypeError fatal.
     $survived = true;

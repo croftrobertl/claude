@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.6
+Stable tag: 0.20.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -221,6 +221,40 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.20.0 =
+Eight corrections from a full-project review pass.
+
+* **Editing no longer publishes half-typed designs.** With "Share this design" on,
+  the Elementor preview re-renders server-side on every keystroke, and the render
+  path published each intermediate state: junk registry entries for every partial
+  design name as it was typed ("M", "Ma", "Mai"…), and — worse — the live published
+  design briefly overwritten with half-typed text while Mini Entries mirrored it.
+  Publishing is now skipped entirely in the editor/preview; saving the page (which
+  was always the authoritative publisher) is what publishes.
+* **Escape in the stacked compare pop-up no longer closes everything.** Opening the
+  comparison table from inside the Mini Entry pop-up stacks two overlays; one Escape
+  used to tear down both, dumping the guest back on the page with their answers
+  gone. Escape (and the Tab focus trap) now applies only to the topmost overlay:
+  first Escape closes the table, second closes the pop-up.
+* **Stale shared designs clean themselves up.** Deleting a shared Selector, turning
+  "Share this design" off, or renaming the design now removes the old entry from
+  the registry on save, so dead names stop haunting every Mini Entry's "Mirror
+  design from" dropdown. Designs published from other pages are never touched.
+* **The pop-up close button ("×") is now a 44px tap target** (was 36px), matching
+  the minimum used everywhere else in the widget.
+* **A broken widget now degrades to cottage links instead of eternal "Loading…".**
+  If the config can't be parsed or the scripts never finish loading, the widget
+  reveals the plain list of links to all eight cottage pages.
+* **Screen readers now hear the Compare selection count** ("Compare 2 cottages" /
+  the pick-2-or-more prompt) instead of silence, and keyboard focus stays on a
+  compare checkbox after ticking it instead of dropping to the top of the page.
+* Cleanup: removed an unreachable compare-paging branch and its vestigial state,
+  dropped a meaningless argument on the "Selector page URL" control, and stopped
+  doubling the root class token in markup (the specificity doubling lives in the
+  CSS selectors, where it belongs; markup needs the class once).
+* Test coverage grows to 68 PHP + 208 JS assertions, and the headless-Chromium
+  audit now also drives the stacked-pop-up flow at 320/360/768px (0 findings).
 
 = 0.19.6 =
 * **The site preset is back on.** Every preset setting and style captured in 0.19.0 —

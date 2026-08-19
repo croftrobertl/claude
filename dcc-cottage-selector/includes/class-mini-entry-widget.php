@@ -71,7 +71,9 @@ class Mini_Entry_Widget extends Selector_Widget
             'label'       => __('Selector page URL', 'dcc-cottage-selector'),
             'description' => __('Leave blank to open the selector in a pop-up on this page.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::URL,
-            'options'     => ['url'],
+            // Just the URL field — the is_external/nofollow extras don't apply to an
+            // internal selector page.
+            'options'     => false,
         ]);
 
         $this->preset_control('copy', [
@@ -258,7 +260,7 @@ class Mini_Entry_Widget extends Selector_Widget
         $label = $copy !== '' ? $copy : self::default_copy();
 
         return sprintf(
-            '<div class="dccs-entry dccs-entry" data-entry="%1$s">'
+            '<div class="dccs-entry" data-entry="%1$s">'
             . '<button type="button" class="dccs-entry-btn">%2$s</button>'
             . '</div>',
             esc_attr((string) (wp_json_encode($entry) ?: '{}')),

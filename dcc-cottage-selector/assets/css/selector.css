@@ -440,11 +440,13 @@
 /* Body-level scope host for the Mini-Entry popup (see openModal): the overlay is its only,
    fixed-positioned child, so the host adds no layout. */
 .dccs-modal-host { position: static; }
-/* The card must fill the box so the close button (pinned to the box) sits inside it. */
-.dccs-modal-content .dccs-in-modal { padding-top: 46px; max-width: none; margin: 0; }
+/* The card must fill the box so the close button (pinned to the box) sits inside it.
+   54px clears the 44px close button anchored at top:8. */
+.dccs-modal-content .dccs-in-modal { padding-top: 54px; max-width: none; margin: 0; }
 .dccs-modal .dccs-modal-close {
   position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0;
-  width: 36px; height: 36px; border-radius: 999px; border: 0;
+  /* 44px minimum tap target, same floor as every other control in the widget. */
+  width: 44px; height: 44px; border-radius: 999px; border: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--dccs-text) !important; color: var(--dccs-surface) !important; font-size: 22px; line-height: 1; cursor: pointer;
   -webkit-appearance: none; appearance: none; box-shadow: none; -webkit-tap-highlight-color: transparent;

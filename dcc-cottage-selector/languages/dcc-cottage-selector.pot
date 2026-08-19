@@ -3,7 +3,7 @@
 # This file is distributed under GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Dora Canal Cottage Selector 0.19.2\n"
+"Project-Id-Version: Dora Canal Cottage Selector 0.20.0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Applies to every button and menu trigger. Individual buttons with their own Style section (View cottage, Edit answers) can still override this."
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:110
+#: includes/class-mini-entry-widget.php:112
 msgid "Apply text"
 msgstr ""
 
@@ -510,7 +510,7 @@ msgstr ""
 msgid "Icon side"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:107
+#: includes/class-mini-entry-widget.php:109
 msgid "Import text"
 msgstr ""
 
@@ -606,7 +606,7 @@ msgstr ""
 msgid "Low"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:97
+#: includes/class-mini-entry-widget.php:99
 msgid "Match a Cottage Selector that has \"Share this design\" turned on. Save that Selector first to populate this list. (Live + locked: this widget's own controls hide while mirroring.)"
 msgstr ""
 
@@ -638,7 +638,7 @@ msgstr ""
 msgid "Mini Entry"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:96
+#: includes/class-mini-entry-widget.php:98
 msgid "Mirror design from"
 msgstr ""
 
@@ -726,7 +726,7 @@ msgstr ""
 msgid "Not pet-friendly"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:212
+#: includes/class-mini-entry-widget.php:214
 msgid "Not sure this layout fits you best? Open our 30-Second Selector."
 msgstr ""
 
@@ -752,7 +752,7 @@ msgstr ""
 msgid "Padding"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:111
+#: includes/class-mini-entry-widget.php:113
 msgid "Paste a text code from a Cottage Selector, then click Apply…"
 msgstr ""
 
@@ -820,7 +820,7 @@ msgstr ""
 msgid "Progress label color"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:78
+#: includes/class-mini-entry-widget.php:80
 msgid "Prompt text"
 msgstr ""
 
@@ -1188,7 +1188,7 @@ msgstr ""
 msgid "Workspace"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:112
+#: includes/class-mini-entry-widget.php:114
 msgid "Writes the pasted Selector wording into this widget’s own text fields, then edit freely. For the visual design, right-click the Selector → Copy, then right-click this widget → Paste Style."
 msgstr ""
 
@@ -1249,7 +1249,7 @@ msgstr ""
 msgid "the most square footage of the bunch"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:88
+#: includes/class-mini-entry-widget.php:90
 msgid "— None (use my own settings) —"
 msgstr ""
 

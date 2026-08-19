@@ -38,7 +38,7 @@ function freshDom(url) {
 
 function mountSelector(window, configStr) {
   const div = window.document.createElement('div');
-  div.className = 'dccs-root dccs-root';
+  div.className = 'dccs-root';
   div.dataset.config = configStr || CONFIG;
   window.document.body.appendChild(div);
   window.DCCS.bootAll(window.document);
@@ -392,7 +392,7 @@ function enter(root, mode) {
   cfg.strings.intro = 'CUSTOM MINI INTRO XYZ';   // a per-instance override the popup must show
   const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
   const node = w.document.createElement('div');
-  node.className = 'dccs-entry dccs-entry';
+  node.className = 'dccs-entry';
   node.dataset.entry = JSON.stringify(entry);
   node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
   w.document.body.appendChild(node);
@@ -432,7 +432,7 @@ function enter(root, mode) {
   const widget = w.document.createElement('div');
   widget.className = 'elementor-element elementor-element-abc123 elementor-widget elementor-widget-dccs_mini_entry';
   const node = w.document.createElement('div');
-  node.className = 'dccs-entry dccs-entry';
+  node.className = 'dccs-entry';
   node.dataset.entry = JSON.stringify(entry);
   node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
   widget.appendChild(node); page.appendChild(widget); w.document.body.appendChild(page);
@@ -464,7 +464,7 @@ function enter(root, mode) {
   const widget = w.document.createElement('div');
   widget.className = 'elementor-element elementor-element-mini999';
   const node = w.document.createElement('div');
-  node.className = 'dccs-entry dccs-entry';
+  node.className = 'dccs-entry';
   node.dataset.entry = JSON.stringify(entry);
   node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
   widget.appendChild(node); w.document.body.appendChild(widget);
@@ -631,7 +631,7 @@ function configWith(overrides) {
   const w = dom.window;
   injectScript(w, 'selector.js');                 // controller only — no data layer yet
   const div = w.document.createElement('div');
-  div.className = 'dccs-root dccs-root';
+  div.className = 'dccs-root';
   div.dataset.config = CONFIG;
   w.document.body.appendChild(div);
   w.DCCS.bootAll(w.document);
@@ -722,7 +722,7 @@ function configWith(overrides) {
   const cfg = JSON.parse(CONFIG);
   const entry = { current: '31', selectorUrl: '', modalConfig: cfg };
   const node = w.document.createElement('div');
-  node.className = 'dccs-entry dccs-entry';
+  node.className = 'dccs-entry';
   node.dataset.entry = JSON.stringify(entry);
   node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
   w.document.body.appendChild(node);
@@ -943,6 +943,83 @@ function configWith(overrides) {
   const inResults = root2.querySelector('.dccs-open-compare');
   ok('quiz-results button reuses .dccs-open-compare (one control set covers both)',
     !!inResults && !!inResults.closest('.dccs-results-compare'));
+})();
+
+// ---- 33. Nested overlays: Escape only closes the TOPMOST one ----
+// Opening the compare table from inside the mini-entry pop-up stacks two modals.
+// One Escape used to tear down both (each overlay has a document-level key
+// handler), dumping the guest back on the page with their answers gone.
+(function () {
+  const w = freshDom();
+  const entry = { current: '31', selectorUrl: '', modalConfig: JSON.parse(CONFIG) };
+  const node = w.document.createElement('div');
+  node.className = 'dccs-entry';
+  node.dataset.entry = JSON.stringify(entry);
+  node.innerHTML = '<button type="button" class="dccs-entry-btn">Open</button>';
+  w.document.body.appendChild(node);
+  w.DCCS.bootAll(w.document);
+  node.querySelector('.dccs-entry-btn').click();
+
+  const popRoot = w.document.querySelector('.dccs-modal .dccs-root');
+  enter(popRoot, 'quick');
+  toResults(popRoot, 'either');
+  for (const i of [0, 1]) {
+    const cb = popRoot.querySelectorAll('.dccs-card input[data-cmp]')[i];
+    cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  popRoot.querySelector('.dccs-open-compare').click();
+  ok('compare table stacks on the mini-entry pop-up', w.document.querySelectorAll('.dccs-modal').length === 2);
+
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('first Esc closes only the compare table', w.document.querySelectorAll('.dccs-modal').length === 1);
+  ok('the selector pop-up survives with its results intact',
+    !!w.document.querySelector('.dccs-modal .dccs-results'));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('second Esc closes the pop-up itself', !w.document.querySelector('.dccs-modal'));
+})();
+
+// ---- 34. Terminal init failure shows the cottage links, not eternal "Loading…" ----
+(function () {
+  const w = freshDom();
+  const div = w.document.createElement('div');
+  div.className = 'dccs-root';
+  div.dataset.config = '{not valid json';
+  div.innerHTML = '<noscript><ul class="dccs-noscript"><li><a href="/accommodation/cottage-22/">Cottage 22</a></li></ul></noscript>' +
+    '<div class="dccs-loading">Loading…</div>';
+  w.document.body.appendChild(div);
+  w.DCCS.bootAll(w.document);
+  ok('bad config replaces the loading text', !div.querySelector('.dccs-loading'));
+  ok('fallback reveals the noscript cottage links', !!div.querySelector('.dccs-noscript a[href="/accommodation/cottage-22/"]'));
+  ok('failed root is marked done (no re-init loop)', div.dataset.dccsReady === '1');
+})();
+
+// ---- 35. Compare checkbox keeps keyboard focus through the re-render ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  toResults(root, 'either');
+  const cb = root.querySelectorAll('.dccs-card input[data-cmp]')[0];
+  const id = cb.dataset.cmp;
+  cb.focus();
+  cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  const after = w.document.activeElement;
+  ok('focus stays on the toggled compare checkbox after re-render',
+    !!after && after.matches && after.matches('input[data-cmp="' + id + '"]'));
+})();
+
+// ---- 36. Compare mode announces the selection count to screen readers ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  const live = () => root.querySelector('.dccs-sr-only[aria-live="polite"]').textContent;
+  ok('under 2 ticked, live region carries the pick-2 prompt', live().length > 0 && /2/.test(live()));
+  for (const i of [0, 1]) {
+    const cb = root.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  }
+  ok('with 2 ticked, live region announces "Compare 2 …"', /Compare 2/i.test(live()));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

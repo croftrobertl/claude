@@ -82,6 +82,10 @@
     if (a.classList.contains('dccs-chip')) { return '.dccs-chip[data-group="' + a.dataset.group + '"][data-value="' + a.dataset.value + '"]'; }
     if (a.classList.contains('dccs-next')) { return '.dccs-next'; }
     if (a.classList.contains('dccs-reset')) { return '.dccs-reset'; }
+    // Compare checkboxes re-render on every toggle; without a key, keyboard focus
+    // drops to <body> after each tick. (Buttons whose handlers call focusStep()
+    // don't need keys — they move focus deliberately.)
+    if (a.matches && a.matches('input[data-cmp]')) { return 'input[data-cmp="' + a.dataset.cmp + '"]'; }
     return null;
   }
 
@@ -112,9 +116,7 @@
       // Fresh loads open on the landing screen; a mode choice moves past it.
       step: 0,
       stage: 'landing',
-      editReturn: null,
-      // Transient UI state: the compare table's paging window offset.
-      cmpStart: 0
+      editReturn: null
     };
   }
 
@@ -624,7 +626,13 @@
         tr.qLabel(tr.questions[i]) + '. ' + matchCount(S, n);
       return;
     }
-    if (state.mode === 'compare') { live.textContent = ''; return; }
+    if (state.mode === 'compare') {
+      // Announce the selection count, not silence: "Compare N cottages" once
+      // enough are ticked, else the pick-2-or-more prompt.
+      var cn = state.compareIds.length;
+      live.textContent = cn >= 2 ? fmt(S.compare_btn, cn) : S.compare_prompt;
+      return;
+    }
     var msg = matchCount(S, n);
     if (!res.empty && res.results[0]) { msg += '. ' + fmt(S.sr_top_match, cname(config, res.results[0])); }
     live.textContent = msg;
@@ -705,12 +713,30 @@
   }
   function depsReady() { return !!(window.DCCS && DCCS.score && DCCS.labels); }
 
+  /** Terminal failure (bad config, missing deps): don't leave "Loading…" up forever.
+      Reveal the server-rendered noscript cottage-link list instead — browsers keep
+      <noscript> content as inert text, so re-parsing it (site-authored, trusted
+      markup) turns the dead widget into a plain list of links to every cottage. */
+  function showFallback(root) {
+    root.dataset.dccsReady = '1';
+    var ns = root.querySelector('noscript');
+    var loading = root.querySelector('.dccs-loading');
+    if (!ns || !loading || !loading.parentNode) { return; }
+    var list = document.createElement('div');
+    list.className = 'dccs-noscript';
+    list.innerHTML = ns.textContent || '';
+    loading.parentNode.replaceChild(list, loading);
+  }
+
   function initSelector(root) {
     if (root.dataset.dccsReady) { return; }
-    if (!depsReady()) { scheduleRetry(); return; }
+    if (!depsReady()) {
+      if (retryCount > 100) { showFallback(root); return; }
+      scheduleRetry(); return;
+    }
     var config;
-    try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { return; }
-    if (!config.cottages || !config.cottages.length) { return; }
+    try { config = JSON.parse(root.dataset.config || '{}'); } catch (e) { showFallback(root); return; }
+    if (!config.cottages || !config.cottages.length) { showFallback(root); return; }
     root.dataset.dccsReady = '1';
     if (!root.dataset.dccsUid) { root.dataset.dccsUid = 'dccs' + (++UID); }
 
@@ -790,7 +816,7 @@
     // (the owner asked that a mode change never carry a stale comparison set forward).
     function resetForMode(st) {
       st.step = 0; st.stage = 'q'; st.editReturn = null;
-      st.compareIds = []; st.cmpStart = 0;
+      st.compareIds = [];
     }
 
     root.addEventListener('click', function (e) {
@@ -843,13 +869,9 @@
         resetForMode(state); // fresh start in the new mode
         rerender(); focusStep(); return;
       }
-      // --- compare ---
+      // --- compare (the ‹ › paging buttons live in the modal, which mounts outside
+      //     this root and handles its own clicks — see openCompareModal) ---
       if (cl.contains('dccs-open-compare')) { openCompareModal(config, state, t); return; }
-      if (cl.contains('dccs-cmp-prev') || cl.contains('dccs-cmp-next')) {
-        if (t.disabled) { return; }
-        state.cmpStart = (state.cmpStart | 0) + (cl.contains('dccs-cmp-next') ? 1 : -1);
-        rerender(); return;
-      }
       // --- reset (Start over) ---
       if (cl.contains('dccs-reset')) {
         state = defaultState(config);
@@ -962,7 +984,17 @@
       if (trigger && trigger.focus) { trigger.focus(); }
       else if (prevFocus && prevFocus.focus) { prevFocus.focus(); }
     }
+    /** Overlays can nest (the compare table opens over the mini-entry pop-up), and
+        each one registers its own document-level key handler. Only the TOPMOST
+        overlay may react — otherwise one Escape press closes the whole stack and
+        dumps the guest back on the page with their answers gone. Later-opened
+        overlays always sit later in document order. */
+    function isTopmost() {
+      var all = document.querySelectorAll('.dccs-modal');
+      return all.length > 0 && all[all.length - 1] === overlay;
+    }
     function onKey(e) {
+      if (!isTopmost()) { return; }
       if (e.key === 'Escape') { close(); return; }
       if (e.key === 'Tab') {
         var f = focusables();
@@ -990,7 +1022,7 @@
     function paint() {
       // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply
       // (data-dccs-ready stops bootAll from trying to initialize this shell).
-      o.content.innerHTML = '<div class="dccs-root dccs-root dccs-in-modal" data-dccs-ready="1">' +
+      o.content.innerHTML = '<div class="dccs-root dccs-in-modal" data-dccs-ready="1">' +
         '<div class="dccs-compare dccs-compare-modal">' +
         '<h3 class="dccs-modal-h">' + esc(config.strings.mode_compare) + '</h3>' +
         compareMatrixHtml(config, state, start) + '</div></div>';
@@ -1075,7 +1107,7 @@
     var host = entry.scope ? explicitScopeHost(entry.scope) : elementorScopeHost(mount);
     var o = buildOverlay(trigger, config.strings && config.strings.heading, host ? host.inner : null);
     if (host) { o.overlay._dccsHost = host.outer; }
-    var inner = el('<div class="dccs-root dccs-root dccs-in-modal"></div>');
+    var inner = el('<div class="dccs-root dccs-in-modal"></div>');
     // Apply the palette/spacing as INLINE custom properties so the pop-up shows the
     // right colours even when SpeedyCache's "remove unused CSS" defers the stylesheets
     // (inline props win over, and are never stripped with, those sheets).

@@ -1546,6 +1546,23 @@ class Selector_Widget extends Widget_Base
         update_option(self::DESIGN_OPTION, $sources, false);
     }
 
+    /**
+     * True while rendering for the Elementor editor: the edit-mode AJAX re-render
+     * (fires on every control change) or the preview iframe. Guarded per method so a
+     * future Elementor that drops one accessor degrades to the other, not to a fatal.
+     */
+    private static function in_editor(): bool
+    {
+        if (!class_exists('\Elementor\Plugin')) {
+            return false;
+        }
+        $el = \Elementor\Plugin::$instance;
+        if (isset($el->editor) && method_exists($el->editor, 'is_edit_mode') && $el->editor->is_edit_mode()) {
+            return true;
+        }
+        return isset($el->preview) && method_exists($el->preview, 'is_preview_mode') && $el->preview->is_preview_mode();
+    }
+
     protected function render(): void
     {
         $settings = $this->get_settings_for_display();
@@ -1555,7 +1572,14 @@ class Selector_Widget extends Widget_Base
         // The post id must be the document that CONTAINS the widget — get_the_ID()
         // alone would return the host page when the Selector renders via a global
         // template/shortcode, and a wrong id poisons the mirror's CSS scope.
-        if (($settings['share_design'] ?? '') === 'yes') {
+        //
+        // NEVER publish from the editor/preview: none of this widget's controls sets
+        // render_type, so the preview re-renders server-side on every keystroke, and
+        // publishing here would (a) mint junk registry entries for each partial
+        // design name as it is typed ("M", "Ma", "Mai"…) and (b) overwrite the live
+        // published design with half-typed settings while Mini Entries mirror it.
+        // In the editor the after_save hook is the only publisher.
+        if (($settings['share_design'] ?? '') === 'yes' && !self::in_editor()) {
             $post_id = 0;
             if (class_exists('\Elementor\Plugin')) {
                 $doc = \Elementor\Plugin::$instance->documents->get_current();
@@ -1580,14 +1604,17 @@ class Selector_Widget extends Widget_Base
 
         if (empty($cottages)) {
             printf(
-                '<div class="dccs-root dccs-root"><p class="dccs-unavailable">%s</p></div>',
+                '<div class="dccs-root"><p class="dccs-unavailable">%s</p></div>',
                 esc_html($config['strings']['unavailable'])
             );
             return;
         }
 
         $strings = $config['strings'];
-        $root_class = 'dccs-root dccs-root';
+        // One class token is all the markup needs: the (0,4,0)-specificity doubling
+        // lives in the CSS selectors (.dccs-root.dccs-root), which match a
+        // single-class element — repeating the token in HTML does nothing.
+        $root_class = 'dccs-root';
         if (($settings['inherit_theme'] ?? '') === 'yes') {
             $root_class .= ' dccs-inherit-theme';
         }

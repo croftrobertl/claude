@@ -188,18 +188,22 @@ final class Plugin
 
         $busy = true;
         try {
-            $this->walk_elements($data['elements'], $post_id);
+            $published = [];
+            $this->walk_elements($data['elements'], $post_id, $published);
+            $this->prune_registry($post_id, $published);
         } finally {
             $busy = false;
         }
     }
 
     /**
-     * Recurse an Elementor element tree, publishing each share-enabled Cottage Selector.
+     * Recurse an Elementor element tree, publishing each share-enabled Cottage
+     * Selector and recording the names published into $published.
      *
      * @param array<int,array<string,mixed>> $elements
+     * @param array<int,string>              $published
      */
-    private function walk_elements(array $elements, int $post_id): void
+    private function walk_elements(array $elements, int $post_id, array &$published): void
     {
         foreach ($elements as $el) {
             if (!is_array($el)) {
@@ -210,17 +214,52 @@ final class Plugin
             if ($type === 'dccs_selector') {
                 $settings = is_array($el['settings'] ?? null) ? $el['settings'] : [];
                 if (($settings['share_design'] ?? '') === 'yes') {
+                    $name = trim((string) ($settings['design_name'] ?? ''));
                     Selector_Widget::publish_design(
-                        (string) ($settings['design_name'] ?? ''),
+                        $name,
                         $post_id,
                         (string) ($el['id'] ?? ''),
                         $settings
                     );
+                    if ($name !== '') {
+                        $published[] = $name;
+                    }
                 }
             }
             if (!empty($el['elements']) && is_array($el['elements'])) {
-                $this->walk_elements($el['elements'], $post_id);
+                $this->walk_elements($el['elements'], $post_id, $published);
             }
+        }
+    }
+
+    /**
+     * Drop registry entries this document used to own but no longer publishes: the
+     * widget was deleted, "Share this design" was turned off, or the design was
+     * renamed. Without this the stale name lives in every Mini Entry's "Mirror
+     * design from" dropdown forever, mirroring a design whose source is gone.
+     * Scoped strictly to entries whose post_id is the SAVED document — designs
+     * published from other pages are never touched.
+     *
+     * @param array<int,string> $published Names this save (re)published.
+     */
+    private function prune_registry(int $post_id, array $published): void
+    {
+        $sources = get_option(Selector_Widget::DESIGN_OPTION, []);
+        if (!is_array($sources)) {
+            return;
+        }
+        $changed = false;
+        foreach ($sources as $name => $entry) {
+            if (!is_array($entry) || (int) ($entry['post_id'] ?? 0) !== $post_id) {
+                continue;
+            }
+            if (!in_array((string) $name, $published, true)) {
+                unset($sources[$name]);
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            update_option(Selector_Widget::DESIGN_OPTION, $sources, false);
         }
     }
 
