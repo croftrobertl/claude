@@ -635,7 +635,13 @@
         var timer = null;
         var obs = new MutationObserver(function () {
             if (timer) { clearTimeout(timer); }
-            timer = setTimeout(function () { applyBreakdownBreaks(root); }, 150);
+            timer = setTimeout(function () {
+                applyBreakdownBreaks(root);
+                // MotoPress re-renders (coupon apply, country change, …) bring
+                // back untouched labels; both passes are idempotent via their
+                // data-dcc-* guards, so re-running is cheap and loop-safe.
+                cleanRequiredMarkers(root);
+            }, 150);
         });
         obs.observe(root, { childList: true, subtree: true });
     }

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.7
+Stable tag: 0.1.8
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,6 +109,21 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.1.8 =
+* Hardening (review pass):
+  - The server-side guest-2 and pet backstops now skip wp-admin requests
+    entirely (alongside the existing AJAX skip), so MotoPress admin booking
+    screens and deliberate admin overrides can never be redirected away.
+  - Uninstall now deletes the plugin's settings option (dcc_checkout_settings);
+    per-booking dog meta is still intentionally kept.
+  - The required-marker cleanup (Part B) re-applies after MotoPress re-renders
+    (coupon apply, country change) via the existing MutationObserver — both
+    passes are idempotent.
+  - The server-side "is this pet service attached?" scan now only matches IDs
+    inside the room_details `services` branch (excluding quantities), instead of
+    any numeric value in the payload — a future rate/room post whose ID collides
+    with a pet Service ID can no longer false-positive.
 
 = 0.1.7 =
 * Fix: the dog Checkout Fields are enabled globally in MotoPress, so they

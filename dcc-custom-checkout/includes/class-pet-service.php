@@ -53,7 +53,10 @@ final class Pet_Service
         }
         // Never redirect during an AJAX submission — it would break the JSON
         // response MotoPress expects. Client-side validation is the guard there.
-        if (wp_doing_ajax()) {
+        // Never interfere with wp-admin either: admins may deliberately attach
+        // a non-bucket pet service (manual override), and MotoPress admin
+        // screens may POST a room_details shape.
+        if (wp_doing_ajax() || is_admin()) {
             return;
         }
 

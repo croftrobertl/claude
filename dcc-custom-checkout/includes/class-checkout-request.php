@@ -83,21 +83,45 @@ final class Checkout_Request
     }
 
     /**
-     * Does the submitted room-details array reference this pet Service ID?
-     * (Scans recursively, comparing scalar leaf values.)
+     * Does the submitted room-details array attach this Service ID?
+     *
+     * Only values inside a `services` branch count — scanning the whole
+     * room_details payload would also match rate IDs, room IDs, etc., and a
+     * future post whose ID collides with a pet Service ID would false-positive.
+     * Within the services branch, `quantity` values are excluded; both shapes
+     * (list of ['id' => …, 'quantity' => …] arrays and plain ID lists) match.
      */
     public static function contains_service_id(int $service_id): bool
     {
-        $found = false;
-        self::walk(self::room_details(), static function ($key, $value) use (&$found, $service_id): void {
-            if ($found) {
+        return in_array($service_id, self::attached_service_ids(), true);
+    }
+
+    /**
+     * All Service IDs attached in room_details (see contains_service_id()).
+     *
+     * @return int[]
+     */
+    public static function attached_service_ids(): array
+    {
+        $found = [];
+
+        $walk = static function ($data, bool $in_services) use (&$walk, &$found): void {
+            if (!is_array($data)) {
                 return;
             }
-            if (is_scalar($value) && (int) $value === $service_id) {
-                $found = true;
+            foreach ($data as $key => $value) {
+                $key_str = (string) $key;
+                if ($in_services && is_scalar($value) && $key_str !== 'quantity') {
+                    $found[] = (int) $value;
+                }
+                if (is_array($value)) {
+                    $walk($value, $in_services || $key_str === 'services');
+                }
             }
-        });
-        return $found;
+        };
+        $walk(self::room_details(), false);
+
+        return array_values(array_unique(array_filter($found)));
     }
 
     /**

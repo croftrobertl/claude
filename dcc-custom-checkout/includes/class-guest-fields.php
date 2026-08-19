@@ -33,7 +33,10 @@ final class Guest_Fields
         }
         // Never redirect during an AJAX submission — it would break the JSON
         // response MotoPress expects. Client-side validation is the guard there.
-        if (wp_doing_ajax()) {
+        // Never interfere with wp-admin either: MotoPress's admin booking
+        // screens may POST a room_details shape, and admins are allowed to
+        // override rules ("skip booking rules for admin" is on for this site).
+        if (wp_doing_ajax() || is_admin()) {
             return;
         }
 
