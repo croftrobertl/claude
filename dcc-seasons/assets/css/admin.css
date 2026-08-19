@@ -1,0 +1,36 @@
+/* DCC Seasons — settings page styles. */
+.dcc-seasons-wrap .dcc-seasons-schedule {
+	max-width: 860px;
+	margin-top: 8px;
+}
+.dcc-seasons-wrap .dcc-seasons-schedule td {
+	vertical-align: middle;
+}
+.dcc-seasons-wrap .dcc-seasons-schedule input[type="date"] {
+	width: 150px;
+}
+.dcc-seasons-wrap .dcc-seasons-schedule input[type="text"] {
+	width: 100%;
+}
+.dcc-seasons-wrap .dcc-seasons-remove-row {
+	color: #b32d2e;
+	text-decoration: none;
+	font-size: 14px;
+	cursor: pointer;
+	background: none;
+	border: 0;
+	padding: 4px 8px;
+}
+.dcc-seasons-wrap .dcc-seasons-remove-row:hover {
+	color: #8a2424;
+}
+.dcc-seasons-wrap input[type="range"] {
+	vertical-align: middle;
+	width: 220px;
+}
+.dcc-seasons-wrap output {
+	display: inline-block;
+	min-width: 34px;
+	margin-left: 8px;
+	font-weight: 600;
+}
