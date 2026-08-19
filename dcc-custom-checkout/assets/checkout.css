@@ -259,6 +259,7 @@
     display: flex;
     gap: 20px;
     align-items: center;
+    justify-content: center; /* Yes/No centered, matching the centered fields */
     margin-bottom: 4px;
 }
 
