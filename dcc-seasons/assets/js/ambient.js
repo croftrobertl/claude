@@ -19,6 +19,18 @@
 	}
 	var theme = row && CFG.themes && CFG.themes[row.theme] ? CFG.themes[row.theme] : null;
 
+	/* Admin-only preview (?dcc_season=<key>|off). The flag is only present
+	 * in the config when PHP verified manage_options server-side. */
+	if (CFG.preview) {
+		if (CFG.preview === 'off') {
+			row = null;
+			theme = null;
+		} else if (CFG.themes && CFG.themes[CFG.preview]) {
+			theme = CFG.themes[CFG.preview];
+			row = { theme: CFG.preview, label: CFG.previewLabel || CFG.preview };
+		}
+	}
+
 	/* Can this glyph render? Draw it tiny and look for any opaque pixel. */
 	var tcx = null;
 	function drawable(g) {

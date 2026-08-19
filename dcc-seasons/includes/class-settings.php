@@ -275,6 +275,38 @@ class Settings {
                     <?php self::render_row('__i__', ['start' => '', 'end' => '', 'theme' => 'classic', 'label' => ''], $labels); ?>
                 </script>
 
+                <h2><?php esc_html_e('Theme preview', 'dcc-seasons'); ?></h2>
+                <p class="description">
+                    <?php
+                    printf(
+                        /* translators: 1: example URL parameter, 2: "off" parameter */
+                        esc_html__('Append %1$s to any front-end URL to force that theme for the page view — ambient runs in that theme and the tap-the-logo egg uses its Matrix palette. %2$s forces no theme. Works only for logged-in administrators (manage_options, verified server-side); visitors always get the date-driven schedule.', 'dcc-seasons'),
+                        '<code>?dcc_season=halloween</code>',
+                        '<code>?dcc_season=off</code>'
+                    );
+                    ?>
+                </p>
+                <table class="widefat striped dcc-seasons-preview-keys">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Theme key', 'dcc-seasons'); ?></th>
+                            <th><?php esc_html_e('Theme', 'dcc-seasons'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($labels as $key => $label) : ?>
+                            <tr>
+                                <td><code>?dcc_season=<?php echo esc_html($key); ?></code></td>
+                                <td><?php echo esc_html($label); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <tr>
+                            <td><code>?dcc_season=off</code></td>
+                            <td><?php esc_html_e('No theme (no ambient; egg falls back to classic green)', 'dcc-seasons'); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+
                 <?php submit_button(); ?>
             </form>
         </div>

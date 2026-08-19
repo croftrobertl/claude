@@ -173,6 +173,8 @@ final class Plugin {
             'schedule'    => Themes::schedule($opt['schedule']),
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
+            'preview'      => null,
+            'previewLabel' => '',
             'i18n'        => [
                 'close'         => __('Close', 'dcc-seasons'),
                 'eggLabel'      => __('Seasonal Matrix easter egg', 'dcc-seasons'),
@@ -181,11 +183,41 @@ final class Plugin {
             ],
         ];
 
+        $preview = $this->preview_theme();
+        if ($preview !== null) {
+            $config['preview']      = $preview['key'];
+            $config['previewLabel'] = $preview['label'];
+        }
+
         /**
          * Filter the full client config (schedule, themes, tap settings…).
          *
          * @param array $config
          */
         return apply_filters('dcc_seasons_config', $config);
+    }
+
+    /**
+     * ?dcc_season=<theme_key> forces that theme for this page view (ambient
+     * AND egg palette); ?dcc_season=off forces "no theme". Checked
+     * SERVER-side: only logged-in users with manage_options ever get the
+     * preview flag in their config — visitors can put anything in the URL
+     * and receive the normal date-driven config.
+     *
+     * @return array{key:string,label:string}|null
+     */
+    private function preview_theme(): ?array {
+        if (!isset($_GET['dcc_season']) || !current_user_can('manage_options')) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            return null;
+        }
+        $key = sanitize_key(wp_unslash($_GET['dcc_season'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ($key === 'off') {
+            return ['key' => 'off', 'label' => ''];
+        }
+        if (!array_key_exists($key, Themes::themes())) {
+            return null; // unknown key — behave as if no preview was asked
+        }
+        $labels = Themes::labels();
+        return ['key' => $key, 'label' => $labels[$key] ?? $key];
     }
 }

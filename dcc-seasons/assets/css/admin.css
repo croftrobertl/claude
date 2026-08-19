@@ -24,6 +24,10 @@
 .dcc-seasons-wrap .dcc-seasons-remove-row:hover {
 	color: #8a2424;
 }
+.dcc-seasons-wrap .dcc-seasons-preview-keys {
+	max-width: 560px;
+	margin-top: 8px;
+}
 .dcc-seasons-wrap input[type="range"] {
 	vertical-align: middle;
 	width: 220px;

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,15 @@ tap target selector, tap count, ambient density/opacity sliders, and a fully
 editable schedule table ({start, end, theme, label} rows, pre-seeded for
 2026–27) — future years need no rebuild.
 
+= Theme preview (admins only) =
+
+Append `?dcc_season=<theme_key>` to any front-end URL to force that theme for
+the page view — ambient runs in it and the egg uses its Matrix palette.
+`?dcc_season=off` forces no theme (no ambient, classic green egg). The
+capability check (`manage_options`) happens server-side and only then is the
+preview flag placed in the JS config, so visitors typing the parameter get
+the normal date-driven behavior. The settings page lists every valid key.
+
 = Filters =
 
 * `dcc_seasons_options` — the effective option array.
@@ -97,6 +106,11 @@ editable schedule table ({start, end, theme, label} rows, pre-seeded for
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 1.1.0 =
+* Theme preview: `?dcc_season=<theme_key>` forces a theme for the page view
+  (`off` forces none) — restricted server-side to logged-in users with
+  `manage_options`. Valid keys listed on the settings page.
 
 = 1.0.0 =
 * Initial release: ambient particle layer, lazy-loaded themed Matrix egg,
