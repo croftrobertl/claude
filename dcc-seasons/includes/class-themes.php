@@ -21,9 +21,14 @@
  *        w  spawn weight           st 1 → settles on the waterline
  *        sz [min,max] px           cl color list for tinted primitives
  *        glow 1 → soft halo behind the glyph (pumpkins)
+ *        face 'L' → the glyph's native art faces LEFT; the engine mirrors
+ *        it when travelling rightward so it faces its direction of travel
+ *        (never set on flags, symmetric glyphs, or canvas primitives)
  *      Behaviors: fall sway flutter wobble float rise grow fly vee pulse
  *      orbit tumble dangle hang toss hop waddle dart twinkle chatter jump
- *      spin (mode 'burst' adds the firework emitter + auto-year text).
+ *      spin cruise — cruise rides AT the waterline while crossing, with a
+ *      wake ripple every 2–4 s (mode 'burst' adds the firework emitter +
+ *      auto-year text).
  *  - 'egg': the Matrix-rain recolor/re-glyph config, or false to disable the
  *      easter egg entirely on those dates (Patriot Day, MLK Day).
  *
@@ -61,14 +66,18 @@ class Themes {
         $themes = [
             'labor_day' => [
                 'ambient' => [
+                    'water'     => true,
                     'particles' => [
                         ['e' => '🇺🇸', 'f' => '★', 'fc' => '#B22234', 'b' => 'fall', 'w' => 2],
                         ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
                         ['e' => '🍔', 'b' => 'fall'],
                         ['e' => '🌭', 'b' => 'fall'],
-                        ['e' => '⛱️', 'f' => '☂', 'fc' => '#E03131', 'b' => 'fall'],
-                        // Last boating weekend of summer.
-                        ['e' => '🚤', 'f' => '⛵', 'b' => 'fly', 'w' => 2, 'sz' => [26, 34]],
+                        // Planted at the bottom like a beach umbrella —
+                        // umbrellas don't rain.
+                        ['e' => '⛱️', 'f' => '☂', 'fc' => '#E03131', 'b' => 'grow'],
+                        // Last boating weekend of summer: pontoons cruise ON
+                        // the waterline, mirrored to face their travel.
+                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'sz' => [30, 38]],
                     ],
                 ],
                 'egg' => [
@@ -101,7 +110,7 @@ class Themes {
                         ['s' => 'bobber', 'b' => 'float', 'w' => 2],
                         // Fishing line lowers, pauses, reels back up.
                         ['e' => '🪝', 'f' => '🎣', 'b' => 'dangle', 'worm' => 1],
-                        ['e' => '🐟', 'b' => 'jump', 'w' => 2],
+                        ['e' => '🐟', 'b' => 'jump', 'face' => 'L', 'w' => 2],
                     ],
                 ],
                 'egg' => [
@@ -137,7 +146,7 @@ class Themes {
                         ['s' => 'acorn', 'b' => 'fall', 'w' => 2],
                         ['e' => '🥧', 'b' => 'fall'],
                         // Raining turkeys = no. One walks the bottom instead.
-                        ['e' => '🦃', 'b' => 'waddle'],
+                        ['e' => '🦃', 'b' => 'waddle', 'face' => 'L'],
                     ],
                 ],
                 'egg' => [
@@ -155,7 +164,9 @@ class Themes {
                         ['s' => 'ornament', 'b' => 'hang', 'w' => 2],
                         ['s' => 'holly', 'b' => 'hang'],
                         ['e' => '🎁', 'b' => 'fall'],
-                        ['e' => '🎄', 'b' => 'fall'],
+                        // Trees stand up from the bottom edge — they don't
+                        // rain from the sky.
+                        ['e' => '🎄', 'b' => 'grow'],
                     ],
                 ],
                 'egg' => [
@@ -189,7 +200,7 @@ class Themes {
                     'hero'      => 'manatee',
                     'particles' => [
                         // Migration! Small V formations of flamingos.
-                        ['e' => '🦩', 'f' => 'v', 'fc' => '#F783AC', 'b' => 'vee', 'w' => 2],
+                        ['e' => '🦩', 'f' => 'v', 'fc' => '#F783AC', 'b' => 'vee', 'face' => 'L', 'w' => 2],
                         ['e' => '🧳', 'f' => '🧺', 'b' => 'fall'],
                         ['e' => '😎', 'b' => 'fall'],
                         ['e' => '🍊', 'b' => 'fall', 'w' => 2],
@@ -206,7 +217,7 @@ class Themes {
             'mlk' => [
                 'ambient' => [
                     'particles' => [
-                        ['e' => '🕊️', 'f' => '♡', 'fc' => '#B8860B', 'b' => 'fly', 'slow' => 1, 'w' => 2],
+                        ['e' => '🕊️', 'f' => '♡', 'fc' => '#B8860B', 'b' => 'fly', 'face' => 'L', 'slow' => 1, 'w' => 2],
                         ['e' => '🌿', 'b' => 'fall', 'slow' => 1],
                         ['e' => '🤍', 'f' => '♥', 'fc' => '#B8860B', 'b' => 'pulse'],
                     ],
@@ -298,15 +309,16 @@ class Themes {
             'easter' => [
                 'ambient' => [
                     'particles' => [
-                        ['c' => 'egg', 'cl' => ['#F9A8D4', '#A7F3D0', '#BFDBFE', '#FDE68A', '#D8B4FE'], 'b' => 'tumble', 'w' => 3],
-                        ['e' => '🐰', 'b' => 'hop'],
-                        ['e' => '🐣', 'b' => 'waddle'],
+                        ['c' => 'egg', 'cl' => ['#F9A8D4', '#A7F3D0', '#BFDBFE', '#FDE68A', '#D8B4FE'], 'b' => 'tumble', 'w' => 4, 'sz' => [20, 30]],
+                        ['e' => '🐰', 'b' => 'hop', 'face' => 'L'],
+                        ['e' => '🐣', 'b' => 'waddle', 'face' => 'L'],
                         ['e' => '🌷', 'b' => 'grow', 'w' => 2],
                     ],
                 ],
+                // No '🥚' in the rain — it renders as a plain chicken egg.
                 'egg' => [
                     'colors' => ['#F9A8D4', '#A7F3D0', '#BFDBFE', '#FDE68A'],
-                    'glyphs' => ['🥚', '🐣', 'ｵ', '0'],
+                    'glyphs' => ['🐣', '🐰', '✿', 'ｵ', '0'],
                 ],
             ],
 
@@ -338,7 +350,8 @@ class Themes {
                         ['e' => '🪷', 'f' => '🌸', 'b' => 'float', 'w' => 2],
                         ['s' => 'dragonfly', 'b' => 'dart'],
                         ['e' => '🌸', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        ['e' => '🛶', 'f' => '⛵', 'b' => 'fly', 'low' => 1],
+                        // Canoes belong ON the water, facing their travel.
+                        ['e' => '🛶', 'f' => '⛵', 'b' => 'cruise', 'face' => 'L'],
                     ],
                 ],
                 'egg' => [

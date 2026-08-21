@@ -6,7 +6,9 @@
  *    glides submerged. Per-theme opt-in; ripples count toward the cap.
  *  - Motion personalities: fall sway flutter wobble float rise grow fly vee
  *    pulse orbit tumble dangle hang toss hop waddle dart twinkle chatter
- *    jump spin (+ the burst firework emitter with auto-year text).
+ *    jump spin cruise (+ the burst firework emitter with auto-year text).
+ *  - Directional facing: specs with face:'L' (native art faces left) are
+ *    mirrored when travelling rightward so nothing swims/sails backwards.
  *  - Hybrid rendering: emoji where strong, canvas-drawn primitives where
  *    emoji can't be recolored (r/w/b stars, confetti, decorated eggs,
  *    license plates), small inline SVG sprites for the rest. Emoji are
@@ -28,6 +30,7 @@
 
 	/* ---------- SVG sprite registry (bold, 2–3 colors, legible ~30px) ---------- */
 	var SVGS = {
+		pontoon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 26"><rect x="8" y="2" width="26" height="3" rx="1.5" fill="#1864AB"/><line x1="11" y1="5" x2="11" y2="12" stroke="#495057" stroke-width="1.6"/><line x1="31" y1="5" x2="31" y2="12" stroke="#495057" stroke-width="1.6"/><path d="M4 12h34l-3 7H8Z" fill="#F1F3F5"/><path d="M4 12h34l-1.2 2.8H5.2Z" fill="#DEE2E6"/><rect x="2" y="19" width="38" height="5" rx="2.5" fill="#868E96"/><path d="M38 14h4v6h-3Z" fill="#343A40"/></svg>',
 		bobber: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30"><line x1="12" y1="0" x2="12" y2="4" stroke="#495057" stroke-width="1.5"/><circle cx="12" cy="16" r="11" fill="#F1F3F5"/><path d="M1 16a11 11 0 0 1 22 0Z" fill="#E03131"/><circle cx="12" cy="16" r="11" fill="none" stroke="#343A40" stroke-width="1.2"/><circle cx="12" cy="4" r="2.4" fill="#343A40"/></svg>',
 		candycorn: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 30"><path d="M11 1 21 29H1Z" fill="#FFD43B"/><path d="M4.4 19 11 1l6.6 18Z" fill="#FF922B"/><path d="M8 9.2 11 1l3 8.2Z" fill="#FFF9DB"/></svg>',
 		witchhat: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 26"><ellipse cx="16" cy="22" rx="15" ry="3.6" fill="#212529"/><path d="M16 0 24 21H8Z" fill="#343A40"/><rect x="9" y="16.4" width="14" height="4" fill="#9C36B5"/><rect x="14" y="16.9" width="3.4" height="3" fill="#FFD43B"/></svg>',
@@ -108,7 +111,7 @@
 			cx.stroke();
 		},
 		egg: function (cx, p, s) {
-			var rx = p.size * 0.32 * s, ry = p.size * 0.42 * s;
+			var rx = p.size * 0.37 * s, ry = p.size * 0.48 * s;
 			cx.save();
 			cx.beginPath();
 			cx.ellipse(0, 0, rx, ry, 0, 0, TAU);
@@ -277,7 +280,14 @@
 			p.st = 0;
 			p.t = 0;
 			p.settled = 0;
-			if (def.cl) { p.color = pick(def.cl); p.color2 = pick(def.cl); p.deco = Math.random() < 0.5 ? 1 : 0; }
+			if (def.cl) {
+				p.color = pick(def.cl);
+				p.color2 = pick(def.cl);
+				/* decoration must contrast — a same-color egg looks plain */
+				var guard = 4;
+				while (p.color2 === p.color && guard--) { p.color2 = pick(def.cl); }
+				p.deco = Math.random() < 0.5 ? 1 : 0;
+			}
 			if (def.states) { p.state = pick(def.states); }
 			var slow = def.slow ? 0.45 : 1;
 			var b = p.b;
@@ -308,6 +318,14 @@
 				p.y = vh + 20;
 				p.gy = vh - rnd(30, 110);
 				p.st = 1; p.vr = 0; p.vx = 0;
+			}
+			if (b === 'cruise') { /* rides the waterline while crossing */
+				p.dir = Math.random() < 0.5 ? -1 : 1;
+				p.x = anywhere ? rnd(0, vw) : (p.dir > 0 ? -60 : vw + 60);
+				p.y = waterY;
+				p.vx = p.dir * rnd(28, 50);
+				p.vy = 0; p.vr = 0;
+				p.wake = rnd(2, 4);
 			}
 			if (b === 'fly' || b === 'vee') {
 				p.dir = Math.random() < 0.5 ? -1 : 1;
@@ -438,6 +456,17 @@
 						if (p.t <= 0) { seed(p); }
 					}
 					break;
+				case 'cruise':
+					p.x += p.vx * dt;
+					p.y = waterY - p.size * 0.18 + Math.sin(p.ph) * 2;
+					p.rot = Math.sin(p.ph) * 0.04;
+					p.wake -= dt;
+					if (p.wake <= 0) { /* small wake ripple astern */
+						addRipple(p.x - p.dir * p.size * 0.6, waterY + 2);
+						p.wake = rnd(2, 4);
+					}
+					if ((p.dir > 0 && p.x > vw + 80) || (p.dir < 0 && p.x < -80)) { seed(p); }
+					break;
 				case 'fly': case 'vee':
 					p.x += p.vx * dt;
 					p.y += Math.sin(p.ph) * 6 * dt;
@@ -543,8 +572,24 @@
 			}
 		}
 
-		function drawGlyph(p, s) {
+		/* Is this particle effectively moving rightward? Directional glyphs
+		 * (face:'L' — boats, fish, birds… native art faces LEFT) get
+		 * mirrored so they travel nose-first. */
+		function facingRight(p) {
+			var b = p.b;
+			if (b === 'fly' || b === 'vee' || b === 'hop' || b === 'waddle' || b === 'chatter' || b === 'cruise') {
+				return p.dir > 0;
+			}
+			return p.vx > 0;
+		}
+
+		function drawGlyph(p, s, flip) {
 			var sp = p.sp;
+			/* The outer transform already applied rotate(p.rot); mirroring
+			 * INSIDE it equals the mirror-then-rotate(-rot) form, so jump
+			 * arcs stay correct. Canvas primitives are never flipped. */
+			if (flip && sp.kind === 'c') { flip = false; }
+			if (flip) { cx.save(); cx.scale(-1, 1); }
 			if (sp.kind === 'e' || sp.kind === 't') {
 				cx.font = Math.round(p.size * s) + 'px sans-serif';
 				cx.textAlign = 'center';
@@ -570,6 +615,7 @@
 			} else if (sp.kind === 'c') {
 				PRIMS[sp.c](cx, p, s);
 			}
+			if (flip) { cx.restore(); }
 		}
 
 		function drawP(p, t) {
@@ -593,29 +639,31 @@
 			cx.translate(px, py);
 			if (p.rot) { cx.rotate(p.rot); }
 			var s = p.sc;
+			var flip = !!(p.sp.def.face && facingRight(p));
 			if (b === 'pulse') { s *= 1 + 0.18 * Math.sin(p.ph * 2.2); }
 			if (b === 'orbit') { /* two glyphs circling each other */
 				for (var k = 0; k < 2; k++) {
 					cx.save();
 					cx.translate(Math.cos(p.ph + k * Math.PI) * p.orr, Math.sin(p.ph + k * Math.PI) * p.orr * 0.5);
-					drawGlyph(p, s * 0.85);
+					drawGlyph(p, s * 0.85, flip);
 					cx.restore();
 				}
 			} else if (b === 'vee') { /* small V formation */
 				var offs = [[0, 0], [-24, 12], [-24, -12], [-48, 24]];
 				for (var m = 0; m < p.n && m < offs.length; m++) {
 					cx.save();
-					/* trailing birds sit BEHIND the leader */
+					/* trailing birds sit BEHIND the leader; the flip is
+					 * per-glyph so the formation itself doesn't mirror */
 					cx.translate(offs[m][0] * (p.dir > 0 ? 1 : -1), offs[m][1]);
-					drawGlyph(p, s * (m ? 0.85 : 1));
+					drawGlyph(p, s * (m ? 0.85 : 1), flip);
 					cx.restore();
 				}
 			} else if (p.sp.def.worm && p.b === 'dangle' && p.st === 2) {
-				drawGlyph(p, s);
+				drawGlyph(p, s, flip);
 				cx.font = Math.round(p.size * 0.7) + 'px sans-serif';
 				cx.fillText(drawable('🪱') ? '🪱' : '~', 0, p.size * 0.8);
 			} else {
-				drawGlyph(p, s);
+				drawGlyph(p, s, flip);
 			}
 			cx.restore();
 		}
@@ -693,6 +741,8 @@
 				hero.rip = 0;
 				sprite('manatee');
 			} else if (kind === 'bass') {
+				hero.g = drawable('🐟') ? '🐟' : (drawable('🐠') ? '🐠' : null);
+				if (!hero.g) { hero = null; heroNext = t + 5000; return; }
 				hero.x = rnd(vw * 0.15, vw * 0.85);
 				hero.y = waterY + 8;
 				hero.vy = -rnd(340, 400);
@@ -767,22 +817,39 @@
 					if (h.dir > 0) { cx.scale(-1, 1); }
 					cx.drawImage(sim.img, -h.w / 2, -h.w * sim.ratio / 2, h.w, h.w * sim.ratio);
 				}
+			} else if (h.kind === 'bass') {
+				/* rotate along the arc, then mirror when travelling right —
+				 * rotate-then-scale(-1,1) equals the mirrored-rotation form */
+				cx.rotate(Math.atan2(h.vy, h.vxj * 4) * 0.5);
+				if (h.vxj > 0) { cx.scale(-1, 1); }
+				cx.font = '40px sans-serif';
+				cx.textAlign = 'center';
+				cx.textBaseline = 'middle';
+				cx.fillText(h.g, 0, 0);
 			} else if (h.kind === 'eagle' || h.kind === 'witch') {
 				cx.font = '42px sans-serif';
 				cx.textAlign = 'center';
 				cx.textBaseline = 'middle';
 				if (h.kind === 'witch') { cx.rotate(h.dir * -0.15); }
+				if (h.dir > 0) { cx.scale(-1, 1); } /* art faces left */
 				cx.fillText(h.g, 0, 0);
 			} else if (h.kind === 'ducks') {
-				cx.font = '30px sans-serif';
 				cx.textAlign = 'center';
 				cx.textBaseline = 'middle';
 				var duck = drawable('🦆') ? '🦆' : '🐤';
 				var chick = drawable('🐥') ? '🐥' : '🐤';
-				cx.fillText(duck, 0, Math.sin(h.ph * 3) * 2);
-				cx.font = '20px sans-serif';
-				cx.fillText(chick, -h.dir * 30, Math.sin(h.ph * 3 + 1) * 2);
-				cx.fillText(chick, -h.dir * 54, Math.sin(h.ph * 3 + 2) * 2);
+				/* per-glyph flip keeps the chicks trailing the leader */
+				var duckling = function (g, ox, oy, fs) {
+					cx.save();
+					cx.translate(ox, oy);
+					if (h.dir > 0) { cx.scale(-1, 1); }
+					cx.font = fs + 'px sans-serif';
+					cx.fillText(g, 0, 0);
+					cx.restore();
+				};
+				duckling(duck, 0, Math.sin(h.ph * 3) * 2, 30);
+				duckling(chick, -h.dir * 30, Math.sin(h.ph * 3 + 1) * 2, 20);
+				duckling(chick, -h.dir * 54, Math.sin(h.ph * 3 + 2) * 2, 20);
 			}
 			cx.restore();
 		}

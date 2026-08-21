@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,29 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 2.1.0 =
+* Directional facing: particle specs can declare `face:'L'` (native art
+  faces left) and the engine mirrors the glyph when travelling rightward —
+  boats, fish, birds, turkey, flamingo Vs, dove, bunny and chick now face
+  their direction of travel. Flags, symmetric glyphs, and canvas primitives
+  are never flipped; jump-arc rotation stays correct when mirrored. The
+  emoji heroes (eagle, witch) and the duckling line flip too.
+* FIX: the big-bass hero never rendered (jump physics ran but there was no
+  draw branch — visitors saw two unexplained ripples). It now draws a 🐟
+  (🐠 fallback) at 40px, rotated along its arc and facing its travel.
+* FIX: procedural Easter eggs could pick identical base/decoration colors
+  and look plain; the decoration color now always contrasts, and the eggs
+  are ~15% larger (sz 20–30) with a heavier spawn weight.
+* New `cruise` behavior: rides AT the waterline with a gentle bob while
+  steadily crossing, dropping a wake ripple every 2–4 s. Labor Day's
+  speedboat is replaced by a new pontoon-boat SVG sprite that cruises the
+  water (boats no longer fly mid-air); Spring on the Canal's canoe cruises
+  too. Labor Day gains the waterline and plants its beach umbrellas at the
+  bottom (grow) instead of raining them; Christmas trees likewise grow up
+  from the bottom edge instead of falling.
+* Easter Matrix rain: removed '🥚' (renders as a plain chicken egg);
+  glyphs are now 🐣 🐰 ✿ with the pastel palette unchanged.
 
 = 2.0.0 =
 * FIX (critical): the tap target now accepts a comma-separated selector list
