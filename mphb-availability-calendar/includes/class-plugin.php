@@ -119,5 +119,7 @@ final class Plugin
     public function register_widget(\Elementor\Widgets_Manager $widgets_manager): void
     {
         $widgets_manager->register(new Widget());
+        // Single-cottage variant for the individual accommodation templates.
+        $widgets_manager->register(new Widget_Single());
     }
 }

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.0
+Stable tag: 0.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ A mobile-friendly Elementor widget that shows multi-property availability for Mo
 
 == Description ==
 
-This plugin adds a single Elementor widget — **DCC Availability Calendar** — under a "Dora Canal Court" category. It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
+This plugin adds two Elementor widgets under a "Dora Canal Court" category. **DCC Availability Calendar** shows the full multi-cottage grid; **DCC Availability — Single Cottage** shows one chosen cottage's row (for the individual accommodation pages, where the cottage name column and details popup are redundant). It displays a compact, responsive availability grid for any subset of the MotoPress Hotel Booking accommodation types on your site:
 
 * Reads MotoPress's already-synced bookings directly from the database. No extra iCal HTTP fetches, no new cron jobs.
 * Caches each grid render as a WordPress transient (15-minute TTL by default).
@@ -30,6 +30,7 @@ This plugin adds a single Elementor widget — **DCC Availability Calendar** —
 1. Zip the `mphb-availability-calendar` folder.
 2. In WordPress: Plugins → Add New → Upload Plugin → choose the zip → Install Now → Activate.
 3. Edit any page or template with Elementor. Find the **DCC Availability Calendar** widget under the "Dora Canal Court" category and drag it onto a full-width section.
+4. For an individual cottage page, use **DCC Availability — Single Cottage** instead, and pick that cottage from its "Cottage" dropdown.
 
 Requires Elementor and MotoPress Hotel Booking to be active.
 
@@ -62,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.17.0 =
+* New widget: **DCC Availability — Single Cottage**. Drop it on an individual cottage page and pick that cottage from a dropdown; it shows just that cottage's availability strip. The dropdown lists every published accommodation automatically, so cottages added in future appear without any code change.
+* On this variant the cottage-name column is omitted (the page it sits on already identifies the cottage) and the day cells use the full width, and the cottage-details popup is gone (those details are already on the page). Everything else — the date navigation, legend, colors, styling controls, availability data and caching — is the same code as the full calendar, so the two stay in step automatically.
+* Until a cottage is chosen the widget shows a "Choose a cottage…" placeholder in the Elementor editor only; it renders nothing at all on the front end. If a selected cottage is later unpublished or deleted, it renders nothing rather than silently falling back to showing every cottage.
+* The Book Now popup is kept on this variant (it is a booking action, not a details popup) and can still be switched off per-instance with the existing "Enable Book Now popup" toggle.
+* The existing multi-cottage calendar is unchanged — same markup, same behavior, same settings. Pages already using it need no edits.
 
 = 0.16.0 =
 Fixes from a full-codebase review (three independent review passes over the PHP, the JavaScript, and the integration seams).

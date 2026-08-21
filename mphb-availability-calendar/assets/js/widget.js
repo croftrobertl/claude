@@ -1266,8 +1266,14 @@
         if (empty) empty.hidden = true;
 
         var days = buildDayList(from, to);
+        // Single-cottage variant: the host page already identifies the
+        // cottage, so the row-label column is omitted entirely and the day
+        // cells take the full width. Dropping the cells (rather than hiding
+        // them) also removes the .mphbac-row-toggle that opens the cottage
+        // info popup, which is exactly what that variant wants.
+        var single = !!(config && config.singleMode);
         var grid = document.createElement('div');
-        grid.className = 'mphbac-grid';
+        grid.className = 'mphbac-grid' + (single ? ' mphbac-grid--single' : '');
         grid.style.setProperty('--mphbac-days', String(days.length));
         grid.setAttribute('role', 'table');
 
@@ -1277,11 +1283,13 @@
         var header = document.createElement('div');
         header.className = 'mphbac-row mphbac-row-header';
         header.setAttribute('role', 'row');
-        var corner = document.createElement('div');
-        corner.className = 'mphbac-cell mphbac-cell-label';
-        corner.setAttribute('role', 'columnheader');
-        corner.textContent = strings.property || '';
-        header.appendChild(corner);
+        if (!single) {
+            var corner = document.createElement('div');
+            corner.className = 'mphbac-cell mphbac-cell-label';
+            corner.setAttribute('role', 'columnheader');
+            corner.textContent = strings.property || '';
+            header.appendChild(corner);
+        }
         days.forEach(function (day, idx) {
             var dh = buildDayHeader(day);
             if (config && config.today === day) dh.classList.add('is-today');
@@ -1307,24 +1315,26 @@
             row.setAttribute('role', 'row');
             row.setAttribute('data-room-type-id', String(room.id));
 
-            var labelBtn = document.createElement('button');
-            labelBtn.type = 'button';
-            labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle'
-                + (hasInfo ? ' mphbac-row-toggle--info' : '');
-            labelBtn.title = room.title || '';
-            var custom = customLabels[room.id];
-            if (custom === undefined) custom = customLabels[String(room.id)];
-            if (typeof custom === 'string' && custom.trim() !== '') {
-                labelBtn.innerHTML = '<span class="mphbac-label-custom"></span>';
-                labelBtn.querySelector('.mphbac-label-custom').textContent = custom.trim();
-            } else {
-                labelBtn.innerHTML =
-                    '<span class="mphbac-label-abbrev"></span>' +
-                    '<span class="mphbac-label-num"></span>';
-                labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
-                labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
+            if (!single) {
+                var labelBtn = document.createElement('button');
+                labelBtn.type = 'button';
+                labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle'
+                    + (hasInfo ? ' mphbac-row-toggle--info' : '');
+                labelBtn.title = room.title || '';
+                var custom = customLabels[room.id];
+                if (custom === undefined) custom = customLabels[String(room.id)];
+                if (typeof custom === 'string' && custom.trim() !== '') {
+                    labelBtn.innerHTML = '<span class="mphbac-label-custom"></span>';
+                    labelBtn.querySelector('.mphbac-label-custom').textContent = custom.trim();
+                } else {
+                    labelBtn.innerHTML =
+                        '<span class="mphbac-label-abbrev"></span>' +
+                        '<span class="mphbac-label-num"></span>';
+                    labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
+                    labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
+                }
+                row.appendChild(labelBtn);
             }
-            row.appendChild(labelBtn);
 
             var roomAvail = availability[room.id] || {};
             days.forEach(function (day, idx) {
@@ -1852,8 +1862,14 @@
     }
 
     if (window.elementorFrontend && window.elementorFrontend.hooks) {
-        window.elementorFrontend.hooks.addAction('frontend/element_ready/mphbac_calendar.default', function ($el) {
-            if ($el && $el[0]) init($el[0].querySelector('.mphbac-root'));
+        // One hook per registered widget name — Elementor namespaces
+        // element_ready by widget slug, so the single-cottage variant needs
+        // its own registration or it would only ever be initialised by
+        // boot()'s initial sweep (and would miss late/edited mounts).
+        ['mphbac_calendar', 'dccac_single'].forEach(function (name) {
+            window.elementorFrontend.hooks.addAction('frontend/element_ready/' + name + '.default', function ($el) {
+                if ($el && $el[0]) init($el[0].querySelector('.mphbac-root'));
+            });
         });
     }
 }());

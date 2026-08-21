@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-final class Widget extends Widget_Base
+class Widget extends Widget_Base
 {
     private static ?array $cached_room_types = null;
 
@@ -22,7 +22,7 @@ final class Widget extends Widget_Base
      * uppercase the first letter of each word. "BOOK NOW" / "book now" both
      * render "Book Now". Server-side so there's no flash and no JS/CSS needed.
      */
-    private static function tc(string $s): string
+    protected static function tc(string $s): string
     {
         return function_exists('mb_convert_case')
             ? mb_convert_case($s, MB_CASE_TITLE, 'UTF-8')
@@ -210,7 +210,7 @@ final class Widget extends Widget_Base
      * default, so an untouched widget renders exactly as the baked CSS
      * dictates — setting one is opt-in and overrides the baked value.
      */
-    private function register_popup_title_style_controls(): void
+    protected function register_popup_title_style_controls(): void
     {
         $this->start_controls_section('section_style_popup_title', [
             'label' => __('Popup Titles', 'mphb-availability-calendar'),
@@ -249,7 +249,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_info_controls(): void
+    protected function register_info_controls(): void
     {
         $this->start_controls_section('section_info', [
             'label' => __('Cottage Info Popups', 'mphb-availability-calendar'),
@@ -330,7 +330,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_legend_style_controls(): void
+    protected function register_legend_style_controls(): void
     {
         $this->start_controls_section('section_style_legend', [
             'label'     => __('Legend', 'mphb-availability-calendar'),
@@ -378,7 +378,7 @@ final class Widget extends Widget_Base
         return $options;
     }
 
-    private function register_labels_controls(): void
+    protected function register_labels_controls(): void
     {
         $this->start_controls_section('section_labels', [
             'label' => __('Custom Cottage Labels', 'mphb-availability-calendar'),
@@ -414,7 +414,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_calheader_style_controls(): void
+    protected function register_calheader_style_controls(): void
     {
         $this->start_controls_section('section_style_calheader', [
             'label' => __('Calendar Header Row', 'mphb-availability-calendar'),
@@ -496,7 +496,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_namecol_style_controls(): void
+    protected function register_namecol_style_controls(): void
     {
         $this->start_controls_section('section_style_namecol', [
             'label' => __('Cottage Name Column', 'mphb-availability-calendar'),
@@ -549,7 +549,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_nav_style_controls(): void
+    protected function register_nav_style_controls(): void
     {
         $this->start_controls_section('section_style_nav', [
             'label'     => __('Navigation', 'mphb-availability-calendar'),
@@ -590,7 +590,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_content_controls(): void
+    protected function register_content_controls(): void
     {
         $this->start_controls_section('section_content', [
             'label' => __('Content', 'mphb-availability-calendar'),
@@ -626,7 +626,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_display_controls(): void
+    protected function register_display_controls(): void
     {
         $this->start_controls_section('section_display', [
             'label' => __('Display', 'mphb-availability-calendar'),
@@ -765,7 +765,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_strings_controls(): void
+    protected function register_strings_controls(): void
     {
         $this->start_controls_section('section_strings', [
             'label' => __('Labels & Strings', 'mphb-availability-calendar'),
@@ -812,7 +812,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_style_controls(): void
+    protected function register_style_controls(): void
     {
         $this->start_controls_section('section_style', [
             'label' => __('Colors', 'mphb-availability-calendar'),
@@ -867,7 +867,7 @@ final class Widget extends Widget_Base
      */
     private const SEL = '{{WRAPPER}} .mphbac-root.mphbac-root ';
 
-    private function register_heading_style_controls(): void
+    protected function register_heading_style_controls(): void
     {
         $this->start_controls_section('section_style_heading', [
             'label'     => __('Heading', 'mphb-availability-calendar'),
@@ -892,7 +892,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_field_style_controls(): void
+    protected function register_field_style_controls(): void
     {
         $this->start_controls_section('section_style_fields', [
             'label' => __('Filter Fields', 'mphb-availability-calendar'),
@@ -942,7 +942,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_button_style_controls(): void
+    protected function register_button_style_controls(): void
     {
         $this->start_controls_section('section_style_buttons', [
             'label' => __('Buttons', 'mphb-availability-calendar'),
@@ -1029,7 +1029,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_cell_style_controls(): void
+    protected function register_cell_style_controls(): void
     {
         $this->start_controls_section('section_style_cells', [
             'label' => __('Calendar Cells', 'mphb-availability-calendar'),
@@ -1090,7 +1090,7 @@ final class Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    private function register_view_button_style_controls(): void
+    protected function register_view_button_style_controls(): void
     {
         $this->start_controls_section('section_style_view_button', [
             'label' => __('Cottage Page Button', 'mphb-availability-calendar'),
@@ -1228,7 +1228,37 @@ final class Widget extends Widget_Base
     /**
      * @return array<int,string>
      */
-    private function cottage_options(): array
+    /**
+     * Which accommodation type IDs this instance shows. The multi-cottage
+     * widget honours the `cottages` SELECT2 (empty = every type); the
+     * single-cottage variant overrides this to return just its one pick.
+     * Kept as a hook so both widgets share one render() implementation.
+     *
+     * @param array<string,mixed>                                                   $settings
+     * @param array<int,array{id:int,title:string,abbrev:string,number:string}>      $all_types
+     * @return int[]
+     */
+    protected function resolve_selected_ids(array $settings, array $all_types): array
+    {
+        $selected_ids = array_map('intval', (array) ($settings['cottages'] ?? []));
+        if (empty($selected_ids)) {
+            $selected_ids = array_map(static fn($t) => (int) $t['id'], $all_types);
+        }
+        return $selected_ids;
+    }
+
+    /**
+     * True for the single-cottage variant. Drops the row-label column (the
+     * page it sits on IS the cottage, so the label is redundant) and, via
+     * that variant's no-op register_info_controls(), leaves no cottage-info
+     * rows — so no info popup markup or trigger is ever emitted.
+     */
+    protected function single_mode(): bool
+    {
+        return false;
+    }
+
+    protected function cottage_options(): array
     {
         $options = [];
         foreach (self::room_types() as $type) {
@@ -1247,12 +1277,17 @@ final class Widget extends Widget_Base
 
         $settings = $this->get_settings_for_display();
 
-        $all_types       = self::room_types();
-        $selected_ids    = array_map('intval', (array) ($settings['cottages'] ?? []));
-        if (empty($selected_ids)) {
-            $selected_ids = array_map(static fn($t) => (int) $t['id'], $all_types);
-        }
+        $all_types    = self::room_types();
+        $selected_ids = $this->resolve_selected_ids($settings, $all_types);
         $rooms = array_values(array_filter($all_types, static fn($t) => in_array((int) $t['id'], $selected_ids, true)));
+        // Single variant only: its pick resolved to nothing (unset, or the
+        // cottage was deleted/unpublished after selection), so render nothing
+        // rather than an empty shell. Deliberately NOT applied to the
+        // multi-cottage widget, whose existing empty-$rooms behavior (render
+        // the shell, let the client fall back) is left exactly as it was.
+        if (empty($rooms) && $this->single_mode()) {
+            return;
+        }
 
         $today = Data_Provider::today();
 
@@ -1432,6 +1467,7 @@ final class Widget extends Widget_Base
             'minNights'      => $min_nights,
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
+            'singleMode'     => $this->single_mode(),
             'initial'        => $initial,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => [
@@ -1470,6 +1506,11 @@ final class Widget extends Widget_Base
             $root_classes[] = 'mphbac-popup-enabled';
         }
         $root_classes[] = 'mphbac-label-' . ($settings['label_style'] === 'number_only' ? 'number' : 'abbrev');
+        if ($this->single_mode()) {
+            // Drops the label column in CSS and (via config.singleMode) stops
+            // widget.js emitting the label cells at all.
+            $root_classes[] = 'mphbac-single';
+        }
 
         ?>
         <div class="<?php echo esc_attr(implode(' ', $root_classes)); ?>"

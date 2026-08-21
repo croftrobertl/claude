@@ -17,7 +17,33 @@ Key facts from that document that affect this plugin:
 
 ## Repository purpose
 
-A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+A single WordPress plugin — **DCC Availability Calendar** — that adds **two** Elementor widgets for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+
+| Widget | Slug | Use |
+|---|---|---|
+| DCC Availability Calendar | `mphbac_calendar` | The full multi-cottage grid (homepage / availability page) |
+| DCC Availability — Single Cottage | `dccac_single` | One cottage's strip, for the individual `/accommodation/<slug>/` templates |
+
+`Widget_Single extends Widget` — it is a variant, not a copy. Both share one
+`render()`, one data pipeline, one cache layer, and one `widget.js`. The
+variant differs only via three overridable hooks, so a change to the calendar
+automatically applies to both:
+
+- `resolve_selected_ids()` — the multi widget honours the `cottages` SELECT2
+  (empty = every type); the single widget returns exactly its one validated
+  `single_cottage` pick, or `[]` if it was never set or has since been
+  unpublished (it never falls back to "all").
+- `single_mode()` — adds the `mphbac-single` root class and `config.singleMode`,
+  which make `widget.js` omit the row-label cells entirely (not hide them) and
+  make the day columns span the full width.
+- No-op `register_*_controls()` overrides drop panel sections that are
+  meaningless without a label column or an info popup (cottage-info repeater,
+  custom labels, name-column styling, view-cottage button, popup titles).
+
+Because the label button IS the info-popup trigger, omitting it removes the
+cottage-details popup structurally — there is no separate "disable popup"
+flag to keep in sync. The Book Now popup is retained and still governed by the
+inherited `enable_popup` switch.
 
 ## Target environment
 
@@ -47,6 +73,7 @@ Single-folder plugin, PSR-4-ish layout under a `MPHBAC\` namespace. Bootstrap �
 mphb-availability-calendar.php       # Headers + constants + require()s + activation hook
 includes/class-plugin.php            # Singleton orchestrator; registers all WP hooks
 includes/class-widget.php            # Elementor_Widget_Base subclass; ~all Elementor controls live here
+includes/class-widget-single.php     # Single-cottage variant (extends Widget; overrides 3 hooks + drops panel sections)
 includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL fallback)
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice

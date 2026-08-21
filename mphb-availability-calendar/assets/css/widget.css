@@ -285,6 +285,34 @@
     user-select: none;
 }
 
+/* Single-cottage variant (widget dccac_single): no row-label column, so the
+   day columns claim the whole width. widget.js omits the label cells
+   entirely when config.singleMode is set, so this is purely the matching
+   track definition — there is no zero-width leftover column. */
+.mphbac-grid--single {
+    grid-template-columns: repeat(var(--mphbac-days), minmax(0, 1fr));
+}
+/* The skeleton is server-rendered before the grid exists, so it needs the
+   same treatment: one full-width shimmer band per row instead of the
+   name + cells split. */
+.mphbac-root.mphbac-single .mphbac-skeleton-row {
+    grid-template-columns: 1fr;
+}
+.mphbac-root.mphbac-single .mphbac-skeleton-name {
+    display: none;
+}
+/* Editor-only stand-in shown until a cottage is chosen. Never renders on the
+   front end (Widget_Single::render() bails before emitting anything). */
+.mphbac-single-placeholder {
+    padding: 1.25em;
+    border: 1px dashed var(--mphbac-color-frame, #e0e0e0);
+    border-radius: var(--mphbac-radius, 4px);
+    background: #fafafa;
+    color: #666666;
+    font-size: 0.95em;
+    text-align: center;
+}
+
 .mphbac-row {
     display: contents;
 }

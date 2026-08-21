@@ -1,0 +1,178 @@
+<?php
+namespace MPHBAC;
+
+use Elementor\Controls_Manager;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Single-cottage variant of the availability calendar.
+ *
+ * Intended for the individual /accommodation/<slug>/ Elementor templates,
+ * where the page already IS one cottage: it renders that cottage's
+ * availability strip only.
+ *
+ * It deliberately extends Widget rather than duplicating it, so the data
+ * pipeline, caching, date-range navigation, legend, styling, and every style
+ * control stay literally the same code. Only three things differ:
+ *
+ *   1. Cottage selection — one SELECT dropdown (`single_cottage`) instead of
+ *      the multi-select `cottages`, resolved via resolve_selected_ids().
+ *   2. No row-label column — single_mode() adds the `mphbac-single` root
+ *      class and sets config.singleMode, which together drop the label cells
+ *      from the grid and let the day cells use the full width.
+ *   3. No cottage-details popup — register_info_controls() is a no-op here,
+ *      so no cottage_info rows exist, so render() emits neither the hidden
+ *      info content nor the popup markup, and no .mphbac-row-toggle trigger
+ *      is ever created (the label button that opened it is gone anyway).
+ *
+ * The Book Now popup is NOT removed — it is a booking affordance rather than
+ * a "details" one, and it remains governed by the inherited "Enable Book Now
+ * popup" switch, so it can be turned off per-instance from the panel.
+ */
+class Widget_Single extends Widget
+{
+    public function get_name(): string
+    {
+        return 'dccac_single';
+    }
+
+    public function get_title(): string
+    {
+        return __('DCC Availability — Single Cottage', 'mphb-availability-calendar');
+    }
+
+    public function get_icon(): string
+    {
+        return 'eicon-calendar';
+    }
+
+    public function get_keywords(): array
+    {
+        return ['motopress', 'mphb', 'availability', 'calendar', 'cottage', 'single', 'accommodation'];
+    }
+
+    protected function single_mode(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Exactly the one chosen cottage — and only if it is still a published
+     * accommodation type. A cottage that was deleted or unpublished after
+     * being selected resolves to nothing, which render() treats as "show
+     * nothing" rather than silently falling back to all cottages.
+     */
+    protected function resolve_selected_ids(array $settings, array $all_types): array
+    {
+        $cid = (int) ($settings['single_cottage'] ?? 0);
+        if ($cid <= 0) {
+            return [];
+        }
+        $valid = array_map(static fn($t) => (int) $t['id'], $all_types);
+        return in_array($cid, $valid, true) ? [$cid] : [];
+    }
+
+    /**
+     * Replaces the parent's Content section: same heading controls, but the
+     * multi-cottage SELECT2 is swapped for a single-cottage dropdown. Options
+     * come from cottage_options(), which reads the published mphb_room_type
+     * posts at editor load — so a cottage added later appears automatically,
+     * with no hardcoded IDs anywhere.
+     */
+    protected function register_content_controls(): void
+    {
+        $this->start_controls_section('section_content', [
+            'label' => __('Content', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->add_control('single_cottage', [
+            'label'       => __('Cottage', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::SELECT2,
+            'options'     => $this->cottage_options(),
+            'label_block' => true,
+            'default'     => '',
+            'description' => __('Which cottage this calendar shows. Place this widget on that cottage\'s own page — the row label is omitted because the page already identifies the cottage.', 'mphb-availability-calendar'),
+        ]);
+
+        $this->add_control('heading_show', [
+            'label'        => __('Show heading', 'mphb-availability-calendar'),
+            'type'         => Controls_Manager::SWITCHER,
+            'label_on'     => __('Show', 'mphb-availability-calendar'),
+            'label_off'    => __('Hide', 'mphb-availability-calendar'),
+            'return_value' => 'yes',
+            'default'      => '',
+        ]);
+
+        $this->add_control('heading_text', [
+            'label'     => __('Heading text', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::TEXT,
+            'default'   => __('Availability', 'mphb-availability-calendar'),
+            'condition' => ['heading_show' => 'yes'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    /**
+     * No cottage-info popups on this variant — the details it would show are
+     * already on the page hosting the widget. A no-op (rather than a hidden
+     * section) means `cottage_info` never exists in settings, so render()
+     * emits no hidden info content and no popup markup at all.
+     */
+    protected function register_info_controls(): void
+    {
+    }
+
+    /**
+     * The custom-label repeater is meaningless without a label column.
+     */
+    protected function register_labels_controls(): void
+    {
+    }
+
+    /**
+     * Likewise the label-column styling section.
+     */
+    protected function register_namecol_style_controls(): void
+    {
+    }
+
+    /**
+     * ...and the "View Cottage Page" button, which only ever appeared inside
+     * the info popup this variant does not have.
+     */
+    protected function register_view_button_style_controls(): void
+    {
+    }
+
+    protected function register_popup_title_style_controls(): void
+    {
+        // Only the Book Now popup remains here, and its title is styled by
+        // the same baked CSS; keeping the section would expose controls for
+        // a mostly-absent element.
+    }
+
+    protected function render(): void
+    {
+        $settings = $this->get_settings_for_display();
+        $cid      = (int) ($settings['single_cottage'] ?? 0);
+
+        if ($cid <= 0) {
+            // Editor-only affordance so an unconfigured widget isn't an
+            // invisible blank on the canvas. Front end renders nothing.
+            if (\Elementor\Plugin::$instance->editor->is_edit_mode()) {
+                printf(
+                    '<div class="mphbac-single-placeholder">%s</div>',
+                    esc_html__('Choose a cottage…', 'mphb-availability-calendar')
+                );
+            }
+            return;
+        }
+
+        parent::render();
+    }
+}
