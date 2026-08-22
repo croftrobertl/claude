@@ -1258,6 +1258,55 @@ class Widget extends Widget_Base
         return false;
     }
 
+    /**
+     * True when this instance renders a calendar-month grid (7 columns, week
+     * rows, blank cells outside the month) instead of the linear day strip.
+     * Only the single-cottage variant can opt in — a month grid can only
+     * represent one accommodation, so the multi-cottage widget is always a
+     * strip. Takes $settings because it is a per-instance panel choice.
+     */
+    protected function month_mode(array $settings): bool
+    {
+        return false;
+    }
+
+    /**
+     * Weekday and month names for the month grid, localized through WP's
+     * locale object rather than hardcoded in JS. Weekdays are indexed 0..6 by
+     * JS getDay() (0 = Sunday) regardless of start_of_week; the client
+     * rotates them. Two letters, matching the reference arrangement.
+     *
+     * @return array{weekdays:string[],months:string[],startOfWeek:int}
+     */
+    private static function calendar_locale(): array
+    {
+        global $wp_locale;
+        $weekdays = [];
+        $months   = [];
+        if ($wp_locale instanceof \WP_Locale) {
+            for ($i = 0; $i < 7; $i++) {
+                $full = (string) $wp_locale->get_weekday($i);
+                $weekdays[] = function_exists('mb_substr') ? mb_substr($full, 0, 2) : substr($full, 0, 2);
+            }
+            for ($m = 1; $m <= 12; $m++) {
+                $months[] = (string) $wp_locale->get_month($m);
+            }
+        }
+        if (count($weekdays) !== 7) {
+            $weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+        }
+        if (count($months) !== 12) {
+            $months = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+        }
+        return [
+            'weekdays'    => $weekdays,
+            'months'      => $months,
+            // WP stores 0 = Sunday … 6 = Saturday, same basis as JS getDay().
+            'startOfWeek' => max(0, min(6, (int) get_option('start_of_week', 0))),
+        ];
+    }
+
     protected function cottage_options(): array
     {
         $options = [];
@@ -1311,6 +1360,7 @@ class Widget extends Widget_Base
         }
 
         $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
+        $month_mode    = $this->month_mode($settings);
         $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
 
         $property_label = (string) ($settings['str_property'] ?? '');
@@ -1400,10 +1450,18 @@ class Widget extends Widget_Base
         // ~no server time; failure degrades to the old AJAX-only flow.
         $initial = null;
         try {
-            $type_ids  = array_map(static fn($r) => (int) $r['id'], $rooms);
-            $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
-            $max_days  = max($days_desktop, $days_tablet, $days_mobile);
-            $init_to   = $base_from->modify('+' . ($max_days - 1) . ' days');
+            $type_ids = array_map(static fn($r) => (int) $r['id'], $rooms);
+            if ($month_mode) {
+                // Month grid: the embedded window is the displayed month, so
+                // first paint needs no request. The client's default window is
+                // the same range, so the slice in tryRenderEmbedded() is exact.
+                $base_from = $today->modify('first day of this month');
+                $init_to   = $today->modify('last day of this month');
+            } else {
+                $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
+                $max_days  = max($days_desktop, $days_tablet, $days_mobile);
+                $init_to   = $base_from->modify('+' . ($max_days - 1) . ' days');
+            }
             $init_avail = Data_Provider::get_availability($type_ids, $base_from, $init_to, $init_age);
             if (!empty($init_avail)) {
                 // Mirror Ajax::handle()'s all-booked forward scan so the
@@ -1468,6 +1526,8 @@ class Widget extends Widget_Base
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
             'singleMode'     => $this->single_mode(),
+            'monthMode'      => $month_mode,
+            'calendar'       => $month_mode ? self::calendar_locale() : null,
             'initial'        => $initial,
             'checkoutUrl'    => self::resolve_checkout_url(),
             'infoPopupMaxWidth' => [
@@ -1510,6 +1570,9 @@ class Widget extends Widget_Base
             // Drops the label column in CSS and (via config.singleMode) stops
             // widget.js emitting the label cells at all.
             $root_classes[] = 'mphbac-single';
+        }
+        if ($month_mode) {
+            $root_classes[] = 'mphbac-month';
         }
 
         ?>

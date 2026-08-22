@@ -248,11 +248,20 @@
         if (state.filtered) return;
         // Unknown or slow endpoint — don't speculate. (See lastLatencyMs.)
         if (lastLatencyMs === null || lastLatencyMs > PREFETCH_MAX_LATENCY_MS) return;
-        var span = daysBetween(state.from, state.to) + 1;
-        var nextFrom = addDays(state.to, 1);
-        var nextTo = addDays(state.to, span);
-        var prevFrom = addDays(state.from, -span);
-        var prevTo = addDays(state.from, -1);
+        var nextFrom, nextTo, prevFrom, prevTo;
+        if (isMonthMode(config)) {
+            // Adjacent CALENDAR months — what prev/next actually navigate to.
+            nextFrom = shiftMonthStr(state.from, 1);
+            nextTo = monthEnd(nextFrom);
+            prevFrom = shiftMonthStr(state.from, -1);
+            prevTo = monthEnd(prevFrom);
+        } else {
+            var span = daysBetween(state.from, state.to) + 1;
+            nextFrom = addDays(state.to, 1);
+            nextTo = addDays(state.to, span);
+            prevFrom = addDays(state.from, -span);
+            prevTo = addDays(state.from, -1);
+        }
         var run = function () {
             prefetchWindow(config, nextFrom, nextTo);
             prefetchWindow(config, prevFrom, prevTo);
@@ -472,8 +481,44 @@
         return config.showPast ? addDays(config.today, -1) : config.today;
     }
 
+    // ---- Month-grid helpers -------------------------------------------------
+    // All operate on 'YYYY-MM-DD' strings and go through the same local-midnight
+    // Date construction the strip already uses, so DST never shifts a boundary.
+
+    function isMonthMode(config) {
+        return !!(config && config.monthMode);
+    }
+
+    function monthStart(dateStr) {
+        return dateStr.slice(0, 7) + '-01';
+    }
+
+    function monthEnd(dateStr) {
+        var d = new Date(dateStr + 'T00:00:00');
+        // Day 0 of the NEXT month is the last day of this one.
+        var last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        return last.getFullYear() + '-' +
+            String(last.getMonth() + 1).padStart(2, '0') + '-' +
+            String(last.getDate()).padStart(2, '0');
+    }
+
+    // Step whole calendar months. Anchored on the 1st so month lengths never
+    // cause the classic Jan-31 + 1 month => Mar-03 overflow.
+    function shiftMonthStr(dateStr, delta) {
+        var d = new Date(monthStart(dateStr) + 'T00:00:00');
+        d.setMonth(d.getMonth() + delta);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+
     function applyDefaultWindow(config, state) {
         state.filtered = false;
+        if (isMonthMode(config)) {
+            // The window IS the displayed month — matching what render()
+            // embedded, so first paint needs no request.
+            state.from = monthStart(config.today);
+            state.to = monthEnd(config.today);
+            return;
+        }
         state.from = baseFrom(config);
         state.to = addDays(state.from, deviceDays(config) - 1);
     }
@@ -486,6 +531,10 @@
                 var bucket = deviceBucket();
                 if (bucket === state.bucket) return;
                 state.bucket = bucket;
+                // Month mode's window is a calendar month, not a per-device
+                // day count, so a breakpoint change doesn't alter it — the
+                // CSS reflows the same seven columns.
+                if (isMonthMode(config)) return;
                 if (state.filtered) return; // keep an explicit filter range
                 applyDefaultWindow(config, state);
                 request(root, config, state);
@@ -504,6 +553,17 @@
             var hasCi = checkin && checkin.value;
             var hasCo = checkout && checkout.value;
             state.filtered = !!(hasCi || hasCo);
+            if (isMonthMode(config)) {
+                // A month grid shows exactly one month, so a filter range
+                // can't be the window. Jump to the month containing the
+                // chosen check-in (or check-out if that's all they set) and
+                // show that whole month; Reset returns to the current month.
+                var anchor = (hasCi && checkin.value) || (hasCo && checkout.value) || config.today;
+                state.from = monthStart(anchor);
+                state.to = monthEnd(anchor);
+                request(root, config, state);
+                return;
+            }
             state.from = hasCi ? checkin.value : baseFrom(config);
             state.to = hasCo ? checkout.value : addDays(state.from, deviceDays(config) - 1);
             // Typed dates bypass the min attribute (keyboard entry), so a
@@ -590,6 +650,16 @@
     }
 
     function shiftMonth(root, config, state, direction) {
+        if (isMonthMode(config)) {
+            // Step one calendar month, year boundaries included (setMonth
+            // rolls the year over on its own).
+            var next = shiftMonthStr(state.from, direction);
+            state.from = next;
+            state.to = monthEnd(next);
+            state.filtered = false;
+            request(root, config, state);
+            return;
+        }
         // Page by one screenful of days.
         var span = daysBetween(state.from, state.to) + 1;
         state.from = addDays(state.from, direction * span);
@@ -1266,6 +1336,24 @@
         if (empty) empty.hidden = true;
 
         var days = buildDayList(from, to);
+
+        // Month-grid layout: same data, same status classes, same CSS custom
+        // properties — only the arrangement differs (month title bar, weekday
+        // header, 7 columns of week rows, blanks outside the month).
+        if (isMonthMode(config)) {
+            clearWrapPreservingStatus(wrap);
+            var mHint = buildAvailabilityHint(rooms, availability, days, strings0(config), (config && config.customLabels) || {}, data.bookedThrough);
+            if (mHint) {
+                wrap.appendChild(mHint);
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () { mHint.classList.add('mphbac-hint--shown'); });
+                });
+            }
+            wrap.appendChild(buildMonthGrid(rooms, availability, days, state, config));
+            updateRange(root, from, to, config);
+            return;
+        }
+
         // Single-cottage variant: the host page already identifies the
         // cottage, so the row-label column is omitted entirely and the day
         // cells take the full width. Dropping the cells (rather than hiding
@@ -1375,6 +1463,128 @@
         }
         wrap.appendChild(grid);
         updateRange(root, from, to, config);
+    }
+
+    // Unique ids for month-title aria-labelledby wiring (multiple widgets
+    // can coexist on one page).
+    var monthTitleSeq = 0;
+
+    function strings0(config) {
+        return (config && config.strings) || {};
+    }
+
+    // Build one calendar month: title bar, weekday header, then week rows of
+    // seven cells. Day cells reuse the strip's exact classes and markup
+    // (.mphbac-cell-status is-<status>, .mphbac-cell-tip, is-weekend,
+    // is-clickable) so every existing colour/typography/spacing control and
+    // CSS custom property keeps driving them — this is arrangement only.
+    // Cells outside the month are inert placeholders: no number, no status,
+    // no tabindex, hidden from assistive tech.
+    function buildMonthGrid(rooms, availability, days, state, config) {
+        var cal = (config && config.calendar) || {};
+        var weekdayNames = cal.weekdays || ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+        var startOfWeek = typeof cal.startOfWeek === 'number' ? cal.startOfWeek : 0;
+        var statusLabels = (config && config.statusLabels) || {};
+        var room = rooms[0] || null;
+        var roomAvail = room ? (availability[room.id] || {}) : {};
+        var todayStr = (config && config.today) || '';
+
+        var out = document.createDocumentFragment();
+
+        // Month title bar. Kept OUTSIDE the role="grid" element — a grid may
+        // only contain rows — and wired as the grid's accessible name, so
+        // screen readers announce "September 2026" when entering the grid.
+        var first = new Date(days[0] + 'T00:00:00');
+        var monthNames = cal.months || [];
+        var titleText = (monthNames[first.getMonth()] ||
+            first.toLocaleDateString(undefined, { month: 'long' })) + ' ' + first.getFullYear();
+        var titleId = 'mphbac-month-' + (++monthTitleSeq);
+        var title = document.createElement('div');
+        title.className = 'mphbac-month-title';
+        title.id = titleId;
+        title.textContent = titleText;
+        out.appendChild(title);
+
+        var grid = document.createElement('div');
+        grid.className = 'mphbac-grid mphbac-monthgrid';
+        grid.setAttribute('role', 'grid');
+        grid.setAttribute('aria-labelledby', titleId);
+        if (room && room.title) grid.setAttribute('aria-description', room.title);
+
+        // Weekday header, rotated to honour WP's start_of_week.
+        var head = document.createElement('div');
+        head.className = 'mphbac-row mphbac-row-header';
+        head.setAttribute('role', 'row');
+        for (var c = 0; c < 7; c++) {
+            var dow = (startOfWeek + c) % 7;
+            var hc = document.createElement('div');
+            hc.className = 'mphbac-cell mphbac-cell-day'
+                + (dow === 0 || dow === 6 ? ' is-weekend' : '');
+            hc.setAttribute('role', 'columnheader');
+            hc.textContent = weekdayNames[dow] || '';
+            head.appendChild(hc);
+        }
+        grid.appendChild(head);
+
+        // Leading blanks: how far the 1st sits from the first column.
+        var lead = (first.getDay() - startOfWeek + 7) % 7;
+        var cells = [];
+        for (var b = 0; b < lead; b++) cells.push(null);
+        days.forEach(function (day) { cells.push(day); });
+        while (cells.length % 7 !== 0) cells.push(null); // trailing blanks
+
+        for (var i = 0; i < cells.length; i += 7) {
+            var row = document.createElement('div');
+            row.className = 'mphbac-row';
+            row.setAttribute('role', 'row');
+            if (room) row.setAttribute('data-room-type-id', String(room.id));
+
+            for (var j = 0; j < 7; j++) {
+                var day = cells[i + j];
+                if (!day) {
+                    var blank = document.createElement('div');
+                    blank.className = 'mphbac-cell mphbac-cell-blank';
+                    blank.setAttribute('role', 'presentation');
+                    blank.setAttribute('aria-hidden', 'true');
+                    row.appendChild(blank);
+                    continue;
+                }
+                var status = roomAvail[day] || 'booked';
+                var clickable = status === 'available';
+                var tip = statusLabels[status] || status;
+                var d = new Date(day + 'T00:00:00');
+                var dowJ = d.getDay();
+
+                var cell = document.createElement('div');
+                cell.className = 'mphbac-cell mphbac-cell-status is-' + status
+                    + (clickable ? ' is-clickable' : '')
+                    + (dowJ === 0 || dowJ === 6 ? ' is-weekend' : '')
+                    + (todayStr === day ? ' is-today' : '');
+                cell.setAttribute('role', 'gridcell');
+                cell.setAttribute('data-date', day);
+                cell.setAttribute('data-status', status);
+                // Carried on the CELL because the parent row here is a week,
+                // not a cottage row; openSheetFromCell() reads it from either.
+                if (room) cell.setAttribute('data-room-type-id', String(room.id));
+                cell.setAttribute('aria-label', day + ' — ' + tip);
+                if (clickable) cell.setAttribute('tabindex', '0');
+
+                var num = document.createElement('span');
+                num.className = 'mphbac-day-num';
+                num.textContent = String(d.getDate());
+                cell.appendChild(num);
+
+                var tipEl = document.createElement('span');
+                tipEl.className = 'mphbac-cell-tip';
+                tipEl.textContent = tip;
+                cell.appendChild(tipEl);
+
+                row.appendChild(cell);
+            }
+            grid.appendChild(row);
+        }
+        out.appendChild(grid);
+        return out;
     }
 
     // Smart empty-window hint. If the visible window starts with one or more
@@ -1498,10 +1708,19 @@
         if (!label) return;
         var f = new Date(from + 'T00:00:00');
         var t = new Date(to + 'T00:00:00');
-        var fmt = function (d) {
-            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        };
-        label.textContent = fmt(f) + ' – ' + fmt(t) + ', ' + t.getFullYear();
+        if (isMonthMode(config)) {
+            // "September 2026" — month names come from WP's locale via
+            // config.calendar so they translate with the site.
+            var names = (config.calendar && config.calendar.months) || [];
+            var mName = names[f.getMonth()] ||
+                f.toLocaleDateString(undefined, { month: 'long' });
+            label.textContent = mName + ' ' + f.getFullYear();
+        } else {
+            var fmt = function (d) {
+                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            };
+            label.textContent = fmt(f) + ' – ' + fmt(t) + ', ' + t.getFullYear();
+        }
 
         // Back-to-today button shows only when today is OUTSIDE the current
         // visible range. YYYY-MM-DD strings compare lexically, so straight
@@ -1539,8 +1758,12 @@
         var overlayMarker = document.createComment('mphbac-sheet-overlay');
 
         function openSheetFromCell(cell) {
+            // Strip layout: the cottage id lives on the parent row. Month
+            // layout: rows are weeks, so the id is on the cell itself.
+            var own = cell.getAttribute('data-room-type-id');
             var row = cell.parentNode;
-            var typeId = row ? parseInt(row.getAttribute('data-room-type-id'), 10) : 0;
+            var raw = own || (row ? row.getAttribute('data-room-type-id') : '');
+            var typeId = parseInt(raw, 10) || 0;
             var date = cell.getAttribute('data-date') || '';
             openSheet(typeId, date, addDays(date, minNights), cell);
         }

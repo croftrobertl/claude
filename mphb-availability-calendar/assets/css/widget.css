@@ -285,6 +285,49 @@
     user-select: none;
 }
 
+/* ---- Month-grid layout (single-cottage widget, Layout = "Month grid") ----
+   ARRANGEMENT ONLY. Every colour, font, radius and spacing value below is an
+   existing custom property or an existing class — no new visual tokens. Day
+   cells keep .mphbac-cell-status + is-available/is-booked/is-past/is-today/
+   is-weekend/is-clickable, so every Elementor style control still drives them.
+
+   Seven equal columns from the container: 1fr with a minmax(0, …) floor lets
+   the tracks shrink below their content width, which is what keeps a whole
+   month inside ~320px with no horizontal scrolling. --mphbac-cell-min is a
+   min-HEIGHT (tap target) and is deliberately left alone; the explicit
+   min-width: 0 on the cells below neutralises the flex/grid default
+   (min-width: auto) that would otherwise re-inflate the tracks. */
+.mphbac-monthgrid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.mphbac-monthgrid .mphbac-cell {
+    min-width: 0;
+}
+/* Full-width title bar spanning all seven columns. Inherits the widget's own
+   colour and font — no new tokens. */
+.mphbac-month-title {
+    text-align: center;
+    font-weight: 700;
+    padding: 0.4em 0;
+}
+/* Days outside the displayed month: inert placeholders holding the grid
+   shape. No number, no status class, no background, not focusable. */
+.mphbac-monthgrid .mphbac-cell-blank {
+    background: transparent;
+    pointer-events: none;
+}
+.mphbac-monthgrid .mphbac-day-num {
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+/* In month mode past days must keep occupying their cell or the calendar
+   loses its shape, so the strip's "hide past" visibility rule is scoped away
+   here. They still render with the existing is-past colour and stay
+   unclickable — the state is unchanged, only its visibility handling. */
+.mphbac-hide-past .mphbac-monthgrid .mphbac-cell-status.is-past {
+    visibility: visible;
+}
+
 /* Single-cottage variant (widget dccac_single): no row-label column, so the
    day columns claim the whole width. widget.js omits the label cells
    entirely when config.singleMode is set, so this is purely the matching
@@ -442,7 +485,12 @@
 .mphbac-d-dow-long  { display: var(--mphbac-dow-long, inline); }
 .mphbac-d-dow-short { display: var(--mphbac-dow-short, none); }
 
-.mphbac-cell-day.is-today {
+/* Month grid has no day-header row, so today's marker moves onto the day
+   cell itself. Identical declarations — same custom property, same weight —
+   so the "today" treatment is visually the one that already exists. Scoped
+   to .mphbac-monthgrid so the strip layout is untouched. */
+.mphbac-cell-day.is-today,
+.mphbac-monthgrid .mphbac-cell-status.is-today {
     box-shadow: inset 0 -3px 0 0 var(--mphbac-color-today-outline);
     font-weight: 700;
 }

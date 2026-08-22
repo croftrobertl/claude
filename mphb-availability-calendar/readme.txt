@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.0
+Stable tag: 0.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.18.0 =
+* The single-cottage widget now shows a **calendar month grid** by default — a month title bar, a weekday header row (Su/Mo/Tu/We/Th/Fr/Sa), and week rows of seven columns, with empty cells for days before the 1st and after the last. One month at a time, and the whole month fits on a phone with no sideways scrolling.
+* New **Layout** setting on that widget: "Month grid" (default) or "Day strip". Existing placements move to the month grid automatically after updating — no page edits needed — and the original strip is still there if you switch back.
+* Prev/next now step one calendar month (across year boundaries too), "Today" returns to the current month, and the range label reads "September 2026" instead of a date span.
+* The first column follows your WordPress "Week Starts On" setting, and weekday/month names come from your site's language settings rather than being hardcoded.
+* **Appearance is unchanged.** This is a layout change only: day cells keep exactly the same status classes, colors, fonts, corner radius and spacing as before, and every existing style control in the Elementor panel still drives the grid. No new colors or fonts were introduced.
+* One deliberate difference in month view: with "Show past days" off, earlier days of the current month still occupy their cells (greyed, not clickable) instead of being blanked out — otherwise the month would lose its shape. The day strip is unaffected.
+* Availability data, caching, and the embedded first paint all still work the same way; the embedded window now covers the displayed month, so the month still paints without a server request. Adjacent-month prefetch replaces adjacent-window prefetch.
+* Unchanged: the cottage dropdown, no cottage-name column, no cottage-details popup, the Book Now sheet and its toggle, the legend, and the multi-cottage calendar widget (which keeps its strip layout — a month grid cannot show 8 cottages at once).
 
 = 0.17.0 =
 * New widget: **DCC Availability — Single Cottage**. Drop it on an individual cottage page and pick that cottage from a dropdown; it shows just that cottage's availability strip. The dropdown lists every published accommodation automatically, so cottages added in future appear without any code change.

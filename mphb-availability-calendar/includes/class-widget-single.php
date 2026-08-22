@@ -60,6 +60,18 @@ class Widget_Single extends Widget
     }
 
     /**
+     * Month grid is the default for this variant, including for instances
+     * placed before 0.18.0: Elementor returns no value for a control that did
+     * not exist when the widget was saved, and the `?? 'month'` fallback then
+     * lands those on the grid without anyone re-saving the page. Choosing
+     * "Day strip" restores the pre-0.18.0 linear layout.
+     */
+    protected function month_mode(array $settings): bool
+    {
+        return ($settings['layout'] ?? 'month') !== 'strip';
+    }
+
+    /**
      * Exactly the one chosen cottage — and only if it is still a published
      * accommodation type. A cottage that was deleted or unpublished after
      * being selected resolves to nothing, which render() treats as "show
@@ -96,6 +108,17 @@ class Widget_Single extends Widget
             'label_block' => true,
             'default'     => '',
             'description' => __('Which cottage this calendar shows. Place this widget on that cottage\'s own page — the row label is omitted because the page already identifies the cottage.', 'mphb-availability-calendar'),
+        ]);
+
+        $this->add_control('layout', [
+            'label'       => __('Layout', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'month',
+            'options'     => [
+                'month' => __('Month grid', 'mphb-availability-calendar'),
+                'strip' => __('Day strip', 'mphb-availability-calendar'),
+            ],
+            'description' => __('Month grid shows one calendar month at a time (7 columns, week rows) and fits a phone without sideways scrolling. Day strip is the original horizontal run of days, paged by the number of days set under Display.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('heading_show', [

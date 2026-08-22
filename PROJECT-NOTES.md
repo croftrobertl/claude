@@ -36,6 +36,18 @@ automatically applies to both:
 - `single_mode()` — adds the `mphbac-single` root class and `config.singleMode`,
   which make `widget.js` omit the row-label cells entirely (not hide them) and
   make the day columns span the full width.
+- `month_mode($settings)` — per-instance (the variant's `layout` control,
+  default `month`). Emits `config.monthMode` + `config.calendar` (localized
+  weekday/month names and `start_of_week` from `Widget::calendar_locale()`),
+  adds the `mphbac-month` root class, and makes `render()` embed the DISPLAYED
+  MONTH so first paint stays request-free. Client-side it switches
+  `applyDefaultWindow`/`shiftMonth`/`updateRange`/`scheduleAdjacentPrefetch` to
+  calendar-month arithmetic and routes `renderGrid()` into `buildMonthGrid()`.
+  **Month grid is layout only** — day cells reuse the strip's exact classes
+  (`.mphbac-cell-status is-*`, `.mphbac-cell-tip`) so every Elementor style
+  control and CSS custom property keeps driving them; do not add visual tokens
+  there. The multi-cottage widget always returns false (a month grid cannot
+  represent 8 cottages).
 - No-op `register_*_controls()` overrides drop panel sections that are
   meaningless without a label column or an info popup (cottage-info repeater,
   custom labels, name-column styling, view-cottage button, popup titles).
