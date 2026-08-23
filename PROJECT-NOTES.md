@@ -48,6 +48,22 @@ automatically applies to both:
   control and CSS custom property keeps driving them; do not add visual tokens
   there. The multi-cottage widget always returns false (a month grid cannot
   represent 8 cottages).
+- `show_filters($settings)` — base Widget always true (multi widget renders
+  its filter bar unconditionally, no control). The single variant's "Show
+  date filters" switcher defaults OFF via the missing-key `?? ''` pattern, and
+  the skip is server-side: `.mphbac-filters` is not emitted at all. widget.js
+  guards every filter-input selector, so no console errors with the bar absent.
+- Month mode is MULTI-month (0.19.0): per-device `months_shown` (3/2/1
+  defaults, 1–4, condition layout=month) → `config.monthsDesktop/Tablet/Mobile`.
+  The window is monthStart(anchor)..`monthWindowEnd(from, N)`; prev/next SLIDE
+  by one month; render() embeds the LARGEST per-device span. renderGrid splits
+  the window into `.mphbac-monthbox`es inside `.mphbac-months`
+  (auto-fit minmax(min(280px,100%),1fr) — wraps instead of crushing).
+  Breakpoint changes re-window (N differs per device) keeping the first month
+  anchored. `top_spacing` (default 40px) renders margin-top on {{WRAPPER}},
+  with a baked `.elementor-widget-dccac_single{margin-top:40px}` fallback in
+  widget.css because Elementor's cached per-post CSS doesn't regenerate on a
+  plugin update.
 - No-op `register_*_controls()` overrides drop panel sections that are
   meaningless without a label column or an info popup (cottage-info repeater,
   custom labels, name-column styling, view-cottage button, popup titles).

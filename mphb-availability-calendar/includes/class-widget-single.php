@@ -72,6 +72,18 @@ class Widget_Single extends Widget
     }
 
     /**
+     * Default OFF — same missing-key fallback pattern as `layout`, so the
+     * already-placed instances (no stored value) lose the filter bar
+     * automatically and the site's mu-plugin hide rule can be retired. The
+     * skip is server-side: with this off the .mphbac-filters block is never
+     * rendered, not merely hidden.
+     */
+    protected function show_filters(array $settings): bool
+    {
+        return ($settings['show_filters'] ?? '') === 'yes';
+    }
+
+    /**
      * Exactly the one chosen cottage — and only if it is still a published
      * accommodation type. A cottage that was deleted or unpublished after
      * being selected resolves to nothing, which render() treats as "show
@@ -119,6 +131,41 @@ class Widget_Single extends Widget
                 'strip' => __('Day strip', 'mphb-availability-calendar'),
             ],
             'description' => __('Month grid shows one calendar month at a time (7 columns, week rows) and fits a phone without sideways scrolling. Day strip is the original horizontal run of days, paged by the number of days set under Display.', 'mphb-availability-calendar'),
+        ]);
+
+        $this->add_responsive_control('months_shown', [
+            'label'          => __('Months shown', 'mphb-availability-calendar'),
+            'type'           => Controls_Manager::NUMBER,
+            'min'            => 1,
+            'max'            => 4,
+            'step'           => 1,
+            'default'        => 3,
+            'tablet_default' => 2,
+            'mobile_default' => 1,
+            'description'    => __('How many calendar months appear side by side. Months wrap to a second row instead of shrinking when the widget\'s column is too narrow.', 'mphb-availability-calendar'),
+            'condition'      => ['layout' => 'month'],
+        ]);
+
+        $this->add_control('show_filters', [
+            'label'        => __('Show date filters', 'mphb-availability-calendar'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('Shows the check-in / check-out inputs with Show and Reset buttons above the calendar. Off by default — on a cottage page the month navigation usually covers it.', 'mphb-availability-calendar'),
+        ]);
+
+        $this->add_responsive_control('top_spacing', [
+            'label'      => __('Top spacing', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range'      => ['px' => ['min' => 0, 'max' => 120, 'step' => 1]],
+            'default'        => ['size' => 40, 'unit' => 'px'],
+            'tablet_default' => ['size' => 40, 'unit' => 'px'],
+            'mobile_default' => ['size' => 40, 'unit' => 'px'],
+            'description'    => __('Space between the content above and the calendar. The 40px default matches the site\'s previous hand-added rule.', 'mphb-availability-calendar'),
+            'selectors'  => [
+                '{{WRAPPER}}' => 'margin-top: {{SIZE}}{{UNIT}};',
+            ],
         ]);
 
         $this->add_control('heading_show', [

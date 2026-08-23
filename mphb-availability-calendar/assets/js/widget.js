@@ -250,11 +250,14 @@
         if (lastLatencyMs === null || lastLatencyMs > PREFETCH_MAX_LATENCY_MS) return;
         var nextFrom, nextTo, prevFrom, prevTo;
         if (isMonthMode(config)) {
-            // Adjacent CALENDAR months — what prev/next actually navigate to.
+            // The windows prev/next actually navigate to: the whole N-month
+            // span slid by one month either way. Must match shiftMonth()'s
+            // arithmetic exactly or the cache keys never hit.
+            var nMonths = deviceMonths(config);
             nextFrom = shiftMonthStr(state.from, 1);
-            nextTo = monthEnd(nextFrom);
+            nextTo = monthWindowEnd(nextFrom, nMonths);
             prevFrom = shiftMonthStr(state.from, -1);
-            prevTo = monthEnd(prevFrom);
+            prevTo = monthWindowEnd(prevFrom, nMonths);
         } else {
             var span = daysBetween(state.from, state.to) + 1;
             nextFrom = addDays(state.to, 1);
@@ -510,13 +513,33 @@
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
     }
 
+    // How many months this device shows side by side (Months shown control,
+    // defaults 3/2/1). Same bucket logic as deviceDays.
+    function deviceMonths(config) {
+        var bucket = deviceBucket();
+        var n = bucket === 'mobile' ? config.monthsMobile
+              : bucket === 'tablet' ? config.monthsTablet
+              : config.monthsDesktop;
+        n = parseInt(n, 10);
+        if (!(n >= 1)) n = 1;
+        return Math.min(4, n);
+    }
+
+    // Last day of an N-month window that starts at the month containing
+    // fromStr. The single source of window-end truth for month mode — nav,
+    // defaults, filters, and prefetch all use it so their cache keys agree.
+    function monthWindowEnd(fromStr, n) {
+        return monthEnd(shiftMonthStr(fromStr, Math.max(1, n) - 1));
+    }
+
     function applyDefaultWindow(config, state) {
         state.filtered = false;
         if (isMonthMode(config)) {
-            // The window IS the displayed month — matching what render()
-            // embedded, so first paint needs no request.
+            // The window is the current month plus this device's following
+            // months. render() embeds the LARGEST per-device span, so first
+            // paint needs no request on any device.
             state.from = monthStart(config.today);
-            state.to = monthEnd(config.today);
+            state.to = monthWindowEnd(state.from, deviceMonths(config));
             return;
         }
         state.from = baseFrom(config);
@@ -531,10 +554,15 @@
                 var bucket = deviceBucket();
                 if (bucket === state.bucket) return;
                 state.bucket = bucket;
-                // Month mode's window is a calendar month, not a per-device
-                // day count, so a breakpoint change doesn't alter it — the
-                // CSS reflows the same seven columns.
-                if (isMonthMode(config)) return;
+                if (isMonthMode(config)) {
+                    // Months shown is per-device (3/2/1), so crossing a
+                    // breakpoint changes the window LENGTH. Keep the current
+                    // first month as the anchor — don't yank the visitor back
+                    // to today — and re-request with the new span.
+                    state.to = monthWindowEnd(state.from, deviceMonths(config));
+                    request(root, config, state);
+                    return;
+                }
                 if (state.filtered) return; // keep an explicit filter range
                 applyDefaultWindow(config, state);
                 request(root, config, state);
@@ -560,7 +588,7 @@
                 // show that whole month; Reset returns to the current month.
                 var anchor = (hasCi && checkin.value) || (hasCo && checkout.value) || config.today;
                 state.from = monthStart(anchor);
-                state.to = monthEnd(anchor);
+                state.to = monthWindowEnd(state.from, deviceMonths(config));
                 request(root, config, state);
                 return;
             }
@@ -632,8 +660,10 @@
         var probe = document.createElement('input');
         probe.type = 'date';
         if (probe.type !== 'date' && window.jQuery && window.jQuery.fn && window.jQuery.fn.datepicker) {
-            window.jQuery(checkin).datepicker({ dateFormat: 'yy-mm-dd' });
-            window.jQuery(checkout).datepicker({ dateFormat: 'yy-mm-dd' });
+            // Guarded: the single-cottage widget can omit the filter bar
+            // entirely (Show date filters off), so these inputs may not exist.
+            if (checkin) window.jQuery(checkin).datepicker({ dateFormat: 'yy-mm-dd' });
+            if (checkout) window.jQuery(checkout).datepicker({ dateFormat: 'yy-mm-dd' });
         }
     }
 
@@ -651,11 +681,12 @@
 
     function shiftMonth(root, config, state, direction) {
         if (isMonthMode(config)) {
-            // Step one calendar month, year boundaries included (setMonth
-            // rolls the year over on its own).
+            // SLIDE the window by one calendar month (Aug-Sep-Oct becomes
+            // Sep-Oct-Nov), year boundaries included — setMonth rolls the
+            // year over on its own.
             var next = shiftMonthStr(state.from, direction);
             state.from = next;
-            state.to = monthEnd(next);
+            state.to = monthWindowEnd(next, deviceMonths(config));
             state.filtered = false;
             request(root, config, state);
             return;
@@ -1342,6 +1373,8 @@
         // header, 7 columns of week rows, blanks outside the month).
         if (isMonthMode(config)) {
             clearWrapPreservingStatus(wrap);
+            // Hint is computed once over the WHOLE visible span, shared by
+            // all months — one nav, one legend, one hint.
             var mHint = buildAvailabilityHint(rooms, availability, days, strings0(config), (config && config.customLabels) || {}, data.bookedThrough);
             if (mHint) {
                 wrap.appendChild(mHint);
@@ -1349,7 +1382,22 @@
                     requestAnimationFrame(function () { mHint.classList.add('mphbac-hint--shown'); });
                 });
             }
-            wrap.appendChild(buildMonthGrid(rooms, availability, days, state, config));
+            // Split the window into whole calendar months, one box each. The
+            // window always starts on a month boundary (every month-mode path
+            // goes through monthStart), so the split is exact.
+            var monthsWrap = document.createElement('div');
+            monthsWrap.className = 'mphbac-months';
+            var lastDay = days[days.length - 1];
+            var mFrom = days[0];
+            while (mFrom <= lastDay) {
+                var mTo = monthEnd(mFrom);
+                if (mTo > lastDay) mTo = lastDay;
+                monthsWrap.appendChild(
+                    buildMonthGrid(rooms, availability, buildDayList(mFrom, mTo), state, config)
+                );
+                mFrom = shiftMonthStr(mFrom, 1);
+            }
+            wrap.appendChild(monthsWrap);
             updateRange(root, from, to, config);
             return;
         }
@@ -1469,6 +1517,30 @@
     // can coexist on one page).
     var monthTitleSeq = 0;
 
+    function localMonthName(dateStr, config) {
+        var d = new Date(dateStr + 'T00:00:00');
+        var names = (config && config.calendar && config.calendar.months) || [];
+        return names[d.getMonth()] || d.toLocaleDateString(undefined, { month: 'long' });
+    }
+
+    // Nav label for the month view. One month: "September 2026". A span in
+    // one year: "August – October 2026". Across a year boundary:
+    // "November 2026 – January 2027". Month names come from WP's locale via
+    // config.calendar so they translate with the site.
+    function monthRangeLabel(from, to, config) {
+        var f = new Date(from + 'T00:00:00');
+        var t = new Date(to + 'T00:00:00');
+        var fName = localMonthName(from, config);
+        if (f.getFullYear() === t.getFullYear() && f.getMonth() === t.getMonth()) {
+            return fName + ' ' + f.getFullYear();
+        }
+        var tName = localMonthName(to, config);
+        if (f.getFullYear() === t.getFullYear()) {
+            return fName + ' – ' + tName + ' ' + f.getFullYear();
+        }
+        return fName + ' ' + f.getFullYear() + ' – ' + tName + ' ' + t.getFullYear();
+    }
+
     function strings0(config) {
         return (config && config.strings) || {};
     }
@@ -1489,15 +1561,17 @@
         var roomAvail = room ? (availability[room.id] || {}) : {};
         var todayStr = (config && config.today) || '';
 
-        var out = document.createDocumentFragment();
+        // One month = one .mphbac-monthbox (title + grid). The multi-month
+        // wrapper lays these side by side; a box is self-contained so N=1 and
+        // N=3 use identical markup per month.
+        var out = document.createElement('div');
+        out.className = 'mphbac-monthbox';
 
         // Month title bar. Kept OUTSIDE the role="grid" element — a grid may
         // only contain rows — and wired as the grid's accessible name, so
         // screen readers announce "September 2026" when entering the grid.
         var first = new Date(days[0] + 'T00:00:00');
-        var monthNames = cal.months || [];
-        var titleText = (monthNames[first.getMonth()] ||
-            first.toLocaleDateString(undefined, { month: 'long' })) + ' ' + first.getFullYear();
+        var titleText = localMonthName(days[0], config) + ' ' + first.getFullYear();
         var titleId = 'mphbac-month-' + (++monthTitleSeq);
         var title = document.createElement('div');
         title.className = 'mphbac-month-title';
@@ -1709,12 +1783,7 @@
         var f = new Date(from + 'T00:00:00');
         var t = new Date(to + 'T00:00:00');
         if (isMonthMode(config)) {
-            // "September 2026" — month names come from WP's locale via
-            // config.calendar so they translate with the site.
-            var names = (config.calendar && config.calendar.months) || [];
-            var mName = names[f.getMonth()] ||
-                f.toLocaleDateString(undefined, { month: 'long' });
-            label.textContent = mName + ' ' + f.getFullYear();
+            label.textContent = monthRangeLabel(from, to, config);
         } else {
             var fmt = function (d) {
                 return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });

@@ -1259,6 +1259,19 @@ class Widget extends Widget_Base
     }
 
     /**
+     * Whether to render the check-in/check-out/Apply/Reset filter bar. The
+     * multi-cottage widget always does (no control, unchanged behavior). The
+     * single-cottage variant has a "Show date filters" switcher defaulting
+     * OFF — this bakes in the site's former mu-plugin rule
+     * (.elementor-widget-dccac_single .mphbac-filters{display:none}) as a
+     * server-side skip, so the markup isn't even emitted.
+     */
+    protected function show_filters(array $settings): bool
+    {
+        return true;
+    }
+
+    /**
      * True when this instance renders a calendar-month grid (7 columns, week
      * rows, blank cells outside the month) instead of the linear day strip.
      * Only the single-cottage variant can opt in — a month grid can only
@@ -1361,6 +1374,14 @@ class Widget extends Widget_Base
 
         $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
         $month_mode    = $this->month_mode($settings);
+
+        // Months shown per device (month mode). device_number() handles
+        // Elementor's empty-string-for-untouched-slot storage, so the 8
+        // already-placed instances (which have no stored value at all) land
+        // on 3/2/1 automatically after the update.
+        $months_desktop = self::device_number($settings['months_shown']        ?? null, 3, 1, 4);
+        $months_tablet  = self::device_number($settings['months_shown_tablet'] ?? null, 2, 1, 4);
+        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, 1, 1, 4);
         $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
 
         $property_label = (string) ($settings['str_property'] ?? '');
@@ -1452,11 +1473,14 @@ class Widget extends Widget_Base
         try {
             $type_ids = array_map(static fn($r) => (int) $r['id'], $rooms);
             if ($month_mode) {
-                // Month grid: the embedded window is the displayed month, so
-                // first paint needs no request. The client's default window is
-                // the same range, so the slice in tryRenderEmbedded() is exact.
-                $base_from = $today->modify('first day of this month');
-                $init_to   = $today->modify('last day of this month');
+                // Month grid: embed the LARGEST per-device month span
+                // starting at the current month, so first paint needs no
+                // request on any device — each device slices its own N-month
+                // window from it in tryRenderEmbedded(). Anchored on day 1
+                // before adding months, so month lengths can't overflow.
+                $max_months = max($months_desktop, $months_tablet, $months_mobile);
+                $base_from  = $today->modify('first day of this month');
+                $init_to    = $base_from->modify('+' . ($max_months - 1) . ' months')->modify('last day of this month');
             } else {
                 $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
                 $max_days  = max($days_desktop, $days_tablet, $days_mobile);
@@ -1527,6 +1551,9 @@ class Widget extends Widget_Base
             'statusLabels'   => $status_labels,
             'singleMode'     => $this->single_mode(),
             'monthMode'      => $month_mode,
+            'monthsDesktop'  => $months_desktop,
+            'monthsTablet'   => $months_tablet,
+            'monthsMobile'   => $months_mobile,
             'calendar'       => $month_mode ? self::calendar_locale() : null,
             'initial'        => $initial,
             'checkoutUrl'    => self::resolve_checkout_url(),
@@ -1583,6 +1610,7 @@ class Widget extends Widget_Base
                 <h2 class="mphbac-heading"><?php echo esc_html($settings['heading_text']); ?></h2>
             <?php endif; ?>
 
+            <?php if ($this->show_filters($settings)) : ?>
             <div class="mphbac-filters" role="search">
                 <label class="mphbac-filter mphbac-filter-checkin">
                     <span class="mphbac-filter-label"><?php echo esc_html($settings['str_checkin']); ?></span>
@@ -1604,6 +1632,7 @@ class Widget extends Widget_Base
                 </div>
                 <span class="mphbac-sr-only mphbac-filter-status" role="status" aria-live="polite"></span>
             </div>
+            <?php endif; ?>
 
             <?php if ($settings['show_legend'] === 'yes') : ?>
                 <div class="mphbac-legend" aria-hidden="false">

@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.18.0
+Stable tag: 0.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.19.0 =
+* Single-cottage widget: the month view is now **responsive multi-month** — 3 months side by side on desktop, 2 on tablet, 1 on phones, via a new per-device "Months shown" setting (1–4, shown only for the Month grid layout). The 8 already-placed cottage instances pick up 3/2/1 automatically after updating; no template edits.
+* One shared navigation and legend for the whole widget. Prev/next slide the window by one month (Aug–Oct becomes Sep–Nov, year boundaries included); "Today" returns to the current month; the label shows the span ("August – October 2026", or "November 2026 – January 2027" across a year end).
+* Months never crush: if the widget's column is too narrow for the configured count (roughly 280px per month), months wrap onto a second row instead of shrinking the day cells. No horizontal page scrolling at any width.
+* Each month keeps its own title bar, weekday header, and week rows exactly as in 0.18.0 — same classes, same colors, every existing style control still applies.
+* First paint still needs no server request: the page embeds the largest per-device span (3 months), and each device slices its own window from it. Adjacent windows are still prefetched for instant prev/next.
+* Baked in (single-cottage widget only): the **date-filter bar is now off by default** via a new "Show date filters" switch. When off the bar isn't rendered at all (not merely hidden), replacing the site-side CSS rule that used to hide it — that mu-plugin rule can be retired. Switch it on to get the check-in/check-out inputs with Show/Reset back, working exactly as before.
+* Baked in (single-cottage widget only): a **"Top spacing"** setting (0–120px, default 40px on all devices) rendered as the widget's top margin — replacing the site-side 40px margin rule, which can also be retired. Existing instances get the 40px default automatically.
+* The multi-cottage calendar widget is fully unchanged: same strip layout, filters always shown, no new margin, no new controls.
 
 = 0.18.0 =
 * The single-cottage widget now shows a **calendar month grid** by default — a month title bar, a weekday header row (Su/Mo/Tu/We/Th/Fr/Sa), and week rows of seven columns, with empty cells for days before the 1st and after the last. One month at a time, and the whole month fits on a phone with no sideways scrolling.

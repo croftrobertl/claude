@@ -297,6 +297,24 @@
    min-HEIGHT (tap target) and is deliberately left alone; the explicit
    min-width: 0 on the cells below neutralises the flex/grid default
    (min-width: auto) that would otherwise re-inflate the tracks. */
+/* Multi-month wrapper: N .mphbac-monthbox children side by side with equal
+   widths. auto-fit + a ~280px floor is the wrap-instead-of-crush behavior:
+   as many months as genuinely fit share the row 1:1, the rest wrap to the
+   next row — so a narrow column never crushes day cells, and a phone gets
+   one month per row with zero horizontal overflow (min(280px,100%) keeps
+   even sub-280px containers safe). How MANY boxes exist per device is the
+   JS side (Months shown, 3/2/1); this only lays out whatever is rendered.
+   12px gap matches the existing nav spacing value. */
+.mphbac-months {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.mphbac-monthbox {
+    min-width: 0;
+}
+
 .mphbac-monthgrid {
     grid-template-columns: repeat(7, minmax(0, 1fr));
 }
@@ -344,6 +362,17 @@
 .mphbac-root.mphbac-single .mphbac-skeleton-name {
     display: none;
 }
+/* Baked default for the single-cottage widget's "Top spacing" control (40px,
+   the value the site previously hand-added via an mu-plugin rule). Needed in
+   the stylesheet, not just as the control default, because Elementor's
+   per-post CSS is cached: the 8 already-placed instances won't regenerate it
+   on a plugin update. When the control IS set (or regeneration runs),
+   Elementor's generated selector has higher specificity and wins — same
+   baked-default-plus-control layering used for the buttons. */
+.elementor-widget-dccac_single {
+    margin-top: 40px;
+}
+
 /* Editor-only stand-in shown until a cottage is chosen. Never renders on the
    front end (Widget_Single::render() bails before emitting anything). */
 .mphbac-single-placeholder {
