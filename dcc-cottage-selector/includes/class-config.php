@@ -186,6 +186,7 @@ final class Config
             'highlight'    => '',
             'showHeading'  => true,
             'showReview'   => false,
+            'showCompareTip' => false,
         ], $extra);
     }
 }

@@ -173,11 +173,19 @@ namespace {
     // present here or the shortcode pop-up silently behaves differently.
     $shortcodeCfg = \DCCS\Config::build([], ['highlight' => '22', 'startMode' => 'quick']);
     $widgetCfg    = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]));
-    foreach (['showReview', 'showHeading'] as $key) {
+    foreach (['showReview', 'showHeading', 'showCompareTip'] as $key) {
         ok("shortcode pop-up config declares $key (no silent JS default)", array_key_exists($key, $shortcodeCfg));
         ok("shortcode $key matches the widget default", ($shortcodeCfg[$key] ?? null) === ($widgetCfg[$key] ?? null));
     }
     ok('review step is off by default on both paths', ($shortcodeCfg['showReview'] ?? null) === false);
+
+    // The "pick 2" tip switch: off by default, and a MISSING stored key (every
+    // instance placed before 0.21.0) must read as off too.
+    ok('compare tip is off by default on both paths', ($shortcodeCfg['showCompareTip'] ?? null) === false);
+    ok('snapshot maps a missing show_compare_tip to off',
+        Selector_Widget::design_snapshot([])['showCompareTip'] === false);
+    ok('snapshot maps show_compare_tip=yes to on',
+        Selector_Widget::design_snapshot(['show_compare_tip' => 'yes'])['showCompareTip'] === true);
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

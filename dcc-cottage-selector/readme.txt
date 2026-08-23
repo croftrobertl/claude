@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.0
+Stable tag: 0.21.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -221,6 +221,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.21.0 =
+* The Compare tab's bottom "pick 2" tip is now **hidden by default** — it duplicated
+  the subheader already shown above the checkbox list. A new switch, **Content →
+  Text & labels → Show “pick 2” tip** (off by default), brings it back; when on, the
+  behavior is exactly as before: the tip appears only while fewer than 2 cottages
+  are checked, worded by the "Compare “pick 2” tip" text control.
+* Instances already placed on pages have no stored value for the new switch, so they
+  hide the tip automatically — no editing needed. Nothing else about Compare
+  changes: the subheader, the scroll cue, the checkbox logic, and the Compare
+  button's enable-at-2 behavior are untouched, and the `.dccs-compare-note` class
+  keeps its name.
 
 = 0.20.0 =
 Eight corrections from a full-project review pass.

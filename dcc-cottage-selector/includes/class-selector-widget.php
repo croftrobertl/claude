@@ -387,6 +387,17 @@ class Selector_Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
+        // The bottom "pick 2" tip duplicates the Compare subheader shown right above
+        // the checkbox list, so it is OFF by default. Missing key reads as off —
+        // instances placed before this control existed hide the tip automatically.
+        $this->preset_control('show_compare_tip', [
+            'label'        => __('Show “pick 2” tip', 'dcc-cottage-selector'),
+            'description'  => __('Off by default: the Compare subheader already says to pick 2+. Turn on to also show the tip under the Compare button while fewer than 2 cottages are checked.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SWITCHER,
+            'default'      => '',
+            'return_value' => 'yes',
+        ]);
+
         $defaults = Config::strings();
         $editable = [
             'heading'         => __('Heading', 'dcc-cottage-selector'),
@@ -1430,6 +1441,7 @@ class Selector_Widget extends Widget_Base
             'enabledModes'     => array_values($enabled),
             'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
             'showReview'       => ($settings['show_review'] ?? '') === 'yes',
+            'showCompareTip'   => ($settings['show_compare_tip'] ?? '') === 'yes',
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
             'cssVars'          => self::collect_css_vars($settings),
@@ -1505,6 +1517,7 @@ class Selector_Widget extends Widget_Base
             'enabledModes' => $snap['enabledModes'] ?? ['quick', 'weights', 'compare'],
             'showHeading'  => $snap['showHeading'] ?? true,
             'showReview'   => $snap['showReview'] ?? false,
+            'showCompareTip' => $snap['showCompareTip'] ?? false,
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
             'cssVars'      => $snap['cssVars'] ?? [],

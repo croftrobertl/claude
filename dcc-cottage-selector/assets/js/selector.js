@@ -479,7 +479,11 @@
     // .dccs-open-compare class so the existing click handler opens the shared popup.
     var canCompare = n >= 2;
     var btnLabel = canCompare ? fmt(S.compare_btn, n) : S.mode_compare;
-    var note = canCompare ? '' : '<p class="dccs-compare-note">' + esc(S.compare_need_two) + '</p>';
+    // The "pick 2" tip is opt-in (it duplicates the subheader above the list).
+    // Strict === true so a missing key — old placed instances, mirrored snapshots
+    // published before the switch existed — reads as off.
+    var note = (canCompare || config.showCompareTip !== true)
+      ? '' : '<p class="dccs-compare-note">' + esc(S.compare_need_two) + '</p>';
     var btn = '<div class="dccs-compare-actions">' +
       '<button type="button" class="dccs-open-compare"' + (canCompare ? '' : ' disabled') + '>' +
       esc(btnLabel) + '</button>' + note + '</div>';

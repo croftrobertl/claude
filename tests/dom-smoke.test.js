@@ -527,7 +527,9 @@ function enter(root, mode) {
   // and the "Compare" button is present in the same view (never hidden by a panel).
   ok('checklist + options visible with no dropdown interaction',
     root.querySelectorAll('.dccs-cmp-option').length === 8 && !root.querySelector('.dccs-cmp-trigger'));
-  ok('a "pick 2" tip shows while fewer than 2 are ticked', !!root.querySelector('.dccs-compare-note'));
+  // The tip duplicates the subheader above the list, so it's opt-in since 0.21.0.
+  ok('no "pick 2" tip by default (opt-in switch is off)', !root.querySelector('.dccs-compare-note'));
+  ok('the Compare subheader still shows', !!root.querySelector('.dccs-hint'));
 
   // Tick two cottages, then leave and return to Compare — the picks must reset.
   function tick(i) {
@@ -1020,6 +1022,39 @@ function configWith(overrides) {
     cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   }
   ok('with 2 ticked, live region announces "Compare 2 …"', /Compare 2/i.test(live()));
+})();
+
+// ---- 37. "pick 2" tip switch (show_compare_tip, off by default) ----
+(function () {
+  // Default / missing key: never render the note, in any tick state.
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  delete cfg.showCompareTip; // an old placed instance: key absent entirely
+  const root = mountSelector(w, JSON.stringify(cfg));
+  enter(root, 'compare');
+  ok('missing showCompareTip key reads as off', !root.querySelector('.dccs-compare-note'));
+  function tick(r, win, i) {
+    var b = r.querySelectorAll('.dccs-cmp-option input[data-cmp]')[i];
+    b.checked = true; b.dispatchEvent(new win.Event('change', { bubbles: true }));
+  }
+  tick(root, w, 0);
+  ok('still no tip at 1 ticked', !root.querySelector('.dccs-compare-note'));
+  ok('Compare button still disabled below 2', !!root.querySelector('.dccs-open-compare[disabled]'));
+  tick(root, w, 1);
+  ok('Compare enables at 2 exactly as before', root.querySelector('.dccs-open-compare').disabled === false);
+
+  // Toggled on: today's old behavior, including the per-instance string override.
+  const w2 = freshDom();
+  const cfg2 = JSON.parse(CONFIG);
+  cfg2.showCompareTip = true;
+  cfg2.strings.compare_need_two = 'CUSTOM TIP QQQ';
+  const root2 = mountSelector(w2, JSON.stringify(cfg2));
+  enter(root2, 'compare');
+  const note = root2.querySelector('.dccs-compare-note');
+  ok('switch on: tip shows while fewer than 2 are ticked', !!note);
+  ok('tip wording comes from the str_compare_need_two override', note.textContent === 'CUSTOM TIP QQQ');
+  tick(root2, w2, 0); tick(root2, w2, 1);
+  ok('switch on: tip disappears once 2 are ticked', !root2.querySelector('.dccs-compare-note'));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
