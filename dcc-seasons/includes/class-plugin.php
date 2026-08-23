@@ -28,6 +28,7 @@ final class Plugin {
     public function boot(): void {
         add_action('init', [$this, 'load_textdomain']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
+        Preview::init();
 
         if (is_admin()) {
             Settings::init();

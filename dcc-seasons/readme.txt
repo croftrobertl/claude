@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,20 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 2.2.0 =
+* Preview tooling baked in (the "DCC Seasons Preview Links" companion
+  mu-plugin can now be deleted): the settings page gets a panel of
+  one-click preview buttons — one per theme plus a red-outlined "Off
+  (force none)" — each opening the homepage with ?dcc_season=<key> in a
+  new tab, with a note that reads the live saved tap count; and any
+  front-end page loaded by an administrator with ?dcc_season= present
+  shows a fixed bottom-right chip ("Previewing:" + a theme dropdown that
+  swaps the param in place, preserving path and other query params, and a
+  ✕ that removes it). Admin-gated inline output only — nothing is
+  enqueued for visitors and non-admins get no markup at all. Themes added
+  via the dcc_seasons_themes filter appear in both automatically. No
+  engine, loader, schedule, or visitor-facing changes.
 
 = 2.1.0 =
 * Directional facing: particle specs can declare `face:'L'` (native art
