@@ -112,6 +112,66 @@
 			var glitch = !!egg.glitch;
 			var vw, vh, fontSize, nCols, colW, drops, speeds, colColors;
 
+			/* Finale formation: ~18s in, the rain briefly organizes into the
+			 * theme's shape (an alpha mask of one large glyph — or the
+			 * auto-computed year), holds ~2.5s, dissolves back. */
+			var finChar = egg.finale || null;
+			var finAt = egg.finaleAt || 18000;
+			var finStart = 0, finDone = false, finCells = null, finGlyphs = null, t0 = 0;
+			function buildMask() {
+				var rows = Math.max(4, Math.ceil(vh / fontSize));
+				var oc = D.createElement('canvas');
+				oc.width = nCols; oc.height = rows;
+				var ox = oc.getContext('2d', { willReadFrequently: true });
+				var text = finChar;
+				if (text === 'YEAR') {
+					var nowd = new Date();
+					text = String(nowd.getFullYear() + (nowd.getMonth() >= 6 ? 1 : 0));
+				}
+				ox.textAlign = 'center';
+				ox.textBaseline = 'middle';
+				ox.font = Math.round(text.length > 2 ? rows * 0.52 : rows * 0.92) + 'px sans-serif';
+				ox.fillStyle = '#fff';
+				ox.fillText(text, nCols / 2, rows / 2);
+				var d = ox.getImageData(0, 0, nCols, rows).data;
+				finCells = [];
+				finGlyphs = [];
+				for (var r = 0; r < rows; r++) {
+					for (var c = 0; c < nCols; c++) {
+						if (d[(r * nCols + c) * 4 + 3] > 60) {
+							finCells.push([c, r]);
+							finGlyphs.push(glyphs[(Math.random() * glyphs.length) | 0]);
+						}
+					}
+				}
+				if (!finCells.length) { finDone = true; }
+			}
+			function drawFinale(t) {
+				if (!finChar || finDone) { return; }
+				if (!t0) { t0 = t; }
+				if (!finStart) {
+					if (t - t0 >= finAt) {
+						finStart = t;
+						buildMask();
+						if (W.DCC_SEASONS && W.DCC_SEASONS.debug) { W.DCCSeasonsMatrix._fin = finCells ? finCells.length : 0; }
+					}
+					return;
+				}
+				var el = (t - finStart) / 1000;
+				var a = el < 0.8 ? el / 0.8 : (el < 3.3 ? 1 : (el < 4.1 ? (4.1 - el) / 0.8 : 0));
+				if (el >= 4.1) { finDone = true; return; }
+				cx.save();
+				cx.globalAlpha = a;
+				cx.font = fontSize + 'px monospace';
+				var refresh = ((t / 220) | 0) % 7;
+				for (var k = 0; k < finCells.length; k++) {
+					if (k % 7 === refresh) { finGlyphs[k] = glyphs[(Math.random() * glyphs.length) | 0]; }
+					cx.fillStyle = colors[finCells[k][0] % colors.length];
+					cx.fillText(finGlyphs[k], finCells[k][0] * colW + colW / 2, finCells[k][1] * fontSize + fontSize * 0.8);
+				}
+				cx.restore();
+			}
+
 			function build() {
 				/* One width source: the canvas rect × DPR (Chrome changes
 				 * devicePixelRatio at runtime on zoom). */
@@ -132,6 +192,7 @@
 					colColors[k] = colors[k % colors.length];
 				}
 				cx.textAlign = 'center';
+				if (finStart && !finDone) { buildMask(); } /* grid changed */
 			}
 			build();
 			var resizeTimer = 0;
@@ -180,6 +241,7 @@
 					}
 				}
 				if (glitch) { cx.filter = 'none'; }
+				drawFinale(t);
 				raf = W.requestAnimationFrame(frame);
 			}
 			play = function () {

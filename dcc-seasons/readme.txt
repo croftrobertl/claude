@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 2.2.0
+Stable tag: 3.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,51 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.0.0 =
+* The "wow" visual overhaul, designed around the Dora Canal identity.
+* Bespoke illustrated sprite set (~75 inline SVGs, one consistent hand):
+  species-accurate fall leaves (maple/oak/cypress/sweetgum), three
+  jack-o'-lantern faces with flicker glow, turkey 2.0 leading chicks,
+  glinting ornaments, state license plates (NY/OH/MI), rose petals, opening
+  love letter, quill with ink trail, decorated-egg upgrades, pontoon 2.0
+  with stern flag, kayak, swans, stilt walker, and more. Emoji remain only
+  as tofu-checked fallbacks.
+* Depth layers: FAR parallax layer (60% scale / 50% speed / 60% opacity)
+  behind the NEAR layer.
+* Waterline reflections: actors just above the water draw a flipped,
+  squashed 25% mirror; floaters get a broken shimmer line. Off on mobile.
+* Pointer awareness (observation only): particles ease away from the
+  cursor and spring back; a click landing on a particle pops it without
+  consuming the click.
+* Vignette director — rare 5–12s choreographed scenes, one at a time,
+  ≥90s apart: the pontoon flotilla, the FULL CAST fishing story (lure →
+  bobber → circling shadow → bass strike), dragonfly-lands-on-the-bobber,
+  witch across the moon, sleigh gift-drop (+ evening sleigh-past-moon),
+  cork pop, flamingo arrival on the waterline, stilt walker, doubloon
+  shower, the two swans forming a heart, berry-in-the-basket, the Easter
+  egg hunt and the hatch, the banana slip, mama duck parade, the kayaker.
+* THE real New Year's countdown: within the final 10 seconds of Dec 31 by
+  the visitor's clock, numerals count down to a triple mega-burst with the
+  year in gold.
+* Evening tint (7pm–6am local): −10% brightness, +30% glow, night
+  variants (fireflies on the canal, pontoon deck lights, sleigh-past-moon).
+* Christmas snow accumulation: a ≤6px snow line builds along the
+  waterline from settled flakes (per-session).
+* Egg finale formations: ~18s into the Matrix rain the glyphs organize
+  into the theme's shape (jack-o'-lantern, turkey, tree, year numerals,
+  fleur-de-lis, heart, shamrock, egg, globe), hold, and dissolve.
+* Heroes upgraded: 3-frame heron wingbeat with an occasional full landing
+  sequence on the waterline (the classic no-theme day's signature);
+  manatee mom-with-calf; upgraded rainbow moment (leprechaun hat, coin
+  arcs, clover strip); the inverted heron on April Fool's only.
+* Auto-degrade ladder (~8ms rolling frame budget): sheds reflections →
+  far parallax → vignettes, silently. New settings: Visual richness
+  (Full/Classic/Minimal) + Advanced visuals toggles (reflections,
+  vignettes, pointer awareness, evening tint, snow).
+* Patriot Day and MLK Day are exempt from all of it beyond sprite polish —
+  quiet and dignified, nothing falls on Patriot Day, egg stays off.
+* engine.min.js: 56.7KB raw / 20.3KB gzipped (budget ≤60KB / ≤20KiB).
 
 = 2.2.0 =
 * Preview tooling baked in (the "DCC Seasons Preview Links" companion

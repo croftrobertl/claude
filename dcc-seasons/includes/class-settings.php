@@ -26,14 +26,20 @@ class Settings {
      */
     public static function defaults(): array {
         return [
-            'enabled'      => 1,
-            'ambient'      => 1,
-            'egg'          => 1,
-            'tap_selector' => '#branding, .header-image .entry-title, .entry-title, #site-title',
-            'tap_count'    => 5,
-            'density'      => 10,
-            'opacity'      => 0.35,
-            'schedule'     => Themes::default_schedule(),
+            'enabled'         => 1,
+            'ambient'         => 1,
+            'egg'             => 1,
+            'tap_selector'    => '#branding, .header-image .entry-title, .entry-title, #site-title',
+            'tap_count'       => 5,
+            'density'         => 10,
+            'opacity'         => 0.35,
+            'richness'        => 'full',
+            'fx_reflections'  => 1,
+            'fx_vignettes'    => 1,
+            'fx_pointer'      => 1,
+            'fx_evening'      => 1,
+            'fx_snow'         => 1,
+            'schedule'        => Themes::default_schedule(),
         ];
     }
 
@@ -115,6 +121,12 @@ class Settings {
 
         $opacity        = (float) ($in['opacity'] ?? $d['opacity']);
         $out['opacity'] = min(1.0, max(0.05, round($opacity, 2)));
+
+        $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
+        $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
+        foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
+            $out[$fx] = empty($in[$fx]) ? 0 : 1;
+        }
 
         $rows       = [];
         $theme_keys = array_keys(Themes::themes());
@@ -240,6 +252,38 @@ class Settings {
                                    data-dcc-output="dcc-seasons-opacity-out" />
                             <output id="dcc-seasons-opacity-out"><?php echo esc_html((string) $opt['opacity']); ?></output>
                             <p class="description"><?php esc_html_e('How visible the ambient particles are (default 0.35 — deliberately faint).', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-richness"><?php esc_html_e('Visual richness', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <select id="dcc-seasons-richness" name="<?php echo esc_attr(self::OPTION); ?>[richness]">
+                                <option value="full" <?php selected($opt['richness'], 'full'); ?>><?php esc_html_e('Full — parallax depth, reflections, scene moments, pointer awareness', 'dcc-seasons'); ?></option>
+                                <option value="classic" <?php selected($opt['richness'], 'classic'); ?>><?php esc_html_e('Classic — v2 behavior (sprites + heroes, no extras)', 'dcc-seasons'); ?></option>
+                                <option value="minimal" <?php selected($opt['richness'], 'minimal'); ?>><?php esc_html_e('Minimal — sprites only, no motion extras', 'dcc-seasons'); ?></option>
+                            </select>
+                            <details style="margin-top:8px;">
+                                <summary><?php esc_html_e('Advanced visuals (apply within Full)', 'dcc-seasons'); ?></summary>
+                                <p style="margin:8px 0 0;">
+                                    <?php
+                                    $fx_labels = [
+                                        'fx_reflections' => __('Waterline reflections (off on mobile automatically)', 'dcc-seasons'),
+                                        'fx_vignettes'   => __('Scene moments (rare choreographed vignettes)', 'dcc-seasons'),
+                                        'fx_pointer'     => __('Pointer awareness (particles ease away from the cursor)', 'dcc-seasons'),
+                                        'fx_evening'     => __('Evening tint (dusk grade + night variants, 7pm–6am local)', 'dcc-seasons'),
+                                        'fx_snow'        => __('Snow accumulation (Christmas only)', 'dcc-seasons'),
+                                    ];
+                                    foreach ($fx_labels as $fx => $label) :
+                                        ?>
+                                        <label style="display:block;margin:2px 0;">
+                                            <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[<?php echo esc_attr($fx); ?>]" value="1" <?php checked(!empty($opt[$fx])); ?> />
+                                            <?php echo esc_html($label); ?>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </p>
+                            </details>
                         </td>
                     </tr>
                 </table>

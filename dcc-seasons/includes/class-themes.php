@@ -7,30 +7,33 @@
  *      engine (assets/js/engine.js). Keys:
  *        mode      'drift' (default) or 'burst' (firework emitters)
  *        water     true → the invisible waterline along the bottom ~8% of
- *                  the viewport is active (settle/float/jump/submerged)
+ *                  the viewport is active (settle/float/jump/submerged,
+ *                  reflections, cruise wakes)
  *        up        true → fall-family behaviors run upward (April Fool's)
  *        hero      extra rare crosser besides the year-round heron
- *                  (engine registry: eagle, witch, sleigh, manatee, bass,
- *                  ducks, rainbow)
- *        accent    static corner accent rendered by the engine
+ *        max       optional per-theme cap below the density option
  *        particles particle specs (see below)
  *      Particle spec keys (short — they ship as JSON):
  *        e  emoji glyph            f  fallback glyph if e can't render
- *        fc fallback tint          s  SVG sprite key (engine registry)
+ *        fc fallback tint          s  SVG sprite key OR array of keys
+ *                                     (engine registry; picked per spawn)
  *        c  canvas primitive key   b  behavior/personality name
  *        w  spawn weight           st 1 → settles on the waterline
  *        sz [min,max] px           cl color list for tinted primitives
- *        glow 1 → soft halo behind the glyph (pumpkins)
- *        face 'L' → the glyph's native art faces LEFT; the engine mirrors
- *        it when travelling rightward so it faces its direction of travel
- *        (never set on flags, symmetric glyphs, or canvas primitives)
+ *        glow 1 → soft halo        face 'L' → native art faces LEFT, the
+ *                                     engine mirrors it travelling right
+ *        fx draw extra: smoke | glint | lights | string | letter | trail |
+ *           orbitarrows | shine | chicks (trailing chicks on a waddler)
  *      Behaviors: fall sway flutter wobble float rise grow fly vee pulse
  *      orbit tumble dangle hang toss hop waddle dart twinkle chatter jump
- *      spin cruise — cruise rides AT the waterline while crossing, with a
- *      wake ripple every 2–4 s (mode 'burst' adds the firework emitter +
- *      auto-year text).
- *  - 'egg': the Matrix-rain recolor/re-glyph config, or false to disable the
- *      easter egg entirely on those dates (Patriot Day, MLK Day).
+ *      spin cruise frogger berrycycle (mode 'burst' adds the firework
+ *      emitter + auto-year text). Vignettes, heroes, corner accents,
+ *      parallax, reflections, evening variants and the degrade ladder live
+ *      in the engine keyed by theme.
+ *  - 'egg': the Matrix-rain recolor/re-glyph config, or false to disable
+ *      the easter egg entirely on those dates (Patriot Day, MLK Day).
+ *      Optional 'finale': a glyph (or 'YEAR') the rain briefly organizes
+ *      into ~18s in, via an alpha-mask of that glyph.
  *
  * Everything here ships to the client as JSON; JS picks the active row from
  * the visitor's local date so cached HTML stays date-agnostic.
@@ -62,6 +65,9 @@ class Themes {
      */
     public static function themes(): array {
         $katakana = self::katakana();
+        // The four real leaf species on the canal (maple, oak, cypress,
+        // sweetgum) — shared by the fall themes.
+        $leaves = ['leafm', 'leafo', 'leafc', 'leafs'];
 
         $themes = [
             'labor_day' => [
@@ -69,15 +75,12 @@ class Themes {
                     'water'     => true,
                     'particles' => [
                         ['e' => '🇺🇸', 'f' => '★', 'fc' => '#B22234', 'b' => 'fall', 'w' => 2],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
                         ['e' => '🍔', 'b' => 'fall'],
-                        ['e' => '🌭', 'b' => 'fall'],
-                        // Planted at the bottom like a beach umbrella —
-                        // umbrellas don't rain.
+                        ['s' => 'grill', 'b' => 'grow', 'fx' => 'smoke', 'sz' => [26, 32]],
+                        ['s' => 'cooler', 'b' => 'tumble', 'sz' => [20, 26]],
                         ['e' => '⛱️', 'f' => '☂', 'fc' => '#E03131', 'b' => 'grow'],
-                        // Last boating weekend of summer: pontoons cruise ON
-                        // the waterline, mirrored to face their travel.
-                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'sz' => [30, 38]],
+                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'sz' => [32, 40]],
                     ],
                 ],
                 'egg' => [
@@ -86,15 +89,15 @@ class Themes {
                 ],
             ],
 
-            // Patriot Day — gentle: NOTHING falls (the wrong image for 9/11).
-            // Twinkling stars, slow gliding flags, static ribbon, eagle hero.
+            // Patriot Day — gentle: NOTHING falls, no vignettes, no
+            // playfulness. Cloth flag glides, stars twinkle, ribbon accent.
             'patriot_day' => [
                 'ambient' => [
                     'hero'      => 'eagle',
                     'accent'    => ['svg' => 'ribbon'],
                     'particles' => [
                         ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 3],
-                        ['e' => '🇺🇸', 'f' => '★', 'fc' => '#3C3B6E', 'b' => 'fly', 'w' => 1, 'slow' => 1],
+                        ['s' => 'flagcloth', 'b' => 'fly', 'w' => 1, 'slow' => 1, 'sz' => [26, 32]],
                     ],
                 ],
                 'egg' => false,
@@ -105,12 +108,12 @@ class Themes {
                     'water'     => true,
                     'hero'      => 'bass',
                     'particles' => [
-                        ['e' => '🍁', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        ['e' => '🍂', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        ['s' => $leaves, 'b' => 'sway', 'st' => 1, 'w' => 4],
                         ['s' => 'bobber', 'b' => 'float', 'w' => 2],
-                        // Fishing line lowers, pauses, reels back up.
                         ['e' => '🪝', 'f' => '🎣', 'b' => 'dangle', 'worm' => 1],
                         ['e' => '🐟', 'b' => 'jump', 'face' => 'L', 'w' => 2],
+                        ['s' => 'tacklebox', 'b' => 'grow', 'sz' => [24, 30]],
+                        ['s' => 'dragonfly', 'b' => 'dart'],
                     ],
                 ],
                 'egg' => [
@@ -123,10 +126,10 @@ class Themes {
                 'ambient' => [
                     'hero'      => 'witch',
                     'particles' => [
-                        ['e' => '🎃', 'b' => 'fall', 'glow' => 1, 'w' => 3],
-                        ['e' => '👻', 'f' => '☠', 'fc' => '#E9ECEF', 'b' => 'wobble', 'w' => 2],
+                        ['s' => ['jack1', 'jack2', 'jack3'], 'b' => 'fall', 'glow' => 1, 'w' => 3],
+                        ['s' => 'ghost', 'b' => 'wobble', 'w' => 2],
                         ['e' => '🦇', 'b' => 'flutter', 'w' => 2],
-                        ['e' => '🕷️', 'f' => '🕸', 'b' => 'dangle'],
+                        ['s' => 'spider', 'b' => 'dangle'],
                         ['s' => 'candycorn', 'b' => 'fall'],
                         ['s' => 'witchhat', 'b' => 'fall'],
                     ],
@@ -134,6 +137,7 @@ class Themes {
                 'egg' => [
                     'colors' => ['#FF7A00', '#9C36B5'],
                     'glyphs' => ['🎃', '🦇', '☠', 'ﾊ', 'ｷ', '0'],
+                    'finale' => '🎃',
                 ],
             ],
 
@@ -141,17 +145,17 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['e' => '🍁', 'b' => 'sway', 'st' => 1, 'w' => 3],
-                        ['e' => '🍂', 'b' => 'sway', 'st' => 1, 'w' => 3],
+                        ['s' => $leaves, 'b' => 'sway', 'st' => 1, 'w' => 5],
                         ['s' => 'acorn', 'b' => 'fall', 'w' => 2],
-                        ['e' => '🥧', 'b' => 'fall'],
-                        // Raining turkeys = no. One walks the bottom instead.
-                        ['e' => '🦃', 'b' => 'waddle', 'face' => 'L'],
+                        ['s' => 'pie', 'b' => 'fall', 'fx' => 'smoke'],
+                        // Turkey 2.0 leads two chicks along the bottom.
+                        ['s' => 'turkey', 'b' => 'waddle', 'face' => 'L', 'fx' => 'chicks', 'sz' => [26, 32]],
                     ],
                 ],
                 'egg' => [
                     'colors' => ['#E8890C', '#A05A2C'],
                     'glyphs' => ['🍂', '🦃', 'ﾅ', 'ｵ', '1'],
+                    'finale' => '🦃',
                 ],
             ],
 
@@ -161,22 +165,20 @@ class Themes {
                     'hero'      => 'sleigh',
                     'particles' => [
                         ['e' => '❄️', 'f' => '❄', 'fc' => '#8FC1E8', 'b' => 'fall', 'st' => 1, 'w' => 4, 'sz' => [10, 26]],
-                        ['s' => 'ornament', 'b' => 'hang', 'w' => 2],
+                        ['s' => 'ornament', 'b' => 'hang', 'fx' => 'glint', 'w' => 2],
                         ['s' => 'holly', 'b' => 'hang'],
-                        ['e' => '🎁', 'b' => 'fall'],
-                        // Trees stand up from the bottom edge — they don't
-                        // rain from the sky.
-                        ['e' => '🎄', 'b' => 'grow'],
+                        ['s' => 'gift', 'b' => 'fall'],
+                        // Pine grows from the bottom, then pops its lights on.
+                        ['s' => 'pine', 'b' => 'grow', 'fx' => 'lights', 'sz' => [28, 38]],
                     ],
                 ],
                 'egg' => [
                     'colors' => ['#2F9E44', '#E03131'],
                     'glyphs' => ['❄', '✦', '*', 'ｼ', 'ﾒ', '0'],
+                    'finale' => '🎄',
                 ],
             ],
 
-            // New Year's — fireworks explode, the auto-computed year appears
-            // at the burst point and fades; confetti tumbles; bubbles rise.
             'new_years' => [
                 'ambient' => [
                     'mode'      => 'burst',
@@ -191,6 +193,7 @@ class Themes {
                 'egg' => [
                     'colors' => ['#FFD43B', '#CED4DA'],
                     'glyphs' => ['2', '0', '2', '7', '✨', '🥂'],
+                    'finale' => 'YEAR',
                 ],
             ],
 
@@ -199,12 +202,11 @@ class Themes {
                     'water'     => true,
                     'hero'      => 'manatee',
                     'particles' => [
-                        // Migration! Small V formations of flamingos.
                         ['e' => '🦩', 'f' => 'v', 'fc' => '#F783AC', 'b' => 'vee', 'face' => 'L', 'w' => 2],
-                        ['e' => '🧳', 'f' => '🧺', 'b' => 'fall'],
-                        ['e' => '😎', 'b' => 'fall'],
+                        ['s' => 'suitcase', 'b' => 'tumble', 'sz' => [22, 28]],
                         ['e' => '🍊', 'b' => 'fall', 'w' => 2],
-                        ['c' => 'plate', 'states' => ['NY', 'OH', 'MI'], 'b' => 'fall'],
+                        // Real plate colors + state silhouettes.
+                        ['s' => ['plateny', 'plateoh', 'platemi'], 'b' => 'fall', 'sz' => [26, 32]],
                     ],
                 ],
                 'egg' => [
@@ -217,7 +219,7 @@ class Themes {
             'mlk' => [
                 'ambient' => [
                     'particles' => [
-                        ['e' => '🕊️', 'f' => '♡', 'fc' => '#B8860B', 'b' => 'fly', 'face' => 'L', 'slow' => 1, 'w' => 2],
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'slow' => 1, 'w' => 2, 'sz' => [26, 32]],
                         ['e' => '🌿', 'b' => 'fall', 'slow' => 1],
                         ['e' => '🤍', 'f' => '♥', 'fc' => '#B8860B', 'b' => 'pulse'],
                     ],
@@ -228,44 +230,47 @@ class Themes {
             'mardi_gras' => [
                 'ambient' => [
                     'particles' => [
-                        // Bead strings arc in from the top corners like
-                        // parade throws.
-                        ['s' => 'beads', 'b' => 'toss', 'w' => 3],
+                        ['s' => 'beads', 'b' => 'toss', 'fx' => 'shine', 'w' => 3],
                         ['s' => 'doubloon', 'b' => 'tumble', 'glint' => 1, 'w' => 2],
                         ['e' => '⚜️', 'f' => '⚜', 'fc' => '#F1C40F', 'b' => 'fall'],
-                        ['e' => '🎭', 'f' => '⚜', 'fc' => '#7C3AED', 'b' => 'fall'],
+                        ['s' => 'mask', 'b' => 'fall', 'sz' => [26, 32]],
                     ],
                 ],
                 'egg' => [
                     'colors' => ['#7C3AED', '#2F9E44', '#F1C40F'],
                     'glyphs' => ['⚜', '🎭', '*', 'ｻ', '0'],
+                    'finale' => '⚜',
                 ],
             ],
 
             'valentines' => [
                 'ambient' => [
+                    'water'     => true,
                     'particles' => [
+                        // Petals, not whole roses — they land and drift.
+                        ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 3],
                         ['e' => '❤️', 'f' => '♥', 'fc' => '#FA5252', 'b' => 'pulse', 'w' => 2],
-                        ['e' => '💗', 'f' => '♥', 'fc' => '#F783AC', 'b' => 'pulse', 'w' => 2],
-                        ['e' => '💘', 'f' => '♥', 'fc' => '#E64980', 'b' => 'pulse'],
-                        ['e' => '💌', 'f' => '♡', 'fc' => '#FA5252', 'b' => 'fall'],
-                        ['e' => '🌹', 'b' => 'fall'],
-                        // Couples' getaway: two hearts circling each other.
+                        ['s' => 'balloon', 'b' => 'rise', 'fx' => 'string', 'sz' => [24, 30]],
+                        // Opens mid-fall and releases three tiny hearts.
+                        ['s' => 'letter', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
                         ['e' => '💕', 'f' => '♥', 'fc' => '#F06595', 'b' => 'orbit'],
                     ],
                 ],
                 'egg' => [
                     'colors' => ['#F06595', '#FA5252'],
                     'glyphs' => ['♥', '♡', 'ﾒ', '1'],
+                    'finale' => '♥',
                 ],
             ],
 
             'presidents' => [
                 'ambient' => [
                     'particles' => [
-                        ['e' => '🎩', 'f' => '♦', 'fc' => '#343A40', 'b' => 'tumble', 'w' => 2],
-                        ['e' => '🪶', 'f' => '~', 'fc' => '#868E96', 'b' => 'sway'],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
+                        ['s' => 'tophat', 'b' => 'tumble', 'w' => 2, 'sz' => [24, 30]],
+                        // Quill leaves a brief ink squiggle as it sways down.
+                        ['s' => 'quill', 'b' => 'sway', 'fx' => 'trail'],
+                        ['s' => 'cherry', 'b' => 'fall'],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
                     ],
                 ],
                 'egg' => [
@@ -278,10 +283,11 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['e' => '🍓', 'b' => 'tumble', 'w' => 3],
-                        ['e' => '🌸', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        ['e' => '🍃', 'b' => 'sway'],
-                        ['e' => '🧺', 'b' => 'fall', 'w' => 1],
+                        ['s' => 'berry', 'b' => 'tumble', 'w' => 3, 'sz' => [20, 26]],
+                        ['s' => 'blossom', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        // Bloom → petals → berry swells → drops off.
+                        ['s' => 'blossom', 'b' => 'berrycycle'],
+                        ['s' => 'ladybug', 'b' => 'waddle', 'face' => 'L', 'sz' => [12, 16]],
                     ],
                 ],
                 'egg' => [
@@ -290,8 +296,6 @@ class Themes {
                 ],
             ],
 
-            // St. Patrick's — rare corner moment: a rainbow arc fades in
-            // with a pot of gold at its end (rainbows don't fall).
             'st_patricks' => [
                 'ambient' => [
                     'hero'      => 'rainbow',
@@ -303,6 +307,7 @@ class Themes {
                 'egg' => [
                     'colors' => ['#00FF41'],
                     'glyphs' => array_merge($katakana, ['☘', '☘', '☘']),
+                    'finale' => '☘',
                 ],
             ],
 
@@ -310,19 +315,18 @@ class Themes {
                 'ambient' => [
                     'particles' => [
                         ['c' => 'egg', 'cl' => ['#F9A8D4', '#A7F3D0', '#BFDBFE', '#FDE68A', '#D8B4FE'], 'b' => 'tumble', 'w' => 4, 'sz' => [20, 30]],
-                        ['e' => '🐰', 'b' => 'hop', 'face' => 'L'],
-                        ['e' => '🐣', 'b' => 'waddle', 'face' => 'L'],
-                        ['e' => '🌷', 'b' => 'grow', 'w' => 2],
+                        ['s' => 'bunny', 'b' => 'hop', 'face' => 'L', 'sz' => [24, 30]],
+                        ['s' => 'chick', 'b' => 'waddle', 'face' => 'L', 'sz' => [16, 20]],
+                        ['c' => 'tulip', 'cl' => ['#E64980', '#FAB005', '#7C3AED'], 'b' => 'grow', 'w' => 2],
                     ],
                 ],
-                // No '🥚' in the rain — it renders as a plain chicken egg.
                 'egg' => [
                     'colors' => ['#F9A8D4', '#A7F3D0', '#BFDBFE', '#FDE68A'],
                     'glyphs' => ['🐣', '🐰', '✿', 'ｵ', '0'],
+                    'finale' => '🥚',
                 ],
             ],
 
-            // April Fool's — everything falls UPWARD, egg glitches.
             'april_fools' => [
                 'ambient' => [
                     'up'        => true,
@@ -331,6 +335,7 @@ class Themes {
                         ['e' => '😂', 'f' => '!', 'b' => 'fall'],
                         ['e' => '🍌', 'b' => 'tumble', 'w' => 2],
                         ['s' => 'jester', 'b' => 'fall'],
+                        ['s' => 'disguise', 'b' => 'fall', 'sz' => [24, 30]],
                         ['s' => 'teeth', 'b' => 'chatter'],
                     ],
                 ],
@@ -345,12 +350,12 @@ class Themes {
             'spring_canal' => [
                 'ambient' => [
                     'water'     => true,
-                    'hero'      => 'ducks',
                     'particles' => [
-                        ['e' => '🪷', 'f' => '🌸', 'b' => 'float', 'w' => 2],
+                        ['s' => 'lilypad', 'b' => 'float', 'w' => 2, 'sz' => [26, 34]],
+                        // The frog hops lily pad to lily pad.
+                        ['s' => 'frog', 'b' => 'frogger', 'sz' => [16, 20]],
+                        ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
                         ['s' => 'dragonfly', 'b' => 'dart'],
-                        ['e' => '🌸', 'b' => 'sway', 'st' => 1, 'w' => 2],
-                        // Canoes belong ON the water, facing their travel.
                         ['e' => '🛶', 'f' => '⛵', 'b' => 'cruise', 'face' => 'L'],
                     ],
                 ],
@@ -364,10 +369,11 @@ class Themes {
                 'ambient' => [
                     'particles' => [
                         ['s' => 'cannabis', 'b' => 'sway', 'w' => 3],
-                        ['e' => '💨', 'f' => '~', 'fc' => '#ADB5BD', 'b' => 'rise', 'w' => 2],
+                        // Curl-noise smoke wisps instead of an emoji puff.
+                        ['c' => 'wisp', 'cl' => ['#ADB5BD', '#CED4DA'], 'b' => 'rise', 'w' => 2],
+                        ['s' => 'peace', 'b' => 'spin', 'sz' => [24, 30]],
+                        ['s' => 'basket', 'b' => 'grow', 'sz' => [24, 30]],
                         ['e' => '✌️', 'f' => 'V', 'fc' => '#2F9E44', 'b' => 'fall'],
-                        ['e' => '🧁', 'b' => 'fall'],
-                        ['e' => '🌮', 'b' => 'fall'],
                     ],
                 ],
                 'egg' => [
@@ -379,8 +385,8 @@ class Themes {
             'earth_day' => [
                 'ambient' => [
                     'particles' => [
-                        ['e' => '🌱', 'b' => 'grow', 'w' => 2],
-                        ['e' => '🌎', 'b' => 'pulse'],
+                        ['s' => 'sprout', 'b' => 'grow', 'w' => 2],
+                        ['s' => 'globe', 'b' => 'pulse', 'fx' => 'orbitarrows', 'sz' => [26, 32]],
                         ['e' => '♻️', 'f' => '♺', 'fc' => '#2F9E44', 'b' => 'spin'],
                         ['e' => '🌳', 'b' => 'grow'],
                     ],
@@ -388,14 +394,21 @@ class Themes {
                 'egg' => [
                     'colors' => ['#2F9E44', '#339AF0'],
                     'glyphs' => ['🌎', '💧', '🍃', 'ﾂ', '0'],
+                    'finale' => '🌎',
                 ],
             ],
 
-            // Fallback for dates outside every range: no themed particles —
-            // but the great blue heron (the DCC logo bird) still glides by
-            // every couple of minutes, year-round. Egg = classic green rain.
+            // Fallback for dates outside every range — the year-round face
+            // of the site: the heron (now with a full landing sequence) and
+            // at most ONE quiet canal touch at a time. Sparse is the point.
             'classic' => [
-                'ambient' => ['particles' => []],
+                'ambient' => [
+                    'water'     => true,
+                    'max'       => 1,
+                    'particles' => [
+                        ['s' => 'dragonfly', 'b' => 'dart'],
+                    ],
+                ],
                 'egg'     => [
                     'colors' => ['#00FF41'],
                     'glyphs' => $katakana,
