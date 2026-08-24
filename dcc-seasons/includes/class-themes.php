@@ -30,8 +30,8 @@
  *      emitter + auto-year text). Vignettes, heroes, corner accents,
  *      parallax, reflections, evening variants and the degrade ladder live
  *      in the engine keyed by theme.
- *  - 'egg': the Matrix-rain recolor/re-glyph config, or false to disable
- *      the easter egg entirely on those dates (Patriot Day, MLK Day).
+ *  - 'egg': the Matrix-rain recolor/re-glyph config. (The false-to-disable
+ *      form still works but no theme uses it — every theme ships full.)
  *      Optional 'finale': a glyph (or 'YEAR') the rain briefly organizes
  *      into ~18s in, via an alpha-mask of that glyph.
  *
@@ -74,12 +74,12 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['e' => '🇺🇸', 'f' => '★', 'fc' => '#B22234', 'b' => 'fall', 'w' => 2],
+                        ['s' => 'flagcloth', 'b' => 'fall', 'w' => 2],
                         ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
-                        ['e' => '🍔', 'b' => 'fall'],
+                        ['s' => 'burger', 'b' => 'fall'],
                         ['s' => 'grill', 'b' => 'grow', 'fx' => 'smoke', 'sz' => [26, 32]],
                         ['s' => 'cooler', 'b' => 'tumble', 'sz' => [20, 26]],
-                        ['e' => '⛱️', 'f' => '☂', 'fc' => '#E03131', 'b' => 'grow'],
+                        ['s' => 'umbrella', 'b' => 'grow'],
                         ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'w' => 2, 'sz' => [32, 40]],
                     ],
                 ],
@@ -89,18 +89,24 @@ class Themes {
                 ],
             ],
 
-            // Patriot Day — gentle: NOTHING falls, no vignettes, no
-            // playfulness. Cloth flag glides, stars twinkle, ribbon accent.
+            // Patriot Day — full celebratory-patriotic theme (the "gentle"
+            // variant was retired in 3.2.0 at the owner's request).
             'patriot_day' => [
                 'ambient' => [
                     'hero'      => 'eagle',
                     'accent'    => ['svg' => 'ribbon'],
                     'particles' => [
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 3],
-                        ['s' => 'flagcloth', 'b' => 'fly', 'w' => 1, 'slow' => 1, 'sz' => [26, 32]],
+                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 2],
+                        ['s' => 'sparkle', 'b' => 'twinkle'],
                     ],
                 ],
-                'egg' => false,
+                'egg' => [
+                    'colors' => ['#FF5252', '#F1F3F5', '#5C7CFA'],
+                    'glyphs' => ['★', '✦', '▮', '1', '0'],
+                    'finale' => '★',
+                ],
             ],
 
             'fall_fishing' => [
@@ -110,8 +116,8 @@ class Themes {
                     'particles' => [
                         ['s' => $leaves, 'b' => 'sway', 'st' => 1, 'w' => 4],
                         ['s' => 'bobber', 'b' => 'float', 'w' => 2],
-                        ['e' => '🪝', 'f' => '🎣', 'b' => 'dangle', 'worm' => 1],
-                        ['e' => '🐟', 'b' => 'jump', 'face' => 'L', 'w' => 2],
+                        ['s' => 'hook', 'b' => 'dangle', 'worm' => 1],
+                        ['s' => 'bass', 'b' => 'jump', 'face' => 'L', 'w' => 2],
                         ['s' => 'tacklebox', 'b' => 'grow', 'sz' => [24, 30]],
                         ['s' => 'dragonfly', 'b' => 'dart'],
                     ],
@@ -128,7 +134,7 @@ class Themes {
                     'particles' => [
                         ['s' => ['jack1', 'jack2', 'jack3'], 'b' => 'fall', 'glow' => 1, 'w' => 3],
                         ['s' => 'ghost', 'b' => 'wobble', 'w' => 2],
-                        ['e' => '🦇', 'b' => 'flutter', 'w' => 2],
+                        ['s' => 'bat', 'b' => 'flutter', 'w' => 2],
                         ['s' => 'spider', 'b' => 'dangle'],
                         ['s' => 'candycorn', 'b' => 'fall'],
                         ['s' => 'witchhat', 'b' => 'fall'],
@@ -164,7 +170,7 @@ class Themes {
                     'water'     => true,
                     'hero'      => 'sleigh',
                     'particles' => [
-                        ['e' => '❄️', 'f' => '❄', 'fc' => '#8FC1E8', 'b' => 'fall', 'st' => 1, 'w' => 4, 'sz' => [10, 26]],
+                        ['s' => 'snowflake', 'b' => 'fall', 'st' => 1, 'w' => 4, 'sz' => [10, 26]],
                         ['s' => 'ornament', 'b' => 'hang', 'fx' => 'glint', 'w' => 2],
                         ['s' => 'holly', 'b' => 'hang'],
                         ['s' => 'gift', 'b' => 'fall'],
@@ -184,9 +190,9 @@ class Themes {
                     'mode'      => 'burst',
                     'particles' => [
                         ['c' => 'confetti', 'cl' => ['#FFD43B', '#E03131', '#339AF0', '#2F9E44', '#CED4DA'], 'b' => 'tumble', 'w' => 3],
-                        ['e' => '🥂', 'f' => '🍾', 'b' => 'rise'],
+                        ['s' => 'flutes', 'b' => 'rise'],
                         ['c' => 'bubble', 'cl' => ['#FFD43B', '#F8F0C8'], 'b' => 'rise', 'w' => 2],
-                        ['e' => '✨', 'f' => '*', 'fc' => '#FFD43B', 'b' => 'twinkle', 'w' => 2],
+                        ['s' => 'sparkle', 'b' => 'twinkle', 'w' => 2],
                     ],
                     'sparkCl'   => ['#FFD43B', '#CED4DA', '#FAB005', '#F1F3F5'],
                 ],
@@ -202,9 +208,9 @@ class Themes {
                     'water'     => true,
                     'hero'      => 'manatee',
                     'particles' => [
-                        ['e' => '🦩', 'f' => 'v', 'fc' => '#F783AC', 'b' => 'vee', 'face' => 'L', 'w' => 2],
+                        ['s' => 'flamingo', 'b' => 'vee', 'face' => 'L', 'w' => 2],
                         ['s' => 'suitcase', 'b' => 'tumble', 'sz' => [22, 28]],
-                        ['e' => '🍊', 'b' => 'fall', 'w' => 2],
+                        ['s' => 'orange', 'b' => 'fall', 'w' => 2],
                         // Real plate colors + state silhouettes.
                         ['s' => ['plateny', 'plateoh', 'platemi'], 'b' => 'fall', 'sz' => [26, 32]],
                     ],
@@ -215,16 +221,23 @@ class Themes {
                 ],
             ],
 
-            // MLK Day — gentle, minimal, dignified. Egg disabled.
+            // MLK Day — celebratory and dignified: doves in flight, a
+            // gold/white palette, hearts. Full richness like every other
+            // theme (the "gentle" variant was retired in 3.2.0).
             'mlk' => [
                 'ambient' => [
                     'particles' => [
-                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'slow' => 1, 'w' => 2, 'sz' => [26, 32]],
-                        ['e' => '🌿', 'b' => 'fall', 'slow' => 1],
-                        ['e' => '🤍', 'f' => '♥', 'fc' => '#B8860B', 'b' => 'pulse'],
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'w' => 3, 'sz' => [26, 34]],
+                        ['s' => 'olive', 'b' => 'sway', 'w' => 2],
+                        ['c' => 'heart', 'cl' => ['#B8860B', '#F1F3F5', '#FFD43B'], 'b' => 'pulse', 'w' => 2],
+                        ['s' => 'sparkle', 'b' => 'twinkle'],
                     ],
                 ],
-                'egg' => false,
+                'egg' => [
+                    'colors' => ['#FFD43B', '#F1F3F5', '#B8860B'],
+                    'glyphs' => ['♥', '✦', '🕊', 'ﾒ', '0'],
+                    'finale' => '♥',
+                ],
             ],
 
             'mardi_gras' => [
@@ -232,7 +245,7 @@ class Themes {
                     'particles' => [
                         ['s' => 'beads', 'b' => 'toss', 'fx' => 'shine', 'w' => 3],
                         ['s' => 'doubloon', 'b' => 'tumble', 'glint' => 1, 'w' => 2],
-                        ['e' => '⚜️', 'f' => '⚜', 'fc' => '#F1C40F', 'b' => 'fall'],
+                        ['s' => 'fleur', 'b' => 'fall'],
                         ['s' => 'mask', 'b' => 'fall', 'sz' => [26, 32]],
                     ],
                 ],
@@ -249,11 +262,11 @@ class Themes {
                     'particles' => [
                         // Petals, not whole roses — they land and drift.
                         ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 3],
-                        ['e' => '❤️', 'f' => '♥', 'fc' => '#FA5252', 'b' => 'pulse', 'w' => 2],
+                        ['c' => 'heart', 'cl' => ['#FA5252', '#E64980', '#F783AC'], 'b' => 'pulse', 'w' => 2],
                         ['s' => 'balloon', 'b' => 'rise', 'fx' => 'string', 'sz' => [24, 30]],
                         // Opens mid-fall and releases three tiny hearts.
-                        ['s' => 'letter', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
-                        ['e' => '💕', 'f' => '♥', 'fc' => '#F06595', 'b' => 'orbit'],
+                        ['s' => 'letter0', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
+                        ['c' => 'heart', 'cl' => ['#F06595', '#FA5252'], 'b' => 'orbit'],
                     ],
                 ],
                 'egg' => [
@@ -300,7 +313,7 @@ class Themes {
                 'ambient' => [
                     'hero'      => 'rainbow',
                     'particles' => [
-                        ['e' => '🍀', 'f' => '♣', 'fc' => '#2F9E44', 'b' => 'tumble', 'w' => 4],
+                        ['s' => 'clover', 'b' => 'tumble', 'w' => 4],
                         ['s' => 'horseshoe', 'b' => 'fall'],
                     ],
                 ],
@@ -331,9 +344,9 @@ class Themes {
                 'ambient' => [
                     'up'        => true,
                     'particles' => [
-                        ['e' => '🙃', 'f' => '¿', 'b' => 'fall', 'w' => 2],
-                        ['e' => '😂', 'f' => '!', 'b' => 'fall'],
-                        ['e' => '🍌', 'b' => 'tumble', 'w' => 2],
+                        ['s' => 'silly', 'b' => 'fall', 'w' => 2],
+                        ['s' => 'silly', 'b' => 'fall'],
+                        ['s' => 'banana', 'b' => 'tumble', 'w' => 2],
                         ['s' => 'jester', 'b' => 'fall'],
                         ['s' => 'disguise', 'b' => 'fall', 'sz' => [24, 30]],
                         ['s' => 'teeth', 'b' => 'chatter'],
@@ -356,7 +369,7 @@ class Themes {
                         ['s' => 'frog', 'b' => 'frogger', 'sz' => [16, 20]],
                         ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
                         ['s' => 'dragonfly', 'b' => 'dart'],
-                        ['e' => '🛶', 'f' => '⛵', 'b' => 'cruise', 'face' => 'L'],
+                        ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],
                     ],
                 ],
                 'egg' => [
@@ -368,12 +381,14 @@ class Themes {
             'four_twenty' => [
                 'ambient' => [
                     'particles' => [
+                        // Real field marks: 7 serrated lance leaflets.
                         ['s' => 'cannabis', 'b' => 'sway', 'w' => 3],
-                        // Curl-noise smoke wisps instead of an emoji puff.
-                        ['c' => 'wisp', 'cl' => ['#ADB5BD', '#CED4DA'], 'b' => 'rise', 'w' => 2],
+                        // A drawn joint with an ember and its own curling
+                        // smoke — replaces the old gray "noodle" wisps.
+                        ['s' => 'joint', 'b' => 'rise', 'fx' => 'smoke', 'w' => 2, 'sz' => [22, 28]],
                         ['s' => 'peace', 'b' => 'spin', 'sz' => [24, 30]],
+                        ['s' => 'peacehand', 'b' => 'fall'],
                         ['s' => 'basket', 'b' => 'grow', 'sz' => [24, 30]],
-                        ['e' => '✌️', 'f' => 'V', 'fc' => '#2F9E44', 'b' => 'fall'],
                     ],
                 ],
                 'egg' => [
@@ -387,8 +402,8 @@ class Themes {
                     'particles' => [
                         ['s' => 'sprout', 'b' => 'grow', 'w' => 2],
                         ['s' => 'globe', 'b' => 'pulse', 'fx' => 'orbitarrows', 'sz' => [26, 32]],
-                        ['e' => '♻️', 'f' => '♺', 'fc' => '#2F9E44', 'b' => 'spin'],
-                        ['e' => '🌳', 'b' => 'grow'],
+                        ['s' => 'recycle', 'b' => 'spin'],
+                        ['s' => 'tree', 'b' => 'grow'],
                     ],
                 ],
                 'egg' => [
@@ -432,14 +447,14 @@ class Themes {
     public static function labels(): array {
         return [
             'labor_day'    => __('Labor Day', 'dcc-seasons'),
-            'patriot_day'  => __('Patriot Day (gentle)', 'dcc-seasons'),
+            'patriot_day'  => __('Patriot Day', 'dcc-seasons'),
             'fall_fishing' => __('Fall Fishing', 'dcc-seasons'),
             'halloween'    => __('Halloween', 'dcc-seasons'),
             'thanksgiving' => __('Thanksgiving', 'dcc-seasons'),
             'christmas'    => __('Christmas', 'dcc-seasons'),
             'new_years'    => __('New Year\'s (fireworks)', 'dcc-seasons'),
             'snowbird'     => __('Snowbird Season', 'dcc-seasons'),
-            'mlk'          => __('MLK Day (gentle)', 'dcc-seasons'),
+            'mlk'          => __('MLK Day', 'dcc-seasons'),
             'mardi_gras'   => __('Mardi Gras', 'dcc-seasons'),
             'valentines'   => __('Valentine\'s', 'dcc-seasons'),
             'presidents'   => __('Presidents Day', 'dcc-seasons'),

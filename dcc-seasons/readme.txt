@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,9 @@ easter egg, built cache-safe and performance-first for doracanalcourt.com.
 == Description ==
 
 Two layers, both vanilla JS + 2D canvas (no libraries, no WebGL, no image
-assets — particles and glyphs are emoji/text rendered to canvas):
+assets — every ambient particle is a bespoke inline-SVG sprite or a canvas
+primitive drawn in code; emoji survive only as tofu fallbacks and as the
+Matrix rain's deliberate glyph aesthetic):
 
 1. **Ambient mode** — a sparse, slow, low-opacity drift of themed particles
    over the page during each scheduled date range. Capped at 16 particles,
@@ -37,11 +39,12 @@ JSON config and the visitor's browser picks the active theme from its LOCAL
 date at runtime. The markup is identical on every request. No AJAX, no
 cookies, no localStorage.
 
-= Quiet days =
+= Every theme runs full =
 
-Patriot Day (09/08–09/11) and MLK Day (01/18) are "subtle only": no particles
-— just a small static corner accent (flag ribbon / gold-purple dove) — and
-the easter egg is disabled entirely.
+As of 3.2.0 there are no "quiet" themes: Patriot Day and MLK Day get the same
+particle counts, vignettes, parallax, pointer play, accents and working easter
+egg as every other theme, in their own palettes. Use the density and opacity
+sliders (or Visual richness) to tone any of it down.
 
 = Accessibility & performance =
 
@@ -106,6 +109,41 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.2.0 =
+* 4/20 art fixed (the owner's direct complaint). The cannabis sprite was a
+  smooth six-petal shape that read as a generic tree leaf; it is redrawn
+  with the real field marks — 7 narrow lance-shaped leaflets radiating
+  from one point, serrated edges, longest in the centre, smallest at the
+  bottom. The grey curl-noise "wisp" particles (which read as noodles) are
+  gone entirely, replaced by a drawn joint: tapered rolled cone, twisted
+  paper tip, warm ember, and its own smoke curling up from the lit end.
+  The peace emoji is now a drawn V-sign hand.
+* No more "gentle" themes. Patriot Day and MLK Day run at full richness
+  like every other theme — real particle counts, parallax, vignettes,
+  pointer play, accents and a working easter egg. Patriot Day: waving flag
+  cloths, red/white/blue stars, the eagle hero, a three-flag formation
+  vignette, and a red/white/blue egg with star glyphs. MLK Day: doves in
+  flight, olive sprigs and gold hearts on a gold/white palette, a
+  dove-formation vignette, and a matching egg. The engine's `solemn`
+  special-case is deleted; no theme ships `egg => false` any more. Preview
+  labels are plain "Patriot Day" and "MLK Day".
+* Full art audit — the ambient layer is now 100% drawn. All 24 remaining
+  raw platform emoji (which rendered differently on every device and
+  clashed with the drawn sprites beside them) are replaced by 18 new
+  house-style sprites — snowflake, sparkle, fleur-de-lis, clover, orange,
+  banana, burger, olive sprig, tree, flamingo, bat, champagne flutes,
+  upside-down face, beach umbrella, recycle, fishing hook, joint, peace
+  hand — plus a recolourable heart primitive and reuse of the existing
+  bass, flagcloth and kayak art. Ambiguous silhouettes were re-cut after
+  judging every sprite at its real 28px particle size: the pie was
+  redrawn as a dish with a domed lattice crust, and the dove, swan and
+  blossom (previously white-on-white and nearly invisible on a light page)
+  gained outlines and shading.
+* engine.min.js 62,712 bytes raw / 22,120 gzipped — within the raised
+  64KB / 22KB ceiling (was 56,764 / 20,353).
+* No settings, schedule, behaviour or performance-guardrail changes; all
+  stored options survive untouched.
 
 = 3.1.0 =
 * New "Layering" setting (Settings → DCC Seasons, next to the layer
