@@ -716,6 +716,13 @@ function configWith(overrides) {
     !!root.querySelector('.dccs-cmp-bar .dccs-cmp-bar-thumb'));
   ok('compare shows a "scroll to see all N" count cue',
     /\ball 8 cottages\b/i.test(root.querySelector('.dccs-cmp-count').textContent));
+  // Owner request (0.21.2): the cue continues the subheader as ONE paragraph.
+  const hint = root.querySelector('.dccs-compare .dccs-hint');
+  ok('the cue lives inside the subheader paragraph (one <p>, not two)',
+    !!hint.querySelector('span.dccs-cmp-count') && !root.querySelector('p.dccs-cmp-count'));
+  ok('the merged paragraph reads prompt then cue',
+    /^Select 2 or more cottages to compare side by side\.\s+Scroll the list to see all 8 cottages\.$/
+      .test(hint.textContent.replace(/\s+/g, ' ').trim()));
 })();
 
 // ---- 26b. The per-widget document listener self-removes once the widget is gone ----

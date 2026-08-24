@@ -489,15 +489,17 @@
       esc(btnLabel) + '</button>' + note + '</div>';
 
     // A plain-language cue that the list holds every cottage and scrolls — reassuring
-    // for guests who might not notice the scrollbar. %d = total cottages.
-    var count = '<p class="dccs-cmp-count">' + esc(fmt(S.compare_scroll_all, config.cottages.length)) + '</p>';
+    // for guests who might not notice the scrollbar. %d = total cottages. Rendered
+    // INSIDE the subheader paragraph (owner request: one paragraph, not two); the
+    // span keeps the .dccs-cmp-count hook and the string stays separately editable.
+    var count = ' <span class="dccs-cmp-count">' + esc(fmt(S.compare_scroll_all, config.cottages.length)) + '</span>';
     // The list scrolls internally; an always-visible custom scrollbar (.dccs-cmp-bar,
     // positioned by wireCmpScrollbar) sits on its right edge so guests can see there's
     // more to scroll — reliable even on iOS, where native scrollbars auto-hide.
     var scroller = '<div class="dccs-cmp-scroller">' +
       '<div class="dccs-cmp-list dccs-cmp-static" role="group" aria-label="' + esc(S.compare_prompt) + '">' + list + '</div>' +
       '<div class="dccs-cmp-bar" aria-hidden="true"><div class="dccs-cmp-bar-thumb"></div></div></div>';
-    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + '</p>' + count +
+    return '<div class="dccs-compare"><p class="dccs-hint">' + esc(S.compare_prompt) + count + '</p>' +
       scroller + btn + '</div>';
   }
 

@@ -299,8 +299,10 @@
 }
 .dccs-root.dccs-root .dccs-cmp-option:last-child { border-bottom: 0; }
 .dccs-root.dccs-root .dccs-cmp-option input { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
-/* Plain-language "the list scrolls" cue above the checklist. */
-.dccs-root.dccs-root .dccs-cmp-count { margin: 0 0 6px; font-size: 0.88rem; color: var(--dccs-muted); text-align: center; }
+/* Plain-language "the list scrolls" cue — an inline span continuing the .dccs-hint
+   subheader paragraph (one paragraph by owner request), so size/alignment/color all
+   inherit from the hint. The class remains as a styling hook. */
+.dccs-root.dccs-root .dccs-cmp-count { font-size: inherit; color: inherit; }
 /* Hint shown under the Compare button while fewer than 2 cottages are ticked. */
 .dccs-root.dccs-root .dccs-compare-note { margin: 8px 0 0; font-size: 0.88rem; color: var(--dccs-muted); }
 

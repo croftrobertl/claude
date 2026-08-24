@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.1
+Stable tag: 0.21.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -221,6 +221,14 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.21.2 =
+* Compare tab: the subheader and the "scroll the list" cue now read as **one
+  paragraph** ("Select 2+ cottages to compare side by side. Scroll the list to see
+  all 8 cottages.") instead of two separate lines. Both texts remain separate,
+  individually editable controls (Compare subheader / Compare "scroll to see all"
+  cue), and the `.dccs-cmp-count` class stays on the cue as a styling hook. No
+  other Compare behavior changes.
 
 = 0.21.1 =
 * Both widgets move to the **`dcc-widgets`** Elementor category — the "Dora Canal
