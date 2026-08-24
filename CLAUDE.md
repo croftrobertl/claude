@@ -17,7 +17,10 @@ Key facts from that document that affect this plugin:
 
 ## Repository purpose
 
-A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+WordPress plugins for doracanalcourt.com. The repo has no build step.
+
+- **MPHB Availability Calendar** (`mphb-availability-calendar/`) — one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations. Documented by the rest of this file.
+- **DCC Wildlife** (`dcc-wildlife/`) — "On the Canal This Month" wildlife spotlight/field guide + moderated guest sightings log. Has its own `dcc-wildlife/CLAUDE.md` — read it before touching that plugin (different invariants: 100% WordPress-native, client-side month selection, nonce-free AJAX).
 
 ## Target environment
 
@@ -123,5 +126,5 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Git workflow
 
-- Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
-- The repo has only the plugin folder at root — no other deliverables.
+- Develop and push on the session's designated `claude/...` branch. Don't open a PR unless the user asks.
+- The repo has only the plugin folders (and these docs) at root — no other deliverables.

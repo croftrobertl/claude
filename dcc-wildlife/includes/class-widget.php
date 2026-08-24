@@ -1,0 +1,100 @@
+<?php
+/**
+ * Elementor widget `dccwl_month` — a thin wrapper over Render::render() so
+ * the widget and the [dcc_wildlife] shortcode produce identical output.
+ * Uses only free-Elementor APIs.
+ */
+
+namespace DCC_WL;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class Widget extends \Elementor\Widget_Base {
+
+	public function get_name(): string {
+		return 'dccwl_month';
+	}
+
+	public function get_title(): string {
+		return __( 'DCC Wildlife — On the Canal', 'dcc-wildlife' );
+	}
+
+	public function get_icon(): string {
+		return 'eicon-globe';
+	}
+
+	public function get_categories(): array {
+		return [ 'claude-code' ];
+	}
+
+	public function get_keywords(): array {
+		return [ 'wildlife', 'canal', 'nature', 'sightings', 'dcc' ];
+	}
+
+	protected function register_controls(): void {
+		$this->start_controls_section(
+			'section_content',
+			[
+				'label' => __( 'Wildlife', 'dcc-wildlife' ),
+				'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
+			]
+		);
+
+		$this->add_control(
+			'widget_title',
+			[
+				'label'       => __( 'Title', 'dcc-wildlife' ),
+				'type'        => \Elementor\Controls_Manager::TEXT,
+				'default'     => '',
+				'placeholder' => __( 'On the canal this month', 'dcc-wildlife' ),
+				'description' => __( 'Leave empty for the default title.', 'dcc-wildlife' ),
+			]
+		);
+
+		$this->add_control(
+			'show_guide',
+			[
+				'label'   => __( 'Show field guide', 'dcc-wildlife' ),
+				'type'    => \Elementor\Controls_Manager::SWITCHER,
+				'default' => 'yes',
+			]
+		);
+
+		$this->add_control(
+			'show_browser',
+			[
+				'label'   => __( 'Show month browser', 'dcc-wildlife' ),
+				'type'    => \Elementor\Controls_Manager::SWITCHER,
+				'default' => 'yes',
+			]
+		);
+
+		$this->add_control(
+			'compact',
+			[
+				'label'       => __( 'Compact mode', 'dcc-wildlife' ),
+				'type'        => \Elementor\Controls_Manager::SWITCHER,
+				'default'     => '',
+				'description' => __( 'Spotlight strip only — hides the field guide, month browser and sightings.', 'dcc-wildlife' ),
+			]
+		);
+
+		$this->end_controls_section();
+	}
+
+	protected function render(): void {
+		$settings = $this->get_settings_for_display();
+
+		// Render::render() escapes all output internally.
+		echo Render::render( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			[
+				'title'        => (string) ( $settings['widget_title'] ?? '' ),
+				'show_guide'   => 'yes' === ( $settings['show_guide'] ?? 'yes' ),
+				'show_browser' => 'yes' === ( $settings['show_browser'] ?? 'yes' ),
+				'compact'      => 'yes' === ( $settings['compact'] ?? '' ),
+			]
+		);
+	}
+}

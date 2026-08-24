@@ -1,0 +1,400 @@
+/**
+ * DCC Wildlife — widget styles.
+ *
+ * Inherits the theme's body font (no webfonts). Site palette: navy
+ * #0a3d62, coral #e8604f, whites/soft neutrals.
+ *
+ * Specificity note: the Bravada theme's Elementor kit resets inputs and
+ * buttons with (0,3,1)-specific selectors. Every rule here that styles a
+ * button/input doubles its classes (e.g. `.dccwl-root.dccwl-root
+ * .dccwl-btn.dccwl-btn` = (0,4,0)) so it wins without !important.
+ */
+
+.dccwl-root {
+	--dccwl-navy: #0a3d62;
+	--dccwl-coral: #e8604f;
+	--dccwl-ink: #1c2b36;
+	--dccwl-muted: #566a77;
+	--dccwl-soft: #f4f7f9;
+	--dccwl-line: #dbe4ea;
+	--dccwl-white: #ffffff;
+
+	color: var(--dccwl-ink);
+	font-size: 1.0625rem; /* readable type for an older clientele */
+	line-height: 1.55;
+}
+
+.dccwl-root .dccwl-title {
+	color: var(--dccwl-navy);
+	font-size: 1.65rem;
+	line-height: 1.25;
+	margin: 0 0 0.75rem;
+}
+
+.dccwl-root .dccwl-section-title {
+	color: var(--dccwl-navy);
+	font-size: 1.3rem;
+	line-height: 1.3;
+	margin: 2rem 0 0.75rem;
+}
+
+.dccwl-root .dccwl-group-title {
+	color: var(--dccwl-muted);
+	font-size: 1rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	margin: 1.5rem 0 0.6rem;
+}
+
+/* ----------------------------------------------------------------------
+ * Month browser
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-months {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0 0 1rem;
+}
+
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 8px;
+	color: var(--dccwl-navy);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.95rem;
+	line-height: 1;
+	min-height: 44px;
+	min-width: 52px;
+	padding: 10px 12px;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:hover,
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible {
+	background: var(--dccwl-soft);
+	color: var(--dccwl-navy);
+}
+
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn[aria-pressed="true"] {
+	background: var(--dccwl-navy);
+	border-color: var(--dccwl-navy);
+	color: var(--dccwl-white);
+}
+
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------------
+ * Cards (spotlight + field guide)
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-cards {
+	display: grid;
+	gap: 14px;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+/* Reserve space so the JS-rendered spotlight causes no layout shift. */
+.dccwl-root .dccwl-spotlight-cards {
+	min-height: 200px;
+}
+
+.dccwl-root .dccwl-card {
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 16px;
+}
+
+.dccwl-root .dccwl-card-head {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.dccwl-root .dccwl-emoji {
+	font-size: 1.7rem;
+	line-height: 1;
+}
+
+.dccwl-root .dccwl-name {
+	color: var(--dccwl-navy);
+	font-size: 1.1rem;
+	font-weight: 700;
+}
+
+.dccwl-root .dccwl-badge {
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	padding: 3px 10px;
+	white-space: nowrap;
+}
+
+.dccwl-root .dccwl-badge-mascot {
+	background: rgba(232, 96, 79, 0.12);
+	border: 1px solid rgba(232, 96, 79, 0.35);
+	color: #b03a2b;
+}
+
+.dccwl-root .dccwl-badge-peak {
+	background: var(--dccwl-coral);
+	color: var(--dccwl-white);
+}
+
+.dccwl-root .dccwl-fact {
+	color: var(--dccwl-ink);
+	font-size: 0.98rem;
+	margin: 0;
+}
+
+.dccwl-root .dccwl-cardmeta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+}
+
+.dccwl-root .dccwl-pill {
+	background: rgba(10, 61, 98, 0.08);
+	border-radius: 999px;
+	color: var(--dccwl-navy);
+	font-size: 0.85rem;
+	font-weight: 600;
+	padding: 4px 12px;
+	white-space: nowrap;
+}
+
+.dccwl-root .dccwl-pill-months {
+	background: rgba(10, 61, 98, 0.04);
+	border: 1px dashed rgba(10, 61, 98, 0.3);
+}
+
+.dccwl-root .dccwl-where {
+	color: var(--dccwl-muted);
+	font-size: 0.92rem;
+	margin: 0;
+}
+
+.dccwl-root .dccwl-empty,
+.dccwl-root .dccwl-noscript {
+	color: var(--dccwl-muted);
+	font-size: 0.98rem;
+	list-style: none;
+	margin: 0;
+	padding: 8px 0;
+}
+
+/* ----------------------------------------------------------------------
+ * Sightings
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-sightings-list {
+	display: grid;
+	gap: 10px;
+	list-style: none;
+	margin: 0 0 1rem;
+	padding: 0;
+}
+
+.dccwl-root .dccwl-sighting {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-left: 4px solid var(--dccwl-coral);
+	border-radius: 10px;
+	margin: 0;
+	padding: 12px 14px;
+}
+
+.dccwl-root .dccwl-sighting-head {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.dccwl-root .dccwl-sighting-head .dccwl-emoji {
+	font-size: 1.25rem;
+}
+
+.dccwl-root .dccwl-sighting-date {
+	color: var(--dccwl-muted);
+	font-size: 0.88rem;
+}
+
+.dccwl-root .dccwl-sighting-note {
+	font-size: 0.95rem;
+	margin: 4px 0 0;
+}
+
+.dccwl-root .dccwl-sighting-name {
+	color: var(--dccwl-muted);
+	font-size: 0.88rem;
+	font-style: italic;
+	margin: 2px 0 0;
+}
+
+.dccwl-root .dccwl-sightings-actions {
+	margin: 0 0 1rem;
+}
+
+/* Buttons — doubled classes to beat Bravada's (0,3,1) resets. */
+.dccwl-root.dccwl-root .dccwl-btn.dccwl-btn {
+	background: var(--dccwl-coral);
+	border: 1px solid var(--dccwl-coral);
+	border-radius: 8px;
+	color: var(--dccwl-white);
+	cursor: pointer;
+	font: inherit;
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1;
+	min-height: 44px;
+	padding: 12px 20px;
+	transition: background-color 0.15s ease;
+}
+
+.dccwl-root.dccwl-root .dccwl-btn.dccwl-btn:hover,
+.dccwl-root.dccwl-root .dccwl-btn.dccwl-btn:focus-visible {
+	background: #cf4c3c;
+	border-color: #cf4c3c;
+	color: var(--dccwl-white);
+}
+
+.dccwl-root.dccwl-root .dccwl-btn.dccwl-btn:focus-visible {
+	outline: 2px solid var(--dccwl-navy);
+	outline-offset: 2px;
+}
+
+.dccwl-root.dccwl-root .dccwl-btn.dccwl-btn:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.dccwl-root.dccwl-root .dccwl-btn-quiet.dccwl-btn-quiet {
+	background: var(--dccwl-white);
+	border-color: var(--dccwl-line);
+	color: var(--dccwl-navy);
+}
+
+.dccwl-root.dccwl-root .dccwl-btn-quiet.dccwl-btn-quiet:hover,
+.dccwl-root.dccwl-root .dccwl-btn-quiet.dccwl-btn-quiet:focus-visible {
+	background: var(--dccwl-soft);
+	border-color: var(--dccwl-line);
+	color: var(--dccwl-navy);
+}
+
+/* Form */
+.dccwl-root .dccwl-form {
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 12px;
+	margin: 0 0 1rem;
+	max-width: 480px;
+	padding: 16px;
+}
+
+.dccwl-root .dccwl-field {
+	margin: 0 0 12px;
+}
+
+.dccwl-root .dccwl-label {
+	color: var(--dccwl-navy);
+	display: block;
+	font-size: 0.95rem;
+	font-weight: 600;
+	margin: 0 0 4px;
+}
+
+.dccwl-root.dccwl-root .dccwl-input.dccwl-input {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 8px;
+	box-sizing: border-box;
+	color: var(--dccwl-ink);
+	display: block;
+	font: inherit;
+	font-size: 1rem;
+	min-height: 44px;
+	padding: 10px 12px;
+	width: 100%;
+}
+
+.dccwl-root.dccwl-root textarea.dccwl-input.dccwl-input {
+	min-height: 88px;
+	resize: vertical;
+}
+
+.dccwl-root.dccwl-root .dccwl-input.dccwl-input:focus,
+.dccwl-root.dccwl-root .dccwl-input.dccwl-input:focus-visible {
+	border-color: var(--dccwl-navy);
+	outline: 2px solid var(--dccwl-navy);
+	outline-offset: 1px;
+}
+
+.dccwl-root .dccwl-form-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 4px 0 0;
+}
+
+.dccwl-root .dccwl-form-msg {
+	color: #a4332a;
+	font-size: 0.95rem;
+	font-weight: 600;
+	margin: 10px 0 0;
+}
+
+.dccwl-root .dccwl-form-msg-ok {
+	color: #1d6b47;
+	margin: 0 0 1rem;
+}
+
+/* Honeypot — off-screen, never display:none (some bots skip hidden fields). */
+.dccwl-root .dccwl-hp {
+	height: 1px;
+	left: -9999px;
+	margin: 0;
+	overflow: hidden;
+	position: absolute;
+	top: auto;
+	width: 1px;
+}
+
+/* ----------------------------------------------------------------------
+ * Motion & small screens
+ * -------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-root *,
+	.dccwl-root *::before,
+	.dccwl-root *::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.dccwl-root .dccwl-cards {
+		grid-template-columns: 1fr;
+	}
+
+	.dccwl-root .dccwl-title {
+		font-size: 1.45rem;
+	}
+}
