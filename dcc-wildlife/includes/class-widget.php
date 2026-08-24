@@ -30,7 +30,7 @@ class Widget extends \Elementor\Widget_Base {
 	}
 
 	public function get_keywords(): array {
-		return [ 'wildlife', 'canal', 'nature', 'sightings', 'dcc' ];
+		return [ 'wildlife', 'canal', 'nature', 'dcc' ];
 	}
 
 	protected function register_controls(): void {
@@ -77,7 +77,7 @@ class Widget extends \Elementor\Widget_Base {
 				'label'       => __( 'Compact mode', 'dcc-wildlife' ),
 				'type'        => \Elementor\Controls_Manager::SWITCHER,
 				'default'     => '',
-				'description' => __( 'Spotlight strip only — hides the field guide, month browser and sightings.', 'dcc-wildlife' ),
+				'description' => __( 'Spotlight band only — hides the field guide and month browser.', 'dcc-wildlife' ),
 			]
 		);
 

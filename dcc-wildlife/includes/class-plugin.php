@@ -25,16 +25,9 @@ final class Plugin {
 		add_action( 'init', [ $this, 'register_shortcode' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
 
-		Settings::register_hooks();
-		Sightings::register_hooks();
-
 		// Elementor (free). The widget file only loads when Elementor is active.
 		add_action( 'elementor/widgets/register', [ $this, 'register_widget' ] );
 		add_action( 'elementor/elements/categories_registered', [ $this, 'register_category' ] );
-	}
-
-	public static function on_activate(): void {
-		add_option( Settings::OPTION, Settings::defaults() );
 	}
 
 	public function load_textdomain(): void {

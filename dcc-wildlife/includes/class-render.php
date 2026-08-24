@@ -8,14 +8,13 @@
  * the client (inline JSON config) and the JS picks the month from the
  * visitor's local date. The month headline, spotlight chip strip, month
  * nav and detail panel are client-rendered; only month-independent markup
- * (field-guide chip grids, shells) is server-rendered. The sightings
- * section renders as a hidden shell only the JS reveals — with JS disabled
- * it degrades to nothing.
+ * (field-guide chip grids, shells) is server-rendered.
  *
  * v1.1.0 UI: compact chip strips + one shared, JS-built detail panel per
  * widget instance (opened below whichever row the tapped chip lives in),
- * guide as three tabbed chip grids, sightings as a slim expandable bar.
- * Default rendered height stays under ~560px desktop / ~720px mobile.
+ * guide as three tabbed chip grids. Default rendered height stays under
+ * ~560px desktop / ~720px mobile. (The guest sightings module was removed
+ * in v1.2.0 — see git history at v1.1.0 to restore it.)
  */
 
 namespace DCC_WL;
@@ -81,7 +80,6 @@ final class Render {
 		$compact      = (bool) $opts['compact'];
 		$show_guide   = ! $compact && (bool) $opts['show_guide'];
 		$show_browser = ! $compact && (bool) $opts['show_browser'];
-		$sightings    = ! $compact && Sightings::is_enabled();
 
 		$title = sanitize_text_field( (string) $opts['title'] );
 
@@ -89,7 +87,6 @@ final class Render {
 
 		$instance = [
 			'browser'     => $show_browser,
-			'sightings'   => $sightings,
 			'customTitle' => '' !== $title,
 		];
 
@@ -135,26 +132,6 @@ final class Render {
 					</div>
 					<?php self::render_guide_grids(); ?>
 					<div class="dccwl-panel-slot dccwl-slot-guide"></div>
-				</section>
-			<?php endif; ?>
-
-			<?php if ( $sightings ) : ?>
-				<section class="dccwl-sightings" hidden>
-					<button type="button" class="dccwl-sightbar" aria-expanded="false">
-						<span class="dccwl-sightbar-text"></span>
-						<span class="dccwl-sightbar-cta"></span>
-					</button>
-					<div class="dccwl-drawer-slot">
-						<div class="dccwl-clip">
-							<div class="dccwl-drawer">
-								<ul class="dccwl-sightings-list"></ul>
-								<p class="dccwl-sightings-actions">
-									<button type="button" class="dccwl-btn dccwl-log-btn"><?php esc_html_e( 'Log a sighting', 'dcc-wildlife' ); ?></button>
-								</p>
-								<div class="dccwl-form-slot"></div>
-							</div>
-						</div>
-					</div>
 				</section>
 			<?php endif; ?>
 
@@ -212,13 +189,9 @@ final class Render {
 		self::$config_added = true;
 
 		$config = [
-			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 			'species'    => Species::dataset(),
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
-			'sightings'  => Sightings::is_enabled(),
-			'maxNote'    => Sightings::MAX_NOTE,
-			'maxName'    => Sightings::MAX_NAME,
 			'i18n'       => [
 				/* translators: %s: month name, e.g. "August". */
 				'headline'    => __( '%s on the canal', 'dcc-wildlife' ),
@@ -238,21 +211,6 @@ final class Render {
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
 				'details'     => __( 'Species details', 'dcc-wildlife' ),
 				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),
-				'latest'      => __( 'Latest sighting:', 'dcc-wildlife' ),
-				'logYours'    => __( 'Log yours', 'dcc-wildlife' ),
-				'spotted'     => __( 'Spotted something?', 'dcc-wildlife' ),
-				'logIt'       => __( 'Log it', 'dcc-wildlife' ),
-				'noSightings' => __( 'No sightings logged yet — be the first!', 'dcc-wildlife' ),
-				'species'     => __( 'What did you see?', 'dcc-wildlife' ),
-				'choose'      => __( 'Choose a species…', 'dcc-wildlife' ),
-				'date'        => __( 'When?', 'dcc-wildlife' ),
-				'note'        => __( 'Note (optional)', 'dcc-wildlife' ),
-				'notePh'      => __( 'e.g. Two otters playing by the dock', 'dcc-wildlife' ),
-				'firstName'   => __( 'First name (optional)', 'dcc-wildlife' ),
-				'submit'      => __( 'Submit sighting', 'dcc-wildlife' ),
-				'sending'     => __( 'Sending…', 'dcc-wildlife' ),
-				'cancel'      => __( 'Cancel', 'dcc-wildlife' ),
-				'genericErr'  => __( 'Sorry — your sighting could not be saved right now.', 'dcc-wildlife' ),
 			],
 		];
 

@@ -1,14 +1,14 @@
 === DCC Wildlife ===
 Contributors: doracanalcourt
-Tags: wildlife, elementor, shortcode, nature, sightings
+Tags: wildlife, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-"On the Canal This Month" — wildlife spotlight, field guide and moderated guest sightings log for Dora Canal Court.
+"On the Canal This Month" — wildlife spotlight and field guide for Dora Canal Court.
 
 == Description ==
 
@@ -18,9 +18,8 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * **Detail panel** — tapping any chip expands one shared panel below it: the species emoji staged in a drawn SVG scene medallion, the fact, best-time pill, where-to-look line and derived peak-months range.
 * **Field guide** — all species in three compact tabs (Critters, Birds, Plants); same tap-for-details chips.
 * **Month browser** — prev/next arrows plus 12 mini buttons to peek at any month, entirely client-side.
-* **Guest sightings log** (optional, on by default) — a slim "Latest sighting" bar expanding to a list and a small form that files sightings as *pending* posts for owner moderation. Protected by a honeypot, a time-trap, a per-IP rate limit and hard length caps. Can be switched off under Settings → DCC Wildlife.
 
-100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no images (emoji only). One small CSS file and one vanilla-JS file, enqueued only on pages that use the widget or shortcode.
+100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no images (emoji + inline SVG only). One small CSS file and one vanilla-JS file, enqueued only on pages that use the widget or shortcode. No AJAX, no forms, no data collection.
 
 == Usage ==
 
@@ -31,10 +30,12 @@ Developers can filter the species registry with `dcc_wl_species` and the monthly
 
 == Changelog ==
 
+= 1.2.0 =
+* Removed the guest sightings module entirely (form, moderation CPT, AJAX endpoints, settings page) — too little use to keep. The widget is now fully read-only with zero AJAX. Already-saved sighting posts remain in the database, just without an admin UI; restore the module from git history (v1.1.0) if it is ever wanted again.
+
 = 1.1.0 =
-* UI overhaul: compact chip-based spotlight band with a month headline, one shared expanding detail panel with drawn SVG scene medallions, tabbed field guide, arrow + mini-button month nav, and a slim expandable sightings bar. Default render is a fraction of the old height; everything else is behind a tap.
+* UI overhaul: compact chip-based spotlight band with a month headline, one shared expanding detail panel with drawn SVG scene medallions, tabbed field guide, arrow + mini-button month nav. Default render is a fraction of the old height; everything else is behind a tap.
 * Elementor category corrected to the shared "Dora Canal Court" (`dcc-widgets`) category.
-* Data layer, cache-safe month logic, settings and sightings backend unchanged.
 
 = 1.0.0 =
 * Initial release.

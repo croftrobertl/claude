@@ -20,7 +20,7 @@ Key facts from that document that affect this plugin:
 WordPress plugins for doracanalcourt.com. The repo has no build step.
 
 - **MPHB Availability Calendar** (`mphb-availability-calendar/`) — one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations. Documented by the rest of this file.
-- **DCC Wildlife** (`dcc-wildlife/`) — "On the Canal This Month" wildlife spotlight/field guide + moderated guest sightings log. Has its own `dcc-wildlife/CLAUDE.md` — read it before touching that plugin (different invariants: 100% WordPress-native, client-side month selection, nonce-free AJAX).
+- **DCC Wildlife** (`dcc-wildlife/`) — "On the Canal This Month" wildlife spotlight/field guide. Has its own `dcc-wildlife/CLAUDE.md` — read it before touching that plugin (different invariants: 100% WordPress-native, client-side month selection, zero AJAX; the guest sightings log was removed in v1.2.0 — restore from git history at v1.1.0 if ever wanted).
 
 ## Target environment
 
