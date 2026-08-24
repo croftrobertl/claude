@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.0.0
+Stable tag: 3.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,20 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.1.0 =
+* New "Layering" setting (Settings → DCC Seasons, next to the layer
+  toggles). "Behind interactive widgets" (the default, including for
+  upgrades with no stored value) puts the ambient canvas at z-index 5 and
+  raises the DCC cottage-selector and availability-calendar Elementor
+  wrappers above it on a white backing — replacing the site-side
+  mu-plugin rule (dcc-ui-tweaks item 3) byte-for-byte so it can be
+  retired. "In front of everything" restores the pre-3.1 canvas
+  z-index 99990 and outputs no widget CSS at all. The choice rides the
+  existing config pipeline (a one-key `layer` flag the engine reads when
+  creating its canvas); the Matrix easter-egg overlay is untouched in
+  both modes and still covers everything. No other setting, theme, or
+  behavior changed; existing stored options survive unchanged.
 
 = 3.0.0 =
 * The "wow" visual overhaul, designed around the Dora Canal identity.

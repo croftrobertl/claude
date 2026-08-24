@@ -28,6 +28,7 @@ final class Plugin {
     public function boot(): void {
         add_action('init', [$this, 'load_textdomain']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
+        add_action('wp_head', [$this, 'print_layering_css']);
         Preview::init();
 
         if (is_admin()) {
@@ -90,6 +91,32 @@ final class Plugin {
             'window.DCC_SEASONS = ' . wp_json_encode($this->config($opt)) . ';',
             'before'
         );
+    }
+
+    /**
+     * "Behind interactive widgets" layering (the default): the ambient
+     * canvas sits at z-index 5 (picked engine-side from the config's
+     * `layer` key) and the DCC cottage-selector / availability-calendar
+     * Elementor wrappers are raised above it on a white backing. This
+     * replaces the site-side mu-plugin rule (dcc-ui-tweaks item 3),
+     * byte-for-byte for the widget-raising block. Front-end only; not
+     * output at all in "In front of everything" mode. The Matrix egg
+     * overlay is never routed through this setting.
+     */
+    public function print_layering_css(): void {
+        $opt = Settings::options();
+        if ($opt['layering'] !== 'behind') {
+            return;
+        }
+        echo "<style id=\"dcc-seasons-layering\">\n"
+            . ".elementor-widget-dccs_selector,\n"
+            . ".elementor-widget-dccac_single,\n"
+            . ".elementor-widget-mphbac_calendar {\n"
+            . "\tposition: relative;\n"
+            . "\tz-index: 10;\n"
+            . "\tbackground: #fff;\n"
+            . "}\n"
+            . "</style>\n";
     }
 
     /**
@@ -171,6 +198,7 @@ final class Plugin {
             'tapWindow'   => 3000,
             'density'     => (int) $opt['density'],
             'opacity'     => (float) $opt['opacity'],
+            'layer'       => $opt['layering'] === 'behind' ? 1 : 0,
             'visual'      => [
                 'richness'    => (string) $opt['richness'],
                 'reflections' => !empty($opt['fx_reflections']),

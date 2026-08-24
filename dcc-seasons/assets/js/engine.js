@@ -333,7 +333,9 @@
 		var cv = D.createElement('canvas');
 		cv.setAttribute('aria-hidden', 'true');
 		cv.className = 'dcc-seasons-canvas';
-		cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99990;';
+		/* Layering setting: behind interactive widgets (5) or in front of
+		 * everything (99990). The egg overlay is never routed through this. */
+		cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + (CFG.layer ? 5 : 99990) + ';';
 		D.body.appendChild(cv);
 		var cx = cv.getContext('2d');
 

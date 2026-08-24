@@ -29,6 +29,7 @@ class Settings {
             'enabled'         => 1,
             'ambient'         => 1,
             'egg'             => 1,
+            'layering'        => 'behind',
             'tap_selector'    => '#branding, .header-image .entry-title, .entry-title, #site-title',
             'tap_count'       => 5,
             'density'         => 10,
@@ -122,6 +123,9 @@ class Settings {
         $opacity        = (float) ($in['opacity'] ?? $d['opacity']);
         $out['opacity'] = min(1.0, max(0.05, round($opacity, 2)));
 
+        $layering        = sanitize_key((string) ($in['layering'] ?? $d['layering']));
+        $out['layering'] = in_array($layering, ['behind', 'front'], true) ? $layering : 'behind';
+
         $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
         $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
         foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
@@ -204,6 +208,18 @@ class Settings {
                                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[egg]" value="1" <?php checked(!empty($opt['egg'])); ?> />
                                 <?php esc_html_e('Matrix easter egg (tap the logo)', 'dcc-seasons'); ?>
                             </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-layering"><?php esc_html_e('Layering', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <select id="dcc-seasons-layering" name="<?php echo esc_attr(self::OPTION); ?>[layering]">
+                                <option value="behind" <?php selected($opt['layering'], 'behind'); ?>><?php esc_html_e('Behind interactive widgets (recommended)', 'dcc-seasons'); ?></option>
+                                <option value="front" <?php selected($opt['layering'], 'front'); ?>><?php esc_html_e('In front of everything', 'dcc-seasons'); ?></option>
+                            </select>
+                            <p class="description"><?php esc_html_e('"Behind" keeps the ambient particles under the cottage selector and availability calendars (the widgets are raised above the canvas). The Matrix easter egg always covers everything regardless.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>
