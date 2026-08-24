@@ -444,13 +444,17 @@ Plugins in snapshot zip with version-risk notes:
 - **MotoPress availability:** read from `portal_mphb_reserved_room` posts + `portal_mphb_blocks`,
   **not** from the PHP API. See CLAUDE.md invariants.
 - **Checkout page:** MotoPress checkout is at page ID 1399 (slug: `/submit-booking/`).
-- **Elementor widget category slug for ALL DCC-built plugins:** `claude-code`, displayed
-  as "Dora Canal Court". Availability Calendar, Cottage Selector, Guest Guide, and
-  Features & Amenities all register this same slug. Don't change it in any of them:
-  Elementor groups the widget panel by *slug*, so a plugin on a different slug gets its
-  own duplicate section even when the displayed title matches exactly. That is precisely
-  what Cottage Selector 0.17.1 did (slug → `dora-canal-court`) and 0.19.4 undid. Rename
-  the `title` freely; never the slug.
+- **Elementor widget category slug for ALL DCC-built plugins:** `dcc-widgets`, displayed
+  as "Dora Canal Court". Verified on the LIVE install: Guest Guide, Contact Form, and the
+  Availability Calendar all register `dcc-widgets`; Cottage Selector joined them in
+  0.21.1. Elementor groups the widget panel by *slug*, so a plugin on a different slug
+  gets its own duplicate section even when the displayed title matches exactly — the
+  0.17.1 lesson is "same slug as the rest of the family", not any particular slug.
+  (History of wrong turns: 0.17.1 used `dora-canal-court`, 0.19.4 used `claude-code`
+  after inferring the family slug from THIS REPO's calendar code — which is stale
+  relative to the live siblings. Trust the live install, not this repo's
+  `mphb-availability-calendar/`, for the family slug.) Rename the `title` freely;
+  never the slug.
 - **No child theme** — all Bravada customizations via Elementor kit + Angie snippets.
 - **SpeedyCache has 526 options** — it's heavily configured. Don't reset settings without
   capturing the current config first.

@@ -47,8 +47,9 @@ class Selector_Widget extends Widget_Base
 
     public function get_categories(): array
     {
-        // Shared with the other DCC plugins — see Plugin::register_category().
-        return ['claude-code'];
+        // The live family slug shared by every DCC plugin — see
+        // Plugin::register_category(). Mini_Entry_Widget inherits this.
+        return ['dcc-widgets'];
     }
 
     public function get_keywords(): array

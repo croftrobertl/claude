@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.0
+Stable tag: 0.21.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -221,6 +221,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.21.1 =
+* Both widgets move to the **`dcc-widgets`** Elementor category — the "Dora Canal
+  Court" section every other live DCC plugin (Guest Guide, Contact Form,
+  Availability Calendar) registers — and this plugin no longer contributes a
+  "Claude Code" section. 0.19.4 had moved the slug to `claude-code` based on this
+  repo's calendar code, which turned out to be stale relative to the live install;
+  the live family slug, now verified in the running site, is `dcc-widgets`.
+* Categories only group the editor's widget panel — Elementor stores the widget
+  type on the page, not the category — so every placed instance renders and edits
+  exactly as before. No other behavior, markup, styles, controls, or strings
+  changed.
 
 = 0.21.0 =
 * The Compare tab's bottom "pick 2" tip is now **hidden by default** — it duplicated

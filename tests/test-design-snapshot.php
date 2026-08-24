@@ -160,10 +160,11 @@ namespace {
     $miniRef  = new \ReflectionClass(\DCCS\Mini_Entry_Widget::class);
     $miniCats = $miniRef->newInstanceWithoutConstructor()->get_categories();
     ok('Mini Entry shares the Selector\'s Elementor category', $miniCats === $selCats);
-    // Elementor groups the panel by SLUG, not by title. 'claude-code' is the slug the
-    // sibling DCC plugins register, so sharing it is what puts all the widgets in ONE
-    // "Dora Canal Court" section; a prettier slug silently splits the panel in two.
-    ok('category slug is the one shared with the sibling DCC plugins', $selCats === ['claude-code']);
+    // Elementor groups the panel by SLUG, not by title. 'dcc-widgets' is the slug the
+    // sibling DCC plugins register on the LIVE install (verified: Guest Guide, Contact
+    // Form, Availability Calendar), so sharing it is what puts all the widgets in ONE
+    // "Dora Canal Court" section; any other slug silently splits the panel in two.
+    ok('category slug is the one shared with the sibling DCC plugins', $selCats === ['dcc-widgets']);
     ok('Mini Entry inherits the category (no duplicated slug to drift)',
         $miniRef->getMethod('get_categories')->getDeclaringClass()->getName() === Selector_Widget::class);
 

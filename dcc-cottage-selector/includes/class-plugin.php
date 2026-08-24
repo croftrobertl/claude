@@ -82,14 +82,18 @@ final class Plugin
     public function register_category(\Elementor\Elements_Manager $elements_manager): void
     {
         $elements_manager->add_category(
-            // Slug MUST stay 'claude-code' — it is the shared category the other
-            // DCC-built plugins (Availability Calendar, Guest Guide, Features &
-            // Amenities) register too. Elementor groups the widget panel by SLUG,
-            // so a different slug creates a SECOND panel section even when the
-            // title matches character for character. 0.17.1 renamed the slug and
-            // caused exactly that duplicate; only the displayed title should differ
-            // from the working name.
-            'claude-code',
+            // 'dcc-widgets' is the family slug — verified on the LIVE install: Guest
+            // Guide, Contact Form, and the Availability Calendar all register this
+            // slug titled "Dora Canal Court". Elementor groups the widget panel by
+            // SLUG, not by title, so any other slug here contributes a SECOND panel
+            // section even when the displayed title matches character for character.
+            // That is the real lesson of the 0.17.1 duplicate-panel incident: every
+            // DCC plugin must register the SAME slug — and the same slug the rest of
+            // the family uses is 'dcc-widgets'. (A previous comment here pinned
+            // 'claude-code' as the shared slug; that was inferred from this repo's
+            // calendar code, which is stale relative to the live siblings.)
+            // add_category() is idempotent, so activation order doesn't matter.
+            'dcc-widgets',
             [
                 'title' => __('Dora Canal Court', 'dcc-cottage-selector'),
                 'icon'  => 'fa fa-plug',
