@@ -6,10 +6,16 @@
  * Cache-safety: this site is aggressively page-cached, so PHP must never
  * bake "the current month" into HTML. The full 12-month dataset ships to
  * the client (inline JSON config) and the JS picks the month from the
- * visitor's local date. The spotlight strip and month browser are
- * client-rendered; the field guide is month-independent and is rendered
- * server-side. The sightings section renders as a hidden shell that only
- * the JS reveals — with JS disabled it degrades to nothing.
+ * visitor's local date. The month headline, spotlight chip strip, month
+ * nav and detail panel are client-rendered; only month-independent markup
+ * (field-guide chip grids, shells) is server-rendered. The sightings
+ * section renders as a hidden shell only the JS reveals — with JS disabled
+ * it degrades to nothing.
+ *
+ * v1.1.0 UI: compact chip strips + one shared, JS-built detail panel per
+ * widget instance (opened below whichever row the tapped chip lives in),
+ * guide as three tabbed chip grids, sightings as a slim expandable bar.
+ * Default rendered height stays under ~560px desktop / ~720px mobile.
  */
 
 namespace DCC_WL;
@@ -55,10 +61,10 @@ final class Render {
 	 * Render the widget markup.
 	 *
 	 * @param array $opts {
-	 *     @type string $title        Heading override ('' = default).
-	 *     @type bool   $show_guide   Render the field guide.
-	 *     @type bool   $show_browser Render the month browser.
-	 *     @type bool   $compact      Spotlight only (overrides the others).
+	 *     @type string $title        Heading override ('' = JS month headline).
+	 *     @type bool   $show_guide   Render the field guide tabs.
+	 *     @type bool   $show_browser Render the month nav.
+	 *     @type bool   $compact      Spotlight band only (overrides the others).
 	 * }
 	 */
 	public static function render( array $opts ): string {
@@ -78,47 +84,77 @@ final class Render {
 		$sightings    = ! $compact && Sightings::is_enabled();
 
 		$title = sanitize_text_field( (string) $opts['title'] );
-		if ( '' === $title ) {
-			$title = __( 'On the canal this month', 'dcc-wildlife' );
-		}
 
 		self::enqueue_assets();
 
 		$instance = [
-			'browser'   => $show_browser,
-			'sightings' => $sightings,
+			'browser'     => $show_browser,
+			'sightings'   => $sightings,
+			'customTitle' => '' !== $title,
 		];
 
 		ob_start();
 		?>
 		<div class="dccwl-root" data-dccwl="<?php echo esc_attr( (string) wp_json_encode( $instance ) ); ?>">
 
-			<section class="dccwl-spotlight">
-				<h2 class="dccwl-title"><?php echo esc_html( $title ); ?></h2>
-				<?php if ( $show_browser ) : ?>
-					<div class="dccwl-months" role="group" aria-label="<?php esc_attr_e( 'Browse wildlife by month', 'dcc-wildlife' ); ?>" hidden></div>
-				<?php endif; ?>
-				<ul class="dccwl-cards dccwl-spotlight-cards" aria-live="polite"></ul>
-				<noscript>
-					<p class="dccwl-noscript"><?php esc_html_e( 'Please enable JavaScript to see this month’s wildlife highlights.', 'dcc-wildlife' ); ?></p>
-				</noscript>
-			</section>
+			<header class="dccwl-hero">
+				<h2 class="dccwl-title"><?php echo esc_html( '' !== $title ? $title : __( 'On the canal', 'dcc-wildlife' ) ); ?></h2>
+				<p class="dccwl-sub" aria-live="polite"></p>
+			</header>
+
+			<?php if ( $show_browser ) : ?>
+				<div class="dccwl-monthnav" hidden>
+					<button type="button" class="dccwl-nav-arrow dccwl-nav-prev" aria-label="<?php esc_attr_e( 'Previous month', 'dcc-wildlife' ); ?>">
+						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+					<div class="dccwl-months" role="group" aria-label="<?php esc_attr_e( 'Browse wildlife by month', 'dcc-wildlife' ); ?>"></div>
+					<button type="button" class="dccwl-nav-arrow dccwl-nav-next" aria-label="<?php esc_attr_e( 'Next month', 'dcc-wildlife' ); ?>">
+						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+				</div>
+			<?php endif; ?>
+
+			<div class="dccwl-strip-wrap">
+				<ul class="dccwl-chips dccwl-strip dccwl-spotlight-chips"></ul>
+			</div>
+			<div class="dccwl-panel-slot dccwl-slot-spotlight"></div>
+			<noscript>
+				<p class="dccwl-noscript"><?php esc_html_e( 'Please enable JavaScript to see this month’s wildlife highlights.', 'dcc-wildlife' ); ?></p>
+			</noscript>
 
 			<?php if ( $show_guide ) : ?>
-				<section class="dccwl-guide">
-					<h3 class="dccwl-section-title"><?php esc_html_e( 'Canal field guide', 'dcc-wildlife' ); ?></h3>
-					<?php self::render_guide(); ?>
+				<section class="dccwl-guide" aria-label="<?php esc_attr_e( 'Canal field guide', 'dcc-wildlife' ); ?>">
+					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide groups', 'dcc-wildlife' ); ?>">
+						<?php $first = true; ?>
+						<?php foreach ( Species::groups() as $slug => $label ) : ?>
+							<button type="button" class="dccwl-tab" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" aria-pressed="<?php echo $first ? 'true' : 'false'; ?>">
+								<?php echo esc_html( $label ); ?>
+							</button>
+							<?php $first = false; ?>
+						<?php endforeach; ?>
+					</div>
+					<?php self::render_guide_grids(); ?>
+					<div class="dccwl-panel-slot dccwl-slot-guide"></div>
 				</section>
 			<?php endif; ?>
 
 			<?php if ( $sightings ) : ?>
 				<section class="dccwl-sightings" hidden>
-					<h3 class="dccwl-section-title"><?php esc_html_e( 'Recent sightings', 'dcc-wildlife' ); ?></h3>
-					<ul class="dccwl-sightings-list"></ul>
-					<p class="dccwl-sightings-actions">
-						<button type="button" class="dccwl-btn dccwl-log-btn"><?php esc_html_e( 'Log a sighting', 'dcc-wildlife' ); ?></button>
-					</p>
-					<div class="dccwl-form-slot"></div>
+					<button type="button" class="dccwl-sightbar" aria-expanded="false">
+						<span class="dccwl-sightbar-text"></span>
+						<span class="dccwl-sightbar-cta"></span>
+					</button>
+					<div class="dccwl-drawer-slot">
+						<div class="dccwl-clip">
+							<div class="dccwl-drawer">
+								<ul class="dccwl-sightings-list"></ul>
+								<p class="dccwl-sightings-actions">
+									<button type="button" class="dccwl-btn dccwl-log-btn"><?php esc_html_e( 'Log a sighting', 'dcc-wildlife' ); ?></button>
+								</p>
+								<div class="dccwl-form-slot"></div>
+							</div>
+						</div>
+					</div>
 				</section>
 			<?php endif; ?>
 
@@ -128,11 +164,14 @@ final class Render {
 	}
 
 	/**
-	 * Server-rendered field guide: every species in three groups. This is
-	 * month-independent, so it is safe inside cached HTML.
+	 * Server-rendered field-guide chip grids (month-independent, so safe in
+	 * cached HTML). One grid per group; only the first is visible until the
+	 * JS wires the tabs. Chips are inert buttons until JS attaches the
+	 * shared detail panel.
 	 */
-	private static function render_guide(): void {
+	private static function render_guide_grids(): void {
 		$dataset = Species::dataset();
+		$first   = true;
 
 		foreach ( Species::groups() as $slug => $label ) {
 			$group_species = array_values( array_filter( $dataset, static fn( array $sp ): bool => $sp['group'] === $slug ) );
@@ -140,35 +179,21 @@ final class Render {
 				continue;
 			}
 			?>
-			<h4 class="dccwl-group-title"><?php echo esc_html( $label ); ?></h4>
-			<ul class="dccwl-cards">
+			<ul class="dccwl-chips dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php foreach ( $group_species as $sp ) : ?>
-					<li class="dccwl-card">
-						<div class="dccwl-card-head">
-							<span class="dccwl-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
-							<span class="dccwl-name"><?php echo esc_html( $sp['name'] ); ?></span>
+					<li>
+						<button type="button" class="dccwl-chip<?php echo $sp['mascot'] ? ' dccwl-chip-mascot' : ''; ?>" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-expanded="false">
+							<span class="dccwl-chip-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
+							<span class="dccwl-chip-name"><?php echo esc_html( $sp['name'] ); ?></span>
 							<?php if ( $sp['mascot'] ) : ?>
-								<span class="dccwl-badge dccwl-badge-mascot"><?php esc_html_e( 'Our mascot', 'dcc-wildlife' ); ?></span>
+								<span class="dccwl-sr"><?php esc_html_e( '— our mascot', 'dcc-wildlife' ); ?></span>
 							<?php endif; ?>
-						</div>
-						<p class="dccwl-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
-						<p class="dccwl-cardmeta">
-							<span class="dccwl-pill dccwl-pill-best"><?php echo esc_html( $sp['best'] ); ?></span>
-							<?php $months_label = Species::best_months_label( $sp['months'] ); ?>
-							<?php if ( '' !== $months_label ) : ?>
-								<span class="dccwl-pill dccwl-pill-months">
-									<?php
-									/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
-									echo esc_html( sprintf( __( 'Best: %s', 'dcc-wildlife' ), $months_label ) );
-									?>
-								</span>
-							<?php endif; ?>
-						</p>
-						<p class="dccwl-where"><?php echo esc_html( sprintf( /* translators: %s: where-to-look description. */ __( 'Where to look: %s', 'dcc-wildlife' ), $sp['where'] ) ); ?></p>
+						</button>
 					</li>
 				<?php endforeach; ?>
 			</ul>
 			<?php
+			$first = false;
 		}
 	}
 
@@ -195,12 +220,29 @@ final class Render {
 			'maxNote'    => Sightings::MAX_NOTE,
 			'maxName'    => Sightings::MAX_NAME,
 			'i18n'       => [
+				/* translators: %s: month name, e.g. "August". */
+				'headline'    => __( '%s on the canal', 'dcc-wildlife' ),
+				/* translators: %d: number of species (2 or more). */
+				'subPeak'     => __( '%d species at their peak', 'dcc-wildlife' ),
+				'subPeakOne'  => __( '1 species at its peak', 'dcc-wildlife' ),
+				/* translators: %d: number of species worth looking for. */
+				'subSpot'     => __( '%d species to spot', 'dcc-wildlife' ),
+				/* translators: 1: month name, 2: species-count phrase. */
+				'monthSub'    => _x( '%1$s: %2$s', 'month subline', 'dcc-wildlife' ),
 				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
+				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
 				'mascot'      => __( 'Our mascot', 'dcc-wildlife' ),
 				'where'       => __( 'Where to look:', 'dcc-wildlife' ),
-				'noSpotlight' => __( 'A quiet month on the canal — see the field guide below.', 'dcc-wildlife' ),
+				/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
+				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),
+				'close'       => __( 'Close details', 'dcc-wildlife' ),
+				'details'     => __( 'Species details', 'dcc-wildlife' ),
+				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),
+				'latest'      => __( 'Latest sighting:', 'dcc-wildlife' ),
+				'logYours'    => __( 'Log yours', 'dcc-wildlife' ),
+				'spotted'     => __( 'Spotted something?', 'dcc-wildlife' ),
+				'logIt'       => __( 'Log it', 'dcc-wildlife' ),
 				'noSightings' => __( 'No sightings logged yet — be the first!', 'dcc-wildlife' ),
-				'logSighting' => __( 'Log a sighting', 'dcc-wildlife' ),
 				'species'     => __( 'What did you see?', 'dcc-wildlife' ),
 				'choose'      => __( 'Choose a species…', 'dcc-wildlife' ),
 				'date'        => __( 'When?', 'dcc-wildlife' ),

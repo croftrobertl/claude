@@ -249,15 +249,16 @@ final class Species {
 			);
 
 			$dataset[] = [
-				'id'     => (string) $id,
-				'emoji'  => (string) ( $sp['emoji'] ?? '' ),
-				'name'   => (string) ( $sp['name'] ?? $id ),
-				'group'  => (string) ( $sp['group'] ?? 'critters' ),
-				'fact'   => (string) ( $sp['fact'] ?? '' ),
-				'best'   => (string) ( $sp['best'] ?? '' ),
-				'where'  => (string) ( $sp['where'] ?? '' ),
-				'mascot' => ! empty( $sp['mascot'] ),
-				'months' => $months,
+				'id'        => (string) $id,
+				'emoji'     => (string) ( $sp['emoji'] ?? '' ),
+				'name'      => (string) ( $sp['name'] ?? $id ),
+				'group'     => (string) ( $sp['group'] ?? 'critters' ),
+				'fact'      => (string) ( $sp['fact'] ?? '' ),
+				'best'      => (string) ( $sp['best'] ?? '' ),
+				'where'     => (string) ( $sp['where'] ?? '' ),
+				'mascot'    => ! empty( $sp['mascot'] ),
+				'months'    => $months,
+				'bestLabel' => self::best_months_label( $months ),
 			];
 		}
 

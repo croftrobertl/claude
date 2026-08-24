@@ -66,19 +66,19 @@ final class Plugin {
 	}
 
 	/**
-	 * Site convention: all DCC-built widgets live in the "Claude Code"
-	 * Elementor category. Register the category defensively in case this
-	 * plugin is the only one active.
+	 * Site convention: all DCC-built widgets share the "Dora Canal Court"
+	 * Elementor category (slug `dcc-widgets`). Registered idempotently so
+	 * it is safe regardless of which DCC plugin activates first.
 	 *
 	 * @param \Elementor\Elements_Manager $elements_manager Elementor elements manager.
 	 */
 	public function register_category( $elements_manager ): void {
 		$categories = $elements_manager->get_categories();
-		if ( ! isset( $categories['claude-code'] ) ) {
+		if ( ! isset( $categories['dcc-widgets'] ) ) {
 			$elements_manager->add_category(
-				'claude-code',
+				'dcc-widgets',
 				[
-					'title' => __( 'Claude Code', 'dcc-wildlife' ),
+					'title' => __( 'Dora Canal Court', 'dcc-wildlife' ),
 					'icon'  => 'fa fa-plug',
 				]
 			);

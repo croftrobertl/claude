@@ -26,7 +26,7 @@ class Widget extends \Elementor\Widget_Base {
 	}
 
 	public function get_categories(): array {
-		return [ 'claude-code' ];
+		return [ 'dcc-widgets' ];
 	}
 
 	public function get_keywords(): array {

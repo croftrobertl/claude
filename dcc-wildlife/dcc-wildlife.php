@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Wildlife
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       "On the Canal This Month" — wildlife spotlight, field guide and guest sightings log for Dora Canal Court. 100% WordPress-native: no external services, no API keys, no CDN scripts.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DCC_WL_VERSION', '1.0.0' );
+define( 'DCC_WL_VERSION', '1.1.0' );
 define( 'DCC_WL_FILE', __FILE__ );
 define( 'DCC_WL_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DCC_WL_URL', plugin_dir_url( __FILE__ ) );

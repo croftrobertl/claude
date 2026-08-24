@@ -1,18 +1,24 @@
 /**
- * DCC Wildlife — widget styles.
+ * DCC Wildlife — widget styles (v1.1.0 compact/interactive UI).
  *
  * Inherits the theme's body font (no webfonts). Site palette: navy
- * #0a3d62, coral #e8604f, whites/soft neutrals.
+ * #0a3d62, coral #e8604f, deep illustration teals #17333c/#1c3a43.
  *
  * Specificity note: the Bravada theme's Elementor kit resets inputs and
  * buttons with (0,3,1)-specific selectors. Every rule here that styles a
  * button/input doubles its classes (e.g. `.dccwl-root.dccwl-root
  * .dccwl-btn.dccwl-btn` = (0,4,0)) so it wins without !important.
+ *
+ * Motion: CSS transitions only, none longer than 250ms; panels/drawers
+ * animate grid-template-rows (0fr -> 1fr) so opening never jumps the
+ * layout. Everything is inert under prefers-reduced-motion.
  */
 
 .dccwl-root {
 	--dccwl-navy: #0a3d62;
 	--dccwl-coral: #e8604f;
+	--dccwl-teal-deep: #17333c;
+	--dccwl-teal: #1c3a43;
 	--dccwl-ink: #1c2b36;
 	--dccwl-muted: #566a77;
 	--dccwl-soft: #f4f7f9;
@@ -24,51 +30,103 @@
 	line-height: 1.55;
 }
 
+.dccwl-sr {
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* ----------------------------------------------------------------------
+ * Hero
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-hero {
+	margin: 0 0 0.75rem;
+}
+
 .dccwl-root .dccwl-title {
 	color: var(--dccwl-navy);
 	font-size: 1.65rem;
 	line-height: 1.25;
-	margin: 0 0 0.75rem;
+	margin: 0;
+	min-height: 1.25em; /* reserved — JS swaps in the month headline */
 }
 
-.dccwl-root .dccwl-section-title {
-	color: var(--dccwl-navy);
-	font-size: 1.3rem;
-	line-height: 1.3;
-	margin: 2rem 0 0.75rem;
-}
-
-.dccwl-root .dccwl-group-title {
-	color: var(--dccwl-muted);
-	font-size: 1rem;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	margin: 1.5rem 0 0.6rem;
+.dccwl-root .dccwl-sub {
+	color: var(--dccwl-coral);
+	font-size: 0.98rem;
+	font-weight: 600;
+	margin: 2px 0 0;
+	min-height: 1.55em; /* reserved — JS fills, no layout shift */
 }
 
 /* ----------------------------------------------------------------------
- * Month browser
+ * Month nav (arrows + scrollable mini-button strip)
  * -------------------------------------------------------------------- */
 
-.dccwl-root .dccwl-months {
+.dccwl-root .dccwl-monthnav {
+	align-items: center;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 0 0 1rem;
+	gap: 6px;
+	margin: 0 0 0.75rem;
+	position: relative;
 }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn {
+.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow {
+	align-items: center;
 	background: var(--dccwl-white);
 	border: 1px solid var(--dccwl-line);
 	border-radius: 8px;
 	color: var(--dccwl-navy);
 	cursor: pointer;
+	display: inline-flex;
+	flex: 0 0 auto;
+	justify-content: center;
+	min-height: 44px;
+	min-width: 44px;
+	padding: 0;
+	transition: background-color 0.15s ease;
+}
+
+.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:hover,
+.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:focus-visible {
+	background: var(--dccwl-soft);
+	color: var(--dccwl-navy);
+}
+
+.dccwl-root .dccwl-months {
+	display: flex;
+	flex: 1 1 auto;
+	gap: 6px;
+	overflow-x: auto;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+}
+
+.dccwl-root .dccwl-months::-webkit-scrollbar {
+	display: none;
+}
+
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn {
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	color: var(--dccwl-muted);
+	cursor: pointer;
+	flex: 1 0 auto;
 	font: inherit;
-	font-size: 0.95rem;
+	font-size: 0.9rem;
+	font-weight: 600;
 	line-height: 1;
 	min-height: 44px;
-	min-width: 52px;
-	padding: 10px 12px;
+	min-width: 44px;
+	padding: 0 8px;
+	scroll-snap-align: center;
 	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -80,60 +138,283 @@
 
 .dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn[aria-pressed="true"] {
 	background: var(--dccwl-navy);
-	border-color: var(--dccwl-navy);
 	color: var(--dccwl-white);
 }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible {
+.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible,
+.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:focus-visible {
 	outline: 2px solid var(--dccwl-coral);
 	outline-offset: 2px;
 }
 
 /* ----------------------------------------------------------------------
- * Cards (spotlight + field guide)
+ * Chips (spotlight strip + guide grids)
  * -------------------------------------------------------------------- */
 
-.dccwl-root .dccwl-cards {
-	display: grid;
-	gap: 14px;
-	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+.dccwl-root .dccwl-chips {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-/* Reserve space so the JS-rendered spotlight causes no layout shift. */
-.dccwl-root .dccwl-spotlight-cards {
-	min-height: 200px;
+.dccwl-root .dccwl-chips li {
+	margin: 0;
 }
 
-.dccwl-root .dccwl-card {
+.dccwl-root .dccwl-strip-wrap,
+.dccwl-root .dccwl-monthnav {
+	position: relative;
+}
+
+.dccwl-root .dccwl-strip {
+	display: flex;
+	gap: 8px;
+	min-height: 52px; /* reserved — JS fills, no layout shift */
+	overflow-x: auto;
+	padding: 2px;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+}
+
+.dccwl-root .dccwl-strip::-webkit-scrollbar {
+	display: none;
+}
+
+.dccwl-root .dccwl-strip li {
+	flex: 0 0 auto;
+	scroll-snap-align: start;
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dccwl-root .dccwl-strip li.dccwl-in {
+	opacity: 0;
+	transform: translateY(5px);
+}
+
+/* Edge-fade scroll cues (JS toggles the classes when scrollable). */
+.dccwl-root .dccwl-strip-wrap::before,
+.dccwl-root .dccwl-strip-wrap::after,
+.dccwl-root .dccwl-monthnav::before,
+.dccwl-root .dccwl-monthnav::after {
+	bottom: 0;
+	content: "";
+	opacity: 0;
+	pointer-events: none;
+	position: absolute;
+	top: 0;
+	transition: opacity 0.15s ease;
+	width: 28px;
+	z-index: 1;
+}
+
+.dccwl-root .dccwl-strip-wrap::before,
+.dccwl-root .dccwl-monthnav::before {
+	background: linear-gradient(to right, var(--dccwl-white), rgba(255, 255, 255, 0));
+	left: 0;
+}
+
+.dccwl-root .dccwl-strip-wrap::after,
+.dccwl-root .dccwl-monthnav::after {
+	background: linear-gradient(to left, var(--dccwl-white), rgba(255, 255, 255, 0));
+	right: 0;
+}
+
+.dccwl-root .dccwl-monthnav::before {
+	left: 50px; /* keep the arrow buttons clear of the fade */
+}
+
+.dccwl-root .dccwl-monthnav::after {
+	right: 50px;
+}
+
+.dccwl-root .dccwl-fade-l::before,
+.dccwl-root .dccwl-fade-r::after {
+	opacity: 1;
+}
+
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip {
+	align-items: center;
 	background: var(--dccwl-soft);
 	border: 1px solid var(--dccwl-line);
-	border-radius: 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin: 0;
-	padding: 16px;
+	border-radius: 999px;
+	color: var(--dccwl-ink);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
+	gap: 7px;
+	line-height: 1.2;
+	min-height: 44px;
+	padding: 6px 14px 6px 9px;
+	position: relative;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	white-space: nowrap;
 }
 
-.dccwl-root .dccwl-card-head {
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:hover,
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:focus-visible {
+	background: #e8eff4;
+	border-color: #b9ccd8;
+	color: var(--dccwl-ink);
+}
+
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] {
+	background: var(--dccwl-navy);
+	border-color: var(--dccwl-navy);
+	color: var(--dccwl-white);
+}
+
+.dccwl-root.dccwl-root .dccwl-chip-mascot.dccwl-chip-mascot {
+	border-color: rgba(232, 96, 79, 0.55);
+}
+
+.dccwl-root .dccwl-chip-emoji {
+	font-size: 1.35rem;
+	line-height: 1;
+}
+
+.dccwl-root .dccwl-chip-mark {
+	display: inline-flex;
+	line-height: 1;
+}
+
+.dccwl-root .dccwl-tick {
+	background: var(--dccwl-coral);
+	border-radius: 50%;
+	display: inline-block;
+	flex: 0 0 auto;
+	height: 7px;
+	width: 7px;
+}
+
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] .dccwl-tick {
+	background: #ffb3a8;
+}
+
+/* ----------------------------------------------------------------------
+ * Shared detail panel (expands below the tapped row — never a modal)
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-panel-slot {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.22s ease;
+}
+
+.dccwl-root .dccwl-panel-slot.dccwl-open {
+	grid-template-rows: 1fr;
+}
+
+.dccwl-root .dccwl-clip {
+	min-height: 0;
+	overflow: hidden;
+}
+
+.dccwl-root .dccwl-panel {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 14px;
+	margin: 10px 2px;
+	padding: 16px;
+	position: relative;
+}
+
+.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close {
+	align-items: center;
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 50%;
+	color: var(--dccwl-muted);
+	cursor: pointer;
+	display: inline-flex;
+	height: 40px;
+	justify-content: center;
+	padding: 0;
+	position: absolute;
+	right: 10px;
+	top: 10px;
+	transition: background-color 0.15s ease, color 0.15s ease;
+	width: 40px;
+	z-index: 1;
+}
+
+.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:hover,
+.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:focus-visible {
+	background: var(--dccwl-navy);
+	color: var(--dccwl-white);
+}
+
+.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+.dccwl-root .dccwl-panel-body {
+	align-items: flex-start;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	opacity: 1;
+	transition: opacity 0.13s ease;
+}
+
+.dccwl-root .dccwl-panel-body.dccwl-fading {
+	opacity: 0;
+}
+
+/* Scene medallion: circular SVG vignette with the emoji staged on top. */
+.dccwl-root .dccwl-medallion {
+	border-radius: 50%;
+	flex: 0 0 auto;
+	height: 112px;
+	overflow: hidden;
+	position: relative;
+	width: 112px;
+}
+
+.dccwl-root .dccwl-medallion svg {
+	display: block;
+	height: 100%;
+	left: 0;
+	position: absolute;
+	top: 0;
+	width: 100%;
+}
+
+.dccwl-root .dccwl-medallion-emoji {
+	filter: drop-shadow(0 3px 4px rgba(10, 26, 32, 0.45));
+	font-size: 46px;
+	left: 50%;
+	line-height: 1;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -52%);
+}
+
+.dccwl-root .dccwl-panel-text {
+	flex: 1 1 240px;
+	min-width: 0;
+	padding-right: 44px; /* clear the close button */
+}
+
+.dccwl-root .dccwl-panel-name {
 	align-items: center;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
+	margin: 0 0 6px;
 }
 
-.dccwl-root .dccwl-emoji {
-	font-size: 1.7rem;
-	line-height: 1;
-}
-
-.dccwl-root .dccwl-name {
+.dccwl-root .dccwl-panel-name strong {
 	color: var(--dccwl-navy);
-	font-size: 1.1rem;
-	font-weight: 700;
+	font-size: 1.15rem;
 }
 
 .dccwl-root .dccwl-badge {
@@ -157,16 +438,15 @@
 }
 
 .dccwl-root .dccwl-fact {
-	color: var(--dccwl-ink);
 	font-size: 0.98rem;
-	margin: 0;
+	margin: 0 0 8px;
 }
 
 .dccwl-root .dccwl-cardmeta {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
-	margin: 0;
+	margin: 0 0 6px;
 }
 
 .dccwl-root .dccwl-pill {
@@ -200,8 +480,131 @@
 }
 
 /* ----------------------------------------------------------------------
- * Sightings
+ * Field guide: tabs + compact chip grids
  * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-guide {
+	margin: 1rem 0 0;
+}
+
+.dccwl-root .dccwl-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0 0 10px;
+}
+
+.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab {
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: 999px;
+	color: var(--dccwl-muted);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.92rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	line-height: 1;
+	min-height: 44px;
+	padding: 0 18px;
+	text-transform: uppercase;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:hover,
+.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
+	background: var(--dccwl-soft);
+	color: var(--dccwl-navy);
+}
+
+.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"] {
+	background: var(--dccwl-navy);
+	border-color: var(--dccwl-navy);
+	color: var(--dccwl-white);
+}
+
+.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+.dccwl-root .dccwl-guide-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 2px;
+}
+
+/* Author display:flex would defeat the UA [hidden] rule — restore it. */
+.dccwl-root .dccwl-guide-grid[hidden] {
+	display: none;
+}
+
+/* ----------------------------------------------------------------------
+ * Sightings: slim bar + expandable drawer
+ * -------------------------------------------------------------------- */
+
+.dccwl-root .dccwl-sightings {
+	margin: 1rem 0 0;
+}
+
+.dccwl-root.dccwl-root .dccwl-sightbar.dccwl-sightbar {
+	align-items: center;
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 10px;
+	color: var(--dccwl-ink);
+	cursor: pointer;
+	display: flex;
+	font: inherit;
+	font-size: 0.95rem;
+	gap: 10px;
+	justify-content: space-between;
+	min-height: 48px;
+	padding: 8px 14px;
+	text-align: left;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	width: 100%;
+}
+
+.dccwl-root.dccwl-root .dccwl-sightbar.dccwl-sightbar:hover,
+.dccwl-root.dccwl-root .dccwl-sightbar.dccwl-sightbar:focus-visible {
+	background: #e8eff4;
+	border-color: #b9ccd8;
+	color: var(--dccwl-ink);
+}
+
+.dccwl-root.dccwl-root .dccwl-sightbar.dccwl-sightbar:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+.dccwl-root .dccwl-sightbar-text {
+	min-height: 1.5em; /* reserved — JS fills, no layout shift */
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dccwl-root .dccwl-sightbar-cta {
+	color: var(--dccwl-coral);
+	flex: 0 0 auto;
+	font-weight: 700;
+}
+
+.dccwl-root .dccwl-drawer-slot {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.22s ease;
+}
+
+.dccwl-root .dccwl-drawer-slot.dccwl-open {
+	grid-template-rows: 1fr;
+}
+
+.dccwl-root .dccwl-drawer {
+	padding: 12px 2px 2px;
+}
 
 .dccwl-root .dccwl-sightings-list {
 	display: grid;
@@ -229,6 +632,11 @@
 
 .dccwl-root .dccwl-sighting-head .dccwl-emoji {
 	font-size: 1.25rem;
+}
+
+.dccwl-root .dccwl-sighting-head .dccwl-name {
+	color: var(--dccwl-navy);
+	font-weight: 700;
 }
 
 .dccwl-root .dccwl-sighting-date {
@@ -390,11 +798,20 @@
 }
 
 @media (max-width: 480px) {
-	.dccwl-root .dccwl-cards {
-		grid-template-columns: 1fr;
+	.dccwl-root .dccwl-title {
+		font-size: 1.4rem;
 	}
 
-	.dccwl-root .dccwl-title {
-		font-size: 1.45rem;
+	.dccwl-root .dccwl-medallion {
+		height: 92px;
+		width: 92px;
+	}
+
+	.dccwl-root .dccwl-medallion-emoji {
+		font-size: 38px;
+	}
+
+	.dccwl-root .dccwl-panel-text {
+		padding-right: 0;
 	}
 }
