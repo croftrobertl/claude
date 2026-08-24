@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Seasons
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Date-scheduled seasonal ambient particles plus a 5-tap Matrix-style easter egg on the site logo. Cache-safe (the visitor's browser picks the active theme from its local date, so cached HTML never bakes in "today"), performance-first, no libraries, no image assets.
- * Version:           3.2.0
+ * Version:           3.2.1
  * Requires at least: 6.3
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCC_SEASONS_VERSION', '3.2.0');
+define('DCC_SEASONS_VERSION', '3.2.1');
 define('DCC_SEASONS_FILE', __FILE__);
 define('DCC_SEASONS_DIR', plugin_dir_path(__FILE__));
 define('DCC_SEASONS_URL', plugin_dir_url(__FILE__));

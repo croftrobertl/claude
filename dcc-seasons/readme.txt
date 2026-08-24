@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.2.0
+Stable tag: 3.2.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -102,13 +102,44 @@ the normal date-driven behavior. The settings page lists every valid key.
 * On a date inside a range: sparse particles drift; on any other date: none.
 * 5 quick taps on the logo → themed rain; ✕, Escape, and overlay tap all exit.
 * Outside every range: 5 taps → classic green rain.
-* On 09/08–09/11 or 01/18 (adjust a row to today to simulate): corner accent
-  only, egg does nothing.
+* On 09/08–09/11 or 01/18 (adjust a row to today to simulate): Patriot Day
+  and MLK Day run full, egg included.
 * `/submit-booking/`: no script tag, no effects.
 * OS reduced-motion on: no ambient; egg shows the static banner.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.2.1 =
+* Sprite contrast on light pages. The 3.2.0 audit judged every sprite
+  against a single background; the live site renders particles over both a
+  deep navy hero and large white content sections, and the pale sprites
+  that survived on navy washed out on white. Root cause is stroke weight
+  relative to viewBox width — a 1-unit outline on a 46-wide viewBox is
+  about 0.6px at particle size, i.e. sub-pixel. Rule adopted: any sprite
+  with a near-white body needs an outline of at least ~6% of its viewBox
+  width, in a tone dark enough to read on white rather than a tint of the
+  fill. Applied to dove (the worst case, and MLK Day's primary particle),
+  swan, bunny, bunnycarry, ghost (kept deliberately soft — ethereal, but
+  now visible), blossom, quill, joint and flutes (whose outline was wide
+  enough but far too pale to count). Silhouettes and palettes unchanged.
+* recycle redrawn. Three solid rotated wedges read unmistakably as a green
+  fir tree at particle size — actively confusing on Earth Day, which
+  already has plant particles. It is now the real Möbius symbol: three
+  chasing ribbon arms with visible arrowheads and an open centre.
+* fleur redrawn. The rounded lobes read as a chess piece or trophy; the
+  petals are now lance-tipped over a banded waist, so the Mardi Gras
+  reference lands at 26–34px.
+* The audit grid is now the acceptance test: every sprite is rendered
+  three ways — 120px on white, 30px on white, 30px on the site's navy —
+  and passes only if identifiable in all three. That grid ships with the
+  release. It also caught two the report had not listed: bunnycarry (as
+  faint on white as bunny) and the Halloween web accent.
+* engine.min.js 63,015 bytes raw / 22,228 gzipped, inside the 64KB /
+  22.5KB ceiling (3.2.0 was 62,712 / 22,120) — outlines are cheap, so no
+  art had to be thinned to pay for them.
+* Art only: no theme, behaviour, settings, schedule, engine or layout
+  changes, and all stored options survive untouched.
 
 = 3.2.0 =
 * 4/20 art fixed (the owner's direct complaint). The cannabis sprite was a
