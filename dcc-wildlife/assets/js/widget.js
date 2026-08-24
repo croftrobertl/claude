@@ -26,15 +26,15 @@
 	var SCENES = {
 		critters:
 			'<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
-			'<rect width="120" height="120" fill="#1c3a43"/>' +
-			'<path d="M0 68 Q30 62 60 68 T120 68 V120 H0 Z" fill="#17333c"/>' +
-			'<ellipse cx="60" cy="88" rx="30" ry="7" fill="none" stroke="#3d6b74" stroke-width="2"/>' +
-			'<ellipse cx="60" cy="88" rx="16" ry="4" fill="none" stroke="#4d7d86" stroke-width="1.5"/>' +
+			'<rect width="120" height="120" fill="#2b5a66"/>' +
+			'<path d="M0 68 Q30 62 60 68 T120 68 V120 H0 Z" fill="#234b56"/>' +
+			'<ellipse cx="60" cy="88" rx="30" ry="7" fill="none" stroke="#4d7d86" stroke-width="2"/>' +
+			'<ellipse cx="60" cy="88" rx="16" ry="4" fill="none" stroke="#6da3ae" stroke-width="1.5"/>' +
 			'<path d="M13 102 a13 8 0 1 1 26 0 l-13 -3 z" fill="#2e7d5b"/>' +
 			'<path d="M96 99 a10 6 0 1 1 20 0 l-10 -2.4 z" fill="#27604a"/>' +
-			'<circle cx="98" cy="26" r="2.5" fill="#4d7d86"/>' +
-			'<circle cx="22" cy="20" r="2" fill="#3d6b74"/>' +
-			'<circle cx="34" cy="34" r="1.5" fill="#3d6b74"/>' +
+			'<circle cx="98" cy="26" r="2.5" fill="#6da3ae"/>' +
+			'<circle cx="22" cy="20" r="2" fill="#4d7d86"/>' +
+			'<circle cx="34" cy="34" r="1.5" fill="#4d7d86"/>' +
 			'</svg>',
 		birds:
 			'<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
@@ -79,6 +79,34 @@
 			node.textContent = text;
 		}
 		return node;
+	}
+
+	/* <svg><use> reference to the server-printed sprite symbol sheet.
+	 * Built with createElementNS (no innerHTML), so species ids from the
+	 * filterable config can never inject markup. */
+	function spriteUse(id, cls) {
+		var NS = 'http://www.w3.org/2000/svg';
+		var svg = document.createElementNS(NS, 'svg');
+		svg.setAttribute('class', cls);
+		svg.setAttribute('viewBox', '0 0 48 48');
+		svg.setAttribute('aria-hidden', 'true');
+		svg.setAttribute('focusable', 'false');
+		var use = document.createElementNS(NS, 'use');
+		use.setAttribute('href', '#dccwl-sp-' + id);
+		use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#dccwl-sp-' + id);
+		svg.appendChild(use);
+		return svg;
+	}
+
+	/* Species art: bespoke sprite when the registry has one, emoji fallback
+	 * for filter-added species without a sprite. */
+	function speciesArt(sp, spriteCls, emojiCls) {
+		if (sp.sprite) {
+			return spriteUse(sp.id, spriteCls);
+		}
+		var emoji = el('span', emojiCls, sp.emoji);
+		emoji.setAttribute('aria-hidden', 'true');
+		return emoji;
 	}
 
 	function fmt(template) {
@@ -181,7 +209,7 @@
 			panelBody.textContent = '';
 			var medallion = el('div', 'dccwl-medallion dccwl-medallion-' + (SCENES[sp.group] ? sp.group : 'critters'));
 			medallion.innerHTML = SCENES[sp.group] || SCENES.critters; // static trusted constant
-			medallion.appendChild(el('span', 'dccwl-medallion-emoji', sp.emoji));
+			medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite', 'dccwl-medallion-emoji'));
 			panelBody.appendChild(medallion);
 
 			var text = el('div', 'dccwl-panel-text');
@@ -317,9 +345,7 @@
 			chip.type = 'button';
 			chip.setAttribute('data-dccwl-species', sp.id);
 			chip.setAttribute('aria-expanded', 'false');
-			var emoji = el('span', 'dccwl-chip-emoji', sp.emoji);
-			emoji.setAttribute('aria-hidden', 'true');
-			chip.appendChild(emoji);
+			chip.appendChild(speciesArt(sp, 'dccwl-chip-sprite', 'dccwl-chip-emoji'));
 			chip.appendChild(el('span', 'dccwl-chip-name', sp.name));
 			if (sp.mascot) {
 				var mark = el('span', 'dccwl-chip-mark');

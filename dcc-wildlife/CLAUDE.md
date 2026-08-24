@@ -51,6 +51,8 @@ dcc-wildlife.php              # Headers + constants + require()s
 includes/class-plugin.php     # Singleton; registers hooks, assets, Elementor bits
 includes/class-species.php    # Species registry + monthly likelihood table (PHP data,
                               #   filterable); dataset()/best_months_label() helpers
+includes/class-sprites.php    # Bespoke species sprite registry (48×48 SVG path data)
+                              #   + symbol-sheet/<use> emitters (v1.3.0)
 includes/class-render.php     # Shared renderer for widget AND shortcode (identical
                               #   output); prints DCC_WL_CFG inline JSON once
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
@@ -88,6 +90,24 @@ Height budget for the default render: **≤ 560px desktop / ≤ 720px mobile**
   plants) shared across all 17 species, stored as static JS constants; the
   circle crop is CSS `border-radius` + `overflow:hidden` — deliberately no
   SVG clipPath/gradient defs, whose ids would collide across instances.
+  The critters vignette uses lightened water tones (#2b5a66/#234b56) so
+  dark sprite silhouettes read against it.
+- **Species sprites (v1.3.0)**: every species is a hand-drawn flat
+  two-tone SVG in `class-sprites.php` — 48×48 canvas, deep-teal
+  silhouettes + per-species accents, no stroke thinner than 1.2, legible
+  at both 22px (chip) and 76px (medallion). The whole set ships ONCE per
+  page as a hidden `<symbol>` sheet (printed by Render before the first
+  root, ~12.5KB min / ~3.4KB gz); chips and medallions reference it with
+  `<use>` (PHP `Sprites::use_svg()`, JS `spriteUse()` via createElementNS —
+  never innerHTML, since species ids pass through the filterable config).
+  `symbol_sheet()` minifies on output and strips `fill="none"` /
+  `stroke-linecap="round"`; the CSS rule setting those on
+  `.dccwl-chip-sprite`/`.dccwl-medallion-sprite` is LOAD-BEARING (they
+  inherit into the <use> shadow content). Species emoji remain in the
+  registry only as a fallback for filter-added species without a sprite.
+  Watch two specificity traps: the medallion sprite selector must out-rank
+  `.dccwl-medallion svg`, and the navy expanded chip gives dark sprites a
+  light backing disc.
 - **Field guide**: three tab chips + server-rendered chip grids (they are
   month-independent, so cache-safe). NOTE: grids get `display:flex`, which
   defeats the UA `[hidden]` rule — the explicit
@@ -132,6 +152,10 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 - Chip → panel open/swap/close by mouse, touch and keyboard; Escape closes
   and restores focus; reduced-motion OS setting → no animation anywhere but
   the panel still opens.
+- Sprites render identically on Apple/Android/Windows (no emoji anywhere in
+  species art); the five field-mark litmus tests hold: eagle's white
+  head+tail, egret's yellow feet, anhinga's spread wings, gator's waterline
+  pose, heron's crown plume.
 - No Sightings menu in wp-admin and no Settings → DCC Wildlife page.
 - Tap targets ≥ 40px throughout; no console errors; assets absent on pages
   without the widget/shortcode.

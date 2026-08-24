@@ -280,6 +280,31 @@
 	line-height: 1;
 }
 
+/* Bespoke species sprite at chip size (references the hidden symbol sheet).
+ * fill/stroke-linecap here are LOAD-BEARING: the symbol sheet strips
+ * `fill="none"` and `stroke-linecap="round"` from its paths and relies on
+ * these inheriting into the <use> shadow content. */
+.dccwl-root .dccwl-chip-sprite,
+.dccwl-root .dccwl-medallion-sprite {
+	fill: none;
+	stroke-linecap: round;
+}
+
+.dccwl-root .dccwl-chip-sprite {
+	display: block;
+	flex: 0 0 auto;
+	height: 24px;
+	width: 24px;
+}
+
+/* On the navy expanded chip, dark sprites need a light backing disc. */
+.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] .dccwl-chip-sprite {
+	background: rgba(244, 247, 242, 0.94);
+	border-radius: 50%;
+	box-sizing: border-box;
+	padding: 2px;
+}
+
 .dccwl-root .dccwl-chip-mark {
 	display: inline-flex;
 	line-height: 1;
@@ -396,6 +421,19 @@
 	position: absolute;
 	top: 50%;
 	transform: translate(-50%, -52%);
+}
+
+/* Bespoke species sprite staged in the scene medallion. The selector must
+ * out-rank `.dccwl-root .dccwl-medallion svg` (0,2,1) above, which sizes
+ * the scene backdrop to fill the circle. */
+.dccwl-root .dccwl-medallion .dccwl-medallion-sprite {
+	filter: drop-shadow(0 2px 3px rgba(10, 26, 32, 0.35));
+	height: 76px;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -52%);
+	width: 76px;
 }
 
 .dccwl-root .dccwl-panel-text {
@@ -565,6 +603,11 @@
 
 	.dccwl-root .dccwl-medallion-emoji {
 		font-size: 38px;
+	}
+
+	.dccwl-root .dccwl-medallion .dccwl-medallion-sprite {
+		height: 62px;
+		width: 62px;
 	}
 
 	.dccwl-root .dccwl-panel-text {

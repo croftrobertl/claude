@@ -25,7 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Render {
 
-	private static bool $config_added = false;
+	private static bool $config_added  = false;
+	private static bool $sheet_printed = false;
 
 	/**
 	 * [dcc_wildlife title="" guide="yes" browser="yes" compact="no"]
@@ -91,6 +92,13 @@ final class Render {
 		];
 
 		ob_start();
+
+		// Sprite symbol sheet: printed once per page; all chips/medallions
+		// reference it via <use>, so path data is never duplicated.
+		if ( ! self::$sheet_printed ) {
+			self::$sheet_printed = true;
+			echo Sprites::symbol_sheet(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup.
+		}
 		?>
 		<div class="dccwl-root" data-dccwl="<?php echo esc_attr( (string) wp_json_encode( $instance ) ); ?>">
 
@@ -160,7 +168,11 @@ final class Render {
 				<?php foreach ( $group_species as $sp ) : ?>
 					<li>
 						<button type="button" class="dccwl-chip<?php echo $sp['mascot'] ? ' dccwl-chip-mascot' : ''; ?>" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-expanded="false">
-							<span class="dccwl-chip-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
+							<?php if ( Sprites::has( $sp['id'] ) ) : ?>
+								<?php echo Sprites::use_svg( $sp['id'], 'dccwl-chip-sprite' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup. ?>
+							<?php else : ?>
+								<span class="dccwl-chip-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
+							<?php endif; ?>
 							<span class="dccwl-chip-name"><?php echo esc_html( $sp['name'] ); ?></span>
 							<?php if ( $sp['mascot'] ) : ?>
 								<span class="dccwl-sr"><?php esc_html_e( '— our mascot', 'dcc-wildlife' ); ?></span>
@@ -188,8 +200,15 @@ final class Render {
 		}
 		self::$config_added = true;
 
+		// Species with a bespoke sprite get flagged; the JS falls back to the
+		// emoji for any filter-added species without one.
+		$species = array_map(
+			static fn( array $sp ): array => $sp + [ 'sprite' => Sprites::has( $sp['id'] ) ],
+			Species::dataset()
+		);
+
 		$config = [
-			'species'    => Species::dataset(),
+			'species'    => $species,
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
 			'i18n'       => [
