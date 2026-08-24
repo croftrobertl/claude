@@ -797,6 +797,12 @@ class Widget extends Widget_Base
             'str_book_invalid_range' => [__('Popup invalid-range message', 'mphb-availability-calendar'), __('Check-out must be after check-in.', 'mphb-availability-calendar')],
             'str_book_min_nights' => [__('Popup minimum-nights message ({nights} is replaced with the Minimum nights setting)', 'mphb-availability-calendar'), __('Must be a minimum of {nights} nights. Please select new dates.', 'mphb-availability-calendar')],
             'str_view_cottage'   => [__('Info popup: view-cottage button', 'mphb-availability-calendar'), __('View Cottage Page', 'mphb-availability-calendar')],
+            'str_price_label'      => [__('Booking popup: estimate label', 'mphb-availability-calendar'), __('Estimated total:', 'mphb-availability-calendar')],
+            'str_price_for_nights' => [__('Booking popup: estimate amount ({price}, {nights} replaced)', 'mphb-availability-calendar'), __('{price} for {nights} nights', 'mphb-availability-calendar')],
+            'str_price_one_night'  => [__('Booking popup: estimate amount for one night ({price} replaced)', 'mphb-availability-calendar'), __('{price} for 1 night', 'mphb-availability-calendar')],
+            'str_price_avg'        => [__('Booking popup: per-night average ({avg} replaced)', 'mphb-availability-calendar'), __('({avg}/night avg)', 'mphb-availability-calendar')],
+            'str_price_estimating' => [__('Booking popup: estimate loading text', 'mphb-availability-calendar'), __('Estimating…', 'mphb-availability-calendar')],
+            'str_price_note'       => [__('Booking popup: estimate disclaimer', 'mphb-availability-calendar'), __('before any taxes/fees — final price shown at checkout', 'mphb-availability-calendar')],
             'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
             'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
         ];
@@ -1537,6 +1543,7 @@ class Widget extends Widget_Base
         $config = [
             'ajaxUrl'        => admin_url('admin-ajax.php'),
             'action'         => MPHBAC_AJAX_ACTION,
+            'priceAction'    => MPHBAC_PRICE_ACTION,
             'roomTypeIds'    => array_map(static fn($r) => (int) $r['id'], $rooms),
             'roomTitles'     => $rooms_by_id,
             'daysDesktop'    => $days_desktop,
@@ -1574,6 +1581,11 @@ class Widget extends Widget_Base
                 'bookUnavail'   => (string) ($settings['str_book_unavailable'] ?? ''),
                 'bookInvalid'   => (string) ($settings['str_book_invalid_range'] ?? ''),
                 'bookMinNights' => (string) ($settings['str_book_min_nights'] ?? ''),
+                'priceLabel'      => (string) ($settings['str_price_label'] ?? ''),
+                'priceForNights'  => (string) ($settings['str_price_for_nights'] ?? ''),
+                'priceOneNight'   => (string) ($settings['str_price_one_night'] ?? ''),
+                'priceAvg'        => (string) ($settings['str_price_avg'] ?? ''),
+                'priceEstimating' => (string) ($settings['str_price_estimating'] ?? ''),
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
@@ -1745,6 +1757,15 @@ class Widget extends Widget_Base
                                    min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
                                    autocomplete="off">
                         </label>
+                        <?php // Estimated-price row (0.20.0). Filled by JS from the
+                        // mphbac_price endpoint; stays hidden until a valid range
+                        // has a price > 0. Purely informative — never blocks the
+                        // Confirm flow, and with JS or AJAX failing it simply
+                        // stays hidden. aria-live announces updates politely. ?>
+                        <p class="mphbac-sheet-estimate" aria-live="polite" hidden>
+                            <span class="mphbac-estimate-line"></span>
+                            <span class="mphbac-estimate-note"><?php echo esc_html($settings['str_price_note']); ?></span>
+                        </p>
                         <p class="mphbac-sheet-error" role="alert" hidden></p>
                     </div>
                     <div class="mphbac-sheet-actions">

@@ -105,7 +105,7 @@ includes/class-widget-single.php     # Single-cottage variant (extends Widget; o
 includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL fallback)
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
-includes/class-ajax.php              # Public admin-ajax.php endpoint (action mphbac_query) — deliberately nonce-free; see Invariants
+includes/class-ajax.php              # Public admin-ajax.php endpoints (mphbac_query availability + mphbac_price estimate) — deliberately nonce-free; see Invariants
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
@@ -122,6 +122,7 @@ Request flow when a visitor loads a page containing the widget:
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
 
+- **The booking-sheet price estimate (0.20.0) is additive and non-blocking.** `mphbac_price` calls `mphb_get_room_type_period_price()` per request (never cached — no-store headers + SpeedyCache exclusion), validates via `Ajax::validate_price_request()` (real dates, no past check-in, ≤95 nights, whitelisted type ID), and returns `priceHtml`/`avgHtml` sanitized by `wp_kses` from `mphb_format_price()` (currency symbol is an HTML entity — that's why it's HTML, injected client-side only into controlled spans via `renderTemplate()`, never concatenated with user input). Client side: 400ms debounce, sequence counter + AbortController for last-write-wins, price ≤ 0 or any failure hides the row; the Confirm flow never waits on it.
 - **The availability AJAX endpoint is deliberately nonce-free.** It is public, read-only, and side-effect-free; a nonce embedded in full-page-cached HTML expires after ~24h and turned every cached pageload into a 403. Do not "fix" this by adding one. Input is hardened instead (absint + ID whitelist + date clamp).
 - **All "today" math runs in US/Eastern**, not WP's site timezone. The physical cottages are in Florida and cutoffs must match the property clock regardless of visitor locale. See `Data_Provider::TZ` and `Data_Provider::timezone()`.
 - **Never re-fetch iCal URLs.** MotoPress already syncs iCal feeds every 15 minutes; imported reservations land as `mphb_booking` posts (same as direct bookings). Direct iCal HTTP fetches would duplicate work and risk cron conflicts.

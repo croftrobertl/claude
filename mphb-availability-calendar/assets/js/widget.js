@@ -1545,6 +1545,54 @@
         return (config && config.strings) || {};
     }
 
+    // Fill `parent` from a "{token}"-style template. Plain-string values
+    // become text nodes; {html:...} values are injected via innerHTML into a
+    // dedicated span — used ONLY for the server-formatted price, which
+    // arrives sanitized from PHP (mphb_format_price emits the currency
+    // symbol as an HTML entity) and never has user input concatenated in.
+    function renderTemplate(parent, tmpl, values) {
+        parent.textContent = '';
+        String(tmpl).split(/(\{[a-zA-Z]+\})/).forEach(function (part) {
+            var m = part.match(/^\{([a-zA-Z]+)\}$/);
+            if (!m) {
+                if (part !== '') parent.appendChild(document.createTextNode(part));
+                return;
+            }
+            var v = values[m[1]];
+            if (v === undefined || v === null) return;
+            if (typeof v === 'object' && v.html !== undefined) {
+                var span = document.createElement('span');
+                span.className = 'mphbac-estimate-amount';
+                span.innerHTML = v.html;
+                parent.appendChild(span);
+            } else {
+                parent.appendChild(document.createTextNode(String(v)));
+            }
+        });
+    }
+
+    // Compose the "Estimated total: $910 for 7 nights ($130/night avg)" line
+    // into lineEl. Average only when nights > 1 and the server provided it.
+    function renderEstimateLine(lineEl, strings, nights, priceHtml, avgHtml) {
+        lineEl.textContent = '';
+        var label = document.createElement('strong');
+        label.textContent = (strings.priceLabel || 'Estimated total:');
+        lineEl.appendChild(label);
+        lineEl.appendChild(document.createTextNode(' '));
+        var amount = document.createElement('span');
+        var tmpl = nights === 1
+            ? (strings.priceOneNight || '{price} for 1 night')
+            : (strings.priceForNights || '{price} for {nights} nights');
+        renderTemplate(amount, tmpl, { price: { html: priceHtml }, nights: nights });
+        lineEl.appendChild(amount);
+        if (nights > 1 && avgHtml) {
+            lineEl.appendChild(document.createTextNode(' '));
+            var avg = document.createElement('span');
+            renderTemplate(avg, strings.priceAvg || '({avg}/night avg)', { avg: { html: avgHtml } });
+            lineEl.appendChild(avg);
+        }
+    }
+
     // Build one calendar month: title bar, weekday header, then week rows of
     // seven cells. Day cells reuse the strip's exact classes and markup
     // (.mphbac-cell-status is-<status>, .mphbac-cell-tip, is-weekend,
@@ -1817,6 +1865,97 @@
         var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false, closeTimer: null };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
+        // ---- Price estimate (0.20.0) --------------------------------------
+        // Informative only: it never gates the Confirm flow. Debounced so
+        // date-picker scrubbing doesn't spam admin-ajax; a sequence counter
+        // plus AbortController make the LAST request win (a superseded
+        // response can never paint a stale estimate); any failure or a
+        // price of 0 simply hides the row.
+        var estimateEl = sheet.querySelector('.mphbac-sheet-estimate');
+        var estimateLineEl = sheet.querySelector('.mphbac-estimate-line');
+        var estimateNoteEl = sheet.querySelector('.mphbac-estimate-note');
+        var ESTIMATE_DEBOUNCE_MS = 400;
+        var estTimer = null;
+        var estSeq = 0;
+        var estController = null;
+
+        function hideEstimate() {
+            estSeq++; // orphan any in-flight response
+            clearTimeout(estTimer);
+            estTimer = null;
+            if (estController) {
+                try { estController.abort(); } catch (e) { /* ignore */ }
+                estController = null;
+            }
+            if (estimateEl) estimateEl.hidden = true;
+        }
+
+        function scheduleEstimate() {
+            if (!estimateEl || !estimateLineEl) return;
+            clearTimeout(estTimer);
+            estTimer = setTimeout(fetchEstimate, ESTIMATE_DEBOUNCE_MS);
+        }
+
+        function fetchEstimate() {
+            var ci = checkinEl.value;
+            var co = checkoutEl.value;
+            // Only estimate ranges the sheet itself would accept.
+            if (!context.roomTypeId || !ci || !co || co <= ci || nightsBetween(ci, co) < minNights) {
+                hideEstimate();
+                return;
+            }
+            var seq = ++estSeq;
+            if (estController) {
+                try { estController.abort(); } catch (e) { /* ignore */ }
+            }
+            estController = new AbortController();
+
+            // Subtle in-flight state; the disclaimer only accompanies a real
+            // number, not the spinner text.
+            estimateEl.hidden = false;
+            estimateLineEl.textContent = strings0(config).priceEstimating || 'Estimating…';
+            if (estimateNoteEl) estimateNoteEl.hidden = true;
+
+            var body = new URLSearchParams();
+            body.append('action', config.priceAction || 'mphbac_price');
+            body.append('room_type_id', String(context.roomTypeId));
+            body.append('checkin', ci);
+            body.append('checkout', co);
+
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: body,
+                headers: { 'Accept': 'application/json' },
+                signal: estController.signal
+            }).then(function (r) {
+                return r.json();
+            }).then(function (json) {
+                if (seq !== estSeq) return; // superseded — a newer range owns the row
+                var d = json && json.success && json.data;
+                if (!d || !(d.price > 0) || !d.priceHtml) {
+                    // No rate configured (price 0) or malformed reply: no
+                    // estimate, no error — the sheet works exactly as before.
+                    if (estimateEl) estimateEl.hidden = true;
+                    return;
+                }
+                renderEstimateLine(estimateLineEl, strings0(config), d.nights, d.priceHtml, d.avgHtml || null);
+                if (estimateNoteEl) estimateNoteEl.hidden = false;
+                estimateEl.hidden = false;
+            }).catch(function () {
+                if (seq !== estSeq) return;
+                if (estimateEl) estimateEl.hidden = true;
+            });
+        }
+
+        if (checkinEl && checkoutEl) {
+            // change fires on picker selection; input covers keyboard editing.
+            ['change', 'input'].forEach(function (ev) {
+                checkinEl.addEventListener(ev, scheduleEstimate);
+                checkoutEl.addEventListener(ev, scheduleEstimate);
+            });
+        }
+
         // Portal anchors — same pattern as the info popup. Without this,
         // a transformed Elementor ancestor becomes the containing block for
         // position:fixed and the popup ends up centered to the widget
@@ -1872,6 +2011,9 @@
             renderSplitTitle(titleEl, roomTitle ? (title + ' ' + roomTitle) : title);
             checkinEl.value = checkin || '';
             checkoutEl.value = checkout || '';
+            // Opening from a day cell prefills a valid range — estimate it
+            // right away (still debounced, so a quick date change coalesces).
+            scheduleEstimate();
             errorEl.hidden = true;
             errorEl.textContent = '';
             // Portal sheet + overlay to document.body so position:fixed
@@ -1907,6 +2049,9 @@
 
         function closeSheet() {
             context.isOpen = false;
+            // Reset the estimate: cancel timers/in-flight fetch and hide the
+            // row so the next open starts clean.
+            hideEstimate();
             if (context.focusRaf) {
                 cancelAnimationFrame(context.focusRaf);
                 context.focusRaf = 0;

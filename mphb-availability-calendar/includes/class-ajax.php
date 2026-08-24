@@ -190,6 +190,126 @@ final class Ajax
         wp_send_json_success($payload);
     }
 
+    /**
+     * Price-estimate endpoint (action mphbac_price). Returns MotoPress's own
+     * period price for one accommodation and stay so the booking sheet can
+     * show "Estimated total: $910 for 7 nights" as the guest picks dates.
+     *
+     * Same trust model as the availability endpoint, deliberately nonce-free:
+     * public, read-only, side-effect-free data, and a nonce embedded in
+     * full-page-cached HTML would expire and 403 every cached pageload (the
+     * documented invariant). Input is hardened instead — Y-m-d parsing with
+     * calendar validation, a whitelist of real accommodation-type IDs, and
+     * the same stay-length / future-window clamps the sheet itself enforces.
+     * Responses carry no-store headers; nothing here is ever cached (pricing
+     * is computed per request via MPHB's live rate tables).
+     */
+    public static function handle_price(): void
+    {
+        if (!headers_sent()) {
+            nocache_headers();
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+            header('Pragma: no-cache', true);
+        }
+
+        $type_id = absint($_POST['room_type_id'] ?? 0);
+        $ci_str  = isset($_POST['checkin'])  ? sanitize_text_field((string) wp_unslash($_POST['checkin']))  : '';
+        $co_str  = isset($_POST['checkout']) ? sanitize_text_field((string) wp_unslash($_POST['checkout'])) : '';
+
+        $valid_ids = array_map(static fn($t) => (int) $t['id'], Data_Provider::list_room_types());
+        $stay      = self::validate_price_request($type_id, $ci_str, $co_str, $valid_ids, Data_Provider::today());
+        if ($stay === null) {
+            wp_send_json_error(['message' => __('Invalid request.', 'mphb-availability-calendar')], 400);
+        }
+        [$ci, $co, $nights] = $stay;
+
+        // MPHB resolves the active seasonal rates itself (including rate
+        // boundaries mid-stay) and returns the cheapest applicable total for
+        // the whole period. 0.0 means no rate matched — the client shows
+        // nothing in that case, never "$0".
+        if (!function_exists('mphb_get_room_type_period_price')) {
+            wp_send_json_error(['message' => __('Pricing unavailable.', 'mphb-availability-calendar')], 501);
+        }
+        $price = 0.0;
+        try {
+            // The MPHB helper takes mutable DateTime.
+            $tz    = Data_Provider::timezone();
+            $price = (float) mphb_get_room_type_period_price(
+                new \DateTime($ci->format('Y-m-d'), $tz),
+                new \DateTime($co->format('Y-m-d'), $tz),
+                $type_id
+            );
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: period price lookup failed: ' . $e->getMessage());
+            wp_send_json_error(['message' => __('Pricing unavailable.', 'mphb-availability-calendar')], 500);
+        }
+
+        $payload = [
+            'price'  => $price,
+            'nights' => $nights,
+        ];
+        if ($price > 0) {
+            $payload['priceHtml'] = self::format_price_html($price);
+            $payload['avgHtml']   = $nights > 1
+                ? self::format_price_html(round($price / $nights))
+                : null;
+        }
+        wp_send_json_success($payload);
+    }
+
+    /**
+     * Validate a price request. Returns [checkin, checkout, nights] or null.
+     * Mirrors what the booking sheet enforces client-side: real Y-m-d dates,
+     * checkout strictly after check-in, check-in not in the past, the stay no
+     * longer than MAX_RANGE_DAYS, checkout inside the future clamp, and a
+     * room-type ID that is actually a published accommodation.
+     *
+     * @param int[] $valid_ids
+     * @return array{0:DateTimeImmutable,1:DateTimeImmutable,2:int}|null
+     */
+    private static function validate_price_request(int $type_id, string $ci_str, string $co_str, array $valid_ids, DateTimeImmutable $today): ?array
+    {
+        if ($type_id <= 0 || !in_array($type_id, $valid_ids, true)) {
+            return null;
+        }
+        $ci = self::parse_date($ci_str);
+        $co = self::parse_date($co_str);
+        if (!$ci || !$co || $co <= $ci) {
+            return null;
+        }
+        if ($ci < $today) {
+            return null; // can't book the past; the sheet's min attribute agrees
+        }
+        if ($co > $today->modify('+' . self::CLAMP_FUTURE_DAYS . ' days')) {
+            return null;
+        }
+        $nights = (int) $ci->diff($co)->format('%a');
+        if ($nights < 1 || $nights > self::MAX_RANGE_DAYS) {
+            return null;
+        }
+        return [$ci, $co, $nights];
+    }
+
+    /**
+     * Site-formatted price as safe HTML. mphb_format_price() emits the
+     * currency symbol as an HTML entity (and may wrap parts in spans), so it
+     * must be injected as HTML — sanitized here to formatting-only tags, and
+     * the client only ever inserts it into a controlled element with no user
+     * input concatenated. Fallback when MPHB's formatter is absent: plain
+     * dollar entity + integer amount.
+     */
+    private static function format_price_html(float $price): string
+    {
+        if (function_exists('mphb_format_price')) {
+            $html = (string) mphb_format_price($price);
+            return wp_kses($html, [
+                'span' => ['class' => true],
+                'bdi'  => [],
+            ]);
+        }
+        return '&#36;' . number_format($price, fmod($price, 1.0) === 0.0 ? 0 : 2);
+    }
+
     private static function parse_date(string $value): ?DateTimeImmutable
     {
         if ($value === '') {

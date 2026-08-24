@@ -1345,6 +1345,25 @@ body.mphbac-info-open {
 }
 .mphbac-sheet-error[hidden] { display: none; }
 
+/* Estimated-price row (0.20.0) — one quiet line in the sheet, not a banner.
+   Sizing mirrors .mphbac-sheet-error's 0.9em row scale; every color is
+   inherited from the sheet (the muted note is opacity, not a new color).
+   Plain flow content, so the sheet's swipe-to-close and scrolling are
+   untouched. */
+.mphbac-sheet-estimate {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.mphbac-sheet-estimate[hidden] { display: none; }
+.mphbac-estimate-note {
+    display: block;
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+.mphbac-estimate-note[hidden] { display: none; }
+
 .mphbac-sheet-actions {
     display: flex;
     justify-content: flex-end;

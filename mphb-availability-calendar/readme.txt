@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.0
+Stable tag: 0.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.20.0 =
+* The Book Now popup now shows an **estimated price** for the selected stay — e.g. "Estimated total: $910 for 7 nights ($130/night avg)" — updating live as the dates change, with a muted "before any taxes/fees — final price shown at checkout" note. Works in both widgets (they share the same booking popup).
+* Prices come from MotoPress's own seasonal-rate calculation (`mphb_get_room_type_period_price`), so mid-stay rate boundaries are priced exactly the way checkout prices them; amounts are formatted by MotoPress's own price formatter. The per-night average appears only for stays longer than one night.
+* The estimate is informative only and can never get in the way of booking: requests are debounced (400ms) so date scrubbing doesn't spam the server, a newer selection always wins over a slower older response, and if no rate is configured for the range — or the request fails — the row simply hides. The Confirm button never waits on it, and with JavaScript unavailable the popup behaves exactly as 0.19.0.
+* New endpoint (`mphbac_price`) follows the plugin's established AJAX pattern: public, read-only, deliberately nonce-free (a nonce baked into full-page-cached HTML expires and breaks — the documented invariant), with hardened validation instead: real calendar dates only, check-in not in the past, stays capped at 95 nights inside the two-year window, and the accommodation ID checked against the real published list. Responses carry no-store headers and are excluded from SpeedyCache alongside the availability endpoint; nothing is ever cached (pricing is computed fresh per request).
+* All six new texts (label, amount wording, one-night wording, average, "Estimating…", disclaimer) are editable in the Elementor panel and translation-ready, like every other string in the plugin.
+* Everything else is unchanged: calendar grids, availability logic and its endpoint, month layouts (3/2/1), the filter and spacing controls, and the confirm-to-checkout flow.
 
 = 0.19.0 =
 * Single-cottage widget: the month view is now **responsive multi-month** — 3 months side by side on desktop, 2 on tablet, 1 on phones, via a new per-device "Months shown" setting (1–4, shown only for the Month grid layout). The 8 already-placed cottage instances pick up 3/2/1 automatically after updating; no template edits.

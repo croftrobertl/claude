@@ -19,6 +19,21 @@ final class Cache_Integration
         return '/wp-admin/admin-ajax.php?action=' . MPHBAC_AJAX_ACTION;
     }
 
+    /**
+     * All AJAX endpoints that must stay out of SpeedyCache — availability
+     * plus the 0.20.0 price-estimate action (per-request pricing must never
+     * be served from a page cache).
+     *
+     * @return string[]
+     */
+    public static function ajax_exclusion_patterns(): array
+    {
+        return [
+            self::ajax_exclusion_pattern(),
+            '/wp-admin/admin-ajax.php?action=' . MPHBAC_PRICE_ACTION,
+        ];
+    }
+
     public static function on_activate(): void
     {
         $result = self::add_speedycache_exclusion();
@@ -42,9 +57,10 @@ final class Cache_Integration
     {
         add_filter('speedycache_exclude_urls', static function ($urls) {
             $urls = is_array($urls) ? $urls : [];
-            $pattern = self::ajax_exclusion_pattern();
-            if (!in_array($pattern, $urls, true)) {
-                $urls[] = $pattern;
+            foreach (self::ajax_exclusion_patterns() as $pattern) {
+                if (!in_array($pattern, $urls, true)) {
+                    $urls[] = $pattern;
+                }
             }
             return $urls;
         });
@@ -55,8 +71,6 @@ final class Cache_Integration
      */
     public static function add_speedycache_exclusion(): string
     {
-        $pattern = self::ajax_exclusion_pattern();
-
         self::register_runtime_filter();
 
         $any_found = false;
@@ -69,10 +83,13 @@ final class Cache_Integration
             }
             $any_found = true;
 
-            $updated = self::merge_exclusion_into_settings($settings, $pattern);
-            if ($updated !== null) {
-                update_option($option_key, $updated);
-                $any_updated = true;
+            foreach (self::ajax_exclusion_patterns() as $pattern) {
+                $updated = self::merge_exclusion_into_settings($settings, $pattern);
+                if ($updated !== null) {
+                    $settings = $updated;
+                    update_option($option_key, $updated);
+                    $any_updated = true;
+                }
             }
         }
 

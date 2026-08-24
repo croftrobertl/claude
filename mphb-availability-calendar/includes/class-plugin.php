@@ -50,6 +50,11 @@ final class Plugin
 
         add_action('wp_ajax_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
         add_action('wp_ajax_nopriv_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
+        // Booking-sheet price estimate. Same public/nonce-free trust model as
+        // the availability endpoint (documented invariant) — read-only data,
+        // hardened input validation inside the handler.
+        add_action('wp_ajax_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
+        add_action('wp_ajax_nopriv_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
 
         // Request-time SpeedyCache exclusion — belt-and-braces alongside the
         // option-write done at activation, and self-heals if SpeedyCache's
