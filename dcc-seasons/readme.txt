@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.3.0
+Stable tag: 3.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,6 +109,49 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.3.1 =
+* Three more sprites were still shipping malformed path data from the
+  3.2.0 precision-trim regex. The browser silently drops a bad path, so
+  each rendered with a part missing while only whispering "<path>
+  attribute d: Expected number" to the console: flamingo had lost its
+  BEAK (the black-tipped bill is its field mark), hook had lost its BARB,
+  and clover had one of four LEAVES malformed. All three are reconstructed
+  from intent and rewritten with explicit spacing so no number pair can be
+  ambiguous again.
+* A path validator now ships in tools/validate-paths.js and runs in the
+  test suite. The 3.3.0 registry scan searched for the regex's INPUT
+  pattern (compact runs like "8.2.4"), but the corrupted OUTPUT ("12.2")
+  is an ordinary-looking number that no text search can find — it is only
+  detectable by parsing. The validator tokenises every `d` attribute and
+  checks each command's argument count (M/L/T multiples of 2, H/V of 1,
+  C of 6, S/Q of 4, A of 7, Z of 0). It found exactly these three and
+  would have caught bat the day the regex ran. A companion browser check
+  now fails the build on any "<path> attribute d" console warning across
+  all 20 theme previews.
+* Craft defects — a third class, distinct from "can you see it" (3.2.1)
+  and "is it the right object" (3.3.0): is it BUILT correctly?
+  - spider: 6 legs, asymmetric — the left three started at the body's edge
+    and the right three at its CENTRE, so they emerged from under the body
+    and read shorter. Now 8 legs, 4 per side, mirrored structurally by a
+    <use> flip so symmetry cannot drift.
+  - dragonfly: 2 same-angled wings on a rect body read as a paper dart.
+    Now 4 wings in two pairs, a long segmented abdomen trailing well
+    behind them, and a head with a compound eye.
+  - web: radiating lines that read as scratches. Now 5 spokes plus 4
+    concentric rings — the rings are what make it a web.
+  - frog: no legs at all. Two bent hind legs added.
+  - ladybug: 3 spots scattered across the elytra seam and no antennae.
+    Now 4 spots mirrored about the seam, plus antennae.
+* Anatomy sweep across every sprite with countable or symmetric parts came
+  back clean. One deviation noted and deliberately kept: the strawberry's
+  calyx has 4 sepals where real fruit has 5–7 — a stylisation that reads
+  correctly at 28px.
+* engine.min.js 65,736 raw / 23,105 gzipped, inside the 66KB / 23KB
+  ceiling (3.3.0 was 64,803 / 22,823). No sprite had to be simplified to
+  pay for the extra legs, wings and web rings.
+* Art repair only: no theme, behaviour, settings, schedule or glyph
+  changes, and all stored options survive untouched.
 
 = 3.3.0 =
 * The accuracy release. The criterion was not detail but whether a sprite
