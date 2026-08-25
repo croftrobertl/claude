@@ -17,23 +17,79 @@ final class Settings
     private const MENU_SLUG   = 'dcc-custom-checkout';
     private const GROUP       = 'dcc_checkout_settings_group';
 
+    /**
+     * Hook suffix returned by add_submenu_page(). Compare against this rather
+     * than a hard-coded screen ID — the ID is derived from the parent menu, so
+     * hard-coded strings silently stop matching if the parent ever changes.
+     */
+    private string $hook_suffix = '';
+
     public function register(): void
     {
-        add_action('admin_menu', [$this, 'add_menu']);
+        // Shared "DCC" parent menu — registered by every DCC plugin, first one
+        // in wins (priority 5, before any submenu registers at 50+).
+        add_action('admin_menu', [$this, 'add_parent_menu'], 5);
+        // Our submenu sits at the priority assigned in the shared DCC contract.
+        add_action('admin_menu', [$this, 'add_menu'], 50);
+        // Drop WordPress's auto-generated duplicate of the parent item.
+        add_action('admin_menu', [$this, 'remove_duplicate_parent_item'], 999);
         add_action('admin_init', [$this, 'register_settings']);
+    }
+
+    /**
+     * Register the shared top-level "DCC" menu if no other DCC plugin has.
+     *
+     * Canonical values are fixed by the shared DCC menu contract — do not vary
+     * the slug/title/capability/icon/position, or a second "DCC" menu appears.
+     */
+    public function add_parent_menu(): void
+    {
+        global $admin_page_hooks;
+        if (!isset($admin_page_hooks['dcc'])) {
+            add_menu_page(
+                __('Dora Canal Court', 'dcc-checkout'),
+                __('DCC', 'dcc-checkout'),
+                'manage_options',
+                'dcc',
+                '',                    // no page of its own; first submenu is the landing page
+                'dashicons-palmtree',
+                58
+            );
+        }
+    }
+
+    /**
+     * WordPress mirrors the parent as its own first submenu item; remove it.
+     * Guarded/idempotent — harmless if another DCC plugin already did it.
+     */
+    public function remove_duplicate_parent_item(): void
+    {
+        remove_submenu_page('dcc', 'dcc');
     }
 
     public function add_menu(): void
     {
-        add_menu_page(
+        // Menu label drops the "DCC" prefix — inside a menu already called DCC,
+        // "DCC → DCC Custom Checkout" stutters. The page slug is unchanged, so
+        // the existing admin.php?page=<slug> URL keeps resolving.
+        $hook = add_submenu_page(
+            'dcc',
             __('DCC Custom Checkout', 'dcc-checkout'),
-            __('DCC Custom Checkout', 'dcc-checkout'),
+            __('Custom Checkout', 'dcc-checkout'),
             'manage_options',
             self::MENU_SLUG,
-            [$this, 'render_page'],
-            'dashicons-pets',
-            58
+            [$this, 'render_page']
         );
+        $this->hook_suffix = is_string($hook) ? $hook : '';
+    }
+
+    /**
+     * The screen ID for this settings page (e.g. "dcc_page_dcc-custom-checkout").
+     * Empty until add_menu() has run.
+     */
+    public function hook_suffix(): string
+    {
+        return $this->hook_suffix;
     }
 
     public function register_settings(): void

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.1.9
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,14 +67,14 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
      * Dog type  — text            (e.g. name mphb_dog_type)
      * Dog size  — select: 10–20 lbs / 20–30 lbs / 30–40 lbs   (mphb_dog_size)
      * Dog hair  — select: Short / Medium / Long               (mphb_dog_hair)
-2. WP Admin → DCC Custom Checkout → "Dog info fields" → enter those exact field
+2. WP Admin → DCC → Custom Checkout → "Dog info fields" → enter those exact field
    names. The toggle then shows/hides + requires them; MotoPress saves them.
 3. (Optional) add %dcc_dog_details% to the email template if the fields don't
    already appear in the booking details.
 
 == Admin settings ==
 
-WP Admin → "DCC Custom Checkout":
+WP Admin → DCC → Custom Checkout:
   * Enable pet fee — master on/off. When off, the dog toggle/fields never render
     and no pet service is applied on any cottage.
   * Applies to accommodations — multi-select of accommodation types (default
@@ -109,6 +109,20 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.2.0 =
+* Admin: the settings screen moved from its own top-level "DCC Custom Checkout"
+  menu into the shared "DCC" (Dora Canal Court) menu, as WP Admin →
+  DCC → Custom Checkout. The plugin registers the shared parent only if no
+  other DCC plugin has (idempotent, order-independent), and removes the
+  auto-generated duplicate first item.
+* The page slug is unchanged, so the existing admin.php?page=dcc-custom-checkout
+  URL still resolves — no redirect needed.
+* Screen ID changes from toplevel_page_dcc-custom-checkout to
+  dcc_page_dcc-custom-checkout. Nothing in the plugin compared against the old
+  ID; the hook suffix returned by add_submenu_page() is now stored so future
+  screen checks can't hard-code it.
+* No checkout behaviour, field, or template changes.
 
 = 0.1.9 =
 * Style: center the "Traveling with a dog?" Yes/No options (were left-aligned).
