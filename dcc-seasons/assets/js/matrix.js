@@ -8,6 +8,33 @@
 	var W = window, D = document, isOpen = false;
 
 	/* Drop glyphs the local font stack can't render; keep a plain fallback. */
+	/* '@name' glyphs are drawn, not typed — always available, and skipped by
+	 * the font-support probe below. */
+	var DRAWN = {
+		leaf: function (cx, x, y, s) {
+			/* 7 serrated leaflets radiating from one point = cannabis */
+			cx.save();
+			cx.translate(x, y);
+			cx.beginPath();
+			for (var i = -3; i <= 3; i++) {
+				var a = i * 0.44, L = s * (0.52 - Math.abs(i) * 0.075);
+				var tx = Math.sin(a) * L, ty = -Math.cos(a) * L;
+				var nx = Math.cos(a) * L * 0.13, ny = Math.sin(a) * L * 0.13;
+				cx.moveTo(0, 0);
+				cx.quadraticCurveTo(tx * 0.5 - nx, ty * 0.5 - ny, tx, ty);
+				cx.quadraticCurveTo(tx * 0.5 + nx, ty * 0.5 + ny, 0, 0);
+			}
+			cx.fill();
+			cx.restore();
+		}
+	};
+	function paint(cx, g, x, y, size) {
+		if (g.charCodeAt(0) === 64) {
+			var d = DRAWN[g.slice(1)];
+			if (d) { d(cx, x, y - size * 0.3, size); return; }
+		}
+		cx.fillText(g, x, y);
+	}
 	function usable(list) {
 		var cv = D.createElement('canvas');
 		cv.width = cv.height = 24;
@@ -24,7 +51,7 @@
 		}
 		var out = [], i;
 		for (i = 0; i < list.length; i++) {
-			if (ok(list[i])) { out.push(list[i]); }
+			if (list[i].charCodeAt(0) === 64 || ok(list[i])) { out.push(list[i]); }
 		}
 		return out.length ? out : ['0', '1'];
 	}
@@ -87,7 +114,7 @@
 			box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:82%;padding:26px 34px;text-align:center;border:2px solid ' + colors[0] + ';border-radius:12px;background:rgba(0,0,0,.72);color:#fff;font-family:monospace;pointer-events:none;';
 			var g = D.createElement('div');
 			g.style.cssText = 'font-size:42px;line-height:1.35;';
-			g.textContent = usable(egg.glyphs || []).slice(0, 6).join(' ');
+			g.textContent = usable(egg.glyphs || []).filter(function (q) { return q.charCodeAt(0) !== 64; }).slice(0, 6).join(' ');
 			var t = D.createElement('div');
 			t.style.cssText = 'margin-top:10px;font-size:18px;color:' + colors[0] + ';';
 			t.textContent = (i18n.banner || 'Seasonal mode') + (opts.label ? ': ' + opts.label : '');
@@ -167,7 +194,7 @@
 				for (var k = 0; k < finCells.length; k++) {
 					if (k % 7 === refresh) { finGlyphs[k] = glyphs[(Math.random() * glyphs.length) | 0]; }
 					cx.fillStyle = colors[finCells[k][0] % colors.length];
-					cx.fillText(finGlyphs[k], finCells[k][0] * colW + colW / 2, finCells[k][1] * fontSize + fontSize * 0.8);
+					paint(cx, finGlyphs[k], finCells[k][0] * colW + colW / 2, finCells[k][1] * fontSize + fontSize * 0.8, fontSize);
 				}
 				cx.restore();
 			}
@@ -234,7 +261,7 @@
 						x += (Math.random() - 0.5) * colW;
 					}
 					cx.fillStyle = colColors[k];
-					cx.fillText(glyphs[(Math.random() * glyphs.length) | 0], x, y);
+					paint(cx, glyphs[(Math.random() * glyphs.length) | 0], x, y, fontSize);
 					drops[k] += speeds[k];
 					if (drops[k] * fontSize > vh + fontSize && Math.random() > 0.965) {
 						drops[k] = 0;

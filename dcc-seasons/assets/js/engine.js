@@ -51,11 +51,11 @@
 	}
 	var SVGS = {
 		/* — canal & boats — */
-		joint: '24 40|<path d="M9 38 13 36l7-22-5-2Z" fill="%d" stroke="#9AA3AD" stroke-width="1.6"/><path d="M9 38 13 36l2-5-5-2Z" fill="#C8A882"/><path d="M14 13l5 2-1 3-2-2-1 1-1-2-1 1Z" fill="%d" stroke="#9AA3AD" stroke-width="1.4"/><circle cx="18" cy="11" r="3" fill="#FF6B1A"/><circle cx="18" cy="11" r="1.4" fill="%k"/><path d="M19 7q3-3 1-6" fill="none" stroke="%t" stroke-width="1.3" opacity=".55"/>',
+		joint: '20 42|<path d="M8 38 12 38 15 16 5.6 16Z" fill="%d" stroke="#9AA3AD" stroke-width="1.4"/><path d="M8.6 33 11 33" stroke="#9AA3AD" stroke-width="0.9"/><circle cx="10.3" cy="12" r="4.8" fill="#FF6B1A" opacity="0.16"/><circle cx="10.3" cy="12" r="2.9" fill="#FF7A1A" opacity="0.45"/><path d="M5.6 16 15 16 14 12 12 13 10 11 8.7 13 7 12Z" fill="%q" stroke="#9AA3AD" stroke-width="1"/><circle cx="10.3" cy="12.4" r="1.7" fill="#FFC24D"/><path d="M13 8q3 -3 1 -6" fill="none" stroke="%t" stroke-width="1.3" opacity="0.5"/>',
 		peacehand: '28 33|<g fill="#F2C79B" stroke="#C98F55" stroke-width="1"><path d="M11 17 8 5a2 2 0 0 1 3.7-1L15 16Z"/><path d="M16 16 21 5a2 2 0 0 1 3.5 1.4L20 17Z"/><path d="M9 15h11q3.4 0 3.4 5v3.2q0 8-7 8h-3.4q-5 0-5-6Z"/><path d="M10 20q-3.6-1.4-4 1.6t3.8 3.4"/></g><g fill="none" stroke="#C98F55" stroke-width="1"><path d="M11 23h11M12 26h11"/></g>',
 		snowflake: '24 24|<g stroke="#8FC1E8" stroke-linecap="round" fill="none"><g stroke-width="2"><path d="M12 2v20M3.4 7l17 10M3.4 17 21 7"/></g><g stroke-width="1.4"><path d="m12 7-2.6-2.6M12 7l2.6-2.6M12 17l-2.6 2.6M12 17l2.6 2.6M7 9 3 9m2.8 6L3 15m14-6L21 9m-2.8 6L21 15"/></g></g>',
 		sparkle: '24 24|<g fill="%k"><path d="M9 1c1.2 5 2.4 7 7 8-5 1-6 2.2-7 8-1.2-5-2.4-7-7-8 5-1 6-2.2 7-8Z"/><path d="M18 13c.7 3 1.3 3.7 4 4-2.7.6-3.3 1.3-4 4-.7-3-1.3-3.7-4-4 2.7-.6 3.3-1.3 4-4Z"/></g>',
-		fleur: '26 32|<g fill="%a"><path d="M13 1q3.4 6.5 2 11-1 3-2 6-1-3-2-6-1.4-4.5 2-11Z"/><path d="M11.5 18q-1-6.5-6-9Q1.5 7.5 2 12.5T8 19q-4 .5-5.5 3.5Q6 24.5 11.5 21Z"/><path d="M14.5 18q1-6.5 6-9Q24.5 7.5 24 12.5T18 19q4 .5 5.5 3.5Q20 24.5 14.5 21Z"/></g><rect x="5" y="17.4" width="16" height="3.8" rx="1.4" fill="%f"/><path d="M9.6 21.4h6.8L14.6 30h-3.2Z" fill="%a"/>',
+		fleur: '26 34|<g fill="%a"><path d="M13 1C16 6 16 11 15 14 14 16 14 17 13 19 13 17 12 16 11 14 10 11 10 6 13 1Z"/><path d="M12 19C10 13 6 8.6 3.4 11 1.2 14 3 18 6.4 18 3.6 20 3 24 5.4 26 7.6 27 11 25 12 19Z"/><path d="M14 19C16 13 20 8.6 23 11 25 14 23 18 20 18 22 20 23 24 21 26 18 27 15 25 14 19Z"/></g><rect x="5" y="18.6" width="16" height="3.6" rx="1.4" fill="%f"/><path d="M10 22 16 22 13 32Z" fill="%a"/>',
 		clover: '26 30|<g fill="%j"><path id="cv" d="M13 13C13 5 3.6 5 6 11 2.4 8.8 15 13 13Z"/><use href="#cv" transform="rotate(90 13 13)"/><use href="#cv" transform="rotate(180 13 13)"/><use href="#cv" transform="rotate(270 13 13)"/></g><path d="M13 14q1.6 8-2 15" fill="none" stroke="%c" stroke-width="1.8"/>',
 		orange: '24 27|<circle cx="12" cy="16" r="10" fill="%r"/><path d="M12 6q4-5 9-3.4-2.4 5-8 5Z" fill="%j"/><path d="M12 5V8" stroke="%i" stroke-width="1.8"/><ellipse cx="8" cy="12" rx="2.6" ry="1.8" fill="#FFA94D" opacity=".75" transform="rotate(-40 8 12)"/>',
 		banana: '30 24|<path d="M3.4 4q1.4 15 15 17 10 1.2 11-6-2.4 3.4-10 2.4Q7 16 7 3.6Z" fill="%k"/><path d="M5 3.6 3 1l3.6 1.4Zm23 11 2 1.4-2.4 2.4Z" fill="%i"/><path d="M5 5q1.6 12 13 14" fill="none" stroke="#E8C33C" stroke-width="1"/>',
@@ -63,9 +63,8 @@
 		olive: '30 21|<path d="M2 18q12-2.4 26-14" fill="none" stroke="%c" stroke-width="1.6"/><g fill="%j"><ellipse cx="8" cy="13" rx="4" ry="2.2" transform="rotate(-32 8 13)"/><ellipse cx="15" cy="9" rx="4" ry="2.2" transform="rotate(-32 15 9)"/><ellipse cx="22" cy="6" rx="4" ry="2.2" transform="rotate(-32 22 6)"/><ellipse cx="11" cy="18" rx="3.6" ry="2" transform="rotate(22 11 18)"/><ellipse cx="18" cy="15" rx="3.6" ry="2" transform="rotate(22 18 15)"/></g>',
 		tree: '30 34|<circle cx="15" cy="12" r="10" fill="%j"/><circle cx="8" cy="16" r="6" fill="%c"/><circle cx="22" cy="16" r="6" fill="%c"/><rect x="13" y="20" width="4" height="13" rx="1" fill="%i"/>',
 		flamingo: '28 40|<ellipse cx="14" cy="25" rx="10" ry="7" fill="%s"/><path d="M8 20q4-4 8-2" fill="none" stroke="%u" stroke-width="2.4" opacity=".55"/><path d="M17 20q3.4-9-2.6-12T6 11" fill="none" stroke="%s" stroke-width="4" stroke-linecap="round"/><circle cx="6" cy="10" r="3.4" fill="%s"/><path d="M3.6 12.2 14l4-.6Z" fill="%b"/><circle cx="5" cy="9" r=".9" fill="%g"/><path d="M12 31v7m4-7v7" stroke="%u" stroke-width="1.6"/><path d="M10 38H14m1 0h4" stroke="%u" stroke-width="1.4"/>',
-		bat: '36 22|<path d="M18 6q3-4 8-3.4-1.2 3 .8 5 3.2-4 8-2.2-6 3-6 9-4-3.2-7 1-2-4-4-4t-4 4q-3.2-4-7-1Q6 8.4 5 6 3.2 9 7q2-2.2.8-5Q15 1.2 18 6Z" fill="%b"/><circle cx="16" cy="8" r=".9" fill="%e"/><circle cx="20" cy="8" r=".9" fill="%e"/>',
+		bat: '38 20|<path d="M19 5.4C21 2.6 23 1.6 26 2.2 25 4 25 5.6 26 6.8 29 4.2 32 3.8 35 5.4 31 6.8 29 9.4 29 13 26 11 24 12 22 14 21 12 20 10 19 10 18 10 17 12 16 14 14 12 12 11 9 13 8.6 9.4 6.6 6.8 3 5.4 6.2 3.8 9.4 4.2 12 6.8 13 5.6 13 4 12 2.2 15 1.6 17 2.6 19 5.4Z" fill="%b"/><path d="M17 3.8 16 0.8 18 2.4Z" fill="%b"/><path d="M21 3.8 22 0.8 20 2.4Z" fill="%b"/><circle cx="17.4" cy="7.2" r="0.9" fill="%e"/><circle cx="20.6" cy="7.2" r="0.9" fill="%e"/>',
 		flutes: '30 34|<g fill="%d" stroke="#8A99A8" stroke-width="1.8"><path d="M4 3 11 5 9 14q-1 3-4 2T3 12Z"/><path d="M26 3 19 5l2 9q1 3 4 2t2-4Z"/></g><g fill="%k"><path d="M5 8l5 2-1 5q-1 2-3 1t-2-3Z"/><path d="M25 8l-5 2 1 5q1 2 3 1t2-3Z"/></g><path d="M7 17 9 29m14-12-2 12" stroke="#8A99A8" stroke-width="1.8"/><path d="M5 30h8m3 0h8" stroke="#8A99A8" stroke-width="2"/><g fill="%d" stroke="#8A99A8" stroke-width="1"><circle cx="13" cy="2" r="1.4"/><circle cx="18" cy="1.4" r="1.1"/></g>',
-		silly: '24 24|<circle cx="12" cy="12" r="11" fill="%k"/><path d="M6 10q6 5 11 0" fill="none" stroke="%g" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="16" r="1.5" fill="%g"/><circle cx="16" cy="16" r="1.5" fill="%g"/>',
 		umbrella: '32 35|<path d="M2 14a14 12 0 0 1 28 0Z" fill="%e"/><path d="M9 14q0-9 4-12a5 5 0 0 1 2.6-.2v12Zm7 0V2a5 5 0 0 1 2.6.2Q23 5 23 14Z" fill="%d"/><path d="M16 14v20" stroke="%p" stroke-width="2.2"/>',
 		recycle: '34 34|<g fill="%j"><g id="rc"><rect x="7" y="8" width="14" height="4.4" rx="1.4"/><path d="M20 5 27.5 10.2 20 15.4Z"/></g><use href="#rc" transform="rotate(120 17 17)"/><use href="#rc" transform="rotate(240 17 17)"/></g>',
 		hook: '20 30|<path d="M10 1.4v12" stroke="%t" stroke-width="2"/><path d="M10 14q0 9-4 9T2 17" fill="none" stroke="%t" stroke-width="2.2"/><path d="M2 16.2 20l3.8-.4Z" fill="%t"/><circle cx="10" cy="2" r="2.2" fill="%h"/>',
@@ -86,12 +85,12 @@
 		heronstand: '44 64|<path d="M18 10q8 2 10 12v12q0 10-8 12l-4-2q6-6 4-14-8-6-2-20Z" fill="%v"/><path d="M20 6q-6 0-8 6l6-1q4 1 2 6" fill="none" stroke="#5D6D7E" stroke-width="3"/><path d="M12 8 2 6l8 5Z" fill="%a"/><circle cx="17" cy="9" r="1" fill="#111"/><line x1="20" y1="46" x2="19" y2="60" stroke="%f" stroke-width="2"/><line x1="24" y1="46" x2="26" y2="60" stroke="%f" stroke-width="2"/><path d="M15 60h17" stroke="%f" stroke-width="2"/>',
 		manatee: '90 46|<ellipse cx="42" cy="24" rx="34" ry="17" fill="#8D99A6"/><path d="M72 20q14-4 16-12-2 12 2 18-4 6-2 18-8-10-16-12 4-6 0-12Z" fill="#7B8794"/><circle cx="14" cy="18" r="9" fill="#8D99A6"/><circle cx="10" cy="16" r="2" fill="%b"/><ellipse cx="7" cy="21" rx="4" ry="3" fill="#7B8794"/><circle cx="6" cy="20" r=".9" fill="%b"/><circle cx="9" cy="20" r=".9" fill="%b"/><path d="M34 38q6 6 12 0l-4 6h-4Z" fill="#7B8794"/>',
 		dove: '46 34|<path d="M8 15q2-7 11-6 8 2 13 7l12 2-9 5 3 7-10-6q-9 3-16-3T8 15Z" fill="%d" stroke="#5A6B7C" stroke-width="2.8"/><path d="M19 15q6-10 14-9-2 7-6 11-4 3-8-2Z" fill="%q" stroke="#5A6B7C" stroke-width="2.4"/><path d="M7 14 2 16l5 2Z" fill="%a"/><circle cx="11" cy="13" r="1.4" fill="%g"/><ellipse cx="6" cy="21" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 6 21)"/><ellipse cx="10" cy="22" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 10 22)"/>',
-		swan: '40 40|<path d="M8 4q-6 1-6 7 0 5 6 5 4 0 4 5v6h6v-8q0-8-6-9-3-1-2-3 1-2-2-3Z" fill="%d" stroke="#6B7A88" stroke-width="2.4"/><path d="M2 8 0 9l3 1Z" fill="%r"/><circle cx="6" cy="8" r="1.2" fill="%g"/><path d="M10 27h24q4 0 6-5-4 2-7 1 3-3 2-7-3 4-7 4-9 0-13 4Z" fill="%d" stroke="#6B7A88" stroke-width="2.4"/><path d="M12 27h20q-8 6-16 4Z" fill="%o"/>',
+		swan: '44 36|<path d="M9 25C4.6 18 7 9.6 14 7 18 5.8 21 6.8 22 9.2L19 11C18 9.4 16 9.2 14 10 9.4 13 8.2 19 12 25Z" fill="%d" stroke="#6B7A88" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 25 26 25C31 25 35 23 39 19 38 27 30 32 21 32 13 32 7.4 29 8 25Z" fill="%d" stroke="#6B7A88" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 27C19 24 27 24 32 27" fill="none" stroke="%o" stroke-width="1.5"/><circle cx="22.6" cy="8.4" r="3.2" fill="%d" stroke="#6B7A88" stroke-width="1.4"/><path d="M26 9 31 10 26 12Z" fill="%r"/><circle cx="25.2" cy="6.8" r="1.5" fill="%g"/><circle cx="21.8" cy="7.6" r="1" fill="%g"/>',
 		ladybug: '22 18|<circle cx="7" cy="8" r="4" fill="%g"/><ellipse cx="13" cy="10" rx="8" ry="7" fill="%e"/><line x1="13" y1="3" x2="13" y2="17" stroke="%g" stroke-width="1"/><circle cx="10" cy="8" r="1" fill="%g"/><circle cx="17" cy="9" r="1" fill="%g"/><circle cx="14" cy="13" r="1" fill="%g"/><circle cx="6" cy="7" r=".8" fill="%d"/>',
 		turkey: '40 36|<path d="M20 20 8 4q-3 8 4 14Zm0 0 4-18q6 4 3 14Zm0 0 12-14q4 8-5 15Z" fill="#A05A2C"/><ellipse cx="20" cy="25" rx="10" ry="9" fill="%i"/><circle cx="12" cy="18" r="5" fill="%i"/><circle cx="11" cy="17" r="1" fill="#111"/><path d="M8 18l-4 1 4 2Z" fill="%a"/><path d="M9 20q-2 3 0 5" stroke="%e" stroke-width="2" fill="none"/><line x1="17" y1="33" x2="17" y2="36" stroke="%f" stroke-width="2"/><line x1="23" y1="33" x2="23" y2="36" stroke="%f" stroke-width="2"/>',
 		chick: '20 20|<circle cx="10" cy="12" r="7" fill="%k"/><circle cx="7" cy="6" r="4" fill="#FFE066"/><circle cx="6" cy="5" r=".9" fill="#111"/><path d="M3 6 .4 7l2 1Z" fill="%w"/><path d="M14 12q4-1 4 2-3 2-5 0Z" fill="#FAB005"/><line x1="8" y1="19" x2="8" y2="20" stroke="%w" stroke-width="1"/><line x1="12" y1="19" x2="12" y2="20" stroke="%w" stroke-width="1"/>',
-		bunny: '30 30|<g stroke="#7A8290" stroke-width="2"><ellipse cx="17" cy="21" rx="11" ry="8" fill="%q"/><path d="M5 10Q2 2 7 1q2 4 1 9Zm5-1q0-8 5-8 1 5-2 9Z" fill="%q"/><circle cx="8" cy="14" r="5.4" fill="%q"/><circle cx="26" cy="17" r="3.4" fill="#F8F9FA"/></g><circle cx="6.4" cy="13" r="1.3" fill="%g"/>',
-		bunnycarry: '30 32|<g stroke="#7A8290" stroke-width="2"><ellipse cx="16" cy="22" rx="10" ry="8" fill="%q"/><path d="M6 8Q3 0 8-1v0q2 4 1 9Zm5-1q0-8 5-8 1 5-2 9Z" fill="%q"/><circle cx="9" cy="12" r="5.4" fill="%q"/><circle cx="26" cy="18" r="3.2" fill="#F8F9FA"/></g><circle cx="7.4" cy="11" r="1.3" fill="%g"/><ellipse cx="13" cy="23" rx="4.6" ry="5.8" fill="#BFDBFE" stroke="%l" stroke-width="1.6"/><path d="M8.4 21.4h9.2m-9 3h8.8" stroke="%l" stroke-width="1.4"/>',
+		bunny: '32 30|<g fill="%q" stroke="#7A8290" stroke-width="1.8" stroke-linejoin="round"><path d="M9.6 13C7 7.4 8.4 2.6 11 3 13 3.4 14 8.4 12 14Z"/><path d="M14 13C13 6.8 16 3 18 4.4 20 5.8 19 10 17 13Z"/><path d="M23 26C27 26 29 22 28 18 27 14 23 11 18 11 14 11 11 12 9.4 14 7.2 13 5.2 14 4.6 16 4 19 5.4 20 7.6 21 7.4 23 9.6 26 13 26Z"/></g><circle cx="7.6" cy="17.4" r="1.4" fill="%g"/><path d="M5 19Q3.2 20 5 21" fill="none" stroke="#7A8290" stroke-width="1"/><path d="M28 20Q31 19 31 22 30 25 27 24" fill="%q" stroke="#7A8290" stroke-width="1.6"/>',
+		bunnycarry: '32 32|<g fill="%q" stroke="#7A8290" stroke-width="1.8" stroke-linejoin="round"><path d="M11 12C8 6.4 9.4 1.6 12 2 14 2.4 15 7.4 13 13Z"/><path d="M15 12C14 5.8 17 2 19 3.4 21 4.8 20 9.2 18 12Z"/><path d="M24 27C28 27 30 24 29 20 28 15 24 12 19 12 15 12 12 13 10 15 8.2 15 6.2 16 5.6 18 5 20 6.4 22 8.6 22 8.4 25 11 27 14 27Z"/></g><circle cx="8.6" cy="18.8" r="1.4" fill="%g"/><ellipse cx="12.6" cy="23.4" rx="5" ry="6.2" fill="#BFDBFE" stroke="%l" stroke-width="1.6"/><path d="M7.8 22 17 22M8 25 17 25" stroke="%l" stroke-width="1.4"/><path d="M7.4 21Q6 23 8.6 26" fill="none" stroke="#7A8290" stroke-width="1.8"/><path d="M18 20Q19 23 17 26" fill="none" stroke="#7A8290" stroke-width="1.8"/>',
 		/* — fall leaves: maple, oak, cypress, sweetgum — */
 		leafm: '26 28|<path d="M13 2l3 5 5-2-2 5 6 2-5 4 3 5-6-1-1 6h-6l-1-6-6 1 3-5-5-4 6-2-2-5 5 2Z" fill="%r"/><path d="M13 6v16m0-12-5 6m5-6 5 6" stroke="#C44D0B" stroke-width="1" fill="none"/>',
 		leafo: '22 30|<path d="M11 1q7 3 7 9 0 4-3 5 3 2 3 6 0 6-7 8-7-2-7-8 0-4 3-6-3-1-3-5 0-6 7-9Z" fill="#A0622D"/><path d="M11 4v22m0-16-4 3m4-3 4 3m-8 8 4 3m4-3-4 3" stroke="#7A4A21" stroke-width="1" fill="none"/>',
@@ -140,11 +139,11 @@
 		quill: '26 34|<path d="M22 2Q8 8 6 24l2 1Q12 10 24 4Z" fill="%d" stroke="#7C8894" stroke-width="1.8"/><path d="M22 2Q12 6 8 18q6-2 10-8 4-4 4-8Z" fill="%o"/><path d="M6 24 3 32l5-6Z" fill="%f"/>',
 		cherry: '26 30|<path d="M13 2q-6 4-8 14m8-14q6 6 6 14" fill="none" stroke="%c" stroke-width="2"/><path d="M13 2q4-2 7 0-3 2-7 0Z" fill="%j"/><circle cx="5" cy="21" r="5" fill="%n"/><circle cx="19" cy="21" r="5" fill="%e"/><circle cx="3" cy="19" r="1" fill="#FFC9C9"/><circle cx="17" cy="19" r="1" fill="#FFC9C9"/>',
 		/* — strawberry — */
-		berry: '24 28|<path d="M12 6q-4-4-8-2 3 3 6 3Zm0 0q4-4 8-2-3 3-6 3Z" fill="%j"/><line x1="12" y1="0" x2="12" y2="5" stroke="%c" stroke-width="2"/><path d="M12 7C19 7 23 12 22 17c-1 6-6 10-10 10S3 23 2 17C1 12 5 7 12 7Z" fill="%e"/><g fill="#FDE68A"><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/><circle cx="12" cy="20" r="1"/></g>',
+		berry: '24 30|<path d="M12 3 12 8" stroke="%c" stroke-width="2"/><path d="M12 27C6 24 2.6 19 3 14 3.4 10 7 8 12 8 17 8 21 10 21 14 21 19 18 24 12 27Z" fill="%e"/><g fill="%j"><path d="M12 8 3.6 6 7 10Z"/><path d="M12 8 20 6 17 10Z"/><path d="M12 8 9 3.4 8.4 8.2Z"/><path d="M12 8 15 3.4 16 8.2Z"/></g><g fill="#FFE9A8"><circle cx="8" cy="13" r="1.1"/><circle cx="16" cy="13" r="1.1"/><circle cx="12" cy="16" r="1.1"/><circle cx="9" cy="19.6" r="1.1"/><circle cx="15" cy="19.6" r="1.1"/><circle cx="12" cy="22.6" r="1.1"/></g>',
 		blossom: '24 24|<g fill="%d" stroke="#C97FA0" stroke-width="1.6"><circle cx="12" cy="5" r="4.4"/><circle cx="19" cy="10" r="4.4"/><circle cx="16.4" cy="18" r="4.4"/><circle cx="7.6" cy="18" r="4.4"/><circle cx="5" cy="10" r="4.4"/></g><circle cx="12" cy="12" r="3.4" fill="%k"/>',
 		basket: '32 24|<path d="M6 8Q16 -4 26 8" fill="none" stroke="%p" stroke-width="2"/><path d="M2 8h28l-4 15H6Z" fill="#B08552"/><path d="M4 12h24m-23 5h22M9 8l3 15m8-15-3 15" stroke="%p" stroke-width="1" fill="none"/>',
 		/* — st pat / april fools — */
-		horseshoe: '28 28|<path d="M5 26V13a9 9 0 0 1 18 0v13h-5V13a4 4 0 0 0-8 0v13Z" fill="#868E96"/><circle cx="8" cy="17" r="1" fill="%h"/><circle cx="8" cy="22" r="1" fill="%h"/><circle cx="21" cy="17" r="1" fill="%h"/><circle cx="21" cy="22" r="1" fill="%h"/>',
+		horseshoe: '30 30|<path d="M7.4 28C4.4 22 3 17 3.8 13 5 6.8 9.6 2.8 15 2.8 20 2.8 25 6.8 26 13 27 17 26 22 23 28L17 27C19 21 20 18 20 15 19 11 17 8.6 15 8.6 13 8.6 11 11 10 15 10 18 11 21 13 27Z" fill="#868E96"/><g fill="#39414A"><circle cx="7.6" cy="15.4" r="1.3"/><circle cx="8.4" cy="20" r="1.3"/><circle cx="9.8" cy="24.4" r="1.3"/><circle cx="22.4" cy="15.4" r="1.3"/><circle cx="21.6" cy="20" r="1.3"/><circle cx="20.2" cy="24.4" r="1.3"/></g>',
 		rainbow: '96 62|<g fill="none" stroke-width="4"><path d="M5 60a40 40 0 0 1 80 0" stroke="%e"/><path d="M9 60a36 36 0 0 1 72 0" stroke="#FF922B"/><path d="M13 60a32 32 0 0 1 64 0" stroke="%k"/><path d="M17 60a28 28 0 0 1 56 0" stroke="%j"/><path d="M21 60a24 24 0 0 1 48 0" stroke="#5C7CFA"/></g><path d="M68 48h20l-3 10a7 7 0 0 1-7 4h-1a7 7 0 0 1-7-4Z" fill="%g"/><circle cx="73" cy="47" r="3" fill="%a"/><circle cx="79" cy="46" r="3" fill="%k"/><circle cx="85" cy="47" r="3" fill="%a"/><ellipse cx="64" cy="56" rx="7" ry="2" fill="#1E5B2B"/><path d="M60 50h8l-1 6h-6Z" fill="%c"/>',
 		jester: '34 28|<path d="M5 22 2 4l10 10L17 2l5 12L32 4l-3 18Z" fill="%l"/><path d="M17 2l5 12 5-6-2 14H12l-2-14 5 6Z" fill="%j" opacity=".85"/><rect x="4" y="21" width="26" height="5" rx="3" fill="%a"/><circle cx="3" cy="4" r="2" fill="%a"/><circle cx="17" cy="3" r="2" fill="%a"/><circle cx="32" cy="4" r="2" fill="%a"/>',
 		teeth0: '30 24|<path d="M2 10q13-8 26 0v5q-13 8-26 0Z" fill="%s"/><path d="M4 10q11-6 22 0l-1 3q-10 5-20 0Z" fill="#FFF"/><line x1="15" y1="7" x2="15" y2="14" stroke="%o"/><circle cx="25" cy="18" r="3" fill="%t"/>',
@@ -225,13 +224,13 @@
 			/* metallic shimmer: alternate a lighter tint every ~200ms */
 			cx.fillStyle = (((t / 200) | 0) + (p.shim || 0)) % 2 ? p.color : '#FFFFFF';
 			if (cx.fillStyle === '#FFFFFF') { cx.globalAlpha *= 0.8; }
-			cx.fillRect(-p.size * 0.28 * s, -p.size * 0.11 * s, p.size * 0.56 * s, p.size * 0.22 * s);
+			cx.fillRect(-p.size * 0.42 * s, -p.size * 0.17 * s, p.size * 0.84 * s, p.size * 0.34 * s);
 		},
 		bubble: function (cx, p, s) {
 			cx.strokeStyle = p.color;
-			cx.lineWidth = 1;
+			cx.lineWidth = 1.8;
 			cx.beginPath();
-			cx.arc(0, 0, p.size * 0.16 * s, 0, TAU);
+			cx.arc(0, 0, p.size * 0.26 * s, 0, TAU);
 			cx.stroke();
 		},
 		egg: function (cx, p, s) {
@@ -1190,40 +1189,58 @@
 		}
 
 		/* --- Burst mode (New Year's): firework emitter + auto-year. --- */
-		var nextBurst = 0, yearFx = null;
+		var nextBurst = 0, yearFx = null, flash = null;
 		var yearNow = localNow();
 		var yearText = String(yearNow.getFullYear() + (yearNow.getMonth() >= 6 ? 1 : 0));
 		var sparkCl = A.sparkCl || ['#FFD43B', '#CED4DA'];
+		var bursts = [];
 		function fire(t) {
-			var bx = rnd(vw * 0.2, vw * 0.8), by = rnd(vh * 0.15, vh * 0.45), n = 0;
-			for (var k = 0; k < parts.length && n < 9; k++) {
-				var p = parts[k];
-				if (p.dormant || p.b === 'twinkle' || p.b === 'rise') { continue; }
-				var a = rnd(0, TAU), sp = rnd(40, 110);
-				p.b = 'spark';
-				p.x = bx; p.y = by;
-				p.vx = cos(a) * sp;
-				p.vy = sin(a) * sp;
-				p.sparkUntil = t + rnd(1100, 2000);
-				p.sparkColor = pick(sparkCl);
-				p.alpha = 1;
-				n++;
+			var bx = rnd(vw * 0.18, vw * 0.82), by = rnd(vh * 0.12, vh * 0.42);
+			var col = pick(sparkCl), n = 26, sp = [];
+			for (var i = 0; i < n; i++) {
+				var a = (i / n) * TAU + rnd(-0.09, 0.09), v = rnd(150, 265);
+				sp.push({ x: bx, y: by, vx: cos(a) * v, vy: sin(a) * v });
 			}
+			bursts.push({ s: sp, life: 0, col: col });
+			if (bursts.length > 2) { bursts.shift(); }
+			flash = { x: bx, y: by, a: 1 };
 			yearFx = { x: bx, y: by, a: 1.4 };
-			nextBurst = t + rnd(2800, 5800);
+			nextBurst = t + rnd(1400, 2800);
 		}
-		function stepSpark(p, dt, t) {
-			p.vy += 70 * dt;
-			p.x += p.vx * dt;
-			p.y += p.vy * dt;
-			p.alpha = clamp((p.sparkUntil - t) / 900, 0, 1);
-			if (t > p.sparkUntil) { seed(p); }
+		function stepBursts(dt) {
+			for (var k = bursts.length - 1; k >= 0; k--) {
+				var b2 = bursts[k];
+				b2.life += dt;
+				var fade = clamp(1 - b2.life / 1.6, 0, 1);
+				if (fade <= 0) { bursts.splice(k, 1); continue; }
+				cx.save();
+				cx.globalAlpha = mn(1, alphaBase * 1.9) * fade;
+				cx.strokeStyle = b2.col;
+				cx.lineWidth = 2.6;
+				cx.lineCap = 'round';
+				cx.beginPath();
+				for (var i = 0; i < b2.s.length; i++) {
+					var q = b2.s[i];
+					q.vy += 130 * dt;
+					q.x += q.vx * dt;
+					q.y += q.vy * dt;
+					cx.moveTo(q.x - q.vx * 0.055, q.y - q.vy * 0.055);
+					cx.lineTo(q.x, q.y);
+				}
+				cx.stroke();
+				cx.restore();
+			}
 		}
-		function drawSpark(p) {
+		function drawFlash(dt) {
+			if (!flash) { return; }
+			flash.a -= dt * 3.2;
+			if (flash.a <= 0) { flash = null; return; }
 			cx.save();
-			cx.globalAlpha = alphaBase * clamp(p.alpha, 0, 1);
-			cx.fillStyle = p.sparkColor;
-			cx.fillRect(p.x - 2, p.y - 2, 4, 4);
+			cx.globalAlpha = clamp(flash.a * 0.5, 0, 1);
+			cx.fillStyle = '#FFF3C4';
+			cx.beginPath();
+			cx.arc(flash.x, flash.y, 26 * (1.4 - flash.a), 0, TAU);
+			cx.fill();
 			cx.restore();
 		}
 
@@ -1929,7 +1946,15 @@
 				var nw2 = localNow();
 				var left = nw2.getMonth() === 11 && nw2.getDate() === 31 ? 60 - nw2.getSeconds() : 0;
 				if (left > 0 && left <= 10) {
-					dtxt(String(left), vw / 2, vh * 0.4, 90, '#FFD43B', mn(1, VA * 1.3));
+					cx.save();
+					cx.font = 'bold 96px sans-serif';
+					cx.textAlign = 'center';
+					cx.lineWidth = 7;
+					cx.strokeStyle = '#7A4E00';
+					cx.strokeText(String(left), vw / 2, vh * 0.4);
+					cx.fillStyle = '#FFD43B';
+					cx.fillText(String(left), vw / 2, vh * 0.4);
+					cx.restore();
 				} else { /* midnight! triple mega-burst + the year in gold */
 					vig.st.after = (vig.st.after || 0) + dt;
 					if (!vig.st.boom) { vig.st.boom = 1; fire(t); fire(t); fire(t); nextBurst = t + 800; }
@@ -1973,15 +1998,20 @@
 			if (burstMode) {
 				if (!nextBurst) { nextBurst = t + 1500; }
 				else if (t >= nextBurst) { fire(t); }
+				stepBursts(dt);
+				drawFlash(dt);
 				if (yearFx) {
-					yearFx.a -= dt * 0.7;
+					yearFx.a -= dt * 0.42;
 					yearFx.y -= dt * 12;
 					if (yearFx.a <= 0) { yearFx = null; }
 					else {
 						cx.save();
-						cx.globalAlpha = clamp(alphaBase * 1.8 * clamp(yearFx.a, 0, 1), 0, 1);
+						cx.globalAlpha = clamp(mn(1, alphaBase * 2.4) * clamp(yearFx.a, 0, 1), 0, 1);
+						cx.font = 'bold 46px sans-serif';
+						cx.lineWidth = 4;
+						cx.strokeStyle = '#7A4E00';
+						cx.strokeText(yearText, yearFx.x, yearFx.y);
 						cx.fillStyle = sparkCl[0];
-						cx.font = 'bold 34px sans-serif';
 						cx.fillText(yearText, yearFx.x, yearFx.y);
 						cx.restore();
 					}
@@ -1991,18 +2021,16 @@
 			for (k = 0; k < parts.length; k++) {
 				p = parts[k];
 				if (p.dormant) { continue; }
-				if (p.b === 'spark') { stepSpark(p, dt, t); continue; }
 				repel(p, dt);
 				step(p, dt, t);
 			}
 			/* FAR layer first, then water, then NEAR */
-			for (k = 0; k < parts.length; k++) { p = parts[k]; if (!p.dormant && p.far && p.b !== 'spark') { drawP(p, t); } }
+			for (k = 0; k < parts.length; k++) { p = parts[k]; if (!p.dormant && p.far) { drawP(p, t); } }
 			stepRipples(dt);
 			drawRipples();
 			for (k = 0; k < parts.length; k++) {
 				p = parts[k];
 				if (p.dormant || p.far) { continue; }
-				if (p.b === 'spark') { drawSpark(p); continue; }
 				drawP(p, t);
 			}
 			stepVig(dt, t);

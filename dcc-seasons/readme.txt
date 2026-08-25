@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.2.1
+Stable tag: 3.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,6 +109,56 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.3.0 =
+* The accuracy release. The criterion was not detail but whether a sprite
+  depicts the object it is supposed to depict: if a viewer confidently
+  names it as something else, it fails, because it silently misrepresents
+  the theme. Every item below was that class of defect, judged at ~28px.
+* Critical false reads fixed: joint (read as a PENCIL/cigarette — the tan
+  wedge at the mouth end is exactly where a pencil's wood or a cigarette's
+  filter sits, so it is gone; the cone is now strongly tapered and the lit
+  end glows instead of being a hard orange bead); fleur (read as a CROWN
+  or trophy — the side petals now sweep out and hook DOWNWARD, the
+  decisive field mark, over a tapering foot rather than a blunt block);
+  berry (read as a TOMATO — now a cone/heart silhouette pointed at the
+  bottom with a pointed calyx crown on the shoulders and brighter seeds);
+  horseshoe (read as a MAGNET — the branches now curve back in so the
+  mouth is narrower than the widest point, which magnets never do, plus
+  six high-contrast nail holes).
+* silly retired. It read as ANGRY (an arc above two dots is a furrowed
+  brow), and it was the last sprite still imitating a flat platform emoji.
+  April Fool's leans on the existing jester instead, which also saves
+  bytes.
+* Softer misreads fixed: swan (read as a DUCK — now a long thin S-curve
+  neck, small head, and the mute swan's black knob at the orange bill);
+  bunny and bunnycarry (read as a BLOB with ears — now a crouched rabbit
+  with a defined haunch, a muzzle rather than a sphere, and the tail as a
+  tuft on the outline; bunnycarry holds the egg in front with its paws).
+* bat was rendering brown rather than black because its wing path had been
+  CORRUPTED by the precision-trim regex shipped in 3.2.0, which collapsed
+  compact SVG number pairs such as "8.2.4" (two numbers) into one. The bat
+  is redrawn, the trim is rewritten to only touch unambiguously delimited
+  numbers, and the whole registry is checked for the same damage.
+* Matrix rain: matrix.js can now paint DRAWN glyphs (a '@name' entry is
+  rendered with canvas paths instead of fillText), so 4/20 rains a real
+  cannabis leaf instead of 🍃, which is a wind-blown tree leaf — the very
+  error the ambient sprite had before 3.2.0. Colour object-emoji are gone
+  from twelve themes' glyph sets, replaced by typographic and katakana
+  glyphs that render identically on every platform; ★ ✦ ▮ ❄ ♥ ☠ ⚜ ☘ ✿ and
+  the katakana stay, and the eight already-clean themes were not touched.
+* New Year's now reads as a celebration. Fireworks were built from stolen
+  ambient particles — 13 dots on a 1200px canvas, which also emptied the
+  theme while they flew. They are now a dedicated short-lived system: 26
+  radiating streaks with trails, a flash at the burst point, and a cadence
+  of 1.4–2.8s so any given moment shows one. The year is 46px bold with a
+  dark outline (it was barely legible on a light page) and holds longer,
+  the countdown numerals are outlined to match, and confetti and bubbles
+  are large enough to register.
+* engine.min.js 64,803 raw / 22,823 gzipped and matrix.min.js 5,959 raw /
+  2,660 gzipped. The ceiling was raised to 66KB/23KB for this release but
+  the engine landed under the OLD 64KB/22.5KB ceiling instead.
+* No settings, schedule or behaviour changes; all stored options survive.
 
 = 3.2.1 =
 * Sprite contrast on light pages. The 3.2.0 audit judged every sprite
