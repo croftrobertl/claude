@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.7.35
+Stable tag: 0.9.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,35 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.8 =
+
+**Settings moved under the shared "DCC" admin menu.**
+
+The settings screen was at Settings → DCC Guest Guide. It now lives at
+**DCC → Guest Guide**, alongside the other Dora Canal Court plugins under
+one top-level menu.
+
+* The shared "DCC" parent is registered idempotently — any DCC plugin may
+  create it and any may be deactivated, so this plugin creates it only if
+  absent. Order-independent: exactly one DCC menu either way.
+* The duplicate first item WordPress auto-generates for a parent menu is
+  removed (guarded, so it is harmless if another plugin got there first).
+* The menu label is the bare product name, "Guest Guide" — "DCC → DCC
+  Guest Guide" would stutter. The page heading stays fully qualified.
+* The page slug is unchanged (`dccgg-settings`), so saved settings, the
+  options.php form target and any menu_page_url() caller still resolve.
+* Old bookmarks to `options-general.php?page=dccgg-settings` redirect to
+  the new location. The redirect is capability-gated and scoped to that
+  exact page, so it cannot fire on unrelated Settings screens or loop.
+* The screen ID changed from `settings_page_dccgg-settings` to
+  `dcc_page_dccgg-settings`. Nothing in the plugin compared against the
+  old string, and the live hook suffix is now stored rather than
+  hard-coded so anything added later cannot silently stop matching.
+
+No front-end changes: the guide, search, AI, copy buttons, popups and the
+Elementor widget (already under the "Dora Canal Court" category) are all
+untouched.
 
 = 0.9.7.35 =
 

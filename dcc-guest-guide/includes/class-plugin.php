@@ -10,6 +10,17 @@ final class Plugin
     private static ?Plugin $instance = null;
     private bool $booted = false;
 
+    /**
+     * Hook suffix returned by add_submenu_page(), i.e. the settings screen's
+     * ID. Kept live rather than hard-coded: the ID derives from the parent
+     * menu, so moving the page under "DCC" in v0.9.8 changed it from
+     * settings_page_dccgg-settings to dcc_page_dccgg-settings. A literal
+     * would have kept parsing fine and silently stopped matching.
+     *
+     * @var string|false|null
+     */
+    private $settings_hook = null;
+
     public static function instance(): self
     {
         return self::$instance ??= new self();
@@ -41,7 +52,15 @@ final class Plugin
         // v0.7: settings page (Gemini key) + AJAX endpoints (AI fallback +
         // weather proxy so the Open-Meteo response is transient-cached
         // server-side rather than re-hit on every page load).
-        add_action('admin_menu', [$this, 'register_settings_page']);
+        // v0.9.8: settings moved under the shared top-level "DCC" menu.
+        // Priority 5 registers the shared parent (idempotently — any DCC
+        // plugin may create it, and any may be deactivated); 30 is this
+        // plugin's assigned slot in the agreed cross-plugin ordering; 999
+        // drops the duplicate first item WordPress auto-generates.
+        add_action('admin_menu', [$this, 'register_dcc_parent_menu'], 5);
+        add_action('admin_menu', [$this, 'register_settings_page'], 30);
+        add_action('admin_menu', [$this, 'remove_dcc_parent_duplicate'], 999);
+        add_action('admin_init', [$this, 'redirect_legacy_settings_url']);
         add_action('admin_init', [$this, 'register_settings_fields']);
         add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
         add_action('wp_ajax_nopriv_dccgg_ai_query', [$this, 'handle_ai_query']);
@@ -509,11 +528,71 @@ final class Plugin
         return array_keys($out);
     }
 
+    /**
+     * Shared top-level "DCC" menu. Several DCC plugins register this same
+     * parent, so it is created only when absent — registration is therefore
+     * idempotent and order-independent, and the menu survives any single
+     * plugin being deactivated. The slug, titles, capability, icon and
+     * position are a fixed cross-plugin contract: diverging on any of them
+     * silently produces a SECOND "DCC" menu.
+     */
+    public function register_dcc_parent_menu(): void
+    {
+        global $admin_page_hooks;
+        if (!isset($admin_page_hooks['dcc'])) {
+            add_menu_page(
+                __('Dora Canal Court', 'dcc-guest-guide'),
+                __('DCC', 'dcc-guest-guide'),
+                'manage_options',
+                'dcc',
+                '',                    // no page of its own; the first submenu becomes the landing page
+                'dashicons-palmtree',
+                58
+            );
+        }
+    }
+
+    /**
+     * WordPress auto-generates a submenu mirroring the parent label. Remove
+     * it — guarded, so it is harmless if another DCC plugin got there first.
+     */
+    public function remove_dcc_parent_duplicate(): void
+    {
+        remove_submenu_page('dcc', 'dcc');
+    }
+
+    /**
+     * Old bookmarks pointed at Settings → DCC Guest Guide. That URL no longer
+     * resolves now the page hangs off the DCC parent, so send it onward.
+     */
+    public function redirect_legacy_settings_url(): void
+    {
+        global $pagenow;
+        if ($pagenow !== 'options-general.php') { return; }
+        if (($_GET['page'] ?? '') !== 'dccgg-settings') { return; }
+        if (!current_user_can('manage_options')) { return; }
+        wp_safe_redirect(admin_url('admin.php?page=dccgg-settings'));
+        exit;
+    }
+
+    /**
+     * Settings page, now a child of the shared DCC menu. The page slug is
+     * deliberately unchanged (options.php posts and menu_page_url() callers
+     * still resolve); only the parent moved. The menu label drops the "DCC"
+     * prefix because it would stutter inside a menu already called DCC.
+     *
+     * The returned hook suffix is kept because the screen ID is derived from
+     * the parent: it changed from settings_page_dccgg-settings to
+     * dcc_page_dccgg-settings. Nothing in this plugin compares against that
+     * string today; storing it means anything added later can use the live
+     * value rather than hard-coding a name that silently stops matching.
+     */
     public function register_settings_page(): void
     {
-        add_options_page(
+        $this->settings_hook = add_submenu_page(
+            'dcc',
             __('DCC Guest Guide', 'dcc-guest-guide'),
-            __('DCC Guest Guide', 'dcc-guest-guide'),
+            __('Guest Guide', 'dcc-guest-guide'),
             'manage_options',
             'dccgg-settings',
             [$this, 'render_settings_page']
