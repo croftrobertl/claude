@@ -28,7 +28,7 @@ class Widget extends Widget_Base {
 	}
 
 	public function get_categories() {
-		return [ 'dcc-widgets', 'general' ];
+		return [ 'dcc-widgets' ];
 	}
 
 	public function get_keywords() {
