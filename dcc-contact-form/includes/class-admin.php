@@ -6,53 +6,133 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Admin UI: a top-level "DCC Contact Form" menu with a Submissions list
- * (view + single/bulk delete) and a site-wide Settings page (reCAPTCHA keys,
- * threshold, min submit time, prohibited-words list).
+ * Admin UI. Both screens live under the shared top-level "DCC" menu that every
+ * DCC plugin registers into: a Settings page (reCAPTCHA keys, threshold, min
+ * submit time, prohibited-words list) and a Submissions list (view + single/bulk
+ * delete).
  */
 final class Admin
 {
-    private const CAP        = 'manage_options';
-    private const MENU_SLUG  = 'dcc-contact-form';
-    private const SET_SLUG   = 'dcc-contact-settings';
-    private const PER_PAGE   = 30;
+    private const CAP = 'manage_options';
+
+    /**
+     * Shared top-level "DCC" menu. These values are contractually identical in
+     * every DCC plugin — a divergent slug silently creates a SECOND "DCC" menu.
+     * Do not change them here in isolation.
+     */
+    private const PARENT_SLUG = 'dcc';
+
+    /**
+     * Submissions page slug. Unchanged from when this was the plugin's own
+     * top-level menu: only the parent moved, so `admin.php?page=dcc-contact-form`
+     * still resolves and every saved bookmark keeps working.
+     */
+    private const SUB_SLUG = 'dcc-contact-form';
+
+    /** Settings page slug — likewise unchanged. */
+    private const SET_SLUG = 'dcc-contact-settings';
+
+    private const PER_PAGE = 30;
+
+    /**
+     * Hook suffixes returned by add_submenu_page(). A submenu's screen ID is
+     * derived from its parent, so it changes whenever the parent does; anything
+     * needing to match this screen must compare against these values rather
+     * than a hard-coded "toplevel_page_…" / "settings_page_…" string.
+     */
+    private static string $settings_hook = '';
+    private static string $submissions_hook = '';
 
     public static function init(): void
     {
-        add_action('admin_menu', [self::class, 'register_menus']);
+        // 5: the shared parent must exist before any plugin registers into it.
+        add_action('admin_menu', [self::class, 'register_parent_menu'], 5);
+        // 20: this plugin's assigned slot in the DCC menu order. Priorities 10
+        // and 60 are reserved for site-side mu-plugins.
+        add_action('admin_menu', [self::class, 'register_menus'], 20);
+        // 999: drop WordPress's auto-generated duplicate of the parent label.
+        add_action('admin_menu', [self::class, 'remove_parent_duplicate'], 999);
+
         add_action('admin_init', [self::class, 'register_settings']);
         add_action('admin_init', [self::class, 'maybe_handle_actions']);
     }
 
+    /**
+     * Register the shared "DCC" parent, but only if no other DCC plugin has
+     * already done so. Idempotent and order-independent: any of the plugins
+     * sharing this menu may be deactivated at any time, so each one is able to
+     * create the parent on its own.
+     */
+    public static function register_parent_menu(): void
+    {
+        global $admin_page_hooks;
+
+        if (!isset($admin_page_hooks[self::PARENT_SLUG])) {
+            add_menu_page(
+                __('Dora Canal Court', 'dcc-contact-form'),
+                __('DCC', 'dcc-contact-form'),
+                self::CAP,
+                self::PARENT_SLUG,
+                '', // No page of its own; the first submenu becomes the landing page.
+                'dashicons-palmtree',
+                58
+            );
+        }
+    }
+
+    /**
+     * WordPress mirrors the parent as its own first submenu item. Remove that
+     * duplicate; guarded so it is harmless when another DCC plugin got there
+     * first (or when the parent does not exist).
+     */
+    public static function remove_parent_duplicate(): void
+    {
+        remove_submenu_page(self::PARENT_SLUG, self::PARENT_SLUG);
+    }
+
+    /**
+     * Both real pages attach directly to the shared parent — WordPress supports
+     * only two menu levels, so the plugin's former top-level menu cannot survive
+     * as an intermediate group and is gone entirely.
+     *
+     * Menu labels drop the "DCC" prefix: inside a menu already called DCC,
+     * "DCC → DCC Contact Form" stutters. Page titles stay fully qualified.
+     */
     public static function register_menus(): void
     {
-        add_menu_page(
-            __('DCC Contact Form', 'dcc-contact-form'),
-            __('DCC Contact Form', 'dcc-contact-form'),
-            self::CAP,
-            self::MENU_SLUG,
-            [self::class, 'render_submissions'],
-            'dashicons-email-alt',
-            26
-        );
-
-        add_submenu_page(
-            self::MENU_SLUG,
-            __('Submissions', 'dcc-contact-form'),
-            __('Submissions', 'dcc-contact-form'),
-            self::CAP,
-            self::MENU_SLUG,
-            [self::class, 'render_submissions']
-        );
-
-        add_submenu_page(
-            self::MENU_SLUG,
-            __('Settings', 'dcc-contact-form'),
-            __('Settings', 'dcc-contact-form'),
+        self::$settings_hook = (string) add_submenu_page(
+            self::PARENT_SLUG,
+            __('DCC Contact Form — Settings', 'dcc-contact-form'),
+            __('Contact Form', 'dcc-contact-form'),
             self::CAP,
             self::SET_SLUG,
             [self::class, 'render_settings']
         );
+
+        self::$submissions_hook = (string) add_submenu_page(
+            self::PARENT_SLUG,
+            __('DCC Contact Form — Submissions', 'dcc-contact-form'),
+            __('Form Submissions', 'dcc-contact-form'),
+            self::CAP,
+            self::SUB_SLUG,
+            [self::class, 'render_submissions']
+        );
+    }
+
+    /**
+     * The screen IDs of this plugin's two admin pages, as WordPress actually
+     * assigned them. Use this for `get_current_screen()->id` comparisons and
+     * conditional asset enqueues — never a hard-coded screen string, which
+     * silently stops matching the moment the parent menu changes.
+     *
+     * @return array{settings:string,submissions:string}
+     */
+    public static function screen_ids(): array
+    {
+        return [
+            'settings'    => self::$settings_hook,
+            'submissions' => self::$submissions_hook,
+        ];
     }
 
     /* ------------------------------------------------------------------ */
@@ -126,7 +206,7 @@ final class Admin
 
     public static function maybe_handle_actions(): void
     {
-        if (!isset($_REQUEST['page']) || $_REQUEST['page'] !== self::MENU_SLUG) {
+        if (!isset($_REQUEST['page']) || $_REQUEST['page'] !== self::SUB_SLUG) {
             return;
         }
         if (!current_user_can(self::CAP)) {
@@ -155,7 +235,7 @@ final class Admin
     private static function redirect_with_notice(string $notice, int $count = 1): void
     {
         $url = add_query_arg(
-            ['page' => self::MENU_SLUG, 'dcc_notice' => $notice, 'dcc_count' => $count],
+            ['page' => self::SUB_SLUG, 'dcc_notice' => $notice, 'dcc_count' => $count],
             admin_url('admin.php')
         );
         wp_safe_redirect($url);
@@ -228,9 +308,9 @@ final class Admin
                         </thead>
                         <tbody>
                         <?php foreach ($rows as $row) :
-                            $view_url   = add_query_arg(['page' => self::MENU_SLUG, 'action' => 'view', 'id' => (int) $row->id], admin_url('admin.php'));
+                            $view_url   = add_query_arg(['page' => self::SUB_SLUG, 'action' => 'view', 'id' => (int) $row->id], admin_url('admin.php'));
                             $delete_url = wp_nonce_url(
-                                add_query_arg(['page' => self::MENU_SLUG, 'action' => 'delete', 'id' => (int) $row->id], admin_url('admin.php')),
+                                add_query_arg(['page' => self::SUB_SLUG, 'action' => 'delete', 'id' => (int) $row->id], admin_url('admin.php')),
                                 'dcc_delete_' . (int) $row->id
                             );
                             ?>
@@ -253,7 +333,7 @@ final class Admin
                     </table>
                 </form>
                 <?php if ($pages > 1) :
-                    $base = add_query_arg(['page' => self::MENU_SLUG, 'paged' => '%#%'], admin_url('admin.php'));
+                    $base = add_query_arg(['page' => self::SUB_SLUG, 'paged' => '%#%'], admin_url('admin.php'));
                     echo '<div class="tablenav bottom"><div class="tablenav-pages">';
                     echo wp_kses_post(paginate_links([
                         'base'    => $base,
@@ -271,7 +351,7 @@ final class Admin
     private static function render_single(int $id): void
     {
         $row = Entries::get($id);
-        $back = add_query_arg(['page' => self::MENU_SLUG], admin_url('admin.php'));
+        $back = add_query_arg(['page' => self::SUB_SLUG], admin_url('admin.php'));
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('Submission', 'dcc-contact-form'); ?> #<?php echo esc_html((string) $id); ?></h1>
@@ -295,7 +375,7 @@ final class Admin
                 </table>
                 <p style="margin-top:16px;">
                     <?php $delete_url = wp_nonce_url(
-                        add_query_arg(['page' => self::MENU_SLUG, 'action' => 'delete', 'id' => $id], admin_url('admin.php')),
+                        add_query_arg(['page' => self::SUB_SLUG, 'action' => 'delete', 'id' => $id], admin_url('admin.php')),
                         'dcc_delete_' . $id
                     ); ?>
                     <a href="<?php echo esc_url($delete_url); ?>" class="button button-secondary" onclick="return confirm('<?php echo esc_js(__('Delete this submission?', 'dcc-contact-form')); ?>');"><?php esc_html_e('Delete', 'dcc-contact-form'); ?></a>

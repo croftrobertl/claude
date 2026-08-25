@@ -343,7 +343,7 @@ final class Widget extends Widget_Base
 
         $this->add_control('spam_notice', [
             'type'            => Controls_Manager::RAW_HTML,
-            'raw'             => __('reCAPTCHA keys, threshold, minimum submit time and the prohibited-words list are configured site-wide under <strong>DCC Contact Form &rarr; Settings</strong>.', 'dcc-contact-form'),
+            'raw'             => __('reCAPTCHA keys, threshold, minimum submit time and the prohibited-words list are configured site-wide under <strong>DCC &rarr; Contact Form</strong>.', 'dcc-contact-form'),
             'content_classes' => 'elementor-descriptor',
         ]);
 
