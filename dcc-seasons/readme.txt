@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.4.0
+Stable tag: 3.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,10 +68,38 @@ egg is found there.
 
 = Settings =
 
-WP-Admin → DCC → Seasons: master enable, ambient on/off, egg on/off,
-tap target selector, tap count, ambient density/opacity sliders, and a fully
-editable schedule table ({start, end, theme, label} rows, pre-seeded for
-2026–27) — future years need no rebuild.
+WP-Admin → DCC → Seasons: master enable, ambient on/off, egg on/off, where
+effects appear, tap target selector, tap count, ambient density/opacity
+sliders, and a fully editable schedule table ({start, end, theme, label}
+rows, pre-seeded for 2026–27) — future years need no rebuild.
+
+= Where effects appear =
+
+Four nested tiers, default "All pages and posts" (today's behaviour):
+
+* **Homepage only** — the front page and nothing else.
+* **All pages except cottage pages** — every WordPress page, but not the
+  MotoPress accommodation singles, so the booking screens stay calm.
+* **All pages** — pages including cottage pages.
+* **All pages and posts** — everything: posts, other post types, archives,
+  categories, search and 404 as well.
+
+Cottage pages are matched by MotoPress POST TYPE (`mphb_room_type`), never by
+URL or slug — the live slugs don't correspond to cottage numbers
+(`/accommodation/cottage-34/` serves room type 1607).
+
+A page outside the scope loads none of the plugin: no script, no inline
+config, no inline layering CSS. The scope decision is made server-side, which
+is cache-safe because it depends only on which URL is being rendered, not on
+the date — the season schedule still ships to the client and is still picked
+from the visitor's local clock. Saving the settings purges the page cache so
+already-cached URLs pick up the change; if no cache plugin can be purged
+automatically, the settings page says so and asks you to purge by hand.
+
+Scope covers the ambient particles AND the tap easter egg together, so with
+"Homepage only" the egg does not fire on interior pages. Admin theme previews
+(`?dcc_season=`) ignore the scope entirely, so you can always preview
+anywhere.
 
 = Theme preview (admins only) =
 
@@ -90,6 +118,10 @@ the normal date-driven behavior. The settings page lists every valid key.
 * `dcc_seasons_config` — the final JS config object.
 * `dcc_seasons_excluded_page_ids` — page IDs that never get effects.
 * `dcc_seasons_is_excluded` — final say on excluding the current request.
+* `dcc_seasons_in_scope` — final say on the "Where effects appear" gate
+  (applied after the exclusions, so it can't re-enable the checkout).
+* `dcc_seasons_cottage_post_types` — post types treated as cottage pages.
+* `dcc_seasons_purged_cache` (action) — fires after a settings save purge.
 
 == Installation ==
 
@@ -109,6 +141,31 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.5.0 =
+* New "Where effects appear" setting (`scope`), directly beneath the
+  ambient/egg toggles: Homepage only · All pages except cottage pages · All
+  pages · All pages and posts. Default is "All pages and posts", including
+  for existing installs whose stored options have no `scope` key, so
+  upgrading changes nothing until you choose otherwise.
+* Cottage pages are detected by MotoPress post type (`mphb_room_type`, asked
+  of MotoPress's own API first), never by URL or slug.
+* A page outside the scope now loads NOTHING — no loader script, no inline
+  config, no inline layering CSS. Out-of-scope pages cost zero bytes.
+* The scope gate runs alongside, never instead of, the hard exclusions: the
+  MotoPress checkout and the Elementor editor stay clean under every scope
+  value, and the new `dcc_seasons_in_scope` filter cannot re-enable them.
+* Admin theme previews (`?dcc_season=`) bypass the scope gate, so previewing
+  works on pages the current scope excludes.
+* Saving the settings purges the page cache (SpeedyCache first, then other
+  common caches, all guarded by function/class checks). The settings page
+  reports what was purged — or warns you to purge manually if nothing could
+  be reached.
+* New filters: `dcc_seasons_in_scope`, `dcc_seasons_cottage_post_types`, and
+  the `dcc_seasons_purged_cache` action.
+* Note: scope governs the ambient effects and the easter egg together, so
+  with "Homepage only" the egg does not fire on interior pages.
+* No art, sprite, theme, schedule, engine, glyph or animation changes.
 
 = 3.4.0 =
 * The settings page moved from Settings → DCC Seasons to the shared

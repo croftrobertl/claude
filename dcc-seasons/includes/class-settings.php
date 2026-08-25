@@ -33,6 +33,12 @@ class Settings {
         add_action('admin_init', [self::class, 'register']);
         add_action('admin_init', [self::class, 'redirect_legacy_url']);
         add_action('admin_enqueue_scripts', [self::class, 'assets']);
+        // The client config is inlined into cached HTML and the scope gate
+        // decides server-side whether it is emitted at all, so any save can
+        // leave stale pages behind.
+        add_action('update_option_' . self::OPTION, [Cache_Purge::class, 'purge_and_report']);
+        add_action('add_option_' . self::OPTION, [Cache_Purge::class, 'purge_and_report']);
+        add_action('admin_notices', [self::class, 'purge_notice']);
     }
 
     /**
@@ -40,6 +46,52 @@ class Settings {
      */
     public static function hook(): string {
         return self::$hook;
+    }
+
+    /**
+     * "Where effects appear" choices, narrowest first. The tiers are
+     * strictly nested (home < no_cottages < pages < all); the matrix each
+     * one covers lives on Plugin::scope_allows().
+     *
+     * @return array<string, string>
+     */
+    public static function scopes(): array {
+        return [
+            'home'         => __('Homepage only', 'dcc-seasons'),
+            'no_cottages'  => __('All pages except cottage pages', 'dcc-seasons'),
+            'pages'        => __('All pages', 'dcc-seasons'),
+            'all'          => __('All pages and posts', 'dcc-seasons'),
+        ];
+    }
+
+    /**
+     * Tell the owner what happened to the page cache when they saved —
+     * including, honestly, when nothing could be purged automatically.
+     */
+    public static function purge_notice(): void {
+        if (self::$hook === '' || !function_exists('get_current_screen')) {
+            return;
+        }
+        $screen = get_current_screen();
+        if (!$screen || $screen->id !== self::$hook) {
+            return;
+        }
+        $ran = get_transient(Cache_Purge::NOTICE);
+        if (!$ran) {
+            return;
+        }
+        delete_transient(Cache_Purge::NOTICE);
+
+        if ($ran === ['none']) {
+            echo '<div class="notice notice-warning"><p>'
+                . esc_html__('Settings saved, but no page cache could be purged automatically. The scope and the other settings are baked into cached pages, so purge your cache manually (SpeedyCache → Purge Cache) for the change to show on already-cached URLs.', 'dcc-seasons')
+                . '</p></div>';
+            return;
+        }
+        echo '<div class="notice notice-success"><p>'
+            /* translators: %s: comma-separated list of caches that were purged. */
+            . esc_html(sprintf(__('Settings saved and page cache purged: %s.', 'dcc-seasons'), implode(', ', array_map('strval', (array) $ran))))
+            . '</p></div>';
     }
 
     /**
@@ -71,6 +123,7 @@ class Settings {
             'ambient'         => 1,
             'egg'             => 1,
             'layering'        => 'behind',
+            'scope'           => 'all',
             'tap_selector'    => '#branding, .header-image .entry-title, .entry-title, #site-title',
             'tap_count'       => 5,
             'density'         => 10,
@@ -171,6 +224,11 @@ class Settings {
         $layering        = sanitize_key((string) ($in['layering'] ?? $d['layering']));
         $out['layering'] = in_array($layering, ['behind', 'front'], true) ? $layering : 'behind';
 
+        // Unknown/absent value falls back to 'all' — today's behavior, so an
+        // upgrade from an options array with no `scope` key changes nothing.
+        $scope        = sanitize_key((string) ($in['scope'] ?? $d['scope']));
+        $out['scope'] = array_key_exists($scope, self::scopes()) ? $scope : 'all';
+
         $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
         $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
         foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
@@ -253,6 +311,20 @@ class Settings {
                                 <input type="checkbox" name="<?php echo esc_attr(self::OPTION); ?>[egg]" value="1" <?php checked(!empty($opt['egg'])); ?> />
                                 <?php esc_html_e('Matrix easter egg (tap the logo)', 'dcc-seasons'); ?>
                             </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-scope"><?php esc_html_e('Where effects appear', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <select id="dcc-seasons-scope" name="<?php echo esc_attr(self::OPTION); ?>[scope]">
+                                <?php foreach (self::scopes() as $key => $label) : ?>
+                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($opt['scope'], $key); ?>><?php echo esc_html($label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description"><?php esc_html_e('Pages outside this scope load none of the plugin at all — no script, no config, no styles — so they cost nothing. "All pages except cottage pages" keeps the booking screens calm while the rest of the site stays festive; cottage pages are matched by MotoPress post type, not by URL. This covers the ambient particles AND the tap easter egg together, so the egg only fires where effects appear.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Saving purges the page cache automatically — already-cached pages would otherwise keep the old scope. Admin theme previews (?dcc_season=) ignore this setting, so you can always preview anywhere.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>

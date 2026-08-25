@@ -74,14 +74,10 @@ final class Plugin {
      * 5th tap only.
      */
     public function enqueue(): void {
+        if (!$this->should_load()) {
+            return;
+        }
         $opt = Settings::options();
-
-        if (empty($opt['enabled']) || (empty($opt['ambient']) && empty($opt['egg']))) {
-            return;
-        }
-        if ($this->is_excluded()) {
-            return;
-        }
 
         wp_enqueue_script(
             'dcc-seasons',
@@ -109,6 +105,9 @@ final class Plugin {
      * overlay is never routed through this setting.
      */
     public function print_layering_css(): void {
+        if (!$this->should_load()) {
+            return;
+        }
         $opt = Settings::options();
         if ($opt['layering'] !== 'behind') {
             return;
@@ -132,6 +131,145 @@ final class Plugin {
      */
     private static function suffix(): string {
         return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
+    }
+
+    /**
+     * The single load gate, shared by the script enqueue and the layering
+     * CSS so an out-of-scope page carries ZERO Seasons bytes — no loader,
+     * no inline config, no inline style. Order matters:
+     *
+     * 1. master switches   — nothing to load at all
+     * 2. hard exclusions   — checkout / Elementor, and they beat everything,
+     *                        including an admin preview and a scope of "all"
+     * 3. admin preview     — ?dcc_season= bypasses the SCOPE gate, never the
+     *                        exclusions
+     * 4. scope             — the owner's "Where effects appear" choice
+     */
+    private function should_load(): bool {
+        $opt = Settings::options();
+
+        if (empty($opt['enabled']) || (empty($opt['ambient']) && empty($opt['egg']))) {
+            return false;
+        }
+        if ($this->is_excluded()) {
+            return false;
+        }
+        if ($this->preview_theme() !== null) {
+            return true;
+        }
+        return $this->in_scope();
+    }
+
+    /**
+     * Is the current request inside the owner's chosen scope?
+     *
+     * This check is deliberately SERVER-side, unlike the theme schedule.
+     * The doctrine that PHP must not bake decisions into cached HTML exists
+     * for DATE-dependent logic — which season is active today — and that
+     * still ships to the client untouched. Scope depends only on which URL
+     * is being rendered, which is exactly what a full-page cache keys on: a
+     * cached homepage is only ever served as the homepage. So deciding it
+     * here is cache-safe, and it's the only way to spend zero bytes on an
+     * out-of-scope page.
+     *
+     * Changing the setting does invalidate already-cached pages, which is
+     * why saving the options purges the page cache (see Cache_Purge).
+     */
+    private function in_scope(): bool {
+        $scope = (string) Settings::options()['scope'];
+
+        /**
+         * Filter whether the current request is inside the effects scope.
+         *
+         * Runs alongside — never instead of — dcc_seasons_is_excluded: the
+         * hard exclusions are applied first and this filter cannot re-enable
+         * effects on the checkout or in the Elementor editor.
+         *
+         * @param bool   $in_scope
+         * @param string $scope Stored setting: home|no_cottages|pages|all.
+         */
+        return (bool) apply_filters('dcc_seasons_in_scope', $this->scope_allows($scope), $scope);
+    }
+
+    /**
+     * The scope matrix. Tiers are strictly nested
+     * (home < no_cottages < pages < all), so a wider tier never loses a
+     * context a narrower one had.
+     *
+     *                              home  no_cottages  pages  all
+     *   front page / homepage       Y         Y         Y     Y
+     *   `page` post type            -         Y         Y     Y
+     *   cottage (mphb_room_type)    -         -         Y     Y
+     *   blog post / other CPT       -         -         -     Y
+     *   archives, search, 404,
+     *   blog index                  -         -         -     Y
+     */
+    private function scope_allows(string $scope): bool {
+        if (is_front_page()) {
+            return true;
+        }
+        if ($scope === 'home') {
+            return false;
+        }
+        if ($this->is_cottage()) {
+            return $scope === 'pages' || $scope === 'all';
+        }
+        if (is_page()) {
+            return true; // no_cottages, pages, all
+        }
+        return $scope === 'all';
+    }
+
+    /**
+     * Is this a single cottage (MotoPress accommodation) page?
+     *
+     * Matched by POST TYPE, never by slug or URL: the live slugs don't line
+     * up with cottage numbers (/accommodation/cottage-34/ serves room type
+     * 1607), so slug logic looks right in testing and is wrong in
+     * production. MotoPress's own API is asked first in case it ever renames
+     * the type; the literal is the documented fallback.
+     */
+    private function is_cottage(): bool {
+        return is_singular(self::cottage_post_types());
+    }
+
+    /**
+     * @return string[] Post types treated as cottage pages.
+     */
+    private static function cottage_post_types(): array {
+        $type = '';
+
+        if (function_exists('MPHB')) {
+            try {
+                $mphb = MPHB();
+                if (is_object($mphb) && method_exists($mphb, 'postTypes')) {
+                    $types = $mphb->postTypes();
+                    if (is_object($types) && method_exists($types, 'roomType')) {
+                        $cpt = $types->roomType();
+                        if (is_object($cpt) && method_exists($cpt, 'getPostType')) {
+                            $type = (string) $cpt->getPostType();
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $type = ''; // MotoPress internals changed - fall through.
+            }
+        }
+        if ($type === '' && defined('\MPHB\PostTypes\RoomTypeCPT::POST_TYPE')) {
+            $type = (string) constant('\MPHB\PostTypes\RoomTypeCPT::POST_TYPE');
+        }
+        if ($type === '') {
+            $type = 'mphb_room_type';
+        }
+
+        /**
+         * Filter the post types treated as cottage pages by the scope gate.
+         *
+         * @param string[] $types
+         */
+        $types = apply_filters('dcc_seasons_cottage_post_types', [$type]);
+
+        return array_values(array_filter(array_map('strval', (array) $types)));
     }
 
     /**
