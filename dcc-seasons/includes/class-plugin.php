@@ -55,7 +55,12 @@ final class Plugin {
      * @return string[]
      */
     public function action_links(array $links): array {
-        $url = admin_url('options-general.php?page=dcc-seasons');
+        // Resolve against the registered menu so the link follows the page
+        // wherever it is parented; fall back if admin_menu hasn't run.
+        $url = function_exists('menu_page_url') ? menu_page_url(Settings::SLUG, false) : '';
+        if (!$url) {
+            $url = admin_url('admin.php?page=' . Settings::SLUG);
+        }
         array_unshift(
             $links,
             '<a href="' . esc_url($url) . '">' . esc_html__('Settings', 'dcc-seasons') . '</a>'

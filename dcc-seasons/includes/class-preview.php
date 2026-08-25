@@ -90,8 +90,11 @@ class Preview {
      * tap count reads the LIVE saved option.
      */
     public static function render_settings_panel(): void {
+        // Compare against the hook suffix add_submenu_page() handed back —
+        // the screen ID is derived from the parent menu, so a hard-coded
+        // string would silently stop matching if the page is re-parented.
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if (!$screen || 'settings_page_dcc-seasons' !== $screen->id) {
+        if (!$screen || Settings::hook() === '' || Settings::hook() !== $screen->id) {
             return;
         }
         $labels = self::labels();

@@ -15,10 +15,51 @@ class Settings {
 
     public const OPTION = 'dcc_seasons_options';
 
+    /** Page slug — unchanged by the move to the DCC parent menu. */
+    public const SLUG = 'dcc-seasons';
+
+    /**
+     * Hook suffix returned by add_submenu_page(). The screen ID is derived
+     * from the PARENT, so it changed from settings_page_dcc-seasons to
+     * dcc_page_dcc-seasons when the page moved. Anything that needs to know
+     * "am I on the settings page?" compares against this instead of a
+     * hard-coded string, so a future re-parent can't silently break it.
+     */
+    private static string $hook = '';
+
     public static function init(): void {
-        add_action('admin_menu', [self::class, 'add_page']);
+        Menu::init();
+        add_action('admin_menu', [self::class, 'add_page'], Menu::PRIORITY);
         add_action('admin_init', [self::class, 'register']);
+        add_action('admin_init', [self::class, 'redirect_legacy_url']);
         add_action('admin_enqueue_scripts', [self::class, 'assets']);
+    }
+
+    /**
+     * The settings page's hook suffix / screen ID, once admin_menu has run.
+     */
+    public static function hook(): string {
+        return self::$hook;
+    }
+
+    /**
+     * Old bookmarks: Settings → DCC Seasons lived at
+     * options-general.php?page=dcc-seasons. Send those to the new parent.
+     */
+    public static function redirect_legacy_url(): void {
+        global $pagenow;
+        if ($pagenow !== 'options-general.php') {
+            return;
+        }
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect of a bookmarked URL.
+        if ((isset($_GET['page']) ? $_GET['page'] : '') !== self::SLUG) {
+            return;
+        }
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        wp_safe_redirect(admin_url('admin.php?page=' . self::SLUG));
+        exit;
     }
 
     /**
@@ -63,11 +104,15 @@ class Settings {
     }
 
     public static function add_page(): void {
-        add_options_page(
+        // Inside a menu already called DCC, "DCC → DCC Seasons" stutters:
+        // the menu label is the bare product name, the page title stays
+        // fully qualified.
+        self::$hook = (string) add_submenu_page(
+            Menu::PARENT,
             __('DCC Seasons', 'dcc-seasons'),
-            __('DCC Seasons', 'dcc-seasons'),
+            __('Seasons', 'dcc-seasons'),
             'manage_options',
-            'dcc-seasons',
+            self::SLUG,
             [self::class, 'render_page']
         );
     }
@@ -80,7 +125,7 @@ class Settings {
     }
 
     public static function assets(string $hook): void {
-        if ($hook !== 'settings_page_dcc-seasons') {
+        if (self::$hook === '' || $hook !== self::$hook) {
             return;
         }
         wp_enqueue_style(

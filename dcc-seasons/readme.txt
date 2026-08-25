@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.3.1
+Stable tag: 3.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,7 +68,7 @@ egg is found there.
 
 = Settings =
 
-WP-Admin → Settings → DCC Seasons: master enable, ambient on/off, egg on/off,
+WP-Admin → DCC → Seasons: master enable, ambient on/off, egg on/off,
 tap target selector, tap count, ambient density/opacity sliders, and a fully
 editable schedule table ({start, end, theme, label} rows, pre-seeded for
 2026–27) — future years need no rebuild.
@@ -95,7 +95,7 @@ the normal date-driven behavior. The settings page lists every valid key.
 
 1. WP Admin → Plugins → Add New → Upload Plugin → `dcc-seasons.zip`.
 2. Activate. Defaults are live immediately (schedule pre-seeded for 2026–27).
-3. Optional: adjust under Settings → DCC Seasons.
+3. Optional: adjust under DCC → Seasons.
 
 == Manual smoke-test checklist ==
 
@@ -109,6 +109,23 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.4.0 =
+* The settings page moved from Settings → DCC Seasons to the shared
+  **DCC → Seasons** top-level menu, alongside the other Dora Canal Court
+  plugins' screens. The page slug is unchanged, so the old
+  `options-general.php?page=dcc-seasons` URL redirects to the new
+  `admin.php?page=dcc-seasons` and existing bookmarks still resolve.
+* The shared parent menu is registered idempotently: whichever DCC plugin
+  loads first creates it, and each one removes WordPress's auto-generated
+  duplicate first item, so deactivating any sibling never orphans the page
+  and never produces a second "DCC" menu.
+* Internal: the admin screen ID changed with the parent
+  (settings_page_dcc-seasons → dcc_page_dcc-seasons). The conditional admin
+  asset enqueue and the preview-buttons panel now compare against the hook
+  suffix add_submenu_page() returns rather than a hard-coded string, and the
+  Plugins-row "Settings" link resolves through menu_page_url().
+* No art, theme, schedule, engine, glyph, or option changes.
 
 = 3.3.1 =
 * Three more sprites were still shipping malformed path data from the
