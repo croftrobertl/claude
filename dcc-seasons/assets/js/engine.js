@@ -129,7 +129,7 @@
 		mask: '36 26|<path d="M4 2Q1 -1 2 4q1 4 5 5Zm28 0q3-3 2 2-1 4-5 5Z" fill="%j"/><path d="M2 10q16-8 32 0 0 10-9 10-4 0-7-3-3 3-7 3-9 0-9-10Z" fill="%l"/><ellipse cx="11" cy="13" rx="4" ry="3" fill="#FFF"/><ellipse cx="25" cy="13" rx="4" ry="3" fill="#FFF"/><path d="M2 10q16-6 32 0" stroke="%a" stroke-width="1" fill="none"/>',
 		stilts: '32 78|<path d="M11 46 L11 76" stroke="%i" stroke-width="3"/><path d="M21 46 L21 76" stroke="%i" stroke-width="3"/><path d="M7 47 L15 47 L15 50 L7 50 Z" fill="%f"/><path d="M17 47 L25 47 L25 50 L17 50 Z" fill="%f"/><path d="M16 3 L23 9 L20 11 L24 14 L16 17 L8 14 L12 11 L9 9 Z" fill="%l"/><circle cx="23.4" cy="8.6" r="1.8" fill="%a"/><circle cx="8.6" cy="8.6" r="1.8" fill="%a"/><circle cx="16" cy="21" r="4.2" fill="#F8D8B8"/><path d="M9 26 L23 26 L21 42 L11 42 Z" fill="%j"/><path d="M9 26 L1 34 L4 37 L11 30 Z" fill="%l"/><path d="M23 26 L31 34 L28 37 L21 30 Z" fill="%l"/><path d="M12 42 L15 42 L15 50 L12 50 Z" fill="%a"/><path d="M17 42 L20 42 L20 50 L17 50 Z" fill="%a"/>',
 		bottle: '18 44|<path d="M7 2h4v8q5 4 5 12v18q0 3-3 3H5q-3 0-3-3V22q0-8 5-12Z" fill="#1E5B2B"/><path d="M7 2h4v6H7Z" fill="%f"/><rect x="4" y="24" width="10" height="10" rx="1" fill="%d"/>',
-		cork: '16 20|<path d="M2.6 7 Q2.6 1 8 1 Q13.4 1 13.4 7 Z" fill="#D9A441"/><path d="M4.6 7 L11.4 7 L11 16.4 Q11 18.8 8 18.8 Q5 18.8 5 16.4 Z" fill="#C08A2E"/><path d="M4.8 8.6 L11.2 8.6" stroke="#8A8F98" stroke-width="1.1"/><path d="M6.6 8.6 L6.6 15.4 M9.4 8.6 L9.4 15.4" stroke="#8A8F98" stroke-width="0.9"/><path d="M5.4 4 Q8 2.4 10.6 4" stroke="#EFCB6B" stroke-width="1.3" fill="none"/>',
+		popper: '30 28|<clipPath id="pk"><path d="M4 26 L15 7 L24 14 Z"/></clipPath><path d="M4 26 L15 7 L24 14 Z" fill="%a"/><g clip-path="url(#pk)" fill="%e"><path d="M5 21 L15 8 L18 10.4 L8 23.4 Z"/><path d="M10 27 L20 14 L23 16.4 L13 29.4 Z"/></g><ellipse cx="19.6" cy="10.6" rx="2.6" ry="4.8" transform="rotate(-38 19.6 10.6)" fill="#8A6508"/><circle cx="26" cy="5.4" r="2" fill="%l"/><circle cx="21" cy="2.6" r="1.6" fill="%j"/><path d="M27.4 10.4 L29.6 8.6 L28.8 11.8 Z" fill="%m"/><path d="M23.4 1 L25.6 2.6 L23.6 4.2 Z" fill="%e"/><circle cx="28.6" cy="14.4" r="1.5" fill="%s"/><path d="M21.6 7.4 Q25.4 4.4 24.6 1.6 M22.8 9.6 Q27 8.8 28.8 6" stroke="%c" stroke-width="1.2" fill="none" stroke-linecap="round"/>',
 		/* — valentines — */
 		balloon: '26 32|<path d="M13 2C6 2 2 7 2 12c0 7 7 12 11 15 4-3 11-8 11-15C24 7 20 2 13 2Z" fill="#FA5252"/><path d="M7 8q1-3 4-4" stroke="#FFC9C9" stroke-width="2" fill="none"/><path d="M12 27h3l-1 3Z" fill="%n"/>',
 		letter0: '30 22|<rect x="1" y="1" width="28" height="20" rx="2" fill="#FFF0F3"/><rect x="1" y="1" width="28" height="20" rx="2" fill="none" stroke="%u" stroke-width="1"/><path d="M1 2l14 11L29 2" fill="none" stroke="%u" stroke-width="1"/><path d="M15 10c2-3 5-1 4 2-.6 2-4 3-4 3s-3-2-4-3c-1-3 2-4 4-2Z" fill="#FA5252"/>',
@@ -347,10 +347,101 @@
 		var cv = D.createElement('canvas');
 		cv.setAttribute('aria-hidden', 'true');
 		cv.className = 'dcc-seasons-canvas';
-		/* Layering setting: behind interactive widgets (5) or in front of
-		 * everything (99990). The egg overlay is never routed through this. */
-		cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + (CFG.layer ? 5 : 99990) + ';';
-		D.body.appendChild(cv);
+
+		/* --- Where the canvas is MOUNTED decides whether "behind" works. ---
+		 *
+		 * "In front of everything": body, z-index 99990. Untouched.
+		 *
+		 * "Behind": mounting on the body cannot express it. The theme's
+		 * content column (Bravada/cryout: main.main) is position:relative
+		 * with z-index:9 AND an opaque white background, so it establishes a
+		 * stacking context and paints over any body-level canvas below 9 —
+		 * and going above 9 is just "front" again. There is no body-level
+		 * z-index that lands BETWEEN that white background and the text on
+		 * top of it, which is what "behind" means.
+		 *
+		 * So the canvas is mounted INSIDE that element with z-index:-1. Per
+		 * the CSS painting order a negative-z-index positioned descendant
+		 * paints after its stacking context's own background and border but
+		 * before that context's in-flow content: above the white, below
+		 * every piece of text, image and widget. It needs no cooperation
+		 * from individual widgets at all.
+		 *
+		 * It stays position:fixed, so it is still a non-scrolling backdrop
+		 * and still covers the viewport outside the host (the coloured page
+		 * margins). A fixed element's containing block is the viewport, so
+		 * the host's overflow:hidden does not clip it — unless the host or
+		 * an ancestor has a transform/filter/perspective, which WOULD make
+		 * it the containing block. Rather than enumerate those properties,
+		 * the mount is verified below by measuring the canvas. --- */
+		function paintsOpaque(el) {
+			var cs = W.getComputedStyle(el);
+			if (cs.backgroundImage && cs.backgroundImage !== 'none') { return true; }
+			var m = /^rgba?\(([^)]+)\)/.exec(cs.backgroundColor || '');
+			if (!m) { return false; }
+			var parts2 = m[1].split(',');
+			return parts2.length < 4 || parseFloat(parts2[3]) >= 0.95;
+		}
+		function stacks(el) {
+			var cs = W.getComputedStyle(el);
+			if (cs.position !== 'static' && cs.zIndex !== 'auto') { return true; }
+			if (parseFloat(cs.opacity) < 1) { return true; }
+			if (cs.isolation === 'isolate') { return true; }
+			if (cs.mixBlendMode && cs.mixBlendMode !== 'normal') { return true; }
+			return !!((cs.transform && cs.transform !== 'none') || (cs.filter && cs.filter !== 'none') || (cs.perspective && cs.perspective !== 'none'));
+		}
+		/* Nearest ancestor of the content that both establishes a stacking
+		 * context and paints something opaque — found by walking up, never
+		 * hardcoded to one theme's markup. A selector from the
+		 * dcc_seasons_backdrop_host filter wins outright. */
+		/* Candidate hosts, nearest first. A selector from the
+		 * dcc_seasons_backdrop_host filter is tried before the walk. */
+		function backdropHosts() {
+			var out = [], el;
+			if (CFG.backdropHost) {
+				try { el = D.querySelector(CFG.backdropHost); } catch (e) { el = null; }
+				if (el && el !== D.body) { out.push(el); }
+			}
+			var anchor = D.querySelector('main, [role="main"], #main, #content, .site-content, article') || null;
+			for (el = anchor; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) {
+				if (stacks(el) && paintsOpaque(el) && out.indexOf(el) < 0) { out.push(el); }
+			}
+			return out;
+		}
+		function mountOnBody(z) {
+			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + z + ';';
+			D.body.appendChild(cv);
+		}
+		/* A host with a transform/filter/perspective is the containing block
+		 * for fixed descendants, so the canvas would be offset and clipped to
+		 * it instead of covering the viewport. Rather than enumerate the
+		 * properties that do that, mount and measure: if the canvas no longer
+		 * covers the viewport, this host is unusable — try the next one up. */
+		function tryHost(el) {
+			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;';
+			el.appendChild(cv);
+			var r = cv.getBoundingClientRect();
+			if (r.width >= W.innerWidth - 2 && r.height >= W.innerHeight - 2 && r.top <= 2 && r.left <= 2) { return true; }
+			el.removeChild(cv);
+			return false;
+		}
+		var host = null;
+		if (CFG.layer) {
+			var cand = backdropHosts();
+			for (var hi = 0; hi < cand.length; hi++) {
+				if (tryHost(cand[hi])) { host = cand[hi]; break; }
+			}
+		}
+		if (!host) {
+			/* No usable host: back to the pre-3.6.1 body mount. On a theme
+			 * that paints an opaque content column this cannot express
+			 * "behind" and the canvas may be covered — say so rather than
+			 * fail silently, and never render nothing. */
+			mountOnBody(CFG.layer ? 5 : 99990);
+			if (CFG.layer && W.console && W.console.warn) {
+				W.console.warn('DCC Seasons: no backdrop host found for "behind" layering; the canvas is on the body at z-index 5 and may be covered by the theme. Set one with the dcc_seasons_backdrop_host filter.');
+			}
+		}
 		var cx = cv.getContext('2d');
 
 		/* --- Sizing: one source (canvas rect × DPR), window + visualViewport
@@ -1678,7 +1769,7 @@
 					if (u < 1) {
 						st.trail.push([cxx, cyy]);
 						if (st.trail.length > 14) { st.trail.shift(); }
-						dspr('cork', cxx, cyy, 10, false, u * 9);
+						dspr('popper', cxx, cyy, 14, false, u * 9);
 					}
 					cx.save(); cx.globalAlpha = VA * 0.8; cx.strokeStyle = '#F783AC'; cx.lineWidth = 1.6;
 					cx.beginPath();

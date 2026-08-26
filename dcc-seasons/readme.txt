@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.6.0
+Stable tag: 3.6.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,9 @@ the normal date-driven behavior. The settings page lists every valid key.
 * `dcc_seasons_in_scope` — final say on the "Where effects appear" gate
   (applied after the exclusions, so it can't re-enable the checkout).
 * `dcc_seasons_cottage_post_types` — post types treated as cottage pages.
+* `dcc_seasons_layering_selectors` — widgets raised above the canvas.
+* `dcc_seasons_backdrop_host` — CSS selector for the element the canvas is
+  mounted inside in "behind" mode (empty = auto-detect).
 * `dcc_seasons_purged_cache` (action) — fires after a settings save purge.
 
 == Installation ==
@@ -141,6 +144,46 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.6.1 =
+* FIXED (the real cause): "Behind interactive widgets" never worked on this
+  site, and 3.6.0's widget fix — correct in itself — could not have fixed it.
+  The theme's content column (Bravada/cryout: main.main) is position:relative
+  with z-index:9 AND an opaque white background. It therefore establishes a
+  stacking context that paints over any body-level canvas below z-index 9,
+  and anything above 9 is simply "front" mode. No body-level z-index lands
+  between that white background and the text on top of it, so the widget-level
+  z-index:10 from 3.6.0 was never consulted — the occlusion happens a level up.
+* The canvas is now mounted INSIDE that element at z-index:-1. A
+  negative-z-index positioned descendant paints after its stacking context's
+  background but before its in-flow content: above the white, below every
+  piece of text, image and widget. It needs no cooperation from individual
+  widgets at all.
+* Measured on a reproduction of the live DOM stack, as the share of the white
+  content column the canvas can paint on: desktop 0.0% -> 60.0%, mobile
+  (375px) 0.0% -> 50.4%, with 0 of 90,438 (desktop) and 0 of 63,076 (mobile)
+  inked pixels covered — no particle over any text, image, button, card or
+  calendar cell. Coloured page margins stay fully reachable.
+* The host is found by walking up from the page's content anchor to the
+  nearest ancestor that both establishes a stacking context and paints an
+  opaque background — never hardcoded to one theme's markup. Override it with
+  the new `dcc_seasons_backdrop_host` filter.
+* A candidate that turns out to be the containing block for fixed descendants
+  (transform/filter/perspective) would clip the canvas; the mount is measured
+  and such a host is rejected in favour of the next one up. If nothing usable
+  is found the canvas returns to the pre-3.6.1 body mount AND logs a console
+  warning naming the filter — it is never left invisible.
+* "In front of everything" is byte-for-byte unchanged: body, z-index 99990.
+* A plugin install or upgrade now purges the page cache. Uploading a zip
+  changes nothing a full-page cache can see, so cached HTML kept the old
+  inline config and the old `?ver=` asset URL — after the 3.6.0 upload the
+  site went on serving engine.min.js?ver=3.5.0 until someone purged by hand.
+  A stored version is compared against the plugin's, so FTP uploads and
+  auto-updates are caught too, not just the upgrader.
+* Art: `cork` replaced by `popper` (a party popper). Two redraws of a
+  champagne cork read as a bucket and then a mushroom; the concept does not
+  survive 28px, so the replacement licence was spent instead of a third try.
+  Same New Year's scene, same beat.
 
 = 3.6.0 =
 * FIXED: "Behind interactive widgets" was far too aggressive. The rule also

@@ -11,4 +11,5 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 }
 
 delete_option('dcc_seasons_options');
+delete_option('dcc_seasons_version');
 delete_transient('dcc_seasons_purge_notice');

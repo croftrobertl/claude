@@ -13,6 +13,9 @@ if (!defined('ABSPATH')) {
 
 final class Plugin {
 
+    /** Stores the version last seen running, to detect an install/upgrade. */
+    public const VERSION_OPTION = 'dcc_seasons_version';
+
     private static ?Plugin $instance = null;
 
     public static function instance(): Plugin {
@@ -32,12 +35,38 @@ final class Plugin {
         Preview::init();
 
         if (is_admin()) {
+            add_action('admin_init', [$this, 'maybe_purge_after_upgrade'], 1);
             Settings::init();
             add_filter(
                 'plugin_action_links_' . plugin_basename(DCC_SEASONS_FILE),
                 [$this, 'action_links']
             );
         }
+    }
+
+    /**
+     * Purge the page cache when the installed version changes.
+     *
+     * Uploading a new zip does not invalidate anything by itself: cached
+     * HTML keeps the OLD inline config and the OLD asset URL (the ?ver=
+     * query is the plugin version), so the site can go on serving
+     * engine.min.js?ver=<previous> until something purges. Purge-on-save
+     * only fires when the SETTINGS are saved, which an upgrade doesn't do.
+     *
+     * Comparing a stored version against the constant catches every route
+     * in — Plugins → Upload, an auto-update, or files dropped over FTP —
+     * where hooking the upgrader alone would miss the last of those.
+     */
+    public function maybe_purge_after_upgrade(): void {
+        $seen = get_option(self::VERSION_OPTION);
+        if ($seen === DCC_SEASONS_VERSION) {
+            return;
+        }
+        update_option(self::VERSION_OPTION, DCC_SEASONS_VERSION, false);
+        if ($seen === false) {
+            return; // First ever run: nothing cached under a previous version.
+        }
+        Cache_Purge::purge_and_report();
     }
 
     public function load_textdomain(): void {
@@ -122,6 +151,12 @@ final class Plugin {
      * No `background` is declared here on purpose: an explicit
      * `background: transparent` would silently wipe any wrapper background
      * the owner set in Elementor.
+     *
+     * Since 3.6.1 the canvas is normally mounted inside the theme's content
+     * column at z-index -1, where every in-flow element already paints above
+     * it and this rule is inert. It is kept because it is exactly what
+     * protects the widgets on the fallback path, when no backdrop host is
+     * found and the canvas goes back on the body at z-index 5.
      *
      * Front-end only; not output at all in "In front of everything" mode,
      * which is what makes a stale cached page detectable — if the style tag
@@ -394,6 +429,17 @@ final class Plugin {
             'density'     => (int) $opt['density'],
             'opacity'     => (float) $opt['opacity'],
             'layer'       => $opt['layering'] === 'behind' ? 1 : 0,
+            /**
+             * CSS selector for the element the ambient canvas is mounted
+             * inside in "behind" mode — the one that paints the opaque
+             * content column. Empty (the default) means the engine finds it
+             * by walking up from the page's content anchor, so a theme
+             * change usually needs nothing here; set it if a theme's markup
+             * defeats the walk.
+             *
+             * @param string $selector
+             */
+            'backdropHost' => (string) apply_filters('dcc_seasons_backdrop_host', ''),
             'visual'      => [
                 'richness'    => (string) $opt['richness'],
                 'reflections' => !empty($opt['fx_reflections']),
