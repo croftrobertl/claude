@@ -347,7 +347,7 @@ class Themes {
                         ['s' => 'banana', 'b' => 'tumble', 'w' => 2],
                         ['s' => 'jester', 'b' => 'fall', 'w' => 3],
                         ['s' => 'disguise', 'b' => 'fall', 'sz' => [24, 30]],
-                        ['s' => 'teeth', 'b' => 'chatter'],
+                        ['s' => 'cushion', 'b' => 'chatter'],
                     ],
                 ],
                 'egg' => [

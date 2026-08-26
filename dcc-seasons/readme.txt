@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.5.0
+Stable tag: 3.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -141,6 +141,35 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.6.0 =
+* FIXED: "Behind interactive widgets" was far too aggressive. The rule also
+  painted `background: #fff` on the Elementor widget WRAPPER — the whole
+  bounding rectangle, not the controls — so the particles were hidden behind
+  a pair of large opaque blocks rather than passing behind the widgets. A
+  browser hit-test (canvas filled solid, screenshot, count the pixels it can
+  reach inside each wrapper) measured 0.0% of the wrapper reachable, on
+  desktop and at 375px alike. The rule now sets stacking only. Same
+  measurement after: 22.0% desktop / 24.8% mobile reachable on a widget
+  whose own root is transparent — its padding, gaps and rounded corners —
+  while painted cards, cells and text still measure 0.0%. Widgets that paint
+  their own background keep it and look identical.
+* The widget list is matched by attribute prefix (`elementor-widget-dcc*`,
+  `elementor-widget-mphbac*`) instead of three exact class names, and is
+  filterable via `dcc_seasons_layering_selectors`, so a DCC widget rename no
+  longer needs a release here.
+* "In front of everything" is unchanged, and still emits no style tag at all
+  — which is what makes a stale cached page detectable.
+* Art: 16 sprites redrawn for accuracy — sleigh (the Christmas hero; read as
+  a flying chicken drumstick), cornucopia, all three remaining autumn leaves
+  (leafm/leafc/leafs — the primary particle in two themes), cork, lure,
+  lilypad, petal, manatee, swan, hands, peel, stilts and pontoon.
+* The April Fool's chattering teeth (`teeth0`/`teeth1`) are replaced by a
+  whoopee cushion (`cushion0`/`cushion1`): the concept could not be read at
+  particle size. Same two-frame chatter animation, same theme slot.
+* Every one of the 278 path elements in the sprite registry passes the
+  path-arity validator, and all 20 theme previews render with zero
+  "<path> attribute d" console warnings.
 
 = 3.5.0 =
 * New "Where effects appear" setting (`scope`), directly beneath the

@@ -97,12 +97,35 @@ final class Plugin {
     /**
      * "Behind interactive widgets" layering (the default): the ambient
      * canvas sits at z-index 5 (picked engine-side from the config's
-     * `layer` key) and the DCC cottage-selector / availability-calendar
-     * Elementor wrappers are raised above it on a white backing. This
-     * replaces the site-side mu-plugin rule (dcc-ui-tweaks item 3),
-     * byte-for-byte for the widget-raising block. Front-end only; not
-     * output at all in "In front of everything" mode. The Matrix egg
-     * overlay is never routed through this setting.
+     * `layer` key) and the DCC interactive widgets are raised above it so
+     * nothing is ever drawn on top of a control a guest is reading.
+     *
+     * WHAT ACTUALLY OCCLUDES THE CANVAS — measured, not assumed. The canvas
+     * is position:fixed with z-index 5, so it paints above every ordinary
+     * page background: sections, containers and the theme's own chrome are
+     * not positioned and cannot cover it. The ONLY things that occlude it
+     * are elements raised into their own stacking context above 5 — which
+     * means these widgets, and only what those widgets actually paint.
+     *
+     * Through 3.5.0 this block also set `background: #fff` on the widget
+     * WRAPPER — the full bounding rectangle, not the controls. A hit-test
+     * (canvas filled solid, screenshot, count reachable pixels inside each
+     * wrapper) measured the result at 0.0% of the wrapper reachable on both
+     * desktop and 375px: the widgets were not "in front of" the particles,
+     * they were a pair of large opaque rectangles hiding them. Dropping that
+     * one declaration takes the same measurement to 22.0% desktop / 24.8%
+     * mobile on a widget whose own root is transparent — the padding, the
+     * grid gaps and the rounded-corner margins — while painted cards, cells
+     * and text still measure 0.0%. Widgets that paint their own background
+     * keep it, so nothing looks different.
+     *
+     * No `background` is declared here on purpose: an explicit
+     * `background: transparent` would silently wipe any wrapper background
+     * the owner set in Elementor.
+     *
+     * Front-end only; not output at all in "In front of everything" mode,
+     * which is what makes a stale cached page detectable — if the style tag
+     * is present in `front` mode, you are looking at cached HTML.
      */
     public function print_layering_css(): void {
         if (!$this->should_load()) {
@@ -112,22 +135,51 @@ final class Plugin {
         if ($opt['layering'] !== 'behind') {
             return;
         }
+
+        /*
+         * ---- The one block that knows about other plugins' markup ----
+         * Attribute-prefix matching rather than exact class names, so the
+         * DCC family can add or rename widgets without a release here:
+         * `elementor-widget-dcc*` covers the cottage selector, the single
+         * availability widget and the guest guide; `elementor-widget-mphbac*`
+         * covers the availability calendar. Filterable for anything else.
+         */
+        $selectors = apply_filters('dcc_seasons_layering_selectors', [
+            '[class*="elementor-widget-dcc"]',
+            '[class*="elementor-widget-mphbac"]',
+        ]);
+        // NOT esc_html'd: entities are not decoded inside <style>, so escaping
+        // the quotes in [class*="…"] would break the rule outright. A CSS
+        // selector cannot legally contain "<", so dropping any that does is
+        // both sufficient to keep the block unclosable and harmless.
+        $selectors = array_filter(
+            array_map(static fn($sel) => trim(preg_replace('/[\x00-\x1F\x7F]/', '', (string) $sel)), (array) $selectors),
+            static fn($sel) => $sel !== '' && strpos($sel, '<') === false
+        );
+        $selectors = array_values($selectors);
+        if (!$selectors) {
+            return;
+        }
+
         echo "<style id=\"dcc-seasons-layering\">\n"
-            . ".elementor-widget-dccs_selector,\n"
-            . ".elementor-widget-dccac_single,\n"
-            . ".elementor-widget-mphbac_calendar {\n"
+            . implode(",\n", $selectors) . " {\n"
             . "\tposition: relative;\n"
             . "\tz-index: 10;\n"
-            . "\tbackground: #fff;\n"
             . "}\n"
             . "</style>\n";
     }
 
     /**
      * '.min' in production, '' under SCRIPT_DEBUG. Regenerate the minified
-     * files after editing the sources:
-     * npx terser assets/js/ambient.js -c -m --safari10 -o assets/js/ambient.min.js
-     * npx terser assets/js/matrix.js  -c -m --safari10 -o assets/js/matrix.min.js
+     * files after editing the sources with EXACTLY this command per file, so
+     * size comparisons between releases are like-for-like (engine.min.js's
+     * build flags were not recorded before 3.6.0, which made the 3.5.0 file
+     * unreproducible and its size incomparable):
+     *
+     * npx terser assets/js/<name>.js -c passes=3 -m --safari10 \
+     *     -d __DCC_DEBUG__=false -o assets/js/<name>.min.js
+     *
+     * for <name> in ambient, engine, matrix.
      */
     private static function suffix(): string {
         return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
