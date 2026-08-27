@@ -35,6 +35,11 @@ find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
 
 # Build the installable zip the user uploads via WP Admin → Plugins → Add New → Upload
 ( cd $(git rev-parse --show-toplevel) && zip -r mphb-availability-calendar.zip mphb-availability-calendar )
+
+# DCC Cottage Selector — deliverable zips are named "Cottage Selector <version>.zip"
+# (user convention: the filename must state the version, so a downloaded build is
+# identifiable without opening it). Read the version from the plugin header first.
+( cd $(git rev-parse --show-toplevel) && zip -r "Cottage Selector 0.21.2.zip" dcc-cottage-selector )
 ```
 
 There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` and the plan in `/root/.claude/plans/` for the manual smoke-test checklist.
