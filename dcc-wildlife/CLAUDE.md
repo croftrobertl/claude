@@ -220,9 +220,19 @@ that's not true."* It is enforced structurally, not editorially.
 # Syntax-check every PHP file
 find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 
-# Build the installable zip (upload via WP Admin → Plugins → Add New → Upload)
-( cd $(git rev-parse --show-toplevel) && zip -r dcc-wildlife.zip dcc-wildlife )
+# Build the installable zip (upload via WP Admin → Plugins → Add New → Upload).
+# NAMING CONVENTION (owner's request): "Wildlife <version>.zip", e.g.
+# "Wildlife 1.5.0.zip". The version is read from the plugin header rather
+# than typed, so the filename can never drift from what is inside the zip.
+(
+  cd "$(git rev-parse --show-toplevel)" &&
+  V=$(sed -n 's/^ \* Version: *//p' dcc-wildlife/dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
+  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store'
+)
 ```
+
+Deliver that file to the owner for the Plugins → Add New → Upload route.
+`Wildlife *.zip` is gitignored, so build artifacts never get committed.
 
 ## Manual smoke-test checklist (staging)
 
