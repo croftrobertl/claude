@@ -98,6 +98,44 @@
 		wrap.appendChild(table);
 	}
 
+	/* ---- Water Atlas clarity probe ----
+	 * The endpoint path was never verified at build time, so rather than
+	 * guessing a URL in code the owner pastes one and this reports exactly
+	 * what came back from the live API. */
+	var clarityBtn = document.getElementById('dccwl-test-clarity');
+	if (clarityBtn && CFG.clarity) {
+		clarityBtn.addEventListener('click', function () {
+			var status = document.getElementById('dccwl-clarity-status');
+			if (status) { status.textContent = I18N.testing || ''; }
+
+			window.fetch(CFG.clarity, {
+				credentials: 'same-origin',
+				headers: { 'X-WP-Nonce': CFG.nonce || '' }
+			})
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					if (!status) { return; }
+					if (!d || !d.ok) {
+						status.textContent = (d && d.reason) ? d.reason : (I18N.clarityBad || '');
+						status.style.color = '#a4332a';
+						return;
+					}
+					var age = (typeof d.ageDays === 'number') ? d.ageDays : '?';
+					var how = d.asCurrent ? 'shown as a current condition'
+						: (d.wouldShow ? 'shown as "most recent known reading"' : 'too old — would be dropped');
+					status.textContent = 'Found ' + d.value + ' ft dated ' + d.date +
+						' (' + age + ' days old) — ' + how + '.';
+					status.style.color = d.wouldShow ? '#1d6b47' : '#a4332a';
+				})
+				.catch(function () {
+					if (status) {
+						status.textContent = I18N.failed || '';
+						status.style.color = '#a4332a';
+					}
+				});
+		});
+	}
+
 	var btn = document.getElementById('dccwl-discover');
 	if (btn && CFG.discover) {
 		btn.addEventListener('click', function () {

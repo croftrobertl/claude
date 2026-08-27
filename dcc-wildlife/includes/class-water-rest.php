@@ -33,6 +33,17 @@ final class Water_Rest {
 			]
 		);
 
+		// Admin-only: probe the configured Water Atlas clarity endpoint.
+		register_rest_route(
+			self::NS,
+			'/test-clarity',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ self::class, 'test_clarity' ],
+				'permission_callback' => static fn(): bool => current_user_can( 'manage_options' ),
+			]
+		);
+
 		// Admin-only: live gauge discovery against the USGS site service.
 		register_rest_route(
 			self::NS,
@@ -59,6 +70,10 @@ final class Water_Rest {
 		// longer than the underlying transient.
 		$response->header( 'Cache-Control', 'public, max-age=120' );
 		return $response;
+	}
+
+	public static function test_clarity(): \WP_REST_Response {
+		return new \WP_REST_Response( Water_Live::probe_clarity() );
 	}
 
 	public static function discover(): \WP_REST_Response {

@@ -63,11 +63,12 @@ includes/class-render.php     # Shared renderer for widget AND shortcode (identi
                               #   output); prints DCC_WL_CFG inline JSON once
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
 includes/class-water-fact.php   # THE GATE: private ctor + make(); no source => no Fact
-includes/class-water-data.php   # Stored settings + almanac (ships empty, filterable)
-includes/class-water-live.php   # USGS + NWS clients, transients, backoff, gauge discovery
+includes/class-water-data.php   # Stored settings + almanac (one seeded verified row)
+includes/class-water-live.php   # USGS/NWS/Water-Atlas clients, level deviation, rainfall,
+                                #   clarity, staleness guards, discovery + clarity probe
 includes/class-water-rest.php   # /conditions (public, serves cache) + /discover-gauges (admin)
 includes/class-water-render.php # Water widget/shortcode renderer; static server-side, live client-side
-includes/class-water-admin.php  # Settings -> DCC Water (slug dcc-wildlife-water)
+includes/class-water-admin.php  # DCC -> Water (slug dcc-wildlife-water, prio 63)
 includes/class-water-widget.php # Elementor widget dccwl_water
 assets/css/widget.css         # One CSS file; palette navy #0a3d62 / coral #e8604f
 assets/js/widget.js           # One vanilla-JS file, no jQuery, no AJAX
@@ -146,11 +147,31 @@ that's not true."* It is enforced structurally, not editorially.
 - **An unknown field is omitted, never rendered as "unknown".** An empty
   almanac renders as an absent section. That is correct behaviour, not a bug
   to be "fixed" with plausible placeholder numbers.
-- **The almanac ships empty on purpose.** It was built with no outbound
-  network access, so no depth, clarity reading, gauge ID or species list
-  could be verified — so none was written. Facts enter only via the admin
-  form, the `dcc_wl_water_almanac` filter, or the live layer; all three pass
-  through the same gate.
+- **The almanac ships nearly empty, on purpose.** v1.4.0 had no network and
+  seeded nothing. In v1.5.0 the owner verified sources on 2026-08-27, so the
+  defaults carry his checked values only: the property coordinates, five
+  active Lake County gauge IDs, and ONE published row (Lake Dora's area).
+  Everything else still enters via the admin form, the
+  `dcc_wl_water_almanac` filter, or the live layer — all three gated.
+- **Water temperature is permanently absent. Do not add it.** No `00010`
+  series exists on this water; the nearest are springs at a constant ~72 °F
+  while the canal swings 50s–90s, so a reading would be wrong in exactly the
+  direction that drives fishing. `class-water-live.php` carries the full
+  reasoning in a header comment — read it before "improving" anything there.
+- **Never print a raw gauge elevation as a headline.** `00065`/`63160` are
+  heights above a datum (~65.9 ft here); a guest reads that as depth. Show a
+  deviation in inches; keep the raw reading in the attribution line.
+- **The label must match the statistic.** "Normal for this week" requires 3+
+  distinct years in the daily-values record; otherwise the fallback is a
+  trailing 30-day mean and must say "the last 30 days", never "normal".
+  Rainfall is calendar-day sums and is labelled as such, not "last 48 hours".
+- **Staleness guards are load-bearing.** USGS keeps publishing dead sensors
+  (02238000's flow has been offline since 2026-03-03). Instantaneous readings
+  older than 6h are dropped; clarity over 45 days is relabelled "most recent
+  known reading" and over a year is dropped.
+- **Auto-hide:** the module emits nothing unless it has static content or a
+  live layer that could return something; live-only renders a hidden shell
+  the JS reveals only on real readings. An empty section is worse than none.
 - **The live layer never states a number this codebase chose.** Value, source
   and measurement time all arrive together from the API. Show the
   **measurement** time, never the fetch time.
@@ -164,9 +185,17 @@ that's not true."* It is enforced structurally, not editorially.
 - **Anecdote is never ingested.** Fishing-report blogs, charter sites and app
   check-ins are link-only, by policy — copyright *and* because one angler's
   Tuesday is not a fact about a guest's Saturday.
-- **Admin slug is `dcc-wildlife-water`, NOT `dcc-wildlife`.** The site
-  mu-plugin `dcc-wildlife-countdown.php` owns `dcc-wildlife`; taking it would
-  make one of the two pages vanish.
+- **Admin lives at DCC → Water**, registered on `admin_menu` at priority 63
+  (after the mu-plugins that build the `dcc` top-level menu), with a fallback
+  to Settings if that parent is absent. Slug is `dcc-wildlife-water`, NOT
+  `dcc-wildlife` — the mu-plugin `dcc-wildlife-countdown.php` owns that one
+  and taking it would make one of the two pages vanish.
+- **USGS API gotcha:** `stateCd` and `countyCd` together return HTTP 400.
+  Only one major filter is allowed; discovery uses a bounding box.
+- **The Water Atlas clarity path is configurable, not hardcoded.** Only the
+  API root and category name were ever confirmed, so the endpoint is a
+  `{wbid}` template with a shape-tolerant parser and an admin Test button
+  that probes the live API. Do not hardcode a guessed path.
 - `WATER-SOURCES.md` is the audit trail — every fact that can reach the page,
   what was deliberately omitted, and the owner questions. Keep it in step
   with the code.

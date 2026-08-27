@@ -2,13 +2,15 @@
 /**
  * Water module — stored configuration and the almanac layer.
  *
- * THE ALMANAC SHIPS EMPTY, ON PURPOSE.
+ * v1.4.0 shipped this empty because it was built with no network access and
+ * nothing could be verified. In v1.5.0 the owner verified the sources from a
+ * networked session on 2026-08-27, so the defaults below now carry a small
+ * number of CHECKED values — the gauge IDs he confirmed active, the
+ * coordinates his own mu-plugin has always used, and one published figure
+ * (Lake Dora's area). Provenance for every seeded value is in
+ * WATER-SOURCES.md; anything he did not verify is still absent.
  *
- * This plugin was built in an environment with no outbound network access,
- * so no lake depth, Secchi reading, gauge ID or species list could be
- * verified against USGS, FWC or the Lake County Water Atlas. Under the
- * owner's rule, an unverifiable figure must not reach the page — so none
- * were written. Facts enter this layer one of three ways, all attributed:
+ * Facts enter this layer one of three ways, all attributed:
  *
  *   1. The owner adds them on Settings → DCC Water, where the form refuses
  *      any row without a tier, a source name and a date.
@@ -41,25 +43,84 @@ final class Water_Data {
 	 */
 	public static function defaults(): array {
 		return [
-			'live_enabled' => 0,   // Off by default — see readme/CLAUDE.md for the reasoning.
-			'lat'          => '',
-			'lon'          => '',
-			'usgs_sites'   => [],  // Populated by discovery against the live USGS API.
-			'dock_notes'   => '',
-			'dock_updated' => '',
-			'almanac'      => [],  // Intentionally empty. See the class docblock.
-			'links'        => self::default_links(),
-			'reports'      => [],  // "Local reports & charters" — owner-supplied only.
+			// Still off by default: it makes network calls, so switching it
+			// on stays a deliberate act by the owner.
+			'live_enabled'      => 0,
+
+			// Verified 2026-08-27: api.weather.gov/points/28.8045,-81.7450
+			// resolves to Tavares, FL — office MLB, grid 11,78. These are the
+			// coordinates the owner's own dcc-sun-canal.php mu-plugin has
+			// used all along for its sunrise/sunset maths. NWS forecasts are
+			// gridded at roughly city scale, so this exposes no home address.
+			'lat'               => '28.8045',
+			'lon'               => '-81.7450',
+
+			// Active gauges confirmed by the owner in Lake County (12069).
+			'usgs_sites'        => [ '02237700', '02237701', '02238000', '02238001', '02237734' ],
+
+			// Apopka-Beauclair: the only one of these reporting precipitation
+			// (00045) as well as flow and stage, so it carries both the level
+			// and the rainfall figure until the owner says otherwise.
+			'featured_site'     => '02237700',
+			'rain_site'         => '02237700',
+
+			// Lake Dora, WBID 2831B (Water Atlas). The request path for the
+			// clarity API is NOT seeded: only the API root and the category
+			// name were confirmed, never the endpoint shape, so it stays
+			// blank until the Test button confirms it against the live API.
+			'clarity_endpoint'  => '',
+			'clarity_wbid'      => '2831B',
+			'clarity_link'      => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
+
+			'dock_notes'        => '',
+			'dock_updated'      => '',
+
+			// Sits beside the live rainfall figure, in the owner's voice.
+			'dock_rain_note'    => '',
+			'dock_rain_updated' => '',
+
+			'almanac'           => self::default_almanac(),
+			'links'             => self::default_links(),
+			'reports'           => [],  // "Local reports & charters" — owner-supplied only.
+		];
+	}
+
+	/**
+	 * The one published figure verified at build time.
+	 *
+	 * Lake Dora's area comes from the Water Atlas waterbody page the owner
+	 * checked on 2026-08-27. The date is the retrieval date, not a claim
+	 * about when the survey was done. Nothing else is seeded: no depths, no
+	 * clarity, no species, no hydrology.
+	 *
+	 * @return array<int,array<string,string>>
+	 */
+	public static function default_almanac(): array {
+		return [
+			[
+				'waterbody'   => __( 'Lake Dora', 'dcc-wildlife' ),
+				'label'       => __( 'Surface area', 'dcc-wildlife' ),
+				'value'       => __( '4,385 acres', 'dcc-wildlife' ),
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => __( 'Lake County Water Atlas — Lake Dora (WBID 2831B), retrieved', 'dcc-wildlife' ),
+				'source_url'  => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
+				'date'        => '2026-08-27',
+				'note'        => '',
+			],
 		];
 	}
 
 	/**
 	 * Authority links only.
 	 *
-	 * Provenance: every URL here is one the OWNER named in his own source
-	 * list, reproduced at its root. None was reachable from the build
-	 * environment, so none is verified by this plugin's author. They are
-	 * links, not claims — no fact is asserted about their contents.
+	 * Provenance: the Lake Dora page is a deep link the owner verified on
+	 * 2026-08-27. The two USGS entries are built from site IDs he confirmed
+	 * active, using the monitoring-location URL pattern this plugin already
+	 * uses for its source links. FWC, NWS and SJRWMD remain roots: no
+	 * Lake-County-specific path on those sites was verified, and a guessed
+	 * deep link is a broken link. They are flagged in WATER-SOURCES.md as
+	 * the owner's to improve. All of these are links, not claims — no fact
+	 * is asserted about their contents.
 	 *
 	 * Commercial and user-generated sites (charters, fishing-report blogs,
 	 * app check-ins) are deliberately NOT prefilled: their pages are
@@ -77,12 +138,16 @@ final class Water_Data {
 				'url'   => 'https://myfwc.com/',
 			],
 			[
-				'label' => __( 'Lake County Water Atlas (USF Water Institute)', 'dcc-wildlife' ),
-				'url'   => 'https://lake.wateratlas.usf.edu/',
+				'label' => __( 'Lake Dora — Water Atlas waterbody page (USF Water Institute)', 'dcc-wildlife' ),
+				'url'   => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
 			],
 			[
-				'label' => __( 'USGS water data', 'dcc-wildlife' ),
-				'url'   => 'https://waterdata.usgs.gov/',
+				'label' => __( 'USGS gauge — Apopka-Beauclair Canal near Astatula', 'dcc-wildlife' ),
+				'url'   => 'https://waterdata.usgs.gov/monitoring-location/02237700/',
+			],
+			[
+				'label' => __( 'USGS gauge — Haynes Creek at Lisbon', 'dcc-wildlife' ),
+				'url'   => 'https://waterdata.usgs.gov/monitoring-location/02238000/',
 			],
 			[
 				'label' => __( 'National Weather Service forecast', 'dcc-wildlife' ),
@@ -219,6 +284,87 @@ final class Water_Data {
 			'text'    => $text,
 			'updated' => trim( (string) self::get( 'dock_updated' ) ),
 		];
+	}
+
+	private static function site_id( string $key ): string {
+		$v = preg_replace( '/\D/', '', (string) self::get( $key ) );
+		return ( is_string( $v ) && preg_match( '/^\d{8,15}$/', $v ) ) ? $v : '';
+	}
+
+	/** Gauge whose stage drives the water-level line. */
+	public static function featured_site(): string {
+		return self::site_id( 'featured_site' );
+	}
+
+	/** Gauge whose precipitation drives the rainfall line. */
+	public static function rain_site(): string {
+		return self::site_id( 'rain_site' );
+	}
+
+	public static function clarity_endpoint(): string {
+		$v = trim( (string) self::get( 'clarity_endpoint' ) );
+		return preg_match( '#^https://#i', $v ) ? $v : '';
+	}
+
+	public static function clarity_wbid(): string {
+		return sanitize_text_field( (string) self::get( 'clarity_wbid' ) );
+	}
+
+	public static function clarity_link(): string {
+		$v = esc_url_raw( trim( (string) self::get( 'clarity_link' ) ) );
+		return preg_match( '#^https?://#i', $v ) ? $v : 'https://lake.wateratlas.usf.edu/';
+	}
+
+	/**
+	 * The owner's note about what rain does to the canal, shown beside the
+	 * live rainfall figure but in his own voice — never blended into it.
+	 *
+	 * @return array{text:string,updated:string}|null
+	 */
+	public static function rain_note(): ?array {
+		$text = trim( (string) self::get( 'dock_rain_note' ) );
+		if ( '' === $text ) {
+			return null;
+		}
+		return [
+			'text'    => $text,
+			'updated' => trim( (string) self::get( 'dock_rain_updated' ) ),
+		];
+	}
+
+	/**
+	 * Does the module hold anything worth showing WITHOUT a network call?
+	 *
+	 * Drives the auto-hide: a heading over five links to national homepages
+	 * reads as unfinished on a guest page, so the module renders nothing at
+	 * all unless it has a sourced fact or the owner's own words. Live
+	 * readings cannot be counted here — they arrive after paint — so the
+	 * renderer keeps the section hidden and lets the JS reveal it if, and
+	 * only if, real readings turn up.
+	 */
+	public static function has_static_content(): bool {
+		if ( self::almanac() ) {
+			return true;
+		}
+		if ( null !== self::dock_notes() ) {
+			return true;
+		}
+		return null !== self::rain_note();
+	}
+
+	/**
+	 * Could a live reading plausibly arrive? Used to decide whether to emit
+	 * the hidden shell at all, so a module with the layer switched off (or
+	 * unconfigured) emits no markup whatsoever.
+	 */
+	public static function live_possible(): bool {
+		if ( ! self::live_enabled() ) {
+			return false;
+		}
+		return '' !== self::featured_site()
+			|| '' !== self::rain_site()
+			|| null !== self::coords()
+			|| ( '' !== self::clarity_endpoint() && '' !== self::clarity_wbid() );
 	}
 
 	/**

@@ -151,6 +151,18 @@
 	margin-bottom: 0;
 }
 
+/* The rain note sits directly beneath the measured rainfall total. Same
+ * owner-voice treatment as "From the dock", but tightened up so the pairing
+ * reads as one thought in two voices rather than two unrelated blocks. */
+.dccwl-water .dccwl-water-rainnote {
+	margin-top: 8px;
+	padding: 10px 14px;
+}
+
+.dccwl-water .dccwl-water-rainnote .dccwl-water-dock-meta {
+	margin-bottom: 4px;
+}
+
 /* ---- links ---- */
 
 .dccwl-water .dccwl-water-linklist {

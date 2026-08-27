@@ -1,193 +1,203 @@
 # Water module — sources, confidence, and gaps
 
-**DCC Wildlife 1.4.0 · "Fishing & Water Conditions"**
+**DCC Wildlife 1.5.0 · "Fishing & Water Conditions"**
 
-This is the audit document for the water module. Every fact that can reach a
-guest's screen is listed here with its origin, its confidence tier and its
-date. If you ever see something on the page that is not in this list, that is
-a bug — tell me.
+This is the audit document. Every fact that can reach a guest's screen is
+listed here with its origin, confidence tier and date. If you ever see
+something on the page that is not in this list, that is a bug — tell me.
 
 ---
 
-## 1. The build constraint you need to know about
+## 0. What changed since 1.4.0
 
-The environment this module was built in **had no outbound internet access**.
-Every data host was blocked at the gateway:
+1.4.0 was built with no outbound network, so nothing could be checked and the
+almanac shipped empty. **You verified the sources from a networked session on
+2026-08-27**, and 1.5.0 is built on those results.
 
-```
-waterservices.usgs.gov  -> blocked (gateway 403)
-api.weather.gov         -> unreachable
-myfwc.com               -> unreachable
-lake.wateratlas.usf.edu -> unreachable
-waterdata.usgs.gov      -> unreachable
-sjrwmd.com              -> unreachable
-```
+One thing to keep straight: **this build environment still has no egress** —
+USGS, NWS, FWC and the Water Atlas are all blocked here. So the figures below
+are *your* verified findings, taken on trust as your first-hand report, not
+values I independently re-checked. Everything derived from them is marked
+accordingly. Where you did not verify something, it is still absent.
 
-That means **I could not verify a single figure** — not one lake depth, not
-one Secchi reading, not one gauge ID, not one species list, not the shape of
-the Harris Chain or which waters connect to which.
+The gate itself is unchanged: `Water_Fact` still has a private constructor and
+a single null-returning factory, and the renderer still accepts nothing else.
 
-Under your rule, the response to that is not to write plausible numbers and
-soften them with "approximately". It is to **write none**. So the almanac
-ships **empty**, and what I built instead is the machinery that makes it
-impossible to fill it carelessly later:
+---
 
-- a schema where an unsourced fact **cannot be constructed**, let alone rendered;
-- a live layer where the value, its source and its measurement time all arrive
-  together from the API, so I never choose a number;
-- a **gauge-discovery tool** that asks USGS, from your live server, which
-  gauges actually exist near you — so the site IDs come from USGS, not from
-  anyone's memory.
+## 1. Verified sources
+
+### USGS Water Services — confirmed working
+
+Active gauges in Lake County (`countyCd=12069`). **API gotcha, now recorded in
+the code:** passing `stateCd` and `countyCd` together returns HTTP 400 — only
+one major filter is allowed, which is why discovery uses a bounding box.
+
+| Site | Name | Reports | Used for |
+|---|---|---|---|
+| **02237700** | Apopka-Beauclair Canal near Astatula | `00045` precip, `00060` flow, `00065` stage, `63160` elev, `72255` velocity | **Water level + rainfall** (default) |
+| 02237701 | Apopka-Beauclair Canal below dam | `00065`, `63160` | Available |
+| **02238000** | Haynes Creek at Lisbon | `00065`, `63160` | Available (flow offline since 2026-03-03) |
+| 02238001 | Haynes Creek below Burrell Dam | `00065`, `63160` | Available |
+| 02237734 | Wolf Branch at FCRR near Mount Dora | `00060`, `00065` | Available |
+
+02238000's dead flow series is exactly why there is now a **staleness guard**:
+any instantaneous reading older than 6 hours is dropped rather than shown as
+current. A five-month-old value can no longer reach the page.
+
+### NWS — confirmed working
+
+`api.weather.gov/points/28.8045,-81.7450` → Tavares, FL, office **MLB**, grid
+**11,78**. Those coordinates are seeded as defaults; they are the same ones
+your `dcc-sun-canal.php` mu-plugin has always used, and NWS grids are roughly
+city-scale, so nothing about a precise address is exposed.
+
+### Lake County Water Atlas — API exists, path not confirmed
+
+`api.wateratlas.usf.edu` is public with no documented key, and publishes a
+Water Clarity Report category. **The request path and response shape were not
+part of what you verified**, so I did not invent one. Instead:
+
+- the endpoint is a **configurable URL template** (`{wbid}` placeholder),
+- the parser is deliberately **shape-tolerant** — it walks whatever JSON comes
+  back looking for a depth-like value paired with a date-like value,
+- and Settings → DCC Water has a **Test button** that fetches from your live
+  server and reports exactly what it found, so the path gets confirmed against
+  the real API rather than guessed here.
+
+Lake Dora's WBID (**2831B**) and waterbody page are seeded from your check.
 
 ---
 
 ## 2. Every fact that can reach the page
 
-### 2a. Live layer — tier `live` (only when enabled AND configured)
+### 2a. Live layer — only when enabled AND configured
 
-| Field | Source | Value comes from | Date shown |
+| Field | Source | How the value is produced | Date shown |
 |---|---|---|---|
-| Water temperature | USGS Water Services, parameter `00010`, per configured site | The API response | The gauge's own measurement timestamp |
-| Gauge height | USGS Water Services, parameter `00065` | The API response | Measurement timestamp |
-| Discharge | USGS Water Services, parameter `00060` | The API response | Measurement timestamp |
-| Forecast — *(period)* | NWS `api.weather.gov` forecast for your coordinates | The API response | Forecast issuance time (`properties.updated`) |
-| Wind | NWS, same forecast payload | The API response | Forecast issuance time |
+| **Water level** | USGS `00065` (or `63160`) at the featured site | A **deviation in inches** from a baseline — never the raw elevation | Gauge measurement time |
+| **Recent rain** | USGS `00045` daily sums (`statCd=00006`) | Sum of the last **two calendar days** | Date of the last complete day |
+| **Water clarity** | Water Atlas clarity endpoint | Latest Secchi depth in the response | The reading's own sample date |
+| **Forecast** | NWS forecast for the grid | The API's own short forecast + temperature | Forecast issuance time |
+| **Wind** | NWS, same payload | The API's own wind speed/direction | Forecast issuance time |
 
-Notes on these five, because they are the only numbers this plugin will ever
-produce on its own:
+Three things worth understanding about how these are worded:
 
-- The **station name and site number are printed next to every USGS reading**
-  and link to that station's USGS page. You can click through and check.
-- **Water temperature is the one value that is transformed:** USGS reports
-  Celsius, guests read Fahrenheit. The conversion is exact, and the original
-  reading is disclosed in the row ("converted from 25.5 °C as reported").
-  Nothing else is transformed.
-- USGS's no-data sentinel (`-999999`) is discarded rather than displayed.
-- The time shown is always the **measurement** time, never the time the site
-  fetched it. A reading taken at 2:15 PM says 2:15 PM even if the page is
-  served from cache at 6 PM.
+**Water level is never shown raw.** `00065`/`63160` are heights above a datum;
+Apopka-Beauclair reads about 65.93 ft, and a guest reading "Gage height: 65.93
+ft" would conclude the water is 65 feet deep — a falsehood produced by the
+module built to prevent falsehoods. So the headline is *"About 4 inches above
+normal for this week"* and the raw reading sits in the small print where it is
+unambiguous.
 
-### 2b. Almanac — tiers `published` / `general`
+**The label always matches the statistic.** "Normal for this week" is only
+printed when the daily-values record actually supports it: **three or more
+distinct years** with at least nine observations in that calendar week. Below
+that threshold it falls back to a trailing 30-day mean and says *"the last 30
+days"* — never the word "normal" — with a note explaining that the record is
+too short. Rainfall is labelled *"over the last two days"* with the calendar
+dates named, because daily sums are what USGS actually publishes; it is not
+described as a rolling 48 hours.
 
-**Ships empty. There are zero pre-filled facts.**
+**Neither gauge is in Lake Dora.** Apopka-Beauclair is upstream of the
+Beauclair/Dora pool and Haynes Creek is downstream past Eustis, so every
+reading names its station and its straight-line distance ("about 3.2 mi from
+the property"). Neither is ever called "your water", and the chain's hydrology
+and flow direction are still not asserted anywhere.
 
-Anything that ever appears here will have been entered by you on
-Settings → DCC Water (or added in code via the `dcc_wl_water_almanac`
-filter), and the form **refuses to save a row** that lacks a confidence tier,
-a source name and a valid date. When it drops rows, it tells you which ones
-and what they were missing.
+### 2b. Almanac — one seeded row
 
-### 2c. "From the dock" — your own words
+| Waterbody | Field | Value | Tier | Source | Date |
+|---|---|---|---|---|---|
+| Lake Dora | Surface area | 4,385 acres | `published` | Lake County Water Atlas, WBID 2831B | 2026-08-27 (retrieved) |
 
-Free text you write, rendered in a visually distinct coral panel, labelled
-"First-hand notes from your hosts" with the date you last updated it. This is
-the only section allowed to speak without a citation, precisely because it is
-explicitly marked as *your observation* rather than published data. It is also
-the most valuable content on the page — no national source can tell a guest
-what the canal does 48 hours after a hard rain.
+That is the **only** pre-filled fact in the plugin. The date is the retrieval
+date, not a claim about when the survey was done. Everything else is still
+entered by you on Settings → DCC Water, where the form refuses any row missing
+a tier, a source name or a date, and tells you which rows it dropped.
 
-### 2d. Links and fixed text
+### 2c. Owner's own words — two places
 
-Outbound links assert nothing. The only fixed factual sentence in the module
-is the disclaimer: *"Licences, seasons and limits change — check the FWC
-before you fish."* That is deliberately the **only** thing said about
-regulations — see §4.
+"From the dock" (standing notes) and the **rain note**, which renders directly
+beneath the measured rainfall in your voice. The gauge measures the rain; you
+say what rain does to the canal. They are deliberately **two blocks, never one
+sentence** — nothing implies the gauge said anything about the canal.
 
----
+### 2d. Links
 
-## 3. Source list — what I used, and what I refused to use
-
-### Used as data (official, public, machine-readable)
-
-| Source | Used for | Why it qualifies |
-|---|---|---|
-| **USGS Water Services** | Gauge height, discharge, water temperature; gauge discovery | Public domain, REST/JSON, no key, self-timestamping |
-| **NWS `api.weather.gov`** | Forecast, wind | Public domain, no key. Sends a descriptive `User-Agent` as they require |
-
-### Wired for you to cite, but not ingested
-
-| Source | Why not automated |
-|---|---|
-| **Lake County Water Atlas** (USF) | The right home for Secchi/clarity, but I could not reach it to confirm whether it exposes a machine-readable endpoint. Linked, and it is the source you would name on a clarity row you enter by hand |
-| **Florida FWC** | Species, regulations, ramps, bathymetry. Some open GIS exists, but I could not confirm any endpoint or its shape. Linked as the authority |
-| **SJRWMD / Lake County Water Authority** | Lake levels and basin management. Same reason |
-
-### Link only — never ingested, by policy
-
-Cabela's, Bass Pro, Dick's, BassOnline, Harris Chain Reports, Lake County
-Bass, Fishbrain, onWater, Fishing Points, Fishbox, Lakefront Florida, Bass
-Fishing Florida, Life in Lake, Paddling, Discover Lake County, Mount Dora
-Boating Center.
-
-Two separate reasons, and the second matters more: their content is
-copyrighted with no public API, so ingesting it would breach their terms —
-**and** their reports are one angler's afternoon. "They were crushing them on
-the north shoal Tuesday" is a true statement about Tuesday and a false
-statement about your guest's Saturday. That is exactly the confident falsehood
-this module exists to prevent. The "Local reports & charters" section takes
-whichever of these you trust, as plain outbound links.
+Now deep-linked where a deep link was verified: the **Lake Dora waterbody
+page**, and per-gauge **USGS monitoring-location** pages built from your
+confirmed site IDs. FWC, NWS and SJRWMD remain roots — no Lake-County-specific
+path on those was verified, and a guessed deep link is a broken link. Those
+three are yours to improve; the fields are editable.
 
 ---
 
-## 4. What I deliberately left out, and why
+## 3. What I deliberately left out, and why
 
-1. **Every lake depth, average and maximum.** Could not reach FWC or any
-   bathymetric source. Guessing a depth on a page guests may act on is
-   exactly the failure mode you described.
-2. **All water-clarity / Secchi figures.** The field most likely to be wrong
-   if guessed, and it changes with the season. Live-or-omit; the almanac row
-   exists for when you have a dated Water Atlas reading in hand.
-3. **The list of Harris Chain lakes and how they connect.** I will not assert
-   which lakes the Dora Canal joins or which way water flows. See §5.
-4. **Specific fishing spots and any coordinates.** The module supports
-   describing *kinds* of water (grass lines, canal mouths, drop-offs, cypress
-   edges); it invents no hot spots.
-5. **Depth at which fish hold, as a site-specific number.** Available only as
-   `general` guidance, rendered inside a visibly separate "General guidance —
-   not measured on this water" box.
-6. **Every bag limit, size limit and season.** These change, and a stale limit
-   on a guest page could get someone cited. The module links FWC and says
-   "check before you fish" — that is the correct answer, not a table.
-7. **Solunar tables.** Not established science; deliberately absent.
-8. **Ramps, locks, low bridges, idle-speed and manatee zones.** Safety-relevant
-   navigation facts are the *last* place to guess. Structurally supported as
-   almanac rows; shipped empty pending sourced values.
-9. **Any species list presented as "found here".** Needs FWC per-waterbody
-   data I could not read. The wildlife module's own fish entry is unaffected.
-10. **Preset USGS site IDs.** A wrong site ID silently shows a real reading
-    from the wrong river — worse than no reading. Hence the discovery tool.
+1. **Water temperature — removed outright, and not coming back.** There is no
+   `00010` series on this water. The nearest active ones are Rock Springs
+   (~15 mi) and Wekiwa Springs (~18 mi) — both **springs**, discharging at a
+   near-constant ~72 °F year round, while the canal is shallow surface water
+   swinging from the fifties to near ninety. Since temperature is what drives
+   bass behaviour, a spring reading would be confidently wrong in the
+   direction that matters most: 72 °F in January and 72 °F in August, telling
+   an angler the opposite of the truth in both. Disclosing the distance does
+   not rescue it. The C→F conversion path is deleted and a comment in
+   `class-water-live.php` records why, so nobody helpfully re-adds it. If a
+   thermometer goes on the dock, it enters as a **dated owner observation**.
+2. **Raw gauge elevation as a headline** — see above.
+3. **The word "normal" on a short record** — the fallback says what it is.
+4. **Lake depths, average and maximum.** Still unverified. Absent.
+5. **The Harris Chain lake list and how the waters connect.** Still yours.
+6. **Specific fishing spots and coordinates.** Kinds of water only.
+7. **Bag limits, size limits and seasons.** These change, and a stale limit
+   could get a guest cited. Link to FWC and "check before you fish".
+8. **Solunar tables.** Not established science. Absent.
+9. **Ramps, locks, low bridges, idle-speed and manatee zones.** Safety
+   information is the last place to guess. Structurally supported, empty.
+10. **A guessed Water Atlas endpoint path.** Configurable + Test button
+    instead.
+11. **Species lists presented as "found here".** Needs FWC per-waterbody data.
 
 ---
 
-## 5. Questions only you can answer
+## 4. The empty-state change, measured
 
-Hyperlocal facts I will not guess. Answer any of these and I can wire them in
-as sourced rows (with you as the named source, dated):
+Rendering the actual v1.4.0 code with nothing configured produced **1,289
+bytes** — a heading, five links to national homepages, a disclaimer, and zero
+facts. On a guest page that reads as unfinished.
 
-1. **Which waters should the module list?** Name them exactly as you would say
-   them to a guest — and which the Dora Canal actually connects to.
-2. **Where is the property, to four decimals?** Needed for the NWS forecast
-   and for gauge discovery. Nothing is guessed, so both stay off until you
-   enter it.
-3. **Which USGS gauge is genuinely representative of your water?** Run the
-   discovery button and tell me which of the returned stations you would trust
-   — proximity alone is not the same as relevance.
-4. **What do guests actually catch off your dock, and when?** This becomes
-   "From the dock", the best content on the page.
-5. **What does the canal do after heavy rain?** You have said it colours up —
-   how long does it take to clear in your experience?
-6. **Nearest ramp(s) guests really use**, and any idle-speed, manatee-zone,
-   lock or low-bridge constraint between you and the open lakes. I would
-   rather print your first-hand navigation knowledge than a guessed map.
-7. **Do you want the live layer on at all?** It is off by default and breaks
-   the plugin's old "no external services" promise — deliberately, in the
-   open, with the header rewritten to say what actually happens.
+v1.5.0 in the same situation renders **0 bytes**. The module now emits nothing
+at all unless it holds a sourced fact, your own words, or a live layer that
+could plausibly return something. When only live content is possible, the
+section is emitted **hidden** and the JavaScript reveals it *only* once real
+readings arrive — so a failed fetch leaves the page clean rather than showing
+an empty shell. You can place it on the Guest Guide now and let it light up as
+it fills.
+
+---
+
+## 5. Still yours to answer — do not let anyone guess these
+
+1. **Which waters should the module list**, and what the Dora Canal actually
+   connects to.
+2. **Which gauge do you consider representative?** Both are configured;
+   02237700 is the default only because it is the one reporting rainfall.
+3. **What do guests actually catch off the dock, and when?**
+4. **Nearest ramps**, and any idle-speed, manatee-zone, lock or low-bridge
+   constraint between you and the open lakes.
+5. **The Water Atlas clarity endpoint path** — paste a candidate and press
+   Test; it will tell you immediately whether it works.
+6. **Do you want the live layer on?** It is still off by default, because it
+   makes network calls and that should stay a deliberate act.
 
 ---
 
 ## 6. How to audit the page yourself
 
 1. Look at any value on the guest page.
-2. Read the small grey line directly beneath it: that is its source and date.
-3. If it is a USGS reading, click the source — it opens that exact station.
+2. Read the small grey line beneath it: source, measurement time, and for the
+   water level, the raw reading and the comparison basis.
+3. If it is a USGS reading, click through — it opens that exact station.
 4. If a value has no line beneath it, that is a bug. It should not be possible.

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,9 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * Three confidence tiers: `live` (a gauge reading fetched now), `published` (an official dataset) and `general` (angling guidance, rendered in a visibly separate voice). Anything else is dropped.
 * An optional, **off-by-default** live layer fetches public USGS gauge data and the NWS forecast server-side into a transient, exposed through a REST route so page caching can never serve a stale reading. Each row shows the measurement time, not the fetch time.
 * "From the dock" — owner-written first-hand notes, visually distinct from published data.
-* The almanac ships **empty on purpose**; see WATER-SOURCES.md for the full audit trail, what was left out and why.
+* **Renders nothing at all** until it holds a sourced fact, the owner's own words, or a live reading — so it can be placed before it is populated and lights up as it fills.
+* Live water level is expressed as a deviation ("about 4 inches above normal for this week"), never as the raw gauge elevation, which a guest would read as water depth.
+* See WATER-SOURCES.md for the full audit trail, what was left out and why.
 
 The wildlife guide and the water almanac are 100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no image files (inline SVG only). Assets load only on pages that use a widget or shortcode. The optional live layer is the single, clearly-flagged exception and requires no keys or accounts.
 
@@ -34,11 +36,22 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 
 * Elementor: add the **DCC Wildlife — On the Canal** widget (category "Dora Canal Court"). Controls: title override, show/hide field guide, show/hide month browser, compact mode (spotlight band only).
 * Anywhere else: `[dcc_wildlife title="" guide="yes" browser="yes" compact="no"]`.
-* Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under Settings → DCC Water. It renders nowhere until placed — nothing is auto-injected.
+* Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under DCC → Water. It renders nowhere until placed — nothing is auto-injected.
 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.5.0 =
+* Sources verified: USGS gauge IDs, NWS grid and the Lake County Water Atlas were confirmed live, and the module is now seeded with those checked values (property coordinates, five active Lake County gauges, Lake Dora's area as the first published almanac row).
+* **Auto-hide:** the module renders nothing at all unless it has a sourced fact, the owner's own words, or a live layer that could return something. Previously an unpopulated module emitted 1,289 bytes of heading and national-homepage links; it now emits 0.
+* **Water temperature removed entirely, deliberately and permanently.** The nearest `00010` gauges are springs (~72 °F year round) while the canal swings from the fifties to near ninety — a reading that would be wrong in exactly the direction that matters. The C→F conversion path is deleted and a comment records why.
+* **Water level is shown as a deviation, never raw elevation.** "About 4 inches above normal for this week", with the gauge reading and comparison basis in the small print. "Normal for this week" is only said when the record supports it (3+ distinct years); otherwise it falls back to a trailing 30-day mean and says so.
+* New live figures: two-day rainfall totals (labelled as calendar days, not a rolling 48 hours) and Water Atlas Secchi clarity with staleness handling — readings over 45 days are labelled "most recent known reading", over a year are dropped.
+* The owner's note about what rain does to the canal renders directly beneath the measured rainfall, in his voice, never blended into it.
+* Staleness guard: instantaneous readings older than 6 hours are dropped, so a dead series (like 02238000's flow, offline since March) cannot render as current.
+* Settings moved from Settings → DCC Water to the consolidated **DCC → Water** menu, with a fallback to Settings if the DCC parent is absent. Slug stays `dcc-wildlife-water` so the countdown mu-plugin's page is untouched.
+* Authority links deep-linked where a deep link was verified (Lake Dora waterbody page, per-gauge USGS monitoring locations).
 
 = 1.4.0 =
 * New "Fishing & water conditions" module: Elementor widget `dccwl_water` + `[dcc_water]` shortcode, placed manually and rendering nowhere until placed.

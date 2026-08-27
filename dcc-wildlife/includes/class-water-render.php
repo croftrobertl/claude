@@ -13,6 +13,14 @@
  *
  * Every value on the page comes from a Water_Fact, so every value on the
  * page carries a source and a date. There is no other way in.
+ *
+ * AUTO-HIDE (v1.5.0): a heading over five links to national homepages reads
+ * as unfinished on a guest page, so the module emits NOTHING unless it has
+ * either static content (a sourced fact / the owner's own words) or a real
+ * chance of a live reading. When only live content is possible, the section
+ * is emitted hidden and assets/js/water.js reveals it only once genuine
+ * readings arrive — so a failed fetch leaves the page clean rather than
+ * showing an empty shell.
  */
 
 namespace DCC_WL;
@@ -49,17 +57,25 @@ final class Water_Render {
 			$title = __( 'Fishing & water conditions', 'dcc-wildlife' );
 		}
 
-		self::enqueue_assets();
+		$almanac   = Water_Data::almanac();
+		$dock      = Water_Data::dock_notes();
+		$rain_note = Water_Data::rain_note();
+		$links     = Water_Data::link_list( 'links' );
+		$reports   = Water_Data::link_list( 'reports' );
+		$live      = Water_Data::live_possible();
+		$has_static = Water_Data::has_static_content();
 
-		$almanac = Water_Data::almanac();
-		$dock    = Water_Data::dock_notes();
-		$links   = Water_Data::link_list( 'links' );
-		$reports = Water_Data::link_list( 'reports' );
-		$live    = Water_Data::live_enabled();
+		// Nothing sourced and no live layer: render nothing at all. An empty
+		// section is worse than no section.
+		if ( ! $has_static && ! $live ) {
+			return '';
+		}
+
+		self::enqueue_assets();
 
 		ob_start();
 		?>
-		<section class="dccwl-water" aria-labelledby="dccwl-water-title">
+		<section class="dccwl-water" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
 
 			<?php if ( $live ) : ?>
@@ -67,6 +83,30 @@ final class Water_Render {
 				<div class="dccwl-water-live" data-dccwl-water-live hidden>
 					<h3 class="dccwl-water-sub"><?php esc_html_e( 'Right now', 'dcc-wildlife' ); ?></h3>
 					<ul class="dccwl-water-facts" data-dccwl-water-facts></ul>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( null !== $rain_note ) : ?>
+				<?php /* Sits beside the measured rainfall, but visibly in the owner's
+				         voice: the gauge measures rain, the owner says what rain does
+				         to the canal. Two sources, never merged into one sentence. */ ?>
+				<div class="dccwl-water-dock dccwl-water-rainnote">
+					<p class="dccwl-water-dock-meta">
+						<?php
+						if ( '' !== $rain_note['updated'] ) {
+							printf(
+								/* translators: %s: date the owner last updated the note. */
+								esc_html__( 'What that means here — from your hosts, updated %s', 'dcc-wildlife' ),
+								esc_html( $rain_note['updated'] )
+							);
+						} else {
+							esc_html_e( 'What that means here — from your hosts', 'dcc-wildlife' );
+						}
+						?>
+					</p>
+					<div class="dccwl-water-dock-body">
+						<?php echo wp_kses_post( wpautop( $rain_note['text'] ) ); ?>
+					</div>
 				</div>
 			<?php endif; ?>
 
@@ -202,7 +242,7 @@ final class Water_Render {
 	private static function enqueue_assets(): void {
 		wp_enqueue_style( 'dcc-wildlife-water' );
 
-		if ( ! Water_Data::live_enabled() ) {
+		if ( ! Water_Data::live_possible() ) {
 			return; // No live layer: no script, no network call, nothing to fill.
 		}
 

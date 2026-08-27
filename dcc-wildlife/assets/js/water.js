@@ -91,7 +91,14 @@
 
 		// Nothing usable: leave the strip hidden rather than showing an
 		// empty box or an error. The almanac below stands on its own.
-		if (shown > 0) { root.hidden = false; }
+		if (shown > 0) {
+			root.hidden = false;
+			// When the module has no static content it was emitted hidden
+			// entirely, so a failed fetch leaves the page clean. Real
+			// readings arrived, so reveal it.
+			var section = root.closest('[data-dccwl-water-root]');
+			if (section) { section.hidden = false; }
+		}
 	}
 
 	function init() {

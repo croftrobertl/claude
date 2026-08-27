@@ -2,12 +2,18 @@
 /**
  * Water module — Settings → DCC Water.
  *
- * MENU SLUG: `dcc-wildlife-water`, deliberately NOT `dcc-wildlife`.
- * A site mu-plugin (dcc-wildlife-countdown.php) already registers a
- * "DCC → Wildlife" submenu at slug `dcc-wildlife`. Taking that slug would
- * make one of the two pages silently disappear, so this page lives under
- * Settings with its own slug and does not touch the mu-plugin's menu. If
- * the countdown is ever folded into this plugin, both can be merged then.
+ * MENU: a submenu of the site's consolidated **DCC** menu (top-level slug
+ * `dcc`), registered at priority 63 so it lands after the mu-plugins that
+ * build that menu and the ordering stays stable.
+ *
+ * SLUG: `dcc-wildlife-water`, deliberately NOT `dcc-wildlife` — the site
+ * mu-plugin `dcc-wildlife-countdown.php` owns that slug for its
+ * DCC → Wildlife page, and taking it would make one of the two pages
+ * silently disappear.
+ *
+ * FALLBACK: if the `dcc` parent does not exist (mu-plugins disabled, or
+ * this plugin installed somewhere else), the page falls back to Settings
+ * rather than becoming an orphaned submenu that renders nowhere.
  *
  * The save handler is where the owner's rule becomes visible: every almanac
  * row missing a tier, a source name or a valid date is DROPPED on save, and
@@ -24,23 +30,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Water_Admin {
 
 	public const SLUG   = 'dcc-wildlife-water';
+	public const PARENT = 'dcc';
 	private const NOTICE = 'dcc_wl_water_notice';
 
+	/** Hook suffix of whichever page we ended up registering. */
+	private static string $hook = '';
+
 	public static function register_hooks(): void {
-		add_action( 'admin_menu', [ self::class, 'add_page' ] );
+		// Priority 63: after the mu-plugins that construct the DCC menu
+		// (top-level registered around 58–62).
+		add_action( 'admin_menu', [ self::class, 'add_page' ], 63 );
 		add_action( 'admin_init', [ self::class, 'register' ] );
 		add_action( 'admin_notices', [ self::class, 'notices' ] );
 		add_action( 'admin_enqueue_scripts', [ self::class, 'assets' ] );
 	}
 
 	public static function add_page(): void {
-		add_options_page(
-			__( 'DCC Water', 'dcc-wildlife' ),
-			__( 'DCC Water', 'dcc-wildlife' ),
-			'manage_options',
-			self::SLUG,
-			[ self::class, 'render_page' ]
-		);
+		$parent_exists = isset( $GLOBALS['admin_page_hooks'][ self::PARENT ] );
+
+		$hook = $parent_exists
+			? add_submenu_page(
+				self::PARENT,
+				__( 'DCC Water', 'dcc-wildlife' ),
+				__( 'Water', 'dcc-wildlife' ),
+				'manage_options',
+				self::SLUG,
+				[ self::class, 'render_page' ]
+			)
+			: add_options_page(
+				__( 'DCC Water', 'dcc-wildlife' ),
+				__( 'DCC Water', 'dcc-wildlife' ),
+				'manage_options',
+				self::SLUG,
+				[ self::class, 'render_page' ]
+			);
+
+		self::$hook = is_string( $hook ) ? $hook : '';
 	}
 
 	public static function register(): void {
@@ -56,7 +81,7 @@ final class Water_Admin {
 	}
 
 	public static function assets( string $hook ): void {
-		if ( 'settings_page_' . self::SLUG !== $hook ) {
+		if ( '' === self::$hook || $hook !== self::$hook ) {
 			return;
 		}
 		wp_enqueue_script(
@@ -71,8 +96,11 @@ final class Water_Admin {
 			'window.DCC_WL_WATER_ADMIN = ' . wp_json_encode(
 				[
 					'discover' => esc_url_raw( rest_url( Water_Rest::NS . '/discover-gauges' ) ),
+					'clarity'  => esc_url_raw( rest_url( Water_Rest::NS . '/test-clarity' ) ),
 					'nonce'    => wp_create_nonce( 'wp_rest' ),
 					'i18n'     => [
+						'testing'    => __( 'Asking the Water Atlas…', 'dcc-wildlife' ),
+						'clarityBad' => __( 'No usable reading found.', 'dcc-wildlife' ),
 						'searching' => __( 'Asking USGS…', 'dcc-wildlife' ),
 						'none'      => __( 'No active gauges returned for that area. Check the coordinates, or add site IDs by hand.', 'dcc-wildlife' ),
 						'failed'    => __( 'Could not reach USGS. Nothing was changed.', 'dcc-wildlife' ),
@@ -99,6 +127,23 @@ final class Water_Admin {
 			$v          = trim( (string) ( $input[ $k ] ?? '' ) );
 			$out[ $k ]  = is_numeric( $v ) ? $v : '';
 		}
+
+		foreach ( [ 'featured_site', 'rain_site' ] as $k ) {
+			$v         = preg_replace( '/\D/', '', (string) ( $input[ $k ] ?? '' ) );
+			$out[ $k ] = ( is_string( $v ) && preg_match( '/^\d{8,15}$/', $v ) ) ? $v : '';
+		}
+
+		// Clarity: https only — this endpoint is fetched server-side.
+		$endpoint = trim( (string) ( $input['clarity_endpoint'] ?? '' ) );
+		$endpoint = esc_url_raw( $endpoint );
+		$out['clarity_endpoint'] = preg_match( '#^https://#i', $endpoint ) ? $endpoint : '';
+		$out['clarity_wbid']     = sanitize_text_field( (string) ( $input['clarity_wbid'] ?? '' ) );
+		$clarity_link            = esc_url_raw( trim( (string) ( $input['clarity_link'] ?? '' ) ) );
+		$out['clarity_link']     = preg_match( '#^https?://#i', $clarity_link ) ? $clarity_link : '';
+
+		$out['dock_rain_note'] = wp_kses_post( trim( (string) ( $input['dock_rain_note'] ?? '' ) ) );
+		$rain_updated          = trim( (string) ( $input['dock_rain_updated'] ?? '' ) );
+		$out['dock_rain_updated'] = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $rain_updated ) ? $rain_updated : '';
 
 		// Site IDs: newline/comma separated, digits only.
 		$raw_sites = (string) ( $input['usgs_sites_raw'] ?? '' );
@@ -186,7 +231,7 @@ final class Water_Admin {
 
 	public static function notices(): void {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || 'settings_page_' . self::SLUG !== $screen->id ) {
+		if ( ! $screen || '' === self::$hook || $screen->id !== self::$hook ) {
 			return;
 		}
 		$rejected = get_transient( self::NOTICE );
@@ -223,7 +268,7 @@ final class Water_Admin {
 					<?php esc_html_e( 'nothing reaches the guest page without a source and a date. Rows missing either are dropped on save and listed back to you. An omitted line is always better than a wrong one.', 'dcc-wildlife' ); ?>
 				</p>
 				<p style="margin:.4em 0">
-					<?php esc_html_e( 'Place the module with the "DCC Water — Fishing & Conditions" Elementor widget, or the [dcc_water] shortcode. It renders nowhere until you place it.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Place the module with the "DCC Water — Fishing & Conditions" Elementor widget, or the [dcc_water] shortcode. It renders nowhere until you place it — and once placed it stays completely invisible until it has something sourced to say, so you can put it on the Guest Guide now and let it light up as it fills.', 'dcc-wildlife' ); ?>
 				</p>
 			</div>
 
@@ -256,6 +301,25 @@ final class Water_Admin {
 						<td><input type="text" id="dccwl-lon" class="regular-text" name="<?php echo esc_attr( $name ); ?>[lon]" value="<?php echo esc_attr( (string) $o['lon'] ); ?>" placeholder="-81.7..." /></td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="dccwl-featured"><?php esc_html_e( 'Water-level gauge', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-featured" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[featured_site]" value="<?php echo esc_attr( (string) $o['featured_site'] ); ?>" />
+							<p class="description">
+								<?php esc_html_e( 'Neither nearby gauge sits in Lake Dora — Apopka-Beauclair is upstream of the Beauclair/Dora pool and Haynes Creek is downstream past Eustis. The page names the station and its distance plainly and never calls it "your water". Pick whichever you consider representative.', 'dcc-wildlife' ); ?>
+							</p>
+							<p class="description">
+								<?php esc_html_e( 'The raw gauge figure is an elevation above a datum (about 65.9 ft), not a depth, so it is never shown as a headline — the page reports how far above or below normal the water is running, with the reading itself in the small print.', 'dcc-wildlife' ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-rainsite"><?php esc_html_e( 'Rain gauge', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-rainsite" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[rain_site]" value="<?php echo esc_attr( (string) $o['rain_site'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'Site 02237700 is the only nearby gauge reporting precipitation. Totals are whole calendar days, and the page says so rather than claiming a rolling 48 hours.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="dccwl-sites"><?php esc_html_e( 'USGS site IDs', 'dcc-wildlife' ); ?></label></th>
 						<td>
 							<textarea id="dccwl-sites" class="large-text code" rows="3" name="<?php echo esc_attr( $name ); ?>[usgs_sites_raw]"><?php echo esc_textarea( implode( "\n", (array) $o['usgs_sites'] ) ); ?></textarea>
@@ -266,6 +330,33 @@ final class Water_Admin {
 							</p>
 							<div id="dccwl-discover-results"></div>
 						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Water clarity (Lake County Water Atlas)', 'dcc-wildlife' ); ?></h2>
+				<p class="description" style="max-width:46em">
+					<?php esc_html_e( 'The Water Atlas has a public API, but only its root and the "Water Clarity Report" category were confirmed — never the exact request path. Rather than guess a URL, paste the endpoint here and press Test: it fetches from your live server and shows what came back. Use {wbid} where the waterbody ID belongs.', 'dcc-wildlife' ); ?>
+				</p>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="dccwl-clarity-endpoint"><?php esc_html_e( 'Clarity endpoint', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="url" id="dccwl-clarity-endpoint" class="large-text code" name="<?php echo esc_attr( $name ); ?>[clarity_endpoint]" value="<?php echo esc_attr( (string) $o['clarity_endpoint'] ); ?>" placeholder="https://api.wateratlas.usf.edu/…/{wbid}" />
+							<p>
+								<button type="button" class="button" id="dccwl-test-clarity"><?php esc_html_e( 'Test this endpoint', 'dcc-wildlife' ); ?></button>
+								<span id="dccwl-clarity-status" style="margin-left:8px"></span>
+							</p>
+							<p class="description"><?php esc_html_e( 'Save first — the test runs against the saved value. A reading within 45 days shows as a current condition; older than that it is labelled "most recent known reading"; over a year old it is dropped.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-wbid"><?php esc_html_e( 'Waterbody ID (WBID)', 'dcc-wildlife' ); ?></label></th>
+						<td><input type="text" id="dccwl-wbid" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[clarity_wbid]" value="<?php echo esc_attr( (string) $o['clarity_wbid'] ); ?>" />
+						<p class="description"><?php esc_html_e( 'Lake Dora is 2831B.', 'dcc-wildlife' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-clarity-link"><?php esc_html_e( 'Waterbody page (for the source link)', 'dcc-wildlife' ); ?></label></th>
+						<td><input type="url" id="dccwl-clarity-link" class="large-text code" name="<?php echo esc_attr( $name ); ?>[clarity_link]" value="<?php echo esc_attr( (string) $o['clarity_link'] ); ?>" /></td>
 					</tr>
 				</table>
 
@@ -281,6 +372,17 @@ final class Water_Admin {
 					<tr>
 						<th scope="row"><label for="dccwl-dock-date"><?php esc_html_e( 'Last updated', 'dcc-wildlife' ); ?></label></th>
 						<td><input type="date" id="dccwl-dock-date" name="<?php echo esc_attr( $name ); ?>[dock_updated]" value="<?php echo esc_attr( (string) $o['dock_updated'] ); ?>" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-rain-note"><?php esc_html_e( 'What rain does to the canal', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<textarea id="dccwl-rain-note" class="large-text" rows="4" name="<?php echo esc_attr( $name ); ?>[dock_rain_note]"><?php echo esc_textarea( (string) $o['dock_rain_note'] ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'Shown directly beneath the measured rainfall total, in your voice rather than the data voice — the gauge measures the rain, you say what it means here. The two are never merged into one sentence.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-rain-date"><?php esc_html_e( 'Rain note updated', 'dcc-wildlife' ); ?></label></th>
+						<td><input type="date" id="dccwl-rain-date" name="<?php echo esc_attr( $name ); ?>[dock_rain_updated]" value="<?php echo esc_attr( (string) $o['dock_rain_updated'] ); ?>" /></td>
 					</tr>
 				</table>
 
