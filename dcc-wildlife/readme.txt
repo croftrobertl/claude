@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,9 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * An optional, **off-by-default** live layer fetches public USGS gauge data and the NWS forecast server-side into a transient, exposed through a REST route so page caching can never serve a stale reading. Each row shows the measurement time, not the fetch time.
 * "From the dock" — owner-written first-hand notes, visually distinct from published data.
 * **Renders nothing at all** until it holds a sourced fact, the owner's own words, or a live reading — so it can be placed before it is populated and lights up as it fills.
-* Live water level is expressed as a deviation ("about 4 inches above normal for this week"), never as the raw gauge elevation, which a guest would read as water depth.
+* Live water level is expressed as a deviation ("about 5 inches below normal for August"), never as the raw gauge elevation, which a guest would read as water depth.
+* Water clarity, dissolved oxygen, TSI and a bathymetric depth map come from the Lake County Water Atlas, each with its own units, precision, sample date and station read from the payload.
+* Lines stay silent when they have nothing to say — a level near its monthly norm, or a dry couple of days, prints nothing rather than noise.
 * See WATER-SOURCES.md for the full audit trail, what was left out and why.
 
 The wildlife guide and the water almanac are 100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no image files (inline SVG only). Assets load only on pages that use a widget or shortcode. The optional live layer is the single, clearly-flagged exception and requires no keys or accounts.
@@ -41,6 +43,16 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.6.0 =
+* Lake County Water Atlas fully wired after the endpoints were resolved live. Two earlier assumptions were wrong and are corrected: the API key is the Water Atlas waterbody id (Lake Dora = 7972), not the FDEP WBID (2831B); and Secchi lives in the WaterQuality report, not the WaterClarity report (which is an annual colour/chlorophyll/turbidity summary carrying no Secchi at all). Also recorded: no /api/ path prefix, and `s` is an integer Site Id.
+* **Water level reinstated** from SJRWMD station 30013010, which is on Lake Dora itself — unlike the USGS gauges, which are now dropped entirely. Shown as a deviation from the API's own monthly norm ("about 5 inches below normal for August"), with the raw reading, datum and 1994–2026 record in the small print.
+* **Water clarity** now uses the API's own period-of-record statistics: "3.61 ft — clearer than usual here; the long-run median is 1.50 ft across 1,246 samples since 1978". The current-versus-stale label is gone — the sample date is stated plainly instead, because monthly sampling made the old rule read as permanently broken.
+* **Dissolved oxygen and TSI** added, each with a one-line plain-English gloss. Turbidity deliberately excluded.
+* **Bathymetric depth map** linked (LCWA, DGPS-SONAR, surveyed 2013) — answering the "how deep is the water" question that had been open since 1.4.0 because no single depth figure could be sourced.
+* Units and precision are read from each payload and never assumed.
+* Lines stay silent when they have nothing to say: a level within 2 inches of its monthly norm, or a dry two days of rainfall, renders nothing.
+* Render bar raised: almanac rows carry a section, and "About the water" rows such as surface area no longer make the section appear on their own — they render in their own block below the conditions.
 
 = 1.5.0 =
 * Sources verified: USGS gauge IDs, NWS grid and the Lake County Water Atlas were confirmed live, and the module is now seeded with those checked values (property coordinates, five active Lake County gauges, Lake Dora's area as the first published almanac row).

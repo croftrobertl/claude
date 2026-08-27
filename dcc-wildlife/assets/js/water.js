@@ -68,8 +68,11 @@
 
 		var when = readingTime(f.date);
 		if (when) {
-			attr.appendChild(el('span', 'dccwl-water-date',
-				((CFG.i18n && CFG.i18n.asOf) || 'reading') + ' ' + when));
+			// The wording comes from the fact: a gauge is "read", a lab
+			// sample is "sampled", a survey is "surveyed". Falls back to the
+			// generic word rather than asserting the wrong one.
+			var prefix = f.dateLabel || (CFG.i18n && CFG.i18n.asOf) || 'reading';
+			attr.appendChild(el('span', 'dccwl-water-date', prefix + ' ' + when));
 		}
 		if (f.note) {
 			attr.appendChild(el('span', 'dccwl-water-note', f.note));

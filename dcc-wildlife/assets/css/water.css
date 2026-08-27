@@ -163,6 +163,18 @@
 	margin-bottom: 4px;
 }
 
+/* Reference facts about the waterbody, set back from the conditions above
+ * so a guest reads them as background rather than as today's state. */
+.dccwl-water .dccwl-water-about {
+	border-top: 1px solid var(--dccwl-line);
+	margin-top: 1.25rem;
+	padding-top: 0.5rem;
+}
+
+.dccwl-water .dccwl-water-about .dccwl-water-value {
+	font-size: 1.05rem;
+}
+
 /* ---- links ---- */
 
 .dccwl-water .dccwl-water-linklist {

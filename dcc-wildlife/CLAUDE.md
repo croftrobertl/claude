@@ -64,8 +64,9 @@ includes/class-render.php     # Shared renderer for widget AND shortcode (identi
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
 includes/class-water-fact.php   # THE GATE: private ctor + make(); no source => no Fact
 includes/class-water-data.php   # Stored settings + almanac (one seeded verified row)
-includes/class-water-live.php   # USGS/NWS/Water-Atlas clients, level deviation, rainfall,
-                                #   clarity, staleness guards, discovery + clarity probe
+includes/class-water-live.php   # Water Atlas (level/Secchi/DO/TSI/bathymetry) + USGS
+                                #   rainfall + NWS; deviation wording, silence rules,
+                                #   staleness guards, gauge discovery + atlas probe
 includes/class-water-rest.php   # /conditions (public, serves cache) + /discover-gauges (admin)
 includes/class-water-render.php # Water widget/shortcode renderer; static server-side, live client-side
 includes/class-water-admin.php  # DCC -> Water (slug dcc-wildlife-water, prio 63)
@@ -158,9 +159,27 @@ that's not true."* It is enforced structurally, not editorially.
   while the canal swings 50s–90s, so a reading would be wrong in exactly the
   direction that drives fishing. `class-water-live.php` carries the full
   reasoning in a header comment — read it before "improving" anything there.
-- **Never print a raw gauge elevation as a headline.** `00065`/`63160` are
-  heights above a datum (~65.9 ft here); a guest reads that as depth. Show a
-  deviation in inches; keep the raw reading in the attribution line.
+- **Never print a raw gauge elevation as a headline.** Every level source
+  reports height above a datum (the atlas station reads ~61.2 ft NAVD88); a
+  guest reads that as depth. Show a deviation in inches; keep the raw reading
+  and its datum in the attribution line.
+- **Water Atlas gotchas, resolved live 2026-08-27 — do not re-derive these:**
+  the base has **no `/api/` prefix**; `s` is an **integer** Site Id (`s=lake`
+  returns 400, omitting it 404s); the API key is the Water Atlas **waterbody
+  id** (Lake Dora = `7972`), **NOT** the FDEP WBID `2831B`; and Secchi lives
+  in **WaterQuality**, not `WaterClarity` (an annual colour/chlorophyll/
+  turbidity report with no Secchi at all).
+- **Read `units` and `precision` from each payload; never assume them.**
+- **Per-parameter trust in the atlas `historic` blocks.** Secchi's is sound
+  and is used for the long-run median. The Water Levels component's is NOT —
+  `minValue` 0 is impossible for a lake at 61 ft NAVD88 and `medValue` is
+  null. Level uses `historicAverageForMonth.norm` and nothing else.
+- **`find_component()` is breadth-first on purpose:** the shallowest match is
+  the component itself, so a nested `historic` sub-block carrying the same
+  parameter name can never impersonate the current reading.
+- **Only speak when it matters.** A level within `LEVEL_SILENT_INCHES` of its
+  monthly norm, or a rainfall total that rounds to zero, renders NOTHING.
+  Printing "about normal" daily teaches guests to stop reading the section.
 - **The label must match the statistic.** "Normal for this week" requires 3+
   distinct years in the daily-values record; otherwise the fallback is a
   trailing 30-day mean and must say "the last 30 days", never "normal".
@@ -172,6 +191,10 @@ that's not true."* It is enforced structurally, not editorially.
 - **Auto-hide:** the module emits nothing unless it has static content or a
   live layer that could return something; live-only renders a hidden shell
   the JS reveals only on real readings. An empty section is worse than none.
+- **Almanac rows carry a `section`: `conditions` or `about`.** Only
+  `conditions` rows count toward the render decision. Surface area and
+  similar reference facts are `about`: a heading promising fishing conditions
+  must never appear on the strength of an acreage figure.
 - **The live layer never states a number this codebase chose.** Value, source
   and measurement time all arrive together from the API. Show the
   **measurement** time, never the fetch time.

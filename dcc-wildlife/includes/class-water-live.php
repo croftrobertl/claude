@@ -48,11 +48,39 @@ final class Water_Live {
 	 * has been offline for maintenance since 2026-03-03 — and a value whose
 	 * timestamp is five months old must never render as a current condition.
 	 */
-	private const STALE_IV_SECONDS   = 21600;   // 6 h; gauge data is 15-minute.
-	private const STALE_RAIN_DAYS    = 3;       // Daily totals; allow for reporting lag.
-	private const CLARITY_FRESH_DAYS = 45;      // Secchi runs are often monthly.
-	private const CLARITY_MAX_DAYS   = 365;     // Older than a year: dropped entirely.
-	private const TTL_DV             = 86400;   // Daily values change once a day.
+	private const STALE_RAIN_DAYS = 3;    // Daily totals; allow for reporting lag.
+	private const TTL_DV          = 86400; // USGS daily values change once a day.
+
+	/**
+	 * Water Atlas values move monthly, not by the minute, and it is an
+	 * academic API — so cache hard and never poll.
+	 */
+	private const TTL_ATLAS = 21600; // 6 h.
+
+	/**
+	 * A continuous SJRWMD hydro station should report near-daily; 45 days
+	 * without a sample means the station is down, not that the lake has not
+	 * moved, so the deviation is withheld rather than computed from a stale
+	 * reading. Lab samples (Secchi, DO, TSI) run monthly to quarterly and
+	 * are shown with their sample date regardless, up to a one-year backstop.
+	 */
+	private const LEVEL_MAX_AGE_DAYS = 45;
+	private const ATLAS_MAX_AGE_DAYS = 365;
+
+	/**
+	 * Below this the level line stays silent. A lake sitting an inch off its
+	 * monthly norm has nothing to tell an angler, and printing "about normal"
+	 * every day trains guests to stop reading the section.
+	 */
+	private const LEVEL_SILENT_INCHES = 2;
+
+	/**
+	 * Secchi comparison thresholds against the period-of-record median.
+	 * Deliberately wide: the clause only appears when the difference is
+	 * unmistakable, so a middling reading gets no editorial spin.
+	 */
+	private const SECCHI_CLEARER = 1.5;
+	private const SECCHI_MURKIER = 0.67;
 
 	private static function user_agent(): string {
 		return sprintf( 'DCC-Wildlife-WordPress/%s (%s)', DCC_WL_VERSION, home_url( '/' ) );
@@ -91,9 +119,8 @@ final class Water_Live {
 	 */
 	public static function refresh(): array {
 		$rows = array_merge(
-			self::fetch_level(),
+			self::fetch_atlas(),
 			self::fetch_rainfall(),
-			self::fetch_clarity(),
 			self::fetch_nws()
 		);
 
@@ -117,149 +144,617 @@ final class Water_Live {
 	}
 
 	/* =====================================================================
-	 * Water level — expressed as CHANGE, never as raw elevation.
+	 * Lake County Water Atlas — level, clarity, DO, TSI, bathymetry.
+	 *
+	 * Resolved against the live API on 2026-08-27. Two earlier assumptions
+	 * were wrong and are recorded here so they are not repeated:
+	 *
+	 *   1. There is NO `/api/` path prefix. The bare
+	 *      `/waterbodies/{id}/{report}` path is correct.
+	 *   2. The API key is the Water Atlas WATERBODY ID (Lake Dora = 7972),
+	 *      NOT the FDEP WBID (2831B), which is a different identifier
+	 *      entirely and 404s here.
+	 *
+	 * Also: `s` is an integer Site Id (`s=1`); `s=lake` returns 400 and
+	 * omitting it 404s. And `WaterClarity?siteID=` is the wrong endpoint —
+	 * it is an annual report carrying colour/chlorophyll/turbidity and no
+	 * Secchi at all. Do not reintroduce it.
 	 * ===================================================================== */
 
 	/**
-	 * `00065` and `63160` are heights above a datum, not water depth. The
-	 * Apopka-Beauclair gauge reads about 65.93 ft; printed as a headline a
-	 * guest reads "the water is 65 feet deep", which is a falsehood produced
-	 * by the module built to prevent falsehoods.
-	 *
-	 * So the headline is a deviation in inches, and the raw reading appears
-	 * only in the attribution line where it is unambiguous.
-	 *
-	 * The comparison basis is chosen honestly: the same calendar week across
-	 * the period of record if the record supports it (so "normal for this
-	 * week" is literally true), otherwise a trailing 30-day mean which is
-	 * labelled as exactly that. The label always matches the statistic.
-	 *
 	 * @return array<int,array<string,mixed>>
 	 */
-	private static function fetch_level(): array {
-		$site = Water_Data::featured_site();
-		if ( '' === $site ) {
+	private static function fetch_atlas(): array {
+		$wq = self::atlas_report( 'WaterQuality' );
+		$lf = self::atlas_report( 'LevelsFlows' );
+
+		return array_merge(
+			self::atlas_level( $lf ),
+			self::atlas_secchi( $wq ),
+			self::atlas_dissolved_oxygen( $wq ),
+			self::atlas_tsi( $wq ),
+			self::atlas_bathymetry( $lf )
+		);
+	}
+
+	/**
+	 * One cached report fetch. Returns null on any failure.
+	 *
+	 * @return array<mixed>|null
+	 */
+	private static function atlas_report( string $report ): ?array {
+		$base      = Water_Data::atlas_base();
+		$waterbody = Water_Data::atlas_waterbody();
+		$site      = Water_Data::atlas_site();
+		if ( '' === $base || '' === $waterbody ) {
+			return null;
+		}
+
+		$key    = 'dcc_wl_atlas_' . md5( $base . $waterbody . $site . $report );
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		if ( 'MISS' === $cached ) {
+			return null; // Recent failure; do not re-hit an academic API.
+		}
+
+		$url = sprintf(
+			'%s/waterbodies/%s/%s?s=%s',
+			untrailingslashit( $base ),
+			rawurlencode( $waterbody ),
+			rawurlencode( $report ),
+			rawurlencode( $site )
+		);
+
+		$body = self::get_json( $url );
+		if ( ! is_array( $body ) ) {
+			set_transient( $key, 'MISS', Water_Data::TTL_FAIL );
+			return null;
+		}
+
+		set_transient( $key, $body, self::TTL_ATLAS );
+		return $body;
+	}
+
+	/**
+	 * Admin-only probe: call both Water Atlas reports and report which
+	 * components were recognised, so the integration is confirmed from the
+	 * live server rather than taken on trust.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function probe_atlas(): array {
+		$wq = self::atlas_report( 'WaterQuality' );
+		$lf = self::atlas_report( 'LevelsFlows' );
+
+		if ( null === $wq && null === $lf ) {
+			return [
+				'ok'     => false,
+				'reason' => __( 'Neither report could be fetched. Check the base URL, the waterbody id and the site id.', 'dcc-wildlife' ),
+			];
+		}
+
+		$found = [];
+		foreach ( self::fetch_atlas() as $row ) {
+			$found[] = [
+				'label' => (string) ( $row['label'] ?? '' ),
+				'value' => (string) ( $row['value'] ?? '' ),
+				'date'  => (string) ( $row['date'] ?? '' ),
+			];
+		}
+
+		return [
+			'ok'           => true,
+			'waterQuality' => null !== $wq,
+			'levelsFlows'  => null !== $lf,
+			'found'        => $found,
+		];
+	}
+
+	/**
+	 * Breadth-first search for a named component.
+	 *
+	 * BFS is deliberate: the shallowest match is the component itself, so a
+	 * nested `historic` sub-block carrying the same parameter name can never
+	 * be mistaken for the current reading.
+	 *
+	 * @param array<mixed>|null $body
+	 * @return array<string,mixed>|null
+	 */
+	private static function find_component( ?array $body, callable $matches ): ?array {
+		if ( null === $body ) {
+			return null;
+		}
+
+		$queue = [ $body ];
+		while ( $queue ) {
+			$node = array_shift( $queue );
+			if ( ! is_array( $node ) ) {
+				continue;
+			}
+
+			$name = '';
+			foreach ( [ 'displayName', 'parameter', 'componentName', 'name' ] as $k ) {
+				if ( isset( $node[ $k ] ) && is_string( $node[ $k ] ) && '' !== trim( $node[ $k ] ) ) {
+					$name = strtolower( trim( $node[ $k ] ) );
+					break;
+				}
+			}
+			if ( '' !== $name && $matches( $name ) ) {
+				return $node;
+			}
+
+			foreach ( $node as $child ) {
+				if ( is_array( $child ) ) {
+					$queue[] = $child;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Format a measurement using the units and precision the API supplied.
+	 * Neither is ever assumed: an absent precision means the value is
+	 * printed as given rather than rounded to a guess.
+	 *
+	 * @param mixed $value
+	 * @param mixed $precision
+	 */
+	private static function fmt_measure( $value, $precision, string $units ): string {
+		if ( ! is_numeric( $value ) ) {
+			return '';
+		}
+		if ( is_numeric( $precision ) && $precision >= 0 && $precision <= 6 ) {
+			$out = number_format( (float) $value, (int) $precision, '.', '' );
+		} else {
+			$out = rtrim( rtrim( number_format( (float) $value, 4, '.', '' ), '0' ), '.' );
+		}
+		return '' !== $units ? $out . ' ' . $units : $out;
+	}
+
+	/**
+	 * @param array<string,mixed> $c
+	 */
+	private static function comp_str( array $c, string $key ): string {
+		return isset( $c[ $key ] ) && is_scalar( $c[ $key ] ) ? trim( (string) $c[ $key ] ) : '';
+	}
+
+	/**
+	 * Age in days of a component's sample, or null when undatable.
+	 */
+	private static function comp_age_days( string $date ): ?float {
+		if ( '' === $date ) {
+			return null;
+		}
+		$ts = strtotime( $date );
+		if ( false === $ts ) {
+			return null;
+		}
+		return ( time() - $ts ) / DAY_IN_SECONDS;
+	}
+
+	/**
+	 * @param array<string,mixed> $c
+	 */
+	private static function station_url( array $c ): string {
+		$url = '';
+		if ( isset( $c['samplingStation'] ) && is_array( $c['samplingStation'] ) ) {
+			$url = trim( (string) ( $c['samplingStation']['stationUrl'] ?? '' ) );
+		}
+		if ( '' === $url ) {
+			$url = Water_Data::clarity_link();
+		}
+		return esc_url_raw( $url );
+	}
+
+	/**
+	 * Water level, from SJRWMD station 30013010 — which is ON Lake Dora,
+	 * unlike the USGS gauges this replaced.
+	 *
+	 * The headline is a deviation. 61.19 ft is an elevation above NAVD88 and
+	 * a guest reads that as depth; that is the exact trap the USGS gauges
+	 * were dropped for, and the atlas station is no different.
+	 *
+	 * The baseline is `historicAverageForMonth.norm` and NOTHING ELSE. The
+	 * component's outer `historic` block is unreliable for this parameter —
+	 * its minValue is 0, impossible for a lake sitting at 61 ft NAVD88, and
+	 * its medValue is null. (Secchi's `historic` block IS sound and is used;
+	 * the difference is per-parameter, not a rule about the API.)
+	 *
+	 * @param array<mixed>|null $lf
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function atlas_level( ?array $lf ): array {
+		$c = self::find_component( $lf, static fn( string $n ): bool => 'water levels' === $n );
+		if ( null === $c || ! is_numeric( $c['value'] ?? null ) ) {
 			return [];
 		}
 
-		$iv = self::usgs_iv( [ $site ], '00065,63160' );
-		if ( ! $iv ) {
+		$date = self::comp_str( $c, 'sampleDate' );
+		$age  = self::comp_age_days( $date );
+		if ( null === $age || $age > self::LEVEL_MAX_AGE_DAYS ) {
 			return [];
 		}
 
-		// Prefer gage height; fall back to NAVD88 elevation at sites that
-		// only publish the latter.
-		$current = $iv['00065'] ?? $iv['63160'] ?? null;
-		if ( null === $current ) {
+		$avg = ( isset( $c['historicAverageForMonth'] ) && is_array( $c['historicAverageForMonth'] ) )
+			? $c['historicAverageForMonth']
+			: [];
+		$norm = $avg['norm'] ?? null;
+		if ( ! is_numeric( $norm ) ) {
 			return [];
 		}
 
-		$param    = isset( $iv['00065'] ) ? '00065' : '63160';
-		$baseline = self::level_baseline( $site, $param );
-		if ( null === $baseline ) {
+		$current = (float) $c['value'];
+		$inches  = ( $current - (float) $norm ) * 12.0;
+
+		// Nothing worth saying: stay silent rather than print "about normal".
+		if ( abs( $inches ) < self::LEVEL_SILENT_INCHES ) {
 			return [];
 		}
 
-		$inches = ( (float) $current['value'] - $baseline['mean'] ) * 12.0;
-		$phrase = self::describe_deviation( $inches, $baseline['label'] );
+		$units = self::comp_str( $c, 'units' );
+		$datum = self::comp_str( $c, 'verticalDatum' );
+		$ts    = strtotime( $date );
+		$month = false !== $ts ? gmdate( 'F', $ts ) : '';
 
-		$station = self::station_label( $current );
+		$basis = sprintf(
+			/* translators: 1: the monthly norm with units, 2: period of record. */
+			__( 'the Water Atlas monthly norm is %1$s%2$s', 'dcc-wildlife' ),
+			self::fmt_measure( $norm, 2, $units ),
+			self::por_suffix( $avg )
+		);
 
 		return [
 			[
 				'label'       => __( 'Water level', 'dcc-wildlife' ),
-				'value'       => $phrase,
+				'value'       => self::describe_deviation(
+					$inches,
+					'' !== $month
+						/* translators: %s: month name. */
+						? sprintf( __( 'normal for %s', 'dcc-wildlife' ), $month )
+						: __( 'the monthly norm', 'dcc-wildlife' )
+				),
 				'tier'        => Water_Fact::TIER_LIVE,
-				'source_name' => $station,
-				'source_url'  => 'https://waterdata.usgs.gov/monitoring-location/' . rawurlencode( $site ) . '/',
-				'date'        => $current['when'],
+				'source_name' => self::atlas_source_name( $c, __( 'SJRWMD station', 'dcc-wildlife' ) ),
+				'source_url'  => self::station_url( $c ),
+				'date'        => $date,
+				'date_label'  => __( 'reading', 'dcc-wildlife' ),
 				'note'        => sprintf(
-					/* translators: 1: raw gauge reading with units, 2: description of the comparison basis. */
-					__( 'gauge reading %1$s; compared with %2$s', 'dcc-wildlife' ),
-					$current['value'] . ( '' !== $current['unit'] ? ' ' . $current['unit'] : '' ),
-					$baseline['basis']
+					/* translators: 1: raw station reading, 2: datum, 3: comparison basis. */
+					__( 'station reading %1$s%2$s; %3$s', 'dcc-wildlife' ),
+					self::fmt_measure( $current, $c['precision'] ?? null, $units ),
+					'' !== $datum ? ' ' . $datum : '',
+					$basis
 				),
 			],
 		];
 	}
 
 	/**
-	 * Turn a signed inch difference into plain language. Sub-inch
-	 * differences are not dressed up as a trend.
+	 * Turn a signed inch difference into plain language. The caller has
+	 * already decided the difference is worth mentioning at all — see
+	 * LEVEL_SILENT_INCHES — so this never has to say "about the same".
 	 */
 	private static function describe_deviation( float $inches, string $basis_label ): string {
 		$abs = (int) round( abs( $inches ) );
-
 		if ( $abs < 1 ) {
-			return sprintf(
-				/* translators: %s: e.g. "normal for this week". */
-				__( 'About the same as %s', 'dcc-wildlife' ),
-				$basis_label
-			);
+			$abs = 1;
 		}
 
 		return $inches > 0
-			/* translators: 1: whole inches, 2: e.g. "normal for this week". */
+			/* translators: 1: whole inches, 2: e.g. "normal for August". */
 			? sprintf( _n( 'About %1$d inch above %2$s', 'About %1$d inches above %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label )
-			/* translators: 1: whole inches, 2: e.g. "normal for this week". */
+			/* translators: 1: whole inches, 2: e.g. "normal for August". */
 			: sprintf( _n( 'About %1$d inch below %2$s', 'About %1$d inches below %2$s', $abs, 'dcc-wildlife' ), $abs, $basis_label );
 	}
 
 	/**
-	 * The comparison figure, with the label that honestly describes it.
+	 * " over 1994–2026" when the API states its period of record.
 	 *
-	 * @return array{mean:float,label:string,basis:string}|null
+	 * @param array<string,mixed> $block
 	 */
-	private static function level_baseline( string $site, string $param ): ?array {
-		$daily = self::usgs_daily( $site, $param, '00003', '10' );
-		if ( ! $daily ) {
-			return null;
+	private static function por_suffix( array $block ): string {
+		$from = strtotime( (string) ( $block['porStartDate'] ?? '' ) );
+		$to   = strtotime( (string) ( $block['porEndDate'] ?? '' ) );
+		if ( false === $from ) {
+			return '';
+		}
+		return sprintf(
+			/* translators: 1: first year of record, 2: last year of record. */
+			__( ' over %1$s–%2$s', 'dcc-wildlife' ),
+			gmdate( 'Y', $from ),
+			false !== $to ? gmdate( 'Y', $to ) : gmdate( 'Y' )
+		);
+	}
+
+	/**
+	 * "<Source> station <id>, via the Lake County Water Atlas".
+	 *
+	 * @param array<string,mixed> $c
+	 */
+	private static function atlas_source_name( array $c, string $fallback ): string {
+		$station = self::comp_str( $c, 'stationId' );
+		$source  = self::comp_str( $c, 'dataSetName' );
+		if ( '' === $source ) {
+			$source = self::comp_str( $c, 'source' );
+		}
+		$who = '' !== $source ? $source : $fallback;
+
+		return '' !== $station
+			? sprintf(
+				/* translators: 1: data source name, 2: station identifier. */
+				__( '%1$s, station %2$s — via the Lake County Water Atlas', 'dcc-wildlife' ),
+				$who,
+				$station
+			)
+			: sprintf(
+				/* translators: %s: data source name. */
+				__( '%s — via the Lake County Water Atlas', 'dcc-wildlife' ),
+				$who
+			);
+	}
+
+	/**
+	 * Water clarity. The API supplies its own period-of-record statistics,
+	 * so the "clearer than usual" framing is the API's arithmetic, not ours.
+	 *
+	 * The sample date is stated plainly and no current-versus-stale label is
+	 * applied: Lake County samples monthly to quarterly, so a 45-day rule
+	 * would have read "most recent known reading" almost permanently —
+	 * accurate, but it reads as broken. The date does the honest work.
+	 *
+	 * @param array<mixed>|null $wq
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function atlas_secchi( ?array $wq ): array {
+		$c = self::find_component( $wq, static fn( string $n ): bool => false !== strpos( $n, 'secchi' ) );
+		if ( null === $c || ! is_numeric( $c['value'] ?? null ) ) {
+			return [];
 		}
 
-		$this_week = (int) gmdate( 'W' );
-		$same_week = [];
-		$years     = [];
+		$date = self::comp_str( $c, 'sampleDate' );
+		$age  = self::comp_age_days( $date );
+		if ( null === $age || $age > self::ATLAS_MAX_AGE_DAYS ) {
+			return [];
+		}
 
-		foreach ( $daily as $day ) {
-			$ts = strtotime( $day['date'] . ' 12:00:00 UTC' );
-			if ( false === $ts ) {
-				continue;
+		$units   = self::comp_str( $c, 'units' );
+		$current = (float) $c['value'];
+		$value   = self::fmt_measure( $current, $c['precision'] ?? null, $units );
+
+		$hist = ( isset( $c['historic'] ) && is_array( $c['historic'] ) ) ? $c['historic'] : [];
+		$med  = $hist['medValue'] ?? null;
+		$note = '';
+
+		if ( is_numeric( $med ) && (float) $med > 0 ) {
+			$ratio = $current / (float) $med;
+			if ( $ratio >= self::SECCHI_CLEARER ) {
+				$value .= __( ' — clearer than usual here', 'dcc-wildlife' );
+			} elseif ( $ratio <= self::SECCHI_MURKIER ) {
+				$value .= __( ' — murkier than usual here', 'dcc-wildlife' );
 			}
-			if ( (int) gmdate( 'W', $ts ) === $this_week ) {
-				$same_week[]                    = $day['value'];
-				$years[ (int) gmdate( 'Y', $ts ) ] = true;
-			}
-		}
 
-		// "Normal for this week" is only allowed to be said when the record
-		// actually supports it: three or more distinct years of that week.
-		if ( count( $years ) >= 3 && count( $same_week ) >= 9 ) {
-			$yr = array_keys( $years );
-			sort( $yr );
-			return [
-				'mean'  => array_sum( $same_week ) / count( $same_week ),
-				'label' => __( 'normal for this week', 'dcc-wildlife' ),
-				'basis' => sprintf(
-					/* translators: 1: first year of record, 2: last year of record. */
-					__( 'the %1$d–%2$d average for this calendar week', 'dcc-wildlife' ),
-					(int) $yr[0],
-					(int) end( $yr )
-				),
-			];
+			$samples = $hist['numSamples'] ?? null;
+			$note    = is_numeric( $samples )
+				? sprintf(
+					/* translators: 1: median with units, 2: sample count, 3: period of record. */
+					__( 'long-run median here is %1$s across %2$s samples%3$s', 'dcc-wildlife' ),
+					self::fmt_measure( $med, 2, $units ),
+					number_format( (int) $samples ),
+					self::por_suffix( $hist )
+				)
+				: sprintf(
+					/* translators: 1: median with units, 2: period of record. */
+					__( 'long-run median here is %1$s%2$s', 'dcc-wildlife' ),
+					self::fmt_measure( $med, 2, $units ),
+					self::por_suffix( $hist )
+				);
 		}
-
-		// Fallback. This is NOT "normal" and must never be labelled as such.
-		$recent = array_slice( $daily, -30 );
-		if ( count( $recent ) < 20 ) {
-			return null;
-		}
-		$values = array_column( $recent, 'value' );
 
 		return [
-			'mean'  => array_sum( $values ) / count( $values ),
-			'label' => __( 'the last 30 days', 'dcc-wildlife' ),
-			'basis' => __( 'the average of the last 30 days (the record is too short to say what is normal for this week)', 'dcc-wildlife' ),
+			[
+				'label'       => __( 'Water clarity (Secchi depth)', 'dcc-wildlife' ),
+				'value'       => $value,
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
+				'source_url'  => self::station_url( $c ),
+				'date'        => $date,
+				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'note'        => $note,
+			],
 		];
+	}
+
+	/**
+	 * Dissolved oxygen, with a gloss. A bare "9.91" means nothing to a guest,
+	 * and an unexplained number on this page costs more than it gives — so
+	 * the note explains what the parameter is, without making a claim about
+	 * what today's particular value implies.
+	 *
+	 * @param array<mixed>|null $wq
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function atlas_dissolved_oxygen( ?array $wq ): array {
+		$c = self::find_component(
+			$wq,
+			static fn( string $n ): bool => false !== strpos( $n, 'dissolved oxygen' ) || 'do' === $n
+		);
+		if ( null === $c || ! is_numeric( $c['value'] ?? null ) ) {
+			return [];
+		}
+
+		$date = self::comp_str( $c, 'sampleDate' );
+		$age  = self::comp_age_days( $date );
+		if ( null === $age || $age > self::ATLAS_MAX_AGE_DAYS ) {
+			return [];
+		}
+
+		return [
+			[
+				'label'       => __( 'Dissolved oxygen', 'dcc-wildlife' ),
+				'value'       => self::fmt_measure( $c['value'], $c['precision'] ?? null, self::comp_str( $c, 'units' ) ),
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
+				'source_url'  => self::station_url( $c ),
+				'date'        => $date,
+				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'note'        => __( 'how much oxygen the water holds — fish tend to move out of water that runs low', 'dcc-wildlife' ),
+			],
+		];
+	}
+
+	/**
+	 * Trophic State Index. This component arrives as payloadType
+	 * `LimitingParameter` rather than `SingleParameter`, so it is handled
+	 * explicitly instead of being assumed to share the common shape — it
+	 * carries a `limitingNutrient` the others do not.
+	 *
+	 * @param array<mixed>|null $wq
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function atlas_tsi( ?array $wq ): array {
+		$c = self::find_component(
+			$wq,
+			static fn( string $n ): bool => 'tsi' === $n || false !== strpos( $n, 'trophic' )
+		);
+		if ( null === $c || ! is_numeric( $c['value'] ?? null ) ) {
+			return [];
+		}
+
+		$date = self::comp_str( $c, 'sampleDate' );
+		$age  = self::comp_age_days( $date );
+		if ( null === $age || $age > self::ATLAS_MAX_AGE_DAYS ) {
+			return [];
+		}
+
+		$gloss    = __( 'a measure of how nutrient-rich and productive the water is — lower means clearer and less productive', 'dcc-wildlife' );
+		$nutrient = self::comp_str( $c, 'limitingNutrient' );
+		if ( '' !== $nutrient ) {
+			$gloss .= sprintf(
+				/* translators: %s: the limiting nutrient, e.g. "phosphorus". */
+				__( '; %s is the limiting nutrient here', 'dcc-wildlife' ),
+				strtolower( $nutrient )
+			);
+		}
+
+		return [
+			[
+				'label'       => __( 'Trophic State Index (TSI)', 'dcc-wildlife' ),
+				'value'       => self::fmt_measure( $c['value'], $c['precision'] ?? null, self::comp_str( $c, 'units' ) ),
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
+				'source_url'  => self::station_url( $c ),
+				'date'        => $date,
+				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'note'        => $gloss,
+			],
+		];
+	}
+
+	/**
+	 * The bathymetric survey — the answer to "how deep is the water", which
+	 * has been an open question since 1.4.0 because no single depth figure
+	 * could be sourced. An authoritative depth CHART is more use to an
+	 * angler than any average would have been, and it invents nothing.
+	 *
+	 * @param array<mixed>|null $lf
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function atlas_bathymetry( ?array $lf ): array {
+		$c = self::find_component( $lf, static fn( string $n ): bool => false !== strpos( $n, 'bathymetry' ) );
+		if ( null === $c ) {
+			return [];
+		}
+
+		$url = self::first_url_in( $c );
+		if ( '' === $url ) {
+			return [];
+		}
+
+		$date = '';
+		foreach ( [ 'assessmentDate', 'assessedDate', 'sampleDate', 'date' ] as $k ) {
+			$candidate = self::comp_str( $c, $k );
+			if ( '' !== $candidate && false !== strtotime( $candidate ) ) {
+				$date = $candidate;
+				break;
+			}
+		}
+		if ( '' === $date ) {
+			return []; // No date, no fact — the gate would drop it anyway.
+		}
+
+		$method = self::comp_str( $c, 'method' );
+		$datum  = self::comp_str( $c, 'verticalDatum' );
+		$bits   = array_filter( [ $method, $datum ] );
+
+		$source = self::comp_str( $c, 'dataSetName' );
+		if ( '' === $source ) {
+			$source = self::comp_str( $c, 'source' );
+		}
+		if ( '' === $source ) {
+			$source = __( 'Lake County Water Authority', 'dcc-wildlife' );
+		}
+
+		return [
+			[
+				'label'       => __( 'Depth map', 'dcc-wildlife' ),
+				'value'       => '' !== $method
+					/* translators: %s: survey method, e.g. "DGPS-SONAR". */
+					? sprintf( __( 'Bathymetric survey (%s)', 'dcc-wildlife' ), $method )
+					: __( 'Bathymetric survey', 'dcc-wildlife' ),
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => sprintf(
+					/* translators: %s: the dataset name. */
+					__( '%s — open the depth map (PDF)', 'dcc-wildlife' ),
+					$source
+				),
+				'source_url'  => $url,
+				'date'        => $date,
+				'date_label'  => __( 'surveyed', 'dcc-wildlife' ),
+				'note'        => $bits ? implode( ', ', $bits ) : '',
+			],
+		];
+	}
+
+	/**
+	 * First http(s) URL anywhere in a component, preferring a PDF.
+	 *
+	 * @param array<mixed> $node
+	 */
+	private static function first_url_in( array $node ): string {
+		$found = '';
+		$queue = [ $node ];
+
+		while ( $queue ) {
+			$cur = array_shift( $queue );
+			if ( ! is_array( $cur ) ) {
+				continue;
+			}
+			foreach ( $cur as $v ) {
+				if ( is_array( $v ) ) {
+					$queue[] = $v;
+					continue;
+				}
+				if ( ! is_string( $v ) || ! preg_match( '#^https?://#i', trim( $v ) ) ) {
+					continue;
+				}
+				$url = esc_url_raw( trim( $v ) );
+				if ( '' === $url ) {
+					continue;
+				}
+				if ( preg_match( '#\.pdf($|\?)#i', $url ) ) {
+					return $url;
+				}
+				if ( '' === $found ) {
+					$found = $url;
+				}
+			}
+		}
+
+		return $found;
 	}
 
 	/* =====================================================================
@@ -298,6 +793,12 @@ final class Water_Live {
 			$total += $d['value'];
 		}
 
+		// Same principle as the level line: a dry couple of days is the
+		// default state here, and printing "0 in. of rain" daily is noise.
+		if ( $total < 0.005 ) {
+			return [];
+		}
+
 		$first_date = $recent[0]['date'];
 		$last_date  = $last['date'];
 
@@ -327,253 +828,11 @@ final class Water_Live {
 		];
 	}
 
-	/* =====================================================================
-	 * Water clarity (Secchi) — Lake County Water Atlas.
-	 * ===================================================================== */
-
-	/**
-	 * The Water Atlas publishes a Water Clarity Report and exposes a public
-	 * API at api.wateratlas.usf.edu. The exact request path and response
-	 * shape could NOT be confirmed from the build environment, so the
-	 * endpoint is a configurable template and the parser below is
-	 * deliberately shape-tolerant: it walks whatever JSON comes back looking
-	 * for records that carry a depth-like value and a date-like value.
-	 * Settings → DCC Water has a Test button that prints what actually came
-	 * back, so the path is confirmed against the live API rather than
-	 * guessed here.
-	 *
-	 * Staleness matters more here than anywhere: Secchi runs are often
-	 * monthly, and a six-week-old clarity figure shown as a current
-	 * condition is precisely the quiet staleness that erodes trust. Readings
-	 * within 45 days read as current; older ones are explicitly labelled
-	 * "most recent known reading"; anything over a year is dropped.
-	 *
-	 * @return array<int,array<string,mixed>>
-	 */
-	private static function fetch_clarity(): array {
-		$template = Water_Data::clarity_endpoint();
-		$wbid     = Water_Data::clarity_wbid();
-		if ( '' === $template || '' === $wbid ) {
-			return [];
-		}
-
-		$url  = str_replace( '{wbid}', rawurlencode( $wbid ), $template );
-		$body = self::get_json( $url );
-		if ( ! is_array( $body ) ) {
-			return [];
-		}
-
-		$reading = self::latest_clarity_reading( $body );
-		if ( null === $reading ) {
-			return [];
-		}
-
-		$age_days = ( time() - $reading['ts'] ) / DAY_IN_SECONDS;
-		if ( $age_days > self::CLARITY_MAX_DAYS ) {
-			return [];
-		}
-
-		$is_current = $age_days <= self::CLARITY_FRESH_DAYS;
-
-		return [
-			[
-				'label'       => $is_current
-					? __( 'Water clarity (Secchi depth)', 'dcc-wildlife' )
-					: __( 'Water clarity — most recent known reading', 'dcc-wildlife' ),
-				'value'       => sprintf(
-					/* translators: %s: Secchi depth in feet. */
-					__( '%s ft', 'dcc-wildlife' ),
-					rtrim( rtrim( number_format( $reading['value'], 2, '.', '' ), '0' ), '.' )
-				),
-				'tier'        => Water_Fact::TIER_PUBLISHED,
-				'source_name' => __( 'Lake County Water Atlas (USF Water Institute)', 'dcc-wildlife' ),
-				'source_url'  => Water_Data::clarity_link(),
-				'date'        => $reading['date'],
-				'note'        => $is_current
-					? ''
-					: __( 'not a current condition — this is simply the latest reading on record', 'dcc-wildlife' ),
-			],
-		];
-	}
-
-	/**
-	 * Admin-only probe: fetch the configured clarity endpoint and report
-	 * what came back, so the owner confirms the path against the live API
-	 * instead of anyone guessing it here.
-	 *
-	 * @return array<string,mixed>
-	 */
-	public static function probe_clarity(): array {
-		$template = Water_Data::clarity_endpoint();
-		$wbid     = Water_Data::clarity_wbid();
-
-		if ( '' === $template ) {
-			return [
-				'ok'     => false,
-				'reason' => __( 'No endpoint URL saved yet.', 'dcc-wildlife' ),
-			];
-		}
-
-		$url  = str_replace( '{wbid}', rawurlencode( $wbid ), $template );
-		$body = self::get_json( $url );
-		if ( ! is_array( $body ) ) {
-			return [
-				'ok'     => false,
-				'url'    => $url,
-				'reason' => __( 'No JSON came back (unreachable, not JSON, or non-200).', 'dcc-wildlife' ),
-			];
-		}
-
-		$reading = self::latest_clarity_reading( $body );
-		if ( null === $reading ) {
-			return [
-				'ok'     => false,
-				'url'    => $url,
-				'reason' => __( 'JSON parsed, but no depth + date pair was recognised in it. Check the path, or send me a sample of the response.', 'dcc-wildlife' ),
-			];
-		}
-
-		$age = (int) floor( ( time() - $reading['ts'] ) / DAY_IN_SECONDS );
-
-		return [
-			'ok'      => true,
-			'url'     => $url,
-			'value'   => $reading['value'],
-			'date'    => $reading['date'],
-			'ageDays' => $age,
-			'wouldShow' => $age <= self::CLARITY_MAX_DAYS,
-			'asCurrent' => $age <= self::CLARITY_FRESH_DAYS,
-		];
-	}
-
-	/**
-	 * Shape-tolerant scan for the newest {depth, date} pair in an arbitrary
-	 * JSON tree. Returns null rather than guessing when nothing matches.
-	 *
-	 * @param array<mixed> $body
-	 * @return array{value:float,date:string,ts:int}|null
-	 */
-	private static function latest_clarity_reading( array $body ): ?array {
-		$best  = null;
-		$stack = [ $body ];
-
-		$depth_keys = [ 'secchi', 'secchidepth', 'secchi_depth', 'result', 'value', 'depth', 'resultvalue' ];
-		$date_keys  = [ 'sampledate', 'sample_date', 'date', 'datetime', 'observationdate', 'resultdate' ];
-
-		while ( $stack ) {
-			$node = array_pop( $stack );
-			if ( ! is_array( $node ) ) {
-				continue;
-			}
-
-			$value = null;
-			$date  = null;
-			foreach ( $node as $k => $v ) {
-				if ( is_array( $v ) ) {
-					$stack[] = $v;
-					continue;
-				}
-				$key = strtolower( preg_replace( '/[^a-z_]/i', '', (string) $k ) );
-				if ( null === $value && in_array( $key, $depth_keys, true ) && is_numeric( $v ) ) {
-					$value = (float) $v;
-				}
-				if ( null === $date && in_array( $key, $date_keys, true ) && is_string( $v ) && '' !== $v ) {
-					$date = $v;
-				}
-			}
-
-			if ( null === $value || null === $date || $value <= 0 ) {
-				continue;
-			}
-			$ts = strtotime( $date );
-			if ( false === $ts ) {
-				continue;
-			}
-			if ( null === $best || $ts > $best['ts'] ) {
-				$best = [
-					'value' => $value,
-					'date'  => gmdate( 'Y-m-d', $ts ),
-					'ts'    => $ts,
-				];
-			}
-		}
-
-		return $best;
-	}
-
-	/* =====================================================================
-	 * USGS plumbing
-	 * ===================================================================== */
-
-	/**
-	 * Latest instantaneous value per parameter for one or more sites.
-	 * Stale series and the -999999 no-data sentinel are dropped here so no
-	 * caller has to remember to check.
-	 *
-	 * @param string[] $sites
-	 * @return array<string,array{value:string,unit:string,when:string,station:string,site:string,lat:?float,lon:?float}>
-	 */
-	private static function usgs_iv( array $sites, string $params ): array {
-		if ( ! $sites ) {
-			return [];
-		}
-
-		$body = self::get_json(
-			add_query_arg(
-				[
-					'format'      => 'json',
-					'sites'       => implode( ',', $sites ),
-					'parameterCd' => $params,
-					'siteStatus'  => 'active',
-				],
-				'https://waterservices.usgs.gov/nwis/iv/'
-			)
-		);
-
-		$series = $body['value']['timeSeries'] ?? null;
-		if ( ! is_array( $series ) ) {
-			return [];
-		}
-
-		$out = [];
-		foreach ( $series as $ts ) {
-			if ( ! is_array( $ts ) ) {
-				continue;
-			}
-			$code = trim( (string) ( $ts['variable']['variableCode'][0]['value'] ?? '' ) );
-			$vals = $ts['values'][0]['value'] ?? [];
-			if ( '' === $code || ! is_array( $vals ) || ! $vals ) {
-				continue;
-			}
-			$point = end( $vals );
-			$value = trim( (string) ( $point['value'] ?? '' ) );
-			$when  = trim( (string) ( $point['dateTime'] ?? '' ) );
-			if ( '' === $value || '' === $when || (float) $value <= -999998 ) {
-				continue;
-			}
-
-			// Dead series guard: USGS keeps publishing offline sensors.
-			$when_ts = strtotime( $when );
-			if ( false === $when_ts || ( time() - $when_ts ) > self::STALE_IV_SECONDS ) {
-				continue;
-			}
-
-			$lat = $ts['sourceInfo']['geoLocation']['geogLocation']['latitude'] ?? null;
-			$lon = $ts['sourceInfo']['geoLocation']['geogLocation']['longitude'] ?? null;
-
-			$out[ $code ] = [
-				'value'   => $value,
-				'unit'    => trim( (string) ( $ts['variable']['unit']['unitCode'] ?? '' ) ),
-				'when'    => $when,
-				'station' => trim( (string) ( $ts['sourceInfo']['siteName'] ?? '' ) ),
-				'site'    => trim( (string) ( $ts['sourceInfo']['siteCode'][0]['value'] ?? '' ) ),
-				'lat'     => is_numeric( $lat ) ? (float) $lat : null,
-				'lon'     => is_numeric( $lon ) ? (float) $lon : null,
-			];
-		}
-
-		return $out;
-	}
+	/* The USGS instantaneous-values reader was removed in 1.6.0 along with
+	 * the USGS level gauges: neither sat on Lake Dora, and the atlas exposes
+	 * an SJRWMD station that does. Rainfall below still uses USGS daily
+	 * values, which is the one thing those gauges do better than anything
+	 * else nearby. */
 
 	/**
 	 * Daily values, oldest first. Cached for a day — these change once.
@@ -620,48 +879,6 @@ final class Water_Live {
 
 		set_transient( $key, $out, self::TTL_DV );
 		return $out;
-	}
-
-	/**
-	 * "USGS <STATION> (site <n>) — about N mi from the property".
-	 *
-	 * Neither configured gauge sits in Lake Dora, so the station is named
-	 * plainly with its straight-line distance and never described as "your
-	 * water". The chain's hydrology and flow direction remain unsourced and
-	 * are not asserted anywhere.
-	 *
-	 * @param array{station:string,site:string,lat:?float,lon:?float} $s
-	 */
-	private static function station_label( array $s ): string {
-		$base = '' !== $s['station']
-			? sprintf(
-				/* translators: 1: USGS station name, 2: USGS site number. */
-				__( 'USGS %1$s (site %2$s)', 'dcc-wildlife' ),
-				$s['station'],
-				$s['site']
-			)
-			: __( 'USGS Water Services', 'dcc-wildlife' );
-
-		$coords = Water_Data::coords();
-		if ( null === $coords || null === $s['lat'] || null === $s['lon'] ) {
-			return $base;
-		}
-
-		$miles = self::distance_miles( $coords['lat'], $coords['lon'], $s['lat'], $s['lon'] );
-		return sprintf(
-			/* translators: 1: station description, 2: straight-line distance in miles. */
-			__( '%1$s — about %2$s mi from the property, straight line', 'dcc-wildlife' ),
-			$base,
-			number_format( $miles, $miles < 10 ? 1 : 0, '.', '' )
-		);
-	}
-
-	private static function distance_miles( float $lat1, float $lon1, float $lat2, float $lon2 ): float {
-		$r  = 3958.7613;
-		$dl = deg2rad( $lat2 - $lat1 );
-		$dg = deg2rad( $lon2 - $lon1 );
-		$a  = sin( $dl / 2 ) ** 2 + cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) * sin( $dg / 2 ) ** 2;
-		return $r * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
 	}
 
 	/* =====================================================================
@@ -862,6 +1079,12 @@ final class Water_Live {
 	}
 
 	public static function flush(): void {
+		global $wpdb;
+		// Atlas transients are keyed by endpoint hash; clear them too so a
+		// settings change is reflected immediately rather than in six hours.
+		if ( isset( $wpdb ) && is_object( $wpdb ) ) {
+			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_dcc_wl_atlas_%' OR option_name LIKE '_transient_timeout_dcc_wl_atlas_%'" );
+		}
 		delete_transient( self::CACHE_KEY );
 		delete_transient( self::FAIL_KEY );
 		delete_transient( self::LOCK_KEY );

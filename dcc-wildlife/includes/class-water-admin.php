@@ -96,11 +96,11 @@ final class Water_Admin {
 			'window.DCC_WL_WATER_ADMIN = ' . wp_json_encode(
 				[
 					'discover' => esc_url_raw( rest_url( Water_Rest::NS . '/discover-gauges' ) ),
-					'clarity'  => esc_url_raw( rest_url( Water_Rest::NS . '/test-clarity' ) ),
+					'clarity'  => esc_url_raw( rest_url( Water_Rest::NS . '/test-atlas' ) ),
 					'nonce'    => wp_create_nonce( 'wp_rest' ),
 					'i18n'     => [
 						'testing'    => __( 'Asking the Water Atlas…', 'dcc-wildlife' ),
-						'clarityBad' => __( 'No usable reading found.', 'dcc-wildlife' ),
+						'clarityBad' => __( 'No usable readings found.', 'dcc-wildlife' ),
 						'searching' => __( 'Asking USGS…', 'dcc-wildlife' ),
 						'none'      => __( 'No active gauges returned for that area. Check the coordinates, or add site IDs by hand.', 'dcc-wildlife' ),
 						'failed'    => __( 'Could not reach USGS. Nothing was changed.', 'dcc-wildlife' ),
@@ -128,16 +128,18 @@ final class Water_Admin {
 			$out[ $k ]  = is_numeric( $v ) ? $v : '';
 		}
 
-		foreach ( [ 'featured_site', 'rain_site' ] as $k ) {
-			$v         = preg_replace( '/\D/', '', (string) ( $input[ $k ] ?? '' ) );
-			$out[ $k ] = ( is_string( $v ) && preg_match( '/^\d{8,15}$/', $v ) ) ? $v : '';
-		}
+		$rain      = preg_replace( '/\D/', '', (string) ( $input['rain_site'] ?? '' ) );
+		$out['rain_site'] = ( is_string( $rain ) && preg_match( '/^\d{8,15}$/', $rain ) ) ? $rain : '';
 
-		// Clarity: https only — this endpoint is fetched server-side.
-		$endpoint = trim( (string) ( $input['clarity_endpoint'] ?? '' ) );
-		$endpoint = esc_url_raw( $endpoint );
-		$out['clarity_endpoint'] = preg_match( '#^https://#i', $endpoint ) ? $endpoint : '';
-		$out['clarity_wbid']     = sanitize_text_field( (string) ( $input['clarity_wbid'] ?? '' ) );
+		// Water Atlas: https only — fetched server-side. The waterbody and
+		// site ids are integers; anything else is dropped rather than sent.
+		$base = esc_url_raw( trim( (string) ( $input['atlas_base'] ?? '' ) ) );
+		$out['atlas_base'] = preg_match( '#^https://#i', $base ) ? untrailingslashit( $base ) : '';
+		$wb   = preg_replace( '/\D/', '', (string) ( $input['atlas_waterbody'] ?? '' ) );
+		$out['atlas_waterbody'] = is_string( $wb ) ? $wb : '';
+		$site = preg_replace( '/\D/', '', (string) ( $input['atlas_site'] ?? '' ) );
+		$out['atlas_site'] = ( is_string( $site ) && '' !== $site ) ? $site : '1';
+
 		$clarity_link            = esc_url_raw( trim( (string) ( $input['clarity_link'] ?? '' ) ) );
 		$out['clarity_link']     = preg_match( '#^https?://#i', $clarity_link ) ? $clarity_link : '';
 
@@ -173,6 +175,7 @@ final class Water_Admin {
 				'label'       => sanitize_text_field( (string) ( $row['label'] ?? '' ) ),
 				'value'       => sanitize_text_field( (string) ( $row['value'] ?? '' ) ),
 				'tier'        => sanitize_key( (string) ( $row['tier'] ?? '' ) ),
+				'section'     => 'about' === sanitize_key( (string) ( $row['section'] ?? '' ) ) ? 'about' : 'conditions',
 				'source_name' => sanitize_text_field( (string) ( $row['source_name'] ?? '' ) ),
 				'source_url'  => esc_url_raw( trim( (string) ( $row['source_url'] ?? '' ) ) ),
 				'date'        => sanitize_text_field( (string) ( $row['date'] ?? '' ) ),
@@ -301,18 +304,6 @@ final class Water_Admin {
 						<td><input type="text" id="dccwl-lon" class="regular-text" name="<?php echo esc_attr( $name ); ?>[lon]" value="<?php echo esc_attr( (string) $o['lon'] ); ?>" placeholder="-81.7..." /></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-featured"><?php esc_html_e( 'Water-level gauge', 'dcc-wildlife' ); ?></label></th>
-						<td>
-							<input type="text" id="dccwl-featured" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[featured_site]" value="<?php echo esc_attr( (string) $o['featured_site'] ); ?>" />
-							<p class="description">
-								<?php esc_html_e( 'Neither nearby gauge sits in Lake Dora — Apopka-Beauclair is upstream of the Beauclair/Dora pool and Haynes Creek is downstream past Eustis. The page names the station and its distance plainly and never calls it "your water". Pick whichever you consider representative.', 'dcc-wildlife' ); ?>
-							</p>
-							<p class="description">
-								<?php esc_html_e( 'The raw gauge figure is an elevation above a datum (about 65.9 ft), not a depth, so it is never shown as a headline — the page reports how far above or below normal the water is running, with the reading itself in the small print.', 'dcc-wildlife' ); ?>
-							</p>
-						</td>
-					</tr>
-					<tr>
 						<th scope="row"><label for="dccwl-rainsite"><?php esc_html_e( 'Rain gauge', 'dcc-wildlife' ); ?></label></th>
 						<td>
 							<input type="text" id="dccwl-rainsite" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[rain_site]" value="<?php echo esc_attr( (string) $o['rain_site'] ); ?>" />
@@ -333,30 +324,43 @@ final class Water_Admin {
 					</tr>
 				</table>
 
-				<h2><?php esc_html_e( 'Water clarity (Lake County Water Atlas)', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Lake County Water Atlas', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
-					<?php esc_html_e( 'The Water Atlas has a public API, but only its root and the "Water Clarity Report" category were confirmed — never the exact request path. Rather than guess a URL, paste the endpoint here and press Test: it fetches from your live server and shows what came back. Use {wbid} where the waterbody ID belongs.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Supplies water level (from an SJRWMD station on Lake Dora itself), Secchi clarity, dissolved oxygen, TSI and the bathymetric depth map. Each reading arrives with its own units, precision, sample date and station, and those are what get shown.', 'dcc-wildlife' ); ?>
 				</p>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="dccwl-clarity-endpoint"><?php esc_html_e( 'Clarity endpoint', 'dcc-wildlife' ); ?></label></th>
+						<th scope="row"><label for="dccwl-atlas-base"><?php esc_html_e( 'API base URL', 'dcc-wildlife' ); ?></label></th>
 						<td>
-							<input type="url" id="dccwl-clarity-endpoint" class="large-text code" name="<?php echo esc_attr( $name ); ?>[clarity_endpoint]" value="<?php echo esc_attr( (string) $o['clarity_endpoint'] ); ?>" placeholder="https://api.wateratlas.usf.edu/…/{wbid}" />
-							<p>
-								<button type="button" class="button" id="dccwl-test-clarity"><?php esc_html_e( 'Test this endpoint', 'dcc-wildlife' ); ?></button>
-								<span id="dccwl-clarity-status" style="margin-left:8px"></span>
-							</p>
-							<p class="description"><?php esc_html_e( 'Save first — the test runs against the saved value. A reading within 45 days shows as a current condition; older than that it is labelled "most recent known reading"; over a year old it is dropped.', 'dcc-wildlife' ); ?></p>
+							<input type="url" id="dccwl-atlas-base" class="large-text code" name="<?php echo esc_attr( $name ); ?>[atlas_base]" value="<?php echo esc_attr( (string) $o['atlas_base'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'No /api/ prefix — that path 404s. The bare host is correct.', 'dcc-wildlife' ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-wbid"><?php esc_html_e( 'Waterbody ID (WBID)', 'dcc-wildlife' ); ?></label></th>
-						<td><input type="text" id="dccwl-wbid" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[clarity_wbid]" value="<?php echo esc_attr( (string) $o['clarity_wbid'] ); ?>" />
-						<p class="description"><?php esc_html_e( 'Lake Dora is 2831B.', 'dcc-wildlife' ); ?></p></td>
+						<th scope="row"><label for="dccwl-atlas-wb"><?php esc_html_e( 'Waterbody id', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-atlas-wb" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[atlas_waterbody]" value="<?php echo esc_attr( (string) $o['atlas_waterbody'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'Lake Dora is 7972. This is the Water Atlas waterbody id — NOT the FDEP WBID (2831B), which is a different identifier and does not work here.', 'dcc-wildlife' ); ?></p>
+						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-clarity-link"><?php esc_html_e( 'Waterbody page (for the source link)', 'dcc-wildlife' ); ?></label></th>
-						<td><input type="url" id="dccwl-clarity-link" class="large-text code" name="<?php echo esc_attr( $name ); ?>[clarity_link]" value="<?php echo esc_attr( (string) $o['clarity_link'] ); ?>" /></td>
+						<th scope="row"><label for="dccwl-atlas-site"><?php esc_html_e( 'Site id', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-atlas-site" class="small-text code" name="<?php echo esc_attr( $name ); ?>[atlas_site]" value="<?php echo esc_attr( (string) $o['atlas_site'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'An integer; 1 is correct here. Text values return 400 and omitting it 404s.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-clarity-link"><?php esc_html_e( 'Waterbody page (fallback source link)', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="url" id="dccwl-clarity-link" class="large-text code" name="<?php echo esc_attr( $name ); ?>[clarity_link]" value="<?php echo esc_attr( (string) $o['clarity_link'] ); ?>" />
+							<p>
+								<button type="button" class="button" id="dccwl-test-clarity"><?php esc_html_e( 'Test the Water Atlas', 'dcc-wildlife' ); ?></button>
+								<span id="dccwl-clarity-status" style="margin-left:8px"></span>
+							</p>
+							<div id="dccwl-clarity-results"></div>
+							<p class="description"><?php esc_html_e( 'Save first — the test runs against the saved values and lists every reading it recognised.', 'dcc-wildlife' ); ?></p>
+						</td>
 					</tr>
 				</table>
 
@@ -428,6 +432,7 @@ final class Water_Admin {
 					<th><?php esc_html_e( 'Source name *', 'dcc-wildlife' ); ?></th>
 					<th><?php esc_html_e( 'Source URL', 'dcc-wildlife' ); ?></th>
 					<th><?php esc_html_e( 'Date *', 'dcc-wildlife' ); ?></th>
+					<th><?php esc_html_e( 'Section', 'dcc-wildlife' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -447,6 +452,12 @@ final class Water_Admin {
 						<td><input type="text" name="<?php echo esc_attr( $name ); ?>[almanac][<?php echo (int) $i; ?>][source_name]" value="<?php echo esc_attr( (string) ( $row['source_name'] ?? '' ) ); ?>" placeholder="<?php esc_attr_e( 'FWC bathymetry', 'dcc-wildlife' ); ?>" /></td>
 						<td><input type="url" name="<?php echo esc_attr( $name ); ?>[almanac][<?php echo (int) $i; ?>][source_url]" value="<?php echo esc_attr( (string) ( $row['source_url'] ?? '' ) ); ?>" /></td>
 						<td><input type="text" name="<?php echo esc_attr( $name ); ?>[almanac][<?php echo (int) $i; ?>][date]" value="<?php echo esc_attr( (string) ( $row['date'] ?? '' ) ); ?>" placeholder="2024 / 2024-06 / 2024-06-01" size="12" /></td>
+						<td>
+							<select name="<?php echo esc_attr( $name ); ?>[almanac][<?php echo (int) $i; ?>][section]">
+								<option value="conditions" <?php selected( (string) ( $row['section'] ?? 'conditions' ), 'conditions' ); ?>><?php esc_html_e( 'Conditions', 'dcc-wildlife' ); ?></option>
+								<option value="about" <?php selected( (string) ( $row['section'] ?? '' ), 'about' ); ?>><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></option>
+							</select>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>

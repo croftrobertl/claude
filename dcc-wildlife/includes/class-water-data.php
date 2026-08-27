@@ -56,20 +56,22 @@ final class Water_Data {
 			'lon'               => '-81.7450',
 
 			// Active gauges confirmed by the owner in Lake County (12069).
+			// Since 1.6.0 these are used for RAINFALL ONLY — the USGS level
+			// gauges were dropped because none sits on Lake Dora, and the
+			// Water Atlas exposes an SJRWMD station that does.
 			'usgs_sites'        => [ '02237700', '02237701', '02238000', '02238001', '02237734' ],
 
-			// Apopka-Beauclair: the only one of these reporting precipitation
-			// (00045) as well as flow and stage, so it carries both the level
-			// and the rainfall figure until the owner says otherwise.
-			'featured_site'     => '02237700',
+			// Apopka-Beauclair is the only nearby gauge reporting
+			// precipitation (00045).
 			'rain_site'         => '02237700',
 
-			// Lake Dora, WBID 2831B (Water Atlas). The request path for the
-			// clarity API is NOT seeded: only the API root and the category
-			// name were confirmed, never the endpoint shape, so it stays
-			// blank until the Test button confirms it against the live API.
-			'clarity_endpoint'  => '',
-			'clarity_wbid'      => '2831B',
+			// Lake County Water Atlas, resolved live 2026-08-27.
+			// NOTE: 7972 is the Water Atlas WATERBODY id for Lake Dora. It is
+			// NOT the FDEP WBID (2831B), which is a different identifier and
+			// 404s against this API. `s` is an integer Site Id.
+			'atlas_base'        => 'https://api.wateratlas.usf.edu',
+			'atlas_waterbody'   => '7972',
+			'atlas_site'        => '1',
 			'clarity_link'      => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
 
 			'dock_notes'        => '',
@@ -93,6 +95,11 @@ final class Water_Data {
 	 * about when the survey was done. Nothing else is seeded: no depths, no
 	 * clarity, no species, no hydrology.
 	 *
+	 * It carries `section => about` because acreage is NOT a condition. A
+	 * section headed "Fishing & water conditions" must not appear on the
+	 * strength of a surface-area figure alone, so `about` rows render in
+	 * their own block below and never satisfy has_static_content().
+	 *
 	 * @return array<int,array<string,string>>
 	 */
 	public static function default_almanac(): array {
@@ -106,6 +113,7 @@ final class Water_Data {
 				'source_url'  => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
 				'date'        => '2026-08-27',
 				'note'        => '',
+				'section'     => 'about',
 			],
 		];
 	}
@@ -230,9 +238,10 @@ final class Water_Data {
 	 * filter, then passed through Water_Fact::make(). Anything unattributed
 	 * is dropped here and can never reach the renderer.
 	 *
+	 * @param string $section 'conditions' (default) or 'about'.
 	 * @return array<string,Water_Fact[]>
 	 */
-	public static function almanac(): array {
+	public static function almanac( string $section = 'conditions' ): array {
 		$rows = self::get( 'almanac' );
 		$rows = is_array( $rows ) ? $rows : [];
 
@@ -252,6 +261,10 @@ final class Water_Data {
 		$grouped = [];
 		foreach ( $rows as $row ) {
 			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$row_section = 'about' === trim( (string) ( $row['section'] ?? '' ) ) ? 'about' : 'conditions';
+			if ( $row_section !== $section ) {
 				continue;
 			}
 			$fact = Water_Fact::make( $row );
@@ -291,23 +304,30 @@ final class Water_Data {
 		return ( is_string( $v ) && preg_match( '/^\d{8,15}$/', $v ) ) ? $v : '';
 	}
 
-	/** Gauge whose stage drives the water-level line. */
-	public static function featured_site(): string {
-		return self::site_id( 'featured_site' );
-	}
-
 	/** Gauge whose precipitation drives the rainfall line. */
 	public static function rain_site(): string {
 		return self::site_id( 'rain_site' );
 	}
 
-	public static function clarity_endpoint(): string {
-		$v = trim( (string) self::get( 'clarity_endpoint' ) );
-		return preg_match( '#^https://#i', $v ) ? $v : '';
+	public static function atlas_base(): string {
+		$v = esc_url_raw( trim( (string) self::get( 'atlas_base' ) ) );
+		return preg_match( '#^https://#i', $v ) ? untrailingslashit( $v ) : '';
 	}
 
-	public static function clarity_wbid(): string {
-		return sanitize_text_field( (string) self::get( 'clarity_wbid' ) );
+	/** Water Atlas waterbody id — NOT the FDEP WBID. Lake Dora = 7972. */
+	public static function atlas_waterbody(): string {
+		$v = preg_replace( '/\D/', '', (string) self::get( 'atlas_waterbody' ) );
+		return is_string( $v ) ? $v : '';
+	}
+
+	/** Site Id: an integer. `s=lake` returns 400. */
+	public static function atlas_site(): string {
+		$v = preg_replace( '/\D/', '', (string) self::get( 'atlas_site' ) );
+		return ( is_string( $v ) && '' !== $v ) ? $v : '1';
+	}
+
+	public static function atlas_configured(): bool {
+		return '' !== self::atlas_base() && '' !== self::atlas_waterbody();
 	}
 
 	public static function clarity_link(): string {
@@ -343,7 +363,10 @@ final class Water_Data {
 	 * only if, real readings turn up.
 	 */
 	public static function has_static_content(): bool {
-		if ( self::almanac() ) {
+		// Deliberately almanac('conditions') only: an "About the water" row
+		// such as surface area is not a condition and must not be the sole
+		// reason a section headed "Fishing & water conditions" appears.
+		if ( self::almanac( 'conditions' ) ) {
 			return true;
 		}
 		if ( null !== self::dock_notes() ) {
@@ -361,10 +384,9 @@ final class Water_Data {
 		if ( ! self::live_enabled() ) {
 			return false;
 		}
-		return '' !== self::featured_site()
-			|| '' !== self::rain_site()
+		return '' !== self::rain_site()
 			|| null !== self::coords()
-			|| ( '' !== self::clarity_endpoint() && '' !== self::clarity_wbid() );
+			|| self::atlas_configured();
 	}
 
 	/**

@@ -14,10 +14,12 @@
  * Every value on the page comes from a Water_Fact, so every value on the
  * page carries a source and a date. There is no other way in.
  *
- * AUTO-HIDE (v1.5.0): a heading over five links to national homepages reads
+ * AUTO-HIDE (v1.5.0, tightened in 1.6.0): a heading over five links reads
  * as unfinished on a guest page, so the module emits NOTHING unless it has
- * either static content (a sourced fact / the owner's own words) or a real
- * chance of a live reading. When only live content is possible, the section
+ * either static content (a CONDITION-tier sourced fact, or the owner's own
+ * words) or a real chance of a live reading. "About the water" rows such as
+ * surface area deliberately do not count: acreage is not a condition, and a
+ * section promising fishing conditions must not appear on its strength. When only live content is possible, the section
  * is emitted hidden and assets/js/water.js reveals it only once genuine
  * readings arrive — so a failed fetch leaves the page clean rather than
  * showing an empty shell.
@@ -57,7 +59,8 @@ final class Water_Render {
 			$title = __( 'Fishing & water conditions', 'dcc-wildlife' );
 		}
 
-		$almanac   = Water_Data::almanac();
+		$almanac   = Water_Data::almanac( 'conditions' );
+		$about     = Water_Data::almanac( 'about' );
 		$dock      = Water_Data::dock_notes();
 		$rain_note = Water_Data::rain_note();
 		$links     = Water_Data::link_list( 'links' );
@@ -136,6 +139,22 @@ final class Water_Render {
 				</div>
 			<?php endif; ?>
 
+			<?php if ( $about ) : ?>
+				<?php /* Reference facts about the waterbody rather than today's
+				         conditions. Rendered below everything else, and never
+				         enough on their own to make this section appear. */ ?>
+				<div class="dccwl-water-about">
+					<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></h3>
+					<?php foreach ( $about as $waterbody => $facts ) : ?>
+						<ul class="dccwl-water-facts">
+							<?php foreach ( $facts as $fact ) : ?>
+								<?php self::render_fact( $fact ); ?>
+							<?php endforeach; ?>
+						</ul>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
 			<?php self::render_links( __( 'Official information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
 			<?php self::render_links( __( 'Local reports & charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
 
@@ -207,7 +226,15 @@ final class Water_Render {
 				<?php else : ?>
 					<?php echo esc_html( $f['sourceName'] ); ?>
 				<?php endif; ?>
-				<span class="dccwl-water-date"><?php echo esc_html( $f['date'] ); ?></span>
+				<span class="dccwl-water-date">
+					<?php
+					echo esc_html(
+						'' !== ( $f['dateLabel'] ?? '' )
+							? $f['dateLabel'] . ' ' . $f['date']
+							: $f['date']
+					);
+					?>
+				</span>
 				<?php if ( '' !== $f['note'] ) : ?>
 					<span class="dccwl-water-note"><?php echo esc_html( $f['note'] ); ?></span>
 				<?php endif; ?>

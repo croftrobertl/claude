@@ -98,15 +98,41 @@
 		wrap.appendChild(table);
 	}
 
-	/* ---- Water Atlas clarity probe ----
-	 * The endpoint path was never verified at build time, so rather than
-	 * guessing a URL in code the owner pastes one and this reports exactly
-	 * what came back from the live API. */
+	/* ---- Water Atlas probe ----
+	 * Calls both reports from the live server and lists every reading the
+	 * parser recognised, so the integration is confirmed against the real
+	 * API rather than taken on trust. */
+	function renderAtlas(found) {
+		var wrap = document.getElementById('dccwl-clarity-results');
+		if (!wrap) { return; }
+		wrap.textContent = '';
+		if (!found.length) { return; }
+
+		var table = document.createElement('table');
+		table.className = 'widefat striped';
+		table.style.marginTop = '8px';
+		var tbody = document.createElement('tbody');
+
+		found.forEach(function (f) {
+			var tr = document.createElement('tr');
+			[f.label, f.value, f.date].forEach(function (text, i) {
+				var td = document.createElement('td');
+				td.textContent = String(text || '');
+				if (i === 2) { td.style.width = '130px'; }
+				tr.appendChild(td);
+			});
+			tbody.appendChild(tr);
+		});
+
+		table.appendChild(tbody);
+		wrap.appendChild(table);
+	}
+
 	var clarityBtn = document.getElementById('dccwl-test-clarity');
 	if (clarityBtn && CFG.clarity) {
 		clarityBtn.addEventListener('click', function () {
 			var status = document.getElementById('dccwl-clarity-status');
-			if (status) { status.textContent = I18N.testing || ''; }
+			if (status) { status.textContent = I18N.testing || ''; status.style.color = ''; }
 
 			window.fetch(CFG.clarity, {
 				credentials: 'same-origin',
@@ -118,14 +144,17 @@
 					if (!d || !d.ok) {
 						status.textContent = (d && d.reason) ? d.reason : (I18N.clarityBad || '');
 						status.style.color = '#a4332a';
+						renderAtlas([]);
 						return;
 					}
-					var age = (typeof d.ageDays === 'number') ? d.ageDays : '?';
-					var how = d.asCurrent ? 'shown as a current condition'
-						: (d.wouldShow ? 'shown as "most recent known reading"' : 'too old — would be dropped');
-					status.textContent = 'Found ' + d.value + ' ft dated ' + d.date +
-						' (' + age + ' days old) — ' + how + '.';
-					status.style.color = d.wouldShow ? '#1d6b47' : '#a4332a';
+					var found = Array.isArray(d.found) ? d.found : [];
+					var reports = [];
+					if (d.waterQuality) { reports.push('WaterQuality'); }
+					if (d.levelsFlows) { reports.push('LevelsFlows'); }
+					status.textContent = reports.join(' + ') + ' reachable — ' +
+						found.length + ' reading' + (found.length === 1 ? '' : 's') + ' recognised.';
+					status.style.color = found.length ? '#1d6b47' : '#a4332a';
+					renderAtlas(found);
 				})
 				.catch(function () {
 					if (status) {
