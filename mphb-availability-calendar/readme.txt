@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.0
+Stable tag: 0.20.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.20.1 =
+* The single-cottage widget no longer shows the "All cottages booked through …" message. On an individual cottage's page that sentence was both impossible for it to know (it only ever looks at that one cottage) and misleading — a guest could read it as the whole property being full when only that cottage was, and be talked out of a booking that was free next door. The calendar's own colours already show that the cottage is booked.
+* The full multi-cottage calendar keeps the message exactly as before, where it is accurate and useful.
+* Suppression is a dedicated setting the single-cottage widget sets, not a blank message string, so future text edits cannot bring the sentence back by accident. It applies both on first paint and after changing month.
 
 = 0.20.0 =
 * The Book Now popup now shows an **estimated price** for the selected stay — e.g. "Estimated total: $910 for 7 nights ($130/night avg)" — updating live as the dates change, with a muted "before any taxes/fees — final price shown at checkout" note. Works in both widgets (they share the same booking popup).

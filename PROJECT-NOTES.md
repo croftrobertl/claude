@@ -48,6 +48,16 @@ automatically applies to both:
   control and CSS custom property keeps driving them; do not add visual tokens
   there. The multi-cottage widget always returns false (a month grid cannot
   represent 8 cottages).
+- `show_availability_hint()` — base Widget true; the single variant returns
+  false, emitted as `config.availabilityHint` and checked FIRST inside
+  `buildAvailabilityHint()`. "All cottages booked through …" is unknowable
+  from one room type and misleads guests on a cottage page. Deliberately a
+  named flag, not an empty `strings.allBooked`, so repopulating strings can't
+  resurrect it; the check is strict `=== false` so pre-0.20.1 cached HTML
+  (no key) keeps its old behavior until purged. NOTE: `bookedThrough` stays
+  in the payload — the AJAX endpoint can't tell which widget asked, so
+  dropping it server-side would desync the embed and AJAX `dataSig` values
+  and force a re-render on every load.
 - `show_filters($settings)` — base Widget always true (multi widget renders
   its filter bar unconditionally, no control). The single variant's "Show
   date filters" switcher defaults OFF via the missing-key `?? ''` pattern, and

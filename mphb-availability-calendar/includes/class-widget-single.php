@@ -72,6 +72,17 @@ class Widget_Single extends Widget
     }
 
     /**
+     * Never. This widget shows ONE cottage, so "All cottages booked
+     * through …" is both unknowable from its data and actively misleading on
+     * an individual cottage page — the grid's own colours already say that
+     * this cottage is booked. See Widget::show_availability_hint().
+     */
+    protected function show_availability_hint(): bool
+    {
+        return false;
+    }
+
+    /**
      * Default OFF — same missing-key fallback pattern as `layout`, so the
      * already-placed instances (no stored value) lose the filter bar
      * automatically and the site's mu-plugin hide rule can be retired. The

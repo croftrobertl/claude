@@ -1265,6 +1265,24 @@ class Widget extends Widget_Base
     }
 
     /**
+     * Whether this widget may render the "All cottages booked through {date}"
+     * hint. True for the multi-cottage calendar, where the sentence is
+     * accurate and useful — every cottage is on screen.
+     *
+     * FALSE for the single-cottage variant: it queries one room type, so it
+     * cannot know anything about "all cottages", and a guest reading it on
+     * one cottage's page would conclude the whole property is full when only
+     * that cottage is — talking them out of a booking that was available next
+     * door. Deliberately a named flag (config.availabilityHint) rather than
+     * relying on the hint string being absent, so a future edit that
+     * repopulates the strings array cannot silently bring the sentence back.
+     */
+    protected function show_availability_hint(): bool
+    {
+        return true;
+    }
+
+    /**
      * Whether to render the check-in/check-out/Apply/Reset filter bar. The
      * multi-cottage widget always does (no control, unchanged behavior). The
      * single-cottage variant has a "Show date filters" switcher defaulting
@@ -1557,6 +1575,10 @@ class Widget extends Widget_Base
             'customLabels'   => $custom_labels,
             'statusLabels'   => $status_labels,
             'singleMode'     => $this->single_mode(),
+            // Explicit false suppresses the all-booked hint client-side; a
+            // page cached before 0.20.1 simply lacks the key and keeps its
+            // previous behavior until the cache is purged.
+            'availabilityHint' => $this->show_availability_hint(),
             'monthMode'      => $month_mode,
             'monthsDesktop'  => $months_desktop,
             'monthsTablet'   => $months_tablet,

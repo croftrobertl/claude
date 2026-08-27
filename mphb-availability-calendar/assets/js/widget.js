@@ -1375,7 +1375,7 @@
             clearWrapPreservingStatus(wrap);
             // Hint is computed once over the WHOLE visible span, shared by
             // all months — one nav, one legend, one hint.
-            var mHint = buildAvailabilityHint(rooms, availability, days, strings0(config), (config && config.customLabels) || {}, data.bookedThrough);
+            var mHint = buildAvailabilityHint(config, rooms, availability, days, strings0(config), (config && config.customLabels) || {}, data.bookedThrough);
             if (mHint) {
                 wrap.appendChild(mHint);
                 requestAnimationFrame(function () {
@@ -1499,7 +1499,7 @@
         });
 
         clearWrapPreservingStatus(wrap);
-        var hint = buildAvailabilityHint(rooms, availability, days, strings, customLabels, data.bookedThrough);
+        var hint = buildAvailabilityHint(config, rooms, availability, days, strings, customLabels, data.bookedThrough);
         if (hint) {
             wrap.appendChild(hint);
             // Trigger the fade-in transition on the next frame so the
@@ -1715,7 +1715,15 @@
     // available date and the cottage opening then. Quietly returns null
     // when the window's first day has any availability, which is the
     // overwhelmingly common case.
-    function buildAvailabilityHint(rooms, availability, days, strings, customLabels, bookedThrough) {
+    function buildAvailabilityHint(config, rooms, availability, days, strings, customLabels, bookedThrough) {
+        // Explicit opt-out, checked FIRST. The single-cottage widget sets
+        // availabilityHint:false because "All cottages booked through …" is
+        // unknowable from one room type's data and misleads a guest reading
+        // it on that cottage's page. A named flag rather than an empty
+        // strings entry, so repopulating strings can't resurrect the
+        // sentence. Strict === false: a page cached before 0.20.1 has no such
+        // key and keeps its previous behavior until purged.
+        if (config && config.availabilityHint === false) return null;
         if (!rooms.length || !days.length) return null;
         if (!strings || !strings.allBooked) return null;
 
