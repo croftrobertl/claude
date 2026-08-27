@@ -1,4 +1,7 @@
 mphb-availability-calendar.zip
 dcc-guest-guide.zip
+# Guest Guide zips are named 'Guest Guide <version>.zip' (see CLAUDE.md).
+# Build artifacts: regenerable from source, so not committed.
+Guest Guide *.zip
 .DS_Store
 node_modules/
