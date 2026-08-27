@@ -121,6 +121,28 @@ Grid columns: the cottage column is a fixed `--mphbac-label-width`; day columns 
 
 Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. The whole widget — filters, calendar, legend, popups — is now styled cohesively.
 
+## DCC Guest Guide — deliverable naming
+
+This branch also carries the **DCC Guest Guide** plugin (`dcc-guest-guide/`).
+
+Zips delivered to the user must be named **`Guest Guide <version>.zip`** —
+e.g. `Guest Guide 0.9.8.zip`. Owner's convention, set after an audit found
+two different builds sharing one version number; a version-stamped filename
+makes a stale download obvious in the Downloads folder.
+
+```bash
+# Build the installable zip (run from the repo root)
+V=$(grep -m1 "define('DCCGG_VERSION'" dcc-guest-guide/dcc-guest-guide.php | sed "s/.*'\(0[^']*\)'.*/\1/")
+rm -f "Guest Guide $V.zip"
+zip -rq "Guest Guide $V.zip" dcc-guest-guide -x "*.DS_Store"
+```
+
+The **folder inside the zip must stay `dcc-guest-guide/`** — WordPress takes
+the plugin slug from it, so renaming it would install a second copy instead
+of upgrading. Only the outer filename changes.
+
+Run `node tests/popup.test.js` before building any Guest Guide zip.
+
 ## Git workflow
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
