@@ -25,6 +25,11 @@ final class Plugin {
 		add_action( 'init', [ $this, 'register_shortcode' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
 
+		Water_Rest::register_hooks();
+		if ( is_admin() ) {
+			Water_Admin::register_hooks();
+		}
+
 		// Elementor (free). The widget file only loads when Elementor is active.
 		add_action( 'elementor/widgets/register', [ $this, 'register_widget' ] );
 		add_action( 'elementor/elements/categories_registered', [ $this, 'register_category' ] );
@@ -36,6 +41,7 @@ final class Plugin {
 
 	public function register_shortcode(): void {
 		add_shortcode( 'dcc_wildlife', [ Render::class, 'shortcode' ] );
+		add_shortcode( 'dcc_water', [ Water_Render::class, 'shortcode' ] );
 	}
 
 	/**
@@ -52,6 +58,22 @@ final class Plugin {
 		wp_register_script(
 			'dcc-wildlife',
 			DCC_WL_URL . 'assets/js/widget.js',
+			[],
+			DCC_WL_VERSION,
+			true
+		);
+
+		// Water module. Registered only; Water_Render enqueues at render
+		// time so nothing loads on pages without the widget/shortcode.
+		wp_register_style(
+			'dcc-wildlife-water',
+			DCC_WL_URL . 'assets/css/water.css',
+			[],
+			DCC_WL_VERSION
+		);
+		wp_register_script(
+			'dcc-wildlife-water',
+			DCC_WL_URL . 'assets/js/water.js',
 			[],
 			DCC_WL_VERSION,
 			true
@@ -83,6 +105,8 @@ final class Plugin {
 	 */
 	public function register_widget( $widgets_manager ): void {
 		require_once DCC_WL_DIR . 'includes/class-widget.php';
+		require_once DCC_WL_DIR . 'includes/class-water-widget.php';
 		$widgets_manager->register( new Widget() );
+		$widgets_manager->register( new Water_Widget() );
 	}
 }

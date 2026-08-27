@@ -1,0 +1,187 @@
+/**
+ * DCC Wildlife — water module styles.
+ *
+ * Shares the palette and type scale of widget.css (navy #0a3d62, coral
+ * #e8604f, readable base size for an older clientele). Kept in its own file
+ * so the module's CSS only loads on pages that place the widget/shortcode.
+ *
+ * The visual system carries the epistemics: attribution is always visible
+ * beneath a value, general guidance is boxed away from measured facts, and
+ * the owner's own notes are visually distinct from published data so guests
+ * can tell at a glance who is talking.
+ */
+
+.dccwl-water {
+	--dccwl-navy: #0a3d62;
+	--dccwl-coral: #e8604f;
+	--dccwl-ink: #1c2b36;
+	--dccwl-muted: #566a77;
+	--dccwl-soft: #f4f7f9;
+	--dccwl-line: #dbe4ea;
+	--dccwl-white: #fff;
+
+	color: var(--dccwl-ink);
+	font-size: 1.0625rem;
+	line-height: 1.55;
+}
+
+.dccwl-water .dccwl-water-title {
+	color: var(--dccwl-navy);
+	font-size: 1.65rem;
+	line-height: 1.25;
+	margin: 0 0 0.75rem;
+}
+
+.dccwl-water .dccwl-water-sub {
+	color: var(--dccwl-navy);
+	font-size: 1.15rem;
+	margin: 1.25rem 0 0.5rem;
+}
+
+/* ---- fact rows ---- */
+
+.dccwl-water .dccwl-water-facts {
+	display: grid;
+	gap: 8px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dccwl-water .dccwl-water-fact {
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-left: 4px solid var(--dccwl-line);
+	border-radius: 10px;
+	margin: 0;
+	padding: 10px 14px;
+}
+
+.dccwl-water .dccwl-water-tier-live {
+	border-left-color: var(--dccwl-coral);
+}
+
+.dccwl-water .dccwl-water-tier-published {
+	border-left-color: var(--dccwl-navy);
+}
+
+.dccwl-water .dccwl-water-tier-general {
+	background: var(--dccwl-white);
+	border-left-color: #b9ccd8;
+}
+
+.dccwl-water .dccwl-water-label {
+	color: var(--dccwl-muted);
+	display: block;
+	font-size: 0.88rem;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+
+.dccwl-water .dccwl-water-value {
+	color: var(--dccwl-navy);
+	display: block;
+	font-size: 1.15rem;
+	font-weight: 700;
+}
+
+/* Attribution is part of the fact, never an optional flourish. */
+.dccwl-water .dccwl-water-attr {
+	color: var(--dccwl-muted);
+	display: block;
+	font-size: 0.85rem;
+	margin-top: 2px;
+}
+
+.dccwl-water .dccwl-water-attr a {
+	color: var(--dccwl-muted);
+	text-decoration: underline;
+}
+
+.dccwl-water .dccwl-water-date::before,
+.dccwl-water .dccwl-water-note::before {
+	content: " · ";
+}
+
+.dccwl-water .dccwl-water-note {
+	font-style: italic;
+}
+
+/* ---- general guidance, visibly separated ---- */
+
+.dccwl-water .dccwl-water-general {
+	border-left: 3px dashed #b9ccd8;
+	margin: 10px 0 0;
+	padding-left: 12px;
+}
+
+.dccwl-water .dccwl-water-general-head {
+	color: var(--dccwl-muted);
+	font-size: 0.9rem;
+	font-style: italic;
+	margin: 0 0 6px;
+}
+
+/* ---- owner's own knowledge ---- */
+
+.dccwl-water .dccwl-water-dock {
+	background: rgba(232, 96, 79, 0.06);
+	border: 1px solid rgba(232, 96, 79, 0.35);
+	border-radius: 12px;
+	margin: 1.25rem 0 0;
+	padding: 14px 16px;
+}
+
+.dccwl-water .dccwl-water-dock-head {
+	margin-top: 0;
+}
+
+.dccwl-water .dccwl-water-dock-meta {
+	color: #b03a2b;
+	font-size: 0.85rem;
+	font-weight: 600;
+	margin: 0 0 8px;
+}
+
+.dccwl-water .dccwl-water-dock-body p {
+	margin: 0 0 0.6em;
+}
+
+.dccwl-water .dccwl-water-dock-body p:last-child {
+	margin-bottom: 0;
+}
+
+/* ---- links ---- */
+
+.dccwl-water .dccwl-water-linklist {
+	display: grid;
+	gap: 6px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dccwl-water .dccwl-water-linklist a {
+	color: var(--dccwl-navy);
+}
+
+.dccwl-water .dccwl-water-disclaimer {
+	color: var(--dccwl-muted);
+	font-size: 0.9rem;
+	margin: 1rem 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-water *,
+	.dccwl-water *::before,
+	.dccwl-water *::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+@media (max-width: 480px) {
+	.dccwl-water .dccwl-water-title {
+		font-size: 1.4rem;
+	}
+}
