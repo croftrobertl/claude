@@ -125,3 +125,14 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+## Delivering DCC Seasons zips
+
+When sending the user an installable zip for a new **DCC Seasons** version, name
+the file **`Seasons <version>.zip`** — e.g. `Seasons 3.6.1.zip`. Build it from
+the `dcc-seasons/` folder as usual (the folder inside the zip keeps its own
+name, which is what WordPress installs); only the delivered filename changes.
+
+The repo keeps one tracked build artifact at `dcc-seasons.zip` so a version-named
+copy isn't accumulated per release; rebuild it in the same commit as the version
+bump so the tracked zip never lags the source.
