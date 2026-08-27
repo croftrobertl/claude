@@ -184,8 +184,16 @@ that's not true."* It is enforced structurally, not editorially.
   1.21–2.80 ft, so a chain-wide average would be meaningless.
 - **The map loads NOTHING external until opened** — no Leaflet, no tiles, no
   data. It is a button, not an embed, and a test asserts zero external
-  requests before the click. No satellite layer: licensing for a commercial
-  site was never verified, so OSM only.
+  requests before the click.
+- **TWO base layers, satellite default** (owner's decision, 1.7.1). MIND THE
+  COORDINATE ORDER: Esri is `{z}/{y}/{x}`, OSM is `{z}/{x}/{y}`. Swapping them
+  renders perfectly and shows the wrong place — tests pin both. Each layer
+  carries its OWN `attribution` so Leaflet swaps the credit with the layer;
+  never hardcode one line for both. Both URLs and attributions are settings,
+  because a provider swap must be a paste, not a release.
+- **Tile failure degrades honestly:** 5 misses tolerated, sustained failure
+  switches layers (and the Base map radio follows), both failing drops the
+  imagery for markers on a plain background. Never leave grey squares.
 - **Water Atlas gotchas, resolved live 2026-08-27 — do not re-derive these:**
   the base has **no `/api/` prefix**; `s` is an **integer** Site Id (`s=lake`
   returns 400, omitting it 404s); the API key is the Water Atlas **waterbody

@@ -185,10 +185,7 @@
 		shell.appendChild(canvas);
 
 		var map = L.map(canvas, { scrollWheelZoom: false });
-		L.tileLayer(cfg.tileUrl, {
-			attribution: cfg.tileAttrib || '',
-			maxZoom: 18
-		}).addTo(map);
+		var base = buildBaseLayers(map, canvas, cfg, i18n);
 
 		var groups = {
 			waters: L.layerGroup(),
@@ -260,13 +257,94 @@
 		}
 		recolour('clarity');
 
-		shell.appendChild(buildBar(map, groups, recolour, shell, i18n));
+		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base));
 		setTimeout(function () { map.invalidateSize(); }, 60);
+	}
+
+	/* ---- base layers -------------------------------------------------
+	 * Two providers, each carrying its OWN required attribution — Leaflet's
+	 * attribution control swaps the credit with the layer, which is why each
+	 * gets its own `attribution` option rather than one hardcoded line.
+	 *
+	 * MIND THE COORDINATE ORDER in the templates: Esri is {z}/{y}/{x} and
+	 * OSM is {z}/{x}/{y}. They come from settings verbatim; getting them
+	 * backwards produces a map that renders perfectly and shows the wrong
+	 * place. Both are settings so a provider swap is a paste, not a release.
+	 *
+	 * Failure here is operational, not theoretical: providers throttle and
+	 * block by referrer and volume, and the symptom would be a grid of grey
+	 * squares on the Guest Guide. So a failing layer falls back to the other,
+	 * and if both fail the imagery is dropped entirely and the markers stay
+	 * on a plain background. The data is the valuable part.
+	 * ---------------------------------------------------------------- */
+
+	function buildBaseLayers(map, canvas, cfg, i18n) {
+		var layers = {};
+		var failed = {};
+		var current = null;
+		var notice = null;
+		var onChange = null;
+
+		function make(url, attribution, maxZoom) {
+			return window.L.tileLayer(url, {
+				attribution: attribution || '',
+				maxZoom: maxZoom
+			});
+		}
+
+		if (cfg.satUrl) { layers.satellite = make(cfg.satUrl, cfg.satAttrib, 18); }
+		if (cfg.tileUrl) { layers.streets = make(cfg.tileUrl, cfg.tileAttrib, 19); }
+
+		function dropImagery() {
+			if (current && layers[current]) { map.removeLayer(layers[current]); }
+			current = null;
+			canvas.classList.add('dccwl-map-noimagery');
+			if (!notice) {
+				notice = el('p', 'dccwl-map-notice', i18n.noImagery || '');
+				canvas.parentNode.insertBefore(notice, canvas);
+			}
+			if (onChange) { onChange(null); }
+		}
+
+		function setBase(name) {
+			if (!layers[name] || failed[name]) { return; }
+			if (current && layers[current]) { map.removeLayer(layers[current]); }
+			layers[name].addTo(map);
+			current = name;
+			if (onChange) { onChange(name); }
+		}
+
+		Object.keys(layers).forEach(function (name) {
+			var errors = 0;
+			layers[name].on('tileerror', function () {
+				errors += 1;
+				// A few misses are normal at the edge of coverage; a wall of
+				// them means the provider is refusing us.
+				if (errors < 6 || failed[name]) { return; }
+				failed[name] = true;
+				var alt = 'satellite' === name ? 'streets' : 'satellite';
+				if (layers[alt] && !failed[alt]) {
+					setBase(alt);
+				} else {
+					dropImagery();
+				}
+			});
+		});
+
+		var want = cfg.baseLayer && layers[cfg.baseLayer] ? cfg.baseLayer : Object.keys(layers)[0];
+		if (want) { setBase(want); } else { dropImagery(); }
+
+		return {
+			names: Object.keys(layers),
+			set: setBase,
+			currentName: function () { return current; },
+			onChange: function (fn) { onChange = fn; }
+		};
 	}
 
 	/* ---- the control bar --------------------------------------------- */
 
-	function buildBar(map, groups, recolour, shell, i18n) {
+	function buildBar(map, groups, recolour, shell, i18n, base) {
 		var bar = el('div', 'dccwl-map-bar');
 
 		// Colour by — segmented control.
@@ -298,6 +376,29 @@
 		toggle.setAttribute('aria-expanded', 'false');
 		var panel = el('div', 'dccwl-drop-panel');
 		panel.hidden = true;
+
+		// Base map first — satellite is one tap from streets and vice versa.
+		if (base && base.names.length > 1) {
+			panel.appendChild(el('p', 'dccwl-drop-head', i18n.baseMap || 'Base map'));
+			var radios = {};
+			base.names.forEach(function (nm) {
+				var lab = el('label', 'dccwl-drop-row');
+				var rb = document.createElement('input');
+				rb.type = 'radio';
+				rb.name = 'dccwl-base';
+				rb.checked = nm === base.currentName();
+				rb.addEventListener('change', function () { base.set(nm); });
+				radios[nm] = rb;
+				lab.appendChild(rb);
+				lab.appendChild(document.createTextNode(' ' + (i18n[nm] || nm)));
+				panel.appendChild(lab);
+			});
+			// Keep the control honest if a layer falls back on its own.
+			base.onChange(function (nm) {
+				Object.keys(radios).forEach(function (k) { radios[k].checked = (k === nm); });
+			});
+			panel.appendChild(el('hr', 'dccwl-drop-sep'));
+		}
 		toggle.addEventListener('click', function () {
 			panel.hidden = !panel.hidden;
 			toggle.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');

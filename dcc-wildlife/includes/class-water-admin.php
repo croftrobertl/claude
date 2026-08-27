@@ -45,10 +45,14 @@ final class Water_Admin {
 	 * from this plugin's settings array so the mu-plugin's existing value
 	 * carries over untouched.
 	 *
-	 * CONFIRM THIS KEY against dcc-wildlife-countdown.php before deleting
-	 * that file. If it differs, filter it rather than editing this line.
+	 * Confirmed 1.7.1 against dcc-wildlife-countdown.php line 17:
+	 *   const DCC_WL_COUNTDOWN_OPTION = 'dcc_wl_countdown_enabled';
+	 * read with a default of 1. My 1.7.0 inference (`dcc_wildlife_countdown`)
+	 * was wrong and would have shown the owner's toggle as OFF the first
+	 * time. The default below is 1 to match the mu-plugin, so deleting that
+	 * file changes nothing for a site that never touched the setting.
 	 */
-	public const COUNTDOWN_OPTION = 'dcc_wildlife_countdown';
+	public const COUNTDOWN_OPTION = 'dcc_wl_countdown_enabled';
 
 	public static function countdown_option(): string {
 		/**
@@ -60,7 +64,8 @@ final class Water_Admin {
 	}
 
 	public static function countdown_enabled(): bool {
-		return (bool) get_option( self::countdown_option(), 0 );
+		// Default 1, matching the mu-plugin this replaces.
+		return (bool) get_option( self::countdown_option(), 1 );
 	}
 
 	/** Which slug we actually ended up on. */
@@ -219,7 +224,9 @@ final class Water_Admin {
 
 		$out['map_enabled'] = empty( $input['map_enabled'] ) ? 0 : 1;
 		$out['map_ramps']   = empty( $input['map_ramps'] ) ? 0 : 1;
-		foreach ( [ 'map_leaflet_js', 'map_leaflet_css', 'map_tile_url' ] as $k ) {
+		$out['map_default_layer'] = 'streets' === ( $input['map_default_layer'] ?? '' ) ? 'streets' : 'satellite';
+		$out['map_sat_attrib']    = wp_kses_post( trim( (string) ( $input['map_sat_attrib'] ?? '' ) ) );
+		foreach ( [ 'map_leaflet_js', 'map_leaflet_css', 'map_tile_url', 'map_sat_url' ] as $k ) {
 			$v         = trim( (string) ( $input[ $k ] ?? '' ) );
 			$out[ $k ] = preg_match( '#^https://#i', $v ) ? esc_url_raw( $v ) : '';
 		}
@@ -474,7 +481,7 @@ final class Water_Admin {
 
 				<h2><?php esc_html_e( 'Map', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
-					<?php esc_html_e( 'Nothing external — no Leaflet, no tiles, no map data — loads until a guest presses the Open button. Satellite imagery is deliberately not offered: its licensing for a commercial rental site could not be verified, so the map ships with OpenStreetMap only.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Nothing external — no Leaflet, no tiles, no map data — loads until a guest presses the Open button. Satellite and street layers are both available, each carrying its provider’s required attribution. If tiles ever fail to load the map falls back to the other layer, and then to markers on a plain background rather than a grid of grey squares.', 'dcc-wildlife' ); ?>
 				</p>
 				<table class="form-table" role="presentation">
 					<tr>
@@ -497,14 +504,42 @@ final class Water_Admin {
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-tile"><?php esc_html_e( 'Tile URL', 'dcc-wildlife' ); ?></label></th>
+						<th scope="row"><?php esc_html_e( 'Default base map', 'dcc-wildlife' ); ?></th>
 						<td>
-							<input type="text" id="dccwl-tile" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_tile_url]" value="<?php echo esc_attr( (string) $o['map_tile_url'] ); ?>" />
-							<p class="description"><?php esc_html_e( 'Defaults to OpenStreetMap. Their tile policy discourages heavy commercial use, so if the map gets busy, point this at a paid provider.', 'dcc-wildlife' ); ?></p>
+							<label style="margin-right:14px">
+								<input type="radio" name="<?php echo esc_attr( $name ); ?>[map_default_layer]" value="satellite" <?php checked( 'streets' !== (string) $o['map_default_layer'] ); ?> />
+								<?php esc_html_e( 'Satellite', 'dcc-wildlife' ); ?>
+							</label>
+							<label>
+								<input type="radio" name="<?php echo esc_attr( $name ); ?>[map_default_layer]" value="streets" <?php checked( 'streets' === (string) $o['map_default_layer'] ); ?> />
+								<?php esc_html_e( 'Streets', 'dcc-wildlife' ); ?>
+							</label>
+							<p class="description"><?php esc_html_e( 'Guests can switch under Layers. Satellite is the default because structure, grass lines and shoreline read far better from imagery.', 'dcc-wildlife' ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-tile-attr"><?php esc_html_e( 'Tile attribution', 'dcc-wildlife' ); ?></label></th>
+						<th scope="row"><label for="dccwl-sat"><?php esc_html_e( 'Satellite tile URL', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-sat" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_sat_url]" value="<?php echo esc_attr( (string) $o['map_sat_url'] ); ?>" />
+							<p class="description"><strong><?php esc_html_e( 'Note the order:', 'dcc-wildlife' ); ?></strong> <?php esc_html_e( 'Esri uses {z}/{y}/{x} while OpenStreetMap uses {z}/{x}/{y}. Swapping them gives a map that renders perfectly and shows the wrong place — check it over the canal at zoom 13.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-sat-attr"><?php esc_html_e( 'Satellite attribution', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-sat-attr" class="large-text" name="<?php echo esc_attr( $name ); ?>[map_sat_attrib]" value="<?php echo esc_attr( (string) $o['map_sat_attrib'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'Shown whenever the satellite layer is active. Required by the provider.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-tile"><?php esc_html_e( 'Streets tile URL', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-tile" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_tile_url]" value="<?php echo esc_attr( (string) $o['map_tile_url'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'If either provider ever throttles or blocks the site, paste a replacement URL here — swapping providers is a paste, not a release.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-tile-attr"><?php esc_html_e( 'Streets attribution', 'dcc-wildlife' ); ?></label></th>
 						<td><input type="text" id="dccwl-tile-attr" class="large-text" name="<?php echo esc_attr( $name ); ?>[map_tile_attrib]" value="<?php echo esc_attr( (string) $o['map_tile_attrib'] ); ?>" /></td>
 					</tr>
 					<tr>

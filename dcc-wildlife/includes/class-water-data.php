@@ -70,11 +70,11 @@ final class Water_Data {
 			// /waterbodies/closest?lat=&lng=&len=20&s=1 — note `len` caps at
 			// 20, and search/waterbodies returns 500, so use `closest`.
 			//
-			// Coordinates are NOT seeded: the owner's capture did not include
-			// them, so nothing is guessed. A water without coordinates still
-			// appears in the chain comparison and its readings; it simply is
-			// not drawn on the map until coordinates are entered or the API
-			// supplies them.
+			// Coordinates ARE seeded since 1.7.1: the owner retrieved each
+			// waterbody's own `Waterbody.Location` centroid from the Atlas on
+			// 2026-08-27, so the chain can be drawn rather than only listed.
+			// They are the Atlas's centroid points — `published`, sourced to
+			// the Atlas, not anything measured on the water. Still editable.
 			'chain_waters'      => self::default_chain(),
 			'primary_water'     => '7972',
 
@@ -92,8 +92,20 @@ final class Water_Data {
 			'map_enabled'       => 0,
 			'map_leaflet_js'    => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 			'map_leaflet_css'   => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-			'map_tile_url'      => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			// TWO base layers, both verified working 2026-08-27.
+			//
+			// MIND THE COORDINATE ORDER. Esri's template is {z}/{y}/{x} and
+			// OSM's is {z}/{x}/{y}. Swapping them yields a map that renders
+			// perfectly and shows the wrong part of Florida — no error, no
+			// blank tiles, just the wrong place. Both are settings precisely
+			// so a provider swap is a paste, not a release.
+			'map_sat_url'       => 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+			'map_sat_attrib'    => 'Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+			'map_tile_url'      => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 			'map_tile_attrib'   => '&copy; OpenStreetMap contributors',
+			// Anglers and boaters read structure, grass lines and shoreline
+			// far better from imagery than from a street map.
+			'map_default_layer' => 'satellite',
 			'map_ramps'         => 1,
 
 			'almanac'           => self::default_almanac(),
@@ -109,24 +121,24 @@ final class Water_Data {
 	 */
 	public static function default_chain(): array {
 		$w = [
-			[ '7972', __( 'Lake Dora', 'dcc-wildlife' ) ],
-			[ '7985', __( 'Lake Eustis', 'dcc-wildlife' ) ],
-			[ '7999', __( 'Lake Harris', 'dcc-wildlife' ) ],
-			[ '8099', __( 'Little Lake Harris', 'dcc-wildlife' ) ],
-			[ '7998', __( 'Lake Griffin', 'dcc-wildlife' ) ],
-			[ '7953', __( 'Lake Beauclair', 'dcc-wildlife' ) ],
-			[ '7840', __( 'Lake Carlton', 'dcc-wildlife' ) ],
-			[ '8080', __( 'Lake Yale', 'dcc-wildlife' ) ],
-			[ '1101', __( 'Apopka-Beauclair Canal', 'dcc-wildlife' ) ],
-			[ '1107', __( 'Dead River', 'dcc-wildlife' ) ],
+			[ '7972', __( 'Lake Dora', 'dcc-wildlife' ), '28.79067', '-81.69114' ],
+			[ '7985', __( 'Lake Eustis', 'dcc-wildlife' ), '28.84662', '-81.72718' ],
+			[ '7999', __( 'Lake Harris', 'dcc-wildlife' ), '28.77764', '-81.81551' ],
+			[ '8099', __( 'Little Lake Harris', 'dcc-wildlife' ), '28.72206', '-81.75587' ],
+			[ '7998', __( 'Lake Griffin', 'dcc-wildlife' ), '28.86775', '-81.84831' ],
+			[ '7953', __( 'Lake Beauclair', 'dcc-wildlife' ), '28.77345', '-81.66019' ],
+			[ '7840', __( 'Lake Carlton', 'dcc-wildlife' ), '28.75970', '-81.65749' ],
+			[ '8080', __( 'Lake Yale', 'dcc-wildlife' ), '28.91248', '-81.73657' ],
+			[ '1101', __( 'Apopka-Beauclair Canal', 'dcc-wildlife' ), '28.73306', '-81.68444' ],
+			[ '1107', __( 'Dead River', 'dcc-wildlife' ), '28.81391', '-81.76456' ],
 		];
 		$out = [];
-		foreach ( $w as [ $id, $name ] ) {
+		foreach ( $w as [ $id, $name, $lat, $lon ] ) {
 			$out[] = [
 				'id'   => $id,
 				'name' => $name,
-				'lat'  => '',
-				'lon'  => '',
+				'lat'  => $lat,
+				'lon'  => $lon,
 			];
 		}
 		return $out;
@@ -415,6 +427,23 @@ final class Water_Data {
 		return preg_match( '#^https://#i', $v ) ? $v : '';
 	}
 
+	public static function map_sat_url(): string {
+		$v = trim( (string) self::get( 'map_sat_url' ) );
+		return preg_match( '#^https://#i', $v ) ? $v : '';
+	}
+
+	/** 'satellite' or 'streets'. Falls back to whichever layer exists. */
+	public static function map_default_layer(): string {
+		$v = 'streets' === (string) self::get( 'map_default_layer' ) ? 'streets' : 'satellite';
+		if ( 'satellite' === $v && '' === self::map_sat_url() ) {
+			return 'streets';
+		}
+		if ( 'streets' === $v && '' === self::map_tile_url() ) {
+			return '' !== self::map_sat_url() ? 'satellite' : 'streets';
+		}
+		return $v;
+	}
+
 	public static function map_ramps_enabled(): bool {
 		return (bool) self::get( 'map_ramps' );
 	}
@@ -427,7 +456,7 @@ final class Water_Data {
 		return self::map_enabled()
 			&& self::live_enabled()
 			&& '' !== self::map_asset( 'map_leaflet_js' )
-			&& '' !== self::map_tile_url();
+			&& ( '' !== self::map_tile_url() || '' !== self::map_sat_url() );
 	}
 
 	/**

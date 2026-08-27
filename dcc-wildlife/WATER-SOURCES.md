@@ -1,6 +1,6 @@
 # Water module — sources, confidence, and gaps
 
-**DCC Wildlife 1.7.0 · "Fishing & Water Conditions"**
+**DCC Wildlife 1.7.1 · "Fishing & Water Conditions"**
 
 Every fact that can reach a guest's screen is listed here with its origin,
 confidence tier and date. If you see something on the page that is not in
@@ -149,17 +149,66 @@ coordinates are dropped rather than placed approximately.
 **Distances are straight-line** from the cottages, computed from coordinates
 and labelled as such. Not drive time, which cannot be sourced.
 
-**Satellite imagery is NOT included.** The brief said to verify the tile
-provider's licensing for a commercial rental site and, failing that, to ship
-OSM only and say so. This build environment has no network, so I could not
-verify Esri's terms — so OSM only. Worth noting separately: OSM's own tile
-policy discourages heavy commercial use, so the tile URL is a setting; if the
-map gets busy, point it at a paid provider.
+### Base maps
 
-**Waterbody coordinates are not seeded.** Your capture did not include them,
-so none are invented. The code scans each Atlas payload for coordinates and the
-admin screen lets you enter any that are missing; a water without coordinates
-still appears in the comparison list, it is simply not drawn.
+Two layers, both verified working 2026-08-27. **Satellite is the default** —
+anglers and boaters read structure, grass lines and shoreline far better from
+imagery than from a street map — with streets one tap away under Layers.
+
+| Layer | URL template | Attribution shown when active |
+|---|---|---|
+| Satellite | `server.arcgisonline.com/…/World_Imagery/MapServer/tile/{z}/{y}/{x}` | Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community |
+| Streets | `tile.openstreetmap.org/{z}/{x}/{y}.png` | © OpenStreetMap contributors |
+
+You decided to include satellite and proceed on these tiles. Recorded as your
+decision; the module implements it.
+
+**Mind the coordinate order.** Esri's template is `{z}/{y}/{x}` and OSM's is
+`{z}/{x}/{y}`. Swapping them produces a map that renders perfectly and shows
+the wrong part of Florida — no error, no blank tiles, just the wrong place.
+A test asserts each default ends in the right order.
+
+Each layer carries its **own** `attribution`, so Leaflet swaps the credit with
+the layer rather than showing one line for both.
+
+### When tiles fail
+
+The realistic risk is operational, not legal: providers throttle or block by
+referrer and volume, and the symptom would be a grid of grey squares on the
+Guest Guide. So:
+
+- **Both URLs and both attributions are settings.** Swapping to a paid
+  provider is pasting a URL into DCC → Wildlife, not shipping a release.
+- **A failing layer falls back to the other.** Five tile misses are tolerated
+  (normal at the edge of coverage); sustained failure switches layers, and the
+  Base map control follows the switch so the UI never lies about what is shown.
+- **If both fail the imagery is dropped**, not left broken: the markers stay on
+  a plain background under one line — *"Map imagery is unavailable right now —
+  the markers below are still accurate."* The data is the valuable part; the
+  imagery is the backdrop.
+
+All of this stays behind the existing load-on-demand behaviour, re-verified:
+zero external requests before the button is pressed.
+
+### Waterbody coordinates
+
+Seeded in 1.7.1 from the Atlas's own `Waterbody.Location` centroids, retrieved
+2026-08-27 via `/waterbodies/closest`. They are `published` and sourced to the
+Atlas — centroid points, not anything measured on the water. All ten remain
+editable in the admin table.
+
+| Water | Atlas id | Latitude | Longitude |
+|---|---|---|---|
+| Lake Dora | 7972 | 28.79067 | -81.69114 |
+| Lake Eustis | 7985 | 28.84662 | -81.72718 |
+| Lake Harris | 7999 | 28.77764 | -81.81551 |
+| Little Lake Harris | 8099 | 28.72206 | -81.75587 |
+| Lake Griffin | 7998 | 28.86775 | -81.84831 |
+| Lake Beauclair | 7953 | 28.77345 | -81.66019 |
+| Lake Carlton | 7840 | 28.75970 | -81.65749 |
+| Lake Yale | 8080 | 28.91248 | -81.73657 |
+| Apopka-Beauclair Canal | 1101 | 28.73306 | -81.68444 |
+| Dead River | 1107 | 28.81391 | -81.76456 |
 
 ---
 
@@ -169,11 +218,12 @@ The countdown toggle moves into this plugin, so DCC → Wildlife and DCC → Wat
 become one page with **Field guide / Water / Map** sections.
 
 The toggle keeps its own standalone option so your current value survives
-rather than resetting. **One thing to confirm:** I could not read
-`dcc-wildlife-countdown.php` from here, so the option key is my best inference,
-`dcc_wildlife_countdown`, and it is filterable via `dcc_wl_countdown_option`.
-Check it against the mu-plugin before deleting that file; if it differs, the fix
-is one filter, not a code change.
+rather than resetting. **Resolved in 1.7.1:** the key is
+`dcc_wl_countdown_enabled` (mu-plugin line 17), read with a default of **1**.
+My 1.7.0 inference — `dcc_wildlife_countdown` — was wrong and would have shown
+your toggle as OFF the first time. Both the key and the default now match the
+mu-plugin, so deleting that file changes nothing for a site that never touched
+the setting. It remains filterable via `dcc_wl_countdown_option`.
 
 The page registers at slug `dcc-wildlife` **only if that slug is free**. While
 the mu-plugin is active it owns that slug, so this page stays at
@@ -196,10 +246,10 @@ Drive times. Any hydrology claim about which water connects to which.
 
 ## 8. Still yours
 
-**Which waters you want listed.** Ten are configured; the list is editable.
-Everything else you previously could not answer is now sourced, and the module
-no longer asks you for fishing technique or dock knowledge — that is the whole
-point of it speaking at chain scale.
+**Which waters you want listed.** Ten are configured, now with coordinates, and
+the list is editable. That is the last open question — everything else is
+sourced, and the module no longer asks you for fishing technique or dock
+knowledge, which is the whole point of it speaking at chain scale.
 
 ---
 

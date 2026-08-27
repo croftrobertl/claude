@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,7 +25,7 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * Every fact carries a source and a date, enforced structurally — a value with no source cannot be constructed, so it cannot be rendered. Unknown fields are omitted entirely rather than shown as "unknown".
 * Three confidence tiers: `live` (a gauge reading fetched now), `published` (an official dataset) and `general` (angling guidance, rendered in a visibly separate voice). Anything else is dropped.
 * An optional, **off-by-default** live layer fetches public USGS gauge data and the NWS forecast server-side into a transient, exposed through a REST route so page caching can never serve a stale reading. Each row shows the measurement time, not the fetch time.
-* **Renders nothing at all** until it holds a sourced fact, the owner's own words, or a live reading — so it can be placed before it is populated and lights up as it fills.
+* **Renders nothing at all** until it holds a sourced condition or a live reading — so it can be placed before it is populated and lights up as it fills.
 * Live water level is expressed as a deviation ("about 5 inches below normal for August"), never as the raw gauge elevation, which a guest would read as water depth.
 * Water clarity, dissolved oxygen, TSI and a bathymetric depth map come from the Lake County Water Atlas, each with its own units, precision, sample date and station read from the payload.
 * Lines stay silent when they have nothing to say — a level near its monthly norm, or a dry couple of days, prints nothing rather than noise.
@@ -44,6 +44,13 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.7.1 =
+* **Satellite base layer added** alongside streets, defaulting to satellite — structure, grass lines and shoreline read far better from imagery. Each layer carries its own required attribution (Esri and OpenStreetMap respectively), swapped by Leaflet with the layer.
+* Both tile URLs and both attribution strings are **settings**, so swapping providers is a paste rather than a release.
+* **Honest failure:** sustained tile errors fall back to the other layer, and if both fail the imagery is dropped in favour of markers on a plain background with a one-line explanation — never a grid of grey squares.
+* **Fixes the countdown option key.** The mu-plugin uses `dcc_wl_countdown_enabled` with a default of 1, not the `dcc_wildlife_countdown` inferred in 1.7.0, which would have shown the toggle as off the first time.
+* **Waterbody coordinates seeded** for all ten chain waters from the Atlas's own centroids, so the chain is drawn on the map rather than only listed.
 
 = 1.7.0 =
 * **Fixes two bugs that shipped in 1.6.0** and returned one live reading out of seven. The Water Atlas wraps every reading in a `{name, payloadType, payload}` envelope and the component finder was returning the wrapper rather than the payload, so every reading failed its age check and was silently dropped. Separately, NWS forecasts do not carry `properties.updated` — they carry `updateTime` — so forecast and wind were dropped every time. Both now have regression tests; both were invisible to an offline build.

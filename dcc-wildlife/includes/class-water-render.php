@@ -268,6 +268,9 @@ final class Water_Render {
 							'script'     => esc_url_raw( DCC_WL_URL . 'assets/js/water-map.js?ver=' . DCC_WL_VERSION ),
 							'tileUrl'    => Water_Data::map_tile_url(),
 							'tileAttrib' => (string) Water_Data::get( 'map_tile_attrib' ),
+							'satUrl'     => Water_Data::map_sat_url(),
+							'satAttrib'  => (string) Water_Data::get( 'map_sat_attrib' ),
+							'baseLayer'  => Water_Data::map_default_layer(),
 						]
 						: null,
 					'i18n'     => [
@@ -284,6 +287,10 @@ final class Water_Render {
 						'lyrStations' => __( 'Monitoring stations', 'dcc-wildlife' ),
 						'lyrProperty' => __( 'The cottages', 'dcc-wildlife' ),
 						'fullscreen'  => __( 'Fullscreen', 'dcc-wildlife' ),
+						'baseMap'     => __( 'Base map', 'dcc-wildlife' ),
+						'satellite'   => __( 'Satellite', 'dcc-wildlife' ),
+						'streets'     => __( 'Streets', 'dcc-wildlife' ),
+						'noImagery'   => __( 'Map imagery is unavailable right now — the markers below are still accurate.', 'dcc-wildlife' ),
 						'closed'      => __( 'CLOSED', 'dcc-wildlife' ),
 						'lanes'       => __( 'lanes', 'dcc-wildlife' ),
 						'milesAway'   => __( 'mi from the cottages, straight line', 'dcc-wildlife' ),

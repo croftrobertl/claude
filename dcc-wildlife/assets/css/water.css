@@ -260,6 +260,36 @@
 	padding: 0 6px;
 }
 
+.dccwl-water .dccwl-drop-head {
+	color: var(--dccwl-muted);
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	margin: 2px 0 2px 6px;
+	text-transform: uppercase;
+}
+
+.dccwl-water .dccwl-drop-sep {
+	border: 0;
+	border-top: 1px solid var(--dccwl-line);
+	margin: 6px 0;
+}
+
+/* If both tile providers fail, the imagery is dropped rather than left as a
+ * grid of grey squares — the markers are the valuable part. */
+.dccwl-water .dccwl-map-noimagery {
+	background: var(--dccwl-soft);
+}
+
+.dccwl-water .dccwl-map-notice {
+	background: #fdf3ea;
+	border-bottom: 1px solid var(--dccwl-line);
+	color: #8a5a1a;
+	font-size: 0.9rem;
+	margin: 0;
+	padding: 8px 12px;
+}
+
 /* Popups */
 .dccwl-water .dccwl-pop {
 	font-size: 0.95rem;
