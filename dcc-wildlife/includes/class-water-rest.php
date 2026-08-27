@@ -33,6 +33,19 @@ final class Water_Rest {
 			]
 		);
 
+		// Public, read-only: everything the map draws. Served from the same
+		// transients as the text, and only ever requested when a guest
+		// actually opens the map.
+		register_rest_route(
+			self::NS,
+			'/map',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ self::class, 'map' ],
+				'permission_callback' => '__return_true',
+			]
+		);
+
 		// Admin-only: probe both Water Atlas reports.
 		register_rest_route(
 			self::NS,
@@ -69,6 +82,18 @@ final class Water_Rest {
 		// This endpoint is itself cacheable for a short window, but never
 		// longer than the underlying transient.
 		$response->header( 'Cache-Control', 'public, max-age=120' );
+		return $response;
+	}
+
+	public static function map(): \WP_REST_Response {
+		if ( ! Water_Data::map_possible() ) {
+			return new \WP_REST_Response( [ 'enabled' => false ] );
+		}
+		$payload            = Water_Live::map_data();
+		$payload['enabled'] = true;
+
+		$response = new \WP_REST_Response( $payload );
+		$response->header( 'Cache-Control', 'public, max-age=600' );
 		return $response;
 	}
 

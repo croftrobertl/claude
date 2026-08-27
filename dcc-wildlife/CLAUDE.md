@@ -69,13 +69,16 @@ includes/class-water-live.php   # Water Atlas (level/Secchi/DO/TSI/bathymetry) +
                                 #   staleness guards, gauge discovery + atlas probe
 includes/class-water-rest.php   # /conditions (public, serves cache) + /discover-gauges (admin)
 includes/class-water-render.php # Water widget/shortcode renderer; static server-side, live client-side
-includes/class-water-admin.php  # DCC -> Water (slug dcc-wildlife-water, prio 63)
+includes/class-water-admin.php  # ONE page: DCC -> Wildlife (falls back to
+                                #   dcc-wildlife-water while the countdown
+                                #   mu-plugin still owns that slug), prio 63
 includes/class-water-widget.php # Elementor widget dccwl_water
 assets/css/widget.css         # One CSS file; palette navy #0a3d62 / coral #e8604f
 assets/js/widget.js           # One vanilla-JS file, no jQuery, no AJAX
 assets/css/water.css          # Water module styles (loaded only where placed)
 assets/js/water.js            # Fills the live strip from the REST route
 assets/js/admin-water.js      # Repeatable rows + USGS gauge discovery (admin only)
+assets/js/water-map.js        # The chain map — fetched on demand, never enqueued
 ```
 
 Data model: the registry (id, emoji, name, group, fact, best, where, mascot)
@@ -163,6 +166,26 @@ that's not true."* It is enforced structurally, not editorially.
   reports height above a datum (the atlas station reads ~61.2 ft NAVD88); a
   guest reads that as depth. Show a deviation in inches; keep the raw reading
   and its datum in the attribution line.
+- **THE PAYLOAD ENVELOPE.** Atlas readings arrive as
+  `{ name, payloadType, payload: {...} }` — the wrapper carries the name,
+  the payload carries the data. `find_component()` unwraps an associative
+  payload; a LIST payload (Bathymetry) keeps the wrapper. Returning the
+  wrapper shipped in 1.6.0 and silently dropped every reading while the
+  probe reported both endpoints healthy. Do not "simplify" that unwrap.
+- **NWS sends `updateTime`, not `properties.updated`.** Requiring `updated`
+  dropped forecast and wind every time in 1.6.0. Order is
+  `updated ?? updateTime ?? generatedAt`; `updateTime` is the ISSUANCE time
+  and `generatedAt` is only when the JSON was rendered.
+- **`array_is_list()` is PHP 8.1+ and this plugin supports 8.0** — it is
+  behind a `function_exists()` guard with a fallback. Keep it that way.
+- **Staleness is PER-WATER, never global.** Griffin's level is from 2008 and
+  Yale's from 2025; both are flagged stale and excluded from any deviation.
+- **Each water compares against its OWN median/norm.** Chain medians run
+  1.21–2.80 ft, so a chain-wide average would be meaningless.
+- **The map loads NOTHING external until opened** — no Leaflet, no tiles, no
+  data. It is a button, not an embed, and a test asserts zero external
+  requests before the click. No satellite layer: licensing for a commercial
+  site was never verified, so OSM only.
 - **Water Atlas gotchas, resolved live 2026-08-27 — do not re-derive these:**
   the base has **no `/api/` prefix**; `s` is an **integer** Site Id (`s=lake`
   returns 400, omitting it 404s); the API key is the Water Atlas **waterbody

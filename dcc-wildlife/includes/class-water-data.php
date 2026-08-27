@@ -65,6 +65,19 @@ final class Water_Data {
 			// precipitation (00045).
 			'rain_site'         => '02237700',
 
+			// The Harris Chain, chain-wide since 1.7.0. Every id below was
+			// resolved from the live API on 2026-08-27 via
+			// /waterbodies/closest?lat=&lng=&len=20&s=1 — note `len` caps at
+			// 20, and search/waterbodies returns 500, so use `closest`.
+			//
+			// Coordinates are NOT seeded: the owner's capture did not include
+			// them, so nothing is guessed. A water without coordinates still
+			// appears in the chain comparison and its readings; it simply is
+			// not drawn on the map until coordinates are entered or the API
+			// supplies them.
+			'chain_waters'      => self::default_chain(),
+			'primary_water'     => '7972',
+
 			// Lake County Water Atlas, resolved live 2026-08-27.
 			// NOTE: 7972 is the Water Atlas WATERBODY id for Lake Dora. It is
 			// NOT the FDEP WBID (2831B), which is a different identifier and
@@ -74,17 +87,89 @@ final class Water_Data {
 			'atlas_site'        => '1',
 			'clarity_link'      => 'https://lake.wateratlas.usf.edu/waterbodies/lakes/7972/lake-dora',
 
-			'dock_notes'        => '',
-			'dock_updated'      => '',
-
-			// Sits beside the live rainfall figure, in the owner's voice.
-			'dock_rain_note'    => '',
-			'dock_rain_updated' => '',
+			// Map. Off by default like the rest of the live layer, and it
+			// loads NOTHING external until a guest actually opens it.
+			'map_enabled'       => 0,
+			'map_leaflet_js'    => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+			'map_leaflet_css'   => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+			'map_tile_url'      => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			'map_tile_attrib'   => '&copy; OpenStreetMap contributors',
+			'map_ramps'         => 1,
 
 			'almanac'           => self::default_almanac(),
 			'links'             => self::default_links(),
 			'reports'           => [],  // "Local reports & charters" — owner-supplied only.
 		];
+	}
+
+	/**
+	 * The Harris Chain waters, ids verified live 2026-08-27.
+	 *
+	 * @return array<int,array<string,string>>
+	 */
+	public static function default_chain(): array {
+		$w = [
+			[ '7972', __( 'Lake Dora', 'dcc-wildlife' ) ],
+			[ '7985', __( 'Lake Eustis', 'dcc-wildlife' ) ],
+			[ '7999', __( 'Lake Harris', 'dcc-wildlife' ) ],
+			[ '8099', __( 'Little Lake Harris', 'dcc-wildlife' ) ],
+			[ '7998', __( 'Lake Griffin', 'dcc-wildlife' ) ],
+			[ '7953', __( 'Lake Beauclair', 'dcc-wildlife' ) ],
+			[ '7840', __( 'Lake Carlton', 'dcc-wildlife' ) ],
+			[ '8080', __( 'Lake Yale', 'dcc-wildlife' ) ],
+			[ '1101', __( 'Apopka-Beauclair Canal', 'dcc-wildlife' ) ],
+			[ '1107', __( 'Dead River', 'dcc-wildlife' ) ],
+		];
+		$out = [];
+		foreach ( $w as [ $id, $name ] ) {
+			$out[] = [
+				'id'   => $id,
+				'name' => $name,
+				'lat'  => '',
+				'lon'  => '',
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * @return array<int,array<string,string>>
+	 */
+	public static function chain_waters(): array {
+		$rows = self::get( 'chain_waters' );
+		if ( ! is_array( $rows ) ) {
+			return [];
+		}
+		$out = [];
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$id = preg_replace( '/\D/', '', (string) ( $row['id'] ?? '' ) );
+			if ( ! is_string( $id ) || '' === $id ) {
+				continue;
+			}
+			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
+			$lat  = trim( (string) ( $row['lat'] ?? '' ) );
+			$lon  = trim( (string) ( $row['lon'] ?? '' ) );
+			$out[] = [
+				'id'   => $id,
+				'name' => '' !== $name ? $name : $id,
+				'lat'  => is_numeric( $lat ) ? $lat : '',
+				'lon'  => is_numeric( $lon ) ? $lon : '',
+			];
+		}
+		return $out;
+	}
+
+	/** The water whose detailed conditions head the module. */
+	public static function primary_water(): string {
+		$v = preg_replace( '/\D/', '', (string) self::get( 'primary_water' ) );
+		if ( is_string( $v ) && '' !== $v ) {
+			return $v;
+		}
+		$chain = self::chain_waters();
+		return $chain ? $chain[0]['id'] : self::atlas_waterbody();
 	}
 
 	/**
@@ -280,25 +365,6 @@ final class Water_Data {
 		return $grouped;
 	}
 
-	/**
-	 * Owner's first-hand notes. Free text — the one part of this module no
-	 * published source can provide, and the only part that is allowed to
-	 * speak without a citation, because it is explicitly labelled as the
-	 * owner's own observation rather than published data.
-	 *
-	 * @return array{text:string,updated:string}|null
-	 */
-	public static function dock_notes(): ?array {
-		$text = trim( (string) self::get( 'dock_notes' ) );
-		if ( '' === $text ) {
-			return null;
-		}
-		return [
-			'text'    => $text,
-			'updated' => trim( (string) self::get( 'dock_updated' ) ),
-		];
-	}
-
 	private static function site_id( string $key ): string {
 		$v = preg_replace( '/\D/', '', (string) self::get( $key ) );
 		return ( is_string( $v ) && preg_match( '/^\d{8,15}$/', $v ) ) ? $v : '';
@@ -327,7 +393,7 @@ final class Water_Data {
 	}
 
 	public static function atlas_configured(): bool {
-		return '' !== self::atlas_base() && '' !== self::atlas_waterbody();
+		return '' !== self::atlas_base() && ( '' !== self::primary_water() || '' !== self::atlas_waterbody() );
 	}
 
 	public static function clarity_link(): string {
@@ -335,44 +401,50 @@ final class Water_Data {
 		return preg_match( '#^https?://#i', $v ) ? $v : 'https://lake.wateratlas.usf.edu/';
 	}
 
+	public static function map_enabled(): bool {
+		return (bool) self::get( 'map_enabled' );
+	}
+
+	public static function map_asset( string $key ): string {
+		$v = esc_url_raw( trim( (string) self::get( $key ) ) );
+		return preg_match( '#^https://#i', $v ) ? $v : '';
+	}
+
+	public static function map_tile_url(): string {
+		$v = trim( (string) self::get( 'map_tile_url' ) );
+		return preg_match( '#^https://#i', $v ) ? $v : '';
+	}
+
+	public static function map_ramps_enabled(): bool {
+		return (bool) self::get( 'map_ramps' );
+	}
+
 	/**
-	 * The owner's note about what rain does to the canal, shown beside the
-	 * live rainfall figure but in his own voice — never blended into it.
-	 *
-	 * @return array{text:string,updated:string}|null
+	 * Is the map actually usable? Requires the toggle, the live layer and a
+	 * Leaflet URL — without all three there is nothing to open.
 	 */
-	public static function rain_note(): ?array {
-		$text = trim( (string) self::get( 'dock_rain_note' ) );
-		if ( '' === $text ) {
-			return null;
-		}
-		return [
-			'text'    => $text,
-			'updated' => trim( (string) self::get( 'dock_rain_updated' ) ),
-		];
+	public static function map_possible(): bool {
+		return self::map_enabled()
+			&& self::live_enabled()
+			&& '' !== self::map_asset( 'map_leaflet_js' )
+			&& '' !== self::map_tile_url();
 	}
 
 	/**
 	 * Does the module hold anything worth showing WITHOUT a network call?
 	 *
-	 * Drives the auto-hide: a heading over five links to national homepages
-	 * reads as unfinished on a guest page, so the module renders nothing at
-	 * all unless it has a sourced fact or the owner's own words. Live
-	 * readings cannot be counted here — they arrive after paint — so the
-	 * renderer keeps the section hidden and lets the JS reveal it if, and
-	 * only if, real readings turn up.
+	 * Drives the auto-hide: a heading over a few links reads as unfinished
+	 * on a guest page, so the module renders nothing at all unless it has a
+	 * sourced CONDITION fact. Live readings cannot be counted here — they
+	 * arrive after paint — so the renderer keeps the section hidden and lets
+	 * the JS reveal it if, and only if, real readings turn up.
+	 *
+	 * almanac('conditions') only: an "About the water" row such as surface
+	 * area is not a condition and must not be the sole reason a section
+	 * headed "Fishing & water conditions" appears.
 	 */
 	public static function has_static_content(): bool {
-		// Deliberately almanac('conditions') only: an "About the water" row
-		// such as surface area is not a condition and must not be the sole
-		// reason a section headed "Fishing & water conditions" appears.
-		if ( self::almanac( 'conditions' ) ) {
-			return true;
-		}
-		if ( null !== self::dock_notes() ) {
-			return true;
-		}
-		return null !== self::rain_note();
+		return (bool) self::almanac( 'conditions' );
 	}
 
 	/**
@@ -388,6 +460,13 @@ final class Water_Data {
 			|| null !== self::coords()
 			|| self::atlas_configured();
 	}
+
+	/* The owner's "From the dock" notes and his rain-note were removed in
+	 * 1.7.0 at his request. He lives about an hour from the cottages and
+	 * does not fish, and would not risk giving inaccurate local detail to
+	 * guests who are seasoned, dedicated fishermen and boaters. The module
+	 * speaks at Harris Chain scale from sourced data instead. Restore from
+	 * git history at v1.6.0 if that ever changes. */
 
 	/**
 	 * @param string $key 'links' or 'reports'

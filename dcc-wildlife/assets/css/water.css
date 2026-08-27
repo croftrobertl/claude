@@ -122,47 +122,6 @@
 	margin: 0 0 6px;
 }
 
-/* ---- owner's own knowledge ---- */
-
-.dccwl-water .dccwl-water-dock {
-	background: rgba(232, 96, 79, 0.06);
-	border: 1px solid rgba(232, 96, 79, 0.35);
-	border-radius: 12px;
-	margin: 1.25rem 0 0;
-	padding: 14px 16px;
-}
-
-.dccwl-water .dccwl-water-dock-head {
-	margin-top: 0;
-}
-
-.dccwl-water .dccwl-water-dock-meta {
-	color: #b03a2b;
-	font-size: 0.85rem;
-	font-weight: 600;
-	margin: 0 0 8px;
-}
-
-.dccwl-water .dccwl-water-dock-body p {
-	margin: 0 0 0.6em;
-}
-
-.dccwl-water .dccwl-water-dock-body p:last-child {
-	margin-bottom: 0;
-}
-
-/* The rain note sits directly beneath the measured rainfall total. Same
- * owner-voice treatment as "From the dock", but tightened up so the pairing
- * reads as one thought in two voices rather than two unrelated blocks. */
-.dccwl-water .dccwl-water-rainnote {
-	margin-top: 8px;
-	padding: 10px 14px;
-}
-
-.dccwl-water .dccwl-water-rainnote .dccwl-water-dock-meta {
-	margin-bottom: 4px;
-}
-
 /* Reference facts about the waterbody, set back from the conditions above
  * so a guest reads them as background rather than as today's state. */
 .dccwl-water .dccwl-water-about {
@@ -173,6 +132,178 @@
 
 .dccwl-water .dccwl-water-about .dccwl-water-value {
 	font-size: 1.05rem;
+}
+
+/* ----------------------------------------------------------------------
+ * Chain comparison
+ * -------------------------------------------------------------------- */
+
+.dccwl-water .dccwl-chain {
+	margin-top: 1.25rem;
+}
+
+.dccwl-water .dccwl-chain-note {
+	color: var(--dccwl-muted);
+	font-size: 0.9rem;
+	margin: -4px 0 8px;
+}
+
+/* ----------------------------------------------------------------------
+ * Chain map. Layout follows the owner's Croatia map; the palette is DCC's,
+ * and type/tap targets are sized for reading a phone in sunlight.
+ * -------------------------------------------------------------------- */
+
+.dccwl-water .dccwl-map-wrap {
+	margin-top: 1.25rem;
+}
+
+.dccwl-water .dccwl-map-intro {
+	color: var(--dccwl-muted);
+	font-size: 0.95rem;
+	margin: 0 0 10px;
+}
+
+.dccwl-water .dccwl-map-shell {
+	background: var(--dccwl-soft);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 12px;
+	overflow: hidden;
+	position: relative;
+}
+
+.dccwl-water .dccwl-map-canvas {
+	height: 460px;
+	width: 100%;
+}
+
+.dccwl-water .dccwl-map-shell:fullscreen .dccwl-map-canvas {
+	height: 100vh;
+}
+
+.dccwl-water .dccwl-map-bar {
+	align-items: center;
+	background: var(--dccwl-white);
+	border-top: 1px solid var(--dccwl-line);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 8px 10px;
+	position: relative;
+	z-index: 500;
+}
+
+.dccwl-water .dccwl-seg {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.dccwl-water .dccwl-seg-label {
+	color: var(--dccwl-muted);
+	font-size: 0.88rem;
+	font-weight: 600;
+	margin-right: 2px;
+}
+
+/* Doubled classes to beat Bravada's (0,3,1) button reset, same as the rest
+ * of the plugin. */
+.dccwl-water .dccwl-seg-btn.dccwl-seg-btn,
+.dccwl-water .dccwl-drop-btn.dccwl-drop-btn {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 8px;
+	color: var(--dccwl-navy);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.92rem;
+	font-weight: 600;
+	line-height: 1;
+	min-height: 44px;
+	padding: 10px 14px;
+}
+
+.dccwl-water .dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
+	background: var(--dccwl-navy);
+	border-color: var(--dccwl-navy);
+	color: var(--dccwl-white);
+}
+
+.dccwl-water .dccwl-seg-btn.dccwl-seg-btn:focus-visible,
+.dccwl-water .dccwl-drop-btn.dccwl-drop-btn:focus-visible {
+	outline: 2px solid var(--dccwl-coral);
+	outline-offset: 2px;
+}
+
+.dccwl-water .dccwl-drop {
+	position: relative;
+}
+
+.dccwl-water .dccwl-drop-panel {
+	background: var(--dccwl-white);
+	border: 1px solid var(--dccwl-line);
+	border-radius: 10px;
+	bottom: calc(100% + 6px);
+	box-shadow: 0 6px 18px rgba(10, 26, 32, 0.18);
+	left: 0;
+	min-width: 220px;
+	padding: 8px;
+	position: absolute;
+	z-index: 600;
+}
+
+.dccwl-water .dccwl-drop-row {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	min-height: 44px;
+	padding: 0 6px;
+}
+
+/* Popups */
+.dccwl-water .dccwl-pop {
+	font-size: 0.95rem;
+	line-height: 1.45;
+	max-width: 260px;
+}
+
+.dccwl-water .dccwl-pop-title {
+	color: var(--dccwl-navy);
+	font-size: 1.05rem;
+	margin: 0 0 6px;
+}
+
+.dccwl-water .dccwl-pop-line {
+	margin: 0 0 3px;
+}
+
+.dccwl-water .dccwl-pop-closed {
+	background: var(--dccwl-coral);
+	border-radius: 6px;
+	color: var(--dccwl-white);
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	margin: 0 0 6px;
+	padding: 3px 8px;
+	text-align: center;
+}
+
+.dccwl-water .dccwl-pop-link {
+	color: var(--dccwl-navy);
+	display: block;
+	margin-top: 4px;
+}
+
+.dccwl-water .dccwl-pop-src {
+	color: var(--dccwl-muted);
+	font-size: 0.82rem;
+	margin: 6px 0 0;
+}
+
+@media (max-width: 480px) {
+	.dccwl-water .dccwl-map-canvas {
+		height: 340px;
+	}
 }
 
 /* ---- links ---- */

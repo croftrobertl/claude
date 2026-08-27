@@ -74,6 +74,14 @@ final class Water_Live {
 	 */
 	private const LEVEL_SILENT_INCHES = 2;
 
+	/** Uncached Atlas requests allowed per refresh pass. */
+	private const ATLAS_FETCH_BUDGET = 6;
+
+	/** FWC's ramp inventory is effectively static: cache it for a week. */
+	private const TTL_RAMPS = 604800;
+
+	private static int $fetch_budget = self::ATLAS_FETCH_BUDGET;
+
 	/**
 	 * Secchi comparison thresholds against the period-of-record median.
 	 * Deliberately wide: the clause only appears when the difference is
@@ -118,8 +126,11 @@ final class Water_Live {
 	 * @return array{facts:array<int,array<string,string>>,fetched:string}
 	 */
 	public static function refresh(): array {
+		self::$fetch_budget = self::ATLAS_FETCH_BUDGET;
+
 		$rows = array_merge(
 			self::fetch_atlas(),
+			self::chain_clarity(),
 			self::fetch_rainfall(),
 			self::fetch_nws()
 		);
@@ -182,9 +193,9 @@ final class Water_Live {
 	 *
 	 * @return array<mixed>|null
 	 */
-	private static function atlas_report( string $report ): ?array {
+	private static function atlas_report( string $report, string $waterbody = '' ): ?array {
 		$base      = Water_Data::atlas_base();
-		$waterbody = Water_Data::atlas_waterbody();
+		$waterbody = '' !== $waterbody ? $waterbody : Water_Data::primary_water();
 		$site      = Water_Data::atlas_site();
 		if ( '' === $base || '' === $waterbody ) {
 			return null;
@@ -207,6 +218,14 @@ final class Water_Live {
 			rawurlencode( $site )
 		);
 
+		// Chain-wide means up to 20 requests on a cold cache. Fetch at most a
+		// few uncached waters per refresh so the chain warms up over a couple
+		// of passes instead of hammering an academic API in one burst.
+		if ( self::$fetch_budget <= 0 ) {
+			return null;
+		}
+		--self::$fetch_budget;
+
 		$body = self::get_json( $url );
 		if ( ! is_array( $body ) ) {
 			set_transient( $key, 'MISS', Water_Data::TTL_FAIL );
@@ -215,6 +234,353 @@ final class Water_Live {
 
 		set_transient( $key, $body, self::TTL_ATLAS );
 		return $body;
+	}
+
+	/* =====================================================================
+	 * Chain-wide: each water against ITS OWN record.
+	 * ===================================================================== */
+
+	/**
+	 * Clarity for every configured water, compared with that water's own
+	 * long-run median.
+	 *
+	 * This is the view that needs no local knowledge and that a visiting
+	 * angler can actually act on: Eustis unusually clear at 4.27 against its
+	 * own 2.30, Harris sitting exactly at its median, Yale well below its
+	 * own. Every number is the Atlas's, and each comparison is against the
+	 * right baseline — a chain-wide average would be meaningless when the
+	 * medians range from 1.21 to 2.80.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function chain_clarity(): array {
+		$waters = Water_Data::chain_waters();
+		if ( count( $waters ) < 2 ) {
+			return []; // Nothing to compare against.
+		}
+
+		$rows = [];
+		foreach ( $waters as $w ) {
+			$c = self::find_component(
+				self::atlas_report( 'WaterQuality', $w['id'] ),
+				static fn( string $n ): bool => false !== strpos( $n, 'secchi' )
+			);
+			if ( null === $c || ! is_numeric( $c['value'] ?? null ) ) {
+				continue;
+			}
+
+			$date = self::comp_str( $c, 'sampleDate' );
+			$age  = self::comp_age_days( $date );
+			if ( null === $age || $age > self::ATLAS_MAX_AGE_DAYS ) {
+				continue;
+			}
+
+			$units   = self::comp_str( $c, 'units' );
+			$current = (float) $c['value'];
+			$hist    = ( isset( $c['historic'] ) && is_array( $c['historic'] ) ) ? $c['historic'] : [];
+			$med     = $hist['medValue'] ?? null;
+			if ( ! is_numeric( $med ) || (float) $med <= 0 ) {
+				continue; // No baseline for this water: no comparison to make.
+			}
+
+			$ratio = $current / (float) $med;
+			if ( $ratio >= self::SECCHI_CLEARER ) {
+				$verdict = __( 'clearer than usual for this water', 'dcc-wildlife' );
+			} elseif ( $ratio <= self::SECCHI_MURKIER ) {
+				$verdict = __( 'murkier than usual for this water', 'dcc-wildlife' );
+			} else {
+				$verdict = __( 'about usual for this water', 'dcc-wildlife' );
+			}
+
+			$rows[] = [
+				'label'       => $w['name'],
+				'value'       => sprintf(
+					/* translators: 1: current reading, 2: verdict, 3: this water's median. */
+					__( '%1$s — %2$s (its median is %3$s)', 'dcc-wildlife' ),
+					self::fmt_measure( $current, $c['precision'] ?? null, $units ),
+					$verdict,
+					self::fmt_measure( $med, 2, $units )
+				),
+				'tier'        => Water_Fact::TIER_PUBLISHED,
+				'source_name' => self::atlas_source_name( $c, __( 'Lake County Water Atlas', 'dcc-wildlife' ) ),
+				'source_url'  => self::station_url( $c ),
+				'date'        => $date,
+				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'note'        => '',
+				'group'       => 'chain',
+				'_ratio'      => $ratio,
+			];
+		}
+
+		// Clearest relative to its own normal first — the ordering someone
+		// choosing a lake this week would want. Ordering, not a claim.
+		usort( $rows, static fn( array $a, array $b ): int => $b['_ratio'] <=> $a['_ratio'] );
+
+		return $rows;
+	}
+
+	/**
+	 * Everything the map draws, assembled from the SAME cached readings the
+	 * text uses — so the map can never disagree with the page above it.
+	 *
+	 * A water with no coordinates is still returned (its readings are real)
+	 * but carries lat/lon null, and the map simply does not place it. The
+	 * owner's capture did not include waterbody coordinates, so none are
+	 * invented here; the Atlas payload is scanned for them and the admin
+	 * screen lets him enter any that are missing.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function map_data(): array {
+		$chain = Water_Data::chain_waters();
+
+		// The background conditions refresh trickles a few uncached waters
+		// per pass so an academic API never sees a burst. Opening the map is
+		// different: it is explicit, rare, and its answer is cached for
+		// hours, so it gets a budget sized to the chain (two reports each)
+		// rather than being starved into a half-drawn map.
+		self::$fetch_budget = (int) min( 24, ( count( $chain ) * 2 ) + 2 );
+
+		$waters = [];
+		foreach ( $chain as $w ) {
+			$wq = self::atlas_report( 'WaterQuality', $w['id'] );
+			$lf = self::atlas_report( 'LevelsFlows', $w['id'] );
+
+			$entry = [
+				'id'      => $w['id'],
+				'name'    => $w['name'],
+				'lat'     => '' !== $w['lat'] ? (float) $w['lat'] : null,
+				'lon'     => '' !== $w['lon'] ? (float) $w['lon'] : null,
+				'clarity' => null,
+				'level'   => null,
+				'depthMap'=> null,
+				'ageDays' => null,
+			];
+
+			$sec = self::find_component( $wq, static fn( string $n ): bool => false !== strpos( $n, 'secchi' ) );
+			if ( null !== $sec && is_numeric( $sec['value'] ?? null ) ) {
+				$hist = ( isset( $sec['historic'] ) && is_array( $sec['historic'] ) ) ? $sec['historic'] : [];
+				$med  = $hist['medValue'] ?? null;
+				$date = self::comp_str( $sec, 'sampleDate' );
+				$age  = self::comp_age_days( $date );
+				$entry['clarity'] = [
+					'value'  => (float) $sec['value'],
+					'units'  => self::comp_str( $sec, 'units' ),
+					'median' => is_numeric( $med ) ? (float) $med : null,
+					'ratio'  => ( is_numeric( $med ) && (float) $med > 0 ) ? (float) $sec['value'] / (float) $med : null,
+					'date'   => $date,
+					'age'    => null !== $age ? (int) floor( $age ) : null,
+					'station'=> self::comp_str( $sec, 'stationId' ),
+					'url'    => self::station_url( $sec ),
+				];
+				$entry['ageDays'] = null !== $age ? (int) floor( $age ) : null;
+				if ( null === $entry['lat'] ) {
+					$geo = self::coords_in( $sec );
+					if ( null !== $geo ) {
+						$entry['lat'] = $geo[0];
+						$entry['lon'] = $geo[1];
+					}
+				}
+			}
+
+			$lvl = self::find_component( $lf, static fn( string $n ): bool => 'water levels' === $n );
+			if ( null !== $lvl && is_numeric( $lvl['value'] ?? null ) ) {
+				$avg  = ( isset( $lvl['historicAverageForMonth'] ) && is_array( $lvl['historicAverageForMonth'] ) )
+					? $lvl['historicAverageForMonth'] : [];
+				$norm = $avg['norm'] ?? null;
+				$date = self::comp_str( $lvl, 'sampleDate' );
+				$age  = self::comp_age_days( $date );
+				$entry['level'] = [
+					'value'  => (float) $lvl['value'],
+					'units'  => self::comp_str( $lvl, 'units' ),
+					'datum'  => self::comp_str( $lvl, 'verticalDatum' ),
+					'norm'   => is_numeric( $norm ) ? (float) $norm : null,
+					// Per-water staleness: Griffin's level is from 2008 and
+					// Yale's from 2025. Neither may read as current, so the
+					// age travels with the reading and the map greys it.
+					'inches' => is_numeric( $norm ) ? round( ( (float) $lvl['value'] - (float) $norm ) * 12, 1 ) : null,
+					'date'   => $date,
+					'age'    => null !== $age ? (int) floor( $age ) : null,
+					'stale'  => ( null === $age || $age > self::LEVEL_MAX_AGE_DAYS ),
+					'station'=> self::comp_str( $lvl, 'stationId' ),
+					'url'    => self::station_url( $lvl ),
+				];
+				if ( null === $entry['lat'] ) {
+					$geo = self::coords_in( $lvl );
+					if ( null !== $geo ) {
+						$entry['lat'] = $geo[0];
+						$entry['lon'] = $geo[1];
+					}
+				}
+			}
+
+			foreach ( self::atlas_bathymetry( $lf ) as $b ) {
+				$entry['depthMap'] = [
+					'url'  => $b['source_url'],
+					'date' => $b['date'],
+				];
+			}
+
+			if ( null !== $entry['lat'] ) {
+				$entry['miles'] = self::miles_from_property( $entry['lat'], $entry['lon'] );
+			}
+
+			$waters[] = $entry;
+		}
+
+		$property = Water_Data::coords();
+
+		return [
+			'waters'   => $waters,
+			'ramps'    => self::fwc_ramps(),
+			'property' => null !== $property ? [ 'lat' => $property['lat'], 'lon' => $property['lon'] ] : null,
+			'levelMaxAgeDays' => self::LEVEL_MAX_AGE_DAYS,
+		];
+	}
+
+	/**
+	 * Latitude/longitude anywhere inside a component, or null.
+	 *
+	 * @param array<mixed> $node
+	 * @return array{0:float,1:float}|null
+	 */
+	private static function coords_in( array $node ): ?array {
+		$queue = [ $node ];
+		while ( $queue ) {
+			$cur = array_shift( $queue );
+			if ( ! is_array( $cur ) ) {
+				continue;
+			}
+			$lat = null;
+			$lon = null;
+			foreach ( $cur as $k => $v ) {
+				if ( is_array( $v ) ) {
+					$queue[] = $v;
+					continue;
+				}
+				$key = strtolower( (string) $k );
+				if ( is_numeric( $v ) && in_array( $key, [ 'latitude', 'lat' ], true ) ) {
+					$lat = (float) $v;
+				}
+				if ( is_numeric( $v ) && in_array( $key, [ 'longitude', 'lon', 'lng' ], true ) ) {
+					$lon = (float) $v;
+				}
+			}
+			if ( null !== $lat && null !== $lon && abs( $lat ) <= 90 && abs( $lon ) <= 180 && ( 0.0 !== $lat || 0.0 !== $lon ) ) {
+				return [ $lat, $lon ];
+			}
+		}
+		return null;
+	}
+
+	/* =====================================================================
+	 * FWC boat ramps
+	 * ===================================================================== */
+
+	/**
+	 * Lake County ramps from FWC's public ArcGIS inventory.
+	 *
+	 * Paginated: the layer sets `exceededTransferLimit`, and there are 35+
+	 * in Lake County. `Status` is carried through and honoured by the map —
+	 * sending a guest with a loaded trailer to a closed ramp is exactly the
+	 * kind of error this module exists to prevent.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function fwc_ramps(): array {
+		if ( ! Water_Data::map_ramps_enabled() ) {
+			return [];
+		}
+
+		$key    = 'dcc_wl_ramps';
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		if ( 'MISS' === $cached ) {
+			return [];
+		}
+
+		$base   = 'https://gis.myfwc.com/mapping/rest/services/Open_Data/FWC_Florida_Boat_Ramp_Inventory/MapServer/4/query';
+		$fields = 'RampName,WaterBodyName,City,TotalLanes,isFeeRequired,RestroomType,Status,Latitude,Longitude';
+		$out    = [];
+		$offset = 0;
+
+		// Hard page cap: a runaway loop against a public GIS service is
+		// worse than an incomplete list.
+		for ( $page = 0; $page < 5; $page++ ) {
+			$body = self::get_json(
+				add_query_arg(
+					[
+						'where'             => "County='Lake'",
+						'outFields'         => $fields,
+						'returnGeometry'    => 'false',
+						'f'                 => 'json',
+						'resultOffset'      => $offset,
+						'resultRecordCount' => 1000,
+					],
+					$base
+				)
+			);
+			if ( ! is_array( $body ) || ! isset( $body['features'] ) || ! is_array( $body['features'] ) ) {
+				break;
+			}
+
+			foreach ( $body['features'] as $feature ) {
+				$a = ( is_array( $feature ) && isset( $feature['attributes'] ) && is_array( $feature['attributes'] ) )
+					? $feature['attributes']
+					: null;
+				if ( null === $a ) {
+					continue;
+				}
+				$lat = $a['Latitude'] ?? null;
+				$lon = $a['Longitude'] ?? null;
+				if ( ! is_numeric( $lat ) || ! is_numeric( $lon ) ) {
+					continue; // Cannot place it, so do not claim it.
+				}
+				$out[] = [
+					'name'    => sanitize_text_field( (string) ( $a['RampName'] ?? '' ) ),
+					'water'   => sanitize_text_field( (string) ( $a['WaterBodyName'] ?? '' ) ),
+					'city'    => sanitize_text_field( (string) ( $a['City'] ?? '' ) ),
+					'lanes'   => is_numeric( $a['TotalLanes'] ?? null ) ? (int) $a['TotalLanes'] : null,
+					'fee'     => sanitize_text_field( (string) ( $a['isFeeRequired'] ?? '' ) ),
+					'restroom'=> sanitize_text_field( (string) ( $a['RestroomType'] ?? '' ) ),
+					'status'  => sanitize_text_field( (string) ( $a['Status'] ?? '' ) ),
+					'lat'     => (float) $lat,
+					'lon'     => (float) $lon,
+					'miles'   => self::miles_from_property( (float) $lat, (float) $lon ),
+				];
+			}
+
+			if ( empty( $body['exceededTransferLimit'] ) ) {
+				break;
+			}
+			$offset += 1000;
+		}
+
+		if ( ! $out ) {
+			set_transient( $key, 'MISS', Water_Data::TTL_FAIL );
+			return [];
+		}
+
+		set_transient( $key, $out, self::TTL_RAMPS );
+		return $out;
+	}
+
+	/**
+	 * Straight-line miles from the cottages. Deliberately NOT drive time,
+	 * which cannot be sourced from coordinates.
+	 */
+	private static function miles_from_property( float $lat, float $lon ): ?float {
+		$c = Water_Data::coords();
+		if ( null === $c ) {
+			return null;
+		}
+		$r  = 3958.7613;
+		$dl = deg2rad( $lat - $c['lat'] );
+		$dg = deg2rad( $lon - $c['lon'] );
+		$a  = sin( $dl / 2 ) ** 2 + cos( deg2rad( $c['lat'] ) ) * cos( deg2rad( $lat ) ) * sin( $dg / 2 ) ** 2;
+		return round( $r * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) ), 1 );
 	}
 
 	/**
@@ -253,11 +619,27 @@ final class Water_Live {
 	}
 
 	/**
-	 * Breadth-first search for a named component.
+	 * Breadth-first search for a named component, returning its PAYLOAD.
 	 *
 	 * BFS is deliberate: the shallowest match is the component itself, so a
 	 * nested `historic` sub-block carrying the same parameter name can never
 	 * be mistaken for the current reading.
+	 *
+	 * THE ENVELOPE (fixed 1.7.0 — this bug shipped in 1.6.0). The Atlas wraps
+	 * every reading as:
+	 *
+	 *   { name, payloadType, payload: { value, sampleDate, units, precision,
+	 *     historic, ... }, section, sortOrder }
+	 *
+	 * The WRAPPER carries the name this matcher matches on; the PAYLOAD
+	 * carries the data. 1.6.0 returned the wrapper, so `value`, `sampleDate`
+	 * and `units` were all null, every reading failed its age check and was
+	 * silently dropped — while probe_atlas() still reported both endpoints
+	 * healthy, because they were. Exactly the class of bug an offline build
+	 * cannot see.
+	 *
+	 * Bathymetry's payload is a LIST of maps rather than one reading, so a
+	 * list payload keeps the wrapper and lets the caller walk it.
 	 *
 	 * @param array<mixed>|null $body
 	 * @return array<string,mixed>|null
@@ -282,7 +664,7 @@ final class Water_Live {
 				}
 			}
 			if ( '' !== $name && $matches( $name ) ) {
-				return $node;
+				return self::unwrap_payload( $node );
 			}
 
 			foreach ( $node as $child ) {
@@ -293,6 +675,42 @@ final class Water_Live {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Return a component's associative `payload`, or the node itself when
+	 * there is no payload or the payload is a list (Bathymetry).
+	 *
+	 * @param array<string,mixed> $node
+	 * @return array<string,mixed>
+	 */
+	private static function unwrap_payload( array $node ): array {
+		if ( ! isset( $node['payload'] ) || ! is_array( $node['payload'] ) ) {
+			return $node;
+		}
+		if ( self::is_list( $node['payload'] ) ) {
+			return $node; // A list of maps — the caller walks it.
+		}
+		// Keep the wrapper's identity keys available to the caller.
+		return $node['payload'] + array_diff_key( $node, [ 'payload' => 1 ] );
+	}
+
+	/**
+	 * array_is_list() is PHP 8.1+, and this plugin supports 8.0.
+	 *
+	 * @param array<mixed> $a
+	 */
+	private static function is_list( array $a ): bool {
+		if ( function_exists( 'array_is_list' ) ) {
+			return array_is_list( $a );
+		}
+		$i = 0;
+		foreach ( $a as $k => $_ ) {
+			if ( $k !== $i++ ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -669,6 +1087,18 @@ final class Water_Live {
 			return [];
 		}
 
+		// Bathymetry's payload is a LIST of survey maps, so find_component()
+		// hands back the wrapper. Read the first survey out of it, keeping
+		// the wrapper's identity keys available.
+		if ( isset( $c['payload'] ) && is_array( $c['payload'] ) && self::is_list( $c['payload'] ) ) {
+			foreach ( $c['payload'] as $entry ) {
+				if ( is_array( $entry ) && '' !== self::first_url_in( $entry ) ) {
+					$c = $entry + array_diff_key( $c, [ 'payload' => 1 ] );
+					break;
+				}
+			}
+		}
+
 		$url = self::first_url_in( $c );
 		if ( '' === $url ) {
 			return [];
@@ -907,8 +1337,24 @@ final class Water_Live {
 		}
 
 		$forecast = self::get_json( $forecast_url );
-		$updated  = trim( (string) ( $forecast['properties']['updated'] ?? '' ) );
-		$period   = $forecast['properties']['periods'][0] ?? null;
+		// Fixed 1.7.0 (this bug shipped in 1.6.0): NWS forecast responses do
+		// NOT carry `properties.updated`. They carry units, forecastGenerator,
+		// generatedAt, updateTime, validTimes, elevation and periods. The old
+		// guard therefore dropped forecast AND wind every single time.
+		//
+		// `updateTime` is the ISSUANCE time — the measurement time we want.
+		// `generatedAt` is merely when the JSON was rendered, so it is the
+		// last resort rather than the first choice.
+		$props   = $forecast['properties'] ?? [];
+		$updated = '';
+		foreach ( [ 'updated', 'updateTime', 'generatedAt' ] as $k ) {
+			$candidate = trim( (string) ( $props[ $k ] ?? '' ) );
+			if ( '' !== $candidate ) {
+				$updated = $candidate;
+				break;
+			}
+		}
+		$period = $props['periods'][0] ?? null;
 		if ( ! is_array( $period ) || '' === $updated ) {
 			return [];
 		}

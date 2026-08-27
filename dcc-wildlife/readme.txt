@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,11 +25,12 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * Every fact carries a source and a date, enforced structurally — a value with no source cannot be constructed, so it cannot be rendered. Unknown fields are omitted entirely rather than shown as "unknown".
 * Three confidence tiers: `live` (a gauge reading fetched now), `published` (an official dataset) and `general` (angling guidance, rendered in a visibly separate voice). Anything else is dropped.
 * An optional, **off-by-default** live layer fetches public USGS gauge data and the NWS forecast server-side into a transient, exposed through a REST route so page caching can never serve a stale reading. Each row shows the measurement time, not the fetch time.
-* "From the dock" — owner-written first-hand notes, visually distinct from published data.
 * **Renders nothing at all** until it holds a sourced fact, the owner's own words, or a live reading — so it can be placed before it is populated and lights up as it fills.
 * Live water level is expressed as a deviation ("about 5 inches below normal for August"), never as the raw gauge elevation, which a guest would read as water depth.
 * Water clarity, dissolved oxygen, TSI and a bathymetric depth map come from the Lake County Water Atlas, each with its own units, precision, sample date and station read from the payload.
 * Lines stay silent when they have nothing to say — a level near its monthly norm, or a dry couple of days, prints nothing rather than noise.
+* Chain-wide: every water compared against its OWN long-run median, with per-water staleness so an eighteen-year-old reading can never render as current.
+* An optional chain map — boat ramps, waters and monitoring stations — that loads nothing external until a guest opens it.
 * See WATER-SOURCES.md for the full audit trail, what was left out and why.
 
 The wildlife guide and the water almanac are 100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no image files (inline SVG only). Assets load only on pages that use a widget or shortcode. The optional live layer is the single, clearly-flagged exception and requires no keys or accounts.
@@ -38,11 +39,19 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 
 * Elementor: add the **DCC Wildlife — On the Canal** widget (category "Dora Canal Court"). Controls: title override, show/hide field guide, show/hide month browser, compact mode (spotlight band only).
 * Anywhere else: `[dcc_wildlife title="" guide="yes" browser="yes" compact="no"]`.
-* Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under DCC → Water. It renders nowhere until placed — nothing is auto-injected.
+* Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under DCC → Wildlife (Field guide / Water / Map). It renders nowhere until placed — nothing is auto-injected.
 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.7.0 =
+* **Fixes two bugs that shipped in 1.6.0** and returned one live reading out of seven. The Water Atlas wraps every reading in a `{name, payloadType, payload}` envelope and the component finder was returning the wrapper rather than the payload, so every reading failed its age check and was silently dropped. Separately, NWS forecasts do not carry `properties.updated` — they carry `updateTime` — so forecast and wind were dropped every time. Both now have regression tests; both were invisible to an offline build.
+* **"From the dock" and the rain note removed entirely** at the owner's request, along with an unattributed claim about the canal that had propagated into the documentation as though it were his observation. The module now speaks at Harris Chain scale from sourced data instead.
+* **Chain-wide.** Ten Harris Chain waters, ids verified live, each compared against its OWN long-run median — a chain-wide average would be meaningless when the medians run from 1.21 to 2.80 ft. Staleness is per-water: Lake Griffin's 2008 level and Lake Yale's 2025 level are flagged and excluded rather than shown as current.
+* **One settings page.** The season-countdown toggle moves in from the site mu-plugin, so DCC → Wildlife and DCC → Water become a single page with Field guide / Water / Map sections. The toggle keeps its own option so the existing value survives, and the page only claims the `dcc-wildlife` slug once the mu-plugin releases it.
+* **New chain map** (optional, off by default): boat ramps from FWC's public inventory with `Status` honoured, chain waters, monitoring stations and the cottages. Colour by clarity, level or data age. Nothing external — Leaflet, tiles, map data — loads until a guest presses Open. Satellite imagery is deliberately absent: its licensing for a commercial site could not be verified, so the map ships with OpenStreetMap only.
+* Straight-line distances from the cottages, labelled as such — never drive time.
 
 = 1.6.0 =
 * Lake County Water Atlas fully wired after the endpoints were resolved live. Two earlier assumptions were wrong and are corrected: the API key is the Water Atlas waterbody id (Lake Dora = 7972), not the FDEP WBID (2831B); and Secchi lives in the WaterQuality report, not the WaterClarity report (which is an annual colour/chlorophyll/turbidity summary carrying no Secchi at all). Also recorded: no /api/ path prefix, and `s` is an integer Site Id.

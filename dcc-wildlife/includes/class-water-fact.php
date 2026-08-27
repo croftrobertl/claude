@@ -54,7 +54,8 @@ final class Water_Fact {
 		private string $source_url,
 		private string $date,
 		private string $note,
-		private string $date_label
+		private string $date_label,
+		private string $group
 	) {}
 
 	/**
@@ -62,12 +63,13 @@ final class Water_Fact {
 	 * cannot be attributed.
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
-	 * Optional: source_url, note, date_label.
+	 * Optional: source_url, note, date_label, group.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
 	 * of the gate: a fact still cannot exist without a real date, and an
-	 * absent label just falls back to the default wording.
+	 * absent label just falls back to the default wording. `group` is the
+	 * same: it only decides which list a fact is rendered in.
 	 *
 	 * @param array<string,mixed> $raw
 	 */
@@ -80,6 +82,7 @@ final class Water_Fact {
 		$date   = trim( (string) ( $raw['date'] ?? '' ) );
 		$note   = trim( (string) ( $raw['note'] ?? '' ) );
 		$dlabel = trim( (string) ( $raw['date_label'] ?? '' ) );
+		$group  = trim( (string) ( $raw['group'] ?? '' ) );
 
 		if ( '' === $label || '' === $value ) {
 			return null;
@@ -102,7 +105,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group );
 	}
 
 	/**
@@ -143,6 +146,7 @@ final class Water_Fact {
 			'date'       => $this->date,
 			'note'       => $this->note,
 			'dateLabel'  => $this->date_label,
+			'group'      => $this->group,
 		];
 	}
 

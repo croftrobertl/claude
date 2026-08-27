@@ -2,18 +2,25 @@
 /**
  * Water module — Settings → DCC Water.
  *
- * MENU: a submenu of the site's consolidated **DCC** menu (top-level slug
- * `dcc`), registered at priority 63 so it lands after the mu-plugins that
- * build that menu and the ordering stays stable.
+ * ONE PAGE (1.7.0). Until now there were two — DCC → Wildlife, owned by the
+ * site mu-plugin `dcc-wildlife-countdown.php`, and DCC → Water, owned by
+ * this plugin. Two pages for one plugin, which the owner rightly queried.
+ * The mu-plugin came first, when this plugin had no settings page at all;
+ * now it does, so the countdown toggle moves in here and everything lives
+ * on a single page with Field guide / Water / Map sections.
  *
- * SLUG: `dcc-wildlife-water`, deliberately NOT `dcc-wildlife` — the site
- * mu-plugin `dcc-wildlife-countdown.php` owns that slug for its
- * DCC → Wildlife page, and taking it would make one of the two pages
- * silently disappear.
+ * SLUG HANDOVER. This registers at `dcc-wildlife` — but only if that slug
+ * is still free. While the mu-plugin is active it owns that slug, so we
+ * fall back to `dcc-wildlife-water` and show a notice telling the owner to
+ * delete the mu-plugin, at which point this page takes the slug over. That
+ * way neither page ever silently disappears, whichever order things happen
+ * in. `dcc-wildlife-countdown.php` can be deleted as part of this change.
  *
- * FALLBACK: if the `dcc` parent does not exist (mu-plugins disabled, or
- * this plugin installed somewhere else), the page falls back to Settings
- * rather than becoming an orphaned submenu that renders nowhere.
+ * COUNTDOWN VALUE. The toggle is stored in its own standalone option so the
+ * mu-plugin's existing value survives the move rather than being reset to a
+ * default. See COUNTDOWN_OPTION — that key MUST be confirmed against the
+ * mu-plugin before it is deleted; it is filterable via
+ * `dcc_wl_countdown_option` if it turns out to differ.
  *
  * The save handler is where the owner's rule becomes visible: every almanac
  * row missing a tier, a source name or a valid date is DROPPED on save, and
@@ -29,8 +36,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Water_Admin {
 
-	public const SLUG   = 'dcc-wildlife-water';
-	public const PARENT = 'dcc';
+	public const SLUG     = 'dcc-wildlife';
+	public const SLUG_ALT = 'dcc-wildlife-water';
+	public const PARENT   = 'dcc';
+
+	/**
+	 * Standalone option holding the season-countdown toggle, kept separate
+	 * from this plugin's settings array so the mu-plugin's existing value
+	 * carries over untouched.
+	 *
+	 * CONFIRM THIS KEY against dcc-wildlife-countdown.php before deleting
+	 * that file. If it differs, filter it rather than editing this line.
+	 */
+	public const COUNTDOWN_OPTION = 'dcc_wildlife_countdown';
+
+	public static function countdown_option(): string {
+		/**
+		 * Filter the option name holding the season-countdown toggle.
+		 *
+		 * @param string $option
+		 */
+		return (string) apply_filters( 'dcc_wl_countdown_option', self::COUNTDOWN_OPTION );
+	}
+
+	public static function countdown_enabled(): bool {
+		return (bool) get_option( self::countdown_option(), 0 );
+	}
+
+	/** Which slug we actually ended up on. */
+	private static string $slug = self::SLUG_ALT;
 	private const NOTICE = 'dcc_wl_water_notice';
 
 	/** Hook suffix of whichever page we ended up registering. */
@@ -48,27 +82,46 @@ final class Water_Admin {
 	public static function add_page(): void {
 		$parent_exists = isset( $GLOBALS['admin_page_hooks'][ self::PARENT ] );
 
+		// Claim `dcc-wildlife` only if the mu-plugin has not already taken
+		// it. Two registrations of one slug means one page vanishes.
+		self::$slug = self::slug_taken( self::SLUG ) ? self::SLUG_ALT : self::SLUG;
+
+		$title = __( 'DCC Wildlife', 'dcc-wildlife' );
+		$label = self::SLUG === self::$slug
+			? __( 'Wildlife', 'dcc-wildlife' )
+			: __( 'Water', 'dcc-wildlife' );
+
 		$hook = $parent_exists
-			? add_submenu_page(
-				self::PARENT,
-				__( 'DCC Water', 'dcc-wildlife' ),
-				__( 'Water', 'dcc-wildlife' ),
-				'manage_options',
-				self::SLUG,
-				[ self::class, 'render_page' ]
-			)
-			: add_options_page(
-				__( 'DCC Water', 'dcc-wildlife' ),
-				__( 'DCC Water', 'dcc-wildlife' ),
-				'manage_options',
-				self::SLUG,
-				[ self::class, 'render_page' ]
-			);
+			? add_submenu_page( self::PARENT, $title, $label, 'manage_options', self::$slug, [ self::class, 'render_page' ] )
+			: add_options_page( $title, $title, 'manage_options', self::$slug, [ self::class, 'render_page' ] );
 
 		self::$hook = is_string( $hook ) ? $hook : '';
 	}
 
+	private static function slug_taken( string $slug ): bool {
+		$submenu = $GLOBALS['submenu'][ self::PARENT ] ?? [];
+		if ( ! is_array( $submenu ) ) {
+			return false;
+		}
+		foreach ( $submenu as $item ) {
+			if ( is_array( $item ) && isset( $item[2] ) && $slug === $item[2] ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static function register(): void {
+		// Separate option so the mu-plugin's saved value survives the move.
+		register_setting(
+			'dcc_wl_water',
+			self::countdown_option(),
+			[
+				'type'              => 'boolean',
+				'sanitize_callback' => static fn( $v ): int => empty( $v ) ? 0 : 1,
+			]
+		);
+
 		register_setting(
 			'dcc_wl_water',
 			Water_Data::OPTION,
@@ -140,12 +193,40 @@ final class Water_Admin {
 		$site = preg_replace( '/\D/', '', (string) ( $input['atlas_site'] ?? '' ) );
 		$out['atlas_site'] = ( is_string( $site ) && '' !== $site ) ? $site : '1';
 
+		$primary = preg_replace( '/\D/', '', (string) ( $input['primary_water'] ?? '' ) );
+		$out['primary_water'] = is_string( $primary ) ? $primary : '';
+
+		$chain = is_array( $input['chain_waters'] ?? null ) ? array_values( $input['chain_waters'] ) : [];
+		$rows  = [];
+		foreach ( $chain as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$id = preg_replace( '/\D/', '', (string) ( $row['id'] ?? '' ) );
+			if ( ! is_string( $id ) || '' === $id ) {
+				continue;
+			}
+			$lat = trim( (string) ( $row['lat'] ?? '' ) );
+			$lon = trim( (string) ( $row['lon'] ?? '' ) );
+			$rows[] = [
+				'id'   => $id,
+				'name' => sanitize_text_field( (string) ( $row['name'] ?? '' ) ),
+				'lat'  => is_numeric( $lat ) ? $lat : '',
+				'lon'  => is_numeric( $lon ) ? $lon : '',
+			];
+		}
+		$out['chain_waters'] = $rows;
+
+		$out['map_enabled'] = empty( $input['map_enabled'] ) ? 0 : 1;
+		$out['map_ramps']   = empty( $input['map_ramps'] ) ? 0 : 1;
+		foreach ( [ 'map_leaflet_js', 'map_leaflet_css', 'map_tile_url' ] as $k ) {
+			$v         = trim( (string) ( $input[ $k ] ?? '' ) );
+			$out[ $k ] = preg_match( '#^https://#i', $v ) ? esc_url_raw( $v ) : '';
+		}
+		$out['map_tile_attrib'] = wp_kses_post( trim( (string) ( $input['map_tile_attrib'] ?? '' ) ) );
+
 		$clarity_link            = esc_url_raw( trim( (string) ( $input['clarity_link'] ?? '' ) ) );
 		$out['clarity_link']     = preg_match( '#^https?://#i', $clarity_link ) ? $clarity_link : '';
-
-		$out['dock_rain_note'] = wp_kses_post( trim( (string) ( $input['dock_rain_note'] ?? '' ) ) );
-		$rain_updated          = trim( (string) ( $input['dock_rain_updated'] ?? '' ) );
-		$out['dock_rain_updated'] = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $rain_updated ) ? $rain_updated : '';
 
 		// Site IDs: newline/comma separated, digits only.
 		$raw_sites = (string) ( $input['usgs_sites_raw'] ?? '' );
@@ -158,10 +239,6 @@ final class Water_Admin {
 			}
 		}
 		$out['usgs_sites'] = array_values( array_unique( $clean ) );
-
-		$out['dock_notes'] = wp_kses_post( trim( (string) ( $input['dock_notes'] ?? '' ) ) );
-		$dock_updated      = trim( (string) ( $input['dock_updated'] ?? '' ) );
-		$out['dock_updated'] = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dock_updated ) ? $dock_updated : '';
 
 		// --- Almanac: the gate ------------------------------------------
 		$rows     = is_array( $input['almanac'] ?? null ) ? array_values( $input['almanac'] ) : [];
@@ -237,6 +314,17 @@ final class Water_Admin {
 		if ( ! $screen || '' === self::$hook || $screen->id !== self::$hook ) {
 			return;
 		}
+		if ( self::SLUG_ALT === self::$slug ) {
+			?>
+			<div class="notice notice-info">
+				<p>
+					<strong><?php esc_html_e( 'One page instead of two:', 'dcc-wildlife' ); ?></strong>
+					<?php esc_html_e( 'the season-countdown toggle now lives on this page, so the old mu-plugin is no longer needed. Delete wp-content/mu-plugins/dcc-wildlife-countdown.php and this page moves to DCC → Wildlife, replacing both.', 'dcc-wildlife' ); ?>
+				</p>
+			</div>
+			<?php
+		}
+
 		$rejected = get_transient( self::NOTICE );
 		if ( ! is_array( $rejected ) || ! $rejected ) {
 			return;
@@ -277,6 +365,20 @@ final class Water_Admin {
 
 			<form action="options.php" method="post">
 				<?php settings_fields( 'dcc_wl_water' ); ?>
+
+				<h2><?php esc_html_e( 'Field guide', 'dcc-wildlife' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Season countdown', 'dcc-wildlife' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="<?php echo esc_attr( self::countdown_option() ); ?>" value="1" <?php checked( self::countdown_enabled(), true ); ?> />
+								<?php esc_html_e( 'Show the season countdown on the wildlife guide', 'dcc-wildlife' ); ?>
+							</label>
+							<p class="description"><?php esc_html_e( 'Moved here from the mu-plugin so this plugin has one settings page. Your existing setting was carried over, not reset.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+				</table>
 
 				<h2><?php esc_html_e( 'Live conditions (optional)', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
@@ -364,29 +466,57 @@ final class Water_Admin {
 					</tr>
 				</table>
 
-				<h2><?php esc_html_e( 'From the dock', 'dcc-wildlife' ); ?></h2>
+				<h2><?php esc_html_e( 'Harris Chain waters', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
-					<?php esc_html_e( 'Your own first-hand knowledge — where guests actually catch things off this property, what the canal does after heavy rain, when the specks show up. This is the one section no national source can provide, and it renders visibly marked as your observation rather than published data.', 'dcc-wildlife' ); ?>
+					<?php esc_html_e( 'Ids were resolved live from the Water Atlas. Each water is compared against its OWN long-run median and its own monthly norm — a chain-wide average would be meaningless when the medians range from 1.21 to 2.80 ft. Coordinates are optional: without them a water still appears in the comparison, it is just not drawn on the map.', 'dcc-wildlife' ); ?>
+				</p>
+				<?php self::render_chain_table( $name, (array) $o['chain_waters'], (string) $o['primary_water'] ); ?>
+
+				<h2><?php esc_html_e( 'Map', 'dcc-wildlife' ); ?></h2>
+				<p class="description" style="max-width:46em">
+					<?php esc_html_e( 'Nothing external — no Leaflet, no tiles, no map data — loads until a guest presses the Open button. Satellite imagery is deliberately not offered: its licensing for a commercial rental site could not be verified, so the map ships with OpenStreetMap only.', 'dcc-wildlife' ); ?>
 				</p>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="dccwl-dock"><?php esc_html_e( 'Notes', 'dcc-wildlife' ); ?></label></th>
-						<td><textarea id="dccwl-dock" class="large-text" rows="7" name="<?php echo esc_attr( $name ); ?>[dock_notes]"><?php echo esc_textarea( (string) $o['dock_notes'] ); ?></textarea></td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="dccwl-dock-date"><?php esc_html_e( 'Last updated', 'dcc-wildlife' ); ?></label></th>
-						<td><input type="date" id="dccwl-dock-date" name="<?php echo esc_attr( $name ); ?>[dock_updated]" value="<?php echo esc_attr( (string) $o['dock_updated'] ); ?>" /></td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="dccwl-rain-note"><?php esc_html_e( 'What rain does to the canal', 'dcc-wildlife' ); ?></label></th>
+						<th scope="row"><?php esc_html_e( 'Map', 'dcc-wildlife' ); ?></th>
 						<td>
-							<textarea id="dccwl-rain-note" class="large-text" rows="4" name="<?php echo esc_attr( $name ); ?>[dock_rain_note]"><?php echo esc_textarea( (string) $o['dock_rain_note'] ); ?></textarea>
-							<p class="description"><?php esc_html_e( 'Shown directly beneath the measured rainfall total, in your voice rather than the data voice — the gauge measures the rain, you say what it means here. The two are never merged into one sentence.', 'dcc-wildlife' ); ?></p>
+							<label>
+								<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[map_enabled]" value="1" <?php checked( (int) $o['map_enabled'], 1 ); ?> />
+								<?php esc_html_e( 'Offer the chain map (requires the live layer above)', 'dcc-wildlife' ); ?>
+							</label>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="dccwl-rain-date"><?php esc_html_e( 'Rain note updated', 'dcc-wildlife' ); ?></label></th>
-						<td><input type="date" id="dccwl-rain-date" name="<?php echo esc_attr( $name ); ?>[dock_rain_updated]" value="<?php echo esc_attr( (string) $o['dock_rain_updated'] ); ?>" /></td>
+						<th scope="row"><?php esc_html_e( 'Boat ramps', 'dcc-wildlife' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[map_ramps]" value="1" <?php checked( (int) $o['map_ramps'], 1 ); ?> />
+								<?php esc_html_e( 'Include FWC’s Lake County ramp inventory', 'dcc-wildlife' ); ?>
+							</label>
+							<p class="description"><?php esc_html_e( 'Closed ramps are shown greyed and marked CLOSED rather than hidden — a guest towing a boat needs to know.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-tile"><?php esc_html_e( 'Tile URL', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="text" id="dccwl-tile" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_tile_url]" value="<?php echo esc_attr( (string) $o['map_tile_url'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'Defaults to OpenStreetMap. Their tile policy discourages heavy commercial use, so if the map gets busy, point this at a paid provider.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-tile-attr"><?php esc_html_e( 'Tile attribution', 'dcc-wildlife' ); ?></label></th>
+						<td><input type="text" id="dccwl-tile-attr" class="large-text" name="<?php echo esc_attr( $name ); ?>[map_tile_attrib]" value="<?php echo esc_attr( (string) $o['map_tile_attrib'] ); ?>" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-leaflet-js"><?php esc_html_e( 'Leaflet script', 'dcc-wildlife' ); ?></label></th>
+						<td>
+							<input type="url" id="dccwl-leaflet-js" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_leaflet_js]" value="<?php echo esc_attr( (string) $o['map_leaflet_js'] ); ?>" />
+							<p class="description"><?php esc_html_e( 'The map’s one third-party script, loaded on demand only. Pinned to a version rather than a floating tag.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="dccwl-leaflet-css"><?php esc_html_e( 'Leaflet stylesheet', 'dcc-wildlife' ); ?></label></th>
+						<td><input type="url" id="dccwl-leaflet-css" class="large-text code" name="<?php echo esc_attr( $name ); ?>[map_leaflet_css]" value="<?php echo esc_attr( (string) $o['map_leaflet_css'] ); ?>" /></td>
 					</tr>
 				</table>
 
@@ -464,6 +594,42 @@ final class Water_Admin {
 		</table>
 		<p><button type="button" class="button dccwl-add-row" data-target="dccwl-almanac"><?php esc_html_e( '+ Add row', 'dcc-wildlife' ); ?></button>
 		<span class="description"><?php esc_html_e( '* required — a row without these will not save.', 'dcc-wildlife' ); ?></span></p>
+		<?php
+	}
+
+	/**
+	 * @param array<int,array<string,string>> $rows
+	 */
+	private static function render_chain_table( string $name, array $rows, string $primary ): void {
+		$rows[] = [];
+		?>
+		<table class="widefat striped dccwl-rows" id="dccwl-chain">
+			<thead>
+				<tr>
+					<th style="width:90px"><?php esc_html_e( 'Atlas id', 'dcc-wildlife' ); ?></th>
+					<th><?php esc_html_e( 'Name', 'dcc-wildlife' ); ?></th>
+					<th style="width:120px"><?php esc_html_e( 'Latitude', 'dcc-wildlife' ); ?></th>
+					<th style="width:120px"><?php esc_html_e( 'Longitude', 'dcc-wildlife' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( array_values( $rows ) as $i => $row ) : ?>
+					<tr>
+						<td><input type="text" class="code" size="8" name="<?php echo esc_attr( $name ); ?>[chain_waters][<?php echo (int) $i; ?>][id]" value="<?php echo esc_attr( (string) ( $row['id'] ?? '' ) ); ?>" /></td>
+						<td><input type="text" class="large-text" name="<?php echo esc_attr( $name ); ?>[chain_waters][<?php echo (int) $i; ?>][name]" value="<?php echo esc_attr( (string) ( $row['name'] ?? '' ) ); ?>" /></td>
+						<td><input type="text" class="code" size="10" name="<?php echo esc_attr( $name ); ?>[chain_waters][<?php echo (int) $i; ?>][lat]" value="<?php echo esc_attr( (string) ( $row['lat'] ?? '' ) ); ?>" /></td>
+						<td><input type="text" class="code" size="10" name="<?php echo esc_attr( $name ); ?>[chain_waters][<?php echo (int) $i; ?>][lon]" value="<?php echo esc_attr( (string) ( $row['lon'] ?? '' ) ); ?>" /></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p>
+			<button type="button" class="button dccwl-add-row" data-target="dccwl-chain"><?php esc_html_e( '+ Add water', 'dcc-wildlife' ); ?></button>
+			<label style="margin-left:12px">
+				<?php esc_html_e( 'Featured water (detailed conditions):', 'dcc-wildlife' ); ?>
+				<input type="text" class="code" size="8" name="<?php echo esc_attr( $name ); ?>[primary_water]" value="<?php echo esc_attr( $primary ); ?>" />
+			</label>
+		</p>
 		<?php
 	}
 

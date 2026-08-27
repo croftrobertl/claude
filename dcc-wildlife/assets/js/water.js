@@ -86,11 +86,27 @@
 		if (!list) { return; }
 		list.textContent = '';
 
+		// Chain comparison rows render in their own list beneath the primary
+		// water's conditions — same gate, different section.
+		var chainList = root.querySelector('[data-dccwl-water-chain]');
+		var chainWrap = root.querySelector('[data-dccwl-chain]');
+		if (chainList) { chainList.textContent = ''; }
+
 		var shown = 0;
+		var chainShown = 0;
 		facts.forEach(function (f) {
 			var row = buildRow(f);
-			if (row) { list.appendChild(row); shown += 1; }
+			if (!row) { return; }
+			if (f.group === 'chain' && chainList) {
+				chainList.appendChild(row);
+				chainShown += 1;
+			} else {
+				list.appendChild(row);
+				shown += 1;
+			}
 		});
+		if (chainWrap && chainShown > 0) { chainWrap.hidden = false; }
+		shown += chainShown;
 
 		// Nothing usable: leave the strip hidden rather than showing an
 		// empty box or an error. The almanac below stands on its own.
@@ -119,9 +135,87 @@
 			.catch(function () { /* guests see the almanac; never an error */ });
 	}
 
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', init);
-	} else {
+	/* ------------------------------------------------------------------
+	 * Map: nothing external loads until a guest presses the button.
+	 *
+	 * Leaflet, its stylesheet, the tiles and the map data are ALL fetched
+	 * on demand. A guest who never opens the map pays nothing for it —
+	 * which is the whole reason this is a button and not an embed.
+	 * ---------------------------------------------------------------- */
+
+	function loadCss(href) {
+		return new Promise(function (resolve, reject) {
+			if (!href) { resolve(); return; }
+			if (document.querySelector('link[data-dccwl-leaflet]')) { resolve(); return; }
+			var l = document.createElement('link');
+			l.rel = 'stylesheet';
+			l.href = href;
+			l.setAttribute('data-dccwl-leaflet', '1');
+			l.onload = resolve;
+			l.onerror = reject;
+			document.head.appendChild(l);
+		});
+	}
+
+	function loadScript(src, test) {
+		return new Promise(function (resolve, reject) {
+			if (test && test()) { resolve(); return; }
+			if (!src) { reject(); return; }
+			var sc = document.createElement('script');
+			sc.src = src;
+			sc.async = true;
+			sc.onload = resolve;
+			sc.onerror = reject;
+			document.head.appendChild(sc);
+		});
+	}
+
+	function initMap() {
+		var wrap = document.querySelector('[data-dccwl-map-wrap]');
+		var cfg = CFG.map;
+		if (!wrap || !cfg) { return; }
+
+		var btn = wrap.querySelector('[data-dccwl-map-open]');
+		var shell = wrap.querySelector('[data-dccwl-map-shell]');
+		if (!btn || !shell) { return; }
+
+		btn.addEventListener('click', function () {
+			btn.disabled = true;
+			btn.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading…';
+
+			loadCss(cfg.leafletCss)
+				.then(function () {
+					return loadScript(cfg.leafletJs, function () { return !!window.L; });
+				})
+				.then(function () {
+					return loadScript(cfg.script, function () { return !!window.DCCWL_Map; });
+				})
+				.then(function () {
+					if (!window.L || !window.DCCWL_Map) { throw new Error('map deps'); }
+					return window.fetch(cfg.endpoint, { credentials: 'same-origin' })
+						.then(function (r) { return r.json(); });
+				})
+				.then(function (data) {
+					if (!data || !data.enabled) { throw new Error('map disabled'); }
+					shell.hidden = false;
+					btn.parentNode.removeChild(btn);
+					window.DCCWL_Map.init(shell, data, cfg, CFG.i18n || {});
+				})
+				.catch(function () {
+					btn.disabled = false;
+					btn.textContent = (CFG.i18n && CFG.i18n.mapFailed) || 'Map unavailable';
+				});
+		});
+	}
+
+	function boot() {
 		init();
+		initMap();
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', boot);
+	} else {
+		boot();
 	}
 })();

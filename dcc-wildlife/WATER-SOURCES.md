@@ -1,187 +1,215 @@
 # Water module — sources, confidence, and gaps
 
-**DCC Wildlife 1.6.0 · "Fishing & Water Conditions"**
+**DCC Wildlife 1.7.0 · "Fishing & Water Conditions"**
 
-This is the audit document. Every fact that can reach a guest's screen is
-listed here with its origin, confidence tier and date. If you ever see
-something on the page that is not in this list, that is a bug — tell me.
-
----
-
-## 0. What changed since 1.5.0, and two assumptions I got wrong
-
-You called the Lake County Water Atlas API from a networked session on
-2026-08-27 and resolved it completely. The build environment here still has
-no egress, so what follows is built against your captured responses, taken as
-your first-hand report.
-
-**Two things I had assumed in 1.5.0 were wrong. Recording them plainly so
-neither is repeated:**
-
-1. **I keyed the integration on the FDEP WBID (`2831B`).** That is a different
-   identifier entirely and does not work against this API. The correct key is
-   the Water Atlas **waterbody id — Lake Dora is `7972`**. The old
-   `{wbid}` template has been removed.
-2. **I expected a `WaterClarity` endpoint to carry Secchi.** It does not. It
-   is an *annual* report (ReportYear, period-of-record) returning apparent
-   colour, chlorophyll A, true colour and turbidity — no Secchi at all — and
-   `siteID=1` returns 400. Secchi lives in **WaterQuality**. The wrong
-   endpoint is gone, and a test asserts it is never called again.
-
-Two smaller corrections also recorded in code comments: there is **no `/api/`
-path prefix** (that 404s), and **`s` is an integer Site Id** (`s=lake` returns
-400, omitting it 404s).
-
-What did not change: the `Water_Fact` gate, the measurement-time rule, the
-"label matches the statistic" discipline, graceful degradation, and the
-permanent absence of water temperature.
+Every fact that can reach a guest's screen is listed here with its origin,
+confidence tier and date. If you see something on the page that is not in
+this list, that is a bug — tell me.
 
 ---
 
-## 1. The resolved endpoints
+## 0. A correction I owe you
 
-```
-GET https://api.wateratlas.usf.edu/waterbodies/7972/WaterQuality?s=1
-GET https://api.wateratlas.usf.edu/waterbodies/7972/LevelsFlows?s=1
-```
+Earlier versions of this document said, of the canal after heavy rain:
+*"You have said it colours up."*
 
-Cached for **6 hours**. These values move monthly, not by the minute, and it
-is an academic API — so the module caches hard, backs off on failure, and
-never polls. Settings → DCC → Water has a **Test** button that calls both
-reports from your live server and lists every reading recognised.
+**You never said that.** It began as a hypothesis of mine, was repeated back
+into a prompt as though it were your observation, and arrived in this document
+as sourced fact. Nobody checked it because it had already acquired the shape of
+something you'd told us.
 
-Every reading is used exactly as the API states it: **units and precision are
-read from the payload, never assumed.** A test proves this by feeding the same
-component in metres at three decimals and checking the output follows.
+That is precisely the failure this module exists to prevent, and it happened in
+the document that exists to prevent it. It has been removed. The rain-note
+feature built on top of it is gone too — see §1.
 
 ---
 
-## 2. Every fact that can reach the page
+## 1. Removed: "From the dock" and the rain note
 
-### 2a. From the Water Atlas
+You live about an hour from the cottages and do not fish, and you will not risk
+giving inaccurate local detail to guests who are seasoned, dedicated fishermen
+and boaters. So `dock_notes`, `dock_updated`, `dock_rain_note` and
+`dock_rain_updated` are deleted — settings, storage, rendering and tests. A test
+now asserts no reference to any of them survives anywhere in the code.
 
-| Field | Component | How the value is produced | Tier |
-|---|---|---|---|
-| **Water level** | `Water Levels`, SJRWMD station **30013010, on Lake Dora** | A **deviation in inches** from `historicAverageForMonth.norm` | `live` |
-| **Water clarity** | `Secchi disk depth`, station DORASQUIRRELPT | The reading, plus a comparison against the API's own long-run median | `published` |
-| **Dissolved oxygen** | `Dissolved Oxygen`, FDEP | The reading, with a plain-English gloss | `published` |
-| **TSI** | `TSI` (payloadType `LimitingParameter`) | The index, with a gloss and its limiting nutrient | `published` |
-| **Depth map** | `Bathymetry` | A link to the LCWA survey PDF | `published` |
+**The replacement for local colour is breadth, not invention.** The module
+speaks at Harris Chain scale, from the Atlas's own numbers, and no wider.
 
-**Water level is never shown raw.** 61.19 ft is an elevation above NAVD88 and
-a guest reads that as depth — the exact trap the USGS gauges were dropped
-for, and this station is no different. The headline is *"About 5 inches below
-normal for August"*; the raw reading, its datum, the norm and its 1994–2026
-period of record all sit in the small print.
+---
 
-The baseline is `historicAverageForMonth.norm` **and nothing else**. That
-component's outer `historic` block is unreliable here — its `minValue` is 0,
-impossible for a lake sitting at 61 ft NAVD88, and `medValue` is null. A test
-asserts the deviation is never computed from it. (Secchi's `historic` block
-*is* sound and is used; the difference is per-parameter, not a rule about the
-API.)
+## 2. Two bugs that shipped in 1.6.0
 
-**Water clarity is where the API does the work for us.** It supplies its own
-period-of-record statistics, so *"3.61 ft — clearer than usual here; the
-long-run median is 1.50 ft across 1,246 samples since 1978"* is the API's
-arithmetic, not ours, and every number in it is citable. The comparison clause
-only appears when the difference is unmistakable (≥1.5× or ≤0.67× the median);
-a middling reading gets no editorial spin.
+The live layer was switched on for the first time on 2026-08-27 and returned
+**one reading out of seven**. Both causes were invisible to an offline build,
+and both now have regression tests.
 
-**Clarity is dated, not labelled stale.** The 45-day current/stale rule is
-gone. Lake County samples monthly to quarterly, so it would have read "most
-recent known reading" almost permanently — accurate, but it reads as broken.
-The page says *"sampled 28 May"* and lets you judge. A one-year backstop still
-drops anything genuinely ancient.
+**Bug 1 — the payload envelope.** The Atlas wraps every reading as
+`{ name, payloadType, payload: { value, sampleDate, units, precision, historic } }`.
+The wrapper carries the name the matcher matches on; the payload carries the
+data. `find_component()` returned the wrapper, so `value`, `sampleDate` and
+`units` were all null, every reading failed its age check, and every one was
+dropped — while `probe_atlas()` cheerfully reported both endpoints healthy,
+because they were. Fixed: an associative `payload` is unwrapped and merged with
+the wrapper's identity keys; a **list** payload (Bathymetry is a list of survey
+maps) keeps the wrapper so the caller can walk it.
 
-**The depth map answers a question open since 1.4.0.** You asked for water
-depth at the very start and it has been absent ever since, because no single
-depth figure could be sourced. An authoritative bathymetric chart is more use
-to an angler than any average would have been, and it invents nothing:
-LCWA, DGPS-SONAR, NAVD88, surveyed 2013-09-14.
+**Bug 2 — the NWS issuance time.** Forecast responses do not carry
+`properties.updated`. They carry `units, forecastGenerator, generatedAt,
+updateTime, validTimes, elevation, periods`. The guard required `updated`, so
+forecast *and* wind were dropped every single time. Fixed:
+`updated ?? updateTime ?? generatedAt`, with **`updateTime` as the issuance
+time** — the measurement time we want. `generatedAt` is only when the JSON was
+rendered, so it is the last resort.
 
-### 2b. From USGS
+One implementation note: the unwrap uses `array_is_list()`, which is PHP 8.1+.
+The plugin supports 8.0, so it is behind a `function_exists()` guard with a
+fallback.
 
-| Field | Source | Notes |
+---
+
+## 3. Chain-wide — ids verified live 2026-08-27
+
+Resolved via `/waterbodies/closest?lat=&lng=&len=20&s=1`. Note `len` caps at 20
+and `search/waterbodies` returns 500, so `closest` is the endpoint.
+
+| Water | Atlas id | Clarity | Its own median | Level | Level date |
+|---|---|---|---|---|---|
+| Lake Dora | 7972 | 3.61 ft | 1.50 | 61.19 | 2026-08-22 |
+| Lake Eustis | 7985 | 4.27 ft | 2.30 | 61.01 | 2026-08-26 |
+| Lake Harris | 7999 | 2.30 ft | 2.30 | 61.04 | 2026-08-26 |
+| Little Lake Harris | 8099 | 1.64 ft | 2.18 | — | none |
+| Lake Griffin | 7998 | 1.48 ft | 1.64 | 57.78 | **2008-09-04** |
+| Lake Beauclair | 7953 | 1.97 ft | 1.21 | 61.52 | 2026-07-31 |
+| Lake Carlton | 7840 | 1.64 ft | 1.31 | 61.37 | 2026-07-07 |
+| Lake Yale | 8080 | 1.64 ft | 2.80 | 58.69 | **2025-01-02** |
+| Apopka-Beauclair Canal | 1101 | 2.30 ft | 2.62 | 60.81 | 2026-08-25 |
+| Dead River | 1107 | 2.50 ft | 2.30 | — | none |
+
+**Staleness is per-water, never global.** Griffin's level is eighteen years old
+and Yale's nineteen months. Neither may render as a current condition: both are
+flagged stale, excluded from any deviation, and greyed on the map with their
+date shown. Tests cover both specifically.
+
+**Each water is compared against its OWN record**, because a chain-wide average
+would be meaningless when the medians run from 1.21 to 2.80 ft. The comparison
+list is ordered clearest-relative-to-its-own-normal first — which puts **Dora
+top at 2.41× its median**, ahead of Eustis at 1.86×, a ranking that is not
+obvious from the raw numbers and is exactly why the comparison is worth making.
+
+`Ecology` returns empty components for these waters. There is no vegetation
+data, and none is invented.
+
+---
+
+## 4. Every fact that can reach the page
+
+| Field | Source | Tier |
 |---|---|---|
-| **Recent rain** | USGS `00045` daily sums (`statCd=00006`) at **02237700** | Labelled by **calendar days**, not a rolling 48 hours |
+| Water level (featured water) | Atlas `Water Levels`, SJRWMD 30013010 on Lake Dora — deviation from `historicAverageForMonth.norm`, never raw elevation | `live` |
+| Water clarity | Atlas `Secchi disk depth`, against that station's own long-run median | `published` |
+| Dissolved oxygen | Atlas, FDEP — with a plain-English gloss | `published` |
+| TSI | Atlas (`LimitingParameter` shape), with gloss and limiting nutrient | `published` |
+| Depth map | Atlas `Bathymetry` — LCWA survey PDF | `published` |
+| Chain comparison | One row per water, clarity against its own median | `published` |
+| Recent rain | USGS `00045` daily sums at 02237700, labelled by calendar days | `live` |
+| Forecast, wind | NWS, issuance time from `updateTime` | `live` |
 
-The USGS **level** gauges are gone entirely — none sat on Lake Dora, and the
-atlas exposes an SJRWMD station that does. Rainfall is the one thing those
-gauges still do better than anything else nearby.
-
-### 2c. From NWS
-
-Forecast and wind for the Tavares grid (MLB 11,78), unchanged.
-
-### 2d. Owner's own words
-
-"From the dock", plus the **rain note** rendered directly beneath the measured
-rainfall — the gauge measures the rain, you say what it means here. Two
-blocks, never one sentence.
-
-### 2e. "About the water"
-
-Reference facts about the waterbody rather than today's state. Currently one
-row: Lake Dora, 4,385 acres. See §4 for why it lives in its own block.
+Units and precision are read from every payload and never assumed. Lines stay
+silent when they have nothing to say: a level within 2 inches of its monthly
+norm, or a rainfall total rounding to zero, renders nothing.
 
 ---
 
-## 3. What is deliberately left out
+## 5. The map
 
-1. **Water temperature.** Still gone, permanently. The nearest `00010` gauges
-   are springs at a near-constant ~72 °F while the canal swings from the
-   fifties to near ninety — wrong in exactly the direction that drives bass
-   behaviour. A comment in `class-water-live.php` records the reasoning.
-2. **Turbidity.** Available in the same payload; your call to exclude it. Two
-   clarity numbers would confuse more than they inform.
-3. **The raw gauge elevation as a headline.**
-4. **That level component's outer `historic` block.**
-5. **A flow row.** `Water Flows` returns null flows for this lake. Its
-   `levels.historicAvg` (61.02, 52 samples) remains available as a second
-   opinion on the level baseline if you ever want it.
-6. **The `WaterClarity` endpoint.**
-7. **"About normal" as a daily line.** A level within 2 inches of its monthly
-   norm says nothing an angler can use, and printing it every day teaches
-   guests to stop reading. Same for a dry two days of rainfall: silence.
-8. **Lake list and hydrology.** Still not asserted — see §5.
-9. **Bag limits, seasons, ramps, manatee zones, solunar tables.** Unchanged
-   from 1.5.0: link FWC, guess nothing.
+Modelled on the layout of your Croatia map — bottom control bar, "Colour by"
+segmented control, "Layers" dropdown, fullscreen — in DCC's palette, with 44px
+tap targets and type sized for reading a phone in sunlight.
 
----
+**It costs nothing until opened.** No Leaflet, no stylesheet, no tiles and no
+map data load until a guest presses the button. A browser test confirms **zero
+external requests** before the click.
 
-## 4. The render bar, raised
+| Layer | Source |
+|---|---|
+| Boat ramps | FWC's public ArcGIS ramp inventory, Lake County, paginated |
+| Chain waters | The same cached Atlas readings as the text above |
+| Monitoring stations | The stations those readings name |
+| The cottages | 28.8045, -81.7450 |
 
-1.5.0 published the section on the strength of the seeded acreage row, so the
-live page showed *"Surface area: 4,385 acres"* under a heading promising
-fishing and water conditions. Acreage is not a condition.
+**Colour by** clarity (vs that water's own median), level (vs its own monthly
+norm) or **data age** — the honest option, which turns Griffin's 2008 level from
+a hidden caveat into a visibly grey lake.
 
-Almanac rows now carry a **section**: `conditions` or `about`. Only
-`conditions` rows, the owner's dock notes, or a live layer that could plausibly
-return something will make the module render at all. `about` rows appear in
-their own block below everything else, set off by a rule. A test asserts that
-the defaults alone — acreage only, live off — publish **nothing**.
+**`Status` is honoured.** Lake Saunders Boat Ramp is currently `Closed`; it is
+shown greyed and marked CLOSED rather than hidden, because a guest towing a
+boat to a closed ramp is the error we are trying to avoid. Ramps without
+coordinates are dropped rather than placed approximately.
 
----
+**Distances are straight-line** from the cottages, computed from coordinates
+and labelled as such. Not drive time, which cannot be sourced.
 
-## 5. Still yours to answer — do not let anyone guess these
+**Satellite imagery is NOT included.** The brief said to verify the tile
+provider's licensing for a commercial rental site and, failing that, to ship
+OSM only and say so. This build environment has no network, so I could not
+verify Esri's terms — so OSM only. Worth noting separately: OSM's own tile
+policy discourages heavy commercial use, so the tile URL is a setting; if the
+map gets busy, point it at a paid provider.
 
-1. **Which waters should the module list**, and what the Dora Canal actually
-   connects to.
-2. **What do guests actually catch off the dock, and when?**
-3. **Nearest ramps**, and any idle-speed, manatee-zone, lock or low-bridge
-   constraint between you and the open lakes.
-4. **Do you want the live layer on?** Still off by default, because it makes
-   network calls and that should stay a deliberate act.
+**Waterbody coordinates are not seeded.** Your capture did not include them,
+so none are invented. The code scans each Atlas payload for coordinates and the
+admin screen lets you enter any that are missing; a water without coordinates
+still appears in the comparison list, it is simply not drawn.
 
 ---
 
-## 6. How to audit the page yourself
+## 6. One settings page
 
-1. Look at any value on the guest page.
-2. Read the small grey line beneath it: the source, the station, whether it
-   was *read*, *sampled* or *surveyed*, when — and for the level, the raw
-   reading and the comparison basis.
-3. Click the source: atlas readings open that station's metadata page, the
-   depth map opens the PDF, USGS opens that gauge.
-4. If a value has no line beneath it, that is a bug. It should not be possible.
+The countdown toggle moves into this plugin, so DCC → Wildlife and DCC → Water
+become one page with **Field guide / Water / Map** sections.
+
+The toggle keeps its own standalone option so your current value survives
+rather than resetting. **One thing to confirm:** I could not read
+`dcc-wildlife-countdown.php` from here, so the option key is my best inference,
+`dcc_wildlife_countdown`, and it is filterable via `dcc_wl_countdown_option`.
+Check it against the mu-plugin before deleting that file; if it differs, the fix
+is one filter, not a code change.
+
+The page registers at slug `dcc-wildlife` **only if that slug is free**. While
+the mu-plugin is active it owns that slug, so this page stays at
+`dcc-wildlife-water` and shows a notice telling you to delete the mu-plugin —
+at which point it takes the slug over. Neither page can silently disappear,
+whichever order things happen in. **`dcc-wildlife-countdown.php` can be deleted
+as part of this change.**
+
+---
+
+## 7. Still deliberately absent
+
+Water temperature (springs, wrong in the direction that matters). Turbidity
+(your call). Raw gauge elevation as a headline. The Water Levels component's
+outer `historic` block (`minValue` 0 is impossible for a lake at 61 ft NAVD88).
+Flow rows (null for these waters). Bag limits, seasons and solunar tables.
+Drive times. Any hydrology claim about which water connects to which.
+
+---
+
+## 8. Still yours
+
+**Which waters you want listed.** Ten are configured; the list is editable.
+Everything else you previously could not answer is now sourced, and the module
+no longer asks you for fishing technique or dock knowledge — that is the whole
+point of it speaking at chain scale.
+
+---
+
+## 9. How to audit the page yourself
+
+1. Look at any value.
+2. Read the grey line beneath it: source, station, whether it was *read*,
+   *sampled* or *surveyed*, and when.
+3. Click through — Atlas readings open that station's page, the depth map opens
+   the PDF, USGS opens that gauge.
+4. On the map, switch "Colour by" to **Data age** to see instantly which waters
+   are reporting and which are not.
+5. If a value has no line beneath it, that is a bug. It should not be possible.
