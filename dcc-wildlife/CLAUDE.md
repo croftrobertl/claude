@@ -182,6 +182,15 @@ that's not true."* It is enforced structurally, not editorially.
   Yale's from 2025; both are flagged stale and excluded from any deviation.
 - **Each water compares against its OWN median/norm.** Chain medians run
   1.21–2.80 ft, so a chain-wide average would be meaningless.
+- **Adding chain waters is DISCOVERY, never invention.** `closest` caps at
+  `len=20`, so `discover_waters()` sweeps from the property and from each
+  configured water and unions the results (sweep points capped at 8, cached
+  a day). Candidates are listed for the owner to pick — the endpoint returns
+  ponds and unrelated water. Never hardcode an Atlas id that has not come
+  back from the live API.
+- **A bigger chain warms progressively.** ATLAS_FETCH_BUDGET bounds each
+  background pass; MAP_FETCH_CEILING bounds an explicit map open. Waters
+  with nothing cached yet are absent, never shown empty.
 - **The map loads NOTHING external until opened** — no Leaflet, no tiles, no
   data. It is a button, not an embed, and a test asserts zero external
   requests before the click.

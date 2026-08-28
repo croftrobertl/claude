@@ -74,8 +74,19 @@ final class Water_Live {
 	 */
 	private const LEVEL_SILENT_INCHES = 2;
 
-	/** Uncached Atlas requests allowed per refresh pass. */
-	private const ATLAS_FETCH_BUDGET = 6;
+	/**
+	 * Uncached Atlas requests allowed per background refresh pass.
+	 *
+	 * The chain can now hold twenty-odd waters, which is 40+ report fetches
+	 * on a cold cache. The background pass deliberately trickles: uncached
+	 * waters fill in over successive passes rather than bursting at an
+	 * academic API, and a water with nothing cached yet simply does not
+	 * appear until it does. Everything is cached for six hours after that.
+	 */
+	private const ATLAS_FETCH_BUDGET = 8;
+
+	/** Ceiling on the larger budget an explicit map open is allowed. */
+	private const MAP_FETCH_CEILING = 30;
 
 	/** FWC's ramp inventory is effectively static: cache it for a week. */
 	private const TTL_RAMPS = 604800;
@@ -339,7 +350,7 @@ final class Water_Live {
 		// different: it is explicit, rare, and its answer is cached for
 		// hours, so it gets a budget sized to the chain (two reports each)
 		// rather than being starved into a half-drawn map.
-		self::$fetch_budget = (int) min( 24, ( count( $chain ) * 2 ) + 2 );
+		self::$fetch_budget = (int) min( self::MAP_FETCH_CEILING, ( count( $chain ) * 2 ) + 2 );
 
 		$waters = [];
 		foreach ( $chain as $w ) {
@@ -581,6 +592,157 @@ final class Water_Live {
 		$dg = deg2rad( $lon - $c['lon'] );
 		$a  = sin( $dl / 2 ) ** 2 + cos( deg2rad( $c['lat'] ) ) * cos( deg2rad( $lat ) ) * sin( $dg / 2 ) ** 2;
 		return round( $r * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) ), 1 );
+	}
+
+	/**
+	 * Admin-only: find Harris Chain waters the Atlas knows about.
+	 *
+	 * `closest` is the endpoint that works — `search/waterbodies` returns 500
+	 * — and its `len` caps at 20. Twenty nearest to the property is not the
+	 * whole chain, so this SWEEPS: it queries from the property and from
+	 * each already-configured water, then unions and dedupes the results.
+	 * Waters at the far ends of the chain turn up in a sweep centred on
+	 * their own neighbourhood even when they fall outside the property's
+	 * own twenty.
+	 *
+	 * Nothing is added automatically. Candidates are returned with their
+	 * name, Atlas id, coordinates and distance so the owner picks — the
+	 * endpoint returns whatever is nearest, which includes ponds and
+	 * unrelated water that are not part of the chain.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function discover_waters(): array {
+		$base = Water_Data::atlas_base();
+		if ( '' === $base ) {
+			return [];
+		}
+
+		$cached = get_transient( 'dcc_wl_water_discovery' );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		$site   = Water_Data::atlas_site();
+		$chain  = Water_Data::chain_waters();
+		$known  = [];
+		foreach ( $chain as $w ) {
+			$known[ $w['id'] ] = true;
+		}
+
+		// Sweep points: the property, then each configured water that has
+		// coordinates. Capped so a big chain cannot cause a request storm.
+		$points = [];
+		$coords = Water_Data::coords();
+		if ( null !== $coords ) {
+			$points[] = [ $coords['lat'], $coords['lon'] ];
+		}
+		foreach ( $chain as $w ) {
+			if ( '' !== $w['lat'] && '' !== $w['lon'] ) {
+				$points[] = [ (float) $w['lat'], (float) $w['lon'] ];
+			}
+			if ( count( $points ) >= 8 ) {
+				break;
+			}
+		}
+		if ( ! $points ) {
+			return [];
+		}
+
+		$found = [];
+		foreach ( $points as $pt ) {
+			$body = self::get_json(
+				sprintf(
+					'%s/waterbodies/closest?lat=%s&lng=%s&len=20&s=%s',
+					untrailingslashit( $base ),
+					rawurlencode( (string) round( $pt[0], 5 ) ),
+					rawurlencode( (string) round( $pt[1], 5 ) ),
+					rawurlencode( $site )
+				)
+			);
+			if ( ! is_array( $body ) ) {
+				continue;
+			}
+			foreach ( self::parse_waterbodies( $body ) as $wb ) {
+				if ( isset( $known[ $wb['id'] ] ) || isset( $found[ $wb['id'] ] ) ) {
+					continue;
+				}
+				$wb['miles']       = self::miles_from_property( $wb['lat'], $wb['lon'] );
+				$found[ $wb['id'] ] = $wb;
+			}
+		}
+
+		$out = array_values( $found );
+		usort(
+			$out,
+			static function ( array $a, array $b ): int {
+				$am = null === $a['miles'] ? PHP_INT_MAX : $a['miles'];
+				$bm = null === $b['miles'] ? PHP_INT_MAX : $b['miles'];
+				return $am <=> $bm;
+			}
+		);
+
+		set_transient( 'dcc_wl_water_discovery', $out, DAY_IN_SECONDS );
+		return $out;
+	}
+
+	/**
+	 * Pull {id, name, lat, lon} waterbodies out of a `closest` response.
+	 *
+	 * Shape-tolerant, like the rest of the Atlas parsing: the owner's
+	 * capture confirmed a `Waterbody.Location` structure but not the
+	 * surrounding envelope, so this walks the tree for nodes carrying a
+	 * numeric id, a name and coordinates together, and ignores everything
+	 * else rather than guessing.
+	 *
+	 * @param array<mixed> $body
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function parse_waterbodies( array $body ): array {
+		$out   = [];
+		$queue = [ $body ];
+
+		while ( $queue ) {
+			$node = array_shift( $queue );
+			if ( ! is_array( $node ) ) {
+				continue;
+			}
+
+			$id   = '';
+			$name = '';
+			foreach ( $node as $k => $v ) {
+				if ( is_array( $v ) ) {
+					$queue[] = $v;
+					continue;
+				}
+				$key = strtolower( preg_replace( '/[^a-z]/i', '', (string) $k ) );
+				if ( '' === $id && in_array( $key, [ 'waterbodyid', 'wbid', 'id' ], true )
+					&& is_numeric( $v ) && (int) $v > 0 ) {
+					$id = (string) (int) $v;
+				}
+				if ( '' === $name && in_array( $key, [ 'waterbodyname', 'name', 'title' ], true )
+					&& is_string( $v ) && '' !== trim( $v ) ) {
+					$name = trim( $v );
+				}
+			}
+
+			if ( '' === $id || '' === $name ) {
+				continue;
+			}
+			$geo = self::coords_in( $node );
+			if ( null === $geo ) {
+				continue; // No coordinates: cannot place it, so do not offer it.
+			}
+
+			$out[] = [
+				'id'   => $id,
+				'name' => sanitize_text_field( $name ),
+				'lat'  => $geo[0],
+				'lon'  => $geo[1],
+			];
+		}
+
+		return $out;
 	}
 
 	/**
@@ -1526,6 +1688,7 @@ final class Water_Live {
 
 	public static function flush(): void {
 		global $wpdb;
+		delete_transient( 'dcc_wl_water_discovery' );
 		// Atlas transients are keyed by endpoint hash; clear them too so a
 		// settings change is reflected immediately rather than in six hours.
 		if ( isset( $wpdb ) && is_object( $wpdb ) ) {

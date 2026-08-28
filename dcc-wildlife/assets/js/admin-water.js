@@ -165,6 +165,118 @@
 		});
 	}
 
+	/* ---- chain-water discovery ----
+	 * Sweeps the Atlas from the property and from each configured water, then
+	 * lists what is not already in the table. Nothing is added automatically:
+	 * `closest` returns whatever is nearest, ponds included, so the owner
+	 * picks which belong to the chain. */
+	function addWaterRow(w) {
+		var table = document.getElementById('dccwl-chain');
+		if (!table) { return false; }
+		var tbody = table.querySelector('tbody');
+		var last = tbody && tbody.lastElementChild;
+		if (!tbody || !last) { return false; }
+
+		// Reuse the blank trailing row if it is empty, else clone a new one.
+		var target = last;
+		var isBlank = Array.prototype.every.call(last.querySelectorAll('input'), function (i) { return !i.value; });
+		if (!isBlank) {
+			addRow('dccwl-chain');
+			target = tbody.lastElementChild;
+		}
+		var vals = { id: w.id, name: w.name, lat: w.lat, lon: w.lon };
+		target.querySelectorAll('[name]').forEach(function (input) {
+			var m = /\[(id|name|lat|lon)\]$/.exec(input.getAttribute('name') || '');
+			if (m && vals[m[1]] !== undefined && vals[m[1]] !== null) {
+				input.value = String(vals[m[1]]);
+			}
+		});
+		return true;
+	}
+
+	function renderWaters(list) {
+		var wrap = document.getElementById('dccwl-waters-results');
+		if (!wrap) { return; }
+		wrap.textContent = '';
+		if (!list.length) { return; }
+
+		var table = document.createElement('table');
+		table.className = 'widefat striped';
+		table.style.marginTop = '8px';
+		var tbody = document.createElement('tbody');
+
+		list.forEach(function (w) {
+			var tr = document.createElement('tr');
+
+			var tdName = document.createElement('td');
+			tdName.textContent = w.name || '';
+			tr.appendChild(tdName);
+
+			var tdId = document.createElement('td');
+			tdId.style.width = '90px';
+			var code = document.createElement('code');
+			code.textContent = String(w.id || '');
+            tdId.appendChild(code);
+			tr.appendChild(tdId);
+
+			var tdDist = document.createElement('td');
+			tdDist.style.width = '110px';
+			tdDist.textContent = (typeof w.miles === 'number') ? (w.miles + ' mi') : '';
+			tr.appendChild(tdDist);
+
+			var tdBtn = document.createElement('td');
+			tdBtn.style.width = '130px';
+			var b = document.createElement('button');
+			b.type = 'button';
+			b.className = 'button button-small';
+			b.textContent = I18N.addWater || 'Add';
+			b.addEventListener('click', function () {
+				if (addWaterRow(w)) {
+					b.disabled = true;
+					b.textContent = I18N.added || 'Added';
+				}
+			});
+			tdBtn.appendChild(b);
+			tr.appendChild(tdBtn);
+
+			tbody.appendChild(tr);
+		});
+
+		table.appendChild(tbody);
+		wrap.appendChild(table);
+	}
+
+	var findBtn = document.getElementById('dccwl-find-waters');
+	if (findBtn && CFG.waters) {
+		findBtn.addEventListener('click', function () {
+			var status = document.getElementById('dccwl-waters-status');
+			if (status) { status.textContent = I18N.sweeping || ''; status.style.color = ''; }
+			findBtn.disabled = true;
+
+			window.fetch(CFG.waters, {
+				credentials: 'same-origin',
+				headers: { 'X-WP-Nonce': CFG.nonce || '' }
+			})
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					findBtn.disabled = false;
+					var list = (d && Array.isArray(d.waters)) ? d.waters : [];
+					if (!status) { return; }
+					if (!list.length) {
+						status.textContent = I18N.noWaters || '';
+						renderWaters([]);
+						return;
+					}
+					status.textContent = list.length + ' ' + (I18N.foundWaters || 'candidates found.');
+					renderWaters(list);
+				})
+				.catch(function () {
+					findBtn.disabled = false;
+					if (status) { status.textContent = I18N.failed || ''; status.style.color = '#a4332a'; }
+				});
+		});
+	}
+
 	var btn = document.getElementById('dccwl-discover');
 	if (btn && CFG.discover) {
 		btn.addEventListener('click', function () {

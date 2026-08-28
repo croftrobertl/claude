@@ -57,6 +57,17 @@ final class Water_Rest {
 			]
 		);
 
+		// Admin-only: sweep the Atlas for chain waters not yet configured.
+		register_rest_route(
+			self::NS,
+			'/discover-waters',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ self::class, 'discover_waters' ],
+				'permission_callback' => static fn(): bool => current_user_can( 'manage_options' ),
+			]
+		);
+
 		// Admin-only: live gauge discovery against the USGS site service.
 		register_rest_route(
 			self::NS,
@@ -99,6 +110,10 @@ final class Water_Rest {
 
 	public static function test_atlas(): \WP_REST_Response {
 		return new \WP_REST_Response( Water_Live::probe_atlas() );
+	}
+
+	public static function discover_waters(): \WP_REST_Response {
+		return new \WP_REST_Response( [ 'waters' => Water_Live::discover_waters() ] );
 	}
 
 	public static function discover(): \WP_REST_Response {

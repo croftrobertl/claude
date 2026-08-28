@@ -155,10 +155,16 @@ final class Water_Admin {
 				[
 					'discover' => esc_url_raw( rest_url( Water_Rest::NS . '/discover-gauges' ) ),
 					'clarity'  => esc_url_raw( rest_url( Water_Rest::NS . '/test-atlas' ) ),
+					'waters'   => esc_url_raw( rest_url( Water_Rest::NS . '/discover-waters' ) ),
 					'nonce'    => wp_create_nonce( 'wp_rest' ),
 					'i18n'     => [
 						'testing'    => __( 'Asking the Water Atlas…', 'dcc-wildlife' ),
 						'clarityBad' => __( 'No usable readings found.', 'dcc-wildlife' ),
+						'sweeping'   => __( 'Sweeping the chain…', 'dcc-wildlife' ),
+						'noWaters'   => __( 'No further waters came back. Everything the Atlas knows nearby is already listed.', 'dcc-wildlife' ),
+						'addWater'   => __( 'Add', 'dcc-wildlife' ),
+						'added'      => __( 'Added — remember to Save', 'dcc-wildlife' ),
+						'foundWaters'=> __( 'candidates found — add the ones that belong to the chain, then Save.', 'dcc-wildlife' ),
 						'searching' => __( 'Asking USGS…', 'dcc-wildlife' ),
 						'none'      => __( 'No active gauges returned for that area. Check the coordinates, or add site IDs by hand.', 'dcc-wildlife' ),
 						'failed'    => __( 'Could not reach USGS. Nothing was changed.', 'dcc-wildlife' ),
@@ -660,10 +666,16 @@ final class Water_Admin {
 		</table>
 		<p>
 			<button type="button" class="button dccwl-add-row" data-target="dccwl-chain"><?php esc_html_e( '+ Add water', 'dcc-wildlife' ); ?></button>
+			<button type="button" class="button" id="dccwl-find-waters"><?php esc_html_e( 'Find more chain waters', 'dcc-wildlife' ); ?></button>
+			<span id="dccwl-waters-status" style="margin-left:8px"></span>
 			<label style="margin-left:12px">
 				<?php esc_html_e( 'Featured water (detailed conditions):', 'dcc-wildlife' ); ?>
 				<input type="text" class="code" size="8" name="<?php echo esc_attr( $name ); ?>[primary_water]" value="<?php echo esc_attr( $primary ); ?>" />
 			</label>
+		</p>
+		<div id="dccwl-waters-results"></div>
+		<p class="description" style="max-width:46em">
+			<?php esc_html_e( 'The search asks the Atlas what water lies nearest — from the property and from each water already listed, so the far ends of the chain turn up too. It returns whatever is closest, which includes ponds and unrelated water, so nothing is added automatically: add the ones that belong to the chain. Names worth looking for that are not yet listed include Haines Creek, Lake Denham and Trout Lake — that is general local knowledge, not sourced data, so check what the Atlas actually returns.', 'dcc-wildlife' ); ?>
 		</p>
 		<?php
 	}

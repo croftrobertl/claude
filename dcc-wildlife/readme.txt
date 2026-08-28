@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.1
+Stable tag: 1.7.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,10 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.7.2 =
+* **"Find more chain waters"** — a discovery sweep in DCC → Wildlife that asks the Water Atlas what lies nearest, from the property *and* from every water already listed, so the far ends of the chain turn up despite the API's 20-result cap. Candidates come back with real ids, coordinates and distance for one-click adding; nothing is added automatically, because the endpoint returns ponds and unrelated water too.
+* Request budgets raised and sweep points capped so a chain of twenty-odd waters warms up progressively rather than bursting at an academic API. A water with nothing cached yet simply does not appear until it does.
 
 = 1.7.1 =
 * **Satellite base layer added** alongside streets, defaulting to satellite — structure, grass lines and shoreline read far better from imagery. Each layer carries its own required attribution (Esri and OpenStreetMap respectively), swapped by Leaflet with the layer.

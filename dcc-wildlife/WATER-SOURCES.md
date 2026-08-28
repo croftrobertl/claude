@@ -1,6 +1,6 @@
 # Water module — sources, confidence, and gaps
 
-**DCC Wildlife 1.7.1 · "Fishing & Water Conditions"**
+**DCC Wildlife 1.7.2 · "Fishing & Water Conditions"**
 
 Every fact that can reach a guest's screen is listed here with its origin,
 confidence tier and date. If you see something on the page that is not in
@@ -246,10 +246,32 @@ Drive times. Any hydrology claim about which water connects to which.
 
 ## 8. Still yours
 
-**Which waters you want listed.** Ten are configured, now with coordinates, and
-the list is editable. That is the last open question — everything else is
-sourced, and the module no longer asks you for fishing technique or dock
-knowledge, which is the whole point of it speaking at chain scale.
+**Answered:** as many of the chain as possible.
+
+Ten are configured with coordinates. I could not add more from here — this
+build environment has no network, and inventing Atlas ids is the precise
+failure this module exists to prevent — so 1.7.2 adds **"Find more chain
+waters"** to DCC → Wildlife instead. It sweeps the Atlas from the property
+*and* from every water already listed, unions the results, drops anything
+already configured or lacking coordinates, and lists the rest nearest-first
+with real ids for one-click adding.
+
+The sweep exists because `closest` caps at `len=20`: twenty nearest to the
+property is not the whole chain, but a water at the far end turns up in a
+sweep centred on its own neighbourhood. Sweep points are capped at eight so a
+long chain cannot cause a request storm, and the result is cached for a day.
+
+Nothing is added automatically. `closest` returns whatever water is nearest —
+ponds and unrelated lakes included — so **you pick which belong to the chain**.
+Names commonly counted in the Harris Chain that are not yet listed are Haines
+Creek, Lake Denham and Trout Lake; that is general local knowledge, flagged as
+such in the admin screen, not sourced data. Check what the Atlas actually
+returns.
+
+A larger chain is handled by design: the background pass fetches a bounded
+number of uncached waters per run and the rest fill in over subsequent passes,
+each cached for six hours. A water with nothing cached yet simply does not
+appear until it does — it is never shown with invented or empty readings.
 
 ---
 
