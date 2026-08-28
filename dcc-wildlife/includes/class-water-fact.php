@@ -55,7 +55,8 @@ final class Water_Fact {
 		private string $date,
 		private string $note,
 		private string $date_label,
-		private string $group
+		private string $group,
+		private string $date_precision
 	) {}
 
 	/**
@@ -63,13 +64,20 @@ final class Water_Fact {
 	 * cannot be attributed.
 	 *
 	 * Required: label, value, tier (one of tiers()), source_name, date.
-	 * Optional: source_url, note, date_label, group.
+	 * Optional: source_url, note, date_label, group, date_precision.
 	 *
 	 * `date_label` is presentation only — the word in front of the date
 	 * ("reading" for a gauge, "sampled" for a lab sample). It is NOT part
 	 * of the gate: a fact still cannot exist without a real date, and an
 	 * absent label just falls back to the default wording. `group` is the
 	 * same: it only decides which list a fact is rendered in.
+	 *
+	 * `date_precision` is 'day' or 'minute'. It exists because a lab sample
+	 * dated to the day arrives as a midnight instant, and rendering that as
+	 * "sampled May 28, 12:00 AM" claims a precision the source does not
+	 * have. The PRODUCING code declares what it knows rather than the
+	 * renderer inferring it from a value that cannot distinguish a real
+	 * midnight reading from an absent clock.
 	 *
 	 * @param array<string,mixed> $raw
 	 */
@@ -83,6 +91,10 @@ final class Water_Fact {
 		$note   = trim( (string) ( $raw['note'] ?? '' ) );
 		$dlabel = trim( (string) ( $raw['date_label'] ?? '' ) );
 		$group  = trim( (string) ( $raw['group'] ?? '' ) );
+		$dprec  = trim( (string) ( $raw['date_precision'] ?? '' ) );
+		if ( ! in_array( $dprec, [ 'day', 'minute' ], true ) ) {
+			$dprec = '';
+		}
 
 		if ( '' === $label || '' === $value ) {
 			return null;
@@ -105,7 +117,7 @@ final class Water_Fact {
 			}
 		}
 
-		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group );
+		return new self( $label, $value, $tier, $sname, $surl, $date, $note, $dlabel, $group, $dprec );
 	}
 
 	/**
@@ -147,6 +159,7 @@ final class Water_Fact {
 			'note'       => $this->note,
 			'dateLabel'  => $this->date_label,
 			'group'      => $this->group,
+			'datePrecision' => $this->date_precision,
 		];
 	}
 

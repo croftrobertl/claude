@@ -317,6 +317,7 @@ final class Water_Live {
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'date_precision' => 'day',
 				'note'        => '',
 				'group'       => 'chain',
 				'_ratio'      => $ratio,
@@ -1002,6 +1003,9 @@ final class Water_Live {
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'reading', 'dcc-wildlife' ),
+				// SJRWMD publishes this to the day; the clock component is an
+				// artefact of parsing a bare date.
+				'date_precision' => 'day',
 				'note'        => sprintf(
 					/* translators: 1: raw station reading, 2: datum, 3: comparison basis. */
 					__( 'station reading %1$s%2$s; %3$s', 'dcc-wildlife' ),
@@ -1143,6 +1147,7 @@ final class Water_Live {
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'date_precision' => 'day',
 				'note'        => $note,
 			],
 		];
@@ -1181,6 +1186,7 @@ final class Water_Live {
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'date_precision' => 'day',
 				'note'        => __( 'how much oxygen the water holds — fish tend to move out of water that runs low', 'dcc-wildlife' ),
 			],
 		];
@@ -1229,6 +1235,7 @@ final class Water_Live {
 				'source_url'  => self::station_url( $c ),
 				'date'        => $date,
 				'date_label'  => __( 'sampled', 'dcc-wildlife' ),
+				'date_precision' => 'day',
 				'note'        => $gloss,
 			],
 		];
@@ -1250,65 +1257,118 @@ final class Water_Live {
 		}
 
 		// Bathymetry's payload is a LIST of survey maps, so find_component()
-		// hands back the wrapper. Read the first survey out of it, keeping
-		// the wrapper's identity keys available.
+		// hands back the wrapper. Consider EVERY entry, not just the first.
+		$entries = [ $c ];
 		if ( isset( $c['payload'] ) && is_array( $c['payload'] ) && self::is_list( $c['payload'] ) ) {
+			$identity = array_diff_key( $c, [ 'payload' => 1 ] );
+			$entries  = [];
 			foreach ( $c['payload'] as $entry ) {
-				if ( is_array( $entry ) && '' !== self::first_url_in( $entry ) ) {
-					$c = $entry + array_diff_key( $c, [ 'payload' => 1 ] );
-					break;
+				if ( is_array( $entry ) ) {
+					$entries[] = $entry + $identity;
 				}
 			}
 		}
 
-		$url = self::first_url_in( $c );
-		if ( '' === $url ) {
-			return [];
-		}
+		$best = null;
+		foreach ( $entries as $entry ) {
+			$url = self::first_url_in( $entry );
+			if ( '' === $url ) {
+				continue;
+			}
+			$date = '';
+			foreach ( [ 'assessmentDate', 'assessedDate', 'sampleDate', 'date' ] as $k ) {
+				$candidate = self::comp_str( $entry, $k );
+				if ( '' !== $candidate && false !== strtotime( $candidate ) ) {
+					$date = $candidate;
+					break;
+				}
+			}
+			if ( '' === $date ) {
+				continue; // No date, no fact — the gate would drop it anyway.
+			}
 
-		$date = '';
-		foreach ( [ 'assessmentDate', 'assessedDate', 'sampleDate', 'date' ] as $k ) {
-			$candidate = self::comp_str( $c, $k );
-			if ( '' !== $candidate && false !== strtotime( $candidate ) ) {
-				$date = $candidate;
-				break;
+			$method = self::comp_str( $entry, 'method' );
+			$known  = ! self::is_placeholder( $method );
+			$ts     = (int) strtotime( $date );
+
+			// Selection rule, and the reason for it: the waters usually
+			// publish a same-date PAIR — one entry with method UNKNOWN and
+			// one DGPS-SONAR — which are different exports of the same
+			// survey, not better and worse versions. So date decides first.
+			//
+			// Preferring the known method outright would hand Lake Harris a
+			// 2001 map in place of its 2014 one, which is exactly backwards
+			// for a boater. Method only breaks a tie.
+			if ( null === $best
+				|| $ts > $best['ts']
+				|| ( $ts === $best['ts'] && $known && ! $best['known'] ) ) {
+				$best = [
+					'url'    => $url,
+					'date'   => $date,
+					'ts'     => $ts,
+					'method' => $known ? $method : '',
+					'known'  => $known,
+					'entry'  => $entry,
+				];
 			}
 		}
-		if ( '' === $date ) {
-			return []; // No date, no fact — the gate would drop it anyway.
+
+		if ( null === $best ) {
+			return []; // Eustis and Yale have no bathymetry at all.
 		}
 
-		$method = self::comp_str( $c, 'method' );
-		$datum  = self::comp_str( $c, 'verticalDatum' );
-		$bits   = array_filter( [ $method, $datum ] );
-
-		$source = self::comp_str( $c, 'dataSetName' );
-		if ( '' === $source ) {
-			$source = self::comp_str( $c, 'source' );
+		$entry = $best['entry'];
+		$datum = self::comp_str( $entry, 'verticalDatum' );
+		if ( self::is_placeholder( $datum ) ) {
+			$datum = '';
 		}
+
+		$source = self::comp_str( $entry, 'dataSetName' );
 		if ( '' === $source ) {
+			$source = self::comp_str( $entry, 'source' );
+		}
+		if ( '' === $source || self::is_placeholder( $source ) ) {
 			$source = __( 'Lake County Water Authority', 'dcc-wildlife' );
 		}
 
+		// Lead with the year — the part a boater can actually use — and
+		// append the method only when it is a real one.
+		$year  = gmdate( 'Y', $best['ts'] );
+		$value = '' !== $best['method']
+			/* translators: 1: survey year, 2: survey method, e.g. "DGPS-SONAR". */
+			? sprintf( __( 'Bathymetric survey, %1$s (%2$s)', 'dcc-wildlife' ), $year, $best['method'] )
+			/* translators: %s: survey year. */
+			: sprintf( __( 'Bathymetric survey, %s', 'dcc-wildlife' ), $year );
+
 		return [
 			[
-				'label'       => __( 'Depth map', 'dcc-wildlife' ),
-				'value'       => '' !== $method
-					/* translators: %s: survey method, e.g. "DGPS-SONAR". */
-					? sprintf( __( 'Bathymetric survey (%s)', 'dcc-wildlife' ), $method )
-					: __( 'Bathymetric survey', 'dcc-wildlife' ),
-				'tier'        => Water_Fact::TIER_PUBLISHED,
-				'source_name' => sprintf(
+				'label'          => __( 'Depth map', 'dcc-wildlife' ),
+				'value'          => $value,
+				'tier'           => Water_Fact::TIER_PUBLISHED,
+				'source_name'    => sprintf(
 					/* translators: %s: the dataset name. */
 					__( '%s — open the depth map (PDF)', 'dcc-wildlife' ),
 					$source
 				),
-				'source_url'  => $url,
-				'date'        => $date,
-				'date_label'  => __( 'surveyed', 'dcc-wildlife' ),
-				'note'        => $bits ? implode( ', ', $bits ) : '',
+				'source_url'     => $best['url'],
+				'date'           => $best['date'],
+				'date_label'     => __( 'surveyed', 'dcc-wildlife' ),
+				'date_precision' => 'day',
+				'note'           => '' !== $datum ? $datum : '',
 			],
 		];
+	}
+
+	/**
+	 * Placeholder strings the Atlas emits in place of a real value.
+	 *
+	 * `UNKNOWN` is the literal `method` on most of the chain's depth maps,
+	 * and printing it produced "Bathymetric survey (UNKNOWN)" on the live
+	 * page. Treated as absent so the label falls through cleanly.
+	 */
+	private static function is_placeholder( string $v ): bool {
+		$v = strtolower( trim( $v ) );
+		return in_array( $v, [ '', 'unknown', 'n/a', 'na', 'none', 'null', 'tbd', '-' ], true );
 	}
 
 	/**
@@ -1410,6 +1470,8 @@ final class Water_Live {
 				),
 				'source_url'  => 'https://waterdata.usgs.gov/monitoring-location/' . rawurlencode( $site ) . '/',
 				'date'        => $last_date,
+				// USGS daily values carry a date and no clock.
+				'date_precision' => 'day',
 				'note'        => sprintf(
 					/* translators: 1: first calendar date, 2: last calendar date. */
 					__( 'calendar-day totals for %1$s and %2$s', 'dcc-wildlife' ),
@@ -1544,6 +1606,8 @@ final class Water_Live {
 				'source_name' => $source,
 				'source_url'  => 'https://www.weather.gov/',
 				'date'        => $updated,
+				// The one source with a real clock worth printing.
+				'date_precision' => 'minute',
 				'note'        => '',
 			];
 		}
@@ -1556,6 +1620,7 @@ final class Water_Live {
 				'source_name' => $source,
 				'source_url'  => 'https://www.weather.gov/',
 				'date'        => $updated,
+				'date_precision' => 'minute',
 				'note'        => '',
 			];
 		}

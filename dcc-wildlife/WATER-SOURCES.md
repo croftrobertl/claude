@@ -1,6 +1,6 @@
 # Water module — sources, confidence, and gaps
 
-**DCC Wildlife 1.7.2 · "Fishing & Water Conditions"**
+**DCC Wildlife 1.7.3 · "Fishing & Water Conditions"**
 
 Every fact that can reach a guest's screen is listed here with its origin,
 confidence tier and date. If you see something on the page that is not in
@@ -109,10 +109,23 @@ data, and none is invented.
 | Water clarity | Atlas `Secchi disk depth`, against that station's own long-run median | `published` |
 | Dissolved oxygen | Atlas, FDEP — with a plain-English gloss | `published` |
 | TSI | Atlas (`LimitingParameter` shape), with gloss and limiting nutrient | `published` |
-| Depth map | Atlas `Bathymetry` — LCWA survey PDF | `published` |
+| Depth map | Atlas `Bathymetry` — LCWA survey PDF, newest survey | `published` |
 | Chain comparison | One row per water, clarity against its own median | `published` |
 | Recent rain | USGS `00045` daily sums at 02237700, labelled by calendar days | `live` |
 | Forecast, wind | NWS, issuance time from `updateTime` | `live` |
+
+**Dates say only what the source knows.** Everything but the NWS forecast is
+dated to the day, so the page shows "sampled May 28, 2026" rather than a
+midnight that never happened; only the forecast carries a real issuance time.
+Date-only values are read in the source's own frame, so a guest in any
+timezone sees the same calendar date the Atlas recorded.
+
+**The depth map shows the newest survey.** Most waters publish a same-date
+pair — one entry with `method: UNKNOWN`, one `DGPS-SONAR` — which are
+different exports of the same survey rather than better and worse versions.
+Date therefore decides first and method only breaks a tie: preferring the
+labelled method outright would give Lake Harris a 2001 map in place of its
+2014 one. Eustis and Yale have no bathymetry, and simply omit the row.
 
 Units and precision are read from every payload and never assumed. Lines stay
 silent when they have nothing to say: a level within 2 inches of its monthly

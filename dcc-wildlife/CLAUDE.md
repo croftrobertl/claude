@@ -188,6 +188,23 @@ that's not true."* It is enforced structurally, not editorially.
   a day). Candidates are listed for the owner to pick — the endpoint returns
   ponds and unrelated water. Never hardcode an Atlas id that has not come
   back from the live API.
+- **Dates: precision is DECLARED, not guessed.** Facts carry
+  `date_precision` ('day'|'minute'). Everything except the NWS forecast is
+  dated to the day — a lab sample arrives as a midnight instant, and
+  rendering "sampled May 28, 12:00 AM" claims precision the source lacks.
+  `water.js` has an inference fallback for owner-entered rows.
+- **Date-only values are read in the SOURCE's frame, never converted.**
+  `new Date('2026-08-22')` is midnight UTC, so a naive render showed the
+  previous day to every guest west of UTC. `dateOnlyParts()` reduces such a
+  value to y/m/d and rebuilds it locally; a timezone sweep test covers it.
+- **Atlas placeholders: `UNKNOWN` is a VALUE, not an absence.** Most of the
+  chain's depth maps carry `method: UNKNOWN`. `is_placeholder()` catches
+  that and similar; never print one.
+- **Depth-map choice is newest-first, method only as a tie-break.** The
+  waters publish same-date pairs (one UNKNOWN, one DGPS-SONAR) that are
+  different exports of one survey. Preferring the labelled method outright
+  gives Lake Harris a 2001 map instead of its 2014 one — do not "improve"
+  this into a method preference.
 - **A bigger chain warms progressively.** ATLAS_FETCH_BUDGET bounds each
   background pass; MAP_FETCH_CEILING bounds an explicit map open. Waters
   with nothing cached yet are absent, never shown empty.

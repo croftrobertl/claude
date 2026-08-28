@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.2
+Stable tag: 1.7.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,12 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.7.3 =
+* **Sample dates no longer print a midnight that never happened.** Lab samples, daily-value levels, rainfall totals and bathymetric surveys are dated to the day, so they now render as "sampled May 28, 2026" rather than "sampled May 28, 12:00 AM". Only the NWS forecast, which carries a real issuance time, still shows a clock. The producing code declares the precision rather than the renderer guessing, with an inference fallback for owner-entered rows.
+* **Fixes a timezone off-by-one found while testing the above:** a bare date parses as midnight UTC, so any guest west of UTC was shown the previous day. Date-only values are now read in the source's own frame and render as the same calendar date in every timezone.
+* **Depth map label fixed.** `UNKNOWN` is the literal method the Atlas returns for most of the chain's surveys; it is now treated as absent, and the label leads with the survey year — "Bathymetric survey, 2013 (DGPS-SONAR)", or just "Bathymetric survey, 2014" when no real method is given.
+* **Depth map selection: newest survey wins.** Waters usually publish a same-date pair (one UNKNOWN, one DGPS-SONAR) that are different exports of one survey, so date decides first and method only breaks a tie. Preferring the labelled method outright would have handed Lake Harris a 2001 map in place of its 2014 one. Waters with no bathymetry at all simply omit the row.
 
 = 1.7.2 =
 * **"Find more chain waters"** — a discovery sweep in DCC → Wildlife that asks the Water Atlas what lies nearest, from the property *and* from every water already listed, so the far ends of the chain turn up despite the API's 20-result cap. Candidates come back with real ids, coordinates and distance for one-click adding; nothing is added automatically, because the endpoint returns ponds and unrelated water too.

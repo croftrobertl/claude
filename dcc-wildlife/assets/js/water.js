@@ -31,13 +31,69 @@
 		return n;
 	}
 
+	/* Does this value carry a clock worth printing?
+	 *
+	 * A lab sample dated to the day arrives as a midnight instant — the
+	 * Atlas sends 2026-05-28T04:00:00Z, which is midnight in Florida — and
+	 * USGS daily values carry no clock at all. Rendering either as
+	 * "sampled May 28, 12:00 AM" claims a precision the source does not
+	 * have, which is the wrong kind of detail on this module in particular.
+	 *
+	 * The producing code normally says so via datePrecision. This inference
+	 * is the fallback for almanac rows and anything added through the
+	 * filter: a bare date has no clock, and an instant landing exactly on
+	 * midnight UTC or midnight Florida time is a date wearing a timestamp. */
+	function hasRealTime(iso, precision) {
+		if (precision === 'day') { return false; }
+		if (precision === 'minute') { return true; }
+		if (!/\d{2}:\d{2}/.test(String(iso))) { return false; }
+		var d = new Date(iso);
+		if (isNaN(d.getTime())) { return false; }
+		var minutesUtc = d.getUTCHours() * 60 + d.getUTCMinutes();
+		// 00:00 UTC, or 00:00 at UTC-4 (EDT) / UTC-5 (EST).
+		return !(minutesUtc === 0 || minutesUtc === 240 || minutesUtc === 300);
+	}
+
+	/* The calendar date the SOURCE meant, not whatever it becomes in the
+	 * viewer's timezone.
+	 *
+	 * This matters more than it looks. `new Date('2026-08-22')` parses as
+	 * midnight UTC, so a viewer anywhere west of UTC would have seen
+	 * "Aug 21" for an Aug 22 reading — the wrong date, on a module whose
+	 * whole point is not misstating what is known. Same for the Atlas's
+	 * midnight-in-Florida instants. So a date-only value is reduced to its
+	 * own year/month/day and rebuilt locally, never converted.
+	 *
+	 * @return {Array|null} [year, month, day]
+	 */
+	function dateOnlyParts(iso) {
+		var bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso).trim());
+		if (bare) { return [ +bare[1], +bare[2], +bare[3] ]; }
+
+		var d = new Date(iso);
+		if (isNaN(d.getTime())) { return null; }
+		// Shift back to the source's own midnight (UTC, EDT or EST), then
+		// read the date off that.
+		var minutesUtc = d.getUTCHours() * 60 + d.getUTCMinutes();
+		var atMidnight = new Date(d.getTime() - minutesUtc * 60000);
+		return [ atMidnight.getUTCFullYear(), atMidnight.getUTCMonth() + 1, atMidnight.getUTCDate() ];
+	}
+
 	/* Render an ISO instant in the visitor's locale. Falls back to the raw
 	 * string rather than inventing a format we cannot verify. */
-	function readingTime(iso) {
+	function readingTime(iso, precision) {
 		if (!iso) { return ''; }
 		var d = new Date(iso);
 		if (isNaN(d.getTime())) { return String(iso); }
 		try {
+			if (!hasRealTime(iso, precision)) {
+				var parts = dateOnlyParts(iso);
+				if (!parts) { return String(iso); }
+				// The year is shown too: these run months or years old, and
+				// "May 28" alone hides which May.
+				return new Date(parts[0], parts[1] - 1, parts[2])
+					.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+			}
 			return d.toLocaleString(undefined, {
 				month: 'short', day: 'numeric',
 				hour: 'numeric', minute: '2-digit'
@@ -66,7 +122,7 @@
 			attr.appendChild(document.createTextNode(f.sourceName));
 		}
 
-		var when = readingTime(f.date);
+		var when = readingTime(f.date, f.datePrecision);
 		if (when) {
 			// The wording comes from the fact: a gauge is "read", a lab
 			// sample is "sampled", a survey is "surveyed". Falls back to the
