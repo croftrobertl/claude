@@ -48,6 +48,17 @@ final class Config
             // Information" (Guest #2 Information / Pet Information).
             'guest2_section_title' => 'Guest #2 Information',
             'pet_section_title'    => 'Pet Information',
+            // Extra-guest fee (guests beyond the second, $50/night each on the
+            // six 4-sleeper cottages). Uses ONE per_night+per_adult MotoPress
+            // Service; its ID goes into all three bucket fields (flat pricing —
+            // tiering later is a config change). Service IDs default to 0 and
+            // the whole feature is DORMANT until all three are non-zero.
+            'guest_fee_enabled'     => 1,
+            'guest_accommodations'  => [1071, 1069, 1067, 1065, 1740, 1742],
+            'guest_service_daily'   => 0,
+            'guest_service_weekly'  => 0,
+            'guest_service_monthly' => 0,
+            'included_guests'       => 2,
         ];
     }
 
@@ -176,6 +187,120 @@ final class Config
     {
         $t   = self::bucket_thresholds();
         $ids = self::pet_service_ids();
+
+        if ($nights >= $t['min_monthly']) {
+            return $ids['monthly'];
+        }
+        if ($nights >= $t['min_weekly']) {
+            return $ids['weekly'];
+        }
+        if ($nights >= $t['min_daily']) {
+            return $ids['daily'];
+        }
+        return 0;
+    }
+
+    /* --------------------------------------------------------------------- *
+     * Extra-guest fee (guests beyond the second)
+     * --------------------------------------------------------------------- */
+
+    /**
+     * Master on/off for the extra-guest fee (admin setting).
+     */
+    public static function guest_fee_enabled(): bool
+    {
+        $enabled = !empty(self::settings()['guest_fee_enabled']);
+        return (bool) apply_filters('dcc_checkout_guest_fee_enabled', $enabled);
+    }
+
+    /**
+     * Is the feature actually live? Enabled AND all three bucket service IDs
+     * configured. Defaults are 0, so a fresh install is dormant until the real
+     * "Extra Guest Fee" service post exists and its ID is entered.
+     */
+    public static function guest_fee_active(): bool
+    {
+        if (!self::guest_fee_enabled()) {
+            return false;
+        }
+        foreach (self::guest_service_ids() as $id) {
+            if ($id <= 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Accommodation (room type) IDs the extra-guest fee applies to.
+     * Default: the six 4-sleeper cottages (22/23/31/32/35/36).
+     * Cottages 33 (1604) and 34 (1607) stay capped at 2 and are never listed.
+     *
+     * @return int[]
+     */
+    public static function guest_accommodations(): array
+    {
+        $ids = self::settings()['guest_accommodations'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $ids = apply_filters('dcc_checkout_guest_accommodations', $ids);
+        return is_array($ids) ? array_values(array_map('intval', $ids)) : [];
+    }
+
+    /**
+     * Extra-guest Service IDs by length-of-stay bucket. Flat pricing enters the
+     * SAME service ID in all three fields; the bucket machinery mirrors the pet
+     * flow so tiering later is a config change, not code.
+     *
+     * @return array{daily:int,weekly:int,monthly:int}
+     */
+    public static function guest_service_ids(): array
+    {
+        $s   = self::settings();
+        $ids = apply_filters('dcc_checkout_guest_service_ids', [
+            'daily'   => (int) $s['guest_service_daily'],
+            'weekly'  => (int) $s['guest_service_weekly'],
+            'monthly' => (int) $s['guest_service_monthly'],
+        ]);
+        return [
+            'daily'   => (int) ($ids['daily'] ?? 0),
+            'weekly'  => (int) ($ids['weekly'] ?? 0),
+            'monthly' => (int) ($ids['monthly'] ?? 0),
+        ];
+    }
+
+    /**
+     * Flat list of the extra-guest service IDs (may contain duplicates when the
+     * flat config points all three buckets at one service; deduped).
+     *
+     * @return int[]
+     */
+    public static function guest_service_id_list(): array
+    {
+        return array_values(array_unique(self::guest_service_ids()));
+    }
+
+    /**
+     * Guests included in the nightly rate; each guest beyond this count incurs
+     * the fee. Default 2.
+     */
+    public static function included_guests(): int
+    {
+        $n = (int) apply_filters('dcc_checkout_included_guests', (int) self::settings()['included_guests']);
+        return max(0, $n);
+    }
+
+    /**
+     * Resolve the extra-guest Service ID for a night count. Shares
+     * bucket_thresholds() with the pet fee (2/7/30 — deliberately NOT
+     * duplicated). Returns 0 below the minimum bucket.
+     */
+    public static function guest_service_id_for_nights(int $nights): int
+    {
+        $t   = self::bucket_thresholds();
+        $ids = self::guest_service_ids();
 
         if ($nights >= $t['min_monthly']) {
             return $ids['monthly'];

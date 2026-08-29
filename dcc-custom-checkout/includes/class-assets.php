@@ -96,6 +96,13 @@ final class Assets
                 'guest2' => Config::guest2_section_title(),
                 'pet'    => Config::pet_section_title(),
             ],
+            // Extra-guest fee (guests beyond the second). guestFeeEnabled is the
+            // LIVE flag: enabled AND all three service IDs configured (non-zero).
+            'guestFeeEnabled'     => Config::guest_fee_active(),
+            'guestServiceIds'     => Config::guest_service_ids(),
+            'guestServiceIdList'  => Config::guest_service_id_list(),
+            'guestAccommodations' => Config::guest_accommodations(),
+            'includedGuests'      => Config::included_guests(),
             'guestsSelector'   => Config::guests_selector(),
             'requiredColor'    => '#c62828',
             'i18n'            => [
@@ -106,6 +113,7 @@ final class Assets
                 'requiredMsg'   => __('Please complete the highlighted required fields.', 'dcc-checkout'),
                 'errGuest2'     => __('Please complete the second guest\'s First name, Last name, and Phone.', 'dcc-checkout'),
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),
+                'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
             ],
         ];
     }

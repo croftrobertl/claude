@@ -43,6 +43,7 @@ final class Plugin
         // Server-side backstops (cannot be bypassed by editing the DOM).
         (new Guest_Fields())->register();
         (new Pet_Service())->register();
+        (new Extra_Guest_Service())->register();
     }
 
     public function load_textdomain(): void

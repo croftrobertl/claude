@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,17 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     %dcc_dog_details% (MotoPress may already list checkout fields in the email
     booking details, so the tag is a convenience/fallback).
 
+== Setup: extra-guest fee (one-time) ==
+
+1. Raise mphb_adults_capacity AND mphb_total_capacity to 4 on the six cottages
+   (the checkout dropdown is built from capacity — the plugin never injects
+   options).
+2. Create ONE MotoPress Service "Extra Guest Fee": price 50, per night,
+   per adult, assigned to the six accommodation types only.
+3. WP Admin → DCC → Custom Checkout → "Extra guest fee" → enter that service's
+   ID into all three bucket fields (flat pricing) and keep the feature enabled.
+   While any ID is 0 the feature is dormant.
+
 == Setup: dog info fields (one-time, required for Part D data capture) ==
 
 1. Bookings → Settings → Checkout Fields → add three fields, set NOT required:
@@ -98,6 +109,10 @@ also filterable for snippet-level overrides:
   dcc_checkout_pet_service_ids      (default daily 17712 / weekly 17711 / monthly 14926)
   dcc_checkout_bucket_thresholds    (default min_daily 2 / min_weekly 7 / min_monthly 30)
   dcc_checkout_guest2_field_names   (default mphb_guest2_first_name / _last_name / _phone)
+  dcc_checkout_guest_fee_enabled    (bool)
+  dcc_checkout_guest_accommodations (int[]; default the six 4-sleeper cottages)
+  dcc_checkout_guest_service_ids    (daily/weekly/monthly; defaults 0 = dormant)
+  dcc_checkout_included_guests      (default 2)
   dcc_checkout_dog_field_names      (default mphb_dog_type / mphb_dog_size / mphb_dog_hair)
   dcc_checkout_dog_meta_keys        (default = the dog field names)
   dcc_checkout_guests_selector      (default select[name^="mphb_room_details"][name*="[adults]"])
@@ -109,6 +124,33 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.0 =
+* New: extra-guest fee for guests 3 and 4. On the configured accommodations
+  (default: the six 4-sleeper cottages 22/23/31/32/35/36), each guest beyond the
+  second is charged per night via a native MotoPress Service (per night · per
+  adult): the plugin hides the service's native row, checks it when the room's
+  guest count exceeds 2, and sets the service's "for N guest(s)" select to the
+  EXTRA guest count (adults − 2), so MotoPress prices fee × nights × extra
+  natively — no price math in the plugin. Handled per room, so a two-cottage
+  checkout charges only the room with extra guests. Cottages 33/34 stay capped
+  at 2 and never get the fee.
+* Settings: new "Extra guest fee" section — enable toggle, accommodations
+  multi-select, and three bucket service-ID fields (defaults 0 = the feature is
+  DORMANT until the real service ID is entered; enter the same ID in all three
+  for flat pricing). Night thresholds are the shared bucket fields (pet fee and
+  extra-guest fee alike).
+* Server backstop (new class): per-room validation — the correct bucket service
+  with the correct extra-guest multiplier on eligible rooms, no extra-guest
+  service ever on ineligible rooms, and adults capped at 2 on non-listed
+  cottages. Rejects with ?dcc_checkout_error=guests; skips AJAX and wp-admin
+  (admin edits deliberately exempt).
+* Fix: room-adults detection now excludes the services branch. A per-adult
+  service renders its own "for N guest(s)" select whose name also matches the
+  guests-select pattern (and MotoPress presets it to full capacity) — without
+  the exclusion, the guest-2 flow would have misread it as the room's guest
+  count. Same fix server-side: attached_service_ids() no longer collects a
+  services[adults] value as a "service ID".
 
 = 0.2.0 =
 * Admin: the settings screen moved from its own top-level "DCC Custom Checkout"

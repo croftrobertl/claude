@@ -88,8 +88,10 @@ final class Checkout_Request
      * Only values inside a `services` branch count — scanning the whole
      * room_details payload would also match rate IDs, room IDs, etc., and a
      * future post whose ID collides with a pet Service ID would false-positive.
-     * Within the services branch, `quantity` values are excluded; both shapes
-     * (list of ['id' => …, 'quantity' => …] arrays and plain ID lists) match.
+     * Within the services branch, `quantity` AND `adults` values are excluded
+     * (a per-adult service submits a small services[j][adults] count that must
+     * never be mistaken for a service ID); both shapes (list of
+     * ['id' => …, 'quantity' => …] arrays and plain ID lists) match.
      */
     public static function contains_service_id(int $service_id): bool
     {
@@ -111,7 +113,7 @@ final class Checkout_Request
             }
             foreach ($data as $key => $value) {
                 $key_str = (string) $key;
-                if ($in_services && is_scalar($value) && $key_str !== 'quantity') {
+                if ($in_services && is_scalar($value) && $key_str !== 'quantity' && $key_str !== 'adults') {
                     $found[] = (int) $value;
                 }
                 if (is_array($value)) {
@@ -122,6 +124,46 @@ final class Checkout_Request
         $walk(self::room_details(), false);
 
         return array_values(array_unique(array_filter($found)));
+    }
+
+    /**
+     * Structured per-room view of the submitted room_details, for rules that
+     * must bind a service to ITS room (attached_service_ids()/room_type_ids()
+     * flatten across rooms and are too coarse for that). Shape-tolerant: each
+     * room contributes room_type_id, adults, and its services as
+     * {id, adults, quantity} triples (plain scalar service entries become
+     * {id, 0, 0}).
+     *
+     * @return array<int, array{room_type_id:int, adults:int, services: array<int, array{id:int, adults:int, quantity:int}>}>
+     */
+    public static function rooms(): array
+    {
+        $out = [];
+        foreach (self::room_details() as $room) {
+            if (!is_array($room)) {
+                continue;
+            }
+            $services = [];
+            if (isset($room['services']) && is_array($room['services'])) {
+                foreach ($room['services'] as $svc) {
+                    if (is_array($svc)) {
+                        $services[] = [
+                            'id'       => isset($svc['id']) && is_scalar($svc['id']) ? (int) $svc['id'] : 0,
+                            'adults'   => isset($svc['adults']) && is_scalar($svc['adults']) ? (int) $svc['adults'] : 0,
+                            'quantity' => isset($svc['quantity']) && is_scalar($svc['quantity']) ? (int) $svc['quantity'] : 0,
+                        ];
+                    } elseif (is_scalar($svc)) {
+                        $services[] = ['id' => (int) $svc, 'adults' => 0, 'quantity' => 0];
+                    }
+                }
+            }
+            $out[] = [
+                'room_type_id' => isset($room['room_type_id']) && is_scalar($room['room_type_id']) ? (int) $room['room_type_id'] : 0,
+                'adults'       => isset($room['adults']) && is_scalar($room['adults']) ? (int) $room['adults'] : 0,
+                'services'     => $services,
+            ];
+        }
+        return $out;
     }
 
     /**

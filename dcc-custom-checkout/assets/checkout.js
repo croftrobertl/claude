@@ -83,6 +83,9 @@
         var dog = setupDogFields(root);
         var pet = setupPetFlow(root, dog);       // Part D
         if (pet) { validators.push(pet); }
+        setupExtraGuestFlow(root);               // v0.3.0 — fully automatic,
+                                                 // nothing user-fillable, so no
+                                                 // submit validator to register
 
         setupSubmit(root, validators);
         observeReRenders(root);
@@ -204,9 +207,22 @@
      * Part C — second guest conditional on guest count
      * ===================================================================== */
 
-    function setupGuestConditional(root) {
+    // The ROOM guest dropdowns only. A per-adult service renders its own
+    // "for N guest(s)" select named …[services][j][adults], which ALSO matches
+    // the guests selector pattern — and MotoPress presets it to full capacity,
+    // so counting it would force guest-2 on at 1 guest. Exclude the services
+    // branch here so both the guest-2 flow and the extra-guest flow see only
+    // real room-adults selects.
+    function roomAdultsSelects(root) {
         var selectSel = CFG.guestsSelector || 'select[name*="[adults]"]';
-        var selects = Array.prototype.slice.call(root.querySelectorAll(selectSel));
+        return Array.prototype.slice.call(root.querySelectorAll(selectSel))
+            .filter(function (s) {
+                return String(s.name || '').indexOf('[services]') === -1;
+            });
+    }
+
+    function setupGuestConditional(root) {
+        var selects = roomAdultsSelects(root);
         if (!selects.length) {
             return null;
         }
@@ -440,6 +456,101 @@
         return { inputs: inputs, show: show };
     }
 
+    /* ===================================================================== *
+     * Extra-guest fee — guests beyond the second (v0.3.0)
+     * ===================================================================== */
+
+    // Drives the native "Extra Guest Fee" service (per night · per adult) from
+    // each room's guest dropdown, PER ROOM — a checkout can hold two cottages
+    // with different guest counts. MotoPress renders the service as a checkbox
+    // (…[services][j][id]) plus a "for N guest(s)" select (…[services][j][adults]);
+    // price = fee × nights × that adults value, computed natively (no math here).
+    // We hide the service row, check the bucket service when extra > 0, set its
+    // [adults] select to `extra` (adults − includedGuests) — NEVER a [quantity],
+    // per_night services have none — and uncheck every other bucket. Invariant:
+    // at most ONE bucket checked per room. Dormant unless all service IDs are set.
+    function setupExtraGuestFlow(root) {
+        if (!CFG.guestFeeEnabled) {
+            return;
+        }
+        var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) { return id > 0; });
+        if (!ids.length) {
+            return;
+        }
+        var included = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
+        var guestAcc = (CFG.guestAccommodations || []).map(Number);
+
+        roomAdultsSelects(root).forEach(function (sel) {
+            var m = /^(.*)\[adults\]$/.exec(String(sel.name || ''));
+            if (!m) {
+                return;
+            }
+            var prefix = m[1]; // e.g. mphb_room_details[0]
+
+            // Belt-and-braces accommodation gate when the room type is
+            // discoverable (service assignment already limits rendering to the
+            // configured cottages).
+            var rtEl = root.querySelector('input[name="' + esc(prefix + '[room_type_id]') + '"]');
+            if (rtEl && guestAcc.length && guestAcc.indexOf(parseInt(rtEl.value, 10)) === -1) {
+                return;
+            }
+
+            // This room's extra-guest service checkbox(es) + their [adults]
+            // selects, and hide the native rows.
+            var services = [];
+            var boxes = root.querySelectorAll('input[name^="' + esc(prefix + '[services]') + '"]');
+            Array.prototype.forEach.call(boxes, function (box) {
+                if (!/\[id\]$/.test(box.name) || ids.indexOf(parseInt(box.value, 10)) === -1) {
+                    return;
+                }
+                var adultsSel = root.querySelector(
+                    'select[name="' + esc(box.name.replace(/\[id\]$/, '[adults]')) + '"]'
+                );
+                services.push({ id: parseInt(box.value, 10), box: box, adultsSel: adultsSel });
+                var wrap = serviceRowWrapper(box);
+                if (wrap) { wrap.style.display = 'none'; }
+            });
+            if (!services.length) {
+                return;
+            }
+
+            // Dates are fixed on the checkout step — resolve the bucket once.
+            var target = guestServiceForNights(getNights(root));
+
+            function apply() {
+                var extra = (parseInt(sel.value, 10) || 0) - included;
+                services.forEach(function (svc) {
+                    var want = extra > 0 && svc.id === target;
+                    if (want && svc.adultsSel && String(svc.adultsSel.value) !== String(extra)) {
+                        // The preset filter defaults this select to FULL capacity;
+                        // always set the multiplier to the EXTRA guest count.
+                        svc.adultsSel.value = String(extra);
+                        fireChange(svc.adultsSel);
+                    }
+                    if (!!svc.box.checked !== want) {
+                        svc.box.checked = want;
+                        fireChange(svc.box); // MotoPress recomputes the total natively
+                    }
+                });
+            }
+
+            sel.addEventListener('change', apply);
+            apply();
+            // Re-assert once after MotoPress's own checkout JS initializes, in
+            // case it reset the service inputs during its first render.
+            setTimeout(apply, 800);
+        });
+    }
+
+    function guestServiceForNights(nights) {
+        var t   = CFG.thresholds || { min_daily: 2, min_weekly: 7, min_monthly: 30 };
+        var svc = CFG.guestServiceIds || {};
+        if (nights >= t.min_monthly) { return Number(svc.monthly); }
+        if (nights >= t.min_weekly)  { return Number(svc.weekly); }
+        if (nights >= t.min_daily)   { return Number(svc.daily); }
+        return 0;
+    }
+
     // Toggle-only block ("Traveling with a dog?"). The info fields themselves are
     // native MotoPress Checkout Fields, driven separately (see setupPetFlow).
     function buildPetBlock() {
@@ -662,6 +773,8 @@
             msg = I18N.errGuest2;
         } else if (code === 'pet') {
             msg = I18N.errPet;
+        } else if (code === 'guests') {
+            msg = I18N.errGuests;
         }
         showBanner(root, msg || I18N.requiredMsg || 'Please review your entries.');
     }

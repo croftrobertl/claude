@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Custom Checkout
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Self-contained customizations for the MotoPress Hotel Booking checkout on doracanalcourt.com. Restyles the checkout to match the DCC Contact Form look, adds a conditional second-guest flow, and adds a Cottage 34 "traveling with a dog?" flow that applies a per-night pet fee via native MotoPress Services. Touches no MotoPress core files — CSS + vanilla JS + WordPress/MotoPress hooks only. Loads on the checkout page only.
- * Version:           0.2.0
+ * Version:           0.3.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DCC_CHECKOUT_VERSION', '0.2.0');
+define('DCC_CHECKOUT_VERSION', '0.3.0');
 define('DCC_CHECKOUT_FILE', __FILE__);
 define('DCC_CHECKOUT_DIR', plugin_dir_path(__FILE__));
 define('DCC_CHECKOUT_URL', plugin_dir_url(__FILE__));
