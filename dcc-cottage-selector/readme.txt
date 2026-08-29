@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.2
+Stable tag: 0.22.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,13 +12,15 @@ Dora Canal Court cottages by focusing only on their real differences.
 
 == Description ==
 
-The eight cottages all sleep two on a queen bed and share the same amenities, so
-guests face needless choice overload. This plugin adds a short, elegant decision
-tool:
+Every cottage has a queen bed; six also sleep up to 4 with a pull-out couch
+(the two studios stay cozy at 2). Beyond that the cottages share most
+amenities, so guests face needless choice overload. This plugin adds a short,
+elegant decision tool:
 
 * **Quick finder (default)** — a step-through wizard, one tappable question per
-  screen (desk? pullout couch? studio or 1-bedroom? table for 2 or 4?
-  pet-friendly? ground floor? screened porch?), then straight to the top matches.
+  screen (how many of you? desk? pullout couch? studio or 1-bedroom? table for
+  2 or 4? pet-friendly? ground floor? screened porch?), then straight to the
+  top matches.
   An optional "Review your answers" step can be switched on in the editor.
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
@@ -117,10 +119,11 @@ captured from the site rather than the translated defaults. Translations still a
 to anything the preset does not cover, and Loco Translate can still localize
 everything a widget has not overridden.
 
-= The eight meaningful differences =
+= The meaningful differences =
 
-Square footage · pullout couch · desk/workspace · floor level · studio vs.
-1-bedroom · dining table for 2 vs. 4 · pet policy · screened-in porch.
+Sleeps 2 vs. up to 4 · square footage · pullout couch · desk/workspace · floor
+level · studio vs. 1-bedroom · dining table for 2 vs. 4 · pet policy ·
+screened-in porch.
 
 = How it works =
 
@@ -131,7 +134,7 @@ The widget opens on a **start screen** with the heading, a short intro, and a
 choice of Quick finder, Weigh priorities, or Compare; picking one enters that mode.
 The default Quick finder is a **step-through wizard**: one question per screen so a
 guest never scrolls to find their results. Each step shows a clickable progress
-stepper ("Step 3 of 7") and a live "N cottages match" count; nothing is
+stepper ("Step 3 of 8") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question the guest goes straight to the
@@ -141,7 +144,8 @@ that review screen on demand, so answers can be changed even when the forced ste
 off. Answers are never remembered — every page load starts fresh.
 
 Scoring is a strict two-phase engine: Phase 1 applies the hard filters
-(pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks whatever survives
+(party of 3–4, pet-friendly, ground-floor-only, table-for-4); Phase 2 ranks
+whatever survives
 by softer preferences. If a hard filter leaves three or fewer cottages they are
 returned directly. If a combination is impossible (e.g. pet-friendly AND a table
 for four), the closest matches are shown, each **tagged with the must-have it
@@ -221,6 +225,37 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.0 =
+Sleeps-4 update: capacity data, party-size filter, per-cottage highlights.
+
+* **Six cottages now sleep up to 4** (22/23/31/32/35/36 — the pull-out couch adds
+  two; extra sheets on request). The two studios, 33 and 34, stay at 2. The data
+  file carries the real per-cottage capacity and everything reads from it.
+* **New first question: "How many of you?"** (2 of us / 3–4 of us / No
+  preference). "3–4 of us" is a hard filter on the data's sleeps-max — it removes
+  exactly the two studios; "2 of us" and skipping keep all 8. Weigh priorities
+  gains a matching "Room for 3–4 guests" row (High = must-have), and the new
+  `?party=` and `?w_party=` deep-link parameters are additive — every existing
+  deep link resolves exactly as before.
+* **Data corrections:** Cottage 35 is "Blue Heron Hideaway" (making the live
+  site's hot-patched rename permanent so the next install can't regress it);
+  Cottage 23's dining seats 4 (owner-confirmed). Verified and kept: 35/36 are
+  1-bedrooms, 33/34 have no pull-out couch, pets in 34 only, screened porch on
+  22 only.
+* **Compare matrix:** the capacity row is captioned "Sleeps (max)" and now shows
+  the real spread (4/4/4/4/2/2/4/4 in cottage order).
+* **Capacity + pet notes:** the party-size step carries a neutral capacity
+  sentence ("First 2 guests are included in the nightly rate; a per-night fee
+  applies for guests 3 and 4."), the pet step notes Cottage 34 only, by
+  pre-approval. Both are Elementor-editable. Each can end with an optional
+  "Fee details" link via a new URL control — DEFAULT EMPTY, so no link renders
+  until one is set. Fee amounts never appear in this plugin.
+* **Per-cottage highlights:** owner-supplied facts render as short lines on each
+  result card (e.g. Cottage 22: closest to the canal, private screened porch,
+  largest bedroom…). Straight from `data/cottages.json` — nothing invented.
+* Still pure static data, fully client-rendered: no MotoPress dependency, no new
+  HTTP requests; both widgets and the shortcode share all of the above.
 
 = 0.21.2 =
 * Compare tab: the subheader and the "scroll the list" cue now read as **one

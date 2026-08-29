@@ -7,8 +7,10 @@
  * use them without a build step.
  *
  * Phase 1 — Binary Exclusion (hard filters): pet → only #34; ground-floor-only
- *   → drop #23; table-for-4 → only #22. If ≤3 cottages survive, return them and
- *   bypass Phase 2 to avoid artificial score distortion.
+ *   → drop #23; table-for-4 → only #22/#23; party of 3–4 → drop the two studios
+ *   (#33/#34, the only cottages without a pull-out couch). If ≤3 cottages
+ *   survive, return them and bypass Phase 2 to avoid artificial score
+ *   distortion.
  * Phase 2 — Relative Weighted Scoring of the survivors.
  */
 (function (window) {
@@ -34,7 +36,8 @@
     pullout:  { test: function (c) { return c.pulloutCouch === true; }, tag: 'tag_pullout' },
     studio:   { test: function (c) { return c.layoutType === 'Studio'; }, tag: 'tag_studio' },
     onebed:   { test: function (c) { return c.layoutType !== 'Studio'; }, tag: 'tag_onebed' },
-    moreroom: { test: function (c) { return Number(c.squareFeet) >= 336; }, tag: 'tag_moreroom' }
+    moreroom: { test: function (c) { return Number(c.squareFeet) >= 336; }, tag: 'tag_moreroom' },
+    party34:  { test: function (c) { return Number(c.guests) >= 3; }, tag: 'tag_party' }
   };
 
   /** Phase 1: apply hard filters (crit.hard = feature keys), collecting a reason ledger. */
@@ -70,6 +73,7 @@
     s += (c.petAllowed ? 1 : 0) * (crit.wPet || 0);
     s += (isGround(c) ? 1 : 0) * (crit.wFewerStairs || 0);
     s += (c.screenedPorch ? 1 : 0) * (crit.wScreenedPorch || 0);
+    s += (Number(c.guests) >= 3 ? 1 : 0) * (crit.wParty || 0);
 
     return s;
   }

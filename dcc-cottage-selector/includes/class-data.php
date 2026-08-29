@@ -13,9 +13,10 @@ if (!defined('ABSPATH')) {
  */
 final class Data
 {
-    /** The comparison-table fields. Order drives the Compare matrix. Guests + bed
-     *  are the same for every cottage (shown as core specs); the rest are the
-     *  meaningful differences. */
+    /** The comparison-table fields. Order drives the Compare matrix. 'guests' is
+     *  the sleeps-max capacity and VARIES: 4 where a pull-out couch adds two
+     *  (22/23/31/32/35/36), 2 for the studios (33/34). Only 'bed' (queen) is the
+     *  same everywhere. */
     public const DIFF_FIELDS = [
         'guests',
         'bed',

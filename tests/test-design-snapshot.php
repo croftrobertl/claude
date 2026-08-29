@@ -18,6 +18,10 @@ namespace {
     if (!function_exists('wp_json_encode')) {
         function wp_json_encode($data) { return json_encode($data); }
     }
+    if (!function_exists('esc_url_raw')) {
+        // Pass-through is fine for tests: design_snapshot() only needs it defined.
+        function esc_url_raw($url) { return $url; }
+    }
     // register_controls() renders labels/descriptions through the escaping helpers.
     if (!function_exists('esc_html__')) {
         function esc_html__($t, $d = null) { return $t; }
@@ -174,7 +178,7 @@ namespace {
     // present here or the shortcode pop-up silently behaves differently.
     $shortcodeCfg = \DCCS\Config::build([], ['highlight' => '22', 'startMode' => 'quick']);
     $widgetCfg    = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]));
-    foreach (['showReview', 'showHeading', 'showCompareTip'] as $key) {
+    foreach (['showReview', 'showHeading', 'showCompareTip', 'capacityFeeUrl', 'petFeeUrl'] as $key) {
         ok("shortcode pop-up config declares $key (no silent JS default)", array_key_exists($key, $shortcodeCfg));
         ok("shortcode $key matches the widget default", ($shortcodeCfg[$key] ?? null) === ($widgetCfg[$key] ?? null));
     }
@@ -187,6 +191,17 @@ namespace {
         Selector_Widget::design_snapshot([])['showCompareTip'] === false);
     ok('snapshot maps show_compare_tip=yes to on',
         Selector_Widget::design_snapshot(['show_compare_tip' => 'yes'])['showCompareTip'] === true);
+
+    // Fee-details URLs (v0.22.0): DEFAULT EMPTY -> no link renders; a set URL
+    // control carries through the snapshot to the JS config.
+    ok('capacity fee URL defaults empty',
+        Selector_Widget::design_snapshot([])['capacityFeeUrl'] === '');
+    ok('pet fee URL defaults empty',
+        Selector_Widget::design_snapshot([])['petFeeUrl'] === '');
+    ok('a set capacity fee URL flows through the snapshot',
+        Selector_Widget::design_snapshot(['capacity_fee_url' => ['url' => '/extra-guest-fees/']])['capacityFeeUrl'] === '/extra-guest-fees/');
+    ok('a set pet fee URL flows through the snapshot',
+        Selector_Widget::design_snapshot(['pet_fee_url' => ['url' => '/pet-policy/']])['petFeeUrl'] === '/pet-policy/');
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

@@ -47,8 +47,9 @@
     add('studio', crit.wStudio > 0, c.layoutType === 'Studio');
     add('onebed', crit.wOneBed > 0, c.layoutType !== 'Studio');
     add('dining', crit.wDining > 0, Number(c.diningSeats) >= 4);
-    add('pullout', crit.wPullout > 0, c.pulloutCouch);
     var hard = crit.hard || [];
+    add('pullout', crit.wPullout > 0, c.pulloutCouch);
+    add('party', (crit.wParty > 0) || hard.indexOf('party34') !== -1, Number(c.guests) >= 3);
     add('porch', (crit.wScreenedPorch > 0) || hard.indexOf('porch') !== -1, c.screenedPorch);
 
     // Wanted reasons first (stable), then the rest; keep up to three.

@@ -96,7 +96,7 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('shows exactly one question step', root.querySelectorAll('.dccs-step-q').length === 1);
-  ok('progress reads Step 1 of 7', /1\b.*\b7/.test(progress(root)));
+  ok('progress reads Step 1 of 8', /1\b.*\b8/.test(progress(root)));
   ok('three answer chips', curChips(root).length === 3);
   ok('no answer preselected', !activeChip(root));
   ok('Next is disabled until a choice', root.querySelector('.dccs-next').disabled === true);
@@ -123,7 +123,7 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 4)
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // to the pet step (index 5)
   clickAnswer(root, 'yes'); // pet=yes -> only Coconut
   ok('singular count reads "1 cottage matches"', /\b1 cottage matches\b/.test(root.querySelector('.dccs-count').textContent));
 })();
@@ -133,12 +133,12 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  clickAnswer(root, 'yes');
-  ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === 'yes');
-  ok('still on step 1 (no auto-advance)', /1\b.*\b7/.test(progress(root)));
+  clickAnswer(root, '34');
+  ok('selecting highlights the chip', !!activeChip(root) && activeChip(root).dataset.value === '34');
+  ok('still on step 1 (no auto-advance)', /1\b.*\b8/.test(progress(root)));
   ok('Next becomes enabled', root.querySelector('.dccs-next').disabled === false);
   clickNext(root);
-  ok('Next advances to step 2', /2\b.*\b7/.test(progress(root)));
+  ok('Next advances to step 2', /2\b.*\b8/.test(progress(root)));
   ok('Back appears after step 1', !!root.querySelector('.dccs-back'));
   ok('Back is styled as a primary button', root.querySelector('.dccs-back').classList.contains('dccs-primary'));
   ok('Back and Next share the nav row', root.querySelectorAll('.dccs-wizard-nav .dccs-primary').length === 2);
@@ -149,10 +149,10 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'yes');
+  answerNext(root, '34');
   root.querySelector('.dccs-back').click();
-  ok('Back returns to step 1', /1\b.*\b7/.test(progress(root)));
-  ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === 'yes');
+  ok('Back returns to step 1', /1\b.*\b8/.test(progress(root)));
+  ok('previous answer preserved', activeChip(root) && activeChip(root).dataset.value === '34');
 })();
 
 // ---- 4. Clickable stepper jumps back to an answered step ----
@@ -160,13 +160,13 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'yes');     // step 1
-  answerNext(root, 'no');      // step 2 -> now on step 3
-  ok('on step 3', /3\b.*\b7/.test(progress(root)));
+  answerNext(root, '34');      // step 1 (party size)
+  answerNext(root, 'no');      // step 2 (desk) -> now on step 3
+  ok('on step 3', /3\b.*\b8/.test(progress(root)));
   var dot = root.querySelector('.dccs-stepper button.dccs-step-dot[data-step="0"]');
   ok('answered steps are clickable dots', !!dot);
   dot.click();
-  ok('stepper dot jumps to step 1', /1\b.*\b7/.test(progress(root)));
+  ok('stepper dot jumps to step 1', /1\b.*\b8/.test(progress(root)));
 })();
 
 // ---- 5. Review step + edit returns to where you came from ----
@@ -175,7 +175,7 @@ function enter(root, mode) {
   const root = mountSelector(w, configWith({ showReview: true }));   // review is off by default
   enter(root, 'quick');
   stepThrough(root, 'either');
-  ok('review lists all 7 answers', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('review lists all 8 answers', root.querySelectorAll('.dccs-review-list li').length === 8);
   ok('review has See-my-matches', !!root.querySelector('.dccs-see-matches'));
   const reviewBtns = root.querySelectorAll('.dccs-tail-nav > button');
   ok('review: Restart is left, Submit is right',
@@ -183,9 +183,9 @@ function enter(root, mode) {
     reviewBtns[0].classList.contains('dccs-reset') &&
     reviewBtns[1].classList.contains('dccs-see-matches'));
   root.querySelector('.dccs-edit[data-step="3"]').click();
-  ok('edit jumps to that question (step 4)', /4\b.*\b7/.test(progress(root)));
+  ok('edit jumps to that question (step 4)', /4\b.*\b8/.test(progress(root)));
   clickNext(root);
-  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 7);
+  ok('after editing, Next returns to review', root.querySelectorAll('.dccs-review-list li').length === 8);
 })();
 
 // ---- 6. See matches -> results, full names, recap, edit-answers ----
@@ -224,6 +224,7 @@ function enter(root, mode) {
   cfg.icons = { q_desk: '<i class="dccs-test-qico"></i>', ans_yes: '<i class="dccs-test-aico"></i>' };
   const root = mountSelector(w, JSON.stringify(cfg));
   enter(root, 'quick');
+  answerNext(root, 'either');   // past the party-size step; desk (q_desk icon) is step 2
   ok('the question carries its icon', !!root.querySelector('.dccs-step-q .dccs-ico .dccs-test-qico'));
   ok('the Yes answer chip carries its icon', !!root.querySelector('.dccs-chip[data-value="yes"] .dccs-ico .dccs-test-aico'));
 })();
@@ -258,14 +259,14 @@ function enter(root, mode) {
   ok('deeplink porch=true -> only The Boathouse', cardNames(root).length === 1 && cardNames(root)[0] === 'Cottage 22: The Boathouse');
 })();
 
-// ---- 8c. Screened-porch question appears as the last (7th) Quick-Match step ----
+// ---- 8c. Screened-porch question appears as the last (8th) Quick-Match step ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 6)
-  ok('step 7 of 7 is the screened-porch question', /7\b.*\b7/.test(progress(root)) &&
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // through ground (step 7)
+  ok('step 8 of 8 is the screened-porch question', /8\b.*\b8/.test(progress(root)) &&
     /porch/i.test(root.querySelector('.dccs-step-q').textContent));
   clickAnswer(root, 'yes'); clickNext(root);                    // last step -> review
   seeMatches(root);
@@ -328,10 +329,10 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w, configWith({ showReview: true }));   // review is off by default
   enter(root, 'weights');
-  ok('weights starts at Step 1 of 9', /1\b.*\b9/.test(progress(root)));
+  ok('weights starts at Step 1 of 10', /1\b.*\b10\b/.test(progress(root)));
   ok('nothing preselected, Next disabled', !activeChip(root) && root.querySelector('.dccs-next').disabled === true);
-  stepThrough(root, '2');                                   // medium for all 9
-  ok('weights review lists all 9 priorities', root.querySelectorAll('.dccs-review-list li').length === 9);
+  stepThrough(root, '2');                                   // medium for all 10
+  ok('weights review lists all 10 priorities', root.querySelectorAll('.dccs-review-list li').length === 10);
   seeMatches(root);
   ok('weights results are ranked cards', root.querySelectorAll('.dccs-card').length >= 1);
 })();
@@ -378,9 +379,10 @@ function enter(root, mode) {
     }
     return null;
   }
-  ok('matrix has Guests + Bed + Screened-porch rows',
-    rowValue('Guests') !== null && rowValue('Bed') !== null && rowValue('Screened porch') !== null);
-  ok('matrix shows the constant Guests/Bed values', rowValue('Guests') === '2' && rowValue('Bed') === 'Queen');
+  ok('matrix has Sleeps (max) + Bed + Screened-porch rows',
+    rowValue('Sleeps (max)') !== null && rowValue('Bed') !== null && rowValue('Screened porch') !== null);
+  ok('matrix shows Sleeps (max) 4 for Cottage 22 and the constant Bed value',
+    rowValue('Sleeps (max)') === '4' && rowValue('Bed') === 'Queen');
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
@@ -493,7 +495,7 @@ function enter(root, mode) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either');
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either');
   answerNext(root, 'either'); answerNext(root, 'either');          // advance to the pet step
   ok('count starts at all 8 on the pet step', /\b8\b/.test(countText(root)));
   clickAnswer(root, 'yes');                                        // pet = yes (no advance)
@@ -507,7 +509,8 @@ function enter(root, mode) {
   const root = mountSelector(w);
   enter(root, 'weights');
   ok('weights count starts at all 8', /\b8\b/.test(countText(root)));
-  answerNext(root, '1'); answerNext(root, '1'); answerNext(root, '1');  // Low: workspace/moreroom/fewerstairs
+  answerNext(root, '1'); answerNext(root, '1');
+  answerNext(root, '1'); answerNext(root, '1');  // Low: party/workspace/moreroom/fewerstairs
   ok('Low priorities do not narrow the count', /\b8\b/.test(countText(root)));
   clickAnswer(root, '3');                                          // pet priority = High
   ok('marking pet High drops the count to 1', /\b1\b/.test(countText(root)));
@@ -650,6 +653,7 @@ function configWith(overrides) {
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('count starts at all 8', /\b8\b/.test(countText(root)));
+  answerNext(root, 'either');                                 // party size: no preference
   clickAnswer(root, 'yes');                                   // desk = yes (a specific want)
   ok('answering Desk: Yes narrows the count below 8', !/\b8\b/.test(countText(root)));
   // A fresh run: "No preference" must NOT narrow.
@@ -668,8 +672,9 @@ function configWith(overrides) {
   // Simpler: drive a fresh wizard to the contradiction.
   const r = mountSelector(freshDom());
   enter(r, 'quick');
-  // desk/pullout/layout/dining → no preference; pet step = yes; ground = no pref; porch step = yes.
-  answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either');
+  // party/desk/pullout/layout/dining → no preference; pet = yes; ground = no pref; porch = yes.
+  answerNext(r, 'either'); answerNext(r, 'either'); answerNext(r, 'either');
+  answerNext(r, 'either'); answerNext(r, 'either');
   answerNext(r, 'yes');                                       // pet = yes
   answerNext(r, 'either');                                    // ground = no pref
   clickAnswer(r, 'yes');                                      // screened porch = yes → contradiction
@@ -896,8 +901,9 @@ function configWith(overrides) {
 
   // (3) answering "table for two" no longer excludes the 4-seat Boathouse.
   enter(root, 'quick');
-  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // desk/pullout/layout
-  answerNext(root, '2');                                                              // dining: two
+  answerNext(root, 'either'); answerNext(root, 'either');
+  answerNext(root, 'either'); answerNext(root, 'either'); // party/desk/pullout/layout
+  answerNext(root, '2');                                  // dining: two
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pet/ground/porch
   const sm = root.querySelector('.dccs-see-matches'); if (sm) { sm.click(); }
   ok('dining=two keeps The Boathouse in the matches',
@@ -1062,6 +1068,141 @@ function configWith(overrides) {
   ok('tip wording comes from the str_compare_need_two override', note.textContent === 'CUSTOM TIP QQQ');
   tick(root2, w2, 0); tick(root2, w2, 1);
   ok('switch on: tip disappears once 2 are ticked', !root2.querySelector('.dccs-compare-note'));
+})();
+
+// ==== v0.22.0: sleeps-4 update, party-size filter, highlights, notes ====
+
+// ---- 38. Party-size hard filter: "3-4 of us" removes exactly the two studios ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  // Engine-level: the filter reads c.guests from the data, never a cottage list.
+  const res = w.DCCS.score.run(cfg.cottages, { hard: ['party34'] });
+  ok('party34 excludes exactly 33 and 34',
+    res.excluded.map(e => e.id).sort().join(',') === '33,34' && res.results.length === 6);
+  ok('party34 survivors all sleep 3+', res.results.every(c => c.guests >= 3));
+
+  // Flow-level: answering "3-4 of us" on step 1 drops the live count to 6.
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  ok('quick count starts at 8', /\b8\b/.test(countText(root)));
+  clickAnswer(root, '34');
+  ok('"3-4 of us" drops the live count to 6', /\b6\b/.test(countText(root)));
+  stepThrough(root, 'either'); seeMatches(root);
+  ok('results exclude the studios', !cardNames(root).some(n => /Cottage 3[34]/.test(n)));
+
+  // "2 of us" and the explicit skip constrain nothing — every cottage sleeps 2.
+  const r2 = mountSelector(freshDom());
+  enter(r2, 'quick');
+  clickAnswer(r2, '2');
+  ok('"2 of us" keeps all 8', /\b8\b/.test(countText(r2)));
+  const r3 = mountSelector(freshDom());
+  enter(r3, 'quick');
+  clickAnswer(r3, 'either');
+  ok('skipping party size keeps all 8', /\b8\b/.test(countText(r3)));
+})();
+
+// ---- 39. New ?party= deep link (additive; old params proven elsewhere) ----
+(function () {
+  const w = freshDom('https://example.com/?party=3-4');
+  const root = mountSelector(w);
+  ok('deeplink party=3-4 jumps to results without the studios',
+    cardNames(root).length > 0 && !cardNames(root).some(n => /Cottage 3[34]/.test(n)));
+
+  const w2 = freshDom('https://example.com/?party=2');
+  const root2 = mountSelector(w2);
+  root2.querySelector('.dccs-edit-answers').click();
+  const firstRow = root2.querySelector('.dccs-review-list li .dccs-review-a');
+  ok('deeplink party=2 lands as the "2 of us" answer', firstRow.textContent.trim() === '2 of us');
+
+  // High-priority weight param comes free via the existing w_<group> loop.
+  const w3 = freshDom('https://example.com/?w_party=high');
+  const root3 = mountSelector(w3);
+  ok('deeplink w_party=high filters the studios out of results',
+    !cardNames(root3).some(n => /Cottage 3[34]/.test(n)));
+})();
+
+// ---- 40. Cottage 35 renders as Blue Heron Hideaway ----
+(function () {
+  const w = freshDom('https://example.com/?highlight=35');
+  const root = mountSelector(w);
+  const hc = root.querySelector('.dccs-card.is-highlight h4');
+  ok('Cottage 35 renders as "Blue Heron Hideaway"',
+    !!hc && /Cottage 35: Blue Heron Hideaway/.test(hc.textContent));
+})();
+
+// ---- 41. Compare matrix: Sleeps (max) reads 4/4/4/4/2/2/4/4 in cottage order ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'compare');
+  // Each tick re-renders the checklist, so re-query per id (stale handles no-op).
+  const allIds = Array.prototype.map.call(
+    root.querySelectorAll('.dccs-cmp-option input[data-cmp]'), i => i.dataset.cmp);
+  allIds.forEach(id => {
+    const cb = root.querySelector('.dccs-cmp-option input[data-cmp="' + id + '"]');
+    cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  });
+  root.querySelector('.dccs-open-compare').click();
+  // The window shows 2 columns and slides by 1, so read at offsets 0/2/4/6
+  // (two Next clicks between reads) to cover each cottage exactly once.
+  const vals = [];
+  for (let read = 0; read < 4; read++) {
+    w.document.querySelectorAll('.dccs-modal .dccs-matrix tbody tr').forEach(tr => {
+      const th = tr.querySelector('th');
+      if (th && th.textContent.trim() === 'Sleeps (max)') {
+        tr.querySelectorAll('td').forEach(td => vals.push(td.textContent.trim()));
+      }
+    });
+    for (let k = 0; k < 2; k++) {
+      const nx = w.document.querySelector('.dccs-modal .dccs-cmp-next:not([disabled])');
+      if (nx) { nx.click(); }
+    }
+  }
+  ok('Sleeps (max) row reads 4,4,4,4,2,2,4,4 across the full compare',
+    vals.join(',') === '4,4,4,4,2,2,4,4');
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+})();
+
+// ---- 42. Owner-supplied highlights render on cards; no fee amount anywhere ----
+(function () {
+  const w = freshDom('https://example.com/?porch=true');   // -> Cottage 22 card
+  const root = mountSelector(w);
+  const hl = root.querySelectorAll('.dccs-card .dccs-highlights li');
+  ok('Cottage 22 card lists its 10 owner-supplied highlights', hl.length === 10);
+  const texts = Array.prototype.map.call(hl, li => li.textContent);
+  ok('highlights include the private screened porch', texts.some(t => /Private screened porch/.test(t)));
+  ok('highlights never invent waterfront claims', !texts.some(t => /waterfront|view|dock|boat slip/i.test(t)));
+  ok('no fee amount ($) anywhere in the rendered output', root.innerHTML.indexOf('$') === -1);
+})();
+
+// ---- 43. Capacity + pet notes: shown on their steps, fee link only when set ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  const note = root.querySelector('.dccs-q-note');
+  ok('party step shows the capacity note', !!note && /First 2 guests are included/.test(note.textContent));
+  ok('no fee link renders while the URL control is empty (default)', !note.querySelector('a'));
+  ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
+  answerNext(root, 'either');
+  ok('other steps carry no note', !root.querySelector('.dccs-q-note'));
+  answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pullout/layout/dining
+  answerNext(root, 'either');                                                          // -> pet (step 6)
+  const pnote = root.querySelector('.dccs-q-note');
+  ok('pet step notes Cottage 34 only, by pre-approval',
+    !!pnote && /Cottage 34 only/.test(pnote.textContent) && /pre-approval/.test(pnote.textContent));
+  ok('pet note has no link while unset', !pnote.querySelector('a'));
+
+  // With owner-set URLs, both notes end with a safe link.
+  const cfg = JSON.parse(CONFIG);
+  cfg.capacityFeeUrl = '/extra-guest-fees/';
+  cfg.petFeeUrl = '/pet-policy/';
+  const r2 = mountSelector(freshDom(), JSON.stringify(cfg));
+  enter(r2, 'quick');
+  const link = r2.querySelector('.dccs-q-note a.dccs-q-note-link');
+  ok('a set capacity URL renders the fee-details link',
+    !!link && link.getAttribute('href') === '/extra-guest-fees/' && link.textContent === 'Fee details');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

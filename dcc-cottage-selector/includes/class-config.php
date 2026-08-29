@@ -23,7 +23,7 @@ final class Config
         return [
             // Shell / modes
             'heading'           => __('Find your perfect cottage', 'dcc-cottage-selector'),
-            'intro'             => __('All our cottages sleep two with a queen bed — here is what actually sets them apart. Answer a few quick questions and we will match you in seconds.', 'dcc-cottage-selector'),
+            'intro'             => __('Every cottage has a queen bed, and six sleep up to 4 with a pull-out couch. Answer a few quick questions and we will match you in seconds.', 'dcc-cottage-selector'),
             'mode_quick'        => __('Quick finder', 'dcc-cottage-selector'),
             'mode_weights'      => __('Weigh priorities', 'dcc-cottage-selector'),
             'mode_compare'      => __('Compare', 'dcc-cottage-selector'),
@@ -36,6 +36,7 @@ final class Config
             'unavailable'       => __('The cottage selector is temporarily unavailable.', 'dcc-cottage-selector'),
 
             // Quick Pick questions
+            'q_party'           => __('How many of you?', 'dcc-cottage-selector'),
             'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
             'q_pullout'         => __('Do you want a pullout couch?', 'dcc-cottage-selector'),
             'q_layout'          => __('Studio or 1-bedroom?', 'dcc-cottage-selector'),
@@ -64,6 +65,7 @@ final class Config
             'tag_studio'        => __('Not a studio', 'dcc-cottage-selector'),
             'tag_onebed'        => __('Not a 1-bedroom', 'dcc-cottage-selector'),
             'tag_moreroom'      => __('Less square footage', 'dcc-cottage-selector'),
+            'tag_party'         => __('Sleeps 2 max', 'dcc-cottage-selector'),
 
             // Generic chip answers
             'opt_yes'           => __('Yes', 'dcc-cottage-selector'),
@@ -73,6 +75,8 @@ final class Config
             'opt_onebed'        => __('1-bedroom', 'dcc-cottage-selector'),
             'opt_seats2'        => __('Table for 2', 'dcc-cottage-selector'),
             'opt_seats4'        => __('Table for 4', 'dcc-cottage-selector'),
+            'opt_party2'        => __('2 of us', 'dcc-cottage-selector'),
+            'opt_party34'       => __('3–4 of us', 'dcc-cottage-selector'),
 
             // What Matters Most rows + 3-state toggle
             'w_question'        => /* translators: %s: a priority, e.g. "Workspace" */ __('How much does %s matter?', 'dcc-cottage-selector'),
@@ -85,12 +89,13 @@ final class Config
             'w_dining'          => __('Dining comfort', 'dcc-cottage-selector'),
             'w_pullout'         => __('Pullout couch flexibility', 'dcc-cottage-selector'),
             'w_screenedporch'   => __('Screened-in porch', 'dcc-cottage-selector'),
+            'w_party'           => __('Room for 3–4 guests', 'dcc-cottage-selector'),
             'lvl_low'           => __('Low', 'dcc-cottage-selector'),
             'lvl_med'           => __('Medium', 'dcc-cottage-selector'),
             'lvl_high'          => __('High', 'dcc-cottage-selector'),
 
             // Compare matrix row headers
-            'diff_guests'       => __('Guests', 'dcc-cottage-selector'),
+            'diff_guests'       => __('Sleeps (max)', 'dcc-cottage-selector'),
             'diff_bed'          => __('Bed', 'dcc-cottage-selector'),
             'diff_squareFeet'   => __('Size', 'dcc-cottage-selector'),
             'diff_layoutType'   => __('Layout', 'dcc-cottage-selector'),
@@ -149,6 +154,12 @@ final class Config
             'why_porch'         => __('a private screened-in porch', 'dcc-cottage-selector'),
             'why_lead'          => __('Great because it offers', 'dcc-cottage-selector'),
 
+            // Informational notes under the party-size / pet questions. No fee
+            // amounts anywhere in this plugin (single source of truth elsewhere).
+            'capacity_note'     => __('First 2 guests are included in the nightly rate; a per-night fee applies for guests 3 and 4.', 'dcc-cottage-selector'),
+            'pet_note'          => __('Pets are welcome in Cottage 34 only, by pre-approval.', 'dcc-cottage-selector'),
+            'fee_link'          => __('Fee details', 'dcc-cottage-selector'),
+
             // Misc value labels
             'val_yes'           => __('Yes', 'dcc-cottage-selector'),
             'val_no'            => __('No', 'dcc-cottage-selector'),
@@ -187,6 +198,8 @@ final class Config
             'showHeading'  => true,
             'showReview'   => false,
             'showCompareTip' => false,
+            'capacityFeeUrl' => '',
+            'petFeeUrl'      => '',
         ], $extra);
     }
 }

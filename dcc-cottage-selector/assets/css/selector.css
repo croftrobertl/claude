@@ -190,6 +190,14 @@
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
 }
 
+/* Informational note under specific wizard questions (capacity, pet policy).
+   Muted, centered like the question; the optional link inherits the accent. */
+.dccs-root.dccs-root .dccs-q-note {
+  margin: 12px auto 0; max-width: 46ch; text-align: var(--dccs-question-align, center);
+  color: var(--dccs-muted); font-size: 0.88rem; line-height: 1.4;
+}
+.dccs-root.dccs-root .dccs-q-note-link { color: var(--dccs-accent); font-weight: 600; }
+
 /* Paired button rows never wrap: each button takes half the width and shrinks,
    with long labels wrapping to two lines inside the button. */
 .dccs-root.dccs-root .dccs-wizard-nav {
@@ -386,6 +394,15 @@
   border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600;
 }
 .dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; }
+.dccs-root.dccs-root .dccs-highlights {
+  margin: 0 0 8px; padding-left: 18px; font-size: 0.85rem; line-height: 1.45;
+  color: var(--dccs-muted);
+}
+.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0; break-inside: avoid; }
+@media (min-width: 480px) {
+  .dccs-root.dccs-root .dccs-highlights { columns: 2; column-gap: 22px; }
+}
+
 .dccs-root.dccs-root .dccs-dup { margin: 0 0 8px; font-size: 0.82rem; color: var(--dccs-muted); font-style: italic; }
 .dccs-root.dccs-root .dccs-card-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .dccs-root.dccs-root .dccs-view {

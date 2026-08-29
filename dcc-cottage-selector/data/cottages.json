@@ -2,7 +2,7 @@
   {
     "id": "22",
     "name": "The Boathouse",
-    "guests": 2,
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 400,
     "pulloutCouch": true,
@@ -12,27 +12,48 @@
     "diningSeats": 4,
     "screenedPorch": true,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-22/"
+    "pageUrl": "/accommodation/cottage-22/",
+    "highlights": [
+      "Ground floor",
+      "Closest to the canal",
+      "Private screened porch",
+      "Largest bedroom",
+      "Most pantry, counter & cupboard space of any cottage",
+      "Largest bathroom (tied with Cottage 23)",
+      "Computer desk",
+      "Dining space for 4",
+      "Central AC",
+      "Roku TV in both rooms"
+    ]
   },
   {
     "id": "23",
     "name": "The Lighthouse",
-    "guests": 2,
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 400,
     "pulloutCouch": true,
     "desk": true,
     "floorLevel": "Second Floor",
     "layoutType": "1-bedroom",
-    "diningSeats": 2,
+    "diningSeats": 4,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-23/"
+    "pageUrl": "/accommodation/cottage-23/",
+    "highlights": [
+      "Upstairs, above the coin laundry",
+      "Closest to the canal",
+      "Largest bathroom (tied with Cottage 22)",
+      "Computer desk",
+      "Dining space for 4",
+      "Central AC",
+      "Roku TV in both rooms"
+    ]
   },
   {
     "id": "31",
     "name": "Hibiscus Hut",
-    "guests": 2,
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 340,
     "pulloutCouch": true,
@@ -42,12 +63,18 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-31/"
+    "pageUrl": "/accommodation/cottage-31/",
+    "highlights": [
+      "Second-closest to the canal",
+      "Paved sun area with table and loungers",
+      "Central AC",
+      "Roku TV in both rooms"
+    ]
   },
   {
     "id": "32",
     "name": "Flamingo Bungalow",
-    "guests": 2,
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 340,
     "pulloutCouch": true,
@@ -57,7 +84,12 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-32/"
+    "pageUrl": "/accommodation/cottage-32/",
+    "highlights": [
+      "Second-closest to the canal",
+      "Central AC",
+      "Roku TV in both rooms"
+    ]
   },
   {
     "id": "33",
@@ -72,7 +104,17 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-33/"
+    "pageUrl": "/accommodation/cottage-33/",
+    "highlights": [
+      "True studio",
+      "Mini-split AC",
+      "One TV",
+      "Two rocker chairs",
+      "Two dressers",
+      "Closet",
+      "Table for 2",
+      "Kitchenette"
+    ]
   },
   {
     "id": "34",
@@ -87,12 +129,22 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": true,
-    "pageUrl": "/accommodation/cottage-34/"
+    "pageUrl": "/accommodation/cottage-34/",
+    "highlights": [
+      "True studio",
+      "Mini-split AC",
+      "One TV",
+      "Two rocker chairs",
+      "Two dressers",
+      "Closet",
+      "Table for 2",
+      "Kitchenette"
+    ]
   },
   {
     "id": "35",
-    "name": "Heron Hideaway",
-    "guests": 2,
+    "name": "Blue Heron Hideaway",
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 336,
     "pulloutCouch": true,
@@ -102,12 +154,17 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-35/"
+    "pageUrl": "/accommodation/cottage-35/",
+    "highlights": [
+      "Separate bedroom and living room",
+      "Roku TV in both rooms",
+      "Central AC"
+    ]
   },
   {
     "id": "36",
     "name": "Sunshine Suite",
-    "guests": 2,
+    "guests": 4,
     "bed": "Queen",
     "squareFeet": 336,
     "pulloutCouch": true,
@@ -117,6 +174,11 @@
     "diningSeats": 2,
     "screenedPorch": false,
     "petAllowed": false,
-    "pageUrl": "/accommodation/cottage-36/"
+    "pageUrl": "/accommodation/cottage-36/",
+    "highlights": [
+      "Separate bedroom and living room",
+      "Roku TV in both rooms",
+      "Central AC"
+    ]
   }
 ]

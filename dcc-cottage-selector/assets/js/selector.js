@@ -102,14 +102,14 @@
   function defaultState(config) {
     // Quick answers start UNSET ('') so no option is pre-highlighted; a step is
     // "answered" once the guest taps something ('either' = an explicit skip).
-    var quick = { desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
+    var quick = { party: '', desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
     if (config.presetQuick) { Object.keys(config.presetQuick).forEach(function (k) { quick[k] = config.presetQuick[k]; }); }
     return {
       mode: config.startMode || 'quick',
       quick: quick,
       // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
       // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
-      weights: { workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0, screenedporch: 0 },
+      weights: { party: 0, workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0, screenedporch: 0 },
       compareIds: (config.preCompare || []).map(String),
       highlight: config.highlight || '',
       // Navigation: question index + stage ('landing' | 'q' | 'review' | 'results').
@@ -162,6 +162,10 @@
     if (p.has('pullout')) { state.quick.pullout = normYesNoLevel(p.get('pullout')); }
     if (p.has('layout')) { state.quick.layout = p.get('layout'); }
     if (p.has('dining')) { state.quick.dining = p.get('dining') === '4' ? 4 : (p.get('dining') === '2' ? 2 : 'either'); }
+    if (p.has('party')) {
+      var pv = String(p.get('party'));
+      state.quick.party = pv === '2' ? '2' : (/^3|^4/.test(pv) ? '34' : 'either');
+    }
     if (p.has('compare')) { state.compareIds = p.get('compare').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
 
     Object.keys(state.weights).forEach(function (k) {
@@ -182,7 +186,7 @@
 
   // Weigh-priorities: a "High" (3) answer maps its priority to a hard-required feature.
   var WEIGHT_HARD = {
-    workspace: 'desk', moreroom: 'moreroom', fewerstairs: 'ground', pet: 'pet',
+    party: 'party34', workspace: 'desk', moreroom: 'moreroom', fewerstairs: 'ground', pet: 'pet',
     studio: 'studio', onebed: 'onebed', dining: 'dining4', pullout: 'pullout', screenedporch: 'porch'
   };
 
@@ -199,7 +203,7 @@
         hard: whard,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
         wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
-        wScreenedPorch: w.screenedporch
+        wScreenedPorch: w.screenedporch, wParty: w.party
       };
     }
     // Quick finder: every SPECIFIC want narrows the count + results. Each positive /
@@ -207,6 +211,7 @@
     // ('') impose no constraint. The wX weights still rank the survivors.
     var q = state.quick;
     var hard = [];
+    if (String(q.party) === '34') { hard.push('party34'); }
     if (q.desk === 'yes') { hard.push('desk'); }
     if (q.pullout === 'yes') { hard.push('pullout'); }
     if (q.layout === 'studio') { hard.push('studio'); }
@@ -224,7 +229,8 @@
       wPullout: q.pullout === 'yes' ? 2 : 0,
       wStudio: q.layout === 'studio' ? 2 : 0,
       wOneBed: q.layout === 'onebed' ? 2 : 0,
-      wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0
+      wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0,
+      wParty: String(q.party) === '34' ? 2 : 0
     };
   }
 
@@ -242,10 +248,12 @@
       '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + inner + '</button>';
   }
 
-  // The wizard's 7 questions (the meaningful differences), in natural order.
-  // Each option is [stringKey, value]; the last is always "No preference".
+  // The wizard's 8 questions (party size + the meaningful differences), in
+  // natural order. Each option is [stringKey, value]; the last is always
+  // "No preference".
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
+    { group: 'party', qKey: 'q_party', shortKey: 'diff_guests', opts: [['opt_party2', '2'], ['opt_party34', '34'], ['opt_either', 'either']] },
     { group: 'desk', qKey: 'q_desk', shortKey: 'diff_desk', opts: YND },
     { group: 'pullout', qKey: 'q_pullout', shortKey: 'diff_pulloutCouch', opts: YND },
     { group: 'layout', qKey: 'q_layout', shortKey: 'diff_layoutType', opts: [['opt_studio', 'studio'], ['opt_onebed', 'onebed'], ['opt_either', 'either']] },
@@ -258,6 +266,7 @@
   // The Weigh-priorities wizard: one priority per step, answered Low/Med/High.
   var WLEVELS = [['lvl_low', 1], ['lvl_med', 2], ['lvl_high', 3]];
   var WEIGHT_QUESTIONS = [
+    { group: 'party', shortKey: 'w_party', opts: WLEVELS },
     { group: 'workspace', shortKey: 'w_workspace', opts: WLEVELS },
     { group: 'moreroom', shortKey: 'w_moreroom', opts: WLEVELS },
     { group: 'fewerstairs', shortKey: 'w_fewerstairs', opts: WLEVELS },
@@ -302,6 +311,20 @@
   }
 
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+  /** Small muted note under specific wizard questions: the capacity sentence on
+      the party-size step, the pet policy on the pet step. Each may carry an
+      optional owner-set link (default empty -> no link). No fee amounts here —
+      those live in exactly one place, elsewhere on the site. */
+  function questionNote(config, group) {
+    var S = config.strings;
+    var text = '', url = '';
+    if (group === 'party') { text = S.capacity_note || ''; url = config.capacityFeeUrl || ''; }
+    if (group === 'pet') { text = S.pet_note || ''; url = config.petFeeUrl || ''; }
+    if (!text) { return ''; }
+    var link = url ? ' <a class="dccs-q-note-link" href="' + esc(safeUrl(url)) + '">' + esc(S.fee_link) + '</a>' : '';
+    return '<p class="dccs-q-note">' + esc(text) + link + '</p>';
+  }
 
   /** Dispatch the wizard by stage: questionnaire → review → results. */
   function renderWizard(config, state, ctx) {
@@ -362,6 +385,7 @@
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
     html += '<h3 class="dccs-step-q" tabindex="-1">' + withIcon(config, qIconKey, 'questions', esc(qLabel)) + '</h3>';
     html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
+    html += questionNote(config, q.group);
     html += '<div class="dccs-wizard-nav">';
     // Back/Next: a chosen icon replaces the default arrow (Back = left, Next = right).
     html += i > 0
@@ -605,6 +629,14 @@
     if (reasons.length) {
       html += '<p class="dccs-why"><strong>' + esc(S.why_heading) + ':</strong> ' +
         esc(S.why_lead) + ' ' + esc(joinList(reasons)) + '.</p>';
+    }
+
+    // Owner-supplied per-cottage facts (data/cottages.json "highlights") — short
+    // lines, rendered verbatim; the data file is the only permitted source.
+    if (c.highlights && c.highlights.length) {
+      html += '<ul class="dccs-highlights">' + c.highlights.map(function (h) {
+        return '<li>' + esc(h) + '</li>';
+      }).join('') + '</ul>';
     }
 
     if (c.duplicateOf) {

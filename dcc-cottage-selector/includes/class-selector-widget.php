@@ -415,6 +415,9 @@ class Selector_Widget extends Widget_Base
             'compare_need_two' => __('Compare “pick 2” tip', 'dcc-cottage-selector'),
             'compare_scroll_all' => __('Compare “scroll to see all” cue', 'dcc-cottage-selector'),
             'count_zero_hint' => __('Zero-match note', 'dcc-cottage-selector'),
+            'capacity_note'   => __('Capacity note (party-size question)', 'dcc-cottage-selector'),
+            'pet_note'        => __('Pet policy note (pet question)', 'dcc-cottage-selector'),
+            'fee_link'        => __('Fee-details link text', 'dcc-cottage-selector'),
         ];
 
         foreach ($editable as $key => $label) {
@@ -425,6 +428,23 @@ class Selector_Widget extends Widget_Base
                 'label_block' => true,
             ]);
         }
+
+        // Optional links after the capacity / pet notes. DEFAULT EMPTY: no link
+        // renders until the owner sets a target (the fee page is undecided).
+        // Fee AMOUNTS never appear in this plugin — one source of truth elsewhere.
+        $this->preset_control('capacity_fee_url', [
+            'label'       => __('Capacity note: fee-details link', 'dcc-cottage-selector'),
+            'description' => __('Optional. When set, the capacity note ends with a link to this URL. Leave empty to show no link.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::URL,
+            'options'     => false,
+        ]);
+
+        $this->preset_control('pet_fee_url', [
+            'label'       => __('Pet note: fee-details link', 'dcc-cottage-selector'),
+            'description' => __('Optional. When set, the pet-policy note ends with a link to this URL. Leave empty to show no link.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::URL,
+            'options'     => false,
+        ]);
 
         $this->preset_control('strings_note', [
             'type'            => Controls_Manager::RAW_HTML,
@@ -451,6 +471,7 @@ class Selector_Widget extends Widget_Base
         $defaults = Config::strings();
         $fields = [
             // Quick finder questions
+            'q_party'     => __('Question: party size', 'dcc-cottage-selector'),
             'q_desk'      => __('Question: desk', 'dcc-cottage-selector'),
             'q_pullout'   => __('Question: pullout couch', 'dcc-cottage-selector'),
             'q_layout'    => __('Question: layout', 'dcc-cottage-selector'),
@@ -469,6 +490,7 @@ class Selector_Widget extends Widget_Base
             'w_dining'    => __('Priority: Dining comfort', 'dcc-cottage-selector'),
             'w_pullout'   => __('Priority: Pullout couch', 'dcc-cottage-selector'),
             'w_screenedporch' => __('Priority: Screened-in porch', 'dcc-cottage-selector'),
+            'w_party'     => __('Priority: Room for 3–4 guests', 'dcc-cottage-selector'),
             // Answer options
             'opt_yes'     => __('Answer: Yes', 'dcc-cottage-selector'),
             'opt_no'      => __('Answer: No', 'dcc-cottage-selector'),
@@ -477,6 +499,8 @@ class Selector_Widget extends Widget_Base
             'opt_onebed'  => __('Answer: 1-bedroom', 'dcc-cottage-selector'),
             'opt_seats2'  => __('Answer: Table for 2', 'dcc-cottage-selector'),
             'opt_seats4'  => __('Answer: Table for 4', 'dcc-cottage-selector'),
+            'opt_party2'  => __('Answer: 2 of us', 'dcc-cottage-selector'),
+            'opt_party34' => __('Answer: 3–4 of us', 'dcc-cottage-selector'),
             'lvl_low'     => __('Answer: Low', 'dcc-cottage-selector'),
             'lvl_med'     => __('Answer: Medium', 'dcc-cottage-selector'),
             'lvl_high'    => __('Answer: High', 'dcc-cottage-selector'),
@@ -1443,6 +1467,8 @@ class Selector_Widget extends Widget_Base
             'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
             'showReview'       => ($settings['show_review'] ?? '') === 'yes',
             'showCompareTip'   => ($settings['show_compare_tip'] ?? '') === 'yes',
+            'capacityFeeUrl'   => esc_url_raw((string) ($settings['capacity_fee_url']['url'] ?? '')),
+            'petFeeUrl'        => esc_url_raw((string) ($settings['pet_fee_url']['url'] ?? '')),
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
             'cssVars'          => self::collect_css_vars($settings),
@@ -1519,6 +1545,8 @@ class Selector_Widget extends Widget_Base
             'showHeading'  => $snap['showHeading'] ?? true,
             'showReview'   => $snap['showReview'] ?? false,
             'showCompareTip' => $snap['showCompareTip'] ?? false,
+            'capacityFeeUrl' => $snap['capacityFeeUrl'] ?? '',
+            'petFeeUrl'      => $snap['petFeeUrl'] ?? '',
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
             'cssVars'      => $snap['cssVars'] ?? [],
