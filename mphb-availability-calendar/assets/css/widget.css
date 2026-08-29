@@ -1309,11 +1309,18 @@ body.mphbac-info-open {
     outline-offset: 2px;
 }
 
-/* Check-in and check-out fields sit side-by-side on every viewport.
-   flex-wrap: wrap is the safety net on viewports too narrow for two date
-   inputs (~< 320px) — fields gracefully stack instead of overflowing.
-   The error message lives in the same flex container; flex-basis: 100%
-   pushes it to a new row below the date pair, full width. */
+/* Check-in and check-out sit side-by-side whenever two FULL-WIDTH date
+   inputs genuinely fit, and stack as clean full-width rows when they don't.
+   The old basis was calc(50% - 0.5em): a PERCENTAGE of the line always fits
+   two-up, so the wrap "safety net" could never trigger — instead, on narrow
+   portrait the inputs' 8.5em min-width floor made them overflow their 50%
+   fields into the gap/padding. The basis is now the same 8.5em as the input
+   floor (both resolve in this field's 0.95em context, so they track exactly,
+   including user font scaling): if two input-floor-wide fields + gap exceed
+   the sheet's inner width, the second wraps — measured cutover ≈ 330px
+   viewport at 16px body font, so 320px stacks and 375/414px stay two-up
+   with full date text. The error and estimate rows live in the same flex
+   container; their flex-basis: 100% keeps them full width below the pair. */
 .mphbac-sheet-body {
     display: flex;
     flex-direction: row;
@@ -1325,10 +1332,18 @@ body.mphbac-info-open {
 .mphbac-sheet-field {
     display: flex;
     flex-direction: column;
-    flex: 1 1 calc(50% - 0.5em);
+    flex: 1 1 8.5em; /* == .mphbac-input min-width; see block comment */
     min-width: 0;
     gap: 0.3em;
     font-size: 0.95em;
+}
+/* Fill the field exactly — the width the flex algorithm actually granted —
+   so an input can no longer bleed past its own field. The class-doubled
+   selector and the global min-width: 8.5em guard on .mphbac-input.mphbac-input
+   both stay untouched: they exist to defeat the Bravada Elementor kit's input
+   reset (see ~line 126) and removing either re-collapses date text sitewide. */
+.mphbac-sheet-field .mphbac-input.mphbac-input {
+    width: 100%;
 }
 .mphbac-sheet-field > span {
     font-weight: 600;

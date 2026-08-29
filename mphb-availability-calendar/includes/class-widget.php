@@ -802,7 +802,7 @@ class Widget extends Widget_Base
             'str_price_one_night'  => [__('Booking popup: estimate amount for one night ({price} replaced)', 'mphb-availability-calendar'), __('{price} for 1 night', 'mphb-availability-calendar')],
             'str_price_avg'        => [__('Booking popup: per-night average ({avg} replaced)', 'mphb-availability-calendar'), __('({avg}/night avg)', 'mphb-availability-calendar')],
             'str_price_estimating' => [__('Booking popup: estimate loading text', 'mphb-availability-calendar'), __('Estimating…', 'mphb-availability-calendar')],
-            'str_price_note'       => [__('Booking popup: estimate disclaimer', 'mphb-availability-calendar'), __('before any taxes/fees — final price shown at checkout', 'mphb-availability-calendar')],
+            'str_price_note'       => [__('Booking popup: estimate disclaimer', 'mphb-availability-calendar'), __('for 2 guests, before any taxes/fees — final price shown at checkout', 'mphb-availability-calendar')],
             'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
             'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
         ];

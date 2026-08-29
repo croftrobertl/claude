@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.1
+Stable tag: 0.20.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.20.2 =
+* Booking popup date fields on narrow phones: the Check-in/Check-out pair now stacks into clean full-width rows when two full-size date inputs genuinely don't fit (measured cutover ≈ 330px viewport), and stays side by side with full date text at 375px/414px. Previously the two-column split was a percentage, so it could never stack — on very narrow screens the inputs instead spilled out of their columns into the gap and padding. Desktop rendering is measured pixel-identical to 0.20.1.
+* The price-estimate disclaimer's default wording now reads "for 2 guests, before any taxes/fees — final price shown at checkout" (rates are per-accommodation for 2 guests; the estimate doesn't vary by guest count). This is the control's DEFAULT: any widget instance where the note text was customized in Elementor keeps its custom text and needs a manual edit to match.
+* CSS + one default string only. No JavaScript, markup, endpoint, availability, or caching changes; the 0.20.1 hint suppression is untouched.
 
 = 0.20.1 =
 * The single-cottage widget no longer shows the "All cottages booked through …" message. On an individual cottage's page that sentence was both impossible for it to know (it only ever looks at that one cottage) and misleading — a guest could read it as the whole property being full when only that cottage was, and be talked out of a booking that was free next door. The calendar's own colours already show that the cottage is booked.
