@@ -175,6 +175,36 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Items 3 & 4 (2026-08-30 polish) — two-row reservation details.
+ * "Accommodation:" label on its own row, cottage link beneath (renders per
+ * room, so a two-cottage checkout gets the split in each block); "Check-in:" /
+ * "Check-out:" labels on their own row with date+time beneath. Only the FIRST
+ * span becomes a block — the inline "from"/"until" span must stay inline.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form .mphb-room-type-title > span {
+    display: block;
+}
+
+.mphb_sc_checkout-form .mphb-check-in-date > span:first-of-type,
+.mphb_sc_checkout-form .mphb-check-out-date > span:first-of-type {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 6 (2026-08-30 polish) — the file input must be pill-width like every
+ * other field: full width, border-box, and long filenames ellipsize instead of
+ * widening the element (no horizontal scroll at 320px).
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form input[type="file"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
  * Item 13 — Keep "Cottage N:" on the first line and wrap the name below.
  *           JS inserts a <br> after the colon; this just makes the cell wrap
  *           cleanly and not stretch the layout.
@@ -221,6 +251,15 @@
 /* Labels that already carried no underline shouldn't gain one. */
 .mphb_sc_checkout-form label.dcc_checkout-no-underline .dcc_checkout-label-text {
     text-decoration: none;
+}
+
+/* Items 2/5 (2026-08-30 polish) — exactly ONE underline per field label.
+ * .dcc_checkout-label-text carries it; the processed label itself must not
+ * (its theme/inline underline sat at a different offset → two visible lines,
+ * and it also underlined the marker). Scoped to labels the JS has processed —
+ * never a global label reset. Section headers (h3) are untouched. */
+.mphb_sc_checkout-form label.dcc_checkout-label-fixed {
+    text-decoration: none !important;
 }
 
 /* ---------------------------------------------------------------------------

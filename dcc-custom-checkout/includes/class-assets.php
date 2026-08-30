@@ -14,6 +14,36 @@ final class Assets
     public function register(): void
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
+
+        // 2026-08-30 polish, item 1: MotoPress's "Accommodation Type:" label
+        // (rendered on the checkout as the accommodation row heading) becomes
+        // "Accommodation:". Filtered on the msgid, so the site's Loco Translate
+        // override for the same msgid is bypassed — that override should be
+        // deleted so the string has a single owner (this plugin).
+        add_filter('gettext_motopress-hotel-booking', [$this, 'filter_accommodation_label'], 20, 3);
+    }
+
+    /**
+     * Rewrite "Accommodation Type:" to "Accommodation:", checkout page only.
+     *
+     * @param mixed  $translation Translated string (post-MO, post-Loco).
+     * @param mixed  $text        Original msgid.
+     * @param mixed  $domain      Text domain (already motopress-hotel-booking
+     *                            via the domain-specific hook).
+     * @return mixed
+     */
+    public function filter_accommodation_label($translation, $text, $domain = '')
+    {
+        if ($text !== 'Accommodation Type:') {
+            return $translation;
+        }
+        // is_page() is only reliable once the main query exists; the checkout
+        // template renders long after 'wp', so earlier fires pass through
+        // untouched (also keeps search results / admin / emails unaffected).
+        if (!did_action('wp') || !self::is_checkout_page()) {
+            return $translation;
+        }
+        return __('Accommodation:', 'dcc-checkout');
     }
 
     /**

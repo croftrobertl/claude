@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,25 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.1 =
+* Checkout copy & layout polish (six items from 2026-08-30 phone screenshots):
+  - "Selected Accommodation:" -> "Accommodation:" via a gettext filter on
+    MotoPress's "Accommodation Type:" msgid, checkout page only (delete the
+    site's Loco Translate override for that msgid so the string has one owner).
+  - Exactly one underline per field label: the label-text span keeps its
+    underline; the processed label's own inline/theme underline (a second line
+    at a different offset, which also underlined the marker) is now cleared,
+    scoped via label.dcc_checkout-label-fixed — no global label reset. Section
+    headers unchanged; required markers still red and never underlined.
+  - Accommodation row: label on its own line, cottage link beneath (per room,
+    so two-cottage checkouts split in both blocks).
+  - Check-in/Check-out: label on its own line; date+time normalized to
+    "August 29, 2026, from 2:00pm" (template whitespace inside <time> trimmed,
+    " am"/" pm" collapsed) — text nodes only, <time datetime> attributes
+    untouched, idempotent under re-renders.
+  - Photo ID file input: pill-width like the other fields (100%, border-box),
+    long filenames ellipsize, no horizontal scroll at 320px.
 
 = 0.3.0 =
 * New: extra-guest fee for guests 3 and 4. On the configured accommodations

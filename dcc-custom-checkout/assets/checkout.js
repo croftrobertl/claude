@@ -71,8 +71,9 @@
         }
 
         showServerError(root);
-        cleanRequiredMarkers(root);   // Part B
-        applyBreakdownBreaks(root);   // Part A / item 13
+        cleanRequiredMarkers(root);       // Part B
+        applyBreakdownBreaks(root);       // Part A / item 13
+        normalizeReservationDates(root);  // 2026-08-30 polish, item 4
 
         var validators = [];
         var guest = setupGuestConditional(root); // Part C
@@ -152,6 +153,17 @@
         if (!hadUnderline) {
             label.classList.add('dcc_checkout-no-underline');
         }
+
+        // Items 2/5: the span now carries the ONLY underline. The label's own
+        // decoration (inline style and/or theme rule, at a different offset)
+        // would draw a second line through everything including the marker —
+        // clear the inline one here and let the scoped
+        // label.dcc_checkout-label-fixed CSS rule kill stylesheet-sourced ones.
+        if (/underline/.test(label.style.textDecoration || '') ||
+            /underline/.test(label.style.textDecorationLine || '')) {
+            label.style.textDecoration = 'none';
+        }
+        label.classList.add('dcc_checkout-label-fixed');
     }
 
     function trimEdgeWhitespace(span) {
@@ -201,6 +213,52 @@
                 break;
             }
         });
+    }
+
+    /* ===================================================================== *
+     * Item 4 (2026-08-30 polish) — reservation-details date/time text
+     * ===================================================================== */
+
+    // The check-in/check-out template leaves whitespace inside the <time>
+    // elements (newlines around <strong> collapse to a space before the comma)
+    // and the site time format renders "2:00 pm". Normalize the TEXT NODES of
+    // those two <p> blocks only: trim <time>/<strong> edges and collapse
+    // " am"/" pm" -> "am"/"pm". The <time datetime> attributes are never
+    // touched (machine-readable values stay intact). Idempotent, so it is safe
+    // to re-run from the MutationObserver after MotoPress re-renders.
+    function normalizeReservationDates(root) {
+        var blocks = root.querySelectorAll('.mphb-check-in-date, .mphb-check-out-date');
+        Array.prototype.forEach.call(blocks, function (p) {
+            var times = p.querySelectorAll('time');
+            Array.prototype.forEach.call(times, function (timeEl) {
+                normalizeTextIn(timeEl);
+            });
+        });
+    }
+
+    // Collapse internal whitespace runs, strip the space before am/pm, and trim
+    // the element's leading/trailing text — text nodes only, attributes intact.
+    function normalizeTextIn(el) {
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+        var nodes = [];
+        var n;
+        while ((n = walker.nextNode())) { nodes.push(n); }
+        nodes.forEach(function (node) {
+            node.textContent = node.textContent
+                .replace(/\s+/g, ' ')
+                .replace(/\s+([ap]m)\b/gi, '$1');
+        });
+        // Trim the element's outer edges (first/last text content).
+        if (nodes.length) {
+            nodes[0].textContent = nodes[0].textContent.replace(/^\s+/, '');
+            nodes[nodes.length - 1].textContent =
+                nodes[nodes.length - 1].textContent.replace(/\s+$/, '');
+        }
+        // A lone <strong> child gets its own edges trimmed too.
+        var strong = el.querySelector('strong');
+        if (strong && strong.firstChild && strong.firstChild.nodeType === 3) {
+            strong.firstChild.textContent = strong.firstChild.textContent.trim();
+        }
     }
 
     /* ===================================================================== *
@@ -749,9 +807,11 @@
             timer = setTimeout(function () {
                 applyBreakdownBreaks(root);
                 // MotoPress re-renders (coupon apply, country change, …) bring
-                // back untouched labels; both passes are idempotent via their
-                // data-dcc-* guards, so re-running is cheap and loop-safe.
+                // back untouched labels/dates; all passes are idempotent (the
+                // data-dcc-* guards, and text normalization that is a no-op on
+                // already-clean text), so re-running is cheap and loop-safe.
                 cleanRequiredMarkers(root);
+                normalizeReservationDates(root);
             }, 150);
         });
         obs.observe(root, { childList: true, subtree: true });
