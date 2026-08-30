@@ -36,7 +36,7 @@ final class Config
             'unavailable'       => __('The cottage selector is temporarily unavailable.', 'dcc-cottage-selector'),
 
             // Quick Pick questions
-            'q_party'           => __('How many of you?', 'dcc-cottage-selector'),
+            'q_party'           => __('How many guests will there be?', 'dcc-cottage-selector'),
             'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
             'q_pullout'         => __('Do you want a pullout couch?', 'dcc-cottage-selector'),
             'q_layout'          => __('Studio or 1-bedroom?', 'dcc-cottage-selector'),
@@ -75,8 +75,8 @@ final class Config
             'opt_onebed'        => __('1-bedroom', 'dcc-cottage-selector'),
             'opt_seats2'        => __('Table for 2', 'dcc-cottage-selector'),
             'opt_seats4'        => __('Table for 4', 'dcc-cottage-selector'),
-            'opt_party2'        => __('2 of us', 'dcc-cottage-selector'),
-            'opt_party34'       => __('3–4 of us', 'dcc-cottage-selector'),
+            'opt_party2'        => __('1-2', 'dcc-cottage-selector'),
+            'opt_party34'       => __('3-4', 'dcc-cottage-selector'),
 
             // What Matters Most rows + 3-state toggle
             'w_question'        => /* translators: %s: a priority, e.g. "Workspace" */ __('How much does %s matter?', 'dcc-cottage-selector'),
@@ -156,7 +156,7 @@ final class Config
 
             // Informational notes under the party-size / pet questions. No fee
             // amounts anywhere in this plugin (single source of truth elsewhere).
-            'capacity_note'     => __('First 2 guests are included in the nightly rate; a per-night fee applies for guests 3 and 4.', 'dcc-cottage-selector'),
+            'capacity_note'     => __('The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pullout couch.', 'dcc-cottage-selector'),
             'pet_note'          => __('Pets are welcome in Cottage 34 only, by pre-approval.', 'dcc-cottage-selector'),
             'fee_link'          => __('Fee details', 'dcc-cottage-selector'),
 

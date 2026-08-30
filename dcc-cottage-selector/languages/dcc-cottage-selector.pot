@@ -21,6 +21,10 @@ msgstr ""
 msgid "%d sq ft"
 msgstr ""
 
+#: includes/class-config.php:78
+msgid "1-2"
+msgstr ""
+
 #: includes/class-config.php:142
 msgid "1-Bedroom Suite"
 msgstr ""
@@ -33,12 +37,8 @@ msgstr ""
 msgid "1-bedroom separation"
 msgstr ""
 
-#: includes/class-config.php:78
-msgid "2 of us"
-msgstr ""
-
 #: includes/class-config.php:79
-msgid "3–4 of us"
+msgid "3-4"
 msgstr ""
 
 #: includes/class-selector-widget.php:219
@@ -73,17 +73,17 @@ msgstr ""
 msgid "Answer radius"
 msgstr ""
 
+#: includes/class-selector-widget.php:502
+msgid "Answer: 1-2 guests"
+msgstr ""
+
 #: includes/class-selector-widget.php:359
 #: includes/class-selector-widget.php:499
 msgid "Answer: 1-bedroom"
 msgstr ""
 
-#: includes/class-selector-widget.php:502
-msgid "Answer: 2 of us"
-msgstr ""
-
 #: includes/class-selector-widget.php:503
-msgid "Answer: 3–4 of us"
+msgid "Answer: 3-4 guests"
 msgstr ""
 
 #: includes/class-selector-widget.php:364
@@ -474,10 +474,6 @@ msgstr ""
 msgid "Find your perfect cottage"
 msgstr ""
 
-#: includes/class-config.php:159
-msgid "First 2 guests are included in the nightly rate; a per-night fee applies for guests 3 and 4."
-msgstr ""
-
 #: includes/class-config.php:102
 msgid "Floor"
 msgstr ""
@@ -535,7 +531,7 @@ msgid "Hover transition speed"
 msgstr ""
 
 #: includes/class-config.php:39
-msgid "How many of you?"
+msgid "How many guests will there be?"
 msgstr ""
 
 #: includes/class-config.php:82
@@ -1180,6 +1176,10 @@ msgstr ""
 #: includes/class-selector-widget.php:577
 #: includes/class-selector-widget.php:1029
 msgid "Text alignment"
+msgstr ""
+
+#: includes/class-config.php:159
+msgid "The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pullout couch."
 msgstr ""
 
 #: includes/class-config.php:36

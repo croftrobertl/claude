@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.1
+Stable tag: 0.22.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ amenities, so guests face needless choice overload. This plugin adds a short,
 elegant decision tool:
 
 * **Quick finder (default)** — a step-through wizard, one tappable question per
-  screen (how many of you? desk? pullout couch? studio or 1-bedroom? table for
+  screen (how many guests? desk? pullout couch? studio or 1-bedroom? table for
   2 or 4? pet-friendly? ground floor? screened porch?), then straight to the
   top matches.
   An optional "Review your answers" step can be switched on in the editor.
@@ -225,6 +225,17 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.2 =
+* Copy revisions to the party-size question (owner-approved wording). The
+  question now reads "How many guests will there be?", the answers are "1-2"
+  and "3-4", and the capacity note says what guests 3 and 4 actually sleep on:
+  "The 2 guests are included in the nightly rate and will have a queen bed. For
+  guests 3 and 4, a nightly fee will apply and they will have a pullout couch."
+* Wording only — nothing about matching changed. "3-4" still hides exactly
+  Cottages 33 and 34, "1-2" still shows all eight, and shared links using
+  ?party=2 / ?party=3-4 resolve exactly as they did before (the answers are
+  matched on their stored values, never on the label text).
 
 = 0.22.1 =
 * Results pages (Matching Quiz and Weigh Priorities): the per-card "Compare"

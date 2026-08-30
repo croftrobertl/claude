@@ -1072,7 +1072,7 @@ function configWith(overrides) {
 
 // ==== v0.22.0: sleeps-4 update, party-size filter, highlights, notes ====
 
-// ---- 38. Party-size hard filter: "3-4 of us" removes exactly the two studios ----
+// ---- 38. Party-size hard filter: "3-4" removes exactly the two studios ----
 (function () {
   const w = freshDom();
   const cfg = JSON.parse(CONFIG);
@@ -1082,20 +1082,20 @@ function configWith(overrides) {
     res.excluded.map(e => e.id).sort().join(',') === '33,34' && res.results.length === 6);
   ok('party34 survivors all sleep 3+', res.results.every(c => c.guests >= 3));
 
-  // Flow-level: answering "3-4 of us" on step 1 drops the live count to 6.
+  // Flow-level: answering "3-4" on step 1 drops the live count to 6.
   const root = mountSelector(w);
   enter(root, 'quick');
   ok('quick count starts at 8', /\b8\b/.test(countText(root)));
   clickAnswer(root, '34');
-  ok('"3-4 of us" drops the live count to 6', /\b6\b/.test(countText(root)));
+  ok('"3-4" drops the live count to 6', /\b6\b/.test(countText(root)));
   stepThrough(root, 'either'); seeMatches(root);
   ok('results exclude the studios', !cardNames(root).some(n => /Cottage 3[34]/.test(n)));
 
-  // "2 of us" and the explicit skip constrain nothing — every cottage sleeps 2.
+  // "1-2" and the explicit skip constrain nothing — every cottage sleeps 2.
   const r2 = mountSelector(freshDom());
   enter(r2, 'quick');
   clickAnswer(r2, '2');
-  ok('"2 of us" keeps all 8', /\b8\b/.test(countText(r2)));
+  ok('"1-2" keeps all 8', /\b8\b/.test(countText(r2)));
   const r3 = mountSelector(freshDom());
   enter(r3, 'quick');
   clickAnswer(r3, 'either');
@@ -1113,7 +1113,7 @@ function configWith(overrides) {
   const root2 = mountSelector(w2);
   root2.querySelector('.dccs-edit-answers').click();
   const firstRow = root2.querySelector('.dccs-review-list li .dccs-review-a');
-  ok('deeplink party=2 lands as the "2 of us" answer', firstRow.textContent.trim() === '2 of us');
+  ok('deeplink party=2 lands as the "1-2" answer', firstRow.textContent.trim() === '1-2');
 
   // High-priority weight param comes free via the existing w_<group> loop.
   // Weight deep links enter the wizard (results need the walk-through), so
@@ -1184,7 +1184,10 @@ function configWith(overrides) {
   const root = mountSelector(w);
   enter(root, 'quick');
   const note = root.querySelector('.dccs-q-note');
-  ok('party step shows the capacity note', !!note && /First 2 guests are included/.test(note.textContent));
+  ok('party step shows the capacity note',
+    !!note && /The 2 guests are included in the nightly rate and will have a queen bed/.test(note.textContent));
+  ok('capacity note says what guests 3 and 4 sleep on',
+    /guests 3 and 4[\s\S]*pullout couch/.test(note.textContent));
   ok('no fee link renders while the URL control is empty (default)', !note.querySelector('a'));
   ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
   answerNext(root, 'either');
@@ -1220,7 +1223,7 @@ function configWith(overrides) {
   ok('no compare checkbox/text on a single-result page',
     !r.querySelector('.dccs-cmp-toggle') && !r.querySelector('.dccs-card input[data-cmp]'));
 
-  // Exactly two results (3-4 of us + table for 4 -> 22 and 23): the boundary case.
+  // Exactly two results (3-4 + table for 4 -> 22 and 23): the boundary case.
   const r2 = mountSelector(freshDom('https://example.com/?party=3-4&dining=4'));
   ok('two-result page renders two cards', r2.querySelectorAll('.dccs-card').length === 2);
   ok('compare checkboxes return at 2+ results', r2.querySelectorAll('.dccs-cmp-toggle').length === 2);
@@ -1246,6 +1249,41 @@ function configWith(overrides) {
   const fbCards = r4.querySelectorAll('.dccs-card').length;
   ok('single-card fallback hides the compare checkbox',
     fbCards >= 1 && (fbCards >= 2 || !r4.querySelector('.dccs-cmp-toggle')));
+})();
+
+// ---- 45. Party labels are decoupled from the values the engine + deep links use ----
+// Copy revisions (0.22.2) renamed the visible answers to "1-2" / "3-4". The chip
+// VALUES, the hard filter, and ?party= must not move with the label — otherwise
+// every shared link and every future re-wording silently changes behaviour.
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  const chips = curChips(root);
+  ok('party chips still carry the values 2 / 34 / either',
+    chips.map(c => c.dataset.value).join(',') === '2,34,either');
+  ok('party chips display the revised labels',
+    chips.map(c => c.textContent.trim()).join(',') === '1-2,3-4,No preference');
+  ok('the labels use straight hyphens, not en dashes',
+    !chips.some(c => c.textContent.indexOf('\u2013') !== -1));
+
+  // Arbitrary custom labels (as an Elementor editor might type) must leave both
+  // the filter and the deep link resolving exactly as before.
+  const cfg = JSON.parse(CONFIG);
+  cfg.strings.opt_party2 = 'Just the two of us';
+  cfg.strings.opt_party34 = 'A whole crew';
+  const r2 = mountSelector(freshDom(), JSON.stringify(cfg));
+  enter(r2, 'quick');
+  clickAnswer(r2, '34');
+  ok('a relabelled "3-4" chip still filters to 6', /\b6\b/.test(countText(r2)));
+
+  const r3 = mountSelector(freshDom('https://example.com/?party=3-4'), JSON.stringify(cfg));
+  ok('?party=3-4 still removes the studios under custom labels',
+    cardNames(r3).length > 0 && !cardNames(r3).some(n => /Cottage 3[34]/.test(n)));
+  const r4 = mountSelector(freshDom('https://example.com/?party=2'), JSON.stringify(cfg));
+  r4.querySelector('.dccs-edit-answers').click();
+  ok('?party=2 still selects the first option (shown with its custom label)',
+    r4.querySelector('.dccs-review-list li .dccs-review-a').textContent.trim() === 'Just the two of us');
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

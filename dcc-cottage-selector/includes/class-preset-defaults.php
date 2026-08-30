@@ -61,13 +61,13 @@ final class Preset_Defaults
             'str_opt_studio' => 'Studio',
             'str_opt_yes' => 'Yes',
             'str_q_desk' => 'Do you need a computer desk?',
-            'str_q_party' => 'How many of you?',
-            'str_opt_party2' => '2 of us',
-            'str_opt_party34' => '3–4 of us',
+            'str_q_party' => 'How many guests will there be?',
+            'str_opt_party2' => '1-2',
+            'str_opt_party34' => '3-4',
             'str_w_party' => 'Room for 3–4 guests',
             // Capacity + pet policy notes. Neutral wording; fee AMOUNTS are
             // deliberately absent (single source of truth elsewhere on the site).
-            'str_capacity_note' => 'First 2 guests are included in the nightly rate; a per-night fee applies for guests 3 and 4.',
+            'str_capacity_note' => 'The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pullout couch.',
             'str_pet_note' => 'Pets are welcome in Cottage 34 only, by pre-approval.',
             'str_q_dining' => 'Do you need a dining table for 2 or 4?',
             'str_q_layout' => 'Which layout do you prefer: studio or 1-bedroom?',
