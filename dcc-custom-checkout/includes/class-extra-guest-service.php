@@ -43,6 +43,27 @@ final class Extra_Guest_Service
         if (wp_doing_ajax() || is_admin()) {
             return;
         }
+        // On the checkout REST route, Rest_Guard enforces the same rule with a
+        // proper JSON error instead of a 302; stand down here.
+        if (Checkout_Request::defer_to_rest()) {
+            return;
+        }
+
+        if ($this->find_violation() !== null) {
+            Checkout_Request::redirect_back_with_error('guests');
+        }
+    }
+
+    /**
+     * Shared validator — transport-agnostic (reads via Checkout_Request, which
+     * serves $_POST or the parsed REST payload alike). Returns the error code
+     * ('guests') or null when the submission is fine.
+     */
+    public function find_violation(): ?string
+    {
+        if (!Config::guest_fee_active()) {
+            return null;
+        }
 
         $guest_acc = Config::guest_accommodations();
         $guest_ids = Config::guest_service_id_list();
@@ -65,24 +86,26 @@ final class Extra_Guest_Service
                 // Exactly the bucket service, multiplied by exactly the extra
                 // guest count — anything else is tampering (or a JS failure).
                 if ($expected <= 0 || empty($attached)) {
-                    Checkout_Request::redirect_back_with_error('guests');
+                    return 'guests';
                 }
                 foreach ($attached as $svc) {
                     if ($svc['id'] !== $expected || $svc['adults'] !== $extra) {
-                        Checkout_Request::redirect_back_with_error('guests');
+                        return 'guests';
                     }
                 }
             } else {
                 // No billable extra guests here: no extra-guest service allowed.
                 if (!empty($attached)) {
-                    Checkout_Request::redirect_back_with_error('guests');
+                    return 'guests';
                 }
                 // Non-guest-fee accommodations (33/34) stay capped at the
                 // included count; only enforce when the room type is known.
                 if (!$is_guest_acc && $room['room_type_id'] > 0 && $room['adults'] > $included) {
-                    Checkout_Request::redirect_back_with_error('guests');
+                    return 'guests';
                 }
             }
         }
+
+        return null;
     }
 }

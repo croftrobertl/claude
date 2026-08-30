@@ -39,10 +39,27 @@ final class Guest_Fields
         if (wp_doing_ajax() || is_admin()) {
             return;
         }
+        // On the checkout REST route, Rest_Guard enforces the same rule with a
+        // proper JSON error instead of a 302; stand down here.
+        if (Checkout_Request::defer_to_rest()) {
+            return;
+        }
 
+        if ($this->find_violation() !== null) {
+            Checkout_Request::redirect_back_with_error('guest2');
+        }
+    }
+
+    /**
+     * Shared validator — transport-agnostic (reads via Checkout_Request, which
+     * serves $_POST or the parsed REST payload alike). Returns the error code
+     * ('guest2') or null when the submission is fine.
+     */
+    public function find_violation(): ?string
+    {
         // Only enforce when 2+ adults were selected.
         if ($this->posted_adults() < 2) {
-            return;
+            return null;
         }
 
         // Guest-2 fields are NATIVE Checkout Fields, submitted inside
@@ -63,9 +80,7 @@ final class Guest_Fields
             }
         }
 
-        if ($found_any && $missing_any) {
-            Checkout_Request::redirect_back_with_error('guest2');
-        }
+        return ($found_any && $missing_any) ? 'guest2' : null;
     }
 
     /**

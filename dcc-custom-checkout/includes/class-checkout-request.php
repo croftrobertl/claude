@@ -25,7 +25,51 @@ if (!defined('ABSPATH')) {
 final class Checkout_Request
 {
     /**
-     * Raw, unslashed room-details array from the POST (or empty array).
+     * When set, every reader pulls from this parsed payload instead of $_POST.
+     * The REST guard sets it to WP_REST_Request::get_params() — the parsed body
+     * regardless of content type (JSON or multipart) and already unslashed by
+     * core — so the same validators enforce identically on both transports.
+     * A JSON checkout leaves $_POST empty, which is exactly the bypass this
+     * closes (2026-08-30 audit).
+     *
+     * @var array<int|string,mixed>|null
+     */
+    private static ?array $payload = null;
+
+    /**
+     * @param array<int|string,mixed> $data Parsed request params (unslashed).
+     */
+    public static function set_payload(array $data): void
+    {
+        self::$payload = $data;
+    }
+
+    public static function clear_payload(): void
+    {
+        self::$payload = null;
+    }
+
+    /**
+     * Should the wp_loaded backstops stand down on this request? True when the
+     * request targets the MotoPress checkout REST route AND the REST guard is
+     * registered to enforce there (with a proper JSON error instead of a 302
+     * that fetch() follows opaquely). If the guard ever failed to register,
+     * this returns false and the legacy $_POST path keeps enforcing.
+     */
+    public static function defer_to_rest(): bool
+    {
+        if (!Rest_Guard::is_registered()) {
+            return false;
+        }
+        $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+        // Covers /wp-json/mphb/v1/checkout and the plain-permalink
+        // ?rest_route=/mphb/v1/checkout form (also URL-encoded).
+        return strpos($uri, '/mphb/v1/checkout') !== false
+            || strpos(rawurldecode($uri), '/mphb/v1/checkout') !== false;
+    }
+
+    /**
+     * Raw, unslashed room-details array from the submission (or empty array).
      * Prefers the real `room_details` key; falls back to `mphb_room_details`.
      *
      * @return array<int|string,mixed>
@@ -33,7 +77,11 @@ final class Checkout_Request
     public static function room_details(): array
     {
         foreach (['room_details', 'mphb_room_details'] as $key) {
-            if (isset($_POST[$key]) && is_array($_POST[$key])) {
+            if (self::$payload !== null) {
+                if (isset(self::$payload[$key]) && is_array(self::$payload[$key])) {
+                    return self::$payload[$key]; // REST params: already unslashed
+                }
+            } elseif (isset($_POST[$key]) && is_array($_POST[$key])) {
                 return wp_unslash($_POST[$key]); // phpcs:ignore WordPress.Security
             }
         }
@@ -47,6 +95,10 @@ final class Checkout_Request
      */
     public static function customer_fields(): array
     {
+        if (self::$payload !== null) {
+            $cf = self::$payload['customer_fields'] ?? null;
+            return is_array($cf) ? $cf : [];
+        }
         if (isset($_POST['customer_fields']) && is_array($_POST['customer_fields'])) {
             return wp_unslash($_POST['customer_fields']); // phpcs:ignore WordPress.Security
         }
@@ -60,7 +112,7 @@ final class Checkout_Request
      */
     public static function is_checkout_submission(): bool
     {
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        if (self::$payload === null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             return false;
         }
         return self::room_details() !== [];
@@ -207,10 +259,15 @@ final class Checkout_Request
     private static function posted_date(array $keys): ?int
     {
         foreach ($keys as $key) {
-            if (empty($_POST[$key])) {
+            if (self::$payload !== null) {
+                $value = self::$payload[$key] ?? '';
+            } else {
+                $value = isset($_POST[$key]) ? wp_unslash($_POST[$key]) : ''; // phpcs:ignore WordPress.Security
+            }
+            if (!is_scalar($value) || $value === '') {
                 continue;
             }
-            $raw = sanitize_text_field(wp_unslash($_POST[$key]));
+            $raw = sanitize_text_field((string) $value);
             $dt  = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw, new \DateTimeZone('UTC'));
             if ($dt !== false) {
                 return $dt->getTimestamp();

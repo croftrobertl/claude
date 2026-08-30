@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,30 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.2 =
+* Security (2026-08-30 audit): the server backstops read $_POST, but MotoPress's
+  public REST route POST /mphb/v1/checkout also accepts application/json, which
+  leaves $_POST empty — a crafted JSON request could book 3–4 guests on the
+  4-sleeper cottages with no extra-guest fee (and dodge the pet/guest-2 rules).
+  All three backstops are now transport-agnostic:
+  - Each exposes a shared find_violation() validator; Checkout_Request can be
+    fed the parsed REST body (WP_REST_Request::get_params(), JSON and multipart
+    alike) instead of $_POST.
+  - New Rest_Guard hooks rest_request_before_callbacks (core WP, post-parse,
+    pre-callback — before the booking exists) on /mphb/v1/checkout and runs the
+    three validators there. Rejections return a 422 JSON WP_Error with a
+    readable message — not the 302 redirect that a fetch() follows opaquely
+    (audit finding 2). A LEGITIMATE JSON checkout carrying the correct services
+    now succeeds instead of being blanket-refused.
+  - The wp_loaded $_POST backstops remain fully active for any non-REST form
+    post; they stand down only on the checkout REST route, and only while the
+    REST guard is registered (belt and braces).
+  - No capability exemption on the REST route (it is the public booking
+    pipeline); the wp-admin exemption for admin screens is unchanged.
+* With this verified on staging, the mu-plugin stopgap
+  wp-content/mu-plugins/dcc-checkout-rest-guard.php must be deleted in the same
+  deployment window (it blanket-rejects JSON checkouts this version handles).
 
 = 0.3.1 =
 * Checkout copy & layout polish (six items from 2026-08-30 phone screenshots):

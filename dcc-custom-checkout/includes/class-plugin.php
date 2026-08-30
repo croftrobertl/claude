@@ -44,6 +44,10 @@ final class Plugin
         (new Guest_Fields())->register();
         (new Pet_Service())->register();
         (new Extra_Guest_Service())->register();
+        // REST-pipeline enforcement: the same three validators run on the
+        // parsed /mphb/v1/checkout request body (JSON and multipart alike),
+        // closing the empty-$_POST JSON bypass with a proper 422 JSON error.
+        (new Rest_Guard())->register();
     }
 
     public function load_textdomain(): void

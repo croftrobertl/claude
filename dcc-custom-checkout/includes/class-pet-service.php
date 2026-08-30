@@ -59,6 +59,27 @@ final class Pet_Service
         if (wp_doing_ajax() || is_admin()) {
             return;
         }
+        // On the checkout REST route, Rest_Guard enforces the same rule with a
+        // proper JSON error instead of a 302; stand down here.
+        if (Checkout_Request::defer_to_rest()) {
+            return;
+        }
+
+        if ($this->find_violation() !== null) {
+            Checkout_Request::redirect_back_with_error('pet');
+        }
+    }
+
+    /**
+     * Shared validator — transport-agnostic (reads via Checkout_Request, which
+     * serves $_POST or the parsed REST payload alike). Returns the error code
+     * ('pet') or null when the submission is fine.
+     */
+    public function find_violation(): ?string
+    {
+        if (!Config::pet_fee_enabled()) {
+            return null;
+        }
 
         // Is this submission for a configured pet accommodation? "Has dog" is
         // inferred from the attached pet Service (present in room_details).
@@ -66,22 +87,22 @@ final class Pet_Service
         $is_pet   = (bool) array_intersect(Config::pet_accommodations(), $type_ids)
             || $this->any_pet_service_present();
         if (!$is_pet) {
-            return;
+            return null;
         }
 
         if (!$this->any_pet_service_present()) {
-            return; // No pet service attached → no-dog booking → nothing to enforce.
+            return null; // No pet service attached → no-dog booking → nothing to enforce.
         }
 
         // A pet service is attached: it must be exactly the bucket service.
         $nights      = Checkout_Request::nights();
         $expected_id = Config::service_id_for_nights($nights);
         if ($expected_id <= 0 || !Checkout_Request::contains_service_id($expected_id)) {
-            Checkout_Request::redirect_back_with_error('pet');
+            return 'pet';
         }
         foreach (Config::pet_service_id_list() as $sid) {
             if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
-                Checkout_Request::redirect_back_with_error('pet');
+                return 'pet';
             }
         }
 
@@ -91,9 +112,11 @@ final class Pet_Service
         foreach (Config::dog_field_name_list() as $name) {
             $value = Checkout_Request::customer_field_value($name);
             if ($value !== null && trim($value) === '') {
-                Checkout_Request::redirect_back_with_error('pet');
+                return 'pet';
             }
         }
+
+        return null;
     }
 
     private function any_pet_service_present(): bool
