@@ -81,6 +81,20 @@ class Widget extends \Elementor\Widget_Base {
 			]
 		);
 
+		// 1.8.1: the preferred, zero-config countdown placement — appended
+		// under this widget wherever it already sits. The default mirrors the
+		// sitewide toggle at the moment the control is registered; the
+		// sitewide toggle still overrides when off.
+		$this->add_control(
+			'show_countdown',
+			[
+				'label'       => __( 'Show season countdown', 'dcc-wildlife' ),
+				'type'        => \Elementor\Controls_Manager::SWITCHER,
+				'default'     => Water_Admin::countdown_enabled() ? 'yes' : '',
+				'description' => __( 'Appends the "…season starts in N days" line below the widget. The sitewide toggle in DCC → Wildlife must also be on.', 'dcc-wildlife' ),
+			]
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -94,6 +108,9 @@ class Widget extends \Elementor\Widget_Base {
 				'show_guide'   => 'yes' === ( $settings['show_guide'] ?? 'yes' ),
 				'show_browser' => 'yes' === ( $settings['show_browser'] ?? 'yes' ),
 				'compact'      => 'yes' === ( $settings['compact'] ?? '' ),
+				// Missing on widgets saved before 1.8.1 — default to 'yes' so
+				// the 1.8.0 auto-append behaviour carries over unchanged.
+				'countdown'    => 'yes' === ( $settings['show_countdown'] ?? 'yes' ),
 			]
 		);
 	}

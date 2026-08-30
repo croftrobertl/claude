@@ -613,6 +613,12 @@
 					}
 				}
 			);
+			// Standalone countdown widget (1.8.1): fill its shell when the
+			// editor/preview re-renders it.
+			window.elementorFrontend.hooks.addAction(
+				'frontend/element_ready/dccwl_countdown.default',
+				function () { initCountdown(); }
+			);
 		}
 	});
 })();

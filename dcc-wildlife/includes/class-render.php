@@ -63,13 +63,26 @@ final class Render {
 		return self::countdown_shell();
 	}
 
+	/** One shell per page (1.8.1) — see countdown_shell(). */
+	private static bool $shell_printed = false;
+
 	/**
 	 * The empty countdown shell. Same markup as the mu-plugin's: an empty,
 	 * hidden div the JS fills — the number of days is computed in the
 	 * browser, NEVER baked into cached HTML (same doctrine as "the current
-	 * month"). widget.js fills every instance on the page.
+	 * month").
+	 *
+	 * Emitted ONCE per page (1.8.1): three entry points share this renderer —
+	 * the month widget's toggle, the standalone dccwl_countdown widget and
+	 * the legacy [dcc_wildlife_countdown] shortcode — and a page using more
+	 * than one must still show exactly one line. First caller wins; the rest
+	 * get ''. The JS is naturally single-copy via wp_enqueue_script.
 	 */
 	private static function countdown_shell(): string {
+		if ( self::$shell_printed ) {
+			return '';
+		}
+		self::$shell_printed = true;
 		return '<div class="dccwl-countdown" data-dccwl-countdown hidden></div>';
 	}
 
@@ -120,6 +133,12 @@ final class Render {
 				'show_guide'   => true,
 				'show_browser' => true,
 				'compact'      => false,
+				// 1.8.1: per-placement countdown append (the month widget's
+				// "Show season countdown" toggle maps here). The global
+				// dcc_wl_countdown_enabled option still governs above this:
+				// when it is off, countdown_possible() is false and no path
+				// renders anything regardless of this flag.
+				'countdown'    => true,
 			]
 		);
 
@@ -200,7 +219,7 @@ final class Render {
 		// Season countdown (absorbed from the mu-plugin in 1.8.0): appended
 		// after the widget, exactly where the mu-plugin used to put it. While
 		// that file still exists it appends its own line and this adds nothing.
-		if ( self::countdown_possible() ) {
+		if ( $opts['countdown'] && self::countdown_possible() ) {
 			$out .= self::countdown_shell();
 		}
 

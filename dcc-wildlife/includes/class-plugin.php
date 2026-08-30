@@ -133,7 +133,9 @@ final class Plugin {
 	public function register_widget( $widgets_manager ): void {
 		require_once DCC_WL_DIR . 'includes/class-widget.php';
 		require_once DCC_WL_DIR . 'includes/class-water-widget.php';
+		require_once DCC_WL_DIR . 'includes/class-countdown-widget.php';
 		$widgets_manager->register( new Widget() );
 		$widgets_manager->register( new Water_Widget() );
+		$widgets_manager->register( new Countdown_Widget() );
 	}
 }

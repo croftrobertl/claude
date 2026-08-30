@@ -61,10 +61,15 @@ includes/class-sprites.php    # Bespoke species sprite registry (48×48 SVG path
                               #   + symbol-sheet/<use> emitters (v1.3.0)
 includes/class-render.php     # Shared renderer for widget AND shortcode (identical
                               #   output); prints DCC_WL_CFG inline JSON once;
-                              #   owns the season countdown since 1.8.0 (shell
-                              #   appended after the widget + standalone
-                              #   [dcc_wildlife_countdown]; widget.js computes
-                              #   the day count client-side in canal time)
+                              #   owns the season countdown since 1.8.0 — ONE
+                              #   renderer behind three entry points (month
+                              #   widget toggle, dccwl_countdown widget,
+                              #   [dcc_wildlife_countdown]), shell emitted ONCE
+                              #   per page; widget.js computes the day count
+                              #   client-side in canal time
+includes/class-countdown-widget.php # Elementor widget dccwl_countdown (1.8.1):
+                              #   thin wrapper over the same countdown renderer;
+                              #   editor shows a why-empty note instead of nothing
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
 includes/class-water-fact.php   # THE GATE: private ctor + make(); no source => no Fact
 includes/class-water-data.php   # Stored settings + almanac (one seeded verified row)
@@ -286,8 +291,19 @@ that's not true."* It is enforced structurally, not editorially.
   (`dcc_wl_countdown_enabled`, default 1), same markup/styling, day count
   computed by widget.js in America/New_York (a season is a fact about
   Florida), never baked into cached HTML. Handover step for the owner:
-  verify 1.8.0 live, THEN delete
+  verify live, THEN delete
   `wp-content/mu-plugins/dcc-wildlife-countdown.php`.
+- **Countdown entry points (1.8.1): three, one renderer, ONE shell per
+  page.** (a) the `dccwl_month` widget's "Show season countdown" toggle
+  (default mirrors the sitewide option; widgets saved pre-1.8.1 behave as
+  1.8.0, i.e. append); (b) the standalone `dccwl_countdown` Elementor
+  widget; (c) the legacy `[dcc_wildlife_countdown]` shortcode.
+  `Render::countdown_shell()` has a static first-caller-wins guard so any
+  combination yields exactly one line and the JS ships once via
+  wp_enqueue_script. The sitewide `dcc_wl_countdown_enabled` switch
+  overrides all three. The live site builds pages from the Elementor
+  widgets, not shortcodes — that is WHY the widgets exist; do not retire
+  them back to shortcode-only delivery.
 - **Settings-merge armour (1.8.0).** `Water_Data::all()` merges stored
   settings over defaults with `wp_parse_args`, which is KEY-level: an
   array-typed setting a site already stored (chain_waters, almanac, links)
@@ -374,11 +390,15 @@ Deliver that file to the owner for the Plugins → Add New → Upload route.
 - Admin: exactly ONE settings page. With the mu-plugin still installed it is
   DCC → Water (plus the mu-plugin's DCC → Wildlife); after deleting the
   mu-plugin it moves to DCC → Wildlife and both old pages are gone.
-- Countdown (1.8.0): with the toggle on and the mu-plugin DELETED, the
+- Countdown (1.8.0/1.8.1): with the toggle on and the mu-plugin DELETED, the
   "…season starts in N days" line renders below the widget, identical to the
   mu-plugin's line; with the mu-plugin still present, exactly ONE line
-  renders (the mu-plugin's). `[dcc_wildlife_countdown]` alone on a page
-  renders the line; toggle off renders nothing.
+  renders (the mu-plugin's). The standalone "DCC Wildlife — Season
+  Countdown" widget renders the line on its own; the month widget's "Show
+  season countdown" toggle adds/removes the append; BOTH on one page yield
+  exactly ONE shell and one copy of the JS; `[dcc_wildlife_countdown]`
+  still works; the sitewide toggle off renders nothing by any path; the
+  Elementor editor never fatals and an empty countdown widget explains why.
 - Field guide shows the single attribution line ("local knowledge from your
   hosts"); map popups show no English when a translation is loaded; each map
   colour-by mode shows its legend row and grey is explained.

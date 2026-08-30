@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.8.0
+Stable tag: 1.8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,10 +40,18 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 * Elementor: add the **DCC Wildlife — On the Canal** widget (category "Dora Canal Court"). Controls: title override, show/hide field guide, show/hide month browser, compact mode (spotlight band only).
 * Anywhere else: `[dcc_wildlife title="" guide="yes" browser="yes" compact="no"]`.
 * Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under DCC → Wildlife (Field guide / Water / Map). It renders nowhere until placed — nothing is auto-injected.
+* Season countdown: on by default under the wildlife widget (its "Show season countdown" toggle controls the append per placement), or place the **DCC Wildlife — Season Countdown** widget / `[dcc_wildlife_countdown]` anywhere on its own. One line per page whichever combination is used; the sitewide switch lives in DCC → Wildlife.
 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.8.1 =
+* **The season countdown is now placeable like everything else — through Elementor.** 1.8.0 delivered it via shortcodes only, but the live guest pages are built from the native Elementor widgets, so it had no way onto a real page. Two additions, one shared renderer:
+* **"Show season countdown" toggle on the On the Canal widget** (default on, mirroring the sitewide switch) — the line appends under the guide wherever that widget already sits. Widgets saved before 1.8.1 keep the 1.8.0 auto-append behaviour unchanged.
+* **A standalone "DCC Wildlife — Season Countdown" widget** (`dccwl_countdown`, in the Dora Canal Court category) for placing the line on its own. In the editor an empty render explains itself instead of looking broken.
+* **Exactly one line per page**, whichever combination is placed: the shell is emitted once (first entry point wins) and the JS ships once. The `[dcc_wildlife_countdown]` shortcode still works as a third entry point.
+* The sitewide toggle in DCC → Wildlife still overrides everything: off means no path renders anything.
 
 = 1.8.0 =
 Implements the 1.7.3 self-audit findings, numbered below as in that report.
