@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.0
+Stable tag: 0.22.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.1 =
+* Results pages (Matching Quiz and Weigh Priorities): the per-card "Compare"
+  checkbox/text now renders only when 2 or more results share the page. A lone
+  result has nothing to be compared with, so its card shows just the
+  View-cottage button. The rule also covers the no-match fallback list and
+  counts the extra highlighted card a Mini Entry adds. With 2+ results,
+  everything works exactly as before, and the Compare mode in the menu is
+  unchanged.
 
 = 0.22.0 =
 Sleeps-4 update: capacity data, party-size filter, per-cottage highlights.

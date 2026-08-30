@@ -1116,10 +1116,12 @@ function configWith(overrides) {
   ok('deeplink party=2 lands as the "2 of us" answer', firstRow.textContent.trim() === '2 of us');
 
   // High-priority weight param comes free via the existing w_<group> loop.
-  const w3 = freshDom('https://example.com/?w_party=high');
+  // Weight deep links enter the wizard (results need the walk-through), so
+  // assert on the live count: High party = must-have -> 6 of 8 match.
+  const w3 = freshDom('https://example.com/?mode=weights&w_party=high');
   const root3 = mountSelector(w3);
-  ok('deeplink w_party=high filters the studios out of results',
-    !cardNames(root3).some(n => /Cottage 3[34]/.test(n)));
+  ok('deeplink w_party=high narrows the weights live count to 6',
+    /\b6\b/.test(countText(root3)));
 })();
 
 // ---- 40. Cottage 35 renders as Blue Heron Hideaway ----
@@ -1203,6 +1205,47 @@ function configWith(overrides) {
   const link = r2.querySelector('.dccs-q-note a.dccs-q-note-link');
   ok('a set capacity URL renders the fee-details link',
     !!link && link.getAttribute('href') === '/extra-guest-fees/' && link.textContent === 'Fee details');
+})();
+
+// ---- 44. Compare checkbox hides when the results page shows only one card ----
+(function () {
+  // Quick quiz to a single match (screened porch -> only Cottage 22).
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  stepThrough(root, 'either');
+  // Re-enter the porch step and answer Yes via Edit answers for a 1-card result.
+  const r = mountSelector(freshDom('https://example.com/?porch=true'));
+  ok('single-result page renders exactly one card', r.querySelectorAll('.dccs-card').length === 1);
+  ok('no compare checkbox/text on a single-result page',
+    !r.querySelector('.dccs-cmp-toggle') && !r.querySelector('.dccs-card input[data-cmp]'));
+
+  // Exactly two results (3-4 of us + table for 4 -> 22 and 23): the boundary case.
+  const r2 = mountSelector(freshDom('https://example.com/?party=3-4&dining=4'));
+  ok('two-result page renders two cards', r2.querySelectorAll('.dccs-card').length === 2);
+  ok('compare checkboxes return at 2+ results', r2.querySelectorAll('.dccs-cmp-toggle').length === 2);
+
+  // Unconstrained results (3 cards): one toggle per card, as before.
+  ok('full results keep a toggle on every card',
+    root.querySelectorAll('.dccs-card').length >= 2 &&
+    root.querySelectorAll('.dccs-cmp-toggle').length === root.querySelectorAll('.dccs-card').length);
+
+  // Weigh priorities to one match (pet High -> Coconut Cottage): same rule.
+  const w3b = freshDom();
+  const r3 = mountSelector(w3b);
+  enter(r3, 'weights');
+  answerNext(r3, '1'); answerNext(r3, '1');
+  answerNext(r3, '1'); answerNext(r3, '1');   // Low: party/workspace/moreroom/fewerstairs
+  answerNext(r3, '3');                        // pet = High -> must-have
+  stepThrough(r3, '1'); seeMatches(r3);
+  ok('weights single result also hides the compare checkbox',
+    r3.querySelectorAll('.dccs-card').length === 1 && !r3.querySelector('.dccs-cmp-toggle'));
+
+  // No-match fallback with one closest option keeps the rule too.
+  const r4 = mountSelector(freshDom('https://example.com/?pet=true&porch=true'));
+  const fbCards = r4.querySelectorAll('.dccs-card').length;
+  ok('single-card fallback hides the compare checkbox',
+    fbCards >= 1 && (fbCards >= 2 || !r4.querySelector('.dccs-cmp-toggle')));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

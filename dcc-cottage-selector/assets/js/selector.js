@@ -559,7 +559,7 @@
       var fb = fallback ? DCCS.score.dedupe(fallback.results.slice(0, 3), config.diffFields) : [];
       html += '<div class="dccs-empty"><h3 class="dccs-step-q" tabindex="-1">' + esc(S.empty_heading) + '</h3>' +
         '<p>' + esc(fb.length === 1 ? S.empty_sub_one : S.empty_sub) + '</p></div>';
-      fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S)); });
+      fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S), fb.length >= 2); });
       html += wizardResultsTail(config, st, true);
       html += '</div>';
       return html;
@@ -569,19 +569,24 @@
     var top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
     html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
 
-    top.forEach(function (c) { html += buildCard(c, config, st, crit, ''); });
+    // The extra highlighted card (mini-entry / deep link) counts toward the
+    // page's card total, so resolve it BEFORE building any card: the compare
+    // checkbox only renders when 2+ cards share the page (one card alone has
+    // nothing to be compared with).
+    var extra = null;
+    if (st.highlight && !top.some(function (c) { return String(c.id) === String(st.highlight); })) {
+      var hc = findCottage(config, st.highlight);
+      var hIdx = ranked.map(function (c) { return String(c.id); }).indexOf(String(st.highlight));
+      if (hc && hIdx !== -1) { extra = { c: hc, rank: hIdx + 1 }; }
+    }
+    var showCmp = (top.length + (extra ? 1 : 0)) >= 2;
 
-    // Always surface the highlighted cottage (mini-entry / deep link), even if it
-    // didn't make the top three — showing its rank makes its positioning clear.
-    if (st.highlight) {
-      var inTop = top.some(function (c) { return String(c.id) === String(st.highlight); });
-      if (!inTop) {
-        var hc = findCottage(config, st.highlight);
-        var idx = ranked.map(function (c) { return String(c.id); }).indexOf(String(st.highlight));
-        if (hc && idx !== -1) {
-          html += buildCard(hc, config, st, crit, fmt(S.rank_label, idx + 1));
-        }
-      }
+    top.forEach(function (c) { html += buildCard(c, config, st, crit, '', null, showCmp); });
+
+    // Always surface the highlighted cottage even if it didn't make the top
+    // three — showing its rank makes its positioning clear.
+    if (extra) {
+      html += buildCard(extra.c, config, st, crit, fmt(S.rank_label, extra.rank), null, showCmp);
     }
 
     // The "Compare N cottages" button sits below the cards (where the old recap was),
@@ -605,7 +610,8 @@
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
 
-  function buildCard(c, config, st, crit, rankLabel, miss) {
+  function buildCard(c, config, st, crit, rankLabel, miss, showCmp) {
+    if (showCmp === undefined) { showCmp = true; }
     var S = config.strings;
     var isHi = st.highlight && String(st.highlight) === String(c.id);
     var html = '<div class="dccs-card' + (isHi ? ' is-highlight' : '') + '">';
@@ -644,10 +650,16 @@
       if (other) { html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, cname(config, other))) + '</p>'; }
     }
 
+    // The per-card Compare checkbox renders only when the page shows 2+ cards —
+    // a lone result has nothing to be compared with (Compare mode in the menu
+    // still covers cross-cottage curiosity).
+    var cmpToggle = showCmp
+      ? '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
+        (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>'
+      : '';
     html += '<div class="dccs-card-actions">' +
       '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + withIcon(config, 'view', 'view', esc(S.view_cottage)) + '</a>' +
-      '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
-      (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>' +
+      cmpToggle +
       '</div></div>';
     return html;
   }
