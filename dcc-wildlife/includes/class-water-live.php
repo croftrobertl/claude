@@ -1459,7 +1459,7 @@ final class Water_Live {
 				'label'       => __( 'Recent rain', 'dcc-wildlife' ),
 				'value'       => sprintf(
 					/* translators: %s: rainfall total in inches. */
-					__( '%s in. over the last two days', 'dcc-wildlife' ),
+					__( '%s in. over the two most recent reporting days', 'dcc-wildlife' ),
 					rtrim( rtrim( number_format( $total, 2, '.', '' ), '0' ), '.' )
 				),
 				'tier'        => Water_Fact::TIER_LIVE,

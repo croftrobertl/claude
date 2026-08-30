@@ -29,6 +29,51 @@ final class Render {
 	private static bool $sheet_printed = false;
 
 	/**
+	 * Is the retired mu-plugin (dcc-wildlife-countdown.php) still installed?
+	 *
+	 * While it exists it wraps the [dcc_wildlife] shortcode and appends its
+	 * own countdown, so this plugin must not render a second one. The moment
+	 * the owner deletes the file, this returns false and the native rendering
+	 * below takes over with the same option, markup and styling — the
+	 * handover needs no settings change and no cache flush beyond the usual.
+	 */
+	private static function mu_countdown_active(): bool {
+		return function_exists( 'dcc_wl_countdown_html' );
+	}
+
+	/** Countdown renders: toggle on, mu-plugin gone, species data present. */
+	private static function countdown_possible(): bool {
+		return Water_Admin::countdown_enabled()
+			&& ! self::mu_countdown_active()
+			&& [] !== Species::dataset();
+	}
+
+	/**
+	 * [dcc_wildlife_countdown] — the season-countdown line on its own, for
+	 * manual placement (absorbed from the mu-plugin in 1.8.0). Registered
+	 * only when the mu-plugin has not already claimed the tag.
+	 */
+	public static function countdown_shortcode(): string {
+		if ( ! self::countdown_possible() ) {
+			return '';
+		}
+		// The countdown is computed by widget.js from the shared config, so a
+		// standalone placement needs the same assets as the widget.
+		self::enqueue_assets();
+		return self::countdown_shell();
+	}
+
+	/**
+	 * The empty countdown shell. Same markup as the mu-plugin's: an empty,
+	 * hidden div the JS fills — the number of days is computed in the
+	 * browser, NEVER baked into cached HTML (same doctrine as "the current
+	 * month"). widget.js fills every instance on the page.
+	 */
+	private static function countdown_shell(): string {
+		return '<div class="dccwl-countdown" data-dccwl-countdown hidden></div>';
+	}
+
+	/**
 	 * [dcc_wildlife title="" guide="yes" browser="yes" compact="no"]
 	 *
 	 * @param array|string $atts Shortcode attributes.
@@ -140,12 +185,26 @@ final class Render {
 					</div>
 					<?php self::render_guide_grids(); ?>
 					<div class="dccwl-panel-slot dccwl-slot-guide"></div>
+					<?php /* Owner's decision (1.8.0): the guide's notes and the
+					         likelihood calendar are editorial local knowledge,
+					         and this one line says whose — deliberately not
+					         per-species sourcing. */ ?>
+					<p class="dccwl-credit"><?php esc_html_e( 'Wildlife notes are local knowledge from your hosts — sightings vary.', 'dcc-wildlife' ); ?></p>
 				</section>
 			<?php endif; ?>
 
 		</div>
 		<?php
-		return (string) ob_get_clean();
+		$out = (string) ob_get_clean();
+
+		// Season countdown (absorbed from the mu-plugin in 1.8.0): appended
+		// after the widget, exactly where the mu-plugin used to put it. While
+		// that file still exists it appends its own line and this adds nothing.
+		if ( self::countdown_possible() ) {
+			$out .= self::countdown_shell();
+		}
+
+		return $out;
 	}
 
 	/**
@@ -211,6 +270,9 @@ final class Render {
 			'species'    => $species,
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
+			// Toggle state is baked into the cached page, matching the
+			// mu-plugin's behaviour; only the DAY COUNT is computed client-side.
+			'countdown'  => self::countdown_possible(),
 			'i18n'       => [
 				/* translators: %s: month name, e.g. "August". */
 				'headline'    => __( '%s on the canal', 'dcc-wildlife' ),
@@ -230,6 +292,12 @@ final class Render {
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
 				'details'     => __( 'Species details', 'dcc-wildlife' ),
 				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),
+				/* translators: %s: species name, e.g. "Manatee". */
+				'cdHere'      => __( '%s season is here', 'dcc-wildlife' ),
+				/* translators: 1: species name, 2: number of days (1). */
+				'cdStartsOne' => __( '%1$s season starts in %2$s day', 'dcc-wildlife' ),
+				/* translators: 1: species name, 2: number of days. */
+				'cdStarts'    => __( '%1$s season starts in %2$s days', 'dcc-wildlife' ),
 			],
 		];
 

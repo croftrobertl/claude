@@ -168,7 +168,7 @@ final class Water_Admin {
 						'searching' => __( 'Asking USGS…', 'dcc-wildlife' ),
 						'none'      => __( 'No active gauges returned for that area. Check the coordinates, or add site IDs by hand.', 'dcc-wildlife' ),
 						'failed'    => __( 'Could not reach USGS. Nothing was changed.', 'dcc-wildlife' ),
-						'add'       => __( 'Use this gauge', 'dcc-wildlife' ),
+						'add'       => __( 'Use as rain gauge', 'dcc-wildlife' ),
 						'noCoords'  => __( 'Enter and save the property latitude and longitude first.', 'dcc-wildlife' ),
 					],
 				]
@@ -241,17 +241,8 @@ final class Water_Admin {
 		$clarity_link            = esc_url_raw( trim( (string) ( $input['clarity_link'] ?? '' ) ) );
 		$out['clarity_link']     = preg_match( '#^https?://#i', $clarity_link ) ? $clarity_link : '';
 
-		// Site IDs: newline/comma separated, digits only.
-		$raw_sites = (string) ( $input['usgs_sites_raw'] ?? '' );
-		$sites     = preg_split( '/[\s,]+/', $raw_sites ) ?: [];
-		$clean     = [];
-		foreach ( $sites as $s ) {
-			$s = preg_replace( '/\D/', '', (string) $s );
-			if ( is_string( $s ) && preg_match( '/^\d{8,15}$/', $s ) ) {
-				$clean[] = $s;
-			}
-		}
-		$out['usgs_sites'] = array_values( array_unique( $clean ) );
+		// Uninstall is destructive, so it is opt-in and defaults off.
+		$out['delete_on_uninstall'] = empty( $input['delete_on_uninstall'] ) ? 0 : 1;
 
 		// --- Almanac: the gate ------------------------------------------
 		$rows     = is_array( $input['almanac'] ?? null ) ? array_values( $input['almanac'] ) : [];
@@ -422,14 +413,7 @@ final class Water_Admin {
 						<th scope="row"><label for="dccwl-rainsite"><?php esc_html_e( 'Rain gauge', 'dcc-wildlife' ); ?></label></th>
 						<td>
 							<input type="text" id="dccwl-rainsite" class="regular-text code" name="<?php echo esc_attr( $name ); ?>[rain_site]" value="<?php echo esc_attr( (string) $o['rain_site'] ); ?>" />
-							<p class="description"><?php esc_html_e( 'Site 02237700 is the only nearby gauge reporting precipitation. Totals are whole calendar days, and the page says so rather than claiming a rolling 48 hours.', 'dcc-wildlife' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="dccwl-sites"><?php esc_html_e( 'USGS site IDs', 'dcc-wildlife' ); ?></label></th>
-						<td>
-							<textarea id="dccwl-sites" class="large-text code" rows="3" name="<?php echo esc_attr( $name ); ?>[usgs_sites_raw]"><?php echo esc_textarea( implode( "\n", (array) $o['usgs_sites'] ) ); ?></textarea>
-							<p class="description"><?php esc_html_e( 'One numeric site ID per line. Do not type these from memory — use the button below to ask USGS which gauges are actually near you, then pick from real results.', 'dcc-wildlife' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Site 02237700 is the only nearby gauge reporting precipitation. Totals are whole calendar days, and the page says so rather than claiming a rolling 48 hours. Do not type a site from memory — use the button to ask USGS what is actually near you, then pick from real results.', 'dcc-wildlife' ); ?></p>
 							<p>
 								<button type="button" class="button" id="dccwl-discover"><?php esc_html_e( 'Find nearby USGS gauges', 'dcc-wildlife' ); ?></button>
 								<span id="dccwl-discover-status" style="margin-left:8px"></span>
@@ -575,6 +559,20 @@ final class Water_Admin {
 					<?php esc_html_e( 'Outbound links only. Their content is copyrighted and their reports describe one person\'s afternoon, so nothing from them is ever copied onto your page as fact — but linking the ones you trust is genuinely useful to guests.', 'dcc-wildlife' ); ?>
 				</p>
 				<?php self::render_link_table( $name, 'reports', (array) $o['reports'] ); ?>
+
+				<h2><?php esc_html_e( 'Housekeeping', 'dcc-wildlife' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'On uninstall', 'dcc-wildlife' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[delete_on_uninstall]" value="1" <?php checked( (int) ( $o['delete_on_uninstall'] ?? 0 ), 1 ); ?> />
+								<?php esc_html_e( 'Delete all plugin data when the plugin is uninstalled', 'dcc-wildlife' ); ?>
+							</label>
+							<p class="description"><?php esc_html_e( 'Off by default on purpose: deleting and re-uploading the plugin zip is routine here, and these hand-tuned settings must survive it. Cached data is always cleaned up on uninstall; the settings, this page’s toggles and any old sighting posts are removed only when this box is checked.', 'dcc-wildlife' ); ?></p>
+						</td>
+					</tr>
+				</table>
 
 				<?php submit_button(); ?>
 			</form>

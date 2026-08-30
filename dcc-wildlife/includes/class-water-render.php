@@ -292,13 +292,47 @@ final class Water_Render {
 						'streets'     => __( 'Streets', 'dcc-wildlife' ),
 						'noImagery'   => __( 'Map imagery is unavailable right now — the markers below are still accurate.', 'dcc-wildlife' ),
 						'closed'      => __( 'CLOSED', 'dcc-wildlife' ),
-						'lanes'       => __( 'lanes', 'dcc-wildlife' ),
 						'milesAway'   => __( 'mi from the cottages, straight line', 'dcc-wildlife' ),
 						'depthMap'    => __( 'Depth map (PDF)', 'dcc-wildlife' ),
 						'noReading'   => __( 'no recent reading', 'dcc-wildlife' ),
 						'staleLevel'  => __( 'level reading is old', 'dcc-wildlife' ),
 						'median'      => __( 'median', 'dcc-wildlife' ),
 						'sampled'     => __( 'sampled', 'dcc-wildlife' ),
+
+						// Popup field labels (1.8.0, finding 2 — previously
+						// hardcoded English inside water-map.js).
+						'lblClarity'  => __( 'Clarity:', 'dcc-wildlife' ),
+						'lblLevel'    => __( 'Level:', 'dcc-wildlife' ),
+						'lblWater'    => __( 'Water:', 'dcc-wildlife' ),
+						'lblCity'     => __( 'City:', 'dcc-wildlife' ),
+						'lblLanes'    => __( 'Lanes:', 'dcc-wildlife' ),
+						'lblFee'      => __( 'Fee:', 'dcc-wildlife' ),
+						'lblRestrooms'=> __( 'Restrooms:', 'dcc-wildlife' ),
+						'lblStatus'   => __( 'Status:', 'dcc-wildlife' ),
+						'lblDistance' => __( 'Distance:', 'dcc-wildlife' ),
+						'station'     => __( 'Station', 'dcc-wildlife' ),
+						'rampName'    => __( 'Boat ramp', 'dcc-wildlife' ),
+						'fwcSource'   => __( 'Source: FWC boat ramp inventory', 'dcc-wildlife' ),
+						/* translators: %s: whole inches. */
+						'levelAbove'  => __( '%s in above its monthly norm', 'dcc-wildlife' ),
+						/* translators: %s: whole inches. */
+						'levelBelow'  => __( '%s in below its monthly norm', 'dcc-wildlife' ),
+						/* translators: compact age units shown on the map, e.g. "12d", "3mo", "2y". */
+						'ageDays'     => _x( 'd', 'compact age unit: days', 'dcc-wildlife' ),
+						'ageMonths'   => _x( 'mo', 'compact age unit: months', 'dcc-wildlife' ),
+						'ageYears'    => _x( 'y', 'compact age unit: years', 'dcc-wildlife' ),
+
+						// Colour-by legend (1.8.0, finding 3).
+						'legClearer'  => __( 'Clearer than its own median', 'dcc-wildlife' ),
+						'legUsual'    => __( 'Near its median', 'dcc-wildlife' ),
+						'legMurkier'  => __( 'Murkier than its median', 'dcc-wildlife' ),
+						'legAbove'    => __( 'Above its monthly norm', 'dcc-wildlife' ),
+						'legNear'     => __( 'Near its norm', 'dcc-wildlife' ),
+						'legBelow'    => __( 'Below its norm', 'dcc-wildlife' ),
+						'legFresh'    => __( 'Reading under 45 days old', 'dcc-wildlife' ),
+						'legMonths'   => __( 'Months old', 'dcc-wildlife' ),
+						'legYears'    => __( 'Years old', 'dcc-wildlife' ),
+						'legStale'    => __( 'No current reading', 'dcc-wildlife' ),
 					],
 				]
 			) . ';',

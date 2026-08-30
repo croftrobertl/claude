@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.7.3
+Stable tag: 1.8.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,21 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.8.0 =
+Implements the 1.7.3 self-audit findings, numbered below as in that report.
+
+* **Season countdown absorbed from the mu-plugin** (audit decision 1). The "Manatee season starts in N days" line is now rendered natively: appended to the wildlife widget when the toggle is on (same markup, same styling, same option `dcc_wl_countdown_enabled`), plus a `[dcc_wildlife_countdown]` shortcode for manual placement. The day count is computed in the browser in canal time, never baked into cached HTML. While `dcc-wildlife-countdown.php` still exists it keeps rendering and this plugin stands down, so the handover is safe in either order — **after verifying this version on the live site, delete `wp-content/mu-plugins/dcc-wildlife-countdown.php`**; the settings page then moves to DCC → Wildlife on its own.
+* **Settings migration + merge hardening** (finding 1). A stored `chain_waters` array saved by 1.7.0 silently shadowed the coordinates seeded in 1.7.1, and no amount of re-saving healed it. A one-time upgrade routine now backfills empty coordinates for known Atlas ids into the stored option, `chain_waters()` does the same at read time as belt-and-braces, and a version-keyed migration runner exists so every future array-typed default ships with its own step instead of relying on `wp_parse_args`.
+* **Map popups fully translatable** (finding 2). Every popup label, the level wording, the FWC source line and the compact age units now flow through the i18n bridge; the dead `lanes` key is gone.
+* **Map legend added** (finding 3). Each colour-by mode shows its own decoder row under the control bar — grey explicitly means "no current reading", so the honesty machinery is finally visible.
+* **Wildlife guide attribution line** (audit decision 2): one quiet sentence — "Wildlife notes are local knowledge from your hosts — sightings vary."
+* **Uninstall support with an opt-in** (finding 10, audit decision 3). `uninstall.php` always removes cached transients; settings, the countdown toggle and any old sighting posts are removed only when "Delete all plugin data when the plugin is uninstalled" is checked (default off), and the countdown option is never touched while the mu-plugin file still exists.
+* **Rainfall wording** (finding 8, audit decision 4): "over the two most recent reporting days" — the last reported day can be today's partial total, and the note already names both dates.
+* The chain map is reachable even when the conditions strip is empty (finding 6) — the map is served independently of the strip, so a live-only section no longer hides the Open button behind a quiet day.
+* Latent number-formatting bug fixed in the map (finding 5): trailing-zero trimming could have turned 60 into 6 at zero decimal places.
+* Map "data age" colouring aligned to the 45-day staleness cutoff used everywhere else (finding 7).
+* Dead `usgs_sites` setting removed (finding 9) — nothing had read it since 1.6.0; gauge discovery now fills the rain-gauge field, the one USGS site in use. The stored key is dropped by the migration.
 
 = 1.7.3 =
 * **Sample dates no longer print a midnight that never happened.** Lab samples, daily-value levels, rainfall totals and bathymetric surveys are dated to the day, so they now render as "sampled May 28, 2026" rather than "sampled May 28, 12:00 AM". Only the NWS forecast, which carries a real issuance time, still shows a clock. The producing code declares the precision rather than the renderer guessing, with an inference fallback for owner-entered rows.

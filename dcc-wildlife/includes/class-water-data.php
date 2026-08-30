@@ -55,14 +55,10 @@ final class Water_Data {
 			'lat'               => '28.8045',
 			'lon'               => '-81.7450',
 
-			// Active gauges confirmed by the owner in Lake County (12069).
-			// Since 1.6.0 these are used for RAINFALL ONLY — the USGS level
-			// gauges were dropped because none sits on Lake Dora, and the
-			// Water Atlas exposes an SJRWMD station that does.
-			'usgs_sites'        => [ '02237700', '02237701', '02238000', '02238001', '02237734' ],
-
 			// Apopka-Beauclair is the only nearby gauge reporting
-			// precipitation (00045).
+			// precipitation (00045). (The old `usgs_sites` list was removed in
+			// 1.8.0 — nothing had read it since 1.6.0 dropped the USGS level
+			// gauges; the rain gauge above is the one USGS site in use.)
 			'rain_site'         => '02237700',
 
 			// The Harris Chain, chain-wide since 1.7.0. Every id below was
@@ -111,6 +107,11 @@ final class Water_Data {
 			'almanac'           => self::default_almanac(),
 			'links'             => self::default_links(),
 			'reports'           => [],  // "Local reports & charters" — owner-supplied only.
+
+			// Uninstall stays conservative unless the owner opts in: the site
+			// reinstalls zips routinely, and hand-tuned settings must never be
+			// lost to an accidental delete-then-reinstall.
+			'delete_on_uninstall' => 0,
 		];
 	}
 
@@ -164,14 +165,95 @@ final class Water_Data {
 			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
 			$lat  = trim( (string) ( $row['lat'] ?? '' ) );
 			$lon  = trim( (string) ( $row['lon'] ?? '' ) );
-			$out[] = [
-				'id'   => $id,
-				'name' => '' !== $name ? $name : $id,
-				'lat'  => is_numeric( $lat ) ? $lat : '',
-				'lon'  => is_numeric( $lon ) ? $lon : '',
-			];
+			$out[] = self::backfill_chain_row(
+				[
+					'id'   => $id,
+					'name' => '' !== $name ? $name : $id,
+					'lat'  => is_numeric( $lat ) ? $lat : '',
+					'lon'  => is_numeric( $lon ) ? $lon : '',
+				]
+			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Fill a chain row's empty coordinates from the seeded defaults when the
+	 * Atlas id matches. Belt-and-braces against the settings-merge hole
+	 * (1.8.0, finding 1): a `chain_waters` array stored by an older version
+	 * shadows the seeded defaults entirely under wp_parse_args(), so seeded
+	 * coordinates added later would otherwise never reach an upgraded site.
+	 * Only EMPTY fields are filled — a coordinate the owner typed always wins.
+	 *
+	 * @param array{id:string,name:string,lat:string,lon:string} $row
+	 * @return array{id:string,name:string,lat:string,lon:string}
+	 */
+	private static function backfill_chain_row( array $row ): array {
+		if ( '' !== $row['lat'] && '' !== $row['lon'] ) {
+			return $row;
+		}
+		foreach ( self::default_chain() as $seed ) {
+			if ( $seed['id'] === $row['id'] ) {
+				if ( '' === $row['lat'] ) {
+					$row['lat'] = $seed['lat'];
+				}
+				if ( '' === $row['lon'] ) {
+					$row['lon'] = $seed['lon'];
+				}
+				break;
+			}
+		}
+		return $row;
+	}
+
+	/**
+	 * One-time upgrade pass, run by Plugin when the stored version changes.
+	 *
+	 * Persists what backfill_chain_row() would compute anyway, and drops
+	 * stored keys no current code reads — so the option on disk matches what
+	 * the code serves, instead of relying on runtime patching forever. Adding
+	 * a future migration means adding a step here; the version bump triggers
+	 * it on every site automatically.
+	 */
+	public static function upgrade(): void {
+		$stored = get_option( self::OPTION, null );
+		if ( ! is_array( $stored ) ) {
+			return; // Never saved: defaults already serve, nothing to migrate.
+		}
+
+		$changed = false;
+
+		// 1.8.0: seed coordinates into coordinate-less chain rows (finding 1).
+		if ( isset( $stored['chain_waters'] ) && is_array( $stored['chain_waters'] ) ) {
+			foreach ( $stored['chain_waters'] as $i => $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				$filled = self::backfill_chain_row(
+					[
+						'id'   => (string) ( $row['id'] ?? '' ),
+						'name' => (string) ( $row['name'] ?? '' ),
+						'lat'  => trim( (string) ( $row['lat'] ?? '' ) ),
+						'lon'  => trim( (string) ( $row['lon'] ?? '' ) ),
+					]
+				);
+				if ( $filled['lat'] !== ( $row['lat'] ?? '' ) || $filled['lon'] !== ( $row['lon'] ?? '' ) ) {
+					$stored['chain_waters'][ $i ]['lat'] = $filled['lat'];
+					$stored['chain_waters'][ $i ]['lon'] = $filled['lon'];
+					$changed                             = true;
+				}
+			}
+		}
+
+		// 1.8.0: drop the dead `usgs_sites` list (finding 9).
+		if ( array_key_exists( 'usgs_sites', $stored ) ) {
+			unset( $stored['usgs_sites'] );
+			$changed = true;
+		}
+
+		if ( $changed ) {
+			update_option( self::OPTION, $stored );
+		}
 	}
 
 	/** The water whose detailed conditions head the module. */
@@ -306,26 +388,6 @@ final class Water_Data {
 			return null;
 		}
 		return [ 'lat' => $lat, 'lon' => $lon ];
-	}
-
-	/**
-	 * Configured USGS site IDs (numeric strings, 8–15 digits).
-	 *
-	 * @return string[]
-	 */
-	public static function usgs_sites(): array {
-		$sites = self::get( 'usgs_sites' );
-		if ( ! is_array( $sites ) ) {
-			return [];
-		}
-		$out = [];
-		foreach ( $sites as $s ) {
-			$s = preg_replace( '/\D/', '', (string) $s );
-			if ( is_string( $s ) && preg_match( '/^\d{8,15}$/', $s ) ) {
-				$out[] = $s;
-			}
-		}
-		return array_values( array_unique( $out ) );
 	}
 
 	/**

@@ -235,6 +235,14 @@
 		var shell = wrap.querySelector('[data-dccwl-map-shell]');
 		if (!btn || !shell) { return; }
 
+		// A live-only section is emitted hidden and normally revealed when
+		// readings arrive — but the map is served independently of the
+		// conditions strip (cached ramps and readings can be available while
+		// the strip is empty), so a section that offers a map must not stay
+		// unreachable behind an empty strip.
+		var section = wrap.closest('[data-dccwl-water-root]');
+		if (section) { section.hidden = false; }
+
 		btn.addEventListener('click', function () {
 			btn.disabled = true;
 			btn.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading…';

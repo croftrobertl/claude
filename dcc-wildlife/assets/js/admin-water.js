@@ -46,15 +46,14 @@
 		}
 	});
 
-	/* ---- USGS gauge discovery ---- */
+	/* ---- USGS gauge discovery ----
+	 * Since 1.8.0 the rain gauge is the only USGS site in use (the old
+	 * usgs_sites list was dead since 1.6.0 and has been removed), so picking
+	 * a result fills the rain-gauge field. */
 	function appendSite(siteNo) {
-		var box = document.getElementById('dccwl-sites');
-		if (!box) { return; }
-		var have = box.value.split(/[\s,]+/).filter(Boolean);
-		if (have.indexOf(siteNo) === -1) {
-			have.push(siteNo);
-			box.value = have.join('\n');
-		}
+		var box = document.getElementById('dccwl-rainsite');
+		if (!box || !siteNo) { return; }
+		box.value = siteNo;
 	}
 
 	function renderResults(sites) {

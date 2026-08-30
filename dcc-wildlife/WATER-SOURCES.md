@@ -242,8 +242,24 @@ The page registers at slug `dcc-wildlife` **only if that slug is free**. While
 the mu-plugin is active it owns that slug, so this page stays at
 `dcc-wildlife-water` and shows a notice telling you to delete the mu-plugin —
 at which point it takes the slug over. Neither page can silently disappear,
-whichever order things happen in. **`dcc-wildlife-countdown.php` can be deleted
-as part of this change.**
+whichever order things happen in.
+
+**Completed in 1.8.0:** the countdown *rendering* is absorbed too, from the
+mu-plugin source you supplied — same markup, same styling, same option, day
+count still computed in the browser in canal time, plus a standalone
+`[dcc_wildlife_countdown]` shortcode. While the mu-plugin file exists it keeps
+rendering and this plugin stands down, so nothing doubles up in either order.
+**After verifying 1.8.0 on the live site, delete
+`wp-content/mu-plugins/dcc-wildlife-countdown.php`** — that is the last step;
+the settings page then takes the `dcc-wildlife` slug on its own.
+
+Also in 1.8.0, from the self-audit: a version-keyed settings migration (the
+1.7.1 seeded chain coordinates could never reach a site that saved settings
+under 1.7.0 — the stored array shadowed them; now backfilled once and guarded
+at read time), the dead `usgs_sites` list removed (nothing read it since
+1.6.0), map popups made translatable with a per-mode colour legend, the
+rainfall line reworded to "the two most recent reporting days", and opt-in
+uninstall cleanup (default: settings survive reinstalls).
 
 ---
 

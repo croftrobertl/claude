@@ -192,6 +192,37 @@
 	z-index: 500;
 }
 
+/* Colour-by legend (1.8.0): its own row under the control bar. Swatch
+ * colours are set inline by water-map.js from the same palette that colours
+ * the markers, so the two can never disagree. */
+.dccwl-water .dccwl-map-legend {
+	align-items: center;
+	background: var(--dccwl-white);
+	border-top: 1px solid var(--dccwl-line);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+	padding: 7px 10px;
+}
+
+.dccwl-water .dccwl-leg-item {
+	align-items: center;
+	color: var(--dccwl-muted);
+	display: inline-flex;
+	font-size: 0.85rem;
+	gap: 6px;
+}
+
+.dccwl-water .dccwl-leg-swatch {
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px var(--dccwl-line);
+	display: inline-block;
+	flex: none;
+	height: 12px;
+	width: 12px;
+}
+
 .dccwl-water .dccwl-seg {
 	align-items: center;
 	display: flex;

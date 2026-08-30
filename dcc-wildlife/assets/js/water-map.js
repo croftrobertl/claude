@@ -49,14 +49,22 @@
 
 	function fmt(n, dp) {
 		if (typeof n !== 'number' || isNaN(n)) { return ''; }
-		return n.toFixed(typeof dp === 'number' ? dp : 2).replace(/\.?0+$/, '');
+		// Strip trailing zeros only AFTER a decimal point — a bare /\.?0+$/
+		// would turn fmt(60, 0) into "6".
+		return n.toFixed(typeof dp === 'number' ? dp : 2)
+			.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 	}
 
 	function ageWords(days, i18n) {
 		if (typeof days !== 'number') { return i18n.noReading || 'no recent reading'; }
-		if (days < 45) { return days + 'd'; }
-		if (days < 730) { return Math.round(days / 30) + 'mo'; }
-		return Math.round(days / 365) + 'y';
+		if (days < 45) { return days + (i18n.ageDays || 'd'); }
+		if (days < 730) { return Math.round(days / 30) + (i18n.ageMonths || 'mo'); }
+		return Math.round(days / 365) + (i18n.ageYears || 'y');
+	}
+
+	/* Substitute the one placeholder in a translated template. */
+	function tpl(template, value) {
+		return String(template).replace('%s', String(value));
 	}
 
 	/* ---- colour-by strategies ---------------------------------------- */
@@ -85,7 +93,9 @@
 		if (w.level && typeof w.level.age === 'number') { ages.push(w.level.age); }
 		if (!ages.length) { return C.stale; }
 		var best = Math.min.apply(null, ages);
-		if (best < 60) { return C.fresh; }
+		// 45 days — the same cutoff the PHP staleness guards and ageWords()
+		// use, so "fresh" here never disagrees with the text.
+		if (best < 45) { return C.fresh; }
 		if (best < 730) { return C.months; }
 		return C.years;
 	}
@@ -95,6 +105,51 @@
 		level: colourLevel,
 		fresh: colourFresh
 	};
+
+	/* ---- legend (1.8.0) ----------------------------------------------
+	 * The colours are the module's honesty machinery — grey means "too old
+	 * to state as current" — and colours without a decoder are noise, so
+	 * each colour-by mode shows its own legend. Rows are [palette key,
+	 * i18n key, English fallback]; the swatch colour always comes from C so
+	 * legend and markers can never disagree. */
+
+	var LEGEND = {
+		clarity: [
+			['clear', 'legClearer', 'Clearer than its own median'],
+			['usual', 'legUsual', 'Near its median'],
+			['murky', 'legMurkier', 'Murkier than its median'],
+			['stale', 'legStale', 'No current reading']
+		],
+		level: [
+			['high', 'legAbove', 'Above its monthly norm'],
+			['near', 'legNear', 'Near its norm'],
+			['low', 'legBelow', 'Below its norm'],
+			['stale', 'legStale', 'No current reading']
+		],
+		fresh: [
+			['fresh', 'legFresh', 'Reading under 45 days old'],
+			['months', 'legMonths', 'Months old'],
+			['years', 'legYears', 'Years old'],
+			['stale', 'legStale', 'No current reading']
+		]
+	};
+
+	function buildLegend(i18n) {
+		var box = el('div', 'dccwl-map-legend');
+		function show(mode) {
+			box.textContent = '';
+			(LEGEND[mode] || LEGEND.clarity).forEach(function (row) {
+				var item = el('span', 'dccwl-leg-item');
+				var swatch = el('span', 'dccwl-leg-swatch');
+				swatch.style.backgroundColor = C[row[0]];
+				item.appendChild(swatch);
+				item.appendChild(document.createTextNode(i18n[row[1]] || row[2]));
+				box.appendChild(item);
+			});
+		}
+		show('clarity');
+		return { node: box, show: show };
+	}
 
 	/* ---- popups ------------------------------------------------------ */
 
@@ -115,24 +170,27 @@
 			if (typeof w.clarity.median === 'number') {
 				cl += ' (' + (i18n.median || 'median') + ' ' + fmt(w.clarity.median) + ')';
 			}
-			line(box, 'Clarity:', cl);
+			line(box, i18n.lblClarity || 'Clarity:', cl);
 			line(box, (i18n.sampled || 'sampled') + ':', w.clarity.date || '');
 		}
 
 		if (w.level) {
 			if (w.level.stale) {
 				// Do not state an old elevation as a current condition.
-				line(box, 'Level:', (i18n.staleLevel || 'level reading is old') +
+				line(box, i18n.lblLevel || 'Level:', (i18n.staleLevel || 'level reading is old') +
 					(w.level.date ? ' — ' + w.level.date : ''));
 			} else if (typeof w.level.inches === 'number') {
-				var dir = w.level.inches > 0 ? 'above' : 'below';
-				line(box, 'Level:', Math.abs(Math.round(w.level.inches)) + ' in ' + dir +
-					' its monthly norm' + (w.level.date ? ' — ' + w.level.date : ''));
+				var inches = Math.abs(Math.round(w.level.inches));
+				var levelText = w.level.inches > 0
+					? tpl(i18n.levelAbove || '%s in above its monthly norm', inches)
+					: tpl(i18n.levelBelow || '%s in below its monthly norm', inches);
+				line(box, i18n.lblLevel || 'Level:', levelText +
+					(w.level.date ? ' — ' + w.level.date : ''));
 			}
 		}
 
 		if (typeof w.miles === 'number') {
-			line(box, 'Distance:', w.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
+			line(box, i18n.lblDistance || 'Distance:', w.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
 		}
 
 		if (w.depthMap && w.depthMap.url) {
@@ -143,7 +201,7 @@
 			box.appendChild(a);
 		}
 		if (w.clarity && w.clarity.url) {
-			var s = el('a', 'dccwl-pop-link', 'Station ' + (w.clarity.station || ''));
+			var s = el('a', 'dccwl-pop-link', (i18n.station || 'Station') + ' ' + (w.clarity.station || ''));
 			s.href = w.clarity.url;
 			s.target = '_blank';
 			s.rel = 'noopener nofollow';
@@ -154,7 +212,7 @@
 
 	function rampPopup(r, i18n) {
 		var box = el('div', 'dccwl-pop');
-		box.appendChild(el('h4', 'dccwl-pop-title', r.name || 'Boat ramp'));
+		box.appendChild(el('h4', 'dccwl-pop-title', r.name || i18n.rampName || 'Boat ramp'));
 
 		// Status is honoured loudly: a guest towing a boat to a closed ramp
 		// is exactly the error this module exists to prevent.
@@ -162,16 +220,16 @@
 			var warn = el('p', 'dccwl-pop-closed', i18n.closed || 'CLOSED');
 			box.appendChild(warn);
 		}
-		line(box, 'Water:', r.water || '');
-		line(box, 'City:', r.city || '');
-		if (typeof r.lanes === 'number') { line(box, 'Lanes:', String(r.lanes)); }
-		if (r.fee) { line(box, 'Fee:', r.fee); }
-		if (r.restroom) { line(box, 'Restrooms:', r.restroom); }
-		if (r.status) { line(box, 'Status:', r.status); }
+		line(box, i18n.lblWater || 'Water:', r.water || '');
+		line(box, i18n.lblCity || 'City:', r.city || '');
+		if (typeof r.lanes === 'number') { line(box, i18n.lblLanes || 'Lanes:', String(r.lanes)); }
+		if (r.fee) { line(box, i18n.lblFee || 'Fee:', r.fee); }
+		if (r.restroom) { line(box, i18n.lblRestrooms || 'Restrooms:', r.restroom); }
+		if (r.status) { line(box, i18n.lblStatus || 'Status:', r.status); }
 		if (typeof r.miles === 'number') {
-			line(box, 'Distance:', r.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
+			line(box, i18n.lblDistance || 'Distance:', r.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
 		}
-		box.appendChild(el('p', 'dccwl-pop-src', 'Source: FWC boat ramp inventory'));
+		box.appendChild(el('p', 'dccwl-pop-src', i18n.fwcSource || 'Source: FWC boat ramp inventory'));
 		return box;
 	}
 
@@ -249,15 +307,19 @@
 			map.setView([28.8045, -81.7450], 11);
 		}
 
+		var legend = buildLegend(i18n);
+
 		function recolour(mode) {
 			var fn = MODES[mode] || MODES.clarity;
 			waterMarkers.forEach(function (x) {
 				x.marker.setStyle({ fillColor: fn(x.water) });
 			});
+			legend.show(mode);
 		}
 		recolour('clarity');
 
 		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base));
+		shell.appendChild(legend.node);
 		setTimeout(function () { map.invalidateSize(); }, 60);
 	}
 

@@ -20,9 +20,13 @@ final class Plugin {
 		return self::$instance;
 	}
 
+	/** Stored-version option driving one-time upgrade routines. */
+	public const VERSION_OPTION = 'dcc_wl_version';
+
 	private function __construct() {
 		add_action( 'init', [ $this, 'load_textdomain' ] );
 		add_action( 'init', [ $this, 'register_shortcode' ] );
+		add_action( 'init', [ $this, 'maybe_upgrade' ], 5 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
 
 		Water_Rest::register_hooks();
@@ -42,6 +46,29 @@ final class Plugin {
 	public function register_shortcode(): void {
 		add_shortcode( 'dcc_wildlife', [ Render::class, 'shortcode' ] );
 		add_shortcode( 'dcc_water', [ Water_Render::class, 'shortcode' ] );
+
+		// Season countdown, standalone (1.8.0, absorbed from the mu-plugin).
+		// While dcc-wildlife-countdown.php still exists it registered this tag
+		// at load time and owns the rendering — never fight it for the tag, so
+		// the handover is safe whichever file wins an update race.
+		if ( ! shortcode_exists( 'dcc_wildlife_countdown' ) ) {
+			add_shortcode( 'dcc_wildlife_countdown', [ Render::class, 'countdown_shortcode' ] );
+		}
+	}
+
+	/**
+	 * Run one-time upgrade routines when the stored version changes — the
+	 * armour against the settings-merge class of bug (1.8.0, finding 1):
+	 * wp_parse_args() cannot push new seeded values into an array-typed
+	 * setting a site already stored, so any such change MUST ship with a
+	 * migration step in Water_Data::upgrade().
+	 */
+	public function maybe_upgrade(): void {
+		if ( DCC_WL_VERSION === get_option( self::VERSION_OPTION ) ) {
+			return;
+		}
+		Water_Data::upgrade();
+		update_option( self::VERSION_OPTION, DCC_WL_VERSION, false );
 	}
 
 	/**

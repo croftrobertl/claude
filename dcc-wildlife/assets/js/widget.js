@@ -499,8 +499,99 @@
 		initGuide();
 	}
 
+	/* ------------------------------------------------------------------
+	 * Season countdown (absorbed from the dcc-wildlife-countdown mu-plugin
+	 * in 1.8.0 — same markup, same logic). The day count is computed HERE,
+	 * never baked into cached HTML, and in CANAL time, not the visitor's:
+	 * "manatee season" is a fact about Florida. Reads the same species
+	 * calendar the field guide ships, so it can never disagree with it.
+	 * ---------------------------------------------------------------- */
+
+	function canalToday() {
+		try {
+			var parts = new Intl.DateTimeFormat('en-US', {
+				timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric'
+			}).formatToParts(new Date());
+			var got = {};
+			parts.forEach(function (p) { got[p.type] = parseInt(p.value, 10); });
+			return new Date(got.year, got.month - 1, got.day);
+		} catch (e) { return new Date(); }
+	}
+
+	/* The next month where a species rises TO peak (3) from below it. A
+	 * species at peak all year (the heron) never rises and is skipped rather
+	 * than reported as 0 days out. */
+	function nextRise(scores, today) {
+		var PEAK = 3, DAY = 86400000, cur = today.getMonth();
+		for (var off = 0; off <= 12; off++) {
+			var m = (cur + off) % 12;
+			var prev = (m + 11) % 12;
+			if (scores[m] === PEAK && scores[prev] < PEAK) {
+				if (off === 0) { return { days: 0, here: true }; }
+				var first = new Date(today.getFullYear() + Math.floor((cur + off) / 12), m, 1);
+				return { days: Math.max(0, Math.round((first - today) / DAY)), here: false };
+			}
+		}
+		return null;
+	}
+
+	/* Fill a countdown div: emoji span + text, with the day count in its own
+	 * styled span. Built with createElement/textContent throughout — the
+	 * species list passes through a filter, so nothing here may be innerHTML. */
+	function fillCountdown(node, best, i18n) {
+		node.textContent = '';
+		if (best.s.emoji) {
+			var em = document.createElement('span');
+			em.className = 'dccwl-cd-emoji';
+			em.textContent = best.s.emoji;
+			node.appendChild(em);
+		}
+		if (best.here) {
+			node.appendChild(document.createTextNode(
+				String(i18n.cdHere || '%s season is here').replace('%s', best.s.name)
+			));
+		} else {
+			var template = String(
+				(best.days === 1 ? i18n.cdStartsOne : i18n.cdStarts) ||
+				'%1$s season starts in %2$s days'
+			).replace('%1$s', best.s.name);
+			var halves = template.split('%2$s');
+			node.appendChild(document.createTextNode(halves[0]));
+			var days = document.createElement('span');
+			days.className = 'dccwl-cd-days';
+			days.textContent = String(best.days);
+			node.appendChild(days);
+			if (halves.length > 1) {
+				node.appendChild(document.createTextNode(halves.slice(1).join('%2$s')));
+			}
+		}
+		node.hidden = false;
+	}
+
+	function initCountdown() {
+		// While the old mu-plugin exists, PHP sets countdown:false and emits
+		// no shell here — its own script keeps rendering, exactly once.
+		if (!CFG.countdown) { return; }
+		var shells = document.querySelectorAll('[data-dccwl-countdown]');
+		if (!shells.length) { return; }
+
+		var today = canalToday(), best = null;
+		CFG.species.forEach(function (s) {
+			if (!Array.isArray(s.months)) { return; }
+			var rise = nextRise(s.months, today);
+			if (!rise) { return; }
+			if (!best || rise.days < best.days) { best = { days: rise.days, here: rise.here, s: s }; }
+		});
+		if (!best) { return; }
+
+		Array.prototype.forEach.call(shells, function (node) {
+			fillCountdown(node, best, CFG.i18n || {});
+		});
+	}
+
 	function initAll() {
 		document.querySelectorAll('.dccwl-root').forEach(initRoot);
+		initCountdown();
 	}
 
 	if (document.readyState === 'loading') {
@@ -518,6 +609,7 @@
 					var scope = $scope && $scope[0] ? $scope[0] : $scope;
 					if (scope && scope.querySelectorAll) {
 						scope.querySelectorAll('.dccwl-root').forEach(initRoot);
+						initCountdown();
 					}
 				}
 			);

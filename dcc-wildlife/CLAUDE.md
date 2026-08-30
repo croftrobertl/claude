@@ -60,14 +60,20 @@ includes/class-species.php    # Species registry + monthly likelihood table (PHP
 includes/class-sprites.php    # Bespoke species sprite registry (48×48 SVG path data)
                               #   + symbol-sheet/<use> emitters (v1.3.0)
 includes/class-render.php     # Shared renderer for widget AND shortcode (identical
-                              #   output); prints DCC_WL_CFG inline JSON once
+                              #   output); prints DCC_WL_CFG inline JSON once;
+                              #   owns the season countdown since 1.8.0 (shell
+                              #   appended after the widget + standalone
+                              #   [dcc_wildlife_countdown]; widget.js computes
+                              #   the day count client-side in canal time)
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
 includes/class-water-fact.php   # THE GATE: private ctor + make(); no source => no Fact
 includes/class-water-data.php   # Stored settings + almanac (one seeded verified row)
 includes/class-water-live.php   # Water Atlas (level/Secchi/DO/TSI/bathymetry) + USGS
                                 #   rainfall + NWS; deviation wording, silence rules,
                                 #   staleness guards, gauge discovery + atlas probe
-includes/class-water-rest.php   # /conditions (public, serves cache) + /discover-gauges (admin)
+includes/class-water-rest.php   # Public: /conditions, /map (both serve cache).
+                                #   Admin (manage_options): /test-atlas,
+                                #   /discover-waters, /discover-gauges
 includes/class-water-render.php # Water widget/shortcode renderer; static server-side, live client-side
 includes/class-water-admin.php  # ONE page: DCC -> Wildlife (falls back to
                                 #   dcc-wildlife-water while the countdown
@@ -265,11 +271,39 @@ that's not true."* It is enforced structurally, not editorially.
 - **Anecdote is never ingested.** Fishing-report blogs, charter sites and app
   check-ins are link-only, by policy — copyright *and* because one angler's
   Tuesday is not a fact about a guest's Saturday.
-- **Admin lives at DCC → Water**, registered on `admin_menu` at priority 63
-  (after the mu-plugins that build the `dcc` top-level menu), with a fallback
-  to Settings if that parent is absent. Slug is `dcc-wildlife-water`, NOT
-  `dcc-wildlife` — the mu-plugin `dcc-wildlife-countdown.php` owns that one
-  and taking it would make one of the two pages vanish.
+- **Admin is ONE page**, registered on `admin_menu` at priority 63 (after the
+  mu-plugins that build the `dcc` top-level menu), with a fallback to
+  Settings if that parent is absent. It claims the `dcc-wildlife` slug only
+  when free (`slug_taken()`), falling back to `dcc-wildlife-water` while the
+  mu-plugin `dcc-wildlife-countdown.php` still owns `dcc-wildlife` — taking
+  an owned slug would make one of the two pages vanish.
+- **The season countdown is native since 1.8.0, with a stand-down guard.**
+  While `dcc-wildlife-countdown.php` exists (`function_exists(
+  'dcc_wl_countdown_html')`), that file wraps `[dcc_wildlife]` and renders
+  the line itself — Render emits no shell, `DCC_WL_CFG.countdown` is false,
+  and the `[dcc_wildlife_countdown]` tag is left to the mu-plugin. Once the
+  owner deletes the file, this plugin renders it end-to-end: same option
+  (`dcc_wl_countdown_enabled`, default 1), same markup/styling, day count
+  computed by widget.js in America/New_York (a season is a fact about
+  Florida), never baked into cached HTML. Handover step for the owner:
+  verify 1.8.0 live, THEN delete
+  `wp-content/mu-plugins/dcc-wildlife-countdown.php`.
+- **Settings-merge armour (1.8.0).** `Water_Data::all()` merges stored
+  settings over defaults with `wp_parse_args`, which is KEY-level: an
+  array-typed setting a site already stored (chain_waters, almanac, links)
+  completely shadows its default forever — re-saving does not heal it,
+  because the form round-trips the stored rows. This silently discarded the
+  1.7.1 seeded chain coordinates on any site that saved settings under
+  1.7.0. So: any change to seeded values inside an array-typed default MUST
+  ship with a step in `Water_Data::upgrade()`, which `Plugin::maybe_upgrade()`
+  runs once per version change (stored version in `dcc_wl_version`).
+  `chain_waters()` also backfills empty coordinates from `default_chain()`
+  at read time as belt-and-braces — owner-typed values always win.
+- **Uninstall is opt-in** (`uninstall.php`, 1.8.0): transients always
+  removed; options and old sighting posts only when the owner checked
+  "Delete all plugin data" (default off — this site reinstalls zips
+  routinely). `dcc_wl_countdown_enabled` is never deleted while the
+  mu-plugin file still exists.
 - **USGS API gotcha:** `stateCd` and `countyCd` together return HTTP 400.
   Only one major filter is allowed; discovery uses a bounding box.
 - **The Water Atlas clarity path is configurable, not hardcoded.** Only the
@@ -337,5 +371,14 @@ Deliver that file to the owner for the Plugins → Add New → Upload route.
 - Water module: with the live layer OFF, confirm zero network calls and that
   the almanac/dock/links still render. With it ON but sources unreachable,
   confirm the almanac still renders and no error or spinner reaches guests.
-- Water module: confirm Settings → DCC Water and the mu-plugin's
-  DCC → Wildlife page BOTH still appear in wp-admin.
+- Admin: exactly ONE settings page. With the mu-plugin still installed it is
+  DCC → Water (plus the mu-plugin's DCC → Wildlife); after deleting the
+  mu-plugin it moves to DCC → Wildlife and both old pages are gone.
+- Countdown (1.8.0): with the toggle on and the mu-plugin DELETED, the
+  "…season starts in N days" line renders below the widget, identical to the
+  mu-plugin's line; with the mu-plugin still present, exactly ONE line
+  renders (the mu-plugin's). `[dcc_wildlife_countdown]` alone on a page
+  renders the line; toggle off renders nothing.
+- Field guide shows the single attribution line ("local knowledge from your
+  hosts"); map popups show no English when a translation is loaded; each map
+  colour-by mode shows its legend row and grey is explained.

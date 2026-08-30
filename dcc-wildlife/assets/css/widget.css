@@ -614,3 +614,36 @@
 		padding-right: 0;
 	}
 }
+
+/* ------------------------------------------------------------------
+ * Season countdown (absorbed from the dcc-wildlife-countdown mu-plugin in
+ * 1.8.0). Styling is the mu-plugin's, verbatim — the owner asked for the
+ * same look, and guests have been seeing this line for months.
+ * ---------------------------------------------------------------- */
+
+.dccwl-countdown {
+	background: rgba(10, 61, 98, 0.06);
+	border: 1px solid rgba(10, 61, 98, 0.14);
+	border-radius: 10px;
+	color: #0a3d62;
+	font: 500 15px/1.4 'Segoe UI', sans-serif;
+	margin: 14px 0 0;
+	padding: 10px 14px;
+}
+
+.dccwl-countdown .dccwl-cd-emoji {
+	margin-right: 8px;
+}
+
+.dccwl-countdown .dccwl-cd-days {
+	font-weight: 700;
+}
+
+/* One quiet attribution line on the field guide (owner's decision, 1.8.0):
+ * the notes and likelihood calendar are local knowledge, and this says whose. */
+.dccwl-root .dccwl-credit {
+	color: #6b7a85;
+	font-size: 0.85rem;
+	font-style: italic;
+	margin: 14px 2px 0;
+}
