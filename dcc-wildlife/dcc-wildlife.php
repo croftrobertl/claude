@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Wildlife
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       "On the Canal This Month" wildlife guide, plus a fishing & water-conditions module for Dora Canal Court. The wildlife guide and the water almanac are 100% WordPress-native — no external services. An optional, off-by-default live layer fetches public USGS and NWS data server-side; no API keys, no accounts, no CDN scripts.
- * Version:           1.10.1
+ * Version:           1.10.2
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DCC_WL_VERSION', '1.10.1' );
+define( 'DCC_WL_VERSION', '1.10.2' );
 define( 'DCC_WL_FILE', __FILE__ );
 define( 'DCC_WL_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DCC_WL_URL', plugin_dir_url( __FILE__ ) );

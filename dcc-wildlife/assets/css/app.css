@@ -299,6 +299,21 @@
 	border-color: var(--dccwl-line-strong);
 }
 
+/* No lingering hover state on touch — see the note in canal.css. */
+@media (hover: none) {
+	.dccwl-app .dccwl-tile.dccwl-tile:hover {
+		background: var(--dccwl-glass-bg);
+		border-color: var(--dccwl-glass-border);
+		box-shadow: var(--dccwl-shadow-tile);
+		transform: none;
+	}
+
+	.dccwl-app .dccwl-tile.dccwl-tile[aria-expanded="true"]:hover {
+		border-color: var(--dccwl-accent);
+		box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
+	}
+}
+
 /* =====================================================================
  * THE SHEET — the sliding detail overlay.
  * One implementation, used by the species detail AND the chain map, so the

@@ -105,7 +105,11 @@
 .dccwl-hub-tiles {
 	display: grid;
 	gap: var(--dccwl-gap-lg);
-	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	/* auto-FIT with a max track: when the Water tile hides (its auto-hide
+	 * rule) the lone Wildlife tile stays a tile rather than stretching into
+	 * a slab the width of the page. */
+	grid-template-columns: repeat(auto-fit, minmax(240px, 300px));
+	justify-content: center;
 	list-style: none;
 	margin: 0 auto;
 	max-width: 620px;
@@ -129,8 +133,11 @@
 	font: inherit;
 	gap: 6px;
 	justify-content: center;
-	min-height: 132px;
-	padding: calc(var(--dccwl-pad) * 1.6) var(--dccwl-pad);
+	/* More vertical presence: on a phone the hub is the whole first screen,
+	 * and short tiles left it reading as unfinished rather than as two
+	 * deliberate choices. */
+	min-height: 168px;
+	padding: calc(var(--dccwl-pad) * 1.8) var(--dccwl-pad);
 	text-align: center;
 	transition: transform var(--dccwl-t) var(--dccwl-ease),
 		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
@@ -160,6 +167,41 @@
 .dccwl-hub-preview {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
+}
+
+/* Tile art: the species a Wildlife preview is counting, and the provenance
+ * chips behind a Water reading. Both are filled client-side from data the
+ * page already had. */
+.dccwl-hub-art {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	margin-top: 2px;
+	min-height: 34px;
+}
+
+.dccwl-hub-sprite {
+	fill: none;
+	height: 32px;
+	stroke-linecap: round;
+	width: 32px;
+}
+
+.dccwl-canal .dccwl-hub-chip {
+	font-size: 0.72rem;
+	max-width: 100%;
+	padding: 2px 9px;
+}
+
+.dccwl-hub-chip-src {
+	display: inline-block;
+	max-width: 15ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: bottom;
+	white-space: nowrap;
 }
 
 /* ---- L2a: the month picker ------------------------------------------ */
@@ -305,9 +347,32 @@
 	text-align: left;
 }
 
+/* Touch devices keep :hover on the last thing tapped, and on the month
+ * picker a hovered tile is a border away from looking SELECTED. Nothing
+ * that indicates state may be left behind by a finger. */
+@media (hover: none) {
+	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover,
+	.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover {
+		border-color: var(--dccwl-line);
+		box-shadow: var(--dccwl-shadow-tile);
+		transform: none;
+	}
+
+	/* ...except the genuinely selected one, which keeps its own marking. */
+	.dccwl-canal .dccwl-month-tile.dccwl-month-tile-on:hover {
+		border-color: var(--dccwl-primary);
+	}
+
+	.dccwl-canal .dccwl-month-tile.dccwl-month-tile-now:hover {
+		box-shadow: var(--dccwl-shadow-tile), 0 0 0 2px var(--dccwl-accent);
+	}
+
+	.dccwl-canal .dccwl-back.dccwl-back:hover { background: var(--dccwl-tile-bg); }
+}
+
 @media (max-width: 600px) {
-	.dccwl-hub-tiles { grid-template-columns: 1fr; }
-	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { min-height: 112px; }
+	.dccwl-hub-tiles { grid-template-columns: 1fr; max-width: 340px; }
+	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { min-height: 152px; }
 	.dccwl-month-tiles { grid-template-columns: repeat(3, 1fr); }
 	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
 }

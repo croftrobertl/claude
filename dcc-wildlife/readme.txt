@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.10.1
+Stable tag: 1.10.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,12 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.10.2 =
+* **The month strip no longer slices labels mid-word — and the fix reached the real cause.** 1.10.1 removed the edge fade on phones to stop it dimming the selected month, which left labels hard-clipped to "ul" and "No". The underlying bug was in the centring: it measured each pill from its offsetParent rather than from the scrolling track, a constant error that was invisible on a wide desktop strip and left the selected month 6px from the edge on a 320px phone. With that corrected the selected pill sits 65px clear at 320px, so the fade is back at every width and sized to dissolve a clipped label rather than cut it. At 320px three whole labels show with no fragment at all.
+* **A richer hub.** The two tiles are taller, and each now carries what it is actually talking about: Wildlife shows the species behind its count, Water shows each reading's source and age as the same provenance chip the cards use. Both still come only from data the page already had, the Water tile still shows its name alone when nothing is sourced, and it still disappears entirely when the module auto-hides — the lone Wildlife tile stays a tile rather than stretching across the page.
+* **Sticky hover on touch.** The February "selection" in the 1.10.1 screenshots was a capture artifact — the automated pointer sat over that tile after the panel swap — but it pointed at something real: a phone leaves `:hover` on whatever was last tapped, so a month could sit there looking chosen. Hover treatments that could be mistaken for a selected state are now switched off on touch devices, and the screenshot tooling parks the pointer before every capture.
+* All three now have permanent coverage in the mobile suite.
 
 = 1.10.1 =
 Mobile parity audit and refinements for the canal hub — mobile is how most guests will see this, and 1.10.0 shipped with desktop measurements only. Every level was measured at 320, 360, 375, 390, 414 portrait and 740×360 landscape. The layout held: **zero horizontal overflow at every width**, the hub stacks to one column, the month picker keeps three columns with no wrapped or clipped names even at 320px, and the species sheet fits the viewport. Four defects the measurements found are fixed:

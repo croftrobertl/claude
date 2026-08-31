@@ -230,6 +230,18 @@
 				: c.peak === 1 ? i.subPeakOne
 					: fmt(i.subSpot, c.spot);
 			node.textContent = fmt(I18N.hubMonth || '%1$s in %2$s', phrase, wCfg.monthsFull[m]);
+
+			// Show the species the line is counting. Decorative — the sentence
+			// above carries the meaning, so the art is aria-hidden — but it
+			// gives the tile something to look at besides a number.
+			var art = root.querySelector('[data-dccwl-hub-art="wildlife"]');
+			if (!art || !window.DCCWL_Widget) { return; }
+			art.textContent = '';
+			var peak = window.DCCWL_Widget.peakFor(m).slice(0, 5);
+			peak.forEach(function (sp) {
+				if (!sp.sprite) { return; }
+				art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-hub-sprite'));
+			});
 		}
 
 		/* The Water preview is built ONLY from facts the water module already
@@ -256,9 +268,41 @@
 				}
 				return;
 			}
-			node.textContent = usable.slice(0, 2).map(function (f) {
-				return f.value;
-			}).join(' · ');
+			var shown = usable.slice(0, 2);
+			node.textContent = shown.map(function (f) { return f.value; }).join(' · ');
+
+			// Provenance at a glance, exactly as the water cards do it: the
+			// source name and how old the reading is. Nothing derived.
+			var art = root.querySelector('[data-dccwl-hub-art="water"]');
+			if (!art) { return; }
+			art.textContent = '';
+			shown.forEach(function (f) {
+				var chip = el('span', 'dccwl-metachip dccwl-hub-chip');
+				chip.appendChild(el('span', 'dccwl-hub-chip-src', f.sourceName));
+				var age = ageWords(f.date, f.datePrecision);
+				if (age) {
+					chip.appendChild(el('span', 'dccwl-card-dot', '·'));
+					chip.appendChild(el('span', 'dccwl-card-age', age));
+				}
+				art.appendChild(chip);
+			});
+		}
+
+		/* Age in chip-sized words, from the MEASUREMENT date the fact carried.
+		 * Mirrors water.js so the hub and the cards can never disagree; returns
+		 * '' when the date will not parse rather than guessing. */
+		function ageWords(iso, precision) {
+			if (!iso) { return ''; }
+			var bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso).trim());
+			var then = bare ? new Date(+bare[1], +bare[2] - 1, +bare[3]) : new Date(iso);
+			if (isNaN(then.getTime())) { return ''; }
+			var days = Math.floor((Date.now() - then.getTime()) / 86400000);
+			if (days < 0) { return ''; }
+			var w = (window.DCC_WL_WATER && window.DCC_WL_WATER.i18n) || {};
+			if (days === 0) { return w.ageToday || 'today'; }
+			if (days < 45) { return days + (w.ageDays || 'd'); }
+			if (days < 730) { return Math.round(days / 30) + (w.ageMonths || 'mo'); }
+			return Math.round(days / 365) + (w.ageYears || 'y');
 		}
 
 		// water.js announces what its existing fetch returned; this file

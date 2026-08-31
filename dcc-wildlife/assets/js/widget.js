@@ -393,7 +393,15 @@
 			if (!track || !btn || track.scrollWidth <= track.clientWidth) {
 				return;
 			}
-			track.scrollLeft = btn.offsetLeft - (track.clientWidth - btn.offsetWidth) / 2;
+			// Measure the pill against the SCROLL CONTAINER, not against
+			// whatever happens to be its offsetParent. The track is
+			// position:static, so btn.offsetLeft carried the track's own
+			// offset within the page — a constant error that was invisible on
+			// a wide desktop strip and left the selected pill 6px from the
+			// edge on a 320px phone.
+			var left = btn.getBoundingClientRect().left
+				- track.getBoundingClientRect().left + track.scrollLeft;
+			track.scrollLeft = left - (track.clientWidth - btn.offsetWidth) / 2;
 		}
 
 		function buildTimeline() {
@@ -596,6 +604,12 @@
 	}
 
 	window.DCCWL_Widget = {
+		/* One <use> builder for the whole plugin — see spriteUse(). */
+		sprite: function (id, cls) { return spriteUse(id, cls); },
+		peakFor: function (m) {
+			return speciesForMonth(m).filter(function (x) { return x.v >= 3; })
+				.map(function (x) { return x.s; });
+		},
 		setMonth: function (root, m) {
 			var h = roots.get(root);
 			if (h) { h.setMonth(m); h.recenter(); }

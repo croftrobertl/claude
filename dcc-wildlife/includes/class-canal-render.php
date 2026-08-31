@@ -96,6 +96,10 @@ final class Canal_Render {
 								<?php /* Filled client-side from the bundled species
 								         calendar — always available, never cached. */ ?>
 								<span class="dccwl-hub-preview" data-dccwl-preview="wildlife"></span>
+								<?php /* Species art for the month, added client-side.
+								         Decorative: the preview line above says what
+								         it means. */ ?>
+								<span class="dccwl-hub-art" data-dccwl-hub-art="wildlife" aria-hidden="true"></span>
 							</button>
 						</li>
 						<?php if ( $has_water ) : ?>
@@ -108,6 +112,9 @@ final class Canal_Render {
 									         empty and the tile shows its name alone —
 									         the same rule the module itself follows. */ ?>
 									<span class="dccwl-hub-preview" data-dccwl-preview="water"></span>
+									<?php /* Source + age chips for the very facts above —
+									         the same provenance the cards carry. */ ?>
+									<span class="dccwl-hub-art" data-dccwl-hub-art="water"></span>
 								</button>
 							</li>
 						<?php endif; ?>

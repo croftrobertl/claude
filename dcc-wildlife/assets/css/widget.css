@@ -127,7 +127,14 @@
  * MONTH TIMELINE — the segmented control
  * ================================================================== */
 
+/* The fade has to be wide enough to DISSOLVE a clipped month label rather
+ * than clip it mid-word: a hard-cut "ul" or "No" reads as a rendering fault,
+ * which is what 1.10.1 traded away when it removed the fade on phones. A
+ * pill is ~54px, so ~40px of gradient turns the edge one into a fading hint
+ * instead of broken text. The selected pill is never touched by it — with
+ * centring fixed it sits ~67px clear even at 320px. */
 .dccwl-timeline {
+	--dccwl-strip-fade: 48px;
 	align-items: center;
 	display: flex;
 	gap: 6px;
@@ -215,6 +222,19 @@
 	outline: none;
 }
 
+/* A tapped month pill must not keep looking chosen (touch :hover). */
+@media (hover: none) {
+	.dccwl-root .dccwl-month.dccwl-month:hover {
+		background: transparent;
+		color: var(--dccwl-text-muted);
+	}
+
+	.dccwl-root .dccwl-month.dccwl-month-on:hover {
+		background: var(--dccwl-btn-bg);
+		color: var(--dccwl-btn-txt);
+	}
+}
+
 /* Edge fades cue that the strip scrolls.
  *
  * Masked rather than overlaid: a gradient fading to a page colour has to
@@ -226,18 +246,18 @@
 }
 
 .dccwl-timeline.dccwl-fade-l .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 16px);
-	mask-image: linear-gradient(to right, transparent, #000 16px);
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade));
+	mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade));
 }
 
 .dccwl-timeline.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to left, transparent, #000 16px);
-	mask-image: linear-gradient(to left, transparent, #000 16px);
+	-webkit-mask-image: linear-gradient(to left, transparent, #000 var(--dccwl-strip-fade));
+	mask-image: linear-gradient(to left, transparent, #000 var(--dccwl-strip-fade));
 }
 
 .dccwl-timeline.dccwl-fade-l.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
-	mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade), #000 calc(100% - var(--dccwl-strip-fade)), transparent);
+	mask-image: linear-gradient(to right, transparent, #000 var(--dccwl-strip-fade), #000 calc(100% - var(--dccwl-strip-fade)), transparent);
 }
 
 /* =====================================================================
@@ -547,16 +567,6 @@
 	/* Twelve month labels do not fit across a phone; two rows do. */
 	.dccwl-sheet .dccwl-like-row { grid-template-columns: repeat(6, 1fr); row-gap: 10px; }
 
-	/* No edge fade on the month strip here (1.10.1). The track is narrow
-	 * enough that the selected pill lands within the fade and comes out
-	 * looking half-dimmed — and the prev/next arrows flanking the strip
-	 * already say "there is more", which is what the fade was for. */
-	.dccwl-timeline.dccwl-fade-l .dccwl-timeline-track,
-	.dccwl-timeline.dccwl-fade-r .dccwl-timeline-track,
-	.dccwl-timeline.dccwl-fade-l.dccwl-fade-r .dccwl-timeline-track {
-		-webkit-mask-image: none;
-		mask-image: none;
-	}
 }
 
 @media (prefers-reduced-motion: reduce) {
