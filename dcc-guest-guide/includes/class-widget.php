@@ -1528,23 +1528,33 @@ final class Widget extends Widget_Base
             'description'  => __('Flip-card falls back to stage-swap automatically when paired with List / Carousel / Split-pane.', 'dcc-guest-guide'),
         ]);
 
-        // v0.9.7: explicit column count for the menu hub on phones in
-        // portrait. Without this, narrow viewports collapse to a single
-        // column because the tile-min-width breakpoint wins; the host can
-        // now force 2/3/4 columns on the small viewport.
+        // v0.9.7: explicit column count for the menu hub on phones in portrait.
+        // v0.9.9: the default is now Auto, not 1. Defaulting to 1 pinned every
+        // untouched widget to a single column on phones — and because an
+        // Elementor SELECT left at its default emits no CSS, the old rule's
+        // `repeat(var(--…, 1), …)` fallback did the pinning invisibly, with no
+        // declaration in the generated CSS to hint at why. That default made
+        // sense when tile-min was 200px; at today's smaller tile widths two
+        // tiles fit a 375px phone comfortably, so it actively hurt.
+        //
+        // Auto emits an empty {{VALUE}}, which Elementor skips entirely, so the
+        // custom property stays unset and the stylesheet's auto-fill fallback
+        // applies. A chosen number emits a complete template. One property, two
+        // modes, no possibility of the two rules fighting.
         $this->add_control('grid_columns_mobile', [
             'label'     => __('Grid columns — mobile (portrait)', 'dcc-guest-guide'),
             'type'      => Controls_Manager::SELECT,
-            'default'   => '1',
+            'default'   => '',
             'options'   => [
+                ''  => __('Auto (fit to width)', 'dcc-guest-guide'),
                 '1' => '1', '2' => '2', '3' => '3', '4' => '4',
             ],
             'condition' => ['menu_layout' => 'grid'],
             'selectors' => [
                 self::SEL . '.dccgg-layout-grid .dccgg-menu' =>
-                    '--dccgg-grid-cols-mobile: {{VALUE}};',
+                    '--dccgg-grid-cols-mobile-tpl: repeat({{VALUE}}, minmax(0, 1fr));',
             ],
-            'description' => __('Number of section tiles per row on a phone in portrait orientation. The auto layout from the tile min-width still applies to wider viewports.', 'dcc-guest-guide'),
+            'description' => __('Section tiles per row on a phone in portrait. Auto flows them by the tile min-width, the same way wider screens do — pick a number to pin an exact count instead.', 'dcc-guest-guide'),
             'separator' => 'before',
         ]);
 

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.8
+Stable tag: 0.9.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,30 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.9.9 =
+
+**Mobile grid follows tile width by default instead of collapsing to 1
+column; explicit per-phone column count still available.**
+
+The menu hub collapsed to a single column on phones in portrait even when
+two tiles would fit comfortably. The mobile-portrait rule pinned the
+column count from a separate "Grid columns — mobile (portrait)" dropdown
+that defaulted to 1 — and because an Elementor dropdown left at its
+default emits no CSS at all, the pinning happened through the
+stylesheet's fallback, with nothing in the generated CSS to show why. The
+default made sense when tiles had a 200px minimum width; at the smaller
+tile widths in use now it worked against the natural layout.
+
+* The dropdown now defaults to **Auto (fit to width)**, which flows tiles
+  by the tile min-width exactly as wider screens do — so a 375px phone
+  shows 2 columns at a 120–140px tile min-width instead of 1.
+* Choosing 1, 2, 3 or 4 still pins exactly that many columns on a phone
+  in portrait.
+* Existing widgets that were deliberately set to a number keep that
+  setting. Widgets left at the old default pick up Auto.
+* Desktop and tablet layouts are unchanged, as are the tile min-width and
+  every other control.
 
 = 0.9.8 =
 

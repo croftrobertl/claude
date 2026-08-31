@@ -405,6 +405,50 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario H: mobile menu grid column behaviour (v0.9.9) ---------
+    // The v0.9.7 mobile-portrait rule fell back to repeat(1, …) whenever the
+    // column-count var was unset — the normal state for an untouched widget,
+    // since an Elementor SELECT at its default emits no CSS — so phones
+    // silently collapsed to one column. Auto must now follow tile width;
+    // an explicit choice must still pin.
+    {
+        console.log('\nH. Mobile menu grid: Auto flows by width, explicit count pins');
+        const errors = [];
+        const grid = (tileMin, pin) => `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1"><style>${CSS}
+            .dccgg-menu{--dccgg-tile-min:${tileMin};${pin !== null ? `--dccgg-grid-cols-mobile-tpl:repeat(${pin}, minmax(0,1fr));` : ''}}
+            </style></head><body><div class="dccgg-root dccgg-layout-grid"><div class="dccgg-menu">
+            ${Array.from({ length: 8 }, (_, i) => `<div class="dccgg-tile-wrap"><button class="dccgg-tile">S${i}</button></div>`).join('')}
+            </div></div></body></html>`;
+        const colsAt = async (vp, tileMin, pin) => {
+            const ctx = await browser.newContext({ viewport: vp, isMobile: vp.width <= 600, hasTouch: vp.width <= 600 });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(grid(tileMin, pin), { waitUntil: 'load' });
+            const n = await page.evaluate(() => getComputedStyle(document.querySelector('.dccgg-menu'))
+                .gridTemplateColumns.split(' ').filter(Boolean).length);
+            await ctx.close();
+            return n;
+        };
+        const PHONE_P = { width: 375, height: 812 };
+        // Auto default must give 2 columns at the tile widths actually in use.
+        for (const tm of ['120px', '140px']) {
+            check(`Auto: 375px phone at tile-min ${tm} gives 2 columns`,
+                (await colsAt(PHONE_P, tm, null)) === 2, `got ${await colsAt(PHONE_P, tm, null)}`);
+        }
+        // Explicit choice still pins exactly.
+        let pinned = [];
+        for (const n of [1, 2, 3, 4]) {
+            if ((await colsAt(PHONE_P, '120px', n)) !== n) pinned.push(n);
+        }
+        check('explicit 1/2/3/4 pins exactly that count', pinned.length === 0, `wrong for: ${pinned.join(',')}`);
+        // The mobile pin must not leak past the breakpoint.
+        const dAuto = await colsAt({ width: 1280, height: 800 }, '200px', null);
+        const dPinned = await colsAt({ width: 1280, height: 800 }, '200px', 2);
+        check('mobile pin does not affect desktop', dAuto === dPinned, `auto=${dAuto} pinned=${dPinned}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

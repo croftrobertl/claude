@@ -784,13 +784,20 @@ body.dccgg-detail-open {
 .dccgg-layout-grid .dccgg-menu {
     grid-template-columns: repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr));
 }
-/* v0.9.7: on phones in portrait, override auto-fill with a fixed count
-   from the Elementor Layout panel (defaults to 1). repeat(var(...)) takes
-   the numeric value directly; the fallback is 1 so the column count never
-   collapses to 0 if the var is unset. */
+/* v0.9.9: phones in portrait follow the tile width by default, exactly as
+   wider viewports do, instead of collapsing to one column. The old rule
+   fell back to `repeat(1, …)` whenever the column-count var was unset —
+   which is the normal state, since an Elementor SELECT at its default emits
+   no CSS — so an untouched widget was silently pinned to a single column.
+   The whole track list now comes from ONE property: unset (the Auto
+   default) falls back to the same auto-fill layout the desktop rule uses;
+   choosing 1/2/3/4 in the panel sets it to a complete repeat() template and
+   pins that count. Because both modes write the same property there is no
+   second rule to lose a specificity fight. */
 @media (max-width: 600px) and (orientation: portrait) {
     .dccgg-layout-grid .dccgg-menu {
-        grid-template-columns: repeat(var(--dccgg-grid-cols-mobile, 1), minmax(0, 1fr));
+        grid-template-columns: var(--dccgg-grid-cols-mobile-tpl,
+            repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr)));
     }
 }
 
