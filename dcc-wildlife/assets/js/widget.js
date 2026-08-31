@@ -65,11 +65,6 @@
 		'<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">' +
 		'<path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
-	var MASCOT_MARK =
-		'<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">' +
-		'<path d="M6 1 C8.5 2.5 10 5 9.5 8 L6 11 L2.5 8 C2 5 3.5 2.5 6 1 Z" fill="#f08080"/>' +
-		'<path d="M6 3.2 V9.4" stroke="#fdeeee" stroke-width="1" stroke-linecap="round"/></svg>';
-
 	function el(tag, cls, text) {
 		var node = document.createElement(tag);
 		if (cls) {
@@ -130,12 +125,9 @@
 				if (b.v !== a.v) {
 					return b.v - a.v;
 				}
-				// The heron (our mascot) leads among ties.
-				var am = a.s.mascot ? 1 : 0;
-				var bm = b.s.mascot ? 1 : 0;
-				if (bm !== am) {
-					return bm - am;
-				}
+				// Ties keep registry order, so the strip is stable month to
+				// month. (Through 1.9.1 the heron jumped ties on a flag that
+				// 1.9.2 removed along with the marker it drew.)
 				return a.i - b.i;
 			});
 	}
@@ -212,9 +204,6 @@
 			body.appendChild(medallion);
 
 			var badges = el('p', 'dccwl-detail-badges');
-			if (sp.mascot) {
-				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-mascot', CFG.i18n.mascot));
-			}
 			if ((sp.months[state.month] || 0) >= 3) {
 				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));
 			}
@@ -308,7 +297,7 @@
 
 		function buildTile(sp, value) {
 			var li = el('li');
-			var tile = el('button', 'dccwl-tile' + (sp.mascot ? ' dccwl-tile-mascot' : ''));
+			var tile = el('button', 'dccwl-tile');
 			tile.type = 'button';
 			tile.setAttribute('data-dccwl-species', sp.id);
 			tile.setAttribute('aria-haspopup', 'dialog');
@@ -324,14 +313,6 @@
 			} else if (sp.bestLabel) {
 				tile.appendChild(el('span', 'dccwl-tile-sub', sp.bestLabel));
 			}
-			if (sp.mascot) {
-				var mark = el('span', 'dccwl-tile-mark');
-				mark.setAttribute('aria-hidden', 'true');
-				mark.innerHTML = MASCOT_MARK; // static trusted constant
-				tile.appendChild(mark);
-				tile.appendChild(el('span', 'dccwl-sr', '— ' + CFG.i18n.mascot));
-			}
-
 			wireTile(tile);
 			li.appendChild(tile);
 			return li;

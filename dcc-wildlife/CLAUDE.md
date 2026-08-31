@@ -105,12 +105,14 @@ assets/js/admin-water.js      # Repeatable rows + USGS gauge discovery (admin on
 assets/js/water-map.js        # The chain map — fetched on demand, never enqueued
 ```
 
-Data model: the registry (id, emoji, name, group, fact, best, where, mascot)
-and the calendar (12 ints per species, 0=rare 1=possible 2=good 3=peak) live
-in `class-species.php`. Spotlight = value ≥ 2 for the shown month, ordered
-value desc with the heron (mascot) first among ties; value-3 chips get a
-peak tick and the panel a "Peak season" badge. The "Best: Nov–Mar" ranges
-are derived in PHP (`best_months_label`, value-3 months falling back to the
+Data model: the registry (id, emoji, name, group, fact, best, where) and the
+calendar (12 ints per species, 0=rare 1=possible 2=good 3=peak) live in
+`class-species.php`. Spotlight = value ≥ 2 for the shown month, ordered
+value desc and by registry order among ties; value-3 tiles get a "Peak"
+label and the detail sheet a "Peak season" badge. (There is no mascot: the
+flag, its tile marker and the tie-break it won were removed in 1.9.2 — the
+site has no mascot, so do not reintroduce the concept.) The "Best: Nov–Mar"
+ranges are derived in PHP (`best_months_label`, value-3 months falling back to the
 row max, wrapping across the year end) and shipped per species as
 `bestLabel` in the config JSON.
 

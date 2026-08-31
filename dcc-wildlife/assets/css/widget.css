@@ -284,13 +284,6 @@
 	font-weight: 700;
 }
 
-.dccwl-tile-mark {
-	line-height: 0;
-	position: absolute;
-	right: 9px;
-	top: 9px;
-}
-
 .dccwl-tile-emoji { font-size: 26px; line-height: 1; }
 
 /* Staggered fade-in on a month change. */

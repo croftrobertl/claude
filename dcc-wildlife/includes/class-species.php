@@ -122,7 +122,6 @@ final class Species {
 				'fact'   => __( 'Great Blue Herons stand motionless for minutes before striking prey with lightning speed.', 'dcc-wildlife' ),
 				'best'   => __( 'dawn & dusk', 'dcc-wildlife' ),
 				'where'  => __( 'standing statue-still in the shallows along the bank', 'dcc-wildlife' ),
-				'mascot' => true,
 			],
 			'egret'      => [
 				'emoji' => '🦤',
@@ -187,7 +186,7 @@ final class Species {
 		 *
 		 * @param array $species Keyed by species id; each entry has emoji,
 		 *                       name, group, fact, best, where, and an
-		 *                       optional `mascot` flag.
+		 *                       and `where`.
 		 */
 		return apply_filters( 'dcc_wl_species', $species );
 	}
@@ -256,7 +255,6 @@ final class Species {
 				'fact'      => (string) ( $sp['fact'] ?? '' ),
 				'best'      => (string) ( $sp['best'] ?? '' ),
 				'where'     => (string) ( $sp['where'] ?? '' ),
-				'mascot'    => ! empty( $sp['mascot'] ),
 				'months'    => $months,
 				'bestLabel' => self::best_months_label( $months ),
 			];

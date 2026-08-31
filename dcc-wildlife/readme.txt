@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.9.1
+Stable tag: 1.9.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,6 +46,10 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.9.2 =
+* **Removed the unused mascot marker.** The Great Blue Heron tile carried a small coral flag that read as nothing in particular, and Dora Canal Court has no mascot — so the concept is gone rather than renamed: the registry flag, the tile marker and its screen-reader label, the "Our mascot" badge in the detail sheet, the i18n string and the dead CSS rule.
+* One knock-on worth knowing: the flag also let the heron jump ahead of equally-likely species in the spotlight strip. With it gone, ties fall back to registry order, so the strip may now lead with a different species (in August, the Alligator).
 
 = 1.9.1 =
 * **The Guest Guide's real palette, measured from the live site.** 1.9.0 shipped Wildlife's own navy/coral as an openly-flagged placeholder because the Guide could not be read from the build environment. Those values are gone: primary is now #0f6dbf, accent #f08080, text #111111, muted #5d7891, tiles the Guide's near-opaque white (rgba 255,255,255,.92) over a 15%-blue border, detail surfaces #ffffff, buttons the Guide's blue on white. The token names did not change — only their values — so this was the one-block swap 1.9.0 was built for.

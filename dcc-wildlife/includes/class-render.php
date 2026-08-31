@@ -287,7 +287,7 @@ final class Render {
 			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php foreach ( $group_species as $sp ) : ?>
 					<li>
-						<button type="button" class="dccwl-tile<?php echo $sp['mascot'] ? ' dccwl-tile-mascot' : ''; ?>" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
+						<button type="button" class="dccwl-tile" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
 							<span class="dccwl-tile-icon">
 								<?php if ( Sprites::has( $sp['id'] ) ) : ?>
 									<?php echo Sprites::use_svg( $sp['id'], 'dccwl-chip-sprite' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup. ?>
@@ -296,9 +296,6 @@ final class Render {
 								<?php endif; ?>
 							</span>
 							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
-							<?php if ( $sp['mascot'] ) : ?>
-								<span class="dccwl-sr"><?php esc_html_e( '— our mascot', 'dcc-wildlife' ); ?></span>
-							<?php endif; ?>
 						</button>
 					</li>
 				<?php endforeach; ?>
@@ -348,7 +345,6 @@ final class Render {
 				'monthSub'    => _x( '%1$s: %2$s', 'month subline', 'dcc-wildlife' ),
 				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
 				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
-				'mascot'      => __( 'Our mascot', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.
 				'where'       => __( 'Where to look', 'dcc-wildlife' ),
