@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.3
+Stable tag: 0.22.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,19 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.4 =
+* The compare pager's range now uses a plain hyphen ("Showing 1-2 of 8") — the
+  last en dash in any guest-visible string. The typography sweep test now runs
+  with no exclusions, and the Weigh Priorities labels are pinned by name so a
+  wording miss in that category fails loudly.
+* Note on "Pullout couch flexibility" still showing on the live Weigh
+  Priorities step: the plugin has served the hyphenated wording since 0.22.3 —
+  what renders is the WIDGET'S OWN saved value for that field (stored in the
+  page, and stored values beat every plugin default). To fix on the site: edit
+  the Cottage Selector, open Content → Questions & answers text → "Priority:
+  Pull-out couch", clear the field (or retype the hyphenated wording), and
+  save. No update can do this from plugin code.
 
 = 0.22.3 =
 Three small cleanups; no behaviour change.

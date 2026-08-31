@@ -113,7 +113,7 @@ final class Config
             'compare_prompt'    => __('Select 2 or more cottages to compare side by side.', 'dcc-cottage-selector'),
             'compare_need_two'  => __('Tip: check at least 2 cottages, then tap “Compare”.', 'dcc-cottage-selector'),
             'compare_scroll_all' => /* translators: %d: total number of cottages */ __('Scroll the list to see all %d cottages.', 'dcc-cottage-selector'),
-            'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d–%2$d of %3$d', 'dcc-cottage-selector'),
+            'cmp_range'         => /* translators: %1$d-%2$d of %3$d cottages */ __('Showing %1$d-%2$d of %3$d', 'dcc-cottage-selector'),
             'cmp_prev'          => __('Previous cottages', 'dcc-cottage-selector'),
             'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),
 

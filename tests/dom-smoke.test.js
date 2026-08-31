@@ -1299,12 +1299,21 @@ function configWith(overrides) {
   const bare = Object.keys(cfg.strings).filter(k => /pullout/i.test(cfg.strings[k]));
   ok('no unhyphenated "pullout" in any visible string' + (bare.length ? ' [' + bare.join(',') + ']' : ''),
     bare.length === 0);
-  // cmp_range ('Showing 1\u20132 of 8') still carries an en dash — pre-existing,
-  // outside the 0.22.3 brief, flagged in the handoff rather than changed.
-  const dashes = Object.keys(cfg.strings)
-    .filter(k => k !== 'cmp_range' && cfg.strings[k].indexOf('\u2013') !== -1);
-  ok('no en dashes left in visible strings (cmp_range flagged separately)' +
-    (dashes.length ? ' [' + dashes.join(',') + ']' : ''), dashes.length === 0);
+  // 0.22.4: cmp_range converted too — the sweep now runs with NO exclusions.
+  const dashes = Object.keys(cfg.strings).filter(k => cfg.strings[k].indexOf('\u2013') !== -1);
+  ok('no en dashes left in ANY visible string' + (dashes.length ? ' [' + dashes.join(',') + ']' : ''),
+    dashes.length === 0);
+  ok('compare pager range uses a plain hyphen', cfg.strings.cmp_range === 'Showing %1$d-%2$d of %3$d');
+
+  // Weigh Priorities labels, pinned explicitly (0.22.4): the generic sweep covers
+  // them, but this names the category so a future miss fails with a clear message.
+  const wKeys = Object.keys(cfg.strings).filter(k => /^w_/.test(k));
+  ok('sweep sees the Weigh Priorities label category', wKeys.length >= 10);
+  const badW = wKeys.filter(k => /pullout/i.test(cfg.strings[k]) || cfg.strings[k].indexOf('\u2013') !== -1);
+  ok('every Weigh Priorities label is hyphen-clean' + (badW.length ? ' [' + badW.join(',') + ']' : ''),
+    badW.length === 0);
+  ok('w_pullout reads "Pull-out couch flexibility"',
+    cfg.strings.w_pullout === 'Pull-out couch flexibility');
 
   // A pull-out cottage's "why this fits" carries the corrected reason end-to-end.
   const root = mountSelector(w, JSON.stringify(cfg));

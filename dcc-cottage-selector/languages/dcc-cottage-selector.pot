@@ -1098,7 +1098,7 @@ msgid "Show “pick 2” tip"
 msgstr ""
 
 #: includes/class-config.php:116
-msgid "Showing %1$d–%2$d of %3$d"
+msgid "Showing %1$d-%2$d of %3$d"
 msgstr ""
 
 #: includes/class-config.php:100
