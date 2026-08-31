@@ -1,190 +1,249 @@
 /**
- * DCC Wildlife — water module styles.
+ * DCC Wildlife — fishing & water conditions (v1.9.0).
  *
- * Shares the palette and type scale of widget.css (navy #0a3d62, coral
- * #e8604f, readable base size for an older clientele). Kept in its own file
- * so the module's CSS only loads on pages that place the widget/shortcode.
+ * Built on assets/css/app.css, same as the month widget, so the two read as
+ * one app. v1.9.0 rebuilt every reading as a DATA CARD carrying a source +
+ * age chip, and moved the chain map into the shared sliding sheet.
  *
- * The visual system carries the epistemics: attribution is always visible
- * beneath a value, general guidance is boxed away from measured facts, and
- * the owner's own notes are visually distinct from published data so guests
- * can tell at a glance who is talking.
+ * Nothing here changes what is fetched or what may render — the Water_Fact
+ * gate is upstream of all of it. This file is chrome.
  */
 
 .dccwl-water {
-	--dccwl-navy: #0a3d62;
-	--dccwl-coral: #e8604f;
-	--dccwl-ink: #1c2b36;
-	--dccwl-muted: #566a77;
-	--dccwl-soft: #f4f7f9;
-	--dccwl-line: #dbe4ea;
-	--dccwl-white: #fff;
-
-	color: var(--dccwl-ink);
-	font-size: 1.0625rem;
-	line-height: 1.55;
+	font-family: var(--dccwl-font);
+	margin: 0 auto;
+	max-width: 100%;
 }
 
+.dccwl-water[hidden] { display: none; }
+
+.dccwl-water > * + * { margin-top: var(--dccwl-gap-lg); }
+
 .dccwl-water .dccwl-water-title {
-	color: var(--dccwl-navy);
-	font-size: 1.65rem;
-	line-height: 1.25;
-	margin: 0 0 0.75rem;
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	margin: 0;
 }
 
 .dccwl-water .dccwl-water-sub {
-	color: var(--dccwl-navy);
-	font-size: 1.15rem;
-	margin: 1.25rem 0 0.5rem;
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	margin: 0 0 var(--dccwl-gap);
+	text-transform: uppercase;
 }
 
-/* ---- fact rows ---- */
+/* =====================================================================
+ * DATA CARDS
+ * One reading per card: the label and its provenance chip on top, the
+ * value large, the full attribution beneath. The chip summarises that
+ * attribution — it never stands in for it, because the source and the
+ * measurement date are the point of this module.
+ * ================================================================== */
 
-.dccwl-water .dccwl-water-facts {
+.dccwl-water .dccwl-cards {
 	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dccwl-water .dccwl-card {
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-glass-bg);
+	border: 1px solid var(--dccwl-glass-border);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0;
+	padding: var(--dccwl-pad);
+}
+
+.dccwl-water .dccwl-card-head {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: space-between;
+}
+
+.dccwl-water .dccwl-card-label {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+/* The source + age chip. The source name can be long ("USGS rain gauge
+ * (site 02237700)"), so it truncates visually — the untruncated name is
+ * still printed in the attribution line below, so nothing is lost. */
+.dccwl-water .dccwl-card-src {
+	max-width: 100%;
+	min-width: 0;
+}
+
+.dccwl-water .dccwl-card-srcname {
+	display: inline-block;
+	max-width: 13ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: bottom;
+	white-space: nowrap;
+}
+
+.dccwl-water .dccwl-card-dot { color: var(--dccwl-text-faint); }
+
+.dccwl-water .dccwl-card-age {
+	color: var(--dccwl-text);
+	font-weight: 700;
+}
+
+.dccwl-water .dccwl-card-value {
+	color: var(--dccwl-text);
+	font-size: 1.35rem;
+	font-weight: 700;
+	line-height: 1.25;
+	margin: 0;
+}
+
+.dccwl-water .dccwl-water-attr {
+	color: var(--dccwl-text-faint);
+	display: flex;
+	flex-direction: column;
+	font-size: var(--dccwl-fs-xs);
+	gap: 2px;
+	margin: auto 0 0;
+}
+
+.dccwl-water .dccwl-water-attr a {
+	color: var(--dccwl-text-muted);
+	text-decoration: underline;
+}
+
+.dccwl-water .dccwl-water-attr a:hover { color: var(--dccwl-accent); }
+
+.dccwl-water .dccwl-water-note { font-style: italic; }
+
+/* Tier is a quiet left edge, not a shout: live readings read as current,
+ * general guidance reads as advice. */
+.dccwl-water .dccwl-water-tier-live { border-left: 3px solid var(--dccwl-ok); }
+.dccwl-water .dccwl-water-tier-published { border-left: 3px solid var(--dccwl-primary); }
+.dccwl-water .dccwl-water-tier-general { border-left: 3px solid var(--dccwl-warn); }
+
+/* =====================================================================
+ * SECTIONS
+ * ================================================================== */
+
+.dccwl-water .dccwl-chain[hidden] { display: none; }
+
+.dccwl-water .dccwl-chain-note {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: 0 0 var(--dccwl-gap);
+}
+
+.dccwl-water .dccwl-water-general {
+	border: 1px dashed var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius);
+	margin-top: var(--dccwl-gap);
+	padding: var(--dccwl-pad);
+}
+
+.dccwl-water .dccwl-water-general-head {
+	color: var(--dccwl-warn);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	margin: 0 0 var(--dccwl-gap);
+	text-transform: uppercase;
+}
+
+.dccwl-water .dccwl-water-linklist {
+	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 	list-style: none;
 	margin: 0;
 	padding: 0;
 }
 
-.dccwl-water .dccwl-water-fact {
-	background: var(--dccwl-soft);
+.dccwl-water .dccwl-water-linklist li { margin: 0; }
+
+.dccwl-water .dccwl-water-linklist a {
 	border: 1px solid var(--dccwl-line);
-	border-left: 4px solid var(--dccwl-line);
-	border-radius: 10px;
-	margin: 0;
-	padding: 10px 14px;
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text);
+	display: inline-block;
+	font-size: var(--dccwl-fs-sm);
+	padding: 9px 16px;
+	text-decoration: none;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
 }
 
-.dccwl-water .dccwl-water-tier-live {
-	border-left-color: var(--dccwl-coral);
+.dccwl-water .dccwl-water-linklist a:hover {
+	background: var(--dccwl-primary-soft);
+	border-color: var(--dccwl-line-strong);
 }
 
-.dccwl-water .dccwl-water-tier-published {
-	border-left-color: var(--dccwl-navy);
-}
-
-.dccwl-water .dccwl-water-tier-general {
-	background: var(--dccwl-white);
-	border-left-color: #b9ccd8;
-}
-
-.dccwl-water .dccwl-water-label {
-	color: var(--dccwl-muted);
-	display: block;
-	font-size: 0.88rem;
-	letter-spacing: 0.03em;
-	text-transform: uppercase;
-}
-
-.dccwl-water .dccwl-water-value {
-	color: var(--dccwl-navy);
-	display: block;
-	font-size: 1.15rem;
-	font-weight: 700;
-}
-
-/* Attribution is part of the fact, never an optional flourish. */
-.dccwl-water .dccwl-water-attr {
-	color: var(--dccwl-muted);
-	display: block;
-	font-size: 0.85rem;
-	margin-top: 2px;
-}
-
-.dccwl-water .dccwl-water-attr a {
-	color: var(--dccwl-muted);
-	text-decoration: underline;
-}
-
-.dccwl-water .dccwl-water-date::before,
-.dccwl-water .dccwl-water-note::before {
-	content: " · ";
-}
-
-.dccwl-water .dccwl-water-note {
-	font-style: italic;
-}
-
-/* ---- general guidance, visibly separated ---- */
-
-.dccwl-water .dccwl-water-general {
-	border-left: 3px dashed #b9ccd8;
-	margin: 10px 0 0;
-	padding-left: 12px;
-}
-
-.dccwl-water .dccwl-water-general-head {
-	color: var(--dccwl-muted);
-	font-size: 0.9rem;
-	font-style: italic;
-	margin: 0 0 6px;
-}
-
-/* Reference facts about the waterbody, set back from the conditions above
- * so a guest reads them as background rather than as today's state. */
-.dccwl-water .dccwl-water-about {
-	border-top: 1px solid var(--dccwl-line);
-	margin-top: 1.25rem;
-	padding-top: 0.5rem;
-}
-
-.dccwl-water .dccwl-water-about .dccwl-water-value {
-	font-size: 1.05rem;
-}
-
-/* ----------------------------------------------------------------------
- * Chain comparison
- * -------------------------------------------------------------------- */
-
-.dccwl-water .dccwl-chain {
-	margin-top: 1.25rem;
-}
-
-.dccwl-water .dccwl-chain-note {
-	color: var(--dccwl-muted);
-	font-size: 0.9rem;
-	margin: -4px 0 8px;
-}
-
-/* ----------------------------------------------------------------------
- * Chain map. Layout follows the owner's Croatia map; the palette is DCC's,
- * and type/tap targets are sized for reading a phone in sunlight.
- * -------------------------------------------------------------------- */
-
-.dccwl-water .dccwl-map-wrap {
-	margin-top: 1.25rem;
+.dccwl-water .dccwl-water-disclaimer {
+	color: var(--dccwl-text-faint);
+	font-size: var(--dccwl-fs-xs);
+	margin: var(--dccwl-gap) 0 0;
 }
 
 .dccwl-water .dccwl-map-intro {
-	color: var(--dccwl-muted);
-	font-size: 0.95rem;
-	margin: 0 0 10px;
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: 0 0 var(--dccwl-gap);
 }
 
-.dccwl-water .dccwl-map-shell {
-	background: var(--dccwl-soft);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 12px;
+/* =====================================================================
+ * THE MAP, INSIDE THE SHEET
+ * The sheet body normally pads and scrolls its content; a map wants
+ * neither — Leaflet pans inside its own canvas.
+ * ================================================================== */
+
+.dccwl-sheet-body-map {
+	display: flex;
+	flex-direction: column;
 	overflow: hidden;
-	position: relative;
+	padding: 0;
 }
 
-.dccwl-water .dccwl-map-canvas {
-	height: 460px;
+.dccwl-sheet-body-map .dccwl-map-canvas {
+	flex: 1 1 auto;
+	min-height: 240px;
 	width: 100%;
 }
 
-.dccwl-water .dccwl-map-shell:fullscreen .dccwl-map-canvas {
-	height: 100vh;
+.dccwl-sheet-body-map .dccwl-map-noimagery { background: var(--dccwl-page-bg); }
+
+.dccwl-map-notice {
+	background: var(--dccwl-accent-soft);
+	border-bottom: 1px solid var(--dccwl-line);
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-sm);
+	margin: 0;
+	padding: 10px var(--dccwl-detail-pad-x);
 }
 
-.dccwl-water .dccwl-map-bar {
+/* --- the control bar --- */
+
+.dccwl-map-bar {
 	align-items: center;
-	background: var(--dccwl-white);
+	background: var(--dccwl-detail-bg);
 	border-top: 1px solid var(--dccwl-line);
 	display: flex;
+	flex: none;
 	flex-wrap: wrap;
 	gap: 8px;
 	padding: 8px 10px;
@@ -192,29 +251,116 @@
 	z-index: 500;
 }
 
-/* Colour-by legend (1.8.0): its own row under the control bar. Swatch
- * colours are set inline by water-map.js from the same palette that colours
- * the markers, so the two can never disagree. */
-.dccwl-water .dccwl-map-legend {
+.dccwl-seg {
 	align-items: center;
-	background: var(--dccwl-white);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.dccwl-seg-label {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	margin-right: 2px;
+}
+
+/* Doubled classes to beat Bravada's (0,3,1) button reset. */
+.dccwl-seg-btn.dccwl-seg-btn,
+.dccwl-drop-btn.dccwl-drop-btn {
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	min-height: 40px;
+	padding: 9px 14px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+}
+
+.dccwl-seg-btn.dccwl-seg-btn:hover,
+.dccwl-drop-btn.dccwl-drop-btn:hover { background: var(--dccwl-primary-soft); }
+
+.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
+	background: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
+}
+
+.dccwl-seg-btn.dccwl-seg-btn:focus-visible,
+.dccwl-drop-btn.dccwl-drop-btn:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+.dccwl-drop { position: relative; }
+
+.dccwl-drop-panel {
+	background: var(--dccwl-detail-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius);
+	bottom: calc(100% + 6px);
+	box-shadow: var(--dccwl-shadow-raised);
+	left: 0;
+	min-width: 210px;
+	padding: 10px;
+	position: absolute;
+	z-index: 600;
+}
+
+.dccwl-drop-panel[hidden] { display: none; }
+
+.dccwl-drop-head {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	margin: 0 0 6px;
+	text-transform: uppercase;
+}
+
+.dccwl-drop-row {
+	align-items: center;
+	color: var(--dccwl-text);
+	display: flex;
+	font-size: var(--dccwl-fs-sm);
+	gap: 8px;
+	min-height: 40px;
+	padding: 4px 2px;
+}
+
+.dccwl-drop-sep {
+	border: 0;
+	border-top: 1px solid var(--dccwl-line);
+	margin: 8px 0;
+}
+
+/* --- the colour-by legend (1.8.0) --- */
+
+.dccwl-map-legend {
+	align-items: center;
+	background: var(--dccwl-detail-bg);
 	border-top: 1px solid var(--dccwl-line);
 	display: flex;
+	flex: none;
 	flex-wrap: wrap;
 	gap: 6px 16px;
 	padding: 7px 10px;
 }
 
-.dccwl-water .dccwl-leg-item {
+.dccwl-leg-item {
 	align-items: center;
-	color: var(--dccwl-muted);
+	color: var(--dccwl-text-muted);
 	display: inline-flex;
-	font-size: 0.85rem;
+	font-size: var(--dccwl-fs-sm);
 	gap: 6px;
 }
 
-.dccwl-water .dccwl-leg-swatch {
-	border: 1px solid rgba(255, 255, 255, 0.9);
+.dccwl-leg-swatch {
+	border: 1px solid var(--dccwl-detail-bg);
 	border-radius: 50%;
 	box-shadow: 0 0 0 1px var(--dccwl-line);
 	display: inline-block;
@@ -223,181 +369,42 @@
 	width: 12px;
 }
 
-.dccwl-water .dccwl-seg {
-	align-items: center;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-}
+/* --- Leaflet popups --- */
 
-.dccwl-water .dccwl-seg-label {
-	color: var(--dccwl-muted);
-	font-size: 0.88rem;
-	font-weight: 600;
-	margin-right: 2px;
-}
+.dccwl-pop { color: #16242e; font-size: var(--dccwl-fs-sm); }
 
-/* Doubled classes to beat Bravada's (0,3,1) button reset, same as the rest
- * of the plugin. */
-.dccwl-water .dccwl-seg-btn.dccwl-seg-btn,
-.dccwl-water .dccwl-drop-btn.dccwl-drop-btn {
-	background: var(--dccwl-white);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 8px;
-	color: var(--dccwl-navy);
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.92rem;
-	font-weight: 600;
-	line-height: 1;
-	min-height: 44px;
-	padding: 10px 14px;
-}
-
-.dccwl-water .dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
-	background: var(--dccwl-navy);
-	border-color: var(--dccwl-navy);
-	color: var(--dccwl-white);
-}
-
-.dccwl-water .dccwl-seg-btn.dccwl-seg-btn:focus-visible,
-.dccwl-water .dccwl-drop-btn.dccwl-drop-btn:focus-visible {
-	outline: 2px solid var(--dccwl-coral);
-	outline-offset: 2px;
-}
-
-.dccwl-water .dccwl-drop {
-	position: relative;
-}
-
-.dccwl-water .dccwl-drop-panel {
-	background: var(--dccwl-white);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 10px;
-	bottom: calc(100% + 6px);
-	box-shadow: 0 6px 18px rgba(10, 26, 32, 0.18);
-	left: 0;
-	min-width: 220px;
-	padding: 8px;
-	position: absolute;
-	z-index: 600;
-}
-
-.dccwl-water .dccwl-drop-row {
-	align-items: center;
-	display: flex;
-	gap: 8px;
-	min-height: 44px;
-	padding: 0 6px;
-}
-
-.dccwl-water .dccwl-drop-head {
-	color: var(--dccwl-muted);
-	font-size: 0.82rem;
+.dccwl-pop-title {
+	font-size: 1rem;
 	font-weight: 700;
-	letter-spacing: 0.05em;
-	margin: 2px 0 2px 6px;
-	text-transform: uppercase;
-}
-
-.dccwl-water .dccwl-drop-sep {
-	border: 0;
-	border-top: 1px solid var(--dccwl-line);
-	margin: 6px 0;
-}
-
-/* If both tile providers fail, the imagery is dropped rather than left as a
- * grid of grey squares — the markers are the valuable part. */
-.dccwl-water .dccwl-map-noimagery {
-	background: var(--dccwl-soft);
-}
-
-.dccwl-water .dccwl-map-notice {
-	background: #fdf3ea;
-	border-bottom: 1px solid var(--dccwl-line);
-	color: #8a5a1a;
-	font-size: 0.9rem;
-	margin: 0;
-	padding: 8px 12px;
-}
-
-/* Popups */
-.dccwl-water .dccwl-pop {
-	font-size: 0.95rem;
-	line-height: 1.45;
-	max-width: 260px;
-}
-
-.dccwl-water .dccwl-pop-title {
-	color: var(--dccwl-navy);
-	font-size: 1.05rem;
 	margin: 0 0 6px;
 }
 
-.dccwl-water .dccwl-pop-line {
-	margin: 0 0 3px;
-}
+.dccwl-pop-line { margin: 0 0 4px; }
 
-.dccwl-water .dccwl-pop-closed {
-	background: var(--dccwl-coral);
-	border-radius: 6px;
-	color: var(--dccwl-white);
-	font-weight: 700;
-	letter-spacing: 0.05em;
+.dccwl-pop-closed {
+	background: #fdeceb;
+	border-radius: var(--dccwl-radius-sm);
+	color: var(--dccwl-emergency);
+	font-weight: 800;
+	letter-spacing: 0.04em;
 	margin: 0 0 6px;
-	padding: 3px 8px;
-	text-align: center;
+	padding: 4px 8px;
 }
 
-.dccwl-water .dccwl-pop-link {
-	color: var(--dccwl-navy);
-	display: block;
+.dccwl-pop-link {
+	color: #0a3d62;
+	display: inline-block;
 	margin-top: 4px;
+	text-decoration: underline;
 }
 
-.dccwl-water .dccwl-pop-src {
-	color: var(--dccwl-muted);
-	font-size: 0.82rem;
+.dccwl-pop-src {
+	color: #5c6f7c;
+	font-size: var(--dccwl-fs-xs);
 	margin: 6px 0 0;
 }
 
-@media (max-width: 480px) {
-	.dccwl-water .dccwl-map-canvas {
-		height: 340px;
-	}
-}
-
-/* ---- links ---- */
-
-.dccwl-water .dccwl-water-linklist {
-	display: grid;
-	gap: 6px;
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
-.dccwl-water .dccwl-water-linklist a {
-	color: var(--dccwl-navy);
-}
-
-.dccwl-water .dccwl-water-disclaimer {
-	color: var(--dccwl-muted);
-	font-size: 0.9rem;
-	margin: 1rem 0 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.dccwl-water *,
-	.dccwl-water *::before,
-	.dccwl-water *::after {
-		animation: none !important;
-		transition: none !important;
-	}
-}
-
-@media (max-width: 480px) {
-	.dccwl-water .dccwl-water-title {
-		font-size: 1.4rem;
-	}
+@media (max-width: 600px) {
+	.dccwl-water .dccwl-cards { grid-template-columns: 1fr; }
+	.dccwl-water .dccwl-card-srcname { max-width: 20ch; }
 }

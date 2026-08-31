@@ -1,411 +1,398 @@
 /**
- * DCC Wildlife — widget styles (compact/interactive chip UI).
+ * DCC Wildlife — the month widget (v1.9.0).
  *
- * Inherits the theme's body font (no webfonts). Site palette: navy
- * #0a3d62, coral #e8604f, deep illustration teals #17333c/#1c3a43.
+ * Built on assets/css/app.css: every colour, radius, gap and duration here
+ * is a token from that file, so re-theming is a change to ONE block there
+ * and never a sweep through this file. Nothing below defines a colour that
+ * has no light-mode definition, which is what keeps dark mode honest.
  *
- * Specificity note: the Bravada theme's Elementor kit resets inputs and
- * buttons with (0,3,1)-specific selectors. Every rule here that styles a
- * button doubles its classes (e.g. `.dccwl-root.dccwl-root
- * .dccwl-chip.dccwl-chip` = (0,4,0)) so it wins without !important.
+ * v1.9.0 rebuilt this in the Guest Guide's app language: species are tiles
+ * that open the shared sliding sheet, the month browser is a segmented
+ * timeline, and the season countdown leads as a hero stat.
  *
- * Motion: CSS transitions only, none longer than 250ms; the detail panel
- * animates grid-template-rows (0fr -> 1fr) so opening never jumps the
- * layout. Everything is inert under prefers-reduced-motion.
+ * TWO LOAD-BEARING RULES live in this file — see the sprite section at the
+ * bottom before touching it.
  */
 
 .dccwl-root {
-	--dccwl-navy: #0a3d62;
-	--dccwl-coral: #e8604f;
-	--dccwl-teal-deep: #17333c;
-	--dccwl-teal: #1c3a43;
-	--dccwl-ink: #1c2b36;
-	--dccwl-muted: #566a77;
-	--dccwl-soft: #f4f7f9;
-	--dccwl-line: #dbe4ea;
-	--dccwl-white: #ffffff;
-
-	color: var(--dccwl-ink);
-	font-size: 1.0625rem; /* readable type for an older clientele */
-	line-height: 1.55;
+	background: transparent;
+	font-family: var(--dccwl-font);
+	margin: 0 auto;
+	max-width: 100%;
 }
 
-.dccwl-sr {
-	clip: rect(1px, 1px, 1px, 1px);
-	clip-path: inset(50%);
-	height: 1px;
-	overflow: hidden;
-	position: absolute;
-	white-space: nowrap;
-	width: 1px;
+.dccwl-root > * + * { margin-top: var(--dccwl-gap-lg); }
+
+/* =====================================================================
+ * HERO STAT — the season countdown (1.9.0)
+ * The strongest come-back-later element on the page, so it leads the
+ * widget instead of trailing it as it did in 1.8.x. Empty and hidden until
+ * widget.js fills it client-side in canal time.
+ * ================================================================== */
+
+.dccwl-hero-stat {
+	align-items: center;
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-glass-bg);
+	border: 1px solid var(--dccwl-glass-border);
+	border-left: 4px solid var(--dccwl-accent);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	display: flex;
+	gap: var(--dccwl-gap-lg);
+	padding: calc(var(--dccwl-pad) * 0.85) var(--dccwl-pad);
 }
 
-/* ----------------------------------------------------------------------
- * Hero
- * -------------------------------------------------------------------- */
-
-.dccwl-root .dccwl-hero {
-	margin: 0 0 0.75rem;
+.dccwl-hero-icon {
+	align-items: center;
+	background: var(--dccwl-accent-soft);
+	border-radius: var(--dccwl-radius);
+	display: flex;
+	flex: none;
+	height: 56px;
+	justify-content: center;
+	width: 56px;
 }
+
+.dccwl-hero-emoji { font-size: 34px; line-height: 1; }
+
+.dccwl-hero-text { min-width: 0; }
+
+.dccwl-hero-label {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	margin: 0;
+	text-transform: uppercase;
+}
+
+.dccwl-hero-value {
+	align-items: baseline;
+	color: var(--dccwl-text);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 2px 0 0;
+}
+
+.dccwl-hero-num {
+	color: var(--dccwl-accent);
+	font-size: var(--dccwl-fs-hero);
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1;
+}
+
+.dccwl-hero-unit,
+.dccwl-hero-now {
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 600;
+}
+
+.dccwl-hero-now { color: var(--dccwl-accent); }
+
+.dccwl-hero-why {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: 4px 0 0;
+}
+
+/* =====================================================================
+ * HEADLINE
+ * Both lines reserve their height so filling them client-side cannot
+ * shift the page.
+ * ================================================================== */
+
+.dccwl-head { margin: 0; }
 
 .dccwl-root .dccwl-title {
-	color: var(--dccwl-navy);
-	font-size: 1.65rem;
-	line-height: 1.25;
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	letter-spacing: -0.01em;
 	margin: 0;
-	min-height: 1.25em; /* reserved — JS swaps in the month headline */
+	min-height: 1.4em;
 }
 
 .dccwl-root .dccwl-sub {
-	color: var(--dccwl-coral);
-	font-size: 0.98rem;
-	font-weight: 600;
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
 	margin: 2px 0 0;
-	min-height: 1.55em; /* reserved — JS fills, no layout shift */
+	min-height: 1.3em;
 }
 
-/* ----------------------------------------------------------------------
- * Month nav (arrows + scrollable mini-button strip)
- * -------------------------------------------------------------------- */
+/* =====================================================================
+ * MONTH TIMELINE — the segmented control
+ * ================================================================== */
 
-.dccwl-root .dccwl-monthnav {
+.dccwl-timeline {
 	align-items: center;
 	display: flex;
 	gap: 6px;
-	margin: 0 0 0.75rem;
 	position: relative;
 }
 
-.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow {
+.dccwl-timeline[hidden] { display: none; }
+
+.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow {
 	align-items: center;
-	background: var(--dccwl-white);
+	background: var(--dccwl-tile-bg);
 	border: 1px solid var(--dccwl-line);
-	border-radius: 8px;
-	color: var(--dccwl-navy);
+	border-radius: 50%;
+	color: var(--dccwl-text);
 	cursor: pointer;
 	display: inline-flex;
-	flex: 0 0 auto;
+	flex: none;
+	height: 44px;
 	justify-content: center;
-	min-height: 44px;
-	min-width: 44px;
 	padding: 0;
-	transition: background-color 0.15s ease;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	width: 44px;
 }
 
-.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:hover,
-.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:focus-visible {
-	background: var(--dccwl-soft);
-	color: var(--dccwl-navy);
+.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:hover {
+	background: var(--dccwl-primary-soft);
+	border-color: var(--dccwl-line-strong);
 }
 
-.dccwl-root .dccwl-months {
+.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+.dccwl-timeline-track {
+	-ms-overflow-style: none;
 	display: flex;
 	flex: 1 1 auto;
-	gap: 6px;
+	gap: 4px;
 	overflow-x: auto;
+	padding: 3px;
+	scroll-behavior: smooth;
 	scroll-snap-type: x proximity;
 	scrollbar-width: none;
-	-webkit-overflow-scrolling: touch;
 }
 
-.dccwl-root .dccwl-months::-webkit-scrollbar {
-	display: none;
-}
+.dccwl-timeline-track::-webkit-scrollbar { display: none; }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn {
+.dccwl-root .dccwl-month.dccwl-month {
 	background: transparent;
 	border: 1px solid transparent;
-	border-radius: 8px;
-	color: var(--dccwl-muted);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text-muted);
 	cursor: pointer;
-	flex: 1 0 auto;
+	flex: none;
 	font: inherit;
-	font-size: 0.9rem;
+	font-size: var(--dccwl-fs-sm);
 	font-weight: 600;
-	line-height: 1;
-	min-height: 44px;
-	min-width: 44px;
-	padding: 0 8px;
+	min-height: 40px;
+	padding: 8px 15px;
 	scroll-snap-align: center;
-	transition: background-color 0.15s ease, color 0.15s ease;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease),
+		color var(--dccwl-t-fast) var(--dccwl-ease);
 }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:hover,
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible {
-	background: var(--dccwl-soft);
-	color: var(--dccwl-navy);
+.dccwl-root .dccwl-month.dccwl-month:hover {
+	background: var(--dccwl-primary-soft);
+	color: var(--dccwl-text);
 }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn[aria-pressed="true"] {
-	background: var(--dccwl-navy);
-	color: var(--dccwl-white);
+/* The month in view: the anchor of the whole strip. */
+.dccwl-root .dccwl-month.dccwl-month-on {
+	background: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
 }
 
-.dccwl-root.dccwl-root .dccwl-month-btn.dccwl-month-btn:focus-visible,
-.dccwl-root.dccwl-root .dccwl-nav-arrow.dccwl-nav-arrow:focus-visible {
-	outline: 2px solid var(--dccwl-coral);
-	outline-offset: 2px;
+.dccwl-root .dccwl-month.dccwl-month:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
 }
 
-/* ----------------------------------------------------------------------
- * Chips (spotlight strip + guide grids)
- * -------------------------------------------------------------------- */
-
-.dccwl-root .dccwl-chips {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
-.dccwl-root .dccwl-chips li {
-	margin: 0;
-}
-
-.dccwl-root .dccwl-strip-wrap,
-.dccwl-root .dccwl-monthnav {
-	position: relative;
-}
-
-.dccwl-root .dccwl-strip {
-	display: flex;
-	gap: 8px;
-	min-height: 52px; /* reserved — JS fills, no layout shift */
-	overflow-x: auto;
-	padding: 2px;
-	scroll-snap-type: x proximity;
-	scrollbar-width: none;
-	-webkit-overflow-scrolling: touch;
-}
-
-.dccwl-root .dccwl-strip::-webkit-scrollbar {
-	display: none;
-}
-
-.dccwl-root .dccwl-strip li {
-	flex: 0 0 auto;
-	scroll-snap-align: start;
-	transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.dccwl-root .dccwl-strip li.dccwl-in {
-	opacity: 0;
-	transform: translateY(5px);
-}
-
-/* Edge-fade scroll cues (JS toggles the classes when scrollable). */
-.dccwl-root .dccwl-strip-wrap::before,
-.dccwl-root .dccwl-strip-wrap::after,
-.dccwl-root .dccwl-monthnav::before,
-.dccwl-root .dccwl-monthnav::after {
+/* Edge fades cue that the strip scrolls. */
+.dccwl-timeline::before,
+.dccwl-timeline::after {
 	bottom: 0;
-	content: "";
+	content: '';
 	opacity: 0;
 	pointer-events: none;
 	position: absolute;
 	top: 0;
-	transition: opacity 0.15s ease;
-	width: 28px;
+	transition: opacity var(--dccwl-t-fast) var(--dccwl-ease);
+	width: 34px;
 	z-index: 1;
 }
 
-.dccwl-root .dccwl-strip-wrap::before,
-.dccwl-root .dccwl-monthnav::before {
-	background: linear-gradient(to right, var(--dccwl-white), rgba(255, 255, 255, 0));
-	left: 0;
+.dccwl-timeline::before {
+	background: linear-gradient(to right, var(--dccwl-page-bg), transparent);
+	left: 46px;
 }
 
-.dccwl-root .dccwl-strip-wrap::after,
-.dccwl-root .dccwl-monthnav::after {
-	background: linear-gradient(to left, var(--dccwl-white), rgba(255, 255, 255, 0));
-	right: 0;
+.dccwl-timeline::after {
+	background: linear-gradient(to left, var(--dccwl-page-bg), transparent);
+	right: 46px;
 }
 
-.dccwl-root .dccwl-monthnav::before {
-	left: 50px; /* keep the arrow buttons clear of the fade */
+.dccwl-timeline.dccwl-fade-l::before,
+.dccwl-timeline.dccwl-fade-r::after { opacity: 0.9; }
+
+/* =====================================================================
+ * TILES — the spotlight grid and the guide grids
+ * (.dccwl-tile itself is a primitive; app.css owns it.)
+ * ================================================================== */
+
+/* The spotlight is ONE horizontally scrolling row of tiles, not a grid.
+ *
+ * This is deliberate and load-bearing: the documented render budget is
+ * <= 560px desktop / <= 720px mobile (see CLAUDE.md), and a wrapping grid of
+ * a dozen species blows straight through it — measured at 721px before this
+ * rule existed. The guide grids below DO wrap, because they sit behind tabs
+ * and are opened on purpose. Same tile component either way. */
+.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles {
+	-ms-overflow-style: none;
+	display: flex;
+	gap: var(--dccwl-gap);
+	min-height: 108px;
+	overflow-x: auto;
+	padding: 3px 3px 6px;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+	/* Fades the right edge to cue that the row scrolls. */
+	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+	mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
 }
 
-.dccwl-root .dccwl-monthnav::after {
-	right: 50px;
+.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles::-webkit-scrollbar { display: none; }
+
+.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles > li {
+	flex: none;
+	scroll-snap-align: start;
+	width: 138px;
 }
 
-.dccwl-root .dccwl-fade-l::before,
-.dccwl-root .dccwl-fade-r::after {
-	opacity: 1;
+/* A two-line species name must not leave a short card in the row: the tile
+ * fills its list item, so every card in the strip ends level. */
+.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles > li > .dccwl-tile { height: 100%; }
+
+/* Scrolled to the end there is nothing more to cue, so drop the mask. */
+.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles.dccwl-at-end {
+	-webkit-mask-image: none;
+	mask-image: none;
 }
 
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip {
-	align-items: center;
-	background: var(--dccwl-soft);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 999px;
-	color: var(--dccwl-ink);
-	cursor: pointer;
-	display: inline-flex;
-	font: inherit;
-	font-size: 0.95rem;
-	font-weight: 600;
-	gap: 7px;
-	line-height: 1.2;
-	min-height: 44px;
-	padding: 6px 14px 6px 9px;
-	position: relative;
-	transition: background-color 0.15s ease, border-color 0.15s ease;
-	white-space: nowrap;
+.dccwl-tile-peak {
+	color: var(--dccwl-accent);
+	font-weight: 700;
 }
 
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:hover,
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:focus-visible {
-	background: #e8eff4;
-	border-color: #b9ccd8;
-	color: var(--dccwl-ink);
-}
-
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip:focus-visible {
-	outline: 2px solid var(--dccwl-coral);
-	outline-offset: 2px;
-}
-
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] {
-	background: var(--dccwl-navy);
-	border-color: var(--dccwl-navy);
-	color: var(--dccwl-white);
-}
-
-.dccwl-root.dccwl-root .dccwl-chip-mascot.dccwl-chip-mascot {
-	border-color: rgba(232, 96, 79, 0.55);
-}
-
-.dccwl-root .dccwl-chip-emoji {
-	font-size: 1.35rem;
-	line-height: 1;
-}
-
-/* Bespoke species sprite at chip size (references the hidden symbol sheet).
- * fill/stroke-linecap here are LOAD-BEARING: the symbol sheet strips
- * `fill="none"` and `stroke-linecap="round"` from its paths and relies on
- * these inheriting into the <use> shadow content. */
-.dccwl-root .dccwl-chip-sprite,
-.dccwl-root .dccwl-medallion-sprite {
-	fill: none;
-	stroke-linecap: round;
-}
-
-.dccwl-root .dccwl-chip-sprite {
-	display: block;
-	flex: 0 0 auto;
-	height: 24px;
-	width: 24px;
-}
-
-/* On the navy expanded chip, dark sprites need a light backing disc. */
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] .dccwl-chip-sprite {
-	background: rgba(244, 247, 242, 0.94);
-	border-radius: 50%;
-	box-sizing: border-box;
-	padding: 2px;
-}
-
-.dccwl-root .dccwl-chip-mark {
-	display: inline-flex;
-	line-height: 1;
-}
-
-.dccwl-root .dccwl-tick {
-	background: var(--dccwl-coral);
-	border-radius: 50%;
-	display: inline-block;
-	flex: 0 0 auto;
-	height: 7px;
-	width: 7px;
-}
-
-.dccwl-root.dccwl-root .dccwl-chip.dccwl-chip[aria-expanded="true"] .dccwl-tick {
-	background: #ffb3a8;
-}
-
-/* ----------------------------------------------------------------------
- * Shared detail panel (expands below the tapped row — never a modal)
- * -------------------------------------------------------------------- */
-
-.dccwl-root .dccwl-panel-slot {
-	display: grid;
-	grid-template-rows: 0fr;
-	transition: grid-template-rows 0.22s ease;
-}
-
-.dccwl-root .dccwl-panel-slot.dccwl-open {
-	grid-template-rows: 1fr;
-}
-
-.dccwl-root .dccwl-clip {
-	min-height: 0;
-	overflow: hidden;
-}
-
-.dccwl-root .dccwl-panel {
-	background: var(--dccwl-white);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 14px;
-	margin: 10px 2px;
-	padding: 16px;
-	position: relative;
-}
-
-.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close {
-	align-items: center;
-	background: var(--dccwl-soft);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 50%;
-	color: var(--dccwl-muted);
-	cursor: pointer;
-	display: inline-flex;
-	height: 40px;
-	justify-content: center;
-	padding: 0;
+.dccwl-tile-mark {
+	line-height: 0;
 	position: absolute;
-	right: 10px;
-	top: 10px;
-	transition: background-color 0.15s ease, color 0.15s ease;
-	width: 40px;
-	z-index: 1;
+	right: 9px;
+	top: 9px;
 }
 
-.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:hover,
-.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:focus-visible {
-	background: var(--dccwl-navy);
-	color: var(--dccwl-white);
+.dccwl-tile-emoji { font-size: 26px; line-height: 1; }
+
+/* Staggered fade-in on a month change. */
+.dccwl-tiles > li {
+	opacity: 1;
+	transform: none;
+	transition: opacity var(--dccwl-t) var(--dccwl-ease),
+		transform var(--dccwl-t) var(--dccwl-ease);
 }
 
-.dccwl-root.dccwl-root .dccwl-panel-close.dccwl-panel-close:focus-visible {
-	outline: 2px solid var(--dccwl-coral);
-	outline-offset: 2px;
+.dccwl-tiles > li.dccwl-in {
+	opacity: 0;
+	transform: translateY(6px);
 }
 
-.dccwl-root .dccwl-panel-body {
-	align-items: flex-start;
+.dccwl-empty {
+	color: var(--dccwl-text-muted);
+	grid-column: 1 / -1;
+	margin: 0;
+	padding: var(--dccwl-pad) 0;
+}
+
+.dccwl-noscript {
+	color: var(--dccwl-text-muted);
+	margin: var(--dccwl-gap) 0 0;
+}
+
+/* =====================================================================
+ * FIELD GUIDE
+ * ================================================================== */
+
+.dccwl-guide { margin: 0; }
+
+.dccwl-tabs {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
-	opacity: 1;
-	transition: opacity 0.13s ease;
+	gap: 6px;
+	margin-bottom: var(--dccwl-gap);
 }
 
-.dccwl-root .dccwl-panel-body.dccwl-fading {
-	opacity: 0;
+.dccwl-root .dccwl-tab.dccwl-tab {
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text-muted);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	min-height: 44px;
+	padding: 10px 18px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease),
+		color var(--dccwl-t-fast) var(--dccwl-ease);
 }
 
-/* Scene medallion: circular SVG vignette with the emoji staged on top. */
-.dccwl-root .dccwl-medallion {
-	border-radius: 50%;
-	flex: 0 0 auto;
-	height: 112px;
+.dccwl-root .dccwl-tab.dccwl-tab:hover {
+	background: var(--dccwl-primary-soft);
+	color: var(--dccwl-text);
+}
+
+.dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"] {
+	background: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
+}
+
+.dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+/* LOAD-BEARING (since v1.1.0): the grids are display:grid, which overrides
+ * the UA rule for [hidden]. Without this the inactive guide grids all
+ * render stacked. Do not remove when reorganising this file. */
+.dccwl-guide-grid[hidden] { display: none; }
+
+.dccwl-credit {
+	color: var(--dccwl-text-faint);
+	font-size: var(--dccwl-fs-sm);
+	font-style: italic;
+	margin: var(--dccwl-gap-lg) 2px 0;
+}
+
+/* =====================================================================
+ * DETAIL DRAWER CONTENT
+ * Scoped to .dccwl-sheet, NOT .dccwl-root: the sheet is a body-level
+ * element (one per page), so root-scoped rules would never reach it.
+ * ================================================================== */
+
+.dccwl-sheet .dccwl-medallion {
+	border-radius: var(--dccwl-radius);
+	height: 168px;
+	margin: 0 0 var(--dccwl-gap-lg);
 	overflow: hidden;
 	position: relative;
-	width: 112px;
+	width: 100%;
 }
 
-.dccwl-root .dccwl-medallion svg {
-	display: block;
+.dccwl-sheet .dccwl-medallion svg.scene,
+.dccwl-sheet .dccwl-medallion > svg:first-child {
 	height: 100%;
 	left: 0;
 	position: absolute;
@@ -413,9 +400,17 @@
 	width: 100%;
 }
 
-.dccwl-root .dccwl-medallion-emoji {
-	filter: drop-shadow(0 3px 4px rgba(10, 26, 32, 0.45));
-	font-size: 46px;
+.dccwl-sheet .dccwl-medallion .dccwl-medallion-sprite {
+	height: 104px;
+	left: 50%;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -52%);
+	width: 104px;
+}
+
+.dccwl-sheet .dccwl-medallion .dccwl-medallion-emoji {
+	font-size: 62px;
 	left: 50%;
 	line-height: 1;
 	position: absolute;
@@ -423,227 +418,170 @@
 	transform: translate(-50%, -52%);
 }
 
-/* Bespoke species sprite staged in the scene medallion. The selector must
- * out-rank `.dccwl-root .dccwl-medallion svg` (0,2,1) above, which sizes
- * the scene backdrop to fill the circle. */
-.dccwl-root .dccwl-medallion .dccwl-medallion-sprite {
-	filter: drop-shadow(0 2px 3px rgba(10, 26, 32, 0.35));
-	height: 76px;
-	left: 50%;
-	position: absolute;
-	top: 50%;
-	transform: translate(-50%, -52%);
-	width: 76px;
-}
-
-.dccwl-root .dccwl-panel-text {
-	flex: 1 1 240px;
-	min-width: 0;
-	padding-right: 44px; /* clear the close button */
-}
-
-.dccwl-root .dccwl-panel-name {
-	align-items: center;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 0 0 6px;
-}
-
-.dccwl-root .dccwl-panel-name strong {
-	color: var(--dccwl-navy);
-	font-size: 1.15rem;
-}
-
-.dccwl-root .dccwl-badge {
-	border-radius: 999px;
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.02em;
-	padding: 3px 10px;
-	white-space: nowrap;
-}
-
-.dccwl-root .dccwl-badge-mascot {
-	background: rgba(232, 96, 79, 0.12);
-	border: 1px solid rgba(232, 96, 79, 0.35);
-	color: #b03a2b;
-}
-
-.dccwl-root .dccwl-badge-peak {
-	background: var(--dccwl-coral);
-	color: var(--dccwl-white);
-}
-
-.dccwl-root .dccwl-fact {
-	font-size: 0.98rem;
-	margin: 0 0 8px;
-}
-
-.dccwl-root .dccwl-cardmeta {
+.dccwl-sheet .dccwl-detail-badges {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
-	margin: 0 0 6px;
+	margin: 0 0 var(--dccwl-gap);
 }
 
-.dccwl-root .dccwl-pill {
-	background: rgba(10, 61, 98, 0.08);
-	border-radius: 999px;
-	color: var(--dccwl-navy);
-	font-size: 0.85rem;
-	font-weight: 600;
-	padding: 4px 12px;
-	white-space: nowrap;
+.dccwl-sheet .dccwl-fact {
+	color: var(--dccwl-text);
+	margin: 0 0 var(--dccwl-gap-lg);
 }
 
-.dccwl-root .dccwl-pill-months {
-	background: rgba(10, 61, 98, 0.04);
-	border: 1px dashed rgba(10, 61, 98, 0.3);
-}
-
-.dccwl-root .dccwl-where {
-	color: var(--dccwl-muted);
-	font-size: 0.92rem;
-	margin: 0;
-}
-
-.dccwl-root .dccwl-empty,
-.dccwl-root .dccwl-noscript {
-	color: var(--dccwl-muted);
-	font-size: 0.98rem;
-	list-style: none;
-	margin: 0;
-	padding: 8px 0;
-}
-
-/* ----------------------------------------------------------------------
- * Field guide: tabs + compact chip grids
- * -------------------------------------------------------------------- */
-
-.dccwl-root .dccwl-guide {
-	margin: 1rem 0 0;
-}
-
-.dccwl-root .dccwl-tabs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 0 0 10px;
-}
-
-.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab {
-	background: transparent;
-	border: 1px solid var(--dccwl-line);
-	border-radius: 999px;
-	color: var(--dccwl-muted);
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.92rem;
+.dccwl-sheet .dccwl-detail-h {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
 	font-weight: 700;
-	letter-spacing: 0.04em;
-	line-height: 1;
-	min-height: 44px;
-	padding: 0 18px;
+	letter-spacing: 0.06em;
+	margin: var(--dccwl-gap-lg) 0 4px;
 	text-transform: uppercase;
-	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:hover,
-.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
-	background: var(--dccwl-soft);
-	color: var(--dccwl-navy);
+.dccwl-sheet .dccwl-detail-p {
+	color: var(--dccwl-text);
+	margin: 0;
 }
 
-.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"] {
-	background: var(--dccwl-navy);
-	border-color: var(--dccwl-navy);
-	color: var(--dccwl-white);
-}
-
-.dccwl-root.dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
-	outline: 2px solid var(--dccwl-coral);
-	outline-offset: 2px;
-}
-
-.dccwl-root .dccwl-guide-grid {
+.dccwl-sheet .dccwl-detail-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-	padding: 2px;
+	gap: 6px;
+	margin: 8px 0 0;
 }
 
-/* Author display:flex would defeat the UA [hidden] rule — restore it. */
-.dccwl-root .dccwl-guide-grid[hidden] {
-	display: none;
+/* --- the 12-month likelihood strip --- */
+
+.dccwl-sheet .dccwl-like-row {
+	display: grid;
+	gap: 4px;
+	grid-template-columns: repeat(12, 1fr);
+	list-style: none;
+	margin: 6px 0 0;
+	padding: 0;
 }
 
-/* ----------------------------------------------------------------------
- * Motion & small screens
- * -------------------------------------------------------------------- */
+.dccwl-sheet .dccwl-like-cell {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin: 0;
+}
+
+.dccwl-sheet .dccwl-like-bar {
+	background: var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	display: block;
+	height: 8px;
+	width: 100%;
+}
+
+/* Four steps of one hue, so the strip reads as intensity rather than as
+ * four unrelated colours. */
+.dccwl-sheet .dccwl-like-0 .dccwl-like-bar { height: 5px; opacity: 0.45; }
+.dccwl-sheet .dccwl-like-1 .dccwl-like-bar { background: var(--dccwl-primary); height: 10px; opacity: 0.35; }
+.dccwl-sheet .dccwl-like-2 .dccwl-like-bar { background: var(--dccwl-primary); height: 15px; opacity: 0.6; }
+.dccwl-sheet .dccwl-like-3 .dccwl-like-bar { background: var(--dccwl-accent); height: 21px; opacity: 1; }
+
+.dccwl-sheet .dccwl-like-m {
+	color: var(--dccwl-text-faint);
+	font-size: 0.62rem;
+	letter-spacing: -0.01em;
+}
+
+.dccwl-sheet .dccwl-like-now .dccwl-like-m {
+	color: var(--dccwl-text);
+	font-weight: 800;
+}
+
+/* =====================================================================
+ * SPRITES — LOAD-BEARING RULES. READ BEFORE EDITING.
+ *
+ * Sprites::symbol_sheet() minifies on output and STRIPS fill="none" and
+ * stroke-linecap="round" from the symbol bodies. These rules put them back,
+ * and they inherit into the <use> shadow content. Delete them and every
+ * species silhouette fills solid black. This is why the sprite classes kept
+ * their 1.3.0 names through the 1.9.0 rebuild.
+ * ================================================================== */
+
+.dccwl-chip-sprite,
+.dccwl-medallion-sprite,
+.dccwl-hero-sprite {
+	fill: none;
+	stroke-linecap: round;
+}
+
+.dccwl-chip-sprite {
+	display: block;
+	height: 30px;
+	width: 30px;
+}
+
+.dccwl-hero-sprite {
+	display: block;
+	height: 42px;
+	width: 42px;
+}
+
+/* =====================================================================
+ * NARROW SCREENS
+ * ================================================================== */
+
+@media (max-width: 600px) {
+	/* Three tiles across a 375px phone rather than two: at minmax(108px)
+	 * the guide grid fell to two columns and ran three rows deep, which is
+	 * what pushed the rendered height past its budget. */
+	.dccwl-app .dccwl-tiles {
+		grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+	}
+
+	.dccwl-app .dccwl-tiles.dccwl-spotlight-tiles > li { width: 124px; }
+
+	.dccwl-hero-icon { height: 54px; width: 54px; }
+	.dccwl-hero-sprite { height: 36px; width: 36px; }
+
+	.dccwl-sheet .dccwl-medallion { height: 140px; }
+
+	/* Twelve month labels do not fit across a phone; two rows do. */
+	.dccwl-sheet .dccwl-like-row { grid-template-columns: repeat(6, 1fr); row-gap: 10px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-	.dccwl-root *,
-	.dccwl-root *::before,
-	.dccwl-root *::after {
-		animation: none !important;
-		transition: none !important;
-	}
+	.dccwl-tiles > li,
+	.dccwl-root .dccwl-tile.dccwl-tile,
+	.dccwl-root .dccwl-month.dccwl-month,
+	.dccwl-root .dccwl-tab.dccwl-tab,
+	.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow,
+	.dccwl-timeline::before,
+	.dccwl-timeline::after { transition: none; }
+
+	.dccwl-tiles > li.dccwl-in { opacity: 1; transform: none; }
+	.dccwl-timeline-track { scroll-behavior: auto; }
+
+	/* With no transition to carry it, the hover lift becomes an instant
+	 * 2px jump under the cursor — worse than no lift at all. The tile still
+	 * reports hover through its border and shadow. */
+	.dccwl-app .dccwl-tile.dccwl-tile:hover { transform: none; }
 }
 
-@media (max-width: 480px) {
-	.dccwl-root .dccwl-title {
-		font-size: 1.4rem;
+/* =====================================================================
+ * DARK MODE: SPRITES NEED A LIGHT BACKING
+ *
+ * The species sprites are deep-teal silhouettes drawn for light surfaces
+ * (see class-sprites.php). On a dark tile the gator, snake and turtle all
+ * but disappear — the same trap documented in 1.3.0, where the navy
+ * expanded chip had to give its sprite a light disc. So in dark mode the
+ * icon holders keep a light ground and the artwork keeps its contrast.
+ * ================================================================== */
+
+@media (prefers-color-scheme: dark) {
+	.dccwl-app.dccwl-dark-auto .dccwl-tile-icon,
+	.dccwl-app.dccwl-dark-auto .dccwl-hero-icon {
+		background: #e8eef1;
 	}
 
-	.dccwl-root .dccwl-medallion {
-		height: 92px;
-		width: 92px;
-	}
-
-	.dccwl-root .dccwl-medallion-emoji {
-		font-size: 38px;
-	}
-
-	.dccwl-root .dccwl-medallion .dccwl-medallion-sprite {
-		height: 62px;
-		width: 62px;
-	}
-
-	.dccwl-root .dccwl-panel-text {
-		padding-right: 0;
-	}
-}
-
-/* ------------------------------------------------------------------
- * Season countdown (absorbed from the dcc-wildlife-countdown mu-plugin in
- * 1.8.0). Styling is the mu-plugin's, verbatim — the owner asked for the
- * same look, and guests have been seeing this line for months.
- * ---------------------------------------------------------------- */
-
-.dccwl-countdown {
-	background: rgba(10, 61, 98, 0.06);
-	border: 1px solid rgba(10, 61, 98, 0.14);
-	border-radius: 10px;
-	color: #0a3d62;
-	font: 500 15px/1.4 'Segoe UI', sans-serif;
-	margin: 14px 0 0;
-	padding: 10px 14px;
-}
-
-.dccwl-countdown .dccwl-cd-emoji {
-	margin-right: 8px;
-}
-
-.dccwl-countdown .dccwl-cd-days {
-	font-weight: 700;
-}
-
-/* One quiet attribution line on the field guide (owner's decision, 1.8.0):
- * the notes and likelihood calendar are local knowledge, and this says whose. */
-.dccwl-root .dccwl-credit {
-	color: #6b7a85;
-	font-size: 0.85rem;
-	font-style: italic;
-	margin: 14px 2px 0;
+	/* The scene medallions carry their own painted grounds, so they are
+	 * deliberately untouched here. */
 }

@@ -168,155 +168,122 @@
 			instance = {};
 		}
 
-		var uid = 'dccwl-' + (uidCounter += 1);
-		var state = {
-			month: new Date().getMonth(),
-			openId: null,
-			openCtx: null,
-			opener: null
-		};
+		var state = { month: new Date().getMonth(), openId: null, opener: null };
 
 		var titleEl = root.querySelector('.dccwl-title');
 		var subEl = root.querySelector('.dccwl-sub');
-		var strip = root.querySelector('.dccwl-spotlight-chips');
-		var stripWrap = root.querySelector('.dccwl-strip-wrap');
-		var slotSpot = root.querySelector('.dccwl-slot-spotlight');
-		var slotGuide = root.querySelector('.dccwl-slot-guide');
-		var updateStripFades = strip && stripWrap ? attachEdgeFades(strip, stripWrap) : null;
+		var strip = root.querySelector('.dccwl-spotlight-tiles');
 
-		/* ---------- shared detail panel ---------- */
+		/* ---------- the detail sheet ----------
+		 * Species open in the SAME sliding sheet the chain map uses, so the
+		 * two widgets share one motion and one focus-trap implementation
+		 * (assets/js/sheet.js). Everything below inserts text with
+		 * textContent — species data passes through a public filter. */
 
-		var panelId = uid + '-panel';
-		var clip = el('div', 'dccwl-clip');
-		var panel = el('div', 'dccwl-panel');
-		panel.id = panelId;
-		panel.setAttribute('role', 'region');
-		panel.setAttribute('aria-label', CFG.i18n.details);
-		var closeBtn = el('button', 'dccwl-panel-close');
-		closeBtn.type = 'button';
-		closeBtn.setAttribute('aria-label', CFG.i18n.close);
-		closeBtn.innerHTML = ICON_CLOSE; // static trusted constant
-		var panelBody = el('div', 'dccwl-panel-body');
-		panel.appendChild(closeBtn);
-		panel.appendChild(panelBody);
-		clip.appendChild(panel);
+		function likelihoodStrip(sp) {
+			var wrap = el('div', 'dccwl-like');
+			wrap.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.likelihood));
 
-		function allChips() {
-			return root.querySelectorAll('.dccwl-chip');
+			var row = el('ul', 'dccwl-like-row');
+			var names = [CFG.i18n.likeRare, CFG.i18n.likePossible, CFG.i18n.likeGood, CFG.i18n.likePeak];
+			(sp.months || []).forEach(function (v, m) {
+				var level = Math.max(0, Math.min(3, v | 0));
+				var cell = el('li', 'dccwl-like-cell dccwl-like-' + level);
+				var bar = el('span', 'dccwl-like-bar');
+				bar.setAttribute('aria-hidden', 'true');
+				cell.appendChild(bar);
+				cell.appendChild(el('span', 'dccwl-like-m', CFG.months[m]));
+				if (m === state.month) {
+					cell.classList.add('dccwl-like-now');
+				}
+				// The bars are decoration; this is the actual reading of it.
+				cell.appendChild(el('span', 'dccwl-sr',
+					(CFG.monthsFull[m] || CFG.months[m]) + ': ' + (names[level] || '')));
+				row.appendChild(cell);
+			});
+			wrap.appendChild(row);
+			return wrap;
 		}
 
-		function fillPanel(sp) {
-			panelBody.textContent = '';
+		function buildDetail(body, sp) {
 			var medallion = el('div', 'dccwl-medallion dccwl-medallion-' + (SCENES[sp.group] ? sp.group : 'critters'));
 			medallion.innerHTML = SCENES[sp.group] || SCENES.critters; // static trusted constant
 			medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite', 'dccwl-medallion-emoji'));
-			panelBody.appendChild(medallion);
+			body.appendChild(medallion);
 
-			var text = el('div', 'dccwl-panel-text');
-			var nameRow = el('p', 'dccwl-panel-name');
-			nameRow.appendChild(el('strong', null, sp.name));
+			var badges = el('p', 'dccwl-detail-badges');
 			if (sp.mascot) {
-				nameRow.appendChild(el('span', 'dccwl-badge dccwl-badge-mascot', CFG.i18n.mascot));
+				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-mascot', CFG.i18n.mascot));
 			}
 			if ((sp.months[state.month] || 0) >= 3) {
-				nameRow.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));
+				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));
 			}
-			text.appendChild(nameRow);
-			text.appendChild(el('p', 'dccwl-fact', sp.fact));
-			var meta = el('p', 'dccwl-cardmeta');
-			meta.appendChild(el('span', 'dccwl-pill dccwl-pill-best', sp.best));
-			if (sp.bestLabel) {
-				meta.appendChild(el('span', 'dccwl-pill dccwl-pill-months', fmt(CFG.i18n.bestMonths, sp.bestLabel)));
-			}
-			text.appendChild(meta);
-			text.appendChild(el('p', 'dccwl-where', CFG.i18n.where + ' ' + sp.where));
-			panelBody.appendChild(text);
-		}
-
-		function setExpanded(chip) {
-			allChips().forEach(function (c) {
-				c.setAttribute('aria-expanded', c === chip ? 'true' : 'false');
-			});
-		}
-
-		function closePanel(focusBack) {
-			if (!state.openId) {
-				return;
-			}
-			var slot = clip.parentNode;
-			if (slot) {
-				slot.classList.remove('dccwl-open');
-			}
-			setExpanded(null);
-			state.openId = null;
-			state.openCtx = null;
-			if (focusBack && state.opener && root.contains(state.opener)) {
-				state.opener.focus();
-			}
-			state.opener = null;
-		}
-
-		function openPanel(chip) {
-			var id = chip.getAttribute('data-dccwl-species');
-			var sp = speciesById[id];
-			if (!sp) {
-				return;
-			}
-			var ctx = chip.closest('.dccwl-guide') ? 'guide' : 'spot';
-			if (state.openId === id && state.openCtx === ctx) {
-				closePanel(false);
-				return;
-			}
-			var targetSlot = ctx === 'guide' ? slotGuide : slotSpot;
-			if (!targetSlot) {
-				return;
+			if (badges.childNodes.length) {
+				body.appendChild(badges);
 			}
 
-			var sameSlot = clip.parentNode === targetSlot && state.openId;
-			if (sameSlot && !reducedMotion) {
-				// Swap content in place with a quick crossfade.
-				panelBody.classList.add('dccwl-fading');
-				window.setTimeout(function () {
-					fillPanel(sp);
-					panelBody.classList.remove('dccwl-fading');
-				}, 130);
-			} else {
-				if (clip.parentNode && clip.parentNode !== targetSlot) {
-					clip.parentNode.classList.remove('dccwl-open');
+			body.appendChild(el('p', 'dccwl-fact', sp.fact));
+
+			// Where to look + best time: the two questions a guest on the
+			// dock actually has, given their own headings in the drawer.
+			if (sp.where) {
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.where));
+				body.appendChild(el('p', 'dccwl-detail-p', sp.where));
+			}
+			if (sp.best) {
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.bestTime));
+				var bestP = el('p', 'dccwl-detail-p', sp.best);
+				body.appendChild(bestP);
+				if (sp.bestLabel) {
+					var chips = el('p', 'dccwl-detail-chips');
+					chips.appendChild(el('span', 'dccwl-metachip', fmt(CFG.i18n.bestMonths, sp.bestLabel)));
+					body.appendChild(chips);
 				}
-				fillPanel(sp);
-				targetSlot.appendChild(clip);
-				// Force a layout pass so the 0fr -> 1fr transition runs.
-				void targetSlot.offsetHeight;
 			}
-			targetSlot.classList.add('dccwl-open');
-			chip.setAttribute('aria-controls', panelId);
-			setExpanded(chip);
-			state.openId = id;
-			state.openCtx = ctx;
-			state.opener = chip;
+
+			body.appendChild(likelihoodStrip(sp));
 		}
 
-		function wireChip(chip) {
-			chip.setAttribute('aria-controls', panelId);
-			chip.addEventListener('click', function () {
-				openPanel(chip);
+		function allTiles() {
+			return root.querySelectorAll('.dccwl-tile');
+		}
+
+		function markOpen(tile) {
+			allTiles().forEach(function (t) {
+				t.setAttribute('aria-expanded', t === tile ? 'true' : 'false');
 			});
 		}
 
-		root.addEventListener('keydown', function (e) {
-			if (e.key === 'Escape' && state.openId) {
-				e.preventDefault();
-				closePanel(true);
+		function openDetail(tile) {
+			var id = tile.getAttribute('data-dccwl-species');
+			var sp = speciesById[id];
+			if (!sp || !window.DCCWL_Sheet) {
+				return;
 			}
-		});
-		closeBtn.addEventListener('click', function () {
-			closePanel(true);
-		});
+			state.openId = id;
+			markOpen(tile);
+			window.DCCWL_Sheet.open({
+				title: sp.name,
+				appClasses: root.className.replace('dccwl-root', '').trim(),
+				closeLabel: CFG.i18n.close,
+				opener: tile,
+				build: function (body) { buildDetail(body, sp); },
+				onClose: function () {
+					state.openId = null;
+					markOpen(null);
+				}
+			});
+		}
 
-		/* ---------- hero headline + subline ---------- */
+		function wireTile(tile) {
+			tile.addEventListener('click', function () {
+				openDetail(tile);
+			});
+		}
 
-		function updateHero() {
+		/* ---------- headline + subline ---------- */
+
+		function updateHead() {
 			var m = state.month;
 			var entries = speciesForMonth(m);
 			var peaks = entries.filter(function (x) { return x.v >= 3; }).length;
@@ -337,32 +304,44 @@
 			}
 		}
 
-		/* ---------- spotlight chip strip ---------- */
+		/* ---------- spotlight tiles ---------- */
 
-		function buildChip(sp, value) {
+		function buildTile(sp, value) {
 			var li = el('li');
-			var chip = el('button', 'dccwl-chip' + (sp.mascot ? ' dccwl-chip-mascot' : ''));
-			chip.type = 'button';
-			chip.setAttribute('data-dccwl-species', sp.id);
-			chip.setAttribute('aria-expanded', 'false');
-			chip.appendChild(speciesArt(sp, 'dccwl-chip-sprite', 'dccwl-chip-emoji'));
-			chip.appendChild(el('span', 'dccwl-chip-name', sp.name));
+			var tile = el('button', 'dccwl-tile' + (sp.mascot ? ' dccwl-tile-mascot' : ''));
+			tile.type = 'button';
+			tile.setAttribute('data-dccwl-species', sp.id);
+			tile.setAttribute('aria-haspopup', 'dialog');
+			tile.setAttribute('aria-expanded', 'false');
+
+			var icon = el('span', 'dccwl-tile-icon');
+			icon.appendChild(speciesArt(sp, 'dccwl-chip-sprite', 'dccwl-tile-emoji'));
+			tile.appendChild(icon);
+			tile.appendChild(el('span', 'dccwl-tile-name', sp.name));
+
+			if (value >= 3) {
+				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
+			} else if (sp.bestLabel) {
+				tile.appendChild(el('span', 'dccwl-tile-sub', sp.bestLabel));
+			}
 			if (sp.mascot) {
-				var mark = el('span', 'dccwl-chip-mark');
+				var mark = el('span', 'dccwl-tile-mark');
 				mark.setAttribute('aria-hidden', 'true');
 				mark.innerHTML = MASCOT_MARK; // static trusted constant
-				chip.appendChild(mark);
-				chip.appendChild(el('span', 'dccwl-sr', '— ' + CFG.i18n.mascot));
+				tile.appendChild(mark);
+				tile.appendChild(el('span', 'dccwl-sr', '— ' + CFG.i18n.mascot));
 			}
-			if (value >= 3) {
-				var tick = el('span', 'dccwl-tick');
-				tick.setAttribute('aria-hidden', 'true');
-				chip.appendChild(tick);
-				chip.appendChild(el('span', 'dccwl-sr', CFG.i18n.peak));
-			}
-			wireChip(chip);
-			li.appendChild(chip);
+
+			wireTile(tile);
+			li.appendChild(tile);
 			return li;
+		}
+
+		/* The right-edge fade cues "there is more"; at the end there is not. */
+		function updateStripEnd() {
+			if (!strip) { return; }
+			var max = strip.scrollWidth - strip.clientWidth;
+			strip.classList.toggle('dccwl-at-end', max <= 4 || strip.scrollLeft >= max - 4);
 		}
 
 		function renderSpotlight() {
@@ -373,14 +352,15 @@
 			var entries = speciesForMonth(state.month);
 			if (!entries.length) {
 				strip.appendChild(el('li', 'dccwl-empty', CFG.i18n.noSpotlight));
+				return;
 			}
 			var items = entries.map(function (x) {
-				return buildChip(x.s, x.v);
+				return buildTile(x.s, x.v);
 			});
 			items.forEach(function (li) {
 				strip.appendChild(li);
 			});
-			if (!reducedMotion && items.length) {
+			if (!reducedMotion) {
 				// Quick staggered fade-in (~40ms apart, capped).
 				items.forEach(function (li, i) {
 					li.classList.add('dccwl-in');
@@ -400,12 +380,10 @@
 				}, 700);
 			}
 			strip.scrollLeft = 0;
-			if (updateStripFades) {
-				updateStripFades();
-			}
+			updateStripEnd();
 		}
 
-		/* ---------- month nav ---------- */
+		/* ---------- month timeline ---------- */
 
 		var monthButtons = [];
 
@@ -415,52 +393,50 @@
 				return;
 			}
 			state.month = m;
-			if (state.openCtx === 'spot') {
-				closePanel(false);
-			}
 			monthButtons.forEach(function (b, i) {
 				b.setAttribute('aria-pressed', i === m ? 'true' : 'false');
+				b.classList.toggle('dccwl-month-on', i === m);
 			});
-			centerMonthButton();
-			updateHero();
+			centerMonth();
+			updateHead();
 			renderSpotlight();
 		}
 
-		function centerMonthButton() {
-			var msWrap = root.querySelector('.dccwl-months');
+		function centerMonth() {
+			var track = root.querySelector('.dccwl-timeline-track');
 			var btn = monthButtons[state.month];
-			if (!msWrap || !btn || msWrap.scrollWidth <= msWrap.clientWidth) {
+			if (!track || !btn || track.scrollWidth <= track.clientWidth) {
 				return;
 			}
-			msWrap.scrollLeft = btn.offsetLeft - (msWrap.clientWidth - btn.offsetWidth) / 2;
+			track.scrollLeft = btn.offsetLeft - (track.clientWidth - btn.offsetWidth) / 2;
 		}
 
-		function buildMonthNav() {
-			var nav = root.querySelector('.dccwl-monthnav');
+		function buildTimeline() {
+			var nav = root.querySelector('.dccwl-timeline');
 			if (!nav) {
 				return;
 			}
-			var msWrap = nav.querySelector('.dccwl-months');
+			var track = nav.querySelector('.dccwl-timeline-track');
 			CFG.months.forEach(function (abbrev, m) {
-				var btn = el('button', 'dccwl-month-btn', abbrev);
+				var btn = el('button', 'dccwl-month' + (m === state.month ? ' dccwl-month-on' : ''), abbrev);
 				btn.type = 'button';
 				btn.setAttribute('aria-label', CFG.monthsFull[m] || abbrev);
 				btn.setAttribute('aria-pressed', m === state.month ? 'true' : 'false');
 				btn.addEventListener('click', function () {
 					setMonth(m);
 				});
-				msWrap.appendChild(btn);
+				track.appendChild(btn);
 				monthButtons.push(btn);
 			});
-			nav.querySelector('.dccwl-nav-prev').addEventListener('click', function () {
+			nav.querySelector('.dccwl-timeline-prev').addEventListener('click', function () {
 				setMonth(state.month - 1);
 			});
-			nav.querySelector('.dccwl-nav-next').addEventListener('click', function () {
+			nav.querySelector('.dccwl-timeline-next').addEventListener('click', function () {
 				setMonth(state.month + 1);
 			});
-			attachEdgeFades(msWrap, nav);
+			attachEdgeFades(track, nav);
 			nav.hidden = false;
-			centerMonthButton();
+			centerMonth();
 		}
 
 		/* ---------- field guide tabs ---------- */
@@ -470,7 +446,7 @@
 			if (!guide) {
 				return;
 			}
-			guide.querySelectorAll('.dccwl-chip').forEach(wireChip);
+			guide.querySelectorAll('.dccwl-tile').forEach(wireTile);
 			var tabs = guide.querySelectorAll('.dccwl-tab');
 			var grids = guide.querySelectorAll('.dccwl-guide-grid');
 			tabs.forEach(function (tab) {
@@ -482,19 +458,21 @@
 					grids.forEach(function (g) {
 						g.hidden = g.getAttribute('data-dccwl-group') !== group;
 					});
-					if (state.openCtx === 'guide') {
-						closePanel(false);
-					}
 				});
 			});
 		}
 
 		/* ---------- boot this instance ---------- */
 
-		updateHero();
+		if (strip) {
+			strip.addEventListener('scroll', updateStripEnd, { passive: true });
+			window.addEventListener('resize', updateStripEnd);
+		}
+
+		updateHead();
 		renderSpotlight();
 		if (instance.browser) {
-			buildMonthNav();
+			buildTimeline();
 		}
 		initGuide();
 	}
@@ -527,9 +505,9 @@
 			var m = (cur + off) % 12;
 			var prev = (m + 11) % 12;
 			if (scores[m] === PEAK && scores[prev] < PEAK) {
-				if (off === 0) { return { days: 0, here: true }; }
+				if (off === 0) { return { days: 0, here: true, month: m }; }
 				var first = new Date(today.getFullYear() + Math.floor((cur + off) / 12), m, 1);
-				return { days: Math.max(0, Math.round((first - today) / DAY)), here: false };
+				return { days: Math.max(0, Math.round((first - today) / DAY)), here: false, month: m };
 			}
 		}
 		return null;
@@ -540,31 +518,37 @@
 	 * species list passes through a filter, so nothing here may be innerHTML. */
 	function fillCountdown(node, best, i18n) {
 		node.textContent = '';
-		if (best.s.emoji) {
-			var em = document.createElement('span');
-			em.className = 'dccwl-cd-emoji';
-			em.textContent = best.s.emoji;
-			node.appendChild(em);
-		}
+		node.classList.add('dccwl-hero-stat');
+
+		// Icon: the species' own sprite, at hero scale.
+		var icon = el('span', 'dccwl-hero-icon');
+		icon.appendChild(speciesArt(best.s, 'dccwl-hero-sprite', 'dccwl-hero-emoji'));
+		node.appendChild(icon);
+
+		var textWrap = el('div', 'dccwl-hero-text');
+
+		// "Manatee season" — the label, quiet above the number.
+		textWrap.appendChild(el('p', 'dccwl-hero-label',
+			fmt(i18n.cdLabel || '%s season', best.s.name)));
+
+		var value = el('p', 'dccwl-hero-value');
 		if (best.here) {
-			node.appendChild(document.createTextNode(
-				String(i18n.cdHere || '%s season is here').replace('%s', best.s.name)
-			));
+			value.appendChild(el('span', 'dccwl-hero-now', i18n.cdNow || 'is here now'));
 		} else {
-			var template = String(
-				(best.days === 1 ? i18n.cdStartsOne : i18n.cdStarts) ||
-				'%1$s season starts in %2$s days'
-			).replace('%1$s', best.s.name);
-			var halves = template.split('%2$s');
-			node.appendChild(document.createTextNode(halves[0]));
-			var days = document.createElement('span');
-			days.className = 'dccwl-cd-days';
-			days.textContent = String(best.days);
-			node.appendChild(days);
-			if (halves.length > 1) {
-				node.appendChild(document.createTextNode(halves.slice(1).join('%2$s')));
-			}
+			value.appendChild(el('span', 'dccwl-hero-num', String(best.days)));
+			value.appendChild(el('span', 'dccwl-hero-unit',
+				best.days === 1 ? (i18n.cdDay || 'day') : (i18n.cdDays || 'days')));
 		}
+		textWrap.appendChild(value);
+
+		// One line of reason, so the number is never a bare assertion.
+		var monthName = (CFG.monthsFull && CFG.monthsFull[best.month]) || '';
+		var why = best.here
+			? fmt(i18n.cdWhyNow || 'Peak sightings run through %s.', monthName)
+			: fmt(i18n.cdWhy || 'Peak sightings begin in %s.', monthName);
+		textWrap.appendChild(el('p', 'dccwl-hero-why', why));
+
+		node.appendChild(textWrap);
 		node.hidden = false;
 	}
 
@@ -580,7 +564,9 @@
 			if (!Array.isArray(s.months)) { return; }
 			var rise = nextRise(s.months, today);
 			if (!rise) { return; }
-			if (!best || rise.days < best.days) { best = { days: rise.days, here: rise.here, s: s }; }
+			if (!best || rise.days < best.days) {
+				best = { days: rise.days, here: rise.here, month: rise.month, s: s };
+			}
 		});
 		if (!best) { return; }
 

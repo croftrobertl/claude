@@ -76,14 +76,14 @@ final class Water_Render {
 
 		ob_start();
 		?>
-		<section class="dccwl-water" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
+		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
 
 			<?php if ( $live ) : ?>
 				<?php /* Shell only — filled client-side so page caching cannot serve a stale reading. */ ?>
 				<div class="dccwl-water-live" data-dccwl-water-live hidden>
 					<h3 class="dccwl-water-sub"><?php esc_html_e( 'Right now', 'dcc-wildlife' ); ?></h3>
-					<ul class="dccwl-water-facts" data-dccwl-water-facts></ul>
+					<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-facts></ul>
 
 					<?php /* Each water against its OWN long-run median — the
 					         comparison a visiting angler can act on without any
@@ -91,7 +91,7 @@ final class Water_Render {
 					<div class="dccwl-chain" data-dccwl-chain hidden>
 						<h3 class="dccwl-water-sub"><?php esc_html_e( 'Across the Harris Chain', 'dcc-wildlife' ); ?></h3>
 						<p class="dccwl-chain-note"><?php esc_html_e( 'Clarity now against each water’s own long-run median — clearest relative to its own normal first.', 'dcc-wildlife' ); ?></p>
-						<ul class="dccwl-water-facts" data-dccwl-water-chain></ul>
+						<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-chain></ul>
 					</div>
 				</div>
 			<?php endif; ?>
@@ -106,11 +106,13 @@ final class Water_Render {
 					<h3 class="dccwl-water-sub"><?php esc_html_e( 'Chain map', 'dcc-wildlife' ); ?></h3>
 					<p class="dccwl-map-intro"><?php esc_html_e( 'Boat ramps, the waters of the chain and the stations these readings come from. The map loads only when you open it.', 'dcc-wildlife' ); ?></p>
 					<p>
+						<?php /* 1.9.0: opens the shared sliding sheet rather than
+						         expanding inline, so the map gets the room it
+						         needs and dismisses like every other detail. */ ?>
 						<button type="button" class="dccwl-btn dccwl-map-open" data-dccwl-map-open>
 							<?php esc_html_e( 'Open the chain map', 'dcc-wildlife' ); ?>
 						</button>
 					</p>
-					<div class="dccwl-map-shell" data-dccwl-map-shell hidden></div>
 				</div>
 			<?php endif; ?>
 
@@ -121,7 +123,7 @@ final class Water_Render {
 				<div class="dccwl-water-about">
 					<h3 class="dccwl-water-sub"><?php esc_html_e( 'About the water', 'dcc-wildlife' ); ?></h3>
 					<?php foreach ( $about as $waterbody => $facts ) : ?>
-						<ul class="dccwl-water-facts">
+						<ul class="dccwl-cards dccwl-water-facts">
 							<?php foreach ( $facts as $fact ) : ?>
 								<?php self::render_fact( $fact ); ?>
 							<?php endforeach; ?>
@@ -160,7 +162,7 @@ final class Water_Render {
 			<div class="dccwl-water-body">
 				<h3 class="dccwl-water-sub"><?php echo esc_html( $waterbody ); ?></h3>
 				<?php if ( $specific ) : ?>
-					<ul class="dccwl-water-facts">
+					<ul class="dccwl-cards dccwl-water-facts">
 						<?php foreach ( $specific as $fact ) : ?>
 							<?php self::render_fact( $fact ); ?>
 						<?php endforeach; ?>
@@ -171,7 +173,7 @@ final class Water_Render {
 						<p class="dccwl-water-general-head">
 							<?php esc_html_e( 'General guidance — not measured on this water', 'dcc-wildlife' ); ?>
 						</p>
-						<ul class="dccwl-water-facts">
+						<ul class="dccwl-cards dccwl-water-facts">
 							<?php foreach ( $general as $fact ) : ?>
 								<?php self::render_fact( $fact ); ?>
 							<?php endforeach; ?>
@@ -188,12 +190,25 @@ final class Water_Render {
 	 * from the same object that guarantees the value was attributable.
 	 */
 	private static function render_fact( Water_Fact $fact ): void {
-		$f = $fact->to_array();
+		$f   = $fact->to_array();
+		$age = self::age_words( $f['date'] );
 		?>
-		<li class="dccwl-water-fact dccwl-water-tier-<?php echo esc_attr( $f['tier'] ); ?>">
-			<span class="dccwl-water-label"><?php echo esc_html( $f['label'] ); ?></span>
-			<span class="dccwl-water-value"><?php echo esc_html( $f['value'] ); ?></span>
-			<span class="dccwl-water-attr">
+		<li class="dccwl-card dccwl-water-fact dccwl-water-tier-<?php echo esc_attr( $f['tier'] ); ?>">
+			<div class="dccwl-card-head">
+				<span class="dccwl-card-label"><?php echo esc_html( $f['label'] ); ?></span>
+				<?php /* Source + age chip (1.9.0): provenance at a glance. It
+				         summarises the attribution line below, never replaces
+				         it — the full source and measurement date still print. */ ?>
+				<span class="dccwl-metachip dccwl-card-src">
+					<span class="dccwl-card-srcname"><?php echo esc_html( $f['sourceName'] ); ?></span>
+					<?php if ( '' !== $age ) : ?>
+						<span class="dccwl-card-dot">·</span>
+						<span class="dccwl-card-age"><?php echo esc_html( $age ); ?></span>
+					<?php endif; ?>
+				</span>
+			</div>
+			<p class="dccwl-card-value"><?php echo esc_html( $f['value'] ); ?></p>
+			<p class="dccwl-water-attr">
 				<?php if ( '' !== $f['sourceUrl'] ) : ?>
 					<a href="<?php echo esc_url( $f['sourceUrl'] ); ?>" rel="noopener nofollow" target="_blank">
 						<?php echo esc_html( $f['sourceName'] ); ?>
@@ -213,9 +228,50 @@ final class Water_Render {
 				<?php if ( '' !== $f['note'] ) : ?>
 					<span class="dccwl-water-note"><?php echo esc_html( $f['note'] ); ?></span>
 				<?php endif; ?>
-			</span>
+			</p>
 		</li>
 		<?php
+	}
+
+	/**
+	 * A reading's age in chip-sized words. Mirrors the thresholds in
+	 * water.js so a server-rendered card and a client-rendered one never
+	 * describe the same age differently.
+	 *
+	 * Returns '' when the date will not parse or lies in the future: the card
+	 * then shows its attribution without an age claim rather than guessing.
+	 */
+	private static function age_words( string $date ): string {
+		$date = trim( $date );
+		if ( '' === $date ) {
+			return '';
+		}
+		// A year or year-month alone is not a day, so it gets no day-precision
+		// age; the printed date already says what is known.
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}/', $date ) ) {
+			return '';
+		}
+		$ts = strtotime( substr( $date, 0, 10 ) . ' 12:00:00' );
+		if ( false === $ts ) {
+			return '';
+		}
+		$days = (int) floor( ( time() - $ts ) / DAY_IN_SECONDS );
+		if ( $days < 0 ) {
+			return '';
+		}
+		if ( 0 === $days ) {
+			return __( 'today', 'dcc-wildlife' );
+		}
+		if ( $days < 45 ) {
+			/* translators: %d: whole days. */
+			return sprintf( _x( '%dd', 'compact age: days', 'dcc-wildlife' ), $days );
+		}
+		if ( $days < 730 ) {
+			/* translators: %d: whole months. */
+			return sprintf( _x( '%dmo', 'compact age: months', 'dcc-wildlife' ), (int) round( $days / 30 ) );
+		}
+		/* translators: %d: whole years. */
+		return sprintf( _x( '%dy', 'compact age: years', 'dcc-wildlife' ), (int) round( $days / 365 ) );
 	}
 
 	/**
@@ -273,8 +329,14 @@ final class Water_Render {
 							'baseLayer'  => Water_Data::map_default_layer(),
 						]
 						: null,
+					// The sheet is a body-level element, so it needs to be
+					// told which app/theme classes to wear (1.9.0).
+					'appClasses' => Render::app_classes(),
 					'i18n'     => [
 						'asOf'        => __( 'reading', 'dcc-wildlife' ),
+						'mapTitle'    => __( 'Chain map', 'dcc-wildlife' ),
+						'mapClose'    => __( 'Close the map', 'dcc-wildlife' ),
+						'ageToday'    => __( 'today', 'dcc-wildlife' ),
 						'mapLoading'  => __( 'Loading the map…', 'dcc-wildlife' ),
 						'mapFailed'   => __( 'The map could not be loaded.', 'dcc-wildlife' ),
 						'colorBy'     => __( 'Colour by:', 'dcc-wildlife' ),

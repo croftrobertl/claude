@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.8.1
+Stable tag: 1.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,11 +14,12 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 
-* **Spotlight band** — a compact scrollable strip of species chips for the current month, with a headline like "August on the canal — 6 species at their peak". The month is chosen in the visitor's browser, so aggressive page caching never shows a stale month.
+* **Spotlight band** — a compact scrollable row of species tiles for the current month, with a headline like "August on the canal — 6 species at their peak". The month is chosen in the visitor's browser, so aggressive page caching never shows a stale month.
 * **Bespoke species art** — every species is drawn as a flat two-tone inline-SVG sprite in the site's deep-teal illustration language (no platform emoji, so the art is identical on every device). Sprites ship once per page as a hidden symbol sheet.
-* **Detail panel** — tapping any chip expands one shared panel below it: the species sprite staged in a drawn SVG scene medallion, the fact, best-time pill, where-to-look line and derived peak-months range.
-* **Field guide** — all species in three compact tabs (Critters, Birds, Plants); same tap-for-details chips.
-* **Month browser** — prev/next arrows plus 12 mini buttons to peek at any month, entirely client-side.
+* **Detail sheet** — tapping any species opens a sliding drawer: the sprite staged in a drawn SVG scene medallion, the fact, where to look, best time and a 12-month likelihood strip. Escape, the back button, an outside tap and the browser back button all close it; focus is trapped while it is open.
+* **Field guide** — all species in three tabbed tile grids (Critters, Birds, Plants); same tap-for-details behaviour.
+* **Month timeline** — a scrollable month strip with the current month anchored, plus prev/next arrows, entirely client-side.
+* **Season countdown** — a hero stat leading the widget ("Fish season — 31 days away"), computed in the browser in canal time.
 
 **Fishing & water conditions** (v1.4.0) is a second, separately-placed module:
 
@@ -45,6 +46,20 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.9.0 =
+**The widgets are rebuilt in the DCC Guest Guide's visual language**, so /guest/ and the wildlife pages read as one app. This release is chrome and interaction only: no data source, no REST route, no fetch discipline, no countdown maths and above all no part of the Water_Fact truth gate was touched.
+
+Element by element:
+
+* **Species chips → TILES that open a sliding detail SHEET.** Tapping a species opens a drawer carrying its scene medallion, the fact, *where to look*, *best time* and a new 12-month likelihood strip — the same registry and calendar data as before, finally all in one place. The strip's bars are decoration; each month also reads out as "March: peak season" for screen readers.
+* **Month nav → a segmented TIMELINE.** A scrollable month strip with the current month anchored and highlighted. The month logic is untouched; only the control around it changed.
+* **Water readings → DATA CARDS with a source + age chip.** Every reading now shows its provenance at a glance ("Lake County Water Atlas · 40d"), with the age computed from the measurement date in the source's own frame. The chip summarises the attribution line — it never replaces it, so the full source, the measurement date and the note still print beneath every value. A reading with no valid source still renders nothing at all.
+* **Season countdown → a HERO STAT** at the top of the widget: the species, the number, and one line of reason ("Peak sightings begin in October"). Still computed in the browser in canal time, still one shell per page, still governed by the sitewide toggle.
+* **Chain map → a full sliding SHEET** with the same mechanics as the species detail. Leaflet, the tiles, the ramps, the popups and the colour-by legend are unchanged; the map simply gets the room it needs and dismisses like every other detail. It still loads nothing external until a guest opens it, and reopening no longer refetches.
+* **One shared overlay** (`assets/js/sheet.js`) drives both sheets: focus moves in and returns to whatever opened it, focus is trapped while open, and Escape, the back affordance, an outside tap and the browser/Android back button all close it. The page behind is scroll-locked. Under `prefers-reduced-motion` the sheet still opens — it just does not travel.
+* **A token layer** (`assets/css/app.css`) holds every colour, radius, gap and duration in one block, with density and glass modifiers and full auto dark mode. In dark mode the widget paints its own ground rather than assuming the theme follows the OS, and the dark species sprites keep a light backing so they stay visible.
+* Render budget: the widget measures 562px desktop / 699px mobile. Mobile still fits its original ≤720px budget; the desktop budget moves from 560px to 600px to hold the hero stat, which is new content the old figure never accounted for.
 
 = 1.8.1 =
 * **The season countdown is now placeable like everything else — through Elementor.** 1.8.0 delivered it via shortcodes only, but the live guest pages are built from the native Elementor widgets, so it had no way onto a real page. Two additions, one shared renderer:

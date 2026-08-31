@@ -84,7 +84,18 @@ includes/class-water-admin.php  # ONE page: DCC -> Wildlife (falls back to
                                 #   dcc-wildlife-water while the countdown
                                 #   mu-plugin still owns that slug), prio 63
 includes/class-water-widget.php # Elementor widget dccwl_water
-assets/css/widget.css         # One CSS file; palette navy #0a3d62 / coral #e8604f
+assets/css/app.css            # THE TOKEN LAYER (1.9.0): every colour/radius/gap
+                              #   /duration + density, glass and dark modifiers,
+                              #   plus the shared primitives (tiles, sheet,
+                              #   chips, buttons). Dependency of both widget
+                              #   stylesheets — re-theming happens HERE only
+assets/js/sheet.js            # THE SHARED OVERLAY (1.9.0): one sliding sheet for
+                              #   the species detail AND the chain map; focus
+                              #   trap, Escape/back/scrim/history close,
+                              #   scroll-lock. Dependency of both widget scripts
+tools/extract-guest-guide-tokens.js # Console snippet the owner runs on /guest/
+                              #   to capture the real Guest Guide token values
+assets/css/widget.css         # Month widget; palette navy #0a3d62 / coral #e8604f
 assets/js/widget.js           # One vanilla-JS file, no jQuery, no AJAX
 assets/css/water.css          # Water module styles (loaded only where placed)
 assets/js/water.js            # Fills the live strip from the REST route
@@ -101,23 +112,50 @@ are derived in PHP (`best_months_label`, value-3 months falling back to the
 row max, wrapping across the year end) and shipped per species as
 `bestLabel` in the config JSON.
 
-## UI architecture (compact + interactive, since v1.1.0)
+## UI architecture (the app language, since v1.9.0)
 
-Height budget for the default render: **≤ 560px desktop / ≤ 720px mobile**
-(measured ~310px / ~410px). Everything else lives behind interaction:
+v1.9.0 rebuilt the UI to speak the DCC Guest Guide's visual language so
+/guest/ and the wildlife pages read as one app. **It changed chrome and
+interaction only** — no data source, REST route, fetch rule, countdown
+maths or any part of the Water_Fact gate was touched, and that separation
+is worth preserving in any future re-skin.
+
+**THE TOKEN VALUES ARE NOT MEASURED FROM THE GUEST GUIDE.** That plugin was
+not readable from the build environment (not in this repo; the live site is
+unreachable from it), so `app.css` carries Wildlife's own verified palette
+arranged in the Guest Guide's token STRUCTURE, with each name mapped to its
+`--dccgg-` counterpart in a comment. Matching the two apps for real is a
+swap of that one block — run `tools/extract-guest-guide-tokens.js` in the
+browser console on /guest/ and paste what it prints. Do not invent
+`--dccgg-` values; that is the same failure this project has guarded
+against everywhere else. The density/dark defaults (`dccwl-density-cozy`,
+`dccwl-dark-auto`) are a best guess from the brief's own class names and
+are filterable via `dcc_wl_app_classes`.
+
+Height budget for the default render: **≤ 600px desktop / ≤ 720px mobile**
+(measured 562px / 699px). The desktop figure was 560px through 1.8.x; it
+moved in 1.9.0 to hold the hero stat, which is ~113px of new content the
+old budget never accounted for. Mobile still fits its original figure — the
+guide grid goes three tiles across on a phone specifically so it does.
+Everything else lives behind interaction:
 
 - **Hero**: JS sets "{Month} on the canal" + "N species at their peak"
   from the calendar data (with a custom title, the month moves into the
   subline). Both lines have reserved min-heights — no layout shift.
-- **Spotlight band**: one horizontally scrollable row of chips
-  (scroll-snap, JS-toggled edge fades, ~40ms staggered fade-in on month
-  change, capped).
-- **One shared detail panel per widget instance**: a single `.dccwl-panel`
-  moved by JS between the slot under the spotlight and the slot under the
-  guide. Chips are buttons with `aria-expanded` + `aria-controls`; Escape
-  or the ✕ closes and restores focus; tapping another chip crossfades the
-  body in place. Slots animate `grid-template-rows: 0fr ↔ 1fr` (the
-  no-jump technique — do NOT switch to max-height hacks).
+- **Spotlight band**: one horizontally scrollable row of TILES
+  (scroll-snap, a right-edge mask that drops at the end, ~40ms staggered
+  fade-in on month change, capped). **It must stay a single row** — a
+  wrapping grid of a dozen species measured 721px and blew the height
+  budget. The guide grids below DO wrap, because they sit behind tabs.
+- **ONE sliding sheet per page**, shared by the species detail and the
+  chain map (`assets/js/sheet.js`, body-level, `role="dialog"`
+  `aria-modal`). It moves focus in, traps it, and returns it to whatever
+  opened it; Escape, the back affordance, a scrim tap and the browser or
+  Android back button all close it; `<html>` is scroll-locked while it is
+  open. Detail content is therefore styled under `.dccwl-sheet`, NOT
+  `.dccwl-root` — root-scoped rules can never reach it.
+- **Hero stat**: the season countdown leads the widget (it trailed it in
+  1.8.x). Empty, hidden shell server-side; filled client-side in canal time.
 - **Scene medallions**: three drawn SVG vignettes (critters / birds /
   plants) shared across all 17 species, stored as static JS constants; the
   circle crop is CSS `border-radius` + `overflow:hidden` — deliberately no
@@ -145,7 +183,17 @@ Height budget for the default render: **≤ 560px desktop / ≤ 720px mobile**
   defeats the UA `[hidden]` rule — the explicit
   `.dccwl-guide-grid[hidden]{display:none}` rule is load-bearing.
 - **Motion**: CSS transitions only, all ≤ 250ms, everything inert under
-  `prefers-reduced-motion` (panels still open — they just snap).
+  `prefers-reduced-motion` (the sheet still opens — it just does not
+  travel). The tile hover-lift is also dropped there: with no transition to
+  carry it, a 2px jump under the cursor is worse than no lift.
+- **Dark mode** is auto via `prefers-color-scheme`, and every colour is
+  defined on the base selector first — the dark block only REDEFINES
+  tokens, so no surface can come out unstyled. A test asserts that
+  property statically. Two dark-mode rules are load-bearing: the widget
+  paints its OWN background (Bravada has no dark mode, so otherwise a
+  dark-OS visitor gets light-on-light text), and the sprite icon holders
+  keep a LIGHT ground (the deep-teal silhouettes vanish on a dark tile —
+  the same trap 1.3.0 hit with the navy expanded chip).
 
 ## The water module (v1.4.0) — read before touching it
 
@@ -369,14 +417,23 @@ Deliver that file to the owner for the Plugins → Add New → Upload route.
 - Widget renders with defaults; `[dcc_wildlife]` renders identically; the
   widget appears under "Dora Canal Court" in the Elementor panel (and no
   "Claude Code" category is created by this plugin).
-- Default render ≤ 560px desktop / ≤ 720px at 375px width; zero horizontal
+- Default render ≤ 600px desktop / ≤ 720px at 375px width; zero horizontal
   overflow at 375px.
 - View source: no month-specific markup server-side; change the OS clock →
   headline/spotlight change; arrows + all 12 mini buttons work; the
   "N species at their peak" count matches the calendar table.
-- Chip → panel open/swap/close by mouse, touch and keyboard; Escape closes
-  and restores focus; reduced-motion OS setting → no animation anywhere but
-  the panel still opens.
+- Tile → sheet opens by mouse, touch and keyboard; Escape, the back button,
+  an outside tap and the browser back button all close it; focus is trapped
+  while open and returns to the tile; reduced-motion OS setting → no
+  animation anywhere but the sheet still opens.
+- Side by side with /guest/: same tiles, same drawer motion, same buttons,
+  same density, same dark-mode behaviour. (Until the Guest Guide's real
+  token values are pasted into app.css this will match in STRUCTURE but not
+  in exact hue — see the UI architecture section.)
+- Toggle the OS to dark: every surface and string stays legible on both
+  widgets, and the species sprites keep their light backing.
+- The chain map opens as a full sheet; Leaflet, tiles, ramps, popups and the
+  colour-by legend all work; reopening does not refetch.
 - Sprites render identically on Apple/Android/Windows (no emoji anywhere in
   species art); the five field-mark litmus tests hold: eagle's white
   head+tail, egret's yellow feet, anhinga's spread wings, gator's waterline

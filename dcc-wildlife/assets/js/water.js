@@ -103,15 +103,65 @@
 		}
 	}
 
-	function buildRow(f) {
+	/* How old is this reading, in words short enough for a chip?
+	 *
+	 * Computed from the MEASUREMENT date the payload carried, never from
+	 * when we fetched it, and read in the source's own frame so a date-only
+	 * value cannot slip a day. Returns '' when the date will not parse —
+	 * the card then shows its attribution line without an age claim rather
+	 * than guessing one. */
+	function ageWords(iso, precision, i18n) {
+		if (!iso) { return ''; }
+		var then;
+		if (!hasRealTime(iso, precision)) {
+			var parts = dateOnlyParts(iso);
+			if (!parts) { return ''; }
+			then = new Date(parts[0], parts[1] - 1, parts[2]);
+		} else {
+			then = new Date(iso);
+		}
+		if (isNaN(then.getTime())) { return ''; }
+
+		var days = Math.floor((Date.now() - then.getTime()) / 86400000);
+		if (days < 0) { return ''; }          // clock skew: say nothing
+		if (days === 0) { return i18n.ageToday || 'today'; }
+		if (days < 45) { return days + (i18n.ageDays || 'd'); }
+		if (days < 730) { return Math.round(days / 30) + (i18n.ageMonths || 'mo'); }
+		return Math.round(days / 365) + (i18n.ageYears || 'y');
+	}
+
+	/* One reading = one data card.
+	 *
+	 * The gate is unchanged and still absolute: no source name, no card.
+	 * 1.9.0 adds the source+age CHIP so provenance is legible at a glance;
+	 * the full source name and measurement date stay printed beneath it, so
+	 * the chip summarises the attribution rather than replacing it. */
+	function buildCard(f) {
 		// Belt and braces: the server already dropped unsourced facts.
 		if (!f || !f.label || !f.value || !f.sourceName) { return null; }
 
-		var li = el('li', 'dccwl-water-fact dccwl-water-tier-' + (f.tier || 'live'));
-		li.appendChild(el('span', 'dccwl-water-label', f.label));
-		li.appendChild(el('span', 'dccwl-water-value', f.value));
+		var i18n = CFG.i18n || {};
+		var li = el('li', 'dccwl-card dccwl-water-fact dccwl-water-tier-' + (f.tier || 'live'));
 
-		var attr = el('span', 'dccwl-water-attr');
+		var head = el('div', 'dccwl-card-head');
+		head.appendChild(el('span', 'dccwl-card-label', f.label));
+
+		// Source + age chip.
+		var age = ageWords(f.date, f.datePrecision, i18n);
+		var chip = el('span', 'dccwl-metachip dccwl-card-src');
+		chip.appendChild(el('span', 'dccwl-card-srcname', f.sourceName));
+		if (age) {
+			chip.appendChild(el('span', 'dccwl-card-dot', '·'));
+			chip.appendChild(el('span', 'dccwl-card-age', age));
+		}
+		head.appendChild(chip);
+		li.appendChild(head);
+
+		li.appendChild(el('p', 'dccwl-card-value', f.value));
+
+		// Full attribution: the source (linked where there is a URL) and the
+		// measurement time, worded by the fact itself.
+		var attr = el('p', 'dccwl-water-attr');
 		if (f.sourceUrl) {
 			var a = el('a', null, f.sourceName);
 			a.href = f.sourceUrl;
@@ -127,7 +177,7 @@
 			// The wording comes from the fact: a gauge is "read", a lab
 			// sample is "sampled", a survey is "surveyed". Falls back to the
 			// generic word rather than asserting the wrong one.
-			var prefix = f.dateLabel || (CFG.i18n && CFG.i18n.asOf) || 'reading';
+			var prefix = f.dateLabel || i18n.asOf || 'reading';
 			attr.appendChild(el('span', 'dccwl-water-date', prefix + ' ' + when));
 		}
 		if (f.note) {
@@ -151,7 +201,7 @@
 		var shown = 0;
 		var chainShown = 0;
 		facts.forEach(function (f) {
-			var row = buildRow(f);
+			var row = buildCard(f);
 			if (!row) { return; }
 			if (f.group === 'chain' && chainList) {
 				chainList.appendChild(row);
@@ -232,8 +282,7 @@
 		if (!wrap || !cfg) { return; }
 
 		var btn = wrap.querySelector('[data-dccwl-map-open]');
-		var shell = wrap.querySelector('[data-dccwl-map-shell]');
-		if (!btn || !shell) { return; }
+		if (!btn) { return; }
 
 		// A live-only section is emitted hidden and normally revealed when
 		// readings arrive — but the map is served independently of the
@@ -243,7 +292,38 @@
 		var section = wrap.closest('[data-dccwl-water-root]');
 		if (section) { section.hidden = false; }
 
+		// Fetched once and kept: reopening the sheet must not re-hit the
+		// REST route, and through it the upstream APIs.
+		var mapData = null;
+		var label = btn.textContent;
+
+		function openSheet() {
+			window.DCCWL_Sheet.open({
+				title: (CFG.i18n && CFG.i18n.mapTitle) || label,
+				appClasses: (CFG.appClasses || 'dccwl-app'),
+				closeLabel: (CFG.i18n && CFG.i18n.mapClose) || 'Close',
+				opener: btn,
+				tall: true,
+				build: function (body) {
+					// The map wants the whole sheet: no padding, no scroll of
+					// its own — Leaflet handles panning inside the canvas.
+					body.classList.add('dccwl-sheet-body-map');
+					window.DCCWL_Map.init(body, mapData, cfg, (CFG.i18n || {}));
+				},
+				onClose: function () {
+					btn.textContent = label;
+				}
+			});
+		}
+
 		btn.addEventListener('click', function () {
+			if (!window.DCCWL_Sheet) { return; }
+			if (mapData) {
+				// Already loaded once — straight back to the sheet.
+				openSheet();
+				return;
+			}
+
 			btn.disabled = true;
 			btn.textContent = (CFG.i18n && CFG.i18n.mapLoading) || 'Loading…';
 
@@ -261,9 +341,10 @@
 				})
 				.then(function (data) {
 					if (!data || !data.enabled) { throw new Error('map disabled'); }
-					shell.hidden = false;
-					btn.parentNode.removeChild(btn);
-					window.DCCWL_Map.init(shell, data, cfg, CFG.i18n || {});
+					mapData = data;
+					btn.disabled = false;
+					btn.textContent = label;
+					openSheet();
 				})
 				.catch(function () {
 					btn.disabled = false;

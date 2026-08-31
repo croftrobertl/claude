@@ -1,0 +1,486 @@
+/**
+ * DCC Wildlife — the app layer (v1.9.0).
+ *
+ * Tokens and shared primitives so the Wildlife widgets speak the DCC Guest
+ * Guide's visual language and the two pages read as one app. Loaded first;
+ * widget.css and water.css build on it.
+ *
+ * ============================================================
+ * TOKEN VALUES — READ THIS BEFORE CHANGING ANY NUMBER BELOW
+ * ============================================================
+ * The Guest Guide is a SEPARATE plugin and was NOT readable from the build
+ * environment (not in this repo, and the live site is unreachable from it),
+ * so the values in the block below are NOT the Guest Guide's measured
+ * tokens. They are DCC Wildlife's own verified palette (navy #0a3d62 /
+ * coral #e8604f, the same values this plugin has shipped since 1.4.0),
+ * arranged in the Guest Guide's token STRUCTURE.
+ *
+ * That means: the architecture, component patterns and interaction are the
+ * Guest Guide's; the exact hues are Wildlife's until the real values are
+ * pasted in. Every token name below maps 1:1 to its --dccgg- counterpart
+ * (noted inline), so matching the two apps is a mechanical swap of this one
+ * block — nothing else in any stylesheet needs to change.
+ *
+ * To capture the real values, run tools/extract-guest-guide-tokens.js in the
+ * browser console on /guest/ and paste what it prints over this block.
+ *
+ * A future step could extract this file into a stylesheet shared by both
+ * plugins. Deliberately not now: that would couple two independently
+ * installed plugins, and this release adds no cross-plugin dependency.
+ */
+
+.dccwl-app {
+	/* --- palette ------------------------------------------------------
+	 * Light values live here on the base selector, never only inside a
+	 * dark-mode block, so no surface can lose its colour when a theme
+	 * flips. The dark block below REDEFINES these same names. */
+
+	--dccwl-accent: #e8604f;            /* --dccgg-accent */
+	--dccwl-accent-ink: #ffffff;
+	--dccwl-accent-soft: rgba(232, 96, 79, 0.12);
+	--dccwl-primary: #0a3d62;           /* --dccgg-primary */
+	--dccwl-primary-soft: rgba(10, 61, 98, 0.08);
+
+	--dccwl-btn-bg: #0a3d62;            /* --dccgg-btn-bg */
+	--dccwl-btn-txt: #ffffff;           /* --dccgg-btn-txt */
+	--dccwl-btn-bg-hover: #0d4d7a;
+
+	--dccwl-page-bg: #f6f8fa;
+	--dccwl-tile-bg: #ffffff;           /* --dccgg-tile-bg */
+	--dccwl-tile-bg-hover: #ffffff;
+	--dccwl-detail-bg: #ffffff;         /* --dccgg-detail-bg */
+	--dccwl-sheet-scrim: rgba(12, 24, 33, 0.44);
+
+	--dccwl-text: #16242e;
+	--dccwl-text-muted: #5c6f7c;
+	--dccwl-text-faint: #7d8d98;
+	--dccwl-line: #dbe4ea;
+	--dccwl-line-strong: #c3d1da;
+
+	--dccwl-emergency: #c0392b;         /* --dccgg-color-emergency */
+	--dccwl-ok: #2e7d5b;
+	--dccwl-warn: #b07d3a;
+
+	/* --- shape + depth ---------------------------------------------- */
+	--dccwl-radius-sm: 8px;
+	--dccwl-radius: 14px;
+	--dccwl-radius-lg: 20px;
+	--dccwl-radius-pill: 999px;
+	--dccwl-shadow-tile: 0 1px 2px rgba(16, 34, 45, 0.06), 0 2px 8px rgba(16, 34, 45, 0.05);
+	--dccwl-shadow-raised: 0 2px 6px rgba(16, 34, 45, 0.09), 0 12px 28px rgba(16, 34, 45, 0.12);
+	--dccwl-shadow-sheet: 0 -2px 10px rgba(16, 34, 45, 0.10), 0 -18px 48px rgba(16, 34, 45, 0.18);
+	--dccwl-ring: 0 0 0 3px rgba(232, 96, 79, 0.38);
+
+	/* --- density -----------------------------------------------------
+	 * One multiplier drives every gap and pad, so a density change is a
+	 * single token, exactly like the Guest Guide's density control. */
+	--dccwl-density: 1;
+	--dccwl-gap: calc(10px * var(--dccwl-density));
+	--dccwl-gap-lg: calc(16px * var(--dccwl-density));
+	--dccwl-pad: calc(14px * var(--dccwl-density));
+	--dccwl-detail-pad-x: calc(20px * var(--dccwl-density));  /* --dccgg-detail-pad-x */
+	--dccwl-detail-pad-y: calc(18px * var(--dccwl-density));
+
+	/* --- type -------------------------------------------------------- */
+	--dccwl-font: inherit;               /* never load a webfont */
+	--dccwl-fs-base: 1.0625rem;          /* older clientele: 17px floor */
+	--dccwl-fs-sm: 0.875rem;
+	--dccwl-fs-xs: 0.78rem;
+	--dccwl-fs-lg: 1.25rem;
+	--dccwl-fs-hero: clamp(1.75rem, 1.1rem + 2.1vw, 2.5rem);
+	--dccwl-lh: 1.45;
+
+	/* --- motion ------------------------------------------------------ */
+	--dccwl-t-fast: 140ms;
+	--dccwl-t: 220ms;
+	--dccwl-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+	/* --- glass -------------------------------------------------------
+	 * Off by default; .dccwl-glass-yes opts in, matching the Guest
+	 * Guide's glass modifier. */
+	--dccwl-glass-bg: var(--dccwl-tile-bg);
+	--dccwl-glass-blur: none;
+	--dccwl-glass-border: var(--dccwl-line);
+
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-base);
+	line-height: var(--dccwl-lh);
+}
+
+/* Density modifiers — same three steps as the Guest Guide's control. */
+.dccwl-app.dccwl-density-compact { --dccwl-density: 0.82; }
+.dccwl-app.dccwl-density-cozy    { --dccwl-density: 1; }
+.dccwl-app.dccwl-density-roomy   { --dccwl-density: 1.22; }
+
+/* Glass surfaces — opt-in, and degrades to a solid fill where
+ * backdrop-filter is unsupported because the fallback is the token itself. */
+.dccwl-app.dccwl-glass-yes {
+	--dccwl-glass-bg: rgba(255, 255, 255, 0.72);
+	--dccwl-glass-blur: saturate(1.6) blur(14px);
+	--dccwl-glass-border: rgba(255, 255, 255, 0.55);
+}
+
+/* --- dark mode -------------------------------------------------------
+ * REDEFINES tokens only. Nothing here introduces a colour that has no
+ * light-mode definition, so a surface can never come out unstyled.
+ * Two entry points, matching the Guest Guide: the OS setting (auto) and an
+ * explicit .dccwl-theme-dark class. */
+@media (prefers-color-scheme: dark) {
+	.dccwl-app.dccwl-dark-auto {
+		--dccwl-accent: #ff7a68;
+		--dccwl-accent-ink: #1a0e0c;
+		--dccwl-accent-soft: rgba(255, 122, 104, 0.16);
+		--dccwl-primary: #7fb2d8;
+		--dccwl-primary-soft: rgba(127, 178, 216, 0.14);
+
+		--dccwl-btn-bg: #2f79ab;
+		--dccwl-btn-txt: #ffffff;
+		--dccwl-btn-bg-hover: #3c8cc2;
+
+		--dccwl-page-bg: #101922;
+		--dccwl-tile-bg: #17232e;
+		--dccwl-tile-bg-hover: #1d2c39;
+		--dccwl-detail-bg: #16212b;
+		--dccwl-sheet-scrim: rgba(4, 9, 13, 0.66);
+
+		--dccwl-text: #e8eef3;
+		--dccwl-text-muted: #a3b4c0;
+		--dccwl-text-faint: #8496a3;
+		--dccwl-line: #2a3a48;
+		--dccwl-line-strong: #3a4d5d;
+
+		--dccwl-emergency: #ff6b5b;
+		--dccwl-ok: #58b98d;
+		--dccwl-warn: #d3a35f;
+
+		--dccwl-shadow-tile: 0 1px 2px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.28);
+		--dccwl-shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.42), 0 12px 28px rgba(0, 0, 0, 0.46);
+		--dccwl-shadow-sheet: 0 -2px 10px rgba(0, 0, 0, 0.4), 0 -18px 48px rgba(0, 0, 0, 0.5);
+		--dccwl-ring: 0 0 0 3px rgba(255, 122, 104, 0.44);
+
+		--dccwl-glass-bg: var(--dccwl-tile-bg);
+		--dccwl-glass-border: var(--dccwl-line);
+	}
+
+	.dccwl-app.dccwl-dark-auto.dccwl-glass-yes {
+		--dccwl-glass-bg: rgba(23, 35, 46, 0.72);
+		--dccwl-glass-border: rgba(255, 255, 255, 0.10);
+	}
+
+	/* Paint our OWN ground in dark mode.
+	 *
+	 * Not decoration — correctness. The tokens above turn every string in
+	 * the widget light, but the page around it belongs to the theme, and
+	 * Bravada has no dark mode. Without a background of our own, a visitor
+	 * whose OS is set to dark would get light-on-light text: headings, the
+	 * link pills and the guide credit all effectively invisible. Painting
+	 * the widget's own surface keeps it legible whether or not the theme
+	 * follows the OS. In light mode these stay transparent, so the widget
+	 * still sits on whatever the page provides. */
+	.dccwl-root.dccwl-dark-auto,
+	.dccwl-water.dccwl-dark-auto {
+		background: var(--dccwl-page-bg);
+		border-radius: var(--dccwl-radius-lg);
+		padding: var(--dccwl-gap-lg);
+	}
+}
+
+/* =====================================================================
+ * PRIMITIVES — the components both widgets share.
+ * Buttons and interactive elements double their classes to out-rank
+ * Bravada's (0,3,1) Elementor-kit resets without !important.
+ * ================================================================== */
+
+.dccwl-app *,
+.dccwl-app *::before,
+.dccwl-app *::after { box-sizing: border-box; }
+
+.dccwl-sr {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* --- tiles ---------------------------------------------------------- */
+
+.dccwl-app .dccwl-tiles {
+	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dccwl-app .dccwl-tiles > li { margin: 0; }
+
+.dccwl-app .dccwl-tile.dccwl-tile {
+	align-items: center;
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-glass-bg);
+	border: 1px solid var(--dccwl-glass-border);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	font: inherit;
+	gap: calc(var(--dccwl-gap) * 0.6);
+	justify-content: flex-start;
+	min-height: 96px;
+	padding: calc(var(--dccwl-pad) * 0.85);
+	position: relative;
+	text-align: center;
+	transition: transform var(--dccwl-t-fast) var(--dccwl-ease),
+		box-shadow var(--dccwl-t-fast) var(--dccwl-ease),
+		border-color var(--dccwl-t-fast) var(--dccwl-ease);
+	width: 100%;
+}
+
+.dccwl-app .dccwl-tile.dccwl-tile:hover {
+	background: var(--dccwl-tile-bg-hover);
+	border-color: var(--dccwl-line-strong);
+	box-shadow: var(--dccwl-shadow-raised);
+	transform: translateY(-2px);
+}
+
+.dccwl-app .dccwl-tile.dccwl-tile:focus-visible {
+	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
+	outline: none;
+}
+
+.dccwl-app .dccwl-tile.dccwl-tile[aria-expanded="true"] {
+	border-color: var(--dccwl-accent);
+	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
+}
+
+.dccwl-app .dccwl-tile-icon {
+	align-items: center;
+	background: var(--dccwl-primary-soft);
+	border-radius: var(--dccwl-radius-sm);
+	display: flex;
+	height: 42px;
+	justify-content: center;
+	width: 42px;
+}
+
+.dccwl-app .dccwl-tile-name {
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.dccwl-app .dccwl-tile-sub {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	margin-top: auto;
+}
+
+/* --- badges + chips ------------------------------------------------- */
+
+.dccwl-app .dccwl-badge {
+	background: var(--dccwl-primary-soft);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-primary);
+	display: inline-block;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	padding: 3px 10px;
+}
+
+.dccwl-app .dccwl-badge-peak {
+	background: var(--dccwl-accent-soft);
+	color: var(--dccwl-accent);
+}
+
+.dccwl-app .dccwl-metachip {
+	align-items: center;
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text-muted);
+	display: inline-flex;
+	font-size: var(--dccwl-fs-xs);
+	gap: 6px;
+	padding: 3px 10px;
+	white-space: nowrap;
+}
+
+/* --- buttons -------------------------------------------------------- */
+
+.dccwl-app .dccwl-btn.dccwl-btn {
+	align-items: center;
+	background: var(--dccwl-btn-bg);
+	border: 1px solid transparent;
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-btn-txt);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-weight: 600;
+	gap: 8px;
+	justify-content: center;
+	min-height: 44px;
+	padding: 10px 20px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+}
+
+.dccwl-app .dccwl-btn.dccwl-btn:hover { background: var(--dccwl-btn-bg-hover); }
+
+.dccwl-app .dccwl-btn.dccwl-btn:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+.dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet {
+	background: transparent;
+	border-color: var(--dccwl-line);
+	color: var(--dccwl-text);
+}
+
+.dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet:hover {
+	background: var(--dccwl-primary-soft);
+	border-color: var(--dccwl-line-strong);
+}
+
+/* =====================================================================
+ * THE SHEET — the sliding detail overlay.
+ * One implementation, used by the species detail AND the chain map, so the
+ * motion is identical wherever it opens (assets/js/sheet.js drives it).
+ * ================================================================== */
+
+.dccwl-sheet-scrim {
+	background: var(--dccwl-sheet-scrim);
+	inset: 0;
+	opacity: 0;
+	position: fixed;
+	transition: opacity var(--dccwl-t) var(--dccwl-ease);
+	z-index: 99998;
+}
+
+.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet-scrim { opacity: 1; }
+
+.dccwl-sheet {
+	background: var(--dccwl-detail-bg);
+	border-radius: var(--dccwl-radius-lg) var(--dccwl-radius-lg) 0 0;
+	bottom: 0;
+	box-shadow: var(--dccwl-shadow-sheet);
+	color: var(--dccwl-text);
+	display: flex;
+	flex-direction: column;
+	left: 0;
+	margin: 0 auto;
+	max-height: 88vh;
+	max-width: 720px;
+	position: fixed;
+	right: 0;
+	transform: translateY(100%);
+	transition: transform var(--dccwl-t) var(--dccwl-ease);
+	z-index: 99999;
+}
+
+.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet { transform: translateY(0); }
+
+/* A map wants the room; a species detail does not. */
+.dccwl-sheet.dccwl-sheet-tall { height: 88vh; max-width: 980px; }
+
+.dccwl-sheet-head {
+	align-items: center;
+	border-bottom: 1px solid var(--dccwl-line);
+	display: flex;
+	flex: none;
+	gap: var(--dccwl-gap);
+	padding: var(--dccwl-detail-pad-y) var(--dccwl-detail-pad-x);
+}
+
+.dccwl-sheet-title {
+	flex: 1 1 auto;
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	margin: 0;
+	min-width: 0;
+}
+
+.dccwl-sheet-body {
+	-webkit-overflow-scrolling: touch;
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: var(--dccwl-detail-pad-y) var(--dccwl-detail-pad-x);
+}
+
+.dccwl-sheet-body > :first-child { margin-top: 0; }
+.dccwl-sheet-body > :last-child { margin-bottom: 0; }
+
+.dccwl-app .dccwl-sheet-back.dccwl-sheet-back,
+.dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back {
+	align-items: center;
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: 50%;
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	height: 44px;
+	justify-content: center;
+	padding: 0;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	width: 44px;
+}
+
+.dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back:hover { background: var(--dccwl-primary-soft); }
+
+.dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+.dccwl-sheet .dccwl-sheet-back svg { height: 20px; width: 20px; }
+
+/* The grab handle reads as "this drags/dismisses" on touch. */
+.dccwl-sheet-grip {
+	background: var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-pill);
+	flex: none;
+	height: 4px;
+	margin: 8px auto 0;
+	width: 40px;
+}
+
+@media (min-width: 782px) {
+	/* On a wide screen the sheet centres as a dialog rather than a drawer —
+	 * same component, same motion, proportioned for the viewport. */
+	.dccwl-sheet {
+		border-radius: var(--dccwl-radius-lg);
+		bottom: auto;
+		max-height: 84vh;
+		top: 50%;
+		transform: translateY(calc(-50% + 24px));
+	}
+	.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet { transform: translateY(-50%); }
+	.dccwl-sheet.dccwl-sheet-tall { height: 84vh; }
+	.dccwl-sheet-grip { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* The sheet still opens and closes — it just does not travel. */
+	.dccwl-sheet-scrim,
+	.dccwl-sheet { transition: none; }
+	.dccwl-sheet { transform: none; }
+	.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet { transform: none; }
+	@media (min-width: 782px) {
+		.dccwl-sheet,
+		.dccwl-sheet-host[data-dccwl-open="true"] .dccwl-sheet { transform: translateY(-50%); }
+	}
+}
+
+/* While a sheet is open the page behind it must not scroll under the
+ * finger; the class is applied to <html> by sheet.js. */
+.dccwl-sheet-lock { overflow: hidden; }

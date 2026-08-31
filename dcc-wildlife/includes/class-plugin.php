@@ -76,16 +76,34 @@ final class Plugin {
 	 * only when the widget/shortcode is actually on the page.
 	 */
 	public function register_assets(): void {
+		// The app layer (1.9.0): tokens + shared primitives + the sliding
+		// sheet. Declared as DEPENDENCIES of the two widget bundles rather
+		// than enqueued separately, so WordPress loads them exactly once and
+		// only on pages that actually place a widget.
+		wp_register_style(
+			'dcc-wildlife-app',
+			DCC_WL_URL . 'assets/css/app.css',
+			[],
+			DCC_WL_VERSION
+		);
+		wp_register_script(
+			'dcc-wildlife-sheet',
+			DCC_WL_URL . 'assets/js/sheet.js',
+			[],
+			DCC_WL_VERSION,
+			true
+		);
+
 		wp_register_style(
 			'dcc-wildlife',
 			DCC_WL_URL . 'assets/css/widget.css',
-			[],
+			[ 'dcc-wildlife-app' ],
 			DCC_WL_VERSION
 		);
 		wp_register_script(
 			'dcc-wildlife',
 			DCC_WL_URL . 'assets/js/widget.js',
-			[],
+			[ 'dcc-wildlife-sheet' ],
 			DCC_WL_VERSION,
 			true
 		);
@@ -95,13 +113,13 @@ final class Plugin {
 		wp_register_style(
 			'dcc-wildlife-water',
 			DCC_WL_URL . 'assets/css/water.css',
-			[],
+			[ 'dcc-wildlife-app' ],
 			DCC_WL_VERSION
 		);
 		wp_register_script(
 			'dcc-wildlife-water',
 			DCC_WL_URL . 'assets/js/water.js',
-			[],
+			[ 'dcc-wildlife-sheet' ],
 			DCC_WL_VERSION,
 			true
 		);

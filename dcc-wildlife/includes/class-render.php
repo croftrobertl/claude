@@ -10,11 +10,12 @@
  * nav and detail panel are client-rendered; only month-independent markup
  * (field-guide chip grids, shells) is server-rendered.
  *
- * v1.1.0 UI: compact chip strips + one shared, JS-built detail panel per
- * widget instance (opened below whichever row the tapped chip lives in),
- * guide as three tabbed chip grids. Default rendered height stays under
- * ~560px desktop / ~720px mobile. (The guest sightings module was removed
- * in v1.2.0 — see git history at v1.1.0 to restore it.)
+ * v1.9.0 UI: the Guest Guide's app language — species render as TILES that
+ * open the shared sliding SHEET (assets/js/sheet.js), the month browser is a
+ * segmented timeline, and the season countdown leads as a hero stat. The
+ * server still emits only month-independent markup; everything month-shaped
+ * is built client-side. (The guest sightings module was removed in v1.2.0 —
+ * see git history at v1.1.0 to restore it.)
  */
 
 namespace DCC_WL;
@@ -60,7 +61,7 @@ final class Render {
 		// The countdown is computed by widget.js from the shared config, so a
 		// standalone placement needs the same assets as the widget.
 		self::enqueue_assets();
-		return self::countdown_shell();
+		return self::countdown_shell( true );
 	}
 
 	/** One shell per page (1.8.1) — see countdown_shell(). */
@@ -78,12 +79,44 @@ final class Render {
 	 * than one must still show exactly one line. First caller wins; the rest
 	 * get ''. The JS is naturally single-copy via wp_enqueue_script.
 	 */
-	private static function countdown_shell(): string {
+	private static function countdown_shell( bool $standalone = false ): string {
 		if ( self::$shell_printed ) {
 			return '';
 		}
 		self::$shell_printed = true;
-		return '<div class="dccwl-countdown" data-dccwl-countdown hidden></div>';
+
+		// 1.9.0: the countdown is a HERO STAT card, not a footnote line. The
+		// shell is still empty and hidden — widget.js fills it client-side in
+		// canal time — but it now carries the hero structure the JS populates.
+		$shell = '<div class="dccwl-hero-stat" data-dccwl-countdown hidden></div>';
+
+		// Placed inside the month widget it inherits that instance's app
+		// classes; standing alone it needs its own token scope.
+		return $standalone
+			? '<div class="' . esc_attr( self::app_classes() ) . '">' . $shell . '</div>'
+			: $shell;
+	}
+
+	/**
+	 * The app-layer classes every Wildlife surface carries (1.9.0).
+	 *
+	 * `dccwl-app` scopes the token block; the density and dark-mode
+	 * modifiers mirror the Guest Guide's own so the two pages read as one
+	 * app. Filterable because the Guest Guide's live preset could not be
+	 * read from the build environment — see app.css — and because a theme
+	 * change there should be a one-line change here, not a release.
+	 */
+	public static function app_classes(): string {
+		$classes = [ 'dccwl-app', 'dccwl-density-cozy', 'dccwl-dark-auto' ];
+
+		/**
+		 * Filter the app-layer classes (density / dark / glass modifiers).
+		 *
+		 * @param string[] $classes
+		 */
+		$classes = (array) apply_filters( 'dcc_wl_app_classes', $classes );
+
+		return implode( ' ', array_map( 'sanitize_html_class', $classes ) );
 	}
 
 	/**
@@ -164,29 +197,42 @@ final class Render {
 			echo Sprites::symbol_sheet(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup.
 		}
 		?>
-		<div class="dccwl-root" data-dccwl="<?php echo esc_attr( (string) wp_json_encode( $instance ) ); ?>">
+		<div class="dccwl-root <?php echo esc_attr( self::app_classes() ); ?>" data-dccwl="<?php echo esc_attr( (string) wp_json_encode( $instance ) ); ?>">
 
-			<header class="dccwl-hero">
+			<?php
+			/* Season countdown as the HERO STAT (1.9.0), at the TOP: it is the
+			   strongest come-back-later element on the page, so it leads rather
+			   than trailing the widget as it did in 1.8.x. Still an empty shell —
+			   the day count is computed client-side in canal time. */
+			if ( $opts['countdown'] && self::countdown_possible() ) {
+				echo self::countdown_shell(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
+			}
+			?>
+
+			<header class="dccwl-head">
 				<h2 class="dccwl-title"><?php echo esc_html( '' !== $title ? $title : __( 'On the canal', 'dcc-wildlife' ) ); ?></h2>
 				<p class="dccwl-sub" aria-live="polite"></p>
 			</header>
 
 			<?php if ( $show_browser ) : ?>
-				<div class="dccwl-monthnav" hidden>
-					<button type="button" class="dccwl-nav-arrow dccwl-nav-prev" aria-label="<?php esc_attr_e( 'Previous month', 'dcc-wildlife' ); ?>">
+				<?php /* Segmented timeline (1.9.0): a scrollable month strip with
+				         the canal's current month anchored. Same month logic as
+				         before — the control around it is what changed. */ ?>
+				<div class="dccwl-timeline" hidden>
+					<button type="button" class="dccwl-timeline-arrow dccwl-timeline-prev" aria-label="<?php esc_attr_e( 'Previous month', 'dcc-wildlife' ); ?>">
 						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</button>
-					<div class="dccwl-months" role="group" aria-label="<?php esc_attr_e( 'Browse wildlife by month', 'dcc-wildlife' ); ?>"></div>
-					<button type="button" class="dccwl-nav-arrow dccwl-nav-next" aria-label="<?php esc_attr_e( 'Next month', 'dcc-wildlife' ); ?>">
+					<div class="dccwl-timeline-track" role="group" aria-label="<?php esc_attr_e( 'Browse wildlife by month', 'dcc-wildlife' ); ?>"></div>
+					<button type="button" class="dccwl-timeline-arrow dccwl-timeline-next" aria-label="<?php esc_attr_e( 'Next month', 'dcc-wildlife' ); ?>">
 						<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5.5 2.5 11 8l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</button>
 				</div>
 			<?php endif; ?>
 
-			<div class="dccwl-strip-wrap">
-				<ul class="dccwl-chips dccwl-strip dccwl-spotlight-chips"></ul>
-			</div>
-			<div class="dccwl-panel-slot dccwl-slot-spotlight"></div>
+			<?php /* Spotlight tiles — built client-side from the month the
+			         visitor is actually in, so page caching can never serve a
+			         stale month. */ ?>
+			<ul class="dccwl-tiles dccwl-spotlight-tiles"></ul>
 			<noscript>
 				<p class="dccwl-noscript"><?php esc_html_e( 'Please enable JavaScript to see this month’s wildlife highlights.', 'dcc-wildlife' ); ?></p>
 			</noscript>
@@ -203,7 +249,6 @@ final class Render {
 						<?php endforeach; ?>
 					</div>
 					<?php self::render_guide_grids(); ?>
-					<div class="dccwl-panel-slot dccwl-slot-guide"></div>
 					<?php /* Owner's decision (1.8.0): the guide's notes and the
 					         likelihood calendar are editorial local knowledge,
 					         and this one line says whose — deliberately not
@@ -216,12 +261,9 @@ final class Render {
 		<?php
 		$out = (string) ob_get_clean();
 
-		// Season countdown (absorbed from the mu-plugin in 1.8.0): appended
-		// after the widget, exactly where the mu-plugin used to put it. While
-		// that file still exists it appends its own line and this adds nothing.
-		if ( $opts['countdown'] && self::countdown_possible() ) {
-			$out .= self::countdown_shell();
-		}
+		// (The countdown is emitted INSIDE the root as the hero stat since
+		// 1.9.0 — see the top of the markup above. It used to be appended
+		// here, below the widget, which is where the mu-plugin put it.)
 
 		return $out;
 	}
@@ -242,16 +284,18 @@ final class Render {
 				continue;
 			}
 			?>
-			<ul class="dccwl-chips dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
+			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php foreach ( $group_species as $sp ) : ?>
 					<li>
-						<button type="button" class="dccwl-chip<?php echo $sp['mascot'] ? ' dccwl-chip-mascot' : ''; ?>" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-expanded="false">
-							<?php if ( Sprites::has( $sp['id'] ) ) : ?>
-								<?php echo Sprites::use_svg( $sp['id'], 'dccwl-chip-sprite' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup. ?>
-							<?php else : ?>
-								<span class="dccwl-chip-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
-							<?php endif; ?>
-							<span class="dccwl-chip-name"><?php echo esc_html( $sp['name'] ); ?></span>
+						<button type="button" class="dccwl-tile<?php echo $sp['mascot'] ? ' dccwl-tile-mascot' : ''; ?>" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
+							<span class="dccwl-tile-icon">
+								<?php if ( Sprites::has( $sp['id'] ) ) : ?>
+									<?php echo Sprites::use_svg( $sp['id'], 'dccwl-chip-sprite' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup. ?>
+								<?php else : ?>
+									<span class="dccwl-tile-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
+								<?php endif; ?>
+							</span>
+							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
 							<?php if ( $sp['mascot'] ) : ?>
 								<span class="dccwl-sr"><?php esc_html_e( '— our mascot', 'dcc-wildlife' ); ?></span>
 							<?php endif; ?>
@@ -305,18 +349,36 @@ final class Render {
 				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
 				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
 				'mascot'      => __( 'Our mascot', 'dcc-wildlife' ),
-				'where'       => __( 'Where to look:', 'dcc-wildlife' ),
+				// Detail-drawer headings (1.9.0): these label their own
+				// sections now, so they carry no trailing colon.
+				'where'       => __( 'Where to look', 'dcc-wildlife' ),
+				'bestTime'    => __( 'Best time', 'dcc-wildlife' ),
 				/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
 				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
 				'details'     => __( 'Species details', 'dcc-wildlife' ),
 				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),
+
+				// The 12-month likelihood strip in the detail drawer. The
+				// bars are decoration; these words are what a screen reader
+				// actually reads, one per month.
+				'likelihood'  => __( 'Through the year', 'dcc-wildlife' ),
+				'likeRare'    => __( 'rarely seen', 'dcc-wildlife' ),
+				'likePossible'=> __( 'possible', 'dcc-wildlife' ),
+				'likeGood'    => __( 'good chance', 'dcc-wildlife' ),
+				'likePeak'    => __( 'peak season', 'dcc-wildlife' ),
+
+				// Hero stat (1.9.0). The countdown reads as a headline stat
+				// rather than a sentence, so its parts are separate strings.
 				/* translators: %s: species name, e.g. "Manatee". */
-				'cdHere'      => __( '%s season is here', 'dcc-wildlife' ),
-				/* translators: 1: species name, 2: number of days (1). */
-				'cdStartsOne' => __( '%1$s season starts in %2$s day', 'dcc-wildlife' ),
-				/* translators: 1: species name, 2: number of days. */
-				'cdStarts'    => __( '%1$s season starts in %2$s days', 'dcc-wildlife' ),
+				'cdLabel'     => __( '%s season', 'dcc-wildlife' ),
+				'cdDays'      => __( 'days away', 'dcc-wildlife' ),
+				'cdDay'       => __( 'day away', 'dcc-wildlife' ),
+				'cdNow'       => __( 'is here now', 'dcc-wildlife' ),
+				/* translators: %s: month name, e.g. "December". */
+				'cdWhy'       => __( 'Peak sightings begin in %s.', 'dcc-wildlife' ),
+				/* translators: %s: month name, e.g. "December". */
+				'cdWhyNow'    => __( 'Peak sightings run through %s.', 'dcc-wildlife' ),
 			],
 		];
 
