@@ -1187,7 +1187,7 @@ function configWith(overrides) {
   ok('party step shows the capacity note',
     !!note && /The 2 guests are included in the nightly rate and will have a queen bed/.test(note.textContent));
   ok('capacity note says what guests 3 and 4 sleep on',
-    /guests 3 and 4[\s\S]*pullout couch/.test(note.textContent));
+    /guests 3 and 4[\s\S]*pull-out couch/.test(note.textContent));
   ok('no fee link renders while the URL control is empty (default)', !note.querySelector('a'));
   ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
   answerNext(root, 'either');
@@ -1284,6 +1284,38 @@ function configWith(overrides) {
   r4.querySelector('.dccs-edit-answers').click();
   ok('?party=2 still selects the first option (shown with its custom label)',
     r4.querySelector('.dccs-review-list li .dccs-review-a').textContent.trim() === 'Just the two of us');
+})();
+
+// ---- 46. 0.22.3 copy cleanups: pull-out spelling, two-guest reason, hyphen ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  ok('why_pullout says the couch sleeps TWO extra guests',
+    cfg.strings.why_pullout === 'a pull-out couch for two extra guests');
+  ok('w_party uses a plain hyphen', cfg.strings.w_party === 'Room for 3-4 guests');
+  // Every guest-visible string uses the hyphenated "pull-out couch" — no bare
+  // "pullout" survives anywhere in the shipped copy. (Data keys like
+  // pulloutCouch and the ?pullout= param are intentionally untouched.)
+  const bare = Object.keys(cfg.strings).filter(k => /pullout/i.test(cfg.strings[k]));
+  ok('no unhyphenated "pullout" in any visible string' + (bare.length ? ' [' + bare.join(',') + ']' : ''),
+    bare.length === 0);
+  // cmp_range ('Showing 1\u20132 of 8') still carries an en dash — pre-existing,
+  // outside the 0.22.3 brief, flagged in the handoff rather than changed.
+  const dashes = Object.keys(cfg.strings)
+    .filter(k => k !== 'cmp_range' && cfg.strings[k].indexOf('\u2013') !== -1);
+  ok('no en dashes left in visible strings (cmp_range flagged separately)' +
+    (dashes.length ? ' [' + dashes.join(',') + ']' : ''), dashes.length === 0);
+
+  // A pull-out cottage's "why this fits" carries the corrected reason end-to-end.
+  const root = mountSelector(w, JSON.stringify(cfg));
+  enter(root, 'quick');
+  answerNext(root, 'either');          // party
+  answerNext(root, 'either');          // desk
+  answerNext(root, 'yes');             // pull-out couch = yes
+  stepThrough(root, 'either'); seeMatches(root);
+  const why = root.querySelector('.dccs-card .dccs-why');
+  ok('results reason reads "a pull-out couch for two extra guests"',
+    !!why && /a pull-out couch for two extra guests/.test(why.textContent));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

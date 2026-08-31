@@ -343,7 +343,7 @@ class Selector_Widget extends Widget_Base
 
         $questions = [
             'q_desk'     => __('Question: desk', 'dcc-cottage-selector'),
-            'q_pullout'  => __('Question: pullout couch', 'dcc-cottage-selector'),
+            'q_pullout'  => __('Question: pull-out couch', 'dcc-cottage-selector'),
             'q_layout'   => __('Question: layout', 'dcc-cottage-selector'),
             'q_dining'   => __('Question: dining', 'dcc-cottage-selector'),
             'q_pet'      => __('Question: pet-friendly', 'dcc-cottage-selector'),
@@ -473,7 +473,7 @@ class Selector_Widget extends Widget_Base
             // Quick finder questions
             'q_party'     => __('Question: party size', 'dcc-cottage-selector'),
             'q_desk'      => __('Question: desk', 'dcc-cottage-selector'),
-            'q_pullout'   => __('Question: pullout couch', 'dcc-cottage-selector'),
+            'q_pullout'   => __('Question: pull-out couch', 'dcc-cottage-selector'),
             'q_layout'    => __('Question: layout', 'dcc-cottage-selector'),
             'q_dining'    => __('Question: dining', 'dcc-cottage-selector'),
             'q_pet'       => __('Question: pet-friendly', 'dcc-cottage-selector'),
@@ -488,9 +488,9 @@ class Selector_Widget extends Widget_Base
             'w_studio'    => __('Priority: Studio simplicity', 'dcc-cottage-selector'),
             'w_onebed'    => __('Priority: 1-bedroom separation', 'dcc-cottage-selector'),
             'w_dining'    => __('Priority: Dining comfort', 'dcc-cottage-selector'),
-            'w_pullout'   => __('Priority: Pullout couch', 'dcc-cottage-selector'),
+            'w_pullout'   => __('Priority: Pull-out couch', 'dcc-cottage-selector'),
             'w_screenedporch' => __('Priority: Screened-in porch', 'dcc-cottage-selector'),
-            'w_party'     => __('Priority: Room for 3–4 guests', 'dcc-cottage-selector'),
+            'w_party'     => __('Priority: Room for 3-4 guests', 'dcc-cottage-selector'),
             // Answer options
             'opt_yes'     => __('Answer: Yes', 'dcc-cottage-selector'),
             'opt_no'      => __('Answer: No', 'dcc-cottage-selector'),

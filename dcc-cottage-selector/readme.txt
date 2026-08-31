@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.2
+Stable tag: 0.22.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ amenities, so guests face needless choice overload. This plugin adds a short,
 elegant decision tool:
 
 * **Quick finder (default)** — a step-through wizard, one tappable question per
-  screen (how many guests? desk? pullout couch? studio or 1-bedroom? table for
+  screen (how many guests? desk? pull-out couch? studio or 1-bedroom? table for
   2 or 4? pet-friendly? ground floor? screened porch?), then straight to the
   top matches.
   An optional "Review your answers" step can be switched on in the editor.
@@ -121,7 +121,7 @@ everything a widget has not overridden.
 
 = The meaningful differences =
 
-Sleeps 2 vs. up to 4 · square footage · pullout couch · desk/workspace · floor
+Sleeps 2 vs. up to 4 · square footage · pull-out couch · desk/workspace · floor
 level · studio vs. 1-bedroom · dining table for 2 vs. 4 · pet policy ·
 screened-in porch.
 
@@ -225,6 +225,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.3 =
+Three small cleanups; no behaviour change.
+
+* The "why this fits" reason now says the couch sleeps two: "a pull-out couch
+  for two extra guests" (it said "an extra guest" — the pull-out sleeps guests
+  3 AND 4).
+* Spelling standardised to "pull-out couch" in every guest-visible string
+  (question, priority row, compare row header, miss tag, capacity note),
+  matching the checkout, cottage pages and FAQ. Data keys, CSS classes, and
+  the ?pullout= link parameter are untouched.
+* "Room for 3-4 guests" (Weigh Priorities) now uses a plain hyphen, matching
+  the "3-4" answer shipped in 0.22.2.
+* Internal: the capacity and pet notes are no longer duplicated in the site
+  preset — they read from the one translatable default, so the two copies can
+  never drift again and Loco Translate can localise them. Same wording renders
+  everywhere, including widgets already placed.
 
 = 0.22.2 =
 * Copy revisions to the party-size question (owner-approved wording). The

@@ -64,11 +64,12 @@ final class Preset_Defaults
             'str_q_party' => 'How many guests will there be?',
             'str_opt_party2' => '1-2',
             'str_opt_party34' => '3-4',
-            'str_w_party' => 'Room for 3–4 guests',
-            // Capacity + pet policy notes. Neutral wording; fee AMOUNTS are
-            // deliberately absent (single source of truth elsewhere on the site).
-            'str_capacity_note' => 'The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pullout couch.',
-            'str_pet_note' => 'Pets are welcome in Cottage 34 only, by pre-approval.',
+            'str_w_party' => 'Room for 3-4 guests',
+            // NOTE: str_capacity_note / str_pet_note are deliberately NOT preset.
+            // They were never captured from a live widget and only duplicated the
+            // Config::strings() defaults verbatim — creating a two-copies-must-agree
+            // drift hazard (bitten in 0.22.2) and bypassing Loco translation. New
+            // widgets pick up the translatable Config default instead (0.22.3).
             'str_q_dining' => 'Do you need a dining table for 2 or 4?',
             'str_q_layout' => 'Which layout do you prefer: studio or 1-bedroom?',
             'str_q_pet' => 'Do you need a pet-friendly cottage?',
@@ -83,7 +84,7 @@ final class Preset_Defaults
             'str_w_moreroom' => 'More room',
             'str_w_onebed' => '1-bedroom separation',
             'str_w_pet' => 'Pet-friendly',
-            'str_w_pullout' => 'Pullout couch flexibility',
+            'str_w_pullout' => 'Pull-out couch flexibility',
             'str_w_question' => 'How much does %s matter?',
             'str_w_screenedporch' => 'Private, screened-in porch',
             'str_w_studio' => 'Studio simplicity',

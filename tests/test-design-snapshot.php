@@ -203,6 +203,25 @@ namespace {
     ok('a set pet fee URL flows through the snapshot',
         Selector_Widget::design_snapshot(['pet_fee_url' => ['url' => '/pet-policy/']])['petFeeUrl'] === '/pet-policy/');
 
+    // 0.22.3: the two note strings are deliberately NOT preset any more — they
+    // duplicated the Config defaults verbatim (drift hazard, bitten in 0.22.2)
+    // and bypassed Loco. A widget with NO stored value (every instance placed
+    // before the controls existed) must fall back to the translatable Config
+    // default and render the exact live wording.
+    require_once DCCS_DIR . 'includes/class-preset-defaults.php';
+    $presetNow = \DCCS\Preset_Defaults::map();
+    ok('preset no longer carries str_capacity_note', !array_key_exists('str_capacity_note', $presetNow));
+    ok('preset no longer carries str_pet_note', !array_key_exists('str_pet_note', $presetNow));
+    $fallbackCfg = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]));
+    ok('capacity note falls back to the Config default (live wording)',
+        ($fallbackCfg['strings']['capacity_note'] ?? null)
+            === 'The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pull-out couch.');
+    ok('pet note falls back to the Config default (live wording)',
+        ($fallbackCfg['strings']['pet_note'] ?? null) === 'Pets are welcome in Cottage 34 only, by pre-approval.');
+    ok('a widget-stored note still wins over the fallback',
+        (Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(
+            ['str_capacity_note' => 'CUSTOM NOTE']))['strings']['capacity_note'] ?? null) === 'CUSTOM NOTE');
+
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
     // final; declaring them in a subclass is a fatal error at class-declaration time,
