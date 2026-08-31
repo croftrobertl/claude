@@ -168,7 +168,10 @@
 	flex: 1 1 auto;
 	gap: 4px;
 	overflow-x: auto;
-	padding: 3px;
+	/* Inline padding keeps the active pill clear of the edge fade below —
+	 * on a 320px screen the centred pill otherwise sits flush against it
+	 * and reads as half-dimmed. */
+	padding: 3px 10px;
 	scroll-behavior: smooth;
 	scroll-snap-type: x proximity;
 	scrollbar-width: none;
@@ -186,8 +189,10 @@
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
 	font-weight: 600;
-	min-height: 40px;
-	padding: 8px 15px;
+	/* 44px, not 40: this is a thumb target on the species screen and the
+	 * audit measured it under the minimum at every width (1.10.1). */
+	min-height: 44px;
+	padding: 10px 15px;
 	scroll-snap-align: center;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
 		color var(--dccwl-t-fast) var(--dccwl-ease-color);
@@ -221,18 +226,18 @@
 }
 
 .dccwl-timeline.dccwl-fade-l .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 28px);
-	mask-image: linear-gradient(to right, transparent, #000 28px);
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 16px);
+	mask-image: linear-gradient(to right, transparent, #000 16px);
 }
 
 .dccwl-timeline.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to left, transparent, #000 28px);
-	mask-image: linear-gradient(to left, transparent, #000 28px);
+	-webkit-mask-image: linear-gradient(to left, transparent, #000 16px);
+	mask-image: linear-gradient(to left, transparent, #000 16px);
 }
 
 .dccwl-timeline.dccwl-fade-l.dccwl-fade-r .dccwl-timeline-track {
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-	mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+	mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
 }
 
 /* =====================================================================
@@ -266,7 +271,11 @@
 .dccwl-app .dccwl-tiles.dccwl-spotlight-tiles > li {
 	flex: none;
 	scroll-snap-align: start;
-	width: 138px;
+	/* A fraction of the row, capped at the desktop width, so a partial
+	 * third tile ALWAYS peeks past the edge. Fixed at 138px the row landed
+	 * exactly two tiles wide on a 320px phone (measured 2px of peek), which
+	 * reads as the end of the list rather than as something to scroll. */
+	width: clamp(112px, 40%, 138px);
 }
 
 /* A two-line species name must not leave a short card in the row: the tile
@@ -537,6 +546,17 @@
 
 	/* Twelve month labels do not fit across a phone; two rows do. */
 	.dccwl-sheet .dccwl-like-row { grid-template-columns: repeat(6, 1fr); row-gap: 10px; }
+
+	/* No edge fade on the month strip here (1.10.1). The track is narrow
+	 * enough that the selected pill lands within the fade and comes out
+	 * looking half-dimmed — and the prev/next arrows flanking the strip
+	 * already say "there is more", which is what the fade was for. */
+	.dccwl-timeline.dccwl-fade-l .dccwl-timeline-track,
+	.dccwl-timeline.dccwl-fade-r .dccwl-timeline-track,
+	.dccwl-timeline.dccwl-fade-l.dccwl-fade-r .dccwl-timeline-track {
+		-webkit-mask-image: none;
+		mask-image: none;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

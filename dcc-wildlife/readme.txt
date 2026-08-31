@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,14 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.10.1 =
+Mobile parity audit and refinements for the canal hub — mobile is how most guests will see this, and 1.10.0 shipped with desktop measurements only. Every level was measured at 320, 360, 375, 390, 414 portrait and 740×360 landscape. The layout held: **zero horizontal overflow at every width**, the hub stacks to one column, the month picker keeps three columns with no wrapped or clipped names even at 320px, and the species sheet fits the viewport. Four defects the measurements found are fixed:
+
+* **Touch targets under 44px.** The timeline's month pills and the Official-information link pills both measured 40px, as did the chain map's own colour-by and layer controls. All now meet the 44px minimum the rest of the plugin holds to.
+* **The spotlight's scroll cue vanished on small phones.** At 320px the row landed exactly two tiles wide, so a partially-visible third tile — the thing that says "scroll me" — was 2px. Tiles are now a fraction of the row width capped at their desktop size, giving a 52px peek at 320px and more above it.
+* **The month strip's edge fade dimmed the selected month.** On a narrow track the centred pill sits inside the fade and came out looking half-greyed. The fade is smaller everywhere and off entirely below 600px, where the prev/next arrows already carry that affordance.
+* The audit is now a permanent suite rather than a one-off, so any of these regressing fails the tests.
 
 = 1.10.0 =
 * **One app instead of two stacked widgets.** A new **DCC Canal — Wildlife & Water** Elementor widget (`dccwl_canal`, shortcode `[dcc_canal]`) restructures the front end into hub → section → detail: the season countdown leads the hub with zero taps, below it two centred tiles, Wildlife and Water.

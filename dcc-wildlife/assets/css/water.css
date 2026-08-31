@@ -179,12 +179,15 @@
 .dccwl-water .dccwl-water-linklist li { margin: 0; }
 
 .dccwl-water .dccwl-water-linklist a {
+	align-items: center;
 	border: 1px solid var(--dccwl-line);
+	display: inline-flex;
 	border-radius: var(--dccwl-radius-pill);
 	color: var(--dccwl-text);
-	display: inline-block;
 	font-size: var(--dccwl-fs-sm);
-	padding: 9px 16px;
+	/* 44px minimum: these are links, but they are tapped like buttons. */
+	min-height: 44px;
+	padding: 11px 16px;
 	text-decoration: none;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
@@ -276,8 +279,9 @@
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
 	font-weight: 600;
-	min-height: 40px;
-	padding: 9px 14px;
+	/* 44px: the map's own controls are thumb targets too (1.10.1). */
+	min-height: 44px;
+	padding: 11px 14px;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
@@ -328,8 +332,8 @@
 	display: flex;
 	font-size: var(--dccwl-fs-sm);
 	gap: 8px;
-	min-height: 40px;
-	padding: 4px 2px;
+	min-height: 44px;
+	padding: 6px 2px;
 }
 
 .dccwl-drop-sep {
