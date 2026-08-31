@@ -98,6 +98,18 @@ final class Render {
 	}
 
 	/**
+	 * The countdown shell for the canal hub (1.10.0).
+	 *
+	 * Same gate and the same once-per-page guard as every other entry
+	 * point — the hub is simply a fourth one. Returns '' when the countdown
+	 * is off, when the retired mu-plugin is still rendering it, or when a
+	 * shell has already been emitted on this page.
+	 */
+	public static function countdown_shell_for_canal(): string {
+		return self::countdown_possible() ? self::countdown_shell() : '';
+	}
+
+	/**
 	 * The app-layer classes every Wildlife surface carries (1.9.0).
 	 *
 	 * `dccwl-app` scopes the token block; the modifiers mirror what /guest/

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.9.2
+Stable tag: 1.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,7 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 
 == Usage ==
 
+* **Recommended (v1.10.0):** add the **DCC Canal — Wildlife & Water** widget (category "Dora Canal Court"), or `[dcc_canal title=""]`. It is the whole app — countdown, wildlife and water — so place it *instead of* the separate Wildlife and Water widgets rather than alongside them.
 * Elementor: add the **DCC Wildlife — On the Canal** widget (category "Dora Canal Court"). Controls: title override, show/hide field guide, show/hide month browser, compact mode (spotlight band only).
 * Anywhere else: `[dcc_wildlife title="" guide="yes" browser="yes" compact="no"]`.
 * Fishing & water: the **DCC Water — Fishing & Conditions** Elementor widget, or `[dcc_water title=""]`. Content is managed under DCC → Wildlife (Field guide / Water / Map). It renders nowhere until placed — nothing is auto-injected.
@@ -46,6 +47,16 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.10.0 =
+* **One app instead of two stacked widgets.** A new **DCC Canal — Wildlife & Water** Elementor widget (`dccwl_canal`, shortcode `[dcc_canal]`) restructures the front end into hub → section → detail: the season countdown leads the hub with zero taps, below it two centred tiles, Wildlife and Water.
+* **Live tile previews, under the same truth discipline as everything else.** Wildlife always shows one ("6 species at their peak in August") because the species calendar ships with the page. Water shows one only when the existing `/conditions` call returns sourced facts; a failed fetch, stale-gated readings or nothing sourced leaves the tile showing its name alone. When the water module would render nothing at all, the hub drops the Water tile entirely.
+* **Wildlife is month-first:** hub → a grid of twelve month tiles, each with its own count, the canal's current month ringed and chipped "now" so today is one tap → the species screen (headline, spotlight, the field-guide tabs and full grids, and the timeline kept as a secondary switcher) → the species sheet. Inside the hub the guide tiles pick up a chip for the chosen month.
+* **Water lands directly on its full screen** — Right now, the chain comparison, the almanac bodies, the chain map (still a sheet), About the water, both link lists and the FWC disclaimer, in today's order. Nothing moved out and nothing was dropped.
+* **Browser back walks up one level.** A back press with a species sheet open closes the sheet first and leaves the level alone; the next walks up. Navigation reads its level from the history state rather than stepping, which is what makes that ordering hold — including when Escape closes the sheet and the sheet returns its own history entry.
+* The chosen month survives species ↔ sheet ↔ month-picker; focus moves to each new panel and returns to the tile that opened it; every non-hub level has a centred back control.
+* Text centres throughout — tiles, previews, headings, sublines, species names, water card labels and values, chips, link lists, credit and disclaimer. The one exception is the multi-line citation block under each water card, which stays left-aligned inside a centred column because centring turned one attribution into three ragged fragments.
+* **Composition, not a fork:** the species and water panels call the existing renderers unchanged, so `dccwl_month`, `dccwl_water`, `dccwl_countdown` and their shortcodes keep working exactly as before when placed on their own. No data source, REST route, fetch rule, countdown maths or any part of the Water_Fact gate was touched.
 
 = 1.9.2 =
 * **Removed the unused mascot marker.** The Great Blue Heron tile carried a small coral flag that read as nothing in particular, and Dora Canal Court has no mascot — so the concept is gone rather than renamed: the registry flag, the tile marker and its screen-reader label, the "Our mascot" badge in the detail sheet, the i18n string and the dead CSS rule.

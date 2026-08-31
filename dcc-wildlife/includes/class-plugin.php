@@ -46,6 +46,7 @@ final class Plugin {
 	public function register_shortcode(): void {
 		add_shortcode( 'dcc_wildlife', [ Render::class, 'shortcode' ] );
 		add_shortcode( 'dcc_water', [ Water_Render::class, 'shortcode' ] );
+		add_shortcode( 'dcc_canal', [ Canal_Render::class, 'shortcode' ] );
 
 		// Season countdown, standalone (1.8.0, absorbed from the mu-plugin).
 		// While dcc-wildlife-countdown.php still exists it registered this tag
@@ -108,6 +109,23 @@ final class Plugin {
 			true
 		);
 
+		// The Canal hub (1.10.0). Its stylesheet builds on the app layer and
+		// its script drives the existing widget rather than replacing it, so
+		// both are dependencies rather than copies.
+		wp_register_style(
+			'dcc-wildlife-canal',
+			DCC_WL_URL . 'assets/css/canal.css',
+			[ 'dcc-wildlife' ],
+			DCC_WL_VERSION
+		);
+		wp_register_script(
+			'dcc-wildlife-canal',
+			DCC_WL_URL . 'assets/js/canal.js',
+			[ 'dcc-wildlife' ],
+			DCC_WL_VERSION,
+			true
+		);
+
 		// Water module. Registered only; Water_Render enqueues at render
 		// time so nothing loads on pages without the widget/shortcode.
 		wp_register_style(
@@ -152,8 +170,10 @@ final class Plugin {
 		require_once DCC_WL_DIR . 'includes/class-widget.php';
 		require_once DCC_WL_DIR . 'includes/class-water-widget.php';
 		require_once DCC_WL_DIR . 'includes/class-countdown-widget.php';
+		require_once DCC_WL_DIR . 'includes/class-canal-widget.php';
 		$widgets_manager->register( new Widget() );
 		$widgets_manager->register( new Water_Widget() );
 		$widgets_manager->register( new Countdown_Widget() );
+		$widgets_manager->register( new Canal_Widget() );
 	}
 }

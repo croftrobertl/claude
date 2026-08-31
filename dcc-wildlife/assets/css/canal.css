@@ -1,0 +1,313 @@
+/**
+ * DCC Wildlife — the Canal hub (v1.10.0).
+ *
+ * Layout for hub → month → species → (sheet) and hub → water. Every colour,
+ * radius, gap and duration is a token from app.css, so this file adds no
+ * palette of its own and the always-light rule holds automatically: there is
+ * no OS dark-mode rule here, and there must never be one.
+ *
+ * CENTRING. The hub reads as a series of centred screens, so text centres
+ * throughout — tiles, previews, headings, sublines, species names, water
+ * card labels AND values, chips, link lists, credit and disclaimer. The one
+ * exception is called out at the foot of this file.
+ */
+
+.dccwl-canal {
+	margin: 0 auto;
+	max-width: 100%;
+	text-align: center;
+}
+
+.dccwl-canal > * + * { margin-top: var(--dccwl-gap-lg); }
+
+/* ---- the countdown hero, at the head of the hub ---------------------
+ * The flat widget stacks it as an icon-beside-text banner. Here it heads a
+ * column of centred screens, so it centres too and takes the hub's width
+ * rather than the page's. */
+
+.dccwl-canal > .dccwl-hero-stat {
+	border-left: 0;
+	border-top: 4px solid var(--dccwl-accent);
+	flex-direction: column;
+	gap: 6px;
+	margin: 0 auto;
+	max-width: 620px;
+	text-align: center;
+}
+
+.dccwl-canal > .dccwl-hero-stat .dccwl-hero-value { justify-content: center; }
+
+/* ---- the stage ------------------------------------------------------ */
+
+.dccwl-stage { position: relative; }
+
+.dccwl-panel { outline: none; }
+.dccwl-panel[hidden] { display: none; }
+
+/* Panels arrive with the Guide's springy curve, the same motion the sheet
+ * and the tiles use. Reduced motion drops the travel, never the change. */
+.dccwl-panel:not([hidden]) {
+	animation: dccwl-panel-in var(--dccwl-t) var(--dccwl-ease) both;
+}
+
+@keyframes dccwl-panel-in {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-panel:not([hidden]) { animation: none; }
+}
+
+.dccwl-canal .dccwl-panel-title {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+
+/* ---- the back control ----------------------------------------------- */
+
+.dccwl-back-wrap {
+	margin: 0 0 var(--dccwl-gap-lg);
+	text-align: center;
+}
+
+/* Doubled class to beat Bravada's (0,3,1) button reset. */
+.dccwl-canal .dccwl-back.dccwl-back {
+	align-items: center;
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	gap: 6px;
+	min-height: 44px;
+	padding: 10px 20px 10px 14px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
+}
+
+.dccwl-canal .dccwl-back.dccwl-back:hover { background: var(--dccwl-primary-soft); }
+
+.dccwl-canal .dccwl-back.dccwl-back:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+/* ---- L1: the hub ---------------------------------------------------- */
+
+.dccwl-hub-tiles {
+	display: grid;
+	gap: var(--dccwl-gap-lg);
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	list-style: none;
+	margin: 0 auto;
+	max-width: 620px;
+	padding: 0;
+}
+
+.dccwl-hub-tiles > li { margin: 0; }
+
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile {
+	align-items: center;
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-lg);
+	box-shadow: var(--dccwl-shadow-tile);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	font: inherit;
+	gap: 6px;
+	justify-content: center;
+	min-height: 132px;
+	padding: calc(var(--dccwl-pad) * 1.6) var(--dccwl-pad);
+	text-align: center;
+	transition: transform var(--dccwl-t) var(--dccwl-ease),
+		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
+		border-color var(--dccwl-t-fast) var(--dccwl-ease-color);
+	width: 100%;
+}
+
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover {
+	border-color: var(--dccwl-line-strong);
+	box-shadow: var(--dccwl-shadow-raised);
+	transform: translateY(-2px);
+}
+
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:focus-visible {
+	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
+	outline: none;
+}
+
+.dccwl-hub-name {
+	font-size: 1.5rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+/* Empty until the browser fills it — and legitimately empty when the water
+ * module has nothing sourced to say, which is why it reserves no height. */
+.dccwl-hub-preview {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+}
+
+/* ---- L2a: the month picker ------------------------------------------ */
+
+.dccwl-month-tiles {
+	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: repeat(auto-fill, minmax(var(--dccwl-tile-min), 1fr));
+	list-style: none;
+	margin: 0 auto;
+	max-width: 720px;
+	padding: 0;
+}
+
+.dccwl-month-tiles > li { margin: 0; }
+
+.dccwl-canal .dccwl-month-tile.dccwl-month-tile {
+	align-items: center;
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	font: inherit;
+	gap: 3px;
+	justify-content: center;
+	min-height: 88px;
+	padding: var(--dccwl-pad) 6px;
+	position: relative;
+	text-align: center;
+	transition: transform var(--dccwl-t) var(--dccwl-ease),
+		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
+		border-color var(--dccwl-t-fast) var(--dccwl-ease-color);
+	width: 100%;
+}
+
+.dccwl-canal .dccwl-month-tile.dccwl-month-tile:hover {
+	border-color: var(--dccwl-line-strong);
+	box-shadow: var(--dccwl-shadow-raised);
+	transform: translateY(-2px);
+}
+
+.dccwl-canal .dccwl-month-tile.dccwl-month-tile:focus-visible {
+	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
+	outline: none;
+}
+
+/* The month being viewed. */
+.dccwl-canal .dccwl-month-tile.dccwl-month-tile-on {
+	background: var(--dccwl-primary-soft);
+	border-color: var(--dccwl-primary);
+}
+
+/* The canal's ACTUAL month — a ring plus a "now" chip, so "just show me
+ * today" is one tap from the picker. */
+.dccwl-canal .dccwl-month-tile.dccwl-month-tile-now {
+	box-shadow: var(--dccwl-shadow-tile), 0 0 0 2px var(--dccwl-accent);
+}
+
+.dccwl-month-name {
+	font-size: 1.0625rem;
+	font-weight: 700;
+}
+
+.dccwl-month-preview {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+}
+
+.dccwl-month-now {
+	background: var(--dccwl-accent);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-accent-ink);
+	font-size: 0.66rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	padding: 2px 8px;
+	text-transform: uppercase;
+}
+
+/* ---- centring the composed panels -----------------------------------
+ * The species and water panels are the EXISTING renderers, unchanged. They
+ * default to left-aligned prose; inside the hub they centre. */
+
+.dccwl-canal .dccwl-root,
+.dccwl-canal .dccwl-water { text-align: center; }
+
+.dccwl-canal .dccwl-title,
+.dccwl-canal .dccwl-sub,
+.dccwl-canal .dccwl-credit,
+.dccwl-canal .dccwl-noscript,
+.dccwl-canal .dccwl-water-title,
+.dccwl-canal .dccwl-water-sub,
+.dccwl-canal .dccwl-chain-note,
+.dccwl-canal .dccwl-map-intro,
+.dccwl-canal .dccwl-water-general-head,
+.dccwl-canal .dccwl-water-disclaimer,
+.dccwl-canal .dccwl-card-label,
+.dccwl-canal .dccwl-card-value,
+.dccwl-canal .dccwl-empty { text-align: center; }
+
+/* Water cards: label and value centre, and their head stacks so the
+ * source chip sits under the label rather than pushed to one edge. */
+.dccwl-canal .dccwl-card-head {
+	flex-direction: column;
+	gap: 4px;
+	justify-content: center;
+}
+
+.dccwl-canal .dccwl-water-linklist,
+.dccwl-canal .dccwl-tabs,
+.dccwl-canal .dccwl-hub-tiles { justify-content: center; }
+
+/* Card grids centre their tracks rather than filling from the left: a
+ * section holding ONE card (an access note, a piece of general guidance)
+ * otherwise sits hard left under a centred heading. auto-FIT collapses the
+ * empty tracks; the max track width stops a lone card stretching the row. */
+.dccwl-canal .dccwl-cards {
+	grid-template-columns: repeat(auto-fit, minmax(230px, 320px));
+	justify-content: center;
+}
+
+.dccwl-canal .dccwl-timeline,
+.dccwl-canal .dccwl-spotlight-tiles { justify-content: flex-start; }
+
+/* Centre the strip's content when it is short enough not to scroll. */
+.dccwl-canal .dccwl-tiles.dccwl-spotlight-tiles { margin: 0 auto; }
+
+/* THE ONE EXCEPTION (flagged in the 1.10.0 handoff): the citation block
+ * under each water card is a stack of three or four short lines — source,
+ * measurement date, note. Centred, its ragged edges make it read as three
+ * unrelated fragments rather than one attribution, which is the opposite of
+ * what this module is for. Its label and value above it centre normally. */
+.dccwl-canal .dccwl-water-attr {
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 34ch;
+	text-align: left;
+}
+
+@media (max-width: 600px) {
+	.dccwl-hub-tiles { grid-template-columns: 1fr; }
+	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { min-height: 112px; }
+	.dccwl-month-tiles { grid-template-columns: repeat(3, 1fr); }
+	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
+}

@@ -145,7 +145,10 @@
 		return update;
 	}
 
-	var uidCounter = 0;
+	/* Per-root handles, so the canal hub can drive an existing widget
+	 * instance rather than duplicating its month logic. Keyed by the root
+	 * element; see window.DCCWL_Widget at the foot of this file. */
+	var roots = new WeakMap();
 
 	function initRoot(root) {
 		if (root.getAttribute('data-dccwl-init')) {
@@ -381,6 +384,7 @@
 			centerMonth();
 			updateHead();
 			renderSpotlight();
+			annotateGuide();
 		}
 
 		function centerMonth() {
@@ -422,6 +426,31 @@
 
 		/* ---------- field guide tabs ---------- */
 
+		/* Annotate the (month-independent, server-rendered) guide tiles with
+		 * the chosen month's likelihood. Client-side only: the grids' HTML
+		 * stays cacheable, and this is the same data the spotlight uses.
+		 *
+		 * Only inside the canal hub (1.10.0). There the guide sits on a
+		 * screen that IS a month, so a per-month chip is the point; on the
+		 * flat legacy widget it is just an extra line on every tile, and it
+		 * measured 41px of rendered height on a phone — over the budget that
+		 * surface has kept since 1.1.0. */
+		function annotateGuide() {
+			var guide = root.querySelector('.dccwl-guide');
+			if (!guide || !root.closest('[data-dccwl-canal]')) { return; }
+			guide.querySelectorAll('.dccwl-tile').forEach(function (tile) {
+				var sp = speciesById[tile.getAttribute('data-dccwl-species')];
+				var old = tile.querySelector('.dccwl-tile-sub');
+				if (old) { old.parentNode.removeChild(old); }
+				if (!sp || !sp.months) { return; }
+				var v = sp.months[state.month] || 0;
+				if (v < 2) { return; }
+				tile.appendChild(el('span',
+					'dccwl-tile-sub' + (v >= 3 ? ' dccwl-tile-peak' : ''),
+					v >= 3 ? CFG.i18n.peakShort : CFG.i18n.likeGood));
+			});
+		}
+
 		function initGuide() {
 			var guide = root.querySelector('.dccwl-guide');
 			if (!guide) {
@@ -456,6 +485,16 @@
 			buildTimeline();
 		}
 		initGuide();
+		annotateGuide();
+
+		// Expose this instance so an outer shell can set the month and
+		// re-centre the strip after un-hiding a panel (offsetLeft is 0 while
+		// hidden, so the timeline cannot centre itself until it is visible).
+		roots.set(root, {
+			setMonth: setMonth,
+			recenter: centerMonth,
+			month: function () { return state.month; }
+		});
 	}
 
 	/* ------------------------------------------------------------------
@@ -555,6 +594,21 @@
 			fillCountdown(node, best, CFG.i18n || {});
 		});
 	}
+
+	window.DCCWL_Widget = {
+		setMonth: function (root, m) {
+			var h = roots.get(root);
+			if (h) { h.setMonth(m); h.recenter(); }
+		},
+		recenter: function (root) {
+			var h = roots.get(root);
+			if (h) { h.recenter(); }
+		},
+		month: function (root) {
+			var h = roots.get(root);
+			return h ? h.month() : null;
+		}
+	};
 
 	function initAll() {
 		document.querySelectorAll('.dccwl-root').forEach(initRoot);

@@ -71,6 +71,11 @@ includes/class-countdown-widget.php # Elementor widget dccwl_countdown (1.8.1):
                               #   thin wrapper over the same countdown renderer;
                               #   editor shows a why-empty note instead of nothing
 includes/class-widget.php     # Elementor widget (free APIs only); thin Render wrapper
+includes/class-canal-render.php # THE HUB (1.10.0): hub -> month -> species and
+                              #   hub -> water, as stage panels. COMPOSES
+                              #   Render::render() and Water_Render::render()
+                              #   unchanged — never forks their markup
+includes/class-canal-widget.php # Elementor widget dccwl_canal + [dcc_canal]
 includes/class-water-fact.php   # THE GATE: private ctor + make(); no source => no Fact
 includes/class-water-data.php   # Stored settings + almanac (one seeded verified row)
 includes/class-water-live.php   # Water Atlas (level/Secchi/DO/TSI/bathymetry) + USGS
@@ -91,6 +96,11 @@ assets/css/app.css            # THE TOKEN LAYER (1.9.0; Guide's measured values
                               #   primitives (tiles, sheet, chips, buttons).
                               #   Dependency of both widget stylesheets —
                               #   re-theming happens HERE only
+assets/js/canal.js            # Hub navigation (1.10.0): stage swapping, the
+                              #   month grid, hub previews, history + focus.
+                              #   Drives widget.js via window.DCCWL_Widget
+                              #   rather than duplicating month logic
+assets/css/canal.css          # Hub layout + the centring rules
 assets/js/sheet.js            # THE SHARED OVERLAY (1.9.0): one sliding sheet for
                               #   the species detail AND the chain map; focus
                               #   trap, Escape/back/scrim/history close,
@@ -115,6 +125,55 @@ site has no mascot, so do not reintroduce the concept.) The "Best: Nov–Mar"
 ranges are derived in PHP (`best_months_label`, value-3 months falling back to the
 row max, wrapping across the year end) and shipped per species as
 `bestLabel` in the config JSON.
+
+## Information architecture (since v1.10.0)
+
+The front end is ONE app with four levels, placed by the `dccwl_canal`
+widget / `[dcc_canal]`:
+
+```
+L1 hub      countdown hero (zero taps) + two tiles: Wildlife, Water
+L2a month   twelve month tiles, the canal's month ringed + "now" chipped
+L3a species headline, spotlight, tabs + full guide grids, timeline switcher
+L4a sheet   the species detail (assets/js/sheet.js) — unchanged
+L2b water   the whole water module, section order unchanged; map = a sheet
+```
+
+Rules that hold this together — break any of them and the app misleads:
+
+- **Composition, never a fork.** The species and water panels are the output
+  of `Render::render()` and `Water_Render::render()` verbatim. Content
+  parity with the legacy widgets is therefore structural, not something to
+  re-audit each release. The legacy widgets and shortcodes still render
+  flat when placed alone; they are live-safe during the transition.
+- **Previews obey the same truth rules as their sources.** The Wildlife
+  preview is computed from the bundled calendar (always available). The
+  Water preview is built ONLY from facts the existing `/conditions` call
+  returned — water.js announces them on a `dccwl:water-facts` event and
+  canal.js buffers the last one, so ordering between the two scripts cannot
+  matter (during development the fetch resolved one millisecond before the
+  canal initialised). No facts → the tile shows its name alone. The module
+  auto-hiding entirely → no Water tile at all.
+- **HISTORY IS STATE-DRIVEN, NOT "STEP UP".** sheet.js pushes its own entry
+  on open and pops it on close and must not be touched, so canal.js reads
+  the level out of `popstate`'s state object instead of stepping. That is
+  what makes every ordering work: back with a sheet open closes the sheet
+  and leaves the level; Escape (which makes sheet.js call history.back()
+  itself) likewise; back with no sheet walks up one. A "step up on any pop"
+  design passes the first test and fails the second.
+- **The chosen month is session UI state, not history state.** It persists
+  across species ↔ sheet ↔ picker and is never rewound by a back press.
+  Each fresh page load starts at the hub on the canal's current month.
+- **Month logic is never re-implemented.** canal.js calls
+  `window.DCCWL_Widget.setMonth(root, m)`; widget.js still owns the
+  headline, spotlight, timeline and guide chips. The timeline also needs
+  `recenter()` after its panel is un-hidden — `offsetLeft` is 0 while
+  hidden.
+- **The guide month chips render only inside the hub.** On the flat legacy
+  widget they add ~41px of height on a phone, over the budget that surface
+  has kept since 1.1.0; in the hub they sit on a screen that IS a month.
+- Nothing month-dependent or time-sensitive is server-rendered — not the
+  month tiles' labels, not either preview. Same doctrine as the spotlight.
 
 ## UI architecture (the app language, since v1.9.0)
 

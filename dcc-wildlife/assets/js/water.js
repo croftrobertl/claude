@@ -226,6 +226,16 @@
 		}
 	}
 
+	/* Tell anything listening what the conditions call returned. Detail is
+	 * the gated facts themselves — no derived claims travel with it. */
+	function announce(facts) {
+		try {
+			document.dispatchEvent(new CustomEvent('dccwl:water-facts', {
+				detail: { facts: facts || [] }
+			}));
+		} catch (e) { /* very old browsers: the strip still fills */ }
+	}
+
 	function init() {
 		var roots = document.querySelectorAll('[data-dccwl-water-live]');
 		if (!roots.length) { return; }
@@ -233,12 +243,18 @@
 		window.fetch(CFG.endpoint, { credentials: 'same-origin' })
 			.then(function (r) { return r.json(); })
 			.then(function (data) {
-				if (!data || !data.enabled || !Array.isArray(data.facts) || !data.facts.length) {
-					return;
-				}
-				roots.forEach(function (root) { fill(root, data.facts); });
+				var facts = (data && data.enabled && Array.isArray(data.facts)) ? data.facts : [];
+				// Announce what this ONE existing call returned, so the 1.10.0
+				// hub can show a preview without a second request. Fired even
+				// when empty: "nothing sourced" is the signal the hub needs in
+				// order to stay silent.
+				announce(facts);
+				if (!facts.length) { return; }
+				roots.forEach(function (root) { fill(root, facts); });
 			})
-			.catch(function () { /* guests see the almanac; never an error */ });
+			.catch(function () {
+				announce([]);   // guests see the almanac; never an error
+			});
 	}
 
 	/* ------------------------------------------------------------------
