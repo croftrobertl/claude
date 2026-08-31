@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.9.0
+Stable tag: 1.9.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,14 @@ Developers can filter the species registry with `dcc_wl_species`, the monthly li
 
 == Changelog ==
 
+= 1.9.1 =
+* **The Guest Guide's real palette, measured from the live site.** 1.9.0 shipped Wildlife's own navy/coral as an openly-flagged placeholder because the Guide could not be read from the build environment. Those values are gone: primary is now #0f6dbf, accent #f08080, text #111111, muted #5d7891, tiles the Guide's near-opaque white (rgba 255,255,255,.92) over a 15%-blue border, detail surfaces #ffffff, buttons the Guide's blue on white. The token names did not change — only their values — so this was the one-block swap 1.9.0 was built for.
+* **The Guide's cozy density and springy motion.** Gaps drop to the Guide's tight 5px/10px, tiles to a 120–140px minimum (from a roomier default), glass blur to 10px, and every transform — the sheet sliding in, tiles lifting, the spotlight fading — now runs 300ms on the Guide's overshoot curve `cubic-bezier(.34, 1.56, .64, 1)`, so the two pages move identically. Colour changes deliberately keep a plain curve: overshooting a colour sends it past its own value and back.
+* **Always light, matching the Guide (Rob's decision).** The auto-dark palette added in 1.9.0 is removed entirely — no OS dark-mode rule remains anywhere in the plugin's CSS or JS. The dark-OS readability problem it existed to solve is now handled the Guide's way instead: every surface the widget owns — tiles, the sliding sheet, condition cards, the hero stat, the map sheet — always paints an opaque light ground, so the host and OS themes are irrelevant. A test renders the module under a light OS and a dark one and asserts the two are **pixel-identical**.
+* The dark-mode sprite backing added in 1.9.0 is gone with it: on an always-light tile the deep-teal silhouettes keep their contrast unaided, which was verified rather than assumed.
+* The month timeline's edge fades are masked rather than painted with a page-coloured gradient, so the scroll cue no longer assumes what colour the page behind it is.
+* Render budget: 533px desktop / 745px mobile. Desktop is back inside its original ≤560px budget — the Guide's tighter spacing more than paid for the hero stat. Mobile moves to ≤760px, because the Guide's tile-min resolves to two columns on a phone and matching it there matters more than the old figure.
+
 = 1.9.0 =
 **The widgets are rebuilt in the DCC Guest Guide's visual language**, so /guest/ and the wildlife pages read as one app. This release is chrome and interaction only: no data source, no REST route, no fetch discipline, no countdown maths and above all no part of the Water_Fact truth gate was touched.
 
@@ -58,7 +66,7 @@ Element by element:
 * **Season countdown → a HERO STAT** at the top of the widget: the species, the number, and one line of reason ("Peak sightings begin in October"). Still computed in the browser in canal time, still one shell per page, still governed by the sitewide toggle.
 * **Chain map → a full sliding SHEET** with the same mechanics as the species detail. Leaflet, the tiles, the ramps, the popups and the colour-by legend are unchanged; the map simply gets the room it needs and dismisses like every other detail. It still loads nothing external until a guest opens it, and reopening no longer refetches.
 * **One shared overlay** (`assets/js/sheet.js`) drives both sheets: focus moves in and returns to whatever opened it, focus is trapped while open, and Escape, the back affordance, an outside tap and the browser/Android back button all close it. The page behind is scroll-locked. Under `prefers-reduced-motion` the sheet still opens — it just does not travel.
-* **A token layer** (`assets/css/app.css`) holds every colour, radius, gap and duration in one block, with density and glass modifiers and full auto dark mode. In dark mode the widget paints its own ground rather than assuming the theme follows the OS, and the dark species sprites keep a light backing so they stay visible.
+* **A token layer** (`assets/css/app.css`) holds every colour, radius, gap and duration in one block, with density and glass modifiers. (1.9.0 also shipped auto dark mode; 1.9.1 removed it — see above.)
 * Render budget: the widget measures 562px desktop / 699px mobile. Mobile still fits its original ≤720px budget; the desktop budget moves from 560px to 600px to hold the hero stat, which is new content the old figure never accounted for.
 
 = 1.8.1 =

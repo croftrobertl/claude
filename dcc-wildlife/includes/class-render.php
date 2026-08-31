@@ -100,14 +100,14 @@ final class Render {
 	/**
 	 * The app-layer classes every Wildlife surface carries (1.9.0).
 	 *
-	 * `dccwl-app` scopes the token block; the density and dark-mode
-	 * modifiers mirror the Guest Guide's own so the two pages read as one
-	 * app. Filterable because the Guest Guide's live preset could not be
-	 * read from the build environment — see app.css — and because a theme
-	 * change there should be a one-line change here, not a release.
+	 * `dccwl-app` scopes the token block; the modifiers mirror what /guest/
+	 * actually renders — density cozy, glass on, and NO dark class, because
+	 * the Guide renders light on every OS and so does this (1.9.1). Kept
+	 * filterable so a theme change on the Guide side is a one-line change
+	 * here rather than a release.
 	 */
 	public static function app_classes(): string {
-		$classes = [ 'dccwl-app', 'dccwl-density-cozy', 'dccwl-dark-auto' ];
+		$classes = [ 'dccwl-app', 'dccwl-density-cozy', 'dccwl-glass-yes' ];
 
 		/**
 		 * Filter the app-layer classes (density / dark / glass modifiers).

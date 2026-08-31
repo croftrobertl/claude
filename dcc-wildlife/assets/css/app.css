@@ -1,85 +1,81 @@
 /**
- * DCC Wildlife — the app layer (v1.9.0).
+ * DCC Wildlife — the app layer (v1.9.0, palette measured in v1.9.1).
  *
  * Tokens and shared primitives so the Wildlife widgets speak the DCC Guest
  * Guide's visual language and the two pages read as one app. Loaded first;
  * widget.css and water.css build on it.
  *
  * ============================================================
- * TOKEN VALUES — READ THIS BEFORE CHANGING ANY NUMBER BELOW
+ * TOKEN VALUES — MEASURED FROM THE LIVE GUEST GUIDE (1.9.1)
  * ============================================================
- * The Guest Guide is a SEPARATE plugin and was NOT readable from the build
- * environment (not in this repo, and the live site is unreachable from it),
- * so the values in the block below are NOT the Guest Guide's measured
- * tokens. They are DCC Wildlife's own verified palette (navy #0a3d62 /
- * coral #e8604f, the same values this plugin has shipped since 1.4.0),
- * arranged in the Guest Guide's token STRUCTURE.
+ * 1.9.0 shipped Wildlife's own palette as an honest placeholder, because
+ * the Guest Guide could not be read from the build environment. Those
+ * values are GONE. Everything in the block below is the Guest Guide's own,
+ * measured from what /guest/ actually renders, with each token named for
+ * its --dccgg- counterpart.
  *
- * That means: the architecture, component patterns and interaction are the
- * Guest Guide's; the exact hues are Wildlife's until the real values are
- * pasted in. Every token name below maps 1:1 to its --dccgg- counterpart
- * (noted inline), so matching the two apps is a mechanical swap of this one
- * block — nothing else in any stylesheet needs to change.
+ * Live config being matched: the custom preset, density cozy, glass ON,
+ * dark OFF.
  *
- * To capture the real values, run tools/extract-guest-guide-tokens.js in the
- * browser console on /guest/ and paste what it prints over this block.
+ * A handful of values the Guide did not expose (a faint text tint, a
+ * stronger line, hover states, shadows) are DERIVED from the measured ones
+ * and marked "derived" inline. They are the only judgement calls here; if
+ * any looks wrong beside /guest/, it is one of those lines.
  *
- * A future step could extract this file into a stylesheet shared by both
- * plugins. Deliberately not now: that would couple two independently
- * installed plugins, and this release adds no cross-plugin dependency.
+ * ALWAYS LIGHT. There is deliberately no dark-mode block in this plugin —
+ * see the note at the foot of this file before adding one.
  */
 
 .dccwl-app {
-	/* --- palette ------------------------------------------------------
-	 * Light values live here on the base selector, never only inside a
-	 * dark-mode block, so no surface can lose its colour when a theme
-	 * flips. The dark block below REDEFINES these same names. */
+	/* --- palette — measured from /guest/ ------------------------------ */
 
-	--dccwl-accent: #e8604f;            /* --dccgg-accent */
+	--dccwl-accent: #f08080;             /* --dccgg-accent */
 	--dccwl-accent-ink: #ffffff;
-	--dccwl-accent-soft: rgba(232, 96, 79, 0.12);
-	--dccwl-primary: #0a3d62;           /* --dccgg-primary */
-	--dccwl-primary-soft: rgba(10, 61, 98, 0.08);
+	--dccwl-accent-soft: rgba(240, 128, 128, 0.16);   /* derived */
+	--dccwl-primary: #0f6dbf;            /* --dccgg-primary */
+	--dccwl-primary-soft: rgba(15, 109, 191, 0.08);   /* derived */
 
-	--dccwl-btn-bg: #0a3d62;            /* --dccgg-btn-bg */
-	--dccwl-btn-txt: #ffffff;           /* --dccgg-btn-txt */
-	--dccwl-btn-bg-hover: #0d4d7a;
+	--dccwl-btn-bg: #0f6dbf;             /* --dccgg-btn-bg (= primary) */
+	--dccwl-btn-txt: #ffffff;            /* --dccgg-btn-txt */
+	--dccwl-btn-bg-hover: #0c5a9e;                    /* derived */
 
-	--dccwl-page-bg: #f6f8fa;
-	--dccwl-tile-bg: #ffffff;           /* --dccgg-tile-bg */
-	--dccwl-tile-bg-hover: #ffffff;
-	--dccwl-detail-bg: #ffffff;         /* --dccgg-detail-bg */
-	--dccwl-sheet-scrim: rgba(12, 24, 33, 0.44);
+	/* Surfaces are near-opaque WHITE on purpose — this is how the Guide
+	 * stays legible under any host or OS theme without ever recolouring.
+	 * Do not make any of these transparent. */
+	--dccwl-tile-bg: rgba(255, 255, 255, 0.92);       /* --dccgg-tile-bg */
+	--dccwl-tile-bg-hover: rgba(255, 255, 255, 0.98); /* derived */
+	--dccwl-detail-bg: #ffffff;          /* --dccgg-detail-bg */
+	--dccwl-page-bg: #f4f7fa;                         /* derived */
+	--dccwl-sheet-scrim: rgba(17, 17, 17, 0.44);      /* derived */
 
-	--dccwl-text: #16242e;
-	--dccwl-text-muted: #5c6f7c;
-	--dccwl-text-faint: #7d8d98;
-	--dccwl-line: #dbe4ea;
-	--dccwl-line-strong: #c3d1da;
+	--dccwl-text: #111111;               /* --dccgg-text */
+	--dccwl-text-muted: #5d7891;         /* --dccgg-muted */
+	--dccwl-text-faint: #8ba0b3;                      /* derived from muted */
+	--dccwl-line: rgba(15, 109, 191, 0.15);           /* --dccgg-tile-border */
+	--dccwl-line-strong: rgba(15, 109, 191, 0.32);    /* derived */
 
-	--dccwl-emergency: #c0392b;         /* --dccgg-color-emergency */
-	--dccwl-ok: #2e7d5b;
-	--dccwl-warn: #b07d3a;
+	--dccwl-emergency: #c0392b;          /* --dccgg-color-emergency */
+	--dccwl-ok: #2e7d5b;                              /* derived */
+	--dccwl-warn: #b07d3a;                            /* derived */
 
-	/* --- shape + depth ---------------------------------------------- */
+	/* --- shape + depth (derived) -------------------------------------- */
 	--dccwl-radius-sm: 8px;
 	--dccwl-radius: 14px;
 	--dccwl-radius-lg: 20px;
 	--dccwl-radius-pill: 999px;
-	--dccwl-shadow-tile: 0 1px 2px rgba(16, 34, 45, 0.06), 0 2px 8px rgba(16, 34, 45, 0.05);
-	--dccwl-shadow-raised: 0 2px 6px rgba(16, 34, 45, 0.09), 0 12px 28px rgba(16, 34, 45, 0.12);
-	--dccwl-shadow-sheet: 0 -2px 10px rgba(16, 34, 45, 0.10), 0 -18px 48px rgba(16, 34, 45, 0.18);
-	--dccwl-ring: 0 0 0 3px rgba(232, 96, 79, 0.38);
+	--dccwl-shadow-tile: 0 1px 2px rgba(15, 60, 100, 0.06), 0 2px 8px rgba(15, 60, 100, 0.05);
+	--dccwl-shadow-raised: 0 2px 6px rgba(15, 60, 100, 0.10), 0 12px 28px rgba(15, 60, 100, 0.13);
+	--dccwl-shadow-sheet: 0 -2px 10px rgba(15, 60, 100, 0.10), 0 -18px 48px rgba(15, 60, 100, 0.18);
+	--dccwl-ring: 0 0 0 3px rgba(15, 109, 191, 0.38);
 
-	/* --- density -----------------------------------------------------
-	 * One multiplier drives every gap and pad, so a density change is a
-	 * single token, exactly like the Guest Guide's density control. */
+	/* --- density — the Guide's cozy spacing --------------------------- */
 	--dccwl-density: 1;
-	--dccwl-gap: calc(10px * var(--dccwl-density));
-	--dccwl-gap-lg: calc(16px * var(--dccwl-density));
-	--dccwl-pad: calc(14px * var(--dccwl-density));
+	--dccwl-gap: calc(5px * var(--dccwl-density));    /* --dccgg-gap, tight */
+	--dccwl-gap-lg: calc(10px * var(--dccwl-density));/* --dccgg-gap, larger */
+	--dccwl-pad: calc(12px * var(--dccwl-density));   /* derived */
 	--dccwl-detail-pad-x: calc(20px * var(--dccwl-density));  /* --dccgg-detail-pad-x */
-	--dccwl-detail-pad-y: calc(18px * var(--dccwl-density));
+	--dccwl-detail-pad-y: calc(16px * var(--dccwl-density));  /* derived */
+	--dccwl-tile-min: 132px;             /* --dccgg-tile-min (Guide: 120–140) */
 
 	/* --- type -------------------------------------------------------- */
 	--dccwl-font: inherit;               /* never load a webfont */
@@ -90,14 +86,17 @@
 	--dccwl-fs-hero: clamp(1.75rem, 1.1rem + 2.1vw, 2.5rem);
 	--dccwl-lh: 1.45;
 
-	/* --- motion ------------------------------------------------------ */
-	--dccwl-t-fast: 140ms;
-	--dccwl-t: 220ms;
-	--dccwl-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+	/* --- motion — the Guide's signature springy overshoot -------------
+	 * The overshoot is what makes the two pages feel like one app, so it
+	 * drives every TRANSFORM: the sheet sliding in, tiles lifting, the
+	 * spotlight fading in. Colour changes use a plain curve instead —
+	 * overshooting a colour sends it past its own value and back. */
+	--dccwl-t: 300ms;                    /* --dccgg-transition-duration */
+	--dccwl-ease: cubic-bezier(.34, 1.56, .64, 1);   /* --dccgg-transition-easing */
+	--dccwl-t-fast: 140ms;                            /* derived */
+	--dccwl-ease-color: ease;                         /* derived */
 
-	/* --- glass -------------------------------------------------------
-	 * Off by default; .dccwl-glass-yes opts in, matching the Guest
-	 * Guide's glass modifier. */
+	/* --- glass — ON, matching the Guide ------------------------------- */
 	--dccwl-glass-bg: var(--dccwl-tile-bg);
 	--dccwl-glass-blur: none;
 	--dccwl-glass-border: var(--dccwl-line);
@@ -115,75 +114,25 @@
 /* Glass surfaces — opt-in, and degrades to a solid fill where
  * backdrop-filter is unsupported because the fallback is the token itself. */
 .dccwl-app.dccwl-glass-yes {
-	--dccwl-glass-bg: rgba(255, 255, 255, 0.72);
-	--dccwl-glass-blur: saturate(1.6) blur(14px);
-	--dccwl-glass-border: rgba(255, 255, 255, 0.55);
+	--dccwl-glass-blur: blur(10px);      /* --dccgg-glass-blur */
 }
 
-/* --- dark mode -------------------------------------------------------
- * REDEFINES tokens only. Nothing here introduces a colour that has no
- * light-mode definition, so a surface can never come out unstyled.
- * Two entry points, matching the Guest Guide: the OS setting (auto) and an
- * explicit .dccwl-theme-dark class. */
-@media (prefers-color-scheme: dark) {
-	.dccwl-app.dccwl-dark-auto {
-		--dccwl-accent: #ff7a68;
-		--dccwl-accent-ink: #1a0e0c;
-		--dccwl-accent-soft: rgba(255, 122, 104, 0.16);
-		--dccwl-primary: #7fb2d8;
-		--dccwl-primary-soft: rgba(127, 178, 216, 0.14);
-
-		--dccwl-btn-bg: #2f79ab;
-		--dccwl-btn-txt: #ffffff;
-		--dccwl-btn-bg-hover: #3c8cc2;
-
-		--dccwl-page-bg: #101922;
-		--dccwl-tile-bg: #17232e;
-		--dccwl-tile-bg-hover: #1d2c39;
-		--dccwl-detail-bg: #16212b;
-		--dccwl-sheet-scrim: rgba(4, 9, 13, 0.66);
-
-		--dccwl-text: #e8eef3;
-		--dccwl-text-muted: #a3b4c0;
-		--dccwl-text-faint: #8496a3;
-		--dccwl-line: #2a3a48;
-		--dccwl-line-strong: #3a4d5d;
-
-		--dccwl-emergency: #ff6b5b;
-		--dccwl-ok: #58b98d;
-		--dccwl-warn: #d3a35f;
-
-		--dccwl-shadow-tile: 0 1px 2px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.28);
-		--dccwl-shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.42), 0 12px 28px rgba(0, 0, 0, 0.46);
-		--dccwl-shadow-sheet: 0 -2px 10px rgba(0, 0, 0, 0.4), 0 -18px 48px rgba(0, 0, 0, 0.5);
-		--dccwl-ring: 0 0 0 3px rgba(255, 122, 104, 0.44);
-
-		--dccwl-glass-bg: var(--dccwl-tile-bg);
-		--dccwl-glass-border: var(--dccwl-line);
-	}
-
-	.dccwl-app.dccwl-dark-auto.dccwl-glass-yes {
-		--dccwl-glass-bg: rgba(23, 35, 46, 0.72);
-		--dccwl-glass-border: rgba(255, 255, 255, 0.10);
-	}
-
-	/* Paint our OWN ground in dark mode.
-	 *
-	 * Not decoration — correctness. The tokens above turn every string in
-	 * the widget light, but the page around it belongs to the theme, and
-	 * Bravada has no dark mode. Without a background of our own, a visitor
-	 * whose OS is set to dark would get light-on-light text: headings, the
-	 * link pills and the guide credit all effectively invisible. Painting
-	 * the widget's own surface keeps it legible whether or not the theme
-	 * follows the OS. In light mode these stay transparent, so the widget
-	 * still sits on whatever the page provides. */
-	.dccwl-root.dccwl-dark-auto,
-	.dccwl-water.dccwl-dark-auto {
-		background: var(--dccwl-page-bg);
-		border-radius: var(--dccwl-radius-lg);
-		padding: var(--dccwl-gap-lg);
-	}
-}
+/* --- NO DARK MODE, DELIBERATELY (1.9.1) -------------------------------
+ * Rob's decision, matching the Guest Guide: this widget renders LIGHT on
+ * every OS and never recolours.
+ *
+ * 1.9.0 shipped an auto-dark palette and then had to paint its own dark
+ * ground to stop a dark-OS visitor getting light-on-light text, because
+ * the Bravada theme has no dark mode. The Guide solves the same problem
+ * the other way round and more simply: its surfaces are near-opaque WHITE
+ * (--dccwl-tile-bg, --dccwl-detail-bg above), so the host and OS themes
+ * are irrelevant and everyone sees one design.
+ *
+ * So: do not add an OS dark-mode media query here or in any other
+ * stylesheet in this plugin, and do not make a surface transparent — that
+ * is what would let a dark page show through and reintroduce the bug.
+ * A test greps for both.
+ * ------------------------------------------------------------------- */
 
 /* =====================================================================
  * PRIMITIVES — the components both widgets share.
@@ -210,7 +159,7 @@
 .dccwl-app .dccwl-tiles {
 	display: grid;
 	gap: var(--dccwl-gap);
-	grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(var(--dccwl-tile-min), 1fr));
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -237,9 +186,10 @@
 	padding: calc(var(--dccwl-pad) * 0.85);
 	position: relative;
 	text-align: center;
-	transition: transform var(--dccwl-t-fast) var(--dccwl-ease),
-		box-shadow var(--dccwl-t-fast) var(--dccwl-ease),
-		border-color var(--dccwl-t-fast) var(--dccwl-ease);
+	transition: transform var(--dccwl-t) var(--dccwl-ease),
+		box-shadow var(--dccwl-t-fast) var(--dccwl-ease-color),
+		border-color var(--dccwl-t-fast) var(--dccwl-ease-color),
+		background var(--dccwl-t-fast) var(--dccwl-ease-color);
 	width: 100%;
 }
 
@@ -328,7 +278,7 @@
 	justify-content: center;
 	min-height: 44px;
 	padding: 10px 20px;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
 .dccwl-app .dccwl-btn.dccwl-btn:hover { background: var(--dccwl-btn-bg-hover); }
@@ -360,7 +310,7 @@
 	inset: 0;
 	opacity: 0;
 	position: fixed;
-	transition: opacity var(--dccwl-t) var(--dccwl-ease);
+	transition: opacity var(--dccwl-t) var(--dccwl-ease-color);
 	z-index: 99998;
 }
 
@@ -431,7 +381,7 @@
 	height: 44px;
 	justify-content: center;
 	padding: 0;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 	width: 44px;
 }
 

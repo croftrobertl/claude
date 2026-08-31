@@ -84,18 +84,20 @@ includes/class-water-admin.php  # ONE page: DCC -> Wildlife (falls back to
                                 #   dcc-wildlife-water while the countdown
                                 #   mu-plugin still owns that slug), prio 63
 includes/class-water-widget.php # Elementor widget dccwl_water
-assets/css/app.css            # THE TOKEN LAYER (1.9.0): every colour/radius/gap
-                              #   /duration + density, glass and dark modifiers,
-                              #   plus the shared primitives (tiles, sheet,
-                              #   chips, buttons). Dependency of both widget
-                              #   stylesheets — re-theming happens HERE only
+assets/css/app.css            # THE TOKEN LAYER (1.9.0; Guide's measured values
+                              #   since 1.9.1): every colour/radius/gap/duration
+                              #   + density and glass modifiers (NO dark — see
+                              #   the always-light rule), plus the shared
+                              #   primitives (tiles, sheet, chips, buttons).
+                              #   Dependency of both widget stylesheets —
+                              #   re-theming happens HERE only
 assets/js/sheet.js            # THE SHARED OVERLAY (1.9.0): one sliding sheet for
                               #   the species detail AND the chain map; focus
                               #   trap, Escape/back/scrim/history close,
                               #   scroll-lock. Dependency of both widget scripts
-tools/extract-guest-guide-tokens.js # Console snippet the owner runs on /guest/
-                              #   to capture the real Guest Guide token values
-assets/css/widget.css         # Month widget; palette navy #0a3d62 / coral #e8604f
+tools/extract-guest-guide-tokens.js # Console snippet run on /guest/ to (re)capture
+                              #   the Guest Guide's token values
+assets/css/widget.css         # Month widget; all colour via app.css tokens
 assets/js/widget.js           # One vanilla-JS file, no jQuery, no AJAX
 assets/css/water.css          # Water module styles (loaded only where placed)
 assets/js/water.js            # Fills the live strip from the REST route
@@ -120,23 +122,38 @@ interaction only** — no data source, REST route, fetch rule, countdown
 maths or any part of the Water_Fact gate was touched, and that separation
 is worth preserving in any future re-skin.
 
-**THE TOKEN VALUES ARE NOT MEASURED FROM THE GUEST GUIDE.** That plugin was
-not readable from the build environment (not in this repo; the live site is
-unreachable from it), so `app.css` carries Wildlife's own verified palette
-arranged in the Guest Guide's token STRUCTURE, with each name mapped to its
-`--dccgg-` counterpart in a comment. Matching the two apps for real is a
-swap of that one block — run `tools/extract-guest-guide-tokens.js` in the
-browser console on /guest/ and paste what it prints. Do not invent
-`--dccgg-` values; that is the same failure this project has guarded
-against everywhere else. The density/dark defaults (`dccwl-density-cozy`,
-`dccwl-dark-auto`) are a best guess from the brief's own class names and
-are filterable via `dcc_wl_app_classes`.
+**The token values ARE the Guest Guide's, measured from the live site
+(1.9.1).** 1.9.0's placeholder palette is gone. `app.css` now carries the
+Guide's own primary #0f6dbf, accent #f08080, text #111111, muted #5d7891,
+near-opaque white tiles and 15%-blue borders, its cozy 5px/10px gaps, its
+120–140px tile-min, 10px glass blur, and its 300ms
+`cubic-bezier(.34, 1.56, .64, 1)` overshoot. Values the Guide did not
+expose (a faint tint, hover states, shadows) are DERIVED and marked so
+inline — those lines are the only judgement calls in the palette. The live
+config being matched is: custom preset, density cozy, glass ON, dark OFF,
+which is what `app_classes()` emits (filterable via `dcc_wl_app_classes`).
+`tools/extract-guest-guide-tokens.js` remains, for re-measuring if the
+Guide is ever re-themed.
 
-Height budget for the default render: **≤ 600px desktop / ≤ 720px mobile**
-(measured 562px / 699px). The desktop figure was 560px through 1.8.x; it
-moved in 1.9.0 to hold the hero stat, which is ~113px of new content the
-old budget never accounted for. Mobile still fits its original figure — the
-guide grid goes three tiles across on a phone specifically so it does.
+**ALWAYS LIGHT — never recolour (Rob's decision, 1.9.1).** There is no OS
+dark-mode rule anywhere in this plugin, and there must not be one. 1.9.0
+shipped an auto-dark palette and then had to paint its own dark ground to
+stop a dark-OS visitor seeing light-on-light text, because Bravada has no
+dark mode. The Guide solves it the other way: its surfaces are near-opaque
+WHITE, so the host and OS themes cannot reach the content. Every surface
+this widget owns must therefore stay opaque and light — making one
+transparent is what would let a dark page show through and bring the bug
+back. A test greps for `prefers-color-scheme` and also renders the module
+under both OS schemes asserting the screenshots are PIXEL-IDENTICAL, so
+any reintroduction fails loudly whatever form it takes.
+
+Height budget for the default render: **≤ 560px desktop / ≤ 760px mobile**
+(measured 533px / 745px). Desktop is back at its original 1.1.0 figure —
+1.9.0 needed 600px to hold the hero stat, and 1.9.1's tighter cozy spacing
+more than paid that back. Mobile moved from 720px because the Guide's
+tile-min resolves to TWO columns on a 375px screen; 1.9.0 forced three
+across to protect the old number, which made the two apps look different
+in exactly the place most guests see them. Matching won.
 Everything else lives behind interaction:
 
 - **Hero**: JS sets "{Month} on the canal" + "N species at their peak"
@@ -186,14 +203,14 @@ Everything else lives behind interaction:
   `prefers-reduced-motion` (the sheet still opens — it just does not
   travel). The tile hover-lift is also dropped there: with no transition to
   carry it, a 2px jump under the cursor is worse than no lift.
-- **Dark mode** is auto via `prefers-color-scheme`, and every colour is
-  defined on the base selector first — the dark block only REDEFINES
-  tokens, so no surface can come out unstyled. A test asserts that
-  property statically. Two dark-mode rules are load-bearing: the widget
-  paints its OWN background (Bravada has no dark mode, so otherwise a
-  dark-OS visitor gets light-on-light text), and the sprite icon holders
-  keep a LIGHT ground (the deep-teal silhouettes vanish on a dark tile —
-  the same trap 1.3.0 hit with the navy expanded chip).
+- **Motion follows the Guide's signature overshoot** for transforms
+  (`--dccwl-ease`, 300ms) and a plain curve for colour
+  (`--dccwl-ease-color`) — an overshoot on a colour sends it past its own
+  value and back, which reads as a flicker.
+- **Sprites need no dark handling since 1.9.1.** The icon wells are always
+  a light tint, so the deep-teal silhouettes keep contrast unaided. The
+  1.3.0 trap (dark sprite on a dark ground) can only return if someone
+  darkens a tile — which the always-light rule already forbids.
 
 ## The water module (v1.4.0) — read before touching it
 
@@ -426,12 +443,10 @@ Deliver that file to the owner for the Plugins → Add New → Upload route.
   an outside tap and the browser back button all close it; focus is trapped
   while open and returns to the tile; reduced-motion OS setting → no
   animation anywhere but the sheet still opens.
-- Side by side with /guest/: same tiles, same drawer motion, same buttons,
-  same density, same dark-mode behaviour. (Until the Guest Guide's real
-  token values are pasted into app.css this will match in STRUCTURE but not
-  in exact hue — see the UI architecture section.)
-- Toggle the OS to dark: every surface and string stays legible on both
-  widgets, and the species sprites keep their light backing.
+- Side by side with /guest/: same blue (#0f6dbf) and coral (#f08080), same
+  near-white glass tiles, same cozy spacing, same springy 300ms drawer.
+- Toggle the OS to dark: NOTHING changes — both widgets render exactly as
+  they do in light mode, like /guest/ does.
 - The chain map opens as a full sheet; Leaflet, tiles, ramps, popups and the
   colour-by legend all work; reopening does not refetch.
 - Sprites render identically on Apple/Android/Windows (no emoji anywhere in

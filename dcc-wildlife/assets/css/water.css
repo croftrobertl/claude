@@ -186,7 +186,7 @@
 	font-size: var(--dccwl-fs-sm);
 	padding: 9px 16px;
 	text-decoration: none;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
 .dccwl-water .dccwl-water-linklist a:hover {
@@ -278,7 +278,7 @@
 	font-weight: 600;
 	min-height: 40px;
 	padding: 9px 14px;
-	transition: background var(--dccwl-t-fast) var(--dccwl-ease);
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
 .dccwl-seg-btn.dccwl-seg-btn:hover,
@@ -371,7 +371,7 @@
 
 /* --- Leaflet popups --- */
 
-.dccwl-pop { color: #16242e; font-size: var(--dccwl-fs-sm); }
+.dccwl-pop { color: #111111; font-size: var(--dccwl-fs-sm); }
 
 .dccwl-pop-title {
 	font-size: 1rem;
@@ -382,7 +382,7 @@
 .dccwl-pop-line { margin: 0 0 4px; }
 
 .dccwl-pop-closed {
-	background: #fdeceb;
+	background: #fdeeee;
 	border-radius: var(--dccwl-radius-sm);
 	color: var(--dccwl-emergency);
 	font-weight: 800;
@@ -392,14 +392,14 @@
 }
 
 .dccwl-pop-link {
-	color: #0a3d62;
+	color: #0f6dbf;
 	display: inline-block;
 	margin-top: 4px;
 	text-decoration: underline;
 }
 
 .dccwl-pop-src {
-	color: #5c6f7c;
+	color: #5d7891;
 	font-size: var(--dccwl-fs-xs);
 	margin: 6px 0 0;
 }

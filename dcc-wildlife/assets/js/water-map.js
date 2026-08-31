@@ -18,10 +18,13 @@
 (function () {
 	'use strict';
 
-	/* DCC palette. Deliberately not Croatia's. */
+	/* DCC palette — the Guest Guide's, not Croatia's (1.9.1). The colour-by
+	 * ramps below are data encoding rather than brand, so they are left
+	 * alone: they exist to keep clear/usual/murky and fresh/stale
+	 * distinguishable, which is a different job from matching the Guide. */
 	var C = {
-		navy: '#0a3d62',
-		coral: '#e8604f',
+		navy: '#0f6dbf',
+		coral: '#f08080',
 		clear: '#2b7bb9',   // clearer than its own median
 		usual: '#4d7d86',   // about its own median
 		murky: '#b07d3a',   // murkier than its own median
@@ -32,9 +35,9 @@
 		months: '#b07d3a',
 		years: '#8a97a0',
 		stale: '#9aa7ae',   // any reading too old to state as current
-		ramp: '#e8604f',
+		ramp: '#f08080',
 		rampClosed: '#8a97a0',
-		home: '#0a3d62'
+		home: '#0f6dbf'
 	};
 
 	/* Thresholds mirror the PHP side so map and text agree. */

@@ -67,8 +67,8 @@
 
 	var MASCOT_MARK =
 		'<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">' +
-		'<path d="M6 1 C8.5 2.5 10 5 9.5 8 L6 11 L2.5 8 C2 5 3.5 2.5 6 1 Z" fill="#e8604f"/>' +
-		'<path d="M6 3.2 V9.4" stroke="#f8ded9" stroke-width="1" stroke-linecap="round"/></svg>';
+		'<path d="M6 1 C8.5 2.5 10 5 9.5 8 L6 11 L2.5 8 C2 5 3.5 2.5 6 1 Z" fill="#f08080"/>' +
+		'<path d="M6 3.2 V9.4" stroke="#fdeeee" stroke-width="1" stroke-linecap="round"/></svg>';
 
 	function el(tag, cls, text) {
 		var node = document.createElement(tag);
