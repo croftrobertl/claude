@@ -387,6 +387,34 @@
 			annotateGuide();
 		}
 
+		/* A month label is either wholly visible or not shown at all.
+		 *
+		 * A fade stops a sliced label reading as broken, but it cannot make
+		 * "ul" into a whole word — so any pill that does not fit entirely
+		 * inside the track is hidden outright. visibility (not display)
+		 * keeps it in the layout, so the scroll geometry and the arrows are
+		 * unaffected; it simply never renders half a month name.
+		 *
+		 * Recomputed after the strip settles rather than during a drag, so a
+		 * finger-scroll does not pop labels in and out mid-gesture; the edge
+		 * fade covers that moment. */
+		function trimPartialMonths() {
+			var track = root.querySelector('.dccwl-timeline-track');
+			if (!track) { return; }
+			var r = track.getBoundingClientRect();
+			monthButtons.forEach(function (btn) {
+				var b = btn.getBoundingClientRect();
+				var whole = b.left >= r.left - 0.5 && b.right <= r.right + 0.5;
+				btn.classList.toggle('dccwl-month-cut', !whole);
+			});
+		}
+
+		var trimTimer = null;
+		function trimSoon() {
+			window.clearTimeout(trimTimer);
+			trimTimer = window.setTimeout(trimPartialMonths, 140);
+		}
+
 		function centerMonth() {
 			var track = root.querySelector('.dccwl-timeline-track');
 			var btn = monthButtons[state.month];
@@ -402,6 +430,7 @@
 			var left = btn.getBoundingClientRect().left
 				- track.getBoundingClientRect().left + track.scrollLeft;
 			track.scrollLeft = left - (track.clientWidth - btn.offsetWidth) / 2;
+			trimSoon();
 		}
 
 		function buildTimeline() {
@@ -428,8 +457,11 @@
 				setMonth(state.month + 1);
 			});
 			attachEdgeFades(track, nav);
+			track.addEventListener('scroll', trimSoon, { passive: true });
+			window.addEventListener('resize', trimSoon);
 			nav.hidden = false;
 			centerMonth();
+			trimPartialMonths();
 		}
 
 		/* ---------- field guide tabs ---------- */

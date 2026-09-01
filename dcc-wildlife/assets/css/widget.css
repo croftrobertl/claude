@@ -235,6 +235,14 @@
 	}
 }
 
+/* A month that does not fit the track entirely is not rendered at all — see
+ * trimPartialMonths(). visibility, not display, so the strip's scroll
+ * geometry and the arrows behave exactly as before. */
+.dccwl-root .dccwl-month.dccwl-month-cut {
+	pointer-events: none;
+	visibility: hidden;
+}
+
 /* Edge fades cue that the strip scrolls.
  *
  * Masked rather than overlaid: a gradient fading to a page colour has to
