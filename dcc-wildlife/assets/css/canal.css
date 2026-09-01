@@ -100,6 +100,36 @@
 	outline: none;
 }
 
+/* ---- the heritage hero (1.11.0) -------------------------------------
+ * Folded into the hub header so the canal's own legend LEADS the experience
+ * without spending height on a separate banner. No new colour, no webfont —
+ * italics carry the quote. */
+.dccwl-hero-canal {
+	margin: 0 auto var(--dccwl-gap-lg);
+	max-width: 640px;
+}
+
+.dccwl-canal .dccwl-hero-canal-title.dccwl-hero-canal-title {
+	font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+	margin-bottom: 6px;
+}
+
+.dccwl-hero-canal-quote {
+	color: var(--dccwl-text);
+	font-size: 1.125rem;
+	font-style: italic;
+	line-height: 1.4;
+	margin: 0 auto;
+	max-width: 30ch;
+}
+
+.dccwl-hero-canal-attr {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: 6px auto 0;
+	max-width: 44ch;
+}
+
 /* ---- L1: the hub ---------------------------------------------------- */
 
 .dccwl-hub-tiles {

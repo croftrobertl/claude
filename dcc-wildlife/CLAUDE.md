@@ -21,14 +21,30 @@ git history at the v1.1.0 commit; any old sighting posts and the
 
 ## Hard rules (do not "fix" these)
 
-- **No API keys, no accounts, no CDN scripts, no webfonts, no image files,
-  ever.** The wildlife guide and the water almanac make ZERO network calls.
-  v1.4.0 added one deliberate, negotiated exception: the water module's
-  **optional, off-by-default** live layer calls two keyless public-domain
-  APIs (USGS, NWS) server-side. It was resolved in the open — the plugin
-  header was rewritten to describe what actually happens rather than keep
-  claiming "no external services". Do not re-broaden that promise, and do
-  not add a third remote source without the same conversation.
+- **No API keys, no accounts, no CDN scripts, no webfonts.** The wildlife
+  guide and the water almanac make ZERO network calls. v1.4.0 added one
+  deliberate, negotiated exception: the water module's **optional,
+  off-by-default** live layer calls two keyless public-domain APIs (USGS,
+  NWS) server-side. It was resolved in the open — the plugin header was
+  rewritten to describe what actually happens rather than keep claiming
+  "no external services". Do not re-broaden that promise, and do not add a
+  third remote source without the same conversation.
+- **Image files: allowed since v1.11.0 for VETTED species photos only
+  (owner-authorised 2026-09-01).** The "no image files, ever" rule was
+  relaxed on purpose: 17 of the 24 species now carry a real licensed photo
+  in `assets/photos/<id>.jpg`, shown as the hero of the detail sheet only
+  (the small tiles keep the SVG sprite, so the spotlight/guide grids still
+  ship no images). Each photo is a free-tier **Adobe Stock** license,
+  visually vetted for the correct species, and optimised to ≤ ~210KB; they
+  load `loading="lazy"`, one at a time, so a guest who never opens a species
+  pays nothing. The 7 species with no accurate free photo (ibis, wood stork,
+  little blue / tricolored heron, water snake, apple snail, resurrection
+  fern) DELIBERATELY keep their drawn scene — never swap in a wrong-species
+  photo to fill the gap. `Species::photos()` is the map; the credit line and
+  the `photoCredit` string are load-bearing (the licence expects
+  attribution). DO NOT delete `assets/photos/` as a "no image files"
+  cleanup — it is now sanctioned. Still no webfonts, no CDN, no per-tile
+  images.
 - **PHP must never bake "the current month" into HTML.** The site is
   aggressively page-cached (SpeedyCache + Endurance + advanced-cache.php).
   The full 12-month dataset ships to the client in the inline `DCC_WL_CFG`

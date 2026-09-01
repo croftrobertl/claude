@@ -201,10 +201,39 @@
 		}
 
 		function buildDetail(body, sp) {
-			var medallion = el('div', 'dccwl-medallion dccwl-medallion-' + (SCENES[sp.group] ? sp.group : 'critters'));
-			medallion.innerHTML = SCENES[sp.group] || SCENES.critters; // static trusted constant
-			medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite', 'dccwl-medallion-emoji'));
+			var medallion;
+			if (sp.photo && CFG.photoBase) {
+				// A real, licensed photo leads the sheet where we have a vetted
+				// one. Lazy — it loads only when a species is opened, one at a
+				// time. src is set as an ATTRIBUTE (never innerHTML), and the
+				// filename comes from a fixed server-side map.
+				medallion = el('div', 'dccwl-medallion dccwl-medallion-photo');
+				var img = document.createElement('img');
+				img.className = 'dccwl-photo';
+				img.loading = 'lazy';
+				img.decoding = 'async';
+				img.alt = sp.name;
+				img.src = CFG.photoBase + sp.photo;
+				medallion.appendChild(img);
+			} else {
+				// No photo for this species — the drawn scene + sprite still
+				// carries it, so a wrong-species stock image can never appear.
+				medallion = el('div', 'dccwl-medallion dccwl-medallion-' + (SCENES[sp.group] ? sp.group : 'critters'));
+				medallion.innerHTML = SCENES[sp.group] || SCENES.critters; // static trusted constant
+				medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite', 'dccwl-medallion-emoji'));
+			}
 			body.appendChild(medallion);
+
+			// Scientific name, italicised under the common name in the sheet
+			// head. Accuracy for the curious; the tile face stays plain.
+			if (sp.sci) {
+				body.appendChild(el('p', 'dccwl-sci', sp.sci));
+			}
+
+			// Quiet photo credit, only where a licensed photo is shown.
+			if (sp.photo && CFG.photoBase) {
+				body.appendChild(el('p', 'dccwl-photo-credit', CFG.i18n.photoCredit || 'Photo: Adobe Stock'));
+			}
 
 			var badges = el('p', 'dccwl-detail-badges');
 			if ((sp.months[state.month] || 0) >= 3) {
@@ -311,10 +340,12 @@
 			tile.appendChild(icon);
 			tile.appendChild(el('span', 'dccwl-tile-name', sp.name));
 
+			// The tile face carries ONE signal only — the coral "Peak" flag when
+			// the species is at its best this month. The month-range label that
+			// used to sit here (and left the strip reading as busy, mismatched
+			// cards) now lives in the detail sheet, where there is room for it.
 			if (value >= 3) {
 				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
-			} else if (sp.bestLabel) {
-				tile.appendChild(el('span', 'dccwl-tile-sub', sp.bestLabel));
 			}
 			wireTile(tile);
 			li.appendChild(tile);
@@ -484,10 +515,11 @@
 				if (old) { old.parentNode.removeChild(old); }
 				if (!sp || !sp.months) { return; }
 				var v = sp.months[state.month] || 0;
-				if (v < 2) { return; }
-				tile.appendChild(el('span',
-					'dccwl-tile-sub' + (v >= 3 ? ' dccwl-tile-peak' : ''),
-					v >= 3 ? CFG.i18n.peakShort : CFG.i18n.likeGood));
+				// One signal only, matching the spotlight: the coral "Peak" flag
+				// on species at their best this month. Everything else stays a
+				// plain icon-and-name tile, so the grid reads calm.
+				if (v < 3) { return; }
+				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
 			});
 		}
 

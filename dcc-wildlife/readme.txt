@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.10.2
+Stable tag: 1.11.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,14 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.11.0 =
+* **Attenborough-proof wildlife.** Every species now carries a scientific name (shown in the detail sheet) and its facts were re-verified against FWC, the Cornell Lab, the USF Plant Atlas, USGS and USFWS. Real corrections landed: the canal turtles no longer include the dry-upland gopher tortoise; the manatee is framed as the rare, recent, warm-month visitor it actually is (not a winter regular); the bald-cypress "knees" are described as an unresolved mystery rather than settled fact; the belted kingfisher loses an unverifiable dive speed; the wood stork is now a post-2026-delisting recovery success; and the resurrection fern uses its current name, *Pleopeltis michauxiana*.
+* **Seven new species, seven new sprites.** Limpkin, white ibis, wood stork, little blue heron, tricolored heron, green heron and the native Florida apple snail join the guide — each drawn as a bespoke two-tone sprite in the same deep-teal language as the rest, so no species falls back to a platform emoji.
+* **A calmer tile.** The spotlight and guide tiles now carry a single signal — the coral "Peak" flag when a species is at its best this month — instead of a mismatched month-range label. Same for the hub's guide grids. The strip reads quiet; the month-range moved into the detail sheet, where there is room.
+* **The heritage hero.** The hub now leads with the canal's own legend — Grantland Rice's "the most beautiful mile of waterway in the world" — folded into the header so it adds wonder without spending a pixel of the render budget on a second banner.
+* **A fishing almanac.** A new, clearly-attributed "Fishing the Harris Chain" block: the FWC sportfish and keep-limits, the eleven FWC fish attractors in Lake Dora, a season-by-season bass/crappie/bream guide, and an honest note on the full moon (FWC-supported) versus solunar tables (folklore). Season-shaped, so nothing month-specific enters cached HTML; rendered as guidance, never as a measured reading. A deliberate, owner-authorised expansion of the prior link-only fishing policy — see WATER-SOURCES.md.
+* **Real photos.** 17 of the 24 species now open their detail sheet with a real, licensed Adobe Stock photo (each visually vetted for the correct species, many unmistakably Florida — a manatee in a spring, a limpkin in the shallows, bald cypress in a swamp). The photos are lazy-loaded one at a time and never appear on the small tiles, so pages that don't open a species still ship no images. The 7 species without an accurate free photo keep their hand-drawn art rather than borrow a wrong-species stock shot. This relaxes the plugin's long-standing "no image files" rule for vetted species photos only (owner-authorised) — see CLAUDE.md.
 
 = 1.10.2 =
 * **The month strip no longer slices labels mid-word — and the fix reached the real cause.** 1.10.1 removed the edge fade on phones to stop it dimming the selected month, which left labels hard-clipped to "ul" and "No". The underlying bug was in the centring: it measured each pill from its offsetParent rather than from the scrolling track, a constant error that was invisible on a wide desktop strip and left the selected month 6px from the edge on a 320px phone. With that corrected the selected pill sits 65px clear at 320px, so the fade is back at every width. And because no amount of fading turns "ul" into July, a month that does not fit the strip entirely is now not drawn at all: at 320, 375 and 414 the strip shows three whole labels — Jul, **Aug**, Sep — with the selection solid and no fragment anywhere. The arrows still reach every month, and the month picker still offers all twelve at once.

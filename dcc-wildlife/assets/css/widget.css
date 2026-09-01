@@ -446,6 +446,37 @@
 	transform: translate(-50%, -52%);
 }
 
+/* Scientific name under the common name — italic, quiet, authoritative. */
+.dccwl-sheet .dccwl-sci {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-style: italic;
+	margin: 0 0 var(--dccwl-gap);
+}
+
+/* Real-photo hero (v1.11.0) — a licensed photo fills the medallion where we
+ * have a vetted one; species without a photo keep the drawn scene above. */
+.dccwl-sheet .dccwl-medallion-photo { height: 224px; }
+
+.dccwl-sheet .dccwl-medallion-photo .dccwl-photo {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
+.dccwl-sheet .dccwl-photo-credit {
+	color: var(--dccwl-text-faint);
+	font-size: 0.72rem;
+	letter-spacing: 0.02em;
+	margin: 0 0 var(--dccwl-gap);
+	text-align: right;
+}
+
+@media (max-width: 600px) {
+	.dccwl-sheet .dccwl-medallion-photo { height: 190px; }
+}
+
 .dccwl-sheet .dccwl-detail-badges {
 	display: flex;
 	flex-wrap: wrap;

@@ -63,11 +63,12 @@ final class Water_Render {
 		$about     = Water_Data::almanac( 'about' );
 		$links     = Water_Data::link_list( 'links' );
 		$reports   = Water_Data::link_list( 'reports' );
+		$fishing   = Water_Data::fishing();
 		$live      = Water_Data::live_possible() || Water_Data::map_possible();
-		$has_static = Water_Data::has_static_content();
+		$has_static = Water_Data::has_static_content() || null !== $fishing;
 
-		// Nothing sourced and no live layer: render nothing at all. An empty
-		// section is worse than no section.
+		// Nothing sourced, no fishing almanac and no live layer: render nothing
+		// at all. An empty section is worse than no section.
 		if ( ! $has_static && ! $live ) {
 			return '';
 		}
@@ -94,6 +95,10 @@ final class Water_Render {
 						<ul class="dccwl-cards dccwl-water-facts" data-dccwl-water-chain></ul>
 					</div>
 				</div>
+			<?php endif; ?>
+
+			<?php if ( null !== $fishing ) : ?>
+				<?php self::render_fishing( $fishing ); ?>
 			<?php endif; ?>
 
 			<?php self::render_almanac( $almanac ); ?>
@@ -183,6 +188,110 @@ final class Water_Render {
 			</div>
 			<?php
 		}
+	}
+
+	/**
+	 * The fishing almanac (v1.11.0). Static, FWC-sourced angling guidance,
+	 * rendered under its own honestly-labelled heading — never as a measured
+	 * reading, and never through the Water_Fact gate (it is guidance, not a
+	 * gauge value). Season-shaped, so nothing month-specific enters cached HTML.
+	 *
+	 * @param array<string,mixed> $f
+	 */
+	private static function render_fishing( array $f ): void {
+		$seasons = is_array( $f['seasons'] ?? null ) ? $f['seasons'] : [];
+		$regs    = is_array( $f['regs'] ?? null ) ? $f['regs'] : [];
+		$fish    = [
+			'bass'    => __( 'Bass', 'dcc-wildlife' ),
+			'crappie' => __( 'Crappie', 'dcc-wildlife' ),
+			'bream'   => __( 'Bream', 'dcc-wildlife' ),
+		];
+		?>
+		<div class="dccwl-fishing" data-dccwl-fishing>
+			<h3 class="dccwl-water-sub"><?php esc_html_e( 'Fishing the Harris Chain', 'dcc-wildlife' ); ?></h3>
+			<?php if ( ! empty( $f['intro'] ) ) : ?>
+				<p class="dccwl-fishing-intro"><?php echo esc_html( (string) $f['intro'] ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( $seasons ) : ?>
+				<ul class="dccwl-fishing-seasons">
+					<?php foreach ( $seasons as $s ) : ?>
+						<?php if ( ! is_array( $s ) ) { continue; } ?>
+						<li class="dccwl-fishing-season">
+							<p class="dccwl-fishing-season-name"><?php echo esc_html( (string) ( $s['name'] ?? '' ) ); ?></p>
+							<?php foreach ( $fish as $k => $label ) : ?>
+								<?php if ( ! empty( $s[ $k ] ) ) : ?>
+									<p class="dccwl-fishing-line"><span class="dccwl-fishing-fish"><?php echo esc_html( $label ); ?></span> <?php echo esc_html( (string) $s[ $k ] ); ?></p>
+								<?php endif; ?>
+							<?php endforeach; ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $f['sportfish'] ) ) : ?>
+				<p class="dccwl-fishing-note"><?php echo esc_html( (string) $f['sportfish'] ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $f['attractors'] ) ) : ?>
+				<p class="dccwl-fishing-note">
+					<?php echo esc_html( (string) $f['attractors'] ); ?>
+					<?php if ( ! empty( $f['attractors_url'] ) ) : ?>
+						<a href="<?php echo esc_url( (string) $f['attractors_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php echo esc_html( (string) ( $f['attractors_label'] ?? $f['attractors_url'] ) ); ?></a>
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( $regs ) : ?>
+				<div class="dccwl-fishing-regs">
+					<h4 class="dccwl-fishing-h"><?php esc_html_e( 'Keep-limits — Florida FWC', 'dcc-wildlife' ); ?></h4>
+					<ul class="dccwl-fishing-reglist">
+						<?php foreach ( $regs as $r ) : ?>
+							<?php if ( is_array( $r ) && isset( $r[0], $r[1] ) ) : ?>
+								<li><span class="dccwl-fishing-reg-k"><?php echo esc_html( (string) $r[0] ); ?></span><span class="dccwl-fishing-reg-v"><?php echo esc_html( (string) $r[1] ); ?></span></li>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</ul>
+					<?php if ( ! empty( $f['license'] ) ) : ?>
+						<p class="dccwl-fishing-note dccwl-fishing-license">
+							<?php echo esc_html( (string) $f['license'] ); ?>
+							<?php if ( ! empty( $f['license_url'] ) ) : ?>
+								<a href="<?php echo esc_url( (string) $f['license_url'] ); ?>" rel="noopener nofollow" target="_blank"><?php esc_html_e( 'FWC licences', 'dcc-wildlife' ); ?></a>
+							<?php endif; ?>
+						</p>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $f['moon'] ) ) : ?>
+				<p class="dccwl-fishing-note dccwl-fishing-moon"><?php echo esc_html( (string) $f['moon'] ); ?></p>
+			<?php endif; ?>
+
+			<?php
+			$fish_links = [];
+			foreach ( [ 'forecast', 'regs' ] as $key ) {
+				if ( ! empty( $f[ $key . '_url' ] ) ) {
+					$fish_links[] = [
+						'url'   => (string) $f[ $key . '_url' ],
+						'label' => (string) ( $f[ $key . '_label' ] ?? $f[ $key . '_url' ] ),
+					];
+				}
+			}
+			?>
+			<p class="dccwl-fishing-src">
+				<?php if ( ! empty( $f['source'] ) ) : ?>
+					<span class="dccwl-fishing-src-note"><?php echo esc_html( (string) $f['source'] ); ?></span>
+				<?php endif; ?>
+				<?php if ( $fish_links ) : ?>
+					<span class="dccwl-fishing-src-links">
+						<?php foreach ( $fish_links as $i => $l ) : ?>
+							<?php echo $i ? esc_html( ' · ' ) : ''; ?><a href="<?php echo esc_url( $l['url'] ); ?>" rel="noopener nofollow" target="_blank"><?php echo esc_html( $l['label'] ); ?></a>
+						<?php endforeach; ?>
+					</span>
+				<?php endif; ?>
+			</p>
+		</div>
+		<?php
 	}
 
 	/**

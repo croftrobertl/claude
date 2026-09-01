@@ -88,7 +88,16 @@ final class Canal_Render {
 
 				<?php /* ---------- L1: the hub ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-hub" data-dccwl-panel="hub" tabindex="-1">
-					<h2 class="dccwl-panel-title"><?php echo esc_html( '' !== $title ? $title : __( 'The Dora Canal', 'dcc-wildlife' ) ); ?></h2>
+					<?php /* The heritage hero (1.11.0). Folded into the hub's own
+					         header so it adds wonder without a second stacked block
+					         (the render budget is unchanged). The Grantland Rice
+					         line is the canal's long-standing calling card; the
+					         "Elfin River" was its steamboat-era name. */ ?>
+					<div class="dccwl-hero-canal">
+						<h2 class="dccwl-panel-title dccwl-hero-canal-title"><?php echo esc_html( '' !== $title ? $title : __( 'The Dora Canal', 'dcc-wildlife' ) ); ?></h2>
+						<p class="dccwl-hero-canal-quote"><?php esc_html_e( '“The most beautiful mile of waterway in the world.”', 'dcc-wildlife' ); ?></p>
+						<p class="dccwl-hero-canal-attr"><?php esc_html_e( '— sportswriter Grantland Rice, of the cypress-canopied channel once called the Elfin River', 'dcc-wildlife' ); ?></p>
+					</div>
 					<ul class="dccwl-hub-tiles">
 						<li>
 							<button type="button" class="dccwl-hub-tile" data-dccwl-go="month">

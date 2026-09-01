@@ -108,6 +108,17 @@ final class Water_Data {
 			'links'             => self::default_links(),
 			'reports'           => [],  // "Local reports & charters" — owner-supplied only.
 
+			// Fishing almanac (v1.11.0). Static, FWC-sourced angling guidance —
+			// species, limits, the Lake Dora fish attractors and a month-by-month
+			// pattern. It makes NO network call (unlike the live layer), so it is
+			// on by default. This is a DELIBERATE expansion, authorised by the
+			// owner on 2026-09-01, of the prior "fishing is link-only" policy
+			// (see class-water-data's dock-notes comment and WATER-SOURCES.md):
+			// every claim is attributed to FWC or flagged as veteran-guide
+			// guidance, the block never masquerades as a measured reading, and it
+			// carries the same "check FWC, seasons change" disclaimer.
+			'fishing_enabled'   => 1,
+
 			// Uninstall stays conservative unless the owner opts in: the site
 			// reinstalls zips routinely, and hand-tuned settings must never be
 			// lost to an accidental delete-then-reinstall.
@@ -344,6 +355,106 @@ final class Water_Data {
 				'label' => __( 'St. Johns River Water Management District', 'dcc-wildlife' ),
 				'url'   => 'https://www.sjrwmd.com/',
 			],
+		];
+	}
+
+	public static function fishing_enabled(): bool {
+		return (bool) self::get( 'fishing_enabled' );
+	}
+
+	/**
+	 * The fishing almanac (v1.11.0), or null when switched off.
+	 *
+	 * Static, FWC-sourced angling guidance — makes NO network call. Authorised
+	 * by the owner on 2026-09-01 as a deliberate expansion of the prior
+	 * "fishing is link-only" policy (see the dock-notes comment above and
+	 * WATER-SOURCES.md). Every claim is either FWC-official (regs, sportfish,
+	 * attractors) or FWC-plus-veteran-guide seasonal guidance, it is rendered
+	 * under its own honestly-labelled heading (never as a measured reading),
+	 * and it is SEASON-shaped rather than month-shaped so nothing time-specific
+	 * is baked into the cached page.
+	 *
+	 * Regs verified against FWC statewide bag & length limits; sportfish and
+	 * fish attractors from the FWC Harris Chain forecast and attractor list;
+	 * seasonal patterns from that forecast plus reputable guide reports. The
+	 * FWC forecast text rotates through the year, so this stays at season scale.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	public static function fishing(): ?array {
+		if ( ! self::fishing_enabled() ) {
+			return null;
+		}
+
+		/**
+		 * Filter the fishing almanac before it renders. Return null to hide it.
+		 *
+		 * @param array<string,mixed> $data
+		 */
+		$data = apply_filters( 'dcc_wl_fishing', self::default_fishing() );
+		return is_array( $data ) ? $data : null;
+	}
+
+	/**
+	 * @return array<string,mixed>
+	 */
+	public static function default_fishing(): array {
+		return [
+			'intro'            => __( 'Lake Dora and Lake Eustis are two links in the Harris Chain of Lakes — a nationally known trophy-bass fishery that also gives up excellent crappie (speckled perch) and bream. Here is the shape of the year.', 'dcc-wildlife' ),
+
+			// FWC-official reference.
+			'sportfish'        => __( 'The headline sportfish are largemouth bass, black crappie (speckled perch), and bream — bluegill and redear (shellcracker); FWC has also stocked sunshine bass. FWC rates Dora and Harris for strong bluegill, and Dora and Griffin for big shellcracker.', 'dcc-wildlife' ),
+			'attractors'       => __( 'FWC has sunk eleven “Mossback” brush-pile fish attractors in Lake Dora — offshore cover that pulls in crappie and bream. Their GPS coordinates and a map are on FWC’s Harris Chain attractor list.', 'dcc-wildlife' ),
+			'attractors_url'   => 'https://myfwc.com/media/20144/fw-harris-fish-attractors.pdf',
+			'attractors_label' => __( 'FWC — Harris Chain fish-attractor list (PDF)', 'dcc-wildlife' ),
+
+			// Season-shaped so nothing month-specific enters cached HTML.
+			// bass / crappie / bream lines per season; FWC + veteran-guide.
+			'seasons'          => [
+				[
+					'name'    => __( 'Winter · Dec–Feb', 'dcc-wildlife' ),
+					'bass'    => __( 'Pre-spawn — the big females stage on deep hydrilla edges. Work speed worms and crankbaits, and flip the back canals on the warmer afternoons.', 'dcc-wildlife' ),
+					'crappie' => __( 'The year’s best. Drift the open water and channel edges with minnows or small jigs; the February full moon fires them up (FWC).', 'dcc-wildlife' ),
+					'bream'   => __( 'Slow in the cold — not a target now.', 'dcc-wildlife' ),
+				],
+				[
+					'name'    => __( 'Spring · Mar–May', 'dcc-wildlife' ),
+					'bass'    => __( 'The spawn — bass move shallow into the canals and grassy flats. Live shiners, soft plastics, and flipping jigs.', 'dcc-wildlife' ),
+					'crappie' => __( 'Still strong on the March full moon, then tapering as the water warms.', 'dcc-wildlife' ),
+					'bream'   => __( 'The bite opens up: redear (shellcracker) on the March–April full moons, bluegill close behind. Worms and crickets on shallow sandy beds (FWC).', 'dcc-wildlife' ),
+				],
+				[
+					'name'    => __( 'Summer · Jun–Aug', 'dcc-wildlife' ),
+					'bass'    => __( 'Beat the heat: fish dawn and dusk with frogs over the pads, and deep-diving crankbaits on the offshore hydrilla and the fish attractors (FWC).', 'dcc-wildlife' ),
+					'crappie' => __( 'Slow by day — look for a night bite in deeper water.', 'dcc-wildlife' ),
+					'bream'   => __( 'Prime and dependable — bedding on the full moons all summer. A great month for kids, with crickets and worms (FWC).', 'dcc-wildlife' ),
+				],
+				[
+					'name'    => __( 'Fall · Sep–Nov', 'dcc-wildlife' ),
+					'bass'    => __( 'The fall feed-up — bass chase shad shallow. Cover water with crankbaits, spinnerbaits, and topwater.', 'dcc-wildlife' ),
+					'crappie' => __( 'Turning back on as the water cools, ramping toward the winter peak.', 'dcc-wildlife' ),
+					'bream'   => __( 'Fading with the first cool fronts.', 'dcc-wildlife' ),
+				],
+			],
+
+			'moon'             => __( 'Bream bed on the full moon — FWC times redear to the March–April full moons and bluegill through the summer moons — and crappie spawning peaks on the February and March full moons. Broader “solunar” bite-time tables are angler tradition, not FWC science: water temperature, cold fronts, and plain old dawn and dusk are what actually move fish.', 'dcc-wildlife' ),
+
+			// FWC statewide limits (verified against the FWC page).
+			'regs'             => [
+				[ __( 'Largemouth bass', 'dcc-wildlife' ), __( '5 per day — only one may be 16″ or longer; no minimum size', 'dcc-wildlife' ) ],
+				[ __( 'Black crappie (specks)', 'dcc-wildlife' ), __( '25 per day — no size limit', 'dcc-wildlife' ) ],
+				[ __( 'Panfish (bluegill, shellcracker…)', 'dcc-wildlife' ), __( '50 per day, in total', 'dcc-wildlife' ) ],
+				[ __( 'Sunshine / striped / white bass', 'dcc-wildlife' ), __( '20 per day — only 6 may be 24″ or longer', 'dcc-wildlife' ) ],
+				[ __( 'Catfish, gar, bowfin, pickerel', 'dcc-wildlife' ), __( 'No statewide bag or size limit', 'dcc-wildlife' ) ],
+			],
+			'regs_url'         => 'https://myfwc.com/fishing/freshwater/regulations/general/',
+			'regs_label'       => __( 'FWC — statewide bag & length limits', 'dcc-wildlife' ),
+			'license'          => __( 'Anglers 16 and older need a Florida freshwater fishing licence (some exemptions — under-16, resident seniors 65+, free-fishing days).', 'dcc-wildlife' ),
+			'license_url'      => 'https://myfwc.com/license/recreational/do-i-need-one/',
+
+			'forecast_url'     => 'https://myfwc.com/fishing/freshwater/sites-forecasts/ne/lake-harris/',
+			'forecast_label'   => __( 'FWC — Harris Chain fishing forecast', 'dcc-wildlife' ),
+			'source'           => __( 'Limits, sportfish and attractors from Florida FWC; seasonal patterns from FWC’s Harris Chain forecast and veteran-guide reports. The FWC forecast updates through the year — always check the FWC before you keep a fish.', 'dcc-wildlife' ),
 		];
 	}
 

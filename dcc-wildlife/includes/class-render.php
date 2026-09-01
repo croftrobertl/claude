@@ -340,6 +340,7 @@ final class Render {
 
 		$config = [
 			'species'    => $species,
+			'photoBase'  => esc_url_raw( DCC_WL_URL . 'assets/photos/' ),
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
 			// Toggle state is baked into the cached page, matching the
@@ -365,6 +366,7 @@ final class Render {
 				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),
 				'close'       => __( 'Close details', 'dcc-wildlife' ),
 				'details'     => __( 'Species details', 'dcc-wildlife' ),
+				'photoCredit' => __( 'Photo: Adobe Stock', 'dcc-wildlife' ),
 				'noSpotlight' => __( 'A quiet month on the canal — browse the field guide below.', 'dcc-wildlife' ),
 
 				// The 12-month likelihood strip in the detail drawer. The

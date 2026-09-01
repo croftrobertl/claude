@@ -314,3 +314,64 @@ appear until it does — it is never shown with invented or empty readings.
 4. On the map, switch "Colour by" to **Data age** to see instantly which waters
    are reporting and which are not.
 5. If a value has no line beneath it, that is a bug. It should not be possible.
+
+---
+
+## v1.11.0 — Fishing almanac, wildlife accuracy pass, and species photos (2026-09-01)
+
+Three additions, each owner-authorised on 2026-09-01, each with its own sourcing.
+
+### 1. Fishing almanac (`Water_Data::default_fishing()` → the "Fishing the Harris Chain" block)
+
+A deliberate expansion of the prior **link-only** fishing policy (the owner does
+not fish; earlier versions refused to state anything). Now rendered under its own
+honestly-labelled heading, **never** through the `Water_Fact` gate (it is
+seasonal guidance, not a measured reading) and **season-shaped** so nothing
+month-specific is baked into cached HTML.
+
+- **Regulations** — FWC statewide bag & length limits, verified against
+  https://myfwc.com/fishing/freshwater/regulations/general/ : black bass 5/day
+  (one ≥16″), crappie 25/day, panfish 50/day aggregate, sunshine/striped/white
+  bass 20/day (6 ≥24″), no statewide limit on catfish/gar/bowfin/pickerel. No
+  Harris-Chain-specific special reg exists (checked the Special Limits page).
+- **Sportfish + attractors** — FWC Harris Chain forecast
+  (https://myfwc.com/fishing/freshwater/sites-forecasts/ne/lake-harris/) and the
+  FWC attractor list (https://myfwc.com/media/20144/fw-harris-fish-attractors.pdf,
+  11 "Mossback" attractors in Lake Dora). We link the PDF rather than bake the
+  coordinates, which FWC re-works over time.
+- **Season-by-season patterns** — FWC forecast + FWC bream/crappie pages
+  (full-moon bedding is FWC-stated) plus reputable guide reports (Bassmaster,
+  BassOnline). The block says so, and the "solunar tables are folklore, not FWC
+  science" caveat is stated outright. The FWC forecast text rotates through the
+  year, so we stay at season scale and disclaim it.
+- **Left out on purpose:** trophy-size superlatives and precise bite-time
+  predictions (guide marketing, not FWC), and any claim that reads as the owner's
+  personal local knowledge.
+
+### 2. Wildlife guide accuracy pass (`Species::registry()` / `calendar()`)
+
+Every species carries a scientific name and its facts were re-verified against
+FWC, the Cornell Lab (All About Birds / Birds of the World), the USF Plant Atlas,
+USGS, USFWS, the Florida Museum and UF/IFAS. Corrections of record: turtles no
+longer list the dry-upland gopher tortoise; the manatee is the rare warm-month
+visitor it actually is (first Harris-Chain record 2015), not a winter regular;
+the bald-cypress "knees" are an unresolved mystery, not settled fact; the belted
+kingfisher lost an unsourceable "25 mph"; the wood stork is a post-2026-ESA-
+delisting recovery success (FWC's own profile still lags on this); the
+resurrection fern uses its current name *Pleopeltis michauxiana*; the water snake
+gains a cottonmouth safety caveat. Six iconic canal species were added (limpkin,
+white ibis, wood stork, little blue / tricolored / green heron) plus the native
+Florida apple snail (*Pomacea paludosa*), the keystone the limpkin and snail kite
+feed on.
+
+### 3. Species photos (`Species::photos()` → `assets/photos/`)
+
+17 of 24 species now open their detail sheet with a real photo; see the CLAUDE.md
+"Image files" rule for the full policy. Every photo is a **free-tier Adobe Stock
+license** (zero cost), visually vetted for the correct species before licensing,
+and optimised to ≤ ~210KB, lazy-loaded one at a time. The 7 species with no
+accurate free photo (white ibis, wood stork, little blue / tricolored heron,
+water snake, apple snail, resurrection fern — the free results were European
+storks, great egrets, sea kraits, etc.) keep their drawn sprite: a wrong-species
+photo would undo the accuracy pass above, so it is never substituted. Attribution
+is shown in the sheet ("Photo: Adobe Stock").

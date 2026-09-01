@@ -408,7 +408,129 @@
 	margin: 6px 0 0;
 }
 
+/* =====================================================================
+ * FISHING ALMANAC (v1.11.0)
+ * Static, FWC-sourced angling guidance in its own block, below the live
+ * "Right now" strip. Season cards read as a calm grid; the keep-limits are a
+ * simple two-column list; every part ends in a visible source line. Prose is
+ * left-aligned for readability even inside the centred hub — text-align set
+ * directly on the block wins over the hub's inherited centring.
+ * ================================================================== */
+
+.dccwl-fishing { text-align: left; }
+
+.dccwl-fishing-intro {
+	color: var(--dccwl-text);
+	margin: 0 0 var(--dccwl-gap-lg);
+}
+
+.dccwl-fishing-seasons {
+	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	list-style: none;
+	margin: 0 0 var(--dccwl-gap-lg);
+	padding: 0;
+}
+
+.dccwl-fishing-season {
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	background: var(--dccwl-glass-bg);
+	border: 1px solid var(--dccwl-glass-border);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	margin: 0;
+	padding: var(--dccwl-pad);
+}
+
+.dccwl-fishing-season-name {
+	color: var(--dccwl-primary);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	margin: 0 0 6px;
+	text-transform: uppercase;
+}
+
+.dccwl-fishing-line {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-sm);
+	line-height: 1.4;
+	margin: 6px 0 0;
+}
+
+.dccwl-fishing-fish {
+	color: var(--dccwl-text-muted);
+	font-weight: 700;
+}
+
+.dccwl-fishing-note {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-sm);
+	margin: var(--dccwl-gap) 0 0;
+}
+
+.dccwl-fishing-note a,
+.dccwl-fishing-src a { color: var(--dccwl-primary); }
+
+.dccwl-fishing-moon {
+	color: var(--dccwl-text-muted);
+	font-style: italic;
+}
+
+.dccwl-fishing-regs {
+	background: var(--dccwl-primary-soft);
+	border-radius: var(--dccwl-radius);
+	margin: var(--dccwl-gap-lg) 0 0;
+	padding: var(--dccwl-pad);
+}
+
+.dccwl-fishing-h {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	margin: 0 0 6px;
+	text-transform: uppercase;
+}
+
+.dccwl-fishing-reglist {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dccwl-fishing-reglist li {
+	border-bottom: 1px solid var(--dccwl-line);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+	justify-content: space-between;
+	padding: 6px 0;
+}
+
+.dccwl-fishing-reglist li:last-child { border-bottom: 0; }
+
+.dccwl-fishing-reg-k { color: var(--dccwl-text); font-weight: 600; }
+.dccwl-fishing-reg-v { color: var(--dccwl-text-muted); }
+
+.dccwl-fishing-license {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	margin-top: var(--dccwl-gap);
+}
+
+.dccwl-fishing-src {
+	color: var(--dccwl-text-faint);
+	font-size: var(--dccwl-fs-xs);
+	margin: var(--dccwl-gap-lg) 0 0;
+}
+
+.dccwl-fishing-src-links { display: inline-block; margin-top: 4px; }
+
 @media (max-width: 600px) {
 	.dccwl-water .dccwl-cards { grid-template-columns: 1fr; }
 	.dccwl-water .dccwl-card-srcname { max-width: 20ch; }
+	.dccwl-fishing-seasons { grid-template-columns: 1fr; }
 }
