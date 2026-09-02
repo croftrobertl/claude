@@ -79,6 +79,7 @@ final class Water_Render {
 		?>
 		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
+			<div class="dccwl-moon" data-dccwl-moon hidden></div>
 
 			<?php if ( $live ) : ?>
 				<?php /* Shell only — filled client-side so page caching cannot serve a stale reading. */ ?>
@@ -441,8 +442,32 @@ final class Water_Render {
 					// The sheet is a body-level element, so it needs to be
 					// told which app/theme classes to wear (1.9.0).
 					'appClasses' => Render::app_classes(),
+					'coords'     => Water_Data::coords(),
 					'i18n'     => [
 						'asOf'        => __( 'reading', 'dcc-wildlife' ),
+						'moon' => [
+							'label' => __( 'Tonight on the canal', 'dcc-wildlife' ),
+							/* translators: 1: sunrise time, 2: sunset time. */
+							'light' => __( 'First light %1$s · last light %2$s', 'dcc-wildlife' ),
+							'new' => __( 'New moon', 'dcc-wildlife' ),
+							'waxingCrescent' => __( 'Waxing crescent', 'dcc-wildlife' ),
+							'firstQuarter' => __( 'First quarter', 'dcc-wildlife' ),
+							'waxingGibbous' => __( 'Waxing gibbous', 'dcc-wildlife' ),
+							'full' => __( 'Full moon', 'dcc-wildlife' ),
+							'waningGibbous' => __( 'Waning gibbous', 'dcc-wildlife' ),
+							'lastQuarter' => __( 'Last quarter', 'dcc-wildlife' ),
+							'waningCrescent' => __( 'Waning crescent', 'dcc-wildlife' ),
+							'night' => __( 'night', 'dcc-wildlife' ),
+							'nights' => __( 'nights', 'dcc-wildlife' ),
+							'lineFull' => __( 'The full moon is up — prime for bedding bream and staging specks, and the gators bellow into the bright night.', 'dcc-wildlife' ),
+							/* translators: %s: a duration such as "4 nights". */
+							'lineToFull' => __( 'Full moon in %s — the bream will bed and the crappie stage.', 'dcc-wildlife' ),
+							/* translators: %s: a duration such as "3 nights". */
+							'lineSinceFull' => __( 'The full moon was %s ago — bream bedded on it, and the bite lingers.', 'dcc-wildlife' ),
+							'lineDark' => __( 'Dark skies tonight — best for the stars over the cypress, and the gators are boldest after moonset.', 'dcc-wildlife' ),
+							/* translators: 1: phase name (lowercase), 2: illumination percent. */
+							'lineGeneric' => __( 'A %1$s tonight, %2$d% lit.', 'dcc-wildlife' ),
+						],
 						'mapTitle'    => __( 'Chain map', 'dcc-wildlife' ),
 						'mapClose'    => __( 'Close the map', 'dcc-wildlife' ),
 						'ageToday'    => __( 'today', 'dcc-wildlife' ),

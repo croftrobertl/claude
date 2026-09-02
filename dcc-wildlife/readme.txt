@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.11.0
+Stable tag: 1.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.12.0 =
+* **Tonight on the Canal.** The water module now opens with tonight's real moon — its phase computed live in the browser with Meeus' phase-angle formula (accurate to a fraction of a percent, verified against the real sky) and drawn geometrically as a flat two-tone disk that changes every night. It's tied to the canal's rhythms: the FWC full-moon fishing behaviour (bream bed, crappie stage) and the after-dark wildlife (gators bellow), plus "first light / last light" from the sunrise equation for the canal's own coordinates — dawn and dusk being its most active hours. All of it is pure astronomy: zero network calls, computed client-side so it never enters the cached HTML. On an actual full-moon night the card wears a soft warm halo.
+* **Lusher field-guide plates.** The three shared detail-sheet scenes were redrawn from abstract shapes into evocative Florida-canal vignettes — a golden-hour waterline with a cypress silhouette and Spanish moss for birds, sunlit rippled water with lily pads for critters, a cypress grove with hanging moss and ferns for plants — so the seven species that carry hand-drawn art (rather than a photo) read as deliberate naturalist illustrations.
+* **A more immersive photo hero on phones.** Fixed a CSS bug that was shrinking the detail-sheet photo to 140px on mobile; the licensed photos now fill a 210px hero on a phone.
 
 = 1.11.0 =
 * **Attenborough-proof wildlife.** Every species now carries a scientific name (shown in the detail sheet) and its facts were re-verified against FWC, the Cornell Lab, the USF Plant Atlas, USGS and USFWS. Real corrections landed: the canal turtles no longer include the dry-upland gopher tortoise; the manatee is framed as the rare, recent, warm-month visitor it actually is (not a winter regular); the bald-cypress "knees" are described as an unresolved mystery rather than settled fact; the belted kingfisher loses an unverifiable dive speed; the wood stork is now a post-2026-delisting recovery success; and the resurrection fern uses its current name, *Pleopeltis michauxiana*.

@@ -26,38 +26,40 @@
 	var SCENES = {
 		critters:
 			'<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
-			'<rect width="120" height="120" fill="#2b5a66"/>' +
-			'<path d="M0 68 Q30 62 60 68 T120 68 V120 H0 Z" fill="#234b56"/>' +
-			'<ellipse cx="60" cy="88" rx="30" ry="7" fill="none" stroke="#4d7d86" stroke-width="2"/>' +
-			'<ellipse cx="60" cy="88" rx="16" ry="4" fill="none" stroke="#6da3ae" stroke-width="1.5"/>' +
-			'<path d="M13 102 a13 8 0 1 1 26 0 l-13 -3 z" fill="#2e7d5b"/>' +
-			'<path d="M96 99 a10 6 0 1 1 20 0 l-10 -2.4 z" fill="#27604a"/>' +
-			'<circle cx="98" cy="26" r="2.5" fill="#6da3ae"/>' +
-			'<circle cx="22" cy="20" r="2" fill="#4d7d86"/>' +
-			'<circle cx="34" cy="34" r="1.5" fill="#4d7d86"/>' +
+			'<rect width="120" height="120" fill="#3f7079"/>' +
+			'<rect width="120" height="52" fill="#5a8d95"/>' +
+			'<ellipse cx="60" cy="70" rx="48" ry="9" fill="none" stroke="#7aacb2" stroke-width="1.6" opacity="0.65"/>' +
+			'<ellipse cx="60" cy="70" rx="28" ry="5.5" fill="none" stroke="#a2c9ce" stroke-width="1.3" opacity="0.65"/>' +
+			'<path d="M0 98 H120 V120 H0 Z" fill="#2c5560"/>' +
+			'<path d="M-2 100 q30 -6 60 0 t62 0" fill="none" stroke="#4d7d86" stroke-width="3" opacity="0.55"/>' +
+			'<ellipse cx="22" cy="106" rx="15" ry="4.6" fill="#2e7d5b"/>' +
+			'<ellipse cx="99" cy="100" rx="12" ry="4" fill="#27604a"/>' +
+			'<g stroke="#3e7257" stroke-width="2.2" stroke-linecap="round"><line x1="9" y1="74" x2="9" y2="54"/><line x1="14" y1="74" x2="15" y2="58"/></g>' +
+			'<circle cx="99" cy="24" r="2.4" fill="#a2c9ce"/><circle cx="24" cy="20" r="1.8" fill="#7aacb2"/>' +
 			'</svg>',
 		birds:
 			'<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
-			'<rect width="120" height="120" fill="#f6d7b8"/>' +
-			'<rect y="36" width="120" height="30" fill="#efc6a4"/>' +
-			'<circle cx="88" cy="26" r="12" fill="#f9e6cd"/>' +
-			'<path d="M0 76 10 66 14 76 22 60 30 76 38 68 44 76 54 56 62 76 72 64 80 76 90 60 98 76 108 68 114 76 120 71 V120 H0 Z" fill="#46707a"/>' +
-			'<path d="M0 94 Q30 90 60 94 T120 94 V120 H0 Z" fill="#1c3a43"/>' +
-			'<path d="M20 26 q4 -4 8 0 q4 -4 8 0" fill="none" stroke="#d8a986" stroke-width="2" stroke-linecap="round"/>' +
-			'<path d="M42 16 q3 -3 6 0 q3 -3 6 0" fill="none" stroke="#d8a986" stroke-width="1.8" stroke-linecap="round"/>' +
+			'<rect width="120" height="120" fill="#f7ddc0"/>' +
+			'<rect y="40" width="120" height="80" fill="#f0d0ae"/>' +
+			'<circle cx="60" cy="34" r="15" fill="#fcead6"/>' +
+			'<path d="M0 62 q10 -6 20 -2 q10 4 20 -1 q10 -6 20 -1 q10 4 20 -2 q10 -6 20 0 q10 4 20 -1 V84 H0 Z" fill="#7aa3a9" opacity="0.4"/>' +
+			'<rect y="80" width="120" height="40" fill="#4d7d86"/>' +
+			'<rect y="80" width="120" height="5" fill="#7cabb3"/>' +
+			'<g stroke="#c8e0e3" stroke-width="1.4" stroke-linecap="round" opacity="0.5"><line x1="14" y1="98" x2="34" y2="98"/><line x1="72" y1="106" x2="98" y2="106"/><line x1="46" y1="113" x2="62" y2="113"/></g>' +
+			'<path d="M2 82 C-2 56 8 46 12 32 C17 46 25 60 20 82 Z" fill="#2f5a52"/>' +
+			'<g stroke="#8aa994" stroke-width="1" stroke-linecap="round" opacity="0.75"><line x1="8" y1="48" x2="8" y2="62"/><line x1="13" y1="52" x2="13" y2="64"/></g>' +
+			'<g stroke="#3e7257" stroke-width="2.2" stroke-linecap="round"><line x1="110" y1="82" x2="110" y2="60"/><line x1="115" y1="82" x2="116" y2="64"/><line x1="105" y1="82" x2="106" y2="66"/></g>' +
 			'</svg>',
 		plants:
 			'<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
-			'<rect width="120" height="120" fill="#e9e3d0"/>' +
-			'<path d="M0 78 Q30 72 60 78 T120 78 V120 H0 Z" fill="#2e5d46"/>' +
-			'<path d="M0 102 Q30 98 60 102 T120 102 V120 H0 Z" fill="#1c3a43"/>' +
-			'<line x1="36" y1="100" x2="36" y2="42" stroke="#5d3f28" stroke-width="2.5"/>' +
-			'<rect x="32.5" y="26" width="7" height="18" rx="3.5" fill="#8a5a3b"/>' +
-			'<line x1="52" y1="100" x2="52" y2="58" stroke="#5d3f28" stroke-width="2"/>' +
-			'<rect x="49" y="44" width="6" height="15" rx="3" fill="#8a5a3b"/>' +
-			'<path d="M68 102 C74 74 88 62 98 56" fill="none" stroke="#3e7257" stroke-width="3" stroke-linecap="round"/>' +
-			'<path d="M78 104 C86 86 100 80 108 78" fill="none" stroke="#356a50" stroke-width="3" stroke-linecap="round"/>' +
-			'<path d="M22 102 C18 82 10 74 4 70" fill="none" stroke="#3e7257" stroke-width="3" stroke-linecap="round"/>' +
+			'<rect width="120" height="120" fill="#e8e1ce"/>' +
+			'<rect y="72" width="120" height="48" fill="#d0c7ac"/>' +
+			'<rect x="28" y="0" width="9" height="120" fill="#6b4a30"/>' +
+			'<rect x="84" y="0" width="7" height="120" fill="#7a5638"/>' +
+			'<g stroke="#9aa77e" stroke-width="1.4" stroke-linecap="round" opacity="0.8"><line x1="32" y1="18" x2="32" y2="40"/><line x1="37" y1="24" x2="37" y2="46"/><line x1="87" y1="16" x2="87" y2="34"/><line x1="82" y1="22" x2="82" y2="40"/></g>' +
+			'<path d="M0 80 C12 68 22 70 26 80" fill="none" stroke="#3e7257" stroke-width="3" stroke-linecap="round"/>' +
+			'<path d="M120 84 C108 72 98 74 94 84" fill="none" stroke="#356a50" stroke-width="3" stroke-linecap="round"/>' +
+			'<ellipse cx="60" cy="112" rx="52" ry="7" fill="#bcb392" opacity="0.55"/>' +
 			'</svg>'
 	};
 

@@ -551,3 +551,34 @@ Deliver that file to the owner for the Plugins → Add New → Upload route.
 - Field guide shows the single attribution line ("local knowledge from your
   hosts"); map popups show no English when a translation is loaded; each map
   colour-by mode shows its legend row and grey is explained.
+
+## "Tonight on the Canal" — the moon & sun (v1.12.0)
+
+A card at the top of the water module, filled entirely client-side by
+`assets/js/water.js` (`initMoon`). It is **pure astronomy with ZERO network
+calls** — it does not touch the live layer's REST route or any API:
+
+- **Moon phase** — Meeus' phase-angle formula (`computeMoon`): illumination good
+  to ~0.1%, phase name, and nights-to/-since full. Verified against the real
+  Aug–Sep 2026 sky. The disk is drawn geometrically (`moonDisk`, createElementNS,
+  no innerHTML, no gradient/clipPath ids — the same collision rule as the scene
+  medallions). Lit region is a two-arc path; the sweep flags are load-bearing.
+- **Golden hour** — the standard sunrise equation (`sunTimes`) for the property's
+  own lat/lon (shipped as `DCC_WL_WATER.coords`), rendered in canal time. Dawn
+  and dusk are the canal's most active wildlife hours; the west-longitude sign in
+  the solar-noon term is load-bearing (get it wrong and sunrise/sunset swap).
+- **Cache doctrine, unchanged** — a phase/suntime is time-sensitive, so PHP emits
+  only an empty `[data-dccwl-moon]` shell and the JS fills it at load time. Every
+  string comes from `DCC_WL_WATER.i18n.moon` and is inserted with textContent.
+- On an actual full-moon night the card gets `.dccwl-moon-full` (a soft warm halo,
+  no motion). The line ties tonight's sky to the FWC full-moon fishing facts.
+
+**Scene medallions redrawn (v1.12.0).** The three shared SCENES in `widget.js`
+(critters/birds/plants) were redrawn into lusher Florida-canal vignettes — the
+seven photo-less species render on these as deliberate naturalist plates. Still
+flat, still no gradient/clipPath ids, still a light-enough centre so the deep-teal
+sprites read.
+
+**Mobile photo hero.** `.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo` is
+DOUBLE-classed on purpose — it must out-rank the base medallion's own mobile
+height rule (same specificity, later in source) or the photo shrinks to 140px.

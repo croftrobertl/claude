@@ -369,7 +369,157 @@
 		});
 	}
 
+	/* ------------------------------------------------------------------
+	 * "Tonight on the canal" — the moon (v1.12.0).
+	 *
+	 * Pure astronomy, ZERO network: Meeus' phase-angle formula, computed at
+	 * the visitor's load time (a moon phase is a global instant, so no
+	 * timezone is needed — and computing it client-side keeps it out of the
+	 * SpeedyCache HTML, same doctrine as every other time-sensitive value
+	 * here). The disk is drawn geometrically with createElementNS; every
+	 * string comes from CFG.i18n.moon and is inserted with textContent. It
+	 * ties tonight's sky to the FWC full-moon fishing facts and the canal's
+	 * after-dark wildlife.
+	 * ---------------------------------------------------------------- */
+
+	var MOON_D2R = Math.PI / 180, MOON_DEG_PER_DAY = 12.190749117;
+	function moonNorm(x) { x = x % 360; return x < 0 ? x + 360 : x; }
+
+	function computeMoon(date) {
+		var jd = date.getTime() / 86400000 + 2440587.5;   // JS epoch → Julian Day
+		var d  = jd - 2451545.0;                           // days since J2000
+		var D  = moonNorm(297.8501921 + MOON_DEG_PER_DAY * d);  // mean elongation
+		var M  = moonNorm(357.5291092 + 0.98560028 * d);        // Sun mean anomaly
+		var Mp = moonNorm(134.9633964 + 13.064992297 * d);      // Moon mean anomaly
+		var i  = 180 - D
+			- 6.289 * Math.sin(Mp * MOON_D2R)
+			+ 2.100 * Math.sin(M * MOON_D2R)
+			- 1.274 * Math.sin((2 * D - Mp) * MOON_D2R)
+			- 0.658 * Math.sin(2 * D * MOON_D2R)
+			- 0.214 * Math.sin(2 * Mp * MOON_D2R)
+			- 0.110 * Math.sin(D * MOON_D2R);
+		return {
+			illum: (1 + Math.cos(i * MOON_D2R)) / 2,
+			waxing: D < 180,
+			toFull: moonNorm(180 - D) / MOON_DEG_PER_DAY,
+			sinceFull: moonNorm(D - 180) / MOON_DEG_PER_DAY,
+			nearestFull: Math.min(moonNorm(180 - D), moonNorm(D - 180)) / MOON_DEG_PER_DAY
+		};
+	}
+
+	function moonPhaseKey(m) {
+		var k = m.illum, wax = m.waxing;
+		if (k < 0.015) { return 'new'; }
+		if (k > 0.985) { return 'full'; }
+		if (Math.abs(k - 0.5) < 0.06) { return wax ? 'firstQuarter' : 'lastQuarter'; }
+		if (k < 0.5) { return wax ? 'waxingCrescent' : 'waningCrescent'; }
+		return wax ? 'waxingGibbous' : 'waningGibbous';
+	}
+
+	/* The moon, drawn: a dark disk with the lit region on top. All geometry,
+	 * no data — safe to build in the SVG namespace. */
+	function moonDisk(R, k, wax) {
+		var NS = 'http://www.w3.org/2000/svg', size = R * 2 + 8, c = size / 2;
+		var svg = document.createElementNS(NS, 'svg');
+		svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+		svg.setAttribute('width', size); svg.setAttribute('height', size);
+		svg.setAttribute('class', 'dccwl-moon-disk');
+		svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+		function disc(r, fill, stroke) {
+			var e = document.createElementNS(NS, 'circle');
+			e.setAttribute('cx', c); e.setAttribute('cy', c); e.setAttribute('r', r);
+			if (fill) { e.setAttribute('fill', fill); }
+			if (stroke) { e.setAttribute('fill', 'none'); e.setAttribute('stroke', stroke); e.setAttribute('stroke-width', '1'); }
+			return e;
+		}
+		svg.appendChild(disc(R, '#1b3a44'));
+		k = Math.max(0, Math.min(1, k));
+		if (k > 0.004) {
+			var f = 2 * k - 1, rt = (R * Math.abs(f)).toFixed(3);
+			var outer = wax ? 1 : 0, term = wax ? (f >= 0 ? 1 : 0) : (f >= 0 ? 0 : 1);
+			var p = document.createElementNS(NS, 'path');
+			p.setAttribute('d', 'M' + c + ',' + (c - R) + ' A' + R + ',' + R + ' 0 0 ' + outer + ' ' + c + ',' + (c + R) +
+				' A' + rt + ',' + R + ' 0 0 ' + term + ' ' + c + ',' + (c - R) + ' Z');
+			p.setAttribute('fill', '#eef3f0');
+			svg.appendChild(p);
+		}
+		svg.appendChild(disc(R, null, 'rgba(255,255,255,.14)'));
+		return svg;
+	}
+
+	function moonLine(m, t) {
+		function nights(n) { n = Math.round(n); return n + ' ' + (n === 1 ? (t.night || 'night') : (t.nights || 'nights')); }
+		var key = moonPhaseKey(m), pct = Math.round(m.illum * 100);
+		if (key === 'full' || m.nearestFull < 0.6) { return t.lineFull || ''; }
+		if (m.waxing && m.toFull <= 7) { return (t.lineToFull || '%s').replace('%s', nights(m.toFull)); }
+		if (!m.waxing && m.sinceFull <= 7) { return (t.lineSinceFull || '%s').replace('%s', nights(m.sinceFull)); }
+		if (m.illum < 0.10) { return t.lineDark || ''; }
+		return (t.lineGeneric || '%1$s %2$d%').replace('%1$s', (t[key] || '').toLowerCase()).replace('%2$d', pct);
+	}
+
+	/* Sunrise/sunset for the canal's own coordinates — the standard sunrise
+	 * equation. Returns UTC instants; the caller renders them in canal time.
+	 * Dawn and dusk are the canal's most active wildlife hours, so this is the
+	 * "best light" companion to the moon. */
+	function sunTimes(date, lat, lonEast) {
+		var rad = Math.PI / 180, lw = -lonEast;               // west longitude positive
+		var jd = date.getTime() / 86400000 + 2440587.5;
+		var n  = Math.round(jd - 2451545.0 - 0.0009 - lw / 360);
+		var Js = 2451545.0 + 0.0009 + lw / 360 + n;           // approx solar noon (west lon → later UTC)
+		var M  = ((357.5291 + 0.98560028 * (Js - 2451545.0)) % 360) * rad;
+		var C  = 1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M);
+		var lam = (M / rad + C + 180 + 102.9372) % 360 * rad;
+		var Jt = Js + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * lam);
+		var dec = Math.asin(Math.sin(lam) * Math.sin(23.4397 * rad));
+		var cosO = (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) /
+			(Math.cos(lat * rad) * Math.cos(dec));
+		if (cosO > 1 || cosO < -1) { return null; }           // sun up/down all day
+		var O = Math.acos(cosO) / rad / 360;
+		function toDate(J) { return new Date((J - 2440587.5) * 86400000); }
+		return { sunrise: toDate(Jt - O), sunset: toDate(Jt + O) };
+	}
+	function fmtCanalTime(d) {
+		try {
+			return d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+		} catch (e) {
+			return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+		}
+	}
+
+	function initMoon() {
+		var host = document.querySelector('[data-dccwl-moon]');
+		if (!host) { return; }
+		var t = (CFG.i18n && CFG.i18n.moon) || {};
+		var m = computeMoon(new Date());
+		var key = moonPhaseKey(m);
+		host.textContent = '';
+		// A quiet reward for being here on a full-moon night: the card glows.
+		host.classList.toggle('dccwl-moon-full', key === 'full');
+		host.appendChild(moonDisk(30, m.illum, m.waxing));
+		var txt = el('div', 'dccwl-moon-text');
+		txt.appendChild(el('p', 'dccwl-moon-label', t.label || 'Tonight on the canal'));
+		txt.appendChild(el('p', 'dccwl-moon-phase', (t[key] || '') + ' · ' + Math.round(m.illum * 100) + '%'));
+		var why = moonLine(m, t);
+		if (why) { txt.appendChild(el('p', 'dccwl-moon-why', why)); }
+		// Best light — sunrise & sunset in canal time, the most active hours.
+		var co = CFG.coords;
+		if (co && co.lat != null && co.lon != null) {
+			var sun = sunTimes(new Date(), +co.lat, +co.lon);
+			if (sun && !isNaN(sun.sunrise.getTime()) && !isNaN(sun.sunset.getTime())) {
+				txt.appendChild(el('p', 'dccwl-moon-light',
+					(t.light || 'First light %1$s · last light %2$s')
+						.replace('%1$s', fmtCanalTime(sun.sunrise))
+						.replace('%2$s', fmtCanalTime(sun.sunset))));
+			}
+		}
+		host.appendChild(txt);
+		host.hidden = false;
+		var section = host.closest('[data-dccwl-water-root]');
+		if (section) { section.hidden = false; }
+	}
+
 	function boot() {
+		initMoon();
 		init();
 		initMap();
 	}

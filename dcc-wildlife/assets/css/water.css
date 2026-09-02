@@ -409,6 +409,68 @@
 }
 
 /* =====================================================================
+ * TONIGHT ON THE CANAL — the moon (v1.12.0)
+ * A light card like the rest (always-light rule); the drawn moon carries the
+ * night motif. Left-aligned prose so it reads even inside the centred hub.
+ * ================================================================== */
+
+.dccwl-moon {
+	-webkit-backdrop-filter: var(--dccwl-glass-blur);
+	backdrop-filter: var(--dccwl-glass-blur);
+	align-items: center;
+	background: var(--dccwl-glass-bg);
+	border: 1px solid var(--dccwl-glass-border);
+	border-radius: var(--dccwl-radius);
+	box-shadow: var(--dccwl-shadow-tile);
+	display: flex;
+	gap: var(--dccwl-gap-lg);
+	padding: var(--dccwl-pad);
+	text-align: left;
+}
+
+.dccwl-moon[hidden] { display: none; }
+
+/* Full-moon nights only — a soft warm halo, no motion. */
+.dccwl-moon.dccwl-moon-full {
+	border-color: rgba(233, 197, 122, 0.5);
+	box-shadow: var(--dccwl-shadow-tile), 0 0 0 1px rgba(233, 197, 122, 0.35), 0 0 26px rgba(240, 214, 150, 0.35);
+}
+
+.dccwl-moon-disk { display: block; flex: none; height: 66px; width: 66px; }
+
+.dccwl-moon-text { min-width: 0; }
+
+.dccwl-moon-label {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	margin: 0;
+	text-transform: uppercase;
+}
+
+.dccwl-moon-phase {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-lg);
+	font-weight: 700;
+	margin: 2px 0 0;
+}
+
+.dccwl-moon-why {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	line-height: 1.45;
+	margin: 4px 0 0;
+}
+
+.dccwl-moon-light {
+	color: var(--dccwl-text-faint);
+	font-size: var(--dccwl-fs-xs);
+	letter-spacing: 0.01em;
+	margin: 6px 0 0;
+}
+
+/* =====================================================================
  * FISHING ALMANAC (v1.11.0)
  * Static, FWC-sourced angling guidance in its own block, below the live
  * "Right now" strip. Season cards read as a calm grid; the keep-limits are a

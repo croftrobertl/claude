@@ -375,3 +375,14 @@ water snake, apple snail, resurrection fern — the free results were European
 storks, great egrets, sea kraits, etc.) keep their drawn sprite: a wrong-species
 photo would undo the accuracy pass above, so it is never substituted. Attribution
 is shown in the sheet ("Photo: Adobe Stock").
+
+## Astronomy (v1.12.0) — computed, never fetched
+
+"Tonight on the Canal" (moon phase + first/last light) is **computed in the
+browser**, not fetched: Meeus' phase-angle formula for the moon and the standard
+sunrise equation for the sun, at the property's own coordinates, in canal time.
+No API, no key, no network call — it is maths, so there is no source to attribute
+beyond the formulae themselves. It is deliberately kept out of the cached HTML
+(client-side, like the season countdown and the live strip). The fishing tie-in it
+prints (full moon → bedding bream / staging crappie) is the same FWC-sourced fact
+already documented above; the moon just says which nights it applies to.

@@ -455,8 +455,10 @@
 }
 
 /* Real-photo hero (v1.11.0) — a licensed photo fills the medallion where we
- * have a vetted one; species without a photo keep the drawn scene above. */
-.dccwl-sheet .dccwl-medallion-photo { height: 224px; }
+ * have a vetted one; species without a photo keep the drawn scene above.
+ * Double class (.dccwl-medallion.dccwl-medallion-photo) so this out-ranks the
+ * base medallion's own mobile height rule regardless of source order. */
+.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 240px; }
 
 .dccwl-sheet .dccwl-medallion-photo .dccwl-photo {
 	display: block;
@@ -474,7 +476,7 @@
 }
 
 @media (max-width: 600px) {
-	.dccwl-sheet .dccwl-medallion-photo { height: 190px; }
+	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 210px; }
 }
 
 .dccwl-sheet .dccwl-detail-badges {
