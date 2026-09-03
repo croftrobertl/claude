@@ -398,7 +398,8 @@
 .dccwl-guide-grid[hidden] { display: none; }
 
 .dccwl-credit {
-	color: var(--dccwl-text-faint);
+	/* muted, not faint: faint is 2.7:1 here and fails WCAG AA. */
+	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	font-style: italic;
 	margin: var(--dccwl-gap-lg) 2px 0;
@@ -468,7 +469,8 @@
 }
 
 .dccwl-sheet .dccwl-photo-credit {
-	color: var(--dccwl-text-faint);
+	/* muted, not faint — a required credit is text, and faint fails AA. */
+	color: var(--dccwl-text-muted);
 	font-size: 0.72rem;
 	letter-spacing: 0.02em;
 	margin: 0 0 var(--dccwl-gap);
@@ -512,6 +514,52 @@
 	margin: 8px 0 0;
 }
 
+/* "Easily confused with" (v1.15.0) — the look-alike rows. Informational, not
+ * navigation: no tap targets, so the shared sheet's history contract is safe. */
+.dccwl-sheet .dccwl-mark-self { margin-bottom: var(--dccwl-gap); }
+
+.dccwl-sheet .dccwl-lookalikes {
+	display: grid;
+	gap: var(--dccwl-gap-lg);
+	list-style: none;
+	margin: var(--dccwl-gap) 0 0;
+	padding: 0;
+}
+
+.dccwl-sheet .dccwl-lookalike {
+	align-items: flex-start;
+	display: flex;
+	gap: var(--dccwl-gap-lg);
+	margin: 0;
+	text-align: left;
+}
+
+.dccwl-sheet .dccwl-lookalike-icon {
+	align-items: center;
+	background: var(--dccwl-primary-soft);
+	border-radius: var(--dccwl-radius-sm);
+	display: flex;
+	flex: none;
+	height: 40px;
+	justify-content: center;
+	width: 40px;
+}
+
+.dccwl-sheet .dccwl-lookalike-text { min-width: 0; }
+
+.dccwl-sheet .dccwl-lookalike-name {
+	color: var(--dccwl-text);
+	display: block;
+	font-weight: 700;
+}
+
+.dccwl-sheet .dccwl-lookalike-mark {
+	color: var(--dccwl-text-muted);
+	display: block;
+	font-size: var(--dccwl-fs-sm);
+	line-height: 1.4;
+}
+
 /* --- the 12-month likelihood strip --- */
 
 .dccwl-sheet .dccwl-like-row {
@@ -547,7 +595,9 @@
 .dccwl-sheet .dccwl-like-3 .dccwl-like-bar { background: var(--dccwl-accent); height: 21px; opacity: 1; }
 
 .dccwl-sheet .dccwl-like-m {
-	color: var(--dccwl-text-faint);
+	/* These month labels are how a sighted guest reads the chart; screen
+	 * readers get the .dccwl-sr text. faint fails AA, so use muted. */
+	color: var(--dccwl-text-muted);
 	font-size: 0.62rem;
 	letter-spacing: -0.01em;
 }
@@ -631,3 +681,131 @@
  * near-opaque white, the icon well a 8%-blue tint), so the deep-teal
  * silhouettes keep their contrast on every OS. The dark-mode backing that
  * 1.9.0 needed was removed with the dark palette itself. */
+
+/* ---------------------------------------------------------------------------
+   The whole field guide, in words (1.16.0)
+   ---------------------------------------------------------------------------
+   A native <details> holding every species as real prose. It exists so the
+   guide's knowledge is readable by search engines, by screen readers, and by a
+   guest with no JavaScript or one bar of signal — see Render::render_guide_text().
+
+   Deliberately quiet: collapsed it is a single line, so the widget's height
+   budget is unchanged. Text uses --dccwl-text / --dccwl-text-muted only; the
+   faint token is decoration-only and fails AA (see the 1.15.1 audit).
+   --------------------------------------------------------------------------- */
+.dccwl-fullguide {
+	margin-top: var(--dccwl-gap-lg);
+	border-top: 1px solid var(--dccwl-line);
+	padding-top: var(--dccwl-gap-lg);
+}
+
+.dccwl-fullguide-summary {
+	color: var(--dccwl-primary);
+	cursor: pointer;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	list-style: none;              /* the custom marker below replaces it */
+	padding: 4px 2px 4px 20px;
+	position: relative;
+	border-radius: var(--dccwl-radius-sm);
+}
+
+/* Safari/Chrome render their own disclosure triangle without this. */
+.dccwl-fullguide-summary::-webkit-details-marker {
+	display: none;
+}
+
+/* Our own marker, rotating to point down when open. Decorative. */
+.dccwl-fullguide-summary::before {
+	content: "";
+	position: absolute;
+	left: 4px;
+	top: 50%;
+	width: 0;
+	height: 0;
+	border-left: 5px solid currentColor;
+	border-top: 4px solid transparent;
+	border-bottom: 4px solid transparent;
+	transform: translateY(-50%);
+	transform-origin: 2px 50%;
+	transition: transform 140ms ease;
+}
+
+.dccwl-fullguide[open] > .dccwl-fullguide-summary::before {
+	transform: translateY(-50%) rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-fullguide-summary::before {
+		transition: none;
+	}
+}
+
+/* Scoped to .dccwl-app, NOT .dccwl-root: the prose guide appears both inside
+   the standalone widget (.dccwl-root) AND at the canal hub's top level
+   (.dccwl-canal), and both wrappers carry .dccwl-app. Doubled class keeps
+   specificity at (0,4,0), which beats the Elementor kit's (0,3,1) resets. */
+.dccwl-app .dccwl-fullguide-summary.dccwl-fullguide-summary:focus-visible {
+	outline: none;
+	box-shadow: var(--dccwl-ring);
+}
+
+.dccwl-fullguide-body {
+	padding-top: var(--dccwl-gap-lg);
+	max-width: 68ch;               /* a readable measure, not the full card */
+}
+
+.dccwl-fg-group {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	margin: var(--dccwl-gap-lg) 0 var(--dccwl-gap);
+}
+
+.dccwl-fg {
+	margin: 0 0 var(--dccwl-gap-lg);
+	padding-bottom: var(--dccwl-gap-lg);
+	border-bottom: 1px solid var(--dccwl-line);
+}
+
+.dccwl-fg:last-child {
+	border-bottom: 0;
+}
+
+.dccwl-fg-name {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-base);
+	font-weight: 700;
+	margin: 0 0 4px;
+}
+
+.dccwl-fg-sci {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	font-style: italic;
+	font-weight: 400;
+	margin-left: 6px;
+}
+
+.dccwl-fg-fact {
+	color: var(--dccwl-text);
+	margin: 0 0 6px;
+}
+
+.dccwl-fg-line {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: 0 0 3px;
+}
+
+/* The label reads as a key, but stays AA-legible rather than dropping to faint. */
+.dccwl-fg-k {
+	color: var(--dccwl-text);
+	font-weight: 600;
+}
+
+.dccwl-fg-k::after {
+	content: ":";
+}

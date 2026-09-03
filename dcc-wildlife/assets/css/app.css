@@ -50,6 +50,9 @@
 
 	--dccwl-text: #111111;               /* --dccgg-text */
 	--dccwl-text-muted: #5d7891;         /* --dccgg-muted */
+	/* DECORATION ONLY — never for text. Measured 2.7:1 on the white card
+	 * surfaces this plugin uses, which fails WCAG AA at every size here. Use
+	 * --dccwl-text-muted (4.6:1) for any text a guest is meant to read. */
 	--dccwl-text-faint: #8ba0b3;                      /* derived from muted */
 	--dccwl-line: rgba(15, 109, 191, 0.15);           /* --dccgg-tile-border */
 	--dccwl-line-strong: rgba(15, 109, 191, 0.32);    /* derived */

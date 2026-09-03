@@ -20,22 +20,23 @@
 
 .dccwl-canal > * + * { margin-top: var(--dccwl-gap-lg); }
 
-/* ---- the countdown hero, at the head of the hub ---------------------
- * The flat widget stacks it as an icon-beside-text banner. Here it heads a
- * column of centred screens, so it centres too and takes the hub's width
- * rather than the page's. */
+/* ---- the countdown hero, inside the hub (moved in 1.14.0) -----------
+ * The flat widget stacks it as an icon-beside-text banner. Here it centres and
+ * takes the hub's width. It now sits AFTER the heritage hero and the "right
+ * now" line — the hub reads legend → right now → what's coming → where to go —
+ * so this is a descendant rule, not the direct-child one it used to be. */
 
-.dccwl-canal > .dccwl-hero-stat {
+.dccwl-canal .dccwl-hero-stat {
 	border-left: 0;
 	border-top: 4px solid var(--dccwl-accent);
 	flex-direction: column;
 	gap: 6px;
-	margin: 0 auto;
+	margin: 0 auto var(--dccwl-gap-lg);
 	max-width: 620px;
 	text-align: center;
 }
 
-.dccwl-canal > .dccwl-hero-stat .dccwl-hero-value { justify-content: center; }
+.dccwl-canal .dccwl-hero-stat .dccwl-hero-value { justify-content: center; }
 
 /* ---- the stage ------------------------------------------------------ */
 
@@ -129,6 +130,18 @@
 	margin: 6px auto 0;
 	max-width: 44ch;
 }
+
+/* "Right now on the canal" — the living line under the heritage hero. Empty
+ * (and invisible) until canal.js fills it from the real sun times. */
+.dccwl-now-line {
+	color: var(--dccwl-primary);
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	margin: calc(var(--dccwl-gap-lg) * -0.4) auto var(--dccwl-gap-lg);
+	max-width: 46ch;
+}
+
+.dccwl-now-line:empty { display: none; }
 
 /* ---- L1: the hub ---------------------------------------------------- */
 
@@ -304,6 +317,36 @@
 .dccwl-month-preview {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
+}
+
+/* "April and May are the canal's fullest months" — the planning line under the
+ * year. Empty (and so invisible) until the JS fills it. */
+.dccwl-year-note {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	margin: calc(var(--dccwl-gap-lg) * -0.5) auto var(--dccwl-gap-lg);
+	max-width: 44ch;
+}
+
+.dccwl-year-note:empty { display: none; }
+
+/* The month's headline species — the year at a glance. The fill/stroke pair is
+ * LOAD-BEARING: Sprites::symbol_sheet() strips them on output and they inherit
+ * into the <use> shadow content (see the sprite note in widget.css). */
+.dccwl-month-art {
+	align-items: center;
+	display: flex;
+	gap: 3px;
+	justify-content: center;
+	margin-top: 3px;
+	min-height: 21px;
+}
+
+.dccwl-month-sprite {
+	fill: none;
+	height: 20px;
+	stroke-linecap: round;
+	width: 20px;
 }
 
 .dccwl-month-now {

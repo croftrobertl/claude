@@ -195,15 +195,35 @@
 				var t = el('button', 'dccwl-month-tile');
 				t.type = 'button';
 				t.setAttribute('aria-pressed', m === state.month ? 'true' : 'false');
-				t.setAttribute('aria-label', fmt(I18N.monthAria || '%s', name));
+				/* The aria-label REPLACES the tile's text for a screen reader, so it
+				 * must carry the count too — labelling it "Wildlife in January" alone
+				 * hid the one thing the tile exists to say. */
+				var prevText = monthPreview(m);
+				t.setAttribute('aria-label',
+					fmt(I18N.monthAria || '%s', name) + (prevText ? ', ' + prevText : ''));
 				if (m === state.month) { t.classList.add('dccwl-month-tile-on'); }
 				if (m === now) {
 					t.classList.add('dccwl-month-tile-now');
 				}
 
 				t.appendChild(el('span', 'dccwl-month-name', name));
-				var prev = monthPreview(m);
-				if (prev) { t.appendChild(el('span', 'dccwl-month-preview', prev)); }
+				if (prevText) { t.appendChild(el('span', 'dccwl-month-preview', prevText)); }
+
+				/* The species that actually peak in this month, so the picker
+				 * reads as THE CANAL YEAR rather than twelve numbers — you can
+				 * see the rhythm and pick when to come. Decorative: the count
+				 * above carries the meaning, so the art is aria-hidden. Same
+				 * bundled calendar, same peakFor() the spotlight uses. */
+				if (window.DCCWL_Widget) {
+					var art = el('span', 'dccwl-month-art');
+					art.setAttribute('aria-hidden', 'true');
+					window.DCCWL_Widget.peakFor(m).slice(0, 3).forEach(function (sp) {
+						if (!sp.sprite) { return; }
+						art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-month-sprite'));
+					});
+					if (art.childNodes.length) { t.appendChild(art); }
+				}
+
 				if (m === now) {
 					t.appendChild(el('span', 'dccwl-month-now', I18N.now || 'now'));
 				}
@@ -216,6 +236,142 @@
 				list.appendChild(li);
 				monthTiles.push(t);
 			});
+		}
+
+		/* "April and May are the canal's fullest months" — the one line that
+		 * turns twelve tiles into a plan. Computed here from the same bundled
+		 * calendar the tiles use (never server-rendered, so a cached page
+		 * cannot state a stale month), and it stays silent rather than saying
+		 * something useless when the year has no clear peak. */
+		function fillYearNote() {
+			var node = root.querySelector('[data-dccwl-year-note]');
+			if (!node || !Array.isArray(wCfg.monthsFull)) { return; }
+
+			var best = -1, months = [];
+			for (var m = 0; m < 12; m++) {
+				var c = monthCounts(m);
+				if (!c) { return; }
+				if (c.peak > best) { best = c.peak; months = [ m ]; }
+				else if (c.peak === best) { months.push(m); }
+			}
+			// No peaks at all, or so many months tie that "fullest" means
+			// nothing: say nothing.
+			if (best <= 0 || !months.length || months.length > 3) { return; }
+
+			var names = months.map(function (m) { return wCfg.monthsFull[m]; });
+			var list = names.length === 1
+				? names[0]
+				: names.slice(0, -1).join(', ') + ' ' + (I18N.and || 'and') + ' ' + names[names.length - 1];
+
+			node.textContent = fmt(
+				months.length === 1
+					? (I18N.yearBestOne || '%1$s is the fullest month — %2$d species at their peak.')
+					: (I18N.yearBest || '%1$s are the fullest months — %2$d species at their peak.'),
+				list, best
+			);
+		}
+
+		/* "Right now on the canal" — the living line (v1.14.0).
+		 *
+		 * Reads the REAL sunrise and sunset for these coordinates (through
+		 * window.DCCWL_Sky, the one astronomy implementation, which water.js
+		 * owns) and turns the hour into a phrase, then names species that are
+		 * BOTH at their peak this month AND active at this hour — matched on
+		 * the species' own `best` field, so the pairing comes from the same
+		 * verified data the rest of the guide uses rather than a hand-written
+		 * table. It therefore changes through the day AND through the year.
+		 *
+		 * Computed here, never server-rendered: a cached page must not be able
+		 * to state the wrong hour. No sky (the water module is off, so the
+		 * maths is absent) → the line stays empty rather than guessing. */
+
+		var NOW_KEYS = {
+			night:      [ 'dark', 'night' ],
+			firstLight: [ 'dawn', 'early morning', 'first light' ],
+			morning:    [ 'morning', 'dawn' ],
+			midday:     [ 'midday', 'all day' ],
+			afternoon:  [ 'afternoon', 'all day' ],
+			golden:     [ 'golden', 'dusk' ],
+			dusk:       [ 'dusk', 'dark' ]
+		};
+
+		/* Minutes since midnight in CANAL time — the same rule as canalMonth(). */
+		function canalMinutes(d) {
+			try {
+				var h = 0, mi = 0;
+				new Intl.DateTimeFormat('en-US', {
+					timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: false
+				}).formatToParts(d).forEach(function (p) {
+					if (p.type === 'hour') { h = parseInt(p.value, 10); }
+					if (p.type === 'minute') { mi = parseInt(p.value, 10); }
+				});
+				return (h % 24) * 60 + mi;
+			} catch (e) {
+				return d.getHours() * 60 + d.getMinutes();
+			}
+		}
+
+		function fillNowLine() {
+			var node = root.querySelector('[data-dccwl-now-line]');
+			if (!node) { return; }
+
+			var sky = window.DCCWL_Sky;
+			var coords = (window.DCC_WL_WATER || {}).coords;
+			if (!sky || !sky.sun || !coords || coords.lat == null || coords.lon == null) { return; }
+
+			var now = new Date();
+			var s = sky.sun(now, +coords.lat, +coords.lon);
+			if (!s || isNaN(s.sunrise.getTime()) || isNaN(s.sunset.getTime())) { return; }
+
+			var t = canalMinutes(now), sr = canalMinutes(s.sunrise), ss = canalMinutes(s.sunset);
+			var phase;
+			if (t < sr - 40 || t > ss + 35) { phase = 'night'; }
+			else if (t < sr + 55) { phase = 'firstLight'; }
+			else if (t < 11 * 60) { phase = 'morning'; }
+			else if (t < 15 * 60) { phase = 'midday'; }
+			else if (t < ss - 70) { phase = 'afternoon'; }
+			else if (t <= ss) { phase = 'golden'; }
+			else { phase = 'dusk'; }
+
+			var label = I18N[{
+				night: 'nowNight', firstLight: 'nowFirstLight', morning: 'nowMorning',
+				midday: 'nowMidday', afternoon: 'nowAfternoon', golden: 'nowGolden', dusk: 'nowDusk'
+			}[phase]];
+			if (!label) { return; }
+
+			/* Species worth looking for this month whose own "best time" matches
+			 * this hour. Candidates are the same threshold the spotlight uses
+			 * (value >= 2, "good chance" and up) rather than peaks only —
+			 * otherwise the after-dark line has nothing to say in a month when
+			 * the limpkin is merely likely. Peaks sort first, so the strongest
+			 * bet is always named first. */
+			var mNow = canalMonth();
+			var keys = NOW_KEYS[phase] || [];
+			var matches = [];
+			(wCfg.species || [])
+				.map(function (sp) { return { sp: sp, v: (sp.months && sp.months[mNow]) || 0 }; })
+				.filter(function (x) { return x.v >= 2; })
+				.sort(function (a, b) { return b.v - a.v; })
+				.forEach(function (x) {
+					if (matches.length >= 3) { return; }
+					var best = String(x.sp.best || '').toLowerCase();
+					for (var i = 0; i < keys.length; i++) {
+						if (best.indexOf(keys[i]) !== -1) { matches.push(x.sp); return; }
+					}
+				});
+
+			/* Don't say the same species twice on one screen: the countdown
+			 * directly below already features one. Defer to it — but only when
+			 * something else matches this hour, so we never trade a real name
+			 * for silence. */
+			var cid = (window.DCCWL_Widget || {}).countdownId;
+			var pruned = cid ? matches.filter(function (sp) { return sp.id !== cid; }) : matches;
+			var names = (pruned.length ? pruned : matches).slice(0, 2).map(function (sp) { return sp.name; });
+
+			node.textContent = names.length
+				? fmt(I18N.nowLook || '%1$s — look for %2$s.', label,
+					names.length === 1 ? names[0] : names[0] + ' ' + (I18N.and || 'and') + ' ' + names[1])
+				: fmt(I18N.nowPlain || '%s.', label);
 		}
 
 		/* ---------- hub previews ---------- */
@@ -322,6 +478,8 @@
 		});
 
 		buildMonths();
+		fillYearNote();
+		fillNowLine();
 		fillWildlifePreview();
 		setMonth(state.month);
 		show('hub', false);

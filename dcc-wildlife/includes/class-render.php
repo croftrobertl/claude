@@ -184,6 +184,13 @@ final class Render {
 				// when it is off, countdown_possible() is false and no path
 				// renders anything regardless of this flag.
 				'countdown'    => true,
+				// 1.16.0: whether THIS call prints the crawlable prose guide.
+				// The hub sets it false and prints the prose itself at its own
+				// top level — otherwise the prose lands inside the hub's
+				// display:none species panel, where a crawler discounts it and
+				// the whole point of the prose (being read) is lost. Same shape
+				// as the countdown, which the hub also lifts out and re-emits.
+				'guide_prose'  => true,
 			]
 		);
 
@@ -261,12 +268,14 @@ final class Render {
 						<?php endforeach; ?>
 					</div>
 					<?php self::render_guide_grids(); ?>
+					<?php if ( $opts['guide_prose'] ) { self::render_guide_text(); } ?>
 					<?php /* Owner's decision (1.8.0): the guide's notes and the
 					         likelihood calendar are editorial local knowledge,
 					         and this one line says whose — deliberately not
 					         per-species sourcing. */ ?>
 					<p class="dccwl-credit"><?php esc_html_e( 'Wildlife notes are local knowledge from your hosts — sightings vary.', 'dcc-wildlife' ); ?></p>
 				</section>
+				<?php self::render_species_jsonld(); ?>
 			<?php endif; ?>
 
 		</div>
@@ -318,6 +327,197 @@ final class Render {
 	}
 
 	/**
+	 * The whole field guide, in words (1.16.0).
+	 *
+	 * WHY THIS EXISTS. Everything that makes this guide worth reading — the
+	 * scientific names, the facts, the calls, the field marks that separate
+	 * two white waders — lived only inside the inline JSON config, i.e. inside
+	 * a <script> tag. Measured on the live page: the species NAMES were
+	 * readable as page text, but "Ardea herodias" and every fact appeared
+	 * exactly once in the HTML and zero times in the text a crawler reads. A
+	 * search engine could see the shelf and not the books.
+	 *
+	 * So the same content is rendered here as real, server-side prose. This is
+	 * NOT a hidden-text trick: it is a native <details>, any visitor can open
+	 * it, it needs no JavaScript, and it is the same text the sheet shows. It
+	 * doubles as the no-JS and poor-signal fallback — a guest on the dock with
+	 * one bar gets the entire guide.
+	 *
+	 * CACHE-SAFE. Every field used here is month-independent (bestLabel is a
+	 * static range like "Nov–Mar", never "this month"), so it is safe in
+	 * page-cached HTML — the same rule that keeps the spotlight client-side.
+	 */
+	private static function render_guide_text(): void {
+		// Once per page, first caller wins — the same rule the countdown shell
+		// follows. A page carrying both the hub and a standalone [dcc_wildlife]
+		// must not print the whole guide twice: that is duplicated content for
+		// a crawler and a second long block for a screen reader to wade past.
+		if ( self::$fullguide_printed ) {
+			return;
+		}
+		$dataset = Species::dataset();
+		if ( ! $dataset ) {
+			return;
+		}
+		self::$fullguide_printed = true;
+		?>
+		<details class="dccwl-fullguide">
+			<summary class="dccwl-fullguide-summary">
+				<?php
+				printf(
+					/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
+					esc_html__( 'Read the whole field guide — %d species, in words', 'dcc-wildlife' ),
+					count( $dataset )
+				);
+				?>
+			</summary>
+			<div class="dccwl-fullguide-body">
+				<?php foreach ( Species::groups() as $slug => $label ) : ?>
+					<?php
+					$in_group = array_values( array_filter( $dataset, static fn( array $sp ): bool => $sp['group'] === $slug ) );
+					if ( ! $in_group ) {
+						continue;
+					}
+					?>
+					<h3 class="dccwl-fg-group"><?php echo esc_html( $label ); ?></h3>
+					<?php foreach ( $in_group as $sp ) : ?>
+						<article class="dccwl-fg">
+							<h4 class="dccwl-fg-name">
+								<?php echo esc_html( $sp['name'] ); ?>
+								<?php if ( '' !== $sp['sci'] ) : ?>
+									<i class="dccwl-fg-sci"><?php echo esc_html( $sp['sci'] ); ?></i>
+								<?php endif; ?>
+							</h4>
+							<?php if ( '' !== $sp['fact'] ) : ?>
+								<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
+							<?php endif; ?>
+							<?php if ( '' !== $sp['where'] ) : ?>
+								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where to look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
+							<?php endif; ?>
+							<?php if ( '' !== $sp['best'] || '' !== $sp['bestLabel'] ) : ?>
+								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Best time', 'dcc-wildlife' ); ?></span>
+									<?php
+									$when = array_values( array_filter( [ (string) $sp['best'], (string) $sp['bestLabel'] ] ) );
+									echo esc_html( implode( ' · ', $when ) );
+									?>
+								</p>
+							<?php endif; ?>
+							<?php if ( '' !== $sp['sound'] ) : ?>
+								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Listen for', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['sound'] ); ?></p>
+							<?php endif; ?>
+							<?php if ( '' !== $sp['mark'] ) : ?>
+								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Tell it apart', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['mark'] ); ?></p>
+							<?php endif; ?>
+						</article>
+					<?php endforeach; ?>
+				<?php endforeach; ?>
+			</div>
+		</details>
+		<?php
+	}
+
+	/** One prose guide and one JSON-LD block per page, however many widgets are placed. */
+	private static bool $fullguide_printed = false;
+	private static bool $jsonld_printed    = false;
+
+	/**
+	 * The crawlable prose guide, for the hub to place at its OWN top level
+	 * (1.16.0).
+	 *
+	 * The hub's field guide lives inside a display:none panel three taps deep,
+	 * so prose rendered there is content a crawler sees hidden and discounts.
+	 * The hub therefore calls Render::render() with guide_prose=false and emits
+	 * this instead, in normal flow at the foot of the canal module. Same
+	 * $fullguide_printed guard, so it is still exactly once per page.
+	 */
+	public static function guide_prose_for_canal(): string {
+		ob_start();
+		self::render_guide_text();
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * schema.org for the field guide (1.16.0).
+	 *
+	 * An ItemList of Taxon nodes, each carrying the common name, the
+	 * scientific name as alternateName, and `sameAs` pointing at the VERIFIED
+	 * Wikipedia article and Wikidata item (see Species::entities()). That
+	 * sameAs pair is the whole point: it is what tells a machine that this
+	 * page's "Limpkin" is the same entity the rest of the web knows, which is
+	 * the difference between text about birds and data about a species.
+	 *
+	 * HONEST SCOPE. Google publishes no rich result for a species, so this
+	 * will not draw a snippet or a carousel — the win is entity clarity for
+	 * search and for AI retrieval, not decoration in the SERP. It deliberately
+	 * carries no `description`: the facts are already on the page as prose
+	 * above, and repeating them here would inflate every cached page for
+	 * nothing. It also never invents a node — a species with no verified
+	 * entity ships name and alternateName alone.
+	 *
+	 * `Taxon` is schema.org pending vocabulary; consumers that don't know it
+	 * ignore the type and still read the names, so there is no downside.
+	 * Emitted separately from AIOSEO's graph (WebPage/Organization/
+	 * LocalBusiness), which it neither touches nor duplicates.
+	 */
+	private static function render_species_jsonld(): void {
+		if ( self::$jsonld_printed ) {
+			return;
+		}
+		$dataset = Species::dataset();
+		if ( ! $dataset ) {
+			return;
+		}
+		self::$jsonld_printed = true;
+
+		$entities = Species::entities();
+		$items    = [];
+
+		foreach ( $dataset as $i => $sp ) {
+			$taxon = [
+				'@type' => 'Taxon',
+				'name'  => $sp['name'],
+			];
+			if ( '' !== $sp['sci'] ) {
+				// The scientific name as an alternate name — true for every
+				// row. NOT taxonRank: our set mixes ranks (species, the two
+				// manatee/water-snake SUBSPECIES, and "Turtles", which is two
+				// genera at once), so a blanket 'species' would be wrong for
+				// several. An unverifiable rank is worse than none — the same
+				// rule the water module's Fact gate follows.
+				$taxon['alternateName'] = $sp['sci'];
+			}
+			if ( isset( $entities[ $sp['id'] ] ) ) {
+				$taxon['sameAs'] = [
+					$entities[ $sp['id'] ][0],
+					'https://www.wikidata.org/wiki/' . $entities[ $sp['id'] ][1],
+				];
+			}
+			$items[] = [
+				'@type'    => 'ListItem',
+				'position' => $i + 1,
+				'item'     => $taxon,
+			];
+		}
+
+		$graph = [
+			'@context'        => 'https://schema.org',
+			'@type'           => 'ItemList',
+			'name'            => __( 'Dora Canal field guide', 'dcc-wildlife' ),
+			'description'     => __( 'Wildlife recorded along the Dora Canal in Tavares, Florida.', 'dcc-wildlife' ),
+			'numberOfItems'   => count( $items ),
+			'itemListOrder'   => 'https://schema.org/ItemListUnordered',
+			'itemListElement' => $items,
+		];
+
+		// Slashes stay ESCAPED (no JSON_UNESCAPED_SLASHES): that is what stops
+		// a literal "</script>" in any future filtered species name from
+		// breaking out of this tag. "https:\/\/…" is valid JSON-LD and every
+		// consumer reads it. Unicode is left literal so accented names read
+		// cleanly. wp_json_encode already escapes for safe embedding.
+		echo '<script type="application/ld+json">' . wp_json_encode( $graph, JSON_UNESCAPED_UNICODE ) . '</script>';
+	}
+
+	/**
 	 * Enqueue the (pre-registered) assets and print the shared JSON config
 	 * once. Called at render time so assets only load on pages that
 	 * actually use the widget/shortcode.
@@ -361,6 +561,10 @@ final class Render {
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.
 				'where'       => __( 'Where to look', 'dcc-wildlife' ),
+				'listen'      => __( 'Listen for', 'dcc-wildlife' ),
+				'confused'    => __( 'Easily confused with', 'dcc-wildlife' ),
+				/* translators: %s: a field mark, e.g. "its bright golden-yellow feet". */
+				'tellBy'      => __( 'Tell this one by %s.', 'dcc-wildlife' ),
 				'bestTime'    => __( 'Best time', 'dcc-wildlife' ),
 				/* translators: %s: month range, e.g. "Nov–Mar" or "Year-round". */
 				'bestMonths'  => __( 'Best: %s', 'dcc-wildlife' ),

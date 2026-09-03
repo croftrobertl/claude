@@ -63,11 +63,18 @@ final class Canal_Render {
 
 		// The month widget, minus its hero: the countdown belongs to the hub
 		// now, so it is visible with zero taps.
+		//
+		// guide_prose => false: the field guide's prose lives inside this
+		// panel, which is display:none until a visitor taps three levels in —
+		// where a crawler discounts it. The hub prints the prose itself, in
+		// normal flow, at the foot of the module (see below). Same move the
+		// countdown already makes.
 		$species_html = Render::render(
 			[
 				'countdown'    => false,
 				'show_guide'   => true,
 				'show_browser' => true,
+				'guide_prose'  => false,
 			]
 		);
 
@@ -76,13 +83,6 @@ final class Canal_Render {
 		ob_start();
 		?>
 		<div class="dccwl-canal <?php echo esc_attr( Render::app_classes() ); ?>" data-dccwl-canal>
-
-			<?php
-			/* The countdown hero, at the top of the hub and nowhere else:
-			   one shell per page (the 1.8.1 guard still owns that), still an
-			   empty div the browser fills in canal time. */
-			echo Render::countdown_shell_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
-			?>
 
 			<div class="dccwl-stage" data-dccwl-stage>
 
@@ -98,6 +98,25 @@ final class Canal_Render {
 						<p class="dccwl-hero-canal-quote"><?php esc_html_e( '“The most beautiful mile of waterway in the world.”', 'dcc-wildlife' ); ?></p>
 						<p class="dccwl-hero-canal-attr"><?php esc_html_e( '— sportswriter Grantland Rice, of the cypress-canopied channel once called the Elfin River', 'dcc-wildlife' ); ?></p>
 					</div>
+
+					<?php /* "Right now on the canal" (1.14.0) — the living line. An
+					         empty shell; canal.js fills it from the REAL sunrise and
+					         sunset for these coordinates, in canal time, and names
+					         species that are both at their peak this month and active
+					         at this hour. Never server-rendered: a cached page must
+					         not be able to state the wrong hour. */ ?>
+					<p class="dccwl-now-line" data-dccwl-now-line></p>
+
+					<?php
+					/* The countdown hero (moved here in 1.14.0). The hub now tells a
+					   story in order — the canal's own legend, then what is happening
+					   RIGHT NOW, then what is COMING, then where to go. Leading with
+					   the countdown buried the canal's name and its quote under a
+					   species banner. Still exactly one shell per page (the 1.8.1
+					   first-caller-wins guard is untouched) and still an empty div the
+					   browser fills in canal time. */
+					echo Render::countdown_shell_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
+					?>
 					<ul class="dccwl-hub-tiles">
 						<li>
 							<button type="button" class="dccwl-hub-tile" data-dccwl-go="month">
@@ -133,7 +152,11 @@ final class Canal_Render {
 				<?php /* ---------- L2a: the month picker ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-month" data-dccwl-panel="month" tabindex="-1" hidden>
 					<?php self::back_button( __( 'Back', 'dcc-wildlife' ) ); ?>
-					<h2 class="dccwl-panel-title"><?php esc_html_e( 'On the canal', 'dcc-wildlife' ); ?></h2>
+					<h2 class="dccwl-panel-title"><?php esc_html_e( 'The canal year', 'dcc-wildlife' ); ?></h2>
+					<?php /* "The fullest months are…" — computed client-side from the
+					         same bundled calendar the tiles use, so a cached page can
+					         never state a stale one. Empty until the JS fills it. */ ?>
+					<p class="dccwl-year-note" data-dccwl-year-note></p>
 					<?php /* Twelve tiles, built client-side: the labels are
 					         month-independent but the highlight and the preview
 					         lines are not, and mixing the two server-side is how
@@ -156,6 +179,16 @@ final class Canal_Render {
 				<?php endif; ?>
 
 			</div>
+
+			<?php
+			/* The whole field guide, in words (1.16.0), at the hub's own top
+			   level — NOT inside the display:none species panel above, where a
+			   crawler and a screen reader would both meet it hidden. Collapsed
+			   it is a single line, so the render budget is unchanged; open, it
+			   is the entire guide as real prose, no JavaScript required. Prints
+			   once per page via Render's own guard. */
+			echo Render::guide_prose_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Render escapes its own output.
+			?>
 		</div>
 		<?php
 		return (string) ob_get_clean();
@@ -197,6 +230,26 @@ final class Canal_Render {
 						'quiet'      => __( 'a quiet month', 'dcc-wildlife' ),
 						/* translators: %s: month name — the Wildlife tile's preview. */
 						'hubMonth'   => __( '%1$s in %2$s', 'dcc-wildlife' ),
+						/* translators: joins the last two items of a list, e.g. "April and May". */
+						'and'        => __( 'and', 'dcc-wildlife' ),
+						/* translators: 1: a month name, 2: number of species at peak. */
+						'yearBestOne' => __( '%1$s is the canal’s fullest month — %2$d species at their peak.', 'dcc-wildlife' ),
+						/* translators: 1: a list of month names, 2: number of species at peak. */
+						'yearBest'   => __( '%1$s are the canal’s fullest months — %2$d species at their peak.', 'dcc-wildlife' ),
+
+						// "Right now on the canal" — the time-of-day labels, chosen
+						// from the real sunrise/sunset for these coordinates.
+						'nowNight'      => __( 'After dark on the canal', 'dcc-wildlife' ),
+						'nowFirstLight' => __( 'First light on the canal', 'dcc-wildlife' ),
+						'nowMorning'    => __( 'Morning on the canal', 'dcc-wildlife' ),
+						'nowMidday'     => __( 'Midday sun on the canal', 'dcc-wildlife' ),
+						'nowAfternoon'  => __( 'Afternoon on the canal', 'dcc-wildlife' ),
+						'nowGolden'     => __( 'Golden hour on the canal', 'dcc-wildlife' ),
+						'nowDusk'       => __( 'Dusk on the canal', 'dcc-wildlife' ),
+						/* translators: 1: a time-of-day phrase, 2: a list of species names. */
+						'nowLook'       => __( '%1$s — look for %2$s.', 'dcc-wildlife' ),
+						/* translators: %s: a time-of-day phrase, when no species matches this hour. */
+						'nowPlain'      => __( '%s.', 'dcc-wildlife' ),
 					],
 				]
 			) . ';',

@@ -116,7 +116,10 @@
 }
 
 .dccwl-water .dccwl-water-attr {
-	color: var(--dccwl-text-faint);
+	/* WCAG: the faint token measures 2.7:1 on these white cards, which fails AA.
+	 * This is the module's attribution — its entire integrity claim — so it is
+	 * the last text on the page that should be hard to read. */
+	color: var(--dccwl-text-muted);
 	display: flex;
 	flex-direction: column;
 	font-size: var(--dccwl-fs-xs);
@@ -198,7 +201,7 @@
 }
 
 .dccwl-water .dccwl-water-disclaimer {
-	color: var(--dccwl-text-faint);
+	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	margin: var(--dccwl-gap) 0 0;
 }
@@ -464,7 +467,9 @@
 }
 
 .dccwl-moon-light {
-	color: var(--dccwl-text-faint);
+	/* Informational, not decorative — the faint token measures 2.31:1, which
+	 * fails WCAG AA. Muted is the lightest token this text may use. */
+	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	letter-spacing: 0.01em;
 	margin: 6px 0 0;
@@ -584,7 +589,8 @@
 }
 
 .dccwl-fishing-src {
-	color: var(--dccwl-text-faint);
+	/* Attribution is content, not decoration — see the note on .dccwl-moon-light. */
+	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	margin: var(--dccwl-gap-lg) 0 0;
 }

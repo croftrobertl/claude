@@ -582,3 +582,217 @@ sprites read.
 **Mobile photo hero.** `.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo` is
 DOUBLE-classed on purpose — it must out-rank the base medallion's own mobile
 height rule (same specificity, later in source) or the photo shrinks to 140px.
+
+## "The canal year" — the month picker as a planning view (v1.13.0)
+
+L2a is no longer twelve numbers. Each month tile also renders the species that
+actually peak in it (`window.DCCWL_Widget.peakFor(m)`, capped at 3, `.dccwl-month-art`
+/ `.dccwl-month-sprite`), so the year reads as a rhythm and a guest can pick when to
+visit. The art is `aria-hidden` — the "N at peak" count above it carries the meaning.
+
+Above the grid, `fillYearNote()` computes the fullest month(s) from the same bundled
+calendar and prints one line ("April and May are the canal's fullest months — 10
+species at their peak"). Rules that keep it honest:
+
+- **Computed client-side, never server-rendered.** Same doctrine as the spotlight and
+  the countdown: a cached page must not be able to name a stale month.
+- **It stays silent** when there are no peaks at all, or when more than three months
+  tie — "fullest" would then mean nothing. Silence beats noise, as everywhere else here.
+- `.dccwl-year-note:empty { display: none }` so the unfilled shell costs no space.
+- `.dccwl-month-sprite` repeats the LOAD-BEARING `fill:none; stroke-linecap:round` pair
+  — the symbol sheet strips them on output and they inherit into the `<use>` shadow
+  content. Drop them and every month tile fills solid black.
+
+## "Right now on the canal" — the living line (v1.14.0)
+
+One line under the heritage hero on L1, filled by `fillNowLine()` in canal.js.
+
+- **The maths lives in ONE place.** water.js owns the astronomy and exposes
+  `window.DCCWL_Sky = { moon, phase, sun, time }`. canal.js reads the sun through
+  that handle rather than carrying a second copy. Consequence worth knowing: the
+  sky only exists where the water module runs, so with water off the hub line
+  simply stays empty (`.dccwl-now-line:empty { display:none }`) — it must NEVER
+  fall back to a guessed hour.
+- **Phase from the real sun**, in canal minutes (`canalMinutes()`, America/New_York,
+  same rule as `canalMonth()`): night / first light / morning / midday / afternoon /
+  golden / dusk, bracketed off actual sunrise & sunset rather than fixed clock hours.
+- **The species are derived, not authored.** Candidates are this month's species at
+  value >= 2 (the spotlight threshold, so the after-dark line still has something to
+  say in a month when the limpkin is merely likely), sorted peaks-first, then matched
+  on keywords against the species' own `best` string (NOW_KEYS). Change a `best`
+  value and this line follows automatically — that is the point. Cap 2 names.
+- Never server-rendered. Same cache doctrine as the spotlight, countdown and moon.
+
+### Hub order (changed in 1.14.0)
+
+L1 now reads, top to bottom: **heritage hero → "right now" line → countdown hero →
+tiles**. The countdown used to be emitted before the stage (it led the hub); that
+buried the canal's name and its quote under a species banner once the heritage hero
+and the living line existed. It is now echoed inside the hub panel after the now-line.
+
+Two consequences to keep:
+- `canal.css` styles it with a DESCENDANT rule (`.dccwl-canal .dccwl-hero-stat`), not
+  the old direct-child one — moving it back out without fixing that selector silently
+  drops its centring and top border.
+- The 1.8.1 first-caller-wins guard in `Render::countdown_shell()` is untouched, so it
+  is still exactly ONE shell per page however the widgets are combined. Verified.
+- Measured after the change: hub is 696px at 375px wide — inside the ≤760px mobile
+  budget, with no horizontal overflow.
+
+## "Listen for" — the sound layer (v1.14.0)
+
+An optional `sound` string per species in `class-species.php`, threaded through
+`dataset()` and rendered by `buildDetail()` between "Where to look" and "Best time".
+
+- **Only 12 of 24 carry one**, and that asymmetry is the point: a species gets a sound
+  line ONLY where a distinctive, guest-recognisable voice could be verified (Cornell Lab,
+  FWC, NPS, UF/IFAS). The other twelve render nothing — an absent `sound` is normal, not
+  a gap to fill with something evocative-but-unsourced. Do not "complete the set."
+- Currently: alligator, river otter, bald eagle, osprey, anhinga, great blue heron,
+  belted kingfisher, limpkin, white ibis, wood stork, tricolored heron, green heron.
+- **Deliberately WITHOUT a sound**, on advice: snowy egret (effectively silent away from
+  a breeding colony) and little blue heron (usually silent; its interest is visual). Also
+  every plant, both fish and reptiles, and the apple snail — the turtle "plop" off a log
+  and a bass's surface strike are splashes, not species sounds, and no authority
+  characterises them. Do not add them.
+- **Three sourcing rules learned the hard way here:**
+  1. The limpkin-in-the-movies fact is the HIPPOGRIFF in *Harry Potter and the Prisoner
+     of Azkaban*, documented by Cornell's own newsroom. The widely-repeated "used as a
+     jungle sound in Tarzan" version is NOT traceable to any primary source — do not
+     reinstate it.
+  2. For the wood stork print the BEHAVIOUR (voiceless, hisses, bill-clatters, noisy
+     nestlings — FWC + Cornell) and NOT the anatomy ("lacks a functional syrinx"), which
+     traces only to Britannica and a paywalled account.
+  3. For the alligator print the OBSERVATION (water sprays off a bellowing male's back)
+     and not the fluid-dynamics mechanism, which is secondary reporting.
+- Two are deliberate myth-correctors and should not be softened: the movie eagle scream
+  is a dubbed red-tailed hawk, and adult wood storks are voiceless (they bill-clatter).
+- The gator's and otter's `fact` strings were trimmed when this landed so the sheet does
+  not say the same thing twice — if you re-add sound lines elsewhere, check the fact first.
+
+## "Easily confused with" — the ID helper (v1.15.0)
+
+Two optional fields per species in `class-species.php`: `idgroup` (a look-alike set)
+and `mark` (the ONE field mark that settles this species). Rendered by `buildDetail()`
+after "Listen for": the species' own mark as a lead line, then every other member of
+its group with theirs, each behind its sprite.
+
+- Groups today: `white` (snowy egret, white ibis, wood stork, little blue heron —
+  juveniles are white, which is the whole confusion), `dark` (great blue heron,
+  tricolored, green heron, anhinga), `raptor` (bald eagle, osprey).
+- **Marks are verified field marks, not vibes** (Cornell Lab / All About Birds). The
+  tricolored's white belly, the osprey's M-kinked wings and eye-stripe, the snowy's
+  golden feet, the little blue juvenile's black-tipped pale bill — all sourced.
+- **The rows are deliberately NOT tappable.** Opening another species from inside an
+  open sheet would push a second sheet history entry and break the carefully-ordered
+  back/Escape contract in sheet.js. Informational rows keep that contract intact; do
+  not "improve" them into navigation without solving the history problem first.
+- A species with no `idgroup` renders nothing. Fourteen of the twenty-four have none,
+  and that is correct — only add a group where guests genuinely confuse two species.
+
+## Accessibility rules learned in the 1.15.1 audit
+
+- **`--dccwl-text-faint` is DECORATION ONLY.** Measured 2.7:1 on this plugin's white
+  card surfaces — fails WCAG AA at every size used here. Any text a guest is meant to
+  read uses `--dccwl-text-muted` (4.6:1). It currently survives on exactly one glyph,
+  the `·` separator in `.dccwl-card-dot`. Do not reintroduce it for text.
+- **`--dccwl-text-muted` PASSES (4.6:1) — on white.** Measure against the surface the
+  text actually sits on, not a mock background: an early pass in this audit "found" a
+  systemic failure that was really an artefact of a grey preview ground the live site
+  does not use. Verify on doracanalcourt.com, not a local harness.
+- **An `aria-label` on a button REPLACES its text for screen readers.** The month tiles
+  had `aria-label="Wildlife in January"`, which silently hid the visible "7 at peak".
+  If a control has meaningful text inside it, either omit the label or include that
+  text in it.
+- **Two adjacent block spans still concatenate for a screen reader.** The look-alike
+  name and mark read as "White Ibisa long, down-curved…" until a `.dccwl-sr` separator
+  was added between them. Visual line breaks are not textual separators.
+- **Do not test focus rings with `element.focus()`.** This plugin styles `:focus-visible`,
+  which deliberately does not match programmatic focus — a scripted audit will report
+  every control as unfocused. Check the CSS for the rules instead (all eleven controls
+  are covered).
+- **Payload, measured 2026-09-02:** app/widget/canal/water CSS ≈ 22 KB gz, sheet/widget/
+  canal/water JS ≈ 29 KB gz, sprite sheet ≈ 18 KB raw inline. Photos are lazy and only
+  on species open. That is fine — do not "optimise" it without a new measurement.
+
+## Crawlable content & structured data (v1.16.0)
+
+**The problem this solved.** Everything worth reading in this guide — scientific
+names, facts, calls, field marks — shipped only inside `window.DCC_WL_CFG`, i.e.
+inside a `<script>` tag. Measured on the live page: species *names* were readable
+as page text, but `Ardea herodias` occurred once in the HTML and **zero times**
+in the text a crawler reads. The rendering was excellent and invisible.
+
+**The fix, and its rules.**
+
+- `Render::render_guide_text()` renders every species as server-side prose in a
+  native `<details>`. **This must stay genuinely user-openable.** It is not an
+  SEO trick: it needs no JS, any visitor can open it, and it is the same text
+  the sheet shows. It is also the no-JS and one-bar-of-signal fallback. If you
+  ever find yourself hiding it with CSS or `hidden`, stop — that turns a legit
+  accordion into hidden text, which is a guidelines violation.
+- **The hub must render the prose at its OWN top level, never inside a panel.**
+  The hub's field guide sits inside `.dccwl-panel-species`, which is `hidden`
+  (`display:none`) until a visitor taps three levels in. Prose rendered there is
+  content a crawler meets hidden and discounts — the exact failure this feature
+  exists to fix. So `Canal_Render` calls `Render::render()` with
+  `guide_prose => false` and emits `Render::guide_prose_for_canal()` itself,
+  after `.dccwl-stage` closes, in normal flow. This mirrors what the hub already
+  does with the countdown. **Do not "simplify" by moving the prose back into the
+  panel** — it re-hides it. The `$fullguide_printed` guard keeps it once-per-page
+  whichever entry point fires first. (The standalone `[dcc_wildlife]` widget's
+  guide section is visible, so its own `guide_prose => true` default is correct
+  there — only the hub relocates.) Verify with: render `[dcc_canal]` server-side,
+  find `dccwl-fullguide`, and confirm its offset is AFTER the last `</section>`.
+- **Only month-independent fields may appear there.** `bestLabel` is a static
+  range ("Nov–Mar"); `best` is a time of day. Nothing that knows what month or
+  hour it is may be server-rendered — the cache doctrine at the top of this file
+  is unchanged and this section is not an exception to it.
+- `Render::render_species_jsonld()` emits one `ItemList` of `Taxon` nodes.
+  `sameAs` points at the Wikipedia article **and** the Wikidata item from
+  `Species::entities()`. Two hardening rules baked in and easy to undo by
+  accident: (1) the block is encoded **without** `JSON_UNESCAPED_SLASHES` — the
+  escaped `https:\/\/` is what stops a future `</script>` in a filtered species
+  name from breaking out of the tag; don't add that flag back "for readability".
+  (2) It carries **no `taxonRank`**: our set mixes ranks (species, the manatee
+  and water-snake subspecies, and "Turtles" = two genera), so a blanket
+  `'species'` was wrong for several — an unverifiable rank is worse than none,
+  same rule as the water Fact gate. Only add `taxonRank` per-species if you have
+  each one's real rank.
+
+**How `Species::entities()` was built, and how to extend it.** Every row was
+resolved by querying the MediaWiki API with the scientific name from
+`registry()`, following redirects, and confirming the resulting article really
+is that taxon. Do the same for any species you add. Two standing decisions:
+
+- `manatee` links the **species** article — our subspecies has no standalone
+  page and "Florida manatee" redirects there. A correct broader entity beats a
+  wrong precise one.
+- `turtle` has **no** entity on purpose. It covers *Pseudemys* spp. *and*
+  *Apalone ferox*; no single entity is true. Same gate as the water module's
+  `Water_Fact`: no verified source, no claim. Never fill this in to make the
+  map look complete.
+
+**Honest scope, so nobody oversells it later.** Google publishes no rich result
+for a species: this earns no snippet and no carousel. The win is that a machine
+can tell our "Limpkin" is *Aramus guarauna* — entity clarity for search and AI
+retrieval. The JSON-LD deliberately carries **no** `description`; the prose above
+already holds the facts, and repeating them would inflate every cached page for
+nothing. It is emitted separately from AIOSEO's graph (WebPage / Organization /
+LocalBusiness) and must neither touch nor duplicate it.
+
+**Both blocks are once-per-page, first-caller-wins**, like the countdown shell —
+a page carrying the hub *and* a standalone `[dcc_wildlife]` prints one prose
+guide and one JSON-LD block. Total cost to the cached page: ~6.6 KB gzipped, no
+new requests.
+
+**Verifying it.** Staging is login-gated, so fetching the staging URL returns the
+login page, not the guide — render the shortcode server-side instead:
+
+```bash
+ssh dcc 'cd ~/public_html/staging && wp eval "echo do_shortcode( \"[dcc_canal]\" );"'
+```
+
+Then strip `<script>` blocks before asserting anything is "on the page": text
+inside a script tag is not content. That distinction is the entire bug this
+section exists to prevent.

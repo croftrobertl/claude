@@ -253,6 +253,47 @@
 				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.where));
 				body.appendChild(el('p', 'dccwl-detail-p', sp.where));
 			}
+			// The canal is as much a sound as a sight. Only species with a
+			// verified, distinctive voice carry one — absent renders nothing.
+			if (sp.sound) {
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.listen || 'Listen for'));
+				body.appendChild(el('p', 'dccwl-detail-p', sp.sound));
+			}
+
+			/* "Tell them apart" — the real question on a dock is not what lives
+			 * here but WHICH ONE this is. Species that share a confusable group
+			 * (the white waders, the dark waders, the two big fish-hunters) list
+			 * each other with the one field mark that settles it. Informational
+			 * only: no navigation, so the shared sheet's history contract is
+			 * untouched. Absent group → nothing renders. */
+			if (sp.idgroup) {
+				var others = CFG.species.filter(function (o) {
+					return o.idgroup === sp.idgroup && o.id !== sp.id && o.mark;
+				});
+				if (others.length) {
+					body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.confused || 'Easily confused with'));
+					if (sp.mark) {
+						body.appendChild(el('p', 'dccwl-detail-p dccwl-mark-self',
+							fmt(CFG.i18n.tellBy || 'Tell this one by %s.', sp.mark)));
+					}
+					var looks = el('ul', 'dccwl-lookalikes');
+					others.forEach(function (o) {
+						var li = el('li', 'dccwl-lookalike');
+						var ic = el('span', 'dccwl-lookalike-icon');
+						ic.appendChild(speciesArt(o, 'dccwl-chip-sprite', 'dccwl-tile-emoji'));
+						li.appendChild(ic);
+						var tx = el('span', 'dccwl-lookalike-text');
+						tx.appendChild(el('span', 'dccwl-lookalike-name', o.name));
+						// The name and the mark are separate blocks visually, but ran
+						// together as one word for a screen reader ("White Ibisa long...").
+						tx.appendChild(el('span', 'dccwl-sr', ' — '));
+						tx.appendChild(el('span', 'dccwl-lookalike-mark', o.mark));
+						li.appendChild(tx);
+						looks.appendChild(li);
+					});
+					body.appendChild(looks);
+				}
+			}
 			if (sp.best) {
 				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.bestTime));
 				var bestP = el('p', 'dccwl-detail-p', sp.best);
@@ -663,6 +704,11 @@
 			}
 		});
 		if (!best) { return; }
+
+		// Publish which species the countdown is featuring, so the hub's
+		// "right now" line can avoid naming it twice on the same screen.
+		// Set before filling, and only ever read by canal.js.
+		if (window.DCCWL_Widget) { window.DCCWL_Widget.countdownId = best.s.id; }
 
 		Array.prototype.forEach.call(shells, function (node) {
 			fillCountdown(node, best, CFG.i18n || {});

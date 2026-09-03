@@ -486,6 +486,18 @@
 		}
 	}
 
+	/* ONE astronomy implementation, shared. The moon card here uses it, and the
+	 * canal hub's "right now" line reads it through this handle rather than
+	 * carrying a second copy of the maths. Exposed only once water.js actually
+	 * runs, so a page without the water module simply has no sky — and the hub
+	 * stays silent rather than guessing. */
+	window.DCCWL_Sky = {
+		moon: computeMoon,
+		phase: moonPhaseKey,
+		sun: sunTimes,
+		time: fmtCanalTime
+	};
+
 	function initMoon() {
 		var host = document.querySelector('[data-dccwl-moon]');
 		if (!host) { return; }

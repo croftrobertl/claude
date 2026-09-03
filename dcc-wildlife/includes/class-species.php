@@ -67,6 +67,7 @@ final class Species {
 				'fact'  => __( 'Florida’s state reptile. In spring the big bulls bellow at a pitch you feel as much as hear — hard enough to tremble the water into a fine spray off their backs.', 'dcc-wildlife' ),
 				'best'  => __( 'warm, sunny middays', 'dcc-wildlife' ),
 				'where' => __( 'basking on sunny banks, or holding log-still mid-canal', 'dcc-wildlife' ),
+				'sound' => __( 'Warm spring nights, when the bulls answer each other across the water — courtship runs April into May. The hatchlings even call to their mother from inside the egg.', 'dcc-wildlife' ),
 			],
 			'manatee'    => [
 				'emoji' => '🦭',
@@ -82,9 +83,10 @@ final class Species {
 				'name'  => __( 'River Otter', 'dcc-wildlife' ),
 				'sci'   => 'Lontra canadensis',
 				'group' => 'critters',
-				'fact'  => __( 'Playful and semi-aquatic, it can hold its breath up to eight minutes when it needs to. Listen for sharp whistles, and look for well-worn “latrine” spots where a family checks in along the bank.', 'dcc-wildlife' ),
+				'fact'  => __( 'Playful and semi-aquatic, it can hold its breath up to eight minutes when it needs to. Look for the well-worn “latrine” spots where a family checks in along the bank.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
 				'where' => __( 'along the banks near fallen trees and root tangles', 'dcc-wildlife' ),
+				'sound' => __( 'High, sharp chirps traded back and forth while they splash — more bird than mammal until you spot the wake.', 'dcc-wildlife' ),
 			],
 			'turtle'     => [
 				'emoji' => '🐢',
@@ -132,6 +134,9 @@ final class Species {
 				'fact'  => __( 'Bald eagles build the largest nests of any North American bird — one Florida nest weighed over two tons after years of reuse. Ours nest through the cool season, opposite their northern cousins.', 'dcc-wildlife' ),
 				'best'  => __( 'mornings', 'dcc-wildlife' ),
 				'where' => __( 'tall pines and bare snags above the treeline', 'dcc-wildlife' ),
+				'idgroup' => 'raptor',
+				'mark' => __( 'a white head and white tail on a dark body, with broad wings held almost flat', 'dcc-wildlife' ),
+				'sound' => __( 'Not the piercing scream from the movies — that is a red-tailed hawk, dubbed over very nearly every hawk and eagle on screen. A real bald eagle gives surprisingly weak, high piping whistles.', 'dcc-wildlife' ),
 			],
 			'osprey'     => [
 				'emoji' => '🐦',
@@ -141,6 +146,9 @@ final class Species {
 				'fact'  => __( 'The only raptor that plunges feet-first — sometimes fully underwater — to catch fish. A reversible outer toe lets it grip a slippery catch and line it up head-first in flight to cut the drag.', 'dcc-wildlife' ),
 				'best'  => __( 'mid-morning', 'dcc-wildlife' ),
 				'where' => __( 'circling high over open water, then a sudden plunge', 'dcc-wildlife' ),
+				'sound' => __( 'A rising and falling series of sharp whistles — the Cornell Lab likens it to a kettle taken quickly off the stove. This, not the eagle, is the loud whistler over the water.', 'dcc-wildlife' ),
+				'idgroup' => 'raptor',
+				'mark' => __( 'white underneath with a bold dark stripe through the eye; the wings kink into an M seen from below', 'dcc-wildlife' ),
 			],
 			'anhinga'    => [
 				'emoji' => '🐦',
@@ -150,6 +158,9 @@ final class Species {
 				'fact'  => __( 'The “snakebird” swims with only its sinuous neck above the surface. Its feathers aren’t waterproof — a feature, not a flaw, since it sinks to hunt — so it must perch with wings spread wide to dry.', 'dcc-wildlife' ),
 				'best'  => __( 'sunny middays', 'dcc-wildlife' ),
 				'where' => __( 'perched wings-out on snags and dock rails, drying off', 'dcc-wildlife' ),
+				'idgroup' => 'dark',
+				'mark' => __( 'not a heron at all — a snaky neck, a long fanned tail, and it perches with wings spread to dry', 'dcc-wildlife' ),
+				'sound' => __( 'A loud clicking near the nest that the Cornell Lab likens to a treadle sewing machine, or a croaking frog with a sore throat.', 'dcc-wildlife' ),
 			],
 			'heron'      => [
 				'emoji' => '🐦',
@@ -159,6 +170,9 @@ final class Species {
 				'fact'  => __( 'A special hinge in the sixth neck bone lets the great blue coil and fire its bill forward like a loosed spring. With rod-rich eyes, it can hunt by day or night.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
 				'where' => __( 'standing statue-still in the shallows along the bank', 'dcc-wildlife' ),
+				'idgroup' => 'dark',
+				'mark' => __( 'the biggest of them — grey-blue, a heavy yellowish bill, and a black plume over the eye', 'dcc-wildlife' ),
+				'sound' => __( 'A hoarse, prehistoric “frawnk” of complaint as it lifts off the bank — it can run on for the better part of twenty seconds.', 'dcc-wildlife' ),
 			],
 			'egret'      => [
 				'emoji' => '🐦',
@@ -168,6 +182,8 @@ final class Species {
 				'fact'  => __( 'It shuffles its golden-yellow feet to spook prey from the mud. Its lacy plumes were nearly hunted out for ladies’ hats a century ago — the fight to stop that helped launch the Audubon movement.', 'dcc-wildlife' ),
 				'best'  => __( 'early mornings', 'dcc-wildlife' ),
 				'where' => __( 'wading the muddy edges where the bank meets the water', 'dcc-wildlife' ),
+				'idgroup' => 'white',
+				'mark' => __( 'a slim black bill and black legs — but bright golden-yellow feet', 'dcc-wildlife' ),
 			],
 			'kingfisher' => [
 				'emoji' => '🐦',
@@ -177,15 +193,17 @@ final class Species {
 				'fact'  => __( 'It hovers on beating wings, then dives headfirst after small fish. The female is the brighter of the pair — an extra rusty band across the belly — which is unusual among our birds. Mostly a winter visitor here.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
 				'where' => __( 'low perches and wires over the water — listen for the dry rattle', 'dcc-wildlife' ),
+				'sound' => __( 'A hard, dry, mechanical rattle thrown back over its shoulder as it flies off ahead of you; it answers the slightest disturbance.', 'dcc-wildlife' ),
 			],
 			'limpkin'    => [
 				'emoji' => '🐦',
 				'name'  => __( 'Limpkin', 'dcc-wildlife' ),
 				'sci'   => 'Aramus guarauna',
 				'group' => 'birds',
-				'fact'  => __( 'An apple-snail specialist whose bill is even bent slightly to slip into the shell. Its wild, wailing night-scream is so eerie it’s a stock “jungle” sound in old films. Florida’s limpkins have boomed since the 2000s.', 'dcc-wildlife' ),
+				'fact'  => __( 'An apple-snail specialist, and superbly built for it: the closed bill has a gap near the tip that works like tweezers, and the tip curves slightly to the right to follow the shell’s own spiral. Look for its piles of empty shells along the bank. Florida’s limpkins have boomed since the 2000s.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn, dusk & after dark', 'dcc-wildlife' ),
 				'where' => __( 'stalking the reedy shallows — you’ll often hear it long before you see it', 'dcc-wildlife' ),
+				'sound' => __( 'A long, grating, high-pitched scream, mostly after dark, made with a looped windpipe. Cornell supplied one to Hollywood — it is the voice of the hippogriff in Harry Potter and the Prisoner of Azkaban.', 'dcc-wildlife' ),
 			],
 			'ibis'       => [
 				'emoji' => '🐦',
@@ -195,6 +213,9 @@ final class Species {
 				'fact'  => __( 'Flocks probe the mud by feel, snapping that curved red bill shut on crayfish they never see. All white, with jet-black wingtips that only flash when they take to the air.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
 				'where' => __( 'flocks working the shallows and the shoreline grass', 'dcc-wildlife' ),
+				'sound' => __( 'An unmusical, harsh, nasal honk, usually from a flock passing overhead.', 'dcc-wildlife' ),
+				'idgroup' => 'white',
+				'mark' => __( 'a long, down-curved red bill and red legs; black wingtips flash in flight', 'dcc-wildlife' ),
 			],
 			'woodstork'  => [
 				'emoji' => '🐦',
@@ -204,6 +225,9 @@ final class Species {
 				'fact'  => __( 'Florida’s only native stork feeds entirely by touch — it wades with its bill open underwater and snaps shut the instant a fish brushes it. Once federally endangered, it recovered so well it left the Endangered list in 2026.', 'dcc-wildlife' ),
 				'best'  => __( 'dry-season shallows', 'dcc-wildlife' ),
 				'where' => __( 'wading shrinking pools where falling water traps the fish', 'dcc-wildlife' ),
+				'idgroup' => 'white',
+				'mark' => __( 'much bigger and heavier, with a bald dark scaly head and a thick drooping bill', 'dcc-wildlife' ),
+				'sound' => __( 'Almost nothing. Adults are voiceless — capable only of a hiss — and “talk” by clattering those big bills like castanets. Only the nestlings make a racket.', 'dcc-wildlife' ),
 			],
 			'littleblue' => [
 				'emoji' => '🐦',
@@ -213,6 +237,8 @@ final class Species {
 				'fact'  => __( 'The only heron that changes color with age — snow-white as a youngster, deep slate-blue as an adult, and a patchy “calico” in between. The white youngsters even hunt alongside snowy egrets.', 'dcc-wildlife' ),
 				'best'  => __( 'mornings', 'dcc-wildlife' ),
 				'where' => __( 'quiet, vegetated edges, hunting slow and deliberate', 'dcc-wildlife' ),
+				'idgroup' => 'white',
+				'mark' => __( 'young birds are white with greenish-yellow legs and a pale blue-grey bill tipped black; adults are slate-blue', 'dcc-wildlife' ),
 			],
 			'tricolored' => [
 				'emoji' => '🐦',
@@ -222,6 +248,9 @@ final class Species {
 				'fact'  => __( 'A restless, acrobatic hunter — it dashes, pirouettes, and even stirs the bottom with a foot to flush minnows, which make up almost its entire diet.', 'dcc-wildlife' ),
 				'best'  => __( 'mornings', 'dcc-wildlife' ),
 				'where' => __( 'dancing through the shallow edges after small fish', 'dcc-wildlife' ),
+				'sound' => __( 'Usually quiet; a short guttural bark when something flushes it off the bank.', 'dcc-wildlife' ),
+				'idgroup' => 'dark',
+				'mark' => __( 'the only dark heron here with a clean white belly, and a white stripe down the neck', 'dcc-wildlife' ),
 			],
 			'greenheron' => [
 				'emoji' => '🐦',
@@ -231,6 +260,9 @@ final class Species {
 				'fact'  => __( 'One of the very few tool-using birds on Earth: it drops a twig, feather, or insect onto the water as bait, then snatches the curious fish that rises to it.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
 				'where' => __( 'crouched low on a branch or root over shady water', 'dcc-wildlife' ),
+				'sound' => __( 'A single explosive “skeow” as it bursts off the bank — unmistakable once you have heard it.', 'dcc-wildlife' ),
+				'idgroup' => 'dark',
+				'mark' => __( 'small and crouched, with a dark green back and a rich chestnut neck', 'dcc-wildlife' ),
 			],
 
 			// ---- PLANTS ------------------------------------------------
@@ -368,6 +400,66 @@ final class Species {
 	}
 
 	/**
+	 * Verified encyclopedia entities, species id => [ Wikipedia URL, Wikidata Q-id ].
+	 *
+	 * Used ONLY for the JSON-LD `sameAs` on the field guide (1.16.0) — this is
+	 * how a machine learns that our "Limpkin" is the same thing the rest of the
+	 * web calls Aramus guarauna. Deliberately NOT part of dataset(): it never
+	 * reaches the browser, so it costs the client payload nothing.
+	 *
+	 * Every row was resolved by querying the MediaWiki API with the scientific
+	 * name from registry() above, following redirects, and confirming the
+	 * resulting article really is that taxon (2026-09-02). Two judgement calls,
+	 * both deliberate:
+	 *
+	 * - 'manatee' — our subspecies (T. m. latirostris) has no standalone
+	 *   article; "Florida manatee" redirects to the species. The species
+	 *   article is therefore the correct entity, not a loose match.
+	 * - 'turtle' — absent ON PURPOSE. That entry covers Pseudemys spp. AND
+	 *   Apalone ferox; no single entity is true, so it gets none. Same rule as
+	 *   the water module's Fact gate: no verified source, no claim.
+	 *
+	 * @return array<string,array{0:string,1:string}>
+	 */
+	public static function entities(): array {
+		$entities = [
+			'alligator' => [ 'https://en.wikipedia.org/wiki/American_alligator', 'Q193327' ],
+			'manatee'   => [ 'https://en.wikipedia.org/wiki/West_Indian_manatee', 'Q40261' ],
+			'otter'     => [ 'https://en.wikipedia.org/wiki/North_American_river_otter', 'Q327028' ],
+			'snake'     => [ 'https://en.wikipedia.org/wiki/Florida_banded_water_snake', 'Q6996593' ],
+			'fish'      => [ 'https://en.wikipedia.org/wiki/Largemouth_bass', 'Q755105' ],
+			'applesnail' => [ 'https://en.wikipedia.org/wiki/Pomacea_paludosa', 'Q3142468' ],
+			'eagle'     => [ 'https://en.wikipedia.org/wiki/Bald_eagle', 'Q127216' ],
+			'osprey'    => [ 'https://en.wikipedia.org/wiki/Osprey', 'Q25332' ],
+			'anhinga'   => [ 'https://en.wikipedia.org/wiki/Anhinga', 'Q469940' ],
+			'heron'     => [ 'https://en.wikipedia.org/wiki/Great_blue_heron', 'Q333796' ],
+			'egret'     => [ 'https://en.wikipedia.org/wiki/Snowy_egret', 'Q59785' ],
+			'kingfisher' => [ 'https://en.wikipedia.org/wiki/Belted_kingfisher', 'Q736052' ],
+			'limpkin'   => [ 'https://en.wikipedia.org/wiki/Limpkin', 'Q725276' ],
+			'ibis'      => [ 'https://en.wikipedia.org/wiki/American_white_ibis', 'Q589171' ],
+			'woodstork' => [ 'https://en.wikipedia.org/wiki/Wood_stork', 'Q990175' ],
+			'littleblue' => [ 'https://en.wikipedia.org/wiki/Little_blue_heron', 'Q371028' ],
+			'tricolored' => [ 'https://en.wikipedia.org/wiki/Tricolored_heron', 'Q392139' ],
+			'greenheron' => [ 'https://en.wikipedia.org/wiki/Green_heron', 'Q498228' ],
+			'cypress'   => [ 'https://en.wikipedia.org/wiki/Taxodium_distichum', 'Q148950' ],
+			'moss'      => [ 'https://en.wikipedia.org/wiki/Spanish_moss', 'Q311524' ],
+			'fern'      => [ 'https://en.wikipedia.org/wiki/Pleopeltis_michauxiana', 'Q56761285' ],
+			'lily'      => [ 'https://en.wikipedia.org/wiki/Nymphaea_odorata', 'Q635853' ],
+			'palmetto'  => [ 'https://en.wikipedia.org/wiki/Serenoa', 'Q927607' ],
+		];
+
+		/**
+		 * Filter the verified entity map (species id => [ Wikipedia URL, Wikidata id ]).
+		 *
+		 * A species added via dcc_wl_species with no row here simply gets no
+		 * sameAs — an unverified guess is worse than silence.
+		 *
+		 * @param array<string,array{0:string,1:string}> $entities
+		 */
+		return (array) apply_filters( 'dcc_wl_entities', $entities );
+	}
+
+	/**
 	 * Registry + calendar merged into a JS-friendly ordered list, with the
 	 * filtered values normalized (12 months per species, each clamped 0–3).
 	 *
@@ -393,6 +485,13 @@ final class Species {
 				'emoji'     => (string) ( $sp['emoji'] ?? '' ),
 				'name'      => (string) ( $sp['name'] ?? $id ),
 				'sci'       => (string) ( $sp['sci'] ?? '' ),
+				// Optional: only species with a verified, distinctive sound
+				// carry one. Absent is normal and renders nothing.
+				'sound'     => (string) ( $sp['sound'] ?? '' ),
+				// Look-alike grouping: which confusable set this species belongs
+				// to, and the field mark that settles it. Both optional.
+				'idgroup'   => (string) ( $sp['idgroup'] ?? '' ),
+				'mark'      => (string) ( $sp['mark'] ?? '' ),
 				'photo'     => (string) ( $photos[ $id ] ?? '' ),
 				'group'     => (string) ( $sp['group'] ?? 'critters' ),
 				'fact'      => (string) ( $sp['fact'] ?? '' ),
