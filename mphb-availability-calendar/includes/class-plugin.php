@@ -56,6 +56,11 @@ final class Plugin
         add_action('wp_ajax_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
         add_action('wp_ajax_nopriv_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
 
+        // Staff booking calendar (/staff/). Every endpoint below re-verifies
+        // authorization server-side on each request — see Staff::is_authorized().
+        Staff::register();
+        Staff_Widget::register();
+
         // Request-time SpeedyCache exclusion — belt-and-braces alongside the
         // option-write done at activation, and self-heals if SpeedyCache's
         // settings are ever reset without a plugin reactivation.

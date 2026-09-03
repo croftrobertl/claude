@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.2
+Stable tag: 0.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.21.0 =
+* New staff booking calendar for the password-protected /staff/ page, added with the shortcode `[mphb_staff_calendar]` (works inside Elementor via its Shortcode widget). It shows all eight cottages for a month, marks each booking's check-in and check-out distinctly, highlights today, and opens full booking details on tap. Read-only.
+* Details cover all four sections MotoPress itself shows: booking information, reserved accommodations, customer information (including custom checkout fields), and notes.
+* **Guest counts from Vrbo/Airbnb/Booking.com are never shown as fact.** Those channels don't send a real guest count and MotoPress fills in the cottage's maximum capacity instead, so an imported booking shows "not provided by Airbnb" rather than a number that would be wrong. Direct bookings show the real count. Missing emails and phones show a dash, not a blank that looks broken.
+* **All guest information is protected server-side, on every request.** Nothing personal is written into the page — the page itself contains only an empty calendar shell. Names, contact details, notes and photo IDs are fetched separately, and each request re-checks that the visitor either entered the /staff/ page password or is a logged-in manager. A request without either gets nothing back. Uploaded photo IDs are streamed through that same check and never exposed as a public file URL.
+* Safety net: if the /staff/ page's password is ever removed, the calendar refuses to serve guest data rather than becoming public, and logs why.
+* Cancelled and abandoned bookings are excluded. The staff page and its data requests are excluded from caching.
+* Keyboard-operable throughout, with a focus trap and Escape to close, high-contrast phone-first layout, translation-ready, and no external requests.
+* The public availability calendar is unchanged.
 
 = 0.20.2 =
 * Booking popup date fields on narrow phones: the Check-in/Check-out pair now stacks into clean full-width rows when two full-size date inputs genuinely don't fit (measured cutover ≈ 330px viewport), and stays side by side with full date text at 375px/414px. Previously the two-column split was a percentage, so it could never stack — on very narrow screens the inputs instead spilled out of their columns into the gap and padding. Desktop rendering is measured pixel-identical to 0.20.1.

@@ -28,10 +28,27 @@ final class Cache_Integration
      */
     public static function ajax_exclusion_patterns(): array
     {
-        return [
+        $out = [
             self::ajax_exclusion_pattern(),
             '/wp-admin/admin-ajax.php?action=' . MPHBAC_PRICE_ACTION,
         ];
+        // Staff endpoints serve guest PII and must never be cached at any
+        // layer, by anyone, for any duration.
+        foreach (['month', 'booking', 'photo'] as $ep) {
+            $out[] = '/wp-admin/admin-ajax.php?action=mphbac_staff_' . $ep;
+        }
+        // ...and the staff PAGE itself. A full-page cache that ignores the
+        // post password would otherwise serve the shell (and, worse, a cached
+        // nonce) to anyone. The shell carries no PII by design, but caching a
+        // password-protected page is wrong regardless.
+        $staff = get_permalink(Staff::page_id());
+        if (is_string($staff) && $staff !== '') {
+            $path = wp_parse_url($staff, PHP_URL_PATH);
+            if (is_string($path) && $path !== '') {
+                $out[] = $path;
+            }
+        }
+        return $out;
     }
 
     public static function on_activate(): void

@@ -1,0 +1,252 @@
+/* Staff booking calendar — /staff/ only.
+   Loaded exclusively by [mphb_staff_calendar], which only renders for an
+   authorized visitor, so none of this reaches a public page.
+
+   Sized for reading at arm's length on a phone by older eyes: 16px base in
+   the grid, generous tap targets, high-contrast status colours. Self-contained
+   — no webfonts, no CDN, no external requests of any kind. */
+
+.mphbac-staff {
+    --staff-in: #0a6c2f;      /* check-in    */
+    --staff-out: #9a3412;     /* check-out   */
+    --staff-stay: #334155;    /* mid-stay    */
+    --staff-line: #d4d4d8;
+    --staff-today: #f4da62;
+    box-sizing: border-box;
+    width: 100%;
+    color: #111;
+    font-size: 16px;
+    line-height: 1.4;
+}
+.mphbac-staff *,
+.mphbac-staff *::before,
+.mphbac-staff *::after { box-sizing: inherit; }
+
+/* ---- month bar ---- */
+.mphbac-staff-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+}
+.mphbac-staff-month {
+    margin: 0;
+    font-size: 1.25em;
+    font-weight: 700;
+    text-align: center;
+    flex: 1 1 auto;
+}
+.mphbac-staff-nav {
+    /* >= 44px touch target (iOS HIG / WCAG 2.5.5). */
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0.6em;
+    border: 1px solid var(--staff-line);
+    border-radius: 8px;
+    background: #f8f8f8;
+    color: #111;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+.mphbac-staff-nav:hover { background: #eee; }
+.mphbac-staff-nav:focus-visible,
+.mphbac-staff-chip:focus-visible,
+.mphbac-staff-close:focus-visible,
+.mphbac-staff a:focus-visible {
+    outline: 2px solid #0f6dbf;
+    outline-offset: 2px;
+}
+
+/* ---- legend ---- */
+.mphbac-staff-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 1em;
+    margin-bottom: 0.6em;
+    font-size: 0.85em;
+}
+.mphbac-staff-key::before {
+    content: "";
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    margin-right: 0.35em;
+    border-radius: 2px;
+    vertical-align: -1px;
+}
+.mphbac-staff-key--in::before   { background: var(--staff-in); }
+.mphbac-staff-key--out::before  { background: var(--staff-out); }
+.mphbac-staff-key--stay::before { background: var(--staff-stay); }
+
+/* ---- grid ---- */
+.mphbac-staff-grid { width: 100%; overflow-x: auto; }
+.mphbac-staff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+.mphbac-staff-table th,
+.mphbac-staff-table td {
+    border: 1px solid var(--staff-line);
+    padding: 4px;
+    text-align: left;
+    vertical-align: top;
+}
+.mphbac-staff-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f1f5f9;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+.mphbac-staff-date {
+    white-space: nowrap;
+    font-weight: 600;
+    background: #fafafa;
+    min-width: 4.5em;
+}
+.mphbac-staff-table tr.is-today > * {
+    background: #fffbe6;
+    box-shadow: inset 0 -2px 0 0 var(--staff-today);
+}
+.mphbac-staff-cell { min-width: 5.5em; }
+
+/* ---- booking chips ---- */
+.mphbac-staff-chip {
+    display: block;
+    width: 100%;
+    margin: 1px 0;
+    padding: 6px 6px;
+    border: 0;
+    border-left: 4px solid var(--staff-stay);
+    border-radius: 4px;
+    background: #eef2f7;
+    color: #111;
+    font: inherit;
+    font-size: 0.9em;
+    text-align: left;
+    line-height: 1.25;
+    /* Long guest names must not blow the column out. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    /* Comfortable tap target without making every row enormous. */
+    min-height: 32px;
+}
+.mphbac-staff-chip.is-in   { border-left-color: var(--staff-in);  background: #e6f4ea; font-weight: 600; }
+.mphbac-staff-chip.is-out  { border-left-color: var(--staff-out); background: #fdece7; font-weight: 600; }
+.mphbac-staff-chip.is-stay { opacity: 0.85; }
+.mphbac-staff-chip.is-imported { border-left-style: dashed; }
+.mphbac-staff-chip:hover { filter: brightness(0.96); }
+
+.mphbac-staff-status { margin-top: 0.5em; font-size: 0.9em; }
+.mphbac-staff-status.is-error { color: #9a1c1c; font-weight: 600; }
+
+/* ---- detail sheet ---- */
+.mphbac-staff-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.mphbac-staff-overlay.is-open { opacity: 1; }
+.mphbac-staff-overlay[hidden] { display: none; }
+
+.mphbac-staff-sheet {
+    position: fixed;
+    z-index: 1001;
+    left: 50%;
+    top: 50%;
+    width: min(680px, calc(100vw - 20px));
+    max-height: min(88vh, 88dvh);
+    overflow-y: auto;
+    background: #fff;
+    color: #111;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+    padding: 1em 1.1em 1.4em;
+    transform: translate(-50%, -50%) translateY(14px);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.mphbac-staff-sheet.is-open { transform: translate(-50%, -50%); opacity: 1; }
+.mphbac-staff-sheet[hidden] { display: none; }
+
+.mphbac-staff-sheet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5em;
+    margin-bottom: 0.6em;
+}
+.mphbac-staff-sheet-title { font-size: 1.15em; font-weight: 700; }
+.mphbac-staff-close {
+    min-width: 44px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: #eee;
+    color: #111;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mphbac-staff-imported {
+    margin: 0 0 0.8em;
+    padding: 0.5em 0.7em;
+    border-left: 4px solid var(--staff-out);
+    background: #fff7ed;
+    font-size: 0.9em;
+}
+
+.mphbac-staff-section { margin-bottom: 1.1em; }
+.mphbac-staff-section h3 {
+    margin: 0 0 0.4em;
+    padding-bottom: 0.25em;
+    border-bottom: 1px solid var(--staff-line);
+    font-size: 1em;
+    font-weight: 700;
+}
+.mphbac-staff-section dl {
+    display: grid;
+    grid-template-columns: minmax(7em, 40%) 1fr;
+    gap: 0.25em 0.75em;
+    margin: 0;
+}
+.mphbac-staff-section dt { font-weight: 600; }
+.mphbac-staff-section dd { margin: 0; overflow-wrap: anywhere; }
+.mphbac-staff-section dd.is-empty { color: #6b7280; }
+/* An OTA-defaulted occupancy is shown as text, greyed and italic, so it can
+   never be mistaken for a real count. */
+.mphbac-staff-section dd.is-unknown { color: #6b7280; font-style: italic; }
+
+.mphbac-staff-room {
+    margin-bottom: 0.7em;
+    padding: 0.5em 0.6em;
+    border: 1px solid var(--staff-line);
+    border-radius: 8px;
+}
+.mphbac-staff-room h4 { margin: 0 0 0.3em; font-size: 0.95em; font-weight: 700; }
+
+.mphbac-staff-photo { margin: 0.6em 0 0; }
+.mphbac-staff-photo a { font-weight: 600; }
+.mphbac-staff-photo-note { color: #6b7280; font-size: 0.85em; }
+
+/* Phone: stack the definition lists so labels don't squeeze values. */
+@media (max-width: 600px) {
+    .mphbac-staff-section dl { grid-template-columns: 1fr; gap: 0 0; }
+    .mphbac-staff-section dd { margin-bottom: 0.45em; }
+    .mphbac-staff-sheet { width: calc(100vw - 12px); padding: 0.9em 0.8em 1.2em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mphbac-staff-overlay,
+    .mphbac-staff-sheet { transition: none; }
+}

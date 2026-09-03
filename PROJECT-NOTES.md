@@ -124,6 +124,9 @@ includes/class-data-provider.php     # Read layer over MotoPress (PHP API + SQL 
 includes/class-cache.php             # Thin transient wrapper (prefix mphbac_)
 includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin notice
 includes/class-ajax.php              # Public admin-ajax.php endpoints (mphbac_query availability + mphbac_price estimate) — deliberately nonce-free; see Invariants
+includes/class-staff.php             # /staff/ AUTHORIZATION GATE + gated PII endpoints (month/booking/photo) — read the Staff section before touching
+includes/class-staff-data.php        # Staff month query (1 query + cache prime) + MPHB entity adapter + OTA-honesty rule
+includes/class-staff-widget.php      # [mphb_staff_calendar] shell — deliberately contains NO PII
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
@@ -135,6 +138,56 @@ Request flow when a visitor loads a page containing the widget:
 3. `render()` also embeds the default window's availability (`config.initial`, sized to the largest per-device day count) so `widget.js` can **paint the grid instantly** on load — it slices the device's window from the embed, corrects "past" days locally (stale full-page cache), then fires a *silent* AJAX revalidate that re-renders only if the payload signature changed. If the embed is missing/too stale, it falls back to skeleton-then-AJAX.
 4. All network is lazy: `widget.js` defers any admin-ajax call behind an IntersectionObserver (`whenVisible`, 300px rootMargin) and skips the revalidate entirely when the embed passes `embedIsFresh()` — a normal page view can make zero calls. When it does fetch, it picks the day count for the current device, POSTs to `admin-ajax.php?action=mphbac_query`, and **renders the grid client-side**, re-rendering on filter/nav/swipe and breakpoint changes. After a render it idle-prefetches the adjacent nav windows into a client cache (5-min TTL) — but only once measured endpoint latency is under 800ms (`lastLatencyMs`); slow hosting never pays for speculation.
 5. `Data_Provider::get_availability()` (transient-cached, IDs sorted for canonical keys) backs the AJAX endpoint — the transient layer hits on repeats. The AJAX endpoint clamps dates to today−400d…today+730d and validates room-type IDs against real accommodation types (options-table flood protection). The grid is intentionally client-rendered so each device shows its own day count. **Signature parity invariant:** the embedded payload and the AJAX response for the same window must serialize identically (same ID sort, same day order, same `bookedThrough` gating) — that's what lets the silent revalidate skip the re-render.
+
+## Staff calendar (/staff/) — 0.21.0
+
+`[mphb_staff_calendar]`. Three files: `class-staff.php` (gate + endpoints),
+`class-staff-data.php` (queries + MPHB adapter), `class-staff-widget.php`
+(shortcode shell). This is the ONLY part of the plugin that handles guest PII.
+
+**Security gate — the whole design rests on this.**
+- `Staff::is_authorized()` is the single control. Two ways in: a valid
+  `wp-postpass_*` cookie for the staff page (re-hashed server-side by
+  `post_password_required()` on EVERY request), or `current_user_can()` on the
+  `edit_mphb_bookings` cap. Page ID (default 18102) and cap are filterable.
+- **Fail-closed hardening:** `post_password_required()` returns FALSE for a
+  post with NO password, so a naive `!post_password_required($id)` gate swings
+  wide open the moment someone clears the page password. `is_authorized()`
+  therefore verifies the page still HAS a password (and is published) before
+  trusting the cookie path, logs it if not, and falls back to the cap alone.
+  Do not "simplify" that check away.
+- The shortcode shell contains NO PII — only a nonce and endpoint URLs. All
+  guest data (including the calendar's guest names) is fetched through the
+  gated endpoints, so there is ONE enforcement point and the page HTML is
+  worthless if cached or leaked. Keep it that way: never inline booking data.
+- Photo IDs stream through `handle_photo()`, which re-derives the file path
+  from the BOOKING (never client input), rejects anything outside the uploads
+  dir via realpath containment, and sends nosniff + a restrictive CSP. The
+  `/uploads/` URL is never emitted — that is how the /guest/ Wi-Fi passwords
+  leaked.
+- Nonce required on every endpoint. Consequence: if the staff page is ever
+  full-page cached, the baked nonce goes stale and staff get 403 — fail-closed,
+  and the client says "reload the page". The staff page and all three staff
+  endpoints are in the SpeedyCache exclusion list for this reason.
+
+**OTA honesty rule.** iCal-imported bookings carry no real occupancy — MPHB
+defaults adults to the cottage's MAX capacity (~74 of 149 imported rooms).
+Any booking with `mphb_ical_prodid` (checked on the booking AND its reserved
+rooms) is marked imported, and `section_rooms()` returns `adults`/`children`
+as `null` with `provided: false` plus a "not provided by <OTA>" note. The UI
+renders that greyed and italic. **Never surface an imported guest count as a
+number.** Direct bookings return real counts.
+
+**Reading MPHB.** MPHB's source is not vendored and getter names vary across
+6.x, so every entity read goes through `first_of()`/`scalar()`, which try a
+list of candidate getters and fall back to post meta only as a last resort
+(same shape as `Data_Provider::query_room_types()`). A field whose real getter
+isn't in the candidate list degrades to "—" — visibly empty, never fatal,
+never silently wrong. Candidate lists need confirming against the live install.
+
+**Performance.** `month_view()` is ONE query for the range plus a single
+`_prime_post_caches()` + `update_meta_cache()`, so entity getters read from
+cache instead of N+1ing per booking. Detail loads lazily on tap.
 
 ## Invariants that must hold
 
