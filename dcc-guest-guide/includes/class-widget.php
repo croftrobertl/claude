@@ -452,6 +452,45 @@ final class Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
+        // v0.10.0: render mode. 'public' filters this widget's own render to
+        // audience-tagged sections; the shortcode sets it on a COPY of the
+        // source widget's settings so a public page can reuse one guide
+        // definition instead of duplicating it.
+        $this->add_control('guide_mode', [
+            'label'   => __('Mode', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => 'full',
+            'options' => [
+                'full'   => __('Full guest guide', 'dcc-guest-guide'),
+                'public' => __('Public preview (prospects)', 'dcc-guest-guide'),
+            ],
+            'description' => __('Public preview shows only sections marked Public or Both, and force-disables Request Support and the checkout review prompt regardless of their own settings. To publish a public page from an existing guide without copying it, use the shortcode instead: [dcc_guest_guide audience="public" source="POST_ID"].', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('public_intro', [
+            'label'       => __('Public intro line', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'rows'        => 2,
+            'default'     => '',
+            'condition'   => ['guide_mode' => 'public'],
+            'description' => __('Optional sentence shown above the tiles in public mode only. Leave empty to show nothing.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('public_cta_text', [
+            'label'       => __('Public CTA button text', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'condition'   => ['guide_mode' => 'public'],
+            'description' => __('Optional call to action shown after the tiles in public mode only, e.g. "Check availability". Leave empty to show no button.', 'dcc-guest-guide'),
+        ]);
+
+        $this->add_control('public_cta_url', [
+            'label'     => __('Public CTA link', 'dcc-guest-guide'),
+            'type'      => Controls_Manager::URL,
+            'default'   => ['url' => '', 'is_external' => false, 'nofollow' => false],
+            'condition' => ['guide_mode' => 'public'],
+        ]);
+
         $this->add_control('enable_print', [
             'label'        => __('Enable Print button', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -854,6 +893,22 @@ final class Widget extends Widget_Base
                 'checkout'  => __('Checkout (shows review prompt at the bottom)', 'dcc-guest-guide'),
             ],
             'description' => __('Mark this section for special treatment. Emergency tiles are pinned, painted red, and can show a floating SOS button. Checkout sections append the review prompt configured in the Checkout Review panel. At most one of each role per widget.', 'dcc-guest-guide'),
+        ]);
+
+        // v0.10.0: audience gate. Guest-only is the default and is also what
+        // any UNSET value resolves to, so a section can never leak by omission
+        // — including sections authored before this control existed. Only an
+        // explicit 'public' or 'both' is ever rendered on the public page.
+        $repeater->add_control('section_audience', [
+            'label'   => __('Audience', 'dcc-guest-guide'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => 'guest',
+            'options' => [
+                'guest'  => __('Guest-only (hidden from the public guide)', 'dcc-guest-guide'),
+                'public' => __('Public only (prospects)', 'dcc-guest-guide'),
+                'both'   => __('Both guests and public', 'dcc-guest-guide'),
+            ],
+            'description' => __('Controls whether this section appears in the public preview. Guest-only sections and all of their items are left out of the public page entirely — they are absent from the HTML, not merely hidden — so anything sensitive (Wi-Fi passwords, door codes) is safe there.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('section_icon_anim', [
@@ -2722,13 +2777,81 @@ final class Widget extends Widget_Base
     // Render
     // ----------------------------------------------------------------------
 
+    /**
+     * True when this widget should render the prospect-facing public guide.
+     */
+    public static function is_public_mode(array $s): bool
+    {
+        return ($s['guide_mode'] ?? 'full') === 'public';
+    }
+
+    /**
+     * Reduce a settings array to what the public guide may show.
+     *
+     * Fail-safe by construction: a section is kept ONLY on an explicit
+     * 'public' or 'both'. Every other value — 'guest', an empty string, a
+     * missing key, a legacy section authored before the control existed, or a
+     * typo — resolves to guest-only and is dropped. Omission can never leak.
+     *
+     * The hard exclusions are applied by switching off the settings that gate
+     * them, rather than by suppressing markup at each render site. Those flags
+     * are read in several places (menu, popup, per-item buttons, data-config),
+     * so closing them at the source means a render path added later inherits
+     * the exclusion automatically instead of quietly reintroducing the feature.
+     *
+     * @param array $s Settings, modified in place.
+     */
+    public static function apply_public_mode(array &$s): void
+    {
+        $sections = (array) ($s['guide_sections'] ?? []);
+        $kept     = [];
+        $kept_keys = [];
+        foreach ($sections as $sec) {
+            if (!is_array($sec)) { continue; }
+            $audience = (string) ($sec['section_audience'] ?? 'guest');
+            if ($audience !== 'public' && $audience !== 'both') { continue; }
+            $key = trim((string) ($sec['section_key'] ?? ''));
+            if ($key === '') { continue; }
+            $kept[] = $sec;
+            $kept_keys[$key] = true;
+        }
+        $s['guide_sections'] = $kept;
+
+        // Items follow their section. An item whose section did not survive is
+        // dropped outright — otherwise it would still reach the search index.
+        $items = (array) ($s['guide_items'] ?? []);
+        $s['guide_items'] = array_values(array_filter($items, static function ($item) use ($kept_keys) {
+            if (!is_array($item)) { return false; }
+            $k = trim((string) ($item['item_section'] ?? ''));
+            return $k !== '' && isset($kept_keys[$k]);
+        }));
+
+        // Hard exclusions, forced regardless of the widget's own settings.
+        $s['enable_problem_report']  = '';   // no Request Support in menu or popups
+        $s['enable_per_item_report'] = '';   // no per-item report buttons
+        $s['enable_checkout_review'] = '';   // no Airbnb/Vrbo/Google review UI
+    }
+
     protected function render(): void
     {
         if (!Plugin::instance()->dependencies_present()) {
             return;
         }
 
-        $s         = $this->get_settings_for_display();
+        $s = $this->get_settings_for_display();
+
+        // v0.10.0: public mode is applied HERE, before anything reads the
+        // settings, because every downstream consumer takes its data from $s:
+        // the menu tiles, the detail popups, render_item()'s per-item report
+        // button, render_more_menu(), the review prompt, and — easy to miss —
+        // build_search_index(), whose output is inlined verbatim into the
+        // data-config attribute. Filtering the single source rather than each
+        // render point means guest-only content cannot survive in any of them,
+        // so it is absent from the HTML rather than hidden by CSS.
+        if (self::is_public_mode($s)) {
+            self::apply_public_mode($s);
+        }
+
         $sections  = (array) ($s['guide_sections'] ?? []);
         $items_raw = (array) ($s['guide_items'] ?? []);
 
@@ -3091,12 +3214,46 @@ final class Widget extends Widget_Base
                     </div>
                 <?php endif; ?>
 
+                <?php // v0.10.0: public-only intro. Both this and the CTA below
+                // render only when the host has filled them in, so public mode
+                // adds no markup by default. Static text — nothing here varies
+                // per request, so the output stays page-cache and index safe.
+                if (self::is_public_mode($s)) :
+                    $public_intro = trim((string) ($s['public_intro'] ?? ''));
+                    if ($public_intro !== '') : ?>
+                        <p class="dccgg-public-intro"><?php echo esc_html($public_intro); ?></p>
+                    <?php endif;
+                endif; ?>
+
                 <div class="dccgg-stage-container">
                     <?php $this->render_menu($sections, $items_by_section, $s, $reveal_mode); ?>
                     <?php if ($reveal_mode === 'stage') : ?>
                         <?php $this->render_stage($sections, $items_by_section, $s); ?>
                     <?php endif; ?>
                 </div>
+
+                <?php // v0.10.0: public-only CTA, after the tiles. A plain link
+                // styled as a button — no JS, no new request, and it keeps a
+                // real href so it works for keyboard, screen readers and
+                // middle-click alike.
+                if (self::is_public_mode($s)) :
+                    $cta_text = trim((string) ($s['public_cta_text'] ?? ''));
+                    $cta_raw  = $s['public_cta_url'] ?? [];
+                    $cta_url  = is_array($cta_raw) ? trim((string) ($cta_raw['url'] ?? '')) : trim((string) $cta_raw);
+                    if ($cta_text !== '' && $cta_url !== '') :
+                        $cta_rel = [];
+                        if (!empty($cta_raw['nofollow']))    { $cta_rel[] = 'nofollow'; }
+                        if (!empty($cta_raw['is_external'])) { $cta_rel[] = 'noopener'; }
+                        ?>
+                        <div class="dccgg-public-cta-wrap">
+                            <a class="dccgg-btn dccgg-public-cta" href="<?php echo esc_url($cta_url); ?>"
+                               <?php if (!empty($cta_raw['is_external'])) : ?>target="_blank"<?php endif; ?>
+                               <?php if ($cta_rel) : ?>rel="<?php echo esc_attr(implode(' ', $cta_rel)); ?>"<?php endif; ?>>
+                                <?php echo esc_html($cta_text); ?>
+                            </a>
+                        </div>
+                    <?php endif;
+                endif; ?>
 
                 <?php if ($reveal_mode === 'stage') : ?>
                     <div class="dccgg-detail-overlay" hidden></div>

@@ -82,6 +82,10 @@ final class Plugin
         add_action('wp_ajax_dccgg_refresh_nonce',        [$this, 'handle_refresh_nonce']);
         add_action('wp_ajax_nopriv_dccgg_refresh_nonce', [$this, 'handle_refresh_nonce']);
 
+        // v0.10.0: public guide shortcode, so a second page can publish the
+        // prospect-facing view from the SAME guide definition.
+        add_shortcode('dcc_guest_guide', [$this, 'render_guide_shortcode']);
+
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
         // postmeta directly from a privileged AJAX endpoint instead.
@@ -255,6 +259,117 @@ final class Plugin
 
     /** Recursively collect every widget with widgetType=dccgg_guide in
      *  an Elementor element tree. */
+    /**
+     * Locate the guide widget's raw Elementor element data on a given post.
+     * Returns the full node (id, settings, widgetType) or [] when absent.
+     * When $widget_id is empty the first guide on the page is used, which is
+     * the normal case — the site has one guide.
+     */
+    public function find_widget_element(int $post_id, string $widget_id = ''): array
+    {
+        if ($post_id <= 0) { return []; }
+        $raw = get_post_meta($post_id, '_elementor_data', true);
+        if (!is_string($raw) || $raw === '') { return []; }
+        $tree = json_decode($raw, true);
+        if (!is_array($tree)) { return []; }
+        $hits = [];
+        $this->collect_dccgg_widgets($tree, $hits);
+        if (!$hits) { return []; }
+        if ($widget_id === '') { return (array) $hits[0]; }
+        foreach ($hits as $w) {
+            if ((string) ($w['id'] ?? '') === $widget_id) { return (array) $w; }
+        }
+        return [];
+    }
+
+    /**
+     * Find the post holding the guide when the shortcode was given no source.
+     * Cached in an option because it is a metadata scan; the cache is keyed to
+     * the plugin version so an upgrade re-resolves it, and a stale/missing post
+     * simply falls through to a fresh scan.
+     */
+    public function discover_guide_source(): int
+    {
+        $cached = get_option('dccgg_guide_source_post', []);
+        if (is_array($cached)
+            && ($cached['version'] ?? '') === DCCGG_VERSION
+            && (int) ($cached['post_id'] ?? 0) > 0
+            && get_post_status((int) $cached['post_id']) === 'publish') {
+            return (int) $cached['post_id'];
+        }
+        $found = 0;
+        $q = new \WP_Query([
+            'post_type'              => 'any',
+            'post_status'            => 'publish',
+            'posts_per_page'         => 20,
+            'fields'                 => 'ids',
+            'no_found_rows'          => true,
+            'update_post_term_cache' => false,
+            'meta_query'             => [[
+                'key'     => '_elementor_data',
+                'value'   => 'dccgg_guide',
+                'compare' => 'LIKE',
+            ]],
+        ]);
+        foreach ($q->posts as $pid) {
+            if ($this->find_widget_element((int) $pid)) { $found = (int) $pid; break; }
+        }
+        update_option('dccgg_guide_source_post', ['version' => DCCGG_VERSION, 'post_id' => $found], false);
+        return $found;
+    }
+
+    /**
+     * [dcc_guest_guide audience="public" source="123" widget="abc1234"]
+     *
+     * Renders the guide from ONE definition: it reads the source widget's own
+     * Elementor element data and re-renders that same element with the mode
+     * overridden, so the public page cannot drift from the guest guide. There
+     * is no second copy of the sections to maintain, and editing the guide
+     * updates both pages at once.
+     *
+     * audience defaults to "public" — the only reason to use the shortcode is
+     * the public surface, and defaulting the other way would make a typo
+     * publish the full guest guide.
+     */
+    public function render_guide_shortcode($atts = []): string
+    {
+        $atts = shortcode_atts([
+            'audience' => 'public',
+            'source'   => '',
+            'widget'   => '',
+        ], (array) $atts, 'dcc_guest_guide');
+
+        if (!$this->dependencies_present() || !class_exists('\\Elementor\\Plugin')) {
+            return '';
+        }
+
+        $post_id = (int) $atts['source'];
+        if ($post_id <= 0) { $post_id = $this->discover_guide_source(); }
+        $element = $this->find_widget_element($post_id, trim((string) $atts['widget']));
+        if (!$element) {
+            // Nothing to show, and nothing shouted at visitors. Admins get a
+            // pointer since a silent blank is hard to diagnose.
+            return current_user_can('edit_posts')
+                ? '<p>' . esc_html__('DCC Guest Guide: no guide widget found. Add source="POST_ID" to the shortcode, pointing at the page that holds the guide.', 'dcc-guest-guide') . '</p>'
+                : '';
+        }
+
+        // Override the mode on a COPY. The source page's own data is untouched.
+        $element['settings'] = (array) ($element['settings'] ?? []);
+        $element['settings']['guide_mode'] = ($atts['audience'] === 'public') ? 'public' : 'full';
+
+        Widget::register_assets();
+        wp_enqueue_style('dccgg-widget');
+        wp_enqueue_script('dccgg-widget');
+
+        $instance = \Elementor\Plugin::$instance->elements_manager->create_element_instance($element);
+        if (!$instance) { return ''; }
+
+        ob_start();
+        $instance->print_element();
+        return (string) ob_get_clean();
+    }
+
     private function collect_dccgg_widgets(array $tree, array &$out): void
     {
         foreach ($tree as $node) {

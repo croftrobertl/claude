@@ -780,6 +780,33 @@ body.dccgg-detail-open {
     gap: var(--dccgg-gap);
 }
 
+/* v0.10.0: public-preview extras. Deliberately built from the tokens the
+   guest guide already uses (--dccgg-text, --dccgg-btn-*, .dccgg-btn) so the
+   public page reads as the same product, and so no new asset, font or colour
+   enters the stylesheet. Both elements only exist when the host fills the
+   corresponding field in. */
+.dccgg-public-intro {
+    margin: 0 0 18px;
+    text-align: center;
+    color: var(--dccgg-text);
+    font-size: 1.05em;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+.dccgg-public-cta-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+}
+/* Inherits .dccgg-btn; the extra padding gives a comfortably large tap target
+   (>=48px tall) for the older visitors this page is aimed at. */
+.dccgg-root.dccgg-root .dccgg-public-cta {
+    padding: 14px 28px;
+    min-height: 48px;
+    font-size: 1.05em;
+    text-align: center;
+}
+
 /* Grid (default) */
 .dccgg-layout-grid .dccgg-menu {
     grid-template-columns: repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr));

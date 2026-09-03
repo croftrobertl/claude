@@ -121,6 +121,34 @@ Grid columns: the cottage column is a fixed `--mphbac-label-width`; day columns 
 
 Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. The whole widget — filters, calendar, legend, popups — is now styled cohesively.
 
+## DCC Guest Guide — public (prospect-facing) mode
+
+Since v0.10.0 the guide renders in two modes from ONE definition.
+
+- Each section carries `section_audience`: `guest` (default) / `public` / `both`.
+- `guide_mode` (`full` / `public`) selects the render path.
+- `Widget::apply_public_mode(array &$s)` is the single choke point. It runs at
+  the top of `render()`, BEFORE anything reads the settings, because every
+  consumer draws from `$s`: menu tiles, detail popups, `render_item()`'s
+  per-item report button, `render_more_menu()`, the review prompt, and
+  `build_search_index()` — whose output is inlined verbatim into `data-config`.
+  Filter the source, not each render site.
+- **Fail-safe is load-bearing:** a section is kept only on an explicit `public`
+  or `both`. Anything else — `guest`, empty, missing key, legacy section, typo
+  — is dropped. Guest content must never become public by omission. Do not
+  invert this test.
+- Public mode force-disables `enable_problem_report`, `enable_per_item_report`
+  and `enable_checkout_review` by writing the settings off, so a render path
+  added later inherits the exclusion instead of quietly reintroducing it.
+- The shortcode `[dcc_guest_guide audience="public" source="POST_ID"]` reads the
+  source page's Elementor element data and re-renders that same element with the
+  mode overridden. There is no second copy of the guide — do not "fix" this by
+  duplicating sections into options or a CPT.
+
+Run `php tests/public-mode.test.php` after touching any of it. Those tests guard
+a security property (one guest-only section holds Wi-Fi passwords and the public
+page is indexable), not a cosmetic one.
+
 ## DCC Guest Guide — deliverable naming
 
 This branch also carries the **DCC Guest Guide** plugin (`dcc-guest-guide/`).

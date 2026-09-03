@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.9
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,40 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.10.0 =
+
+**New: public (prospect-facing) mode — a marketing mini-guide built from
+the same guide data, so the two can never drift.**
+
+* **Per-section Audience control:** Guest-only (default), Public, or Both.
+  Tag Amenities, Clubhouse, Boating/Fishing, Rules and Map as Public;
+  leave Internet, Checkout and Review Us as Guest-only.
+* **Two ways to publish it.** A widget-level *Mode* control (Full guest
+  guide / Public preview), and a shortcode for a second page that reuses
+  the guide you already have:
+  `[dcc_guest_guide audience="public" source="POST_ID"]` — where POST_ID
+  is the page holding the guide. Omit `source` and the plugin finds the
+  guide itself.
+* **One source of truth.** The shortcode renders the *same* Elementor
+  widget definition with the mode overridden — there is no second copy of
+  the sections. Editing the guide updates both pages at once.
+* **Guest-only content is absent from the public HTML, not hidden.**
+  Filtering happens before anything reads the settings, so guest sections
+  and their items never reach the tiles, the detail popups, or the search
+  index inlined in the page source. A view-source check finds nothing.
+* **Hard exclusions in public mode**, forced regardless of their own
+  settings: Request Support / report-a-problem (menu and popups) and the
+  checkout review prompt.
+* **Fail-safe:** a section with no Audience set — including every section
+  authored before this release — counts as Guest-only. Content can never
+  become public by omission or by a typo in the field.
+* **Optional public-only copy:** an intro line above the tiles and a
+  "Check availability" style CTA button after them. Both render only when
+  filled in, so public mode adds no markup by default.
+* Reuses the existing stylesheet and script (no second copy, no new
+  external request or webfont), output is static and page-cache safe, and
+  every new string is translatable.
 
 = 0.9.9 =
 
