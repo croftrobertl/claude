@@ -352,7 +352,10 @@
 .dccwl-month-now {
 	background: var(--dccwl-accent);
 	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-accent-ink);
+	/* Dark ink on the coral fill (1.16.1): 7.29:1. White on coral was 2.59:1
+	 * on a 10.6px badge — the worst reading in the plugin. The fill keeps the
+	 * brand; only the ink changed. */
+	color: var(--dccwl-text);
 	font-size: 0.66rem;
 	font-weight: 700;
 	letter-spacing: 0.04em;

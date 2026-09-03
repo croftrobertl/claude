@@ -29,9 +29,23 @@
 .dccwl-app {
 	/* --- palette — measured from /guest/ ------------------------------ */
 
+	/* The brand coral is FILL AND BORDER ONLY (1.16.1). It measures 2.59:1
+	 * against white in both directions — as text on white, or white text on
+	 * it — which fails WCAG AA at every size, and even the 3:1 large-text bar.
+	 * No lightness of this hue passes AA while still reading as coral, so
+	 * text gets its own two tokens below. Never write `color: var(--dccwl-accent)`. */
 	--dccwl-accent: #f08080;             /* --dccgg-accent */
 	--dccwl-accent-ink: #ffffff;
 	--dccwl-accent-soft: rgba(240, 128, 128, 0.16);   /* derived */
+	/* Coral for SMALL text (< 24px, or < 18.66px bold): 5.22:1 on white,
+	 * 5.18:1 on the card, 4.54:1 on the accent-soft wash — passes AA on every
+	 * surface it is used on. Same hue, lower saturation, so it stays in the
+	 * family rather than turning alarm-red. */
+	--dccwl-accent-text: #bf4040;                     /* derived */
+	/* Coral for LARGE text only — the hero countdown number (28–40px at 800).
+	 * WCAG asks 3:1 there: 3.50:1 on white, 3.04:1 on the wash. This is the
+	 * closest colour to the brand that is legal; do NOT use it under 24px. */
+	--dccwl-accent-display: #eb5656;                  /* derived */
 	--dccwl-primary: #0f6dbf;            /* --dccgg-primary */
 	--dccwl-primary-soft: rgba(15, 109, 191, 0.08);   /* derived */
 
@@ -49,10 +63,16 @@
 	--dccwl-sheet-scrim: rgba(17, 17, 17, 0.44);      /* derived */
 
 	--dccwl-text: #111111;               /* --dccgg-text */
-	--dccwl-text-muted: #5d7891;         /* --dccgg-muted */
+	/* One step darker than the Guide's #5d7891 (1.16.1). That value is 4.60:1
+	 * on plain white — almost no headroom — and dips under AA on every tinted
+	 * surface it actually sits on: 4.11 on the current-month tile's blue wash,
+	 * 4.00 on the coral wash, 4.28 on the page background. #546d85 passes on
+	 * ALL of them (5.38 white / 4.81 blue / 4.68 coral / 5.00 page), so muted
+	 * text is now surface-independent. Don't lighten it back to match /guest/. */
+	--dccwl-text-muted: #546d85;         /* --dccgg-muted, darkened */
 	/* DECORATION ONLY — never for text. Measured 2.7:1 on the white card
 	 * surfaces this plugin uses, which fails WCAG AA at every size here. Use
-	 * --dccwl-text-muted (4.6:1) for any text a guest is meant to read. */
+	 * --dccwl-text-muted (≥4.68:1 everywhere) for any text a guest is meant to read. */
 	--dccwl-text-faint: #8ba0b3;                      /* derived from muted */
 	--dccwl-line: rgba(15, 109, 191, 0.15);           /* --dccgg-tile-border */
 	--dccwl-line-strong: rgba(15, 109, 191, 0.32);    /* derived */
@@ -249,7 +269,9 @@
 
 .dccwl-app .dccwl-badge-peak {
 	background: var(--dccwl-accent-soft);
-	color: var(--dccwl-accent);
+	/* 12.5px bold on the coral wash: the text token is 4.54:1 here; the
+	 * brand coral was 2.3:1. */
+	color: var(--dccwl-accent-text);
 }
 
 .dccwl-app .dccwl-metachip {

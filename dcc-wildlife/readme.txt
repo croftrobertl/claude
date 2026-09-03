@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.16.0
+Stable tag: 1.16.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.16.1 =
+* **Contrast: the coral, measured.** The 1.15.1 audit moved every quiet line off the faint token and reported "no text below AA" — but it only measured the greys. The brand coral `#f08080` had never been measured as text, and it is 2.59:1 against white in both directions, which fails AA at every size and even the 3:1 large-text bar. Found by the repo's own verification pass after 1.16.0, then re-measured here: the countdown's "is here now", the countdown's big day number, the "now" badge on the current month, the "Peak" flag on tiles, the "Peak season" badge in the sheet, and a hover state on the water attribution links. No lightness of that hue passes AA while still reading as coral, so the coral is now **fill and border only** and text gets two derived tokens: `--dccwl-accent-text` `#bf4040` (5.22:1 on white, 4.54:1 on the coral wash) for small text, and `--dccwl-accent-display` `#eb5656` (3.50:1) for the one large-text use, the hero number, so it stays as close to the brand as the rules allow. The "now" badge keeps its coral fill and switches to dark ink — 7.29:1, the biggest single improvement in the release.
+* **Muted, darkened one step.** `#5d7891` is 4.60:1 on plain white — almost no headroom — and dipped under AA on every tinted surface it actually sits on: 4.11:1 on the current-month tile's blue wash, 4.00:1 on the coral wash, 4.28:1 on the page background. It is now `#546d85`, which passes on all of them (5.38 / 4.81 / 4.68 / 5.00), so muted text is surface-independent for the first time. Every reading in this entry is from the same formula as the 1.15.1 audit, and the "no text below AA" claim is now true rather than nearly true.
+* CSS only — no PHP, no markup, no layout change.
 
 = 1.16.0 =
 * **Made the guide readable by machines — and by anyone without JavaScript.** Measured on the live page first: the species *names* were readable as page text, but "Ardea herodias" and every fact, call and field mark appeared exactly once in the HTML and zero times in the text a search engine reads, because they lived only inside the inline JSON config — i.e. inside a `<script>` tag. A crawler could see the shelf and not the books. The same content is now rendered server-side as real prose in a native `<details>` at the foot of the field guide: 24 species with scientific name, where to look, best time, what to listen for and how to tell it from its look-alikes. It is not a hidden-text trick — any visitor can open it, it needs no JavaScript, and it is the same text the sheet shows. It doubles as the no-JS and poor-signal fallback: a guest on the dock with one bar now gets the entire guide. Everything used is month-independent, so the cache doctrine is untouched.

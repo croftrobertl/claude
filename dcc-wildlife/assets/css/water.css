@@ -132,7 +132,8 @@
 	text-decoration: underline;
 }
 
-.dccwl-water .dccwl-water-attr a:hover { color: var(--dccwl-accent); }
+/* Hover is still a state a guest reads in; AA applies to it too. */
+.dccwl-water .dccwl-water-attr a:hover { color: var(--dccwl-accent-text); }
 
 .dccwl-water .dccwl-water-note { font-style: italic; }
 

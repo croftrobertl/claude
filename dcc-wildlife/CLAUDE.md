@@ -796,3 +796,32 @@ ssh dcc 'cd ~/public_html/staging && wp eval "echo do_shortcode( \"[dcc_canal]\"
 Then strip `<script>` blocks before asserting anything is "on the page": text
 inside a script tag is not content. That distinction is the entire bug this
 section exists to prevent.
+
+## Contrast tokens — the coral rule (v1.16.1)
+
+The 1.15.1 audit measured the greys and missed the coral. **`--dccwl-accent`
+(`#f08080`) is 2.59:1 against white in both directions** — it fails AA as text
+on white, as white text on it, and even the 3:1 large-text bar. No lightness of
+hue 0 passes AA while still reading as coral. Therefore:
+
+- **`--dccwl-accent` is fill and border only.** Never `color: var(--dccwl-accent)`.
+  `grep -rn "color: *var(--dccwl-accent)" assets/css/` must return nothing.
+- **`--dccwl-accent-text` (`#bf4040`)** is for coral text under 24px (or under
+  18.66px bold). Chosen because it passes on *every* surface it is used on —
+  white 5.22, card 5.18, **coral wash 4.54** — where `#cc3333` misses the wash
+  at 4.47. The peak badge sits on that wash, so the wash is the binding case.
+- **`--dccwl-accent-display` (`#eb5656`)** is for ONE thing: `.dccwl-hero-num`,
+  28–40px at weight 800, which WCAG treats as large text (3:1). 3.50 white /
+  3.04 wash. Do not use it under 24px; do not use it for anything else.
+- The `.dccwl-month-now` badge keeps its coral **fill** and uses `--dccwl-text`
+  ink (7.29:1). Don't put white back on it "because badges are white".
+- **`--dccwl-text-muted` is `#546d85`, not the Guide's `#5d7891`.** The Guide's
+  value is 4.60 on plain white and under AA on every tinted surface here (blue
+  tile 4.11, coral wash 4.00, page-bg 4.28). `#546d85` passes on all four
+  (5.38 / 4.81 / 4.68 / 5.00). If someone re-syncs the palette from /guest/,
+  keep this override.
+
+**Measure text on the surface it actually sits on, not on white.** The
+tinted-tile and wash failures were invisible to a white-background check. The
+surfaces in play: card `#fefeff`, current-month tile `#ecf3fa` (primary-soft
+over white), coral wash `#fdebeb` (accent-soft over white), page-bg `#f4f7fa`.

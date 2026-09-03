@@ -78,7 +78,9 @@
 }
 
 .dccwl-hero-num {
-	color: var(--dccwl-accent);
+	/* Large text (28–40px at 800) — the display token clears the 3:1 bar
+	 * the brand coral misses (2.59). The only place this token is allowed. */
+	color: var(--dccwl-accent-display);
 	font-size: var(--dccwl-fs-hero);
 	font-weight: 800;
 	letter-spacing: -0.02em;
@@ -91,7 +93,9 @@
 	font-weight: 600;
 }
 
-.dccwl-hero-now { color: var(--dccwl-accent); }
+/* 20px at 600 is not "large" text in WCAG's terms (that needs 24px, or
+ * 18.66px at 700), so this needs 4.5:1: the text token, not the brand coral. */
+.dccwl-hero-now { color: var(--dccwl-accent-text); }
 
 .dccwl-hero-why {
 	color: var(--dccwl-text-muted);
@@ -317,7 +321,7 @@
 }
 
 .dccwl-tile-peak {
-	color: var(--dccwl-accent);
+	color: var(--dccwl-accent-text);   /* small bold text on white: 5.2:1 */
 	font-weight: 700;
 }
 
