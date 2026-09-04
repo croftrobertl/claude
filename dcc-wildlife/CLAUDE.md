@@ -496,15 +496,31 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 # NAMING CONVENTION (owner's request): "Wildlife <version>.zip", e.g.
 # "Wildlife 1.5.0.zip". The version is read from the plugin header rather
 # than typed, so the filename can never drift from what is inside the zip.
+#
+# DEV DOCS ARE NOT DISTRIBUTED: every *.md in this folder (CLAUDE.md,
+# WATER-SOURCES.md) is developer documentation. It stays in git; it does not
+# ship. The other DCC plugins already exclude it and this one was the last
+# still shipping it. readme.txt is NOT excluded — WordPress reads it for the
+# plugin listing, so keep it .txt and keep it in the zip.
 (
   cd "$(git rev-parse --show-toplevel)" &&
   V=$(sed -n 's/^ \* Version: *//p' dcc-wildlife/dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
-  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store'
+  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md'
 )
+
+# Verify the build before handing it over: no dev docs, readme.txt present.
+unzip -l "Wildlife $V.zip" | grep -E '\.md$' && echo 'FAIL: a dev doc shipped'
+unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
 ```
 
 Deliver that file to the owner for the Plugins → Add New → Upload route.
 `Wildlife *.zip` is gitignored, so build artifacts never get committed.
+
+Note: a few code comments point at CLAUDE.md / WATER-SOURCES.md for context
+(render-budget notes in widget.css, provenance notes in class-species.php and
+class-water-data.php). Those are signposts for anyone reading the source in
+git, where the files do exist; nothing loads a .md at runtime, so excluding
+them cannot change behaviour.
 
 ## Manual smoke-test checklist (staging)
 
