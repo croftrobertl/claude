@@ -85,6 +85,12 @@ final class Plugin
         // v0.10.0: public guide shortcode, so a second page can publish the
         // prospect-facing view from the SAME guide definition.
         add_shortcode('dcc_guest_guide', [$this, 'render_guide_shortcode']);
+        // Enqueue during the normal pass when the page actually uses the
+        // shortcode. Enqueuing only from inside the shortcode callback works,
+        // but by then wp_head has run, so the stylesheet lands late and the
+        // guide paints unstyled for a beat. Still enqueued in the callback too,
+        // for shortcodes rendered from a template or another plugin's content.
+        add_action('wp_enqueue_scripts', [$this, 'maybe_enqueue_for_shortcode']);
 
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
@@ -297,6 +303,13 @@ final class Plugin
             && get_post_status((int) $cached['post_id']) === 'publish') {
             return (int) $cached['post_id'];
         }
+        // A miss is cached briefly too. Without this, a site where discovery
+        // fails (no guide yet, or the shortcode used before the guide exists)
+        // would run the meta_query LIKE scan below on EVERY page render, since
+        // the positive cache requires post_id > 0 to be considered valid.
+        if (get_transient('dccgg_guide_source_miss')) {
+            return 0;
+        }
         $found = 0;
         $q = new \WP_Query([
             'post_type'              => 'any',
@@ -314,8 +327,28 @@ final class Plugin
         foreach ($q->posts as $pid) {
             if ($this->find_widget_element((int) $pid)) { $found = (int) $pid; break; }
         }
-        update_option('dccgg_guide_source_post', ['version' => DCCGG_VERSION, 'post_id' => $found], false);
+        if ($found > 0) {
+            update_option('dccgg_guide_source_post', ['version' => DCCGG_VERSION, 'post_id' => $found], false);
+        } else {
+            set_transient('dccgg_guide_source_miss', 1, 10 * MINUTE_IN_SECONDS);
+        }
         return $found;
+    }
+
+    /**
+     * Front-load the guide assets when the current page's content contains the
+     * shortcode, so they are registered in <head> like any other page asset.
+     * Scoped to that check, so pages without the shortcode load nothing.
+     */
+    public function maybe_enqueue_for_shortcode(): void
+    {
+        if (!is_singular()) { return; }
+        $post = get_post();
+        if (!$post || !is_string($post->post_content) || $post->post_content === '') { return; }
+        if (!has_shortcode($post->post_content, 'dcc_guest_guide')) { return; }
+        Widget::register_assets();
+        wp_enqueue_style('dccgg-widget');
+        wp_enqueue_script('dccgg-widget');
     }
 
     /**
@@ -1026,6 +1059,24 @@ final class Plugin
         $widget_id = isset($_REQUEST['widget_id']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['widget_id']))    : '';
         if ($post_id <= 0 || $widget_id === '') {
             wp_send_json_error(['message' => 'post_id and widget_id required'], 400);
+        }
+        // v0.10.0: this endpoint answers anonymous callers (wp_ajax_nopriv) and
+        // returns a guide's full search index, which for the guest guide
+        // includes Wi-Fi passwords. find_widget_settings() reads _elementor_data
+        // for ANY post id with no visibility check, so without the guard below
+        // a caller could name a private, draft or password-protected page and
+        // read content that page would never show them — bypassing the whole
+        // point of the public/guest split. Serve only what the requester could
+        // already see by visiting the post.
+        $post = get_post($post_id);
+        if (!$post) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+        if ($post->post_status !== 'publish' && !current_user_can('read_post', $post_id)) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+        if (post_password_required($post)) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
         }
         $settings = $this->find_widget_settings($post_id, $widget_id);
         if (empty($settings)) {

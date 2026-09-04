@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.0
+Stable tag: 0.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,36 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.10.1 =
+
+**Self-audit of the 0.10.0 public mode — four fixes.**
+
+* **Security: the search-index endpoint now checks post visibility.** It
+  answers anonymous callers and returns a guide's full search index,
+  including the Wi-Fi passwords, and it looked up any post ID with no
+  visibility check at all. A caller could name a private, draft or
+  password-protected page and read content that page would never show
+  them. It now serves only what the requester could already see by
+  visiting the post. This gap predates 0.10.0 but matters far more now
+  that a public page exists.
+* **Fixed: the public intro and CTA fields were unreachable.** They were
+  hidden unless the widget's own Mode was "Public preview" — but the
+  shortcode renders the public page from a widget that stays in Full
+  mode, so the fields never appeared and the CTA could never be used.
+  They are always editable now.
+* **Fixed: a PHP warning when the CTA link is a plain string** rather
+  than Elementor's link array, which happens with an imported or older
+  guide.
+* **Fixed: guide auto-discovery no longer rescans on every page load**
+  when it finds nothing (e.g. the shortcode is added before the guide
+  exists). Misses are cached briefly, as hits already were.
+* Guide assets are now enqueued in the normal head pass on pages using
+  the shortcode, instead of mid-content, so the guide no longer paints
+  unstyled for a beat.
+
+Public-mode tests extended to 23 assertions, including empty, malformed
+and all-guest guides, run with all PHP warnings enabled.
 
 = 0.10.0 =
 

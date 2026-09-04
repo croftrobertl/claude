@@ -145,6 +145,11 @@ Since v0.10.0 the guide renders in two modes from ONE definition.
   mode overridden. There is no second copy of the guide — do not "fix" this by
   duplicating sections into options or a CPT.
 
+`Plugin::handle_search_index()` is anonymous (`wp_ajax_nopriv`) and returns a
+guide's full index, so it verifies post visibility before answering — without
+that check it is a way to read a private or password-protected guide. Keep that
+guard if you touch the endpoint.
+
 Run `php tests/public-mode.test.php` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.

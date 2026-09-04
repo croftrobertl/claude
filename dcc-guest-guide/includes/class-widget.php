@@ -472,23 +472,20 @@ final class Widget extends Widget_Base
             'type'        => Controls_Manager::TEXTAREA,
             'rows'        => 2,
             'default'     => '',
-            'condition'   => ['guide_mode' => 'public'],
-            'description' => __('Optional sentence shown above the tiles in public mode only. Leave empty to show nothing.', 'dcc-guest-guide'),
+            'description' => __('Optional sentence shown above the tiles, in public mode only. Deliberately NOT hidden when this widget is in Full mode: the shortcode renders the public page from this same widget while its own Mode stays Full, so these fields have to remain editable here. Leave empty to show nothing.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('public_cta_text', [
             'label'       => __('Public CTA button text', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
             'default'     => '',
-            'condition'   => ['guide_mode' => 'public'],
-            'description' => __('Optional call to action shown after the tiles in public mode only, e.g. "Check availability". Leave empty to show no button.', 'dcc-guest-guide'),
+            'description' => __('Optional call to action shown after the tiles, in public mode only, e.g. "Check availability". Leave empty to show no button.', 'dcc-guest-guide'),
         ]);
 
         $this->add_control('public_cta_url', [
             'label'     => __('Public CTA link', 'dcc-guest-guide'),
             'type'      => Controls_Manager::URL,
             'default'   => ['url' => '', 'is_external' => false, 'nofollow' => false],
-            'condition' => ['guide_mode' => 'public'],
         ]);
 
         $this->add_control('enable_print', [
@@ -3238,8 +3235,14 @@ final class Widget extends Widget_Base
                 // middle-click alike.
                 if (self::is_public_mode($s)) :
                     $cta_text = trim((string) ($s['public_cta_text'] ?? ''));
+                    // Normalise the URL control to an array up front. Elementor
+                    // hands back ['url','is_external','nofollow'], but a guide
+                    // imported from JSON (or an older save) can carry a plain
+                    // string — and reading ['nofollow'] off a string raises a
+                    // PHP warning on render, which this plugin does not ship.
                     $cta_raw  = $s['public_cta_url'] ?? [];
-                    $cta_url  = is_array($cta_raw) ? trim((string) ($cta_raw['url'] ?? '')) : trim((string) $cta_raw);
+                    if (!is_array($cta_raw)) { $cta_raw = ['url' => (string) $cta_raw]; }
+                    $cta_url  = trim((string) ($cta_raw['url'] ?? ''));
                     if ($cta_text !== '' && $cta_url !== '') :
                         $cta_rel = [];
                         if (!empty($cta_raw['nofollow']))    { $cta_rel[] = 'nofollow'; }

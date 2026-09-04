@@ -122,5 +122,35 @@ $fullCopy = $full;   // render() only filters when is_public_mode() is true
 check('full mode keeps every section', count($fullCopy['guide_sections']) === 7);
 check('full mode keeps Request Support', $fullCopy['enable_problem_report'] === 'yes');
 
+echo "\nG. Degenerate guides degrade cleanly (no notices, no half-state)\n";
+// Every section guest-only: the public page must come back empty and
+// well-formed rather than warning or emitting a partial section.
+$allGuest = [
+    'guide_mode' => 'public',
+    'guide_sections' => [['section_key' => 'wifi', 'section_title' => 'Internet', 'section_audience' => 'guest']],
+    'guide_items'    => [['item_section' => 'wifi', 'item_title' => 'Password', 'item_text' => 'DCC32586']],
+];
+$g = $allGuest;
+\DCCGG\Widget::apply_public_mode($g);
+check('all-guest guide yields zero sections', $g['guide_sections'] === []);
+check('all-guest guide yields zero items', $g['guide_items'] === []);
+check('all-guest guide leaks nothing', stripos(json_encode([$g['guide_sections'], $g['guide_items']]), 'DCC32586') === false);
+$emptyIdx = \DCCGG\Widget::build_search_index($g);
+check('search index over an empty public guide is empty', $emptyIdx === [] || $emptyIdx === array_values([]));
+
+// A guide with no sections/items keys at all must not warn or fatal.
+$bare = ['guide_mode' => 'public'];
+\DCCGG\Widget::apply_public_mode($bare);
+check('missing guide_sections/guide_items keys handled', $bare['guide_sections'] === [] && $bare['guide_items'] === []);
+
+// Malformed rows (non-arrays) must be skipped, not crash the filter.
+$malformed = [
+    'guide_mode' => 'public',
+    'guide_sections' => ['not-an-array', ['section_key' => 'ok', 'section_audience' => 'public']],
+    'guide_items'    => ['also-not-an-array', ['item_section' => 'ok', 'item_title' => 'Fine']],
+];
+\DCCGG\Widget::apply_public_mode($malformed);
+check('malformed rows skipped without error', count($malformed['guide_sections']) === 1 && count($malformed['guide_items']) === 1);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }
