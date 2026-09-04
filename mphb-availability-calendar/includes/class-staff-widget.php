@@ -98,7 +98,10 @@ final class Staff_Widget
         <div class="mphbac-staff" data-staff-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
             <div class="mphbac-staff-bar">
                 <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>">&larr;</button>
-                <h2 class="mphbac-staff-month" aria-live="polite"></h2>
+                <?php // Not a heading element: it ships empty (JS fills it), which is
+                // precisely what tripped the empty-heading check fixed in 0.20.1.
+                // aria-live announces the month when it changes. ?>
+                <div class="mphbac-staff-month" aria-live="polite"></div>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>">&rarr;</button>
             </div>
             <div class="mphbac-staff-legend" aria-hidden="true">
@@ -106,7 +109,10 @@ final class Staff_Widget
                 <span class="mphbac-staff-key mphbac-staff-key--out"><?php echo esc_html__('Check-out', 'mphb-availability-calendar'); ?></span>
                 <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
             </div>
-            <div class="mphbac-staff-grid" role="region" aria-live="polite"
+            <?php // No aria-live here on purpose: the grid is a whole table, and a
+            // live region would re-read every cell on each month change. The
+            // status line below carries the announcements instead. ?>
+            <div class="mphbac-staff-grid" role="region"
                  aria-label="<?php echo esc_attr__('Staff booking calendar', 'mphb-availability-calendar'); ?>"></div>
             <div class="mphbac-staff-status" role="status" aria-live="polite"></div>
 

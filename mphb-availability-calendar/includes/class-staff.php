@@ -93,17 +93,21 @@ final class Staff
     {
         self::send_private_headers();
 
-        $nonce = isset($_REQUEST['nonce']) ? sanitize_text_field((string) wp_unslash($_REQUEST['nonce'])) : '';
-        if (!wp_verify_nonce($nonce, self::NONCE_ACTION)) {
-            status_header(403);
-            // Distinguishable ONLY for an already-authorized-looking caller;
-            // the body stays empty either way. The client turns this into
-            // "reload the page" rather than a silent break.
-            header('X-MPHBAC-Staff: nonce');
-            exit;
-        }
+        // Authorization FIRST. If this ran after the nonce check, an
+        // unauthorized caller could tell a valid nonce from an invalid one by
+        // the presence of the header below — a small oracle, but free to
+        // remove. An unauthorized caller now gets an indistinguishable 403.
         if (!self::is_authorized()) {
             status_header(403);
+            exit;
+        }
+        $nonce = isset($_REQUEST['nonce']) ? sanitize_text_field((string) wp_unslash($_REQUEST['nonce'])) : '';
+        if (!wp_verify_nonce($nonce, self::NONCE_ACTION)) {
+            // Only ever seen by someone who IS authorized — i.e. real staff
+            // whose baked nonce went stale. The client turns it into
+            // "reload the page" rather than a silent break. Body stays empty.
+            status_header(403);
+            header('X-MPHBAC-Staff: nonce');
             exit;
         }
     }

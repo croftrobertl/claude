@@ -78,11 +78,19 @@ final class Staff_Data
 
         // Group reserved rooms under their booking — a multi-cottage booking
         // is ONE entry listing several cottages, not several bookings.
+        // booking_id => reserved-room ids, straight from the rows we already
+        // have. Feeding this to source_for() is what keeps the OTA check from
+        // becoming a get_posts() per booking.
+        $reserved_by_booking = [];
+        foreach ($rows as $r) {
+            $reserved_by_booking[(int) $r->booking_id][] = (int) $r->reserved_id;
+        }
+
         $bookings = [];
         foreach ($rows as $r) {
             $bid = (int) $r->booking_id;
             if (!isset($bookings[$bid])) {
-                $source = self::source_for($bid);
+                $source = self::source_for($bid, $reserved_by_booking[$bid] ?? []);
                 $bookings[$bid] = [
                     'id'         => $bid,
                     'status'     => (string) $r->status,
@@ -330,6 +338,37 @@ final class Staff_Data
         return $out;
     }
 
+    /**
+     * Display name for the calendar chip. PII — which is exactly why the whole
+     * month payload is gated. Falls back through customer entity → reserved
+     * room guest name → booking meta → the booking number, so a chip always
+     * has something to show rather than rendering blank.
+     */
+    private static function guest_name(int $booking_id): string
+    {
+        $b = self::booking_entity($booking_id);
+        $c = self::first_of($b, ['getCustomer']);
+
+        $first = (string) self::scalar($c, ['getFirstName'], '');
+        $last  = (string) self::scalar($c, ['getLastName'], '');
+        $name  = trim($first . ' ' . $last);
+        if ($name !== '') {
+            return $name;
+        }
+        $full = self::scalar($c, ['getName', 'getFullName'], null);
+        if (is_string($full) && trim($full) !== '') {
+            return trim($full);
+        }
+        // Imports frequently have no customer record at all.
+        foreach (['mphb_first_name', 'mphb_last_name', 'mphb_customer_name'] as $k) {
+            $v = (string) get_post_meta($booking_id, $k, true);
+            if ($v !== '') {
+                $name = trim($name . ' ' . $v);
+            }
+        }
+        return $name !== '' ? $name : '#' . $booking_id;
+    }
+
     // ------------------------------------------------------------ OTA source
 
     /**
@@ -337,19 +376,25 @@ final class Staff_Data
      *
      * @return array{imported:bool,ota:string,prodid:string,uid:string,summary:string}
      */
-    public static function source_for(int $booking_id): array
+    public static function source_for(int $booking_id, ?array $reserved_ids = null): array
     {
         $prodid = (string) get_post_meta($booking_id, self::META_ICAL_PROD, true);
         if ($prodid === '') {
             // Reserved rooms sometimes carry the marker instead of the parent.
-            foreach (get_posts([
-                'post_type'      => 'mphb_reserved_room',
-                'post_parent'    => $booking_id,
-                'posts_per_page' => 5,
-                'fields'         => 'ids',
-                'no_found_rows'  => true,
-                'post_status'    => 'any',
-            ]) as $rid) {
+            // month_view() passes the ids it ALREADY has from its single query
+            // (and has already meta-primed), so this costs no extra queries.
+            // Only the lazy single-booking detail path falls back to a lookup.
+            if ($reserved_ids === null) {
+                $reserved_ids = get_posts([
+                    'post_type'      => 'mphb_reserved_room',
+                    'post_parent'    => $booking_id,
+                    'posts_per_page' => 5,
+                    'fields'         => 'ids',
+                    'no_found_rows'  => true,
+                    'post_status'    => 'any',
+                ]);
+            }
+            foreach ((array) $reserved_ids as $rid) {
                 $prodid = (string) get_post_meta((int) $rid, self::META_ICAL_PROD, true);
                 if ($prodid !== '') {
                     break;

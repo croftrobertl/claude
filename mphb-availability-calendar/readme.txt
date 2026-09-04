@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.0
+Stable tag: 0.21.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.21.1 =
+Self-audit of the 0.21.0 staff calendar. **0.21.0 should not be installed — use this build instead.**
+
+* Fixed a crash that made the staff calendar fail to load at all: an internal function was called but never written, so the month view errored on first use. 0.21.0 was never usable; this is the first working build of the feature.
+* Fixed a performance defect: checking whether each booking came from Airbnb/Vrbo/Booking.com ran an extra database lookup per booking, which is exactly the per-booking querying the calendar was supposed to avoid. It now reuses data already fetched — one database query per month, no extras.
+* The month heading no longer ships as an empty heading element (the same accessibility issue fixed for the guest calendar in 0.20.1).
+* Removed a "live region" from the calendar table that would have made screen readers re-read every cell on each month change; announcements now come from the status line only.
+* Security tightening: the endpoints now check authorization *before* the security token, so an unauthorized request can no longer learn anything from the difference between the two failures. Genuine staff still get the "reload the page" hint.
+* A stale error message no longer lingers when returning to an already-loaded month.
 
 = 0.21.0 =
 * New staff booking calendar for the password-protected /staff/ page, added with the shortcode `[mphb_staff_calendar]` (works inside Elementor via its Shortcode widget). It shows all eight cottages for a month, marks each booking's check-in and check-out distinctly, highlights today, and opens full booking details on tap. Read-only.

@@ -84,7 +84,7 @@
         function loadMonth() {
             var seq = ++monthReq;
             monthEl.textContent = monthName(month);
-            if (cache[month]) { paint(cache[month]); return; }
+            if (cache[month]) { say(''); paint(cache[month]); return; }
             say(S.loading || 'Loading…');
             gridEl.setAttribute('aria-busy', 'true');
             post('mphbac_staff_month', { month: month }).then(function (json) {
