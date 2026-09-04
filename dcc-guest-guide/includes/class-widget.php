@@ -2848,6 +2848,9 @@ final class Widget extends Widget_Base
         $s['enable_problem_report']  = '';   // no Request Support in menu or popups
         $s['enable_per_item_report'] = '';   // no per-item report buttons
         $s['enable_checkout_review'] = '';   // no Airbnb/Vrbo/Google review UI
+        // v0.11.0, by owner decision:
+        $s['enable_ai_search']       = '';   // anonymous prospects must not spend the Gemini quota
+        $s['enable_emergency_fab']   = '';   // no floating SOS button on a marketing page
     }
 
     protected function render(): void

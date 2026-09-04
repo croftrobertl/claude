@@ -145,6 +145,14 @@ Since v0.10.0 the guide renders in two modes from ONE definition.
   guide; every other value (typo, wrong case, empty, non-scalar) returns
   `public`. Do not "simplify" it to `=== 'public' ? public : full` — that is
   what it was, and `audience="Public"` published the Wi-Fi passwords.
+- Two front doors, ONE render path: the `Widget_Public` widget
+  (`class-widget-public.php`) and the shortcode both call
+  `Plugin::render_source_guide()`. Add behaviour there, not in either caller.
+  `Widget_Public` hard-codes mode `public` — it has no input that could select
+  the guest guide.
+- `render_source_guide()` also enqueues the SOURCE post's Elementor stylesheet.
+  Without it the guide renders with plugin defaults, because the host's style
+  controls compile into the source page's own CSS file.
 - The shortcode `[dcc_guest_guide audience="public" source="POST_ID"]` reads the
   source page's Elementor element data and re-renders that same element with the
   mode overridden. There is no second copy of the guide — do not "fix" this by

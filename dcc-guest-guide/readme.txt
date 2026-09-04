@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.2
+Stable tag: 0.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,41 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.11.0 =
+
+**New: a dedicated "DCC Guest Guide — Public" Elementor widget.**
+
+The public guide is now its own widget, alongside the main guide widget in
+the same **Dora Canal Court** category — matching how DCC Availability
+Calendar and DCC Cottage Selector each ship a full widget plus a variant.
+The `[dcc_guest_guide]` shortcode still works and is unchanged.
+
+* **Source control.** Pick the page holding the guide (or leave it on
+  Auto-detect when there is only one). The widget holds no content of its
+  own: it re-renders that same guide definition filtered to Public/Both,
+  so editing the guide updates the guest page and this one together.
+* **Intro and button, pre-filled**, ready to adjust:
+  *"A look at life on the Dora Canal — the water, the amenities, and the
+  little things that make a stay here ours."* and **See the cottages →**
+  linking to /cottages/. Clear either field to show nothing.
+* **Two more hard exclusions in public mode**, by owner decision: the AI
+  "Ask anything" search (anonymous prospect traffic should not spend the
+  Gemini quota) and the emergency SOS floating button (no SOS on a
+  marketing page). These join Request Support and the checkout review
+  prompt, and apply to the widget, the shortcode and Public preview mode
+  alike.
+* **Fix: the guide's own styling now follows it.** The colours and
+  typography set on the source guide live in that page's generated
+  stylesheet, which a public page never loaded — so the public guide
+  would have rendered with plugin defaults instead of your settings. The
+  source stylesheet is now enqueued alongside it.
+* The shortcode and the new widget share one render path, so they cannot
+  diverge in behaviour.
+
+The audience fail-safe is unchanged: only sections explicitly marked
+Public or Both ever appear, and the widget's mode is fixed in code rather
+than read from a setting, so no typo can turn it into the guest guide.
 
 = 0.10.2 =
 

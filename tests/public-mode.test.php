@@ -45,6 +45,8 @@ $settings = [
     'enable_problem_report'  => 'yes',
     'enable_per_item_report' => 'yes',
     'enable_checkout_review' => 'yes',
+    'enable_ai_search'       => 'yes',
+    'enable_emergency_fab'   => 'yes',
     'guide_sections' => [
         ['section_key' => 'amenities', 'section_title' => 'Amenities',        'section_audience' => 'public'],
         ['section_key' => 'clubhouse', 'section_title' => 'Clubhouse',        'section_audience' => 'both'],
@@ -89,6 +91,10 @@ echo "\nC. Hard exclusions forced off regardless of settings\n";
 check('Request Support disabled', ($s['enable_problem_report'] ?? '') !== 'yes');
 check('per-item report disabled',  ($s['enable_per_item_report'] ?? '') !== 'yes');
 check('checkout review prompt disabled', ($s['enable_checkout_review'] ?? '') !== 'yes');
+// v0.11.0, owner decision: prospects must not spend the Gemini quota, and a
+// marketing page must not carry an emergency SOS button.
+check('AI "Ask anything" search disabled', ($s['enable_ai_search'] ?? '') !== 'yes');
+check('emergency SOS floating button disabled', ($s['enable_emergency_fab'] ?? '') !== 'yes');
 
 echo "\nD. Leak sweep — the content render() feeds every consumer\n";
 // Sweep the CONTENT subtrees, i.e. everything that becomes visible text or
@@ -121,6 +127,8 @@ check('public mode detected from settings', \DCCGG\Widget::is_public_mode($setti
 $fullCopy = $full;   // render() only filters when is_public_mode() is true
 check('full mode keeps every section', count($fullCopy['guide_sections']) === 7);
 check('full mode keeps Request Support', $fullCopy['enable_problem_report'] === 'yes');
+check('full mode keeps AI search and the SOS button',
+    $fullCopy['enable_ai_search'] === 'yes' && $fullCopy['enable_emergency_fab'] === 'yes');
 
 echo "\nG. Degenerate guides degrade cleanly (no notices, no half-state)\n";
 // Every section guest-only: the public page must come back empty and

@@ -352,6 +352,66 @@ final class Plugin
     }
 
     /**
+     * Render a guide from its source definition, in the given mode.
+     *
+     * The single mechanism behind both the [dcc_guest_guide] shortcode and the
+     * "DCC Guest Guide — Public" widget: read the SOURCE page's Elementor
+     * element data and re-render that same element with the mode (and any
+     * per-placement overrides such as the CTA copy) applied to a COPY. The
+     * source page's stored data is never touched, and no section content is
+     * duplicated, so the public view cannot drift from the guest guide.
+     *
+     * @param array $overrides Settings applied over the source's own. Applied
+     *                         unconditionally, including empty values, so a
+     *                         placement can deliberately clear inherited copy.
+     */
+    public function render_source_guide(int $post_id, string $widget_id, string $mode, array $overrides = []): string
+    {
+        if (!$this->dependencies_present() || !class_exists('\Elementor\Plugin')) {
+            return '';
+        }
+        if ($post_id <= 0) { $post_id = $this->discover_guide_source(); }
+        $element = $this->find_widget_element($post_id, $widget_id);
+        if (!$element) {
+            // Silent for visitors; editors get a pointer, since a blank space
+            // is otherwise hard to diagnose.
+            return current_user_can('edit_posts')
+                ? '<p>' . esc_html__('DCC Guest Guide: no guide widget found. Point the Source setting at the page that holds the guide.', 'dcc-guest-guide') . '</p>'
+                : '';
+        }
+
+        $element['settings'] = (array) ($element['settings'] ?? []);
+        $element['settings']['guide_mode'] = $mode;
+        foreach ($overrides as $k => $v) {
+            $element['settings'][$k] = $v;
+        }
+
+        Widget::register_assets();
+        wp_enqueue_style('dccgg-widget');
+        wp_enqueue_script('dccgg-widget');
+
+        // The host's Elementor style-control settings for the guide are
+        // compiled into the SOURCE post's generated stylesheet, which this page
+        // would otherwise never load — the guide would render with plugin
+        // defaults and none of the configured colours or typography. Rules are
+        // scoped to their own element ids, so pulling the file in is safe.
+        if (class_exists('\Elementor\Core\Files\CSS\Post')) {
+            try {
+                \Elementor\Core\Files\CSS\Post::create($post_id)->enqueue();
+            } catch (\Throwable $e) {
+                error_log('DCCGG: could not enqueue source Elementor CSS for post ' . $post_id . ' — ' . $e->getMessage());
+            }
+        }
+
+        $instance = \Elementor\Plugin::$instance->elements_manager->create_element_instance($element);
+        if (!$instance) { return ''; }
+
+        ob_start();
+        $instance->print_element();
+        return (string) ob_get_clean();
+    }
+
+    /**
      * [dcc_guest_guide audience="public" source="123" widget="abc1234"]
      *
      * Renders the guide from ONE definition: it reads the source widget's own
@@ -376,31 +436,11 @@ final class Plugin
             return '';
         }
 
-        $post_id = (int) $atts['source'];
-        if ($post_id <= 0) { $post_id = $this->discover_guide_source(); }
-        $element = $this->find_widget_element($post_id, trim((string) $atts['widget']));
-        if (!$element) {
-            // Nothing to show, and nothing shouted at visitors. Admins get a
-            // pointer since a silent blank is hard to diagnose.
-            return current_user_can('edit_posts')
-                ? '<p>' . esc_html__('DCC Guest Guide: no guide widget found. Add source="POST_ID" to the shortcode, pointing at the page that holds the guide.', 'dcc-guest-guide') . '</p>'
-                : '';
-        }
-
-        // Override the mode on a COPY. The source page's own data is untouched.
-        $element['settings'] = (array) ($element['settings'] ?? []);
-        $element['settings']['guide_mode'] = Widget::mode_for_audience($atts['audience']);
-
-        Widget::register_assets();
-        wp_enqueue_style('dccgg-widget');
-        wp_enqueue_script('dccgg-widget');
-
-        $instance = \Elementor\Plugin::$instance->elements_manager->create_element_instance($element);
-        if (!$instance) { return ''; }
-
-        ob_start();
-        $instance->print_element();
-        return (string) ob_get_clean();
+        return $this->render_source_guide(
+            (int) $atts['source'],
+            trim((string) $atts['widget']),
+            Widget::mode_for_audience($atts['audience'])
+        );
     }
 
     private function collect_dccgg_widgets(array $tree, array &$out): void
@@ -1172,5 +1212,8 @@ final class Plugin
     public function register_widget(\Elementor\Widgets_Manager $widgets_manager): void
     {
         $widgets_manager->register(new Widget());
+        // v0.11.0: dedicated public widget, matching how the other DCC plugins
+        // ship a full widget plus a variant. Same "dcc-widgets" category.
+        $widgets_manager->register(new Widget_Public());
     }
 }
