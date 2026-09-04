@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.6.1
+Stable tag: 3.6.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -144,6 +144,24 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.6.2 =
+* FIXED: the 3.6.1 purge-on-upgrade never fired on an upgrade. The stored
+  version option only exists from 3.6.1, so every upgrade from an earlier
+  release arrived with no stored version — indistinguishable from a fresh
+  install, which is the one case that correctly skips the purge. A saved
+  settings row now tells the two apart, so upgrading actually purges.
+* FIXED: the backdrop host was found by walking up from the FIRST element
+  matching the content-anchor list, in document order. A theme wrapper that
+  matches the list and encloses the real content column is therefore found
+  first, and walking up from an ancestor can never reach the column inside
+  it — so "behind" would silently fall back to the body mount. Every anchor
+  is now walked, deepest candidate first.
+* The "no backdrop host" console warning is only emitted when candidates
+  existed and none could hold the canvas. A theme with no opaque content
+  column has nothing covering a body-level canvas, so "behind" already works
+  there and the warning was noise.
+* No art, theme, schedule, glyph or settings changes.
 
 = 3.6.1 =
 * FIXED (the real cause): "Behind interactive widgets" never worked on this

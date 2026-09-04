@@ -63,8 +63,19 @@ final class Plugin {
             return;
         }
         update_option(self::VERSION_OPTION, DCC_SEASONS_VERSION, false);
-        if ($seen === false) {
-            return; // First ever run: nothing cached under a previous version.
+
+        /*
+         * No stored version means one of two very different things, and
+         * telling them apart matters: this option only exists from 3.6.1, so
+         * EVERY upgrade from an earlier release arrives here with $seen ===
+         * false — including the one this feature was written for. Treating
+         * that as "first install" would skip the purge exactly when it is
+         * needed. A saved options row is the tell: it means the plugin has
+         * run here before, so there is cached HTML carrying the old inline
+         * config and the old ?ver= asset URL.
+         */
+        if ($seen === false && get_option(Settings::OPTION) === false) {
+            return; // Genuinely first install: nothing cached under a previous version.
         }
         Cache_Purge::purge_and_report();
     }

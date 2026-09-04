@@ -17,7 +17,15 @@ Key facts from that document that affect this plugin:
 
 ## Repository purpose
 
-A single WordPress plugin — **MPHB Availability Calendar** — that adds one Elementor widget displaying multi-property availability for MotoPress Hotel Booking accommodations on doracanalcourt.com. The plugin lives at `mphb-availability-calendar/`. The repo has no build step.
+Two WordPress plugins for doracanalcourt.com:
+
+- **MPHB Availability Calendar** (`mphb-availability-calendar/`) — one Elementor
+  widget displaying multi-property availability for MotoPress Hotel Booking
+  accommodations. No build step. Most of this file describes this plugin.
+- **DCC Seasons** (`dcc-seasons/`) — date-scheduled seasonal ambient particles
+  plus a tap-the-logo Matrix easter egg. See the section at the end of this file.
+
+Both share the `dcc` admin menu and the `claude-code` Elementor category.
 
 ## Target environment
 
@@ -123,8 +131,10 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Git workflow
 
-- Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
-- The repo has only the plugin folder at root — no other deliverables.
+- Active branch: `claude/dcc-seasons-plugin-2tqkxt`. Develop and push there. Don't open a PR unless the user asks.
+- Root holds two plugin folders (`mphb-availability-calendar/`, `dcc-seasons/`),
+  the `tools/` dev scripts, the tracked `dcc-seasons.zip` build artifact, and the
+  site context docs.
 
 ## Delivering DCC Seasons zips
 
@@ -136,3 +146,25 @@ name, which is what WordPress installs); only the delivered filename changes.
 The repo keeps one tracked build artifact at `dcc-seasons.zip` so a version-named
 copy isn't accumulated per release; rebuild it in the same commit as the version
 bump so the tracked zip never lags the source.
+
+## DCC Seasons — things that bite
+
+- **Minified assets have a recorded build command.** Regenerate with exactly
+  `npx terser assets/js/<name>.js -c passes=3 -m --safari10 -d __DCC_DEBUG__=false
+  -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
+  flags were unrecorded, which made one release's binary unreproducible and its
+  size incomparable to the next.
+- **Never run a numeric-precision regex over the sprite path data.** A trim regex
+  in 3.2.0 fused compact SVG number pairs (`8.2.4` is two numbers, not one),
+  silently corrupting four sprites; the corrupted output is an ordinary-looking
+  number no text search can find. Run `node tools/validate-paths.js` after any
+  change to `assets/js/engine.js` — it parses every `d` and exits 1 on a bad one.
+- **The "behind" layering canvas is mounted inside the theme's opaque content
+  column at `z-index:-1`,** not on the body. Bravada's `main.main` is
+  `position:relative; z-index:9` with a white background, so no body-level
+  z-index can sit between that background and the text above it. Override the
+  host with the `dcc_seasons_backdrop_host` filter.
+- **Uploading a new zip does not purge the page cache.** The client config and the
+  `?ver=` asset URL are both baked into cached HTML, so the site keeps serving the
+  previous build. The plugin purges itself on a version change, but verify after
+  any manual/FTP deploy.

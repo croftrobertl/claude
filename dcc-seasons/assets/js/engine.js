@@ -397,16 +397,37 @@
 		/* Candidate hosts, nearest first. A selector from the
 		 * dcc_seasons_backdrop_host filter is tried before the walk. */
 		function backdropHosts() {
-			var out = [], el;
+			var out = [], el, i;
 			if (CFG.backdropHost) {
 				try { el = D.querySelector(CFG.backdropHost); } catch (e) { el = null; }
 				if (el && el !== D.body) { out.push(el); }
 			}
-			var anchor = D.querySelector('main, [role="main"], #main, #content, .site-content, article') || null;
-			for (el = anchor; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) {
-				if (stacks(el) && paintsOpaque(el) && out.indexOf(el) < 0) { out.push(el); }
+			/* Walk up from EVERY content anchor, not just the first one in
+			 * document order. querySelector returns the earliest match, which
+			 * on a theme where a wrapper like #content encloses the real
+			 * content column would be that wrapper — and walking up from an
+			 * ancestor can never reach the column inside it. Collecting from
+			 * every anchor and trying the deepest candidates first makes the
+			 * search independent of how the theme nests its wrappers. */
+			var anchors = D.querySelectorAll('main, [role="main"], #main, #content, .site-content, .site-main, article, .entry-content');
+			var found = [];
+			for (i = 0; i < anchors.length; i++) {
+				for (el = anchors[i]; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) {
+					if (found.indexOf(el) < 0 && stacks(el) && paintsOpaque(el)) { found.push(el); }
+				}
+			}
+			/* Deepest first: the innermost opaque column is the one whose
+			 * background is actually covering the canvas. */
+			found.sort(function (a, b) { return depth(b) - depth(a); });
+			for (i = 0; i < found.length; i++) {
+				if (out.indexOf(found[i]) < 0) { out.push(found[i]); }
 			}
 			return out;
+		}
+		function depth(el) {
+			var n = 0;
+			while ((el = el.parentElement)) { n++; }
+			return n;
 		}
 		function mountOnBody(z) {
 			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + z + ';';
@@ -425,9 +446,9 @@
 			el.removeChild(cv);
 			return false;
 		}
-		var host = null;
+		var host = null, cand = [];
 		if (CFG.layer) {
-			var cand = backdropHosts();
+			cand = backdropHosts();
 			for (var hi = 0; hi < cand.length; hi++) {
 				if (tryHost(cand[hi])) { host = cand[hi]; break; }
 			}
@@ -438,7 +459,11 @@
 			 * "behind" and the canvas may be covered — say so rather than
 			 * fail silently, and never render nothing. */
 			mountOnBody(CFG.layer ? 5 : 99990);
-			if (CFG.layer && W.console && W.console.warn) {
+			/* Only worth saying when there WAS an opaque column and none of
+			 * the candidates could hold the canvas. A theme with no opaque
+			 * content column has nothing to hide the body-level canvas, so
+			 * "behind" already works there and a warning would be noise. */
+			if (CFG.layer && cand.length && W.console && W.console.warn) {
 				W.console.warn('DCC Seasons: no backdrop host found for "behind" layering; the canvas is on the body at z-index 5 and may be covered by the theme. Set one with the dcc_seasons_backdrop_host filter.');
 			}
 		}
