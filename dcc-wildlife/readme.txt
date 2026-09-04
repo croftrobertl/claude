@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.16.1
+Stable tag: 1.16.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.16.2 =
+* **Contrast: the amber, measured.** The 1.16.1 pass fixed the coral but didn't re-check the amber. The water panel's "GENERAL GUIDANCE — NOT MEASURED…" heading is `--dccwl-warn` #b07d3a at 0.78rem bold — 3.60:1 on white and 3.21:1 on the blue tile, so the 4.5 small-text bar applies and it failed. Same fix as the coral: `--dccwl-warn` is now fill/border only, and a new `--dccwl-warn-text` #8e652f (same hue, darker) carries that one heading — 5.18:1 on white, 4.63:1 on the blue tile, passing on every surface it can sit on. This was the last text token that had never been measured; the guide is now AA on every text node.
+* Build hygiene: the distributed zip now also excludes the dev-only `tools/` scripts (following 1.16.1's exclusion of the Markdown dev docs), so nothing dev-only ships to sites. No runtime change.
+* CSS only — no PHP logic, no markup, no layout change.
 
 = 1.16.1 =
 * **Contrast: the coral, measured.** The 1.15.1 audit moved every quiet line off the faint token and reported "no text below AA" — but it only measured the greys. The brand coral `#f08080` had never been measured as text, and it is 2.59:1 against white in both directions, which fails AA at every size and even the 3:1 large-text bar. Found by the repo's own verification pass after 1.16.0, then re-measured here: the countdown's "is here now", the countdown's big day number, the "now" badge on the current month, the "Peak" flag on tiles, the "Peak season" badge in the sheet, and a hover state on the water attribution links. No lightness of that hue passes AA while still reading as coral, so the coral is now **fill and border only** and text gets two derived tokens: `--dccwl-accent-text` `#bf4040` (5.22:1 on white, 4.54:1 on the coral wash) for small text, and `--dccwl-accent-display` `#eb5656` (3.50:1) for the one large-text use, the hero number, so it stays as close to the brand as the rules allow. The "now" badge keeps its coral fill and switches to dark ink — 7.29:1, the biggest single improvement in the release.

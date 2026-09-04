@@ -163,7 +163,9 @@
 }
 
 .dccwl-water .dccwl-water-general-head {
-	color: var(--dccwl-warn);
+	/* 0.78rem bold = small text, needs 4.5:1; the warn fill token is 3.60:1.
+	 * warn-text (1.16.2) is 4.63:1 on the blue tile this can sit on. */
+	color: var(--dccwl-warn-text);
 	font-size: var(--dccwl-fs-xs);
 	font-weight: 700;
 	letter-spacing: 0.04em;

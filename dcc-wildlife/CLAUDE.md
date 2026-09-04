@@ -497,19 +497,21 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 # "Wildlife 1.5.0.zip". The version is read from the plugin header rather
 # than typed, so the filename can never drift from what is inside the zip.
 #
-# DEV DOCS ARE NOT DISTRIBUTED: every *.md in this folder (CLAUDE.md,
-# WATER-SOURCES.md) is developer documentation. It stays in git; it does not
-# ship. The other DCC plugins already exclude it and this one was the last
-# still shipping it. readme.txt is NOT excluded — WordPress reads it for the
+# DEV FILES ARE NOT DISTRIBUTED: every *.md in this folder (CLAUDE.md,
+# WATER-SOURCES.md) and the whole tools/ directory are developer-only. They
+# stay in git; they do not ship. The other DCC plugins already exclude their
+# docs and this one was the last still shipping them (*.md dropped in 1.16.1,
+# tools/ in 1.16.2). readme.txt is NOT excluded — WordPress reads it for the
 # plugin listing, so keep it .txt and keep it in the zip.
 (
   cd "$(git rev-parse --show-toplevel)" &&
   V=$(sed -n 's/^ \* Version: *//p' dcc-wildlife/dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
-  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md'
+  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*'
 )
 
-# Verify the build before handing it over: no dev docs, readme.txt present.
-unzip -l "Wildlife $V.zip" | grep -E '\.md$' && echo 'FAIL: a dev doc shipped'
+# Verify the build before handing it over: no dev files, readme.txt present.
+unzip -l "Wildlife $V.zip" | grep -E '\.md$'  && echo 'FAIL: a dev doc shipped'
+unzip -l "Wildlife $V.zip" | grep -E 'tools/' && echo 'FAIL: dev tools shipped'
 unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
 ```
 
@@ -813,7 +815,7 @@ Then strip `<script>` blocks before asserting anything is "on the page": text
 inside a script tag is not content. That distinction is the entire bug this
 section exists to prevent.
 
-## Contrast tokens — the coral rule (v1.16.1)
+## Contrast tokens — the coral rule (v1.16.1) and the amber rule (v1.16.2)
 
 The 1.15.1 audit measured the greys and missed the coral. **`--dccwl-accent`
 (`#f08080`) is 2.59:1 against white in both directions** — it fails AA as text
@@ -837,7 +839,38 @@ hue 0 passes AA while still reading as coral. Therefore:
   (5.38 / 4.81 / 4.68 / 5.00). If someone re-syncs the palette from /guest/,
   keep this override.
 
+### The amber rule (v1.16.2)
+
+The 1.16.1 pass fixed the coral but did not re-check the amber, which had never
+been measured. Same shape of problem, same shape of fix:
+
+- **`--dccwl-warn` (`#b07d3a`) is fill and border only.** As text it is 3.60:1
+  on white and 3.21:1 on the blue tile. Its one legitimate use is the
+  `border-left` on `.dccwl-water-tier-general`.
+- **`--dccwl-warn-text` (`#8e652f`)** — same hue, darker — carries the single
+  amber text use, the water panel's "GENERAL GUIDANCE" head at 0.78rem bold
+  (small text, so the 4.5 bar applies). 5.18 white / 5.14 card / 4.63 blue
+  tile / 4.82 page-bg / 4.51 coral wash: it passes on every surface.
+
+**Both invariants, together — neither hue may ever be a text colour:**
+
+```bash
+# Must both return nothing. Strip comments first: the doc lines above quote
+# these very patterns, and a naive grep matches its own documentation.
+for t in accent warn; do
+  for f in assets/css/*.css; do
+    perl -0pe 's{/\*.*?\*/}{}gs' "$f" |
+      grep -nE "(^|[;{[:space:]])color[[:space:]]*:[[:space:]]*var\(--dccwl-$t\)" |
+      sed "s|^|$f:$t: |"
+  done
+done
+```
+
 **Measure text on the surface it actually sits on, not on white.** The
 tinted-tile and wash failures were invisible to a white-background check. The
 surfaces in play: card `#fefeff`, current-month tile `#ecf3fa` (primary-soft
 over white), coral wash `#fdebeb` (accent-soft over white), page-bg `#f4f7fa`.
+
+With the amber closed, **every text token in the plugin has been measured on
+every surface it can sit on.** Any new text colour must be measured the same
+way before it ships.

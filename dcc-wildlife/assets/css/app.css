@@ -79,7 +79,14 @@
 
 	--dccwl-emergency: #c0392b;          /* --dccgg-color-emergency */
 	--dccwl-ok: #2e7d5b;                              /* derived */
+	/* FILL/BORDER amber. As TEXT it is 3.60:1 on white / 3.21:1 on the blue
+	 * tile — fails AA (1.16.2). The one text use, the water panel's "GENERAL
+	 * GUIDANCE" head, moved to --dccwl-warn-text below. Same rule the coral
+	 * followed in 1.16.1: this hue is a fill, not a text colour. */
 	--dccwl-warn: #b07d3a;                            /* derived */
+	/* Amber for TEXT: same hue, darker. 5.18 white / 5.14 card / 4.63 blue
+	 * tile / 4.82 page-bg / 4.51 coral wash — passes AA on every surface. */
+	--dccwl-warn-text: #8e652f;                       /* derived */
 
 	/* --- shape + depth (derived) -------------------------------------- */
 	--dccwl-radius-sm: 8px;
