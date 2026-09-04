@@ -66,7 +66,7 @@
 .fal-section-header {
 	display: flex; align-items: center; gap: 15px; padding: 15px;
 	background: var(--fal-bg); border: 1px solid var(--fal-border); border-radius: 8px;
-	box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px; cursor: pointer; transition: 0.2s;
+	box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px; cursor: default; transition: 0.2s;
 }
 .fal-section-header:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
 .fal-hh-none .fal-section-header:hover { transform: none; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
@@ -114,11 +114,13 @@
 
 /* Accordion */
 @media (max-width: 767px) {
+	.fal-section-header { cursor: pointer; }
 	.fal-section-header::after { content: "\25BC"; margin-left: auto; transition: 0.3s; }
 	.fal-section.is-open .fal-section-header::after { transform: rotate(180deg); }
 	.fal-section-content { display: none; }
 	.fal-section.is-open .fal-section-content { display: block; }
 }
+.fal-container.desktop-accordion-enabled .fal-section-header { cursor: pointer; }
 .fal-container.desktop-accordion-enabled .fal-section-header::after { content: "\25BC"; margin-left: auto; transition: 0.3s; }
 .fal-container.desktop-accordion-enabled .fal-section.is-open .fal-section-header::after { transform: rotate(180deg); }
 .fal-container.desktop-accordion-enabled .fal-section-content { display: none; }

@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.10.1
+Stable tag: 1.10.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,10 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.10.2 =
+* Hardening: the editor preview counted description words by parsing the description as HTML, which could execute a script tag pasted into a description field while editing. Word counting now strips tags with a plain text operation instead. Editor-only; the live page was never affected.
+* Section headers now show the pointer cursor only where clicking them actually does something — on mobile, and on desktop when "Enable Desktop Accordion" is on. Previously every header showed a pointer even in the plain desktop view where headers do not toggle, which also disagreed with the button semantics added in 1.10.0.
 
 = 1.10.1 =
 * Fixed: the widget was listed twice in the Elementor panel — once under "Dora Canal Court" and again under Elementor's built-in "General" section. It now appears only under "Dora Canal Court". Widgets already placed on pages are unaffected, since Elementor stores them by widget type rather than by category.

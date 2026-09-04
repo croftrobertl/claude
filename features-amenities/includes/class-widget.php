@@ -900,7 +900,11 @@ class Widget extends Widget_Base {
 				var renderedIcon = ownIcon || renderedDefaultIcon;
 				var isFolded = false;
 				if ( autoFold > 0 && item.item_description ) {
-					var plain = jQuery( '<div>' ).html( item.item_description ).text();
+					// Strip tags with a plain regex rather than parsing the
+					// markup — jQuery's .html() evaluates <script> tags, and
+					// this value is unsanitized editor input. Tags collapse to
+					// a space so adjacent blocks stay separate words.
+					var plain = String( item.item_description ).replace( /<[^>]*>/g, ' ' );
 					isFolded  = plain.trim().split( /\s+/ ).filter( Boolean ).length > autoFold;
 				}
 				#>
