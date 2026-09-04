@@ -34,7 +34,8 @@ final class Widget extends Widget_Base
 
     public function get_categories(): array
     {
-        return ['claude-code'];
+        // Shared family slug — see Plugin::register_category().
+        return ['dcc-widgets'];
     }
 
     public function get_keywords(): array

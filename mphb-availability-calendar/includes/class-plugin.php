@@ -93,9 +93,16 @@ final class Plugin
     public function register_category(\Elementor\Elements_Manager $elements_manager): void
     {
         $elements_manager->add_category(
-            'claude-code',
+            // 'dcc-widgets' titled "Dora Canal Court" is the family slug every live
+            // DCC plugin registers (Guest Guide, Contact Form, Features & Amenities,
+            // Cottage Selector since 0.21.1). Elementor groups the widget panel by
+            // SLUG, not by title, so a plugin on any other slug contributes a SECOND
+            // panel section even when the displayed title matches exactly — which is
+            // what the stale 'claude-code' here would have done on a rebuild from
+            // this repo. add_category() is idempotent; activation order is irrelevant.
+            'dcc-widgets',
             [
-                'title' => __('Claude Code', 'mphb-availability-calendar'),
+                'title' => __('Dora Canal Court', 'mphb-availability-calendar'),
                 'icon'  => 'fa fa-plug',
             ]
         );

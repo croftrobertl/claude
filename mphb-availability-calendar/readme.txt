@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.8
+Stable tag: 0.9.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,15 @@ Yes. It only requires free Elementor core.
 It is on by default. Toggle it with the "Enable Book Now popup" switch in the widget's Display settings.
 
 == Changelog ==
+
+= 0.9.9 =
+* Elementor category: this widget now registers the shared **`dcc-widgets`**
+  slug titled "Dora Canal Court", matching every other DCC plugin, instead of
+  its own "Claude Code" section. Elementor groups the widget panel by slug, so
+  the old slug would have split the panel in two on any rebuild from this
+  repository. Categories only affect the editor panel — Elementor stores the
+  widget type on the page, so every placed calendar renders and edits exactly
+  as before.
 
 = 0.9.8 =
 * Mobile (≤600px): the cottage column now shows just the cottage number (e.g. `#22`) instead of stacking a truncated cottage name above it. The truncated name was forcing rows ~30% taller than necessary, which made every day cell on the same row taller and narrower. Rows now collapse to a single line; day cells become roughly square; the whole calendar reads more compactly on phones. Tap any cottage number to open the existing cottage info popup with the full name and details — that's what it's there for.

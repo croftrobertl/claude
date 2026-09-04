@@ -450,11 +450,12 @@ Plugins in snapshot zip with version-risk notes:
   0.21.1. Elementor groups the widget panel by *slug*, so a plugin on a different slug
   gets its own duplicate section even when the displayed title matches exactly — the
   0.17.1 lesson is "same slug as the rest of the family", not any particular slug.
-  (History of wrong turns: 0.17.1 used `dora-canal-court`, 0.19.4 used `claude-code`
-  after inferring the family slug from THIS REPO's calendar code — which is stale
-  relative to the live siblings. Trust the live install, not this repo's
-  `mphb-availability-calendar/`, for the family slug.) Rename the `title` freely;
-  never the slug.
+  Both plugins in this repo now register it: Cottage Selector since 0.21.1,
+  Availability Calendar since 0.9.9 (it had kept the stale `claude-code`, which
+  would have re-split the panel on any rebuild from this repo).
+  (History of wrong turns: 0.17.1 used `dora-canal-court`; 0.19.4 used `claude-code`
+  after inferring the family slug from this repo's then-stale calendar code.)
+  Rename the `title` freely; never the slug.
 - **No child theme** — all Bravada customizations via Elementor kit + Angie snippets.
 - **SpeedyCache has 526 options** — it's heavily configured. Don't reset settings without
   capturing the current config first.
