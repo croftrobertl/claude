@@ -3,9 +3,13 @@
 Pertinent site, stack, and lessons-learned reference for building WordPress
 plugins and Elementor widgets for **doracanalcourt.com**. Paste this (or a
 relevant section) at the start of a Claude session when starting a new
-project for this site. The plugin-specific notes for the MPHB Availability
-Calendar live in `CLAUDE.md` inside that plugin's repo — this file is the
-generic cross-cutting one.
+project for this site. This file is the generic cross-cutting one.
+
+> **Note (2026-09):** every `mphb-availability-calendar/...` path in this document
+> refers to the Availability Calendar's OWN repository, which is maintained in a
+> separate session (live 0.21.2). That code is not in this repo — the stale 0.9.x
+> copy that used to sit here was deleted. This repo holds the DCC Cottage Selector;
+> see its `CLAUDE.md` at the repo root.
 
 ---
 
@@ -575,10 +579,14 @@ Conventions to copy:
 
 ## 14. Existing plugin: MPHB Availability Calendar
 
-Lives in `mphb-availability-calendar/`. One Elementor widget under the
-"Claude Code" category that displays a mobile-friendly multi-property
-availability grid for MotoPress accommodations. See its own `CLAUDE.md`
-for full architecture. Useful patterns to copy:
+> **Note (2026-09):** the calendar's code is no longer in this repository — it is
+> maintained in its own session/repo (live 0.21.2). The `mphb-availability-calendar/`
+> paths referenced in this section and in §5/§8 describe that separate codebase, not
+> files you will find here. Its Elementor category is now `dcc-widgets`
+> ("Dora Canal Court"), not the "Claude Code" name used below.
+
+One Elementor widget displaying a mobile-friendly multi-property availability grid
+for MotoPress accommodations. Useful patterns to copy:
 
 - `\MPHBAC\Data_Provider::list_room_types()` returns `[id, title, abbrev, number]`
   for every cottage — reusable elsewhere on the site (e.g. a pricing

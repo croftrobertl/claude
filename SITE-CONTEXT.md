@@ -30,9 +30,10 @@
 | Nav menus | Primary (menu id 28), Top (same), Socials, Sidebar |
 | Custom logo | Media attachment ID 4383 |
 
-Bravada's Elementor kit resets inputs/buttons with `(0,3,1)` specificity. All
-mphb-availability-calendar style-control selectors must use the `Widget::SEL`
-prefix (doubled `.mphbac-root.mphbac-root`) to reach `(0,4,0)` and win.
+Bravada's Elementor kit resets inputs/buttons with `(0,3,1)` specificity, so every
+DCC widget's style-control selectors must double their root class to reach `(0,4,0)`
+and win — `.dccs-root.dccs-root` in the Cottage Selector,
+`.mphbac-root.mphbac-root` in the Availability Calendar.
 
 ---
 
@@ -54,8 +55,8 @@ prefix (doubled `.mphbac-root.mphbac-root`) to reach `(0,4,0)` and win.
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| **MPHB Availability Calendar** | 0.9.8 | Elementor widget; multi-property grid calendar |
-| **Dora Canal Cottage Selector** | 0.11.0 | Client-rendered Elementor widget + shortcode; helps guests choose a cottage. No MotoPress dep. |
+| **MPHB Availability Calendar** | 0.21.2 | Elementor widget; multi-property grid calendar. Code is NOT in this repo — maintained in its own session/repo. |
+| **Dora Canal Cottage Selector** | 0.22.6 | Client-rendered Elementor widgets + shortcode; helps guests choose a cottage. No MotoPress dep. Code lives in THIS repo. |
 | **DCC Guest Guide** | 0.9.7.20 | Elementor widget; sectioned guest guide with multiple layout + reveal modes, Cmd-K search |
 | **Features & Amenities Widget** | 1.6.1 | Elementor widget; sectioned amenity list per cottage |
 
@@ -244,7 +245,7 @@ doracanalcourt.com (HostGator shared, cPanel)
 │   │   └── iCal sync: Booking.com + Airbnb + VRBO (every 15 min)
 │   │
 │   ├── Custom Elementor widgets (all DCC-built):
-│   │   ├── mphb-availability-calendar — multi-property availability grid
+│   │   ├── mphb-availability-calendar — multi-property availability grid (code in its own repo)
 │   │   ├── dcc-cottage-selector — guest decision tool
 │   │   ├── dcc-guest-guide — in-stay guest information
 │   │   └── features-amenities — per-cottage amenity lists

@@ -1,4 +1,3 @@
-mphb-availability-calendar.zip
 dcc-cottage-selector.zip
 # Diagnostic/bisect builds (rebuildable from history, e.g. `git archive <tag>`).
 dcc-cottage-selector-*.zip
