@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.5
+Stable tag: 0.22.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,17 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.6 =
+* **Cottage 31 no longer says it is identical to Cottage 32.** It isn't — 31 has
+  the paved sun area with table and loungers, and 32 does not (owner-confirmed).
+  The "identical layout and features" note compared only the rows in the
+  comparison table, so it ignored the highlights printed on the card right above
+  it. The check now includes the highlights, so two cottages are called identical
+  only when the card actually shows the same thing for both.
+* Genuinely identical pairs are still flagged: Cottages 35 and 36 continue to
+  carry the note. Re-ordering the highlights in the data file cannot invent a
+  difference, and a cottage with no highlights at all is handled.
 
 = 0.22.5 =
 * **Fixes a missing reason on the results cards.** Since 0.22.0, a guest who

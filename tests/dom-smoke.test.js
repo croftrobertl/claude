@@ -894,8 +894,9 @@ function configWith(overrides) {
   ok('400 sq ft cottage still gets the space reason', DCCS.labels.whyFits(c400, crit).includes('space'));
 
   // (2) duplicateOf cleared on every run — no stale note across renders.
-  DCCS.score.dedupe(cfg.cottages.filter(c => c.id === '31' || c.id === '32'), cfg.diffFields);
-  ok('dedupe marks the twin pair', cfg.cottages.find(c => c.id === '31').duplicateOf === '32');
+  // 35/36 are the genuine twins (31/32 differ by a highlight — see test 48).
+  DCCS.score.dedupe(cfg.cottages.filter(c => c.id === '35' || c.id === '36'), cfg.diffFields);
+  ok('dedupe marks the twin pair', cfg.cottages.find(c => c.id === '35').duplicateOf === '36');
   DCCS.score.run(cfg.cottages, { hard: [] });
   ok('run() clears stale duplicateOf flags', !cfg.cottages.some(c => c.duplicateOf));
 
@@ -1399,6 +1400,49 @@ function configWith(overrides) {
       wStudio: 0, wOneBed: 0, wDining: 0, wPullout: 0, wScreenedPorch: 0 });
   const rendered = chosen.map(k => S['why_' + k]).filter(Boolean);
   ok('no chosen reason is silently dropped', rendered.length === chosen.length);
+})();
+
+// ---- 48. "Identical" means identical on the CARD, not just the spec matrix ----
+// Owner-confirmed: Cottage 32 genuinely lacks the paved sun area that 31 lists,
+// so calling 31 "identical to 32" was false. signature() now folds the
+// highlights in alongside the comparison-matrix fields. Derived from the live
+// engine + real data so it tracks cottages.json rather than a frozen list.
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const D = w.DCCS;
+  const sig = c => D.score.signature(c, cfg.diffFields);
+  const by = id => cfg.cottages.find(c => c.id === id);
+
+  ok('31 and 32 are NOT identical', sig(by('31')) !== sig(by('32')));
+  ok('…and they still match on every comparison-matrix field',
+    cfg.diffFields.every(f => String(by('31')[f]) === String(by('32')[f])));
+  ok('…so the difference comes from the highlights',
+    JSON.stringify(by('31').highlights) !== JSON.stringify(by('32').highlights));
+
+  // A genuinely-identical pair must still be flagged.
+  const pairs = {};
+  cfg.cottages.forEach(c => { (pairs[sig(c)] = pairs[sig(c)] || []).push(c.id); });
+  const dupGroups = Object.values(pairs).filter(g => g.length > 1);
+  ok('at least one genuinely-identical pair is still detected', dupGroups.length >= 1);
+  ok('35 + 36 remain flagged as identical',
+    dupGroups.some(g => g.includes('35') && g.includes('36')));
+
+  // Ordering in the data file must not fabricate a difference.
+  const shuffled = Object.assign({}, by('35'), { highlights: by('35').highlights.slice().reverse() });
+  ok('highlight ORDER does not affect identity', sig(shuffled) === sig(by('35')));
+  ok('a cottage with no highlights key is handled',
+    typeof sig(Object.assign({}, by('35'), { highlights: undefined })) === 'string');
+
+  // End-to-end: the note is gone from 31's card, still present for a real twin.
+  const r = mountSelector(freshDom('https://example.com/?highlight=31'));
+  const c31 = Array.prototype.find.call(r.querySelectorAll('.dccs-card'),
+    el => /Cottage 31/.test(el.querySelector('h4').textContent));
+  ok('Cottage 31 no longer claims to be identical to 32',
+    !!c31 && !c31.querySelector('.dccs-dup'));
+  D.score.dedupe([by('35'), by('36')], cfg.diffFields);
+  ok('a real twin still gets the duplicate note', by('35').duplicateOf === '36');
+  D.score.run(cfg.cottages, { hard: [] });
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

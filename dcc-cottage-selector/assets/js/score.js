@@ -78,9 +78,21 @@
     return s;
   }
 
-  /** Stable signature of the 7 meaningful differences. */
+  /**
+   * Stable identity signature: the comparison-matrix fields PLUS the per-cottage
+   * highlights.
+   *
+   * Highlights are guest-visible facts printed on the result card, so two
+   * cottages listing different ones are not interchangeable — telling a guest
+   * that 31 is "identical" to 32 while 31's card advertises a paved sun area 32
+   * genuinely lacks (owner-confirmed) is simply false. Sorted before joining so
+   * a reordering in cottages.json can never invent a difference, and joined with
+   * a separator that cannot occur inside a highlight line.
+   */
   function signature(c, diffFields) {
-    return diffFields.map(function (f) { return f + ':' + c[f]; }).join('|');
+    var spec = diffFields.map(function (f) { return f + ':' + c[f]; }).join('|');
+    var hl = (c.highlights || []).slice().sort().join('\u241F');
+    return spec + '||highlights:' + hl;
   }
 
   /**
