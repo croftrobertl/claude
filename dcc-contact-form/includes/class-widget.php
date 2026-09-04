@@ -195,6 +195,7 @@ final class Widget extends Widget_Base
             'type'        => Controls_Manager::TEXT,
             'default'     => '',
             'label_block' => true,
+            'description' => __('For Select fields this labels the empty first option.', 'dcc-contact-form'),
             'condition'   => ['field_type!' => ['checkbox', 'name']],
         ]);
 
@@ -663,7 +664,6 @@ final class Widget extends Widget_Base
         $uid      = 'dcc-' . $form_id;
         $submit   = $settings['submit_text'] ?? __('Send Message', 'dcc-contact-form');
         $working  = $settings['submit_processing'] ?? __('Sending...', 'dcc-contact-form');
-        $min_time = Settings::min_submit_time();
         $nonce    = wp_create_nonce(Form_Handler::NONCE_ACTION);
 
         ?>
@@ -671,7 +671,6 @@ final class Widget extends Widget_Base
             <form class="dcc-contact-form" method="post"
                   action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
                   data-ajax-url="<?php echo esc_url(admin_url('admin-ajax.php')); ?>"
-                  data-min-time="<?php echo esc_attr((string) $min_time); ?>"
                   <?php if ($recaptcha_on) : ?>data-recaptcha="<?php echo esc_attr(Settings::recaptcha_site_key()); ?>"<?php endif; ?>
                   novalidate>
 
@@ -783,7 +782,9 @@ final class Widget extends Widget_Base
 
             case 'select':
                 echo '<select class="dcc-input dcc-select" id="' . esc_attr($input_id) . '" name="dcc_field[' . esc_attr($fid) . ']"' . $req_attr . $desc . '>';
-                echo '<option value="">' . esc_html__('— Select —', 'dcc-contact-form') . '</option>';
+                // The repeater's Placeholder control doubles as the empty
+                // option's label for selects, instead of being silently ignored.
+                echo '<option value="">' . esc_html($ph !== '' ? $ph : __('— Select —', 'dcc-contact-form')) . '</option>';
                 foreach ($field['options'] as $opt) {
                     echo '<option value="' . esc_attr($opt) . '">' . esc_html($opt) . '</option>';
                 }

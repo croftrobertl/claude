@@ -66,7 +66,9 @@ final class Form_Handler
             $heading = $lines;
         }
 
-        $back_label = esc_html__('&larr; Go back', 'dcc-contact-form');
+        // The arrow is concatenated, not translated: esc_html__() would escape
+        // the entity and render a literal "&larr;" on the page.
+        $back_label = '&larr; ' . esc_html__('Go back', 'dcc-contact-form');
 
         nocache_headers();
         header('Content-Type: text/html; charset=utf-8');
@@ -192,11 +194,18 @@ final class Form_Handler
         // Passed all layers. Build subject, store, email.
         $subject = self::build_subject($config, $config['fields'], $values);
 
-        Entries::insert($rows, $subject, $form_id, 'ham');
+        $entry_id = Entries::insert($rows, $subject, $form_id, Entries::STATUS_OK);
 
         $config_for_email = $config;
         $config_for_email['reply_to'] = self::resolve_reply_to($config, $config['fields'], $values);
-        Email::send($config_for_email, $rows, $subject);
+        $sent = Email::send($config_for_email, $rows, $subject);
+
+        // The entry is stored first, so a mail failure never loses the enquiry —
+        // but it would otherwise be invisible. Flag it on the entry so the
+        // Submissions screen shows which enquiries were never actually emailed.
+        if (!$sent && $entry_id > 0) {
+            Entries::set_status($entry_id, Entries::STATUS_MAIL_FAILED);
+        }
 
         return ['ok' => true, 'confirmation' => self::confirmation_html($config), 'message' => '', 'errors' => []];
     }
@@ -322,8 +331,24 @@ final class Form_Handler
             $haystack .= ' ' . $row['value'];
         }
         $haystack = mb_strtolower($haystack);
+
         foreach ($keywords as $kw) {
-            if ($kw !== '' && mb_strpos($haystack, $kw) !== false) {
+            if ($kw === '') {
+                continue;
+            }
+
+            // Multi-word phrases match as substrings. A single word matches only
+            // on word boundaries, so a blocklist entry like "ass" no longer
+            // silently rejects a genuine enquiry containing "class" or "Cassidy".
+            if (mb_strpos($kw, ' ') !== false) {
+                if (mb_strpos($haystack, $kw) !== false) {
+                    return true;
+                }
+                continue;
+            }
+
+            $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($kw, '/') . '(?![\p{L}\p{N}])/u';
+            if (preg_match($pattern, $haystack) === 1) {
                 return true;
             }
         }

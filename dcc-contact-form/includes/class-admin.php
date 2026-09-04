@@ -157,6 +157,12 @@ final class Admin
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('DCC Contact Form — Settings', 'dcc-contact-form'); ?></h1>
+            <?php
+            // WordPress only prints the "Settings saved." notice automatically on
+            // options-*.php screens. This page lives under admin.php, so without
+            // this call saving gives no confirmation at all.
+            settings_errors();
+            ?>
             <p><?php esc_html_e('These settings apply site-wide to every DCC Contact Form. The reCAPTCHA secret key is stored here (not in the Elementor panel) because it is sensitive.', 'dcc-contact-form'); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields('dcc_contact_settings_group'); ?>
@@ -190,7 +196,11 @@ final class Admin
                         <th scope="row"><label for="dcc-keywords"><?php esc_html_e('Prohibited Words', 'dcc-contact-form'); ?></label></th>
                         <td>
                             <textarea name="<?php echo esc_attr(Settings::OPTION); ?>[keyword_filter]" id="dcc-keywords" rows="6" class="large-text" placeholder="<?php esc_attr_e('One word or phrase per line', 'dcc-contact-form'); ?>"><?php echo esc_textarea($s['keyword_filter']); ?></textarea>
-                            <p class="description"><?php esc_html_e('One prohibited word or phrase per line (or comma-separated). Matching is case-insensitive. Empty by default.', 'dcc-contact-form'); ?></p>
+                            <p class="description">
+                                <?php esc_html_e('One prohibited word or phrase per line (or comma-separated). Matching is case-insensitive and empty by default.', 'dcc-contact-form'); ?>
+                                <br>
+                                <?php esc_html_e('A single word matches only as a whole word, so "ass" will not block a message containing "class" — add plurals and variants ("casino", "casinos") as separate entries. A multi-word phrase matches anywhere in the message.', 'dcc-contact-form'); ?>
+                            </p>
                         </td>
                     </tr>
                 </table>
@@ -234,11 +244,16 @@ final class Admin
 
     private static function redirect_with_notice(string $notice, int $count = 1): void
     {
-        $url = add_query_arg(
-            ['page' => self::SUB_SLUG, 'dcc_notice' => $notice, 'dcc_count' => $count],
-            admin_url('admin.php')
-        );
-        wp_safe_redirect($url);
+        $args = ['page' => self::SUB_SLUG, 'dcc_notice' => $notice, 'dcc_count' => $count];
+
+        // Stay on the page of the list the action was fired from, rather than
+        // bouncing back to page 1 after every delete.
+        $paged = isset($_REQUEST['paged']) ? max(1, (int) $_REQUEST['paged']) : 1;
+        if ($paged > 1) {
+            $args['paged'] = $paged;
+        }
+
+        wp_safe_redirect(add_query_arg($args, admin_url('admin.php')));
         exit;
     }
 
@@ -416,8 +431,13 @@ final class Admin
 
     private static function status_badge(string $result): string
     {
-        if ($result === 'ham' || $result === '') {
+        if ($result === Entries::STATUS_OK || $result === '') {
             return '<span style="color:#1a7f37;font-weight:600;">' . esc_html__('Received', 'dcc-contact-form') . '</span>';
+        }
+        if ($result === Entries::STATUS_MAIL_FAILED) {
+            return '<span style="color:#b26200;font-weight:600;" title="'
+                . esc_attr__('The submission was stored, but the notification email could not be sent. Check the site\'s mail configuration.', 'dcc-contact-form')
+                . '">' . esc_html__('Received — email failed', 'dcc-contact-form') . '</span>';
         }
         $type = str_replace('spam:', '', $result);
         return '<span style="color:#b32d2e;font-weight:600;">' . esc_html(sprintf(

@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,8 +44,8 @@ Highlights:
 
 == Installation ==
 
-1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload
-   `dcc-contact-form.zip`.
+1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.3.0.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -70,7 +70,9 @@ WP-Admin rather than in the (per-page) Elementor panel.
      rejected.
    * **Minimum submit time** — default **2** seconds (time-trap).
    * **Prohibited words** — one word/phrase per line for the keyword filter
-     (empty by default).
+     (empty by default). A single word matches only as a whole word, so "ass"
+     will not block "class"; add plurals and variants as separate entries. A
+     multi-word phrase matches anywhere in the message.
 5. Save.
 
 **Graceful degrade:** if either key is left blank, reCAPTCHA is skipped
@@ -88,7 +90,7 @@ section of the Elementor panel.
 == Admin: submissions ==
 
 **DCC → Form Submissions** lists every submission (newest first) with a
-status badge (Received / Spam), a **View** screen showing all fields, and
+status badge (Received / Spam / Received — email failed), a **View** screen showing all fields, and
 single or bulk **Delete**. There is no CSV export and no auto-purge, by design.
 
 == Data & uninstall ==
@@ -99,6 +101,26 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.3.0 =
+* Fix: saving the Settings page now shows the "Settings saved." confirmation.
+  WordPress only prints that notice automatically on its own options screens, so
+  on this page saving previously appeared to do nothing.
+* Fix: the non-JavaScript fallback page rendered a literal "&larr;" instead of
+  an arrow on its "Go back" link.
+* New: a submission whose notification email fails to send is now flagged
+  "Received — email failed" in the Submissions list. The entry was always stored
+  (so nothing is lost), but a mail failure was previously invisible.
+* Change: single-word entries in the prohibited-words list now match only as
+  whole words, so a blocklist entry like "ass" no longer silently rejects a
+  genuine enquiry containing "class" or "Cassidy". Multi-word phrases still
+  match anywhere. Add plurals/variants as separate entries.
+* Fix: deleting a submission from page 2+ of the list no longer bounces back to
+  page 1.
+* New: the repeater's Placeholder field now labels the empty first option of a
+  Select field instead of being ignored for that field type.
+* Removed a `data-min-time` attribute from the rendered form that nothing read
+  (the time-trap is enforced server-side).
 
 = 1.2.0 =
 * Admin: both screens moved out of this plugin's own top-level menu and into the

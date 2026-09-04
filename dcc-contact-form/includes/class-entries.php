@@ -11,6 +11,13 @@ if (!defined('ABSPATH')) {
  */
 final class Entries
 {
+    /**
+     * Values stored in the spam_result column. Spam rows use a "spam:<layer>"
+     * prefix; these two are the non-spam states.
+     */
+    public const STATUS_OK = 'ham';
+    public const STATUS_MAIL_FAILED = 'ham:mail-failed';
+
     /** Bumped when the schema changes; drives dbDelta on upgrades. */
     private const DB_VERSION = '1';
     private const DB_VERSION_OPTION = 'dcc_contact_db_version';
@@ -108,6 +115,19 @@ final class Entries
         $table = self::table();
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id));
         return $row ?: null;
+    }
+
+    /** Update an existing entry's status (e.g. to flag a failed notification). */
+    public static function set_status(int $id, string $status): bool
+    {
+        global $wpdb;
+        return (bool) $wpdb->update(
+            self::table(),
+            ['spam_result' => substr($status, 0, 40)],
+            ['id' => $id],
+            ['%s'],
+            ['%d']
+        );
     }
 
     public static function delete(int $id): bool
