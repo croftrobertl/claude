@@ -15,8 +15,10 @@ if (!defined('ABSPATH')) {
  * point, and means the page HTML itself is worthless to anyone who obtains it
  * — including any cache layer that ignores the page password.
  *
- * Drops into Elementor via the standard Shortcode widget; no separate
- * Elementor widget is registered, so there is only one code path to audit.
+ * TWO entry points share this one method: the [mphb_staff_calendar] shortcode
+ * and the "DCC Staff Calendar" Elementor widget (Staff_Elementor), which is a
+ * thin wrapper that calls render() directly. Neither duplicates the markup or
+ * the gate, so there is still exactly one code path to audit.
  */
 final class Staff_Widget
 {

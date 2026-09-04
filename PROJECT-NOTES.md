@@ -23,6 +23,7 @@ A single WordPress plugin — **DCC Availability Calendar** — that adds **two*
 |---|---|---|
 | DCC Availability Calendar | `mphbac_calendar` | The full multi-cottage grid (homepage / availability page) |
 | DCC Availability — Single Cottage | `dccac_single` | One cottage's strip, for the individual `/accommodation/<slug>/` templates |
+| DCC Staff Calendar | `dccac_staff` | Gated staff booking calendar for /staff/ (also `[mphb_staff_calendar]`) |
 
 `Widget_Single extends Widget` — it is a variant, not a copy. Both share one
 `render()`, one data pipeline, one cache layer, and one `widget.js`. The
@@ -126,7 +127,8 @@ includes/class-cache-integration.php # SpeedyCache exclusion on activate + admin
 includes/class-ajax.php              # Public admin-ajax.php endpoints (mphbac_query availability + mphbac_price estimate) — deliberately nonce-free; see Invariants
 includes/class-staff.php             # /staff/ AUTHORIZATION GATE + gated PII endpoints (month/booking/photo) — read the Staff section before touching
 includes/class-staff-data.php        # Staff month query (1 query + cache prime) + MPHB entity adapter + OTA-honesty rule
-includes/class-staff-widget.php      # [mphb_staff_calendar] shell — deliberately contains NO PII
+includes/class-staff-widget.php      # Shared staff shell + [mphb_staff_calendar] — deliberately contains NO PII
+includes/class-staff-elementor.php   # "DCC Staff Calendar" Elementor widget — THIN wrapper over Staff_Widget::render()
 assets/css/widget.css                # CSS custom-property–driven
 assets/js/widget.js                  # Vanilla JS, no jQuery dep; reads data-config from root element
 ```
@@ -156,6 +158,16 @@ Request flow when a visitor loads a page containing the widget:
   therefore verifies the page still HAS a password (and is published) before
   trusting the cookie path, logs it if not, and falls back to the cap alone.
   Do not "simplify" that check away.
+- TWO placements share ONE implementation: the `[mphb_staff_calendar]`
+  shortcode and the `dccac_staff` Elementor widget. `Staff_Elementor::render()`
+  calls `Staff_Widget::render()` and echoes the result verbatim — it holds no
+  gate, no markup and no data access of its own. Keep it that way: a second
+  render path is a second place for the gate to drift. Note it extends
+  `Widget_Base` directly, NOT `Widget`/`Widget_Single`, so the public
+  calendar's controls and render path stay out of a PII page.
+  `staff.js` also hooks `frontend/element_ready/dccac_staff.default`, without
+  which the widget is a dead shell in the Elementor editor (widgets mount
+  after DOMContentLoaded).
 - The shortcode shell contains NO PII — only a nonce and endpoint URLs. All
   guest data (including the calendar's guest names) is fetched through the
   gated endpoints, so there is ONE enforcement point and the page HTML is

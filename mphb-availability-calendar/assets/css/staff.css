@@ -22,6 +22,18 @@
 .mphbac-staff *::before,
 .mphbac-staff *::after { box-sizing: inherit; }
 
+/* Editor-only stand-in when the gate says no (see Staff_Elementor::render).
+   Never rendered on the front end. */
+.mphbac-staff-placeholder {
+    padding: 1.25em;
+    border: 1px dashed #d4d4d8;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #666;
+    font-size: 0.95em;
+    text-align: center;
+}
+
 /* ---- month bar ---- */
 .mphbac-staff-bar {
     display: flex;

@@ -131,5 +131,8 @@ final class Plugin
         $widgets_manager->register(new Widget());
         // Single-cottage variant for the individual accommodation templates.
         $widgets_manager->register(new Widget_Single());
+        // Staff booking calendar (/staff/). A thin wrapper over the same
+        // gated render path the [mphb_staff_calendar] shortcode uses.
+        $widgets_manager->register(new Staff_Elementor());
     }
 }

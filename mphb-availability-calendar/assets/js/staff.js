@@ -432,4 +432,18 @@
     } else {
         boot();
     }
+
+    // The Elementor editor mounts widget markup AFTER DOMContentLoaded, so
+    // boot()'s single sweep would leave the staff widget as a dead shell in
+    // the editor preview (and would miss any late-mounted frontend instance).
+    // init() is idempotent via the data-staff-init flag, and Elementor builds
+    // a fresh node on each edit, so re-running is both safe and necessary.
+    if (window.elementorFrontend && window.elementorFrontend.hooks) {
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/dccac_staff.default', function ($el) {
+            if ($el && $el[0]) {
+                var el = $el[0].querySelector('.mphbac-staff');
+                if (el) init(el);
+            }
+        });
+    }
 }());

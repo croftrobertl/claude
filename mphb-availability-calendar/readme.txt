@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.2
+Stable tag: 0.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.22.0 =
+* The staff calendar is now a proper Elementor widget — **DCC Staff Calendar**, in the "Dora Canal Court" category alongside the other two — so it can be dropped onto the staff page from the editor instead of pasting a shortcode.
+* It is a thin wrapper: it renders the exact same calendar, through the same code, with the same server-side protection. There is no second copy of anything, so the two ways of placing it cannot drift apart.
+* `[mphb_staff_calendar]` keeps working; either can be used.
+* If someone edits the page who cannot view bookings and hasn't entered the staff password, the widget shows a short note in the editor explaining why it looks empty. Visitors on the live page still see nothing at all.
+* Fixed: the staff calendar would have appeared as an empty frame inside the Elementor editor, because the editor adds widgets to the page after the calendar's script has already run. It now starts up correctly there.
 
 = 0.21.2 =
 Second audit pass over the staff calendar.
