@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.4
+Stable tag: 0.22.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.5 =
+* **Fixes a missing reason on the results cards.** Since 0.22.0, a guest who
+  answered "3-4" on the party-size question had the capacity reason silently
+  dropped from "Why this fits your trip" — the engine picked it, but the
+  wording for it was never added, so it rendered as nothing. Those results
+  showed two reasons instead of three, and the one answering the guest's own
+  question was the one missing. Cards now read "…room for up to four guests".
+* Internal: a new test derives the display keys from the live engine (hard
+  filters, badges, why-reasons, compare rows) and fails if any one of them has
+  no wording behind it. Unknown keys were previously discarded silently, which
+  is why this went unnoticed for five releases.
 
 = 0.22.4 =
 * The compare pager's range now uses a plain hyphen ("Showing 1-2 of 8") — the

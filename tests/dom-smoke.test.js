@@ -1327,5 +1327,79 @@ function configWith(overrides) {
     !!why && /a pull-out couch for two extra guests/.test(why.textContent));
 })();
 
+// ---- 47. Every key the ENGINE can emit has a string in Config ----
+// The engine picks display keys dynamically (S['why_' + k], S['badge_' + k],
+// S[f.tag], S['diff_' + field]) and buildCard drops unknown ones with
+// .filter(Boolean) — so a missing string is INVISIBLE, not an error. That is
+// exactly how why_party shipped absent in 0.22.0: whyFits() ranks wanted
+// reasons first and caps at three, so asking for 3-4 guests burned a slot and
+// rendered nothing. This derives the key sets from the live engine rather than
+// a hand-kept list, so any future feature/badge/tag is covered automatically.
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const S = cfg.strings;
+  const cottages = cfg.cottages;
+  const missing = [];
+
+  // tags: straight off the FEATURES table the hard filters use.
+  Object.keys(w.DCCS.score.FEATURES).forEach(function (k) {
+    const tag = w.DCCS.score.FEATURES[k].tag;
+    if (!S[tag]) { missing.push(tag + ' (FEATURES.' + k + ')'); }
+  });
+
+  // badges: run the real function over every cottage.
+  cottages.forEach(function (c) {
+    w.DCCS.labels.badges(c).forEach(function (b) {
+      if (!S['badge_' + b]) { missing.push('badge_' + b + ' (cottage ' + c.id + ')'); }
+    });
+  });
+
+  // why-reasons: whyFits() CAPS at three, so switching every want on at once
+  // hides the lower-ranked reasons (that is why an all-wants probe missed
+  // why_party — it ranks 9th). Probe ONE want at a time so every branch gets
+  // a chance to surface inside the cap.
+  const WANTS = ['wDesk', 'wSpace', 'wPet', 'wFewerStairs', 'wStudio',
+                 'wOneBed', 'wDining', 'wPullout', 'wScreenedPorch', 'wParty'];
+  const probes = WANTS.map(function (k) { const c = { hard: [] }; c[k] = 3; return c; })
+    .concat(Object.keys(w.DCCS.score.FEATURES).map(function (f) { return { hard: [f] }; }));
+  const seenWhy = {};
+  probes.forEach(function (crit) {
+    cottages.forEach(function (c) {
+      w.DCCS.labels.whyFits(c, crit).forEach(function (r) {
+        seenWhy[r] = true;
+        if (!S['why_' + r]) { missing.push('why_' + r + ' (want probe)'); }
+      });
+    });
+  });
+  // Guard the guard: the probe must actually reach every add() branch in
+  // labels.js, or a future reason could hide behind an unexercised want.
+  const declared = (fs.readFileSync(path.join(JS, 'labels.js'), 'utf8')
+    .match(/add\('([a-z0-9]+)'/g) || []).map(function (m) { return m.slice(5, -1); });
+  const unprobed = declared.filter(function (k) { return !seenWhy[k]; });
+  ok('the why-reason probe reaches every branch in labels.js'
+    + (unprobed.length ? ' [' + unprobed.join(', ') + ']' : ''), unprobed.length === 0);
+
+  // compare-matrix row headers.
+  (cfg.diffFields || []).forEach(function (f) {
+    if (!S['diff_' + f]) { missing.push('diff_' + f); }
+  });
+
+  ok('every engine-emitted display key resolves to a string'
+    + (missing.length ? ' [' + missing.join(', ') + ']' : ''), missing.length === 0);
+
+  // And the specific regression: the party reason must actually reach the card.
+  const root = mountSelector(freshDom('https://example.com/?party=3-4'));
+  const why = root.querySelector('.dccs-card .dccs-why');
+  ok('a 3-4 guest search shows the capacity reason on the card',
+    !!why && /room for up to four guests/.test(why.textContent));
+  // whyFits caps at 3; with the key present the card renders all three it chose.
+  const chosen = w.DCCS.labels.whyFits(cottages.find(c => c.id === '22'),
+    { hard: ['party34'], wParty: 2, wDesk: 0, wSpace: 0, wPet: 0, wFewerStairs: 0,
+      wStudio: 0, wOneBed: 0, wDining: 0, wPullout: 0, wScreenedPorch: 0 });
+  const rendered = chosen.map(k => S['why_' + k]).filter(Boolean);
+  ok('no chosen reason is silently dropped', rendered.length === chosen.length);
+})();
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

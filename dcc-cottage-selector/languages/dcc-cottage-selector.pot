@@ -458,7 +458,7 @@ msgstr ""
 msgid "Export text"
 msgstr ""
 
-#: includes/class-config.php:161
+#: includes/class-config.php:162
 msgid "Fee details"
 msgstr ""
 
@@ -478,7 +478,7 @@ msgstr ""
 msgid "Floor"
 msgstr ""
 
-#: includes/class-config.php:155
+#: includes/class-config.php:156
 msgid "Great because it offers"
 msgstr ""
 
@@ -711,7 +711,7 @@ msgid "Next cottages"
 msgstr ""
 
 #: includes/class-config.php:72
-#: includes/class-config.php:165
+#: includes/class-config.php:166
 msgid "No"
 msgstr ""
 
@@ -820,7 +820,7 @@ msgstr ""
 msgid "Pets"
 msgstr ""
 
-#: includes/class-config.php:160
+#: includes/class-config.php:161
 msgid "Pets are welcome in Cottage 34 only, by pre-approval."
 msgstr ""
 
@@ -1178,7 +1178,7 @@ msgstr ""
 msgid "Text alignment"
 msgstr ""
 
-#: includes/class-config.php:159
+#: includes/class-config.php:160
 msgid "The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pull-out couch."
 msgstr ""
 
@@ -1277,7 +1277,7 @@ msgid "Writes the pasted Selector wording into this widget’s own text fields, 
 msgstr ""
 
 #: includes/class-config.php:71
-#: includes/class-config.php:164
+#: includes/class-config.php:165
 msgid "Yes"
 msgstr ""
 
@@ -1305,7 +1305,7 @@ msgstr ""
 msgid "a dining table that seats four"
 msgstr ""
 
-#: includes/class-config.php:154
+#: includes/class-config.php:155
 msgid "a private screened-in porch"
 msgstr ""
 
@@ -1327,6 +1327,10 @@ msgstr ""
 
 #: includes/class-config.php:149
 msgid "easy ground-floor access, no stairs"
+msgstr ""
+
+#: includes/class-config.php:154
+msgid "room for up to four guests"
 msgstr ""
 
 #: includes/class-config.php:147

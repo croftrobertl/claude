@@ -151,6 +151,7 @@ final class Config
             'why_onebed'        => __('a separate bedroom for privacy', 'dcc-cottage-selector'),
             'why_dining'        => __('a dining table that seats four', 'dcc-cottage-selector'),
             'why_pullout'       => __('a pull-out couch for two extra guests', 'dcc-cottage-selector'),
+            'why_party'         => __('room for up to four guests', 'dcc-cottage-selector'),
             'why_porch'         => __('a private screened-in porch', 'dcc-cottage-selector'),
             'why_lead'          => __('Great because it offers', 'dcc-cottage-selector'),
 
