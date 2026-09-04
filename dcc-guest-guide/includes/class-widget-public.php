@@ -114,7 +114,7 @@ class Widget_Public extends \Elementor\Widget_Base
             'label'       => __('Intro line', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXTAREA,
             'rows'        => 3,
-            'default'     => __('A look at life on the Dora Canal — the water, the amenities, and the little things that make a stay here ours.', 'dcc-guest-guide'),
+            'default'     => __('Take a look at what life is like at Dora Canal Court — from the amenities and rules to the canal and wildlife.', 'dcc-guest-guide'),
             'description' => __('Shown above the tiles. Clear it to show nothing.', 'dcc-guest-guide'),
         ]);
 

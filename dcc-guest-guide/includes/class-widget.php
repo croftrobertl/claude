@@ -2775,6 +2775,31 @@ final class Widget extends Widget_Base
     // ----------------------------------------------------------------------
 
     /**
+     * The slots the "…" menu would actually render, in order.
+     *
+     * Extracted from render_more_menu() so the "is this menu empty?" decision
+     * is one testable expression rather than a side effect of emitting markup.
+     * Report is the only slot with a condition attached; print and save-PDF
+     * always render when selected.
+     */
+    public static function more_menu_items(array $s): array
+    {
+        $report_on = ($s['enable_problem_report'] ?? '') === 'yes';
+        $slots     = [
+            (string) ($s['more_menu_slot_1'] ?? 'print'),
+            (string) ($s['more_menu_slot_2'] ?? 'save_pdf'),
+            (string) ($s['more_menu_slot_3'] ?? 'report'),
+        ];
+        $out = [];
+        foreach ($slots as $slot) {
+            if ($slot === 'none' || in_array($slot, $out, true)) { continue; }
+            if ($slot === 'print' || $slot === 'save_pdf') { $out[] = $slot; continue; }
+            if ($slot === 'report' && $report_on)          { $out[] = $slot; }
+        }
+        return $out;
+    }
+
+    /**
      * Map a shortcode audience attribute onto a render mode.
      *
      * Fail-safe, and deliberately asymmetric: ONLY an explicit, recognised
@@ -2851,6 +2876,11 @@ final class Widget extends Widget_Base
         // v0.11.0, by owner decision:
         $s['enable_ai_search']       = '';   // anonymous prospects must not spend the Gemini quota
         $s['enable_emergency_fab']   = '';   // no floating SOS button on a marketing page
+        // The "…" menu's contents were already excluded, but the button itself
+        // still rendered and opened an empty popover. Both gates are cleared so
+        // neither the toolbar button nor the in-popup one is emitted at all.
+        $s['enable_detail_more_menu'] = '';  // toolbar "…" button
+        $s['enable_popup_more_menu']  = '';  // "…" inside a section popup
     }
 
     protected function render(): void
@@ -3448,6 +3478,14 @@ final class Widget extends Widget_Base
         $modifier       = $context === 'popup' ? 'dccgg-more--popup' : 'dccgg-more--hub';
         $summary_class  = $label_text !== '' ? 'dccgg-more-summary--text' : 'dccgg-more-summary--icon';
         $rendered       = [];
+
+        // Work out what the menu would actually contain before emitting any
+        // markup, and render nothing at all when that is empty — otherwise a
+        // config whose slots are all 'none', or whose only slot is Report while
+        // reporting is off, still produced a button opening an empty popover.
+        if (!self::more_menu_items($s)) {
+            return;
+        }
         ?>
         <details class="dccgg-more <?php echo esc_attr($modifier); ?>">
             <summary class="<?php echo esc_attr($summary_class); ?>" aria-label="<?php echo esc_attr($label_more); ?>">

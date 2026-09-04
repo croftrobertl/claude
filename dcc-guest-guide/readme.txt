@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.0
+Stable tag: 0.11.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,21 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.11.1 =
+
+* **The "..." menu is gone from the public guide.** Its contents were
+  already excluded, but the button itself still appeared in the toolbar
+  and opened an empty popover. Public mode now switches off both the
+  toolbar menu and the one inside section popups, so neither is rendered
+  at all. The guest guide is unchanged.
+* **The "..." button no longer appears when it would be empty**, in any
+  configuration — for example when every slot is set to None, or when the
+  only slot is Report a Problem and reporting is switched off.
+* **New default intro** on the public widget: *"Take a look at what life
+  is like at Dora Canal Court — from the amenities and rules to the canal
+  and wildlife."* This only affects public widgets added from now on;
+  pages already set up keep the wording you gave them.
 
 = 0.11.0 =
 

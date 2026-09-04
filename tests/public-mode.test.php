@@ -47,6 +47,8 @@ $settings = [
     'enable_checkout_review' => 'yes',
     'enable_ai_search'       => 'yes',
     'enable_emergency_fab'   => 'yes',
+    'enable_detail_more_menu'=> 'yes',
+    'enable_popup_more_menu' => 'yes',
     'guide_sections' => [
         ['section_key' => 'amenities', 'section_title' => 'Amenities',        'section_audience' => 'public'],
         ['section_key' => 'clubhouse', 'section_title' => 'Clubhouse',        'section_audience' => 'both'],
@@ -95,6 +97,10 @@ check('checkout review prompt disabled', ($s['enable_checkout_review'] ?? '') !=
 // marketing page must not carry an emergency SOS button.
 check('AI "Ask anything" search disabled', ($s['enable_ai_search'] ?? '') !== 'yes');
 check('emergency SOS floating button disabled', ($s['enable_emergency_fab'] ?? '') !== 'yes');
+// v0.11.1: the "…" button itself, not just its contents. Both gates must be
+// cleared or the toolbar still shows a button opening an empty popover.
+check('toolbar "..." more menu disabled', ($s['enable_detail_more_menu'] ?? '') !== 'yes');
+check('in-popup "..." more menu disabled', ($s['enable_popup_more_menu'] ?? '') !== 'yes');
 
 echo "\nD. Leak sweep — the content render() feeds every consumer\n";
 // Sweep the CONTENT subtrees, i.e. everything that becomes visible text or
@@ -129,6 +135,8 @@ check('full mode keeps every section', count($fullCopy['guide_sections']) === 7)
 check('full mode keeps Request Support', $fullCopy['enable_problem_report'] === 'yes');
 check('full mode keeps AI search and the SOS button',
     $fullCopy['enable_ai_search'] === 'yes' && $fullCopy['enable_emergency_fab'] === 'yes');
+check('full mode keeps both more menus',
+    $fullCopy['enable_detail_more_menu'] === 'yes' && $fullCopy['enable_popup_more_menu'] === 'yes');
 
 echo "\nG. Degenerate guides degrade cleanly (no notices, no half-state)\n";
 // Every section guest-only: the public page must come back empty and
@@ -193,6 +201,26 @@ if (\DCCGG\Widget::is_public_mode($srcSettings)) { \DCCGG\Widget::apply_public_m
 $blob = json_encode([$srcSettings['guide_sections'], $srcSettings['guide_items']]);
 check('capital-P "Public" still filters out guest content', stripos($blob, 'DCC32586') === false
     && stripos($blob, 'excitedgadfly450') === false, 'guest content survived');
+
+echo "\nI. The \"...\" menu never renders empty\n";
+// Slot resolution decides whether the button is emitted at all.
+$m = fn(array $cfg) => \DCCGG\Widget::more_menu_items($cfg);
+check('default slots produce items', $m(['enable_problem_report' => 'yes']) === ['print', 'save_pdf', 'report']);
+check('report slot drops when reporting is off',
+    $m(['enable_problem_report' => '']) === ['print', 'save_pdf']);
+check('all slots none -> empty (button suppressed)',
+    $m(['more_menu_slot_1' => 'none', 'more_menu_slot_2' => 'none', 'more_menu_slot_3' => 'none']) === []);
+check('only-report slot with reporting off -> empty (button suppressed)',
+    $m(['more_menu_slot_1' => 'none', 'more_menu_slot_2' => 'none',
+        'more_menu_slot_3' => 'report', 'enable_problem_report' => '']) === []);
+check('duplicate slots collapse',
+    $m(['more_menu_slot_1' => 'print', 'more_menu_slot_2' => 'print', 'more_menu_slot_3' => 'none']) === ['print']);
+// In public mode the menu is switched off upstream, so the question never
+// even reaches slot resolution — but if it did, reporting is off, so a
+// report-only menu would still resolve to empty.
+$pub = $settings; \DCCGG\Widget::apply_public_mode($pub);
+check('public mode: report slot cannot survive slot resolution',
+    !in_array('report', $m($pub), true));
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }
