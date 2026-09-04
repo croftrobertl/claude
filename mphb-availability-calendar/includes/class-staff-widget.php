@@ -67,13 +67,9 @@ final class Staff_Widget
                 'expired'     => __('Your session expired. Please reload this page and re-enter the password.', 'mphb-availability-calendar'),
                 'denied'      => __('Not authorized.', 'mphb-availability-calendar'),
                 'empty'       => __('No bookings this month.', 'mphb-availability-calendar'),
-                'prev'        => __('Previous month', 'mphb-availability-calendar'),
-                'next'        => __('Next month', 'mphb-availability-calendar'),
-                'today'       => __('Today', 'mphb-availability-calendar'),
                 'checkIn'     => __('Check-in', 'mphb-availability-calendar'),
                 'checkOut'    => __('Check-out', 'mphb-availability-calendar'),
                 'staying'     => __('Staying', 'mphb-availability-calendar'),
-                'close'       => __('Close', 'mphb-availability-calendar'),
                 'detailTitle' => __('Booking details', 'mphb-availability-calendar'),
                 'secBooking'  => __('Booking information', 'mphb-availability-calendar'),
                 'secRooms'    => __('Reserved accommodations', 'mphb-availability-calendar'),
@@ -102,6 +98,7 @@ final class Staff_Widget
                 // precisely what tripped the empty-heading check fixed in 0.20.1.
                 // aria-live announces the month when it changes. ?>
                 <div class="mphbac-staff-month" aria-live="polite"></div>
+                <button type="button" class="mphbac-staff-nav mphbac-staff-today"><?php echo esc_html__('Today', 'mphb-availability-calendar'); ?></button>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>">&rarr;</button>
             </div>
             <div class="mphbac-staff-legend" aria-hidden="true">

@@ -64,8 +64,8 @@ final class Staff_Data
         $booking_ids  = array_values(array_unique(array_map(static fn($r) => (int) $r->booking_id, $rows)));
         $reserved_ids = array_values(array_unique(array_map(static fn($r) => (int) $r->reserved_id, $rows)));
         if ($booking_ids) {
+            // The third arg already primes meta — no separate call needed.
             _prime_post_caches($booking_ids, false, true);
-            update_meta_cache('post', $booking_ids);
         }
         if ($reserved_ids) {
             update_meta_cache('post', $reserved_ids);
@@ -346,27 +346,60 @@ final class Staff_Data
      */
     private static function guest_name(int $booking_id): string
     {
-        $b = self::booking_entity($booking_id);
-        $c = self::first_of($b, ['getCustomer']);
+        // META FIRST, and for the month view meta ONLY.
+        //
+        // month_view() has already meta-primed every booking in the range, so
+        // this resolves from memory at zero query cost. Constructing an MPHB
+        // booking entity here instead would be a repository call PER BOOKING
+        // (each of which may load its customer and reserved rooms) — the exact
+        // N+1 the single-query design exists to avoid. The entity path is
+        // therefore opt-in and used only by the lazy single-booking detail.
+        $name = self::name_from_meta($booking_id);
+        if ($name !== '') {
+            return $name;
+        }
+        // Deliberately NO entity fallback here: it would be a repository call
+        // per booking. The detail sheet reads the customer entity directly
+        // (section_customer), which is one booking and lazily loaded.
+        // If chips show "#id" on a real install, extend name_from_meta()'s key
+        // list rather than reaching for the entity here.
+        //
+        // Imports frequently carry no customer at all — the booking number is
+        // still a usable handle for staff, and never a blank chip.
+        return '#' . $booking_id;
+    }
 
-        $first = (string) self::scalar($c, ['getFirstName'], '');
-        $last  = (string) self::scalar($c, ['getLastName'], '');
+    /**
+     * Guest name from primed booking meta, no queries. Tries the usual MPHB
+     * keys, then falls back to scanning the (already loaded) meta for any
+     * first/last/full-name key, so an install storing them under a different
+     * name still shows something.
+     */
+    private static function name_from_meta(int $booking_id): string
+    {
+        $first = (string) get_post_meta($booking_id, 'mphb_first_name', true);
+        $last  = (string) get_post_meta($booking_id, 'mphb_last_name', true);
         $name  = trim($first . ' ' . $last);
         if ($name !== '') {
             return $name;
         }
-        $full = self::scalar($c, ['getName', 'getFullName'], null);
-        if (is_string($full) && trim($full) !== '') {
-            return trim($full);
-        }
-        // Imports frequently have no customer record at all.
-        foreach (['mphb_first_name', 'mphb_last_name', 'mphb_customer_name'] as $k) {
+        foreach (['mphb_customer_name', 'mphb_name', 'mphb_full_name'] as $k) {
             $v = (string) get_post_meta($booking_id, $k, true);
-            if ($v !== '') {
-                $name = trim($name . ' ' . $v);
+            if (trim($v) !== '') {
+                return trim($v);
             }
         }
-        return $name !== '' ? $name : '#' . $booking_id;
+        // Last resort: scan what is already in memory. No extra query.
+        $f = ''; $l = '';
+        foreach ((array) get_post_meta($booking_id) as $key => $vals) {
+            $v = is_array($vals) ? (string) reset($vals) : (string) $vals;
+            if ($v === '') {
+                continue;
+            }
+            if ($f === '' && preg_match('/first[_-]?name$/i', (string) $key)) { $f = $v; }
+            if ($l === '' && preg_match('/last[_-]?name$/i', (string) $key))  { $l = $v; }
+        }
+        return trim($f . ' ' . $l);
     }
 
     // ------------------------------------------------------------ OTA source

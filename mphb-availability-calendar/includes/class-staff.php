@@ -229,6 +229,14 @@ final class Staff
         // rendering, so a mislabelled upload can't execute in the browser.
         $inline = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'], true);
 
+        // Discard any output buffering before streaming bytes. A stray notice
+        // or a plugin's buffered whitespace prepended to a JPEG/PDF corrupts
+        // it, and the failure looks like "the photo is broken" rather than
+        // like a PHP problem.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($real));
         header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="id-' . $booking_id . '.' . pathinfo($real, PATHINFO_EXTENSION) . '"');

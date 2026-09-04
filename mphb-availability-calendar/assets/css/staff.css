@@ -51,6 +51,9 @@
     cursor: pointer;
 }
 .mphbac-staff-nav:hover { background: #eee; }
+/* The Today button carries a word rather than an arrow. */
+.mphbac-staff-today { font-size: 0.9em; font-weight: 600; }
+.mphbac-staff-today[hidden] { display: none; }
 .mphbac-staff-nav:focus-visible,
 .mphbac-staff-chip:focus-visible,
 .mphbac-staff-close:focus-visible,

@@ -28,6 +28,7 @@
         var statusEl = root.querySelector('.mphbac-staff-status');
         var prevBtn  = root.querySelector('.mphbac-staff-prev');
         var nextBtn  = root.querySelector('.mphbac-staff-next');
+        var todayBtn = root.querySelector('.mphbac-staff-today');
         var overlay  = root.querySelector('.mphbac-staff-overlay');
         var sheet    = root.querySelector('.mphbac-staff-sheet');
         var sheetTitle = root.querySelector('.mphbac-staff-sheet-title');
@@ -84,6 +85,7 @@
         function loadMonth() {
             var seq = ++monthReq;
             monthEl.textContent = monthName(month);
+            if (todayBtn) { todayBtn.hidden = (month === config.month); }
             if (cache[month]) { say(''); paint(cache[month]); return; }
             say(S.loading || 'Loading…');
             gridEl.setAttribute('aria-busy', 'true');
@@ -379,6 +381,11 @@
 
         prevBtn.addEventListener('click', function () { month = shift(month, -1); loadMonth(); });
         nextBtn.addEventListener('click', function () { month = shift(month, 1); loadMonth(); });
+        if (todayBtn) {
+            // Hidden while already on the current month so it never sits there
+            // as a no-op button.
+            todayBtn.addEventListener('click', function () { month = config.month; loadMonth(); });
+        }
 
         // ---- date helpers ---------------------------------------------------
 

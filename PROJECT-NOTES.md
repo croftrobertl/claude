@@ -186,8 +186,20 @@ isn't in the candidate list degrades to "—" — visibly empty, never fatal,
 never silently wrong. Candidate lists need confirming against the live install.
 
 **Performance.** `month_view()` is ONE query for the range plus a single
-`_prime_post_caches()` + `update_meta_cache()`, so entity getters read from
-cache instead of N+1ing per booking. Detail loads lazily on tap.
+`_prime_post_caches()`. Two N+1s were found and fixed by audit, both invisible
+to unit tests — guard against reintroducing them:
+- `source_for()` must be passed the reserved-room ids `month_view()` already
+  has; without them it does a `get_posts()` per booking.
+- `guest_name()` is META-ONLY on purpose. Constructing an MPHB booking entity
+  there is a repository call per booking (12 bookings = 12 lookups, each
+  potentially loading customer + reserved rooms). If chips render "#id" on a
+  real install, extend `name_from_meta()`'s key list — do NOT reach for the
+  entity. The detail sheet may use entities: it is one booking, loaded lazily.
+
+`staff-monthview-test.php` and `staff-nplus1-test.php` assert the query count,
+the `get_posts()` count, and the MPHB repository-call count. The second exists
+because the first had no `MPHB()` stub, so `function_exists()` was false and
+the entity N+1 went unseen — any new staff harness must stub MPHB.
 
 ## Invariants that must hold
 

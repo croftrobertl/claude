@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.1
+Stable tag: 0.21.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.21.2 =
+Second audit pass over the staff calendar.
+
+* Fixed a significant slowdown: building the month view asked MotoPress to construct a full booking object for **every** booking on screen, purely to get the guest's name — one lookup per booking, each of which can pull in the customer and reserved rooms. Names now come from data already loaded with the single month query, so a busy month costs the same as an empty one. (Measured on a 12-booking month: 12 MotoPress lookups before, 0 after.)
+* Added a "Today" button to the month bar — it hides itself while you're already on the current month.
+* Photo IDs are now streamed with any buffered output discarded first, so a stray notice from another plugin can't corrupt the image or PDF (which would look like "the photo is broken" rather than a server problem).
+* Removed four unused text settings that were being written into every staff page, and an unreachable code branch.
 
 = 0.21.1 =
 Self-audit of the 0.21.0 staff calendar. **0.21.0 should not be installed — use this build instead.**
