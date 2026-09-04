@@ -35,7 +35,9 @@ final class Extra_Guest_Service
 
     public function validate_submission(): void
     {
-        if (!Checkout_Request::is_checkout_submission() || !Config::guest_fee_active()) {
+        // NOTE: deliberately NOT gated on guest_fee_active() — when the
+        // offering is off, find_violation() enforces the 2-guest cap instead.
+        if (!Checkout_Request::is_checkout_submission()) {
             return;
         }
         // Never redirect during AJAX (would clobber the JSON response) and never
@@ -61,13 +63,32 @@ final class Extra_Guest_Service
      */
     public function find_violation(): ?string
     {
+        $included  = Config::included_guests();
+        // Non-zero only; a dormant config (service IDs still 0) must not make
+        // every service look like an extra-guest service.
+        $guest_ids = array_values(array_filter(Config::guest_service_id_list()));
+
+        // "Pull-out Couch Guests" OFF — or ON but not yet configured, which is
+        // the same thing from a guest's point of view: the offering cannot be
+        // sold. Nobody may exceed the included guest count, and no extra-guest
+        // service may ride along. (Previously this path returned early and
+        // enforced NOTHING, so with capacity raised to 4 a 3–4 guest booking
+        // went through free.)
         if (!Config::guest_fee_active()) {
+            foreach (Checkout_Request::rooms() as $room) {
+                if ($room['room_type_id'] > 0 && $room['adults'] > $included) {
+                    return 'guests';
+                }
+                foreach ($room['services'] as $svc) {
+                    if (in_array($svc['id'], $guest_ids, true)) {
+                        return 'guests';
+                    }
+                }
+            }
             return null;
         }
 
         $guest_acc = Config::guest_accommodations();
-        $guest_ids = Config::guest_service_id_list();
-        $included  = Config::included_guests();
         $nights    = Checkout_Request::nights();
         $expected  = Config::guest_service_id_for_nights($nights);
 

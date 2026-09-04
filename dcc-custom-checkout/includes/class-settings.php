@@ -214,19 +214,19 @@ final class Settings
                     ?>
                 </table>
 
-                <h2><?php echo esc_html__('Extra guest fee', 'dcc-checkout'); ?></h2>
+                <h2><?php echo esc_html__('Pull-out Couch Guests', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
-                    <?php echo esc_html__('Charges each guest beyond the second, per night, via a native MotoPress Service (per night · per adult; the fee amount lives on the Service). For a flat fee across all stay lengths, enter the SAME service ID in all three fields. The night thresholds are the shared bucket fields above — they apply to the pet fee and this fee alike. The feature stays dormant while any service ID is 0.', 'dcc-checkout'); ?>
+                    <?php echo esc_html__('Offers the pull-out couch as extra sleeping space: each guest beyond the included count is charged per night via a native MotoPress Service (per night · per adult; the fee amount lives on the Service). For a flat fee across all stay lengths, enter the SAME service ID in all three fields. The weekly/monthly night thresholds are the shared bucket fields above; this fee applies from the first night. The offering stays dormant while any service ID is 0.', 'dcc-checkout'); ?>
                 </p>
                 <table class="form-table" role="presentation">
                     <tr>
-                        <th scope="row"><?php echo esc_html__('Enable extra guest fee', 'dcc-checkout'); ?></th>
+                        <th scope="row"><?php echo esc_html__('Pull-out Couch Guests', 'dcc-checkout'); ?></th>
                         <td>
                             <label>
                                 <input type="checkbox" name="<?php echo esc_attr(Config::OPTION); ?>[guest_fee_enabled]" value="1" <?php checked(1, (int) $s['guest_fee_enabled']); ?> />
-                                <?php echo esc_html__('Automatically apply the per-night fee for each guest beyond the second.', 'dcc-checkout'); ?>
+                                <?php echo esc_html__('Offer the pull-out couch, and charge the per-night fee for each guest beyond the included count.', 'dcc-checkout'); ?>
                             </label>
-                            <p class="description"><?php echo esc_html__('When off (or while any service ID below is 0), no fee UI renders and no service is auto-attached anywhere.', 'dcc-checkout'); ?></p>
+                            <p class="description"><?php echo esc_html__('When ON, guests beyond the included count are offered and billed automatically. When OFF (or while any service ID below is 0) the offering stands down completely: no fee UI, no service attached, and bookings are capped at the included guest count on the accommodations below.', 'dcc-checkout'); ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -239,9 +239,9 @@ final class Settings
                         </td>
                     </tr>
                     <?php
-                    $this->number_row(__('Daily service ID (extra guest)', 'dcc-checkout'), 'guest_service_daily', (int) $s['guest_service_daily'], __('0 = dormant. Flat pricing: same ID in all three fields.', 'dcc-checkout'));
-                    $this->number_row(__('Weekly service ID (extra guest)', 'dcc-checkout'), 'guest_service_weekly', (int) $s['guest_service_weekly'], '');
-                    $this->number_row(__('Monthly service ID (extra guest)', 'dcc-checkout'), 'guest_service_monthly', (int) $s['guest_service_monthly'], '');
+                    $this->number_row(__('Daily service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_daily', (int) $s['guest_service_daily'], __('0 = dormant. Flat pricing: same ID in all three fields.', 'dcc-checkout'));
+                    $this->number_row(__('Weekly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_weekly', (int) $s['guest_service_weekly'], '');
+                    $this->number_row(__('Monthly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_monthly', (int) $s['guest_service_monthly'], '');
                     ?>
                 </table>
 

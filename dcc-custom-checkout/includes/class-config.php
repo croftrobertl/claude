@@ -205,7 +205,9 @@ final class Config
      * --------------------------------------------------------------------- */
 
     /**
-     * Master on/off for the extra-guest fee (admin setting).
+     * Master on/off for the "Pull-out Couch Guests" offering (admin setting).
+     * When off, the offering stands down entirely and bookings are capped at
+     * included_guests() on the guest accommodations.
      */
     public static function guest_fee_enabled(): bool
     {

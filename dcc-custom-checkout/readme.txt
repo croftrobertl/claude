@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,16 +61,17 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     %dcc_dog_details% (MotoPress may already list checkout fields in the email
     booking details, so the tag is a convenience/fallback).
 
-== Setup: extra-guest fee (one-time) ==
+== Setup: Pull-out Couch Guests (one-time) ==
 
 1. Raise mphb_adults_capacity AND mphb_total_capacity to 4 on the six cottages
    (the checkout dropdown is built from capacity — the plugin never injects
    options).
 2. Create ONE MotoPress Service "Extra Guest Fee": price 50, per night,
    per adult, assigned to the six accommodation types only.
-3. WP Admin → DCC → Custom Checkout → "Extra guest fee" → enter that service's
-   ID into all three bucket fields (flat pricing) and keep the feature enabled.
-   While any ID is 0 the feature is dormant.
+3. WP Admin → DCC → Custom Checkout → "Pull-out Couch Guests" → tick the box
+   and enter that service's ID into all three bucket fields (flat pricing).
+   While the box is off, or while any ID is 0, the offering stands down and
+   bookings are capped at the included guest count.
 
 == Setup: dog info fields (one-time, required for Part D data capture) ==
 
@@ -94,6 +95,12 @@ WP Admin → DCC → Custom Checkout:
     Services aren't enabled in MotoPress are flagged (best-effort).
   * Service IDs (17712/17711/14926) and night thresholds (2–6 / 7–29 / 30+),
     global across all pet accommodations.
+  * Pull-out Couch Guests — master on/off for the extra-guest offering (default
+    ON). ON: guests beyond the included count are offered and billed per night.
+    OFF (or any service ID still 0): no fee UI, no service attached, and
+    bookings are capped at the included guest count on the listed
+    accommodations — enforced server-side on both the form POST and the REST
+    checkout route.
 
 Reminder: for each cottage added, the three pet-fee Services must also be enabled
 for that accommodation type in MotoPress (Bookings → Accommodation Types →
@@ -124,6 +131,27 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.4 =
+* New setting "Pull-out Couch Guests" (DCC → Custom Checkout), default ON.
+  This is the existing extra-guest master switch, relabelled to the name Rob
+  uses — the option key (guest_fee_enabled) is unchanged, so a saved value
+  carries over. A second, separate checkbox was deliberately NOT added: two
+  switches governing one feature would both have to be ON, which is a classic
+  "why isn't this working" trap.
+* OFF now actually stands the offering down. Previously OFF meant NO enforcement
+  at all, so with MotoPress capacity raised to 4 a 3-4 guest booking went
+  through FREE. With the switch off (or while any service ID is still 0, which
+  is the same thing from a guest's point of view) the server now caps bookings
+  at the included guest count and rejects any extra-guest service riding along.
+  The client also disables — never removes or injects — guest-count options
+  above the included count, so a guest isn't offered a choice that will be
+  refused at submit.
+* Gating is server-side: Extra_Guest_Service::validate_submission() no longer
+  early-returns when the feature is off, and the shared find_violation() runs on
+  both transports (form POST and the REST checkout route), so the cap holds for
+  a crafted JSON request too.
+* Pet-fee logic untouched.
 
 = 0.3.3 =
 * Audit pass over the 0.3.0-0.3.2 work; three defects fixed.

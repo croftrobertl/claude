@@ -524,7 +524,14 @@
     // per_night services have none — and uncheck every other bucket. Invariant:
     // at most ONE bucket checked per room. Dormant unless all service IDs are set.
     function setupExtraGuestFlow(root) {
+        var includedCap = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
         if (!CFG.guestFeeEnabled) {
+            // "Pull-out Couch Guests" is off (or unconfigured): the offering is
+            // not for sale, so cap the guest dropdowns at the included count.
+            // The server enforces this too; doing it here spares the guest a
+            // rejection at submit when MotoPress capacity still offers 3–4.
+            // We only DISABLE existing options — never inject any.
+            capAdultsSelects(root, includedCap);
             return;
         }
         var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) { return id > 0; });
@@ -597,6 +604,29 @@
             // Re-assert once after MotoPress's own checkout JS initializes, in
             // case it reset the service inputs during its first render.
             setTimeout(apply, 800);
+        });
+    }
+
+    // Disable (never remove, never inject) guest-count options above `cap`, and
+    // pull an already-selected over-cap value back down. Used when the pull-out
+    // couch offering is switched off while MotoPress capacity still allows 3–4.
+    function capAdultsSelects(root, cap) {
+        roomAdultsSelects(root).forEach(function (sel) {
+            var changed = false;
+            Array.prototype.forEach.call(sel.options, function (opt) {
+                var v = parseInt(opt.value, 10);
+                if (v > cap) {
+                    opt.disabled = true;
+                    opt.hidden = true;
+                }
+            });
+            if ((parseInt(sel.value, 10) || 0) > cap) {
+                sel.value = String(cap);
+                changed = true;
+            }
+            if (changed) {
+                fireChange(sel); // let MotoPress recompute for the corrected count
+            }
         });
     }
 
