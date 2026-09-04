@@ -2775,6 +2775,27 @@ final class Widget extends Widget_Base
     // ----------------------------------------------------------------------
 
     /**
+     * Map a shortcode audience attribute onto a render mode.
+     *
+     * Fail-safe, and deliberately asymmetric: ONLY an explicit, recognised
+     * request for the guest guide returns 'full'. A typo, the wrong case, an
+     * empty value or any unexpected word resolves to 'public'. The opposite
+     * default — treating anything that is not exactly "public" as the guest
+     * guide — meant `audience="Public"` or a slip of the finger published the
+     * Wi-Fi passwords on an indexable page.
+     */
+    public static function mode_for_audience($audience): string
+    {
+        // Shortcode attributes arrive as strings, but this is a public helper —
+        // casting an array or object to string raises a warning, and the plugin
+        // ships none. Anything that is not scalar is not a request for the
+        // guest guide, so it takes the safe branch.
+        if (!is_scalar($audience)) { return 'public'; }
+        $a = strtolower(trim((string) $audience));
+        return ($a === 'full' || $a === 'guest' || $a === 'guests') ? 'full' : 'public';
+    }
+
+    /**
      * True when this widget should render the prospect-facing public guide.
      */
     public static function is_public_mode(array $s): bool

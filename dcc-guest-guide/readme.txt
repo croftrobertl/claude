@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.1
+Stable tag: 0.10.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,24 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.10.2 =
+
+**Second audit pass — one important fix.**
+
+* **Security: a mistyped shortcode could publish the full guest guide.**
+  The audience attribute was read as "public exactly, or else show the
+  guest guide", so `audience="Public"` with a capital P, a typo, or an
+  empty value rendered the complete guest guide — Wi-Fi passwords
+  included — on a public, indexable page. The logic is now the other way
+  round and fails safe: only an explicit `full` or `guest` shows the
+  guest guide, and anything unrecognised falls back to the public view.
+* The public CTA button is hidden when the guide is printed.
+* A stray PHP warning in the new audience handling, found by the tests
+  added for it.
+
+Public-mode tests extended to 27 assertions covering casing, typos, empty
+and non-string audience values end to end.
 
 = 0.10.1 =
 

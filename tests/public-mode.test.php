@@ -152,5 +152,39 @@ $malformed = [
 \DCCGG\Widget::apply_public_mode($malformed);
 check('malformed rows skipped without error', count($malformed['guide_sections']) === 1 && count($malformed['guide_items']) === 1);
 
+echo "\nH. Shortcode audience mapping fails SAFE\n";
+// The shortcode attribute is typed by hand into page content. Before v0.10.2
+// the mapping was `=== 'public' ? public : full`, so any slip — wrong case, a
+// typo, an empty value — published the FULL guest guide, Wi-Fi passwords and
+// all, on an indexable page. Only an explicit, recognised request for the
+// guest guide may return 'full'.
+$mustBePublic = ['public', 'Public', 'PUBLIC', ' public ', 'publc', 'prospects',
+                 'prospect', '', 'yes', 'no', 'true', '0', 'gues', 'ful', 'anything'];
+$leaky = [];
+foreach ($mustBePublic as $a) {
+    if (\DCCGG\Widget::mode_for_audience($a) !== 'public') { $leaky[] = var_export($a, true); }
+}
+check('typos, casing and empty values all resolve to public', !$leaky, implode(' | ', $leaky));
+
+$mustBeFull = ['full', 'Full', 'FULL', ' full ', 'guest', 'Guest', 'guests'];
+$wrong = [];
+foreach ($mustBeFull as $a) {
+    if (\DCCGG\Widget::mode_for_audience($a) !== 'full') { $wrong[] = var_export($a, true); }
+}
+check('explicit full/guest still renders the guest guide', !$wrong, implode(' | ', $wrong));
+
+// Non-string inputs must not warn or fatal.
+check('non-string audience handled', \DCCGG\Widget::mode_for_audience(null) === 'public'
+    && \DCCGG\Widget::mode_for_audience(0) === 'public'
+    && \DCCGG\Widget::mode_for_audience([]) === 'public');
+
+// End-to-end: the mode the shortcode picks must actually filter the guide.
+$srcSettings = $settings;                 // fixture with Wi-Fi + checkout guest sections
+$srcSettings['guide_mode'] = \DCCGG\Widget::mode_for_audience('Public');   // capital P
+if (\DCCGG\Widget::is_public_mode($srcSettings)) { \DCCGG\Widget::apply_public_mode($srcSettings); }
+$blob = json_encode([$srcSettings['guide_sections'], $srcSettings['guide_items']]);
+check('capital-P "Public" still filters out guest content', stripos($blob, 'DCC32586') === false
+    && stripos($blob, 'excitedgadfly450') === false, 'guest content survived');
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

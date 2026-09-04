@@ -389,7 +389,7 @@ final class Plugin
 
         // Override the mode on a COPY. The source page's own data is untouched.
         $element['settings'] = (array) ($element['settings'] ?? []);
-        $element['settings']['guide_mode'] = ($atts['audience'] === 'public') ? 'public' : 'full';
+        $element['settings']['guide_mode'] = Widget::mode_for_audience($atts['audience']);
 
         Widget::register_assets();
         wp_enqueue_style('dccgg-widget');

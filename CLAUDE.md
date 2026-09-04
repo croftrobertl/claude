@@ -140,6 +140,11 @@ Since v0.10.0 the guide renders in two modes from ONE definition.
 - Public mode force-disables `enable_problem_report`, `enable_per_item_report`
   and `enable_checkout_review` by writing the settings off, so a render path
   added later inherits the exclusion instead of quietly reintroducing it.
+- `Widget::mode_for_audience()` maps the shortcode attribute to a mode and is
+  deliberately asymmetric: only an explicit `full`/`guest` returns the guest
+  guide; every other value (typo, wrong case, empty, non-scalar) returns
+  `public`. Do not "simplify" it to `=== 'public' ? public : full` — that is
+  what it was, and `audience="Public"` published the Wi-Fi passwords.
 - The shortcode `[dcc_guest_guide audience="public" source="POST_ID"]` reads the
   source page's Elementor element data and re-renders that same element with the
   mode overridden. There is no second copy of the guide — do not "fix" this by
