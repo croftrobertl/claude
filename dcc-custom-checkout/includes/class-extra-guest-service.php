@@ -68,7 +68,14 @@ final class Extra_Guest_Service
         $guest_acc = Config::guest_accommodations();
         $guest_ids = Config::guest_service_id_list();
         $included  = Config::included_guests();
-        $expected  = Config::guest_service_id_for_nights(Checkout_Request::nights());
+        $nights    = Checkout_Request::nights();
+        $expected  = Config::guest_service_id_for_nights($nights);
+
+        // Stay length unknown (dates missing/unparseable): we cannot say which
+        // service SHOULD be attached, so demanding one would reject a booking
+        // we simply can't evaluate. Fall through to the "no extra-guest service
+        // may be attached where it isn't due" rules only.
+        $can_expect = $nights > 0 && $expected > 0;
 
         foreach (Checkout_Request::rooms() as $room) {
             $is_guest_acc = in_array($room['room_type_id'], $guest_acc, true);
@@ -83,9 +90,12 @@ final class Extra_Guest_Service
             }
 
             if ($is_guest_acc && $extra > 0) {
+                if (!$can_expect) {
+                    continue; // Can't evaluate this stay — don't block the booking.
+                }
                 // Exactly the bucket service, multiplied by exactly the extra
                 // guest count — anything else is tampering (or a JS failure).
-                if ($expected <= 0 || empty($attached)) {
+                if (empty($attached)) {
                     return 'guests';
                 }
                 foreach ($attached as $svc) {

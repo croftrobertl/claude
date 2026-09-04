@@ -109,7 +109,6 @@ final class Assets
         $service_ids = Config::pet_service_ids();
 
         return [
-            'cottageTypeId'   => Config::cottage_type_id(),
             'serviceIds'      => [
                 'daily'   => $service_ids['daily'],
                 'weekly'  => $service_ids['weekly'],
@@ -134,7 +133,6 @@ final class Assets
             'guestAccommodations' => Config::guest_accommodations(),
             'includedGuests'      => Config::included_guests(),
             'guestsSelector'   => Config::guests_selector(),
-            'requiredColor'    => '#c62828',
             'i18n'            => [
                 'petQuestion'   => __('Traveling with a dog?', 'dcc-checkout'),
                 'petNo'         => __('No', 'dcc-checkout'),

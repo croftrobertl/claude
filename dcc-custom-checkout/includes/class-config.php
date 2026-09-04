@@ -293,12 +293,23 @@ final class Config
     }
 
     /**
-     * Resolve the extra-guest Service ID for a night count. Shares
-     * bucket_thresholds() with the pet fee (2/7/30 — deliberately NOT
-     * duplicated). Returns 0 below the minimum bucket.
+     * Resolve the extra-guest Service ID for a night count. Shares the weekly /
+     * monthly thresholds with the pet fee (deliberately NOT duplicated).
+     *
+     * The daily bucket has NO lower bound here: the decided rule is a flat
+     * per-night fee "identical for every stay length", so it applies from the
+     * first night. (bucket_thresholds()['min_daily'] governs the PET fee only —
+     * that fee has its own policy and is live-verified; it is untouched.)
+     * Without this floor a 1-night 3–4 guest booking resolved to 0, the JS
+     * attached nothing, and the backstop then rejected the booking outright.
+     *
+     * Returns 0 only when the stay length is unknown (nights <= 0).
      */
     public static function guest_service_id_for_nights(int $nights): int
     {
+        if ($nights <= 0) {
+            return 0;
+        }
         $t   = self::bucket_thresholds();
         $ids = self::guest_service_ids();
 
@@ -308,10 +319,7 @@ final class Config
         if ($nights >= $t['min_weekly']) {
             return $ids['weekly'];
         }
-        if ($nights >= $t['min_daily']) {
-            return $ids['daily'];
-        }
-        return 0;
+        return $ids['daily'];
     }
 
     /* --------------------------------------------------------------------- *

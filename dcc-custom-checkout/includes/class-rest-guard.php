@@ -35,6 +35,25 @@ final class Rest_Guard
 
     private static bool $registered = false;
 
+    /**
+     * The route fragment both this guard and Checkout_Request::defer_to_rest()
+     * test against. CRITICAL: the two MUST use identical matching semantics —
+     * if the wp_loaded backstops stand down for a request this guard does not
+     * then enforce, the submission is unguarded entirely. Both use a substring
+     * test on this fragment for that reason.
+     */
+    public static function route_fragment(): string
+    {
+        return (string) apply_filters('dcc_checkout_rest_route', self::ROUTE);
+    }
+
+    /** Does this route string identify the checkout submission endpoint? */
+    public static function route_matches(string $route): bool
+    {
+        $fragment = self::route_fragment();
+        return $fragment !== '' && strpos($route, $fragment) !== false;
+    }
+
     public function register(): void
     {
         add_filter('rest_request_before_callbacks', [$this, 'intercept'], 10, 3);
@@ -63,8 +82,10 @@ final class Rest_Guard
         if ($request->get_method() !== 'POST') {
             return $response;
         }
-        $route = (string) apply_filters('dcc_checkout_rest_route', self::ROUTE);
-        if ($request->get_route() !== $route) {
+        // Substring match, mirroring defer_to_rest() exactly (see route_matches).
+        // Over-matching is harmless: a request without room_details makes every
+        // validator a no-op. Under-matching would be a bypass.
+        if (!self::route_matches((string) $request->get_route())) {
             return $response;
         }
         // NOTE: no capability exemption here — this is the public booking

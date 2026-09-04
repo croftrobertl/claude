@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,33 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.3 =
+* Audit pass over the 0.3.0-0.3.2 work; three defects fixed.
+* SECURITY: the wp_loaded backstops stood down on a URI substring match while
+  the REST guard only enforced on an exact route match. Any divergence (a
+  trailing slash, a route variant) meant the legacy path stepped aside and the
+  guard declined — leaving the submission completely unguarded, worse than
+  before the REST work. Both sides now call one shared Rest_Guard::route_matches(),
+  so they cannot disagree. Over-matching is harmless (a request without
+  room_details makes every validator a no-op); under-matching was the risk.
+* FIX: a 1-night booking with 3-4 guests was REJECTED outright. The extra-guest
+  resolver returned 0 below the 2-night daily threshold, so the JS attached no
+  service and the backstop then demanded one. The decided rule is a flat
+  per-night fee "identical for every stay length", so the daily bucket now has
+  no lower bound and applies from night one. (bucket_thresholds()['min_daily']
+  still governs the PET fee only — that policy is separate and live-verified.)
+  The backstop additionally skips rooms whose stay length is unknown rather
+  than blocking a booking it cannot evaluate.
+* FIX: silent overcharge risk. If a service's "for N guests" select was not
+  found, the JS still ticked the checkbox — and MotoPress presets that select to
+  FULL capacity, billing 4 extra guests instead of the real count. It now
+  refuses to attach without control of the multiplier, so the server rejects
+  with a clear message instead of overcharging.
+* Cleanup: removed dead code left by earlier refactors (JS nextId()/UID, the
+  unread cottageTypeId and requiredColor localized keys) and corrected the
+  Checkout_Request and checkout.js file headers, which still described
+  $_POST-only reading and omitted the extra-guest flow.
 
 = 0.3.2 =
 * Security (2026-08-30 audit): the server backstops read $_POST, but MotoPress's

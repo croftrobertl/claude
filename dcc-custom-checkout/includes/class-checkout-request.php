@@ -6,7 +6,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Read-only helpers over the checkout submission ($_POST).
+ * Read-only helpers over the checkout submission — $_POST by default, or a
+ * parsed REST payload when one is set (see set_payload).
  *
  * IMPORTANT: MotoPress submits a NORMALIZED payload, not the raw form. At
  * booking creation the relevant top-level keys are:
@@ -63,9 +64,12 @@ final class Checkout_Request
         }
         $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
         // Covers /wp-json/mphb/v1/checkout and the plain-permalink
-        // ?rest_route=/mphb/v1/checkout form (also URL-encoded).
-        return strpos($uri, '/mphb/v1/checkout') !== false
-            || strpos(rawurldecode($uri), '/mphb/v1/checkout') !== false;
+        // ?rest_route=/mphb/v1/checkout form (also URL-encoded). Uses
+        // Rest_Guard::route_matches() so the stand-down condition and the
+        // enforcement condition can never diverge — deferring to a guard that
+        // then declines the request would leave it completely unguarded.
+        return Rest_Guard::route_matches($uri)
+            || Rest_Guard::route_matches(rawurldecode($uri));
     }
 
     /**

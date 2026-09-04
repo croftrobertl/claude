@@ -4,8 +4,10 @@
  * Part A (item 13) — keep "Cottage N:" on line 1, wrap the name below.
  * Part B (items 11/12/14) — tidy the required markers on every label.
  * Part C (item 3) — show/require the second-guest fields only at 2 guests.
- * Part D (item 2) — Cottage 34 "traveling with a dog?" flow that drives the
- *                   native MotoPress pet Service (native pricing, no math here).
+ * Part D (item 2) — the "traveling with a dog?" flow that drives the native
+ *                   MotoPress pet Service (native pricing, no math here).
+ * Extra-guest fee — per-room, drives the native per-adult Service for guests
+ *                   beyond the second (v0.3.0).
  *
  * All configuration arrives via the localized `DCC_CHECKOUT` object.
  */
@@ -14,12 +16,6 @@
 
     var CFG  = window.DCC_CHECKOUT || {};
     var I18N = CFG.i18n || {};
-    var UID  = 0;
-
-    function nextId(prefix) {
-        UID += 1;
-        return 'dcc_checkout_' + prefix + '_' + UID;
-    }
 
     function esc(sel) {
         return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
@@ -578,10 +574,14 @@
             function apply() {
                 var extra = (parseInt(sel.value, 10) || 0) - included;
                 services.forEach(function (svc) {
-                    var want = extra > 0 && svc.id === target;
-                    if (want && svc.adultsSel && String(svc.adultsSel.value) !== String(extra)) {
-                        // The preset filter defaults this select to FULL capacity;
-                        // always set the multiplier to the EXTRA guest count.
+                    // Never attach without control of the multiplier: MotoPress
+                    // presets that select to FULL capacity, so ticking the box
+                    // with no select in hand would bill 4 extra guests instead
+                    // of `extra` — a silent overcharge. Failing closed here
+                    // instead lets the server backstop reject with a clear
+                    // message, which is the safer wrong answer.
+                    var want = extra > 0 && svc.id === target && !!svc.adultsSel;
+                    if (want && String(svc.adultsSel.value) !== String(extra)) {
                         svc.adultsSel.value = String(extra);
                         fireChange(svc.adultsSel);
                     }
@@ -600,13 +600,16 @@
         });
     }
 
+    // Mirrors Config::guest_service_id_for_nights() — keep the two in step.
+    // The daily bucket has no lower bound (flat fee, applies from night one);
+    // min_daily governs the pet fee only. 0 means "stay length unknown".
     function guestServiceForNights(nights) {
+        if (!(nights > 0)) { return 0; }
         var t   = CFG.thresholds || { min_daily: 2, min_weekly: 7, min_monthly: 30 };
         var svc = CFG.guestServiceIds || {};
         if (nights >= t.min_monthly) { return Number(svc.monthly); }
         if (nights >= t.min_weekly)  { return Number(svc.weekly); }
-        if (nights >= t.min_daily)   { return Number(svc.daily); }
-        return 0;
+        return Number(svc.daily);
     }
 
     // Toggle-only block ("Traveling with a dog?"). The info fields themselves are
