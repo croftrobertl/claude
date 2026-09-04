@@ -1393,7 +1393,13 @@ function configWith(overrides) {
   const root = mountSelector(freshDom('https://example.com/?party=3-4'));
   const why = root.querySelector('.dccs-card .dccs-why');
   ok('a 3-4 guest search shows the capacity reason on the card',
-    !!why && /room for up to four guests/.test(why.textContent));
+    !!why && /room for up to four/.test(why.textContent));
+  // 0.22.7: the reason must caveat WHERE the extra two sleep and THAT a fee
+  // applies — without naming an amount (single source of truth elsewhere).
+  ok('the capacity reason names the pull-out couch', /pull-out couch/.test(why.textContent));
+  ok('the capacity reason flags that a fee applies', /nightly fee/.test(why.textContent));
+  ok('the capacity reason carries no fee amount',
+    why.textContent.indexOf('$') === -1 && !/\d+\s*\/\s*night/.test(why.textContent));
   // whyFits caps at 3; with the key present the card renders all three it chose.
   const chosen = w.DCCS.labels.whyFits(cottages.find(c => c.id === '22'),
     { hard: ['party34'], wParty: 2, wDesk: 0, wSpace: 0, wPet: 0, wFewerStairs: 0,

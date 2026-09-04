@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.6
+Stable tag: 0.22.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,15 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.22.7 =
+* The "why this fits" capacity reason now says where the extra guests sleep and
+  that it costs extra: "room for up to four (the extra two on a pull-out couch,
+  for a nightly fee)". Previously it read only "room for up to four guests",
+  which could be taken to mean four beds at the nightly rate.
+* The amount itself is deliberately not shown here — fee figures live in one
+  place elsewhere on the site, so they can't go stale in two. The party-size
+  step's capacity note is unchanged and still carries the fuller explanation.
 
 = 0.22.6 =
 * **Cottage 31 no longer says it is identical to Cottage 32.** It isn't — 31 has

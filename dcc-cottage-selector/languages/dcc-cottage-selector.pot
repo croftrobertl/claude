@@ -1330,7 +1330,7 @@ msgid "easy ground-floor access, no stairs"
 msgstr ""
 
 #: includes/class-config.php:154
-msgid "room for up to four guests"
+msgid "room for up to four (the extra two on a pull-out couch, for a nightly fee)"
 msgstr ""
 
 #: includes/class-config.php:147
