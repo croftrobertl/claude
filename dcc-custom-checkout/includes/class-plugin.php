@@ -1,0 +1,75 @@
+<?php
+namespace DCC_Checkout;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Singleton orchestrator. Wires up the collaborators and nothing else.
+ */
+final class Plugin
+{
+    private static ?Plugin $instance = null;
+
+    private bool $booted = false;
+
+    public static function instance(): self
+    {
+        return self::$instance ??= new self();
+    }
+
+    public function boot(): void
+    {
+        if ($this->booted) {
+            return;
+        }
+        $this->booted = true;
+
+        add_action('init', [$this, 'load_textdomain']);
+
+        // MotoPress is required. Without it there is no checkout to customize.
+        if (!function_exists('MPHB')) {
+            add_action('admin_notices', [$this, 'render_missing_deps_notice']);
+            return;
+        }
+
+        // Admin settings page (pet-fee on/off + which accommodations).
+        (new Settings())->register();
+
+        // Front-end: conditional CSS/JS on the checkout page only.
+        (new Assets())->register();
+
+        // Server-side backstops (cannot be bypassed by editing the DOM).
+        (new Guest_Fields())->register();
+        (new Pet_Service())->register();
+        (new Extra_Guest_Service())->register();
+        // REST-pipeline enforcement: the same three validators run on the
+        // parsed /mphb/v1/checkout request body (JSON and multipart alike),
+        // closing the empty-$_POST JSON bypass with a proper 422 JSON error.
+        (new Rest_Guard())->register();
+    }
+
+    public function load_textdomain(): void
+    {
+        load_plugin_textdomain(
+            'dcc-checkout',
+            false,
+            dirname(plugin_basename(DCC_CHECKOUT_FILE)) . '/languages'
+        );
+    }
+
+    public function render_missing_deps_notice(): void
+    {
+        if (!current_user_can('activate_plugins')) {
+            return;
+        }
+        printf(
+            '<div class="notice notice-error"><p>%s</p></div>',
+            esc_html__(
+                'DCC Custom Checkout requires the MotoPress Hotel Booking plugin to be active.',
+                'dcc-checkout'
+            )
+        );
+    }
+}

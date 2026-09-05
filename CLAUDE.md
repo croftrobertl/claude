@@ -125,3 +125,13 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+## DCC Custom Checkout — release artifacts
+
+- Deliverable zips are named **`Custom Checkout <version>.zip`** (e.g.
+  `Custom Checkout 0.2.0.zip`), matching the version in the plugin header.
+  The folder *inside* the zip stays `dcc-custom-checkout/` — that is the WordPress
+  plugin slug and must not change.
+- Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
+- Bump the version in all three places whenever behaviour changes:
+  the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.
