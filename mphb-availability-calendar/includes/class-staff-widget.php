@@ -60,66 +60,104 @@ final class Staff_Widget
             'today'    => $today->format('Y-m-d'),
             'calendar' => [
                 'weekdays'    => self::weekday_labels(),
+                'weekdaysFull'=> self::weekday_labels(false),
                 'months'      => self::month_labels(),
                 'startOfWeek' => max(0, min(6, (int) get_option('start_of_week', 0))),
             ],
             'strings' => [
-                'loading'     => __('Loading bookings…', 'mphb-availability-calendar'),
-                'error'       => __('Could not load bookings. Please try again.', 'mphb-availability-calendar'),
-                'expired'     => __('Your session expired. Please reload this page and re-enter the password.', 'mphb-availability-calendar'),
-                'denied'      => __('Not authorized.', 'mphb-availability-calendar'),
-                'empty'       => __('No bookings this month.', 'mphb-availability-calendar'),
-                'checkIn'     => __('Check-in', 'mphb-availability-calendar'),
-                'checkOut'    => __('Check-out', 'mphb-availability-calendar'),
-                'staying'     => __('Staying', 'mphb-availability-calendar'),
-                'detailTitle' => __('Booking details', 'mphb-availability-calendar'),
-                'secBooking'  => __('Booking information', 'mphb-availability-calendar'),
-                'secRooms'    => __('Reserved accommodations', 'mphb-availability-calendar'),
-                'secCustomer' => __('Customer information', 'mphb-availability-calendar'),
-                'secNotes'    => __('Notes', 'mphb-availability-calendar'),
-                'guests'      => __('Guests', 'mphb-availability-calendar'),
-                'adults'      => __('Adults', 'mphb-availability-calendar'),
-                'children'    => __('Children', 'mphb-availability-calendar'),
-                'guestName'   => __('Guest name', 'mphb-availability-calendar'),
-                'rate'        => __('Rate', 'mphb-availability-calendar'),
-                'total'       => __('Total', 'mphb-availability-calendar'),
-                'services'    => __('Services', 'mphb-availability-calendar'),
-                'fees'        => __('Fees', 'mphb-availability-calendar'),
-                'viewPhoto'   => __('View photo ID', 'mphb-availability-calendar'),
-                'photoNote'   => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
-                'importedTip' => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
+                'loading'      => __('Loading bookings…', 'mphb-availability-calendar'),
+                'error'        => __('Could not load bookings. Please try again.', 'mphb-availability-calendar'),
+                'expired'      => __('Your session expired. Please reload this page and re-enter the password.', 'mphb-availability-calendar'),
+                'denied'       => __('Not authorized.', 'mphb-availability-calendar'),
+                'empty'        => __('No bookings this month.', 'mphb-availability-calendar'),
+                'today'        => __('Today', 'mphb-availability-calendar'),
+                'cottage'      => __('Cottage', 'mphb-availability-calendar'),
+                'checkIn'      => __('Check-in', 'mphb-availability-calendar'),
+                'checkOut'     => __('Check-out', 'mphb-availability-calendar'),
+                'staying'      => __('Staying', 'mphb-availability-calendar'),
+                'arrivals'     => __('Arriving', 'mphb-availability-calendar'),
+                'departures'   => __('Departing', 'mphb-availability-calendar'),
+                'inHouse'      => __('In house', 'mphb-availability-calendar'),
+                'noArrivals'   => __('No arrivals.', 'mphb-availability-calendar'),
+                'noDepartures' => __('No departures.', 'mphb-availability-calendar'),
+                'noInHouse'    => __('No one in house.', 'mphb-availability-calendar'),
+                'night'        => __('night', 'mphb-availability-calendar'),
+                'nights'       => __('nights', 'mphb-availability-calendar'),
+                'until'        => __('until', 'mphb-availability-calendar'),
+                'since'        => __('since', 'mphb-availability-calendar'),
+                'arrivedEarlier' => __('arrived before this month', 'mphb-availability-calendar'),
+                'leavesLater'  => __('leaves after this month', 'mphb-availability-calendar'),
+                'via'          => __('via', 'mphb-availability-calendar'),
+                'prevMonth'    => __('Previous month', 'mphb-availability-calendar'),
+                'nextMonth'    => __('Next month', 'mphb-availability-calendar'),
+                'prevDay'      => __('Previous day', 'mphb-availability-calendar'),
+                'nextDay'      => __('Next day', 'mphb-availability-calendar'),
+                'detailTitle'  => __('Booking', 'mphb-availability-calendar'),
+                'secBooking'   => __('Booking information', 'mphb-availability-calendar'),
+                'secRooms'     => __('Reserved accommodations', 'mphb-availability-calendar'),
+                'secCustomer'  => __('Customer information', 'mphb-availability-calendar'),
+                'secNotes'     => __('Notes', 'mphb-availability-calendar'),
+                'guests'       => __('Guests', 'mphb-availability-calendar'),
+                'adults'       => __('Adults', 'mphb-availability-calendar'),
+                'children'     => __('Children', 'mphb-availability-calendar'),
+                'guestName'    => __('Guest name', 'mphb-availability-calendar'),
+                'rate'         => __('Rate', 'mphb-availability-calendar'),
+                'total'        => __('Total', 'mphb-availability-calendar'),
+                'services'     => __('Services', 'mphb-availability-calendar'),
+                'fees'         => __('Fees', 'mphb-availability-calendar'),
+                'viewPhoto'    => __('View photo ID', 'mphb-availability-calendar'),
+                'photoNote'    => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
+                'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
             ],
         ];
+
+        // One dialog per shell; the id only has to be unique per page.
+        static $instance = 0;
+        $instance++;
+        $title_id = 'mphbac-staff-sheet-title-' . $instance;
 
         ob_start();
         ?>
         <div class="mphbac-staff" data-staff-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
-            <div class="mphbac-staff-bar">
-                <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>">&larr;</button>
+            <div class="mphbac-staff-topbar">
+                <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>">&#8249;</button>
                 <?php // Not a heading element: it ships empty (JS fills it), which is
                 // precisely what tripped the empty-heading check fixed in 0.20.1.
-                // aria-live announces the month when it changes. ?>
-                <div class="mphbac-staff-month" aria-live="polite"></div>
+                // aria-live announces the month/day when it changes. ?>
+                <div class="mphbac-staff-title" aria-live="polite"></div>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-today"><?php echo esc_html__('Today', 'mphb-availability-calendar'); ?></button>
-                <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>">&rarr;</button>
+                <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>">&#8250;</button>
             </div>
-            <div class="mphbac-staff-legend" aria-hidden="true">
-                <span class="mphbac-staff-key mphbac-staff-key--in"><?php echo esc_html__('Check-in', 'mphb-availability-calendar'); ?></span>
-                <span class="mphbac-staff-key mphbac-staff-key--out"><?php echo esc_html__('Check-out', 'mphb-availability-calendar'); ?></span>
-                <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
+            <div class="mphbac-staff-tools">
+                <div class="mphbac-staff-views" role="group" aria-label="<?php echo esc_attr__('View', 'mphb-availability-calendar'); ?>">
+                    <button type="button" class="mphbac-staff-view" data-view="agenda" aria-pressed="false"><?php echo esc_html__('List', 'mphb-availability-calendar'); ?></button>
+                    <button type="button" class="mphbac-staff-view" data-view="chart" aria-pressed="false"><?php echo esc_html__('Chart', 'mphb-availability-calendar'); ?></button>
+                </div>
+                <div class="mphbac-staff-legend" aria-hidden="true">
+                    <span class="mphbac-staff-key mphbac-staff-key--in"><?php echo esc_html__('Check-in', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--stay"><?php echo esc_html__('Staying', 'mphb-availability-calendar'); ?></span>
+                    <span class="mphbac-staff-key mphbac-staff-key--out"><?php echo esc_html__('Check-out', 'mphb-availability-calendar'); ?></span>
+                </div>
             </div>
-            <?php // No aria-live here on purpose: the grid is a whole table, and a
-            // live region would re-read every cell on each month change. The
-            // status line below carries the announcements instead. ?>
-            <div class="mphbac-staff-grid" role="region"
-                 aria-label="<?php echo esc_attr__('Staff booking calendar', 'mphb-availability-calendar'); ?>"></div>
+            <?php // Two presentations of the same month payload. The list is the
+            // phone default ("who is arriving and leaving today"); the chart is
+            // the desktop default. No aria-live on either: the status line
+            // below carries announcements so a month change is not read cell
+            // by cell. tabindex=0 makes the scrolling chart keyboard-reachable. ?>
+            <div class="mphbac-staff-agenda" role="region"
+                 aria-label="<?php echo esc_attr__('Arrivals, departures and guests in house', 'mphb-availability-calendar'); ?>" hidden></div>
+            <div class="mphbac-staff-grid" role="region" tabindex="0"
+                 aria-label="<?php echo esc_attr__('Booking chart', 'mphb-availability-calendar'); ?>" hidden></div>
             <div class="mphbac-staff-status" role="status" aria-live="polite"></div>
 
+            <?php // Overlay + dialog are moved to <body> while open (staff.js), so
+            // position:fixed measures the real viewport instead of whichever
+            // Elementor ancestor happens to carry a transform. ?>
             <div class="mphbac-staff-overlay" hidden></div>
             <div class="mphbac-staff-sheet" role="dialog" aria-modal="true"
-                 aria-labelledby="mphbac-staff-sheet-title" hidden>
+                 aria-labelledby="<?php echo esc_attr($title_id); ?>" hidden>
                 <div class="mphbac-staff-sheet-head">
-                    <div class="mphbac-staff-sheet-title" id="mphbac-staff-sheet-title"></div>
+                    <div class="mphbac-staff-sheet-title" id="<?php echo esc_attr($title_id); ?>"></div>
                     <button type="button" class="mphbac-staff-close"
                             aria-label="<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>">&times;</button>
                 </div>
@@ -131,17 +169,22 @@ final class Staff_Widget
     }
 
     /** @return string[] indexed 0..6 by JS getDay(); localized. */
-    private static function weekday_labels(): array
+    private static function weekday_labels(bool $short = true): array
     {
         global $wp_locale;
         $out = [];
         if ($wp_locale instanceof \WP_Locale) {
             for ($i = 0; $i < 7; $i++) {
                 $full = (string) $wp_locale->get_weekday($i);
-                $out[] = function_exists('mb_substr') ? mb_substr($full, 0, 3) : substr($full, 0, 3);
+                $out[] = !$short ? $full : (function_exists('mb_substr') ? mb_substr($full, 0, 3) : substr($full, 0, 3));
             }
         }
-        return count($out) === 7 ? $out : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        if (count($out) === 7) {
+            return $out;
+        }
+        return $short
+            ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     }
 
     /** @return string[] */

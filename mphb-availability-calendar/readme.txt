@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.0
+Stable tag: 0.23.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,19 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.0 =
+Staff calendar rebuilt for use on a phone at the door.
+* **The chart now reads like a proper tape chart:** one row per cottage down the left, dates across the top, a bar per booking. Eight rows fit any screen; the days scroll sideways.
+* **The cottage column and the date row stay pinned** while you scroll, so a booking on the far right of the month is never a nameless cell.
+* **Booking bars are solid colour:** green check-in end, slate stay, rust check-out end — the exact same colours as the legend, and white text that passes AA contrast on all three. A departure and an arrival on the same day sit end to end in the same cell. Bookings that started last month or run into next month have a square edge on that side. Not-yet-confirmed bookings are striped.
+* **Names are no longer chopped to "DOCK B…":** four-night-plus bars show the full name, two- and three-night bars show "First L.", one-night bars show initials, and the full name is always in the bar's tooltip and in the details.
+* **Every month renders at the same size:** fixed 44px day columns and 46px rows regardless of content. October is exactly one column wider than September and nothing else moves.
+* **New list view — the phone default:** for any day, three groups: Arriving, Departing, In house, with the cottage number, guest name, nights and dates on each row. Prev/next step by day, Today jumps back. The Chart/List toggle is remembered on that phone.
+* **Booking details popup fixed:** Total, Paid and Balance due showed raw code (`<span class="mphb-price">…`). Prices are now sent as plain text, as are booking log entries and every other field. The popup is also properly centred on screen (it was anchored to the page section and clipped its own heading), the heading and close button never scroll away, and the content is laid out as left-aligned label / value rows under the four MotoPress headings.
+* **Paid amount now works:** MotoPress's booking record has no "paid" figure, which is why Paid and Balance due showed "—". The plugin now adds up the booking's completed payment records instead. A booking with no payment record at all says "No payment recorded" rather than "—". Payment method and status come from the latest payment.
+* Visual language brought in line with the other DCC widgets: same blue titles, red/green nav buttons, frames, radii and light surfaces. Today button kept.
+* Nothing changed in the protection model: the same server-side check on every request, the same endpoints, the same photo-ID proxy, still no guest data in the page. All of that is re-asserted by the tests.
 
 = 0.22.0 =
 * The staff calendar is now a proper Elementor widget — **DCC Staff Calendar**, in the "Dora Canal Court" category alongside the other two — so it can be dropped onto the staff page from the editor instead of pasting a shortcode.

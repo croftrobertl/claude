@@ -49,6 +49,19 @@ final class Staff_Data
     private const META_ICAL_SUMM = 'mphb_ical_summary';
 
     /**
+     * MPHB records payments as their own post type, linked to the booking by
+     * meta. Both the underscore-prefixed and bare key spellings are accepted
+     * because the exact spelling differs between MPHB releases and the source
+     * is not vendored here; matching either costs nothing.
+     */
+    private const PAYMENT_POST_TYPE = 'mphb_payment';
+    private const PAYMENT_BOOKING_KEYS = ['_mphb_booking_id', 'mphb_booking_id'];
+    private const PAYMENT_AMOUNT_KEYS  = ['_mphb_amount', 'mphb_amount'];
+    private const PAYMENT_GATEWAY_KEYS = ['_mphb_gateway', 'mphb_gateway'];
+    /** Payment post statuses that count as money received. Filterable. */
+    private const PAYMENT_PAID_STATUSES = ['mphb-p-completed'];
+
+    /**
      * Every booking overlapping [$from, $to], with the cottages it occupies.
      * Guest name is included because the calendar shows it — which is exactly
      * why the whole payload is gated (see Staff::require_authorization()).
@@ -218,8 +231,9 @@ final class Staff_Data
     private static function section_booking(int $id, \WP_Post $post, ?object $b, array $source): array
     {
         $total = self::scalar($b, ['getTotalPrice', 'getTotal'], null);
-        $paid  = self::scalar($b, ['getPaidAmount', 'getPaid'], null);
-        $due   = ($total !== null && $paid !== null) ? (float) $total - (float) $paid : null;
+        $pay   = self::payment_info($id, $b);
+        $paid  = $pay['paid'];
+        $due   = ($total !== null && is_numeric($total) && $paid !== null) ? (float) $total - $paid : null;
 
         $out = [
             self::row(__('Booking', 'mphb-availability-calendar'), '#' . $id),
@@ -228,10 +242,16 @@ final class Staff_Data
             self::row(__('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT)),
             self::row(__('Booked on', 'mphb-availability-calendar'), get_the_date(get_option('date_format') . ' ' . get_option('time_format'), $post) ?: '—'),
             self::row(__('Total', 'mphb-availability-calendar'), self::money($total)),
-            self::row(__('Paid', 'mphb-availability-calendar'), self::money($paid)),
+            // A booking with no payment record at all (pay on arrival, an OTA
+            // import) says so in words. "—" here used to be indistinguishable
+            // from "we could not read it".
+            self::row(__('Paid', 'mphb-availability-calendar'),
+                $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid)),
             self::row(__('Balance due', 'mphb-availability-calendar'), self::money($due)),
-            self::row(__('Payment method', 'mphb-availability-calendar'), self::scalar($b, ['getPaymentMethod', 'getGateway'], null)),
-            self::row(__('Payment status', 'mphb-availability-calendar'), self::scalar($b, ['getPaymentStatus'], null)),
+            self::row(__('Payment method', 'mphb-availability-calendar'),
+                $pay['method'] !== '' ? $pay['method'] : self::scalar($b, ['getPaymentMethod', 'getGateway'], null)),
+            self::row(__('Payment status', 'mphb-availability-calendar'),
+                $pay['status'] !== '' ? $pay['status'] : self::scalar($b, ['getPaymentStatus'], null)),
             self::row(__('Coupon', 'mphb-availability-calendar'), self::scalar($b, ['getCouponCode', 'getCouponId'], null)),
             self::row(__('Language', 'mphb-availability-calendar'), self::scalar($b, ['getLanguage'], null)),
         ];
@@ -354,7 +374,7 @@ final class Staff_Data
         // (each of which may load its customer and reserved rooms) — the exact
         // N+1 the single-query design exists to avoid. The entity path is
         // therefore opt-in and used only by the lazy single-booking detail.
-        $name = self::name_from_meta($booking_id);
+        $name = self::plain(self::name_from_meta($booking_id));
         if ($name !== '') {
             return $name;
         }
@@ -601,7 +621,7 @@ final class Staff_Data
             return '—';
         }
         $p = get_post($room_id);
-        return $p && $p->post_title !== '' ? $p->post_title : '#' . $room_id;
+        return $p && $p->post_title !== '' ? self::plain((string) $p->post_title) : '#' . $room_id;
     }
 
     /** First candidate method that returns something non-empty. */
@@ -660,7 +680,7 @@ final class Staff_Data
         }
         $out = [];
         foreach ($v as $item) {
-            $label = is_scalar($item) ? (string) $item : (string) self::scalar($item, ['getTitle', 'getName'], '');
+            $label = self::plain(is_scalar($item) ? (string) $item : (string) self::scalar($item, ['getTitle', 'getName'], ''));
             $price = is_object($item) ? self::money(self::scalar($item, ['getTotalPrice', 'getPrice'], null)) : '';
             if ($label !== '') {
                 $out[] = ['label' => $label, 'price' => $price];
@@ -669,15 +689,198 @@ final class Staff_Data
         return $out;
     }
 
+    /**
+     * PLAIN TEXT, always. mphb_format_price() returns markup
+     * (<span class="mphb-price"><span class="mphb-currency">&#036;</span>…),
+     * and the client deliberately renders every value with textContent — the
+     * one XSS defence that cannot be bypassed by a crafted guest name. The
+     * contract is therefore "the payload is text"; the server keeps it, the
+     * client never relaxes it. Strip the tags and decode the entity here.
+     */
     private static function money($v): string
     {
         if ($v === null || $v === '' || !is_numeric($v)) {
             return '—';
         }
         if (function_exists('mphb_format_price')) {
-            return wp_kses((string) mphb_format_price((float) $v), ['span' => ['class' => true], 'bdi' => []]);
+            $s = self::plain((string) mphb_format_price((float) $v));
+            if ($s !== '') {
+                return $s;
+            }
         }
-        return '&#36;' . number_format((float) $v, 2);
+        return '$' . number_format((float) $v, 2);
+    }
+
+    /**
+     * How much has actually been received for a booking, and through what.
+     *
+     * Three tiers, because the MPHB Booking entity does not reliably expose a
+     * paid amount (the live site returned nothing for getPaidAmount/getPaid
+     * while getTotalPrice worked):
+     *   1. a paid-amount getter on the booking entity, if this MPHB has one;
+     *   2. the payment repository — every payment linked to the booking,
+     *      summing those whose status counts as received;
+     *   3. the payment posts themselves, by SQL.
+     * `paid` is null ONLY when no payment record exists at all (or the read
+     * failed); it is never null merely because a getter is missing.
+     *
+     * @return array{paid:?float,method:string,status:string}
+     */
+    private static function payment_info(int $booking_id, ?object $b): array
+    {
+        $out = ['paid' => null, 'method' => '', 'status' => ''];
+
+        $v = self::scalar($b, ['getPaidAmount', 'getPaid', 'getPaidPrice', 'getTotalPaid'], null);
+        if (is_numeric($v)) {
+            $out['paid'] = (float) $v;
+        }
+
+        $counts = self::paid_statuses();
+        $payments = self::payment_entities($booking_id);
+        if ($payments) {
+            $sum = 0.0;
+            $latest = null;
+            foreach ($payments as $p) {
+                $status = (string) self::scalar($p, ['getStatus'], '');
+                $amount = self::scalar($p, ['getAmount', 'getTotal', 'getTotalPrice'], null);
+                if (in_array($status, $counts, true) && is_numeric($amount)) {
+                    $sum += (float) $amount;
+                }
+                $latest = $p;
+            }
+            if ($out['paid'] === null) {
+                $out['paid'] = $sum;
+            }
+            $out['method'] = self::gateway_label((string) self::scalar($latest, ['getGatewayId', 'getGateway', 'getPaymentMethod'], ''));
+            $out['status'] = self::payment_status_label((string) self::scalar($latest, ['getStatus'], ''));
+            return $out;
+        }
+
+        $sql = self::payment_rows($booking_id);
+        if ($sql !== null && $sql) {
+            $sum = 0.0;
+            foreach ($sql as $r) {
+                if (in_array((string) $r->post_status, $counts, true) && is_numeric($r->amount)) {
+                    $sum += (float) $r->amount;
+                }
+            }
+            $last = end($sql);
+            if ($out['paid'] === null) {
+                $out['paid'] = $sum;
+            }
+            $out['method'] = self::gateway_label((string) ($last->gateway ?? ''));
+            $out['status'] = self::payment_status_label((string) $last->post_status);
+        }
+        return $out;
+    }
+
+    /** @return string[] */
+    private static function paid_statuses(): array
+    {
+        $s = (array) apply_filters('mphbac_staff_paid_statuses', self::PAYMENT_PAID_STATUSES);
+        return array_values(array_filter(array_map('strval', $s)));
+    }
+
+    /** Payment entities for a booking via MPHB's repository, or [] . */
+    private static function payment_entities(int $booking_id): array
+    {
+        try {
+            if (!function_exists('MPHB')) {
+                return [];
+            }
+            $mphb = \MPHB();
+            if (!is_object($mphb) || !method_exists($mphb, 'getPaymentRepository')) {
+                return [];
+            }
+            $repo = $mphb->getPaymentRepository();
+            if (!is_object($repo) || !method_exists($repo, 'findAll')) {
+                return [];
+            }
+            $list = $repo->findAll(['booking_id' => $booking_id]);
+            return is_array($list) ? array_values(array_filter($list, 'is_object')) : [];
+        } catch (\Throwable $e) {
+            error_log('MPHBAC staff: payment repository read failed for ' . $booking_id . ': ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Payment posts linked to a booking, oldest first. Null on a DB error so
+     * the caller can tell "no payments" from "could not read".
+     *
+     * @return object[]|null
+     */
+    private static function payment_rows(int $booking_id): ?array
+    {
+        global $wpdb;
+        if (!is_object($wpdb)) {
+            return null;
+        }
+        $bk_ph = implode(',', array_fill(0, count(self::PAYMENT_BOOKING_KEYS), '%s'));
+        $am_ph = implode(',', array_fill(0, count(self::PAYMENT_AMOUNT_KEYS), '%s'));
+        $gw_ph = implode(',', array_fill(0, count(self::PAYMENT_GATEWAY_KEYS), '%s'));
+        // MAX() rather than bare columns so the GROUP BY is valid under
+        // ONLY_FULL_GROUP_BY when a payment carries both key spellings.
+        $sql = "SELECT p.ID, p.post_status, MAX(am.meta_value) AS amount, MAX(gw.meta_value) AS gateway
+                FROM {$wpdb->posts} p
+                INNER JOIN {$wpdb->postmeta} bk
+                        ON bk.post_id = p.ID AND bk.meta_key IN ($bk_ph) AND bk.meta_value = %s
+                LEFT JOIN {$wpdb->postmeta} am
+                        ON am.post_id = p.ID AND am.meta_key IN ($am_ph)
+                LEFT JOIN {$wpdb->postmeta} gw
+                        ON gw.post_id = p.ID AND gw.meta_key IN ($gw_ph)
+                WHERE p.post_type = %s
+                GROUP BY p.ID, p.post_status, p.post_date
+                ORDER BY p.post_date ASC, p.ID ASC
+                LIMIT 50";
+        $params = array_merge(
+            self::PAYMENT_BOOKING_KEYS, [(string) $booking_id],
+            self::PAYMENT_AMOUNT_KEYS, self::PAYMENT_GATEWAY_KEYS,
+            [self::PAYMENT_POST_TYPE]
+        );
+        $rows = $wpdb->get_results($wpdb->prepare($sql, $params));
+        if (isset($wpdb->last_error) && $wpdb->last_error !== '') {
+            error_log('MPHBAC staff: payment query failed: ' . $wpdb->last_error);
+            return null;
+        }
+        return is_array($rows) ? $rows : [];
+    }
+
+    private static function gateway_label(string $id): string
+    {
+        $id = trim($id);
+        if ($id === '') {
+            return '';
+        }
+        $map = [
+            'manual' => __('Manual', 'mphb-availability-calendar'),
+            'cash'   => __('Cash', 'mphb-availability-calendar'),
+            'bank'   => __('Bank transfer', 'mphb-availability-calendar'),
+            'paypal' => 'PayPal',
+            'stripe' => 'Stripe',
+            'braintree' => 'Braintree',
+            'beanstream' => 'Bambora',
+            '2checkout' => '2Checkout',
+        ];
+        return $map[strtolower($id)] ?? self::humanize($id);
+    }
+
+    private static function payment_status_label(string $status): string
+    {
+        $status = trim($status);
+        if ($status === '') {
+            return '';
+        }
+        $map = [
+            'mphb-p-completed' => __('Completed', 'mphb-availability-calendar'),
+            'mphb-p-pending'   => __('Pending', 'mphb-availability-calendar'),
+            'mphb-p-on-hold'   => __('On hold', 'mphb-availability-calendar'),
+            'mphb-p-failed'    => __('Failed', 'mphb-availability-calendar'),
+            'mphb-p-refunded'  => __('Refunded', 'mphb-availability-calendar'),
+            'mphb-p-abandoned' => __('Abandoned', 'mphb-availability-calendar'),
+            'mphb-p-cancelled' => __('Cancelled', 'mphb-availability-calendar'),
+        ];
+        return $map[$status] ?? ucfirst(str_replace(['mphb-p-', '-'], ['', ' '], $status));
     }
 
     private static function row(string $label, $value): array
@@ -685,7 +888,11 @@ final class Staff_Data
         return ['label' => $label, 'value' => self::str_or_dash($value)];
     }
 
-    /** Imported bookings routinely lack email/phone — an em dash, not a blank. */
+    /**
+     * Imported bookings routinely lack email/phone — an em dash, not a blank.
+     * Every value that reaches the client passes through here (or money()),
+     * and comes out as PLAIN TEXT — see plain().
+     */
     private static function str_or_dash($v): string
     {
         if ($v === null || $v === '' || $v === false) {
@@ -694,8 +901,29 @@ final class Staff_Data
         if (is_array($v)) {
             $v = implode(', ', array_filter(array_map(static fn($x) => is_scalar($x) ? (string) $x : '', $v)));
         }
-        $s = trim((string) $v);
+        $s = self::plain((string) $v);
         return $s === '' ? '—' : $s;
+    }
+
+    /**
+     * Text for a textContent slot: tags stripped, entities decoded, runs of
+     * spaces collapsed, newlines kept (notes are multi-line). MPHB's booking
+     * log entries and formatted prices both carry markup; the client must
+     * never have to choose between showing "&#036;" literally and innerHTML.
+     */
+    private static function plain(string $s): string
+    {
+        if ($s === '') {
+            return '';
+        }
+        if (strpos($s, '<') !== false) {
+            $s = function_exists('wp_strip_all_tags') ? wp_strip_all_tags($s) : strip_tags($s);
+        }
+        if (strpos($s, '&') !== false) {
+            $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        $s = preg_replace('/[ \t]+/', ' ', $s) ?? $s;
+        return trim($s);
     }
 
     private static function int_or_null($v): ?int

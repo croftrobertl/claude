@@ -1,267 +1,711 @@
 /* Staff booking calendar — /staff/ only.
-   Loaded exclusively by [mphb_staff_calendar], which only renders for an
-   authorized visitor, so none of this reaches a public page.
+   Loaded exclusively by the gated staff shell (shortcode + Elementor widget),
+   which only renders for an authorized visitor, so none of this reaches a
+   public page.
 
-   Sized for reading at arm's length on a phone by older eyes: 16px base in
-   the grid, generous tap targets, high-contrast status colours. Self-contained
-   — no webfonts, no CDN, no external requests of any kind. */
+   VISUAL LANGUAGE: the same app-layer tokens as widget.css — header blue,
+   the red/green nav buttons, #e0e0e0 frames, the #F8F9FA name column, 4/8px
+   radii — with an always-light surface (this page is read at the door on a
+   phone; a dark-mode theme swap would silently drop the state colours).
+   Every state colour is used ONCE, as a custom property, so the legend and
+   the chart cannot disagree. Self-contained: no webfonts, no CDN.
+
+   TWO PRESENTATIONS of one payload:
+     .mphbac-staff-agenda  — today's arrivals / departures / in-house list
+                             (phone default)
+     .mphbac-staff-grid    — the tape chart: rows = cottages, columns = days,
+                             sticky cottage column + sticky date header
+                             (desktop default)                                */
 
 .mphbac-staff {
-    --staff-in: #0a6c2f;      /* check-in    */
-    --staff-out: #9a3412;     /* check-out   */
-    --staff-stay: #334155;    /* mid-stay    */
-    --staff-line: #d4d4d8;
-    --staff-today: #f4da62;
+    /* state colours — used by legend swatches, bar segments AND list groups */
+    --staff-in:   #0a6c2f;      /* check-in   — white text 7.1:1 */
+    --staff-out:  #9a3412;      /* check-out  — white text 7.6:1 */
+    --staff-stay: #334155;      /* mid-stay   — white text 10.4:1 */
+    /* app-layer tokens, mirrored from widget.css */
+    --staff-header:     #0A50B2;
+    --staff-nav-bg:     #C43A3A;
+    --staff-nav-text:   #ffffff;
+    --staff-nav-hover:  #078732;
+    --staff-frame:      #e0e0e0;
+    --staff-namecol:    #F8F9FA;
+    --staff-namecol-alt:#F1F3F5;
+    --staff-text:       #111111;
+    --staff-muted:      #5b6470; /* 5.9:1 on white */
+    --staff-bg:         #fdfdfd;
+    --staff-surface:    #ffffff;
+    --staff-today:      #f4da62;
+    --staff-today-tint: #fff8d6;
+    --staff-weekend:    #f6f7f9;
+    --staff-focus:      #0f6dbf;
+    --staff-radius:     4px;
+    --staff-font-size:  15px;
+    /* chart geometry — FIXED, so every month renders identically */
+    --staff-day-w:   44px;
+    --staff-row-h:   46px;
+    --staff-head-h:  48px;
+    --staff-label-w: 96px;
+
     box-sizing: border-box;
     width: 100%;
-    color: #111;
-    font-size: 16px;
-    line-height: 1.4;
+    color: var(--staff-text);
+    background: var(--staff-bg);
+    color-scheme: light;
+    font-size: var(--staff-font-size);
+    line-height: 1.3;
+    -webkit-text-size-adjust: 100%;
 }
 .mphbac-staff *,
 .mphbac-staff *::before,
 .mphbac-staff *::after { box-sizing: inherit; }
 
+/* Font only — every button class below sets its own colour, and a generic
+   (0,1,1) colour reset here would outrank them. */
+.mphbac-staff button {
+    font: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+.mphbac-staff button:focus-visible,
+.mphbac-staff a:focus-visible,
+.mphbac-staff-sheet.mphbac-staff-sheet button:focus-visible,
+.mphbac-staff-sheet.mphbac-staff-sheet a:focus-visible {
+    outline: 2px solid var(--staff-focus, #0f6dbf);
+    outline-offset: 2px;
+}
+
 /* Editor-only stand-in when the gate says no (see Staff_Elementor::render).
    Never rendered on the front end. */
 .mphbac-staff-placeholder {
     padding: 1.25em;
-    border: 1px dashed #d4d4d8;
-    border-radius: 8px;
+    border: 1px dashed #e0e0e0;
+    border-radius: var(--staff-radius, 4px);
     background: #fafafa;
-    color: #666;
+    color: #666666;
     font-size: 0.95em;
     text-align: center;
 }
 
-/* ---- month bar ---- */
-.mphbac-staff-bar {
+/* ---- top bar: prev / title / today / next ---- */
+.mphbac-staff-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5em;
-    margin-bottom: 0.5em;
+    margin-bottom: 12px;
 }
-.mphbac-staff-month {
+.mphbac-staff-title {
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
-    font-size: 1.25em;
+    color: var(--staff-header);
+    font-size: 1.2em;
     font-weight: 700;
     text-align: center;
-    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+}
+.mphbac-staff-title .mphbac-staff-title-sub {
+    display: block;
+    color: var(--staff-muted);
+    font-size: 0.75em;
+    font-weight: 600;
 }
 .mphbac-staff-nav {
-    /* >= 44px touch target (iOS HIG / WCAG 2.5.5). */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* ≥ 44px touch target (iOS HIG / WCAG 2.5.5). */
     min-width: 44px;
     min-height: 44px;
-    padding: 0 0.6em;
-    border: 1px solid var(--staff-line);
-    border-radius: 8px;
-    background: #f8f8f8;
-    color: #111;
-    font-size: 18px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--staff-nav-bg);
+    color: var(--staff-nav-text);
+    font-size: 22px;
     line-height: 1;
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
-.mphbac-staff-nav:hover { background: #eee; }
+.mphbac-staff-nav:hover,
+.mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }
 /* The Today button carries a word rather than an arrow. */
-.mphbac-staff-today { font-size: 0.9em; font-weight: 600; }
-.mphbac-staff-today[hidden] { display: none; }
-.mphbac-staff-nav:focus-visible,
-.mphbac-staff-chip:focus-visible,
-.mphbac-staff-close:focus-visible,
-.mphbac-staff a:focus-visible {
-    outline: 2px solid #0f6dbf;
-    outline-offset: 2px;
+.mphbac-staff-today {
+    width: auto;
+    padding: 0 0.85em;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
 }
+.mphbac-staff-today[hidden] { display: none; }
 
-/* ---- legend ---- */
+/* ---- tools row: view toggle + legend ---- */
+.mphbac-staff-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-bottom: 10px;
+}
+.mphbac-staff-views {
+    display: inline-flex;
+    border: 1px solid var(--staff-frame);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--staff-surface);
+}
+.mphbac-staff-view {
+    min-width: 64px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    background: transparent;
+    color: var(--staff-text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.mphbac-staff-view + .mphbac-staff-view { border-left: 1px solid var(--staff-frame); }
+.mphbac-staff-view[aria-pressed="true"] {
+    background: var(--staff-header);
+    color: #ffffff;
+}
 .mphbac-staff-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4em 1em;
-    margin-bottom: 0.6em;
     font-size: 0.85em;
 }
+.mphbac-staff-legend[hidden] { display: none; }
+.mphbac-staff-key { display: inline-flex; align-items: center; gap: 0.4em; }
 .mphbac-staff-key::before {
     content: "";
     display: inline-block;
-    width: 0.8em;
-    height: 0.8em;
-    margin-right: 0.35em;
+    width: 0.9em;
+    height: 0.9em;
     border-radius: 2px;
-    vertical-align: -1px;
 }
 .mphbac-staff-key--in::before   { background: var(--staff-in); }
 .mphbac-staff-key--out::before  { background: var(--staff-out); }
 .mphbac-staff-key--stay::before { background: var(--staff-stay); }
 
-/* ---- grid ---- */
-.mphbac-staff-grid { width: 100%; overflow-x: auto; }
-.mphbac-staff-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95em;
-}
-.mphbac-staff-table th,
-.mphbac-staff-table td {
-    border: 1px solid var(--staff-line);
-    padding: 4px;
-    text-align: left;
-    vertical-align: top;
-}
-.mphbac-staff-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #f1f5f9;
-    font-size: 0.85em;
-    white-space: nowrap;
-}
-.mphbac-staff-date {
-    white-space: nowrap;
-    font-weight: 600;
-    background: #fafafa;
-    min-width: 4.5em;
-}
-.mphbac-staff-table tr.is-today > * {
-    background: #fffbe6;
-    box-shadow: inset 0 -2px 0 0 var(--staff-today);
-}
-.mphbac-staff-cell { min-width: 5.5em; }
-
-/* ---- booking chips ---- */
-.mphbac-staff-chip {
-    display: block;
-    width: 100%;
-    margin: 1px 0;
-    padding: 6px 6px;
-    border: 0;
-    border-left: 4px solid var(--staff-stay);
-    border-radius: 4px;
-    background: #eef2f7;
-    color: #111;
-    font: inherit;
-    font-size: 0.9em;
-    text-align: left;
-    line-height: 1.25;
-    /* Long guest names must not blow the column out. */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-    /* Comfortable tap target without making every row enormous. */
-    min-height: 32px;
-}
-.mphbac-staff-chip.is-in   { border-left-color: var(--staff-in);  background: #e6f4ea; font-weight: 600; }
-.mphbac-staff-chip.is-out  { border-left-color: var(--staff-out); background: #fdece7; font-weight: 600; }
-.mphbac-staff-chip.is-stay { opacity: 0.85; }
-.mphbac-staff-chip.is-imported { border-left-style: dashed; }
-.mphbac-staff-chip:hover { filter: brightness(0.96); }
-
-.mphbac-staff-status { margin-top: 0.5em; font-size: 0.9em; }
+.mphbac-staff-status { margin-top: 0.5em; font-size: 0.9em; color: var(--staff-muted); }
+.mphbac-staff-status:empty { display: none; }
 .mphbac-staff-status.is-error { color: #9a1c1c; font-weight: 600; }
 
-/* ---- detail sheet ---- */
-.mphbac-staff-overlay {
+/* =====================================================================
+   TAPE CHART — rows are cottages, columns are days
+   ===================================================================== */
+.mphbac-staff-grid {
+    position: relative;
+    width: 100%;
+    /* The scroll container. Both axes scroll here — the sticky column and
+       header are positioned against THIS box, which is why the chart itself
+       must never be the thing that overflows. */
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    max-height: min(78vh, 78dvh);
+    border: 1px solid var(--staff-frame);
+    border-radius: 8px;
+    background: var(--staff-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.mphbac-staff-grid[hidden] { display: none; }
+.mphbac-staff-chart {
+    position: relative;
+    display: grid;
+    /* Label column + TWO half-day tracks per day. Half-day tracks are what
+       let a departure and an arrival share a day: a bar runs from the second
+       half of its check-in day to the first half of its check-out day. Every
+       track is a fixed width, so a 31-day month is exactly 31 × --staff-day-w
+       wider than a 28-day one and nothing else moves. */
+    grid-template-columns: var(--staff-label-w) repeat(var(--staff-halfdays, 62), calc(var(--staff-day-w) / 2));
+    grid-template-rows: var(--staff-head-h);
+    grid-auto-rows: var(--staff-row-h);
+    width: max-content;
+    min-width: 100%;
+    user-select: none;
+}
+
+/* header row */
+.mphbac-staff-corner,
+.mphbac-staff-dayhead {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--staff-namecol);
+    border-bottom: 2px solid var(--staff-frame);
+    font-size: 12px;
+    line-height: 1.15;
+}
+.mphbac-staff-corner {
+    left: 0;
+    z-index: 5;                        /* wins both intersections */
+    align-items: flex-start;
+    padding: 0 10px;
+    border-right: 2px solid var(--staff-frame);
+    font-weight: 700;
+}
+.mphbac-staff-dayhead {
+    border-left: 1px solid var(--staff-frame);
+    color: var(--staff-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.mphbac-staff-dayhead .mphbac-staff-daynum {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    margin-top: 2px;
+    border-radius: 13px;
+    color: var(--staff-text);
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+.mphbac-staff-dayhead.is-weekend { background: var(--staff-weekend); }
+.mphbac-staff-dayhead.is-today .mphbac-staff-daynum {
+    background: var(--staff-today);
+    box-shadow: 0 0 0 2px var(--staff-today);
+}
+
+/* cottage column */
+.mphbac-staff-rowlabel {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 4px 10px;
+    background: var(--staff-namecol);
+    border-right: 2px solid var(--staff-frame);
+    border-bottom: 1px solid var(--staff-frame);
+    color: var(--staff-text);
+    line-height: 1.15;
+    overflow: hidden;
+}
+.mphbac-staff-rowlabel.is-alt { background: var(--staff-namecol-alt); }
+.mphbac-staff-rowlabel .mphbac-staff-rownum {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff-rowlabel .mphbac-staff-rowname {
+    color: var(--staff-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* day background cells — the gridlines and the today/weekend tints */
+.mphbac-staff-daycell {
+    border-left: 1px solid var(--staff-frame);
+    border-bottom: 1px solid var(--staff-frame);
+    background: var(--staff-surface);
+}
+.mphbac-staff-daycell.is-weekend { background: var(--staff-weekend); }
+.mphbac-staff-daycell.is-today {
+    background: var(--staff-today-tint);
+    box-shadow: inset 2px 0 0 0 var(--staff-today), inset -2px 0 0 0 var(--staff-today);
+}
+.mphbac-staff-daycell.is-past { background-image: repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0 4px, transparent 4px 10px); }
+.mphbac-staff-daycell.is-past.is-weekend { background-color: var(--staff-weekend); }
+
+/* ---- booking bars ----
+   One <button> per booking per cottage, spanning grid tracks. Three
+   segments inside it reuse the exact state classes and hues the legend
+   shows: a check-in cap (is-in), the stay body (is-stay), a check-out cap
+   (is-out). A one-night stay is just the two caps. */
+.mphbac-staff-bar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: stretch;
+    align-self: center;
+    height: calc(var(--staff-row-h) - 10px);
+    min-width: 0;
+    margin: 0 1px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: var(--staff-stay);
+    color: #ffffff;
+    text-align: left;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.mphbac-staff-bar:hover { filter: brightness(1.08); }
+.mphbac-staff-bar:focus-visible { outline-offset: 0; }
+.mphbac-staff-seg { flex: 0 0 auto; }
+.mphbac-staff-seg.is-in   { width: calc(var(--staff-day-w) / 2 - 1px); background: var(--staff-in); }
+.mphbac-staff-seg.is-out  { width: calc(var(--staff-day-w) / 2 - 1px); background: var(--staff-out); }
+.mphbac-staff-seg.is-stay { flex: 1 1 auto; min-width: 0; background: var(--staff-stay); }
+/* A bar that began before this month or ends after it has no cap on that
+   side: square edge + a small chevron cue. */
+.mphbac-staff-bar.is-cont-left  { border-top-left-radius: 0;  border-bottom-left-radius: 0; }
+.mphbac-staff-bar.is-cont-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+/* Not-yet-confirmed bookings are striped so they read as provisional. */
+.mphbac-staff-bar.is-pending .mphbac-staff-seg {
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.22) 0 5px, transparent 5px 11px);
+}
+.mphbac-staff-bar-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+/* Keep the green cap visible as a marker whenever there is a body to sit
+   the name on. */
+.mphbac-staff-bar.has-body:not(.is-cont-left) .mphbac-staff-bar-label {
+    padding-left: calc(var(--staff-day-w) / 2 + 4px);
+}
+.mphbac-staff-bar-label .mphbac-staff-bar-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mphbac-staff-otabadge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    color: var(--staff-stay);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* =====================================================================
+   AGENDA — arrivals / departures / in house for one day
+   ===================================================================== */
+.mphbac-staff-agenda {
+    display: grid;
+    gap: 12px;
+}
+.mphbac-staff-agenda[hidden] { display: none; }
+.mphbac-staff-group {
+    border: 1px solid var(--staff-frame);
+    border-radius: 8px;
+    background: var(--staff-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+.mphbac-staff-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    min-height: 44px;
+    padding: 0 12px;
+    color: #ffffff;
+    font-size: 1em;
+    font-weight: 700;
+}
+.mphbac-staff-group.is-in   .mphbac-staff-group-head { background: var(--staff-in); }
+.mphbac-staff-group.is-out  .mphbac-staff-group-head { background: var(--staff-out); }
+.mphbac-staff-group.is-stay .mphbac-staff-group-head { background: var(--staff-stay); }
+.mphbac-staff-group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--staff-text);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.mphbac-staff-group-empty {
+    margin: 0;
+    padding: 12px;
+    color: var(--staff-muted);
+    font-size: 0.95em;
+}
+.mphbac-staff-item {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 12px;
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 12px;
+    border: 0;
+    border-top: 1px solid var(--staff-frame);
+    background: var(--staff-surface);
+    color: var(--staff-text);
+    text-align: left;
+    cursor: pointer;
+}
+.mphbac-staff-item:hover { background: var(--staff-namecol); }
+.mphbac-staff-item-cottage {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.15;
+}
+.mphbac-staff-item-cottage .mphbac-staff-rownum { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mphbac-staff-item-cottage .mphbac-staff-rowname {
+    color: var(--staff-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mphbac-staff-item-main { min-width: 0; }
+.mphbac-staff-item-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1.05em;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.mphbac-staff-item-name .mphbac-staff-otabadge { color: #ffffff; background: var(--staff-stay); }
+.mphbac-staff-item-meta {
+    margin-top: 3px;
+    color: var(--staff-muted);
+    font-size: 0.87em;
+    line-height: 1.25;
+}
+.mphbac-staff-item-meta .is-pending { color: var(--staff-out); font-weight: 600; }
+.mphbac-staff-item-chev {
+    color: var(--staff-muted);
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* =====================================================================
+   DETAIL DIALOG — moved to <body> while open (see staff.js), hence the
+   class-doubled selectors: once portaled, no .mphbac-staff ancestor
+   exists to scope by, and the doubled class also outranks the theme's
+   centred text and h3 sizing without !important.
+   ===================================================================== */
+.mphbac-staff-overlay.mphbac-staff-overlay {
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.45);
     opacity: 0;
     transition: opacity 0.2s ease;
 }
-.mphbac-staff-overlay.is-open { opacity: 1; }
-.mphbac-staff-overlay[hidden] { display: none; }
+.mphbac-staff-overlay.mphbac-staff-overlay.is-open { opacity: 1; }
+.mphbac-staff-overlay.mphbac-staff-overlay[hidden] { display: none !important; }
 
-.mphbac-staff-sheet {
+.mphbac-staff-sheet.mphbac-staff-sheet {
     position: fixed;
     z-index: 1001;
     left: 50%;
     top: 50%;
-    width: min(680px, calc(100vw - 20px));
-    max-height: min(88vh, 88dvh);
-    overflow-y: auto;
-    background: #fff;
-    color: #111;
+    right: auto;
+    bottom: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: min(560px, calc(100vw - 24px));
+    max-height: min(85vh, 85dvh);
+    margin: 0;
+    padding: 0;
     border-radius: 12px;
+    background: #ffffff;
+    color: #111111;
+    color-scheme: light;
+    font-size: 15px;
+    line-height: 1.35;
+    text-align: left;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
-    padding: 1em 1.1em 1.4em;
-    transform: translate(-50%, -50%) translateY(14px);
+    transform: translate(-50%, -50%) translateY(20px);
     opacity: 0;
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
-.mphbac-staff-sheet.is-open { transform: translate(-50%, -50%); opacity: 1; }
-.mphbac-staff-sheet[hidden] { display: none; }
+.mphbac-staff-sheet.mphbac-staff-sheet.is-open { transform: translate(-50%, -50%); opacity: 1; }
+.mphbac-staff-sheet.mphbac-staff-sheet[hidden] { display: none !important; }
+.mphbac-staff-sheet.mphbac-staff-sheet *,
+.mphbac-staff-sheet.mphbac-staff-sheet *::before,
+.mphbac-staff-sheet.mphbac-staff-sheet *::after { box-sizing: inherit; }
 
-.mphbac-staff-sheet-head {
+/* Fixed header: the title and the close control never scroll away. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head {
+    flex: 0 0 auto;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5em;
-    margin-bottom: 0.6em;
+    padding: 12px 12px 12px 18px;
+    border-bottom: 1px solid #e0e0e0;
 }
-.mphbac-staff-sheet-title { font-size: 1.15em; font-weight: 700; }
-.mphbac-staff-close {
-    min-width: 44px;
-    min-height: 44px;
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: #0A50B2;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     border: 0;
     border-radius: 50%;
-    background: #eee;
-    color: #111;
-    font-size: 22px;
+    background: #eeeeee;
+    color: #111111;
+    font: inherit;
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
 }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover { background: #e0e0e0; }
+/* Only the body scrolls. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 14px 18px 20px;
+    text-align: left;
+}
 
-.mphbac-staff-imported {
-    margin: 0 0 0.8em;
-    padding: 0.5em 0.7em;
-    border-left: 4px solid var(--staff-out);
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-imported {
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border-left: 4px solid #9a3412;
+    border-radius: 0 4px 4px 0;
     background: #fff7ed;
     font-size: 0.9em;
 }
-
-.mphbac-staff-section { margin-bottom: 1.1em; }
-.mphbac-staff-section h3 {
-    margin: 0 0 0.4em;
-    padding-bottom: 0.25em;
-    border-bottom: 1px solid var(--staff-line);
-    font-size: 1em;
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section { margin: 0 0 18px; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section:last-child { margin-bottom: 0; }
+/* The four MotoPress headings. Explicit size: the theme sizes h3 at 25px. */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-section > h3 {
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 2px solid #e0e0e0;
+    color: #0A50B2;
+    font-size: 15px;
     font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    text-align: left;
+    text-transform: uppercase;
 }
-.mphbac-staff-section dl {
+/* Label / value rows: left-aligned, label column fixed, value takes the rest. */
+.mphbac-staff-sheet.mphbac-staff-sheet dl {
     display: grid;
-    grid-template-columns: minmax(7em, 40%) 1fr;
-    gap: 0.25em 0.75em;
+    grid-template-columns: minmax(7em, 36%) minmax(0, 1fr);
+    gap: 0 12px;
     margin: 0;
+    padding: 0;
 }
-.mphbac-staff-section dt { font-weight: 600; }
-.mphbac-staff-section dd { margin: 0; overflow-wrap: anywhere; }
-.mphbac-staff-section dd.is-empty { color: #6b7280; }
+.mphbac-staff-sheet.mphbac-staff-sheet dt,
+.mphbac-staff-sheet.mphbac-staff-sheet dd {
+    margin: 0;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+    line-height: 1.35;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet dt { color: #5b6470; font-weight: 600; }
+.mphbac-staff-sheet.mphbac-staff-sheet dd { overflow-wrap: anywhere; white-space: pre-line; }
+.mphbac-staff-sheet.mphbac-staff-sheet dd.is-empty { color: #8a919b; }
 /* An OTA-defaulted occupancy is shown as text, greyed and italic, so it can
    never be mistaken for a real count. */
-.mphbac-staff-section dd.is-unknown { color: #6b7280; font-style: italic; }
+.mphbac-staff-sheet.mphbac-staff-sheet dd.is-unknown { color: #5b6470; font-style: italic; }
+.mphbac-staff-sheet.mphbac-staff-sheet dd.is-money { font-variant-numeric: tabular-nums; font-weight: 600; }
 
-.mphbac-staff-room {
-    margin-bottom: 0.7em;
-    padding: 0.5em 0.6em;
-    border: 1px solid var(--staff-line);
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room {
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
+    background: #F8F9FA;
 }
-.mphbac-staff-room h4 { margin: 0 0 0.3em; font-size: 0.95em; font-weight: 700; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room > h4 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: left;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room dt,
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room dd { border-bottom-color: #e8e8e8; }
 
-.mphbac-staff-photo { margin: 0.6em 0 0; }
-.mphbac-staff-photo a { font-weight: 600; }
-.mphbac-staff-photo-note { color: #6b7280; font-size: 0.85em; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo { margin: 10px 0 0; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: #0f6dbf;
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:hover { background: #0a4f8c; }
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo-note {
+    display: block;
+    margin-top: 6px;
+    color: #5b6470;
+    font-size: 0.85em;
+}
 
-/* Phone: stack the definition lists so labels don't squeeze values. */
+/* Lock page scroll while the dialog is open so touch scrolling lands in the
+   dialog body rather than chaining into the page behind it. */
+html.mphbac-staff-open,
+body.mphbac-staff-open { overflow: hidden; }
+
+/* ---- phone ---- */
 @media (max-width: 600px) {
-    .mphbac-staff-section dl { grid-template-columns: 1fr; gap: 0 0; }
-    .mphbac-staff-section dd { margin-bottom: 0.45em; }
-    .mphbac-staff-sheet { width: calc(100vw - 12px); padding: 0.9em 0.8em 1.2em; }
+    .mphbac-staff-tools { gap: 8px 12px; }
+    .mphbac-staff-legend { font-size: 0.8em; }
+    .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px 10px 10px 14px; }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body { padding: 12px 14px 18px; }
+    .mphbac-staff-sheet.mphbac-staff-sheet dl { grid-template-columns: minmax(6em, 32%) minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mphbac-staff-overlay,
-    .mphbac-staff-sheet { transition: none; }
+    .mphbac-staff-overlay.mphbac-staff-overlay,
+    .mphbac-staff-sheet.mphbac-staff-sheet,
+    .mphbac-staff-nav { transition: none; }
 }
