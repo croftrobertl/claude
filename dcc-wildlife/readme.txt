@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.16.2
+Stable tag: 1.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,7 +34,7 @@ DCC Wildlife shows guests what they can spot on the Dora Canal right now:
 * An optional chain map — boat ramps, waters and monitoring stations — that loads nothing external until a guest opens it.
 * See WATER-SOURCES.md for the full audit trail, what was left out and why.
 
-The wildlife guide and the water almanac are 100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts, no image files (inline SVG only). Assets load only on pages that use a widget or shortcode. The optional live layer is the single, clearly-flagged exception and requires no keys or accounts.
+The wildlife guide and the water almanac are 100% WordPress-native: no external services, no API keys, no CDN scripts, no webfonts. Species art is inline SVG, plus seventeen licensed photographs that ship with the plugin and load only when a guest opens that species. The optional chain map bundles its own copy of Leaflet; the only external requests it ever makes are for map tiles, and only after a guest opens it. Assets load only on pages that use a widget or shortcode. The optional live layer is the single, clearly-flagged exception and requires no keys or accounts.
 
 == Usage ==
 
@@ -47,6 +47,15 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.17.0 =
+* **Every species now has a peak.** Seven species — Manatee, River Otter, Water Snake, Anhinga, Little Blue Heron, Tricolored Heron, Spanish Moss — topped out at "good" (2) and never reached "peak" (3), so the peak badge, the "N at peak" counts, the season countdown and the "fullest months" line all ignored them while their sheets still said "Best: Jul–Aug". Their best windows are now their peaks. Month counts rise accordingly; the three year-round residents join the great blue heron as at-peak-all-year.
+* **The season stays on the hero.** Through 1.16.2 "Osprey season is here now" on Dec 31 became "Snowy Egret 59 days away" on Jan 1, with osprey still at peak until April. Now a season that is on stays on ("Osprey season · through April") and the next rise sits beneath it ("Next up: Snowy Egret season, 59 days away"), so the countdown never disappears either.
+* **Leaflet is self-hosted.** The chain map's Leaflet 1.9.4 loaded from unpkg.com with no integrity check, which contradicted "no CDN scripts" the moment a guest opened the map. It now ships with the plugin; a previously-saved unpkg URL is migrated automatically. Tiles remain the map's only external request.
+* **Keep-limits carry their verification date.** "Limits as verified with FWC in August 2026" now sits under the FWC bag and length limits, so a guest can judge how fresh they are.
+* **Smaller photos where they help.** A 600px variant of each species photo, chosen by srcset on 1× and small screens; high-DPR phones still get the full original.
+* Accessibility and mobile: the prose guide's summary is now an H2, so its Critters/Birds/Plants sections own a place in the outline instead of nesting under the water heading; the detail sheet clears the iPhone home indicator via safe-area padding; the hub tells a no-JavaScript guest that the full guide is just below; the standalone month widget now seeds its month in canal time like the hub.
+* Readme corrected: photographs have shipped since 1.11.0 and the map bundles Leaflet — both claims now say so.
 
 = 1.16.2 =
 * **Contrast: the amber, measured.** The 1.16.1 pass fixed the coral but didn't re-check the amber. The water panel's "GENERAL GUIDANCE — NOT MEASURED…" heading is `--dccwl-warn` #b07d3a at 0.78rem bold — 3.60:1 on white and 3.21:1 on the blue tile, so the 4.5 small-text bar applies and it failed. Same fix as the coral: `--dccwl-warn` is now fill/border only, and a new `--dccwl-warn-text` #8e652f (same hue, darker) carries that one heading — 5.18:1 on white, 4.63:1 on the blue tile, passing on every surface it can sit on. This was the last text token that had never been measured; the guide is now AA on every text node.

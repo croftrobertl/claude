@@ -410,6 +410,10 @@
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	padding: var(--dccwl-detail-pad-y) var(--dccwl-detail-pad-x);
+	/* The sheet pins to bottom: 0. On iPhones the home indicator overlays the
+	 * last ~34px, so the body's bottom padding grows to clear it (1.17.0).
+	 * env() is 0 everywhere else, so max() falls back to the normal pad. */
+	padding-bottom: max(var(--dccwl-detail-pad-y), env(safe-area-inset-bottom, 0px));
 }
 
 .dccwl-sheet-body > :first-child { margin-top: 0; }

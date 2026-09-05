@@ -117,6 +117,12 @@ final class Canal_Render {
 					   browser fills in canal time. */
 					echo Render::countdown_shell_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
 					?>
+					<noscript>
+						<?php /* The two tiles below are buttons the hub script drives; without
+						   it they are inert. Say so, and point at the prose guide, which
+						   is right here on the page and needs nothing (1.17.0). */ ?>
+						<p class="dccwl-noscript"><?php esc_html_e( 'The guided view needs JavaScript. The whole field guide is just below, in words.', 'dcc-wildlife' ); ?></p>
+					</noscript>
 					<ul class="dccwl-hub-tiles">
 						<li>
 							<button type="button" class="dccwl-hub-tile" data-dccwl-go="month">

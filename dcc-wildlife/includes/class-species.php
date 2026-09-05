@@ -29,6 +29,15 @@ final class Species {
 
 	/**
 	 * Likelihood scale: 0 = rare/absent, 1 = possible, 2 = good, 3 = peak.
+	 *
+	 * Every species has at least one month at 3 (1.17.0). The peak badge,
+	 * the "N at peak" counts, the countdown and the "fullest months" line
+	 * all key on 3, and through 1.16.2 seven species topped out at 2 — so
+	 * their sheets promised "Best: Jul–Aug" while nothing in the UI ever
+	 * featured them. A species' best window IS its peak; the two must agree.
+	 * Year-round residents (anhinga, little blue heron, Spanish moss) are at
+	 * 3 all year, like the great blue heron, and the countdown skips them
+	 * because they never "rise".
 	 */
 	public const LIKELY_MIN_SPOTLIGHT = 2;
 	public const LIKELY_PEAK          = 3;
@@ -334,28 +343,28 @@ final class Species {
 			//                 J  F  M  A  M  J  J  A  S  O  N  D
 			// Critters
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
-			'manatee'    => [ 0, 0, 0, 1, 1, 1, 2, 2, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
-			'otter'      => [ 2, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2 ], // Year-round; dawn & dusk.
+			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
+			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
 			'turtle'     => [ 1, 1, 2, 3, 3, 3, 3, 3, 2, 2, 1, 1 ], // Baskers most visible spring–summer.
-			'snake'      => [ 0, 0, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0 ], // Out on warm days.
+			'snake'      => [ 0, 0, 1, 3, 3, 3, 3, 3, 3, 1, 0, 0 ], // Out on warm days.
 			'fish'       => [ 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3 ], // Trophy bass peak: winter–spring spawn, plus a fall feed-up.
 			'applesnail' => [ 1, 1, 1, 2, 2, 3, 3, 3, 2, 1, 1, 1 ], // Egg clutches spring–summer.
 			// Birds
 			'eagle'      => [ 3, 3, 3, 2, 1, 0, 0, 0, 1, 2, 3, 3 ], // FL nesting is the cool season (Oct–May).
 			'osprey'     => [ 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 3 ], // Year-round; nesting Dec–Apr.
-			'anhinga'    => [ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 ], // Year-round resident.
+			'anhinga'    => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Year-round resident.
 			'heron'      => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Abundant year-round resident.
 			'egret'      => [ 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Year-round; plumes peak in spring.
 			'kingfisher' => [ 3, 3, 2, 1, 0, 0, 0, 1, 2, 3, 3, 3 ], // Winter visitor; breeds far north in summer.
 			'limpkin'    => [ 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2 ], // Year-round; loudest in spring breeding.
 			'ibis'       => [ 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3 ], // Abundant year-round.
 			'woodstork'  => [ 3, 3, 3, 2, 1, 1, 1, 1, 1, 2, 3, 3 ], // Concentrates at shrinking dry-season pools.
-			'littleblue' => [ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 ], // Year-round resident.
-			'tricolored' => [ 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1 ], // Regular inland, densest on the coast.
+			'littleblue' => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Year-round resident.
+			'tricolored' => [ 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1 ], // Regular inland, densest on the coast.
 			'greenheron' => [ 1, 1, 2, 2, 3, 3, 3, 3, 2, 2, 1, 1 ], // More numerous & vocal in the warm breeding season.
 			// Plants
 			'cypress'    => [ 2, 2, 3, 3, 3, 3, 3, 3, 2, 3, 3, 2 ], // Spring green-up; rust-orange in fall.
-			'moss'       => [ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 ], // Evergreen year-round.
+			'moss'       => [ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 ], // Evergreen year-round.
 			'fern'       => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Greens spectacularly after the summer rains.
 			'lily'       => [ 0, 0, 1, 2, 3, 3, 3, 3, 3, 2, 1, 0 ], // Blooms spring through fall.
 			'palmetto'   => [ 1, 1, 1, 2, 3, 3, 2, 2, 2, 1, 1, 1 ], // Flowers in spring; berries ripen late summer.
@@ -380,6 +389,22 @@ final class Species {
 	 *
 	 * @return array<string,string>
 	 */
+	/**
+	 * Pixel width of each original photo — the srcset descriptor for the
+	 * full-size file (1.17.0). Measured once here rather than getimagesize()
+	 * on every render. Update if a photo is replaced.
+	 */
+	private const PHOTO_W = [
+		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
+		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
+		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
+		'moss' => 950, 'osprey' => 1100, 'otter' => 733, 'palmetto' => 950, 'turtle' => 950,
+	];
+
+	public static function photo_width( string $id ): int {
+		return self::PHOTO_W[ $id ] ?? 0;
+	}
+
 	public static function photos(): array {
 		$ids = [
 			'alligator', 'manatee', 'otter', 'turtle', 'fish', 'eagle', 'osprey',
@@ -493,6 +518,7 @@ final class Species {
 				'idgroup'   => (string) ( $sp['idgroup'] ?? '' ),
 				'mark'      => (string) ( $sp['mark'] ?? '' ),
 				'photo'     => (string) ( $photos[ $id ] ?? '' ),
+				'photoW'    => self::photo_width( $id ),
 				'group'     => (string) ( $sp['group'] ?? 'critters' ),
 				'fact'      => (string) ( $sp['fact'] ?? '' ),
 				'best'      => (string) ( $sp['best'] ?? '' ),

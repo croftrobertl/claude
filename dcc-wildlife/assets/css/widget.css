@@ -719,6 +719,20 @@
 	display: none;
 }
 
+/* The summary's H2 (1.17.0) exists for the document outline, not for size:
+ * it must look exactly like the summary line did. font: inherit resets the
+ * theme's h2 size/weight/family; the doubled class outranks Bravada's h2 rules. */
+.dccwl-fullguide-summary.dccwl-fullguide-summary .dccwl-fullguide-h {
+	color: inherit;
+	display: inline;
+	font: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	margin: 0;
+	padding: 0;
+	text-transform: none;
+}
+
 /* Our own marker, rotating to point down when open. Decorative. */
 .dccwl-fullguide-summary::before {
 	content: "";

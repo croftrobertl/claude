@@ -363,13 +363,18 @@ final class Render {
 		?>
 		<details class="dccwl-fullguide">
 			<summary class="dccwl-fullguide-summary">
-				<?php
-				printf(
-					/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
-					esc_html__( 'Read the whole field guide — %d species, in words', 'dcc-wildlife' ),
-					count( $dataset )
-				);
-				?>
+				<?php /* An H2 so the guide's Critters/Birds/Plants H3s own a section
+				   in the outline instead of nesting under whatever H2 came before
+				   (on the hub, "Fishing & water conditions"). Styled inline. */ ?>
+				<h2 class="dccwl-fullguide-h">
+					<?php
+					printf(
+						/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
+						esc_html__( 'Read the whole field guide — %d species, in words', 'dcc-wildlife' ),
+						count( $dataset )
+					);
+					?>
+				</h2>
 			</summary>
 			<div class="dccwl-fullguide-body">
 				<?php foreach ( Species::groups() as $slug => $label ) : ?>
@@ -593,6 +598,10 @@ final class Render {
 				'cdWhy'       => __( 'Peak sightings begin in %s.', 'dcc-wildlife' ),
 				/* translators: %s: month name, e.g. "December". */
 				'cdWhyNow'    => __( 'Peak sightings run through %s.', 'dcc-wildlife' ),
+				/* translators: %s: month name. Value line while a season is still on, e.g. "through April". */
+				'cdThrough'   => __( 'through %s', 'dcc-wildlife' ),
+				/* translators: 1: species name, 2: "N days away". The next rise, shown under a season that is still on. */
+				'cdNext'      => __( 'Next up: %1$s season, %2$s.', 'dcc-wildlife' ),
 			],
 		];
 

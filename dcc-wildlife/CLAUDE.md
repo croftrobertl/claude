@@ -509,10 +509,15 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
   zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*'
 )
 
-# Verify the build before handing it over: no dev files, readme.txt present.
+# Verify the build before handing it over: no dev files, readme.txt present,
+# and (1.17.0) the bundled Leaflet actually in the archive — the map's default
+# URLs point at it, so a zip without it ships a broken map.
 unzip -l "Wildlife $V.zip" | grep -E '\.md$'  && echo 'FAIL: a dev doc shipped'
 unzip -l "Wildlife $V.zip" | grep -E 'tools/' && echo 'FAIL: dev tools shipped'
 unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
+for f in leaflet.js leaflet.css; do
+  unzip -l "Wildlife $V.zip" | grep -q "dcc-wildlife/assets/vendor/leaflet/$f" || echo "FAIL: vendor/leaflet/$f missing"
+done
 ```
 
 Deliver that file to the owner for the Plugins → Add New → Upload route.
@@ -874,3 +879,53 @@ over white), coral wash `#fdebeb` (accent-soft over white), page-bg `#f4f7fa`.
 With the amber closed, **every text token in the plugin has been measured on
 every surface it can sit on.** Any new text colour must be measured the same
 way before it ships.
+
+## Data doctrine — a species' best window IS its peak (v1.17.0)
+
+Everything peak-driven keys on likelihood **3**: the sheet badge
+(`widget.js` `>= 3`), the "N at peak" counts, `peakFor()`, the countdown
+(`nextRise` looks for a rise *to* 3) and the "fullest months" line. Through
+1.16.2 seven species topped out at 2, so their sheets said "Best: Jul–Aug"
+while nothing in the UI ever featured them. **Every species now has at least
+one month at 3, and its `bestLabel` spans exactly its run(s) of 3s.** The
+integrity check in the harness (`test-species.php`) enforces both. Year-round
+residents at 3 all twelve months (great blue heron, anhinga, little blue
+heron, Spanish moss) are deliberately skipped by the countdown — a resident
+is not a season.
+
+## Countdown continuity (v1.17.0)
+
+The hero shows the season that is ON — the most recent riser still at peak —
+for its whole run ("Osprey season · through April"), with the next rise
+underneath ("Next up: Snowy Egret season, 59 days away"). Only when nothing is
+mid-run does it fall back to a bare count-down. `peakRun()` finds the current
+run; `nextRise()` the next. Both are in canal time and computed client-side,
+never baked into cached HTML.
+
+## Leaflet is self-hosted (v1.17.0)
+
+`assets/vendor/leaflet/` carries Leaflet 1.9.4 (`leaflet.js`, `leaflet.css`;
+no marker PNGs — the map draws `circleMarker`s only). The defaults in
+`Water_Data::defaults()` point there, and `Water_Data::all()` drops a saved
+`https://unpkg.com/leaflet@…` value so a settings form saved under 1.16.x
+migrates without a re-save. `map_asset()` accepts `http://` only so a local
+dev site can load the bundled copy. The tile layers are the map's only
+external requests, and only after a guest opens it. Do not point the defaults
+back at a CDN.
+
+## Small rules added in 1.17.0
+
+- **Keep-limits carry `regs_verified`** (`Water_Data::defaults()`), rendered
+  as "Limits as verified with FWC in August 2026". Update the date whenever
+  the limits are re-checked; it is a fixed setting, so it is cache-safe.
+- **Photos ship a `-600.jpg` variant** beside each original; `srcset` uses
+  `Species::PHOTO_W` for the full-size descriptor. Regenerate the variant
+  (GD, quality 80, 600px wide) whenever an original is replaced, and update
+  `PHOTO_W`.
+- **Safe area:** `.dccwl-sheet-body` pads its bottom with
+  `env(safe-area-inset-bottom)`. The sheet pins to `bottom: 0`.
+- **The prose guide's `<summary>` holds an H2** so the guide owns a section
+  in the outline; `.dccwl-fullguide-h` resets it to look like the summary.
+- **The hub emits its own `<noscript>`** — `Render`'s lives inside a panel
+  the hub keeps hidden.
+- **The standalone widget seeds its month with `canalToday()`**, like the hub.

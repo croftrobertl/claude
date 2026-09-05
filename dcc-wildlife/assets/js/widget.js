@@ -165,7 +165,10 @@
 			instance = {};
 		}
 
-		var state = { month: new Date().getMonth(), openId: null, opener: null };
+		// Canal time, not the visitor's: a guest in Tokyo on the evening of
+		// the 30th must not be shown next month's canal (1.17.0 — the hub had
+		// this right since 1.10.0; the standalone widget did not).
+		var state = { month: canalToday().getMonth(), openId: null, opener: null };
 
 		var titleEl = root.querySelector('.dccwl-title');
 		var subEl = root.querySelector('.dccwl-sub');
@@ -216,6 +219,14 @@
 				img.decoding = 'async';
 				img.alt = sp.name;
 				img.src = CFG.photoBase + sp.photo;
+				// 1.17.0: a 600px-wide variant beside each original. The hero is
+				// at most 720px wide, so 1x screens and small phones take the
+				// lighter file; high-DPR phones still get the full original.
+				if (sp.photoW) {
+					img.srcset = CFG.photoBase + sp.photo.replace(/\.jpg$/, '-600.jpg') + ' 600w, ' +
+						CFG.photoBase + sp.photo + ' ' + sp.photoW + 'w';
+					img.sizes = '(max-width: 720px) 100vw, 720px';
+				}
 				medallion.appendChild(img);
 			} else {
 				// No photo for this species — the drawn scene + sprite still
@@ -648,6 +659,20 @@
 		return null;
 	}
 
+	/* The peak run a species is in RIGHT NOW: how many months since it rose
+	 * (0 = this month) and the last month of the run. null when it is not at
+	 * peak now, or is at peak all year (a resident, not a season). */
+	function peakRun(scores, cur) {
+		var PEAK = 3;
+		if (scores[cur] !== PEAK) { return null; }
+		var since = 0, m = cur;
+		while (since < 12 && scores[(m + 11) % 12] === PEAK) { m = (m + 11) % 12; since++; }
+		if (since >= 12) { return null; }
+		var through = cur, ahead = 0;
+		while (ahead < 12 && scores[(through + 1) % 12] === PEAK) { through = (through + 1) % 12; ahead++; }
+		return { since: since, through: through };
+	}
+
 	/* Fill a countdown div: emoji span + text, with the day count in its own
 	 * styled span. Built with createElement/textContent throughout — the
 	 * species list passes through a filter, so nothing here may be innerHTML. */
@@ -667,7 +692,12 @@
 			fmt(i18n.cdLabel || '%s season', best.s.name)));
 
 		var value = el('p', 'dccwl-hero-value');
-		if (best.here) {
+		if (best.mode === 'through') {
+			// Still at peak, rose in an earlier month: "through April". Same
+			// coral-text style as "is here now" — both mean "the season is on".
+			value.appendChild(el('span', 'dccwl-hero-now',
+				fmt(i18n.cdThrough || 'through %s', (CFG.monthsFull && CFG.monthsFull[best.month]) || '')));
+		} else if (best.here) {
 			value.appendChild(el('span', 'dccwl-hero-now', i18n.cdNow || 'is here now'));
 		} else {
 			value.appendChild(el('span', 'dccwl-hero-num', String(best.days)));
@@ -678,9 +708,17 @@
 
 		// One line of reason, so the number is never a bare assertion.
 		var monthName = (CFG.monthsFull && CFG.monthsFull[best.month]) || '';
-		var why = best.here
-			? fmt(i18n.cdWhyNow || 'Peak sightings run through %s.', monthName)
-			: fmt(i18n.cdWhy || 'Peak sightings begin in %s.', monthName);
+		var why;
+		if (best.next) {
+			// Current season on the value line; the NEXT rise down here, so the
+			// count-down never disappears just because something is in season.
+			var n = best.next, unit = n.days === 1 ? (i18n.cdDay || 'day away') : (i18n.cdDays || 'days away');
+			why = fmt(i18n.cdNext || 'Next up: %1$s season, %2$s.', n.s.name, n.days + ' ' + unit);
+		} else if (best.here || best.mode === 'through') {
+			why = fmt(i18n.cdWhyNow || 'Peak sightings run through %s.', monthName);
+		} else {
+			why = fmt(i18n.cdWhy || 'Peak sightings begin in %s.', monthName);
+		}
 		textWrap.appendChild(el('p', 'dccwl-hero-why', why));
 
 		node.appendChild(textWrap);
@@ -694,16 +732,35 @@
 		var shells = document.querySelectorAll('[data-dccwl-countdown]');
 		if (!shells.length) { return; }
 
-		var today = canalToday(), best = null;
+		var today = canalToday(), cur = today.getMonth(), rise = null, current = null;
 		CFG.species.forEach(function (s) {
 			if (!Array.isArray(s.months)) { return; }
-			var rise = nextRise(s.months, today);
-			if (!rise) { return; }
-			if (!best || rise.days < best.days) {
-				best = { days: rise.days, here: rise.here, month: rise.month, s: s };
+			var r = nextRise(s.months, today);
+			if (r && (!rise || r.days < rise.days)) {
+				rise = { days: r.days, here: r.here, month: r.month, s: s };
+			}
+			// The season that is ON now: the most recent riser still at peak.
+			var run = peakRun(s.months, cur);
+			if (run && (!current || run.since < current.since)) {
+				current = { s: s, since: run.since, through: run.through };
 			}
 		});
-		if (!best) { return; }
+		var best;
+		if (current && current.since === 0) {
+			// Rose this month: "is here now", through the end of its run.
+			best = { mode: 'now', here: true, days: 0, month: current.through, s: current.s, next: null };
+		} else if (current) {
+			// Rose earlier and still on (1.17.0). Through 1.16.2 this case fell
+			// through to the next riser, so "Osprey is here now" on Dec 31
+			// became "Snowy Egret 59 days away" on Jan 1 with osprey still at
+			// peak until April. Keep the season; put the next rise underneath.
+			best = { mode: 'through', here: false, days: 0, month: current.through, s: current.s,
+				next: (rise && !rise.here) ? rise : null };
+		} else if (rise) {
+			best = { mode: rise.here ? 'now' : 'countdown', here: rise.here, days: rise.days, month: rise.month, s: rise.s, next: null };
+		} else {
+			return;
+		}
 
 		// Publish which species the countdown is featuring, so the hub's
 		// "right now" line can avoid naming it twice on the same screen.

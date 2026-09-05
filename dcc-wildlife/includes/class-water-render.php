@@ -253,6 +253,19 @@ final class Water_Render {
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</ul>
+					<?php if ( ! empty( $f['regs_verified'] ) && false !== strtotime( (string) $f['regs_verified'] ) ) : ?>
+						<?php /* Bag and length limits change with the regulation year. The date
+						   is a fixed setting, not "now", so it is cache-safe (1.17.0). */ ?>
+						<p class="dccwl-fishing-note dccwl-fishing-verified">
+							<?php
+							printf(
+								/* translators: %s: month and year, e.g. "August 2026". */
+								esc_html__( 'Limits as verified with FWC in %s — seasons change, so check FWC before you keep a fish.', 'dcc-wildlife' ),
+								esc_html( date_i18n( 'F Y', strtotime( (string) $f['regs_verified'] ) ) )
+							);
+							?>
+						</p>
+					<?php endif; ?>
 					<?php if ( ! empty( $f['license'] ) ) : ?>
 						<p class="dccwl-fishing-note dccwl-fishing-license">
 							<?php echo esc_html( (string) $f['license'] ); ?>

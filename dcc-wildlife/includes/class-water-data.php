@@ -86,8 +86,13 @@ final class Water_Data {
 			// Map. Off by default like the rest of the live layer, and it
 			// loads NOTHING external until a guest actually opens it.
 			'map_enabled'       => 0,
-			'map_leaflet_js'    => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-			'map_leaflet_css'   => 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+			// Leaflet 1.9.4 is SELF-HOSTED (1.17.0). Through 1.16.2 it came from
+			// unpkg.com with no SRI, which contradicted the "no CDN scripts"
+			// promise the moment a guest opened the map, and handed guest IPs
+			// to a third party. Now it is a plugin asset like any other; the
+			// tile layers are the only external requests a map makes.
+			'map_leaflet_js'    => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.js?ver=' . DCC_WL_VERSION,
+			'map_leaflet_css'   => DCC_WL_URL . 'assets/vendor/leaflet/leaflet.css?ver=' . DCC_WL_VERSION,
 			// TWO base layers, both verified working 2026-08-27.
 			//
 			// MIND THE COORDINATE ORDER. Esri's template is {z}/{y}/{x} and
@@ -447,6 +452,10 @@ final class Water_Data {
 				[ __( 'Sunshine / striped / white bass', 'dcc-wildlife' ), __( '20 per day — only 6 may be 24″ or longer', 'dcc-wildlife' ) ],
 				[ __( 'Catfish, gar, bowfin, pickerel', 'dcc-wildlife' ), __( 'No statewide bag or size limit', 'dcc-wildlife' ) ],
 			],
+			// The date the limits above were last checked against FWC's page.
+			// Rendered beside them so a guest can judge freshness: bag and
+			// length limits change with the regulation year. Update when re-verified.
+			'regs_verified'    => '2026-08-27',
 			'regs_url'         => 'https://myfwc.com/fishing/freshwater/regulations/general/',
 			'regs_label'       => __( 'FWC — statewide bag & length limits', 'dcc-wildlife' ),
 			'license'          => __( 'Anglers 16 and older need a Florida freshwater fishing licence (some exemptions — under-16, resident seniors 65+, free-fishing days).', 'dcc-wildlife' ),
@@ -465,6 +474,16 @@ final class Water_Data {
 		$stored = get_option( self::OPTION, [] );
 		if ( ! is_array( $stored ) ) {
 			$stored = [];
+		}
+		// 1.17.0 migration: a saved settings form persisted the old unpkg
+		// defaults into the option, and wp_parse_args would keep them over
+		// the new self-hosted paths forever. Treat the old CDN defaults as
+		// "unset" so the bundled Leaflet takes over without a re-save. A
+		// deliberately custom URL (anything else) is left alone.
+		foreach ( [ 'map_leaflet_js', 'map_leaflet_css' ] as $k ) {
+			if ( isset( $stored[ $k ] ) && str_starts_with( (string) $stored[ $k ], 'https://unpkg.com/leaflet@' ) ) {
+				unset( $stored[ $k ] );
+			}
 		}
 		return wp_parse_args( $stored, self::defaults() );
 	}
@@ -592,7 +611,9 @@ final class Water_Data {
 
 	public static function map_asset( string $key ): string {
 		$v = esc_url_raw( trim( (string) self::get( $key ) ) );
-		return preg_match( '#^https://#i', $v ) ? $v : '';
+		// https:// for anything remote; http:// only so a local dev site
+		// (DCC_WL_URL is http there) can load the bundled copy. Live is https.
+		return preg_match( '#^https?://#i', $v ) ? $v : '';
 	}
 
 	public static function map_tile_url(): string {
