@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.9.0
+Stable tag: 3.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,49 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.10.0 =
+* FIXED: "behind" mode, measured rather than assumed. With Seasons finally
+  switched on, the host walk was doing its job — it picked the theme's opaque
+  content column — but the canvas was still invisible, because the article
+  INSIDE that column paints opaque white over the whole of it. The re-target
+  that was meant to catch this had existed since 3.7.1 and never fired on the
+  live site: it ran once, from a 16-point sample, behind four conditions that
+  all had to hold at the same moment.
+  The mount is now verified and corrected by a post-condition instead. After
+  mounting, the engine hit-tests a grid of points inside the canvas's own box
+  and asks what paints there; anything inside the host is above the canvas and
+  hiding it. While the canvas is covered it either moves INTO the covering
+  element — where it paints above that element's background and below its
+  content, which is what "behind" means — or, when that element cannot hold a
+  canvas, takes the element's background colour off it and paints that colour
+  on the canvas instead, over exactly that box, every frame. Up to four
+  passes, then it reports what is left.
+* The measurement is in the ?dcc_debug=1 panel as one line: CANVAS REACH: N%
+  of its own box is unpainted-over — behind is working, or STILL COVERED BY
+  <element>. Below 50% it also warns in the browser console. This is what was
+  missing: every previous round needed a screenshot to know whether the mount
+  had worked.
+* Hit-testing, not pixel sampling, on purpose: document.elementFromPoint is
+  layout, so it stays valid in an automated browser whose visibilityState
+  pauses requestAnimationFrame — the state that made the previous round's
+  canvas measurements meaningless.
+* FIXED: a sticky-mounted canvas was always 100vh, so in a content column
+  SHORTER than the window it overflowed and lengthened the page. It now fits
+  whichever is smaller and stays fitted through a ResizeObserver, because lazy
+  images change a column's height without firing a resize event.
+* FIXED: corner accents used position:fixed inside a transformed host, where
+  fixed resolves against the host rather than the viewport — so they landed in
+  the column's corner and added scrollable overflow. They use absolute
+  positioning there, which is what fixed already meant in that subtree.
+* Tests: a new suite drives three shapes of the same problem through the real
+  minified engine — the live markup (opaque column, opaque transformed article
+  inside it), a covering grid container that cannot hold the canvas, and a
+  column with no opaque painter at all — and asserts, by hit test, that
+  nothing paints over the canvas afterwards. It runs the shipped 3.9.0 engine
+  as a control arm on the same fixtures, and checks that a moved background
+  still renders as the same colour and that the page height is identical with
+  the engine on and off.
 
 = 3.9.0 =
 Three upgrade-safety fixes, all of them found on the live install rather than

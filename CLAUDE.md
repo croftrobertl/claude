@@ -159,27 +159,38 @@ bump so the tracked zip never lags the source.
   silently corrupting four sprites; the corrupted output is an ordinary-looking
   number no text search can find. Run `node tools/validate-paths.js` after any
   change to `assets/js/engine.js` — it parses every `d` and exits 1 on a bad one.
-- **The "behind" layering canvas is mounted inside the element that actually
-  PAINTS the page, at `z-index:-1`** — not on the body, and not merely in the
-  theme's content column. On this site that column (`main.main`,
-  `position:relative; z-index:9`, white) contains `article#post-620`, which is
-  also white, so mounting in `main` still left the article covering the canvas.
-  Four rules make it work, and each was a separate bug:
-  1. A candidate must paint something AND have non-zero area — Elementor breaks
-     out of the theme wrappers, collapsing `#content` / `.entry-content` to 0px.
-  2. After mounting, sample what is really painting the viewport; if it is a
-     DESCENDANT of the host, move into it.
-  3. `article#post-620` carries a `translateZ(-0.001px)` hack, making it the
+- **"Behind" is only correct if NOTHING PAINTS OVER the canvas — verify it,
+  never assume it.** The canvas is mounted inside the element that actually
+  paints the page, at `z-index:-1` (a negative-z child paints ABOVE its
+  stacking-context host's own background and BELOW that host's content, which
+  is exactly what "behind" means — it does NOT paint behind the host's
+  background; measured, 3.10.0). Choosing the host right is not enough: the
+  live column was correct and the article inside it still covered everything.
+  So after mounting, `coverage()` hit-tests a 6×6 grid inside the canvas's own
+  box and asks what paints there; a painter that is a DESCENDANT of the host
+  is above the canvas and hiding it. While covered, the engine either descends
+  into the covering element or moves that element's background colour onto the
+  canvas (`transferBg` + `drawBgFills`, repainted every frame over that
+  element's rect). Four passes, then it reports. `?dcc_debug=1` prints the
+  result as `CANVAS REACH: N%`. Four things make the mount work, and each was
+  a separate bug:
+  1. A candidate must paint something AND have non-zero area — Elementor
+     breaks out of the theme wrappers, collapsing `#content` / `.entry-content`
+     to 0px.
+  2. `article#post-620` carries a `translateZ(-0.001px)` hack, making it the
      containing block for `position:fixed` descendants. A fixed canvas there is
      silently reduced to an article-sized scrolling box, so the mount switches
-     to `position:sticky` (with `display:block`, or it adds baseline space and
-     shifts layout).
-  4. `z-index:-1` resolves in the nearest ANCESTOR stacking context, so a host
+     to `position:sticky` (with `display:block`, or it adds baseline space).
+     A sticky canvas is fitted to `min(100vh, host height)` and kept fitted by
+     a ResizeObserver — 100vh in a short column overflows and lengthens the
+     page. Accents go `position:absolute` in that subtree for the same reason.
+  3. `z-index:-1` resolves in the nearest ANCESTOR stacking context, so a host
      that is not one gets `isolation:isolate` — otherwise the canvas lands
      behind that host's own background.
-  Override the host with the `dcc_seasons_backdrop_host` filter. A page painted
-  by SEVERAL opaque boxes is the one case a single canvas cannot fully sit
-  behind; `?dcc_debug=1` says so and names them.
+  4. Hit-test, don't pixel-sample: `elementFromPoint` is layout, so it works in
+     a headless browser whose `visibilityState` pauses rAF. Canvas pixel
+     sampling there is meaningless and has wasted a round already.
+  Override the host with the `dcc_seasons_backdrop_host` filter.
 - **A new theme does NOT reach an edited schedule by itself.** `migrate()`
   only replaces a stored schedule outright when it recognises it as the
   unmodified pre-3.7.0 default; anything the owner touched is converted row

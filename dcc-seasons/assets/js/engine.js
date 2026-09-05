@@ -548,6 +548,29 @@
 		 *             under a transform, and Bravada puts a translateZ() hack
 		 *             on its article element.
 		 */
+		/* A sticky canvas is viewport-tall, which is right for a column
+		 * taller than the window and wrong for a short one: 100vh inside a
+		 * 287px column overflows it and lengthens the page, which is a
+		 * layout change this plugin promises never to make. Fit it to
+		 * whichever is smaller, and keep it fitted as the column grows —
+		 * lazy images and late content change that height without a resize
+		 * event, and a backdrop that stops short of the fold is worse than
+		 * the scroll it saves. */
+		var stickyHost = null, stickyRO = null;
+		function stickyWatch(el) {
+			if (stickyRO) { stickyRO.disconnect(); stickyRO = null; }
+			stickyHost = el;
+		}
+		function stickyFit() {
+			if (!stickyHost) { return; }
+			var h = mx2(1, MT.round(mn(W.innerHeight, mx2(rectOf(stickyHost).height, 1))));
+			cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:' + h +
+				'px;margin-bottom:-' + h + 'px;pointer-events:none;z-index:-1;';
+			if (!stickyRO && W.ResizeObserver) {
+				stickyRO = new W.ResizeObserver(function () { stickyFit(); applySize(); });
+				stickyRO.observe(stickyHost);
+			}
+		}
 		function mountIn(el, mode) {
 			/* z-index:-1 resolves inside the nearest ANCESTOR stacking
 			 * context, not inside the element it is written on. Mount into an
@@ -563,9 +586,14 @@
 				/* display:block matters: a canvas is inline by default, so it would
 				 * sit on a text baseline and add descender space — a layout
 				 * shift, which this plugin promises never to cause. */
-				cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:100vh;margin-bottom:-100vh;pointer-events:none;z-index:-1;';
+				stickyWatch(el);
+				stickyFit();
 				el.insertBefore(cv, el.firstChild);
 			} else {
+				/* Leaving sticky behind: a stale observer would re-apply the
+				 * sticky geometry over this one the next time the old host
+				 * resized. */
+				stickyWatch(null);
 				cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;';
 				el.appendChild(cv);
 			}
@@ -602,6 +630,70 @@
 			}
 			return null;
 		}
+		/* THE post-condition: with the canvas where it is now, does anything
+		 * paint OVER it? For a grid of points inside the canvas's own visible
+		 * box, find the first element that paints something; if that element
+		 * is a DESCENDANT of the canvas's parent it is above the canvas in
+		 * paint order and is hiding it. The host itself, or anything above
+		 * the host, is below the canvas — that is the good case.
+		 *
+		 * Hit-testing, not pixel sampling, on purpose. elementFromPoint is
+		 * layout, so this is valid in a headless browser whose
+		 * visibilityState pauses requestAnimationFrame — the state that made
+		 * the last round of measurements meaningless.
+		 */
+		function coverage() {
+			var host = cv.parentElement;
+			if (!host) { return { reach: 0, cover: null, total: 0, distinct: 0 }; }
+			var r = cv.getBoundingClientRect();
+			var x0 = mx2(r.left, 0), y0 = mx2(r.top, 0);
+			var x1 = mn(r.right, W.innerWidth), y1 = mn(r.bottom, W.innerHeight);
+			if (x1 - x0 < 8 || y1 - y0 < 8) { return { reach: 0, cover: null, total: 0, distinct: 0 }; }
+			var els = [], counts = [], seen = 0, open = 0, i, j, k, p2;
+			for (i = 1; i <= 6; i++) {
+				for (j = 1; j <= 6; j++) {
+					seen++;
+					p2 = painterAt(x0 + (x1 - x0) * i / 7, y0 + (y1 - y0) * j / 7);
+					if (!p2 || p2 === cv || p2 === host || !host.contains(p2)) { open++; continue; }
+					k = els.indexOf(p2);
+					if (k < 0) { els.push(p2); counts.push(1); } else { counts[k]++; }
+				}
+			}
+			var best = null, bestN = 0;
+			for (i = 0; i < els.length; i++) { if (counts[i] > bestN) { bestN = counts[i]; best = els[i]; } }
+			return { reach: seen ? open / seen : 0, cover: best, coverN: bestN, total: seen, distinct: els.length };
+		}
+
+		/* When the covering element cannot hold the canvas, take its
+		 * background colour OFF it and paint that colour on the canvas
+		 * instead, over exactly that element's box, every frame. The page
+		 * looks identical and the canvas is no longer covered. Only a plain,
+		 * fully opaque colour can move this way — an image or a gradient
+		 * cannot be faked, so those are left alone and reported. */
+		var bgFills = [];
+		function transferBg(el) {
+			if (!el || el === cv || bgFills.length >= 3) { return false; }
+			var cs2 = W.getComputedStyle(el);
+			if (cs2.backgroundImage !== 'none' || alphaOf(cs2) < 0.95) { return false; }
+			for (var i = 0; i < bgFills.length; i++) { if (bgFills[i].el === el) { return false; } }
+			/* getComputedStyle returns a LIVE declaration, so read the colour
+			 * out before clearing it — reading after gives 'transparent'. */
+			var col = cs2.backgroundColor;
+			bgFills.push({ el: el, color: col });
+			el.style.backgroundColor = 'transparent';
+			diag.notes.push('background ' + col + ' moved onto the canvas from ' + pathOf(el));
+			return true;
+		}
+		function drawBgFills() {
+			if (!bgFills.length) { return; }
+			var cr = cv.getBoundingClientRect(), i, r2;
+			for (i = 0; i < bgFills.length; i++) {
+				r2 = bgFills[i].el.getBoundingClientRect();
+				if (r2.width < 1 || r2.height < 1) { continue; }
+				cx.fillStyle = bgFills[i].color;
+				cx.fillRect(r2.left - cr.left, r2.top - cr.top, r2.width, r2.height);
+			}
+		}
 		function samplePainters() {
 			var counts = [], els = [], i, j, x, y, p, best = null, bestN = 0, total = 0;
 			for (i = 1; i <= 4; i++) {
@@ -637,38 +729,60 @@
 				diag.tried.push((okh ? 'USED   ' : 'reject ') + desc(cand[hi]) + '  (' + hm + ')');
 				if (okh) { host = cand[hi]; hostMode = hm; break; }
 			}
-			/* Verify, then re-target once. The host's own background is now
-			 * below the canvas — but if the thing actually painting the page
-			 * is a DESCENDANT of it (an Elementor container inside the
-			 * theme's column, say), that descendant still covers the canvas
-			 * and "behind" looks broken exactly as before. When one such
-			 * element paints most of the viewport and is itself a viable
-			 * host, move into it. One retry, never more. */
+			/* Verify, then FIX — up to four passes, driven by the hit-test
+			 * above rather than by a sample of what happens to paint.
+			 *
+			 * 3.6.1 through 3.9.0 did this once, from a 16-point sample
+			 * guarded by four conditions that all had to hold at the same
+			 * time. On the live site not one pass fired: the canvas stayed a
+			 * child of the theme's column with the article inside it painting
+			 * opaque white over the whole thing, and "behind" looked exactly
+			 * as broken as it had for three releases. A measured
+			 * post-condition cannot fail that way — if the canvas is covered,
+			 * something happens, and if nothing can be done the panel says
+			 * so in one line.
+			 *
+			 * Two fixes, in order of preference:
+			 *   1. Move INTO the covering element. The canvas then paints
+			 *      above that element's own background and below its content,
+			 *      which is exactly what "behind" means. Preferred because it
+			 *      changes nothing about the page.
+			 *   2. Take the covering element's background colour and paint it
+			 *      on the canvas instead. For an element that cannot hold the
+			 *      canvas — too short, or a stacking context of its own.
+			 */
 			if (host) {
-				var sp = samplePainters();
-				var spr = sp.el ? rectOf(sp.el) : null;
-				var covers = spr && (spr.width * spr.height) >= W.innerWidth * W.innerHeight * 0.2;
-				if (sp.el && sp.n >= 3 && covers && sp.el !== host && host.contains(sp.el) &&
-						paintsOpaque(sp.el) && hasArea(sp.el)) {
-					/* The host's own background is below the canvas now — but
-					 * the element actually painting the page is INSIDE it, so
-					 * it still covers the canvas and "behind" looks exactly as
-					 * broken as before. Move into the real painter; if that
-					 * sits under a transform, a fixed canvas cannot live
-					 * there, so mount sticky instead. */
-					var mode = trapped(sp.el) ? 'sticky' : 'fixed';
-					diag.notes.push('re-target (' + mode + '): ' + pathOf(sp.el) + ' paints ' + sp.n + '/' + sp.total + ' sampled points ABOVE the canvas');
-					var prev = host;
-					if (mountIn(sp.el, mode)) {
-						diag.tried.push('USED   ' + desc(sp.el) + '  (re-target, ' + mode + ')');
-						host = sp.el;
-						hostMode = mode;
-					} else {
-						/* mountIn detaches the canvas when it fails, so put it
-						 * back where it was. */
-						diag.notes.push('re-target rejected: ' + pathOf(sp.el) + ' cannot hold the canvas');
-						mountIn(prev, hostMode);
+				for (var pass = 0; pass < 4; pass++) {
+					var cov = coverage();
+					diag.notes.push('pass ' + (pass + 1) + ': canvas reaches ' + MT.round(cov.reach * 100) + '% of its own box' +
+						(cov.cover ? ' — covered by ' + pathOf(cov.cover) + ' (' + cov.coverN + '/' + cov.total + ' points)' : ''));
+					if (cov.reach >= 0.75 || !cov.cover) { break; }
+					var c2 = cov.cover, moved = false;
+					if (viable(c2)) {
+						var m2 = trapped(c2) ? 'sticky' : 'fixed';
+						var prev2 = host, prevMode = hostMode;
+						if (mountIn(c2, m2)) {
+							diag.tried.push('USED   ' + desc(c2) + '  (descend, ' + m2 + ')');
+							host = c2; hostMode = m2; moved = true;
+						} else {
+							diag.notes.push('cannot descend into ' + pathOf(c2) + ' — it will not hold the canvas');
+							mountIn(prev2, prevMode);
+						}
 					}
+					if (!moved && !transferBg(c2)) {
+						diag.notes.push('nothing more can be done about ' + pathOf(c2) +
+							(W.getComputedStyle(c2).backgroundImage !== 'none' ? ' (it paints an image, which cannot be moved)' : ''));
+						break;
+					}
+				}
+				var fin = coverage();
+				diag.reach = fin.reach;
+				diag.covers = fin.cover ? pathOf(fin.cover) : '';
+				diag.distinct = fin.distinct;
+				if (fin.reach < 0.5 && W.console && W.console.warn) {
+					W.console.warn('DCC Seasons: the ambient canvas is mounted but ' + MT.round((1 - fin.reach) * 100) +
+						'% of it is painted over by ' + (fin.cover ? pathOf(fin.cover) : 'the theme') +
+						'; "behind" will look like nothing is happening. Run ?dcc_debug=1 as an administrator for the full decision.');
 				}
 			}
 		}
@@ -696,6 +810,13 @@
 				var r = cv.getBoundingClientRect();
 				lines.push('DCC Seasons ' + (CFG.version || '?') + '  engine=' + (CFG.engineSrc || '').replace(/^.*\//, ''));
 				lines.push('layering=' + (CFG.layer ? 'behind' : 'front') + '  richness=' + rich + '  theme=' + (themeKey || 'none') + '  viewport=' + W.innerWidth + 'x' + W.innerHeight + '  dpr=' + (W.devicePixelRatio || 1));
+				/* The headline, and the one number that answers "is behind
+				 * working": how much of the canvas nothing paints over. */
+				if (diag.reach != null) {
+					lines.push('CANVAS REACH: ' + MT.round(diag.reach * 100) + '% of its own box is unpainted-over' +
+						(diag.reach >= 0.75 ? '  — behind is working'
+							: '  — STILL COVERED by ' + (diag.covers || '?') + (diag.distinct > 1 ? ' and ' + (diag.distinct - 1) + ' other element(s)' : '')));
+				}
 				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
 				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
 				for (di = 0; di < diag.notes.length; di++) { lines.push('  ! ' + diag.notes[di]); }
@@ -742,6 +863,12 @@
 		/* Corner accents ride on the same decision as the canvas. */
 		for (var ai = 0; ai < accents.length; ai++) {
 			accents[ai].style.zIndex = host ? '-1' : (CFG.layer ? '5' : '99990');
+			/* position:fixed inside a transformed host resolves against that
+			 * host, not the viewport: the accent lands in the column's corner
+			 * and, being taller than a short column, lengthens the page.
+			 * Absolute is what fixed already means in there — minus the
+			 * overflow. */
+			if (hostMode === 'sticky') { accents[ai].style.position = 'absolute'; }
 			(host || D.body).appendChild(accents[ai]);
 		}
 		var cx = cv.getContext('2d');
@@ -2412,6 +2539,7 @@
 			var dt = last ? mn((t - last) / 1000, 0.05) : 0.016;
 			last = t;
 			cx.clearRect(0, 0, vw, vh);
+			drawBgFills();
 			drawSnow();
 			if (burstMode) {
 				if (!nextBurst) { nextBurst = t + 1500; }
