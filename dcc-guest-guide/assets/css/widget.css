@@ -1988,51 +1988,8 @@ dialog.dccgg-wrapper::backdrop {
     background: var(--dccgg-tile-border);
 }
 
-/* ---- Detail layout with sticky TOC ---- */
+/* ---- Detail layout ---- */
 .dccgg-detail-layout { display: block; position: relative; }
-.dccgg-toc { display: none; }
-.dccgg-detail--has-toc .dccgg-detail-layout {
-    display: block;
-}
-@media (min-width: 768px) {
-    .dccgg-detail--has-toc .dccgg-detail-layout {
-        display: grid;
-        grid-template-columns: 200px 1fr;
-        gap: 32px;
-        align-items: start;
-    }
-    .dccgg-detail--has-toc .dccgg-toc {
-        display: block;
-        position: sticky;
-        top: 16px;
-    }
-    .dccgg-toc ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        border-left: 2px solid var(--dccgg-tile-border);
-    }
-    .dccgg-toc li { padding: 0; }
-    .dccgg-toc a {
-        display: block;
-        padding: 8px 12px;
-        color: var(--dccgg-muted);
-        text-decoration: none;
-        font-size: 0.875em;
-        border-left: 2px solid transparent;
-        margin-left: -2px;
-        transition: color var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
-    }
-@media (hover: hover) {
-        .dccgg-toc a:hover,
-        .dccgg-toc a:focus-visible,
-        .dccgg-toc a.is-current {
-            color: var(--dccgg-primary);
-            border-left-color: var(--dccgg-primary);
-            outline: none;
-        }
-}
-}
 
 /* v0.9.7.26: the reading progress bar was removed — the always-visible
    custom scrollbar (.dccgg-scrollrail) now conveys both "there's more
@@ -3284,7 +3241,6 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-item-tts,
     .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
-    .dccgg-root .dccgg-toc,
     .dccgg-root .dccgg-public-cta-wrap,
     .dccgg-root .dccgg-scrollrail,
     .dccgg-root .dccgg-shrink-sentinel,

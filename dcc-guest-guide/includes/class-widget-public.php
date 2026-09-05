@@ -54,7 +54,7 @@ class Widget_Public extends \Elementor\Widget_Base
         }
         $found = [];
         $q = new \WP_Query([
-            'post_type'              => 'any',
+            'post_type'              => ['page', 'post', 'elementor_library'],
             'post_status'            => ['publish', 'draft', 'private'],
             'posts_per_page'         => 50,
             'fields'                 => 'ids',

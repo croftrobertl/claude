@@ -449,6 +449,94 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+    // ---- Scenario I: Elementor editor re-render + teardown (v0.12.0) ------
+    // The editor renders widgets via AJAX after DOMContentLoaded and swaps the
+    // DOM on every setting change. Before v0.12.0 nothing re-ran init() for
+    // those roots, so their tiles were dead. This emulates Elementor's hook
+    // surface and checks (1) both widget types register, (2) a freshly
+    // inserted root becomes interactive once the hook fires, (3) a root the
+    // editor discarded has its document/window listeners released.
+    {
+        console.log('\nI. Editor re-render: element_ready initialises new roots, stale roots are torn down');
+        const errors = [];
+        const shim = `<script>window.elementorFrontend={hooks:{_a:{},addAction(n,f){this._a[n]=f;}},isEditMode(){return false;}};</script>`;
+        const html = buildFixture().replace('<style>', shim + '<style>');
+        const { ctx, page } = await newPage(browser, DESKTOP, html, errors);
+        const registered = await page.evaluate(() => Object.keys(window.elementorFrontend.hooks._a));
+        check('element_ready hook registered for both widgets',
+            registered.includes('frontend/element_ready/dccgg_guide.default') &&
+            registered.includes('frontend/element_ready/dccgg_guide_public.default'), registered.join(','));
+
+        const r = await page.evaluate(() => {
+            const first = document.querySelector('.dccgg-root');
+            const before = (first.__dccggDisposers || []).length;
+            // Emulate the editor: clone the widget as a NEW root (no init flag).
+            const wrap = document.createElement('div');
+            wrap.innerHTML = first.outerHTML.replace(/ data-dccgg-init="1"/g, '').replace(/is-detail/g, '');
+            const fresh = wrap.querySelector('.dccgg-root');
+            fresh.querySelectorAll('[data-dccgg-init]').forEach(e => e.removeAttribute('data-dccgg-init'));
+            document.body.appendChild(wrap);
+            wrap.id = 'fresh-wrap';
+            fresh.querySelector('.dccgg-tile[data-key="wifi"]').click();
+            return { before };
+        });
+        // Class changes ride a view transition, so give them a frame or two.
+        await page.waitForTimeout(450);
+        r.deadBefore = await page.evaluate(() => !document.querySelector('#fresh-wrap .dccgg-root').classList.contains('is-detail'));
+        await page.evaluate(() => {
+            // Editor discards the old root, then fires element_ready for the new one.
+            const first = document.querySelector('.dccgg-root:not(#fresh-wrap .dccgg-root)');
+            window.__oldRoot = first; first.remove();
+            window.elementorFrontend.hooks._a['frontend/element_ready/dccgg_guide.default']([document.getElementById('fresh-wrap')]);
+            document.querySelector('#fresh-wrap .dccgg-tile[data-key="wifi"]').click();
+        });
+        await page.waitForTimeout(450);
+        Object.assign(r, await page.evaluate(() => ({
+            aliveAfter: document.querySelector('#fresh-wrap .dccgg-root').classList.contains('is-detail'),
+            oldDisposed: (window.__oldRoot.__dccggDisposers || []).length === 0,
+        })));
+        check('old root had global listeners to release', r.before > 0, `disposers=${r.before}`);
+        check('new root is inert until element_ready fires', r.deadBefore);
+        check('new root becomes interactive after element_ready', r.aliveAfter);
+        check('discarded root had its listeners released', r.oldDisposed);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
+    // ---- Scenario J: modal dialog semantics, Tab containment, print date --
+    {
+        console.log('\nJ. Popup is a real dialog: role, Tab stays inside, focus returns; print date stamped');
+        const errors = [];
+        const html = buildFixture().replace('<div class="dccgg-menu">',
+            '<p class="dccgg-print-cover-date">Printed on <span data-dccgg-print-date></span></p><div class="dccgg-menu">');
+        const { ctx, page } = await newPage(browser, DESKTOP, html, errors);
+        const stamped = await page.$eval('[data-dccgg-print-date]', el => el.textContent.trim().length > 0);
+        check('print date stamped client-side at init', stamped);
+        await page.evaluate(() => { document.querySelector('[data-dccgg-print-date]').textContent = ''; window.dispatchEvent(new Event('beforeprint')); });
+        check('print date re-stamped on beforeprint', await page.$eval('[data-dccgg-print-date]', el => el.textContent.trim().length > 0));
+        const tts = await page.evaluate(() => !('speechSynthesis' in window) || typeof document.querySelector('.dccgg-root').__dccggStopSpeech === 'function');
+        check('TTS stop hook exposed on the root', tts);
+
+        await openDetail(page);
+        const a = await page.$eval('.dccgg-stage', s => ({ role: s.getAttribute('role'), modal: s.getAttribute('aria-modal'), label: s.getAttribute('aria-label') }));
+        check('open popup announces as a modal dialog', a.role === 'dialog' && a.modal === 'true', JSON.stringify(a));
+        check('dialog is named after the open section', a.label === 'Wi-Fi', a.label);
+        let escaped = 0;
+        for (let i = 0; i < 25; i++) {
+            await page.keyboard.press(i % 3 === 2 ? 'Shift+Tab' : 'Tab');
+            if (!(await page.evaluate(() => document.querySelector('.dccgg-stage').contains(document.activeElement)))) escaped++;
+        }
+        check('Tab and Shift+Tab never leave the popup', escaped === 0, `escaped ${escaped} times`);
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(400);
+        const after = await page.evaluate(() => ({ role: document.querySelector('.dccgg-stage').getAttribute('role'),
+            focusOnTile: !!(document.activeElement && document.activeElement.classList.contains('dccgg-tile')) }));
+        check('dialog role removed on close', after.role === null);
+        check('focus returns to the tile that opened it', after.focusOnTile);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

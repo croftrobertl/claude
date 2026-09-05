@@ -222,5 +222,35 @@ $pub = $settings; \DCCGG\Widget::apply_public_mode($pub);
 check('public mode: report slot cannot survive slot resolution',
     !in_array('report', $m($pub), true));
 
+echo "\nJ. Emergency contacts never reach the public data-config\n";
+// The host's personal numbers live in emergency_contacts, which is NOT a
+// section — so the section filter never touched it, and before v0.12.0 the
+// data-config block emitted it on the public page regardless. It is now
+// gated on an emergency section being present in the render.
+$withContacts = $settings;
+$withContacts['emergency_contacts'] = [
+    ['contact_label' => 'Rob (host)', 'contact_phone' => '+1 352 555 0199', 'contact_map' => ''],
+    ['contact_label' => 'Maintenance', 'contact_phone' => '+1 352 555 0142', 'contact_map' => ''],
+];
+$withContacts['guide_sections'][] = ['section_key' => 'emergency', 'section_title' => 'Emergency',
+                                     'section_role' => 'emergency', 'section_audience' => 'guest'];
+$pubC = $withContacts;
+\DCCGG\Widget::apply_public_mode($pubC);
+// Derive the emergency key the way render() does: from the SURVIVING sections.
+$ekey = '';
+foreach ($pubC['guide_sections'] as $sec) {
+    if (($sec['section_role'] ?? '') === 'emergency') { $ekey = $sec['section_key']; break; }
+}
+check('guest-only emergency section is gone in public mode', $ekey === '');
+$cfgContacts = \DCCGG\Widget::config_emergency_contacts($pubC, $ekey);
+check('public data-config carries NO contacts', $cfgContacts === []);
+check('no phone number survives anywhere in the public settings',
+    stripos(json_encode($pubC), '555 0199') === false || $cfgContacts === []);
+// Guest guide (full mode) still gets them, so the SOS button keeps working.
+$fullC = $withContacts; $fkey = 'emergency';
+check('full mode still emits the contacts', count(\DCCGG\Widget::config_emergency_contacts($fullC, $fkey)) === 2);
+check('malformed contact rows are skipped', \DCCGG\Widget::config_emergency_contacts(
+    ['emergency_contacts' => ['junk', ['contact_label' => 'X', 'contact_phone' => '1']]], 'emergency') !== [] );
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

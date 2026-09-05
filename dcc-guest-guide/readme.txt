@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.1
+Stable tag: 0.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,63 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.0 =
+
+**Full-plugin audit: one leak closed, the editor preview fixed, and a
+round of robustness work. No visual changes.**
+
+Security and privacy
+* **Emergency contacts no longer appear in the public page's source.** The
+  host's phone numbers were embedded in the page data even when the
+  Emergency section was guest-only and the SOS button was off. They are
+  now emitted only when an Emergency section is actually part of the
+  page.
+* **The weather / NOAA / river-level proxies validate what they're
+  asked for.** They accepted any coordinates on Earth and cached each
+  one — an open proxy and an unbounded way to grow the database. Values
+  are now range-checked, rounded to about a kilometre, and rate-limited
+  per visitor.
+* **Uninstalling now actually removes the plugin's data**, including the
+  Gemini API key, which previously survived removal.
+
+Fixed
+* **Elementor editor: section tiles do something again.** The editor
+  re-renders the widget after every change, and the plugin never re-ran
+  its setup for the new copy, so tiles went dead. It now hooks the
+  editor's own render event, and releases the previous copy's listeners
+  so long editing sessions don't get sluggish.
+* **Read-aloud stops when you close the popup or move to another
+  section** instead of continuing to talk.
+* **The popup is a proper dialog for keyboard and screen-reader users:**
+  announced as a modal named after its section, Tab stays inside it, and
+  focus returns to the tile that opened it.
+* **The printed cover's "Printed on" date is now the real print date.**
+  It was frozen into the page cache, so a page cached on Monday printed
+  "Monday" all week. The cover also shows the page's permalink rather
+  than echoing the request's Host header.
+* **A saved template that contains the guide widget no longer recurses
+  until PHP dies.**
+* **Checklist ticks follow their item.** They were keyed by position, so
+  reordering items in Elementor moved a guest's ticks to the wrong
+  items. Note: guests' existing ticks reset once on this upgrade.
+
+Translation and semantics
+* Lightbox Previous/Next/Close and the report dialog's Close are now
+  editable, translatable strings.
+* Search results are exposed as a named group rather than a listbox
+  whose children were not options.
+
+Housekeeping
+* Removed the dormant in-popup table of contents (CSS, JS and PHP);
+  the printed table of contents is unchanged.
+* The QR dialog's heading id is unique per widget, so two guides on one
+  page stay valid.
+* Guide auto-discovery only considers pages, posts and Elementor
+  templates.
+
+Tests: 44 public-mode assertions; front-end suite extended with editor
+re-render/teardown and dialog/focus scenarios.
 
 = 0.11.1 =
 

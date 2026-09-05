@@ -163,6 +163,16 @@ guide's full index, so it verifies post visibility before answering — without
 that check it is a way to read a private or password-protected guide. Keep that
 guard if you touch the endpoint.
 
+`Widget::config_emergency_contacts()` gates the data-config contact list on an
+emergency section being present in THIS render; apply_public_mode() drops a
+guest-only Emergency section, so the public page gets none. Don't emit that
+list unconditionally again — it is the host's personal phone numbers.
+
+`widget.js` registers `frontend/element_ready/{dccgg_guide,dccgg_guide_public}.default`
+so the Elementor editor's re-rendered roots get init(); per-root document/window
+listeners go through `bindGlobal(root, …)` so `disposeStaleRoots()` can release
+them. Use bindGlobal for any new global listener inside a wire*() function.
+
 Run `php tests/public-mode.test.php` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.

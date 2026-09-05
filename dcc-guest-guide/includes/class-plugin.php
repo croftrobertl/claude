@@ -312,7 +312,7 @@ final class Plugin
         }
         $found = 0;
         $q = new \WP_Query([
-            'post_type'              => 'any',
+            'post_type'              => ['page', 'post', 'elementor_library'],
             'post_status'            => 'publish',
             'posts_per_page'         => 20,
             'fields'                 => 'ids',
@@ -502,14 +502,42 @@ final class Plugin
      * On debug, accepts ?fake=1 to return a synthetic Hurricane Warning so
      * the banner can be exercised without waiting for live weather.
      */
-    public function handle_noaa_alerts(): void
+    /**
+     * Shared entry guard for the weather / NOAA / USGS proxies.
+     *
+     * v0.12.0: these endpoints answer anonymous callers and used to accept ANY
+     * coordinates, un-clamped and unlimited — which made the site a free
+     * weather proxy for the whole planet, and because every distinct lat/lng
+     * (to 3 dp) minted a new cached transient, an unbounded way to grow the
+     * options table. Now: values must be finite and in range, they are rounded
+     * to 2 dp (~1 km, plenty for a fixed cottage and 100x fewer cache keys),
+     * and each IP gets a generous burst budget shared across all three.
+     *
+     * @return array{0: float, 1: float} [lat, lng]
+     */
+    private function proxy_coords(): array
     {
         check_ajax_referer('dccgg_nonce', 'nonce');
         $lat = isset($_GET['lat']) ? (float) $_GET['lat'] : 0.0;
         $lng = isset($_GET['lng']) ? (float) $_GET['lng'] : 0.0;
-        if ($lat === 0.0 && $lng === 0.0) {
+        if (!is_finite($lat) || !is_finite($lng)
+            || ($lat === 0.0 && $lng === 0.0)
+            || $lat < -90.0 || $lat > 90.0 || $lng < -180.0 || $lng > 180.0) {
             wp_send_json_error(['message' => 'lat/lng required'], 400);
         }
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_proxy_rl_' . $ip_hash;
+        $count   = (int) get_transient($rl_key);
+        if ($count >= 60) {
+            wp_send_json_error(['message' => 'Too many requests — please try again shortly.'], 429);
+        }
+        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
+        return [round($lat, 2), round($lng, 2)];
+    }
+
+    public function handle_noaa_alerts(): void
+    {
+        [$lat, $lng] = $this->proxy_coords();
         if (!empty($_GET['fake'])) {
             wp_send_json_success([
                 'alerts' => [[
@@ -520,8 +548,6 @@ final class Plugin
                 ]],
             ]);
         }
-        $lat = round($lat, 3);
-        $lng = round($lng, 3);
         $key = 'dccgg_noaa_' . md5($lat . ':' . $lng);
         $cached = get_transient($key);
         if (is_array($cached)) {
@@ -937,14 +963,7 @@ final class Plugin
      */
     public function handle_weather(): void
     {
-        check_ajax_referer('dccgg_nonce', 'nonce');
-        $lat = isset($_GET['lat']) ? (float) $_GET['lat'] : 0.0;
-        $lng = isset($_GET['lng']) ? (float) $_GET['lng'] : 0.0;
-        if ($lat === 0.0 && $lng === 0.0) {
-            wp_send_json_error(['message' => 'lat/lng required'], 400);
-        }
-        $lat = round($lat, 3);
-        $lng = round($lng, 3);
+        [$lat, $lng] = $this->proxy_coords();
         $key = 'dccgg_wx_' . md5($lat . ':' . $lng);
         $cached = get_transient($key);
         if (is_array($cached)) {
@@ -1000,14 +1019,7 @@ final class Plugin
      */
     public function handle_usgs(): void
     {
-        check_ajax_referer('dccgg_nonce', 'nonce');
-        $lat = isset($_GET['lat']) ? (float) $_GET['lat'] : 0.0;
-        $lng = isset($_GET['lng']) ? (float) $_GET['lng'] : 0.0;
-        if ($lat === 0.0 && $lng === 0.0) {
-            wp_send_json_error(['message' => 'lat/lng required'], 400);
-        }
-        $lat = round($lat, 3);
-        $lng = round($lng, 3);
+        [$lat, $lng] = $this->proxy_coords();
         // v0.9.7.18: admin-only, same as dccgg_weather above.
         $debug = !empty($_GET['debug']) && current_user_can('manage_options');
         // Cache key is the cottage lat/lng so a fallback to a sibling site

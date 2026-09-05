@@ -1460,6 +1460,9 @@ final class Widget extends Widget_Base
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
+            'str_lightbox_prev'  => [__('Lightbox previous-image aria-label', 'dcc-guest-guide'), __('Previous image', 'dcc-guest-guide')],
+            'str_lightbox_next'  => [__('Lightbox next-image aria-label', 'dcc-guest-guide'), __('Next image', 'dcc-guest-guide')],
+            'str_report_close'   => [__('Report dialog close aria-label', 'dcc-guest-guide'), __('Close', 'dcc-guest-guide')],
             'str_more_menu'      => [__('More-menu button label', 'dcc-guest-guide'), __('More', 'dcc-guest-guide')],
             'str_emergency_sos'      => [__('SOS button label', 'dcc-guest-guide'),                  __('Emergency', 'dcc-guest-guide')],
             'str_emergency_911'      => [__('Auto-added 911 chip label', 'dcc-guest-guide'),         __('Call 911', 'dcc-guest-guide')],
@@ -2775,6 +2778,41 @@ final class Widget extends Widget_Base
     // ----------------------------------------------------------------------
 
     /**
+     * Emergency contacts for the data-config block — or nothing.
+     *
+     * The list is only meaningful when an emergency section exists in this
+     * render, because the SOS button and quick-call strip that consume it hang
+     * off that section. Before v0.12.0 it was emitted unconditionally, which
+     * put the host's personal phone numbers into the page source of the PUBLIC
+     * guide even with the Emergency section marked guest-only and the SOS
+     * button forced off: apply_public_mode() removes the section, so
+     * $emergency_key is '' — and that is exactly the case this now returns []
+     * for. Same leak channel as the search index: data-config, not markup.
+     */
+    public static function config_emergency_contacts(array $s, string $emergency_key): array
+    {
+        if ($emergency_key === '') {
+            return [];
+        }
+        $out = [];
+        foreach ((array) ($s['emergency_contacts'] ?? []) as $row) {
+            if (!is_array($row)) { continue; }
+            $label = trim((string) ($row['contact_label'] ?? ''));
+            $phone = trim((string) ($row['contact_phone'] ?? ''));
+            $map   = trim((string) ($row['contact_map'] ?? ''));
+            $icon  = trim((string) ($row['contact_icon'] ?? '📞'));
+            if ($label === '' && $phone === '' && $map === '') { continue; }
+            $out[] = [
+                'label' => $label,
+                'phone' => $phone,
+                'map'   => $map,
+                'icon'  => $icon !== '' ? $icon : '📞',
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * The slots the "…" menu would actually render, in order.
      *
      * Extracted from render_more_menu() so the "is this menu empty?" decision
@@ -2964,21 +3002,9 @@ final class Widget extends Widget_Base
 
         // Build the emergency-contacts list for the data-config block; the
         // 911 chip is auto-added on the JS side using str_emergency_911.
-        $emergency_contacts_raw = (array) ($s['emergency_contacts'] ?? []);
-        $emergency_contacts = [];
-        foreach ($emergency_contacts_raw as $row) {
-            $label = trim((string) ($row['contact_label'] ?? ''));
-            $phone = trim((string) ($row['contact_phone'] ?? ''));
-            $map   = trim((string) ($row['contact_map'] ?? ''));
-            $icon  = trim((string) ($row['contact_icon'] ?? '📞'));
-            if ($label === '' && $phone === '' && $map === '') { continue; }
-            $emergency_contacts[] = [
-                'label' => $label,
-                'phone' => $phone,
-                'map'   => $map,
-                'icon'  => $icon !== '' ? $icon : '📞',
-            ];
-        }
+        // v0.12.0: gated on an emergency section actually being present in
+        // THIS render — see config_emergency_contacts().
+        $emergency_contacts = self::config_emergency_contacts($s, $emergency_key);
 
         $config = [
             'revealMode'       => $reveal_mode,
@@ -3096,6 +3122,7 @@ final class Widget extends Widget_Base
                     'privacy'    => (string) ($s['str_report_privacy'] ?? __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')),
                     'send'       => (string) ($s['str_report_send'] ?? __('Send report', 'dcc-guest-guide')),
                     'cancel'     => (string) ($s['str_report_cancel'] ?? __('Cancel', 'dcc-guest-guide')),
+                    'close'      => (string) ($s['str_report_close']  ?? __('Close', 'dcc-guest-guide')),
                     'thankYou'   => (string) ($s['str_report_thank_you'] ?? __('Thanks! Your host has been notified.', 'dcc-guest-guide')),
                     'error'      => (string) ($s['str_report_error'] ?? __('Could not send. Please contact the host directly.', 'dcc-guest-guide')),
                     'perItem'    => (string) ($s['str_per_item_report'] ?? __('Report', 'dcc-guest-guide')),
@@ -3169,7 +3196,9 @@ final class Widget extends Widget_Base
                 'didYouMean'    => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
                 'qrClose'       => (string) ($s['str_qr_close'] ?? 'Close'),
-                'lightboxClose' => (string) ($s['str_lightbox_close'] ?? 'Close image'),
+                'lightboxClose' => (string) ($s['str_lightbox_close'] ?? __('Close image', 'dcc-guest-guide')),
+                'lightboxPrev'  => (string) ($s['str_lightbox_prev']  ?? __('Previous image', 'dcc-guest-guide')),
+                'lightboxNext'  => (string) ($s['str_lightbox_next']  ?? __('Next image', 'dcc-guest-guide')),
             ],
         ];
         // v0.9.7.20: only emit searchIndex when search is enabled. wireSearch
@@ -3260,7 +3289,7 @@ final class Widget extends Widget_Base
                                aria-label="<?php echo esc_attr($s['search_placeholder']); ?>"
                                autocomplete="off">
                         <kbd class="dccgg-search-kbd">⌘K</kbd>
-                        <div class="dccgg-search-results" role="listbox" hidden></div>
+                        <div class="dccgg-search-results" role="group" aria-label="<?php echo esc_attr__('Search results', 'dcc-guest-guide'); ?>" hidden></div>
                         <span class="dccgg-sr-only" aria-live="polite" data-dccgg-results-count></span>
                     </div>
                 <?php endif; ?>
@@ -3323,9 +3352,9 @@ final class Widget extends Widget_Base
 
             <?php // Shared dialogs portaled out of the widget at runtime. ?>
             <div class="dccgg-qr-overlay" hidden></div>
-            <div class="dccgg-qr-dialog" role="dialog" aria-modal="true" aria-labelledby="dccgg-qr-title" hidden>
+            <div class="dccgg-qr-dialog" role="dialog" aria-modal="true" aria-labelledby="dccgg-qr-title-<?php echo esc_attr($this->get_id()); ?>" hidden>
                 <button type="button" class="dccgg-qr-close" aria-label="<?php echo esc_attr($s['str_qr_close']); ?>">&times;</button>
-                <h3 id="dccgg-qr-title" class="dccgg-qr-title"></h3>
+                <h3 id="dccgg-qr-title-<?php echo esc_attr($this->get_id()); ?>" class="dccgg-qr-title"></h3>
                 <div class="dccgg-qr-canvas" aria-hidden="true"></div>
                 <p class="dccgg-qr-caption"></p>
             </div>
@@ -3548,12 +3577,6 @@ final class Widget extends Widget_Base
                 $wizard    = ($sec['wizard_mode'] ?? '') === 'yes';
                 $procedure = ($sec['procedure_mode'] ?? '') === 'yes' && !$wizard;
                 $checklist = ($sec['checklist_mode'] ?? '') === 'yes' && !$wizard;
-                // v0.9.7.28: the in-popup TOC sidebar is disabled by host
-                // request — on the narrow popup it crowded the content and
-                // threw the section-title / item-title centering off. The
-                // print-only table of contents (render_print_toc) is separate
-                // and unaffected. Filterable so it can be re-enabled per-site.
-                $show_toc  = (bool) apply_filters('dccgg_show_detail_toc', false, $key, count($items));
                 $prev_key  = $idx > 0 ? trim((string) ($valid_sections[$idx - 1]['section_key'] ?? '')) : '';
                 $next_key  = $idx < $section_count - 1 ? trim((string) ($valid_sections[$idx + 1]['section_key'] ?? '')) : '';
                 $bg_url    = (string) ($sec['section_bg_image']['url'] ?? '');
@@ -3561,7 +3584,6 @@ final class Widget extends Widget_Base
                 $show_cond = ($sec['show_conditions_card'] ?? '') === 'yes';
                 $role      = (string) ($sec['section_role'] ?? '');
                 $detail_classes = 'dccgg-detail';
-                if ($show_toc)  { $detail_classes .= ' dccgg-detail--has-toc'; }
                 if ($wizard)    { $detail_classes .= ' dccgg-detail--wizard'; }
                 if ($checklist) { $detail_classes .= ' dccgg-detail--checklist'; }
                 if ($bg_url !== '') { $detail_classes .= ' dccgg-detail--parallax'; }
@@ -3621,17 +3643,6 @@ final class Widget extends Widget_Base
                         <?php endif; ?>
                     </div>
                     <div class="dccgg-detail-layout">
-                        <?php if ($show_toc) : ?>
-                            <nav class="dccgg-toc" aria-label="<?php echo esc_attr($title); ?>">
-                                <ul>
-                                    <?php foreach ($items as $it_idx => $it) :
-                                        $it_title = (string) ($it['item_title'] ?? '');
-                                        if ($it_title === '') { continue; } ?>
-                                        <li><a href="#" data-toc-item="<?php echo (int) $it_idx; ?>"><?php echo esc_html($it_title); ?></a></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </nav>
-                        <?php endif; ?>
                         <?php
                         // v0.9.7.13: conditions card position — "first" (above items, original behavior) or "last" (after items).
                         $cond_extras   = ($s['enable_conditions_extras'] ?? 'yes') === 'yes';
@@ -3833,7 +3844,7 @@ final class Widget extends Widget_Base
         $read_time = $source === 'wysiwyg' ? self::read_time_text($content) : '';
         $tts_supported_text = ($source === 'wysiwyg') ? trim(wp_strip_all_tags($content)) : '';
         ?>
-        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?><?php echo $checkable ? ' dccgg-item--checkable' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>"<?php if ($checkable) : ?> data-checkable="1" data-check-key="<?php echo esc_attr($section_key . ':' . $item_idx); ?>"<?php endif; ?>>
+        <article class="dccgg-item<?php echo $compact ? ' dccgg-item--compact' : ''; ?><?php echo $checkable ? ' dccgg-item--checkable' : ''; ?>" data-item-title="<?php echo esc_attr($title); ?>" data-tts-text="<?php echo esc_attr(mb_substr($tts_supported_text, 0, 3000)); ?>"<?php if ($checkable) : ?> data-checkable="1" data-check-key="<?php echo esc_attr($section_key . ':' . (string) ($item['_id'] ?? $item_idx)); ?>"<?php endif; ?>>
             <?php
             // v0.9.7.28: three-slot title — leading icon(s), centered text,
             // trailing controls — each wrapped so the CSS grid (1fr auto 1fr
@@ -4195,11 +4206,10 @@ final class Widget extends Widget_Base
     {
         $heading  = (string) ($s['guide_heading'] ?? __('Guest Guide', 'dcc-guest-guide'));
         $sub      = (string) ($s['guide_subtitle'] ?? '');
-        $url      = isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])
-            ? esc_url_raw('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'])
-            : home_url('/');
+        // v0.12.0: the permalink, not the raw Host header — the latter is
+        // attacker-influenced and was being echoed into cacheable HTML.
+        $url      = (string) (get_permalink() ?: home_url('/'));
         $section_count = count(array_filter($sections, static fn($x) => trim((string) ($x['section_key'] ?? '')) !== ''));
-        $printed = wp_date(get_option('date_format', 'F j, Y'));
         ?>
         <div class="dccgg-print-only dccgg-print-cover" aria-hidden="true">
             <div class="dccgg-print-cover-band"></div>
@@ -4214,9 +4224,12 @@ final class Widget extends Widget_Base
                     $section_count
                 )); ?></p>
                 <p class="dccgg-print-cover-url"><?php echo esc_html($url); ?></p>
+                <?php // v0.12.0: the date is stamped by JS at print time (and at
+                // init as a fallback). A server date here was frozen into the
+                // page cache, so a page cached Monday printed "Monday" all week. ?>
                 <p class="dccgg-print-cover-date"><?php
-                    /* translators: %s: print date */
-                    echo esc_html(sprintf(__('Printed on %s', 'dcc-guest-guide'), $printed));
+                    /* translators: %s: print date (filled in by the browser at print time) */
+                    echo wp_kses(sprintf(__('Printed on %s', 'dcc-guest-guide'), '<span data-dccgg-print-date></span>'), ['span' => ['data-dccgg-print-date' => []]]);
                 ?></p>
             </div>
         </div>
@@ -4465,6 +4478,15 @@ final class Widget extends Widget_Base
         if ($template_id <= 0) {
             return '';
         }
+        // v0.12.0: a saved template that itself contains a guide widget (or
+        // another template that does) would recurse until PHP died. Bound the
+        // nesting; two levels is already more than any sane layout needs.
+        static $depth = 0;
+        if ($depth >= 2) {
+            error_log('DCCGG: render_template ' . $template_id . ' skipped — nested too deep (template contains the guide widget?)');
+            return '';
+        }
+        $depth++;
         try {
             if (class_exists('\\Elementor\\Plugin')) {
                 $el = \Elementor\Plugin::instance();
@@ -4474,6 +4496,8 @@ final class Widget extends Widget_Base
             }
         } catch (\Throwable $e) {
             error_log('DCCGG: render_template failed for ' . $template_id . ': ' . $e->getMessage());
+        } finally {
+            $depth--;
         }
         return '';
     }

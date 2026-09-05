@@ -154,6 +154,23 @@
         meta.setAttribute('content', content + (content ? ', ' : '') + 'viewport-fit=cover');
     }
 
+    // v0.12.0: the print cover's "Printed on …" date is stamped here, on the
+    // visitor's clock, instead of being baked into server HTML that a page
+    // cache then serves for days. Filled at init (covers browsers without
+    // beforeprint) and refreshed the moment printing starts.
+    function stampPrintDates(scope) {
+        let text;
+        try {
+            text = new Date().toLocaleDateString(document.documentElement.lang || undefined,
+                { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch (_) { text = new Date().toDateString(); }
+        (scope || document).querySelectorAll('[data-dccgg-print-date]').forEach((el) => { el.textContent = text; });
+    }
+    if (!window.__dccggPrintDateHook) {
+        window.__dccggPrintDateHook = true;
+        window.addEventListener('beforeprint', () => stampPrintDates(document));
+    }
+
     // -- Boot --------------------------------------------------------------
     function initAll() {
         ensureViewportFitCover();
@@ -168,9 +185,54 @@
         initAll();
     }
 
+    // v0.12.0: Elementor renders widgets in the editor preview via AJAX and
+    // swaps the DOM on every setting change — long after DOMContentLoaded —
+    // so the roots it produces never went through init() and their tiles
+    // did nothing. This is the standard Elementor hook for exactly that;
+    // the dataset guard in init() keeps a double call harmless.
+    //
+    // The same event is also the moment to release resources held for roots
+    // Elementor has just thrown away: any document/window listener or
+    // observer they registered would otherwise live for the whole editing
+    // session (and keep the detached DOM reachable). bindGlobal() records
+    // such listeners per root; disposeStaleRoots() runs them for every root
+    // that is no longer in the document.
+    const liveRoots = new Set();
+    function bindGlobal(root, target, type, fn, opts) {
+        target.addEventListener(type, fn, opts);
+        (root.__dccggDisposers || (root.__dccggDisposers = [])).push(() => target.removeEventListener(type, fn, opts));
+    }
+    function disposeStaleRoots() {
+        liveRoots.forEach((r) => {
+            if (r.isConnected) return;
+            (r.__dccggDisposers || []).forEach((d) => { try { d(); } catch (_) {} });
+            r.__dccggDisposers = [];
+            liveRoots.delete(r);
+        });
+    }
+    function initElementorHooks() {
+        const ef = window.elementorFrontend;
+        if (!ef || !ef.hooks || typeof ef.hooks.addAction !== 'function') return false;
+        ['dccgg_guide.default', 'dccgg_guide_public.default'].forEach((name) => {
+            ef.hooks.addAction('frontend/element_ready/' + name, ($scope) => {
+                disposeStaleRoots();
+                const el = $scope && ($scope[0] || $scope);
+                if (!el || !el.querySelectorAll) return;
+                el.querySelectorAll('.dccgg-root').forEach(init);
+            });
+        });
+        return true;
+    }
+    if (!initElementorHooks() && window.jQuery) {
+        window.jQuery(window).on('elementor/frontend/init', initElementorHooks);
+    }
+
     function init(root) {
         if (root.dataset.dccggInit === '1') return;
         root.dataset.dccggInit = '1';
+        root.__dccggDisposers = [];
+        liveRoots.add(root);
+        stampPrintDates(root);
 
         let config;
         try { config = JSON.parse(root.dataset.config || '{}'); } catch (_) { config = {}; }
@@ -202,7 +264,6 @@
         wireLightbox(root);
         wirePeek(root);
         wireSheetDrag(root);
-        wireToc(root);
         wireDetailScrollbar(root);
         wireSectionNav(root, config);
         wireWizard(root);
@@ -273,7 +334,7 @@
             const s = el.closest && el.closest('.dccgg-stage');
             return !!(s && s.__dccggRoot === root);
         };
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const btn = e.target.closest('.dccgg-more-save-pdf');
             if (!btn || !ownsTarget(btn)) return;
             if (config.manualPdfUrl) {
@@ -341,7 +402,7 @@
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
                     <h3>${escHtml(STR.title || 'Report a problem')}</h3>
-                    <button type="button" class="dccgg-report-close" aria-label="Close">&times;</button>
+                    <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">&times;</button>
                 </div>
                 <div class="dccgg-report-body">
                     ${catField}
@@ -412,7 +473,7 @@
         root.__dccggOpenReport = open;
 
         // More-menu "Report a problem" → context is the current section title.
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const m = e.target.closest('.dccgg-more-report');
             if (!m || !ownsTarget(m)) return;
             // Close the parent <details> popover so it doesn't sit open behind the dialog.
@@ -422,7 +483,7 @@
         });
 
         // Per-item Report button.
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const b = e.target.closest('.dccgg-item-report');
             if (!b || !ownsTarget(b)) return;
             open(b.dataset.reportSection || '', b.dataset.reportItem || '');
@@ -568,6 +629,7 @@
             if (wrap) decorate(wrap);
         });
         obs.observe(results, { childList: true, subtree: true });
+        root.__dccggDisposers.push(() => obs.disconnect());
     }
     function recordOnce(SR, onInterim, onFinal, onStart, onStop) {
         const r = new SR();
@@ -856,7 +918,7 @@
         };
 
         // Click handler.
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const btn = e.target.closest('.dccgg-item-check');
             if (!btn || !ownsTarget(btn)) return;
             const item = btn.closest('.dccgg-item');
@@ -871,7 +933,7 @@
         });
 
         // Reset.
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const reset = e.target.closest('.dccgg-checklist-reset');
             if (!reset || !ownsTarget(reset)) return;
             const detail = reset.closest('.dccgg-detail');
@@ -925,10 +987,11 @@
             });
         };
         const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
-        window.addEventListener('scroll', onScroll, { passive: true });
+        bindGlobal(root, window, 'scroll', onScroll, { passive: true });
         // Also recompute when a detail opens.
         const obs = new MutationObserver(onScroll);
         root.querySelectorAll('.dccgg-detail--parallax').forEach(d => obs.observe(d, { attributes: true, attributeFilter: ['hidden'] }));
+        root.__dccggDisposers.push(() => obs.disconnect());
         update();
     }
 
@@ -1276,7 +1339,7 @@
             const s = el.closest && el.closest('.dccgg-stage');
             return !!(s && s.__dccggRoot === root);
         };
-        document.addEventListener('click', (e) => {
+        bindGlobal(root, document, 'click', (e) => {
             const thumb = e.target.closest('.dccgg-gallery-thumb');
             if (!thumb || !ownsTarget(thumb)) return;
             e.preventDefault();
@@ -1290,19 +1353,20 @@
                 try { hotspots = JSON.parse(t.dataset.hotspots || '[]'); } catch (_) {}
                 return { url, hotspots, alt: t.getAttribute('aria-label') || '' };
             });
-            openGalleryLightbox(images, idx);
+            openGalleryLightbox(images, idx, (root.__dccgg && root.__dccgg.config && root.__dccgg.config.strings) || {});
         });
     }
-    function openGalleryLightbox(images, startIdx) {
+    function openGalleryLightbox(images, startIdx, labels) {
         if (!images.length) return;
+        const L = labels || {};
         let dialog = document.querySelector('.dccgg-gallery-lightbox');
         if (!dialog) {
             dialog = document.createElement('dialog');
             dialog.className = 'dccgg-lightbox dccgg-gallery-lightbox';
             dialog.innerHTML = `
-                <button type="button" class="dccgg-lightbox-close" aria-label="Close">×</button>
-                <button type="button" class="dccgg-lightbox-prev" aria-label="Previous">‹</button>
-                <button type="button" class="dccgg-lightbox-next" aria-label="Next">›</button>
+                <button type="button" class="dccgg-lightbox-close" aria-label="${escAttr(L.lightboxClose || 'Close')}">×</button>
+                <button type="button" class="dccgg-lightbox-prev" aria-label="${escAttr(L.lightboxPrev || 'Previous')}">‹</button>
+                <button type="button" class="dccgg-lightbox-next" aria-label="${escAttr(L.lightboxNext || 'Next')}">›</button>
                 <div class="dccgg-lightbox-stage"></div>
                 <div class="dccgg-lightbox-counter"></div>
             `;
@@ -1593,7 +1657,7 @@
             const onDocClick = (e) => {
                 if (!menu.contains(e.target) && menu.open) menu.open = false;
             };
-            document.addEventListener('click', onDocClick);
+            bindGlobal(root, document, 'click', onDocClick);
 
             const print = menu.querySelector('.dccgg-more-print');
 
@@ -1832,6 +1896,8 @@
         }
     }
     function openDetailImpl(root, key, onShown) {
+        if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
+        root.__dccggActiveKey = key;
         // v0.9.7.5: after the first open, showDetailModal portals .dccgg-stage
         // (and its .dccgg-detail children) to <body>, so root.querySelectorAll
         // returns an empty list and prev/next/back re-entries bailed silently.
@@ -1905,6 +1971,7 @@
 
     function closeDetail(root) {
         if (!root.classList.contains('is-detail')) return;
+        if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
         const wasModal = !!root.__dccggModal;
         withViewTransition(() => root.classList.remove('is-detail'));
         if (wasModal) hideDetailModal(root);
@@ -2085,6 +2152,21 @@
         void state.stage.offsetWidth;
         requestAnimationFrame(() => {
             state.stage.classList.add('is-modal-open');
+            // v0.12.0: expose the open popup as a modal dialog named after
+            // its section. Focus restore already existed (state.lastTrigger);
+            // this adds the role and, in onKey below, keeps Tab inside.
+            state.stage.setAttribute('role', 'dialog');
+            state.stage.setAttribute('aria-modal', 'true');
+            // Look the section up by key, not by visibility: openDetailImpl
+            // flips the hidden flags inside a view transition, which has not
+            // necessarily applied by this frame.
+            const activeKey = root.__dccggActiveKey || '';
+            const openTitle = activeKey
+                ? state.stage.querySelector('.dccgg-detail[data-key="' + cssEsc(activeKey) + '"] .dccgg-detail-title-text')
+                : null;
+            if (openTitle && openTitle.textContent.trim()) {
+                state.stage.setAttribute('aria-label', openTitle.textContent.trim());
+            }
             const focusTarget = state.stage.querySelector('.dccgg-back')
                 || state.stage.querySelector('button, [href], input, [tabindex]:not([tabindex="-1"])');
             if (focusTarget && typeof focusTarget.focus === 'function') {
@@ -2104,6 +2186,21 @@
             state.overlay.removeEventListener('click', state.onOverlayClick);
         }
         state.onKey = (e) => {
+            if (e.key === 'Tab') {
+                // Modal Tab containment. The overlay blocks the pointer from
+                // the page behind, but nothing blocked the keyboard.
+                if (document.querySelector('.dccgg-qr-dialog:not([hidden]), .dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
+                const focusables = Array.from(state.stage.querySelectorAll(
+                    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )).filter(el => el.getClientRects().length > 0);
+                if (!focusables.length) return;
+                const first = focusables[0];
+                const last  = focusables[focusables.length - 1];
+                const inside = state.stage.contains(document.activeElement);
+                if (e.shiftKey && (!inside || document.activeElement === first)) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && (!inside || document.activeElement === last)) { e.preventDefault(); first.focus(); }
+                return;
+            }
             if (e.key !== 'Escape') return;
             // Don't steal Escape from QR / lightbox / report dialogs that
             // open on top of the detail modal.
@@ -2127,7 +2224,12 @@
         state.onOverlayClick = null;
         // v0.9.7: trigger the close transition (opacity → 0, transform back
         // to scale 0.96 / translateY(100%)) by removing the open class.
-        if (state.stage) state.stage.classList.remove('is-modal-open');
+        if (state.stage) {
+            state.stage.classList.remove('is-modal-open');
+            state.stage.removeAttribute('role');
+            state.stage.removeAttribute('aria-modal');
+            state.stage.removeAttribute('aria-label');
+        }
         state.closeTimer = setTimeout(() => {
             document.documentElement.classList.remove('dccgg-detail-open');
             document.body.classList.remove('dccgg-detail-open');
@@ -3152,6 +3254,12 @@
     function wireTts(root, config) {
         if (!('speechSynthesis' in window)) return;
         let currentBtn = null;
+        // v0.12.0: closing the popup or moving to another section used to
+        // leave the voice reading on. closeDetail()/openDetailImpl() call this.
+        root.__dccggStopSpeech = () => {
+            try { speechSynthesis.cancel(); } catch (_) {}
+            if (currentBtn) { currentBtn.classList.remove('is-speaking'); currentBtn = null; }
+        };
         const buttons = root.querySelectorAll('.dccgg-item-tts');
         buttons.forEach(btn => {
             btn.hidden = false;
@@ -3450,13 +3558,13 @@
             currentY = e.clientY;
             root.classList.add('is-sheet-dragging');
         });
-        document.addEventListener('pointermove', (e) => {
+        bindGlobal(root, document, 'pointermove', (e) => {
             if (!dragging) return;
             currentY = e.clientY;
             const dy = Math.max(0, currentY - startY);
             stage.style.transform = 'translateY(' + dy + 'px)';
         });
-        document.addEventListener('pointerup', () => {
+        bindGlobal(root, document, 'pointerup', () => {
             if (!dragging) return;
             dragging = false;
             root.classList.remove('is-sheet-dragging');
@@ -3468,33 +3576,6 @@
     }
 
     // -- Sticky TOC current-item highlight --------------------------------
-    function wireToc(root) {
-        if (!('IntersectionObserver' in window)) return;
-        root.querySelectorAll('.dccgg-detail--has-toc').forEach(detail => {
-            const tocLinks = detail.querySelectorAll('.dccgg-toc a[data-toc-item]');
-            const anchors  = detail.querySelectorAll('.dccgg-detail-item-anchor');
-            if (!tocLinks.length || !anchors.length) return;
-
-            tocLinks.forEach(a => {
-                a.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const idx = parseInt(a.dataset.tocItem || '0', 10);
-                    const target = detail.querySelector('.dccgg-detail-item-anchor[data-item-idx="' + idx + '"]');
-                    if (target) target.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'start' });
-                });
-            });
-
-            const io = new IntersectionObserver((entries) => {
-                entries.forEach(en => {
-                    if (en.isIntersecting) {
-                        const idx = en.target.dataset.itemIdx;
-                        tocLinks.forEach(a => a.classList.toggle('is-current', a.dataset.tocItem === idx));
-                    }
-                });
-            }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
-            anchors.forEach(a => io.observe(a));
-        });
-    }
 
     // -- Custom always-visible scrollbar (v0.9.7.26) ----------------------
     // Native scrollbars auto-hide (iOS Safari force-hides them), so the
@@ -3538,7 +3619,7 @@
             requestAnimationFrame(() => { update(); pending = false; });
         };
         stage.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('resize', onScroll);
+        bindGlobal(root, window, 'resize', onScroll);
         // Expose so showDetailModal can refresh geometry the moment a section
         // opens (content — and therefore scrollHeight — differs per section).
         stage.__dccggScrollUpdate = update;
