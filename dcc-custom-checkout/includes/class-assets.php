@@ -144,6 +144,9 @@ final class Assets
             'guestAccommodations' => Config::guest_accommodations(),
             'includedGuests'      => Config::included_guests(),
             'guestsSelector'   => Config::guests_selector(),
+            // Surfaces misconfiguration notices (e.g. a double-prefixed
+            // Checkout Field slug) on the page for administrators only.
+            'isAdmin'          => current_user_can('manage_options'),
             'i18n'            => [
                 'petQuestion'   => __('Traveling with a dog?', 'dcc-checkout'),
                 'petNo'         => __('No', 'dcc-checkout'),
@@ -159,6 +162,7 @@ final class Assets
                 'capNote'       => __('This cottage sleeps up to %s guests.', 'dcc-checkout'),
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),
                 'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
+                'adminNoticePrefix' => __('Visible to administrators only:', 'dcc-checkout'),
             ],
         ];
     }

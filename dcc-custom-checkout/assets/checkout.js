@@ -275,6 +275,43 @@
             });
     }
 
+    // MotoPress renders a Checkout Field's input as 'mphb_' . $field->name
+    // (mphb-checkout-fields CheckoutView), so the field SLUG must be
+    // guest3_first_name, NOT mphb_guest3_first_name. A slug typed with the
+    // prefix already on it renders as mphb_mphb_guest3_first_name, no input
+    // ever matches, and the section silently never appears. Detect exactly
+    // that and say so — in the console always, on the page for admins.
+    function reportMisnamedFields(root, names) {
+        var wrong = [];
+        (names || []).forEach(function (name) {
+            if (root.querySelector('[name="mphb_' + esc(name) + '"]')) {
+                wrong.push(name);
+            }
+        });
+        if (!wrong.length) {
+            return;
+        }
+        var slugs = wrong.map(function (n) { return n.replace(/^mphb_/, ''); });
+        var msg = 'DCC Custom Checkout: Checkout Field slug is double-prefixed. ' +
+            'Rename ' + slugs.map(function (s2) { return 'mphb_' + s2; }).join(', ') +
+            ' to ' + slugs.join(', ') +
+            ' (MotoPress adds the mphb_ prefix when it renders the input).';
+        try { window.console && console.warn(msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            box.setAttribute('role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        var line = document.createElement('p');
+        line.textContent = (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg;
+        box.appendChild(line);
+    }
+
     // One conditional details section per guest group (2: name + phone;
     // 3 and 4: name only). Groups come from CFG.guestGroups (a single Config
     // definition shared with the server backstop); the legacy guest2FieldNames
@@ -323,7 +360,10 @@
                 }
             });
             if (!inputs.length) {
-                return; // Owner hasn't created this group's fields — no section.
+                // Owner hasn't created this group's fields — no section. If the
+                // fields DO exist but are double-prefixed, say why.
+                reportMisnamedFields(root, names);
+                return;
             }
 
             // Sections stack after "Your Information" in guest order; each one
@@ -497,6 +537,7 @@
             if (row && rows.indexOf(row) === -1) { rows.push(row); }
         });
         if (!inputs.length) {
+            reportMisnamedFields(root, dogNames);
             return null;
         }
 

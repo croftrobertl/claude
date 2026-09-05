@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.5
+Stable tag: 0.3.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,9 +38,12 @@ Part C — Additional-guest details, conditional on guest count
     made required by the guest dropdown, and validated on submit. A server-side
     backstop (form POST and REST route alike) blocks a submission that leaves a
     visible group's fields blank, so the client rule can't be bypassed.
-  * Guests 3/4 need native Checkout Fields (NOT required):
-    mphb_guest3_first_name, mphb_guest3_last_name, mphb_guest4_first_name,
-    mphb_guest4_last_name. Without them the sections simply don't render.
+  * Guests 3/4 need native Checkout Fields (NOT required), created with the
+    names guest3_first_name, guest3_last_name, guest4_first_name,
+    guest4_last_name — MotoPress renders those as mphb_guest3_first_name etc.
+    (see "Checkout Field names" below). Without them the sections simply
+    don't render. Field order doesn't matter; the rows are moved into their
+    section on load.
 
 Part D — Pet flow + per-night pet fee (native MotoPress Services)
   * Applies to the accommodations selected on the settings page (default:
@@ -78,14 +81,45 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
    While the box is off, or while any ID is 0, the offering stands down and
    bookings are capped at the included guest count.
 
+== Checkout Field names: slug vs. rendered input name ==
+
+MotoPress builds a Checkout Field's input name as "mphb_" + the field's own
+name (mphb-checkout-fields, CheckoutView). So there are two different strings
+and they must not be confused:
+
+  * The NAME you type when creating the field in MotoPress   -> guest3_first_name
+  * The input name it renders as, which this plugin matches  -> mphb_guest3_first_name
+
+Create the field WITHOUT the mphb_ prefix. A field created as
+"mphb_guest3_first_name" renders as mphb_mphb_guest3_first_name; nothing
+matches it, and the section silently never appears with no error shown.
+
+Where the plugin asks you for a value (the dog fields on the settings page)
+it wants the RENDERED input name — mphb_dog_type — and it flags both mistakes:
+a double-prefixed value, and a bare slug entered where the input name belongs.
+If a double-prefixed field exists on the live checkout, the checkout page also
+prints a notice naming the fix — visible to logged-in administrators only.
+
+== Setup: additional-guest fields (one-time, for guests 3 and 4) ==
+
+Bookings → Settings → Checkout Fields → add four text fields, set NOT required,
+named: guest3_first_name, guest3_last_name, guest4_first_name, guest4_last_name.
+(Guest 2's three fields — guest2_first_name, guest2_last_name, guest2_phone —
+already exist on the live site and follow the same pattern.) The exact list,
+with the input name each one renders as, is shown on the settings page under
+"Checkout Fields these sections need".
+
 == Setup: dog info fields (one-time, required for Part D data capture) ==
 
-1. Bookings → Settings → Checkout Fields → add three fields, set NOT required:
-     * Dog type  — text            (e.g. name mphb_dog_type)
-     * Dog size  — select: 10–20 lbs / 20–30 lbs / 30–40 lbs   (mphb_dog_size)
-     * Dog hair  — select: Short / Medium / Long               (mphb_dog_hair)
-2. WP Admin → DCC → Custom Checkout → "Dog info fields" → enter those exact field
-   names. The toggle then shows/hides + requires them; MotoPress saves them.
+1. Bookings → Settings → Checkout Fields → add three fields, set NOT required.
+   Create them with these names (MotoPress adds the mphb_ prefix itself):
+     * Dog type  — text                                        (name: dog_type)
+     * Dog size  — select: 10–20 lbs / 20–30 lbs / 30–40 lbs   (name: dog_size)
+     * Dog hair  — select: Short / Medium / Long               (name: dog_hair)
+2. WP Admin → DCC → Custom Checkout → "Dog info fields" → enter the RENDERED
+   input names: mphb_dog_type, mphb_dog_size, mphb_dog_hair. Each row shows a
+   status confirming the slug it maps to, or flagging a wrong shape. The toggle
+   then shows/hides + requires them; MotoPress saves them.
 3. (Optional) add %dcc_dog_details% to the email template if the fields don't
    already appear in the booking details.
 
@@ -123,11 +157,15 @@ also filterable for snippet-level overrides:
   dcc_checkout_pet_service_ids      (default daily 17712 / weekly 17711 / monthly 14926)
   dcc_checkout_bucket_thresholds    (default min_daily 2 / min_weekly 7 / min_monthly 30)
   dcc_checkout_guest2_field_names   (default mphb_guest2_first_name / _last_name / _phone)
+  dcc_checkout_guest3_field_names   (default mphb_guest3_first_name / _last_name)
+  dcc_checkout_guest4_field_names   (default mphb_guest4_first_name / _last_name)
   dcc_checkout_guest_fee_enabled    (bool)
   dcc_checkout_guest_accommodations (int[]; default the six 4-sleeper cottages)
   dcc_checkout_guest_service_ids    (daily/weekly/monthly; defaults 0 = dormant)
   dcc_checkout_included_guests      (default 2)
   dcc_checkout_dog_field_names      (default mphb_dog_type / mphb_dog_size / mphb_dog_hair)
+    (all field-name filters take RENDERED INPUT names — 'mphb_' + the
+     MotoPress Checkout Field slug — not the slug itself)
   dcc_checkout_dog_meta_keys        (default = the dog field names)
   dcc_checkout_guests_selector      (default select[name^="mphb_room_details"][name*="[adults]"])
   dcc_checkout_page_id / dcc_checkout_is_checkout_page (enqueue detection overrides)
@@ -138,6 +176,30 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.6 =
+* Docs correction (no behaviour change): the install steps named the RENDERED
+  input names (mphb_guest3_first_name, mphb_dog_type) where they should have
+  named the MotoPress Checkout Field SLUGS (guest3_first_name, dog_type).
+  MotoPress builds the input as 'mphb_' . $field->name, so a field created with
+  the prefix already on it renders as mphb_mphb_guest3_first_name, nothing
+  matches, and the section silently never appears with no error shown. The
+  readme, the settings page and the code docblocks now state both strings and
+  which is which. The plugin's own defaults were always correct — they are
+  input names, and they are unchanged.
+* New "Checkout Field names: slug vs. rendered input name" section in the
+  readme, plus a dedicated setup section for the guest 3/4 fields.
+* Settings page: the three dog field-name rows now show a live status —
+  the slug the value maps to, or a warning for the two ways it gets typed
+  wrong (a double-prefixed mphb_mphb_ value, or a bare slug entered where the
+  rendered input name belongs). Same spirit as the 0.3.5 service-ID status.
+* Settings page: new "Checkout Fields these sections need" reference table,
+  built from the same Config definition the JS and the server backstop use, so
+  the documented names can't drift from the ones actually looked for.
+* Checkout page: if a guest or dog Checkout Field exists but is
+  double-prefixed, the plugin now says so instead of doing nothing — a console
+  warning always, and an on-page notice naming the fix for logged-in
+  administrators only.
 
 = 0.3.5 =
 * Guests 3 and 4 now collect first and last name (no phone) — owner decision.

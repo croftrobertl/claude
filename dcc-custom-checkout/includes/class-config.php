@@ -338,6 +338,13 @@ final class Config
      * The second-guest field input NAMES (verified live). The Checkout Fields
      * post IDs are NOT in the markup, so we target by name.
      *
+     * These are RENDERED INPUT NAMES, not MotoPress field slugs. MotoPress
+     * builds the input as 'mphb_' . $field->name (mphb-checkout-fields
+     * CheckoutView), so the field created in MotoPress is named
+     * guest2_first_name and renders here as mphb_guest2_first_name. Creating
+     * the field as "mphb_guest2_first_name" renders mphb_mphb_guest2_first_name
+     * and nothing matches — the section then silently never appears.
+     *
      * @return array{first_name:string,last_name:string,phone:string}
      */
     public static function guest2_field_names(): array
@@ -365,8 +372,11 @@ final class Config
     }
 
     /**
-     * Native Checkout Field NAMES for guests 3 and 4 — names only, no phone
-     * (owner decision, 2026-08-31). Same convention as guest 2.
+     * Rendered input NAMES for guests 3 and 4 — names only, no phone (owner
+     * decision, 2026-08-31). Same convention as guest 2: the MotoPress field
+     * slugs are guest3_first_name / guest3_last_name / guest4_first_name /
+     * guest4_last_name, and MotoPress prefixes each with 'mphb_' when it
+     * renders the input.
      *
      * @return array{first_name:string,last_name:string}
      */
@@ -468,7 +478,11 @@ final class Config
      * --------------------------------------------------------------------- */
 
     /**
-     * The native Checkout Field NAMES for the three dog info fields.
+     * The RENDERED INPUT NAMES for the three dog info Checkout Fields.
+     *
+     * The MotoPress field slugs are dog_type / dog_size / dog_hair; MotoPress
+     * prefixes each with 'mphb_' when it renders the input, which is what we
+     * match on. See guest2_field_names() for the double-prefix failure mode.
      *
      * @return array{type:string,size:string,hair:string}
      */

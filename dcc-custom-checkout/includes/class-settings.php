@@ -246,13 +246,17 @@ final class Settings
 
                 <h2><?php echo esc_html__('Dog info fields (native Checkout Fields)', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
-                    <?php echo esc_html__('The three dog info fields are native MotoPress Checkout Fields you create under Bookings → Settings → Checkout Fields (set them NOT required). Enter their exact field names here so the "Traveling with a dog?" toggle can show/hide and require them. MotoPress saves them to the booking and can show them in emails.', 'dcc-checkout'); ?>
+                    <?php echo esc_html__('The three dog info fields are native MotoPress Checkout Fields you create under Bookings → Settings → Checkout Fields (set them NOT required). MotoPress saves them to the booking and can show them in emails.', 'dcc-checkout'); ?>
+                </p>
+                <p class="description" style="max-width:640px">
+                    <strong><?php echo esc_html__('Field name vs. slug:', 'dcc-checkout'); ?></strong>
+                    <?php echo esc_html__('MotoPress renders a Checkout Field as an input named "mphb_" + the field\'s own name. So create the field with the name dog_type, and enter its rendered input name mphb_dog_type below. Creating the field as "mphb_dog_type" makes MotoPress render mphb_mphb_dog_type, nothing matches, and the fields silently never appear.', 'dcc-checkout'); ?>
                 </p>
                 <table class="form-table" role="presentation">
                     <?php
-                    $this->text_row(__('Dog type — field name', 'dcc-checkout'), 'dog_field_type', (string) $s['dog_field_type'], __('Text field.', 'dcc-checkout'));
-                    $this->text_row(__('Dog size — field name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs.', 'dcc-checkout'));
-                    $this->text_row(__('Dog hair — field name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long.', 'dcc-checkout'));
+                    $this->field_name_row(__('Dog type — rendered input name', 'dcc-checkout'), 'dog_field_type', (string) $s['dog_field_type'], __('Text field. Create it in MotoPress as dog_type.', 'dcc-checkout'));
+                    $this->field_name_row(__('Dog size — rendered input name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs. Create it as dog_size.', 'dcc-checkout'));
+                    $this->field_name_row(__('Dog hair — rendered input name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long. Create it as dog_hair.', 'dcc-checkout'));
                     ?>
                 </table>
 
@@ -263,11 +267,13 @@ final class Settings
                 <table class="form-table" role="presentation">
                     <?php
                     $this->text_row(__('Guest #2 section title', 'dcc-checkout'), 'guest2_section_title', (string) $s['guest2_section_title'], __('Shown at 2+ guests: first name, last name, phone.', 'dcc-checkout'));
-                    $this->text_row(__('Guest #3 section title', 'dcc-checkout'), 'guest3_section_title', (string) $s['guest3_section_title'], __('Shown at 3+ guests: first and last name (create Checkout Fields mphb_guest3_first_name / mphb_guest3_last_name, not required).', 'dcc-checkout'));
-                    $this->text_row(__('Guest #4 section title', 'dcc-checkout'), 'guest4_section_title', (string) $s['guest4_section_title'], __('Shown at 4 guests: first and last name (mphb_guest4_first_name / mphb_guest4_last_name).', 'dcc-checkout'));
+                    $this->text_row(__('Guest #3 section title', 'dcc-checkout'), 'guest3_section_title', (string) $s['guest3_section_title'], __('Shown at 3+ guests: first and last name. Needs the Checkout Fields listed below.', 'dcc-checkout'));
+                    $this->text_row(__('Guest #4 section title', 'dcc-checkout'), 'guest4_section_title', (string) $s['guest4_section_title'], __('Shown at 4 guests: first and last name. Needs the Checkout Fields listed below.', 'dcc-checkout'));
                     $this->text_row(__('Pet section title', 'dcc-checkout'), 'pet_section_title', (string) $s['pet_section_title'], '');
                     ?>
                 </table>
+
+                <?php $this->render_guest_field_reference(); ?>
 
                 <?php submit_button(); ?>
             </form>
@@ -377,7 +383,7 @@ final class Settings
         echo '</td></tr>';
     }
 
-    private function text_row(string $label, string $key, string $value, string $desc): void
+    private function text_row(string $label, string $key, string $value, string $desc, string $extra_html = ''): void
     {
         printf(
             '<tr><th scope="row"><label for="dcc_%1$s">%2$s</label></th><td>'
@@ -390,7 +396,94 @@ final class Settings
         if ($desc !== '') {
             echo '<p class="description">' . esc_html($desc) . '</p>';
         }
+        echo $extra_html; // phpcs:ignore WordPress.Security.EscapeOutput -- built escaped in field_name_status_html()
         echo '</td></tr>';
+    }
+
+    /**
+     * Reference table of the Checkout Fields each conditional guest section
+     * needs, showing the MotoPress field SLUG next to the input name the field
+     * renders as. Built from Config::guest_field_groups() so it can't drift
+     * from what the JS and the server backstop actually look for.
+     */
+    private function render_guest_field_reference(): void
+    {
+        $groups = Config::guest_field_groups();
+        if (empty($groups)) {
+            return;
+        }
+        echo '<h3>' . esc_html__('Checkout Fields these sections need', 'dcc-checkout') . '</h3>';
+        echo '<p class="description" style="max-width:640px">'
+            . esc_html__('Create these under Bookings → Settings → Checkout Fields and leave them NOT required — the plugin makes them required only while their section is visible. Create each one using the NAME column: MotoPress renders the input as "mphb_" + that name, which is the value in the Renders as column. A field created as "mphb_guest3_first_name" would render as mphb_mphb_guest3_first_name and the section would silently never appear. Field order does not matter — the rows are moved into their section on load.', 'dcc-checkout')
+            . '</p>';
+        echo '<table class="widefat striped" style="max-width:640px"><thead><tr>'
+            . '<th>' . esc_html__('Section', 'dcc-checkout') . '</th>'
+            . '<th>' . esc_html__('Create field with name', 'dcc-checkout') . '</th>'
+            . '<th>' . esc_html__('Renders as', 'dcc-checkout') . '</th>'
+            . '</tr></thead><tbody>';
+        foreach ($groups as $group) {
+            foreach ((array) $group['names'] as $name) {
+                $name = (string) $name;
+                $slug = strncmp($name, 'mphb_', 5) === 0 ? substr($name, 5) : $name;
+                printf(
+                    '<tr><td>%1$s</td><td><code>%2$s</code></td><td><code>%3$s</code></td></tr>',
+                    esc_html((string) $group['title']),
+                    esc_html($slug),
+                    esc_html($name)
+                );
+            }
+        }
+        echo '</tbody></table>';
+    }
+
+    /**
+     * A Checkout Field name row: the value stored here is the RENDERED INPUT
+     * NAME, which MotoPress builds as 'mphb_' . $field->name — so the field's
+     * own slug in MotoPress is this value WITHOUT the mphb_ prefix.
+     */
+    private function field_name_row(string $label, string $key, string $value, string $desc): void
+    {
+        $this->text_row($label, $key, $value, $desc, $this->field_name_status_html($value));
+    }
+
+    /**
+     * Escaped status markup for a Checkout Field input name. Catches the two
+     * ways this gets typed wrong, in the same spirit as service_status_html():
+     *
+     *  - 'mphb_mphb_dog_type'  the slug was created WITH the prefix, so
+     *                          MotoPress prefixed it again. Nothing ever matches.
+     *  - 'dog_type'            the slug was entered here instead of the
+     *                          rendered input name.
+     *
+     * Both are pure string shape — no MotoPress internals are assumed.
+     */
+    private function field_name_status_html(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+        if (strncmp($value, 'mphb_mphb_', 10) === 0) {
+            return '<p class="description" style="color:#b32d2e">' . esc_html(sprintf(
+                /* translators: 1: the double-prefixed value, 2: the corrected MotoPress field slug. */
+                __('⚠ Double-prefixed: %1$s. Rename the MotoPress Checkout Field slug to %2$s — MotoPress adds the mphb_ prefix itself when it renders the input.', 'dcc-checkout'),
+                $value,
+                substr($value, 5)
+            )) . '</p>';
+        }
+        if (strncmp($value, 'mphb_', 5) !== 0) {
+            return '<p class="description" style="color:#b32d2e">' . esc_html(sprintf(
+                /* translators: 1: the value entered, 2: the rendered input name it should be. */
+                __('⚠ This looks like the field slug, not the rendered input name. If the MotoPress Checkout Field slug is %1$s, enter %2$s here.', 'dcc-checkout'),
+                $value,
+                'mphb_' . $value
+            )) . '</p>';
+        }
+        return '<p class="description" style="color:#1a7f37">' . esc_html(sprintf(
+            /* translators: %s: the MotoPress Checkout Field slug. */
+            __('✓ MotoPress Checkout Field slug: %s', 'dcc-checkout'),
+            substr($value, 5)
+        )) . '</p>';
     }
 
     /**

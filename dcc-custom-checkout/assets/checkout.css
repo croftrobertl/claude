@@ -403,6 +403,27 @@ select.dcc_checkout-invalid {
 /* ---------------------------------------------------------------------------
  * Error banner (shown after a server-side rejection redirect).
  * ------------------------------------------------------------------------- */
+/* Admin-only misconfiguration notice (e.g. a double-prefixed Checkout Field
+   slug). Deliberately distinct from the guest-facing error banner. */
+.dcc_checkout-admin-notice {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 2px dashed #b26a00;
+    background: #fff8e5;
+    color: #6b4700;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.dcc_checkout-admin-notice p {
+    margin: 0 0 6px;
+}
+
+.dcc_checkout-admin-notice p:last-child {
+    margin-bottom: 0;
+}
+
 .dcc_checkout-error-banner {
     margin: 0 0 20px;
     padding: 14px 18px;
