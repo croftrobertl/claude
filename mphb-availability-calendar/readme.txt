@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.0
+Stable tag: 0.23.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.1 =
+**0.23.0 should not be installed — use this build.**
+* Fixed: opening the details popup failed with "Could not load." for any booking that has internal notes — roughly two-thirds of live bookings. MotoPress hands the notes over as a list, and an over-strict type declaration inside the plugin made PHP 8 abort before the guard that handles lists could run. The declaration is gone from every helper that can receive a value straight from MotoPress, and the guard now does its job.
+* Internal notes and the booking log are now shown properly: one row per entry, newest first, labelled with the entry's date and the staff member who wrote it.
+* Tests now include a booking with internal notes and a log (the case the previous test set lacked), an Airbnb import with notes, and a direct booking with a completed payment. The new test was first run against the 0.23.0 code and reproduced the exact failure before the fix was applied.
 
 = 0.23.0 =
 Staff calendar rebuilt for use on a phone at the door.

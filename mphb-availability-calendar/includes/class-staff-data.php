@@ -228,7 +228,7 @@ final class Staff_Data
     }
 
     /** @return array<int,array{label:string,value:string,muted?:bool}> */
-    private static function section_booking(int $id, \WP_Post $post, ?object $b, array $source): array
+    private static function section_booking(int $id, \WP_Post $post, $b, array $source): array
     {
         $total = self::scalar($b, ['getTotalPrice', 'getTotal'], null);
         $pay   = self::payment_info($id, $b);
@@ -264,7 +264,7 @@ final class Staff_Data
     }
 
     /** Per reserved accommodation. @return array<int,array<string,mixed>> */
-    private static function section_rooms(int $id, ?object $b, array $source): array
+    private static function section_rooms(int $id, $b, array $source): array
     {
         $types = [];
         foreach (Data_Provider::list_room_types() as $t) {
@@ -302,7 +302,7 @@ final class Staff_Data
     }
 
     /** @return array<string,mixed> */
-    private static function section_customer(int $id, ?object $b): array
+    private static function section_customer(int $id, $b): array
     {
         $c = self::first_of($b, ['getCustomer']);
 
@@ -335,27 +335,172 @@ final class Staff_Data
         return ['fields' => $fields, 'photoId' => $photo];
     }
 
-    /** @return array<int,array{label:string,value:string}> */
-    private static function section_notes(int $id, ?object $b): array
+    /**
+     * Guest note, then internal notes and the booking log as one row per
+     * entry, newest first. MPHB's getInternalNotes() returns an ARRAY of
+     * {note, date, user} (and getLogs() an array of arrays/objects); those
+     * are never squeezed through scalar() — see note_entry().
+     *
+     * @return array<int,array{label:string,value:string}>
+     */
+    private static function section_notes(int $id, $b): array
     {
         $out = [];
         $customer_note = self::scalar($b, ['getCustomerNote', 'getNote'], null);
         $out[] = self::row(__('Guest note', 'mphb-availability-calendar'), $customer_note);
 
-        $internal = self::scalar($b, ['getInternalNotes', 'getInternalNote'], null);
-        $out[] = self::row(__('Internal notes', 'mphb-availability-calendar'), $internal);
+        $internal = self::first_of($b, ['getInternalNotes', 'getInternalNote']);
+        $rows = self::entry_rows($internal, __('Internal note', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']);
+        if (!$rows) {
+            $out[] = self::row(__('Internal notes', 'mphb-availability-calendar'), null);
+        }
+        foreach ($rows as $r) {
+            $out[] = $r;
+        }
 
         // The booking log, if MPHB exposes one.
         $log = self::first_of($b, ['getLogs', 'getLog']);
-        if (is_array($log)) {
-            foreach (array_slice($log, 0, 50) as $entry) {
-                $text = is_scalar($entry) ? (string) $entry : (string) self::scalar($entry, ['getMessage', 'getText'], '');
-                if ($text !== '') {
-                    $out[] = self::row(__('Log', 'mphb-availability-calendar'), $text);
-                }
-            }
+        foreach (self::entry_rows($log, __('Log', 'mphb-availability-calendar'), ['message', 'text', 'note', 'log', 'content']) as $r) {
+            $out[] = $r;
         }
         return $out;
+    }
+
+    /**
+     * Turn a notes/log value of ANY shape into label/value rows, newest first.
+     * Accepts a string, an object, or a list whose entries are strings,
+     * arrays ({note,date,user}) or objects (getMessage()/getDate()/getUser()).
+     * Label is the entry's date (date_i18n) and author when known, else
+     * $fallback_label. At most 50 rows.
+     *
+     * @param mixed    $value
+     * @param string[] $text_keys  array keys / getter stems to try for the text
+     * @return array<int,array{label:string,value:string}>
+     */
+    private static function entry_rows($value, string $fallback_label, array $text_keys): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+        $entries = is_array($value) && !self::is_assoc($value) ? $value : [$value];
+
+        $parsed = [];
+        $i = 0;
+        foreach (array_slice($entries, 0, 50) as $e) {
+            $n = self::note_entry($e, $text_keys);
+            if ($n['text'] === '') {
+                continue;
+            }
+            $n['i'] = $i++;
+            $parsed[] = $n;
+        }
+        // Newest first: by timestamp when every entry has one, else reverse
+        // the source order (MPHB appends).
+        $all_dated = $parsed && !in_array(null, array_column($parsed, 'ts'), true);
+        if ($all_dated) {
+            usort($parsed, static fn($a, $b) => ($b['ts'] <=> $a['ts']) ?: ($b['i'] <=> $a['i']));
+        } else {
+            $parsed = array_reverse($parsed);
+        }
+
+        $out = [];
+        foreach ($parsed as $n) {
+            $bits = [];
+            if ($n['ts'] !== null) {
+                $bits[] = self::format_datetime($n['ts']);
+            }
+            if ($n['author'] !== '') {
+                $bits[] = $n['author'];
+            }
+            $out[] = self::row($bits ? implode(' · ', $bits) : $fallback_label, $n['text']);
+        }
+        return $out;
+    }
+
+    /**
+     * One note/log entry of any shape -> ['text','ts','author'].
+     *
+     * @param mixed $e
+     * @return array{text:string,ts:?int,author:string}
+     */
+    private static function note_entry($e, array $text_keys): array
+    {
+        $text = ''; $date = null; $user = null;
+        if (is_scalar($e)) {
+            $text = (string) $e;
+        } elseif (is_array($e)) {
+            foreach ($text_keys as $k) {
+                if (isset($e[$k]) && is_scalar($e[$k]) && (string) $e[$k] !== '') { $text = (string) $e[$k]; break; }
+            }
+            foreach (['date', 'time', 'created', 'datetime', 'timestamp'] as $k) {
+                if (isset($e[$k]) && $e[$k] !== '') { $date = $e[$k]; break; }
+            }
+            foreach (['user', 'user_id', 'author', 'author_id'] as $k) {
+                if (isset($e[$k]) && $e[$k] !== '') { $user = $e[$k]; break; }
+            }
+        } elseif (is_object($e)) {
+            $getters = array_map(static fn($k) => 'get' . str_replace(' ', '', ucwords(str_replace('_', ' ', $k))), $text_keys);
+            $text = (string) self::scalar($e, $getters, '');
+            $date = self::first_of($e, ['getDate', 'getTime', 'getCreated', 'getDateTime']);
+            $user = self::first_of($e, ['getUser', 'getUserId', 'getAuthor', 'getAuthorId']);
+            if ($text === '' && method_exists($e, '__toString')) {
+                $text = (string) $e;
+            }
+        }
+        return ['text' => self::plain($text), 'ts' => self::to_timestamp($date), 'author' => self::author_name($user)];
+    }
+
+    /** @param mixed $v */
+    private static function to_timestamp($v): ?int
+    {
+        if ($v instanceof \DateTimeInterface) {
+            return $v->getTimestamp();
+        }
+        if (is_int($v) || (is_string($v) && ctype_digit($v))) {
+            $n = (int) $v;
+            return $n > 0 ? $n : null;
+        }
+        if (is_string($v) && $v !== '') {
+            $t = strtotime($v);
+            return $t === false ? null : $t;
+        }
+        return null;
+    }
+
+    private static function format_datetime(int $ts): string
+    {
+        $fmt = (string) get_option('date_format', 'F j, Y') . ' ' . (string) get_option('time_format', 'g:i a');
+        $fmt = trim($fmt) !== '' ? trim($fmt) : 'F j, Y g:i a';
+        // date_i18n renders in the site timezone; the raw stamp is UTC.
+        return function_exists('date_i18n') ? (string) date_i18n($fmt, $ts) : date($fmt, $ts);
+    }
+
+    /** @param mixed $user  user id, login/display string, WP_User or object */
+    private static function author_name($user): string
+    {
+        if ($user === null || $user === '' || $user === 0 || $user === '0') {
+            return '';
+        }
+        if (is_object($user)) {
+            $n = $user->display_name ?? null;
+            if (!is_string($n) || $n === '') {
+                $n = self::scalar($user, ['getDisplayName', 'getName', 'getLogin'], '');
+            }
+            return self::plain((string) $n);
+        }
+        if (is_numeric($user)) {
+            $u = function_exists('get_userdata') ? get_userdata((int) $user) : false;
+            if (is_object($u) && isset($u->display_name) && is_string($u->display_name) && $u->display_name !== '') {
+                return self::plain($u->display_name);
+            }
+            return '#' . (int) $user;
+        }
+        return self::plain((string) $user);
+    }
+
+    private static function is_assoc(array $a): bool
+    {
+        return $a !== [] && array_keys($a) !== range(0, count($a) - 1);
     }
 
     /**
@@ -559,7 +704,7 @@ final class Staff_Data
      *
      * @return array<int,array{entity:?object,room_id:int,room_type_id:int}>
      */
-    private static function reserved_entities(int $booking_id, ?object $b): array
+    private static function reserved_entities(int $booking_id, $b): array
     {
         $out = [];
         $ents = self::first_of($b, ['getReservedRooms', 'getRooms']);
@@ -594,7 +739,7 @@ final class Staff_Data
     }
 
     /** @return array<string,mixed> */
-    private static function custom_fields(int $booking_id, ?object $customer): array
+    private static function custom_fields(int $booking_id, $customer): array
     {
         $fields = self::first_of($customer, ['getCustomFields', 'getFields', 'getCustomerFields']);
         if (is_array($fields) && $fields) {
@@ -624,8 +769,20 @@ final class Staff_Data
         return $p && $p->post_title !== '' ? self::plain((string) $p->post_title) : '#' . $room_id;
     }
 
-    /** First candidate method that returns something non-empty. */
-    private static function first_of(?object $obj, array $methods)
+    /**
+     * First candidate method that returns something non-empty.
+     *
+     * $obj is deliberately UNTYPED. MPHB getters return arrays as well as
+     * objects (getInternalNotes(), getLogs(), sometimes getCustomer()), and
+     * scalar() re-feeds whatever it got back through here. A `?object` hint
+     * made PHP 8 throw a TypeError before the is_object() guard below could
+     * run — that fatal broke the details popup for two-thirds of live
+     * bookings in 0.23.0. The guard IS the type check; do not re-add a hint
+     * to this or any helper that can be handed a getter's return value.
+     *
+     * @param mixed $obj
+     */
+    private static function first_of($obj, array $methods)
     {
         if (!is_object($obj)) {
             return null;
@@ -646,7 +803,8 @@ final class Staff_Data
         return null;
     }
 
-    private static function scalar(?object $obj, array $methods, $default)
+    /** @param mixed $obj  see first_of() */
+    private static function scalar($obj, array $methods, $default)
     {
         $v = self::first_of($obj, $methods);
         if ($v === null) {
@@ -663,7 +821,7 @@ final class Staff_Data
         return is_scalar($t) ? $t : $default;
     }
 
-    private static function date_of(?object $b, array $methods, int $id, string $meta_key): string
+    private static function date_of($b, array $methods, int $id, string $meta_key): string
     {
         $v = self::scalar($b, $methods, null);
         if ($v === null || $v === '') {
@@ -672,7 +830,7 @@ final class Staff_Data
         return is_string($v) && $v !== '' ? $v : '—';
     }
 
-    private static function list_of(?object $obj, array $methods): array
+    private static function list_of($obj, array $methods): array
     {
         $v = self::first_of($obj, $methods);
         if (!is_array($v)) {
@@ -726,7 +884,7 @@ final class Staff_Data
      *
      * @return array{paid:?float,method:string,status:string}
      */
-    private static function payment_info(int $booking_id, ?object $b): array
+    private static function payment_info(int $booking_id, $b): array
     {
         $out = ['paid' => null, 'method' => '', 'status' => ''];
 

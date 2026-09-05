@@ -253,6 +253,20 @@ as `null` with `provided: false` plus a "not provided by <OTA>" note. The UI
 renders that greyed and italic. **Never surface an imported guest count as a
 number.** Direct bookings return real counts.
 
+**No `?object` parameter hints in the MPHB adapter (0.23.1).** MPHB getters
+return arrays as well as objects (`getInternalNotes()` is a list of
+`{note,date,user}`, `getLogs()` a list of arrays/objects, `getCustomer()`
+sometimes an array), and `scalar()` re-feeds whatever it got into
+`first_of()`. Under PHP 8 a `?object $obj` hint throws a TypeError BEFORE the
+`is_object()` guard runs — that fatal broke the popup for two-thirds of live
+bookings in 0.23.0. Every helper that can be handed a getter's return value
+is now untyped and guarded by `is_object()`; `staff-notes-test.php` greps
+the file for `?object $` and fails if one comes back. Notes and log entries
+go through `entry_rows()`/`note_entry()` (any shape → rows, newest first,
+date via `date_i18n`, author via `get_userdata()`), never through `scalar()`.
+Harness lesson from the same fix: a top-level `$logs = …` in a harness IS
+`$GLOBALS['logs']` — prefix fixture globals (`fx_*`).
+
 **Reading MPHB.** MPHB's source is not vendored and getter names vary across
 6.x, so every entity read goes through `first_of()`/`scalar()`, which try a
 list of candidate getters and fall back to post meta only as a last resort
