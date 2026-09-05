@@ -141,11 +141,74 @@ Request flow when a visitor loads a page containing the widget:
 4. All network is lazy: `widget.js` defers any admin-ajax call behind an IntersectionObserver (`whenVisible`, 300px rootMargin) and skips the revalidate entirely when the embed passes `embedIsFresh()` — a normal page view can make zero calls. When it does fetch, it picks the day count for the current device, POSTs to `admin-ajax.php?action=mphbac_query`, and **renders the grid client-side**, re-rendering on filter/nav/swipe and breakpoint changes. After a render it idle-prefetches the adjacent nav windows into a client cache (5-min TTL) — but only once measured endpoint latency is under 800ms (`lastLatencyMs`); slow hosting never pays for speculation.
 5. `Data_Provider::get_availability()` (transient-cached, IDs sorted for canonical keys) backs the AJAX endpoint — the transient layer hits on repeats. The AJAX endpoint clamps dates to today−400d…today+730d and validates room-type IDs against real accommodation types (options-table flood protection). The grid is intentionally client-rendered so each device shows its own day count. **Signature parity invariant:** the embedded payload and the AJAX response for the same window must serialize identically (same ID sort, same day order, same `bookedThrough` gating) — that's what lets the silent revalidate skip the re-render.
 
-## Staff calendar (/staff/) — 0.21.0
+## Staff calendar (/staff/) — 0.21.0, rebuilt 0.23.0
 
-`[mphb_staff_calendar]`. Three files: `class-staff.php` (gate + endpoints),
-`class-staff-data.php` (queries + MPHB adapter), `class-staff-widget.php`
-(shortcode shell). This is the ONLY part of the plugin that handles guest PII.
+`[mphb_staff_calendar]` / `dccac_staff`. Four files: `class-staff.php` (gate +
+endpoints), `class-staff-data.php` (queries + MPHB adapter),
+`class-staff-widget.php` (the shell), `class-staff-elementor.php` (thin widget
+wrapper). This is the ONLY part of the plugin that handles guest PII.
+
+**UI (0.23.0).** `staff.js` renders ONE month payload two ways:
+- **Chart** — a tape chart: CSS grid, rows = cottages, columns = days, with
+  TWO half-day tracks per day so a check-out and a check-in share a cell. A
+  bar spans "second half of check-in day" to "first half of check-out day".
+  Bars clamped to the month edge get `is-cont-left/right` (square edge, no
+  cap). Overlapping bookings in one cottage get lanes (greedy interval
+  colouring; the row spans N lanes). Geometry is FIXED by custom properties
+  (`--staff-day-w` 44, `--staff-row-h` 46, `--staff-label-w` 96) so every
+  month is identical. Cottage column, date row and the corner are
+  `position: sticky` inside `.mphbac-staff-grid`, which is the scroll box.
+- **Agenda** — one day's Arriving / Departing / In house lists, computed
+  client-side from the same payload (a day near a month edge loads that
+  month; the request is de-duplicated by the cache). Default on
+  `(max-width: 700px)`; the toggle persists in localStorage under
+  `mphbacStaffView` and, once set, overrides the breakpoint.
+- State hues are custom properties used ONCE each (`--staff-in/out/stay`),
+  shared by legend swatches, bar segments (classes `is-in/is-stay/is-out`)
+  and list group headers, so they cannot disagree. White text on all three
+  is ≥ 7:1.
+- The detail dialog is PORTALED to `<body>` on open (marker comments put it
+  back on close) and every dialog rule is class-doubled
+  (`.mphbac-staff-sheet.mphbac-staff-sheet`). Without the portal, a
+  transformed Elementor ancestor becomes the containing block for
+  `position: fixed` and the dialog opens "high" and clips its heading — the
+  0.21–0.22 bug. `html/body.mphbac-staff-open` locks page scroll.
+- CLASS NAMES: the top nav bar is `.mphbac-staff-topbar`, booking bars are
+  `.mphbac-staff-bar`. They collided in the first 0.23.0 draft (bar rules
+  painted the nav bar; the generic `.mphbac-staff button { color: inherit }`
+  reset outranked the bar colour). The button reset is now font-only and
+  every button class sets its own colour — keep it that way.
+
+**Text contract (0.23.0).** The client renders EVERY value with textContent
+and uses no HTML-injection API (the browser harness greps for it). The
+server therefore sends PLAIN TEXT: `Staff_Data::money()` strips
+`mphb_format_price()`'s markup and decodes `&#036;`, and `str_or_dash()` /
+`plain()` do the same for every row value (MPHB log entries carry links).
+Never "fix" a literal `<span>` in the dialog by switching to innerHTML.
+
+**Paid amount (0.23.0).** The MPHB Booking entity has no paid-amount getter
+on the live install (Total worked, Paid/Balance showed "—"). `payment_info()`
+resolves in tiers: entity getter → `MPHB()->getPaymentRepository()
+->findAll(['booking_id' => id])` summing `mphb-p-completed` → SQL over
+`mphb_payment` posts linked by `_mphb_booking_id` (both key spellings
+accepted, `MAX()` aggregates so ONLY_FULL_GROUP_BY is happy). `paid` is
+null ONLY when no payment record exists or the read failed — then the row
+says "No payment recorded" and Balance due is "—", never "$0.00".
+**Unverified against MPHB source** (motopress.github.io and plugins.trac
+are both blocked from this environment): the repository method/argument
+and the payment meta keys are best knowledge, hedged. If Paid still reads
+"No payment recorded" on a booking that definitely has a payment, check
+the payment post's meta keys in wp-admin and extend the `PAYMENT_*_KEYS`
+constants.
+
+**Harnesses.** `staff-ui/ui-test.js` (Chromium via playwright-core) renders
+the REAL shell (`gen-shell.php` → `shell.html`) + real CSS/JS with a stubbed
+`fetch`, inside a transformed ancestor, at 1280×500 and 375×700, and
+asserts every item of the 0.23.0 brief plus the no-PII shell and the
+no-innerHTML rule. `staff-payment-test.php` covers the plain-text contract
+and the three paid tiers with an MPHB stub present. `staff-gate-test.php`
+must be run with `-d error_log=<file>` (it asserts the fail-closed log
+line); `parity-test.js` takes the widget.js path as its argument.
 
 **Security gate — the whole design rests on this.**
 - `Staff::is_authorized()` is the single control. Two ways in: a valid
