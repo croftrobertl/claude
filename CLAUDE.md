@@ -159,11 +159,27 @@ bump so the tracked zip never lags the source.
   silently corrupting four sprites; the corrupted output is an ordinary-looking
   number no text search can find. Run `node tools/validate-paths.js` after any
   change to `assets/js/engine.js` — it parses every `d` and exits 1 on a bad one.
-- **The "behind" layering canvas is mounted inside the theme's opaque content
-  column at `z-index:-1`,** not on the body. Bravada's `main.main` is
-  `position:relative; z-index:9` with a white background, so no body-level
-  z-index can sit between that background and the text above it. Override the
-  host with the `dcc_seasons_backdrop_host` filter.
+- **The "behind" layering canvas is mounted inside the element that actually
+  PAINTS the page, at `z-index:-1`** — not on the body, and not merely in the
+  theme's content column. On this site that column (`main.main`,
+  `position:relative; z-index:9`, white) contains `article#post-620`, which is
+  also white, so mounting in `main` still left the article covering the canvas.
+  Four rules make it work, and each was a separate bug:
+  1. A candidate must paint something AND have non-zero area — Elementor breaks
+     out of the theme wrappers, collapsing `#content` / `.entry-content` to 0px.
+  2. After mounting, sample what is really painting the viewport; if it is a
+     DESCENDANT of the host, move into it.
+  3. `article#post-620` carries a `translateZ(-0.001px)` hack, making it the
+     containing block for `position:fixed` descendants. A fixed canvas there is
+     silently reduced to an article-sized scrolling box, so the mount switches
+     to `position:sticky` (with `display:block`, or it adds baseline space and
+     shifts layout).
+  4. `z-index:-1` resolves in the nearest ANCESTOR stacking context, so a host
+     that is not one gets `isolation:isolate` — otherwise the canvas lands
+     behind that host's own background.
+  Override the host with the `dcc_seasons_backdrop_host` filter. A page painted
+  by SEVERAL opaque boxes is the one case a single canvas cannot fully sit
+  behind; `?dcc_debug=1` says so and names them.
 - **The schedule is rules, not dates** (`includes/class-schedule.php`). Rows are
   `{start:{on,off,m?,d?}, end:{…}, theme, label, year}`; `on` is `fixed` or a
   named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver

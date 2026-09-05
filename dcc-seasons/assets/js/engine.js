@@ -390,92 +390,280 @@
 		 * an ancestor has a transform/filter/perspective, which WOULD make
 		 * it the containing block. Rather than enumerate those properties,
 		 * the mount is verified below by measuring the canvas. --- */
-		function paintsOpaque(el) {
-			var cs = W.getComputedStyle(el);
-			if (cs.backgroundImage && cs.backgroundImage !== 'none') { return true; }
+		/* --- Choosing the element to mount inside, on a real theme. -------
+		 *
+		 * Measured on the live site (Bravada/Cryout), the content chain is:
+		 *
+		 *   div#content.cryout   transparent, 0px wide
+		 *     main#main.main     WHITE, position:relative z-index:9, no transform
+		 *       article#post-620 WHITE, but carries translateZ(-0.001px)
+		 *         div.entry-content  transparent, 0px wide
+		 *
+		 * Three traps in that, all of which this code now handles:
+		 *
+		 *  1. The DEEPEST anchor (.entry-content) is transparent and ZERO
+		 *     WIDTH — Elementor breaks out of the theme wrappers, so they
+		 *     collapse. A deepest-first walk that only asks "opaque?" can
+		 *     land on an invisible, zero-area host.
+		 *  2. article carries a non-identity 3D transform, which makes it the
+		 *     containing block for position:fixed descendants. Mounting there
+		 *     turns the fixed backdrop into an article-sized box that scrolls
+		 *     and clips — the same trap the availability calendar's popup hit
+		 *     before it portalled to <body>.
+		 *  3. Only a POSITIONED element with a numeric z-index above the
+		 *     body-mount z-index can actually cover a body-level canvas. A
+		 *     stacking context made by transform or opacity alone paints in
+		 *     the z-index:auto step, i.e. BELOW a fixed z-index:5 element, so
+		 *     it is not what is hiding the particles and must not outrank the
+		 *     element that is. main#main.main (z-index 9) is the real one.
+		 * ------------------------------------------------------------------ */
+		var BODY_Z = 5; /* z-index used when the canvas falls back to <body> */
+
+		function alphaOf(cs) {
+			if (cs.backgroundImage && cs.backgroundImage !== 'none') { return 1; }
 			var m = /^rgba?\(([^)]+)\)/.exec(cs.backgroundColor || '');
-			if (!m) { return false; }
+			if (!m) { return 0; }
 			var parts2 = m[1].split(',');
-			return parts2.length < 4 || parseFloat(parts2[3]) >= 0.95;
+			return parts2.length < 4 ? 1 : parseFloat(parts2[3]) || 0;
 		}
+		/* Painted enough to hide anything behind it. Not literally alpha > 0:
+		 * a 2% wash is not what is covering the particles, and treating it as
+		 * a host would mount the canvas UNDER a background that never
+		 * occluded it. */
+		function paintsOpaque(el) { return alphaOf(W.getComputedStyle(el)) > 0.05; }
+
+		function rectOf(el) { return el.getBoundingClientRect(); }
+		function hasArea(el) {
+			var r = rectOf(el);
+			return r.width >= 1 && r.height >= 1;
+		}
+		/* Does this element establish the containing block for fixed
+		 * descendants? Anything here makes `position:fixed` resolve against
+		 * the element instead of the viewport. */
+		function fixesDescendants(el) {
+			var cs = W.getComputedStyle(el);
+			if (cs.transform && cs.transform !== 'none') { return true; }
+			if (cs.perspective && cs.perspective !== 'none') { return true; }
+			if (cs.filter && cs.filter !== 'none') { return true; }
+			if (cs.backdropFilter && cs.backdropFilter !== 'none') { return true; }
+			if (cs.willChange && /transform|perspective|filter/.test(cs.willChange)) { return true; }
+			if (cs.contain && /paint|layout|strict|content/.test(cs.contain)) { return true; }
+			if (cs.containerType && cs.containerType !== 'normal') { return true; }
+			return false;
+		}
+		function trapped(el) {
+			for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+				if (fixesDescendants(n)) { return true; }
+			}
+			return false;
+		}
+		/* Tier 1: can actually cover a body-level canvas (see note 3 above). */
+		function occluder(el) {
+			var cs = W.getComputedStyle(el);
+			var z = parseInt(cs.zIndex, 10);
+			return cs.position !== 'static' && !isNaN(z) && z > BODY_Z;
+		}
+		/* Tier 2: makes a stacking context some other way. Kept as a safety
+		 * net for themes where the reasoning above doesn't hold; never tried
+		 * before a tier-1 candidate. */
 		function stacks(el) {
 			var cs = W.getComputedStyle(el);
 			if (cs.position !== 'static' && cs.zIndex !== 'auto') { return true; }
 			if (parseFloat(cs.opacity) < 1) { return true; }
 			if (cs.isolation === 'isolate') { return true; }
 			if (cs.mixBlendMode && cs.mixBlendMode !== 'normal') { return true; }
-			return !!((cs.transform && cs.transform !== 'none') || (cs.filter && cs.filter !== 'none') || (cs.perspective && cs.perspective !== 'none'));
+			return fixesDescendants(el);
 		}
-		/* Nearest ancestor of the content that both establishes a stacking
-		 * context and paints something opaque — found by walking up, never
-		 * hardcoded to one theme's markup. A selector from the
-		 * dcc_seasons_backdrop_host filter wins outright. */
-		/* Candidate hosts, nearest first. A selector from the
-		 * dcc_seasons_backdrop_host filter is tried before the walk. */
-		function backdropHosts() {
-			var out = [], el, i;
-			if (CFG.backdropHost) {
-				try { el = D.querySelector(CFG.backdropHost); } catch (e) { el = null; }
-				if (el && el !== D.body) { out.push(el); }
-			}
-			/* Walk up from EVERY content anchor, not just the first one in
-			 * document order. querySelector returns the earliest match, which
-			 * on a theme where a wrapper like #content encloses the real
-			 * content column would be that wrapper — and walking up from an
-			 * ancestor can never reach the column inside it. Collecting from
-			 * every anchor and trying the deepest candidates first makes the
-			 * search independent of how the theme nests its wrappers. */
-			var anchors = D.querySelectorAll('main, [role="main"], #main, #content, .site-content, .site-main, article, .entry-content');
-			var found = [];
-			for (i = 0; i < anchors.length; i++) {
-				for (el = anchors[i]; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) {
-					if (found.indexOf(el) < 0 && stacks(el) && paintsOpaque(el)) { found.push(el); }
-				}
-			}
-			/* Deepest first: the innermost opaque column is the one whose
-			 * background is actually covering the canvas. */
-			found.sort(function (a, b) { return depth(b) - depth(a); });
-			for (i = 0; i < found.length; i++) {
-				if (out.indexOf(found[i]) < 0) { out.push(found[i]); }
-			}
-			return out;
+		/* Being inside a transform does NOT disqualify a host — it only rules
+		 * out a position:fixed canvas there, and mountIn() has a sticky mode
+		 * for exactly that. Abandoning such a column to the body mount would
+		 * leave "behind" broken on any theme that uses a translateZ hack. */
+		function viable(el) {
+			return paintsOpaque(el) && hasArea(el);
 		}
 		function depth(el) {
 			var n = 0;
 			while ((el = el.parentElement)) { n++; }
 			return n;
 		}
+		function pathOf(el) {
+			if (!el || el.nodeType !== 1) { return String(el); }
+			return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') +
+				(el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
+		}
+
+		/* Candidate hosts: the filter's selector first, then tier 1 deepest
+		 * first, then tier 2 deepest first. Anchors are walked from EVERY
+		 * match, not just the first in document order — a wrapper like
+		 * #content encloses the real column, and walking up from an ancestor
+		 * can never reach what is inside it. */
+		function backdropHosts() {
+			var out = [], el, i;
+			if (CFG.backdropHost) {
+				try { el = D.querySelector(CFG.backdropHost); } catch (e) { el = null; }
+				if (el && el !== D.body) { out.push(el); }
+			}
+			var anchors = D.querySelectorAll('main, [role="main"], #main, #content, .site-content, .site-main, article, .entry-content');
+			var t1 = [], t2 = [], seen = [];
+			for (i = 0; i < anchors.length; i++) {
+				for (el = anchors[i]; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) {
+					if (seen.indexOf(el) >= 0) { continue; }
+					seen.push(el);
+					if (!viable(el)) { continue; }
+					if (occluder(el)) { t1.push(el); } else if (stacks(el)) { t2.push(el); }
+				}
+			}
+			var byDepth = function (a, b) { return depth(b) - depth(a); };
+			t1.sort(byDepth);
+			t2.sort(byDepth);
+			for (i = 0; i < t1.length; i++) { if (out.indexOf(t1[i]) < 0) { out.push(t1[i]); } }
+			for (i = 0; i < t2.length; i++) { if (out.indexOf(t2[i]) < 0) { out.push(t2[i]); } }
+			return out;
+		}
 		function mountOnBody(z) {
 			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + z + ';';
 			D.body.appendChild(cv);
 		}
-		/* A host with a transform/filter/perspective is the containing block
-		 * for fixed descendants, so the canvas would be offset and clipped to
-		 * it instead of covering the viewport. Rather than enumerate the
-		 * properties that do that, mount and measure: if the canvas no longer
-		 * covers the viewport, this host is unusable — try the next one up. */
-		function tryHost(el) {
-			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;';
-			el.appendChild(cv);
+		/* Mount and MEASURE. Two modes:
+		 *
+		 *  'fixed'  — the normal one. The canvas must come out as the
+		 *             viewport, not merely at-least-viewport-sized: a tall
+		 *             transformed ancestor would satisfy a ">=" test while
+		 *             actually producing a box that scrolls with the page and
+		 *             is clipped by its overflow.
+		 *
+		 *  'sticky' — for a host inside a transformed subtree, where
+		 *             position:fixed resolves against that ancestor instead
+		 *             of the viewport and is unusable. A sticky FIRST child
+		 *             with a negative bottom margin takes no layout space,
+		 *             stays viewport-tall, and follows the scroll through the
+		 *             host — so the particles ride the content column instead
+		 *             of the window. This is the only way to express "behind"
+		 *             under a transform, and Bravada puts a translateZ() hack
+		 *             on its article element.
+		 */
+		function mountIn(el, mode) {
+			/* z-index:-1 resolves inside the nearest ANCESTOR stacking
+			 * context, not inside the element it is written on. Mount into an
+			 * element that isn't one and the canvas lands behind that
+			 * element's own background — invisible, the very failure this is
+			 * meant to fix. `isolation:isolate` makes the host a stacking
+			 * context and changes nothing visually. */
+			if (!stacks(el)) {
+				el.style.isolation = 'isolate';
+				diag.notes.push('isolation:isolate applied to ' + pathOf(el) + ' so z-index:-1 resolves inside it');
+			}
+			if (mode === 'sticky') {
+				/* display:block matters: a canvas is inline by default, so it would
+				 * sit on a text baseline and add descender space — a layout
+				 * shift, which this plugin promises never to cause. */
+				cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:100vh;margin-bottom:-100vh;pointer-events:none;z-index:-1;';
+				el.insertBefore(cv, el.firstChild);
+			} else {
+				cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;';
+				el.appendChild(cv);
+			}
 			var r = cv.getBoundingClientRect();
-			if (r.width >= W.innerWidth - 2 && r.height >= W.innerHeight - 2 && r.top <= 2 && r.left <= 2) { return true; }
+			var ok;
+			if (mode === 'sticky') {
+				/* width:100% resolves against the host's CONTENT box, so a
+				 * padded column legitimately yields a narrower canvas —
+				 * comparing against the border box rejected every padded
+				 * host on a narrow viewport. Compare like for like. */
+				var hcs = W.getComputedStyle(el);
+				var inner = el.clientWidth - (parseFloat(hcs.paddingLeft) || 0) - (parseFloat(hcs.paddingRight) || 0);
+				var hr = rectOf(el);
+				ok = r.width >= 1 && r.width >= mx2(inner, 1) - 2 &&
+					r.height >= mn(W.innerHeight, mx2(hr.height, 1)) * 0.9 - 1;
+			} else {
+				ok = MT.abs(r.width - W.innerWidth) <= 2 && MT.abs(r.height - W.innerHeight) <= 2 &&
+					MT.abs(r.top) <= 2 && MT.abs(r.left) <= 2;
+			}
+			if (ok) { return true; }
 			el.removeChild(cv);
 			return false;
 		}
-		var host = null, cand = [], diag = { tried: [] };
+		function tryHost(el) { return mountIn(el, 'fixed'); }
+
+		/* What is actually painting at a point — the first element at or
+		 * above it with a real background. Used to verify the mount: a
+		 * painter that is a DESCENDANT of the host sits above the canvas and
+		 * is hiding it; the host itself or an ancestor sits below it. */
+		function painterAt(x, y) {
+			var el = D.elementFromPoint(x, y);
+			for (; el && el.nodeType === 1 && el !== D.documentElement; el = el.parentElement) {
+				if (paintsOpaque(el)) { return el; }
+			}
+			return null;
+		}
+		function samplePainters() {
+			var counts = [], els = [], i, j, x, y, p, best = null, bestN = 0, total = 0;
+			for (i = 1; i <= 4; i++) {
+				for (j = 1; j <= 4; j++) {
+					x = W.innerWidth * i / 5;
+					y = W.innerHeight * j / 5;
+					p = painterAt(x, y);
+					total++;
+					if (!p) { continue; }
+					var k = els.indexOf(p);
+					if (k < 0) { els.push(p); counts.push(1); k = els.length - 1; } else { counts[k]++; }
+					if (counts[k] > bestN) { bestN = counts[k]; best = p; }
+				}
+			}
+			var hits = 0;
+			for (i = 0; i < counts.length; i++) { hits += counts[i]; }
+			return { el: best, n: bestN, total: total, hits: hits, distinct: els.length };
+		}
+		var host = null, hostMode = 'fixed', cand = [], diag = { tried: [], notes: [] };
 		function desc(el) {
 			if (!el || el.nodeType !== 1) { return String(el); }
-			var cs = W.getComputedStyle(el);
-			return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '') +
+			var cs = W.getComputedStyle(el), r = rectOf(el);
+			return pathOf(el) +
 				'  pos=' + cs.position + ' z=' + cs.zIndex + ' bg=' + cs.backgroundColor + (cs.backgroundImage !== 'none' ? ' bgimg' : '') +
+				' ' + MT.round(r.width) + 'x' + MT.round(r.height) +
 				(cs.transform !== 'none' ? ' TRANSFORM' : '') + (cs.filter && cs.filter !== 'none' ? ' FILTER' : '') + (cs.overflow !== 'visible' ? ' overflow=' + cs.overflow : '');
 		}
 		if (CFG.layer) {
 			cand = backdropHosts();
 			for (var hi = 0; hi < cand.length; hi++) {
-				var okh = tryHost(cand[hi]);
-				diag.tried.push((okh ? 'USED   ' : 'reject ') + desc(cand[hi]));
-				if (okh) { host = cand[hi]; break; }
+				var hm = trapped(cand[hi]) ? 'sticky' : 'fixed';
+				var okh = mountIn(cand[hi], hm);
+				diag.tried.push((okh ? 'USED   ' : 'reject ') + desc(cand[hi]) + '  (' + hm + ')');
+				if (okh) { host = cand[hi]; hostMode = hm; break; }
+			}
+			/* Verify, then re-target once. The host's own background is now
+			 * below the canvas — but if the thing actually painting the page
+			 * is a DESCENDANT of it (an Elementor container inside the
+			 * theme's column, say), that descendant still covers the canvas
+			 * and "behind" looks broken exactly as before. When one such
+			 * element paints most of the viewport and is itself a viable
+			 * host, move into it. One retry, never more. */
+			if (host) {
+				var sp = samplePainters();
+				var spr = sp.el ? rectOf(sp.el) : null;
+				var covers = spr && (spr.width * spr.height) >= W.innerWidth * W.innerHeight * 0.2;
+				if (sp.el && sp.n >= 3 && covers && sp.el !== host && host.contains(sp.el) &&
+						paintsOpaque(sp.el) && hasArea(sp.el)) {
+					/* The host's own background is below the canvas now — but
+					 * the element actually painting the page is INSIDE it, so
+					 * it still covers the canvas and "behind" looks exactly as
+					 * broken as before. Move into the real painter; if that
+					 * sits under a transform, a fixed canvas cannot live
+					 * there, so mount sticky instead. */
+					var mode = trapped(sp.el) ? 'sticky' : 'fixed';
+					diag.notes.push('re-target (' + mode + '): ' + pathOf(sp.el) + ' paints ' + sp.n + '/' + sp.total + ' sampled points ABOVE the canvas');
+					var prev = host;
+					if (mountIn(sp.el, mode)) {
+						diag.tried.push('USED   ' + desc(sp.el) + '  (re-target, ' + mode + ')');
+						host = sp.el;
+						hostMode = mode;
+					} else {
+						/* mountIn detaches the canvas when it fails, so put it
+						 * back where it was. */
+						diag.notes.push('re-target rejected: ' + pathOf(sp.el) + ' cannot hold the canvas');
+						mountIn(prev, hostMode);
+					}
+				}
 			}
 		}
 		if (!host) {
@@ -504,7 +692,28 @@
 				lines.push('layering=' + (CFG.layer ? 'behind' : 'front') + '  richness=' + rich + '  theme=' + (themeKey || 'none') + '  viewport=' + W.innerWidth + 'x' + W.innerHeight + '  dpr=' + (W.devicePixelRatio || 1));
 				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
 				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
-				lines.push('canvas: parent=' + (host ? desc(host).split('  ')[0] : 'body (fallback)') + '  z=' + cv.style.zIndex + '  rect=' + MT.round(r.left) + ',' + MT.round(r.top) + ' ' + MT.round(r.width) + 'x' + MT.round(r.height) + '  copies=' + D.querySelectorAll('.dcc-seasons-canvas').length);
+				for (di = 0; di < diag.notes.length; di++) { lines.push('  ! ' + diag.notes[di]); }
+				/* THE decisive line when "behind" still looks wrong: what is
+				 * painting the page, and is it above or below the canvas. */
+				var sp2 = samplePainters();
+				if (sp2.el && sp2.n < sp2.hits / 2 && sp2.hits > 2) {
+					/* One canvas can only sit behind ONE element. If the page
+					 * is painted by several opaque boxes, say so — that is the
+					 * case the mount cannot fully solve, and the fix is to
+					 * name the outer one with dcc_seasons_backdrop_host. */
+					lines.push('NOTE: ' + sp2.distinct + ' different elements paint the sampled points; a single canvas can only sit behind one of them.');
+				}
+				if (sp2.el) {
+					var rel = sp2.el === host ? 'the host itself (below the canvas — good)'
+						: (host && host.contains(sp2.el)) ? 'INSIDE the host — it paints ABOVE the canvas and is hiding it'
+						: (host && sp2.el.contains(host)) ? 'an ancestor of the host (below the canvas — good)'
+						: 'outside the host';
+					lines.push('painting ' + sp2.n + '/' + sp2.total + ' sampled points: ' + desc(sp2.el));
+					lines.push('  → that is ' + rel);
+				} else {
+					lines.push('painting: nothing opaque at the sampled points (the page background shows through)');
+				}
+				lines.push('canvas: parent=' + (host ? desc(host).split('  ')[0] : 'body (fallback)') + '  mode=' + (host ? hostMode : 'fixed') + '  z=' + cv.style.zIndex + '  rect=' + MT.round(r.left) + ',' + MT.round(r.top) + ' ' + MT.round(r.width) + 'x' + MT.round(r.height) + '  copies=' + D.querySelectorAll('.dcc-seasons-canvas').length);
 				lines.push('anchor chain (' + (anc ? desc(anc).split('  ')[0] : 'NO ANCHOR MATCHED') + ' → body):');
 				for (var el = anc; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) { lines.push('  ' + desc(el)); }
 				lines.push('  ' + desc(D.body));

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.7.0
+Stable tag: 3.7.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,40 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.7.1 =
+* FIXED, with the live DOM in hand: "behind" layering on this theme. Three
+  separate faults, each of which alone was enough to break it.
+  1. The canvas was mounted in the theme's content column (main), but the
+     element actually PAINTING the white column — article#post-620 — is a
+     descendant of it, so it went on covering the canvas exactly as before.
+     The engine now samples what is really painting the page and, when that
+     turns out to be inside the chosen host, moves into it.
+  2. That article carries a translateZ(-0.001px) hack, which makes it the
+     containing block for position:fixed descendants — a fixed canvas inside
+     it is silently reduced to an article-sized box that scrolls and clips.
+     The canvas now mounts position:sticky in that case, so it stays
+     viewport-tall and rides the content column. display:block on it, so it
+     cannot add baseline space: layout is byte-identical with the engine on
+     and off (verified).
+  3. z-index:-1 resolves in the nearest ANCESTOR stacking context, not in
+     the element it is written on, so mounting inside an ordinary container
+     put the canvas behind that container's own background. Hosts that are
+     not already a stacking context now get `isolation: isolate`, which
+     changes nothing visually.
+  Measured on a reproduction of the live chain: the canvas reaches 0.0% of
+  the white column before, 69.8% after, with 0.0% over images and cards.
+* Host selection is stricter: a candidate must paint something, have
+  non-zero area (Elementor breaks out of the theme wrappers, collapsing them
+  to 0px — they were being chosen), and not sit under a transform. Only a
+  positioned element with a z-index above the canvas's can actually cover
+  it, so those are tried first.
+* FIXED: the mount check accepted any canvas at least viewport-sized, so a
+  tall transformed ancestor could pass while producing a box that scrolled
+  with the page. It now requires an exact viewport match.
+* Diagnostics (?dcc_debug=1) now name the element painting the page and say
+  whether it is above or below the canvas, and warn when several elements
+  paint it — the one case a single canvas cannot fully sit behind.
 
 = 3.7.0 =
 * Six new themes: Independence Day (fireworks in red, white and blue, the
