@@ -157,6 +157,15 @@
 		globe: '30 30|<circle cx="15" cy="15" r="13" fill="#339AF0"/><path d="M8 6q6 2 5 8t3 7q-8 1-10-6-1-6 2-9Zm12 1q4 3 4 8 0 6-5 9-2-5 0-9t1-8Z" fill="#37B24D"/>',
 		hands: '44 32|<circle cx="22" cy="12" r="9.5" fill="#339AF0"/><path d="M15 7 Q20 9 19 13 Q18 17 21 18 Q15 19 13.6 14 Q12.8 10 15 7 Z" fill="%j"/><path d="M27 6 Q31 9 29 12 Q27 15 30 17 Q25 17 24.6 12 Q24.4 8 27 6 Z" fill="%j"/><path d="M2 31 Q1 21 9 18 Q14 16 19 20 L21 24 L14 31 Z" fill="#D9A06B"/><path d="M42 31 Q43 21 35 18 Q30 16 25 20 L23 24 L30 31 Z" fill="#D9A06B"/><path d="M8 20 L12 25 M12 18.6 L16 23.6 M36 20 L32 25 M32 18.6 L28 23.6" stroke="#B87F4E" stroke-width="0.9" fill="none"/>',
 		/* — labor day picnic — */
+		sparkler: '22 34|<path d="M11 33 L11 15" stroke="%h" stroke-width="2.2" stroke-linecap="round"/><path d="M11 13 L11 2 M11 13 L20 5 M11 13 L21 13 M11 13 L20 21 M11 13 L2 5 M11 13 L1 13 M11 13 L2 21" stroke="%a" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M11 13 L15 3 M11 13 L7 3 M11 13 L19 9 M11 13 L3 9 M11 13 L18 18 M11 13 L4 18" stroke="%d" stroke-width="1.1" stroke-linecap="round" fill="none"/><circle cx="11" cy="13" r="2.6" fill="%d"/><circle cx="11" cy="13" r="1.4" fill="%a"/>',
+		poppy: '26 30|<path d="M13 22 L13 29" stroke="%c" stroke-width="1.6"/><g fill="%e"><ellipse cx="8" cy="10" rx="6.4" ry="5.6" transform="rotate(-30 8 10)"/><ellipse cx="18" cy="10" rx="6.4" ry="5.6" transform="rotate(30 18 10)"/><ellipse cx="8" cy="17" rx="6.4" ry="5.6" transform="rotate(30 8 17)"/><ellipse cx="18" cy="17" rx="6.4" ry="5.6" transform="rotate(-30 18 17)"/></g><path d="M13 13 L7 8 M13 13 L19 8 M13 13 L7 19 M13 13 L19 19" stroke="#C92A2A" stroke-width="1.2" fill="none"/><circle cx="13" cy="13.4" r="3.4" fill="%g"/><circle cx="13" cy="13.4" r="1.4" fill="#495057"/>',
+		tulip: '22 34|<path d="M11 33 L11 18" stroke="%c" stroke-width="1.8"/><path d="M11 30 Q3 28 2 20 Q8 22 11 27 Z" fill="%j"/><path d="M3 9 Q2 20 11 21 Q20 20 19 9 L15 13 L11 6 L7 13 Z" fill="%u"/><path d="M8 12 L11 6 L14 12 L14 20 Q11 21 8 20 Z" fill="%s"/>',
+		necktie: '16 40|<clipPath id="nt"><path d="M8 9 L13 7 L14 30 L8 39 L2 30 L3 7 Z"/></clipPath><path d="M5 2 L11 2 L13 7 L8 9 L3 7 Z" fill="%n"/><path d="M8 9 L13 7 L14 30 L8 39 L2 30 L3 7 Z" fill="%e"/><g clip-path="url(#nt)"><path d="M0 15 L16 11 M0 23 L16 19 M0 31 L16 27" stroke="%m" stroke-width="2.4"/></g><path d="M8 9 L13 7 L14 30 L8 39 L2 30 L3 7 Z" fill="none" stroke="#8C1D1D" stroke-width="0.8"/>',
+		medal: '22 34|<path d="M6 1 L16 1 L14 16 L8 16 Z" fill="%e"/><path d="M9 1 L13 1 L12.4 16 L9.6 16 Z" fill="%d"/><path d="M6 1 L8.4 1 L8.6 16 L8 16 Z M13.6 1 L16 1 L14 16 L13.4 16 Z" fill="%m"/><circle cx="11" cy="23.5" r="8.6" fill="%f"/><circle cx="11" cy="23.5" r="7" fill="%a"/><path d="M11 17.4 L12.8 21.2 L17 21.6 L13.8 24.4 L14.8 28.6 L11 26.4 L7.2 28.6 L8.2 24.4 L5 21.6 L9.2 21.2 Z" fill="%f"/>',
+		sun: '34 34|<path d="M17 1.5 L17 6 M32.5 17 L28 17 M17 32.5 L17 28 M1.5 17 L6 17 M28 6 L24.8 9.2 M28 28 L24.8 24.8 M6 28 L9.2 24.8 M6 6 L9.2 9.2" stroke="%k" stroke-width="2.4" stroke-linecap="round" fill="none"/><circle cx="17" cy="17" r="9" fill="%r"/><circle cx="17" cy="17" r="7" fill="%k"/>',
+		watermelon: '34 22|<path d="M1 3 A16 16 0 0 1 33 3 L17 21 Z" fill="%c"/><path d="M3.6 3.6 A13.4 13.4 0 0 1 30.4 3.6 L17 19 Z" fill="%d"/><path d="M5.6 4 A11.4 11.4 0 0 1 28.4 4 L17 17 Z" fill="#FA5252"/><g fill="%g"><ellipse cx="12" cy="7.6" rx="1.1" ry="1.8" transform="rotate(20 12 7.6)"/><ellipse cx="22" cy="7.6" rx="1.1" ry="1.8" transform="rotate(-20 22 7.6)"/><ellipse cx="17" cy="11" rx="1.1" ry="1.8"/><ellipse cx="13.6" cy="12.6" rx="1" ry="1.6" transform="rotate(25 13.6 12.6)"/></g>',
+		flipflop: '18 34|<path d="M9 1 Q17 1 17 12 L16 26 Q15 33 9 33 Q3 33 2 26 L1 12 Q1 1 9 1 Z" fill="%k"/><path d="M9 3 Q15 3 15 12 L14 25 Q13.4 31 9 31 Q4.6 31 4 25 L3 12 Q3 3 9 3 Z" fill="#FFE066"/><path d="M9 11 L3.4 19 M9 11 L14.6 19" stroke="%u" stroke-width="2.2" stroke-linecap="round" fill="none"/><circle cx="9" cy="10.6" r="1.6" fill="%u"/>',
+		icecream: '22 36|<path d="M3 16 L11 35 L19 16 Z" fill="%w"/><path d="M5 18 L17 18 M6.4 22 L15.6 22 M8 26 L14 26 M9.4 30 L12.6 30 M6 16 L13 30 M16 16 L9 30" stroke="#B8690C" stroke-width="0.9" fill="none"/><circle cx="11" cy="12.4" r="7.2" fill="%s"/><circle cx="11" cy="7.4" r="6" fill="%d"/><circle cx="8.6" cy="5.6" r="1.4" fill="%e"/>',
 		grill: '30 32|<path d="M2 8h26q0 9-13 9T2 8Z" fill="%g"/><path d="M2 8h26q0 3-13 3T2 8Z" fill="%b"/><line x1="9" y1="16" x2="6" y2="30" stroke="%h" stroke-width="2"/><line x1="21" y1="16" x2="24" y2="30" stroke="%h" stroke-width="2"/><circle cx="24" cy="30" r="2" fill="%h"/>',
 		cooler: '28 24|<rect x="2" y="8" width="24" height="15" rx="2" fill="%m"/><rect x="1" y="5" width="26" height="5" rx="2" fill="#4DABF7"/><path d="M8 5V2m5 3V1m5 4V2" stroke="%p" stroke-width="2"/><rect x="11" y="14" width="6" height="3" rx="1" fill="%d"/>'
 	};
@@ -331,15 +340,22 @@
 			halloween: ['web', 'right:0;top:0;width:64px;opacity:.5;'],
 			thanksgiving: ['cornucopia', 'left:10px;bottom:10px;width:56px;opacity:.55;'],
 			snowbird: ['sunshades', 'left:12px;top:12px;width:44px;opacity:.5;'],
-			earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;']
+			earth_day: ['hands', 'left:10px;bottom:10px;width:52px;opacity:.55;'],
+			summer_canal: ['sun', 'right:12px;top:12px;width:54px;opacity:.5;']
 		};
+		/* Accents are built here but mounted with the canvas below, so they
+		 * follow the layering setting: through 3.6.2 they sat on the body at
+		 * z-index 99990 in EVERY mode, floating over text and widgets even
+		 * when the owner had chosen "behind". */
+		var accents = [];
 		function accentEl(key, css) {
 			if (!SVGS[key]) { return; }
 			var el = D.createElement('div');
 			el.setAttribute('aria-hidden', 'true');
-			el.style.cssText = 'position:fixed;z-index:99990;pointer-events:none;' + css;
+			el.className = 'dcc-seasons-accent';
+			el.style.cssText = 'position:fixed;pointer-events:none;' + css;
 			el.innerHTML = svgDoc(SVGS[key]);
-			D.body.appendChild(el);
+			accents.push(el);
 		}
 		if (A.accent && A.accent.svg) { accentEl(A.accent.svg, 'left:14px;bottom:14px;width:26px;opacity:.6;'); }
 		if (rich === 'full' && ACCENTS[themeKey]) { accentEl(ACCENTS[themeKey][0], ACCENTS[themeKey][1]); }
@@ -446,11 +462,20 @@
 			el.removeChild(cv);
 			return false;
 		}
-		var host = null, cand = [];
+		var host = null, cand = [], diag = { tried: [] };
+		function desc(el) {
+			if (!el || el.nodeType !== 1) { return String(el); }
+			var cs = W.getComputedStyle(el);
+			return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '') +
+				'  pos=' + cs.position + ' z=' + cs.zIndex + ' bg=' + cs.backgroundColor + (cs.backgroundImage !== 'none' ? ' bgimg' : '') +
+				(cs.transform !== 'none' ? ' TRANSFORM' : '') + (cs.filter && cs.filter !== 'none' ? ' FILTER' : '') + (cs.overflow !== 'visible' ? ' overflow=' + cs.overflow : '');
+		}
 		if (CFG.layer) {
 			cand = backdropHosts();
 			for (var hi = 0; hi < cand.length; hi++) {
-				if (tryHost(cand[hi])) { host = cand[hi]; break; }
+				var okh = tryHost(cand[hi]);
+				diag.tried.push((okh ? 'USED   ' : 'reject ') + desc(cand[hi]));
+				if (okh) { host = cand[hi]; break; }
 			}
 		}
 		if (!host) {
@@ -466,6 +491,43 @@
 			if (CFG.layer && cand.length && W.console && W.console.warn) {
 				W.console.warn('DCC Seasons: no backdrop host found for "behind" layering; the canvas is on the body at z-index 5 and may be covered by the theme. Set one with the dcc_seasons_backdrop_host filter.');
 			}
+		}
+		/* --- Admin-only diagnostics panel (?dcc_debug=1). Everything the
+		 * mount decision looked at, in a textarea the owner can copy and
+		 * paste back. This exists because the live site cannot be reached
+		 * from the build environment, so the DOM has to come to us. --- */
+		if (CFG.diag) {
+			(function () {
+				var lines = [], anc = D.querySelector('main, [role="main"], #main, #content, .site-content, .site-main, article, .entry-content');
+				var r = cv.getBoundingClientRect();
+				lines.push('DCC Seasons ' + (CFG.version || '?') + '  engine=' + (CFG.engineSrc || '').replace(/^.*\//, ''));
+				lines.push('layering=' + (CFG.layer ? 'behind' : 'front') + '  richness=' + rich + '  theme=' + (themeKey || 'none') + '  viewport=' + W.innerWidth + 'x' + W.innerHeight + '  dpr=' + (W.devicePixelRatio || 1));
+				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
+				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
+				lines.push('canvas: parent=' + (host ? desc(host).split('  ')[0] : 'body (fallback)') + '  z=' + cv.style.zIndex + '  rect=' + MT.round(r.left) + ',' + MT.round(r.top) + ' ' + MT.round(r.width) + 'x' + MT.round(r.height) + '  copies=' + D.querySelectorAll('.dcc-seasons-canvas').length);
+				lines.push('anchor chain (' + (anc ? desc(anc).split('  ')[0] : 'NO ANCHOR MATCHED') + ' → body):');
+				for (var el = anc; el && el.nodeType === 1 && el !== D.body; el = el.parentElement) { lines.push('  ' + desc(el)); }
+				lines.push('  ' + desc(D.body));
+				var box = D.createElement('div');
+				box.setAttribute('aria-hidden', 'true');
+				box.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:2147482000;max-width:min(96vw,720px);background:#0a3d62;color:#f4da62;border:2px solid #f4da62;border-radius:8px;padding:8px;font:11px/1.35 monospace;box-shadow:0 4px 14px rgba(0,0,0,.4);';
+				var ta = D.createElement('textarea');
+				ta.readOnly = true;
+				ta.value = lines.join('\n');
+				ta.style.cssText = 'display:block;width:100%;height:190px;box-sizing:border-box;background:#062a44;color:#fff;border:1px solid #f4da62;border-radius:4px;font:11px/1.35 monospace;padding:6px;white-space:pre;resize:vertical;';
+				var cap = D.createElement('div');
+				cap.textContent = 'DCC Seasons diagnostics — select all, copy, paste to the developer';
+				cap.style.cssText = 'margin:0 0 6px;font-weight:700;';
+				box.appendChild(cap); box.appendChild(ta);
+				D.body.appendChild(box);
+				ta.addEventListener('focus', function () { ta.select(); });
+			})();
+		}
+
+		/* Corner accents ride on the same decision as the canvas. */
+		for (var ai = 0; ai < accents.length; ai++) {
+			accents[ai].style.zIndex = host ? '-1' : (CFG.layer ? '5' : '99990');
+			(host || D.body).appendChild(accents[ai]);
 		}
 		var cx = cv.getContext('2d');
 
@@ -485,6 +547,11 @@
 			vw = w; vh = h;
 			waterY = vh * 0.92;
 			ground = vh - 16;
+			var nowMobile = W.innerWidth < 768;
+			if (nowMobile !== mobile) {
+				mobile = nowMobile;
+				FX.reflect = rich === 'full' && V.reflections !== false && !mobile && water && !shed;
+			}
 			for (var k = 0; k < parts.length; k++) { seed(parts[k], true); }
 			ripples.length = 0;
 			snowCols = FX.snow ? new Float32Array(MT.ceil(vw / 8) + 1) : null;
@@ -1320,7 +1387,9 @@
 			bursts.push({ s: sp, life: 0, col: col });
 			if (bursts.length > 2) { bursts.shift(); }
 			flash = { x: bx, y: by, a: 1 };
-			yearFx = { x: bx, y: by, a: 1.4 };
+			/* The rising year is New Year's only — Independence Day shares the
+			 * burst machinery and must not announce "2027" in July. */
+			if (themeKey === 'new_years') { yearFx = { x: bx, y: by, a: 1.4 }; }
 			nextBurst = t + rnd(1400, 2800);
 		}
 		function stepBursts(dt) {

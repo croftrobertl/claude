@@ -77,6 +77,13 @@ final class Plugin {
         if ($seen === false && get_option(Settings::OPTION) === false) {
             return; // Genuinely first install: nothing cached under a previous version.
         }
+        // Persist the 3.7.0 schedule migration so the stored row shape is
+        // current (options() migrates on read regardless).
+        $stored = get_option(Settings::OPTION);
+        if (is_array($stored) && !empty($stored['schedule']) && is_array($stored['schedule']) && Schedule::is_legacy_row($stored['schedule'][0] ?? null)) {
+            $stored['schedule'] = Schedule::migrate($stored['schedule'], Themes::legacy_default_schedule());
+            update_option(Settings::OPTION, $stored);
+        }
         Cache_Purge::purge_and_report();
     }
 
@@ -252,10 +259,18 @@ final class Plugin {
         if ($this->is_excluded()) {
             return false;
         }
-        if ($this->preview_theme() !== null) {
+        if ($this->preview_theme() !== null || $this->diag_requested()) {
             return true;
         }
         return $this->in_scope();
+    }
+
+    /**
+     * ?dcc_debug=1 for a logged-in administrator. Never true for visitors,
+     * so the panel's markup and the flag never reach cached HTML for them.
+     */
+    private function diag_requested(): bool {
+        return isset($_GET['dcc_debug']) && current_user_can('manage_options'); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     }
 
     /**
@@ -460,12 +475,18 @@ final class Plugin {
                 'snow'        => !empty($opt['fx_snow']),
             ],
             'schedule'    => Themes::schedule($opt['schedule']),
+            'anchors'     => self::client_anchors(),
             'themes'      => Themes::themes(),
             'matrixSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/matrix' . self::suffix() . '.js'),
             'engineSrc'   => add_query_arg('ver', DCC_SEASONS_VERSION, DCC_SEASONS_URL . 'assets/js/engine' . self::suffix() . '.js'),
             'heroEvery'   => [120, 180],
             'preview'      => null,
             'previewLabel' => '',
+            'version'      => DCC_SEASONS_VERSION,
+            /* Admin-only on-page diagnostics (?dcc_debug=1): what the engine
+             * found when it looked for a backdrop host, and what it did.
+             * Gated server-side exactly like the preview flag. */
+            'diag'         => $this->diag_requested(),
             'i18n'        => [
                 'close'         => __('Close', 'dcc-seasons'),
                 'eggLabel'      => __('Seasonal Matrix easter egg', 'dcc-seasons'),
@@ -486,6 +507,21 @@ final class Plugin {
          * @param array $config
          */
         return apply_filters('dcc_seasons_config', $config);
+    }
+
+    /**
+     * Anchor definitions the client resolver needs — type and parameters
+     * only, no labels. Cache-safe: nothing here depends on today.
+     *
+     * @return array<string, array>
+     */
+    private static function client_anchors(): array {
+        $out = [];
+        foreach (Schedule::anchors() as $key => $a) {
+            unset($a['label']);
+            $out[$key] = $a;
+        }
+        return $out;
     }
 
     /**

@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.6.2
+Stable tag: 3.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,9 +69,30 @@ egg is found there.
 = Settings =
 
 WP-Admin → DCC → Seasons: master enable, ambient on/off, egg on/off, where
-effects appear, tap target selector, tap count, ambient density/opacity
-sliders, and a fully editable schedule table ({start, end, theme, label}
-rows, pre-seeded for 2026–27) — future years need no rebuild.
+effects appear, layering, tap target selector, tap count, ambient
+density/opacity sliders, and the schedule.
+
+= Schedule =
+
+Rows are RULES that repeat every year, so the calendar never expires. Each
+end of a range is either a fixed month/day or a named holiday — MLK Day,
+Presidents Day, Mardi Gras, Easter, Mother's Day, Memorial Day, Father's Day,
+Labor Day, Columbus Day and Thanksgiving move with the calendar
+automatically — plus an optional ± days offset. Ranges may overlap: the
+NARROWEST one wins that day, so a one-day holiday can sit inside a season
+without splitting it. A range that ends before it starts runs into the next
+year (New Year's, Dec 26 → Jan 3). A row with a year in its last column is a
+one-off. The settings page shows every row resolved to real dates for this
+year and next, and flags any day nothing covers.
+
+The default covers every day of the year: Snowbird → Strawberry →
+St. Patrick's → Spring on the Canal → Summer on the Canal → Fall Fishing →
+Halloween → Thanksgiving → Christmas → New Year's, with the holidays as
+narrower rows inside those seasons.
+
+The rules are resolved in the VISITOR'S browser from their local date
+(cache-safe — the HTML never carries "today"); the same resolver runs in PHP
+for the admin table, and the two are cross-checked by the test suite.
 
 = Where effects appear =
 
@@ -135,8 +156,8 @@ the normal date-driven behavior. The settings page lists every valid key.
 == Manual smoke-test checklist ==
 
 * On a date inside a range: sparse particles drift; on any other date: none.
-* 5 quick taps on the logo → themed rain; ✕, Escape, and overlay tap all exit.
-* Outside every range: 5 taps → classic green rain.
+* N quick taps on the logo (N = the Tap count setting) → themed rain; ✕, Escape, and overlay tap all exit.
+* Outside every range: N taps → classic green rain.
 * On 09/08–09/11 or 01/18 (adjust a row to today to simulate): Patriot Day
   and MLK Day run full, egg included.
 * `/submit-booking/`: no script tag, no effects.
@@ -144,6 +165,41 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.7.0 =
+* Six new themes: Independence Day (fireworks in red, white and blue, the
+  eagle, sparklers), Memorial Day (poppies, the flag, doves), Mother's Day
+  (tulips, blossom, a card that opens into hearts), Father's Day (the dock —
+  a bass on the line, the grill, a necktie), Veterans Day (flag, poppies, a
+  medal) and Summer on the Canal (sun, watermelon, flip-flops, ice cream,
+  boats, dragonflies). Nine new sprites, all three-ground checked.
+* The schedule is now RECURRING. Rows are rules — fixed month/day or a named
+  holiday plus an offset — so it never expires, and moveable holidays land on
+  the right day every year. The narrowest overlapping range wins its day.
+  Year-spanning ranges and one-off years are supported. The settings page
+  resolves every row to real dates for this year and next and reports gaps.
+* Upgrade: an unmodified pre-3.7.0 schedule becomes the new recurring
+  default outright. An edited one is kept — each dated row repeats yearly,
+  and rows for moveable holidays take the proper rule so they stop drifting.
+* FIXED: the easter egg opened after HALF the configured taps. The fallback
+  tap target (#masthead) was always bound and encloses the real target, so
+  every tap counted twice. Taps are now counted by delegation: once per
+  tap, and still counted if the theme rebuilds its header on scroll.
+* FIXED: corner accents (Halloween web, Thanksgiving cornucopia, Snowbird
+  sunshades, Earth Day hands, Valentine's ribbon) ignored the layering
+  setting and floated over content in "behind" mode. They now ride on the
+  same mount as the canvas.
+* The easter egg overlay locks the page behind it and traps keyboard focus;
+  a swipe no longer scrolls the site under the rain.
+* The settings page tables scroll inside their own box on a phone-width
+  admin instead of pushing the page sideways.
+* Reflections re-evaluate the mobile breakpoint on rotate.
+* New admin-only diagnostics: append `?dcc_debug=1` to any front-end URL as
+  an administrator and a panel reports the plugin version, the engine file
+  actually loaded, the layering mode, every backdrop-host candidate with its
+  computed position/z-index/background, which one was used (or why the
+  canvas fell back to the body), and the full ancestor chain of the content
+  column. Copy it and send it to the developer.
 
 = 3.6.2 =
 * FIXED: the 3.6.1 purge-on-upgrade never fired on an upgrade. The stored

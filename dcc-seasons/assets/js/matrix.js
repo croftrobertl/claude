@@ -72,7 +72,14 @@
 		ov.setAttribute('role', 'dialog');
 		ov.setAttribute('aria-modal', 'true');
 		ov.setAttribute('aria-label', i18n.eggLabel || 'Seasonal easter egg');
-		ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483000;background:rgba(0,4,0,.85);cursor:pointer;';
+		ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483000;background:rgba(0,4,0,.85);cursor:pointer;overscroll-behavior:contain;touch-action:none;';
+
+		/* Lock the page behind the overlay: a swipe on a phone would
+		 * otherwise scroll the site underneath the rain. Restored on close. */
+		var html = D.documentElement, body = D.body;
+		var prevHtmlOv = html.style.overflow, prevBodyOv = body.style.overflow;
+		html.style.overflow = 'hidden';
+		body.style.overflow = 'hidden';
 
 		var btn = D.createElement('button');
 		btn.type = 'button';
@@ -88,6 +95,8 @@
 			D.removeEventListener('keydown', onKey, true);
 			D.removeEventListener('visibilitychange', onVis);
 			if (ov.parentNode) { ov.parentNode.removeChild(ov); }
+			html.style.overflow = prevHtmlOv;
+			body.style.overflow = prevBodyOv;
 			isOpen = false;
 			if (prevFocus && prevFocus.focus) {
 				try { prevFocus.focus({ preventScroll: true }); } catch (e) {}
@@ -97,6 +106,11 @@
 			if (e.key === 'Escape' || e.key === 'Esc') {
 				e.stopPropagation();
 				close();
+			} else if (e.key === 'Tab') {
+				/* Focus trap: the close button is the dialog's only control,
+				 * so Tab must not walk out into the dimmed page behind. */
+				e.preventDefault();
+				try { btn.focus({ preventScroll: true }); } catch (err) { btn.focus(); }
 			}
 		}
 		function onVis() {

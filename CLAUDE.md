@@ -139,7 +139,7 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 ## Delivering DCC Seasons zips
 
 When sending the user an installable zip for a new **DCC Seasons** version, name
-the file **`Seasons <version>.zip`** — e.g. `Seasons 3.6.1.zip`. Build it from
+the file **`Seasons <version>.zip`** — e.g. `Seasons 3.7.0.zip`. Build it from
 the `dcc-seasons/` folder as usual (the folder inside the zip keeps its own
 name, which is what WordPress installs); only the delivered filename changes.
 
@@ -164,6 +164,20 @@ bump so the tracked zip never lags the source.
   `position:relative; z-index:9` with a white background, so no body-level
   z-index can sit between that background and the text above it. Override the
   host with the `dcc_seasons_backdrop_host` filter.
+- **The schedule is rules, not dates** (`includes/class-schedule.php`). Rows are
+  `{start:{on,off,m?,d?}, end:{…}, theme, label, year}`; `on` is `fixed` or a
+  named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver
+  exists in PHP (admin table) and in `ambient.js` (the visitor, from their local
+  date — cache-safe). `scratchpad/test-schedule.js` cross-checks them for every
+  anchor 2024–2035; keep both in step. Narrowest overlapping range wins its day.
+  Pre-3.7.0 dated rows are migrated on read (`Schedule::migrate`).
+- **Tap counting is delegated** (one document listener, `closest()` against the
+  selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
+  VISIBLE match). Binding per element double-counted nested targets — the egg
+  opened on half the configured taps until 3.7.0.
+- **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with
+  the backdrop-host decision and the content column's ancestor chain. Ask the
+  owner for that text before theorising about the live layering.
 - **Uploading a new zip does not purge the page cache.** The client config and the
   `?ver=` asset URL are both baked into cached HTML, so the site keeps serving the
   previous build. The plugin purges itself on a version change, but verify after

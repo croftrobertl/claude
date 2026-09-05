@@ -395,6 +395,137 @@ class Themes {
                 ],
             ],
 
+            // ---- 3.7.0: the summer half of the year --------------------------
+
+            // Independence Day: New Year's fireworks machinery in red, white
+            // and blue, the eagle as hero, sparklers falling.
+            'july4' => [
+                'ambient' => [
+                    'mode'      => 'burst',
+                    'hero'      => 'eagle',
+                    'particles' => [
+                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
+                        ['s' => 'sparkler', 'b' => 'fall', 'glow' => 1, 'w' => 2, 'sz' => [22, 30]],
+                        ['c' => 'confetti', 'cl' => ['#FF5252', '#F1F3F5', '#5C7CFA'], 'b' => 'tumble', 'w' => 2],
+                    ],
+                    'sparkCl'   => ['#FF5252', '#F1F3F5', '#5C7CFA', '#FFD43B'],
+                ],
+                'egg' => [
+                    'colors' => ['#FF5252', '#F1F3F5', '#5C7CFA'],
+                    'glyphs' => ['★', '✦', '1', '7', '7', '6'],
+                    'finale' => '★',
+                ],
+            ],
+
+            // Memorial Day: remembrance poppies, the flag, doves — and the
+            // eagle. Celebratory-patriotic like Patriot Day, not "gentle".
+            'memorial_day' => [
+                'ambient' => [
+                    'hero'      => 'eagle',
+                    'particles' => [
+                        ['s' => 'poppy', 'b' => 'sway', 'st' => 1, 'w' => 3, 'sz' => [20, 28]],
+                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L'],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#FF5252', '#F1F3F5', '#5C7CFA'],
+                    'glyphs' => ['★', '✦', '▮', '1', '0'],
+                    'finale' => '★',
+                ],
+            ],
+
+            // Mother's Day: tulips and blossom, a card that opens into
+            // hearts, a balloon on a string.
+            'mothers_day' => [
+                'ambient' => [
+                    'water'     => true,
+                    'particles' => [
+                        ['s' => 'tulip', 'b' => 'grow', 'w' => 2, 'sz' => [22, 30]],
+                        ['s' => 'blossom', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
+                        ['c' => 'heart', 'cl' => ['#F783AC', '#E64980', '#B197FC'], 'b' => 'pulse', 'w' => 2],
+                        ['s' => 'letter0', 'b' => 'fall', 'fx' => 'letter', 'sz' => [22, 26]],
+                        ['s' => 'balloon', 'b' => 'rise', 'fx' => 'string', 'sz' => [24, 30]],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#F783AC', '#B197FC'],
+                    'glyphs' => ['♥', '✿', '❀', 'ﾒ', '1'],
+                    'finale' => '♥',
+                ],
+            ],
+
+            // Father's Day: the dock — a bass on the line, the grill going,
+            // a necktie nobody asked for.
+            'fathers_day' => [
+                'ambient' => [
+                    'water'     => true,
+                    'hero'      => 'bass',
+                    'particles' => [
+                        // Hangs from the top edge like an ornament: upright, a tie
+                        // reads instantly; tumbling, it read as a rocket.
+                        ['s' => 'necktie', 'b' => 'hang', 'w' => 2, 'sz' => [18, 26]],
+                        ['s' => 'bobber', 'b' => 'float', 'w' => 2],
+                        ['s' => 'hook', 'b' => 'dangle', 'worm' => 1],
+                        ['s' => 'bass', 'b' => 'jump', 'face' => 'L'],
+                        ['s' => 'grill', 'b' => 'grow', 'fx' => 'smoke', 'sz' => [26, 32]],
+                        ['s' => 'burger', 'b' => 'fall'],
+                        ['s' => 'cooler', 'b' => 'tumble', 'sz' => [20, 26]],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#1864AB', '#0B7285', '#12B886'],
+                    'glyphs' => ['~', '≈', 'ﾂ', 'ｼ', '0', '1'],
+                ],
+            ],
+
+            // Veterans Day: flag, poppies, a medal, doves; the eagle.
+            'veterans_day' => [
+                'ambient' => [
+                    'hero'      => 'eagle',
+                    'particles' => [
+                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
+                        ['s' => 'poppy', 'b' => 'sway', 'st' => 1, 'w' => 2, 'sz' => [20, 28]],
+                        ['s' => 'medal', 'b' => 'dangle', 'sz' => [20, 26]],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 2],
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L'],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#FF5252', '#F1F3F5', '#5C7CFA'],
+                    'glyphs' => ['★', '▮', '✦', '1', '0'],
+                    'finale' => '★',
+                ],
+            ],
+
+            // Summer on the Canal: the long default from Memorial Day to
+            // Labor Day — sun in the corner, boats on the water, dragonflies,
+            // watermelon and flip-flops.
+            'summer_canal' => [
+                'ambient' => [
+                    'water'     => true,
+                    'hero'      => 'bass',
+                    'particles' => [
+                        ['s' => 'watermelon', 'b' => 'tumble', 'w' => 2, 'sz' => [24, 32]],
+                        ['s' => 'flipflop', 'b' => 'fall', 'w' => 2, 'sz' => [16, 22]],
+                        ['s' => 'icecream', 'b' => 'fall', 'sz' => [18, 24]],
+                        ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
+                        ['s' => 'dragonfly', 'b' => 'dart'],
+                        ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
+                        ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],
+                        ['s' => 'pontoon', 'b' => 'cruise', 'face' => 'L', 'sz' => [32, 40]],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#FFD43B', '#4DABF7'],
+                    'glyphs' => ['☀', '~', '≈', 'ﾂ', '1'],
+                    'finale' => '☀',
+                ],
+            ],
+
             'earth_day' => [
                 'ambient' => [
                     'particles' => [
@@ -463,6 +594,12 @@ class Themes {
             'spring_canal' => __('Spring on the Canal', 'dcc-seasons'),
             'four_twenty'  => __('4/20', 'dcc-seasons'),
             'earth_day'    => __('Earth Day', 'dcc-seasons'),
+            'july4'        => __('Independence Day', 'dcc-seasons'),
+            'memorial_day' => __('Memorial Day', 'dcc-seasons'),
+            'mothers_day'  => __('Mother\'s Day', 'dcc-seasons'),
+            'fathers_day'  => __('Father\'s Day', 'dcc-seasons'),
+            'veterans_day' => __('Veterans Day', 'dcc-seasons'),
+            'summer_canal' => __('Summer on the Canal', 'dcc-seasons'),
             'classic'      => __('None (heron + classic green egg only)', 'dcc-seasons'),
         ];
     }
@@ -473,7 +610,18 @@ class Themes {
      *
      * @return array<int, array{start:string,end:string,theme:string,label:string}>
      */
+    /**
+     * The recurring default schedule (rules, not dates). See Schedule.
+     */
     public static function default_schedule(): array {
+        return Schedule::defaults();
+    }
+
+    /**
+     * The pre-3.7.0 default, dated for 2026-27. Kept ONLY so an unmodified
+     * stored copy of it can be recognised and replaced on upgrade.
+     */
+    public static function legacy_default_schedule(): array {
         return [
             ['start' => '2026-09-01', 'end' => '2026-09-07', 'theme' => 'labor_day',    'label' => __('Labor Day', 'dcc-seasons')],
             ['start' => '2026-09-08', 'end' => '2026-09-11', 'theme' => 'patriot_day',  'label' => __('Patriot Day', 'dcc-seasons')],
@@ -508,7 +656,8 @@ class Themes {
         /**
          * Filter the schedule sent to the client.
          *
-         * @param array $rows Each row: start, end (Y-m-d), theme key, label.
+         * @param array $rows Each row: start + end rules ({on, off, m?, d?}),
+         *                    theme key, label, year (0 = every year).
          */
         return apply_filters('dcc_seasons_schedule', $rows);
     }

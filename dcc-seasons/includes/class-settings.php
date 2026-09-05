@@ -148,6 +148,15 @@ class Settings {
         }
         $opt = wp_parse_args($opt, self::defaults());
 
+        // Pre-3.7.0 rows were dated (Y-m-d). Bring them forward every read —
+        // cheap and idempotent — and persist once on upgrade (see
+        // Plugin::maybe_purge_after_upgrade).
+        if (is_array($opt['schedule'])) {
+            $opt['schedule'] = Schedule::migrate($opt['schedule'], Themes::legacy_default_schedule());
+        } else {
+            $opt['schedule'] = Themes::default_schedule();
+        }
+
         /**
          * Filter the effective plugin options.
          *
@@ -239,27 +248,12 @@ class Settings {
         $theme_keys = array_keys(Themes::themes());
         if (!empty($in['schedule']) && is_array($in['schedule'])) {
             foreach ($in['schedule'] as $row) {
-                if (!is_array($row)) {
-                    continue;
+                $clean = Schedule::sanitize_row($row, $theme_keys);
+                if ($clean) {
+                    $rows[] = $clean;
                 }
-                $start = self::valid_date((string) ($row['start'] ?? ''));
-                $end   = self::valid_date((string) ($row['end'] ?? ''));
-                $theme = sanitize_key((string) ($row['theme'] ?? ''));
-                if ($start === '' || $end === '' || !in_array($theme, $theme_keys, true)) {
-                    continue;
-                }
-                if ($end < $start) {
-                    [$start, $end] = [$end, $start];
-                }
-                $rows[] = [
-                    'start' => $start,
-                    'end'   => $end,
-                    'theme' => $theme,
-                    'label' => sanitize_text_field((string) ($row['label'] ?? '')),
-                ];
             }
         }
-        usort($rows, static fn(array $a, array $b): int => strcmp($a['start'], $b['start']));
         $out['schedule'] = $rows;
 
         return $out;
@@ -268,11 +262,6 @@ class Settings {
     /**
      * Validate a Y-m-d date string; returns '' when invalid.
      */
-    private static function valid_date(string $date): string {
-        $date = trim($date);
-        $dt   = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
-        return ($dt && $dt->format('Y-m-d') === $date) ? $date : '';
-    }
 
     public static function render_page(): void {
         if (!current_user_can('manage_options')) {
@@ -423,16 +412,18 @@ class Settings {
 
                 <h2><?php esc_html_e('Schedule', 'dcc-seasons'); ?></h2>
                 <p class="description">
-                    <?php esc_html_e('Date ranges use the VISITOR\'S local date. Rows can be edited freely — future years never need a plugin rebuild. Ranges may span New Year\'s (use full dates).', 'dcc-seasons'); ?>
+                    <?php esc_html_e('Rows repeat every year. Each end of a range is either a fixed month/day or a named holiday — Easter, Thanksgiving, Memorial Day and the rest move with the calendar automatically — plus an optional ± days offset. Ranges may overlap: the narrowest one wins that day, so a one-day holiday can sit inside a season. A range that ends before it starts runs into the next year (New Year\'s). Put a year in the last column to make a row a one-off. Dates are matched in the VISITOR\'S local time.', 'dcc-seasons'); ?>
                 </p>
 
+                <div class="dcc-seasons-scroll">
                 <table class="widefat striped dcc-seasons-schedule" id="dcc-seasons-schedule">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Start date', 'dcc-seasons'); ?></th>
-                            <th><?php esc_html_e('End date', 'dcc-seasons'); ?></th>
+                            <th><?php esc_html_e('Starts', 'dcc-seasons'); ?></th>
+                            <th><?php esc_html_e('Ends', 'dcc-seasons'); ?></th>
                             <th><?php esc_html_e('Theme', 'dcc-seasons'); ?></th>
                             <th><?php esc_html_e('Label', 'dcc-seasons'); ?></th>
+                            <th><?php esc_html_e('Year', 'dcc-seasons'); ?></th>
                             <th><span class="screen-reader-text"><?php esc_html_e('Remove', 'dcc-seasons'); ?></span></th>
                         </tr>
                     </thead>
@@ -442,14 +433,17 @@ class Settings {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
                 <p>
                     <button type="button" class="button" id="dcc-seasons-add-row">
                         <?php esc_html_e('Add row', 'dcc-seasons'); ?>
                     </button>
                 </p>
 
+                <?php self::render_resolved($opt['schedule'], $labels); ?>
+
                 <script type="text/html" id="dcc-seasons-row-template">
-                    <?php self::render_row('__i__', ['start' => '', 'end' => '', 'theme' => 'classic', 'label' => ''], $labels); ?>
+                    <?php self::render_row('__i__', ['start' => ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0], 'end' => ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0], 'theme' => 'classic', 'label' => '', 'year' => 0], $labels); ?>
                 </script>
 
                 <h2><?php esc_html_e('Theme preview', 'dcc-seasons'); ?></h2>
@@ -463,6 +457,7 @@ class Settings {
                     );
                     ?>
                 </p>
+                <div class="dcc-seasons-scroll">
                 <table class="widefat striped dcc-seasons-preview-keys">
                     <thead>
                         <tr>
@@ -483,6 +478,7 @@ class Settings {
                         </tr>
                     </tbody>
                 </table>
+                </div>
 
                 <?php submit_button(); ?>
             </form>
@@ -499,20 +495,15 @@ class Settings {
      */
     private static function render_row(string $index, array $row, array $labels): void {
         $name = self::OPTION . '[schedule][' . $index . ']';
+        $none = ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0];
         ?>
         <tr>
-            <td>
-                <input type="date" name="<?php echo esc_attr($name); ?>[start]"
-                       value="<?php echo esc_attr($row['start']); ?>" required />
-            </td>
-            <td>
-                <input type="date" name="<?php echo esc_attr($name); ?>[end]"
-                       value="<?php echo esc_attr($row['end']); ?>" required />
-            </td>
+            <td><?php self::render_rule($name . '[start]', is_array($row['start'] ?? null) ? $row['start'] : $none); ?></td>
+            <td><?php self::render_rule($name . '[end]', is_array($row['end'] ?? null) ? $row['end'] : $none); ?></td>
             <td>
                 <select name="<?php echo esc_attr($name); ?>[theme]">
                     <?php foreach ($labels as $key => $label) : ?>
-                        <option value="<?php echo esc_attr($key); ?>" <?php selected($row['theme'], $key); ?>>
+                        <option value="<?php echo esc_attr($key); ?>" <?php selected($row['theme'] ?? '', $key); ?>>
                             <?php echo esc_html($label); ?>
                         </option>
                     <?php endforeach; ?>
@@ -520,7 +511,13 @@ class Settings {
             </td>
             <td>
                 <input type="text" name="<?php echo esc_attr($name); ?>[label]"
-                       value="<?php echo esc_attr($row['label']); ?>" />
+                       value="<?php echo esc_attr($row['label'] ?? ''); ?>" />
+            </td>
+            <td>
+                <input type="number" class="dcc-seasons-year" name="<?php echo esc_attr($name); ?>[year]" min="2000" max="2100" step="1"
+                       value="<?php echo esc_attr(!empty($row['year']) ? (string) (int) $row['year'] : ''); ?>"
+                       placeholder="<?php esc_attr_e('every', 'dcc-seasons'); ?>"
+                       aria-label="<?php esc_attr_e('Year (blank = every year)', 'dcc-seasons'); ?>" />
             </td>
             <td>
                 <button type="button" class="button-link-delete dcc-seasons-remove-row"
@@ -528,5 +525,100 @@ class Settings {
             </td>
         </tr>
         <?php
+    }
+
+    /**
+     * One rule editor: [Fixed date | named holiday] [month] [day] [± days].
+     */
+    private static function render_rule(string $name, array $rule): void {
+        $on  = (string) ($rule['on'] ?? 'fixed');
+        $off = (int) ($rule['off'] ?? 0);
+        $m   = (int) ($rule['m'] ?? 1);
+        $d   = (int) ($rule['d'] ?? 1);
+        ?>
+        <span class="dcc-seasons-rule">
+            <select class="dcc-seasons-on" name="<?php echo esc_attr($name); ?>[on]" aria-label="<?php esc_attr_e('Date or holiday', 'dcc-seasons'); ?>">
+                <option value="fixed" <?php selected($on, 'fixed'); ?>><?php esc_html_e('Fixed date', 'dcc-seasons'); ?></option>
+                <?php foreach (Schedule::anchors() as $key => $a) : ?>
+                    <option value="<?php echo esc_attr($key); ?>" <?php selected($on, $key); ?>><?php echo esc_html($a['label']); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <select class="dcc-seasons-md" name="<?php echo esc_attr($name); ?>[m]" aria-label="<?php esc_attr_e('Month', 'dcc-seasons'); ?>" <?php echo $on === 'fixed' ? '' : 'hidden'; ?>>
+                <?php for ($i = 1; $i <= 12; $i++) : ?>
+                    <option value="<?php echo (int) $i; ?>" <?php selected($m, $i); ?>><?php echo esc_html(date_i18n('M', mktime(12, 0, 0, $i, 1, 2001))); ?></option>
+                <?php endfor; ?>
+            </select>
+            <select class="dcc-seasons-md" name="<?php echo esc_attr($name); ?>[d]" aria-label="<?php esc_attr_e('Day', 'dcc-seasons'); ?>" <?php echo $on === 'fixed' ? '' : 'hidden'; ?>>
+                <?php for ($i = 1; $i <= 31; $i++) : ?>
+                    <option value="<?php echo (int) $i; ?>" <?php selected($d, $i); ?>><?php echo (int) $i; ?></option>
+                <?php endfor; ?>
+            </select>
+            <input type="number" class="dcc-seasons-off" name="<?php echo esc_attr($name); ?>[off]" value="<?php echo (int) $off; ?>" min="-60" max="60" step="1"
+                   aria-label="<?php esc_attr_e('Offset in days', 'dcc-seasons'); ?>" />
+            <span class="dcc-seasons-off-label"><?php esc_html_e('days', 'dcc-seasons'); ?></span>
+        </span>
+        <?php
+    }
+
+    /**
+     * The schedule resolved to real dates for this year and next, plus any
+     * days nothing covers. This is how the owner confirms a moveable
+     * holiday landed where it should.
+     */
+    private static function render_resolved(array $rows, array $labels): void {
+        $year  = (int) current_time('Y');
+        $years = [$year, $year + 1];
+        ?>
+        <h3><?php echo esc_html(sprintf(/* translators: 1: this year, 2: next year */ __('Resolved dates for %1$d and %2$d', 'dcc-seasons'), $year, $year + 1)); ?></h3>
+        <p class="description"><?php esc_html_e('What the rules above come out to. When ranges overlap, the narrowest one wins that day — so a one-day holiday inside a season shows correctly here.', 'dcc-seasons'); ?></p>
+        <div class="dcc-seasons-scroll">
+        <table class="widefat striped dcc-seasons-resolved">
+            <thead><tr>
+                <th><?php esc_html_e('Theme', 'dcc-seasons'); ?></th>
+                <th><?php esc_html_e('Rule', 'dcc-seasons'); ?></th>
+                <?php foreach ($years as $y) : ?><th><?php echo (int) $y; ?></th><?php endforeach; ?>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($rows as $row) : ?>
+                <?php if (!is_array($row['start'] ?? null)) { continue; } ?>
+                <tr>
+                    <td><?php echo esc_html($labels[$row['theme']] ?? $row['theme']); ?><?php if (!empty($row['year'])) : ?> <em><?php echo esc_html(sprintf(/* translators: %d: year */ __('(%d only)', 'dcc-seasons'), (int) $row['year'])); ?></em><?php endif; ?></td>
+                    <td><?php echo esc_html(Schedule::describe($row['start']) . ' → ' . Schedule::describe($row['end'])); ?></td>
+                    <?php foreach ($years as $y) : ?>
+                        <?php $r = Schedule::resolve_row($row, $y); ?>
+                        <td><?php echo $r ? esc_html(date_i18n('M j', strtotime($r[0])) . ' – ' . date_i18n('M j, Y', strtotime($r[1]))) : '—'; ?></td>
+                    <?php endforeach; ?>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
+        <?php
+        foreach ($years as $y) {
+            $gaps = self::gaps($rows, $y);
+            if ($gaps) {
+                echo '<p class="dcc-seasons-gaps">' . esc_html(sprintf(
+                    /* translators: 1: year, 2: number of days, 3: first few dates */
+                    __('%1$d: %2$d day(s) have no theme (the heron-only default runs): %3$s', 'dcc-seasons'),
+                    $y,
+                    count($gaps),
+                    implode(', ', array_slice($gaps, 0, 6)) . (count($gaps) > 6 ? '…' : '')
+                )) . '</p>';
+            }
+        }
+    }
+
+    /** Days of $year no row covers, as 'M j' strings. */
+    private static function gaps(array $rows, int $year): array {
+        $out = [];
+        $d   = new \DateTimeImmutable(sprintf('%04d-01-01', $year));
+        $end = new \DateTimeImmutable(sprintf('%04d-12-31', $year));
+        while ($d <= $end) {
+            if (!Schedule::active($rows, $d->format('Y-m-d'))) {
+                $out[] = $d->format('M j');
+            }
+            $d = $d->modify('+1 day');
+        }
+        return $out;
     }
 }

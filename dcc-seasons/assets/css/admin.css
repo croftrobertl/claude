@@ -38,3 +38,46 @@
 	margin-left: 8px;
 	font-weight: 600;
 }
+
+/* Tables scroll inside their own box on a phone-width admin; the page
+   itself never scrolls sideways. */
+.dcc-seasons-wrap .dcc-seasons-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+@media (max-width: 782px) {
+	/* Nothing in the settings form may be wider than the phone: long
+	   <select> option text, the tap-selector text field and the sliders all
+	   size to their content otherwise, and one 450px cell scrolls the whole
+	   page sideways. */
+	.dcc-seasons-wrap .form-table input[type="text"],
+	.dcc-seasons-wrap .form-table select,
+	.dcc-seasons-wrap input[type="range"] {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+	.dcc-seasons-wrap .form-table td,
+	.dcc-seasons-wrap .form-table th {
+		overflow-wrap: anywhere;
+	}
+	.dcc-seasons-wrap output {
+		margin-left: 0;
+	}
+}
+
+/* Rule editor: [holiday ▾] [±days] or [Fixed ▾] [month ▾] [day ▾] [±days] */
+.dcc-seasons-wrap .dcc-seasons-rule {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	min-width: 220px;
+}
+.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-on { max-width: 190px; }
+.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-md { max-width: 74px; }
+.dcc-seasons-wrap .dcc-seasons-rule input.dcc-seasons-off { width: 62px; }
+.dcc-seasons-wrap .dcc-seasons-rule .dcc-seasons-off-label { color: #646970; font-size: 12px; }
+.dcc-seasons-wrap .dcc-seasons-year { width: 72px; }
+.dcc-seasons-wrap .dcc-seasons-resolved td.win { font-weight: 600; }
+.dcc-seasons-wrap .dcc-seasons-gaps { color: #b32d2e; }

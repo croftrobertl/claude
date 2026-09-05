@@ -32,4 +32,22 @@
 		var tr = btn.closest('tr');
 		if (tr) { tr.parentNode.removeChild(tr); }
 	});
+
+	/* Rule editors: "Fixed date" shows month/day pickers, a named holiday
+	 * hides them. Delegated so rows added later behave too. */
+	function syncRule(sel) {
+		var wrap = sel.closest('.dcc-seasons-rule');
+		if (!wrap) { return; }
+		var fixed = sel.value === 'fixed';
+		Array.prototype.forEach.call(wrap.querySelectorAll('.dcc-seasons-md'), function (el) {
+			el.hidden = !fixed;
+		});
+	}
+	Array.prototype.forEach.call(table.querySelectorAll('.dcc-seasons-rule select.dcc-seasons-on'), syncRule);
+	table.addEventListener('change', function (e) {
+		if (e.target && e.target.classList && e.target.classList.contains('dcc-seasons-on')) { syncRule(e.target); }
+	});
+	addBtn.addEventListener('click', function () {
+		Array.prototype.forEach.call(table.querySelectorAll('.dcc-seasons-rule select.dcc-seasons-on'), syncRule);
+	});
 })();
