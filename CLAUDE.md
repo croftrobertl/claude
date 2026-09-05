@@ -58,7 +58,7 @@ php tools/makepot.php
 # Build the deliverable zip. Filename MUST state the version (user convention),
 # so a downloaded build is identifiable without opening it. Read the version
 # from the plugin header first.
-( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.22.6.zip" dcc-cottage-selector -x '*.DS_Store' )
+( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.23.0.zip" dcc-cottage-selector -x '*.DS_Store' )
 ```
 
 ## Releasing
@@ -134,6 +134,16 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `elementor/document/after_save` hook is the only publisher, and it must never call
   `$document->get_elements_data()` — that recurses into Elementor's empty-document
   conversion and takes down the editor (the 0.19.5 fatal).
+- **Score ties break on a daily rotation, never on cottage ID** (`crit.rotation`,
+  chosen once per page load in `defaultState()`). Tests that read result ORDER must
+  either pass an explicit `rotation` to `score.run()` or assert on the engine's
+  full result set — two assertions passed vacuously for releases because an ID
+  tie-break happened to put 22/23/31 first.
+- **Switching modes resets everything except the highlight** (`resetForMode()`):
+  answers, weights, compare picks, navigation. The modes are independent tools.
+- **Weigh Priorities is disabled on the live widget** (preset `enabled_modes` is
+  quick + compare) and the owner considers it redundant with the quiz. Keep it
+  working and tested, but don't invest in it without asking.
 - **Elementor stores saved widget settings on the page, and stored values beat every
   plugin default.** A string edited in the panel before a release is frozen there; no
   plugin update can change it. Say so plainly rather than shipping a "fix" that

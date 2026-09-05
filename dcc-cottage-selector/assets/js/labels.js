@@ -48,7 +48,12 @@
     add('onebed', crit.wOneBed > 0, c.layoutType !== 'Studio');
     add('dining', crit.wDining > 0, Number(c.diningSeats) >= 4);
     var hard = crit.hard || [];
-    add('pullout', crit.wPullout > 0, c.pulloutCouch);
+    // The capacity reason already says "the extra two on a pull-out couch", so
+    // when it is going to show, the standalone pull-out reason is redundant
+    // (owner decision, 0.23.0): a guest asking for 3-4 guests AND a pull-out
+    // couch reads the couch once, not twice.
+    var partyOn = ((crit.wParty > 0) || hard.indexOf('party34') !== -1) && Number(c.guests) >= 3;
+    add('pullout', crit.wPullout > 0, c.pulloutCouch && !partyOn);
     add('party', (crit.wParty > 0) || hard.indexOf('party34') !== -1, Number(c.guests) >= 3);
     add('porch', (crit.wScreenedPorch > 0) || hard.indexOf('porch') !== -1, c.screenedPorch);
 

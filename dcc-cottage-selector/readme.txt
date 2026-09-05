@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.7
+Stable tag: 0.23.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -225,6 +225,35 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.23.0 =
+Audit release: five fixes and three behaviour changes agreed with the owner.
+
+* **Results no longer favour the same three cottages every time.** With no
+  preferences every cottage scores equally, and ties used to break by number, so
+  Cottages 22, 23 and 31 led for every guest, every day, while 33-36 never
+  surfaced. Ties now break on a rotation that changes daily, so every cottage
+  leads in turn; within a visit the order is stable, and a real preference still
+  outranks the rotation.
+* **Switching modes starts completely fresh.** Quiz answers, priority weights and
+  compare picks all clear when you move between Quick finder, Weigh priorities
+  and Compare (the highlighted cottage from a Mini Entry or link is kept).
+* **No more saying "pull-out couch" twice.** When a guest asks for 3-4 guests and
+  a pull-out couch, the capacity reason already mentions the couch, so the
+  separate pull-out reason is dropped from that card.
+* Review screen: the party-size row is labelled "Guests" (it borrowed the
+  comparison table's "Sleeps (max)" caption). Editable under Questions & answers
+  text as "Review label: party size".
+* Screen readers: each result card's "View Cottage" link and "Compare" checkbox
+  now name their cottage, so three cards no longer announce identically. The
+  mode drop-down uses proper menu semantics.
+* Phones: the progress-stepper dots stay slim but gain an invisible 44px tap
+  area, so tapping a completed step actually works. Below 360px the compare
+  table's column headers read "#22" instead of wrapping the full name over four
+  lines, which also removes a 2px horizontal overflow.
+* Shared links: `?party=1` (and `1-2`) now select the "1-2" answer.
+* Internal: on-screen glyphs (caret, arrows) are escaped so they no longer depend
+  on the page's character set; two never-set config keys removed.
 
 = 0.22.7 =
 * The "why this fits" capacity reason now says where the extra guests sleep and

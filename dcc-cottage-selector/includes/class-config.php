@@ -37,6 +37,10 @@ final class Config
 
             // Quick Pick questions
             'q_party'           => __('How many guests will there be?', 'dcc-cottage-selector'),
+            // Short label for the party-size row on the review screen. (The compare
+            // matrix's "Sleeps (max)" caption was borrowed for this before 0.23.0 and
+            // read oddly as a question topic.)
+            'party_short'       => __('Guests', 'dcc-cottage-selector'),
             'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
             'q_pullout'         => __('Do you want a pull-out couch?', 'dcc-cottage-selector'),
             'q_layout'          => __('Studio or 1-bedroom?', 'dcc-cottage-selector'),

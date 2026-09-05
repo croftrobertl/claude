@@ -133,15 +133,28 @@
       return { results: [], excluded: p1.excluded, bypassed: false, empty: true };
     }
 
+    // Tie-break: a ROTATED data order rather than "lowest ID first". With no
+    // preferences every cottage scores 0, and an ID tie-break meant 22/23/31 were
+    // the top three for every guest, every day, while 33-36 never surfaced
+    // (owner decision, 0.23.0). crit.rotation is an integer offset chosen once per
+    // page load (selector.js derives it from the calendar day, so a visit is
+    // stable and every cottage leads in turn); absent, order falls back to the
+    // data file, which is ascending by ID.
+    var n = cottages.length;
+    var rot = (crit && typeof crit.rotation === 'number' && n) ? ((crit.rotation % n) + n) % n : 0;
+    var rank = {};
+    cottages.forEach(function (c, i) { rank[c.id] = ((i - rot) % n + n) % n; });   // rotation r: index r leads
+    function tieBreak(a, b) { return (rank[a.id] || 0) - (rank[b.id] || 0); }
+
     if (pool.length <= 3) {
-      var direct = pool.slice().sort(function (a, b) { return Number(a.id) - Number(b.id); });
+      var direct = pool.slice().sort(tieBreak);
       return { results: direct, excluded: p1.excluded, bypassed: true, empty: false };
     }
 
     var scored = pool.map(function (c) { return { c: c, s: scoreOne(c, crit) }; });
     scored.sort(function (a, b) {
       if (b.s !== a.s) { return b.s - a.s; }
-      return Number(a.c.id) - Number(b.c.id);
+      return tieBreak(a.c, b.c);
     });
 
     return {

@@ -381,8 +381,13 @@ function enter(root, mode) {
   }
   ok('matrix has Sleeps (max) + Bed + Screened-porch rows',
     rowValue('Sleeps (max)') !== null && rowValue('Bed') !== null && rowValue('Screened porch') !== null);
-  ok('matrix shows Sleeps (max) 4 for Cottage 22 and the constant Bed value',
-    rowValue('Sleeps (max)') === '4' && rowValue('Bed') === 'Queen');
+  // Rotation-proof (0.23.0): whichever cottage heads column 1 today, the
+  // Sleeps (max) cell must equal that cottage's `guests` in the data file.
+  var col1 = w.document.querySelector('.dccs-modal .dccs-matrix thead th:not(.dccs-corner)');
+  var col1Id = ((col1.getAttribute('aria-label') || '').match(/Cottage (\d\d)/) || [])[1];
+  var col1Guests = String((JSON.parse(CONFIG).cottages.find(c => c.id === col1Id) || {}).guests);
+  ok('matrix Sleeps (max) matches the data for the first column (Cottage ' + col1Id + ') and Bed is constant',
+    rowValue('Sleeps (max)') === col1Guests && rowValue('Bed') === 'Queen');
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok('Esc closes the compare overlay', !w.document.querySelector('.dccs-modal'));
 })();
@@ -604,8 +609,8 @@ function configWith(overrides) {
   const w = freshDom();
   const root = mountSelector(w);
   enter(root, 'quick');
-  ok('mode dropdown is a listbox trigger', !!root.querySelector('.dccs-modeselect-trigger[aria-haspopup="listbox"]') &&
-    root.querySelectorAll('.dccs-modetab[role="option"]').length === 3 &&
+  ok('mode dropdown is a menu trigger', !!root.querySelector('.dccs-modeselect-trigger[aria-haspopup="menu"]') &&
+    root.querySelectorAll('.dccs-modetab[role="menuitemradio"]').length === 3 &&
     root.querySelectorAll('.dccs-modetab[role="tab"]').length === 0);
   ok('current step has aria-current', !!root.querySelector('.dccs-step-dot[aria-current="step"]'));
   ok('disabled Next exposes a hint', /\w/.test(root.querySelector('.dccs-next').getAttribute('aria-label') || ''));
@@ -907,8 +912,12 @@ function configWith(overrides) {
   answerNext(root, '2');                                  // dining: two
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pet/ground/porch
   const sm = root.querySelector('.dccs-see-matches'); if (sm) { sm.click(); }
+  // Intent: "table for two" must not EXCLUDE the 4-seat Boathouse. Assert on the
+  // engine's full result set — the visible top 3 rotates day by day (0.23.0).
+  const critTwo = { hard: [], wDesk: 0, wPullout: 0, wStudio: 0, wOneBed: 0, wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0, wParty: 0 };
+  const resTwo = DCCS.score.run(cfg.cottages, critTwo);
   ok('dining=two keeps The Boathouse in the matches',
-    cardNames(root).some(n => /Cottage 22/.test(n)));
+    resTwo.results.some(c => c.id === '22') && !resTwo.excluded.some(e => e.id === '22'));
   ok('dining2 hard filter fully removed', !('dining2' in DCCS.score.FEATURES));
 
   // (4+5) tap-target sizes baked into the stylesheet.
@@ -1089,6 +1098,11 @@ function configWith(overrides) {
   ok('quick count starts at 8', /\b8\b/.test(countText(root)));
   clickAnswer(root, '34');
   ok('"3-4" drops the live count to 6', /\b6\b/.test(countText(root)));
+  // Advance past the party step BEFORE stepping through with 'either' — otherwise
+  // stepThrough overwrites the '34' answer on this very step. (This assertion
+  // passed vacuously until the 0.23.0 tie-break rotation exposed it: with an ID
+  // tie-break the top 3 were always 22/23/31, studio-free by coincidence.)
+  clickNext(root);
   stepThrough(root, 'either'); seeMatches(root);
   ok('results exclude the studios', !cardNames(root).some(n => /Cottage 3[34]/.test(n)));
 
@@ -1449,6 +1463,157 @@ function configWith(overrides) {
   D.score.dedupe([by('35'), by('36')], cfg.diffFields);
   ok('a real twin still gets the duplicate note', by('35').duplicateOf === '36');
   D.score.run(cfg.cottages, { hard: [] });
+})();
+
+// ==== 0.23.0 audit fixes ====
+
+// ---- 49. Review screen labels the party row "Guests", not the matrix caption ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w, configWith({ showReview: true }));
+  enter(root, 'quick');
+  stepThrough(root, 'either');
+  const first = root.querySelector('.dccs-review-list li .dccs-review-q');
+  ok('party row reads "Guests" on the review screen', !!first && first.textContent.trim() === 'Guests');
+  ok('the compare matrix caption is untouched', JSON.parse(CONFIG).strings.diff_guests === 'Sleeps (max)');
+})();
+
+// ---- 50. Card link + checkbox carry the cottage name for assistive tech ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick'); toResults(root, 'either');
+  const cards = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'));
+  ok('every View-cottage link names its cottage',
+    cards.every(c => /Cottage \d\d: /.test(c.querySelector('.dccs-view').getAttribute('aria-label') || '')));
+  ok('every Compare checkbox names its cottage',
+    cards.every(c => /Cottage \d\d: /.test(c.querySelector('input[data-cmp]').getAttribute('aria-label') || '')));
+  const labels = cards.map(c => c.querySelector('.dccs-view').getAttribute('aria-label'));
+  ok('the three link names are all different', new Set(labels).size === labels.length);
+})();
+
+// ---- 51. Stepper dots: 6px bar, 44px invisible hit area (CSS) ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  ok('answered step-dot buttons get a pseudo-element hit area',
+    /button\.dccs-step-dot::before\s*\{[^}]*top:\s*-19px[^}]*bottom:\s*-19px/.test(css));
+  ok('the dot itself stays thin', /button\.dccs-step-dot\s*\{[^}]*height:\s*var\(--dccs-dot-h, 6px\)/.test(css));
+})();
+
+// ---- 52. Mode dropdown uses the menu pattern (buttons are not listbox options) ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  const trig = root.querySelector('.dccs-modeselect-trigger');
+  ok('trigger announces a menu', trig.getAttribute('aria-haspopup') === 'menu');
+  ok('the list is a menu', !!root.querySelector('.dccs-modeselect-list[role="menu"]'));
+  const items = root.querySelectorAll('.dccs-modetab');
+  ok('items are menuitemradio', Array.prototype.every.call(items, b => b.getAttribute('role') === 'menuitemradio'));
+  ok('exactly one item is checked', root.querySelectorAll('.dccs-modetab[aria-checked="true"]').length === 1);
+  ok('no listbox/option/aria-selected remnants', !root.querySelector('[role="listbox"],[role="option"],[aria-selected]'));
+})();
+
+// ---- 53. ?party=1 is the "1-2" answer ----
+(function () {
+  ['1', '1-2', '12', '2'].forEach(v => {
+    const root = mountSelector(freshDom('https://example.com/?party=' + v));
+    root.querySelector('.dccs-edit-answers').click();
+    ok('?party=' + v + ' lands as "1-2"', root.querySelector('.dccs-review-list li .dccs-review-a').textContent.trim() === '1-2');
+  });
+})();
+
+// ---- 54. The standalone pull-out reason yields to the capacity reason ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const c22 = cfg.cottages.find(c => c.id === '22');
+  const both = w.DCCS.labels.whyFits(c22, { hard: ['party34'], wParty: 2, wPullout: 2 });
+  ok('3-4 guests + pull-out wanted: capacity reason shows', both.includes('party'));
+  ok('…and the redundant pull-out reason is suppressed', !both.includes('pullout'));
+  const onlyPull = w.DCCS.labels.whyFits(c22, { hard: [], wPullout: 2 });
+  ok('pull-out alone still gets its reason', onlyPull.includes('pullout') && !onlyPull.includes('party'));
+  // End-to-end: the sentence never says "pull-out couch" twice.
+  const root = mountSelector(freshDom('https://example.com/?party=3-4&pullout=yes'));
+  const why = root.querySelector('.dccs-card .dccs-why').textContent;
+  ok('card sentence mentions the pull-out couch once', (why.match(/pull-out couch/g) || []).length === 1);
+})();
+
+// ---- 55. Tie-break rotates instead of always favouring the lowest ID ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const flat = { hard: [], wDesk: 0, wSpace: 0, wPet: 0, wFewerStairs: 0, wStudio: 0, wOneBed: 0, wDining: 0, wPullout: 0, wScreenedPorch: 0, wParty: 0 };
+  const ids = rot => w.DCCS.score.run(cfg.cottages, Object.assign({ rotation: rot }, flat)).results.map(c => c.id).join(',');
+  ok('rotation 0 keeps the data order (22 first)', ids(0).indexOf('22,23,31') === 0);
+  ok('rotation 2 starts at the third cottage', ids(2).indexOf('31,32,33') === 0);
+  ok('rotation wraps around', ids(6) === '35,36,22,23,31,32,33,34');
+  ok('every cottage leads once across an 8-day cycle',
+    new Set([0,1,2,3,4,5,6,7].map(r => ids(r).split(',')[0])).size === 8);
+  ok('no rotation given -> unchanged legacy order', ids(undefined) === ids(0));
+  // A page load picks ONE rotation and keeps it across re-renders.
+  const root = mountSelector(freshDom());
+  enter(root, 'quick'); toResults(root, 'either');
+  const before = cardNames(root).join('|');
+  const cb = root.querySelector('.dccs-card input[data-cmp]');
+  cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));   // forces a re-render
+  ok('results order is stable within a visit', cardNames(root).join('|') === before);
+  // Rotation only breaks TIES: a hard filter still wins regardless of the day.
+  const r = w.DCCS.score.run(cfg.cottages, Object.assign({ rotation: 5 }, flat, { hard: ['porch'] }));
+  ok('a hard filter is unaffected by rotation', r.results.length === 1 && r.results[0].id === '22');
+})();
+
+// ---- 56. Compare column headers offer a "#22" form for narrow phones ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick'); toResults(root, 'either');
+  const ids = Array.prototype.map.call(root.querySelectorAll('.dccs-card input[data-cmp]'), i => i.dataset.cmp).slice(0, 2);
+  ids.forEach(id => { const cb = root.querySelector('input[data-cmp="' + id + '"]'); cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true })); });
+  root.querySelector('.dccs-open-compare').click();
+  const th = w.document.querySelector('.dccs-modal .dccs-matrix thead th:not(.dccs-corner)');
+  ok('header carries the short "#NN" form', /^#\d\d$/.test((th.querySelector('.dccs-cmp-th-short') || {}).textContent || ''));
+  ok('header keeps the full name for assistive tech', /^Cottage \d\d: /.test(th.getAttribute('aria-label') || ''));
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  ok('short form is hidden by default and shown at <=360px',
+    /\.dccs-cmp-th-short\s*\{[^}]*display:\s*none/.test(css) && /max-width:\s*360px\)[\s\S]*?\.dccs-cmp-th-short\s*\{[^}]*display:\s*block/.test(css));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+})();
+
+// ---- 57. Switching modes clears answers, weights, picks — everything but context ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  clickAnswer(root, '34');
+  ok('setup: an answer narrows the count', /\b6\b/.test(countText(root)));
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  const cb = root.querySelector('.dccs-cmp-option input[data-cmp]');
+  cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
+  ok('back in the quiz: count is 8 again (answers cleared)', /\b8\b/.test(countText(root)));
+  ok('back on step 1', /1\b.*\b8/.test(progress(root)));
+  ok('nothing preselected', !activeChip(root));
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  ok('compare picks were cleared too', !root.querySelector('.dccs-cmp-option input[data-cmp]:checked'));
+})();
+
+// ---- 58. Hardening: glyphs are escapes; dead config keys are gone ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w);
+  enter(root, 'quick');
+  ok('caret renders U+25BE', root.querySelector('.dccs-caret').textContent === '\u25BE');
+  // Only RENDERED literals matter (comments never reach a browser), so look for
+  // the glyphs inside quoted strings: caret, paging arrows, Back/Next arrows, and
+  // the em dash used in the Next button's aria-label.
+  const src = fs.readFileSync(path.join(JS, 'selector.js'), 'utf8');
+  const rawInStrings = src.match(/(['"])[^'"\n]*[\u25BE\u2039\u203A\u2190\u2192\u2014][^'"\n]*\1/g) || [];
+  ok('no raw glyphs inside JS string literals (\\u escapes only)' + (rawInStrings.length ? ' [' + rawInStrings.join(' | ') + ']' : ''),
+    rawInStrings.length === 0);
+  const root2 = mountSelector(freshDom()); enter(root2, 'quick');
+  ok('Next arrow still renders as U+2192', /\u2192/.test(root2.querySelector('.dccs-next').textContent));
+  ok('presetQuick / preCompare no longer read', !/presetQuick|preCompare/.test(src));
 })();
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

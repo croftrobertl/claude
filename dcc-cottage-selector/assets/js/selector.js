@@ -103,14 +103,18 @@
     // Quick answers start UNSET ('') so no option is pre-highlighted; a step is
     // "answered" once the guest taps something ('either' = an explicit skip).
     var quick = { party: '', desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
-    if (config.presetQuick) { Object.keys(config.presetQuick).forEach(function (k) { quick[k] = config.presetQuick[k]; }); }
+    var n = (config.cottages || []).length;
     return {
       mode: config.startMode || 'quick',
       quick: quick,
+      // Tie-break rotation for equal scores (see score.js run()). Derived from the
+      // calendar day so a visit is stable across re-renders and every cottage
+      // leads in turn over an n-day cycle instead of the lowest ID always winning.
+      rotation: n ? Math.floor(Date.now() / 864e5) % n : 0,
       // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
       // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
       weights: { party: 0, workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0, screenedporch: 0 },
-      compareIds: (config.preCompare || []).map(String),
+      compareIds: [],
       highlight: config.highlight || '',
       // Navigation: question index + stage ('landing' | 'q' | 'review' | 'results').
       // Fresh loads open on the landing screen; a mode choice moves past it.
@@ -135,7 +139,7 @@
     // If the guest arrived with criteria (an inbound deep link or a mini-entry
     // pre-fill), skip the landing + questionnaire and jump straight to results.
     // An explicit ?mode=/?compare= deep link skips the landing into that mode.
-    var hasCriteria = !!state.highlight || !!config.presetQuick ||
+    var hasCriteria = !!state.highlight ||
       Object.keys(state.quick).some(function (k) { return state.quick[k] !== ''; });
     var p = new URLSearchParams(window.location.search);
     // The mini-entry modal opens on the landing screen (matching the main Selector's
@@ -164,7 +168,7 @@
     if (p.has('dining')) { state.quick.dining = p.get('dining') === '4' ? 4 : (p.get('dining') === '2' ? 2 : 'either'); }
     if (p.has('party')) {
       var pv = String(p.get('party'));
-      state.quick.party = pv === '2' ? '2' : (/^3|^4/.test(pv) ? '34' : 'either');
+      state.quick.party = /^(1|2|1-2|12)$/.test(pv) ? '2' : (/^3|^4/.test(pv) ? '34' : 'either');
     }
     if (p.has('compare')) { state.compareIds = p.get('compare').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
 
@@ -200,7 +204,7 @@
         if (Number(w[g]) === 3) { whard.push(WEIGHT_HARD[g]); }
       });
       return {
-        hard: whard,
+        hard: whard, rotation: state.rotation,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
         wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
         wScreenedPorch: w.screenedporch, wParty: w.party
@@ -224,7 +228,7 @@
     if (q.ground === 'yes') { hard.push('ground'); }
     if (q.screenedporch === 'yes') { hard.push('porch'); }
     return {
-      hard: hard,
+      hard: hard, rotation: state.rotation,
       wDesk: q.desk === 'yes' ? 2 : 0,
       wPullout: q.pullout === 'yes' ? 2 : 0,
       wStudio: q.layout === 'studio' ? 2 : 0,
@@ -253,7 +257,7 @@
   // "No preference".
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
-    { group: 'party', qKey: 'q_party', shortKey: 'diff_guests', opts: [['opt_party2', '2'], ['opt_party34', '34'], ['opt_either', 'either']] },
+    { group: 'party', qKey: 'q_party', shortKey: 'party_short', opts: [['opt_party2', '2'], ['opt_party34', '34'], ['opt_either', 'either']] },
     { group: 'desk', qKey: 'q_desk', shortKey: 'diff_desk', opts: YND },
     { group: 'pullout', qKey: 'q_pullout', shortKey: 'diff_pulloutCouch', opts: YND },
     { group: 'layout', qKey: 'q_layout', shortKey: 'diff_layoutType', opts: [['opt_studio', 'studio'], ['opt_onebed', 'onebed'], ['opt_either', 'either']] },
@@ -368,7 +372,7 @@
 
     var canNext = tr.isAnswered(q);
     var nextAttrs = canNext ? '' : ' disabled title="' + esc(S.next_hint || '') +
-      '" aria-label="' + esc((S.wiz_next || '') + ' — ' + (S.next_hint || '')) + '"';
+      '" aria-label="' + esc((S.wiz_next || '') + ' \u2014 ' + (S.next_hint || '')) + '"';
     var qLabel = tr.qLabel(q);
     // Optional admin-set icon for the question (weights share one w_question icon).
     var qIconKey = state.mode === 'weights' ? 'w_question' : q.qKey;
@@ -389,9 +393,9 @@
     html += '<div class="dccs-wizard-nav">';
     // Back/Next: a chosen icon replaces the default arrow (Back = left, Next = right).
     html += i > 0
-      ? '<button type="button" class="dccs-back dccs-primary">' + navAffix(config, 'back', '←', 'left') + esc(S.wiz_back) + '</button>'
+      ? '<button type="button" class="dccs-back dccs-primary">' + navAffix(config, 'back', '\u2190', 'left') + esc(S.wiz_back) + '</button>'
       : '<span class="dccs-nav-spacer"></span>';
-    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + navAffix(config, 'next', '→', 'right') + '</button>';
+    html += '<button type="button" class="dccs-next dccs-primary"' + nextAttrs + '>' + esc(S.wiz_next) + navAffix(config, 'next', '\u2192', 'right') + '</button>';
     html += '</div></div>';
     return html;
   }
@@ -440,12 +444,15 @@
   /** Compare-table column header: stack "Cottage NN:" above the name (smaller, narrower
       columns) by splitting the formatted title at the first colon. Falls back to one line
       when a translated name_format carries no colon. */
-  function cmpHeader(title) {
+  function cmpHeader(title, id) {
     title = String(title == null ? '' : title);
+    // Below ~360px the CSS swaps the two-line title for this "#22" form so the
+    // column stays narrow enough for two cottages side by side.
+    var shortForm = '<span class="dccs-cmp-th-short" aria-hidden="true">#' + esc(id) + '</span>';
     var ci = title.indexOf(':');
-    if (ci === -1) { return '<span class="dccs-cmp-th-name">' + esc(title) + '</span>'; }
+    if (ci === -1) { return '<span class="dccs-cmp-th-name">' + esc(title) + '</span>' + shortForm; }
     return '<span class="dccs-cmp-th-num">' + esc(title.slice(0, ci + 1)) + '</span>' +
-      '<span class="dccs-cmp-th-name">' + esc(title.slice(ci + 1).trim()) + '</span>';
+      '<span class="dccs-cmp-th-name">' + esc(title.slice(ci + 1).trim()) + '</span>' + shortForm;
   }
 
   var CMP_WIN = 2; // cottage columns shown at once in the comparison table
@@ -463,13 +470,14 @@
     var html = '<div class="dccs-matrix-block">';
     if (total > CMP_WIN) {
       html += '<div class="dccs-matrix-nav">' +
-        '<button type="button" class="dccs-cmp-prev"' + (start > 0 ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_prev || 'Previous') + '">‹</button>' +
+        '<button type="button" class="dccs-cmp-prev"' + (start > 0 ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_prev || 'Previous') + '">\u2039</button>' +
         '<span class="dccs-matrix-pos">' + esc(fmt3(S.cmp_range, start + 1, Math.min(start + CMP_WIN, total), total)) + '</span>' +
-        '<button type="button" class="dccs-cmp-next"' + (start + CMP_WIN < total ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_next || 'Next') + '">›</button>' +
+        '<button type="button" class="dccs-cmp-next"' + (start + CMP_WIN < total ? '' : ' disabled') + ' aria-label="' + esc(S.cmp_next || 'Next') + '">\u203A</button>' +
         '</div>';
     }
     html += '<div class="dccs-matrix-wrap"><table class="dccs-matrix"><thead><tr><th class="dccs-corner"></th>';
-    sel.forEach(function (c) { html += '<th>' + cmpHeader(cname(config, c)) + '</th>'; });
+    // aria-label keeps the full name for assistive tech whichever form is visible.
+    sel.forEach(function (c) { html += '<th scope="col" aria-label="' + esc(cname(config, c)) + '">' + cmpHeader(cname(config, c), c.id) + '</th>'; });
     html += '</tr></thead><tbody>';
     (config.diffFields || []).forEach(function (field) {
       // Highlight "differs" by comparing across ALL selected, not just the window.
@@ -653,12 +661,16 @@
     // The per-card Compare checkbox renders only when the page shows 2+ cards —
     // a lone result has nothing to be compared with (Compare mode in the menu
     // still covers cross-cottage curiosity).
+    // Three cards each say "View Cottage" / "Compare"; a screen reader needs the
+    // cottage name in the accessible name to tell them apart (WCAG 2.4.4).
+    var nameLabel = cname(config, c);
     var cmpToggle = showCmp
       ? '<label class="dccs-cmp-toggle"><input type="checkbox" data-cmp="' + esc(c.id) + '"' +
+        ' aria-label="' + esc(S.add_compare + ': ' + nameLabel) + '"' +
         (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>'
       : '';
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '">' + withIcon(config, 'view', 'view', esc(S.view_cottage)) + '</a>' +
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" aria-label="' + esc(S.view_cottage + ': ' + nameLabel) + '">' + withIcon(config, 'view', 'view', esc(S.view_cottage)) + '</a>' +
       cmpToggle +
       '</div></div>';
     return html;
@@ -723,16 +735,16 @@
     var current = S[MODE_LABEL[state.mode]] || state.mode;
     var opts = modes.map(function (m) {
       var on = state.mode === m;
-      return '<button type="button" role="option" aria-selected="' + (on ? 'true' : 'false') +
+      return '<button type="button" role="menuitemradio" aria-checked="' + (on ? 'true' : 'false') +
         '" class="dccs-modetab' + (on ? ' is-active' : '') + '" data-mode="' + m + '">' +
         esc(S[MODE_LABEL[m]] || m) + '</button>';
     }).join('');
     // The open/close state lives on the DOM (is-open class), not in app state, so
     // re-renders triggered by other actions don't fight the toggle.
     return '<div class="dccs-modeselect">' +
-      '<button type="button" class="dccs-modeselect-trigger" aria-haspopup="listbox" aria-expanded="false">' +
-      '<span>' + esc(current) + '</span> <span class="dccs-caret" aria-hidden="true">▾</span></button>' +
-      '<div class="dccs-modeselect-list" role="listbox">' + opts + '</div></div>';
+      '<button type="button" class="dccs-modeselect-trigger" aria-haspopup="menu" aria-expanded="false">' +
+      '<span>' + esc(current) + '</span> <span class="dccs-caret" aria-hidden="true">\u25BE</span></button>' +
+      '<div class="dccs-modeselect-list" role="menu">' + opts + '</div></div>';
   }
 
   function renderSelector(root, config, state, ctx) {
@@ -862,11 +874,15 @@
       else if ((state.step | 0) >= trackLen() - 1) { state.stage = (config.showReview !== false) ? 'review' : 'results'; }
       else { state.step = (state.step | 0) + 1; }
     }
-    // Switching to/from any mode starts that mode fresh AND clears the compare picks
-    // (the owner asked that a mode change never carry a stale comparison set forward).
+    // Switching to/from any mode starts that mode completely fresh: quiz answers,
+    // priority weights, compare picks and navigation all reset (owner decision,
+    // 0.23.0 — the modes are independent tools, and Compare is criteria-free).
+    // The highlight (mini-entry / deep-link context) and the day's tie-break
+    // rotation are the only things that carry across.
     function resetForMode(st) {
-      st.step = 0; st.stage = 'q'; st.editReturn = null;
-      st.compareIds = [];
+      var fresh = defaultState(config);
+      st.quick = fresh.quick; st.weights = fresh.weights;
+      st.compareIds = []; st.step = 0; st.stage = 'q'; st.editReturn = null;
     }
 
     root.addEventListener('click', function (e) {

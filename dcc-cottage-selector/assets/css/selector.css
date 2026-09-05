@@ -124,7 +124,14 @@
   display: block; flex: 1 1 0; height: var(--dccs-dot-h, 6px); min-height: 0; padding: 0; margin: 0; border: 0;
   border-radius: 999px; background: var(--dccs-border); box-shadow: none; -webkit-appearance: none; appearance: none; cursor: default;
 }
-.dccs-root.dccs-root button.dccs-step-dot { cursor: pointer; font-size: 0; line-height: 0; }
+.dccs-root.dccs-root button.dccs-step-dot { cursor: pointer; font-size: 0; line-height: 0; position: relative; }
+/* The bar is 6px tall for looks, which is unhittable on touch. An invisible
+   pseudo-element extends each answered dot's hit area to 44px (6 + 19 above +
+   19 below) without moving anything on screen. Nothing interactive sits in the
+   overlap (the progress row above and the question heading below are static). */
+.dccs-root.dccs-root button.dccs-step-dot::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -19px; bottom: -19px;
+}
 /* Bravada resets <button> at (0,3,1) with min-height:44px; the completed dots are
    buttons, so restate the bar geometry at (0,4,1) to keep them thin like the spans. */
 .dccs-root.dccs-root .dccs-stepper button.dccs-step-dot {
@@ -375,6 +382,15 @@
 .dccs-root.dccs-root .dccs-matrix thead th { background: var(--dccs-accent); color: var(--dccs-accent-text); position: sticky; top: 0; z-index: 1; font-size: 0.8rem; padding: 8px 6px; }
 .dccs-root.dccs-root .dccs-cmp-th-num { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
 .dccs-root.dccs-root .dccs-cmp-th-name { display: block; font-weight: 700; line-height: 1.2; }
+/* Short "#22" form of the column header, shown only on the narrowest phones so
+   two cottage columns fit without wrapping the name over four lines. The <th>
+   carries the full name in aria-label, so assistive tech is unaffected. */
+.dccs-root.dccs-root .dccs-cmp-th-short { display: none; font-weight: 700; font-size: 0.95rem; }
+@media (max-width: 360px) {
+  .dccs-root.dccs-root .dccs-cmp-th-num,
+  .dccs-root.dccs-root .dccs-cmp-th-name { display: none; }
+  .dccs-root.dccs-root .dccs-cmp-th-short { display: block; }
+}
 .dccs-root.dccs-root .dccs-matrix tbody th { position: sticky; left: 0; background: var(--dccs-surface); z-index: 1; }
 .dccs-root.dccs-root .dccs-matrix thead th.dccs-corner { left: 0; z-index: 3; background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-matrix td.is-diff { background: var(--dccs-diff); font-weight: 600; }

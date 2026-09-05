@@ -472,6 +472,7 @@ class Selector_Widget extends Widget_Base
         $fields = [
             // Quick finder questions
             'q_party'     => __('Question: party size', 'dcc-cottage-selector'),
+            'party_short' => __('Review label: party size', 'dcc-cottage-selector'),
             'q_desk'      => __('Question: desk', 'dcc-cottage-selector'),
             'q_pullout'   => __('Question: pull-out couch', 'dcc-cottage-selector'),
             'q_layout'    => __('Question: layout', 'dcc-cottage-selector'),
