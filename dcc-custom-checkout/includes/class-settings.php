@@ -133,7 +133,7 @@ final class Settings
             $out[$key] = $name !== '' ? $name : (string) $defaults[$key];
         }
 
-        foreach (['guest2_section_title', 'pet_section_title'] as $key) {
+        foreach (['guest2_section_title', 'guest3_section_title', 'guest4_section_title', 'pet_section_title'] as $key) {
             $title     = isset($input[$key]) ? sanitize_text_field($input[$key]) : '';
             $out[$key] = $title !== '' ? $title : (string) $defaults[$key];
         }
@@ -201,14 +201,13 @@ final class Settings
 
                 <h2><?php echo esc_html__('Services &amp; night buckets', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
-                    <?php echo esc_html__('These native MotoPress Service IDs are applied by length of stay. They are global across every pet accommodation. The fee itself (amount, taxed/untaxed) is configured on the Service in MotoPress — this plugin only ticks the right one.', 'dcc-checkout'); ?>
+                    <?php echo esc_html__('These native MotoPress Service IDs are applied by length of stay; the fee itself (amount, taxed/untaxed) is configured on the Service in MotoPress — this plugin only ticks the right one. The weekly and monthly night thresholds are SHARED by the pet fee and the pull-out couch fee. Both fees apply from the first night (there is no minimum-nights threshold for the daily bucket).', 'dcc-checkout'); ?>
                 </p>
                 <table class="form-table" role="presentation">
                     <?php
-                    $this->number_row(__('Daily service ID', 'dcc-checkout'), 'service_daily', (int) $s['service_daily'], __('Applied for stays in the "daily" bucket.', 'dcc-checkout'));
-                    $this->number_row(__('Weekly service ID', 'dcc-checkout'), 'service_weekly', (int) $s['service_weekly'], '');
-                    $this->number_row(__('Monthly service ID', 'dcc-checkout'), 'service_monthly', (int) $s['service_monthly'], '');
-                    $this->number_row(__('Daily bucket: minimum nights', 'dcc-checkout'), 'min_daily', (int) $s['min_daily'], __('e.g. 2 → daily applies from 2 nights up to (weekly − 1).', 'dcc-checkout'));
+                    $this->service_id_row(__('Daily service ID', 'dcc-checkout'), 'service_daily', (int) $s['service_daily'], __('Applied for stays in the "daily" bucket.', 'dcc-checkout'));
+                    $this->service_id_row(__('Weekly service ID', 'dcc-checkout'), 'service_weekly', (int) $s['service_weekly'], '');
+                    $this->service_id_row(__('Monthly service ID', 'dcc-checkout'), 'service_monthly', (int) $s['service_monthly'], '');
                     $this->number_row(__('Weekly bucket: minimum nights', 'dcc-checkout'), 'min_weekly', (int) $s['min_weekly'], '');
                     $this->number_row(__('Monthly bucket: minimum nights', 'dcc-checkout'), 'min_monthly', (int) $s['min_monthly'], '');
                     ?>
@@ -239,9 +238,9 @@ final class Settings
                         </td>
                     </tr>
                     <?php
-                    $this->number_row(__('Daily service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_daily', (int) $s['guest_service_daily'], __('0 = dormant. Flat pricing: same ID in all three fields.', 'dcc-checkout'));
-                    $this->number_row(__('Weekly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_weekly', (int) $s['guest_service_weekly'], '');
-                    $this->number_row(__('Monthly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_monthly', (int) $s['guest_service_monthly'], '');
+                    $this->service_id_row(__('Daily service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_daily', (int) $s['guest_service_daily'], __('0 = dormant. Flat pricing: same ID in all three fields.', 'dcc-checkout'));
+                    $this->service_id_row(__('Weekly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_weekly', (int) $s['guest_service_weekly'], '');
+                    $this->service_id_row(__('Monthly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_monthly', (int) $s['guest_service_monthly'], '');
                     ?>
                 </table>
 
@@ -259,11 +258,13 @@ final class Settings
 
                 <h2><?php echo esc_html__('Section titles', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
-                    <?php echo esc_html__('Headings for the two conditional sections shown after "Your Information".', 'dcc-checkout'); ?>
+                    <?php echo esc_html__('Headings for the conditional sections shown after "Your Information" (per-guest details and pet information).', 'dcc-checkout'); ?>
                 </p>
                 <table class="form-table" role="presentation">
                     <?php
-                    $this->text_row(__('Guest #2 section title', 'dcc-checkout'), 'guest2_section_title', (string) $s['guest2_section_title'], '');
+                    $this->text_row(__('Guest #2 section title', 'dcc-checkout'), 'guest2_section_title', (string) $s['guest2_section_title'], __('Shown at 2+ guests: first name, last name, phone.', 'dcc-checkout'));
+                    $this->text_row(__('Guest #3 section title', 'dcc-checkout'), 'guest3_section_title', (string) $s['guest3_section_title'], __('Shown at 3+ guests: first and last name (create Checkout Fields mphb_guest3_first_name / mphb_guest3_last_name, not required).', 'dcc-checkout'));
+                    $this->text_row(__('Guest #4 section title', 'dcc-checkout'), 'guest4_section_title', (string) $s['guest4_section_title'], __('Shown at 4 guests: first and last name (mphb_guest4_first_name / mphb_guest4_last_name).', 'dcc-checkout'));
                     $this->text_row(__('Pet section title', 'dcc-checkout'), 'pet_section_title', (string) $s['pet_section_title'], '');
                     ?>
                 </table>
@@ -334,7 +335,32 @@ final class Settings
         echo '<p class="description">' . esc_html__('Hold Ctrl/Cmd to select multiple.', 'dcc-checkout') . '</p>';
     }
 
-    private function number_row(string $label, string $key, int $value, string $desc): void
+    /**
+     * A number_row for a MotoPress Service ID, with a live status line so a
+     * typo can't silently leave a feature dormant: looks the ID up and shows
+     * the service title, or a warning if no published service has that ID.
+     */
+    private function service_id_row(string $label, string $key, int $value, string $desc): void
+    {
+        $this->number_row($label, $key, $value, $desc, $this->service_status_html($value));
+    }
+
+    /** Escaped status markup for a Service ID (empty string for 0). */
+    private function service_status_html(int $id): string
+    {
+        if ($id <= 0) {
+            return '';
+        }
+        $post = get_post($id);
+        if ($post instanceof \WP_Post && $post->post_type === 'mphb_room_service' && $post->post_status === 'publish') {
+            return '<p class="description" style="color:#1a7f37">' . esc_html('✓ ' . $post->post_title) . '</p>';
+        }
+        return '<p class="description" style="color:#b32d2e">'
+            . esc_html__('⚠ No published MotoPress Service has this ID — the feature will stay dormant.', 'dcc-checkout')
+            . '</p>';
+    }
+
+    private function number_row(string $label, string $key, int $value, string $desc, string $extra_html = ''): void
     {
         printf(
             '<tr><th scope="row"><label for="dcc_%1$s">%2$s</label></th><td>'
@@ -347,6 +373,7 @@ final class Settings
         if ($desc !== '') {
             echo '<p class="description">' . esc_html($desc) . '</p>';
         }
+        echo $extra_html; // phpcs:ignore WordPress.Security.EscapeOutput -- built escaped in service_status_html()
         echo '</td></tr>';
     }
 

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.4
+Stable tag: 0.3.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,11 +31,16 @@ Part B — Required-marker cleanup (one JS pass + CSS)
   * The dotted underline and the "Required" tooltip are removed; the visible "*"
     stays, coloured #c62828 (accessible).
 
-Part C — Second guest, conditional on guest count
-  * The Guest-2 fields (First name 8312, Last name 8313, Phone 8314) are hidden
-    unless "Number of Guests" = 2. At 2 guests they are shown, marked required,
-    and validated on submit. A server-side backstop blocks a 2-guest submission
-    that leaves any of the three blank, so the client rule can't be bypassed.
+Part C — Additional-guest details, conditional on guest count
+  * Guest 2 (first name, last name, phone) appears at 2+ guests; guests 3 and 4
+    (first and last name only) appear at 3+ and 4 guests respectively. Each
+    group is its own titled section after "Your Information", shown/hidden and
+    made required by the guest dropdown, and validated on submit. A server-side
+    backstop (form POST and REST route alike) blocks a submission that leaves a
+    visible group's fields blank, so the client rule can't be bypassed.
+  * Guests 3/4 need native Checkout Fields (NOT required):
+    mphb_guest3_first_name, mphb_guest3_last_name, mphb_guest4_first_name,
+    mphb_guest4_last_name. Without them the sections simply don't render.
 
 Part D — Pet flow + per-night pet fee (native MotoPress Services)
   * Applies to the accommodations selected on the settings page (default:
@@ -48,7 +53,7 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     by the toggle. (MotoPress drops bespoke, non-native inputs from its checkout
     payload, so native fields are required for the data to reach the server.)
   * The correct native Service is auto-applied by length-of-stay bucket:
-      2–6 nights  -> Daily   (ID 17712, $25/night)
+      1–6 nights  -> Daily   (ID 17712, $25/night)   (from night one since 0.3.5)
       7–29 nights -> Weekly  (ID 17711, $20/night)
       30+ nights  -> Monthly (ID 14926, $10/night)
     so Price Breakdown / Total / Tax update natively (the fee is intentionally
@@ -93,8 +98,10 @@ WP Admin → DCC → Custom Checkout:
     Cottage 34). The dog flow shows only for a booking whose accommodation is
     selected here AND when the pet fee is enabled. Cottages whose three pet
     Services aren't enabled in MotoPress are flagged (best-effort).
-  * Service IDs (17712/17711/14926) and night thresholds (2–6 / 7–29 / 30+),
-    global across all pet accommodations.
+  * Service IDs (17712/17711/14926) and the shared weekly/monthly night
+    thresholds (7 / 30). Both fees apply from the first night. Each service-ID
+    field shows a live status (the service's title, or a warning if no
+    published service has that ID).
   * Pull-out Couch Guests — master on/off for the extra-guest offering (default
     ON). ON: guests beyond the included count are offered and billed per night.
     OFF (or any service ID still 0): no fee UI, no service attached, and
@@ -131,6 +138,34 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.3.5 =
+* Guests 3 and 4 now collect first and last name (no phone) — owner decision.
+  Sections "Guest #3 Information" / "Guest #4 Information" appear at 3+ / 4
+  guests, mirroring guest 2; titles editable in settings; required-when-visible
+  on the client and enforced by the shared server backstop on both transports.
+  All three groups come from ONE Config definition so JS, PHP and the settings
+  page can't drift. Requires the owner to create the four Checkout Fields.
+* Pet fee now applies from the first night (owner decision), matching the
+  pull-out couch fee. The unused "Daily bucket: minimum nights" setting row is
+  removed (the option key is kept so saved settings stay valid). The pet
+  backstop no longer demands a bucket service when the stay length is unknown.
+* Pull-out couch: a fee hint under the guest dropdown ("$50.00 per night for
+  each guest beyond 2") — the amount is read from MotoPress's own rendered
+  service row, so the plugin still does no price math. When the offering is
+  OFF and a guest arrives with 3–4 selected, the dropdown is capped AND a note
+  explains it ("This cottage sleeps up to 2 guests.") instead of silently
+  reducing them.
+* Accessibility: the "Traveling with a dog?" toggle is a real fieldset/legend
+  (the question now labels the radio group for screen readers); invalid fields
+  get aria-invalid so the alert can be traced to a field; the dynamic "*" is
+  aria-hidden (aria-required carries the meaning); keyboard focus is always
+  visible on the pill fields (:focus-visible ring).
+* Mobile: the Yes/No radio targets are now ≥44px tall (were ~20px).
+* Settings: every service-ID field shows a live status — the service's title,
+  or a warning that no published MotoPress Service has that ID (a typo can no
+  longer silently leave a feature dormant). Thresholds description updated to
+  say they're shared by both fees.
 
 = 0.3.4 =
 * New setting "Pull-out Couch Guests" (DCC → Custom Checkout), default ON.

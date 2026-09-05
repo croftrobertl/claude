@@ -119,6 +119,17 @@ final class Assets
             'petFeeEnabled'    => Config::pet_fee_enabled(),
             'petAccommodations' => Config::pet_accommodations(),
             'guest2FieldNames' => Config::guest2_field_name_list(),
+            // Every conditional per-guest detail group (2: name+phone; 3/4:
+            // name only), from the single Config definition.
+            'guestGroups'      => array_values(array_map(static function (array $g): array {
+                return [
+                    'min'          => $g['min'],
+                    'names'        => $g['names'],
+                    'prefix'       => $g['prefix'],
+                    'title'        => $g['title'],
+                    'sectionClass' => $g['section_class'],
+                ];
+            }, Config::guest_field_groups())),
             // Native dog Checkout Field names the toggle shows/hides + requires.
             'dogFieldNames'    => Config::dog_field_name_list(),
             'sectionTitles'    => [
@@ -139,7 +150,13 @@ final class Assets
                 'petYes'        => __('Yes', 'dcc-checkout'),
                 'petFeeNote'    => __('A per-night pet fee will be added to your total.', 'dcc-checkout'),
                 'requiredMsg'   => __('Please complete the highlighted required fields.', 'dcc-checkout'),
-                'errGuest2'     => __('Please complete the second guest\'s First name, Last name, and Phone.', 'dcc-checkout'),
+                'errGuest2'     => __('Please complete the details for every additional guest.', 'dcc-checkout'),
+                /* translators: 1: fee amount as rendered by MotoPress (e.g. $50.00), 2: included guest count. */
+                'feeHint'       => __('%1$s per night for each guest beyond %2$s.', 'dcc-checkout'),
+                /* translators: %s: included guest count. */
+                'feeHintGeneric' => __('A per-night fee applies to each guest beyond %s.', 'dcc-checkout'),
+                /* translators: %s: maximum guest count. */
+                'capNote'       => __('This cottage sleeps up to %s guests.', 'dcc-checkout'),
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),
                 'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
             ],

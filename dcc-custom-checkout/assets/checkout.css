@@ -81,6 +81,17 @@
     display: none;
 }
 
+/* Keyboard focus must stay visible on the pill fields even if the theme
+   suppresses the UA outline. :focus-visible so mouse users don't get a ring. */
+.mphb_sc_checkout-form input:focus-visible,
+.mphb_sc_checkout-form select:focus-visible,
+.mphb_sc_checkout-form textarea:focus-visible,
+.mphb_sc_checkout-form button:focus-visible,
+.mphb_sc_checkout-form .button:focus-visible {
+    outline: 3px solid #006bcf !important;
+    outline-offset: 2px;
+}
+
 /* ---------------------------------------------------------------------------
  * Item 5 — Buttons: kill the uppercase transform, keep the blue pill.
  * (Live: submit = input.button "Submit Booking"; apply =
@@ -285,13 +296,22 @@
     border: 2px solid #f4da62;
     border-radius: 16px;
     background: #fffdf5;
+    /* It's a real <fieldset> now (a11y: the question labels the radio group);
+       neutralise the UA fieldset defaults so the pill styling above holds. */
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .dcc_checkout-pet__legend {
     font-weight: 700;
     color: #000000;
     margin: 0 0 10px;
+    /* <legend> UA styles: float + fitted width inside the border. Keep it a
+       normal block so it reads as a heading inside the pill. */
     display: block;
+    float: none;
+    width: auto;
+    padding: 0;
 }
 
 .dcc_checkout-pet__toggle {
@@ -305,9 +325,19 @@
 .dcc_checkout-pet__toggle label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-weight: 600;
     cursor: pointer;
+    /* Mobile: a comfortable tap target (≥44px) — the label is the target. */
+    min-height: 44px;
+    padding: 6px 10px;
+}
+
+.dcc_checkout-pet__toggle input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex: 0 0 auto;
 }
 
 .dcc_checkout-pet__fields {
@@ -344,6 +374,21 @@
     margin-top: 10px;
     font-size: 13px;
     color: #6b7280;
+}
+
+/* Notes under a room's guest dropdown: the fee hint (offering on) and the
+   "sleeps up to N" cap note (offering off). */
+.mphb_sc_checkout-form .dcc_checkout-guest-note {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #6b7280;
+    text-align: center;
+}
+
+.mphb_sc_checkout-form .dcc_checkout-fee-note {
+    color: #111111;
+    font-weight: 600;
 }
 
 /* Invalid highlight shared by pet + guest-2 client validation. */

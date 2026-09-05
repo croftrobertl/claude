@@ -275,53 +275,21 @@
             });
     }
 
+    // One conditional details section per guest group (2: name + phone;
+    // 3 and 4: name only). Groups come from CFG.guestGroups (a single Config
+    // definition shared with the server backstop); the legacy guest2FieldNames
+    // shape is honoured as a fallback so an older localized config still works.
     function setupGuestConditional(root) {
         var selects = roomAdultsSelects(root);
         if (!selects.length) {
             return null;
         }
 
-        // Guest-2 fields are targeted by NAME (verified live):
-        // input[name="mphb_guest2_first_name|last_name|phone"], each inside a
-        // <p class="mphb-customer-guest2-* mphb-text-control">. The post ID is
-        // not in the markup.
-        var names = CFG.guest2FieldNames || [];
-        var inputs = [];
-        var rows = [];
-
-        var candidates = Array.prototype.slice.call(
-            root.querySelectorAll('input[name^="mphb_guest2_"]')
-        );
-        // Keep only the configured names (defensive), else fall back to all
-        // mphb_guest2_* inputs found.
-        candidates.forEach(function (el) {
-            if (names.length && names.indexOf(el.name) === -1) {
-                return;
-            }
-            inputs.push(el);
-            var row = el.closest('.mphb-text-control') ||
-                el.closest('[class*="mphb-customer-"], p, li, tr, div');
-            if (row && rows.indexOf(row) === -1) {
-                rows.push(row);
-            }
-        });
-
-        if (!inputs.length) {
-            return null;
-        }
-
-        // Move the guest-2 rows into their own titled section, inserted right
-        // after "Your Information". Falls back to toggling the rows in place if
-        // the customer-details section isn't found.
-        var titles = CFG.sectionTitles || {};
-        var customerDetails = root.querySelector('.mphb-customer-details');
-        var section = customerDetails
-            ? buildFieldSection('dcc_checkout-guest2-section', titles.guest2 || 'Guest #2 Information', rows)
-            : null;
-        if (section) {
-            insertAfter(section, customerDetails);
-        }
-        var visTargets = section ? [section] : rows;
+        var groups = Array.isArray(CFG.guestGroups) && CFG.guestGroups.length
+            ? CFG.guestGroups
+            : [{ min: 2, names: CFG.guest2FieldNames || [], prefix: 'mphb_guest2_',
+                 title: (CFG.sectionTitles || {}).guest2 || 'Guest #2 Information',
+                 sectionClass: 'dcc_checkout-guest2-section' }];
 
         function guestCount() {
             var n = 0;
@@ -329,29 +297,78 @@
             return n;
         }
 
+        // Fields are NATIVE Checkout Fields targeted by NAME (verified live):
+        // input[name="mphb_guest2_first_name"] etc., each inside a
+        // <p class="mphb-customer-* mphb-text-control">.
+        var customerDetails = root.querySelector('.mphb-customer-details');
+        var lastAnchor = customerDetails;
+        var built = [];
+
+        groups.forEach(function (g) {
+            var names = g.names || [];
+            var inputs = [];
+            var rows = [];
+            var candidates = Array.prototype.slice.call(
+                root.querySelectorAll('input[name^="' + esc(g.prefix || 'mphb_guest2_') + '"]')
+            );
+            candidates.forEach(function (el) {
+                if (names.length && names.indexOf(el.name) === -1) {
+                    return;
+                }
+                inputs.push(el);
+                var row = el.closest('.mphb-text-control') ||
+                    el.closest('[class*="mphb-customer-"], p, li, tr, div');
+                if (row && rows.indexOf(row) === -1) {
+                    rows.push(row);
+                }
+            });
+            if (!inputs.length) {
+                return; // Owner hasn't created this group's fields — no section.
+            }
+
+            // Sections stack after "Your Information" in guest order; each one
+            // anchors after the previous so the pet section can follow the last.
+            var section = lastAnchor
+                ? buildFieldSection('dcc_checkout-guest-section ' + (g.sectionClass || ''), g.title || '', rows)
+                : null;
+            if (section) {
+                insertAfter(section, lastAnchor);
+                lastAnchor = section;
+            }
+            built.push({ min: Number(g.min) || 2, inputs: inputs, targets: section ? [section] : rows });
+        });
+
+        if (!built.length) {
+            return null;
+        }
+
         function evaluate() {
-            var show = guestCount() >= 2;
-            visTargets.forEach(function (t) { t.classList.toggle('dcc_checkout-section-hidden', !show); });
-            inputs.forEach(function (inp) {
-                setRequired(inp, show, root);
-                if (!show) { inp.classList.remove('dcc_checkout-invalid'); }
+            var count = guestCount();
+            built.forEach(function (b) {
+                var show = count >= b.min;
+                b.targets.forEach(function (t) { t.classList.toggle('dcc_checkout-section-hidden', !show); });
+                b.inputs.forEach(function (inp) {
+                    setRequired(inp, show, root);
+                    if (!show) { clearInvalid(inp); }
+                });
             });
         }
 
         selects.forEach(function (s) { s.addEventListener('change', evaluate); });
         evaluate();
 
-        // Validator: at 2 guests, none of the three fields may be empty.
+        // Validator: every visible group's fields must be filled.
         return function () {
-            if (guestCount() < 2) {
-                return [];
-            }
+            var count = guestCount();
             var bad = [];
-            inputs.forEach(function (inp) {
-                inp.classList.remove('dcc_checkout-invalid');
-                if (!String(inp.value || '').trim()) {
-                    bad.push(inp);
-                }
+            built.forEach(function (b) {
+                if (count < b.min) { return; }
+                b.inputs.forEach(function (inp) {
+                    clearInvalid(inp);
+                    if (!String(inp.value || '').trim()) {
+                        bad.push(inp);
+                    }
+                });
             });
             return bad;
         };
@@ -452,7 +469,7 @@
             }
             var bad = [];
             dog.inputs.forEach(function (inp) {
-                inp.classList.remove('dcc_checkout-invalid');
+                clearInvalid(inp);
                 if (!String(inp.value || '').trim()) {
                     bad.push(inp);
                 }
@@ -485,7 +502,8 @@
 
         // Move the dog rows into a "Pet Information" section, placed after the
         // Guest #2 section (or after "Your Information").
-        var anchor = root.querySelector('.dcc_checkout-guest2-section') ||
+        var guestSections = root.querySelectorAll('.dcc_checkout-guest-section');
+        var anchor = (guestSections.length ? guestSections[guestSections.length - 1] : null) ||
             root.querySelector('.mphb-customer-details');
         var section = anchor
             ? buildFieldSection('dcc_checkout-pet-section', (CFG.sectionTitles || {}).pet || 'Pet Information', rows)
@@ -501,7 +519,7 @@
             });
             inputs.forEach(function (inp) {
                 setRequired(inp, yes, root);
-                if (!yes) { inp.classList.remove('dcc_checkout-invalid'); }
+                if (!yes) { clearInvalid(inp); }
             });
         }
 
@@ -578,6 +596,18 @@
             // Dates are fixed on the checkout step — resolve the bucket once.
             var target = guestServiceForNights(getNights(root));
 
+            // Tell the guest what the dropdown will cost before the breakdown
+            // redraws. Amount is read from the native (now hidden) service row.
+            var targetSvc = null;
+            services.forEach(function (svc) { if (svc.id === target) { targetSvc = svc; } });
+            var amount = serviceAmountText(targetSvc ? serviceRowWrapper(targetSvc.box) : null);
+            var hint = amount && I18N.feeHint
+                ? I18N.feeHint.replace('%1$s', amount).replace('%2$s', String(included))
+                : (I18N.feeHintGeneric ? I18N.feeHintGeneric.replace('%s', String(included)) : '');
+            if (hint) {
+                setGuestNote(sel, 'dcc_checkout-fee-note', hint);
+            }
+
             function apply() {
                 var extra = (parseInt(sel.value, 10) || 0) - included;
                 services.forEach(function (svc) {
@@ -613,11 +643,13 @@
     function capAdultsSelects(root, cap) {
         roomAdultsSelects(root).forEach(function (sel) {
             var changed = false;
+            var capped = false;
             Array.prototype.forEach.call(sel.options, function (opt) {
                 var v = parseInt(opt.value, 10);
                 if (v > cap) {
                     opt.disabled = true;
-                    opt.hidden = true;
+                    opt.hidden = true; // iOS ignores hidden but honours disabled
+                    capped = true;
                 }
             });
             if ((parseInt(sel.value, 10) || 0) > cap) {
@@ -627,7 +659,35 @@
             if (changed) {
                 fireChange(sel); // let MotoPress recompute for the corrected count
             }
+            // Only explain when we actually took a choice away — a cottage that
+            // already caps at `cap` needs no note.
+            if (capped && I18N.capNote) {
+                setGuestNote(sel, 'dcc_checkout-cap-note', I18N.capNote.replace('%s', String(cap)));
+            }
         });
+    }
+
+    // Insert (or update) a short note directly under a room's guest dropdown.
+    // Idempotent per (select, kind) so re-asserts never stack duplicates.
+    function setGuestNote(sel, kind, text) {
+        var row = sel.closest('.mphb-adults-chooser, p, li, div') || sel.parentNode;
+        var note = row.querySelector('.' + kind);
+        if (!note) {
+            note = document.createElement('p');
+            note.className = 'dcc_checkout-guest-note ' + kind;
+            row.appendChild(note);
+        }
+        note.textContent = text;
+    }
+
+    // Pull the rendered fee (e.g. "$50.00") out of the hidden native service
+    // row so the hint shows the real amount WITHOUT the plugin doing any price
+    // math — MotoPress already formatted it. Returns '' if nothing looks like a
+    // currency amount.
+    function serviceAmountText(wrapper) {
+        if (!wrapper) { return ''; }
+        var m = /([$€£]\s?\d[\d,]*(?:\.\d{2})?)/.exec(wrapper.textContent || '');
+        return m ? m[1].replace(/\s+/g, '') : '';
     }
 
     // Mirrors Config::guest_service_id_for_nights() — keep the two in step.
@@ -645,10 +705,12 @@
     // Toggle-only block ("Traveling with a dog?"). The info fields themselves are
     // native MotoPress Checkout Fields, driven separately (see setupPetFlow).
     function buildPetBlock() {
-        var wrap = document.createElement('div');
+        // A real <fieldset>/<legend> so assistive tech reads the question as
+        // the group label for the Yes/No radios (a span + div did not).
+        var wrap = document.createElement('fieldset');
         wrap.className = 'dcc_checkout-pet';
 
-        var legend = document.createElement('span');
+        var legend = document.createElement('legend');
         legend.className = 'dcc_checkout-pet__legend';
         legend.textContent = I18N.petQuestion || 'Traveling with a dog?';
         wrap.appendChild(legend);
@@ -721,13 +783,16 @@
         el.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
+    // Mirrors Config::service_id_for_nights() — keep the two in step. Since
+    // 0.3.5 the daily bucket has no lower bound (pet fee applies from night
+    // one); 0 means "stay length unknown".
     function serviceForNights(nights) {
+        if (!(nights > 0)) { return 0; }
         var t   = CFG.thresholds || { min_daily: 2, min_weekly: 7, min_monthly: 30 };
         var svc = CFG.serviceIds || {};
         if (nights >= t.min_monthly) { return Number(svc.monthly); }
         if (nights >= t.min_weekly)  { return Number(svc.weekly); }
-        if (nights >= t.min_daily)   { return Number(svc.daily); }
-        return 0;
+        return Number(svc.daily);
     }
 
     function getNights(root) {
@@ -782,6 +847,17 @@
         return null;
     }
 
+    // Mark / clear the invalid state together with its assistive-tech signal, so
+    // a screen-reader user can find WHICH field the alert banner refers to.
+    function markInvalid(el) {
+        el.classList.add('dcc_checkout-invalid');
+        el.setAttribute('aria-invalid', 'true');
+    }
+    function clearInvalid(el) {
+        el.classList.remove('dcc_checkout-invalid');
+        el.removeAttribute('aria-invalid');
+    }
+
     // Toggle a field's required state + its visible "*" marker together.
     function setRequired(input, on, root) {
         input.required = !!on;
@@ -799,6 +875,9 @@
             marker = document.createElement('abbr');
             marker.className = 'dcc_checkout-req dcc_checkout-req--dyn';
             marker.textContent = '*';
+            // Decorative: aria-required on the input carries the semantics, so
+            // don't make screen readers announce "asterisk".
+            marker.setAttribute('aria-hidden', 'true');
             label.appendChild(marker);
         } else if (!on && marker) {
             marker.parentNode.removeChild(marker);
@@ -823,7 +902,7 @@
             if (invalid.length) {
                 e.preventDefault();
                 e.stopPropagation();
-                invalid.forEach(function (el) { el.classList.add('dcc_checkout-invalid'); });
+                invalid.forEach(markInvalid);
                 showBanner(root, I18N.requiredMsg || 'Please complete the required fields.');
                 try { invalid[0].focus(); } catch (_) {}
             }

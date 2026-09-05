@@ -95,14 +95,19 @@ final class Pet_Service
         }
 
         // A pet service is attached: it must be exactly the bucket service.
+        // If the stay length is unknown we can't say WHICH bucket, so skip the
+        // bucket check rather than reject a booking we cannot evaluate (the
+        // required-info rule below still applies).
         $nights      = Checkout_Request::nights();
         $expected_id = Config::service_id_for_nights($nights);
-        if ($expected_id <= 0 || !Checkout_Request::contains_service_id($expected_id)) {
-            return 'pet';
-        }
-        foreach (Config::pet_service_id_list() as $sid) {
-            if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
+        if ($nights > 0 && $expected_id > 0) {
+            if (!Checkout_Request::contains_service_id($expected_id)) {
                 return 'pet';
+            }
+            foreach (Config::pet_service_id_list() as $sid) {
+                if ($sid !== $expected_id && Checkout_Request::contains_service_id($sid)) {
+                    return 'pet';
+                }
             }
         }
 

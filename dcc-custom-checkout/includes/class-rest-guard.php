@@ -128,7 +128,7 @@ final class Rest_Guard
     {
         switch ($code) {
             case 'guest2':
-                return __('Please complete the second guest\'s First name, Last name, and Phone.', 'dcc-checkout');
+                return __('Please complete the details for every additional guest.', 'dcc-checkout');
             case 'pet':
                 return __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout');
             case 'guests':

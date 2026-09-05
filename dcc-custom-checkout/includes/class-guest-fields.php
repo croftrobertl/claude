@@ -6,12 +6,13 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Part C — second-guest logic, server side.
+ * Part C — additional-guest details, server side.
  *
  * The visible show/hide + "required" behaviour is done in the browser
  * (assets/checkout.js). This class is the backstop that can't be bypassed by
- * editing the DOM: when the booking is submitted for 2 guests, the three
- * second-guest fields (First name / Last name / Phone) must all be filled.
+ * editing the DOM: once the guest count reaches a group's threshold, that
+ * group's fields must all be filled — guest 2: first/last name + phone;
+ * guests 3 and 4: first/last name only (see Config::guest_field_groups()).
  *
  * The Checkout Fields admin keeps those fields NOT required, so the MotoPress
  * server never demands them at 1 guest; we add the "required at 2 guests" rule
@@ -57,30 +58,35 @@ final class Guest_Fields
      */
     public function find_violation(): ?string
     {
-        // Only enforce when 2+ adults were selected.
-        if ($this->posted_adults() < 2) {
-            return null;
+        $adults = $this->posted_adults();
+
+        // Each per-guest detail group (guest 2: name + phone; guests 3/4: name
+        // only) is required once the guest count reaches its threshold. Fields
+        // are NATIVE Checkout Fields inside `customer_fields`; we enforce only
+        // fields actually present — if the owner hasn't enabled them, they
+        // won't submit and we must not reject on their absence.
+        foreach (Config::guest_field_groups() as $group) {
+            if ($adults < $group['min']) {
+                continue;
+            }
+            $missing_any = false;
+            $found_any   = false;
+            foreach ($group['names'] as $name) {
+                $value = Checkout_Request::customer_field_value($name);
+                if ($value === null) {
+                    continue; // Field not rendered / not submitted.
+                }
+                $found_any = true;
+                if (trim($value) === '') {
+                    $missing_any = true;
+                }
+            }
+            if ($found_any && $missing_any) {
+                return 'guest2';
+            }
         }
 
-        // Guest-2 fields are NATIVE Checkout Fields, submitted inside
-        // `customer_fields` (MotoPress drops unrecognized top-level inputs).
-        // Enforce required only for fields actually present — if the owner hasn't
-        // enabled them, they won't submit and we must not reject on their absence.
-        $missing_any = false;
-        $found_any   = false;
-
-        foreach (Config::guest2_field_names() as $name) {
-            $value = Checkout_Request::customer_field_value($name);
-            if ($value === null) {
-                continue; // Field not rendered / not submitted.
-            }
-            $found_any = true;
-            if (trim($value) === '') {
-                $missing_any = true;
-            }
-        }
-
-        return ($found_any && $missing_any) ? 'guest2' : null;
+        return null;
     }
 
     /**

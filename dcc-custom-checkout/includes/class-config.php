@@ -47,6 +47,8 @@ final class Config
             // Titles for the two conditional sections inserted after "Your
             // Information" (Guest #2 Information / Pet Information).
             'guest2_section_title' => 'Guest #2 Information',
+            'guest3_section_title' => 'Guest #3 Information',
+            'guest4_section_title' => 'Guest #4 Information',
             'pet_section_title'    => 'Pet Information',
             // Extra-guest fee (guests beyond the second, $50/night each on the
             // six 4-sleeper cottages). Uses ONE per_night+per_adult MotoPress
@@ -181,10 +183,17 @@ final class Config
 
     /**
      * Resolve the correct pet Service ID for a given night count.
-     * Returns 0 when the stay is shorter than the minimum billable bucket.
+     *
+     * Since 0.3.5 the daily bucket has no lower bound — the fee applies from
+     * the first night (owner decision, 2026-08-31), matching the extra-guest
+     * fee. `min_daily` is therefore no longer consulted (the option key is kept
+     * so saved settings stay valid). Returns 0 only when nights is unknown.
      */
     public static function service_id_for_nights(int $nights): int
     {
+        if ($nights <= 0) {
+            return 0;
+        }
         $t   = self::bucket_thresholds();
         $ids = self::pet_service_ids();
 
@@ -194,10 +203,7 @@ final class Config
         if ($nights >= $t['min_weekly']) {
             return $ids['weekly'];
         }
-        if ($nights >= $t['min_daily']) {
-            return $ids['daily'];
-        }
-        return 0;
+        return $ids['daily'];
     }
 
     /* --------------------------------------------------------------------- *
@@ -356,6 +362,72 @@ final class Config
     public static function guest2_field_name_list(): array
     {
         return array_values(self::guest2_field_names());
+    }
+
+    /**
+     * Native Checkout Field NAMES for guests 3 and 4 — names only, no phone
+     * (owner decision, 2026-08-31). Same convention as guest 2.
+     *
+     * @return array{first_name:string,last_name:string}
+     */
+    public static function guest3_field_names(): array
+    {
+        $names = apply_filters('dcc_checkout_guest3_field_names', [
+            'first_name' => 'mphb_guest3_first_name',
+            'last_name'  => 'mphb_guest3_last_name',
+        ]);
+        return [
+            'first_name' => (string) ($names['first_name'] ?? 'mphb_guest3_first_name'),
+            'last_name'  => (string) ($names['last_name'] ?? 'mphb_guest3_last_name'),
+        ];
+    }
+
+    /** @return array{first_name:string,last_name:string} */
+    public static function guest4_field_names(): array
+    {
+        $names = apply_filters('dcc_checkout_guest4_field_names', [
+            'first_name' => 'mphb_guest4_first_name',
+            'last_name'  => 'mphb_guest4_last_name',
+        ]);
+        return [
+            'first_name' => (string) ($names['first_name'] ?? 'mphb_guest4_first_name'),
+            'last_name'  => (string) ($names['last_name'] ?? 'mphb_guest4_last_name'),
+        ];
+    }
+
+    /**
+     * Every conditional per-guest detail group, keyed by the guest count that
+     * reveals it. Drives the JS sections, the server backstop, and the settings
+     * page from ONE definition so the three can't drift.
+     *
+     * @return array<int, array{min:int, names:string[], prefix:string, title:string, section_class:string}>
+     */
+    public static function guest_field_groups(): array
+    {
+        $s = self::settings();
+        return [
+            2 => [
+                'min'           => 2,
+                'names'         => array_values(self::guest2_field_names()),
+                'prefix'        => 'mphb_guest2_',
+                'title'         => self::guest2_section_title(),
+                'section_class' => 'dcc_checkout-guest2-section',
+            ],
+            3 => [
+                'min'           => 3,
+                'names'         => array_values(self::guest3_field_names()),
+                'prefix'        => 'mphb_guest3_',
+                'title'         => (string) apply_filters('dcc_checkout_guest3_section_title', (string) $s['guest3_section_title']),
+                'section_class' => 'dcc_checkout-guest3-section',
+            ],
+            4 => [
+                'min'           => 4,
+                'names'         => array_values(self::guest4_field_names()),
+                'prefix'        => 'mphb_guest4_',
+                'title'         => (string) apply_filters('dcc_checkout_guest4_section_title', (string) $s['guest4_section_title']),
+                'section_class' => 'dcc_checkout-guest4-section',
+            ],
+        ];
     }
 
     /**
