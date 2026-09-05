@@ -32,6 +32,8 @@ final class Plugin {
         add_action('init', [$this, 'load_textdomain']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue']);
         add_action('wp_head', [$this, 'print_layering_css']);
+        // Runs even when nothing else does — see print_diag_stub().
+        add_action('wp_footer', [$this, 'print_diag_stub'], 99);
         Preview::init();
 
         if (is_admin()) {
@@ -78,17 +80,23 @@ final class Plugin {
             return; // Genuinely first install: nothing cached under a previous version.
         }
         // Bring the stored schedule forward, once per upgrade: the 3.7.0
-        // row-shape migration (options() also migrates on read), then the
-        // 3.8.0 year-round base row. The base row is only ever APPENDED and
-        // is the widest range there is, so it cannot change what any
-        // existing row shows — it just closes the gaps.
+        // row-shape migration (options() also migrates on read), then rows
+        // for the themes each release being upgraded THROUGH introduced.
+        //
+        // That second step is why six themes shipped in 3.7.0 and never
+        // displayed on the live install: migrate() only replaces a schedule
+        // it recognises as the unmodified old default, and the owner's was
+        // edited, so it was converted row for row and the new themes were
+        // never given rows. Nothing reported it. See
+        // Schedule::apply_new_themes() — and note that it is scoped BY
+        // VERSION on purpose, so a row the owner deleted is never re-added.
         $stored = get_option(Settings::OPTION);
         if (is_array($stored) && !empty($stored['schedule']) && is_array($stored['schedule'])) {
             $rows = $stored['schedule'];
             if (Schedule::is_legacy_row($rows[0] ?? null)) {
                 $rows = Schedule::migrate($rows, Themes::legacy_default_schedule());
             }
-            $rows = Schedule::ensure_base($rows);
+            $rows = Schedule::apply_new_themes($rows, $seen, DCC_SEASONS_VERSION);
             if ($rows !== $stored['schedule']) {
                 $stored['schedule'] = $rows;
                 update_option(Settings::OPTION, $stored);
@@ -122,6 +130,16 @@ final class Plugin {
             $links,
             '<a href="' . esc_url($url) . '">' . esc_html__('Settings', 'dcc-seasons') . '</a>'
         );
+        // "Active" in the plugins list means loaded, not working: a switched
+        // off Seasons looks identical there. Say so where someone goes when
+        // a plugin appears to do nothing.
+        $opt = Settings::options();
+        if (empty($opt['enabled'])) {
+            array_unshift(
+                $links,
+                '<span style="color:#b32d2e;font-weight:600">' . esc_html__('Switched OFF', 'dcc-seasons') . '</span>'
+            );
+        }
         return $links;
     }
 
@@ -246,6 +264,70 @@ final class Plugin {
      */
     private static function suffix(): string {
         return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
+    }
+
+    /**
+     * ?dcc_debug=1 when the plugin is NOT rendering: a server-side panel
+     * saying exactly why, printed by PHP because the engine that normally
+     * draws the diagnostics is precisely what did not load.
+     *
+     * This is the fix for the worst failure in the plugin's history. The
+     * live install had enabled = 0, so enqueue() returned before printing
+     * anything: no window.DCC_SEASONS, no scripts, no canvas — and, because
+     * the panel was drawn client-side by the engine, no diagnostics either.
+     * ?dcc_debug=1 rendered nothing at all. Three rounds of work went into
+     * "why doesn't behind layering work on the live site" while the real
+     * answer was that the plugin was switched off. A diagnostic that goes
+     * silent in exactly the state you need it for is worse than none.
+     */
+    public function print_diag_stub(): void {
+        if (!$this->diag_requested() || $this->should_load()) {
+            return;
+        }
+        $opt   = Settings::options();
+        $scope = (string) ($opt['scope'] ?? 'all');
+        $why   = '';
+        if (empty($opt['enabled'])) {
+            $why = __('DCC Seasons is SWITCHED OFF (Master enable). Nothing renders on this site: no config, no scripts, no canvas, no easter egg.', 'dcc-seasons');
+        } elseif (empty($opt['ambient']) && empty($opt['egg'])) {
+            $why = __('Both layers are off (ambient particles AND the easter egg), so there is nothing to render.', 'dcc-seasons');
+        } elseif ($this->is_excluded()) {
+            $why = __('This page is hard-excluded (checkout, or the Elementor editor). Exclusions beat every other setting, including a preview.', 'dcc-seasons');
+        } else {
+            $why = __('This page is outside "Where effects appear".', 'dcc-seasons');
+        }
+        $yes  = __('yes', 'dcc-seasons');
+        $no   = __('no', 'dcc-seasons');
+        $rows = [
+            __('Master enable', 'dcc-seasons')      => empty($opt['enabled']) ? __('OFF', 'dcc-seasons') : __('on', 'dcc-seasons'),
+            __('Ambient particles', 'dcc-seasons')  => empty($opt['ambient']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
+            __('Easter egg', 'dcc-seasons')         => empty($opt['egg']) ? __('off', 'dcc-seasons') : __('on', 'dcc-seasons'),
+            __('Hard-excluded page', 'dcc-seasons') => $this->is_excluded() ? $yes : $no,
+            __('Where effects appear', 'dcc-seasons') => $scope,
+            __('This URL in scope', 'dcc-seasons')  => $this->in_scope() ? $yes : $no,
+            __('Layering', 'dcc-seasons')           => (string) ($opt['layering'] ?? ''),
+            __('Schedule rows', 'dcc-seasons')      => (string) count((array) ($opt['schedule'] ?? [])),
+            __('Version', 'dcc-seasons')            => DCC_SEASONS_VERSION,
+        ];
+        echo '<div style="position:fixed;left:12px;bottom:12px;z-index:2147483647;max-width:460px;'
+            . 'font:13px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#1d2327;color:#f0f0f1;'
+            . 'border:2px solid #d63638;border-radius:6px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.4)">';
+        echo '<div style="font-weight:700;margin-bottom:6px">DCC Seasons — ' . esc_html__('nothing is rendering on this page', 'dcc-seasons') . '</div>';
+        echo '<div style="margin-bottom:8px">' . esc_html($why) . '</div>';
+        echo '<table style="border-collapse:collapse;width:100%">';
+        foreach ($rows as $k => $v) {
+            echo '<tr><td style="padding:1px 10px 1px 0;opacity:.75">' . esc_html($k) . '</td>'
+                . '<td style="padding:1px 0"><code style="background:none;color:#8ed1a0">' . esc_html($v) . '</code></td></tr>';
+        }
+        echo '</table>';
+        echo '<div style="margin-top:8px;opacity:.8">'
+            . sprintf(
+                /* translators: %s: settings page URL */
+                esc_html__('Fix it at %s', 'dcc-seasons'),
+                '<a style="color:#72aee6" href="' . esc_url(admin_url('admin.php?page=' . Settings::SLUG)) . '">DCC → Seasons</a>'
+            )
+            . '</div>';
+        echo '</div>';
     }
 
     /**

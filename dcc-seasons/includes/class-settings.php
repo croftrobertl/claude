@@ -32,6 +32,7 @@ class Settings {
         add_action('admin_menu', [self::class, 'add_page'], Menu::PRIORITY);
         add_action('admin_init', [self::class, 'register']);
         add_action('admin_init', [self::class, 'redirect_legacy_url']);
+        add_action('admin_init', [self::class, 'maybe_add_theme_row']);
         add_action('admin_enqueue_scripts', [self::class, 'assets']);
         // The client config is inlined into cached HTML and the scope gate
         // decides server-side whether it is emitted at all, so any save can
@@ -39,6 +40,7 @@ class Settings {
         add_action('update_option_' . self::OPTION, [Cache_Purge::class, 'purge_and_report']);
         add_action('add_option_' . self::OPTION, [Cache_Purge::class, 'purge_and_report']);
         add_action('admin_notices', [self::class, 'purge_notice']);
+        add_action('admin_notices', [self::class, 'status_notice']);
     }
 
     /**
@@ -92,6 +94,164 @@ class Settings {
             /* translators: %s: comma-separated list of caches that were purged. */
             . esc_html(sprintf(__('Settings saved and page cache purged: %s.', 'dcc-seasons'), implode(', ', array_map('strval', (array) $ran))))
             . '</p></div>';
+    }
+
+    /**
+     * Themes that are BUILT but have no schedule row, so they can never
+     * display. Six of these existed on the live install for a full release
+     * cycle without a single thing in the admin saying so.
+     *
+     * Passive on purpose: a missing row can be a deliberate choice (Summer
+     * on the Canal is absent here because Florida Keys was preferred as the
+     * summer backdrop), so this reports and offers, it never auto-adds.
+     * 'classic' is excluded — it is the intentional "None" option.
+     *
+     * @param array $rows Current schedule.
+     * @return array<string, string> theme key => label.
+     */
+    public static function unscheduled_themes(array $rows): array {
+        $have = [];
+        foreach ($rows as $row) {
+            if (is_array($row) && isset($row['theme'])) {
+                $have[(string) $row['theme']] = true;
+            }
+        }
+        $out = [];
+        foreach (Themes::labels() as $key => $label) {
+            if ($key !== 'classic' && !isset($have[$key])) {
+                $out[$key] = $label;
+            }
+        }
+        // A theme added by a filter has a label but no default row; still
+        // worth naming, just without a one-click add.
+        foreach (array_keys(Themes::themes()) as $key) {
+            if ($key !== 'classic' && !isset($have[$key]) && !isset($out[$key])) {
+                $out[$key] = $key;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * "Add a row for this theme" — an explicit, nonce-checked click, never
+     * automatic. Appends the theme's canonical default row (so a moveable
+     * holiday gets its real rule, not a guessed date) and saves.
+     */
+    public static function maybe_add_theme_row(): void {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified immediately below.
+        if (!isset($_GET['dcc_add_row'])) {
+            return;
+        }
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        $theme = sanitize_key(wp_unslash($_GET['dcc_add_row'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        check_admin_referer('dcc_add_row_' . $theme);
+
+        $row = Schedule::default_row_for($theme);
+        $opt = get_option(self::OPTION);
+        if ($row && is_array($opt)) {
+            $rows = isset($opt['schedule']) && is_array($opt['schedule']) ? $opt['schedule'] : [];
+            $seen = false;
+            foreach ($rows as $r) {
+                if (is_array($r) && ($r['theme'] ?? '') === $theme) {
+                    $seen = true;
+                }
+            }
+            if (!$seen) {
+                $rows[]           = $row;
+                $opt['schedule']  = $rows;
+                update_option(self::OPTION, $opt);
+            }
+        }
+        wp_safe_redirect(add_query_arg(
+            ['page' => self::SLUG, 'dcc_added' => $theme],
+            admin_url('admin.php')
+        ));
+        exit;
+    }
+
+    /**
+     * Two things the owner must not be able to miss, both learned the hard
+     * way on the live site:
+     *
+     * 1. The plugin switched OFF. enabled = 0 means Plugin::enqueue()
+     *    returns before anything is printed: no config, no scripts, no
+     *    canvas, no egg. That state spent months looking exactly like "the
+     *    layering setting doesn't work", and an unticked checkbox halfway
+     *    down a settings page said nothing about it.
+     * 2. A row was just added from the unscheduled-themes list.
+     */
+    public static function status_notice(): void {
+        if (self::$hook === '' || !function_exists('get_current_screen')) {
+            return;
+        }
+        $screen = get_current_screen();
+        if (!$screen || $screen->id !== self::$hook) {
+            return;
+        }
+        $opt = self::options();
+        if (empty($opt['enabled'])) {
+            echo '<div class="notice notice-error"><p><strong>'
+                . esc_html__('DCC Seasons is switched OFF.', 'dcc-seasons') . '</strong> '
+                . esc_html__('Nothing renders on the site at all — no ambient canvas, no easter egg, and no scripts on the page. Every other setting below is inert until Master enable is ticked and saved.', 'dcc-seasons')
+                . '</p></div>';
+        } elseif (empty($opt['ambient']) && empty($opt['egg'])) {
+            echo '<div class="notice notice-error"><p><strong>'
+                . esc_html__('Both layers are off.', 'dcc-seasons') . '</strong> '
+                . esc_html__('Seasons is enabled, but with neither ambient particles nor the easter egg there is nothing to render, so no scripts are printed.', 'dcc-seasons')
+                . '</p></div>';
+        }
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only.
+        $added = isset($_GET['dcc_added']) ? sanitize_key(wp_unslash($_GET['dcc_added'])) : '';
+        if ($added !== '') {
+            $labels = Themes::labels();
+            echo '<div class="notice notice-success is-dismissible"><p>'
+                . esc_html(sprintf(
+                    /* translators: %s: theme name */
+                    __('Added a schedule row for %s, using its default dates. It is in the table below — adjust it if you want, no further save needed.', 'dcc-seasons'),
+                    $labels[$added] ?? $added
+                ))
+                . '</p></div>';
+        }
+    }
+
+    /**
+     * The "built, but never shown" list. See unscheduled_themes().
+     *
+     * @param array                 $rows   Current schedule.
+     * @param array<string, string> $labels Theme key => label.
+     */
+    private static function render_unscheduled(array $rows, array $labels): void {
+        $missing = self::unscheduled_themes($rows);
+        if (!$missing) {
+            return;
+        }
+        ?>
+        <div class="notice notice-warning inline dcc-seasons-unscheduled">
+            <p><strong><?php esc_html_e('Built, but never shown', 'dcc-seasons'); ?></strong></p>
+            <p class="description">
+                <?php esc_html_e('These themes exist in the plugin but have no row in the schedule above, so they can never display. That may be exactly what you want — a theme with no row is simply switched off. Adding a row uses that theme\'s default dates and saves immediately.', 'dcc-seasons'); ?>
+            </p>
+            <ul>
+                <?php foreach ($missing as $key => $label) : ?>
+                    <?php $row = Schedule::default_row_for($key); ?>
+                    <li>
+                        <strong><?php echo esc_html($label); ?></strong>
+                        <?php if ($row) : ?>
+                            <?php echo esc_html(' — ' . Schedule::describe($row['start']) . ' → ' . Schedule::describe($row['end'])); ?>
+                            <a class="button button-small" href="<?php echo esc_url(wp_nonce_url(
+                                add_query_arg(['page' => self::SLUG, 'dcc_add_row' => $key], admin_url('admin.php')),
+                                'dcc_add_row_' . $key
+                            )); ?>"><?php esc_html_e('Add row', 'dcc-seasons'); ?></a>
+                        <?php else : ?>
+                            <?php esc_html_e('— no default dates for this theme; add a row by hand above.', 'dcc-seasons'); ?>
+                        <?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php
     }
 
     /**
@@ -441,6 +601,7 @@ class Settings {
                 </p>
 
                 <?php self::render_resolved($opt['schedule'], $labels); ?>
+                <?php self::render_unscheduled($opt['schedule'], $labels); ?>
 
                 <script type="text/html" id="dcc-seasons-row-template">
                     <?php self::render_row('__i__', ['start' => ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0], 'end' => ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0], 'theme' => 'classic', 'label' => '', 'year' => 0], $labels); ?>

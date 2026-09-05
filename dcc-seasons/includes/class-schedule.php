@@ -248,32 +248,81 @@ class Schedule {
     }
 
     /**
-     * Give an already-edited schedule the base row, once. Purely additive:
-     * the widest possible range can never outrank anything the owner set,
-     * so nothing that was showing before shows differently after. A
-     * schedule that already spans a full year is left alone, which is what
-     * makes a second upgrade a no-op and lets an owner who deletes the row
-     * keep it deleted.
+     * Themes introduced by a release that ship with a default schedule row,
+     * keyed by the version that introduced them.
      *
-     * @param array $rows
-     * @return array
+     * This map exists because of a silent failure on the live install.
+     * migrate() only replaces a stored schedule outright when it recognises
+     * it as the UNMODIFIED pre-3.7.0 default; the owner's was edited, so it
+     * was converted row for row and the six themes 3.7.0 added were never
+     * given rows. Six themes were built, tested and shipped, and not one of
+     * them ever displayed — no error, nothing in the admin to hint at it.
+     *
+     * @return array<string, string[]> version => theme keys new in it.
      */
-    public static function ensure_base(array $rows): array {
-        $y = (int) gmdate('Y');
-        foreach ($rows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $r = self::resolve_row($row, $y);
-            if (!$r) {
-                continue;
-            }
-            $span = (int) (new \DateTimeImmutable($r[0]))->diff(new \DateTimeImmutable($r[1]))->days;
-            if ($span >= 364) {
-                return $rows;
+    public static function new_theme_rows(): array {
+        return [
+            '3.7.0' => ['mothers_day', 'memorial_day', 'summer_canal', 'fathers_day', 'july4', 'veterans_day'],
+            '3.8.0' => ['florida_keys'],
+        ];
+    }
+
+    /** The canonical default row for a theme, or null if it has none. */
+    public static function default_row_for(string $theme): ?array {
+        foreach (self::defaults() as $row) {
+            if ($row['theme'] === $theme) {
+                return $row;
             }
         }
-        $rows[] = self::base_row();
+        return null;
+    }
+
+    /**
+     * Append the rows for themes NEW IN THE VERSIONS BEING UPGRADED THROUGH
+     * that the stored schedule has no row for.
+     *
+     * The version scoping is the whole point, and it is not a nicety: the
+     * naive rule — "append a row for any theme that has no row" — would
+     * re-add a row the owner deliberately DELETED on the next upgrade, and
+     * silently undo their choice. Summer on the Canal is exactly that case
+     * on this site: it is absent because Florida Keys was chosen as the
+     * summer backdrop instead, and it must stay absent.
+     *
+     * Appending within that scope is safe: narrowest-wins means a new row
+     * can only take days that no narrower row claims.
+     *
+     * @param array       $rows Stored schedule.
+     * @param string|bool $from Version upgraded FROM; false when unknown
+     *                          (the version option only exists from 3.6.1,
+     *                          so false predates every entry in the map).
+     * @param string      $to   Version upgraded TO.
+     * @return array
+     */
+    public static function apply_new_themes(array $rows, $from, string $to): array {
+        $have = [];
+        foreach ($rows as $row) {
+            if (is_array($row) && isset($row['theme'])) {
+                $have[(string) $row['theme']] = true;
+            }
+        }
+        foreach (self::new_theme_rows() as $version => $themes) {
+            if ($from !== false && $from !== '' && version_compare((string) $from, (string) $version, '>=')) {
+                continue; // already upgraded past the release that added these
+            }
+            if (version_compare($to, (string) $version, '<')) {
+                continue; // not there yet
+            }
+            foreach ($themes as $theme) {
+                if (isset($have[$theme])) {
+                    continue;
+                }
+                $row = self::default_row_for($theme);
+                if ($row) {
+                    $rows[]       = $row;
+                    $have[$theme] = true;
+                }
+            }
+        }
         return $rows;
     }
 

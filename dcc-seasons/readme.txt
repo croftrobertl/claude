@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.8.0
+Stable tag: 3.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,51 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.9.0 =
+Three upgrade-safety fixes, all of them found on the live install rather than
+in a test. Each had been failing silently — no error, nothing in the admin.
+
+* FIXED: new themes never reached an edited schedule. The 3.7.0 migration only
+  replaces a stored schedule outright when it recognises it as the UNMODIFIED
+  pre-3.7.0 default. The owner's was edited, so it was converted row for row —
+  and the six themes 3.7.0 introduced (Mother's Day, Memorial Day, Summer on
+  the Canal, Father's Day, Independence Day, Veterans Day) were never given
+  rows. Six themes were built, tested and shipped, and not one of them ever
+  displayed. An upgrade now appends the default row for each theme a release
+  introduced, when the schedule has no row for it.
+  This is scoped BY VERSION, deliberately: only themes new in a version being
+  upgraded THROUGH are appended, and only once each. The naive rule — "append
+  a row for any theme that has no row" — would re-add a row the owner had
+  deliberately deleted, and silently undo their choice. Summer on the Canal is
+  exactly that case on this site: it is absent because Florida Keys was
+  preferred as the summer backdrop, and it stays absent.
+* NEW: "Built, but never shown" on the settings page. Any theme with no
+  schedule row is listed under the schedule with the dates it would use and a
+  one-click Add row button. Passive by design — a missing row is often
+  deliberate, so nothing is ever added without a click. One line of this would
+  have surfaced the problem above the day it appeared.
+* FIXED: a switched-off plugin now says so, everywhere it matters.
+  With Master enable unticked, nothing at all is printed on the site — no
+  config, no scripts, no canvas, no easter egg — and because the diagnostics
+  panel is drawn by the engine, ?dcc_debug=1 rendered NOTHING either. That
+  state cost three rounds of work on "why doesn't behind layering work on the
+  live site". Now: a red notice at the top of the settings page saying what
+  being off actually means; a "Switched OFF" flag in the plugins list, where
+  "Active" otherwise looks identical either way; and ?dcc_debug=1 renders a
+  server-side panel whose first line is the reason nothing is rendering —
+  switched off, both layers off, page excluded, or out of scope — followed by
+  the state of every gate. A diagnostic that goes silent in exactly the state
+  you need it for is worse than none.
+* Tests: a regression fixture built from the real live schedule (21 rows, not
+  equal to the old default, missing every new theme) asserts the upgrade
+  appends exactly the new-in-version rows once and touches nothing else —
+  including that Summer on the Canal is NOT re-added when it is absent and not
+  new in that version. Coverage is now checked by walking 365 real days and
+  resolving every row for year-1 and year, narrowest wins, asserting per-theme
+  day counts; that method reproduces the live numbers exactly (98 uncovered
+  days before, Florida Keys holding 87 days after) and finds a class of bug a
+  defaults-based test structurally cannot.
 
 = 3.8.0 =
 * NEW THEME: Florida Keys — the year-round base. Calm and water-forward, with

@@ -180,17 +180,39 @@ bump so the tracked zip never lags the source.
   Override the host with the `dcc_seasons_backdrop_host` filter. A page painted
   by SEVERAL opaque boxes is the one case a single canvas cannot fully sit
   behind; `?dcc_debug=1` says so and names them.
+- **A new theme does NOT reach an edited schedule by itself.** `migrate()`
+  only replaces a stored schedule outright when it recognises it as the
+  unmodified pre-3.7.0 default; anything the owner touched is converted row
+  for row, so the six themes 3.7.0 added had no rows and displayed on zero
+  days for a whole release cycle, silently. Every release that adds a theme
+  with a default row MUST add it to `Schedule::new_theme_rows()`
+  (`version => [theme keys]`); `apply_new_themes()` appends the rows for
+  versions being upgraded THROUGH only. Never widen that to "any theme with
+  no row" — a row the owner deleted (summer_canal, on this site) would come
+  back on the next upgrade. `Settings::unscheduled_themes()` reports the rest
+  passively on the settings page.
 - **`florida_keys` is the year-round BASE theme, and it is a full-year schedule
   row, not a code path.** `Schedule::defaults()` ends with a Jan 1 - Dec 31
   row; because `active()` takes the NARROWEST containing range, the widest
   possible row loses to everything and wins only days nothing else claims.
-  `Schedule::ensure_base()` appends it once to an already-edited schedule
-  (skipped when the owner already has a full-year row, so a second upgrade is
-  a no-op and a deliberate deletion sticks); `Plugin::maybe_purge_after_upgrade`
-  persists that. Beware: 3.7.0's season rows already tile the year, so on the
-  SHIPPED defaults the base row wins zero days — it earns its keep on edited
-  schedules (the pre-3.7.0 one covers September to April only). `ambient.js`
-  mirrors the key in `BASE_THEME` and falls back to it when no row matches.
+  Beware: 3.7.0's season rows already tile the year, so on the SHIPPED
+  defaults the base row wins zero days — it earns its keep on edited
+  schedules (on the live site it holds 87 summer days, because the owner
+  deleted summer_canal). `ambient.js` mirrors the key in `BASE_THEME` and
+  falls back to it when no row matches.
+- **`enabled = 0` means NOTHING is printed — check it first.** `should_load()`
+  returns at the master switch, so there is no config, no script tag and no
+  canvas; through 3.8.0 `?dcc_debug=1` also rendered nothing, because the
+  panel was drawn by the engine that never loaded. Three rounds of "behind
+  layering is broken" were that. `Plugin::print_diag_stub()` now prints a
+  PHP-side panel naming the blocking gate, and the settings page and plugins
+  list both flag the off state.
+- **Verify schedule coverage by walking real days, not against
+  `Schedule::defaults()`.** The defaults always contain every theme, so a
+  defaults-based test cannot see a stored schedule that is missing one.
+  `scratchpad/test-upgrade.php` walks 365 days, resolves every row for year-1
+  and year, takes the narrowest containing range and asserts per-theme day
+  counts.
 - **The schedule is rules, not dates** (`includes/class-schedule.php`). Rows are
   `{start:{on,off,m?,d?}, end:{…}, theme, label, year}`; `on` is `fixed` or a
   named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver
