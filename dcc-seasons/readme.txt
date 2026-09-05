@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.7.1
+Stable tag: 3.8.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,36 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.8.0 =
+* NEW THEME: Florida Keys — the year-round base. Calm and water-forward, with
+  nothing in it that reads as a particular season, because it can land in any
+  month: sabal palms (the state tree, and what actually grows along the
+  canal — costapalmate fan fronds, not a coconut palm), a hibiscus bloom that
+  lasts a single day and drops (which is why it FALLS), a flats skiff with its
+  poling platform, a queen conch, the sun, shades, dragonflies and lilypads.
+  The hero is a Brown Pelican: it commutes LOW over the water on stiff,
+  motionless wings and drops into a couple of beats only when it starts to
+  sink, which is the most recognisably-Florida thing in the theme.
+* Six new hand-drawn sprites: sabalpalm, pelican (glide + flap frames),
+  hibiscus, conch, skiff. Each depicts a real species or object with its
+  identifying feature intact — the pelican's pouched bill and folded neck,
+  the hibiscus's protruding staminal column, the conch's knobbed spire and
+  flared pink lip — and each was checked at the real 30px particle size on
+  both a white and a navy ground.
+* The schedule gains a year-round base row (Jan 1 – Dec 31, Florida Keys),
+  appended LAST. The picker takes the narrowest containing range, so a
+  full-year row loses to every other row and can only win a day nothing else
+  claims. Nothing that was showing before shows differently after.
+* On upgrade, a schedule you have already edited gains that base row once, if
+  and only if it has no full-year row of its own. Never duplicated; your rows
+  are not touched; delete it and it stays deleted.
+* A day with no row at all now falls back to Florida Keys rather than to the
+  bare "None" theme.
+* NOTE: 3.7.0's season rows already tile the whole year, so on the shipped
+  default schedule the base row wins zero days. It exists for schedules with
+  gaps — including the pre-3.7.0 one, which covers only September to April.
+  Pick "Florida Keys" for a row, or shorten a season row, to see it.
 
 = 3.7.1 =
 * FIXED, with the live DOM in hand: "behind" layering on this theme. Three

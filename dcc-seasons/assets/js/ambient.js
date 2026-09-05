@@ -10,6 +10,9 @@
 	var mq = W.matchMedia ? W.matchMedia('(prefers-reduced-motion: reduce)') : null;
 	function reduced() { return !!(mq && mq.matches); }
 
+	/* The year-round base theme. Mirrors Schedule::BASE_THEME. */
+	var BASE_THEME = 'florida_keys';
+
 	function pad(n) { return (n < 10 ? '0' : '') + n; }
 	function ymd(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
 	var now = new Date();
@@ -80,6 +83,13 @@
 	var row = activeRow(CFG.schedule || [], today);
 	var themeKey = row ? row.theme : null;
 	var theme = themeKey && CFG.themes && CFG.themes[themeKey] ? CFG.themes[themeKey] : null;
+	/* Nothing claims today: the year-round base theme is the baseline face
+	 * of the site. The default schedule has a full-year row so this is only
+	 * reached on a schedule the owner has cut a hole in. */
+	if (!theme && CFG.themes && CFG.themes[BASE_THEME]) {
+		themeKey = BASE_THEME;
+		theme = CFG.themes[BASE_THEME];
+	}
 
 	/* Admin-only preview (?dcc_season=<key>|off). The flag is only present
 	 * in the config when PHP verified manage_options server-side. */

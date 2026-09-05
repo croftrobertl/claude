@@ -77,12 +77,22 @@ final class Plugin {
         if ($seen === false && get_option(Settings::OPTION) === false) {
             return; // Genuinely first install: nothing cached under a previous version.
         }
-        // Persist the 3.7.0 schedule migration so the stored row shape is
-        // current (options() migrates on read regardless).
+        // Bring the stored schedule forward, once per upgrade: the 3.7.0
+        // row-shape migration (options() also migrates on read), then the
+        // 3.8.0 year-round base row. The base row is only ever APPENDED and
+        // is the widest range there is, so it cannot change what any
+        // existing row shows — it just closes the gaps.
         $stored = get_option(Settings::OPTION);
-        if (is_array($stored) && !empty($stored['schedule']) && is_array($stored['schedule']) && Schedule::is_legacy_row($stored['schedule'][0] ?? null)) {
-            $stored['schedule'] = Schedule::migrate($stored['schedule'], Themes::legacy_default_schedule());
-            update_option(Settings::OPTION, $stored);
+        if (is_array($stored) && !empty($stored['schedule']) && is_array($stored['schedule'])) {
+            $rows = $stored['schedule'];
+            if (Schedule::is_legacy_row($rows[0] ?? null)) {
+                $rows = Schedule::migrate($rows, Themes::legacy_default_schedule());
+            }
+            $rows = Schedule::ensure_base($rows);
+            if ($rows !== $stored['schedule']) {
+                $stored['schedule'] = $rows;
+                update_option(Settings::OPTION, $stored);
+            }
         }
         Cache_Purge::purge_and_report();
     }

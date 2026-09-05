@@ -542,6 +542,37 @@ class Themes {
                 ],
             ],
 
+            // Florida Keys: the year-round base. It can land in any month,
+            // so nothing in it may read as a season — sabal palms (the state
+            // tree, and what actually grows along the canal), a hibiscus
+            // bloom that lasts a day and drops, a flats skiff, a queen conch.
+            // The brown pelican is the hero.
+            'florida_keys' => [
+                'ambient' => [
+                    'water'     => true,
+                    'hero'      => 'pelican',
+                    'particles' => [
+                        // 'grow' (not 'sway'): 'sway' is the falling-leaf drift, and a
+                        // palm TREE drifting down the page reads as a bug. 'grow' is
+                        // what tree/pine use — it rises from the bottom edge and
+                        // stands there. One word to change back.
+                        ['s' => 'sabalpalm', 'b' => 'grow', 'w' => 2, 'sz' => [26, 34]],
+                        ['s' => 'hibiscus', 'b' => 'fall', 'w' => 2, 'sz' => [18, 24]],
+                        ['s' => 'skiff', 'b' => 'cruise', 'face' => 'L', 'sz' => [30, 38]],
+                        ['s' => 'conch', 'b' => 'tumble', 'sz' => [16, 22]],
+                        ['s' => 'sun', 'b' => 'pulse', 'sz' => [26, 32]],
+                        ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
+                        ['s' => 'dragonfly', 'b' => 'dart'],
+                        ['s' => 'lilypad', 'b' => 'float', 'sz' => [26, 34]],
+                    ],
+                ],
+                'egg' => [
+                    'colors' => ['#20B2AA', '#FF7F50'],
+                    'glyphs' => ['≈', '~', '☀', '⚓', 'ﾂ'],
+                    'finale' => '☀',
+                ],
+            ],
+
             // Fallback for dates outside every range — the year-round face
             // of the site: the heron (now with a full landing sequence) and
             // at most ONE quiet canal touch at a time. Sparse is the point.
@@ -600,6 +631,7 @@ class Themes {
             'fathers_day'  => __('Father\'s Day', 'dcc-seasons'),
             'veterans_day' => __('Veterans Day', 'dcc-seasons'),
             'summer_canal' => __('Summer on the Canal', 'dcc-seasons'),
+            'florida_keys' => __('Florida Keys (year-round base)', 'dcc-seasons'),
             'classic'      => __('None (heron + classic green egg only)', 'dcc-seasons'),
         ];
     }

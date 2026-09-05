@@ -180,6 +180,17 @@ bump so the tracked zip never lags the source.
   Override the host with the `dcc_seasons_backdrop_host` filter. A page painted
   by SEVERAL opaque boxes is the one case a single canvas cannot fully sit
   behind; `?dcc_debug=1` says so and names them.
+- **`florida_keys` is the year-round BASE theme, and it is a full-year schedule
+  row, not a code path.** `Schedule::defaults()` ends with a Jan 1 - Dec 31
+  row; because `active()` takes the NARROWEST containing range, the widest
+  possible row loses to everything and wins only days nothing else claims.
+  `Schedule::ensure_base()` appends it once to an already-edited schedule
+  (skipped when the owner already has a full-year row, so a second upgrade is
+  a no-op and a deliberate deletion sticks); `Plugin::maybe_purge_after_upgrade`
+  persists that. Beware: 3.7.0's season rows already tile the year, so on the
+  SHIPPED defaults the base row wins zero days — it earns its keep on edited
+  schedules (the pre-3.7.0 one covers September to April only). `ambient.js`
+  mirrors the key in `BASE_THEME` and falls back to it when no row matches.
 - **The schedule is rules, not dates** (`includes/class-schedule.php`). Rows are
   `{start:{on,off,m?,d?}, end:{…}, theme, label, year}`; `on` is `fixed` or a
   named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver

@@ -70,11 +70,15 @@
 		hook: '20 30|<path d="M10 1.4v12" stroke="%t" stroke-width="2"/><path d="M10 14q0 9.4-4.2 9.4T2 17" fill="none" stroke="%t" stroke-width="2.2"/><path d="M2 17 4.8 20 1 19Z" fill="%t"/><circle cx="10" cy="2" r="2.2" fill="%h"/>',
 		pontoon: '48 30|<path d="M3 21 L45 21 Q47 21 47 24 Q47 27 45 27 L3 27 Q1 27 1 24 Q1 21 3 21 Z" fill="#868E96"/><path d="M4 17 L42 17 L44 21 L2 21 Z" fill="%d"/><path d="M6 6 L36 6 L38 9 L4 9 Z" fill="%e"/><path d="M7 9 L7 17 M35 9 L35 17" stroke="%h" stroke-width="1.6"/><circle cx="21" cy="13" r="2.6" fill="%b"/><path d="M19 16 L23 16 L23 19 L19 19 Z" fill="%m"/><path d="M40 12 L44 12 L44 17 L40 17 Z" fill="%b"/><path d="M42 3 L47 3 L46 5 L47 7 L42 7 Z" fill="%a"/><path d="M42 3 L42 12" stroke="%h" stroke-width="1.2"/>',
 		kayak: '52 22|<path d="M2 16q24-7 48 0-24 7-48 0Z" fill="%r"/><circle cx="26" cy="7" r="3" fill="%b"/><path d="M26 10v5" stroke="%b" stroke-width="2"/><line x1="14" y1="2" x2="38" y2="14" stroke="%p" stroke-width="2"/><ellipse cx="13" cy="2" rx="3" ry="2" fill="%a" transform="rotate(28 13 2)"/><ellipse cx="39" cy="14" rx="3" ry="2" fill="%a" transform="rotate(28 39 14)"/>',
+		skiff: '52 22|<path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="%d"/><path d="M4.6 14.2 L44 14.2 L44 16 Q26 19 8 16 Z" fill="%v"/><path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="none" stroke="%x" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.6 11.4 L43.6 12.2" stroke="%m" stroke-width="1.1" fill="none"/><path d="M44 11 L48 11 L48 15 L46.6 15 L46.6 19 L45 19 L45 15 L44 15 Z" fill="%b"/><path d="M38 11 L38.6 5.6 M44 11 L44 5.6" stroke="%h" stroke-width="1.4" fill="none"/><path d="M36 3.4 L48 3.4 L48 5.4 L36 5.4 Z" fill="%t" stroke="%h" stroke-width="0.8"/><path d="M22 11 L27 11 L26 6 L23 6 Z" fill="%t" stroke="%x" stroke-width="0.8"/>',
 		bobber: '24 30|<line x1="12" y1="0" x2="12" y2="4" stroke="%h" stroke-width="2"/><circle cx="12" cy="16" r="11" fill="%d"/><path d="M1 16a11 11 0 0 1 22 0Z" fill="%e"/><circle cx="12" cy="16" r="11" fill="none" stroke="%b" stroke-width="1"/><circle cx="12" cy="4" r="2" fill="%b"/>',
 		tacklebox: '32 26|<rect x="2" y="9" width="28" height="15" rx="2" fill="%c"/><rect x="2" y="9" width="28" height="5" fill="#237032"/><path d="M12 9V6a4 4 0 0 1 8 0v3h-3V6a1 1 0 0 0-2 0v3Z" fill="%h"/><rect x="14" y="11" width="5" height="4" rx="1" fill="%a"/>',
 		lure: '30 20|<path d="M21 9 L27.6 5.4 L26 9 L27.6 12.6 Z" fill="%e"/><path d="M7 9 A7 4.4 0 0 1 21 9 Z" fill="%e"/><path d="M7 9 A7 4.4 0 0 0 21 9 Z" fill="%d"/><ellipse cx="14" cy="9" rx="7" ry="4.4" fill="none" stroke="%h" stroke-width="0.9"/><path d="M7 8.6 L1.6 12.4 L5.6 13.4 Z" fill="%t"/><path d="M3.4 6.6 L6.4 8" stroke="%h" stroke-width="1"/><circle cx="10" cy="7.4" r="1.3" fill="%b"/><path d="M11 13 L11 15 M11 15 L9.6 16.8 M11 15 L12.4 16.8 M17.6 12.6 L17.6 14.6 M17.6 14.6 L16.2 16.4 M17.6 14.6 L19 16.4" stroke="%h" stroke-width="0.9" fill="none" stroke-linecap="round"/>',
 		bass: '48 26|<path d="M6 13q12-10 28-8l10-4-3 8 3 8-10-4q-16 2-28-8Z" fill="#37633F"/><path d="M8 13q11-7 26-6-13 12-26 6Z" fill="#5C8A54"/><path d="M20 3q6-3 10 0l-4 4Z" fill="#37633F"/><path d="M22 22q5 3 9 1l-4-5Z" fill="#37633F"/><circle cx="12" cy="11" r="2" fill="#111"/><path d="M6 13q3 3 7 3" fill="none" stroke="#2F4F35" stroke-width="1"/>',
 		lilypad: '36 22|<path d="M31.9 7 A16 8 0 1 0 33 13.7 L18 11 Z" fill="%c"/><path d="M18 11 L4 8 M18 11 L5 14 M18 11 L11 18 M18 11 L20 18 M18 11 L19 3 M18 11 L28 4" stroke="#237032" stroke-width="0.9" fill="none"/><circle cx="10" cy="7" r="3" fill="%s"/><circle cx="10" cy="7" r="1.1" fill="#FDE68A"/>',
+		sabalpalm: '34 38|<path d="M14 38 L15 20 L19 20 L20 38 Z" fill="%p"/><path d="M14.6 25 L19.4 25 M14.4 30 L19.6 30 M14.2 35 L19.8 35" stroke="%i" stroke-width="1.1" fill="none"/><g fill="%c"><path id="fr" d="M17 19 L12.4 7.6 L14.6 10.4 L15.6 4.6 L17 8.6 L18.4 4.6 L19.4 10.4 L21.6 7.6 Z"/><use href="#fr" transform="rotate(30 17 19)"/><use href="#fr" transform="rotate(-30 17 19)"/><use href="#fr" transform="rotate(60 17 19)"/><use href="#fr" transform="rotate(-60 17 19)"/><use href="#fr" transform="rotate(88 17 19)"/><use href="#fr" transform="rotate(-88 17 19)"/><use href="#fr" transform="rotate(112 17 19)"/><use href="#fr" transform="rotate(-112 17 19)"/></g><g fill="%j"><path id="fs" d="M17 19 L14 10.6 L15.6 12.6 L17 8.6 L18.4 12.6 L20 10.6 Z"/><use href="#fs" transform="rotate(45 17 19)"/><use href="#fs" transform="rotate(-45 17 19)"/><use href="#fs" transform="rotate(74 17 19)"/><use href="#fs" transform="rotate(-74 17 19)"/></g><circle cx="17" cy="19" r="2.4" fill="%i"/>',
+		hibiscus: '30 30|<g fill="%e"><path id="pt" d="M15 16 C8.6 13.6 7 6 15 3 C23 6 21.4 13.6 15 16 Z"/><use href="#pt" transform="rotate(72 15 16)"/><use href="#pt" transform="rotate(144 15 16)"/><use href="#pt" transform="rotate(216 15 16)"/><use href="#pt" transform="rotate(288 15 16)"/></g><circle cx="15" cy="16" r="3.6" fill="%n"/><path d="M8.6 23 Q3 26.6 6 29 Q11 27.6 11.6 23.6 Z" fill="%j"/><path d="M15 16 L26.4 5.2" stroke="%k" stroke-width="1.8" fill="none"/><g fill="%a"><circle cx="21.6" cy="9.6" r="1"/><circle cx="23.6" cy="8" r="1.1"/><circle cx="25.4" cy="6.2" r="1.1"/></g><circle cx="26.6" cy="4.6" r="1.7" fill="%k"/><g fill="%u"><circle cx="25.6" cy="3.2" r="0.8"/><circle cx="27.6" cy="2.8" r="0.8"/><circle cx="28.4" cy="4.8" r="0.8"/></g>',
+		conch: '30 26|<path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q21.6 24.6 12.6 23 Z" fill="%s"/><path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q24.6 18.6 24 17 Q25 11 11.8 9.4 Z" fill="%o" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><path d="M14.6 9.6 Q23 12.6 22.6 19" fill="none" stroke="%u" stroke-width="1.2"/><path d="M3 15.6 Q2 8.6 6.6 4.6 L9.6 0.8 L11.8 5.4 Q15 8.4 15.8 13 Q17.4 19.6 12.4 23.4 L14 25.6 L10 24.2 Q4.6 22.6 3 15.6 Z" fill="%q" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><g fill="none" stroke="%t" stroke-width="0.9"><path d="M5.4 8 Q8.6 5.4 11 7.4"/><path d="M4 12.4 Q9 9 13.6 12"/><path d="M5.6 17.4 Q9.6 19.6 13.4 18.6"/></g><g fill="%f"><circle cx="5.6" cy="10" r="1.7"/><circle cx="9.4" cy="5.6" r="1.6"/><circle cx="13.4" cy="9" r="1.5"/><circle cx="14.8" cy="14.4" r="1.4"/></g>',
 		frog: '26 22|<path d="M3.4 14Q0.6 17 3.2 20M23 14Q25 17 23 20" fill="none" stroke="%c" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="13" cy="13" rx="11" ry="6.4" fill="%c"/><circle cx="6.4" cy="6.4" r="3.4" fill="%c"/><circle cx="19.6" cy="6.4" r="3.4" fill="%c"/><circle cx="6.4" cy="5.6" r="1.3" fill="%d"/><circle cx="19.6" cy="5.6" r="1.3" fill="%d"/><circle cx="6.4" cy="5.6" r="0.6" fill="#111"/><circle cx="19.6" cy="5.6" r="0.6" fill="#111"/><path d="M8 15q5 3 10 0" fill="none" stroke="#1E5B2B" stroke-width="1.2"/>',
 		petal: '18 22|<path d="M9 1 Q15.4 6.4 15 13 Q14.6 18.6 10.6 20.4 Q9.6 19.6 9 18.6 Q8.4 19.6 7.4 20.4 Q3.4 18.6 3 13 Q2.6 6.4 9 1 Z" fill="%s"/><path d="M9 4 L9 17" stroke="%u" stroke-width="1" fill="none"/><path d="M9 9.4 Q12.2 12 12.6 15.6 M9 9.4 Q5.8 12 5.4 15.6" stroke="%u" stroke-width="0.8" fill="none"/>',
 		dragonfly: '40 26|<g fill="#9CCBEF" opacity="0.85"><ellipse cx="14" cy="7" rx="8" ry="2.6" transform="rotate(-14 14 7)"/><ellipse cx="14" cy="19" rx="8" ry="2.6" transform="rotate(14 14 19)"/><ellipse cx="20.4" cy="8.6" rx="6.6" ry="2.2" transform="rotate(-8 20 8.6)"/><ellipse cx="20.4" cy="17.4" rx="6.6" ry="2.2" transform="rotate(8 20 17)"/></g><path d="M11 13 38 13" stroke="#1864AB" stroke-width="2.6" stroke-linecap="round"/><g stroke="#74C0FC" stroke-width="1"><path d="M23 12v2.8M27 12v2.4M31 12v2M35 12v2"/></g><ellipse cx="11" cy="13" rx="4.2" ry="3.4" fill="#1864AB"/><circle cx="6.4" cy="13" r="3.6" fill="#1864AB"/><circle cx="5.2" cy="11.6" r="1.4" fill="#74C0FC"/>',
@@ -85,6 +89,8 @@
 		heronstand: '44 64|<path d="M18 10q8 2 10 12v12q0 10-8 12l-4-2q6-6 4-14-8-6-2-20Z" fill="%v"/><path d="M20 6q-6 0-8 6l6-1q4 1 2 6" fill="none" stroke="#5D6D7E" stroke-width="3"/><path d="M12 8 2 6l8 5Z" fill="%a"/><circle cx="17" cy="9" r="1" fill="#111"/><line x1="20" y1="46" x2="19" y2="60" stroke="%f" stroke-width="2"/><line x1="24" y1="46" x2="26" y2="60" stroke="%f" stroke-width="2"/><path d="M15 60h17" stroke="%f" stroke-width="2"/>',
 		manatee: '92 48|<path d="M69 17 Q88 9.6 89 25 Q88 40.4 69 33 Z" fill="#7B8794"/><path d="M13 25 Q13 9 40 9 Q64 9 71 20 L71 30 Q64 41 40 41 Q13 41 13 25 Z" fill="#8D99A6"/><ellipse cx="14" cy="28" rx="8" ry="6.5" fill="#7B8794"/><circle cx="10" cy="25.6" r="1.2" fill="%b"/><circle cx="14.4" cy="25.2" r="1.2" fill="%b"/><circle cx="21" cy="19" r="1.4" fill="%b"/><path d="M28 40 Q32 48 41 44 Z" fill="#7B8794"/><path d="M48 41 Q52 47 59 44 Z" fill="#7B8794"/><path d="M30 15 Q44 12 58 15" stroke="#7B8794" stroke-width="1.2" fill="none"/>',
 		dove: '46 34|<path d="M8 15q2-7 11-6 8 2 13 7l12 2-9 5 3 7-10-6q-9 3-16-3T8 15Z" fill="%d" stroke="#5A6B7C" stroke-width="2.8"/><path d="M19 15q6-10 14-9-2 7-6 11-4 3-8-2Z" fill="%q" stroke="#5A6B7C" stroke-width="2.4"/><path d="M7 14 2 16l5 2Z" fill="%a"/><circle cx="11" cy="13" r="1.4" fill="%g"/><ellipse cx="6" cy="21" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 6 21)"/><ellipse cx="10" cy="22" rx="2.2" ry="1.2" fill="%c" transform="rotate(-25 10 22)"/>',
+		pelican: '48 28|<path d="M30 13 Q38 12.8 43.6 14.2 Q38 16.6 30 17.6 Z" fill="%b"/><path d="M19 16.4 Q27 22.6 40 21.4 Q31 18.6 22 16.4 Z" fill="%x"/><path d="M14 12.6 Q24 10 33 13.4 Q35 15.2 33 17 Q24 19.8 14 17.6 Z" fill="%h"/><path d="M17.4 13 Q27 4.6 42 6 Q34 10.6 22.6 14.2 Z" fill="%p"/><path d="M36.6 5.8 Q40.4 5.8 42 6 Q39.4 8 35 9.6 Z" fill="%b"/><circle cx="12.6" cy="12.6" r="4.4" fill="%q"/><path d="M8.6 11.6 Q12.6 6.6 16.8 11 Q12.6 8.8 8.6 11.6 Z" fill="%k"/><circle cx="10.4" cy="11.4" r="0.9" fill="%g"/><path d="M11 13 L1 15.4 Q0.2 16 1.4 16.6 L11.4 15.4 Z" fill="%f"/><path d="M11 15 L2 16.4 Q0.6 17 2 18 Q6.4 20.4 11 18.4 Z" fill="%a"/>',
+		pelican1: '48 28|<path d="M30 13 Q38 12.8 43.6 14.2 Q38 16.6 30 17.6 Z" fill="%b"/><path d="M20 13.6 Q28 8.6 39 9 Q31 12.4 23 14 Z" fill="%x"/><path d="M14 12.6 Q24 10 33 13.4 Q35 15.2 33 17 Q24 19.8 14 17.6 Z" fill="%h"/><path d="M18 16.4 Q27 24.6 41 23 Q33 19 22.6 16.6 Z" fill="%p"/><path d="M35.6 23 Q39.6 23.2 41 23 Q38.4 20.8 34 19.6 Z" fill="%b"/><circle cx="12.6" cy="12.6" r="4.4" fill="%q"/><path d="M8.6 11.6 Q12.6 6.6 16.8 11 Q12.6 8.8 8.6 11.6 Z" fill="%k"/><circle cx="10.4" cy="11.4" r="0.9" fill="%g"/><path d="M11 13 L1 15.4 Q0.2 16 1.4 16.6 L11.4 15.4 Z" fill="%f"/><path d="M11 15 L2 16.4 Q0.6 17 2 18 Q6.4 20.4 11 18.4 Z" fill="%a"/>',
 		swan: '44 38|<path d="M9 26 Q9 17 20 16 Q32 15 39 21 Q34 32 21 33 Q11 33 9 26 Z" fill="%d" stroke="#7D8B99" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 21 Q26 17 35 22 Q28 29 18 27 Z" fill="%q" stroke="#7D8B99" stroke-width="1.2"/><path d="M19 18 Q11 14 13 8 Q15 2.6 22 3.4 Q27.6 4.2 28 9 L24.6 9 Q24.2 7 21.6 6.6 Q17.6 6.2 16.6 9.6 Q15.6 14 22.4 16.4 Z" fill="%d" stroke="#7D8B99" stroke-width="1.2"/><circle cx="26" cy="8" r="3.4" fill="%d" stroke="#7D8B99" stroke-width="1.2"/><path d="M29 8 L34 9.6 L29 11 Z" fill="%r"/><circle cx="27" cy="6.8" r="0.9" fill="%g"/>',
 		ladybug: '24 20|<ellipse cx="14" cy="11" rx="8.4" ry="7" fill="%e"/><path d="M14 4v14" stroke="%g" stroke-width="1.2"/><g fill="%g"><circle cx="10.6" cy="8.4" r="1.4"/><circle cx="17.4" cy="8.4" r="1.4"/><circle cx="10.2" cy="13.4" r="1.4"/><circle cx="17.8" cy="13.4" r="1.4"/></g><circle cx="7" cy="8" r="4" fill="%g"/><path d="M5.4 4.6Q3.4 1.6 1.6 2.4M8.2 4.2Q7.6 1 5.6 0.8" fill="none" stroke="%g" stroke-width="1"/><circle cx="5.6" cy="6.6" r="0.8" fill="%d"/>',
 		turkey: '40 36|<path d="M20 20 8 4q-3 8 4 14Zm0 0 4-18q6 4 3 14Zm0 0 12-14q4 8-5 15Z" fill="#A05A2C"/><ellipse cx="20" cy="25" rx="10" ry="9" fill="%i"/><circle cx="12" cy="18" r="5" fill="%i"/><circle cx="11" cy="17" r="1" fill="#111"/><path d="M8 18l-4 1 4 2Z" fill="%a"/><path d="M9 20q-2 3 0 5" stroke="%e" stroke-width="2" fill="none"/><line x1="17" y1="33" x2="17" y2="36" stroke="%f" stroke-width="2"/><line x1="23" y1="33" x2="23" y2="36" stroke="%f" stroke-width="2"/>',
@@ -297,7 +303,7 @@
 	function start(boot) {
 		var CFG = boot.cfg || {};
 		var theme = boot.theme;
-		var themeKey = boot.themeKey || 'classic';
+		var themeKey = boot.themeKey || 'florida_keys';
 		var A = (theme && theme.ambient) || { particles: [] };
 		var mq = boot.mq;
 		var reduced = function () { return !!(mq && mq.matches); };
@@ -1658,7 +1664,7 @@
 				/* The only day the heron flies inverted: April Fool's, rarely. */
 				hero.invert = themeKey === 'april_fools' && rand() < 0.25;
 				/* Classic landing sequence: glide in → land → stand → leave. */
-				hero.land = !hero.invert && water && rand() < (themeKey === 'classic' ? 0.5 : 0.15);
+				hero.land = !hero.invert && water && rand() < (themeKey === 'classic' || themeKey === 'florida_keys' ? 0.5 : 0.15);
 				if (hero.land) { hero.lx = rnd(vw * 0.25, vw * 0.75); hero.st = 1; }
 			} else if (kind === 'eagle' || kind === 'witch') {
 				var g = kind === 'eagle' ? '🦅' : '🧙‍♀️';
@@ -1689,6 +1695,18 @@
 				hero.vy = -rnd(340, 400);
 				hero.vxj = rnd(-50, 50);
 				addRipple(hero.x, waterY, true);
+			} else if (kind === 'pelican') {
+				/* Brown pelicans commute low over the water on stiff,
+				 * motionless wings, dropping into a few beats only when
+				 * they start to sink. Flying it high and flapping the
+				 * whole way is the one thing that would read wrong. */
+				hero.x = dir > 0 ? -120 : vw + 120;
+				hero.y = water ? waterY - rnd(16, 46) : rnd(vh * 0.3, vh * 0.55);
+				hero.vx = dir * rnd(52, 78);
+				hero.w = 110;
+				hero.fl = 0;
+				hero.gl = rnd(1.6, 3);
+				sprite('pelican'); sprite('pelican1');
 			} else if (kind === 'ducks') {
 				hero.x = dir > 0 ? -90 : vw + 90;
 				hero.y = ground;
@@ -1744,7 +1762,13 @@
 				return;
 			}
 			h.x += h.vx * dt;
-			if (h.kind !== 'manatee' && h.kind !== 'ducks') { h.y += sin(h.ph) * 8 * dt; }
+			if (h.kind === 'pelican') {
+				/* glide → sink slowly → two beats of lift → glide again */
+				h.fl -= dt;
+				if (h.fl <= -h.gl) { h.fl = 0.5; h.gl = rnd(1.8, 3.4); }
+				h.y += (h.fl > 0 ? -26 : 9) * dt;
+				if (water) { h.y = clamp(h.y, waterY - 64, waterY - 10); }
+			} else if (h.kind !== 'manatee' && h.kind !== 'ducks') { h.y += sin(h.ph) * 8 * dt; }
 			if (h.kind === 'manatee') {
 				h.rip -= dt;
 				if (h.rip <= 0) { addRipple(h.x + h.dir * 40, waterY + 2); h.rip = rnd(2, 4); }
@@ -1805,8 +1829,8 @@
 					var hw = stand ? 52 : h.w;
 					cx.drawImage(him.img, -hw / 2, -hw * him.ratio / 2, hw, hw * him.ratio);
 				}
-			} else if (h.kind === 'sleigh' || h.kind === 'manatee') {
-				var sim = sprite(h.kind);
+			} else if (h.kind === 'sleigh' || h.kind === 'manatee' || h.kind === 'pelican') {
+				var sim = sprite(h.kind === 'pelican' ? (h.fl > 0 ? 'pelican1' : 'pelican') : h.kind);
 				if (sim.ready) {
 					if (h.dir > 0) { cx.scale(-1, 1); }
 					cx.drawImage(sim.img, -h.w / 2, -h.w * sim.ratio / 2, h.w, h.w * sim.ratio);

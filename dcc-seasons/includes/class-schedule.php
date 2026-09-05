@@ -29,6 +29,9 @@ if (!defined('ABSPATH')) {
 
 class Schedule {
 
+    /** The year-round base theme: what shows when nothing else claims the day. */
+    public const BASE_THEME = 'florida_keys';
+
     /**
      * Named anchors. 'nth' = nth weekday of month (n = -1 for last),
      * 'easter' = computus, 'fixed' = month/day. Labels are what the settings
@@ -227,7 +230,51 @@ class Schedule {
             self::row(self::fx(11, 1),           self::at('thanksgiving'),       'thanksgiving', __('Thanksgiving', 'dcc-seasons')),
             self::row(self::fx(11, 10),          self::at('veterans_day'),       'veterans_day', __('Veterans Day', 'dcc-seasons')),
             self::row(self::at('thanksgiving', 1), self::at('christmas'),        'christmas',    __('Christmas', 'dcc-seasons')),
+            // Year-round base, LAST on purpose. A full-year range is the
+            // widest possible, and active() takes the narrowest containing
+            // range, so this row loses to every other row and wins only on
+            // the days nothing else claims. It also closes every gap, so
+            // the settings page's "no row covers this day" warning cannot
+            // fire on the default schedule.
+            self::base_row(),
         ];
+    }
+
+    /**
+     * The year-round base row (Jan 1 - Dec 31).
+     */
+    public static function base_row(): array {
+        return self::row(self::fx(1, 1), self::fx(12, 31), self::BASE_THEME, __('Florida Keys', 'dcc-seasons'));
+    }
+
+    /**
+     * Give an already-edited schedule the base row, once. Purely additive:
+     * the widest possible range can never outrank anything the owner set,
+     * so nothing that was showing before shows differently after. A
+     * schedule that already spans a full year is left alone, which is what
+     * makes a second upgrade a no-op and lets an owner who deletes the row
+     * keep it deleted.
+     *
+     * @param array $rows
+     * @return array
+     */
+    public static function ensure_base(array $rows): array {
+        $y = (int) gmdate('Y');
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $r = self::resolve_row($row, $y);
+            if (!$r) {
+                continue;
+            }
+            $span = (int) (new \DateTimeImmutable($r[0]))->diff(new \DateTimeImmutable($r[1]))->days;
+            if ($span >= 364) {
+                return $rows;
+            }
+        }
+        $rows[] = self::base_row();
+        return $rows;
     }
 
     /** True when a row is in the pre-3.7.0 shape (start/end are Y-m-d strings). */
