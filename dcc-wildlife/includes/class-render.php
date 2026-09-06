@@ -191,6 +191,9 @@ final class Render {
 				// the whole point of the prose (being read) is lost. Same shape
 				// as the countdown, which the hub also lifts out and re-emits.
 				'guide_prose'  => true,
+				// 1.18.0: the spotlight strip. The standalone widget keeps it; the
+				// hub turns it off and month-filters the guide grid instead.
+				'spotlight'    => true,
 			]
 		);
 
@@ -248,16 +251,21 @@ final class Render {
 				</div>
 			<?php endif; ?>
 
-			<?php /* Spotlight tiles — built client-side from the month the
-			         visitor is actually in, so page caching can never serve a
-			         stale month. */ ?>
-			<ul class="dccwl-tiles dccwl-spotlight-tiles"></ul>
+			<?php if ( $opts['spotlight'] ) : ?>
+				<?php /* Spotlight tiles — built client-side from the month the
+				         visitor is actually in, so page caching can never serve a
+				         stale month. */ ?>
+				<ul class="dccwl-tiles dccwl-spotlight-tiles"></ul>
+			<?php endif; ?>
 			<noscript>
 				<p class="dccwl-noscript"><?php esc_html_e( 'Please enable JavaScript to see this month’s wildlife highlights.', 'dcc-wildlife' ); ?></p>
 			</noscript>
 
 			<?php if ( $show_guide ) : ?>
 				<section class="dccwl-guide" aria-label="<?php esc_attr_e( 'Canal field guide', 'dcc-wildlife' ); ?>">
+					<?php /* A segmented control (1.18.0): one bordered group, so the
+					         three categories read as a single switch, not as three
+					         more cards among the tiles. */ ?>
 					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide groups', 'dcc-wildlife' ); ?>">
 						<?php $first = true; ?>
 						<?php foreach ( Species::groups() as $slug => $label ) : ?>
@@ -267,13 +275,18 @@ final class Render {
 							<?php $first = false; ?>
 						<?php endforeach; ?>
 					</div>
+					<?php /* The one colour a tile can carry, explained where it is used
+					         (1.18.0). If a colour cannot earn a line here, it must not
+					         carry meaning. */ ?>
+					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
+						<span class="dccwl-legend-item"><span class="dccwl-tile-sub dccwl-tile-peak dccwl-legend-badge" aria-hidden="true"><?php esc_html_e( 'Peak', 'dcc-wildlife' ); ?></span><?php esc_html_e( 'at its best this month', 'dcc-wildlife' ); ?></span>
+					</p>
 					<?php self::render_guide_grids(); ?>
+					<?php /* Month-filtered on the hub (canal.js): a species not likely
+					         this month is hidden, and this line says so when a whole
+					         category goes quiet. Filled client-side; empty in the HTML. */ ?>
+					<p class="dccwl-guide-empty" data-dccwl-guide-empty hidden></p>
 					<?php if ( $opts['guide_prose'] ) { self::render_guide_text(); } ?>
-					<?php /* Owner's decision (1.8.0): the guide's notes and the
-					         likelihood calendar are editorial local knowledge,
-					         and this one line says whose — deliberately not
-					         per-species sourcing. */ ?>
-					<p class="dccwl-credit"><?php esc_html_e( 'Wildlife notes are local knowledge from your hosts — sightings vary.', 'dcc-wildlife' ); ?></p>
 				</section>
 				<?php self::render_species_jsonld(); ?>
 			<?php endif; ?>
@@ -363,18 +376,23 @@ final class Render {
 		?>
 		<details class="dccwl-fullguide">
 			<summary class="dccwl-fullguide-summary">
-				<?php /* An H2 so the guide's Critters/Birds/Plants H3s own a section
-				   in the outline instead of nesting under whatever H2 came before
-				   (on the hub, "Fishing & water conditions"). Styled inline. */ ?>
-				<h2 class="dccwl-fullguide-h">
-					<?php
-					printf(
-						/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
-						esc_html__( 'Read the whole field guide — %d species, in words', 'dcc-wildlife' ),
-						count( $dataset )
-					);
-					?>
-				</h2>
+				<?php /* A real affordance (1.18.0): chevron that turns on open, a label
+				   that is the section's H2 (so Critters/Birds/Plants own a place in
+				   the outline), and a meta line. Still a native <details>, still
+				   server-rendered — this is the crawlable prose. */ ?>
+				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+				<span class="dccwl-fullguide-text">
+					<h2 class="dccwl-fullguide-h"><?php esc_html_e( 'The whole field guide', 'dcc-wildlife' ); ?></h2>
+					<span class="dccwl-fullguide-meta">
+						<?php
+						printf(
+							/* translators: %d: number of species in the field guide. "Species" is invariant in English, so this needs no plural form. */
+							esc_html__( '%d species, in words — tap to read', 'dcc-wildlife' ),
+							count( $dataset )
+						);
+						?>
+					</span>
+				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">
 				<?php foreach ( Species::groups() as $slug => $label ) : ?>
@@ -600,6 +618,9 @@ final class Render {
 				'cdWhyNow'    => __( 'Peak sightings run through %s.', 'dcc-wildlife' ),
 				/* translators: %s: month name. Value line while a season is still on, e.g. "through April". */
 				'cdThrough'   => __( 'through %s', 'dcc-wildlife' ),
+				/* translators: %s: month name. Shown when no species in a category is likely that month. */
+				'guideEmpty'  => __( 'Nothing in this group is likely in %s.', 'dcc-wildlife' ),
+				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
 				/* translators: 1: species name, 2: "N days away". The next rise, shown under a season that is still on. */
 				'cdNext'      => __( 'Next up: %1$s season, %2$s.', 'dcc-wildlife' ),
 			],

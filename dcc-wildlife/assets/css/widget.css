@@ -137,7 +137,14 @@
  * pill is ~54px, so ~40px of gradient turns the edge one into a fading hint
  * instead of broken text. The selected pill is never touched by it — with
  * centring fixed it sits ~67px clear even at 320px. */
+/* 1.18.0: the month strip sits on its own control ground — a tinted,
+ * rounded band — so the pills read as a control, not as more tiles. Text on
+ * this ground: muted 4.81:1, primary 4.74:1; the selected pill is solid
+ * primary with white (5.30:1). */
 .dccwl-timeline {
+	background: var(--dccwl-primary-soft);
+	border-radius: var(--dccwl-radius-pill);
+	padding: 4px;
 	--dccwl-strip-fade: 48px;
 	align-items: center;
 	display: flex;
@@ -358,17 +365,26 @@
 
 .dccwl-guide { margin: 0; }
 
+/* 1.18.0: a segmented control — ONE bordered group on the same tinted
+ * ground as the month strip, so the three categories are visibly a single
+ * switch rather than three more cards among the tiles. */
 .dccwl-tabs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	margin-bottom: var(--dccwl-gap);
+	background: var(--dccwl-primary-soft);
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-pill);
+	display: inline-flex;
+	gap: 2px;
+	margin: 0 auto var(--dccwl-gap);
+	max-width: 100%;
+	padding: 3px;
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab {
 	background: transparent;
-	border: 1px solid var(--dccwl-line);
+	border: 1px solid transparent;
 	border-radius: var(--dccwl-radius-pill);
+	flex: 1 1 0;
+	white-space: nowrap;
 	color: var(--dccwl-text-muted);
 	cursor: pointer;
 	font: inherit;
@@ -396,18 +412,32 @@
 	outline: none;
 }
 
+/* A key for every colour that carries meaning (1.18.0). Small, muted, and
+ * placed where the colour is used. Muted on white: 5.38:1. */
+.dccwl-legend {
+	align-items: center;
+	color: var(--dccwl-text-muted);
+	display: flex;
+	flex-wrap: wrap;
+	font-size: var(--dccwl-fs-xs);
+	gap: 4px 14px;
+	justify-content: center;
+	margin: 0 0 var(--dccwl-gap-lg);
+}
+.dccwl-legend-item { align-items: center; display: inline-flex; gap: 6px; }
+.dccwl-legend-badge { margin: 0; }
+.dccwl-guide-empty {
+	color: var(--dccwl-text-muted);
+	font-style: italic;
+	margin: var(--dccwl-gap-lg) 0;
+	text-align: center;
+}
+.dccwl-guide-empty[hidden] { display: none; }
+
 /* LOAD-BEARING (since v1.1.0): the grids are display:grid, which overrides
  * the UA rule for [hidden]. Without this the inactive guide grids all
  * render stacked. Do not remove when reorganising this file. */
 .dccwl-guide-grid[hidden] { display: none; }
-
-.dccwl-credit {
-	/* muted, not faint: faint is 2.7:1 here and fails WCAG AA. */
-	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	font-style: italic;
-	margin: var(--dccwl-gap-lg) 2px 0;
-}
 
 /* =====================================================================
  * DETAIL DRAWER CONTENT
@@ -417,7 +447,9 @@
 
 .dccwl-sheet .dccwl-medallion {
 	border-radius: var(--dccwl-radius);
-	height: 168px;
+	/* 1.18.0: 120px, not 168 — a drawn plate at photo size read as a failed
+	 * photo. The photo medallion keeps its own 240/210 rule below. */
+	height: 120px;
 	margin: 0 0 var(--dccwl-gap-lg);
 	overflow: hidden;
 	position: relative;
@@ -606,6 +638,21 @@
 	letter-spacing: -0.01em;
 }
 
+/* The strip's key (1.18.0): the same cells, as samples, each named. */
+.dccwl-sheet .dccwl-like-key {
+	color: var(--dccwl-text-muted);
+	display: flex;
+	flex-wrap: wrap;
+	font-size: var(--dccwl-fs-xs);
+	gap: 4px 12px;
+	justify-content: center;
+	list-style: none;
+	margin: var(--dccwl-gap) 0 0;
+	padding: 0;
+}
+.dccwl-sheet .dccwl-like-key-item { align-items: flex-end; display: inline-flex; gap: 5px; }
+.dccwl-sheet .dccwl-like-sample { display: inline-flex; align-items: flex-end; height: 21px; width: 10px; }
+.dccwl-sheet .dccwl-like-sample .dccwl-like-bar { width: 10px; }
 .dccwl-sheet .dccwl-like-now .dccwl-like-m {
 	color: var(--dccwl-text);
 	font-weight: 800;
@@ -657,7 +704,7 @@
 	.dccwl-hero-icon { height: 54px; width: 54px; }
 	.dccwl-hero-sprite { height: 36px; width: 36px; }
 
-	.dccwl-sheet .dccwl-medallion { height: 140px; }
+	.dccwl-sheet .dccwl-medallion { height: 110px; }
 
 	/* Twelve month labels do not fit across a phone; two rows do. */
 	.dccwl-sheet .dccwl-like-row { grid-template-columns: repeat(6, 1fr); row-gap: 10px; }
@@ -697,90 +744,94 @@
    budget is unchanged. Text uses --dccwl-text / --dccwl-text-muted only; the
    faint token is decoration-only and fails AA (see the 1.15.1 audit).
    --------------------------------------------------------------------------- */
+/* ---- the whole field guide, in words (1.16.0; restyled 1.18.0) ------
+ * A native <details>, server-rendered, always in the HTML: this is the
+ * crawlable prose. Restyled as a proper section — a card with a header row
+ * (chevron that turns on open, a label that is the section's H2, a meta
+ * line) — instead of an unstyled browser triangle that read as a stray
+ * link. The <details>/<summary> semantics are untouched. */
 .dccwl-fullguide {
+	background: var(--dccwl-tile-bg);
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-lg);
 	margin-top: var(--dccwl-gap-lg);
-	border-top: 1px solid var(--dccwl-line);
-	padding-top: var(--dccwl-gap-lg);
+	overflow: hidden;
 }
-
 .dccwl-fullguide-summary {
-	color: var(--dccwl-primary);
+	align-items: center;
+	background: linear-gradient(var(--dccwl-primary-soft), var(--dccwl-primary-soft)), #ffffff;
+	color: var(--dccwl-text);
 	cursor: pointer;
-	font-size: var(--dccwl-fs-sm);
-	font-weight: 600;
-	list-style: none;              /* the custom marker below replaces it */
-	padding: 4px 2px 4px 20px;
-	position: relative;
-	border-radius: var(--dccwl-radius-sm);
+	display: flex;
+	gap: 12px;
+	list-style: none;
+	min-height: 60px;
+	padding: 12px 16px;
 }
-
-/* Safari/Chrome render their own disclosure triangle without this. */
-.dccwl-fullguide-summary::-webkit-details-marker {
-	display: none;
+.dccwl-fullguide-summary::-webkit-details-marker { display: none; }
+.dccwl-fullguide-summary::marker { content: ""; }
+.dccwl-fullguide-chev {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: 50%;
+	color: var(--dccwl-primary);
+	display: inline-flex;
+	flex: none;
+	height: 36px;
+	justify-content: center;
+	width: 36px;
 }
-
-/* The summary's H2 (1.17.0) exists for the document outline, not for size:
- * it must look exactly like the summary line did. font: inherit resets the
- * theme's h2 size/weight/family; the doubled class outranks Bravada's h2 rules. */
-.dccwl-fullguide-summary.dccwl-fullguide-summary .dccwl-fullguide-h {
-	color: inherit;
-	display: inline;
-	font: inherit;
-	letter-spacing: inherit;
-	line-height: inherit;
+.dccwl-fullguide-chev svg { transition: transform 160ms ease; }
+.dccwl-fullguide[open] > .dccwl-fullguide-summary .dccwl-fullguide-chev svg { transform: rotate(180deg); }
+.dccwl-fullguide[open] > .dccwl-fullguide-summary { border-bottom: 1px solid var(--dccwl-line); }
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-fullguide-chev svg { transition: none; }
+}
+.dccwl-fullguide-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* The H2 is the section's heading in the outline; styled as the header
+ * label, not as a page heading. Doubled class outranks the kit's h2 rules. */
+.dccwl-app .dccwl-fullguide-h.dccwl-fullguide-h {
+	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-base);
+	font-weight: 700;
+	letter-spacing: 0;
+	line-height: 1.25;
 	margin: 0;
 	padding: 0;
+	text-align: left;
 	text-transform: none;
 }
-
-/* Our own marker, rotating to point down when open. Decorative. */
-.dccwl-fullguide-summary::before {
-	content: "";
-	position: absolute;
-	left: 4px;
-	top: 50%;
-	width: 0;
-	height: 0;
-	border-left: 5px solid currentColor;
-	border-top: 4px solid transparent;
-	border-bottom: 4px solid transparent;
-	transform: translateY(-50%);
-	transform-origin: 2px 50%;
-	transition: transform 140ms ease;
+.dccwl-fullguide-meta {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-sm);
+	text-align: left;
 }
-
-.dccwl-fullguide[open] > .dccwl-fullguide-summary::before {
-	transform: translateY(-50%) rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.dccwl-fullguide-summary::before {
-		transition: none;
-	}
-}
-
 /* Scoped to .dccwl-app, NOT .dccwl-root: the prose guide appears both inside
    the standalone widget (.dccwl-root) AND at the canal hub's top level
    (.dccwl-canal), and both wrappers carry .dccwl-app. Doubled class keeps
    specificity at (0,4,0), which beats the Elementor kit's (0,3,1) resets. */
 .dccwl-app .dccwl-fullguide-summary.dccwl-fullguide-summary:focus-visible {
 	outline: none;
-	box-shadow: var(--dccwl-ring);
+	box-shadow: inset var(--dccwl-ring);
 }
-
 .dccwl-fullguide-body {
-	padding-top: var(--dccwl-gap-lg);
-	max-width: 68ch;               /* a readable measure, not the full card */
+	padding: var(--dccwl-gap-lg) 16px 16px;
+	text-align: left;
 }
+.dccwl-fullguide-body > * { margin-left: auto; margin-right: auto; max-width: 68ch; }
 
 .dccwl-fg-group {
-	color: var(--dccwl-text-muted);
+	border-top: 1px solid var(--dccwl-line);
+	color: var(--dccwl-primary);
 	font-size: var(--dccwl-fs-sm);
 	font-weight: 700;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.06em;
+	margin: var(--dccwl-gap-lg) auto var(--dccwl-gap);
+	padding-top: var(--dccwl-gap-lg);
 	text-transform: uppercase;
-	margin: var(--dccwl-gap-lg) 0 var(--dccwl-gap);
 }
+.dccwl-fg-group:first-child { border-top: 0; padding-top: 0; }
 
 .dccwl-fg {
 	margin: 0 0 var(--dccwl-gap-lg);
@@ -801,10 +852,11 @@
 
 .dccwl-fg-sci {
 	color: var(--dccwl-text-muted);
+	display: block;
 	font-size: var(--dccwl-fs-sm);
 	font-style: italic;
 	font-weight: 400;
-	margin-left: 6px;
+	margin: 2px 0 0;
 }
 
 .dccwl-fg-fact {

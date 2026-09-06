@@ -97,6 +97,10 @@
 	--dccwl-shadow-raised: 0 2px 6px rgba(15, 60, 100, 0.10), 0 12px 28px rgba(15, 60, 100, 0.13);
 	--dccwl-shadow-sheet: 0 -2px 10px rgba(15, 60, 100, 0.10), 0 -18px 48px rgba(15, 60, 100, 0.18);
 	--dccwl-ring: 0 0 0 3px rgba(15, 109, 191, 0.38);
+	/* 1.18.0: the sticky level bar's top offset. 0 by default; set it in the
+	 * theme's CSS to the height of a sticky site header so the bar tucks under
+	 * it instead of behind it. */
+	--dccwl-sticky-offset: 0px;
 
 	/* --- density — the Guide's cozy spacing --------------------------- */
 	--dccwl-density: 1;

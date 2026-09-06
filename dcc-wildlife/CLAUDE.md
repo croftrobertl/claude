@@ -913,6 +913,36 @@ dev site can load the bundled copy. The tile layers are the map's only
 external requests, and only after a guest opens it. Do not point the defaults
 back at a CDN.
 
+## The hierarchy rule (v1.18.0)
+
+The owner's review of 1.17.0, from his phone: navigation was indistinguishable
+from content — month pills, category pills and species tiles were all white
+rounded boxes at the same weight. The rule now:
+
+- **Tiles are the only cards.** White ground, hairline, shadow. Nothing else
+  may use that treatment.
+- **Controls sit on a tinted ground** (`--dccwl-primary-soft` over white): the
+  level bar, the month strip's band, the segmented category switch. Selected
+  state is solid `--dccwl-btn-bg` with `--dccwl-btn-txt` (5.30:1). Measured
+  on that ground: primary text 4.74:1, muted 4.81:1 — both AA.
+- **Depth is visible.** Every panel below the hub opens with
+  `Canal_Render::level_bar()` — Back + breadcrumb, sticky at
+  `--dccwl-sticky-offset` (0 by default; the theme may set it to its sticky
+  header's height). The species crumb's month segment is filled by canal.js
+  (`data-dccwl-crumb="month"`), never server-side.
+- **Every colour that means something has a key next to where it is used**
+  (`.dccwl-legend`, `.dccwl-like-key`). A colour that cannot earn a key entry
+  must not carry meaning.
+- **One grid on the month screen.** `Render::render()` takes `spotlight`
+  (default true; the hub passes false) and `annotateGuide()` hides tiles with
+  likelihood < 2 for the chosen month inside the hub only. The standalone
+  widget is unchanged.
+- **The hub is: countdown + two doors.** The heritage hero and the "right now"
+  line were removed at the owner's request (1.18.0); the hub's `<h2>` is
+  visually hidden but present, so the panel keeps its heading.
+- **The prose guide is still a native `<details>` in the HTML.** Restyle its
+  summary and body freely; never JS-gate, lazy-load or fetch it.
+
 ## Small rules added in 1.17.0
 
 - **Keep-limits carry `regs_verified`** (`Water_Data::defaults()`), rendered

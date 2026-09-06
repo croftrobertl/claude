@@ -69,79 +69,103 @@
 	text-align: center;
 }
 
-/* ---- the back control ----------------------------------------------- */
-
-.dccwl-back-wrap {
+/* ---- the level bar (1.18.0) ---------------------------------------
+ * Every panel below the hub opens with this: Back on the left, "where am
+ * I" in the middle. It is the ONE surface that is allowed to look like a
+ * control ground — a solid tinted band with a hairline, sticky so Back is
+ * always reachable on a phone. Tiles are the only cards; nothing else may
+ * share their treatment. Colours measured on this ground: primary text
+ * 4.74:1, muted text 4.81:1. */
+.dccwl-canal .dccwl-levelbar {
+	align-items: center;
+	/* The tint over an opaque white, so scrolled content cannot show
+	 * through while the bar is stuck. */
+	background: linear-gradient(var(--dccwl-primary-soft), var(--dccwl-primary-soft)), #ffffff;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius);
+	display: grid;
+	gap: var(--dccwl-gap);
+	grid-template-columns: 1fr auto 1fr;
 	margin: 0 0 var(--dccwl-gap-lg);
-	text-align: center;
+	min-height: 52px;
+	padding: 4px 6px;
+	position: sticky;
+	top: var(--dccwl-sticky-offset, 0px);
+	z-index: 3;
 }
-
-/* Doubled class to beat Bravada's (0,3,1) button reset. */
 .dccwl-canal .dccwl-back.dccwl-back {
 	align-items: center;
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
+	background: transparent;
+	border: 1px solid transparent;
 	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text);
+	color: var(--dccwl-primary);
 	cursor: pointer;
 	display: inline-flex;
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
-	font-weight: 600;
-	gap: 6px;
+	font-weight: 700;
+	gap: 4px;
+	justify-self: start;
 	min-height: 44px;
-	padding: 10px 20px 10px 14px;
+	padding: 10px 14px 10px 8px;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
-
-.dccwl-canal .dccwl-back.dccwl-back:hover { background: var(--dccwl-primary-soft); }
-
+.dccwl-canal .dccwl-back.dccwl-back:hover { background: rgba(255, 255, 255, 0.7); }
 .dccwl-canal .dccwl-back.dccwl-back:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
-
-/* ---- the heritage hero (1.11.0) -------------------------------------
- * Folded into the hub header so the canal's own legend LEADS the experience
- * without spending height on a separate banner. No new colour, no webfont —
- * italics carry the quote. */
-.dccwl-hero-canal {
-	margin: 0 auto var(--dccwl-gap-lg);
-	max-width: 640px;
-}
-
-.dccwl-canal .dccwl-hero-canal-title.dccwl-hero-canal-title {
-	font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
-	margin-bottom: 6px;
-}
-
-.dccwl-hero-canal-quote {
-	color: var(--dccwl-text);
-	font-size: 1.125rem;
-	font-style: italic;
-	line-height: 1.4;
-	margin: 0 auto;
-	max-width: 30ch;
-}
-
-.dccwl-hero-canal-attr {
+.dccwl-canal .dccwl-crumbs {
+	align-items: center;
 	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-sm);
-	margin: 6px auto 0;
-	max-width: 44ch;
-}
-
-/* "Right now on the canal" — the living line under the heritage hero. Empty
- * (and invisible) until canal.js fills it from the real sun times. */
-.dccwl-now-line {
-	color: var(--dccwl-primary);
+	display: flex;
 	font-size: var(--dccwl-fs-sm);
 	font-weight: 600;
-	margin: calc(var(--dccwl-gap-lg) * -0.4) auto var(--dccwl-gap-lg);
-	max-width: 46ch;
+	gap: 6px;
+	max-width: 100%;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.dccwl-canal .dccwl-crumb { overflow: hidden; text-overflow: ellipsis; }
+.dccwl-canal .dccwl-crumb-here { color: var(--dccwl-text); font-weight: 700; }
+.dccwl-canal .dccwl-crumb-sep { color: var(--dccwl-text-muted); }
+/* The panel title under the bar is the level's real heading; the crumb
+ * repeats it, so on the species screen the widget's own "September on the
+ * canal" title is for the outline only — the sub line ("5 at peak") stays. */
+.dccwl-canal .dccwl-panel-species .dccwl-head .dccwl-title {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+.dccwl-canal .dccwl-panel-species .dccwl-head { margin-bottom: var(--dccwl-gap); text-align: center; }
+
+/* ---- the month picker's key (1.18.0) ------------------------------- */
+.dccwl-canal .dccwl-legend-swatch {
+	border-radius: 4px;
+	display: inline-block;
+	height: 14px;
+	margin-right: 6px;
+	vertical-align: -2px;
+	width: 14px;
+}
+.dccwl-canal .dccwl-legend-swatch-now {
+	background: var(--dccwl-tile-bg);
+	box-shadow: 0 0 0 2px var(--dccwl-accent);
 }
 
-.dccwl-now-line:empty { display: none; }
+
+/* Doubled class to beat Bravada's (0,3,1) button reset. */
+
+
+
+
+
+
 
 /* ---- L1: the hub ---------------------------------------------------- */
 
@@ -372,7 +396,6 @@
 
 .dccwl-canal .dccwl-title,
 .dccwl-canal .dccwl-sub,
-.dccwl-canal .dccwl-credit,
 .dccwl-canal .dccwl-noscript,
 .dccwl-canal .dccwl-water-title,
 .dccwl-canal .dccwl-water-sub,
@@ -452,3 +475,33 @@
 	.dccwl-month-tiles { grid-template-columns: repeat(3, 1fr); }
 	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
 }
+
+/* ---- hub tiles are DOORS (1.18.0) ---------------------------------- */
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-areas: "name go" "preview go" "art go";
+	align-items: center;
+	text-align: left;
+}
+.dccwl-canal .dccwl-hub-tile .dccwl-hub-name    { grid-area: name; }
+.dccwl-canal .dccwl-hub-tile .dccwl-hub-preview { grid-area: preview; }
+.dccwl-canal .dccwl-hub-tile .dccwl-hub-art     { grid-area: art; justify-content: flex-start; }
+.dccwl-canal .dccwl-hub-go {
+	align-items: center;
+	background: var(--dccwl-primary-soft);
+	border-radius: 50%;
+	color: var(--dccwl-primary);
+	display: inline-flex;
+	grid-area: go;
+	height: 36px;
+	justify-content: center;
+	margin-left: var(--dccwl-gap-lg);
+	width: 36px;
+}
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover .dccwl-hub-go { background: var(--dccwl-btn-bg); color: var(--dccwl-btn-txt); }
+/* A door with nothing to preview (the water module before its first facts,
+ * or with the live layer off) collapses to its name and its chevron rather
+ * than holding empty rows open. */
+.dccwl-canal .dccwl-hub-preview:empty,
+.dccwl-canal .dccwl-hub-art:empty { display: none; }

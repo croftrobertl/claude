@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.17.0
+Stable tag: 1.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,16 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.18.0 =
+* **Navigation you can see.** Every screen below the hub opens with a level bar — Back on the left, "Wildlife › September" in the middle — on its own tinted ground, sticky so Back is always within reach on a phone. Controls and content no longer share a surface: the month strip sits on a tinted band, the three categories are one segmented switch, and the species tiles are the only white cards.
+* **One grid, not two.** On the month screen the spotlight strip that duplicated the grid beneath it is gone; the grid itself now shows only the species likely that month, peaks first, and says so when a whole category is quiet. The standalone month widget keeps its strip.
+* **Every colour has a key.** "Peak — at its best this month" under the categories; "this month" under the month picker; a four-level key (rare / possible / good / peak) under the likelihood strip in every species sheet.
+* **Simpler hub.** The heritage title, the Grantland Rice quote and the "right now on the canal" line are gone at the owner's request. The hub is the season countdown and two clearly-marked doors, Wildlife and Water.
+* **The whole field guide, as a section.** The crawlable prose keeps its native `<details>` and stays in the HTML; it now looks like a deliberate part of the page — a card with a header row, a chevron that turns on open, and typographic sections — instead of a bare browser triangle.
+* Drawn species plates in the sheet are now a 120px illustration, not a 240px stand-in for a missing photo.
+* Removed: the "Wildlife notes are local knowledge from your hosts — sightings vary." line.
+* Contrast: no new colour tokens. Every new pairing was measured on its real ground (primary text on the tinted bar 4.74:1, muted 4.81:1, white on the selected pill 5.30:1); the fill-only / text-only token roles from 1.15.1–1.16.2 are unchanged.
 
 = 1.17.0 =
 * **Every species now has a peak.** Seven species — Manatee, River Otter, Water Snake, Anhinga, Little Blue Heron, Tricolored Heron, Spanish Moss — topped out at "good" (2) and never reached "peak" (3), so the peak badge, the "N at peak" counts, the season countdown and the "fullest months" line all ignored them while their sheets still said "Best: Jul–Aug". Their best windows are now their peaks. Month counts rise accordingly; the three year-round residents join the great blue heron as at-peak-all-year.

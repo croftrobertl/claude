@@ -75,6 +75,11 @@ final class Canal_Render {
 				'show_guide'   => true,
 				'show_browser' => true,
 				'guide_prose'  => false,
+				// 1.18.0: no spotlight strip on the month screen. It duplicated
+				// the grid below it and was the biggest single reason the screen
+				// read as "too much at once". The grid is month-filtered instead
+				// (canal.js + annotateGuide), so one grid does the job.
+				'spotlight'    => false,
 			]
 		);
 
@@ -88,33 +93,17 @@ final class Canal_Render {
 
 				<?php /* ---------- L1: the hub ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-hub" data-dccwl-panel="hub" tabindex="-1">
-					<?php /* The heritage hero (1.11.0). Folded into the hub's own
-					         header so it adds wonder without a second stacked block
-					         (the render budget is unchanged). The Grantland Rice
-					         line is the canal's long-standing calling card; the
-					         "Elfin River" was its steamboat-era name. */ ?>
-					<div class="dccwl-hero-canal">
-						<h2 class="dccwl-panel-title dccwl-hero-canal-title"><?php echo esc_html( '' !== $title ? $title : __( 'The Dora Canal', 'dcc-wildlife' ) ); ?></h2>
-						<p class="dccwl-hero-canal-quote"><?php esc_html_e( '“The most beautiful mile of waterway in the world.”', 'dcc-wildlife' ); ?></p>
-						<p class="dccwl-hero-canal-attr"><?php esc_html_e( '— sportswriter Grantland Rice, of the cypress-canopied channel once called the Elfin River', 'dcc-wildlife' ); ?></p>
-					</div>
-
-					<?php /* "Right now on the canal" (1.14.0) — the living line. An
-					         empty shell; canal.js fills it from the REAL sunrise and
-					         sunset for these coordinates, in canal time, and names
-					         species that are both at their peak this month and active
-					         at this hour. Never server-rendered: a cached page must
-					         not be able to state the wrong hour. */ ?>
-					<p class="dccwl-now-line" data-dccwl-now-line></p>
+					<?php /* The hub's heading is for the outline and screen readers only
+					         (1.18.0). The heritage hero that used to sit here — title,
+					         Grantland Rice quote, attribution — and the "right now on the
+					         canal" line were removed at the owner's request; the hub's one
+					         job is now: what is coming, and where to go. */ ?>
+					<h2 class="dccwl-panel-title dccwl-sr"><?php echo esc_html( '' !== $title ? $title : __( 'On the canal', 'dcc-wildlife' ) ); ?></h2>
 
 					<?php
-					/* The countdown hero (moved here in 1.14.0). The hub now tells a
-					   story in order — the canal's own legend, then what is happening
-					   RIGHT NOW, then what is COMING, then where to go. Leading with
-					   the countdown buried the canal's name and its quote under a
-					   species banner. Still exactly one shell per page (the 1.8.1
-					   first-caller-wins guard is untouched) and still an empty div the
-					   browser fills in canal time. */
+					/* The season countdown: the hub's one living element. Still exactly
+					   one shell per page (the 1.8.1 first-caller-wins guard is untouched)
+					   and still an empty div the browser fills in canal time. */
 					echo Render::countdown_shell_for_canal(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted shell markup.
 					?>
 					<noscript>
@@ -134,6 +123,7 @@ final class Canal_Render {
 								         Decorative: the preview line above says what
 								         it means. */ ?>
 								<span class="dccwl-hub-art" data-dccwl-hub-art="wildlife" aria-hidden="true"></span>
+								<?php self::door_chevron(); ?>
 							</button>
 						</li>
 						<?php if ( $has_water ) : ?>
@@ -149,6 +139,7 @@ final class Canal_Render {
 									<?php /* Source + age chips for the very facts above —
 									         the same provenance the cards carry. */ ?>
 									<span class="dccwl-hub-art" data-dccwl-hub-art="water"></span>
+									<?php self::door_chevron(); ?>
 								</button>
 							</li>
 						<?php endif; ?>
@@ -157,7 +148,7 @@ final class Canal_Render {
 
 				<?php /* ---------- L2a: the month picker ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-month" data-dccwl-panel="month" tabindex="-1" hidden>
-					<?php self::back_button( __( 'Back', 'dcc-wildlife' ) ); ?>
+					<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ) ] ); ?>
 					<h2 class="dccwl-panel-title"><?php esc_html_e( 'The canal year', 'dcc-wildlife' ); ?></h2>
 					<?php /* "The fullest months are…" — computed client-side from the
 					         same bundled calendar the tiles use, so a cached page can
@@ -168,18 +159,24 @@ final class Canal_Render {
 					         lines are not, and mixing the two server-side is how
 					         a cached page starts lying about the date. */ ?>
 					<ul class="dccwl-month-tiles" data-dccwl-month-tiles></ul>
+					<?php /* The one colour the picker carries, explained where it is used. */ ?>
+					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
+						<span class="dccwl-legend-item"><span class="dccwl-legend-swatch dccwl-legend-swatch-now" aria-hidden="true"></span><?php esc_html_e( 'this month', 'dcc-wildlife' ); ?></span>
+					</p>
 				</section>
 
 				<?php /* ---------- L3a: species for the chosen month ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-species" data-dccwl-panel="species" tabindex="-1" hidden>
-					<?php self::back_button( __( 'All months', 'dcc-wildlife' ) ); ?>
+					<?php /* The month segment is filled client-side (canal.js setMonth): a
+					         cached page must never name a month. */ ?>
+					<?php self::level_bar( __( 'All months', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ), '' ], 'month' ); ?>
 					<?php echo $species_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Render::render() escapes its own output. ?>
 				</section>
 
 				<?php if ( $has_water ) : ?>
 					<?php /* ---------- L2b: the whole water module ---------- */ ?>
 					<section class="dccwl-panel dccwl-panel-water" data-dccwl-panel="water" tabindex="-1" hidden>
-						<?php self::back_button( __( 'Back', 'dcc-wildlife' ) ); ?>
+						<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Water', 'dcc-wildlife' ) ] ); ?>
 						<?php echo $water_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Water_Render::render() escapes its own output. ?>
 					</section>
 				<?php endif; ?>
@@ -201,14 +198,39 @@ final class Canal_Render {
 	}
 
 	/** The centred back control every non-hub level carries. */
-	private static function back_button( string $label ): void {
+	/**
+	 * The level bar (1.18.0): a sticky, tinted band at the top of every panel
+	 * below the hub — Back on the left, a breadcrumb in the middle — so depth
+	 * is visible: where am I, what is this a child of, how do I get back.
+	 * Nothing else may share this surface treatment; tiles are the only cards.
+	 *
+	 * @param string   $back    Back button label.
+	 * @param string[] $crumbs  Breadcrumb segments; an empty string is a
+	 *                          client-filled slot (the month name).
+	 * @param string   $fill    data-dccwl-crumb key for the client-filled slot.
+	 */
+	private static function level_bar( string $back, array $crumbs, string $fill = '' ): void {
 		?>
-		<p class="dccwl-back-wrap">
+		<div class="dccwl-levelbar">
 			<button type="button" class="dccwl-back" data-dccwl-back>
 				<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span><?php echo esc_html( $label ); ?></span>
+				<span><?php echo esc_html( $back ); ?></span>
 			</button>
-		</p>
+			<nav class="dccwl-crumbs" aria-label="<?php esc_attr_e( 'You are here', 'dcc-wildlife' ); ?>">
+				<?php $last = count( $crumbs ) - 1; ?>
+				<?php foreach ( $crumbs as $i => $crumb ) : ?>
+					<?php if ( $i > 0 ) : ?><span class="dccwl-crumb-sep" aria-hidden="true">›</span><?php endif; ?>
+					<span class="dccwl-crumb<?php echo $i === $last ? ' dccwl-crumb-here' : ''; ?>"<?php echo $i === $last ? ' aria-current="location"' : ''; ?><?php echo ( '' === $crumb && '' !== $fill ) ? ' data-dccwl-crumb="' . esc_attr( $fill ) . '"' : ''; ?>><?php echo esc_html( $crumb ); ?></span>
+				<?php endforeach; ?>
+			</nav>
+		</div>
+		<?php
+	}
+
+	/** The right-edge chevron that marks a hub tile as a door, not a card. */
+	private static function door_chevron(): void {
+		?>
+		<span class="dccwl-hub-go" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 		<?php
 	}
 
@@ -243,19 +265,6 @@ final class Canal_Render {
 						/* translators: 1: a list of month names, 2: number of species at peak. */
 						'yearBest'   => __( '%1$s are the canal’s fullest months — %2$d species at their peak.', 'dcc-wildlife' ),
 
-						// "Right now on the canal" — the time-of-day labels, chosen
-						// from the real sunrise/sunset for these coordinates.
-						'nowNight'      => __( 'After dark on the canal', 'dcc-wildlife' ),
-						'nowFirstLight' => __( 'First light on the canal', 'dcc-wildlife' ),
-						'nowMorning'    => __( 'Morning on the canal', 'dcc-wildlife' ),
-						'nowMidday'     => __( 'Midday sun on the canal', 'dcc-wildlife' ),
-						'nowAfternoon'  => __( 'Afternoon on the canal', 'dcc-wildlife' ),
-						'nowGolden'     => __( 'Golden hour on the canal', 'dcc-wildlife' ),
-						'nowDusk'       => __( 'Dusk on the canal', 'dcc-wildlife' ),
-						/* translators: 1: a time-of-day phrase, 2: a list of species names. */
-						'nowLook'       => __( '%1$s — look for %2$s.', 'dcc-wildlife' ),
-						/* translators: %s: a time-of-day phrase, when no species matches this hour. */
-						'nowPlain'      => __( '%s.', 'dcc-wildlife' ),
 					],
 				]
 			) . ';',
