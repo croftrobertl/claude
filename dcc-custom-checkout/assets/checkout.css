@@ -283,6 +283,14 @@
     display: none !important;
 }
 
+/* A native service row this plugin drives instead of the guest (the Extra
+   Guest Fee row, and the pet-fee rows the dog toggle replaces). Hidden by
+   class rather than an inline style so the JS can tell our hiding apart from
+   MotoPress's when deciding whether a services section is empty. */
+.dcc_checkout-service-hidden {
+    display: none !important;
+}
+
 .mphb_sc_checkout-form .dcc_checkout-section {
     margin-top: 24px;
 }

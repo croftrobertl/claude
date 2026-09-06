@@ -143,6 +143,13 @@ final class Assets
             'guestServiceIdList'  => Config::guest_service_id_list(),
             'guestAccommodations' => Config::guest_accommodations(),
             'includedGuests'      => Config::included_guests(),
+            // Cumulative extra-guest fee per extra-guest count, pre-formatted
+            // server-side: {1:"$50", 2:"$100", …}. Read off the same Service
+            // MotoPress bills from, so a label can never contradict the total.
+            // Empty when the amount can't be read — the JS then adds no suffix
+            // rather than a wrong one, and no note.
+            'guestFeeSteps'       => Config::guest_fee_steps(),
+            'couchBedsText'       => Config::couch_beds_text(),
             'guestsSelector'   => Config::guests_selector(),
             // Surfaces misconfiguration notices (e.g. a double-prefixed
             // Checkout Field slug) on the page for administrators only.
@@ -154,10 +161,20 @@ final class Assets
                 'petFeeNote'    => __('A per-night pet fee will be added to your total.', 'dcc-checkout'),
                 'requiredMsg'   => __('Please complete the highlighted required fields.', 'dcc-checkout'),
                 'errGuest2'     => __('Please complete the details for every additional guest.', 'dcc-checkout'),
-                /* translators: 1: fee amount as rendered by MotoPress (e.g. $50.00), 2: included guest count. */
-                'feeHint'       => __('%1$s per night for each guest beyond %2$s.', 'dcc-checkout'),
-                /* translators: %s: included guest count. */
-                'feeHintGeneric' => __('A per-night fee applies to each guest beyond %s.', 'dcc-checkout'),
+                /*
+                 * The canonical, owner-approved explanation of the pull-out
+                 * couch. Wording is Rob's and is used verbatim wherever this
+                 * needs explaining; only the numbers are substituted, so a
+                 * cottage that sleeps a different number or charges a different
+                 * fee still reads correctly.
+                 *
+                 * translators: 1: maximum guests for this cottage, 2: sleeping
+                 * arrangement (e.g. "1 queen-sized bed and a pull-out couch"),
+                 * 3: formatted per-night fee (e.g. $50).
+                 */
+                'couchNote'     => __('NOTE: Up to %1$s guests can stay since this cottage has %2$s. A per-night fee of %3$s/night applies for each additional guest.', 'dcc-checkout'),
+                /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
+                'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
                 /* translators: %s: maximum guest count. */
                 'capNote'       => __('This cottage sleeps up to %s guests.', 'dcc-checkout'),
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),

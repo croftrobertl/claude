@@ -156,6 +156,15 @@ final class Settings
             $out[$key] = isset($input[$key]) ? max(0, (int) $input[$key]) : (int) $defaults[$key];
         }
 
+        // 0 = "read the amount off the Service", which is the default and the
+        // only setting that guarantees the label and the charge agree.
+        $out['guest_fee_amount'] = isset($input['guest_fee_amount'])
+            ? max(0.0, (float) $input['guest_fee_amount'])
+            : (float) $defaults['guest_fee_amount'];
+
+        $beds = isset($input['couch_beds_text']) ? sanitize_text_field($input['couch_beds_text']) : '';
+        $out['couch_beds_text'] = $beds !== '' ? $beds : (string) $defaults['couch_beds_text'];
+
         // Fresh reads should reflect the new values immediately.
         Config::flush_cache();
 
@@ -241,8 +250,21 @@ final class Settings
                     $this->service_id_row(__('Daily service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_daily', (int) $s['guest_service_daily'], __('0 = dormant. Flat pricing: same ID in all three fields.', 'dcc-checkout'));
                     $this->service_id_row(__('Weekly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_weekly', (int) $s['guest_service_weekly'], '');
                     $this->service_id_row(__('Monthly service ID (pull-out couch)', 'dcc-checkout'), 'guest_service_monthly', (int) $s['guest_service_monthly'], '');
+                    $this->price_row(
+                        __('Fee amount shown to guests', 'dcc-checkout'),
+                        'guest_fee_amount',
+                        (float) $s['guest_fee_amount'],
+                        __('Per night, per extra guest. Leave at 0 to read it from the Service above — that is the only setting where the label and the charge cannot disagree. Set a number only to override what is DISPLAYED; it never changes what MotoPress bills.', 'dcc-checkout')
+                    );
+                    $this->text_row(
+                        __('Sleeping arrangement', 'dcc-checkout'),
+                        'couch_beds_text',
+                        (string) $s['couch_beds_text'],
+                        __('Named in the guest-facing note, e.g. "1 queen-sized bed and a pull-out couch".', 'dcc-checkout')
+                    );
                     ?>
                 </table>
+                <?php $this->render_guest_copy_preview(); ?>
 
                 <h2><?php echo esc_html__('Dog info fields (native Checkout Fields)', 'dcc-checkout'); ?></h2>
                 <p class="description" style="max-width:640px">
@@ -397,6 +419,81 @@ final class Settings
             echo '<p class="description">' . esc_html($desc) . '</p>';
         }
         echo $extra_html; // phpcs:ignore WordPress.Security.EscapeOutput -- built escaped in field_name_status_html()
+        echo '</td></tr>';
+    }
+
+    /**
+     * Exactly what a guest will read on a couch cottage, rendered from the
+     * live settings. This is the money copy, so it is worth being able to
+     * check it here rather than only on a real checkout.
+     */
+    private function render_guest_copy_preview(): void
+    {
+        $included = Config::included_guests();
+        $steps    = Config::guest_fee_steps(4);
+        $beds     = Config::couch_beds_text();
+
+        echo '<h3>' . esc_html__('What the guest sees', 'dcc-checkout') . '</h3>';
+
+        if (empty($steps)) {
+            echo '<p class="description" style="max-width:640px;color:#b32d2e">'
+                . esc_html__('⚠ The per-night amount could not be read, so guest-count options get no "(+$…)" label and the note is not shown. Enter the Extra Guest Fee service ID above (its price is the source), or set the fee amount explicitly.', 'dcc-checkout')
+                . '</p>';
+            return;
+        }
+
+        echo '<p class="description" style="max-width:640px">'
+            . esc_html__('Guest-count dropdown (a cottage that sleeps 4):', 'dcc-checkout') . '</p><ul style="margin:0 0 12px 18px;list-style:disc">';
+        for ($n = 1; $n <= 4; $n++) {
+            $extra = $n - $included;
+            $label = (string) $n;
+            if ($extra > 0 && isset($steps[$extra])) {
+                $label .= sprintf(
+                    /* translators: %s: formatted cumulative fee (e.g. $100). */
+                    __(' (+%s/night)', 'dcc-checkout'),
+                    $steps[$extra]
+                );
+            }
+            echo '<li><code>' . esc_html($label) . '</code></li>';
+        }
+        echo '</ul>';
+
+        echo '<p class="description" style="max-width:640px">' . esc_html__('Note under the dropdown:', 'dcc-checkout') . '</p>';
+        echo '<p style="max-width:640px;padding:10px 14px;background:#f6f7f7;border-left:4px solid #2271b1">'
+            . esc_html(sprintf(
+                /* translators: 1: maximum guests, 2: sleeping arrangement, 3: formatted per-night fee. */
+                __('NOTE: Up to %1$s guests can stay since this cottage has %2$s. A per-night fee of %3$s/night applies for each additional guest.', 'dcc-checkout'),
+                4,
+                $beds,
+                $steps[1]
+            ))
+            . '</p>';
+        echo '<p class="description" style="max-width:640px">'
+            . esc_html__('Neither the labels nor the note appear on a cottage that is not listed above — Cottages 33 and 34 show a plain 1 / 2 dropdown.', 'dcc-checkout')
+            . '</p>';
+    }
+
+    private function price_row(string $label, string $key, float $value, string $desc): void
+    {
+        printf(
+            '<tr><th scope="row"><label for="dcc_%1$s">%2$s</label></th><td>'
+            . '<input type="number" min="0" step="0.01" id="dcc_%1$s" name="%3$s[%1$s]" value="%4$s" class="small-text" />',
+            esc_attr($key),
+            esc_html($label),
+            esc_attr(Config::OPTION),
+            esc_attr($value > 0 ? (string) $value : '0')
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+        $resolved = Config::guest_fee_amount();
+        if ($resolved > 0) {
+            echo '<p class="description" style="color:#1a7f37">' . esc_html(sprintf(
+                /* translators: %s: the formatted amount actually in use. */
+                __('✓ In use: %s per night, per extra guest.', 'dcc-checkout'),
+                Config::format_price($resolved)
+            )) . '</p>';
+        }
         echo '</td></tr>';
     }
 

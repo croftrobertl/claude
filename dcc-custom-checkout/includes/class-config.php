@@ -61,6 +61,15 @@ final class Config
             'guest_service_weekly'  => 0,
             'guest_service_monthly' => 0,
             'included_guests'       => 2,
+            // Per-night, per-extra-guest amount, used ONLY to label the guest
+            // dropdown and write the note. 0 = read it off the configured
+            // Service so the label can never disagree with what is charged.
+            // The charge itself is always MotoPress's, computed from the
+            // Service — this plugin still does no pricing math.
+            'guest_fee_amount'      => 0,
+            // Sleeping arrangement named in the guest-facing note. One string
+            // for the six couch cottages, which share the same layout.
+            'couch_beds_text'       => '1 queen-sized bed and a pull-out couch',
         ];
     }
 
@@ -237,6 +246,182 @@ final class Config
             }
         }
         return true;
+    }
+
+    /**
+     * The per-night, per-extra-guest amount, as a number.
+     *
+     * Used ONLY to label the guest dropdown and write the guest-facing note.
+     * The money itself is still computed by MotoPress from the Service — this
+     * is a read of the same source so the label cannot disagree with the
+     * charge. Settings value 0 means "read it off the Service", which is the
+     * default precisely so the two can't drift.
+     */
+    public static function guest_fee_amount(): float
+    {
+        $amount = (float) (self::settings()['guest_fee_amount'] ?? 0);
+        if ($amount <= 0) {
+            $amount = self::service_price(self::guest_service_ids()['daily'] ?? 0);
+        }
+        return (float) apply_filters('dcc_checkout_guest_fee_amount', $amount);
+    }
+
+    /**
+     * A MotoPress Service's own price.
+     *
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * Reads the public API first and falls back to the mphb_price post meta
+     * (confirmed on live: service 18063 has mphb_price = 50). Returns 0.0 when
+     * it cannot be determined, and every caller treats 0 as "say nothing"
+     * rather than printing a wrong number.
+     */
+    public static function service_price(int $service_id): float
+    {
+        if ($service_id <= 0) {
+            return 0.0;
+        }
+        if (function_exists('MPHB')) {
+            try {
+                $repo = MPHB()->getServiceRepository();
+                if ($repo && method_exists($repo, 'findById')) {
+                    $service = $repo->findById($service_id);
+                    if ($service && method_exists($service, 'getPrice')) {
+                        $price = (float) $service->getPrice();
+                        if ($price > 0) {
+                            return $price;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall through to the meta read.
+            }
+        }
+        $post = get_post($service_id);
+        if (!$post instanceof \WP_Post || $post->post_type !== 'mphb_room_service') {
+            return 0.0;
+        }
+        return (float) get_post_meta($service_id, 'mphb_price', true);
+    }
+
+    /**
+     * Format an amount the way the rest of the site shows money.
+     *
+     * Prefers MotoPress's own formatter so currency/locale stay consistent,
+     * then trims a trailing ".00" — the owner-approved copy reads "$50/night",
+     * not "$50.00/night".
+     */
+    public static function format_price(float $amount): string
+    {
+        $text = '';
+        if (function_exists('mphb_format_price')) {
+            try {
+                $text = (string) mphb_format_price($amount, ['period' => false]);
+            } catch (\Throwable $e) {
+                $text = '';
+            }
+        }
+        if ($text === '') {
+            $text = '$' . number_format($amount, 2);
+        }
+        $text = wp_strip_all_tags($text);
+        // "$50.00" -> "$50"; leaves "$49.50" alone.
+        $text = (string) preg_replace('/([.,])00\b/', '', $text);
+        return (string) apply_filters('dcc_checkout_format_price', trim($text), $amount);
+    }
+
+    /**
+     * Formatted cumulative extra-guest fee for each possible extra-guest count,
+     * indexed by that count: [1 => "$50", 2 => "$100", ...].
+     *
+     * Cumulative, not per head — the whole point of the owner's request is that
+     * "4 (+$100/night)" states the total the guest will actually pay, instead
+     * of leaving them to multiply $50 by a headcount they have to infer.
+     *
+     * Empty when the fee amount is unknown, so callers print no suffix at all
+     * rather than a wrong one.
+     *
+     * @return array<int,string>
+     */
+    public static function guest_fee_steps(int $max_extra = 8): array
+    {
+        $amount = self::guest_fee_amount();
+        if ($amount <= 0 || $max_extra < 1) {
+            return [];
+        }
+        $steps = [];
+        for ($i = 1; $i <= $max_extra; $i++) {
+            $steps[$i] = self::format_price($amount * $i);
+        }
+        return $steps;
+    }
+
+    /** Sleeping arrangement named in the guest-facing extra-guest note. */
+    public static function couch_beds_text(): string
+    {
+        return (string) apply_filters(
+            'dcc_checkout_couch_beds_text',
+            (string) (self::settings()['couch_beds_text'] ?? '')
+        );
+    }
+
+    /**
+     * The Service IDs actually attached to an accommodation type, or null when
+     * that cannot be determined.
+     *
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * MotoPress stores per-accommodation service assignment differently across
+     * versions, so this reads the public API and returns null (never an empty
+     * array) when it cannot read it. Callers MUST treat null as "unknown" and
+     * fail open — never hide something on the strength of a failed read.
+     *
+     * @return int[]|null
+     */
+    public static function room_type_service_ids(int $room_type_id): ?array
+    {
+        if ($room_type_id <= 0 || !function_exists('MPHB')) {
+            return null;
+        }
+        try {
+            $repo = MPHB()->getRoomTypeRepository();
+            if (!$repo || !method_exists($repo, 'findById')) {
+                return null;
+            }
+            $room_type = $repo->findById($room_type_id);
+            if (!$room_type || !method_exists($room_type, 'getServices')) {
+                return null;
+            }
+            $ids = [];
+            foreach ((array) $room_type->getServices() as $service) {
+                if (is_object($service) && method_exists($service, 'getId')) {
+                    $ids[] = (int) $service->getId();
+                } elseif (is_numeric($service)) {
+                    $ids[] = (int) $service;
+                }
+            }
+            // Empty is ambiguous (genuinely no services vs. an unreadable
+            // shape), so it stays "unknown" rather than "definitely none".
+            return empty($ids) ? null : array_values(array_unique($ids));
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Does this accommodation actually carry the pet Services?
+     * true / false / null = couldn't tell (callers fail open).
+     */
+    public static function room_type_has_pet_services(int $room_type_id): ?bool
+    {
+        $attached = self::room_type_service_ids($room_type_id);
+        if ($attached === null) {
+            return null;
+        }
+        foreach (array_filter(self::pet_service_id_list()) as $pet_id) {
+            if (in_array((int) $pet_id, $attached, true)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

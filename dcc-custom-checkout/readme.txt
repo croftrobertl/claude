@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.3.6
+Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,24 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
     %dcc_dog_details% (MotoPress may already list checkout fields in the email
     booking details, so the tag is a convenience/fallback).
 
+Admin booking screen — conditional fields gated by accommodation (0.4.0)
+  * MotoPress enables Checkout Fields GLOBALLY, and this plugin's front-end
+    script and server backstops all exempt wp-admin on purpose (so an admin is
+    never fought while overriding something). The cost was that an admin
+    booking any cottage was asked for dog type/size/hair, and any cottage
+    offered guest 3/4 name fields.
+  * An admin-only script now mirrors the front-end gate on the booking screen:
+    it watches the accommodation control and shows/hides the dog rows and the
+    guest 3/4 rows to match what that cottage can offer. Pet capability is read
+    from the Services actually attached to the accommodation, so making another
+    cottage pet-friendly is a MotoPress data change, not a code change.
+  * It only shows and hides — nothing is removed, no value is cleared, nothing
+    is validated or blocked, and no server-side backstop was extended into
+    wp-admin. It fails open (unreadable capability, or an accommodation control
+    it cannot identify, hides nothing), keeps any field that already holds a
+    value on an EXISTING booking visible whatever the accommodation, and offers
+    a "Show all booking fields" checkbox for the deliberate-override case.
+
 == Setup: Pull-out Couch Guests (one-time) ==
 
 1. Raise mphb_adults_capacity AND mphb_total_capacity to 4 on the six cottages
@@ -78,8 +96,19 @@ Part D — Pet flow + per-night pet fee (native MotoPress Services)
    per adult, assigned to the six accommodation types only.
 3. WP Admin → DCC → Custom Checkout → "Pull-out Couch Guests" → tick the box
    and enter that service's ID into all three bucket fields (flat pricing).
-   While the box is off, or while any ID is 0, the offering stands down and
-   bookings are capped at the included guest count.
+   While the box is off, or while any ID is 0, the offering stands down: no
+   labels, no note, no service attached, and bookings are capped at the
+   included guest count.
+4. Check the "What the guest sees" preview on that settings page. It renders
+   the dropdown labels and the note from the live settings, so the money copy
+   can be verified without loading a checkout.
+
+The guest never sees the Extra Guest Fee as a service to tick: its row is
+hidden and the charge is driven from the "Number of Guests" dropdown, so the
+count charged is always max(0, guests - included) and the two cannot disagree
+(the server rejects any submission where they do). On a cottage whose only
+service was the Extra Guest Fee, that leaves "Choose Additional Services"
+empty, so the section is dropped as well.
 
 == Checkout Field names: slug vs. rendered input name ==
 
@@ -142,6 +171,14 @@ WP Admin → DCC → Custom Checkout:
     bookings are capped at the included guest count on the listed
     accommodations — enforced server-side on both the form POST and the REST
     checkout route.
+  * Fee amount shown to guests — per night, per extra guest. 0 (the default)
+    means "read it off the Service", which is the only setting where the label
+    and the charge cannot disagree. A number here overrides what is DISPLAYED
+    only; it never changes what MotoPress bills.
+  * Sleeping arrangement — the phrase used in the guest-facing note, default
+    "1 queen-sized bed and a pull-out couch".
+  * "What the guest sees" — a live preview of the dropdown labels and the note,
+    rendered from the current settings.
 
 Reminder: for each cottage added, the three pet-fee Services must also be enabled
 for that accommodation type in MotoPress (Bookings → Accommodation Types →
@@ -163,6 +200,10 @@ also filterable for snippet-level overrides:
   dcc_checkout_guest_accommodations (int[]; default the six 4-sleeper cottages)
   dcc_checkout_guest_service_ids    (daily/weekly/monthly; defaults 0 = dormant)
   dcc_checkout_included_guests      (default 2)
+  dcc_checkout_guest_fee_amount     (per night, per extra guest; 0 = read the Service)
+  dcc_checkout_couch_beds_text      (phrase used in the guest-facing note)
+  dcc_checkout_format_price         (how an amount is rendered in that copy)
+  dcc_checkout_admin_fields_enabled (bool; false disables the wp-admin gating)
   dcc_checkout_dog_field_names      (default mphb_dog_type / mphb_dog_size / mphb_dog_hair)
     (all field-name filters take RENDERED INPUT names — 'mphb_' + the
      MotoPress Checkout Field slug — not the slug itself)
@@ -176,6 +217,46 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.4.0 =
+* Checkout: the Extra Guest Fee service row is removed from "Choose Additional
+  Services" — having both it and the guest dropdown was redundant, and the two
+  could disagree (a 1-guest booking showed the fee row set to 2 guests, because
+  MotoPress presets that select to full capacity independently of the guest
+  count). The charge is now driven solely by the guest dropdown, so the count
+  charged is always max(0, guests - included). The server already rejected any
+  submission where those differ, on both the form POST and the REST route.
+  Where that was a cottage's only service, the now-empty "Choose Additional
+  Services" section is dropped too.
+* Pet-fee selection on Cottage 34 is untouched: its services section is kept,
+  with the "Traveling with a dog?" toggle standing in for the raw service rows
+  exactly as before. Only the Extra Guest Fee row is taken away.
+* Checkout: guest-count options are labelled with the CUMULATIVE amount each
+  one adds — "1", "2", "3 (+$50/night)", "4 (+$100/night)" — so a guest reads
+  the single extra amount for the number they pick instead of a per-head rate
+  they have to multiply. Amounts are read off the same MotoPress Service that
+  does the billing (never hard-coded), formatted server-side, and only appear
+  where a fee can actually be charged. Option VALUES are unchanged.
+* Checkout: the fee hint is replaced by the owner-approved wording — "NOTE: Up
+  to 4 guests can stay since this cottage has 1 queen-sized bed and a pull-out
+  couch. A per-night fee of $50/night applies for each additional guest." The
+  maximum comes from the cottage's own dropdown, the arrangement and the fee
+  from settings, so it cannot state something false; it does not render at all
+  on a cottage that tops out at the included guest count (33 and 34).
+* Settings: "Fee amount shown to guests" (0 = read it off the Service, the
+  default and the only value where label and charge cannot disagree) and
+  "Sleeping arrangement", plus a "What the guest sees" preview that renders the
+  labels and the note from the live settings.
+* NEW: admin booking screen gating. The dog fields and the guest 3/4 name
+  fields are native Checkout Fields, which MotoPress enables globally, so they
+  rendered for every accommodation in wp-admin — booking Cottage 36 asked for
+  the dog's type, size and hair. An admin-only script now shows/hides them to
+  match the chosen accommodation, reactively. It fails open, keeps fields that
+  already hold data on an existing booking visible, and offers a "Show all
+  booking fields" escape hatch. No server-side backstop was extended into
+  wp-admin — those exemptions are deliberate and remain.
+* Coupons were switched off at the MotoPress option level by the owner
+  (mphb_enable_coupons 0); no plugin change was needed or made.
 
 = 0.3.6 =
 * Docs correction (no behaviour change): the install steps named the RENDERED

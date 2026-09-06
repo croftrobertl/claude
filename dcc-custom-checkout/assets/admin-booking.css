@@ -1,0 +1,25 @@
+/**
+ * DCC Custom Checkout — admin booking screen.
+ * Hiding only; nothing here changes how MotoPress lays the screen out.
+ */
+.dcc_admin-field-hidden {
+    display: none !important;
+}
+
+.dcc_admin-showall {
+    margin: 12px 0;
+    padding: 8px 12px;
+    border-left: 4px solid #2271b1;
+    background: #f6f7f7;
+}
+
+.dcc_admin-showall label {
+    margin-left: 6px;
+    font-weight: 600;
+}
+
+.dcc_admin-showall__hint {
+    margin: 6px 0 0;
+    color: #50575e;
+    font-size: 12px;
+}

@@ -48,6 +48,10 @@ final class Plugin
         // parsed /mphb/v1/checkout request body (JSON and multipart alike),
         // closing the empty-$_POST JSON bypass with a proper 422 JSON error.
         (new Rest_Guard())->register();
+        // wp-admin only: gates the globally-enabled Checkout Fields to the
+        // accommodations that can use them. Show/hide only — the deliberate
+        // wp-admin exemptions in the backstops above are untouched.
+        (new Admin_Fields())->register();
     }
 
     public function load_textdomain(): void

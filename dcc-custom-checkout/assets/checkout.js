@@ -84,6 +84,9 @@
                                                  // nothing user-fillable, so no
                                                  // submit validator to register
 
+        // Both flows above hide service rows; drop any section they emptied.
+        collapseEmptyServiceSections(root);
+
         setupSubmit(root, validators);
         observeReRenders(root);
     }
@@ -459,7 +462,7 @@
             var input = serviceInputs[id];
             if (!input) { return; }
             var wrap = serviceRowWrapper(input);
-            if (wrap) { wrap.style.display = 'none'; }
+            if (wrap) { hideServiceRow(wrap); }
         });
 
         var block = buildPetBlock();
@@ -628,7 +631,7 @@
                 );
                 services.push({ id: parseInt(box.value, 10), box: box, adultsSel: adultsSel });
                 var wrap = serviceRowWrapper(box);
-                if (wrap) { wrap.style.display = 'none'; }
+                if (wrap) { hideServiceRow(wrap); }
             });
             if (!services.length) {
                 return;
@@ -637,16 +640,22 @@
             // Dates are fixed on the checkout step — resolve the bucket once.
             var target = guestServiceForNights(getNights(root));
 
-            // Tell the guest what the dropdown will cost before the breakdown
-            // redraws. Amount is read from the native (now hidden) service row.
-            var targetSvc = null;
-            services.forEach(function (svc) { if (svc.id === target) { targetSvc = svc; } });
-            var amount = serviceAmountText(targetSvc ? serviceRowWrapper(targetSvc.box) : null);
-            var hint = amount && I18N.feeHint
-                ? I18N.feeHint.replace('%1$s', amount).replace('%2$s', String(included))
-                : (I18N.feeHintGeneric ? I18N.feeHintGeneric.replace('%s', String(included)) : '');
-            if (hint) {
-                setGuestNote(sel, 'dcc_checkout-fee-note', hint);
+            // The guest dropdown is now the ONLY extra-guest control: its row
+            // in "Choose Additional Services" is hidden above, so the count
+            // charged is always max(0, guests - included) and the two can never
+            // disagree. Label each option with what it adds, and explain the
+            // couch underneath.
+            //
+            // Promise a fee ONLY under exactly the condition apply() can
+            // actually charge one: the bucket resolved, its row is on the page,
+            // and we hold its multiplier. Otherwise apply() attaches nothing,
+            // and a "(+$50/night)" label would state a charge that never lands.
+            var canCharge = target > 0 && services.some(function (svc) {
+                return svc.id === target && !!svc.adultsSel;
+            });
+            if (canCharge) {
+                decorateGuestOptions(sel, included);
+                setCouchNote(sel, included);
             }
 
             function apply() {
@@ -670,11 +679,114 @@
                 });
             }
 
+            function reassert() {
+                apply();
+                // The guest dropdown is exactly the control MotoPress's own
+                // checkout JS rebuilds, so re-apply the labels and note too —
+                // both are idempotent (the original label is stashed per
+                // option, the note is keyed per select).
+                if (canCharge) {
+                    decorateGuestOptions(sel, included);
+                    setCouchNote(sel, included);
+                }
+            }
+
             sel.addEventListener('change', apply);
             apply();
             // Re-assert once after MotoPress's own checkout JS initializes, in
             // case it reset the service inputs during its first render.
-            setTimeout(apply, 800);
+            setTimeout(reassert, 800);
+        });
+    }
+
+    // Label the guest-count options with the CUMULATIVE amount each choice
+    // adds: "1", "2", "3 (+$50/night)", "4 (+$100/night)". Cumulative on
+    // purpose — the owner's ask was that a guest reads the single extra amount
+    // for the number they pick, instead of a per-head rate they have to
+    // multiply and can be surprised by. Options at or below the included count
+    // stay bare.
+    //
+    // The amounts are pre-formatted server-side from the SAME MotoPress Service
+    // that does the billing (CFG.guestFeeSteps), so a label cannot state a
+    // number the total won't match; when that amount can't be read the map is
+    // empty and no suffix is added at all. Only the visible label changes —
+    // option VALUES stay plain integers. Idempotent: the original label is
+    // stashed, so a MotoPress re-render can never stack suffixes.
+    function decorateGuestOptions(sel, included) {
+        var steps  = CFG.guestFeeSteps || {};
+        var suffix = I18N.optionFeeSuffix || ' (+%s/night)';
+        var any    = false;
+        Array.prototype.forEach.call(sel.options, function (opt) {
+            var base = opt.getAttribute('data-dcc-label');
+            if (base === null) {
+                base = opt.textContent;
+                opt.setAttribute('data-dcc-label', base);
+            }
+            var extra  = (parseInt(opt.value, 10) || 0) - included;
+            var amount = extra > 0 ? steps[extra] : '';
+            opt.textContent = amount ? base + suffix.replace('%s', amount) : base;
+            if (amount) { any = true; }
+        });
+        return any;
+    }
+
+    // The canonical, owner-approved explanation of the pull-out couch, under
+    // the guest dropdown. Numbers are substituted rather than frozen into the
+    // sentence: the maximum comes from this cottage's own dropdown and the fee
+    // from the configured Service, so it can't state something false. Rendered
+    // only where the couch is actually offered — a cottage that tops out at the
+    // included count gets no note, because the sentence wouldn't be true there.
+    function setCouchNote(sel, included) {
+        var single = (CFG.guestFeeSteps || {})[1] || '';
+        var beds   = CFG.couchBedsText || '';
+        var max    = maxOptionValue(sel);
+        if (!single || !beds || !I18N.couchNote || max <= included) {
+            return;
+        }
+        setGuestNote(sel, 'dcc_checkout-fee-note', I18N.couchNote
+            .replace('%1$s', String(max))
+            .replace('%2$s', beds)
+            .replace('%3$s', single));
+    }
+
+    // Highest selectable guest count on this room's dropdown (ignores options
+    // capAdultsSelects has disabled, so the note matches what's on offer).
+    function maxOptionValue(sel) {
+        var max = 0;
+        Array.prototype.forEach.call(sel.options, function (opt) {
+            if (opt.disabled) { return; }
+            var v = parseInt(opt.value, 10) || 0;
+            if (v > max) { max = v; }
+        });
+        return max;
+    }
+
+    // Hide a native service row. A class rather than an inline style so
+    // collapseEmptyServiceSections() can tell our hiding from MotoPress's.
+    function hideServiceRow(wrap) {
+        wrap.classList.add('dcc_checkout-service-hidden');
+    }
+
+    // "Choose Additional Services" with nothing left in it is just a confusing
+    // heading, which is what the owner asked to be rid of. Collapse a section
+    // only when every service row inside it is one WE hid and we put nothing
+    // else there — so Cottage 34 keeps its section (the "Traveling with a dog?"
+    // toggle lives inside it, in place of the hidden pet rows), and any service
+    // this plugin doesn't manage keeps its heading too.
+    function collapseEmptyServiceSections(root) {
+        var sections = root.querySelectorAll('.mphb-checkout-section');
+        Array.prototype.forEach.call(sections, function (section) {
+            var rows = section.querySelectorAll('.mphb_sc_checkout-service');
+            if (!rows.length) {
+                return; // Not a services section.
+            }
+            if (section.querySelector('.dcc_checkout-pet')) {
+                return; // We replaced the rows with our own control.
+            }
+            var allHidden = Array.prototype.every.call(rows, function (row) {
+                return row.classList.contains('dcc_checkout-service-hidden');
+            });
+            section.classList.toggle('dcc_checkout-section-hidden', allHidden);
         });
     }
 
@@ -719,16 +831,6 @@
             row.appendChild(note);
         }
         note.textContent = text;
-    }
-
-    // Pull the rendered fee (e.g. "$50.00") out of the hidden native service
-    // row so the hint shows the real amount WITHOUT the plugin doing any price
-    // math — MotoPress already formatted it. Returns '' if nothing looks like a
-    // currency amount.
-    function serviceAmountText(wrapper) {
-        if (!wrapper) { return ''; }
-        var m = /([$€£]\s?\d[\d,]*(?:\.\d{2})?)/.exec(wrapper.textContent || '');
-        return m ? m[1].replace(/\s+/g, '') : '';
     }
 
     // Mirrors Config::guest_service_id_for_nights() — keep the two in step.
@@ -965,6 +1067,10 @@
                 // already-clean text), so re-running is cheap and loop-safe.
                 cleanRequiredMarkers(root);
                 normalizeReservationDates(root);
+                // Re-check after a re-render: if MotoPress brought the service
+                // rows back, the section un-collapses (fail open) rather than
+                // leaving real services hidden behind a missing heading.
+                collapseEmptyServiceSections(root);
             }, 150);
         });
         obs.observe(root, { childList: true, subtree: true });
