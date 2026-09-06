@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.12.0
+Stable tag: 3.13.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,38 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.13.0 =
+* FIXED: "the sprites reset whenever I tap or scroll." They did, on every
+  gesture, and it was applySize(). It ran unconditionally and always re-seeded
+  every particle, dropped every ripple, and killed any hero flyover or
+  vignette in flight — so on a phone those set-pieces could almost never
+  finish. On iOS the URL bar collapsing IS a visualViewport resize, so nearly
+  every swipe fired it. Measured on the live site at 375x812 with the canvas
+  box UNCHANGED: one dispatched resize, one canvas rewrite, 607 lit samples to
+  zero.
+  Three parts, because the first alone would not have fixed a phone:
+  1. applySize() now compares the new width, height and pixel ratio against
+     the current ones and returns immediately when nothing changed — before
+     writing cv.width, which by itself clears the canvas.
+  2. The sticky canvas is fitted to the SMALL viewport height (100svh),
+     measured once from a probe, instead of window.innerHeight. innerHeight
+     genuinely moves with the iOS URL bar, so fitting to it made the size
+     really change on scroll and no guard could help. The probe doubles as the
+     feature test, and orientation changes re-measure it.
+  3. When the size genuinely did change, the scene now SLIDES into the new box
+     — every particle, ripple, hero and vignette rescaled by the width and
+     height ratio — instead of restarting. Only a real discontinuity starts
+     over: the first sizing, or a box that has more than doubled or halved.
+* The host ResizeObserver now goes through the same 150ms debounce as window
+  resizes rather than calling applySize() directly on every observation.
+* Tests: a same-size resize must produce zero canvas rewrites and leave every
+  particle exactly where it was; a real resize must preserve the particle
+  count and rescale each position rather than randomise it; ten simulated
+  URL-bar cycles must leave the canvas box steady and the field untouched; a
+  host resize must be debounced, not synchronous. The shipped 3.12.0 engine
+  runs as a control arm, where the same ten cycles rewrite the canvas ten
+  times with the box unchanged.
 
 = 3.12.0 =
 * FIXED: the canvas could still be lost for good. 3.11.0 checked whether

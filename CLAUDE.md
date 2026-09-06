@@ -267,6 +267,18 @@ bump so the tracked zip never lags the source.
   selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
   VISIBLE match). Binding per element double-counted nested targets — the egg
   opened on half the configured taps until 3.7.0.
+- **A resize is DESTRUCTIVE and must be earned.** Writing `cv.width` clears
+  the canvas, and `applySize()` used to re-seed every particle and kill any
+  hero or vignette with it. On iOS the URL bar collapsing fires a
+  visualViewport `resize` on nearly every scroll, so the whole scene restarted
+  on every gesture — the owner's "the graphics reset whenever I tap". Three
+  rules now: `applySize()` returns immediately unless width, height or DPR
+  actually changed; the sticky canvas is fitted to `100svh` (measured once by
+  a probe, re-measured on orientationchange) and NEVER `innerHeight`, which
+  moves with the URL bar; and a genuine resize RESCALES every actor's
+  coordinates instead of re-seeding, restarting only when the box has more
+  than doubled or halved. The host ResizeObserver goes through `queueSize`,
+  not `applySize` directly.
 - **`test-v21.js`'s bass-hero check is load-sensitive, not flaky-by-design.**
   It polls canvas pixels for 30s of WALL time waiting for a hero jump, so a
   machine busy with other Chromium instances runs too few animation frames in

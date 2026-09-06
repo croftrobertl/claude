@@ -561,14 +561,31 @@
 			if (stickyRO) { stickyRO.disconnect(); stickyRO = null; }
 			stickyHost = el;
 		}
+		/* The SMALL viewport height: what the window is with the browser's own
+		 * chrome SHOWING. Unlike innerHeight it does not move when the iOS URL
+		 * bar collapses on scroll — and innerHeight moving is why the canvas
+		 * was resized, and the whole scene re-seeded, on nearly every swipe.
+		 * Measured once from a probe rather than assumed, which doubles as the
+		 * feature test: where 100svh is not supported the probe has no height
+		 * and innerHeight is used instead. */
+		var svhCache = 0;
+		function svhPx() {
+			if (svhCache) { return svhCache; }
+			var d = D.createElement('div');
+			d.style.cssText = 'position:absolute;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none;';
+			D.body.appendChild(d);
+			svhCache = MT.round(d.getBoundingClientRect().height) || W.innerHeight;
+			D.body.removeChild(d);
+			return svhCache;
+		}
 		function stickyFit() {
 			if (!stickyHost) { return; }
-			var h = mx2(1, MT.round(mn(W.innerHeight, mx2(rectOf(stickyHost).height, 1))));
+			var h = mx2(1, MT.round(mn(svhPx(), mx2(rectOf(stickyHost).height, 1))));
 			stickyH = h;
 			cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:' + h +
 				'px;margin-bottom:-' + (h + stickyPad) + 'px;pointer-events:none;z-index:-1;';
 			if (!stickyRO && W.ResizeObserver) {
-				stickyRO = new W.ResizeObserver(function () { stickyFit(); applySize(); });
+				stickyRO = new W.ResizeObserver(function () { stickyFit(); queueSize(); });
 				stickyRO.observe(stickyHost);
 			}
 		}
@@ -980,11 +997,30 @@
 		/* --- Sizing: one source (canvas rect × DPR), window + visualViewport
 		 * resize, full re-seed on change. --- */
 		var vw = 0, vh = 0, waterY = 0, ground = 0, sizeTimer = 0;
-		function applySize() {
+		/* Resizing the canvas is DESTRUCTIVE: writing cv.width clears it, and
+		 * this used to re-seed every particle, drop every ripple and kill any
+		 * hero or vignette in flight. That is fine once, at startup. It is not
+		 * fine on every scroll — and on iOS every scroll is a resize, because
+		 * the URL bar collapsing fires visualViewport 'resize'. One swipe, one
+		 * restart: the reported "the graphics reset whenever I tap or scroll",
+		 * and why a hero flyover could almost never finish on a phone.
+		 *
+		 * So: do nothing at all when nothing changed, and when something did
+		 * change, SLIDE the scene into the new box rather than restart it.
+		 * Only a real discontinuity — the first sizing, or a box that has more
+		 * than doubled or halved — starts over.
+		 */
+		var lastDpr = 0;
+		function applySize(force) {
 			var r = cv.getBoundingClientRect();
 			var dpr = mn(W.devicePixelRatio || 1, 2);
 			var w = mx2(1, MT.round(r.width));
 			var h = mx2(1, MT.round(r.height));
+			if (!force && w === vw && h === vh && dpr === lastDpr) {
+				return; /* the write to cv.width alone would clear the canvas */
+			}
+			var ow = vw, oh = vh;
+			lastDpr = dpr;
 			cv.width = MT.round(w * dpr);
 			cv.height = MT.round(h * dpr);
 			cx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -998,14 +1034,34 @@
 				mobile = nowMobile;
 				FX.reflect = rich === 'full' && V.reflections !== false && !mobile && water && !shed;
 			}
-			for (var k = 0; k < parts.length; k++) { seed(parts[k], true); }
-			ripples.length = 0;
+			var sx = ow > 0 ? w / ow : 1, sy = oh > 0 ? h / oh : 1;
+			var restart = force || ow < 1 || oh < 1 || sx < 0.5 || sx > 2 || sy < 0.5 || sy > 2;
+			var k;
+			if (restart) {
+				for (k = 0; k < parts.length; k++) { seed(parts[k], true); }
+				ripples.length = 0;
+				if (hero) { hero = null; }
+				if (vig) { endVig(); }
+			} else {
+				for (k = 0; k < parts.length; k++) { scaleXY(parts[k], sx, sy); }
+				for (k = 0; k < ripples.length; k++) { scaleXY(ripples[k], sx, sy); }
+				if (hero) { scaleXY(hero, sx, sy); }
+				if (vig && vig.st) { scaleXY(vig.st, sx, sy); }
+			}
 			snowCols = FX.snow ? new Float32Array(MT.ceil(vw / 8) + 1) : null;
-			if (hero) { hero = null; }
-			if (vig) { endVig(); }
+		}
+		/* Every coordinate an actor carries, moved into the new box. */
+		function scaleXY(o, sx, sy) {
+			if (!o) { return; }
+			if (typeof o.x === 'number') { o.x *= sx; }
+			if (typeof o.y === 'number') { o.y *= sy; }
+			if (typeof o.lx === 'number') { o.lx *= sx; }
+			if (typeof o.gy === 'number') { o.gy *= sy; }
+			if (typeof o.y0 === 'number') { o.y0 *= sy; }
 		}
 		function queueSize() { clearTimeout(sizeTimer); sizeTimer = setTimeout(applySize, 150); }
 		W.addEventListener('resize', queueSize);
+		W.addEventListener('orientationchange', function () { svhCache = 0; stickyFit(); queueSize(); });
 		if (W.visualViewport) { W.visualViewport.addEventListener('resize', queueSize); }
 
 		/* --- Resolve particle specs (sprite arrays, tofu-checked emoji). --- */
@@ -2663,7 +2719,7 @@
 				mountOnBody(CFG.layer ? 5 : 99990);
 			}
 			if (hostMode === 'sticky' && host) { stickyFit(); stickyBalance(); }
-			applySize();
+			applySize(true); /* a re-mount IS a discontinuity */
 			/* Whatever re-rendered the page may have changed what paints over
 			 * the canvas, so re-run the corrective loop rather than assume the
 			 * old decision still holds. Bounded, and at most once a second. */
