@@ -290,6 +290,80 @@ the `get_posts()` count, and the MPHB repository-call count. The second exists
 because the first had no `MPHB()` stub, so `function_exists()` was false and
 the entity N+1 went unseen — any new staff harness must stub MPHB.
 
+## Theme button typography (0.23.2)
+
+`<button>` does NOT inherit `font-family`, and this site carries a global
+button-typography rule at (0,1,1) (an Elementor kit selector). A single class
+therefore LOSES — including the long-standing `font: inherit` on
+`.mphbac-btn`. Measured on live: nav/Today computed Pavanam while the range
+label beside them computed the theme's Raleway. Every button the plugin
+renders needs an explicit family rule at (0,2,0):
+
+```css
+.mphbac-nav-btn.mphbac-nav-btn,
+.mphbac-btn.mphbac-btn,
+.mphbac-sheet-close.mphbac-sheet-close,
+.mphbac-info-close--floating.mphbac-info-close--floating { font-family: inherit; }
+```
+
+- CLASS-DOUBLED, not `.mphbac-root .x`. Both reach (0,2,0), but the sheet and
+  its buttons are portaled to `<body>` on open, where no `.mphbac-root`
+  ancestor exists — same reason `.mphbac-input` and `.mphbac-sheet` are
+  doubled. The harness asserts the face survives the portal.
+- family ONLY. `font: inherit` at (0,2,0) would also pull size/weight in and
+  change how these buttons look today.
+- NOT `!important`: an inline style was verified to beat the theme rule, so
+  the theme rule is not `!important` either.
+- The STAFF widget's buttons have the same latent problem and were
+  deliberately left alone (not requested).
+- Verifying this: a CSSOM sweep for the offending rule returns NOTHING. One
+  stylesheet on the page is cross-origin (`cssRules` throws) and some
+  Elementor selectors make `element.matches(selectorText)` throw, so a
+  try/catch silently drops rules that do match. Inject a candidate rule and
+  read `getComputedStyle` instead.
+
+## Nav row layout (0.23.2)
+
+`.mphbac-nav` is `justify-content: center; gap: 10px`. It was `space-between`,
+which on a ~1000px page put ~235px of air between four controls totalling
+~330px. The print block's `justify-content: center` override is now redundant
+and was removed.
+
+Centring makes the range label's width move BOTH arrows by half its own
+change (~13px month to month), so `.mphbac-nav-range` reserves it:
+
+```css
+min-width: min(19ch, calc(100% - 200px));
+```
+
+`ch` tracks whatever face the theme supplies; 19ch covers the widest
+day-range label (measured 17.4ch). The `min()` clamp is what makes it safe:
+a bare `19ch` overflows any row narrower than ~370px, which includes the
+single-cottage placement (~363px) and every phone, and month-mode labels
+("December 2026 – February 2027") exceed the reservation anyway. Subtracting
+the row's fixed content (two 44px arrows + Today + three 10px gaps ≈ 180px;
+200px allows a longer translated "Today") means the reservation applies only
+where slack genuinely exists. Negative results clamp to 0.
+
+Consequence to know: at ~363px with a SHORT label there WAS slack (measured
+28–43px gaps), so those placements now cluster centred rather than spreading.
+Only a saturated row is literally unchanged.
+
+Arrows are inline stroked SVG chevrons, not `&larr;`/`&rarr;`. The glyphs
+rendered in the theme's button face, so their weight was not ours.
+`stroke="currentColor"` keeps them on the "Nav text color" Elementor control;
+the accessible name stays on the BUTTON, so the `<svg>` is `aria-hidden` +
+`focusable="false"`. Do not shrink the 44x44 hit area.
+
+`nav/nav-test.js` EXTRACTS the nav markup from `class-widget.php` rather than
+retyping it (substitute the `esc_*` echoes BEFORE stripping PHP comment
+blocks, or the strip eats the `aria-label`s), reproduces the (0,1,1) theme
+button rule, and diffs against the previous stylesheet at 1000/375/363/320px.
+Two harness gotchas it encodes: `align-items: center` gives same-line items
+different `top` values (compare vertical CENTRES for "one line"), and a
+programmatic `.focus()` does not set `:focus-visible` in Chromium — press Tab,
+then wait out the 0.2s background transition.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
