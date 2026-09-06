@@ -556,7 +556,7 @@
 		 * lazy images and late content change that height without a resize
 		 * event, and a backdrop that stops short of the fold is worse than
 		 * the scroll it saves. */
-		var stickyHost = null, stickyRO = null, stickyPad = 0;
+		var stickyHost = null, stickyRO = null, stickyPad = 0, stickyH = 0;
 		function stickyWatch(el) {
 			if (stickyRO) { stickyRO.disconnect(); stickyRO = null; }
 			stickyHost = el;
@@ -564,6 +564,7 @@
 		function stickyFit() {
 			if (!stickyHost) { return; }
 			var h = mx2(1, MT.round(mn(W.innerHeight, mx2(rectOf(stickyHost).height, 1))));
+			stickyH = h;
 			cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:' + h +
 				'px;margin-bottom:-' + (h + stickyPad) + 'px;pointer-events:none;z-index:-1;';
 			if (!stickyRO && W.ResizeObserver) {
@@ -582,13 +583,18 @@
 		 * margin collapse, a lazy-image reflow, and themes never seen. */
 		function stickyBalance() {
 			if (!stickyHost || !cv.parentNode) { return 0; }
+			/* Take the no-canvas baseline ONCE and compare every round against
+			 * it. Toggling display:none repeatedly perturbs the very page it
+			 * is measuring — measured on the live site, the first toggle of a
+			 * page load reads the true delta and a second or third reads ~36px
+			 * of residue, which looks exactly like a regression that is not
+			 * there. One toggle, then arithmetic. */
+			cv.style.display = 'none';
+			var base = D.documentElement.scrollHeight;
+			cv.style.display = 'block';
 			var d = 0;
 			for (var i = 0; i < 3; i++) {
-				var on = D.documentElement.scrollHeight;
-				cv.style.display = 'none';
-				var off = D.documentElement.scrollHeight;
-				cv.style.display = 'block';
-				d = on - off;
+				d = D.documentElement.scrollHeight - base;
 				if (!d) { break; }
 				stickyPad += d;
 				stickyFit();
@@ -630,14 +636,25 @@
 				 * host on a narrow viewport. Compare like for like. */
 				var hcs = W.getComputedStyle(el);
 				var inner = el.clientWidth - (parseFloat(hcs.paddingLeft) || 0) - (parseFloat(hcs.paddingRight) || 0);
-				var hr = rectOf(el);
-				ok = r.width >= 1 && r.width >= mx2(inner, 1) - 2 &&
-					r.height >= mn(W.innerHeight, mx2(hr.height, 1)) * 0.9 - 1;
+				/* Ask whether the canvas GOT the geometry it was given, not
+				 * whether it matches the host now: inserting it can change the
+				 * host's own height (it un-collapses the next element's top
+				 * margin), and comparing a pre-insertion fit against a
+				 * post-insertion host rejected a perfectly good mount — 23px
+				 * of canvas against a host that had just grown to 38px.
+				 * Whether the host is short is the fit's business, below. */
+				ok = r.width >= 1 && r.width >= mx2(inner, 1) - 2 && r.height >= mx2(stickyH - 1, 1);
 			} else {
 				ok = MT.abs(r.width - W.innerWidth) <= 2 && MT.abs(r.height - W.innerHeight) <= 2 &&
 					MT.abs(r.top) <= 2 && MT.abs(r.left) <= 2;
 			}
-			if (ok) { return true; }
+			if (ok) {
+				/* Re-fit once: the host's height may have changed by the very
+				 * act of inserting the canvas. The ResizeObserver keeps it in
+				 * step from here. */
+				if (mode === 'sticky') { stickyFit(); }
+				return true;
+			}
 			el.removeChild(cv);
 			return false;
 		}
@@ -939,10 +956,9 @@
 			 * accordion, a theme script re-rendering a container — takes the
 			 * canvas with it. Found while building the fixture for the check
 			 * above, and cheap to survive. */
-			if (CFG.layer && !cv.parentNode) {
-				diag.notes.push('the canvas was removed from the page (the host re-rendered its children); re-mounted');
-				if (host && D.body.contains(host)) { mountIn(host, hostMode); }
-				else { host = null; mountOnBody(CFG.layer ? 5 : 99990); }
+			if (CFG.layer && !D.body.contains(cv)) {
+				diag.notes.push('the canvas had been removed from the page (the host re-rendered its children); re-mounted');
+				ensureMounted();
 			}
 			if (CFG.layer && host) { fixCoverage(true); }
 			printDiag();
@@ -2620,9 +2636,46 @@
 				for (var k = 0; k < parts.length; k++) { parts[k].far = false; }
 			} else if (shed === 2) { FX.vig = false; vigList = []; if (vig) { endVig(t); } shed = 3; frameAvg = 4; }
 		}
+		/* A slider, an accordion, a theme script rewriting the host's
+		 * innerHTML takes the canvas with it, and 3.11.0 only noticed if that
+		 * happened before the settled pass — a one-shot check cannot cover a
+		 * re-render at an arbitrary later time, which is the whole risk. The
+		 * frame loop is already running, so liveness costs one tree walk a
+		 * frame and there is no observer to disconnect or leak. Re-mounts are
+		 * rate-limited and capped: if something is determined to remove the
+		 * canvas, lose gracefully rather than fight it every frame. */
+		var remounts = 0, remountNext = 0;
+		function ensureMounted() {
+			/* Its own clock, so every caller rate-limits on the same scale —
+			 * passing in a frame timestamp from one caller and something else
+			 * from another would let one of them disable the other. */
+			var now = (W.performance && performance.now) ? performance.now() : +new Date();
+			if (!CFG.layer || D.body.contains(cv) || remounts >= 20 || now < remountNext) { return; }
+			remountNext = now + 1000;
+			remounts++;
+			/* The old margin correction belongs to the old layout; carrying it
+			 * into the re-mount distorts the acceptance check. */
+			stickyPad = 0;
+			if (!host || !D.body.contains(host) || !mountIn(host, hostMode)) {
+				/* The host went with it, or will not take the canvas back. */
+				host = null;
+				stickyWatch(null);
+				mountOnBody(CFG.layer ? 5 : 99990);
+			}
+			if (hostMode === 'sticky' && host) { stickyFit(); stickyBalance(); }
+			applySize();
+			/* Whatever re-rendered the page may have changed what paints over
+			 * the canvas, so re-run the corrective loop rather than assume the
+			 * old decision still holds. Bounded, and at most once a second. */
+			if (host) { fixCoverage(true); }
+			if (remounts === 1 && W.console && W.console.info) {
+				W.console.info('DCC Seasons: the ambient canvas was removed from the page (the host re-rendered its children) and has been re-mounted.');
+			}
+		}
 		function frame(t) {
 			raf = 0;
 			if (!running) { return; }
+			ensureMounted();
 			var t0 = (W.performance && performance.now) ? performance.now() : 0;
 			var dt = last ? mn((t - last) / 1000, 0.05) : 0.016;
 			last = t;

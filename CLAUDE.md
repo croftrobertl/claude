@@ -190,9 +190,15 @@ bump so the tracked zip never lags the source.
   4. Hit-test, don't pixel-sample: `elementFromPoint` is layout, so it works in
      a headless browser whose `visibilityState` pauses rAF. Canvas pixel
      sampling there is meaningless and has wasted a round already. For real
-     ground truth, set `canvas.style.backgroundColor` — a background on the
-     canvas ELEMENT paints in the canvas's exact stacking position, cannot be
-     cleared by the engine, and needs no rAF.
+     ground truth paint the canvas from a STYLESHEET, never inline:
+     `style.textContent = 'canvas.dcc-seasons-canvas{background-color:magenta
+     !important}'`. A background on the canvas ELEMENT paints in the canvas's
+     exact stacking position, cannot be cleared by the engine and needs no
+     rAF — but an INLINE one lies twice: it is lost when the element is
+     re-created, and detaching the canvas (which any remove-and-measure
+     layout test does) trips the re-mount below and swaps the element for a
+     fresh one. That combination once photographed a working backdrop as
+     completely broken. The rule matches whatever canvas exists at the time.
   5. Only the ON-SCREEN part of the canvas can be sampled, and a canvas fitted
      to a column that is briefly a few pixels tall has no measurable box.
      Unmeasurable is not covered: `coverage()` returns `measurable:false` and
@@ -204,7 +210,18 @@ bump so the tracked zip never lags the source.
      measures the document with and without the canvas and corrects the
      margin. Assert page height with `documentElement.scrollHeight`, not
      `body.scrollHeight`, on a fixture whose first child has a collapsing
-     top margin (padding on it hides the bug).
+     top margin (padding on it hides the bug). Toggle `display:none` ONCE per
+     page load and compare later rounds against that one baseline: repeated
+     toggling leaves ~36px of residue on the live page and reads as a
+     regression that is not there. The same insertion also changes the HOST's
+     height, so the sticky mount check asks whether the canvas got the
+     geometry it was given, never whether it matches the host afterwards.
+  7. The canvas can be removed at ANY time — a slider, an accordion, a script
+     rewriting the host's innerHTML takes it with it, permanently. Liveness
+     rides on the frame loop (`ensureMounted`, one `body.contains` per frame,
+     nothing to disconnect or leak), rate-limited to once a second and capped
+     at 20, and re-runs `fixCoverage` afterwards because the re-render may
+     have changed what paints over it.
   Override the host with the `dcc_seasons_backdrop_host` filter.
 - **A new theme does NOT reach an edited schedule by itself.** `migrate()`
   only replaces a stored schedule outright when it recognises it as the
@@ -250,6 +267,12 @@ bump so the tracked zip never lags the source.
   selector tiers: configured → `tapFallback` → `#masthead`, first tier with a
   VISIBLE match). Binding per element double-counted nested targets — the egg
   opened on half the configured taps until 3.7.0.
+- **`test-v21.js`'s bass-hero check is load-sensitive, not flaky-by-design.**
+  It polls canvas pixels for 30s of WALL time waiting for a hero jump, so a
+  machine busy with other Chromium instances runs too few animation frames in
+  that window and it fails. Measured: 2 failures in 9 runs under concurrent
+  load, 0 in 6 when alternated against the previous build on an idle machine
+  (which was also 0/5). Re-run it alone before treating it as a regression.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with
   the backdrop-host decision and the content column's ancestor chain. Ask the
   owner for that text before theorising about the live layering.

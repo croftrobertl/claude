@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.11.0
+Stable tag: 3.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,36 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.12.0 =
+* FIXED: the canvas could still be lost for good. 3.11.0 checked whether
+  something had removed it only once, at the settled pass — but the risk it
+  was written for is a container re-rendering at an ARBITRARY later time, and
+  a one-shot check cannot cover that by construction. Reproduced: re-render
+  the host three seconds after load and the backdrop was gone permanently.
+  Liveness now rides on the frame loop, which is already running: one
+  body.contains() per frame, no observer to disconnect and nothing to leak.
+  Re-mounts are rate-limited to one a second and capped at 20, so a script
+  determined to remove the canvas is lost to gracefully rather than fought
+  every frame, and the corrective coverage pass runs again afterwards because
+  a re-render may have changed what paints over it.
+  Latent on this site — nothing re-renders the homepage article today — so
+  this is robustness rather than a live fault.
+* FIXED, found by that test: the sticky mount check could reject a good
+  re-mount. It compared a height computed BEFORE inserting the canvas against
+  the host measured AFTER, and inserting the canvas changes the host's own
+  height (it un-collapses the next element's top margin). A 23px canvas was
+  judged against a host that had just grown to 38px and failed. The check now
+  asks whether the canvas got the geometry it was given; whether the host is
+  short is the fit's business, and the fit runs again straight afterwards.
+* FIXED: the margin-compensation routine toggled display:none once per round.
+  Repeated toggling perturbs the page it is measuring — on the live site the
+  first toggle of a page load reads the true delta and later ones read ~36px
+  of residue, which looks like a regression that is not there. It now takes
+  one no-canvas baseline per page load and compares every round against it.
+* Tests: mount, settle past the re-check, wipe the host's children, assert the
+  canvas returns AND returns to the host rather than the body — with the
+  shipped 3.11.0 engine as a control arm, where it does not return at all.
 
 = 3.11.0 =
 "Behind" itself is confirmed working on the live site in 3.10.0. These are two
