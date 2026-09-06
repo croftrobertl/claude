@@ -23,3 +23,10 @@
     color: #50575e;
     font-size: 12px;
 }
+
+/* The room-type context marker printed by Admin_Fields on the create-booking
+   wizard's checkout step. It carries the `hidden` attribute; this is belt and
+   braces against an admin stylesheet that overrides [hidden]. */
+.dcc_admin-room-context {
+    display: none !important;
+}

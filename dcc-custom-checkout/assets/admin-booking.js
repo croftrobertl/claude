@@ -88,17 +88,45 @@
         }
 
         /**
-         * Accommodation types currently selected anywhere on the screen.
+         * Accommodation types currently selected anywhere on the screen, in
+         * order of trust.
          *
-         * DCC-VERIFY: provisional — confirm against live MotoPress.
-         * The admin booking form's accommodation control has not been inspected
-         * on this site, so rather than guess a selector we DERIVE it: any
-         * <select> offering a known room-type ID as an option value, or any
-         * input whose name mentions room_type and whose value is a known ID.
-         * If nothing matches we return null and the whole gate stands down —
-         * the screen then behaves exactly as it does today.
+         * 1. What PHP stated. The create-booking wizard's checkout step carries
+         *    NO room-type control in its markup — the accommodation was chosen
+         *    in an earlier step and exists only server-side — so there is
+         *    nothing to derive from and derivation alone left that screen
+         *    ungated. Admin_Fields prints the reserved room-type ids on the
+         *    mphb_cb_checkout_form hook; that is authoritative, so it wins.
+         *
+         * 2. Derived from the DOM, for the edit-booking screen, whose
+         *    room-type selects MotoPress creates dynamically (hence the
+         *    MutationObserver). Rather than guess a selector: any <select>
+         *    offering a known room-type ID as an option value, or any input
+         *    whose name mentions room_type and holds a known ID.
+         *
+         * Returns null when neither is available, and the whole gate stands
+         * down — that screen then behaves exactly as it did before this file
+         * existed. Hiding nothing is always the safe wrong answer here.
          */
         function selectedRoomTypes() {
+            var stated = [];
+            Array.prototype.forEach.call(
+                document.querySelectorAll('[data-dcc-room-types]'),
+                function (ctx) {
+                    // Union across markers: should the hook ever fire once per
+                    // reserved room, every room still counts.
+                    String(ctx.getAttribute('data-dcc-room-types') || '')
+                        .split(',')
+                        .forEach(function (v) {
+                            var n = parseInt(v, 10);
+                            if (n > 0 && stated.indexOf(n) === -1) { stated.push(n); }
+                        });
+                }
+            );
+            if (stated.length) {
+                return stated;
+            }
+
             var found = [];
             var sawControl = false;
 

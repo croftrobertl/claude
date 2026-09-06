@@ -40,9 +40,23 @@ final class Admin_Fields
     /** MotoPress booking post type (same one the availability plugin reads). */
     private const BOOKING_POST_TYPE = 'mphb_booking';
 
+    /** Guards against localizing the config twice on one request. */
+    private bool $enqueued = false;
+
     public function register(): void
     {
         add_action('admin_enqueue_scripts', [$this, 'enqueue']);
+
+        // The create-booking wizard's CHECKOUT step is not a post screen and
+        // carries NO room-type control in its markup — the accommodation was
+        // chosen in an earlier step and lives only in PHP. So on that screen we
+        // stop deriving and let PHP state the answer: this hook both loads the
+        // script (the wizard is a menu page, so admin_enqueue_scripts above
+        // does not match it) and prints the authoritative room-type ids.
+        //
+        // Enqueuing mid-render is fine: scripts registered during admin body
+        // output are still printed by admin_print_footer_scripts.
+        add_action('mphb_cb_checkout_form', [$this, 'on_create_booking_checkout'], 5, 2);
     }
 
     public function enqueue(string $hook_suffix = ''): void
@@ -50,12 +64,86 @@ final class Admin_Fields
         if (!$this->is_booking_screen($hook_suffix)) {
             return;
         }
+        $this->enqueue_assets();
+    }
+
+    /**
+     * Create-booking wizard, checkout step.
+     *
+     * @param mixed $booking MPHB booking object being built.
+     * @param mixed $details Reserved-room details: array of
+     *                       [room_id, room_type_id, rate_id, ...].
+     */
+    public function on_create_booking_checkout($booking = null, $details = null): void
+    {
+        if (!$this->enqueue_assets()) {
+            return;
+        }
+        $room_types = $this->room_types_from_context($booking, $details);
+        if (empty($room_types)) {
+            // Nothing authoritative to say; the script falls back to deriving
+            // from the DOM, and hides nothing if that finds no control either.
+            return;
+        }
+        printf(
+            '<div class="dcc_admin-room-context" data-dcc-room-types="%s" hidden></div>',
+            esc_attr(implode(',', $room_types))
+        );
+    }
+
+    /**
+     * Room-type IDs for the booking being created, read from whichever of the
+     * two hook arguments actually carries them.
+     *
+     * DCC-VERIFY: provisional — confirm against live MotoPress.
+     * $details is documented as an array of [room_id, room_type_id, rate_id];
+     * the booking object is tried as a second source. Both are best-effort and
+     * an empty result simply means "say nothing", never a wrong answer.
+     *
+     * @return int[]
+     */
+    private function room_types_from_context($booking, $details): array
+    {
+        $ids = [];
+
+        foreach ((array) $details as $row) {
+            if (is_array($row) && isset($row['room_type_id'])) {
+                $ids[] = (int) $row['room_type_id'];
+            } elseif (is_object($row) && isset($row->room_type_id)) {
+                $ids[] = (int) $row->room_type_id;
+            }
+        }
+
+        if (empty($ids) && is_object($booking) && method_exists($booking, 'getReservedRooms')) {
+            try {
+                foreach ((array) $booking->getReservedRooms() as $reserved) {
+                    if (is_object($reserved) && method_exists($reserved, 'getRoomTypeId')) {
+                        $ids[] = (int) $reserved->getRoomTypeId();
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Leave $ids as-is; empty means "say nothing".
+            }
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    /**
+     * Enqueue + localize once per request. Returns false when the current user
+     * shouldn't get the script at all.
+     */
+    private function enqueue_assets(): bool
+    {
+        if ($this->enqueued) {
+            return true;
+        }
         // The screen itself is already capability-gated by WordPress; this is a
         // floor so the script is never printed for a user who cannot edit the
         // booking anyway. Filterable for sites with custom MPHB roles.
         $allowed = current_user_can('manage_options') || current_user_can('edit_posts');
         if (!apply_filters('dcc_checkout_admin_fields_enabled', $allowed)) {
-            return;
+            return false;
         }
 
         wp_enqueue_style(
@@ -72,23 +160,31 @@ final class Admin_Fields
             true
         );
         wp_localize_script('dcc-checkout-admin', 'DCC_CHECKOUT_ADMIN', $this->script_config());
+        $this->enqueued = true;
+        return true;
     }
 
     /**
-     * Are we on an MPHB booking add/edit screen?
+     * Screens to load on via admin_enqueue_scripts: the booking add/edit post
+     * screen, plus any other MotoPress admin page (the create-booking wizard's
+     * earlier steps included). Loading widely is safe — the script no-ops when
+     * none of the managed fields are on the page — and it means a step that
+     * renders checkout fields without firing mphb_cb_checkout_form is still
+     * covered rather than silently unprotected.
      */
     private function is_booking_screen(string $hook_suffix): bool
     {
-        if ($hook_suffix !== '' && !in_array($hook_suffix, ['post.php', 'post-new.php'], true)) {
-            return false;
-        }
         if (!function_exists('get_current_screen')) {
             return false;
         }
         $screen = get_current_screen();
-        return $screen instanceof \WP_Screen
-            && $screen->base === 'post'
-            && $screen->post_type === self::BOOKING_POST_TYPE;
+        if (!$screen instanceof \WP_Screen) {
+            return false;
+        }
+        if ($screen->base === 'post' && $screen->post_type === self::BOOKING_POST_TYPE) {
+            return true;
+        }
+        return strpos((string) $screen->id, 'mphb') !== false;
     }
 
     /**

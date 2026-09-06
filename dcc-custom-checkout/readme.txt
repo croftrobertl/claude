@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,11 +75,18 @@ Admin booking screen — conditional fields gated by accommodation (0.4.0)
     never fought while overriding something). The cost was that an admin
     booking any cottage was asked for dog type/size/hair, and any cottage
     offered guest 3/4 name fields.
-  * An admin-only script now mirrors the front-end gate on the booking screen:
-    it watches the accommodation control and shows/hides the dog rows and the
+  * An admin-only script now mirrors the front-end gate on the booking screens:
+    it reads the chosen accommodation and shows/hides the dog rows and the
     guest 3/4 rows to match what that cottage can offer. Pet capability is read
     from the Services actually attached to the accommodation, so making another
     cottage pet-friendly is a MotoPress data change, not a code change.
+  * Two ways of knowing the accommodation, in order of trust. On the
+    create-booking wizard's checkout step there is no room-type control in the
+    markup at all — it was chosen in an earlier step and exists only in PHP —
+    so the plugin hooks mphb_cb_checkout_form and prints the reserved room-type
+    ids for the script to read. Everywhere else (the edit-booking screen, whose
+    room-type selects MotoPress creates dynamically) it derives them from the
+    DOM: any select offering a known room-type id, or an input naming one.
   * It only shows and hides — nothing is removed, no value is cleared, nothing
     is validated or blocked, and no server-side backstop was extended into
     wp-admin. It fails open (unreadable capability, or an accommodation control
@@ -217,6 +224,20 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.4.1 =
+* Fix: the admin gating added in 0.4.0 did not reach the create-booking
+  wizard's checkout step — the screen Rob actually reported. Two reasons, both
+  fixed: the script was only enqueued on post.php/post-new.php, and the wizard
+  is a menu page; and that step carries no room-type control in its markup
+  (the accommodation is chosen in an earlier step and exists only in PHP), so
+  deriving it from the DOM found nothing and the gate correctly stood down.
+  The plugin now hooks mphb_cb_checkout_form to both load the script there and
+  print the reserved room-type ids, which the script prefers over derivation.
+  The DOM derivation and its MutationObserver stay for the edit-booking screen.
+* The script is now also enqueued on other MotoPress admin pages, so a wizard
+  step that renders checkout fields without firing that hook is covered rather
+  than silently unprotected. It no-ops where none of the managed fields exist.
 
 = 0.4.0 =
 * Checkout: the Extra Guest Fee service row is removed from "Choose Additional
