@@ -189,7 +189,22 @@ bump so the tracked zip never lags the source.
      behind that host's own background.
   4. Hit-test, don't pixel-sample: `elementFromPoint` is layout, so it works in
      a headless browser whose `visibilityState` pauses rAF. Canvas pixel
-     sampling there is meaningless and has wasted a round already.
+     sampling there is meaningless and has wasted a round already. For real
+     ground truth, set `canvas.style.backgroundColor` — a background on the
+     canvas ELEMENT paints in the canvas's exact stacking position, cannot be
+     cleared by the engine, and needs no rAF.
+  5. Only the ON-SCREEN part of the canvas can be sampled, and a canvas fitted
+     to a column that is briefly a few pixels tall has no measurable box.
+     Unmeasurable is not covered: `coverage()` returns `measurable:false` and
+     nothing is warned. The check runs at mount AND again at 1200ms, and only
+     the settled run may complain — the panel is printed from it too.
+  6. `height` + a matching negative margin cancel the sticky canvas's own flow
+     height, but inserting a first child also un-collapses the NEXT element's
+     top margin — 50px of real page height on this theme. `stickyBalance()`
+     measures the document with and without the canvas and corrects the
+     margin. Assert page height with `documentElement.scrollHeight`, not
+     `body.scrollHeight`, on a fixture whose first child has a collapsing
+     top margin (padding on it hides the bug).
   Override the host with the `dcc_seasons_backdrop_host` filter.
 - **A new theme does NOT reach an edited schedule by itself.** `migrate()`
   only replaces a stored schedule outright when it recognises it as the

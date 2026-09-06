@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.10.0
+Stable tag: 3.11.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,53 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.11.0 =
+"Behind" itself is confirmed working on the live site in 3.10.0. These are two
+defects in the SELF-CHECK that shipped with it — a check that cried wolf, and
+an assertion that missed 50px.
+
+* FIXED: the coverage check could report a working backdrop as 100% covered,
+  and warn about it in the console, when it had not actually measured
+  anything. Only the part of the canvas that is on screen can be sampled —
+  elementFromPoint outside the viewport returns null, which says nothing about
+  what paints there — and a canvas fitted to a column that is a few pixels
+  tall at that instant has no measurable box at all. An unmeasurable sample is
+  now reported as exactly that: the panel says "CANVAS REACH: not measurable —
+  no part of the canvas box was on screen", and nothing is warned. The metric
+  itself was already the right one (walk up to the first element that paints
+  an opaque background, and only a DESCENDANT of the host covers the canvas —
+  a backdrop at z-index:-1 is by design never the topmost element anywhere
+  content exists).
+* The check now runs TWICE: once at mount, and again 1200ms later once the
+  layout has stopped moving. Only the settled run may warn, and the
+  ?dcc_debug=1 panel is printed from it, so the panel and the console describe
+  the page as it finally is rather than as it briefly was. Lazy images, late
+  sections and webfont reflow all change a column's height after the mount.
+* FIXED: the sticky mount added exactly 50px of page height on the live site,
+  and the no-layout-shift assertion missed it twice over — it measured
+  body.scrollHeight instead of documentElement.scrollHeight, on a fixture
+  whose first child had padding instead of a collapsing top margin.
+  height + a matching negative margin cancel the canvas's own flow height, but
+  inserting a block as the host's FIRST CHILD also stops the next element's
+  top margin from collapsing out of the host, and where a preceding sibling's
+  bottom margin had been absorbing it, that margin becomes real page height.
+  The engine now measures the difference instead of guessing at it — document
+  height with the canvas, then with it display:none for one measurement, then
+  back — and takes the difference off the negative margin, repeating up to
+  three times. Self-correcting, so it holds for margin collapse, lazy-image
+  reflow and themes never seen. The panel reports how much it corrected.
+* Added: if something rewrites the host's innerHTML — a slider, an accordion,
+  a theme script re-rendering a container — the canvas goes with it. The
+  settled pass now notices and re-mounts.
+* Tests: the fixtures now reproduce both faults against the shipped 3.10.0
+  engine as a control arm (+50px of page height; a column that collapses after
+  the mount). The suite asserts page height by documentElement.scrollHeight,
+  and cross-checks the hit-test metric against the pixel ground truth of a
+  magenta CSS background on the canvas element — a background on the canvas
+  ELEMENT paints in the canvas's exact stacking position, cannot be cleared by
+  the engine, and needs no requestAnimationFrame, which makes it valid in an
+  automated browser whose visibilityState pauses rAF.
 
 = 3.10.0 =
 * FIXED: "behind" mode, measured rather than assumed. With Seasons finally

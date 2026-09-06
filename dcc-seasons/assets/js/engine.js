@@ -556,7 +556,7 @@
 		 * lazy images and late content change that height without a resize
 		 * event, and a backdrop that stops short of the fold is worse than
 		 * the scroll it saves. */
-		var stickyHost = null, stickyRO = null;
+		var stickyHost = null, stickyRO = null, stickyPad = 0;
 		function stickyWatch(el) {
 			if (stickyRO) { stickyRO.disconnect(); stickyRO = null; }
 			stickyHost = el;
@@ -565,11 +565,35 @@
 			if (!stickyHost) { return; }
 			var h = mx2(1, MT.round(mn(W.innerHeight, mx2(rectOf(stickyHost).height, 1))));
 			cv.style.cssText = 'position:sticky;display:block;top:0;left:0;width:100%;height:' + h +
-				'px;margin-bottom:-' + h + 'px;pointer-events:none;z-index:-1;';
+				'px;margin-bottom:-' + (h + stickyPad) + 'px;pointer-events:none;z-index:-1;';
 			if (!stickyRO && W.ResizeObserver) {
 				stickyRO = new W.ResizeObserver(function () { stickyFit(); applySize(); });
 				stickyRO.observe(stickyHost);
 			}
+		}
+		/* height + margin-bottom cancel the canvas's OWN flow height, and that
+		 * is not the whole story: inserting a block as the host's first child
+		 * also stops the previous first child's top margin from collapsing
+		 * through the host, and that recovered margin is real page height —
+		 * exactly 50px on the live site, which the assertion below now
+		 * catches. Measure it instead of guessing at it: how much taller is
+		 * the document with the canvas than without? Whatever the answer,
+		 * take it off the negative margin. Self-correcting, so it survives
+		 * margin collapse, a lazy-image reflow, and themes never seen. */
+		function stickyBalance() {
+			if (!stickyHost || !cv.parentNode) { return 0; }
+			var d = 0;
+			for (var i = 0; i < 3; i++) {
+				var on = D.documentElement.scrollHeight;
+				cv.style.display = 'none';
+				var off = D.documentElement.scrollHeight;
+				cv.style.display = 'block';
+				d = on - off;
+				if (!d) { break; }
+				stickyPad += d;
+				stickyFit();
+			}
+			return d;
 		}
 		function mountIn(el, mode) {
 			/* z-index:-1 resolves inside the nearest ANCESTOR stacking
@@ -644,24 +668,40 @@
 		 */
 		function coverage() {
 			var host = cv.parentElement;
-			if (!host) { return { reach: 0, cover: null, total: 0, distinct: 0 }; }
+			var out = { measurable: false, reach: 1, cover: null, coverN: 0, total: 0, distinct: 0 };
+			if (!host) { return out; }
+			/* Only the part of the canvas that is ON SCREEN can be sampled:
+			 * elementFromPoint outside the viewport returns null, which says
+			 * nothing at all about what paints there. An unmeasurable sample
+			 * must never be reported as a covered one — it was, and it made
+			 * the engine warn "100% of it is painted over by the theme" about
+			 * a backdrop that was working perfectly. */
 			var r = cv.getBoundingClientRect();
 			var x0 = mx2(r.left, 0), y0 = mx2(r.top, 0);
 			var x1 = mn(r.right, W.innerWidth), y1 = mn(r.bottom, W.innerHeight);
-			if (x1 - x0 < 8 || y1 - y0 < 8) { return { reach: 0, cover: null, total: 0, distinct: 0 }; }
-			var els = [], counts = [], seen = 0, open = 0, i, j, k, p2;
+			if (x1 - x0 < 8 || y1 - y0 < 8) { return out; }
+			var els = [], counts = [], seen = 0, open = 0, i, j, k, p2, x, y;
 			for (i = 1; i <= 6; i++) {
 				for (j = 1; j <= 6; j++) {
+					x = x0 + (x1 - x0) * i / 7;
+					y = y0 + (y1 - y0) * j / 7;
+					if (x < 0 || y < 0 || x >= W.innerWidth || y >= W.innerHeight) { continue; }
+					p2 = painterAt(x, y);
 					seen++;
-					p2 = painterAt(x0 + (x1 - x0) * i / 7, y0 + (y1 - y0) * j / 7);
+					/* The question is what PAINTS here, not what is topmost:
+					 * a working backdrop at z-index:-1 is by design never the
+					 * topmost element anywhere content exists. painterAt walks
+					 * up to the first element with an opaque background, and
+					 * only a DESCENDANT of the host paints above the canvas. */
 					if (!p2 || p2 === cv || p2 === host || !host.contains(p2)) { open++; continue; }
 					k = els.indexOf(p2);
 					if (k < 0) { els.push(p2); counts.push(1); } else { counts[k]++; }
 				}
 			}
+			if (seen < 4) { return out; }
 			var best = null, bestN = 0;
 			for (i = 0; i < els.length; i++) { if (counts[i] > bestN) { bestN = counts[i]; best = els[i]; } }
-			return { reach: seen ? open / seen : 0, cover: best, coverN: bestN, total: seen, distinct: els.length };
+			return { measurable: true, reach: open / seen, cover: best, coverN: bestN, total: seen, distinct: els.length };
 		}
 
 		/* When the covering element cannot hold the canvas, take its
@@ -752,40 +792,59 @@
 			 *      canvas — too short, or a stacking context of its own.
 			 */
 			if (host) {
-				for (var pass = 0; pass < 4; pass++) {
-					var cov = coverage();
-					diag.notes.push('pass ' + (pass + 1) + ': canvas reaches ' + MT.round(cov.reach * 100) + '% of its own box' +
-						(cov.cover ? ' — covered by ' + pathOf(cov.cover) + ' (' + cov.coverN + '/' + cov.total + ' points)' : ''));
-					if (cov.reach >= 0.75 || !cov.cover) { break; }
-					var c2 = cov.cover, moved = false;
-					if (viable(c2)) {
-						var m2 = trapped(c2) ? 'sticky' : 'fixed';
-						var prev2 = host, prevMode = hostMode;
-						if (mountIn(c2, m2)) {
-							diag.tried.push('USED   ' + desc(c2) + '  (descend, ' + m2 + ')');
-							host = c2; hostMode = m2; moved = true;
-						} else {
-							diag.notes.push('cannot descend into ' + pathOf(c2) + ' — it will not hold the canvas');
-							mountIn(prev2, prevMode);
-						}
-					}
-					if (!moved && !transferBg(c2)) {
-						diag.notes.push('nothing more can be done about ' + pathOf(c2) +
-							(W.getComputedStyle(c2).backgroundImage !== 'none' ? ' (it paints an image, which cannot be moved)' : ''));
-						break;
-					}
-				}
-				var fin = coverage();
-				diag.reach = fin.reach;
-				diag.covers = fin.cover ? pathOf(fin.cover) : '';
-				diag.distinct = fin.distinct;
-				if (fin.reach < 0.5 && W.console && W.console.warn) {
-					W.console.warn('DCC Seasons: the ambient canvas is mounted but ' + MT.round((1 - fin.reach) * 100) +
-						'% of it is painted over by ' + (fin.cover ? pathOf(fin.cover) : 'the theme') +
-						'; "behind" will look like nothing is happening. Run ?dcc_debug=1 as an administrator for the full decision.');
-				}
+				fixCoverage(false);
 			}
 		}
+		/* One corrective pass set. Runs at mount, and again once the page
+		 * has settled, because the first run can land on a layout that does
+		 * not exist a moment later — a column whose images have not loaded is
+		 * a few pixels tall, and a canvas fitted to it has no measurable box
+		 * at all. Only the settled run is allowed to complain. */
+		function fixCoverage(settled) {
+			var cov, pass, c2, moved, m2, prev2, prevMode;
+			for (pass = 0; pass < 4; pass++) {
+				cov = coverage();
+				diag.notes.push((settled ? 'settled ' : '') + 'pass ' + (pass + 1) + ': ' +
+					(cov.measurable
+						? 'canvas reaches ' + MT.round(cov.reach * 100) + '% of its own box' +
+							(cov.cover ? ' — covered by ' + pathOf(cov.cover) + ' (' + cov.coverN + '/' + cov.total + ' points)' : '')
+						: 'not measurable yet — none of the canvas is on screen'));
+				if (!cov.measurable || cov.reach >= 0.75 || !cov.cover) { break; }
+				c2 = cov.cover; moved = false;
+				if (viable(c2)) {
+					m2 = trapped(c2) ? 'sticky' : 'fixed';
+					prev2 = host; prevMode = hostMode;
+					if (mountIn(c2, m2)) {
+						diag.tried.push('USED   ' + desc(c2) + '  (descend, ' + m2 + ')');
+						host = c2; hostMode = m2; moved = true;
+					} else {
+						diag.notes.push('cannot descend into ' + pathOf(c2) + ' — it will not hold the canvas');
+						mountIn(prev2, prevMode);
+					}
+				}
+				if (!moved && !transferBg(c2)) {
+					diag.notes.push('nothing more can be done about ' + pathOf(c2) +
+						(W.getComputedStyle(c2).backgroundImage !== 'none' ? ' (it paints an image, which cannot be moved)' : ''));
+					break;
+				}
+			}
+			var pad = stickyBalance();
+			if (stickyPad) {
+				diag.notes.push('sticky margin balanced by ' + stickyPad + 'px' + (pad ? ' (still ' + pad + 'px out)' : '') +
+					' — inserting the canvas as the first child un-collapses the next element\'s top margin');
+			}
+			var fin = coverage();
+			diag.reach = fin.measurable ? fin.reach : null;
+			diag.covers = fin.cover ? pathOf(fin.cover) : '';
+			diag.distinct = fin.distinct;
+			if (settled && fin.measurable && fin.reach < 0.5 && W.console && W.console.warn) {
+				W.console.warn('DCC Seasons: the ambient canvas is mounted but ' + MT.round((1 - fin.reach) * 100) +
+					'% of it is painted over by ' + (fin.cover ? pathOf(fin.cover) : 'the theme') +
+					'; "behind" will look like nothing is happening. Run ?dcc_debug=1 as an administrator for the full decision.');
+			}
+			return fin;
+		}
+
 		if (!host) {
 			/* No usable host: back to the pre-3.6.1 body mount. On a theme
 			 * that paints an opaque content column this cannot express
@@ -804,7 +863,12 @@
 		 * mount decision looked at, in a textarea the owner can copy and
 		 * paste back. This exists because the live site cannot be reached
 		 * from the build environment, so the DOM has to come to us. --- */
-		if (CFG.diag) {
+		/* Printed once the page has settled (see below), not at mount: the
+		 * first measurement can describe a layout that no longer exists. */
+		function printDiag() {
+			if (!CFG.diag) {
+				return;
+			}
 			(function () {
 				var lines = [], anc = D.querySelector('main, [role="main"], #main, #content, .site-content, .site-main, article, .entry-content');
 				var r = cv.getBoundingClientRect();
@@ -816,6 +880,12 @@
 					lines.push('CANVAS REACH: ' + MT.round(diag.reach * 100) + '% of its own box is unpainted-over' +
 						(diag.reach >= 0.75 ? '  — behind is working'
 							: '  — STILL COVERED by ' + (diag.covers || '?') + (diag.distinct > 1 ? ' and ' + (diag.distinct - 1) + ' other element(s)' : '')));
+				} else if (CFG.layer && host) {
+					/* Never say "covered" about something that could not be
+					 * measured: none of the canvas was on screen when this
+					 * ran, which is a fact about the scroll position, not
+					 * about the theme. Scroll to it and reload to measure. */
+					lines.push('CANVAS REACH: not measurable — no part of the canvas box was on screen. Scroll to the content column and reload.');
 				}
 				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
 				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
@@ -859,6 +929,24 @@
 				ta.addEventListener('focus', function () { ta.select(); });
 			})();
 		}
+		/* Re-verify when the layout has stopped moving. A column whose images
+		 * have not loaded is a few pixels tall, and a canvas fitted to it has
+		 * no measurable box — which is how a working backdrop got reported as
+		 * 100% covered. Only this run may warn, and the panel is printed from
+		 * it, so both describe the page as it finally is. */
+		setTimeout(function () {
+			/* Anything that rewrites the host's innerHTML — a slider, an
+			 * accordion, a theme script re-rendering a container — takes the
+			 * canvas with it. Found while building the fixture for the check
+			 * above, and cheap to survive. */
+			if (CFG.layer && !cv.parentNode) {
+				diag.notes.push('the canvas was removed from the page (the host re-rendered its children); re-mounted');
+				if (host && D.body.contains(host)) { mountIn(host, hostMode); }
+				else { host = null; mountOnBody(CFG.layer ? 5 : 99990); }
+			}
+			if (CFG.layer && host) { fixCoverage(true); }
+			printDiag();
+		}, 1200);
 
 		/* Corner accents ride on the same decision as the canvas. */
 		for (var ai = 0; ai < accents.length; ai++) {
