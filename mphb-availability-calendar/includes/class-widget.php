@@ -1680,13 +1680,20 @@ class Widget extends Widget_Base
 
             <?php if ($settings['show_nav'] === 'yes') : ?>
                 <div class="mphbac-nav">
-                    <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>">&larr;</button>
+                    <?php // Stroked SVG chevrons rather than &larr;/&rarr; text glyphs:
+                    // the glyphs rendered in whatever face the theme gave the
+                    // button, so their weight was not ours to control and they
+                    // read as hairlines. stroke="currentColor" keeps them on the
+                    // "Nav text color" control (and its hover/disabled states);
+                    // the accessible name stays on the BUTTON, so the svg is
+                    // aria-hidden + focusable="false" and adds nothing to it. ?>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-prev" aria-label="<?php echo esc_attr($settings['str_prev_month']); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     <span class="mphbac-nav-range" aria-live="polite"></span>
                     <button type="button" class="mphbac-nav-btn mphbac-nav-today"
                             title="<?php echo esc_attr($settings['str_today_hint']); ?>"
                             aria-label="<?php echo esc_attr($settings['str_today_hint']); ?>"
                             hidden><?php echo esc_html(self::tc($settings['str_today'])); ?></button>
-                    <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>">&rarr;</button>
+                    <button type="button" class="mphbac-nav-btn mphbac-nav-next" aria-label="<?php echo esc_attr($settings['str_next_month']); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 </div>
             <?php endif; ?>
 

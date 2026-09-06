@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.1
+Stable tag: 0.23.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.2 =
+Navigation row on the main calendar (back arrow, date range, Today, next arrow).
+* **The four controls now sit together as one centred group.** On a full-width page they were spread right across the row — about 235px of empty space between each one. They now cluster in the middle with even 10px gaps.
+* **The arrows are proper chevrons.** They were thin text characters drawn in whatever font the theme handed the button, so their weight was not the plugin's to control. They are now drawn shapes with a chosen thickness — crisp on any screen, and they still follow the "Nav text color" setting.
+* **The arrows no longer shuffle sideways** as you move month to month. The date label changes width as it changes ("Jul 4 – Jul 9" vs "May 4 – May 11"), which was nudging both arrows by about 13px each time. The label now holds a steady width where there is room to do so, and yields on narrow screens so nothing overflows.
+* **"Today" now uses the site's font.** It was picking up a different typeface from the theme's button styling; it now matches the date label beside it. The same fix was applied to the plugin's other buttons — Apply, Reset, and the popup close buttons — which had the same problem.
+* Buttons keep their 44px touch size, their labels for screen readers are unchanged, and the keyboard focus outline still shows.
+* Narrow placements (a calendar in a sidebar, or a phone) stay on one line with no sideways scrolling. Where a narrow placement previously had spare room, its four controls now cluster in the middle too, matching the wide layout.
 
 = 0.23.1 =
 **0.23.0 should not be installed — use this build.**

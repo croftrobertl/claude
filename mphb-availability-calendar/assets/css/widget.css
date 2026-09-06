@@ -212,8 +212,14 @@
 .mphbac-nav {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5em;
+    /* Centred CLUSTER, not space-between. On a wide page the row is ~1000px
+       while its four controls total ~330px, so space-between pushed ~235px
+       of air between each one and the group stopped reading as a unit. With
+       no slack (the ~363px single-cottage placement) centring and
+       space-between are identical, so the narrow case is untouched. The
+       print block used to re-centre this; that override is now redundant. */
+    justify-content: center;
+    gap: 10px;
     margin-bottom: 12px;
 }
 
@@ -236,9 +242,39 @@
     transition: background-color 0.2s ease;
 }
 
+/* The chevron. Fixed px (not em) so the "Today" label's 13px cannot resize
+   it, and block so it contributes no inline leading inside the flex button.
+   The 44x44 hit area above is unchanged — only the mark inside it. */
+.mphbac-nav-btn svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+}
+
 .mphbac-nav-btn:hover,
 .mphbac-nav-btn:focus-visible {
     background-color: var(--mphbac-color-nav-hover);
+}
+
+/* THEME BUTTON TYPOGRAPHY.
+   On this site a global button-typography rule (Elementor kit, (0,1,1))
+   sets a different face on every <button>, and <button> does not inherit
+   font-family from its ancestor. A single class — including the existing
+   `font: inherit` on .mphbac-btn — therefore LOSES: measured, the nav and
+   Today buttons computed Pavanam while the range label beside them computed
+   the theme's Raleway. These rules are the fix, at (0,2,0).
+   Class-DOUBLED rather than `.mphbac-root .x`: both reach (0,2,0), but the
+   sheet and its buttons are portaled to <body> when a popup opens, at which
+   point no .mphbac-root ancestor exists to match. Doubling survives that,
+   and it is the pattern already used here for .mphbac-input and .mphbac-sheet.
+   family ONLY, deliberately: `font: inherit` would also pull size and weight
+   in and change how these buttons look today. Not !important — an inline
+   style was verified to win, so the theme rule is not !important either. */
+.mphbac-nav-btn.mphbac-nav-btn,
+.mphbac-btn.mphbac-btn,
+.mphbac-sheet-close.mphbac-sheet-close,
+.mphbac-info-close--floating.mphbac-info-close--floating {
+    font-family: inherit;
 }
 
 /* Back-to-today button is a text label, not an arrow icon — let it size
@@ -263,6 +299,21 @@
     font-weight: 600;
     color: #111111;
     text-align: center;
+    /* Reserve the widest label the formatter produces (measured: 17.4ch for
+       the day-range form, e.g. "May 4 – May 11, 2026") so the arrows hold
+       still as the label changes length. Under `center` an unreserved label
+       moves BOTH arrows by half its own change — ~13px each, month to month.
+       ch is the right unit: it tracks whatever face the theme supplies.
+       The min() clamp is what makes this safe at every width. A bare 19ch
+       overflows any row narrower than ~370px — which includes the
+       single-cottage placement (~363px) and every phone — and month-mode
+       labels ("December 2026 – February 2027") are wider than the
+       reservation anyway. Subtracting the rest of the row's fixed content
+       (two 44px arrows + Today + three 10px gaps ≈ 180px; 200px leaves room
+       for a longer translated "Today") means the reservation applies only
+       where there is genuinely slack, and silently yields where there is
+       not. Negative results clamp to 0. */
+    min-width: min(19ch, calc(100% - 200px));
 }
 
 /* Grid */
@@ -1541,7 +1592,7 @@ body.mphbac-info-open {
     .mphbac-root .mphbac-empty,
     .mphbac-root .mphbac-btn,
     .mphbac-root .mphbac-availability-hint { display: none !important; }
-    .mphbac-root .mphbac-nav { justify-content: center; }
+    /* .mphbac-nav is centred by default since 0.23.2 — no print override needed. */
     .mphbac-root .mphbac-cell-status,
     .mphbac-root .mphbac-cell-status.is-available,
     .mphbac-root .mphbac-cell-status.is-booked,
