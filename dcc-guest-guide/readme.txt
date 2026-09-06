@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.0
+Stable tag: 0.12.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,30 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.1 =
+
+**Fixed: read-aloud could not be stopped on iPhone.**
+
+Tapping the speaker a second time restarted the reading instead of
+stopping it, and there was no other way to stop it. The stop only ran
+when the browser reported that speech was in progress — a reading iOS
+Safari gets wrong, reporting "not speaking" while audio is playing. The
+stop was skipped and playback started over.
+
+* **Tapping the lit button now always stops.** The decision no longer
+  depends on anything the browser reports, so it cannot fall through and
+  restart.
+* **Stopping is more forceful**, because a plain cancel is unreliable
+  mid-sentence on iOS.
+* **More ways to stop**, all doing the same thing: tap the button again,
+  tap anywhere else, press Escape, switch to another item, leave the
+  section, or switch away from Safari and back.
+* **The button now shows a stop icon and says "Stop reading"** while it
+  is playing, so it is clear it can be tapped to stop. Both labels are
+  editable and translatable.
+* **A reading that never starts, or never reports finishing, no longer
+  leaves the button stuck lit.**
 
 = 0.12.0 =
 

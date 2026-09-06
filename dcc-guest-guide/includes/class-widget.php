@@ -1459,6 +1459,8 @@ final class Widget extends Widget_Base
             'str_wizard_prev'  => [__('Wizard back button', 'dcc-guest-guide'),  __('Back', 'dcc-guest-guide')],
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
+            'str_tts_play'       => [__('Read-aloud button label', 'dcc-guest-guide'), __('Read this item aloud', 'dcc-guest-guide')],
+            'str_tts_stop'       => [__('Read-aloud STOP button label', 'dcc-guest-guide'), __('Stop reading', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
             'str_lightbox_prev'  => [__('Lightbox previous-image aria-label', 'dcc-guest-guide'), __('Previous image', 'dcc-guest-guide')],
             'str_lightbox_next'  => [__('Lightbox next-image aria-label', 'dcc-guest-guide'), __('Next image', 'dcc-guest-guide')],
@@ -3879,8 +3881,14 @@ final class Widget extends Widget_Base
                         </span>
                     <?php endif; ?>
                     <?php if ($tts_supported_text !== '') : ?>
-                        <button type="button" class="dccgg-item-tts" aria-label="<?php echo esc_attr__('Read this item aloud', 'dcc-guest-guide'); ?>" hidden>
-                            <i class="fas fa-volume-up" aria-hidden="true"></i>
+                        <?php // v0.12.1: both labels ride on the button so the JS can swap
+                        // them without a config lookup, and stay translatable. aria-pressed
+                        // makes the play/stop state audible to screen readers. ?>
+                        <button type="button" class="dccgg-item-tts" aria-pressed="false"
+                                aria-label="<?php echo esc_attr($strings['str_tts_play'] ?? __('Read this item aloud', 'dcc-guest-guide')); ?>"
+                                data-label-play="<?php echo esc_attr($strings['str_tts_play'] ?? __('Read this item aloud', 'dcc-guest-guide')); ?>"
+                                data-label-stop="<?php echo esc_attr($strings['str_tts_stop'] ?? __('Stop reading', 'dcc-guest-guide')); ?>" hidden>
+                            <i class="fas fa-volume-up dccgg-tts-icon" aria-hidden="true"></i>
                         </button>
                     <?php endif; ?>
                     <?php if (($strings['enable_problem_report'] ?? '') === 'yes' && ($strings['enable_per_item_report'] ?? '') === 'yes') : ?>

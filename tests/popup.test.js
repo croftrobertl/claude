@@ -537,6 +537,114 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario K: read-aloud stop under the iOS failure mode ----------
+    // The bug: the stop path was gated on speechSynthesis.speaking, which on
+    // iOS Safari can read false while audio is playing. The stop branch was
+    // skipped and control fell through to speak() — "tapping it again just
+    // restarts it". The stub below reproduces exactly that condition:
+    // `speaking` ALWAYS reports false. Desktop Chrome passes the old code, so
+    // only this stub is a real regression guard.
+    {
+        console.log('\nK. Read-aloud: stoppable on iOS (speechSynthesis.speaking always false)');
+        const errors = [];
+        // window.speechSynthesis is a read-only accessor on Window.prototype:
+        // a plain assignment silently does nothing and the REAL engine stays,
+        // which quietly makes the whole scenario meaningless. Shadow it with
+        // an own property instead, and keep the genuine
+        // SpeechSynthesisUtterance so nothing rejects our objects.
+        const stub = `<script>
+            window.__tts = { speak: 0, cancel: 0, pause: 0, resume: 0 };
+            const fake = {
+                get speaking() { return false; },        // the iOS lie
+                speak(u) { window.__tts.speak++; if (u.onstart) setTimeout(() => u.onstart(), 0); },
+                cancel() { window.__tts.cancel++; },
+                pause()  { window.__tts.pause++; },
+                resume() { window.__tts.resume++; },
+                getVoices() { return []; }
+            };
+            Object.defineProperty(window, 'speechSynthesis', { configurable: true, get() { return fake; } });
+        </script>`;
+        const item = `<article class="dccgg-item" data-tts-text="Boat slips are available to guests.">
+            <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Boat Slips</span>
+            <button type="button" class="dccgg-item-tts" aria-pressed="false"
+                    aria-label="Read this item aloud" data-label-play="Read this item aloud"
+                    data-label-stop="Stop reading" hidden><i class="fas fa-volume-up dccgg-tts-icon"></i></button></h3></article>`;
+        const item2 = item.replace('Boat Slips', 'Fish Cleaning').replace('data-tts-text="[^"]*"', 'x')
+            .replace('Boat slips are available to guests.', 'The fish cleaning station is by the dock.');
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8">${stub}<style>${CSS}</style></head>
+            <body><div class="dccgg-root" data-config='{"revealMode":"stage","strings":{}}'>
+            <div class="dccgg-menu"><div class="dccgg-tile-wrap" data-section-key="boating">
+            <button class="dccgg-tile" data-key="boating">Boating</button></div></div>
+            <div class="dccgg-detail-items">${item}${item2}</div>
+            </div><script>${JS}</script></body></html>`;
+        const { ctx, page } = await newPage(browser, PHONE, html, errors);
+        const btns = '.dccgg-item-tts';
+        const state = () => page.evaluate((sel) => {
+            const b = document.querySelectorAll(sel);
+            return {
+                speak: window.__tts.speak, cancel: window.__tts.cancel, resume: window.__tts.resume,
+                lit: [...b].map(x => x.classList.contains('is-speaking')),
+                pressed: [...b].map(x => x.getAttribute('aria-pressed')),
+                label: b[0].getAttribute('aria-label'),
+                icon: b[0].querySelector('i').className,
+            };
+        }, btns);
+
+        check('stub speech engine is actually installed',
+            await page.evaluate(() => { window.speechSynthesis.pause(); const n = window.__tts.pause;
+                window.__tts.pause = 0; return n === 1; }),
+            'window.speechSynthesis was not shadowed — scenario would be vacuous');
+
+        await page.click(`${btns} >> nth=0`); await page.waitForTimeout(60);
+        let st = await state();
+        check('first tap speaks once and lights the button', st.speak === 1 && st.lit[0] === true, JSON.stringify(st));
+        check('lit button announces itself as Stop', st.label === 'Stop reading' && st.pressed[0] === 'true', st.label);
+        check('icon switches to a stop glyph', /fa-stop/.test(st.icon) && !/fa-volume-up/.test(st.icon), st.icon);
+
+        // THE regression assertion: second tap must stop, and must NOT speak again.
+        await page.click(`${btns} >> nth=0`); await page.waitForTimeout(60);
+        st = await state();
+        check('SECOND TAP STOPS — does not call speak() again', st.speak === 1, `speak=${st.speak}`);
+        check('second tap cancels the utterance', st.cancel >= 1, `cancel=${st.cancel}`);
+        check('stop uses the iOS unstick (pause/cancel/resume)', st.resume >= 1, `resume=${st.resume}`);
+        check('button reverts to unlit / Read aloud', st.lit[0] === false && st.label === 'Read this item aloud');
+
+        // Repeat 5x: never restarts, never overlaps.
+        for (let i = 0; i < 5; i++) { await page.click(`${btns} >> nth=0`); await page.waitForTimeout(40); }
+        st = await state();
+        check('5 further taps alternate cleanly (odd count = playing)', st.speak === 4 && st.lit[0] === true, `speak=${st.speak} lit=${st.lit[0]}`);
+
+        // Tap elsewhere in the open panel -> stops.
+        await page.click('.dccgg-menu'); await page.waitForTimeout(60);
+        st = await state();
+        check('tapping outside stops playback', st.lit[0] === false);
+
+        // Switching items: only the new one is lit and heard.
+        await page.click(`${btns} >> nth=0`); await page.waitForTimeout(40);
+        await page.click(`${btns} >> nth=1`); await page.waitForTimeout(60);
+        st = await state();
+        check('tapping another item leaves only that one lit', st.lit[0] === false && st.lit[1] === true, JSON.stringify(st.lit));
+
+        // Escape and backgrounding both stop.
+        await page.keyboard.press('Escape'); await page.waitForTimeout(60);
+        check('Escape stops playback', (await state()).lit[1] === false);
+        await page.click(`${btns} >> nth=0`); await page.waitForTimeout(40);
+        await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange')); });
+        await page.waitForTimeout(60);
+        check('backgrounding the tab stops playback', (await state()).lit[0] === false);
+
+        // An utterance that never starts must not leave the button stuck lit.
+        await page.evaluate(() => { window.speechSynthesis.speak = (u) => { window.__tts.speak++; }; });
+        await page.click(`${btns} >> nth=0`); await page.waitForTimeout(100);
+        check('button is lit while awaiting start', (await state()).lit[0] === true);
+        await page.waitForTimeout(4200);
+        check('watchdog releases a button whose audio never started', (await state()).lit[0] === false);
+
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

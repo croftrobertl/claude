@@ -3251,48 +3251,138 @@
     }
 
     // -- TTS (Web Speech Synthesis) ---------------------------------------
+    // -- TTS (Web Speech Synthesis) ---------------------------------------
+    // v0.12.1: rebuilt after read-aloud proved unstoppable on iPhone.
+    //
+    // The old stop path was `if (currentBtn === btn && speechSynthesis.speaking)`.
+    // On iOS Safari `speaking` is not trustworthy — it can read false while
+    // audio is genuinely playing. When it did, the stop branch was skipped and
+    // control fell through to speak() again, which is exactly the reported
+    // "tapping it again just restarts it". Two rules follow from that:
+    //
+    //   1. Never gate stopping on anything the platform reports. A tap on the
+    //      lit button ALWAYS stops and returns. If our own state is somehow
+    //      stale, stopping is the safe outcome; restarting is the bug.
+    //   2. cancel() alone is unreliable mid-utterance on iOS, so stopping goes
+    //      through hardStop(): pause, cancel, then resume to unstick the
+    //      engine. Every stop — button, outside tap, Escape, backgrounding,
+    //      section change, watchdog — routes through the one stopSpeech().
     function wireTts(root, config) {
         if (!('speechSynthesis' in window)) return;
-        let currentBtn = null;
-        // v0.12.0: closing the popup or moving to another section used to
-        // leave the voice reading on. closeDetail()/openDetailImpl() call this.
-        root.__dccggStopSpeech = () => {
-            try { speechSynthesis.cancel(); } catch (_) {}
-            if (currentBtn) { currentBtn.classList.remove('is-speaking'); currentBtn = null; }
+
+        let currentBtn  = null;
+        let speakingNow = false;   // our own flag; speechSynthesis.speaking is not believed
+        let startTimer  = null;
+        let endTimer    = null;
+        let outsideBound = false;
+
+        const setBtnState = (btn, speaking) => {
+            if (!btn) return;
+            btn.classList.toggle('is-speaking', speaking);
+            btn.setAttribute('aria-pressed', speaking ? 'true' : 'false');
+            const label = speaking
+                ? (btn.dataset.labelStop || 'Stop reading')
+                : (btn.dataset.labelPlay || 'Read this item aloud');
+            btn.setAttribute('aria-label', label);
+            // A red speaker doesn't read as "tap me to stop" — swap the glyph.
+            const icon = btn.querySelector('.dccgg-tts-icon, i');
+            if (icon) {
+                icon.classList.toggle('fa-volume-up', !speaking);
+                icon.classList.toggle('fa-stop', speaking);
+            }
         };
-        const buttons = root.querySelectorAll('.dccgg-item-tts');
-        buttons.forEach(btn => {
+
+        function hardStop() {
+            try { speechSynthesis.pause();  } catch (_) {}
+            try { speechSynthesis.cancel(); } catch (_) {}
+            try { speechSynthesis.resume(); } catch (_) {}
+        }
+
+        function stopSpeech() {
+            hardStop();
+            speakingNow = false;
+            if (startTimer) { clearTimeout(startTimer); startTimer = null; }
+            if (endTimer)   { clearTimeout(endTimer);   endTimer   = null; }
+            unbindOutside();
+            setBtnState(currentBtn, false);
+            currentBtn = null;
+        }
+        // closeDetail() / openDetailImpl() call this; so does root teardown.
+        root.__dccggStopSpeech = stopSpeech;
+
+        // Capture phase, so it runs regardless of any stopPropagation further
+        // down. Taps on ANY tts button are handed to the button's own handler
+        // instead — otherwise this would stop playback first and the button
+        // handler would then find nothing playing and start over: the very
+        // restart loop being fixed.
+        const onOutside = (e) => {
+            if (e.target && e.target.closest && e.target.closest('.dccgg-item-tts')) return;
+            stopSpeech();
+        };
+        const onEsc = (e) => { if (e.key === 'Escape') stopSpeech(); };
+        const onHide = () => { if (document.hidden) stopSpeech(); };
+
+        function bindOutside() {
+            if (outsideBound) return;
+            outsideBound = true;
+            document.addEventListener('click', onOutside, true);
+            document.addEventListener('keydown', onEsc, true);
+            document.addEventListener('visibilitychange', onHide);
+        }
+        function unbindOutside() {
+            if (!outsideBound) return;
+            outsideBound = false;
+            document.removeEventListener('click', onOutside, true);
+            document.removeEventListener('keydown', onEsc, true);
+            document.removeEventListener('visibilitychange', onHide);
+        }
+        // If the editor throws this root away mid-utterance, stop and unbind.
+        (root.__dccggDisposers || (root.__dccggDisposers = [])).push(stopSpeech);
+
+        root.querySelectorAll('.dccgg-item-tts').forEach(btn => {
             btn.hidden = false;
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
+
+                // Rule 1: lit button -> stop, unconditionally, and return.
+                if (currentBtn === btn) { stopSpeech(); return; }
+
+                // Any other button: stop whatever is playing, then start this.
+                stopSpeech();
+
                 const article = btn.closest('.dccgg-item');
                 if (!article) return;
                 const text = (article.dataset.ttsText || '').trim();
                 if (!text) return;
 
-                // Toggle off if already speaking this one
-                if (currentBtn === btn && speechSynthesis.speaking) {
-                    speechSynthesis.cancel();
-                    btn.classList.remove('is-speaking');
-                    currentBtn = null;
-                    return;
-                }
-                speechSynthesis.cancel();
-                if (currentBtn) currentBtn.classList.remove('is-speaking');
-
                 const u = new SpeechSynthesisUtterance(text);
                 const lang = document.documentElement.lang || 'en-US';
                 u.lang = lang;
-                // Prefer a same-language voice if voices list is loaded.
                 const voices = speechSynthesis.getVoices();
                 const langPrefix = lang.split('-')[0];
                 const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langPrefix.toLowerCase()));
                 if (match) u.voice = match;
-                u.onend = () => { btn.classList.remove('is-speaking'); if (currentBtn === btn) currentBtn = null; };
+
+                u.onstart = () => { speakingNow = true; };
+                u.onend   = () => { if (currentBtn === btn) stopSpeech(); };
                 u.onerror = u.onend;
-                speechSynthesis.speak(u);
-                btn.classList.add('is-speaking');
+
+                try { speechSynthesis.speak(u); } catch (_) { return; }
+
                 currentBtn = btn;
+                setBtnState(btn, true);
+                bindOutside();
+
+                // Watchdogs. iOS can drop an utterance without ever firing
+                // onstart, or finish without firing onend; either would leave
+                // the button lit for good with no way back.
+                startTimer = setTimeout(() => {
+                    if (currentBtn === btn && !speakingNow) stopSpeech();
+                }, 4000);
+                const budget = Math.min(15 * 60000, Math.max(20000, text.length * 120 + 5000));
+                endTimer = setTimeout(() => {
+                    if (currentBtn === btn) stopSpeech();
+                }, budget);
             });
         });
     }
