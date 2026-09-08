@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -115,7 +115,10 @@ hidden and the charge is driven from the "Number of Guests" dropdown, so the
 count charged is always max(0, guests - included) and the two cannot disagree
 (the server rejects any submission where they do). On a cottage whose only
 service was the Extra Guest Fee, that leaves "Choose Additional Services"
-empty, so the section is dropped as well.
+showing an empty heading. That is deliberate as of 0.4.2: collapsing the
+section meant locating an ancestor to hide, and hiding the wrong ancestor can
+take the guest-count dropdown with it. An empty heading is a far smaller
+problem than a checkout that cannot be completed.
 
 == Checkout Field names: slug vs. rendered input name ==
 
@@ -224,6 +227,37 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.4.2 =
+* FIX (blocker): removed the services-section collapse added in 0.4.0. It
+  worked by finding an ancestor to hide, and hiding the wrong ancestor takes
+  the "Number of Guests" dropdown down with it — which disables extra-guest
+  pricing and the conditional guest fields entirely. An empty "Choose
+  Additional Services" heading is a far smaller problem, so it stays.
+* Hardened everything around that failure mode:
+  - serviceRowWrapper() now rejects any candidate containing a guest-count
+    dropdown or a second service input, so a service row can never resolve to
+    a shared container. It returns null (hide nothing) rather than too much.
+  - The guest-count dropdown is now found by four widening selectors, not one:
+    a miss disables the entire guest flow, so it is worth more than one try.
+  - After every pass the plugin proves the dropdown is still present AND
+    visible. If it is not, every row this plugin hid is un-hidden and the check
+    repeats; if it is genuinely absent from the markup, an administrator-only
+    notice on the page says so instead of failing silently.
+* FIX: the guest 2/3/4 fields no longer appear before a guest count is chosen.
+  When the dropdown could not be read the flow used to stand down completely,
+  leaving MotoPress's globally-enabled fields on screen. With no readable count
+  the count is 0, so every conditional group stays hidden.
+* Admin: guest 3/4 fields are now hidden by default and revealed only by "Show
+  all booking fields" — not by the accommodation, and not by any guest count —
+  matching what that checkbox's label promises. Fields on an existing booking
+  that already hold data still show regardless.
+* Admin: the checkout simplification now reaches wp-admin. The Extra Guest Fee
+  row sits behind the same "Show all booking fields" switch, the guest-count
+  options carry the same cumulative labels, and the fee's quantity is slaved to
+  the guest count — so "Number of Guests: 1" can no longer sit beside "Extra
+  Guest Fee for 4 guest(s)". Presentation and input-slaving only; no
+  server-side validation was extended into wp-admin.
 
 = 0.4.1 =
 * Fix: the admin gating added in 0.4.0 did not reach the create-booking

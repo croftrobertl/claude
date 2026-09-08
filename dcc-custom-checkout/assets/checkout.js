@@ -84,8 +84,9 @@
                                                  // nothing user-fillable, so no
                                                  // submit validator to register
 
-        // Both flows above hide service rows; drop any section they emptied.
-        collapseEmptyServiceSections(root);
+        // Last line of defence: nothing above may cost the guest their
+        // "Number of Guests" dropdown.
+        assertGuestChooserSurvived(root);
 
         setupSubmit(root, validators);
         observeReRenders(root);
@@ -270,12 +271,37 @@
     // so counting it would force guest-2 on at 1 guest. Exclude the services
     // branch here so both the guest-2 flow and the extra-guest flow see only
     // real room-adults selects.
+    // The room guest-count dropdowns ("Number of Guests"), by decreasing
+    // precision. If the configured name pattern misses — MotoPress renders the
+    // chooser from renderGuestsChooser on the mphb_sc_checkout_room_details
+    // hook, and the input name is not guaranteed to be room_details[i][adults]
+    // — fall back to the chooser's own container class, then to any select
+    // whose name mentions adults. A miss here disables the WHOLE guest flow
+    // (no gating, no labels, no fee), so it is worth more than one attempt.
     function roomAdultsSelects(root) {
-        var selectSel = CFG.guestsSelector || 'select[name*="[adults]"]';
-        return Array.prototype.slice.call(root.querySelectorAll(selectSel))
-            .filter(function (s) {
-                return String(s.name || '').indexOf('[services]') === -1;
-            });
+        var notService = function (s) {
+            return String(s.name || '').indexOf('[services]') === -1;
+        };
+        var tries = [
+            CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
+            '.mphb_sc_checkout-guests-chooser select',
+            '.mphb-adults-chooser select',
+            'select[name*="[adults]"]',
+            'select[name*="adults"]'
+        ];
+        for (var i = 0; i < tries.length; i++) {
+            var found;
+            try {
+                found = Array.prototype.slice.call(root.querySelectorAll(tries[i]));
+            } catch (e) {
+                continue; // A bad configured selector must not kill the flow.
+            }
+            found = found.filter(notService);
+            if (found.length) {
+                return found;
+            }
+        }
+        return [];
     }
 
     // MotoPress renders a Checkout Field's input as 'mphb_' . $field->name
@@ -320,10 +346,15 @@
     // definition shared with the server backstop); the legacy guest2FieldNames
     // shape is honoured as a fallback so an older localized config still works.
     function setupGuestConditional(root) {
+        // No bail-out when the chooser can't be found. Returning early here
+        // left every guest-2/3/4 field on screen from the start — MotoPress
+        // enables them globally — which is exactly what the owner reported:
+        // "I do see the Guest2 fields even though I didn't even select a number
+        // of guests yet." With no readable count the count is 0, so every
+        // conditional group stays hidden, which is both correct and the safe
+        // direction: these fields are optional in MotoPress, so hiding them
+        // cannot block a booking.
         var selects = roomAdultsSelects(root);
-        if (!selects.length) {
-            return null;
-        }
 
         var groups = Array.isArray(CFG.guestGroups) && CFG.guestGroups.length
             ? CFG.guestGroups
@@ -762,32 +793,77 @@
     }
 
     // Hide a native service row. A class rather than an inline style so
-    // collapseEmptyServiceSections() can tell our hiding from MotoPress's.
+    // assertGuestChooserSurvived() can find and undo every row we hid.
     function hideServiceRow(wrap) {
-        wrap.classList.add('dcc_checkout-service-hidden');
+        if (wrap && wrap.nodeType === 1) {
+            wrap.classList.add('dcc_checkout-service-hidden');
+        }
     }
 
-    // "Choose Additional Services" with nothing left in it is just a confusing
-    // heading, which is what the owner asked to be rid of. Collapse a section
-    // only when every service row inside it is one WE hid and we put nothing
-    // else there — so Cottage 34 keeps its section (the "Traveling with a dog?"
-    // toggle lives inside it, in place of the hidden pet rows), and any service
-    // this plugin doesn't manage keeps its heading too.
-    function collapseEmptyServiceSections(root) {
-        var sections = root.querySelectorAll('.mphb-checkout-section');
-        Array.prototype.forEach.call(sections, function (section) {
-            var rows = section.querySelectorAll('.mphb_sc_checkout-service');
-            if (!rows.length) {
-                return; // Not a services section.
-            }
-            if (section.querySelector('.dcc_checkout-pet')) {
-                return; // We replaced the rows with our own control.
-            }
-            var allHidden = Array.prototype.every.call(rows, function (row) {
-                return row.classList.contains('dcc_checkout-service-hidden');
+    // Nothing this plugin hides is worth losing the "Number of Guests"
+    // dropdown over: without it a guest cannot choose 3 or 4, and the whole
+    // conditional-fields flow stands down. So after every pass, prove the
+    // chooser is still there AND still visible; if it is not, undo every row we
+    // hid and re-check. Undoing shows a redundant service row at worst —
+    // hiding the chooser costs bookings.
+    function assertGuestChooserSurvived(root) {
+        if (guestChooserVisible(root)) {
+            return;
+        }
+        var hidden = root.querySelectorAll('.dcc_checkout-service-hidden');
+        if (hidden.length) {
+            Array.prototype.forEach.call(hidden, function (el) {
+                el.classList.remove('dcc_checkout-service-hidden');
             });
-            section.classList.toggle('dcc_checkout-section-hidden', allHidden);
+            try {
+                window.console && console.warn('DCC Custom Checkout: restored hidden service rows — ' +
+                    'hiding one of them was also hiding the guest-count dropdown.');
+            } catch (_) {}
+            if (guestChooserVisible(root)) {
+                return;
+            }
+        }
+        // Still nothing: the chooser is absent from the markup, which is not
+        // something this plugin can cause or repair. Say so where an admin
+        // will see it, rather than leaving a silently broken checkout.
+        reportMissingChooser(root);
+    }
+
+    function guestChooserVisible(root) {
+        var selects = roomAdultsSelects(root);
+        if (!selects.length) {
+            return false;
+        }
+        return selects.every(function (sel) {
+            // offsetParent is null for an element hidden anywhere up the tree.
+            return sel.offsetParent !== null || sel.getClientRects().length > 0;
         });
+    }
+
+    function reportMissingChooser(root) {
+        var msg = 'DCC Custom Checkout: no "Number of Guests" dropdown found on this checkout. ' +
+            'Extra-guest pricing and the conditional guest fields are all driven by it, so they ' +
+            'are inactive. Checked: ' + (CFG.guestsSelector || '(default)') +
+            ', .mphb_sc_checkout-guests-chooser select, .mphb-adults-chooser select, ' +
+            'select[name*="[adults]"].';
+        try { window.console && console.warn(msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            box.setAttribute('role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        if (box.querySelector('.dcc_checkout-admin-notice__chooser')) {
+            return;
+        }
+        var line = document.createElement('p');
+        line.className = 'dcc_checkout-admin-notice__chooser';
+        line.textContent = (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg;
+        box.appendChild(line);
     }
 
     // Disable (never remove, never inject) guest-count options above `cap`, and
@@ -910,15 +986,50 @@
     // Verified live (staging): each service row is `.mphb_sc_checkout-service`
     // inside `.mphb_sc_checkout-services-list`; hide the service item, not the
     // bare input. The remaining fallbacks stay for resilience across versions.
+    // The smallest element that wraps ONE service row.
+    //
+    // The loose tail of this chain (li / p / label / parentNode) can land on a
+    // shared ancestor, and this wrapper gets display:none — so a bad match
+    // takes the guest chooser or the whole room block down with it. Every
+    // candidate is therefore checked for containment first: anything holding a
+    // guest-count select, or more than one service input, is not a row and is
+    // rejected. Returning null (hide nothing) is always safer than hiding too
+    // much.
     function serviceRowWrapper(input) {
-        return input.closest('.mphb_sc_checkout-service')
-            || input.closest('.mphb_sc_checkout-services-list__item')
-            || input.closest('.mphb-service')
-            || input.closest('li')
-            || input.closest('.mphb-checkout-field')
-            || input.closest('p')
-            || input.closest('label')
-            || input.parentNode;
+        var candidates = [
+            input.closest('.mphb_sc_checkout-service'),
+            input.closest('.mphb_sc_checkout-services-list__item'),
+            input.closest('.mphb-service'),
+            input.closest('li'),
+            input.closest('.mphb-checkout-field'),
+            input.closest('p'),
+            input.closest('label'),
+            input.parentNode
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            var el = candidates[i];
+            if (el && el.nodeType === 1 && isServiceRowSized(el, input)) {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    // Guard for the above: a real service row contains its own input and
+    // nothing that belongs to another part of the form.
+    function isServiceRowSized(el, input) {
+        if (!el.contains(input)) {
+            return false;
+        }
+        // A guest-count dropdown inside means this is a room container, not a
+        // service row. (A per-adult service has its own [services]…[adults]
+        // select, which roomAdultsSelects deliberately excludes.)
+        if (roomAdultsSelects(el).length) {
+            return false;
+        }
+        // More than one service checkbox means this is the services LIST.
+        var ids = el.querySelectorAll('input[name*="[services]"][name$="[id]"]');
+        return ids.length <= 1;
     }
 
     function fireChange(el) {
@@ -1067,10 +1178,7 @@
                 // already-clean text), so re-running is cheap and loop-safe.
                 cleanRequiredMarkers(root);
                 normalizeReservationDates(root);
-                // Re-check after a re-render: if MotoPress brought the service
-                // rows back, the section un-collapses (fail open) rather than
-                // leaving real services hidden behind a missing heading.
-                collapseEmptyServiceSections(root);
+                assertGuestChooserSurvived(root);
             }, 150);
         });
         obs.observe(root, { childList: true, subtree: true });

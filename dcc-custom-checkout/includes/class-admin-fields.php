@@ -217,12 +217,23 @@ final class Admin_Fields
             'dogFieldNames'  => Config::dog_field_name_list(),
             'guestGroups'    => $groups,
             'petFeeEnabled'  => Config::pet_fee_enabled() ? '1' : '',
+            // Extra-guest fee, so wp-admin gets the same simplification as the
+            // public checkout: the service row is hidden behind the escape
+            // hatch and its quantity is slaved to the guest count, which is
+            // what stops "Number of Guests: 1" sitting beside "Extra Guest Fee
+            // for 4 guest(s)". Amounts come from Config, never literals.
+            'guestServiceIds' => array_values(array_filter(Config::guest_service_id_list())),
+            'guestFeeSteps'   => Config::guest_fee_steps(),
+            'includedGuests'  => $included,
+            'guestsSelector'  => Config::guests_selector(),
             // Sticky-value protection applies to an existing booking only; on a
             // brand-new booking a field's default value is not stored data.
             'isExisting'     => $this->is_existing_booking() ? '1' : '',
             'i18n'           => [
                 'showAll' => __('Show all booking fields', 'dcc-checkout'),
-                'hint'    => __('Fields for guests 3–4 and pet details are hidden for accommodations that cannot use them. Tick to show every field.', 'dcc-checkout'),
+                'hint'    => __('Guest 3–4 details, pet details and the Extra Guest Fee row are hidden by default. Tick to show every field — for example to book a guest with a dog into a cottage that is not normally pet-friendly.', 'dcc-checkout'),
+                /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
+                'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
             ],
         ];
     }

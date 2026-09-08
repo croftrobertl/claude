@@ -18,6 +18,11 @@
     var I18N = CFG.i18n || {};
     var HIDDEN_CLASS = 'dcc_admin-field-hidden';
     var STORAGE_KEY  = 'dccCheckoutShowAllFields';
+    /** Capability that no accommodation ever satisfies: escape hatch only. */
+    var NEED_SHOW_ALL = '__show_all_only__';
+    var GUEST_IDS = (CFG.guestServiceIds || [])
+        .map(Number)
+        .filter(function (n) { return n > 0; });
 
     function esc(sel) {
         return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
@@ -45,11 +50,16 @@
         if ((CFG.dogFieldNames || []).length) {
             groups.push({ need: 'pet', names: CFG.dogFieldNames });
         }
+        // Guest 3/4 are NOT gated on the accommodation (nor on any admin guest
+        // count) — the owner wants them hidden by default and revealed only by
+        // the "Show all booking fields" checkbox, which is what its label
+        // already promises. NEED_SHOW_ALL is never "capable", so only that
+        // checkbox (or stored data on an existing booking) reveals them.
         (CFG.guestGroups || []).forEach(function (g) {
-            groups.push({ need: 'couch', names: g.names || [] });
+            groups.push({ need: NEED_SHOW_ALL, names: g.names || [] });
         });
 
-        var managed = collect(groups);
+        var managed = collect(groups).concat(collectServiceRows());
         if (!managed.length) {
             return; // None of the fields are on this screen.
         }
@@ -85,6 +95,181 @@
                 });
             });
             return out;
+        }
+
+        /**
+         * The Extra Guest Fee service rows on this screen.
+         *
+         * Hidden behind the same "Show all booking fields" switch as the other
+         * conditional fields, so wp-admin matches the public checkout: one
+         * control (the guest count) drives the charge, instead of two that can
+         * disagree.
+         */
+        function collectServiceRows() {
+            if (!GUEST_IDS.length) { return []; }
+            var out = [];
+            Array.prototype.forEach.call(
+                document.querySelectorAll('input[name*="[services]"]'),
+                function (box) {
+                    if (!/\[id\]$/.test(String(box.name || ''))) { return; }
+                    if (GUEST_IDS.indexOf(parseInt(box.value, 10)) === -1) { return; }
+                    var row = serviceRow(box);
+                    if (row) {
+                        out.push({ need: NEED_SHOW_ALL, row: row, sticky: false });
+                    }
+                }
+            );
+            return out;
+        }
+
+        /**
+         * Smallest element wrapping one service row, with the same containment
+         * guard the public checkout uses: never return an ancestor holding a
+         * guest-count dropdown or a second service, because this element gets
+         * hidden and taking the guest chooser down with it is exactly the
+         * regression that cost the public checkout its "Number of Guests".
+         */
+        function serviceRow(box) {
+            var el = box.parentNode;
+            var best = null;
+            for (var depth = 0; el && el.nodeType === 1 && depth < 6; depth++) {
+                if (adultsSelects(el).length) { break; }
+                if (el.querySelectorAll('input[name*="[services]"][name$="[id]"]').length > 1) { break; }
+                best = el;
+                el = el.parentNode;
+            }
+            return best;
+        }
+
+        /**
+         * Guest-count dropdowns within `scope` (never a service's own per-adult
+         * select). Same widening fallbacks as the public checkout, because the
+         * admin markup is not guaranteed to use the same input names.
+         */
+        function adultsSelects(scope) {
+            var tries = [
+                CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
+                '.mphb-adults-chooser select',
+                'select[name*="[adults]"]',
+                'select[name*="adults"]'
+            ];
+            for (var i = 0; i < tries.length; i++) {
+                var found;
+                try {
+                    found = Array.prototype.slice.call(scope.querySelectorAll(tries[i]));
+                } catch (e) {
+                    continue;
+                }
+                found = found.filter(function (sel) {
+                    return String(sel.name || '').indexOf('[services]') === -1;
+                });
+                if (found.length) { return found; }
+            }
+            return [];
+        }
+
+        /**
+         * Keep the Extra Guest Fee slaved to the guest count, and label the
+         * count options with what each one adds — the same rules as the public
+         * checkout, from the same Config values (never literals).
+         *
+         * This is presentation and input-slaving only. No server-side
+         * validation is extended into wp-admin; those exemptions stay.
+         */
+        function syncExtraGuestFee(ids) {
+            if (!GUEST_IDS.length) { return; }
+            var included = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
+            var steps    = CFG.guestFeeSteps || {};
+
+            // Label only where the fee genuinely applies: at least one selected
+            // accommodation must be a known couch cottage. "Unknown" is good
+            // enough to SHOW a field, but not to promise a price.
+            var couch = !!(ids && ids.length) && ids.some(function (id) {
+                var rt = roomTypes[String(id)];
+                return rt && rt.couch === 'yes';
+            });
+
+            adultsSelects(document).forEach(function (sel) {
+                if (couch) { decorateOptions(sel, included, steps); }
+                var svc = serviceFor(sel);
+                if (!svc) { return; }
+                var extra = Math.max(0, (parseInt(sel.value, 10) || 0) - included);
+                // Never tick without control of the multiplier — MotoPress
+                // presets that select to full capacity, which would bill more
+                // guests than were booked.
+                var want = couch && extra > 0 && !!svc.adults;
+                if (want && String(svc.adults.value) !== String(extra)) {
+                    svc.adults.value = String(extra);
+                    fire(svc.adults);
+                }
+                if (!!svc.box.checked !== want) {
+                    svc.box.checked = want;
+                    fire(svc.box);
+                }
+            });
+        }
+
+        /** Pair a guest-count select with its Extra Guest Fee inputs. */
+        function serviceFor(sel) {
+            var boxes = [];
+            Array.prototype.forEach.call(
+                document.querySelectorAll('input[name*="[services]"]'),
+                function (box) {
+                    if (!/\[id\]$/.test(String(box.name || ''))) { return; }
+                    if (GUEST_IDS.indexOf(parseInt(box.value, 10)) === -1) { return; }
+                    boxes.push(box);
+                }
+            );
+            if (!boxes.length) { return null; }
+
+            // Prefer the service that shares this select's name prefix, so a
+            // multi-room booking can never cross-wire two cottages.
+            var m = /^(.*)\[adults\]$/.exec(String(sel.name || ''));
+            var box = null;
+            if (m) {
+                var prefix = m[1];
+                box = boxes.filter(function (b) {
+                    return String(b.name || '').indexOf(prefix + '[services]') === 0;
+                })[0] || null;
+            }
+            // Only fall back to "the one service" when there is exactly one of
+            // each; guessing across rooms could bill the wrong cottage.
+            if (!box && boxes.length === 1 && adultsSelects(document).length === 1) {
+                box = boxes[0];
+            }
+            if (!box) { return null; }
+
+            return {
+                box: box,
+                adults: document.querySelector(
+                    '[name="' + esc(String(box.name).replace(/\[id\]$/, '[adults]')) + '"]'
+                )
+            };
+        }
+
+        /**
+         * "1", "2", "3 (+$50/night)", "4 (+$100/night)" — cumulative, so the
+         * amount shown is what that choice adds in total. Idempotent: the
+         * original label is stashed, so re-running can't stack suffixes. Option
+         * VALUES are never touched.
+         */
+        function decorateOptions(sel, included, steps) {
+            var suffix = I18N.optionFeeSuffix || ' (+%s/night)';
+            Array.prototype.forEach.call(sel.options, function (opt) {
+                var base = opt.getAttribute('data-dcc-label');
+                if (base === null) {
+                    base = opt.textContent;
+                    opt.setAttribute('data-dcc-label', base);
+                }
+                var extra  = (parseInt(opt.value, 10) || 0) - included;
+                var amount = extra > 0 ? steps[extra] : '';
+                opt.textContent = amount ? base + suffix.replace('%s', amount) : base;
+            });
+        }
+
+        function fire(el) {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         /**
@@ -164,6 +349,9 @@
          * 'unknown' counts as capable — we never hide on a failed read.
          */
         function capable(need, ids) {
+            if (need === NEED_SHOW_ALL) {
+                return false; // Only the escape hatch (or stored data) shows these.
+            }
             if (!ids || !ids.length) {
                 return true; // Nothing chosen yet — show everything.
             }
@@ -187,6 +375,7 @@
                 var show = showAll || f.sticky || capable(f.need, ids);
                 f.row.classList.toggle(HIDDEN_CLASS, !show);
             });
+            syncExtraGuestFee(ids);
         }
 
         /**
@@ -208,7 +397,7 @@
                 timer = setTimeout(function () {
                     // Rows can be replaced wholesale by a re-render; re-find
                     // them before re-evaluating.
-                    managed = collect(groups);
+                    managed = collect(groups).concat(collectServiceRows());
                     evaluate();
                 }, 200);
             }).observe(document.body, { childList: true, subtree: true });
