@@ -149,6 +149,8 @@
         function adultsSelects(scope) {
             var tries = [
                 CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
+                'select.mphb_sc_checkout-guests-chooser',
+                'select.mphb_checkout-guests-chooser',
                 '.mphb-adults-chooser select',
                 'select[name*="[adults]"]',
                 'select[name*="adults"]'
@@ -256,6 +258,12 @@
         function decorateOptions(sel, included, steps) {
             var suffix = I18N.optionFeeSuffix || ' (+%s/night)';
             Array.prototype.forEach.call(sel.options, function (opt) {
+                // MotoPress renders counts as <option>1</option> with no value
+                // attribute, and such an option takes its VALUE FROM ITS TEXT.
+                // Pin it before relabelling, or the label becomes the value.
+                if (!opt.hasAttribute('value')) {
+                    opt.setAttribute('value', opt.value);
+                }
                 var base = opt.getAttribute('data-dcc-label');
                 if (base === null) {
                     base = opt.textContent;

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.2
+Stable tag: 0.4.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,26 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.4.3 =
+* FIX (money path): relabelling the guest-count options was CHANGING THEIR
+  SUBMITTED VALUES. MotoPress renders them as <option>1</option> with no value
+  attribute, and an option without one takes its value from its text, so
+  "3 (+$50/night)" was being submitted as mphb_room_details[N][adults] instead
+  of "3". The value is now pinned before the label is touched, in both the
+  checkout and the admin script. This is the likeliest reason MotoPress's own
+  chooser scripts (which read data-max-allowed / data-max-total) misbehaved.
+* FIX: one of the fallback selectors added in 0.4.2 could never match. The
+  classes mphb_sc_checkout-guests-chooser / mphb_checkout-guests-chooser sit ON
+  the <select>, wrapped in <p class="mphb-adults-chooser">; they were written as
+  descendant selectors. Corrected against MotoPress's checkout-view.php.
+* FIX: the note under the guest dropdown was appended INSIDE
+  <p class="mphb-adults-chooser">, and a <p> cannot contain a <p>. It is now
+  placed as the wrapper's next sibling.
+* The administrator-only diagnostic now distinguishes the two failure cases and
+  names the culprit: "no dropdown found" (listing every selector tried) versus
+  "present but not visible, hidden by <element.class>", found by walking
+  computed styles. The remedies are completely different.
 
 = 0.4.2 =
 * FIX (blocker): removed the services-section collapse added in 0.4.0. It

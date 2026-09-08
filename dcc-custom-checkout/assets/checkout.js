@@ -284,7 +284,11 @@
         };
         var tries = [
             CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
-            '.mphb_sc_checkout-guests-chooser select',
+            // Verified against MotoPress's checkout-view.php: these two
+            // classes sit ON the <select>, wrapped in <p class="mphb-adults-
+            // chooser">. Written as descendant selectors they matched nothing.
+            'select.mphb_sc_checkout-guests-chooser',
+            'select.mphb_checkout-guests-chooser',
             '.mphb-adults-chooser select',
             'select[name*="[adults]"]',
             'select[name*="adults"]'
@@ -748,6 +752,14 @@
         var suffix = I18N.optionFeeSuffix || ' (+%s/night)';
         var any    = false;
         Array.prototype.forEach.call(sel.options, function (opt) {
+            // MotoPress renders the counts as <option>1</option> — no value
+            // attribute — and an option without one takes its VALUE FROM ITS
+            // TEXT. Rewriting the label would therefore have submitted
+            // "3 (+$50/night)" as mphb_room_details[N][adults]. Pin the value
+            // first so the label is cosmetic, as the spec requires.
+            if (!opt.hasAttribute('value')) {
+                opt.setAttribute('value', opt.value);
+            }
             var base = opt.getAttribute('data-dcc-label');
             if (base === null) {
                 base = opt.textContent;
@@ -823,10 +835,10 @@
                 return;
             }
         }
-        // Still nothing: the chooser is absent from the markup, which is not
-        // something this plugin can cause or repair. Say so where an admin
-        // will see it, rather than leaving a silently broken checkout.
-        reportMissingChooser(root);
+        // Still wrong after undoing our own hiding. Report WHICH of the two
+        // cases it is — absent from the markup, or present but hidden by
+        // something else — because the remedies are completely different.
+        reportChooserProblem(root);
     }
 
     function guestChooserVisible(root) {
@@ -840,12 +852,28 @@
         });
     }
 
-    function reportMissingChooser(root) {
-        var msg = 'DCC Custom Checkout: no "Number of Guests" dropdown found on this checkout. ' +
-            'Extra-guest pricing and the conditional guest fields are all driven by it, so they ' +
-            'are inactive. Checked: ' + (CFG.guestsSelector || '(default)') +
-            ', .mphb_sc_checkout-guests-chooser select, .mphb-adults-chooser select, ' +
-            'select[name*="[adults]"].';
+    function reportChooserProblem(root) {
+        var selects = roomAdultsSelects(root);
+        var msg;
+        if (!selects.length) {
+            msg = 'DCC Custom Checkout: no "Number of Guests" dropdown found on this checkout. ' +
+                'Extra-guest pricing and the conditional guest fields are all driven by it, so they ' +
+                'are inactive. Checked: ' + (CFG.guestsSelector || '(default)') +
+                ', select.mphb_sc_checkout-guests-chooser, .mphb-adults-chooser select, ' +
+                'select[name*="[adults]"].';
+        } else {
+            // Present but not visible: name the element actually hiding it, so
+            // the culprit can be found in one look instead of by bisecting CSS.
+            var culprit = null;
+            for (var i = 0; i < selects.length && !culprit; i++) {
+                culprit = hidingAncestor(selects[i]);
+            }
+            msg = 'DCC Custom Checkout: the "Number of Guests" dropdown is present (' +
+                selects.length + ' found) but not visible' +
+                (culprit ? ', hidden by <' + describeEl(culprit) + '>' : '') +
+                '. This plugin has already un-hidden everything it hid, so the cause is elsewhere ' +
+                '(theme or another plugin).';
+        }
         try { window.console && console.warn(msg); } catch (_) {}
         if (!CFG.isAdmin) {
             return;
@@ -864,6 +892,24 @@
         line.className = 'dcc_checkout-admin-notice__chooser';
         line.textContent = (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg;
         box.appendChild(line);
+    }
+
+    // First ancestor (self included) that computed styles say is not rendering.
+    function hidingAncestor(el) {
+        for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+            var cs;
+            try { cs = getComputedStyle(n); } catch (e) { return null; }
+            if (!cs) { return null; }
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    function describeEl(el) {
+        var cls = String(el.className || '').trim();
+        return el.tagName.toLowerCase() + (cls ? '.' + cls.split(/\s+/).join('.') : '');
     }
 
     // Disable (never remove, never inject) guest-count options above `cap`, and
@@ -900,11 +946,19 @@
     // Idempotent per (select, kind) so re-asserts never stack duplicates.
     function setGuestNote(sel, kind, text) {
         var row = sel.closest('.mphb-adults-chooser, p, li, div') || sel.parentNode;
-        var note = row.querySelector('.' + kind);
+        // The chooser's wrapper is <p class="mphb-adults-chooser">, and a <p>
+        // cannot contain a <p>. Append inside anything else; place the note as
+        // the wrapper's next sibling when it is itself a paragraph.
+        var host = row.tagName === 'P' ? (row.parentNode || row) : row;
+        var note = host.querySelector('.' + kind);
         if (!note) {
             note = document.createElement('p');
             note.className = 'dcc_checkout-guest-note ' + kind;
-            row.appendChild(note);
+            if (row.tagName === 'P' && row.parentNode) {
+                insertAfter(note, row);
+            } else {
+                row.appendChild(note);
+            }
         }
         note.textContent = text;
     }
