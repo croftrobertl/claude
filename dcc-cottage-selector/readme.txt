@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.0
+Stable tag: 0.24.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,7 +32,10 @@ Results show the top three matches with friendly badges, a "why this fits your
 trip" snippet, and a direct link to each cottage page.
 
 The whole experience is client-side over a tiny bundled dataset
-(`data/cottages.json`) — no MotoPress dependency, no AJAX, no external requests.
+(`data/cottages.json`). The one exception is the optional availability check: turn
+it on and the widget asks the MPHB Availability Calendar plugin whether each
+cottage is free for the guest's dates. Leave it off and the selector makes no
+requests at all.
 
 = Provided widgets / shortcode =
 
@@ -127,8 +130,9 @@ screened-in porch.
 
 = How it works =
 
-Everything runs in the browser from a small dataset inlined into the page — no
-server round-trips.
+Everything runs in the browser from a small dataset inlined into the page. The
+only server round-trip is the optional availability check, and only once the
+guest has actually given dates.
 
 The widget opens on a **start screen** with the heading, a short intro, and a
 choice of Quick finder, Weigh priorities, or Compare; picking one enters that mode.
@@ -225,6 +229,28 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.24.0 =
+* **The selector can now recommend only what is actually free.** Turn on
+  *Content → Availability* and the quiz gains an optional first step asking for
+  dates, with a clear "Not sure yet" skip. Given dates, each result says
+  **"Available for your dates"** or **"Booked for your dates"** with a link to
+  the calendar to pick others. Booked cottages are never hidden — the free
+  matches lead, and any cottage that would have been a top match but is taken is
+  still listed below it, so nobody loses the cottage they fell for.
+* Availability comes from the MPHB Availability Calendar plugin's existing
+  public endpoint, so there is one implementation of "is this booked" on the
+  site. Answers are cached per date range, so changing an answer never re-asks.
+  **If the check fails the results still appear**, ranked as before, with a note
+  saying availability could not be checked — never a blank page.
+* With no dates given, results are exactly as they were.
+* **Share your results.** A "Share these results" button copies a link that
+  reopens the same answers, the same compare picks and the same order on
+  someone else's phone — handy for couples deciding together.
+* Pet-friendly filtering confirmed end to end: answering yes can only ever
+  return Cottage 34, the one pet-friendly cottage, whatever else was asked for.
+* Requires the MPHB Availability Calendar plugin only when the availability
+  switch is on; with it off, the selector still makes no requests at all.
 
 = 0.23.0 =
 Audit release: five fixes and three behaviour changes agreed with the owner.

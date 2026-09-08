@@ -41,6 +41,14 @@ final class Config
             // matrix's "Sleeps (max)" caption was borrowed for this before 0.23.0 and
             // read oddly as a question topic.)
             'party_short'       => __('Guests', 'dcc-cottage-selector'),
+            'q_dates'           => __('When are you thinking of staying?', 'dcc-cottage-selector'),
+            'dates_short'       => __('Dates', 'dcc-cottage-selector'),
+            'dates_in'          => __('Check-in', 'dcc-cottage-selector'),
+            'dates_out'         => __('Check-out', 'dcc-cottage-selector'),
+            'dates_skip'        => __('Not sure yet', 'dcc-cottage-selector'),
+            'dates_none'        => __('No dates yet', 'dcc-cottage-selector'),
+            'dates_hint'        => __('Optional. Give us dates and we will only recommend cottages that are free.', 'dcc-cottage-selector'),
+            'dates_invalid'     => __('Check-out must be after check-in.', 'dcc-cottage-selector'),
             'q_desk'            => __('Do you need a desk for work?', 'dcc-cottage-selector'),
             'q_pullout'         => __('Do you want a pull-out couch?', 'dcc-cottage-selector'),
             'q_layout'          => __('Studio or 1-bedroom?', 'dcc-cottage-selector'),
@@ -165,6 +173,17 @@ final class Config
             'pet_note'          => __('Pets are welcome in Cottage 34 only, by pre-approval.', 'dcc-cottage-selector'),
             'fee_link'          => __('Fee details', 'dcc-cottage-selector'),
 
+            // Availability, when the guest supplied dates (see assets/js/availability.js)
+            'avail_yes'         => __('Available for your dates', 'dcc-cottage-selector'),
+            'avail_no'          => __('Booked for your dates', 'dcc-cottage-selector'),
+            'avail_calendar'    => __('See open dates', 'dcc-cottage-selector'),
+            'avail_checking'    => __('Checking availability…', 'dcc-cottage-selector'),
+            'avail_error'       => __('We could not check availability just now — these are ranked without it.', 'dcc-cottage-selector'),
+            'avail_none_free'   => __('None of your matches are free for those dates. They are listed below so you can pick other dates.', 'dcc-cottage-selector'),
+            'share_btn'         => __('Share these results', 'dcc-cottage-selector'),
+            'share_done'        => __('Link copied', 'dcc-cottage-selector'),
+            'share_fail'        => __('Copy the link from your address bar to share it.', 'dcc-cottage-selector'),
+
             // Misc value labels
             'val_yes'           => __('Yes', 'dcc-cottage-selector'),
             'val_no'            => __('No', 'dcc-cottage-selector'),
@@ -205,6 +224,10 @@ final class Config
             'showCompareTip' => false,
             'capacityFeeUrl' => '',
             'petFeeUrl'      => '',
+            // Availability lookup. Disabled unless a widget turns it on: the check
+            // is the ONLY runtime request this plugin makes, and it depends on the
+            // MPHB Availability Calendar plugin being active to answer it.
+            'availability'   => ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
         ], $extra);
     }
 }

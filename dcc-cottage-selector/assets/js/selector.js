@@ -86,6 +86,8 @@
     // drops to <body> after each tick. (Buttons whose handlers call focusStep()
     // don't need keys — they move focus deliberately.)
     if (a.matches && a.matches('input[data-cmp]')) { return 'input[data-cmp="' + a.dataset.cmp + '"]'; }
+    if (a.classList.contains('dccs-date-in')) { return '.dccs-date-in'; }
+    if (a.classList.contains('dccs-date-out')) { return '.dccs-date-out'; }
     return null;
   }
 
@@ -104,17 +106,27 @@
     // "answered" once the guest taps something ('either' = an explicit skip).
     var quick = { party: '', desk: '', pullout: '', layout: '', dining: '', pet: '', ground: '', screenedporch: '' };
     var n = (config.cottages || []).length;
+    // Dates are their own thing, not a quick answer: they don't filter, they
+    // annotate and re-rank. '' = not asked yet, 'skip' = "not sure yet".
     return {
       mode: config.startMode || 'quick',
       quick: quick,
       // Tie-break rotation for equal scores (see score.js run()). Derived from the
       // calendar day so a visit is stable across re-renders and every cottage
       // leads in turn over an n-day cycle instead of the lowest ID always winning.
-      rotation: n ? Math.floor(Date.now() / 864e5) % n : 0,
+      // Tie-break rotation. A SHARED link seeds it from the encoded answers so both
+      // people see the same order on any day/device; otherwise it follows the
+      // calendar day so every cottage leads in turn (0.23.0).
+      rotation: n ? (config.rotationSeed != null
+        ? ((config.rotationSeed % n) + n) % n
+        : Math.floor(Date.now() / 864e5) % n) : 0,
       // Priority weights also start UNSET (0) so the Weigh-priorities wizard has
       // nothing pre-selected; 0 simply means "no weight" in the scoring engine.
       weights: { party: 0, workspace: 0, moreroom: 0, fewerstairs: 0, pet: 0, studio: 0, onebed: 0, dining: 0, pullout: 0, screenedporch: 0 },
       compareIds: [],
+      dates: { from: '', to: '', mode: '' },
+      // Filled asynchronously by the availability lookup; '' until it answers.
+      avail: { status: '', byId: {} },
       highlight: config.highlight || '',
       // Navigation: question index + stage ('landing' | 'q' | 'review' | 'results').
       // Fresh loads open on the landing screen; a mode choice moves past it.
@@ -139,7 +151,7 @@
     // If the guest arrived with criteria (an inbound deep link or a mini-entry
     // pre-fill), skip the landing + questionnaire and jump straight to results.
     // An explicit ?mode=/?compare= deep link skips the landing into that mode.
-    var hasCriteria = !!state.highlight ||
+    var hasCriteria = !!state.highlight || state.dates.mode !== '' ||
       Object.keys(state.quick).some(function (k) { return state.quick[k] !== ''; });
     var p = new URLSearchParams(window.location.search);
     // The mini-entry modal opens on the landing screen (matching the main Selector's
@@ -171,6 +183,20 @@
       state.quick.party = /^(1|2|1-2|12)$/.test(pv) ? '2' : (/^3|^4/.test(pv) ? '34' : 'either');
     }
     if (p.has('compare')) { state.compareIds = p.get('compare').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+    // Dates: ?in=YYYY-MM-DD&out=YYYY-MM-DD, or ?dates=skip for an explicit skip.
+    if (p.get('dates') === 'skip') { state.dates = { from: '', to: '', mode: 'skip' }; }
+    if (p.has('in') && p.has('out')) {
+      var din = String(p.get('in')), dout = String(p.get('out'));
+      if (DCCS.availability && DCCS.availability.validRange(din, dout, 95)) {
+        state.dates = { from: din, to: dout, mode: 'set' };
+      }
+    }
+    // A shared link pins the tie-break so both devices agree (see defaultState).
+    if (p.has('seed')) {
+      var seed = parseInt(p.get('seed'), 10);
+      var cn = (config.cottages || []).length;
+      if (!isNaN(seed) && cn) { state.rotation = ((seed % cn) + cn) % cn; }
+    }
 
     Object.keys(state.weights).forEach(function (k) {
       var v = p.get('w_' + k);
@@ -257,6 +283,9 @@
   // "No preference".
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
+    // kind:'dates' renders two date inputs instead of chips (see renderDatesStep).
+    // Only present when the widget enables availability.
+    { group: 'dates', kind: 'dates', qKey: 'q_dates', shortKey: 'dates_short', opts: [] },
     { group: 'party', qKey: 'q_party', shortKey: 'party_short', opts: [['opt_party2', '2'], ['opt_party34', '34'], ['opt_either', 'either']] },
     { group: 'desk', qKey: 'q_desk', shortKey: 'diff_desk', opts: YND },
     { group: 'pullout', qKey: 'q_pullout', shortKey: 'diff_pulloutCouch', opts: YND },
@@ -304,17 +333,55 @@
       };
     }
     return {
-      questions: WIZARD_QUESTIONS,
-      get: function (q) { return state.quick[q.group]; },
+      // The dates step only exists when the widget turns availability on.
+      questions: WIZARD_QUESTIONS.filter(function (q) {
+        return q.kind !== 'dates' || availOn(state.config);
+      }),
+      get: function (q) { return q.kind === 'dates' ? state.dates : state.quick[q.group]; },
       set: function (q, v) { state.quick[q.group] = coerce(v); },
-      isAnswered: function (q) { var x = state.quick[q.group]; return x !== '' && x != null; },
+      isAnswered: function (q) {
+        if (q.kind === 'dates') { return state.dates.mode !== ''; }
+        var x = state.quick[q.group]; return x !== '' && x != null;
+      },
       qLabel: function (q) { return S[q.qKey]; },
       shortLabel: function (q) { return S[q.shortKey]; },
-      valueLabel: function (q, v) { return answerLabel(q, v, S); }
+      valueLabel: function (q, v) {
+        if (q.kind === 'dates') {
+          return state.dates.mode === 'set' ? state.dates.from + ' \u2192 ' + state.dates.to : S.dates_none;
+        }
+        return answerLabel(q, v, S);
+      }
     };
   }
 
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+  /** Is the availability feature switched on for this widget? */
+  function availOn(config) {
+    return !!(config && config.availability && config.availability.enabled &&
+      config.availability.ajaxUrl && window.DCCS && DCCS.availability);
+  }
+
+  /** Two date inputs + a "not sure yet" skip, in place of the usual answer chips. */
+  function renderDatesStep(config, state) {
+    var S = config.strings;
+    var d = state.dates;
+    var today = DCCS.availability.ymd(new Date());
+    var skipOn = d.mode === 'skip';
+    var bad = d.mode === 'set' && !DCCS.availability.validRange(d.from, d.to, config.availability.maxNights);
+    return '<div class="dccs-dates">' +
+      '<div class="dccs-date-row">' +
+        '<label class="dccs-date-field"><span>' + esc(S.dates_in) + '</span>' +
+        '<input type="date" class="dccs-date-in" min="' + esc(today) + '" value="' + esc(d.from) + '"></label>' +
+        '<label class="dccs-date-field"><span>' + esc(S.dates_out) + '</span>' +
+        '<input type="date" class="dccs-date-out" min="' + esc(d.from || today) + '" value="' + esc(d.to) + '"></label>' +
+      '</div>' +
+      (bad ? '<p class="dccs-date-error" role="alert">' + esc(S.dates_invalid) + '</p>' : '') +
+      '<button type="button" class="dccs-chip dccs-date-skip' + (skipOn ? ' is-active' : '') +
+        '" role="radio" aria-checked="' + (skipOn ? 'true' : 'false') + '" tabindex="0">' + esc(S.dates_skip) + '</button>' +
+      '<p class="dccs-q-note">' + esc(S.dates_hint) + '</p>' +
+      '</div>';
+  }
 
   /** Small muted note under specific wizard questions: the capacity sentence on
       the party-size step, the pet policy on the pet step. Each may carry an
@@ -350,6 +417,7 @@
 
     // When nothing is selected yet, keep the first option keyboard-tabbable so the
     // radiogroup is reachable (ARIA roving-focus pattern needs one tabbable entry).
+    var isDates = q.kind === 'dates';
     var anyActive = q.opts.some(function (o) { return String(value) === String(o[1]); });
     var ansSide = (config.iconSides && config.iconSides.answers) || 'left';
     var chips = q.opts.map(function (o, idx) {
@@ -388,8 +456,10 @@
     }
     html += '<div class="dccs-stepper" role="presentation">' + dots + '</div>';
     html += '<h3 class="dccs-step-q" tabindex="-1">' + withIcon(config, qIconKey, 'questions', esc(qLabel)) + '</h3>';
-    html += '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
-    html += questionNote(config, q.group);
+    html += isDates
+      ? renderDatesStep(config, state)
+      : '<div class="dccs-chips dccs-chips-wizard" role="radiogroup" aria-label="' + esc(qLabel) + '">' + chips + '</div>';
+    if (!isDates) { html += questionNote(config, q.group); }
     html += '<div class="dccs-wizard-nav">';
     // Back/Next: a chosen icon replaces the default arrow (Back = left, Next = right).
     html += i > 0
@@ -574,8 +644,25 @@
     }
 
     var ranked = res.results;
-    var top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
+    var top;
+    if (st.avail.status === 'ok') {
+      // Availability re-orders but NEVER removes. Free matches fill the top three;
+      // then any cottage that WOULD have made the top three on merit but is booked
+      // is appended, clearly marked, so a guest can still see the one they'd have
+      // loved and change dates for it. Sinking it out of view would be exactly the
+      // silent dead end this feature exists to prevent.
+      var byId = st.avail.byId;
+      var isBooked = function (c) { return byId[c.id] === 'booked'; };
+      var free = ranked.filter(function (c) { return !isBooked(c); }).slice(0, 3);
+      var missed = ranked.slice(0, 3).filter(function (c) {
+        return isBooked(c) && free.indexOf(c) === -1;
+      });
+      top = DCCS.score.dedupe(free.concat(missed), config.diffFields);
+    } else {
+      top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
+    }
     html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
+    html += availNote(config, st, top);
 
     // The extra highlighted card (mini-entry / deep link) counts toward the
     // page's card total, so resolve it BEFORE building any card: the compare
@@ -613,9 +700,46 @@
     // "Edit answers" always appears on results and opens the review screen on demand —
     // even when the forced review STEP (config.showReview) is turned off. That keeps a
     // full edit path from results without making review a mandatory extra step.
-    return '<div class="dccs-wizard-nav dccs-tail-nav">' +
+    var share = '<div class="dccs-share-row"><button type="button" class="dccs-share">' +
+      esc(S.share_btn) + '</button><span class="dccs-share-msg" role="status"></span></div>';
+    return share + '<div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
+  }
+
+  /** Status line above the cards: checking / failed / nothing free for those dates. */
+  function availNote(config, st, shown) {
+    var S = config.strings;
+    if (!availOn(config) || st.dates.mode !== 'set') { return ''; }
+    if (st.avail.status === 'pending') {
+      return '<p class="dccs-avail-note is-pending">' + esc(S.avail_checking) + '</p>';
+    }
+    if (st.avail.status === 'error') {
+      return '<p class="dccs-avail-note is-error" role="status">' + esc(S.avail_error) + '</p>';
+    }
+    if (st.avail.status === 'ok' && shown.length &&
+        shown.every(function (c) { return st.avail.byId[c.id] === 'booked'; })) {
+      return '<p class="dccs-avail-note is-none" role="status">' + esc(S.avail_none_free) + '</p>';
+    }
+    return '';
+  }
+
+  /** Per-card availability badge. Renders nothing unless dates produced a verdict. */
+  function availBadge(config, st, c) {
+    var S = config.strings;
+    if (!availOn(config) || st.dates.mode !== 'set' || st.avail.status !== 'ok') { return ''; }
+    var v = st.avail.byId[c.id];
+    if (v === 'free') {
+      return '<p class="dccs-avail dccs-avail-free">' + esc(S.avail_yes) + '</p>';
+    }
+    if (v === 'booked') {
+      var url = (config.availability && config.availability.calendarUrl) || '';
+      var link = url
+        ? ' <a class="dccs-avail-link" href="' + esc(safeUrl(url)) + '">' + esc(S.avail_calendar) + '</a>'
+        : '';
+      return '<p class="dccs-avail dccs-avail-booked">' + esc(S.avail_no) + link + '</p>';
+    }
+    return '';
   }
 
   function buildCard(c, config, st, crit, rankLabel, miss, showCmp) {
@@ -625,6 +749,8 @@
     var html = '<div class="dccs-card' + (isHi ? ' is-highlight' : '') + '">';
     html += '<div class="dccs-card-head"><h4>' + esc(cname(config, c)) +
       (rankLabel ? ' <span class="dccs-rank">' + esc(rankLabel) + '</span>' : '') + '</h4></div>';
+
+    html += availBadge(config, st, c);
 
     if (miss && miss.length) {
       html += '<div class="dccs-misses">' + miss.map(function (m) {
@@ -803,6 +929,7 @@
     if (!root.dataset.dccsUid) { root.dataset.dccsUid = 'dccs' + (++UID); }
 
     var state = buildState(config);
+    state.config = config;   // wizardTrack needs it to decide on the dates step
 
     // Persistent screen-reader live region — kept across re-renders (re-appended,
     // not recreated) so aria-live actually announces result changes.
@@ -810,7 +937,58 @@
     live.className = 'dccs-sr-only';
     live.setAttribute('aria-live', 'polite');
 
+    /**
+     * Kick off (or reuse) the availability lookup for the current dates. Sets a
+     * 'pending' status immediately so the results say what is happening, then
+     * re-renders once with the verdicts. Cached per range in availability.js, so
+     * editing an unrelated answer never refetches.
+     */
+    function refreshAvailability() {
+      if (!availOn(config) || state.dates.mode !== 'set') {
+        state.avail = { status: '', byId: {} };
+        return;
+      }
+      var from = state.dates.from, to = state.dates.to;
+      var key = from + '|' + to;
+      // Any SETTLED status for this range is final — including 'error'. The
+      // resolve handler calls rerender(), which calls back here; retrying on
+      // error would loop forever and hammer the endpoint precisely when it is
+      // already failing. A new date range gets a fresh attempt.
+      if (state.avail.key === key && state.avail.status !== '') { return; }
+      state.avail = { status: 'pending', byId: {}, key: key };
+      DCCS.availability.lookup(config, from, to).then(function (res) {
+        // A later edit may have changed the dates while this was in flight.
+        if (state.dates.from !== from || state.dates.to !== to) { return; }
+        state.avail = { status: res.status === 'ok' ? 'ok' : res.status, byId: res.byId || {}, key: from + '|' + to };
+        rerender();
+      });
+    }
+
+    /** A URL that reopens these exact results — answers, compare picks, dates, order. */
+    function shareUrl() {
+      var u = new URL(window.location.href);
+      var p = u.searchParams;
+      ['mode', 'party', 'desk', 'pullout', 'layout', 'dining', 'pet', 'ground', 'porch',
+       'compare', 'in', 'out', 'dates', 'seed', 'highlight'].forEach(function (k) { p.delete(k); });
+      p.set('mode', state.mode);
+      var q = state.quick;
+      if (q.party !== '') { p.set('party', q.party === '2' || q.party === 2 ? '2' : (String(q.party) === '34' ? '3-4' : 'either')); }
+      [['desk', q.desk], ['pullout', q.pullout], ['pet', q.pet], ['ground', q.ground],
+       ['porch', q.screenedporch]].forEach(function (pair) {
+        if (pair[1] !== '') { p.set(pair[0], pair[1] === 'yes' ? 'true' : 'false'); }
+      });
+      if (q.layout !== '') { p.set('layout', String(q.layout)); }
+      if (q.dining !== '') { p.set('dining', String(q.dining)); }
+      if (state.dates.mode === 'set') { p.set('in', state.dates.from); p.set('out', state.dates.to); }
+      else if (state.dates.mode === 'skip') { p.set('dates', 'skip'); }
+      if (state.compareIds.length) { p.set('compare', state.compareIds.join(',')); }
+      // Pin the tie-break so the recipient sees the same order on any day.
+      p.set('seed', String(state.rotation));
+      return u.toString();
+    }
+
     function rerender() {
+      if (state.stage === 'results') { refreshAvailability(); }
       var key = root.contains(document.activeElement) ? focusKey(document.activeElement) : null;
       // Score once per render and reuse it for the body + the live region.
       var crit = criteriaFromState(state);
@@ -882,6 +1060,7 @@
     function resetForMode(st) {
       var fresh = defaultState(config);
       st.quick = fresh.quick; st.weights = fresh.weights;
+      st.dates = fresh.dates; st.avail = fresh.avail;
       st.compareIds = []; st.step = 0; st.stage = 'q'; st.editReturn = null;
     }
 
@@ -890,6 +1069,26 @@
       if (!t || !root.contains(t)) { return; }
       var cl = t.classList;
 
+      // --- dates: the "not sure yet" skip ---
+      if (cl.contains('dccs-date-skip')) {
+        state.dates = { from: '', to: '', mode: 'skip' };
+        state.avail = { status: '', byId: {} };
+        rerender(); return;
+      }
+      // --- share: copy a link that reopens these results ---
+      if (cl.contains('dccs-share')) {
+        var url = shareUrl();
+        var msg = root.querySelector('.dccs-share-msg');
+        var say = function (text) { if (msg) { msg.textContent = text; } };
+        try { window.history.replaceState(null, '', url); } catch (e) { /* file:// etc. */ }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(
+            function () { say(config.strings.share_done); },
+            function () { say(config.strings.share_fail); }
+          );
+        } else { say(config.strings.share_fail); }
+        return;
+      }
       // --- answer chip: select only (no auto-advance) ---
       if (cl.contains('dccs-chip')) {
         if (state.mode === 'weights') { state.weights[t.dataset.group] = Number(t.dataset.value); }
@@ -964,11 +1163,24 @@
       }
     });
 
-    // Compare checkboxes inside result cards.
+    // Compare checkboxes inside result cards, and the two date inputs.
     root.addEventListener('change', function (e) {
-      var cb = e.target;
-      if (cb && cb.matches('input[type="checkbox"][data-cmp]')) {
-        toggleCompare(state, cb.dataset.cmp); rerender();
+      var t = e.target;
+      if (t && t.matches('input[type="checkbox"][data-cmp]')) {
+        toggleCompare(state, t.dataset.cmp); rerender(); return;
+      }
+      if (t && (t.classList.contains('dccs-date-in') || t.classList.contains('dccs-date-out'))) {
+        var into = t.classList.contains('dccs-date-in');
+        var from = into ? t.value : state.dates.from;
+        var to = into ? state.dates.to : t.value;
+        // Picking a check-in after the current check-out clears the stale end date
+        // rather than leaving an impossible range on screen.
+        if (into && to && DCCS.availability.parseYmd(to) && DCCS.availability.parseYmd(from) &&
+            DCCS.availability.parseYmd(to) <= DCCS.availability.parseYmd(from)) { to = ''; }
+        state.dates = { from: from, to: to, mode: (from && to) ? 'set' : '' };
+        state.avail = { status: '', byId: {} };
+        refreshAvailability();
+        rerender();
       }
     });
 

@@ -23,8 +23,15 @@ A single WordPress plugin — **DCC Cottage Selector** — a mobile-first decisi
 that helps guests choose among the eight Dora Canal Court cottages by focusing only
 on their real differences. It lives at `dcc-cottage-selector/` and provides two
 Elementor widgets (the full Selector and a compact Mini Entry) plus a
-`[dcc_selector_entry]` shortcode. Pure static data, fully client-rendered: no
-MotoPress dependency, no AJAX, no external requests. The repo has no build step.
+`[dcc_selector_entry]` shortcode. Static data, fully client-rendered. The repo has
+no build step.
+
+**One runtime request, and only when asked for.** Since 0.24.0 the widget can
+check availability for guest-supplied dates. It is OFF by default; when a widget
+turns it on it POSTs to the MPHB Availability Calendar plugin's public read-only
+endpoint (`admin-ajax.php`, `action=mphbac_query`, no nonce by design so
+full-page caches cannot serve a stale one). With the switch off the plugin still
+makes no requests whatsoever.
 
 **The MPHB Availability Calendar is no longer in this repo.** It is maintained in a
 separate session (live 0.21.2); the copy that used to sit at
@@ -58,7 +65,7 @@ php tools/makepot.php
 # Build the deliverable zip. Filename MUST state the version (user convention),
 # so a downloaded build is identifiable without opening it. Read the version
 # from the plugin header first.
-( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.23.0.zip" dcc-cottage-selector -x '*.DS_Store' )
+( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.24.0.zip" dcc-cottage-selector -x '*.DS_Store' )
 ```
 
 ## Releasing
@@ -88,6 +95,7 @@ includes/class-data.php              # Read layer over data/cottages.json
 includes/class-preset-defaults.php   # Site preset: control defaults a NEW widget starts from
 includes/class-control-design-io.php # Custom Elementor control for the text export/import
 data/cottages.json                   # SINGLE SOURCE OF TRUTH for cottage attributes
+assets/js/availability.js            # The only runtime request: date-range availability
 assets/js/score.js                   # Two-phase scoring engine (hard filters, then weights)
 assets/js/labels.js                  # Badge + "why this fits" key allocation
 assets/js/selector.js                # Front-end controller; renders every mode
@@ -134,6 +142,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `elementor/document/after_save` hook is the only publisher, and it must never call
   `$document->get_elements_data()` — that recurses into Elementor's empty-document
   conversion and takes down the editor (the 0.19.5 fatal).
+- **Availability never removes a cottage.** It re-orders and annotates. Free
+  matches lead; a cottage that would have been a top match but is booked is still
+  listed, marked, with a calendar link. Any failure fails OPEN — rank as if no
+  dates were given, show a note, never blank the results.
+- **A settled availability status is final for that date range, including an
+  error.** The lookup's resolve handler calls `rerender()`, which calls back into
+  the lookup; retrying on error loops forever and hammers the endpoint exactly
+  when it is already failing (caught pre-release in 0.24.0). Only a new date
+  range starts a fresh attempt.
+- **Async tests must be registered with `defer()`** in `tests/dom-smoke.test.js`,
+  not run as bare `(async () => {})()`. The summary prints synchronously, so a
+  bare async block's assertions are silently uncounted — ~26 of the 0.24.0
+  availability assertions vanished that way before this was fixed.
 - **Score ties break on a daily rotation, never on cottage ID** (`crit.rotation`,
   chosen once per page load in `defaultState()`). Tests that read result ORDER must
   either pass an explicit `rotation` to `score.run()` or assert on the engine's

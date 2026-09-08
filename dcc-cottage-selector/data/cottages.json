@@ -13,6 +13,7 @@
     "screenedPorch": true,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-22/",
+    "roomTypeId": 1071,
     "highlights": [
       "Ground floor",
       "Closest to the canal",
@@ -40,6 +41,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-23/",
+    "roomTypeId": 1069,
     "highlights": [
       "Upstairs, above the coin laundry",
       "Closest to the canal",
@@ -64,6 +66,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-31/",
+    "roomTypeId": 1067,
     "highlights": [
       "Second-closest to the canal",
       "Paved sun area with table and loungers",
@@ -85,6 +88,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-32/",
+    "roomTypeId": 1065,
     "highlights": [
       "Second-closest to the canal",
       "Central AC",
@@ -105,6 +109,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-33/",
+    "roomTypeId": 1604,
     "highlights": [
       "True studio",
       "Mini-split AC",
@@ -130,6 +135,7 @@
     "screenedPorch": false,
     "petAllowed": true,
     "pageUrl": "/accommodation/cottage-34/",
+    "roomTypeId": 1607,
     "highlights": [
       "True studio",
       "Mini-split AC",
@@ -155,6 +161,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-35/",
+    "roomTypeId": 1740,
     "highlights": [
       "Separate bedroom and living room",
       "Roku TV in both rooms",
@@ -175,6 +182,7 @@
     "screenedPorch": false,
     "petAllowed": false,
     "pageUrl": "/accommodation/cottage-36/",
+    "roomTypeId": 1742,
     "highlights": [
       "Separate bedroom and living room",
       "Roku TV in both rooms",

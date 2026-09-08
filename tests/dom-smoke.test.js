@@ -22,6 +22,12 @@ const CONFIG = execSync('php ' + path.join(__dirname, 'dump-config.php')).toStri
 let pass = 0, fail = 0;
 function ok(name, cond) { cond ? pass++ : fail++; console.log((cond ? 'PASS ' : 'FAIL ') + name); }
 
+// Async test blocks must finish BEFORE the summary prints, or their assertions
+// are silently uncounted — the 0.24.0 availability tests lost ~26 that way.
+// Wrap each in `defer(async () => {...})` and the runner awaits them all.
+const deferred = [];
+function defer(fn) { deferred.push(fn); }
+
 function injectScript(window, file) {
   const s = window.document.createElement('script');
   s.textContent = fs.readFileSync(path.join(JS, file), 'utf8');
@@ -32,7 +38,7 @@ function freshDom(url) {
   const dom = new JSDOM('<!DOCTYPE html><body></body>', {
     url: url || 'https://example.com/', pretendToBeVisual: true, runScripts: 'dangerously'
   });
-  ['score.js', 'labels.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
+  ['score.js', 'labels.js', 'availability.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
   return dom.window;
 }
 
@@ -1616,5 +1622,280 @@ function configWith(overrides) {
   ok('presetQuick / preCompare no longer read', !/presetQuick|preCompare/.test(src));
 })();
 
-console.log('\n' + pass + ' passed, ' + fail + ' failed');
-process.exit(fail ? 1 : 0);
+// ==== 0.24.0: availability, pets, shareable results ====
+
+// Config with the availability feature switched on.
+function availConfig(extra) {
+  const cfg = JSON.parse(CONFIG);
+  cfg.availability = { enabled: true, ajaxUrl: '/wp-admin/admin-ajax.php', action: 'mphbac_query', calendarUrl: '/availability/', maxNights: 95 };
+  return JSON.stringify(Object.assign(cfg, extra || {}));
+}
+// Stub the endpoint. `booked` lists cottage IDs to report as booked; `fail` makes
+// every call reject, exercising the fail-open path.
+function stubAvail(w, opts) {
+  const o = opts || {};
+  const cfg = JSON.parse(CONFIG);
+  const byType = {};
+  cfg.cottages.forEach(c => { byType[String(c.roomTypeId)] = c.id; });
+  w.fetch = function (url, init) {
+    if (o.fail) { return Promise.reject(new Error('network')); }
+    const body = String((init && init.body) || '');
+    const from = decodeURIComponent((body.match(/from=([^&]*)/) || [])[1] || '');
+    const to = decodeURIComponent((body.match(/to=([^&]*)/) || [])[1] || '');
+    const nights = w.DCCS.availability.nightsBetween(from, to);
+    const availability = {};
+    Object.keys(byType).forEach(t => {
+      const id = byType[t]; const days = {};
+      nights.forEach(n => { days[n] = (o.booked || []).indexOf(id) !== -1 ? 'booked' : 'available'; });
+      availability[t] = days;
+    });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { availability: availability, from: from, to: to } }) });
+  };
+}
+const flush = () => new Promise(r => setTimeout(r, 0));
+
+// ---- 59. availability.js: night maths and verdicts ----
+(function () {
+  const w = freshDom();
+  const A = w.DCCS.availability;
+  ok('a stay occupies check-in but NOT check-out',
+    A.nightsBetween('2026-09-10', '2026-09-13').join(',') === '2026-09-10,2026-09-11,2026-09-12');
+  ok('same-day range is no nights', A.nightsBetween('2026-09-10', '2026-09-10').length === 0);
+  ok('reversed range is no nights', A.nightsBetween('2026-09-13', '2026-09-10').length === 0);
+  ok('impossible dates rejected', A.parseYmd('2026-02-30') === null && A.parseYmd('nope') === null);
+  ok('validRange rejects reversed', !A.validRange('2026-09-13', '2026-09-10', 95));
+  ok('validRange rejects over-long stays', !A.validRange('2026-01-01', '2027-01-01', 95));
+
+  const cottages = [{ id: '22', roomTypeId: 1071 }, { id: '23', roomTypeId: 1069 }];
+  const nights = A.nightsBetween('2026-09-10', '2026-09-12');
+  const payload = { availability: {
+    '1071': { '2026-09-10': 'available', '2026-09-11': 'available' },
+    '1069': { '2026-09-10': 'available', '2026-09-11': 'booked' }
+  } };
+  const v = A.verdicts(cottages, payload, nights);
+  ok('all nights free -> free', v['22'] === 'free');
+  ok('any night booked -> booked', v['23'] === 'booked');
+  ok('a cottage the endpoint omitted -> unknown',
+    A.verdicts([{ id: '99', roomTypeId: 999 }], payload, nights)['99'] === 'unknown');
+  ok('a partially-reported range -> unknown, never "free"',
+    A.verdicts(cottages, { availability: { '1071': { '2026-09-10': 'available' } } }, nights)['22'] === 'unknown');
+})();
+
+// ---- 60. (a) booked cottages are marked and ranked below free ones ----
+defer(async function () {
+  const w = freshDom('https://example.com/?in=2026-09-10&out=2026-09-13');
+  stubAvail(w, { booked: ['22', '23', '31'] });   // the usual leaders are taken
+  const root = mountSelector(w, availConfig());
+  await flush(); await flush();
+  const names = cardNames(root);
+  const bookedShown = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'))
+    .filter(c => c.querySelector('.dccs-avail-booked'));
+  // The two best matches are booked here, so they must still appear — appended
+  // below the free ones — rather than being sunk out of the visible top three.
+  ok('booked top matches are still shown, never dropped', names.length > 3);
+  ok('the booked best-matches are present by name',
+    /Cottage 22/.test(names.join('|')) && /Cottage 23/.test(names.join('|')));
+  ok('a booked cottage is labelled "Booked for your dates"',
+    !bookedShown.length || /Booked for your dates/.test(bookedShown[0].textContent));
+  const order = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'))
+    .map(c => c.querySelector('.dccs-avail-booked') ? 'booked' : 'free');
+  ok('free cottages rank above booked ones', order.join(',') === order.slice().sort().reverse().join(','));
+  ok('a free cottage says "Available for your dates"',
+    !!root.querySelector('.dccs-avail-free') && /Available for your dates/.test(root.querySelector('.dccs-avail-free').textContent));
+  ok('a booked card links to the calendar to pick other dates',
+    !bookedShown.length || !!bookedShown[0].querySelector('.dccs-avail-link[href="/availability/"]'));
+});
+
+// ---- 61. (a) with no dates, results look exactly as before ----
+defer(async function () {
+  const w = freshDom();
+  stubAvail(w, { booked: ['22'] });
+  const root = mountSelector(w, availConfig());
+  enter(root, 'quick');
+  // The dates step is first, and skipping it must not colour anything.
+  root.querySelector('.dccs-date-skip').click();
+  clickNext(root);
+  stepThrough(root, 'either'); seeMatches(root);
+  await flush(); await flush();
+  ok('no dates -> no availability badges at all',
+    !root.querySelector('.dccs-avail') && !root.querySelector('.dccs-avail-note'));
+  ok('no dates -> three cards as usual', cardNames(root).length === 3);
+});
+
+// ---- 62. (b) a failed check degrades to today's behaviour, with a note ----
+defer(async function () {
+  const w = freshDom('https://example.com/?in=2026-09-10&out=2026-09-13');
+  stubAvail(w, { fail: true });
+  const root = mountSelector(w, availConfig());
+  await flush(); await flush();
+  ok('failure still renders the full results', cardNames(root).length === 3);
+  const note = root.querySelector('.dccs-avail-note.is-error');
+  ok('failure shows a visible note', !!note && /could not check availability/i.test(note.textContent));
+  ok('failure adds no per-card badges', !root.querySelector('.dccs-avail'));
+  ok('the results are never blank', root.querySelectorAll('.dccs-card').length > 0);
+});
+
+// ---- 63. the dates step only exists when the feature is on ----
+(function () {
+  const off = mountSelector(freshDom());
+  enter(off, 'quick');
+  ok('feature off: no dates step', !off.querySelector('.dccs-dates'));
+  ok('feature off: wizard is still 8 steps', /1\b.*\b8/.test(progress(off)));
+  const on = mountSelector(freshDom(), availConfig());
+  enter(on, 'quick');
+  ok('feature on: dates step is first', !!on.querySelector('.dccs-dates'));
+  ok('feature on: wizard is 9 steps', /1\b.*\b9/.test(progress(on)));
+  ok('dates step offers a "not sure yet" skip', !!on.querySelector('.dccs-date-skip'));
+  ok('dates step has check-in and check-out inputs',
+    !!on.querySelector('input.dccs-date-in[type="date"]') && !!on.querySelector('input.dccs-date-out[type="date"]'));
+  ok('Next is blocked until dates or skip', on.querySelector('.dccs-next').disabled === true);
+  on.querySelector('.dccs-date-skip').click();
+  ok('skipping unblocks Next', on.querySelector('.dccs-next').disabled === false);
+})();
+
+// ---- 64. (c) "pet-friendly: yes" can never rank a non-pet cottage first ----
+(function () {
+  const w = freshDom();
+  const cfg = JSON.parse(CONFIG);
+  const petIds = cfg.cottages.filter(c => c.petAllowed).map(c => c.id);
+  ok('exactly one cottage is pet-friendly in the data', petIds.length === 1 && petIds[0] === '34');
+  // Engine level, across every rotation — the filter must never be order-dependent.
+  for (let r = 0; r < cfg.cottages.length; r++) {
+    const res = w.DCCS.score.run(cfg.cottages, { hard: ['pet'], rotation: r });
+    if (res.results[0].id !== '34' || res.results.length !== 1) {
+      ok('pet=yes leaves only Cottage 34 (rotation ' + r + ')', false);
+    }
+  }
+  ok('pet=yes leaves only Cottage 34 at every rotation', true);
+  ok('no petAllowed:false cottage survives a pet filter',
+    w.DCCS.score.run(cfg.cottages, { hard: ['pet'] }).results.every(c => c.petAllowed === true));
+  // Flow level: a guest who wants a pull-out couch AND a pet still gets 34 first.
+  const root = mountSelector(freshDom('https://example.com/?pet=true&pullout=yes'));
+  ok('pet + couch wants still put Cottage 34 first', /Cottage 34/.test(cardNames(root)[0]));
+  ok('…and the card explains the pet welcome',
+    /warm welcome for your pet/.test(root.querySelector('.dccs-card .dccs-why').textContent));
+})();
+
+// ---- 65. (d) a shared link reopens the same results in the same order ----
+defer(async function () {
+  const w = freshDom('https://example.com/selector/');
+  const root = mountSelector(w, availConfig());
+  enter(root, 'quick');
+  root.querySelector('.dccs-date-skip').click(); clickNext(root);
+  clickAnswer(root, '34'); clickNext(root);              // party 3-4
+  stepThrough(root, 'either'); seeMatches(root);
+  const cb = root.querySelector('.dccs-card input[data-cmp]');
+  const pickedId = cb.dataset.cmp;
+  cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
+  const before = cardNames(root).join('|');
+
+  let copied = '';
+  w.navigator.clipboard = { writeText: t => { copied = t; return Promise.resolve(); } };
+  root.querySelector('.dccs-share').click();
+  await flush();
+  ok('share copies a URL', /^https?:\/\//.test(copied));
+  const qp = new w.URLSearchParams(copied.split('?')[1] || '');
+  ok('share URL carries the party answer', qp.get('party') === '3-4');
+  ok('share URL carries the compare pick', (qp.get('compare') || '').split(',').indexOf(pickedId) !== -1);
+  ok('share URL carries the skipped-dates state', qp.get('dates') === 'skip');
+  ok('share URL pins the tie-break seed', qp.get('seed') !== null);
+
+  // A second "device": different day, same link.
+  const w2 = freshDom(copied);
+  const root2 = mountSelector(w2, availConfig());
+  ok('the shared link opens straight on results', !!root2.querySelector('.dccs-results'));
+  ok('the second device sees the same cottages in the same order', cardNames(root2).join('|') === before);
+  ok('the compare pick survives the share', !!root2.querySelector('input[data-cmp="' + pickedId + '"]:checked'));
+});
+
+// ---- 66. dates flow: inputs, validation, and mode reset ----
+defer(async function () {
+  const w = freshDom();
+  stubAvail(w, { booked: [] });
+  const root = mountSelector(w, availConfig());
+  enter(root, 'quick');
+  const setDate = (sel, v) => { const i = root.querySelector(sel); i.value = v; i.dispatchEvent(new w.Event('change', { bubbles: true })); };
+  setDate('.dccs-date-in', '2026-09-10');
+  ok('check-in alone does not complete the step', root.querySelector('.dccs-next').disabled === true);
+  setDate('.dccs-date-out', '2026-09-13');
+  ok('a full range completes the step', root.querySelector('.dccs-next').disabled === false);
+  // Choosing a check-in after the check-out clears the impossible end date.
+  setDate('.dccs-date-in', '2026-09-20');
+  ok('a check-in past the check-out clears the stale end date', root.querySelector('.dccs-date-out').value === '');
+  // Mode switching clears dates too (the 0.23.0 reset contract).
+  setDate('.dccs-date-in', '2026-09-10'); setDate('.dccs-date-out', '2026-09-13');
+  root.querySelector('.dccs-modetab[data-mode="compare"]').click();
+  root.querySelector('.dccs-modetab[data-mode="quick"]').click();
+  ok('switching modes clears the dates', root.querySelector('.dccs-date-in').value === '');
+});
+
+// ---- 67. the availability request matches the calendar plugin's contract ----
+defer(async function () {
+  const w = freshDom('https://example.com/?in=2026-09-10&out=2026-09-13');
+  let seenUrl = '', seenBody = '';
+  w.fetch = function (url, init) {
+    seenUrl = url; seenBody = String((init && init.body) || '');
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { availability: {} } }) });
+  };
+  const root = mountSelector(w, availConfig());
+  await flush(); await flush();
+  ok('posts to the configured admin-ajax URL', seenUrl === '/wp-admin/admin-ajax.php');
+  ok('sends action=mphbac_query', /(^|&)action=mphbac_query(&|$)/.test(seenBody));
+  ok('sends from/to as Y-m-d', /from=2026-09-10/.test(seenBody) && /to=2026-09-13/.test(seenBody));
+  ok('sends room_type_ids[] for every cottage',
+    (seenBody.match(/room_type_ids%5B%5D=/g) || []).length === JSON.parse(CONFIG).cottages.length);
+  ok('sends the real MotoPress room-type id for Cottage 22', /room_type_ids%5B%5D=1071/.test(seenBody));
+  ok('sends no nonce (the endpoint takes none, so caches cannot stale it)', !/nonce/i.test(seenBody));
+  // Cached per range: a re-render must not refetch.
+  const calls = [];
+  w.fetch = function (u, i) { calls.push(1); return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { availability: {} } }) }); };
+  const cbx = root.querySelector('.dccs-card input[data-cmp]');
+  if (cbx) { cbx.checked = true; cbx.dispatchEvent(new w.Event('change', { bubbles: true })); }
+  await flush();
+  ok('a re-render does not refetch the same date range', calls.length === 0);
+});
+
+// ---- 68b. a failing endpoint is asked ONCE, not in a loop ----
+// The resolve handler calls rerender(), which calls back into the lookup. Until
+// 0.24.0 an 'error' status was not treated as settled, so a down endpoint got
+// hammered in a tight loop by every visitor on the results page.
+defer(async function () {
+  const w = freshDom('https://example.com/?in=2026-09-10&out=2026-09-13');
+  let calls = 0;
+  w.fetch = function () { calls++; return Promise.reject(new Error('down')); };
+  const root = mountSelector(w, availConfig());
+  for (let i = 0; i < 12; i++) { await flush(); }
+  ok('a failing endpoint is called exactly once', calls === 1);
+  ok('and the failure note is shown', !!root.querySelector('.dccs-avail-note.is-error'));
+  // Changing the dates is allowed to try again.
+  root.querySelector('.dccs-edit-answers').click();
+  const back = root.querySelector('.dccs-edit[data-step="0"]');
+  if (back) { back.click(); }
+  // Each change re-renders, so re-query between the two inputs.
+  const setDate = (sel, v) => {
+    const el = root.querySelector(sel);
+    if (!el) { return false; }
+    el.value = v; el.dispatchEvent(new w.Event('change', { bubbles: true }));
+    return true;
+  };
+  const got = setDate('.dccs-date-in', '2026-10-01') && setDate('.dccs-date-out', '2026-10-04');
+  for (let i = 0; i < 8; i++) { await flush(); }
+  ok('a new date range gets a fresh attempt', got && calls === 2);
+});
+
+// ---- 68. every cottage carries a MotoPress room-type id ----
+(function () {
+  const cottages = JSON.parse(CONFIG).cottages;
+  ok('all eight cottages have a roomTypeId',
+    cottages.length === 8 && cottages.every(c => Number.isInteger(c.roomTypeId) && c.roomTypeId > 0));
+  ok('room-type ids are unique', new Set(cottages.map(c => c.roomTypeId)).size === 8);
+})();
+
+(async function runDeferred() {
+  for (const fn of deferred) {
+    try { await fn(); }
+    catch (e) { ok('deferred block threw: ' + (e && e.message), false); }
+  }
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})();

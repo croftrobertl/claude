@@ -61,7 +61,7 @@ class Selector_Widget extends Widget_Base
     {
         // List the whole chain so the data layer is guaranteed present at boot,
         // on the front-end and in the Elementor editor preview alike.
-        return ['dccs-score', 'dccs-labels', 'dccs-selector'];
+        return ['dccs-score', 'dccs-labels', 'dccs-availability', 'dccs-selector'];
     }
 
     public function get_style_depends(): array
@@ -120,6 +120,7 @@ class Selector_Widget extends Widget_Base
     protected function register_controls(): void
     {
         $this->register_content_controls();
+        $this->register_availability_controls();
         $this->register_design_source_controls();
         $this->register_icon_controls();
         $this->register_qa_icon_controls();
@@ -199,6 +200,38 @@ class Selector_Widget extends Widget_Base
      * Mini Entry overrides this method to a no-op, so the controls appear only on the
      * Selector.
      */
+    /**
+     * Availability lookup. OFF by default — turning it on makes this plugin's only
+     * runtime request, to the MPHB Availability Calendar plugin's public read-only
+     * endpoint (admin-ajax action mphbac_query, no nonce by design so full-page
+     * caches cannot stale it). With it off the widget behaves exactly as before.
+     */
+    protected function register_availability_controls(): void
+    {
+        $this->section('availability', [
+            'label' => __('Availability', 'dcc-cottage-selector'),
+            'tab'   => Controls_Manager::TAB_CONTENT,
+        ]);
+
+        $this->preset_control('avail_enable', [
+            'label'        => __('Check availability for the guest\'s dates', 'dcc-cottage-selector'),
+            'description'  => __('Adds an optional dates step. Cottages booked for those dates are still shown, ranked below the free ones and clearly marked. Requires the MPHB Availability Calendar plugin to be active.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SWITCHER,
+            'default'      => '',
+            'return_value' => 'yes',
+        ]);
+
+        $this->preset_control('avail_calendar_url', [
+            'label'       => __('Availability calendar page', 'dcc-cottage-selector'),
+            'description' => __('Optional. A cottage shown as booked links here so the guest can pick other dates.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::URL,
+            'options'     => false,
+            'condition'   => ['avail_enable' => 'yes'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
     protected function register_design_source_controls(): void
     {
         $this->section('design_source', [
@@ -1469,6 +1502,15 @@ class Selector_Widget extends Widget_Base
             'showReview'       => ($settings['show_review'] ?? '') === 'yes',
             'showCompareTip'   => ($settings['show_compare_tip'] ?? '') === 'yes',
             'capacityFeeUrl'   => esc_url_raw((string) ($settings['capacity_fee_url']['url'] ?? '')),
+            'availability'     => [
+                'enabled'     => ($settings['avail_enable'] ?? '') === 'yes',
+                // admin_url() is the canonical endpoint; it is same-origin, so no
+                // CORS and no credentials needed for this read-only GET/POST.
+                'ajaxUrl'     => function_exists('admin_url') ? admin_url('admin-ajax.php') : '',
+                'action'      => 'mphbac_query',
+                'calendarUrl' => esc_url_raw((string) ($settings['avail_calendar_url']['url'] ?? '')),
+                'maxNights'   => 95,
+            ],
             'petFeeUrl'        => esc_url_raw((string) ($settings['pet_fee_url']['url'] ?? '')),
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
@@ -1547,6 +1589,7 @@ class Selector_Widget extends Widget_Base
             'showReview'   => $snap['showReview'] ?? false,
             'showCompareTip' => $snap['showCompareTip'] ?? false,
             'capacityFeeUrl' => $snap['capacityFeeUrl'] ?? '',
+            'availability'   => $snap['availability'] ?? ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
             'petFeeUrl'      => $snap['petFeeUrl'] ?? '',
             'icons'        => $snap['icons'] ?? [],
             'iconSides'    => $snap['iconSides'] ?? [],
