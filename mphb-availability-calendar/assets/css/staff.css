@@ -24,9 +24,14 @@
     --staff-stay: #334155;      /* mid-stay   — white text 10.4:1 */
     /* app-layer tokens, mirrored from widget.css */
     --staff-header:     #0A50B2;
-    --staff-nav-bg:     #C43A3A;
-    --staff-nav-text:   #ffffff;
-    --staff-nav-hover:  #078732;
+    /* Nav defaults are the PUBLIC widget's LIVE values on /cottages/, not the
+       public widget's plugin defaults — so a fresh install matches that page
+       with no Elementor edits. The dccac_staff "Navigation" style section
+       overrides these per instance; the shortcode has only these. */
+    --staff-nav-bg:     #0A50B2;
+    --staff-nav-text:   #FFFFFF;
+    --staff-nav-hover:  #FFA000;
+    --staff-nav-radius: 30px;
     --staff-frame:      #e0e0e0;
     --staff-namecol:    #F8F9FA;
     --staff-namecol-alt:#F1F3F5;
@@ -129,7 +134,7 @@
     min-height: 44px;
     padding: 0 4px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--staff-nav-radius, 30px);
     background: var(--staff-nav-bg);
     color: var(--staff-nav-text);
     /* 16px to match .mphbac-nav-btn exactly; the chevron is sized in px
@@ -266,7 +271,10 @@
 .mphbac-staff-corner {
     left: 0;
     z-index: 5;                        /* wins both intersections */
-    align-items: flex-start;
+    /* Centred both ways (the base rule is a centred flex column; this used to
+       override the cross axis to flex-start). */
+    align-items: center;
+    text-align: center;
     padding: 0 10px;
     border-right: 2px solid var(--staff-frame);
     font-weight: 700;

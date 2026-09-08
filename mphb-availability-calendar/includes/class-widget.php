@@ -581,6 +581,17 @@ class Widget extends Widget_Base
             ],
         ]);
 
+        $this->add_control('nav_btn_radius', [
+            'label'      => __('Button corner radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            // NO default, deliberately. This control exists so the two widgets
+            // expose the same list; giving it one would emit a border-radius
+            // that overrides whatever already shapes an existing nav.
+            'range'      => ['px' => ['min' => 0, 'max' => 40, 'step' => 1], '%' => ['min' => 0, 'max' => 50, 'step' => 1]],
+            'selectors'  => [self::SEL . '.mphbac-nav-btn' => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
+
         $this->add_control('nav_label_color', [
             'label'     => __('Date-range label color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
@@ -773,7 +784,7 @@ class Widget extends Widget_Base
         ]);
 
         $strings = [
-            'str_property'      => [__('Cottage-column header label', 'mphb-availability-calendar'), __('Property', 'mphb-availability-calendar')],
+            'str_property'      => [__('Cottage-column header label', 'mphb-availability-calendar'), __('Cottages', 'mphb-availability-calendar')],
             'str_checkin'       => [__('Check-in label', 'mphb-availability-calendar'), __('Check-in', 'mphb-availability-calendar')],
             'str_checkout'      => [__('Check-out label', 'mphb-availability-calendar'), __('Check-out', 'mphb-availability-calendar')],
             'str_apply'         => [__('Apply button', 'mphb-availability-calendar'), __('Apply', 'mphb-availability-calendar')],

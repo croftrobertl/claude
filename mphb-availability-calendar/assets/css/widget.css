@@ -112,13 +112,8 @@
     .mphbac-cell-label:has(.mphbac-label-num:not(:empty)) .mphbac-label-abbrev {
         display: none;
     }
-    .mphbac-cell-label .mphbac-label-num {
-        opacity: 1;
-        font-size: 1em;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: 0.02em;
-    }
+    /* Type scale is now set once, above, at (0,4,0) — this block only has to
+       decide WHAT SHOWS on a phone (the number alone), not how it looks. */
     /* Center the #N inside the data-row cottage cells so the column reads
        as an intentional ID column rather than a left-jammed remnant of
        the pre-v0.9.8 two-line layout. Doubled-class prefix outranks
@@ -526,6 +521,56 @@
     flex-basis: 100%;
 }
 
+/* ---- Cottage cells: the staff calendar's row-label treatment (0.23.4) ----
+   Values mirror .mphbac-staff-rowlabel in staff.css: number 16px/700 with
+   tabular figures, the short name beneath at 11px/600 in the muted slate,
+   2px apart, line-height 1.15. The backgrounds were ALREADY the staff pair
+   (--mphbac-color-namecol #F8F9FA / -alt #F1F3F5) and are unchanged.
+
+   Specificity (0,4,0): the cell is a <button>, so the theme's button rules
+   (Bravada's reset is (0,3,1), plus a global family rule) otherwise win on
+   family, size and weight alike — that is why size and weight are pinned
+   here and not only the family. Not !important; an Elementor control still
+   overrides, since its selector carries {{WRAPPER}} on top of the same
+   doubled root.
+
+   ORDER: the markup emits abbrev then num, so the number is pulled to the
+   top with `order` rather than by changing the markup — the custom-label
+   override (.mphbac-label-custom, no siblings) is untouched either way. */
+/* The family has to be pinned on the BUTTON, not on the spans: the theme
+   rule targets `button`, so a span's `font-family: inherit` faithfully
+   inherits the theme face from its own parent. Class-doubled (0,2,0) beats
+   the (0,1,1) kit rule — the same pattern as .mphbac-btn in 0.23.2. */
+.mphbac-cell-label.mphbac-cell-label {
+    font-family: inherit;
+}
+.mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-num,
+.mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-abbrev,
+.mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-custom {
+    font-family: inherit;
+    line-height: 1.15;
+}
+.mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-num {
+    order: -1;
+    opacity: 1;
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+.mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-abbrev {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5b6470;
+}
+/* 16px + 2px + 11px at 1.15 is ~33px; with the old 8px block padding that is
+   49px and would push the 45px row taller, so data-row padding is trimmed.
+   Scoped off the header row, which keeps its own padding. */
+.mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label {
+    gap: 2px;
+    padding: 4px 8px;
+}
+
 .mphbac-label-num {
     opacity: 0.7;
     font-size: 0.85em;
@@ -621,6 +666,15 @@
     text-transform: capitalize;
     cursor: default;
     border-right-color: rgba(255, 255, 255, 0.15);
+}
+/* Corner cell centred (0.23.4). It was left-aligned by design; Rob wants it
+   centred in both widgets. Doubled root prefix to reach (0,4,0) — the base
+   .mphbac-cell-label sets justify-content: flex-start, and Bravada's button
+   reset is (0,3,1). COLOURS ARE DELIBERATELY UNTOUCHED: the live page has an
+   Elementor override making this white on the header blue. */
+.mphbac-root.mphbac-root .mphbac-row-header .mphbac-cell-label {
+    justify-content: center;
+    text-align: center;
 }
 
 .mphbac-cell-status {

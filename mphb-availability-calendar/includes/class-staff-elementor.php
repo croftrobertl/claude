@@ -60,7 +60,76 @@ final class Staff_Elementor extends Widget_Base
         return ['mphbac-staff'];
     }
 
+    /**
+     * Wrapper-scoped, class-doubled — the same specificity strategy
+     * Widget::SEL uses ({{WRAPPER}} .mphbac-root.mphbac-root), so these beat
+     * the theme's button rules without !important.
+     */
+    private const SEL = '{{WRAPPER}} .mphbac-staff.mphbac-staff ';
+
     protected function register_controls(): void
+    {
+        $this->register_content_controls();
+        $this->register_nav_style_controls();
+    }
+
+    /**
+     * Deliberately mirrors Widget::register_nav_style_controls() control for
+     * control, so a future restyle can be applied to both widgets by hand
+     * without translating between two different control sets. Only the
+     * DEFAULTS differ: the staff calendar ships with the values the public
+     * nav actually renders on /cottages/, so it matches out of the box.
+     */
+    protected function register_nav_style_controls(): void
+    {
+        $this->start_controls_section('section_style_nav', [
+            'label' => __('Navigation', 'mphb-availability-calendar'),
+            'tab'   => Controls_Manager::TAB_STYLE,
+        ]);
+
+        $this->add_control('nav_btn_bg', [
+            'label'     => __('Button background', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#0A50B2',
+            'selectors' => [self::SEL . '.mphbac-staff-nav' => 'background-color: {{VALUE}};'],
+        ]);
+
+        $this->add_control('nav_btn_text', [
+            'label'     => __('Button arrow color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFFFFF',
+            'selectors' => [self::SEL . '.mphbac-staff-nav' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->add_control('nav_btn_hover_bg', [
+            'label'     => __('Button hover background', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFA000',
+            'selectors' => [
+                self::SEL . '.mphbac-staff-nav:hover'         => 'background-color: {{VALUE}};',
+                self::SEL . '.mphbac-staff-nav:focus-visible' => 'background-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('nav_btn_radius', [
+            'label'      => __('Button corner radius', 'mphb-availability-calendar'),
+            'type'       => Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'default'    => ['size' => 30, 'unit' => 'px'],
+            'range'      => ['px' => ['min' => 0, 'max' => 40, 'step' => 1], '%' => ['min' => 0, 'max' => 50, 'step' => 1]],
+            'selectors'  => [self::SEL . '.mphbac-staff-nav' => 'border-radius: {{SIZE}}{{UNIT}};'],
+        ]);
+
+        $this->add_control('nav_label_color', [
+            'label'     => __('Month/day label color', 'mphb-availability-calendar'),
+            'type'      => Controls_Manager::COLOR,
+            'selectors' => [self::SEL . '.mphbac-staff-title' => 'color: {{VALUE}};'],
+        ]);
+
+        $this->end_controls_section();
+    }
+
+    protected function register_content_controls(): void
     {
         $this->start_controls_section('section_staff', [
             'label' => __('Staff Calendar', 'mphb-availability-calendar'),

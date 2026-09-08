@@ -240,7 +240,7 @@
             // header row
             var corner = document.createElement('div');
             corner.className = 'mphbac-staff-corner';
-            corner.textContent = S.cottage || 'Cottage';
+            corner.textContent = S.cottage || 'Cottages';
             corner.style.gridRow = '1';
             corner.style.gridColumn = '1';
             chart.appendChild(corner);

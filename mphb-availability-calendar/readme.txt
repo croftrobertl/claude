@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.3
+Stable tag: 0.23.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.4 =
+* **The staff calendar's navigation now matches the main calendar's** out of the box — same blue buttons, white chevrons, amber hover and pill shape, with no Elementor editing needed. The staff widget also gains the same Navigation style settings the main widget has (button colour, arrow colour, hover colour, corner radius, label colour), so both can be restyled the same way.
+* The main widget gains a matching "Button corner radius" setting. It is deliberately left blank so nothing about existing calendars changes.
+* **Both calendars' first column now reads "Cottages", centred.**
+* **The cottage cells on the main calendar now use the staff calendar's look:** the number large and bold with the short cottage name beneath it in smaller grey, on the same soft alternating backgrounds. On phones the cell shows the number alone, as before. Row height and column width are unchanged.
+* The cottage number no longer has a "#" in front of it, matching the staff calendar's cleaner look.
+* Fixed along the way: the cottage cells were being drawn in the theme's button font rather than the site font. Pinning the font on the cell itself (rather than the text inside it) was needed, since text inside a button inherits the button's font.
+* The Today button behaviour is unchanged on both calendars.
 
 = 0.23.3 =
 * **Staff calendar arrows now match the public one exactly** — the same chevrons, size, colour and hover. The staff page was still using thin text arrows. Its buttons also now use the site font instead of the one the theme was forcing on them.

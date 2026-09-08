@@ -415,6 +415,46 @@ PHP on every run — a stale shell silently tested the previous release's
 markup. `nav/public-ui-test.js` reproduces the theme's inherited grey and the
 (0,1,1) button rule, and extracts the booking sheet from `class-widget.php`.
 
+## Cross-widget style parity (0.23.4)
+
+Both widgets expose the SAME nav control list — `nav_btn_bg`,
+`nav_btn_text`, `nav_btn_hover_bg`, `nav_btn_radius`, `nav_label_color` —
+so a restyle can be mirrored by hand. Only the DEFAULTS differ:
+
+- `dccac_staff` defaults to the public nav's LIVE values on /cottages/
+  (#0A50B2 / #FFFFFF / #FFA000 / 30px), baked into staff.css as
+  `--staff-nav-bg/-text/-hover/-radius` as well, because the shortcode has
+  no Elementor CSS and Elementor's cached per-post CSS does not regenerate
+  on a plugin update.
+- The public `nav_btn_radius` has NO default on purpose: an emitted value
+  would override whatever already shapes an existing nav.
+- `Staff_Elementor::SEL` is `{{WRAPPER}} .mphbac-staff.mphbac-staff `,
+  mirroring `Widget::SEL`.
+
+**Font on a <button> comes from the BUTTON, not its spans.** The theme rule
+targets `button`, so `font-family: inherit` on a child span faithfully
+inherits the theme face from its own parent. `.mphbac-cell-label` therefore
+carries the class-doubled `font-family: inherit`; the spans only set size,
+weight and colour. Caught by the harness, not by inspection.
+
+Public cottage cells now mirror `.mphbac-staff-rowlabel`: number 16px/700
+tabular, short name beneath 11px/600 #5b6470, 2px gap, line-height 1.15, on
+the existing `--mphbac-color-namecol` / `-alt` pair. The number is pulled
+above the name with `order: -1` rather than by reordering the markup, so the
+custom-label override is untouched. Data-row padding is 4px 8px (was 8px
+12px) so 16+2+11 at 1.15 fits the 45px row; the header row keeps its own.
+The number is now bare ("22", no "#").
+
+**Two things on /cottages/ are page settings, not plugin defaults** — the
+plugin cannot and should not override them:
+- `label_style` = `number_only` on that widget hides the cottage name at
+  every width. The plugin default is `abbrev_number` (two-line), which is
+  what item 3 asks for. The mobile-only collapse is a SEPARATE, correctly
+  media-scoped `:has()` rule in the 600px block.
+- `namecol_bg` is set to #C9C9C9 there; the plugin default has always been
+  #F8F9FA. Same for `str_property` ("Cottage" vs the new "Cottages"
+  default) and any `namecol_typography` override.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

@@ -1467,7 +1467,9 @@
                         '<span class="mphbac-label-abbrev"></span>' +
                         '<span class="mphbac-label-num"></span>';
                     labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
-                    labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
+                    // Bare number ("22"), matching the staff calendar's scale.
+                    // The "#" was dropped in 0.23.4.
+                    labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? String(room.number) : '';
                 }
                 row.appendChild(labelBtn);
             }

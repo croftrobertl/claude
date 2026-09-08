@@ -71,7 +71,7 @@ final class Staff_Widget
                 'denied'       => __('Not authorized.', 'mphb-availability-calendar'),
                 'empty'        => __('No bookings this month.', 'mphb-availability-calendar'),
                 'today'        => __('Today', 'mphb-availability-calendar'),
-                'cottage'      => __('Cottage', 'mphb-availability-calendar'),
+                'cottage'      => __('Cottages', 'mphb-availability-calendar'),
                 'checkIn'      => __('Check-in', 'mphb-availability-calendar'),
                 'checkOut'     => __('Check-out', 'mphb-availability-calendar'),
                 'staying'      => __('Staying', 'mphb-availability-calendar'),
