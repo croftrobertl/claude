@@ -178,6 +178,19 @@
 .dccwl-app *::before,
 .dccwl-app *::after { box-sizing: border-box; }
 
+/* The Elementor kit styles EVERY <button> on the site — Rob's sets
+ * text-transform: capitalize and a wide letter-spacing, meant for real
+ * buttons. Our tiles, doors and month cells are buttons too, so on the phone
+ * "10 species at their peak" came out as "10 Species At Their Peak" and the
+ * spaced-out "September" overflowed its cell. `font: inherit` undoes neither
+ * property (they are not part of the font shorthand), so reset them here,
+ * one notch above the kit's `.elementor-kit-N button` (0,1,1). Deliberate
+ * caps in this plugin live on spans and paragraphs, never on a button. */
+.dccwl-app.dccwl-app button {
+	letter-spacing: normal;
+	text-transform: none;
+}
+
 .dccwl-sr {
 	clip: rect(0 0 0 0);
 	clip-path: inset(50%);

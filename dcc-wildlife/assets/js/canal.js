@@ -378,6 +378,70 @@
 			btn.addEventListener('click', back);
 		});
 
+		/* ---------- sticky offset (1.18.1) ----------
+		 * The level bar is position: sticky; top: var(--dccwl-sticky-offset).
+		 * Rob's theme header is sticky too, and on the phone it sat exactly
+		 * over the bar. Measure whatever fixed or sticky element owns the top
+		 * edge of the viewport — a theme header, the WP admin bar — and push
+		 * the bar down below it. A theme that sets --dccwl-sticky-offset
+		 * itself keeps its value: this only runs while the token is 0. */
+		var stickyAuto = (function () {
+			var v = '';
+			try { v = String(getComputedStyle(root).getPropertyValue('--dccwl-sticky-offset') || ''); } catch (e) { return false; }
+			return '' === v.trim() || parseFloat(v) === 0;
+		})();
+		var stickyLast = -1, stickyQueued = false;
+
+		// The bottom edge of the fixed/sticky bar covering (x, y), or 0.
+		function barBottomAt(x, y, h) {
+			var top = document.elementFromPoint(x, y);
+			if (!top || root.contains(top)) { return 0; }
+			for (var e = top; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+				var pos = getComputedStyle(e).position;
+				if (pos !== 'fixed' && pos !== 'sticky') { continue; }
+				var r = e.getBoundingClientRect();
+				// Covers this point, and is a bar, not a full-screen overlay.
+				return (r.top <= y && r.bottom > y && r.bottom < h * 0.4) ? Math.ceil(r.bottom) : 0;
+			}
+			return 0;
+		}
+
+		function coveringHeight() {
+			var w = window.innerWidth || 0, h = window.innerHeight || 0, best = 0;
+			if (!w || !h || !document.elementFromPoint) { return 0; }
+			[0.5, 0.08, 0.92].forEach(function (fx) {
+				// Bars stack: the admin bar over a theme header that starts
+				// below it. Walk down through whatever covers the top edge
+				// until the point is on ordinary page content (at most four
+				// bars — nobody stacks more than that).
+				var x = Math.round(w * fx), y = 1, n = 0, b;
+				while (n++ < 4 && (b = barBottomAt(x, y, h)) > y) { y = b + 1; }
+				best = Math.max(best, y - 1);
+			});
+			return best;
+		}
+
+		function applySticky() {
+			stickyQueued = false;
+			var px = coveringHeight();
+			if (px === stickyLast) { return; }
+			stickyLast = px;
+			root.style.setProperty('--dccwl-sticky-offset', px + 'px');
+		}
+
+		function queueSticky() {
+			if (stickyQueued) { return; }
+			stickyQueued = true;
+			(window.requestAnimationFrame || function (f) { setTimeout(f, 16); })(applySticky);
+		}
+
+		if (stickyAuto) {
+			window.addEventListener('scroll', queueSticky, { passive: true });
+			window.addEventListener('resize', queueSticky);
+			window.addEventListener('load', queueSticky);
+			queueSticky();
+		}
+
 		buildMonths();
 		fillYearNote();
 		fillWildlifePreview();

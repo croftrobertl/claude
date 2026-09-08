@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.18.0
+Stable tag: 1.18.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,14 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.18.1 =
+* Fixes from the owner's phone review of 1.18.0.
+* The theme's global button typography (capitalize + letter-spacing) no longer reaches our tiles: "10 species at their peak" reads as a sentence again.
+* The month picker can no longer run off the right edge of a phone: three shrinking columns and a viewport-scaled month name.
+* The sticky level bar measures whatever fixed or sticky bar owns the top of the viewport (theme header, admin bar, both) and sits below it. A theme that sets --dccwl-sticky-offset itself is left alone.
+* Restores the month-filtered species grid, the "nothing in this group is likely in <month>" line and the four-level likelihood key in every sheet. Their JavaScript was reverted by a test-restore step seconds before the 1.18.0 commit; the PHP and CSS halves had shipped without it.
+* Water Atlas data-set codes ("SJRWMD_HYDRO") read as their agency on the hub's Water door.
 
 = 1.18.0 =
 * **Navigation you can see.** Every screen below the hub opens with a level bar — Back on the left, "Wildlife › September" in the middle — on its own tinted ground, sticky so Back is always within reach on a phone. Controls and content no longer share a surface: the month strip sits on a tinted band, the three categories are one segmented switch, and the species tiles are the only white cards.

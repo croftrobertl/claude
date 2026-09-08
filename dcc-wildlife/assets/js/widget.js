@@ -202,6 +202,22 @@
 				row.appendChild(cell);
 			});
 			wrap.appendChild(row);
+			// The key (1.18.0): every bar height/colour above, named. The bars
+			// were decoration with a screen-reader reading; sighted guests had
+			// no way to know what a tall coral bar meant.
+			var key = el('ul', 'dccwl-like-key');
+			key.setAttribute('aria-label', CFG.i18n.likeKey || 'Key');
+			names.forEach(function (name, level) {
+				var item = el('li', 'dccwl-like-key-item');
+				var sample = el('span', 'dccwl-like-cell dccwl-like-' + level + ' dccwl-like-sample');
+				var sb = el('span', 'dccwl-like-bar');
+				sb.setAttribute('aria-hidden', 'true');
+				sample.appendChild(sb);
+				item.appendChild(sample);
+				item.appendChild(el('span', 'dccwl-like-key-name', name || ''));
+				key.appendChild(item);
+			});
+			wrap.appendChild(key);
 			return wrap;
 		}
 
@@ -569,12 +585,34 @@
 				if (old) { old.parentNode.removeChild(old); }
 				if (!sp || !sp.months) { return; }
 				var v = sp.months[state.month] || 0;
-				// One signal only, matching the spotlight: the coral "Peak" flag
-				// on species at their best this month. Everything else stays a
-				// plain icon-and-name tile, so the grid reads calm.
+				// 1.18.0: on the hub the grid IS the month view (the spotlight
+				// strip that duplicated it is gone), so a species that is not
+				// likely this month is not shown. Same threshold the strip used.
+				var li = tile.closest('li');
+				if (li) { li.hidden = v < 2; }
+				// One signal only: the coral "Peak" flag on species at their best
+				// this month. Everything else stays a plain icon-and-name tile.
 				if (v < 3) { return; }
 				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
 			});
+			updateGuideEmpty();
+		}
+
+		/* When a whole category has nothing likely this month, say so rather
+		 * than showing an empty grid (1.18.0). */
+		function updateGuideEmpty() {
+			var note = root.querySelector('[data-dccwl-guide-empty]');
+			if (!note) { return; }
+			var grid = root.querySelector('.dccwl-guide-grid:not([hidden])');
+			var visible = grid ? grid.querySelectorAll('li:not([hidden])').length : 1;
+			if (visible) {
+				note.hidden = true;
+				note.textContent = '';
+			} else {
+				note.textContent = fmt(CFG.i18n.guideEmpty || 'Nothing in this group is likely in %s.',
+					(CFG.monthsFull && CFG.monthsFull[state.month]) || '');
+				note.hidden = false;
+			}
 		}
 
 		function initGuide() {
@@ -594,6 +632,7 @@
 					grids.forEach(function (g) {
 						g.hidden = g.getAttribute('data-dccwl-group') !== group;
 					});
+					updateGuideEmpty();
 				});
 			});
 		}

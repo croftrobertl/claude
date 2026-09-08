@@ -1059,13 +1059,28 @@ final class Water_Live {
 	 *
 	 * @param array<string,mixed> $c
 	 */
+	/**
+	 * Atlas data-set names are machine codes ("SJRWMD_HYDROLOGIC…"). On the
+	 * hub's Water door that truncated to "SJRWMD_HYD…" (1.18.0 review). A code
+	 * — capitals and digits joined by underscores, no spaces — is reduced to
+	 * its agency prefix; anything already readable passes through untouched.
+	 */
+	private static function humanize_dataset( string $name ): string {
+		$name = trim( $name );
+		if ( preg_match( '/^[A-Z0-9]+(?:_[A-Z0-9]+)+$/', $name ) ) {
+			return (string) strtok( $name, '_' );
+		}
+
+		return $name;
+	}
+
 	private static function atlas_source_name( array $c, string $fallback ): string {
 		$station = self::comp_str( $c, 'stationId' );
 		$source  = self::comp_str( $c, 'dataSetName' );
 		if ( '' === $source ) {
 			$source = self::comp_str( $c, 'source' );
 		}
-		$who = '' !== $source ? $source : $fallback;
+		$who = '' !== $source ? self::humanize_dataset( $source ) : $fallback;
 
 		return '' !== $station
 			? sprintf(

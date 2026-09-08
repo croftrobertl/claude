@@ -959,3 +959,24 @@ rounded boxes at the same weight. The rule now:
 - **The hub emits its own `<noscript>`** — `Render`'s lives inside a panel
   the hub keeps hidden.
 - **The standalone widget seeds its month with `canalToday()`**, like the hub.
+
+## 1.18.1 — what the phone review of 1.18.0 taught (keep these)
+
+- **The site's Elementor kit styles every `<button>`** (capitalize + letter-spacing).
+  Tiles, doors and month cells are buttons. `font: inherit` undoes neither
+  property, so `app.css` resets both at `.dccwl-app.dccwl-app button` (0,2,1).
+  Never put deliberate caps on a button; use a span or paragraph.
+- **Grids on phones use `minmax(0, 1fr)`**, never bare `1fr` (its floor is the
+  content's min-width, which is how "September" pushed the month grid off
+  screen). `review118.js` checks page and grid width at 393 and 320.
+- **The level bar finds the sticky header itself** (`canal.js`, `coveringHeight`):
+  it probes the top edge of the viewport, walks down through stacked fixed or
+  sticky bars, and writes `--dccwl-sticky-offset` inline on the root. It only
+  runs while the token is 0 — a theme that sets the token keeps its value.
+- **Mutation tests restore from a copy, never with `git checkout -- <file>`.**
+  That command reverts the file to the last COMMIT, and on 6 Sep it silently
+  discarded the uncommitted 1.18.0 widget.js seconds before the commit. Use
+  `cp file file.bak` … `mv file.bak file`, and re-run the whole harness AFTER
+  the restore and BEFORE the commit — never trust a run that preceded it.
+- **Atlas data-set codes** (`SJRWMD_HYDRO`) are reduced to their agency by
+  `Water_Live::humanize_dataset()`; readable names pass through.

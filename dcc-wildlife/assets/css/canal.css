@@ -336,11 +336,15 @@
 .dccwl-month-name {
 	font-size: 1.0625rem;
 	font-weight: 700;
+	max-width: 100%;
+	overflow-wrap: anywhere;
 }
 
 .dccwl-month-preview {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
+	max-width: 100%;
+	overflow-wrap: anywhere;
 }
 
 /* "April and May are the canal's fullest months" — the planning line under the
@@ -472,7 +476,14 @@
 @media (max-width: 600px) {
 	.dccwl-hub-tiles { grid-template-columns: 1fr; max-width: 340px; }
 	.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile { min-height: 152px; }
-	.dccwl-month-tiles { grid-template-columns: repeat(3, 1fr); }
+	/* Three columns that SHRINK: `1fr` alone means minmax(auto, 1fr), so a
+	 * bold "September" set the column's floor and the third column ran off
+	 * the right edge of the phone (1.18.0 review). minmax(0, 1fr) plus a
+	 * viewport-scaled name keeps the grid inside the page at 320px. */
+	.dccwl-month-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.dccwl-month-tiles > li { min-width: 0; }
+	.dccwl-canal .dccwl-month-tile.dccwl-month-tile { min-width: 0; padding-left: 4px; padding-right: 4px; }
+	.dccwl-month-name { font-size: clamp(0.875rem, 4.2vw, 1.0625rem); }
 	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
 }
 
