@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.14.0
+Stable tag: 3.15.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,64 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.15.0 =
+* FIXED: "sprites only show up in the area underneath the hero image and above
+  the DCC Cottage Selector widget." They were being seeded evenly over the
+  CANVAS, and on a phone the canvas is mostly page that paints over it. The
+  occlusion map of the live article at 375px: from the article top (456) to
+  the selector (1,685) is 99-100% open — the band that was working — and below
+  it, eight full-bleed room cards and 270 painted calendar cells leave 300px
+  bands that are 14/69/17/39/51/8/48/32/26/51/11/48 percent open. 57% of the
+  column is open by area and almost none of it can hold a whole sprite.
+* Seeding now asks the page where a sprite can be seen. The same hit test the
+  mount already uses (what paints here, and is it inside the host and
+  therefore above the canvas?) runs over a coarse grid of the canvas's
+  on-screen box — 48px cells, 136 of them on a 375x812 phone — and the
+  guardrail draws its candidates from the open cells only. Its even-share rule
+  is computed over the OPEN cells too: a third of a canvas that is 15% visible
+  is not a third of what anyone can see, which is why the old rule still
+  looked random below the fold. Crossers entering from an edge pick their band
+  from open rows on that side. On a fixture built to the band profile above,
+  respawns landing where a sprite can be seen went from 35.7% (3.14.0, which
+  is simply the open fraction of the page) to 86.3%. On the florida_keys theme
+  the live site runs, 54.9% of on-screen sprite-seconds are now spent on open
+  page.
+* The map is rebuilt on scroll-settle, on a real resize, after the settled
+  mount pass and after a re-mount — never per frame, and never more than once
+  every 400ms. Measured at 1.2-1.8ms a build. If under 10% of the sampled page
+  is open it is ignored and seeding falls back to even coverage, so a fully
+  painted page still gets its full field rather than ten sprites in one
+  gutter. Cells below the fold are unknown, not covered: they stay in the
+  candidate pool but are left out of the open fraction.
+* FIXED: "clumping isn't as bad but still needs to be better." The 3.14.0
+  guardrail was seed-only, so free-air motion re-bunched the field within a
+  minute. Free-air sprites now push each other apart with a soft force that
+  fades to nothing at the spacing target — no teleports, no jitter, clamped so
+  a nudge can never push a sprite over an edge and restart it, and never
+  applied to anything placed on purpose (water-line riders, growers,
+  off-screen entrances, the hero). At most 16 particles is at most 120 pairs:
+  0.002-0.011ms a frame. At density 10 a field's closest pair after 10 seconds
+  of running went from 49px to 76px; over 200 seedings the worst ninth held 2
+  of 10 and no field ever held 4 in one.
+* At density 12 or below the seeding pass looks harder (16 candidate throws
+  instead of 8) and asks for more room (0.6 of the lattice pitch instead of
+  0.45). Both numbers, and the map, are printed by ?dcc_debug=1.
+* Retired four sprites that were not good enough: the cork (it read as a
+  mushroom — it was renamed `popper` in 3.2.0), both whoopee-cushion frames,
+  and the legless frog. The April Fools' chatterer is now the disguise, the
+  Spring Canal pad-hopper is now a dragonfly (which is what that behaviour
+  actually looks like), and the New Year's cork is the same theme's sparkle on
+  the same arc. tools/validate-paths.js now also resolves every sprite
+  reference — the plain form, the array form, the $variable form, computed
+  'prefix' + n keys and theme heroes — and fails the build on a dangling one:
+  106 sprites, 98 references, 0 dangling, 0 unreferenced.
+* engine.min.js is 93,845 raw / 32,920 gzipped. Retiring the four sprites paid
+  for roughly three quarters of the new code; the net is +855 raw / +797
+  gzipped over 3.14.0. Note that the 66KB/23KB ceiling quoted for this release
+  has not been the real one since 3.6.0 — the shipped engine passed it with
+  the backdrop machinery and has been over it for eight releases (3.14.0 was
+  92,990 / 32,123).
 
 = 3.14.0 =
 * FIXED: "too many in the same area versus more evenly distributed throughout

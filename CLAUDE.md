@@ -279,6 +279,22 @@ bump so the tracked zip never lags the source.
   coordinates instead of re-seeding, restarting only when the box has more
   than doubled or halved. The host ResizeObserver goes through `queueSize`,
   not `applySize` directly.
+- **Seeding evenly over the CANVAS is not seeding evenly over what anyone
+  can SEE.** On a phone most of the content column paints over the backdrop:
+  the live homepage at 375px is 99-100% open from the article top to the
+  cottage selector and then a wall of full-bleed cards whose open remainder is
+  gutters — 57% open by area, almost none of it usable, which is why sprites
+  "only showed up in one band". `buildOpenMap()` samples the canvas's
+  on-screen box on 48px cells with the same painterAt question the mount asks,
+  and `spreadPlace()` draws its candidates from the open cells AND computes
+  its even share over them. Rebuild it on scroll-settle, on the resize path
+  and after the settled mount pass only — never per frame, never oftener than
+  MAP_MIN. Cells below the fold are UNKNOWN: they stay in the candidate pool
+  (nothing is known to paint there) but are excluded from the open fraction,
+  or a page whose visible part is solid reports itself open and the <10%
+  fallback never fires. Keep the build under 2ms: it is 136 hit tests on a
+  phone and `getComputedStyle` dominates, so each build stamps its verdict on
+  the element (`_dccPb`/`_dccPo`) and every ancestor answers once.
 - **Even spacing is a SEED-TIME rule, and it must stay one.** Uniform random
   placement bunches: measured over 200 fields of 16 particles at 390x844, the
   pre-3.14.0 engine put six or more into the same ninth of the canvas in 27 of
@@ -296,6 +312,21 @@ bump so the tracked zip never lags the source.
   spreads across x alone, against column totals — and note that pass counts
   OFF-SCREEN particles, which the ninth pass must not: without that, a field
   respawning together sees an empty grid and the guardrail does nothing.
+  Seeding is only half of it: free-air motion re-bunches a field within a
+  minute, so `deClump()` adds a soft pairwise separation for the free-air
+  behaviours ONLY (`FREEAIR`, space-delimited so a bare indexOf cannot match
+  'fly' inside 'firefly'), fading to nothing at the shared spacing target and
+  clamped inside the box so a nudge can never push a sprite over an edge and
+  restart it. It shares `sepRun` with the seeding pass so the two cannot pull
+  against each other. Never make it a hard constraint or a per-frame
+  re-placement.
+- **A theme naming a retired sprite draws NOTHING and says nothing.** There
+  are five ways a sprite key is named — `'s' => 'key'`, an array of keys, a
+  `$variable` of keys, a computed `'prefix' + n`, and the accent map — plus
+  hero `kind`s that are not sprites at all. `tools/validate-paths.js` resolves
+  all of them and fails the build on a dangling reference; run it after
+  touching `SVGS` or any theme. Sprite entries can be strings OR functions
+  (`jack1`, `plateny`), so key extraction must match both.
 - **`test-v21.js`'s bass-hero check is load-sensitive, not flaky-by-design.**
   It polls canvas pixels for 30s of WALL time waiting for a hero jump, so a
   machine busy with other Chromium instances runs too few animation frames in

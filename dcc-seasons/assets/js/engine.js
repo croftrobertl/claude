@@ -79,7 +79,6 @@
 		sabalpalm: '34 38|<path d="M14 38 L15 20 L19 20 L20 38 Z" fill="%p"/><path d="M14.6 25 L19.4 25 M14.4 30 L19.6 30 M14.2 35 L19.8 35" stroke="%i" stroke-width="1.1" fill="none"/><g fill="%c"><path id="fr" d="M17 19 L12.4 7.6 L14.6 10.4 L15.6 4.6 L17 8.6 L18.4 4.6 L19.4 10.4 L21.6 7.6 Z"/><use href="#fr" transform="rotate(30 17 19)"/><use href="#fr" transform="rotate(-30 17 19)"/><use href="#fr" transform="rotate(60 17 19)"/><use href="#fr" transform="rotate(-60 17 19)"/><use href="#fr" transform="rotate(88 17 19)"/><use href="#fr" transform="rotate(-88 17 19)"/><use href="#fr" transform="rotate(112 17 19)"/><use href="#fr" transform="rotate(-112 17 19)"/></g><g fill="%j"><path id="fs" d="M17 19 L14 10.6 L15.6 12.6 L17 8.6 L18.4 12.6 L20 10.6 Z"/><use href="#fs" transform="rotate(45 17 19)"/><use href="#fs" transform="rotate(-45 17 19)"/><use href="#fs" transform="rotate(74 17 19)"/><use href="#fs" transform="rotate(-74 17 19)"/></g><circle cx="17" cy="19" r="2.4" fill="%i"/>',
 		hibiscus: '30 30|<g fill="%e"><path id="pt" d="M15 16 C8.6 13.6 7 6 15 3 C23 6 21.4 13.6 15 16 Z"/><use href="#pt" transform="rotate(72 15 16)"/><use href="#pt" transform="rotate(144 15 16)"/><use href="#pt" transform="rotate(216 15 16)"/><use href="#pt" transform="rotate(288 15 16)"/></g><circle cx="15" cy="16" r="3.6" fill="%n"/><path d="M8.6 23 Q3 26.6 6 29 Q11 27.6 11.6 23.6 Z" fill="%j"/><path d="M15 16 L26.4 5.2" stroke="%k" stroke-width="1.8" fill="none"/><g fill="%a"><circle cx="21.6" cy="9.6" r="1"/><circle cx="23.6" cy="8" r="1.1"/><circle cx="25.4" cy="6.2" r="1.1"/></g><circle cx="26.6" cy="4.6" r="1.7" fill="%k"/><g fill="%u"><circle cx="25.6" cy="3.2" r="0.8"/><circle cx="27.6" cy="2.8" r="0.8"/><circle cx="28.4" cy="4.8" r="0.8"/></g>',
 		conch: '30 26|<path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q21.6 24.6 12.6 23 Z" fill="%s"/><path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q24.6 18.6 24 17 Q25 11 11.8 9.4 Z" fill="%o" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><path d="M14.6 9.6 Q23 12.6 22.6 19" fill="none" stroke="%u" stroke-width="1.2"/><path d="M3 15.6 Q2 8.6 6.6 4.6 L9.6 0.8 L11.8 5.4 Q15 8.4 15.8 13 Q17.4 19.6 12.4 23.4 L14 25.6 L10 24.2 Q4.6 22.6 3 15.6 Z" fill="%q" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><g fill="none" stroke="%t" stroke-width="0.9"><path d="M5.4 8 Q8.6 5.4 11 7.4"/><path d="M4 12.4 Q9 9 13.6 12"/><path d="M5.6 17.4 Q9.6 19.6 13.4 18.6"/></g><g fill="%f"><circle cx="5.6" cy="10" r="1.7"/><circle cx="9.4" cy="5.6" r="1.6"/><circle cx="13.4" cy="9" r="1.5"/><circle cx="14.8" cy="14.4" r="1.4"/></g>',
-		frog: '26 22|<path d="M3.4 14Q0.6 17 3.2 20M23 14Q25 17 23 20" fill="none" stroke="%c" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="13" cy="13" rx="11" ry="6.4" fill="%c"/><circle cx="6.4" cy="6.4" r="3.4" fill="%c"/><circle cx="19.6" cy="6.4" r="3.4" fill="%c"/><circle cx="6.4" cy="5.6" r="1.3" fill="%d"/><circle cx="19.6" cy="5.6" r="1.3" fill="%d"/><circle cx="6.4" cy="5.6" r="0.6" fill="#111"/><circle cx="19.6" cy="5.6" r="0.6" fill="#111"/><path d="M8 15q5 3 10 0" fill="none" stroke="#1E5B2B" stroke-width="1.2"/>',
 		petal: '18 22|<path d="M9 1 Q15.4 6.4 15 13 Q14.6 18.6 10.6 20.4 Q9.6 19.6 9 18.6 Q8.4 19.6 7.4 20.4 Q3.4 18.6 3 13 Q2.6 6.4 9 1 Z" fill="%s"/><path d="M9 4 L9 17" stroke="%u" stroke-width="1" fill="none"/><path d="M9 9.4 Q12.2 12 12.6 15.6 M9 9.4 Q5.8 12 5.4 15.6" stroke="%u" stroke-width="0.8" fill="none"/>',
 		dragonfly: '40 26|<g fill="#9CCBEF" opacity="0.85"><ellipse cx="14" cy="7" rx="8" ry="2.6" transform="rotate(-14 14 7)"/><ellipse cx="14" cy="19" rx="8" ry="2.6" transform="rotate(14 14 19)"/><ellipse cx="20.4" cy="8.6" rx="6.6" ry="2.2" transform="rotate(-8 20 8.6)"/><ellipse cx="20.4" cy="17.4" rx="6.6" ry="2.2" transform="rotate(8 20 17)"/></g><path d="M11 13 38 13" stroke="#1864AB" stroke-width="2.6" stroke-linecap="round"/><g stroke="#74C0FC" stroke-width="1"><path d="M23 12v2.8M27 12v2.4M31 12v2M35 12v2"/></g><ellipse cx="11" cy="13" rx="4.2" ry="3.4" fill="#1864AB"/><circle cx="6.4" cy="13" r="3.6" fill="#1864AB"/><circle cx="5.2" cy="11.6" r="1.4" fill="#74C0FC"/>',
 		/* — birds & wildlife — */
@@ -135,7 +134,6 @@
 		mask: '36 26|<path d="M4 2Q1 -1 2 4q1 4 5 5Zm28 0q3-3 2 2-1 4-5 5Z" fill="%j"/><path d="M2 10q16-8 32 0 0 10-9 10-4 0-7-3-3 3-7 3-9 0-9-10Z" fill="%l"/><ellipse cx="11" cy="13" rx="4" ry="3" fill="#FFF"/><ellipse cx="25" cy="13" rx="4" ry="3" fill="#FFF"/><path d="M2 10q16-6 32 0" stroke="%a" stroke-width="1" fill="none"/>',
 		stilts: '32 78|<path d="M11 46 L11 76" stroke="%i" stroke-width="3"/><path d="M21 46 L21 76" stroke="%i" stroke-width="3"/><path d="M7 47 L15 47 L15 50 L7 50 Z" fill="%f"/><path d="M17 47 L25 47 L25 50 L17 50 Z" fill="%f"/><path d="M16 3 L23 9 L20 11 L24 14 L16 17 L8 14 L12 11 L9 9 Z" fill="%l"/><circle cx="23.4" cy="8.6" r="1.8" fill="%a"/><circle cx="8.6" cy="8.6" r="1.8" fill="%a"/><circle cx="16" cy="21" r="4.2" fill="#F8D8B8"/><path d="M9 26 L23 26 L21 42 L11 42 Z" fill="%j"/><path d="M9 26 L1 34 L4 37 L11 30 Z" fill="%l"/><path d="M23 26 L31 34 L28 37 L21 30 Z" fill="%l"/><path d="M12 42 L15 42 L15 50 L12 50 Z" fill="%a"/><path d="M17 42 L20 42 L20 50 L17 50 Z" fill="%a"/>',
 		bottle: '18 44|<path d="M7 2h4v8q5 4 5 12v18q0 3-3 3H5q-3 0-3-3V22q0-8 5-12Z" fill="#1E5B2B"/><path d="M7 2h4v6H7Z" fill="%f"/><rect x="4" y="24" width="10" height="10" rx="1" fill="%d"/>',
-		popper: '30 28|<clipPath id="pk"><path d="M4 26 L15 7 L24 14 Z"/></clipPath><path d="M4 26 L15 7 L24 14 Z" fill="%a"/><g clip-path="url(#pk)" fill="%e"><path d="M5 21 L15 8 L18 10.4 L8 23.4 Z"/><path d="M10 27 L20 14 L23 16.4 L13 29.4 Z"/></g><ellipse cx="19.6" cy="10.6" rx="2.6" ry="4.8" transform="rotate(-38 19.6 10.6)" fill="#8A6508"/><circle cx="26" cy="5.4" r="2" fill="%l"/><circle cx="21" cy="2.6" r="1.6" fill="%j"/><path d="M27.4 10.4 L29.6 8.6 L28.8 11.8 Z" fill="%m"/><path d="M23.4 1 L25.6 2.6 L23.6 4.2 Z" fill="%e"/><circle cx="28.6" cy="14.4" r="1.5" fill="%s"/><path d="M21.6 7.4 Q25.4 4.4 24.6 1.6 M22.8 9.6 Q27 8.8 28.8 6" stroke="%c" stroke-width="1.2" fill="none" stroke-linecap="round"/>',
 		/* — valentines — */
 		balloon: '26 32|<path d="M13 2C6 2 2 7 2 12c0 7 7 12 11 15 4-3 11-8 11-15C24 7 20 2 13 2Z" fill="#FA5252"/><path d="M7 8q1-3 4-4" stroke="#FFC9C9" stroke-width="2" fill="none"/><path d="M12 27h3l-1 3Z" fill="%n"/>',
 		letter0: '30 22|<rect x="1" y="1" width="28" height="20" rx="2" fill="#FFF0F3"/><rect x="1" y="1" width="28" height="20" rx="2" fill="none" stroke="%u" stroke-width="1"/><path d="M1 2l14 11L29 2" fill="none" stroke="%u" stroke-width="1"/><path d="M15 10c2-3 5-1 4 2-.6 2-4 3-4 3s-3-2-4-3c-1-3 2-4 4-2Z" fill="#FA5252"/>',
@@ -152,8 +150,6 @@
 		horseshoe: '30 30|<path d="M7.4 28C4.4 22 3 17 3.8 13 5 6.8 9.6 2.8 15 2.8 20 2.8 25 6.8 26 13 27 17 26 22 23 28L17 27C19 21 20 18 20 15 19 11 17 8.6 15 8.6 13 8.6 11 11 10 15 10 18 11 21 13 27Z" fill="#868E96"/><g fill="#39414A"><circle cx="7.6" cy="15.4" r="1.3"/><circle cx="8.4" cy="20" r="1.3"/><circle cx="9.8" cy="24.4" r="1.3"/><circle cx="22.4" cy="15.4" r="1.3"/><circle cx="21.6" cy="20" r="1.3"/><circle cx="20.2" cy="24.4" r="1.3"/></g>',
 		rainbow: '96 62|<g fill="none" stroke-width="4"><path d="M5 60a40 40 0 0 1 80 0" stroke="%e"/><path d="M9 60a36 36 0 0 1 72 0" stroke="#FF922B"/><path d="M13 60a32 32 0 0 1 64 0" stroke="%k"/><path d="M17 60a28 28 0 0 1 56 0" stroke="%j"/><path d="M21 60a24 24 0 0 1 48 0" stroke="#5C7CFA"/></g><path d="M68 48h20l-3 10a7 7 0 0 1-7 4h-1a7 7 0 0 1-7-4Z" fill="%g"/><circle cx="73" cy="47" r="3" fill="%a"/><circle cx="79" cy="46" r="3" fill="%k"/><circle cx="85" cy="47" r="3" fill="%a"/><ellipse cx="64" cy="56" rx="7" ry="2" fill="#1E5B2B"/><path d="M60 50h8l-1 6h-6Z" fill="%c"/>',
 		jester: '34 28|<path d="M5 22 2 4l10 10L17 2l5 12L32 4l-3 18Z" fill="%l"/><path d="M17 2l5 12 5-6-2 14H12l-2-14 5 6Z" fill="%j" opacity=".85"/><rect x="4" y="21" width="26" height="5" rx="3" fill="%a"/><circle cx="3" cy="4" r="2" fill="%a"/><circle cx="17" cy="3" r="2" fill="%a"/><circle cx="32" cy="4" r="2" fill="%a"/>',
-		cushion0: '32 22|<ellipse cx="14" cy="13.4" rx="11.6" ry="7" fill="#9C1B1B"/><ellipse cx="14" cy="11" rx="11.6" ry="7" fill="%e"/><ellipse cx="14" cy="11" rx="11.6" ry="7" fill="none" stroke="#8C1D1D" stroke-width="1"/><path d="M2.6 12.6 Q14 17.4 25.4 12.6" stroke="#8C1D1D" stroke-width="1" fill="none"/><ellipse cx="10" cy="7.4" rx="3.6" ry="1.9" fill="#FF8787"/><path d="M23.6 8.8 Q28.6 8.6 28.6 11 Q28.6 13.4 23.6 13.2 Z" fill="#9C1B1B"/><ellipse cx="28.4" cy="11" rx="1.3" ry="2.2" fill="#6E1414"/>',
-		cushion1: '32 22|<ellipse cx="14" cy="16" rx="11.6" ry="4.4" fill="#9C1B1B"/><ellipse cx="14" cy="14.6" rx="11.6" ry="4.4" fill="%e"/><ellipse cx="14" cy="14.6" rx="11.6" ry="4.4" fill="none" stroke="#8C1D1D" stroke-width="1"/><path d="M2.6 15.4 Q14 18.6 25.4 15.4" stroke="#8C1D1D" stroke-width="1" fill="none"/><path d="M23.6 12.6 Q28.6 12.4 28.6 14.6 Q28.6 16.8 23.6 16.6 Z" fill="#9C1B1B"/><ellipse cx="28.4" cy="14.6" rx="1.3" ry="2" fill="#6E1414"/><path d="M26 10 Q29 7 27.4 4 M20 8.4 Q22.4 5 20 2.4 M14 7.4 Q16 4.4 13.6 2" stroke="%t" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
 		disguise: '34 26|<circle cx="9" cy="8" r="7" fill="none" stroke="%b" stroke-width="2"/><circle cx="25" cy="8" r="7" fill="none" stroke="%b" stroke-width="2"/><path d="M16 8h2" stroke="%b" stroke-width="2"/><path d="M0 6h3m28 0h3" stroke="%b" stroke-width="2"/><path d="M17 10q-5 4-4 9 2 4 6 2" fill="#F8C8A8" stroke="#D9A06B"/>',
 		peel: '36 16|<path d="M18 8 Q11 4 5 5 Q9 9 16 10 Z" fill="#FFC107"/><path d="M17 9 Q9 11 2 14 Q9 16 16 12 Z" fill="%k"/><path d="M19 9 Q27 11 34 14 Q27 16 20 12 Z" fill="%k"/><path d="M18 10 Q19.4 14 17.6 15.6 Q15.2 14 16.4 10 Z" fill="#FFC107"/><ellipse cx="18" cy="9" rx="3.6" ry="2.6" fill="%k"/><path d="M4 4.4 L7 4.4 L6.4 6.4 L4.4 6.4 Z" fill="%i"/><path d="M8 8 Q13 10 16 10.6 M8 13.4 Q13 12.4 15.6 11.6 M28 13.4 Q23 12.4 20.4 11.6" stroke="#E0A800" stroke-width="0.9" fill="none"/>',
 		/* — 420 / earth — */
@@ -298,6 +294,12 @@
 			cx.stroke();
 		},
 	};
+
+	/* The behaviours that are placed in free air and nowhere in particular:
+	 * the guardrail spreads them at seed time and the anti-clump keeps them
+	 * apart afterwards. Everything else is staged on purpose — water-line
+	 * riders, growers, off-screen entrances, the hero — and is left alone. */
+	var FREEAIR = ' fall sway tumble spin wobble jump flutter rise pulse orbit dangle hang dart twinkle firefly ';
 
 	/* ================= Engine ================= */
 	function start(boot) {
@@ -921,6 +923,17 @@
 					 * about the theme. Scroll to it and reload to measure. */
 					lines.push('CANVAS REACH: not measurable — no part of the canvas box was on screen. Scroll to the content column and reload.');
 				}
+				/* Where a sprite can be SEEN, and what the two new guardrails
+				 * cost — the numbers to quote when the field still looks
+				 * wrong on a page this build has never seen. */
+				var frn = 0;
+				for (var fi = 0; fi < parts.length; fi++) { if (parts[fi].free) { frn++; } }
+				lines.push('open map: ' + (omList
+					? omN + '/' + omTot + ' cells open (' + MT.round(omFrac * 100) + '%) in ' + omMs.toFixed(2) + 'ms, ' + omBuilds + ' build(s), cell ' + MAP_CELL + 'px' +
+						(mapUsable() ? '' : ' — under 10% open, seeding falls back to even coverage')
+					: 'not built (front layering or no host) — the canvas is above the page'));
+				lines.push('anti-clump: ' + (repN ? repMs.toFixed(3) + 'ms/frame over ' + repN + ' frames' : 'no frames measured yet') +
+					'  spacing target ' + MT.round(sepRun) + 'px  free-air ' + frn + '/' + parts.length + ' particles');
 				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
 				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
 				for (di = 0; di < diag.notes.length; di++) { lines.push('  ! ' + diag.notes[di]); }
@@ -978,6 +991,12 @@
 				ensureMounted();
 			}
 			if (CFG.layer && host) { fixCoverage(true); }
+			/* The map that seeded the first field was built against a layout
+			 * whose images had not loaded. Rebuild it now that the page has
+			 * settled — the field migrates into the open as it respawns,
+			 * which is the only way to correct it without teleporting
+			 * anything. */
+			buildOpenMap();
 			printDiag();
 		}, 1200);
 
@@ -1049,6 +1068,11 @@
 				if (vig && vig.st) { scaleXY(vig.st, sx, sy); }
 			}
 			snowCols = FX.snow ? new Float32Array(MT.ceil(vw / 8) + 1) : null;
+			/* A real resize changes both the box and what is under it. The
+			 * map is rebuilt on the throttle, never inline: this path runs on
+			 * the debounce and must stay cheap. */
+			sepTarget();
+			queueMap(120);
 		}
 		/* Every coordinate an actor carries, moved into the new box. */
 		function scaleXY(o, sx, sy) {
@@ -1162,6 +1186,153 @@
 		var parts = [];
 		function dirY() { return up ? -1 : 1; }
 
+		/* --- Open-cell map: WHERE A SPRITE CAN ACTUALLY BE SEEN. ----------
+		 * Reported from the live homepage: sprites "only show up in the area
+		 * underneath the hero image and above the DCC Cottage Selector
+		 * widget". Measured there at 375px: the band from the article top to
+		 * the selector is 99-100% open, and below it the page is a wall of
+		 * full-bleed cards (8 room cards, 270 painted calendar cells) whose
+		 * only open pixels are gutters too narrow to show a whole sprite.
+		 * 57% of that column is "open" by area and almost none of it is
+		 * usable. Seeding evenly over the CANVAS therefore puts most of the
+		 * field where nothing can be seen — which is what "they only show up
+		 * in one band, and they still kinda cluster" describes.
+		 *
+		 * So ask the page, with the same question the mount already asks
+		 * (painterAt: what is the first thing that paints here, and is it
+		 * INSIDE the host and therefore above the canvas?), on a coarse grid
+		 * of the canvas's on-screen box. Cells nothing paints over are open;
+		 * seeding draws from those.
+		 *
+		 * Rebuilt on scroll-settle, on a real resize and after the settled
+		 * mount pass, never per frame and never faster than MAP_MIN apart.
+		 * getComputedStyle dominates the cost, and the same handful of
+		 * ancestors answer for every cell, so each build stamps its verdict
+		 * on the element and reuses it. --- */
+		/* 48px: finer than a sprite (16-34px) and coarse enough that a phone
+		 * viewport is ~8x17 = 136 hit tests. At 40px it was 210 and the build
+		 * ran 1.8-3.4ms in the test container — over the 2ms ceiling. */
+		var MAP_CELL = 48, MAP_MIN = 400;
+		var omC = 0, omR = 0, omCell = null, omList = null, omN = 0, omTot = 0, omMeas = 0, omOpen = 0;
+		var omNine = [0, 0, 0, 0, 0, 0, 0, 0, 0], omCol = [0, 0, 0];
+		var omFrac = 1, omMs = 0, omBuilds = 0, omAt = -1e9, omStamp = 0, omTimer = 0;
+		function nowMs() { return (W.performance && performance.now) ? performance.now() : +new Date(); }
+		/* Usable = built, and enough of the page open that steering into it
+		 * still leaves room to spread. Below that the honest thing is to seed
+		 * as before rather than crowd every sprite into one gutter. */
+		function mapUsable() { return !!omList && omN > 0 && omFrac >= 0.1; }
+		function paintsStamped(el) {
+			if (el._dccPb === omStamp) { return el._dccPo; }
+			el._dccPb = omStamp;
+			el._dccPo = paintsOpaque(el);
+			return el._dccPo;
+		}
+		function openAt(x, y) {
+			var el = D.elementFromPoint(x, y), p2 = null;
+			for (; el && el.nodeType === 1 && el !== D.documentElement; el = el.parentElement) {
+				if (paintsStamped(el)) { p2 = el; break; }
+			}
+			/* Same verdict as coverage(): only a DESCENDANT of the host paints
+			 * above the canvas. */
+			return !p2 || p2 === cv || p2 === host || !host.contains(p2);
+		}
+		function buildOpenMap() {
+			var t0 = nowMs();
+			omAt = t0; omBuilds++;
+			/* In front mode the canvas is above the page: everything is open,
+			 * and sampling would be a lie dressed as a measurement. */
+			if (!CFG.layer || !host || vw < 1 || vh < 1) {
+				omList = null; omFrac = 1; omMs = 0; sepTarget(); return;
+			}
+			var r = cv.getBoundingClientRect();
+			var sx = vw > 0 ? r.width / vw : 1, sy = vh > 0 ? r.height / vh : 1;
+			var c, rw, i, k, x, y, vx, vy, open;
+			var iw = W.innerWidth, ih = W.innerHeight;
+			omC = mx2(1, MT.ceil(vw / MAP_CELL));
+			omR = mx2(1, MT.ceil(vh / MAP_CELL));
+			var stepX = vw / omC, stepY = vh / omR;
+			omTot = omC * omR;
+			if (!omCell || omCell.length !== omTot) { omCell = new Uint8Array(omTot); omList = new Uint16Array(omTot); }
+			omStamp++;
+			omN = 0; omMeas = 0; omOpen = 0;
+			for (i = 0; i < 9; i++) { omNine[i] = 0; }
+			omCol[0] = omCol[1] = omCol[2] = 0;
+			for (rw = 0; rw < omR; rw++) {
+				for (c = 0; c < omC; c++) {
+					k = rw * omC + c;
+					x = (c + 0.5) * stepX;
+					y = (rw + 0.5) * stepY;
+					vx = r.left + x * sx;
+					vy = r.top + y * sy;
+					/* Off-screen is UNMEASURABLE, not covered — elementFromPoint
+					 * outside the viewport returns null, which says nothing. The
+					 * mount learned this the hard way in 3.11.0. */
+					if (vx < 0 || vy < 0 || vx >= iw || vy >= ih) {
+						open = 1;                       /* unmeasurable, so not covered */
+					} else {
+						open = openAt(vx, vy) ? 1 : 0;
+						omMeas++; omOpen += open;
+					}
+					omCell[k] = open;
+					if (open) {
+						omList[omN++] = k;
+						omNine[mn(2, (y / vh * 3) | 0) * 3 + mn(2, (x / vw * 3) | 0)]++;
+						omCol[mn(2, (x / vw * 3) | 0)]++;
+					}
+				}
+			}
+			/* The open FRACTION is of what could actually be sampled. Cells
+			 * off the bottom of the viewport are unknown, and counting them
+			 * as open would keep the map "usable" on a page whose visible
+			 * part is solid — the same unmeasurable-is-not-covered trap the
+			 * mount fell into in 3.11.0, in the other direction. They still
+			 * belong in the candidate pool: nothing is known to paint there. */
+			omFrac = omMeas ? omOpen / omMeas : 1;
+			omMs = nowMs() - t0;
+			sepTarget();
+		}
+		function queueMap(ms) {
+			clearTimeout(omTimer);
+			var wait = mx2(ms || 200, MAP_MIN - (nowMs() - omAt));
+			omTimer = setTimeout(buildOpenMap, mx2(0, wait));
+		}
+		/* A sticky canvas rides the viewport, so scrolling changes what is
+		 * under it. Settle first: a scroll is a stream of events. */
+		W.addEventListener('scroll', function () { queueMap(220); }, { passive: true });
+
+		/* One open cell whose centre lies in the wanted box, found by a
+		 * bounded scan from a random start — no allocation, and it degrades
+		 * to "no cell" rather than looping when the box has none open.
+		 * col 0/1/2 restricts to a third of the width (an entry edge). */
+		function pickCell(x0, x1, y0, y1, col) {
+			if (!mapUsable()) { return -1; }
+			var s = (rand() * omN) | 0, i, k, c, rw, x, y;
+			for (i = 0; i < omN && i < 24; i++) {
+				k = omList[(s + i) % omN];
+				c = k % omC; rw = (k - c) / omC;
+				x = (c + 0.5) * vw / omC;
+				y = (rw + 0.5) * vh / omR;
+				if (x < x0 || x > x1) { continue; }
+				if (y1 > y0 && (y < y0 || y > y1)) { continue; }
+				if (col >= 0 && mn(2, (x / vw * 3) | 0) !== col) { continue; }
+				return k;
+			}
+			return -1;
+		}
+		function cellX(k) { var c = k % omC; return clamp(((c + 0.5) + rnd(-0.45, 0.45)) * vw / omC, 0, vw); }
+		function cellY(k) { var rw = ((k - (k % omC)) / omC); return clamp(((rw + 0.5) + rnd(-0.45, 0.45)) * vh / omR, 0, vh); }
+		/* An open x anywhere on the row a deliberate actor is entering on,
+		 * and an open y for a crosser entering from `edge` (-1 either). */
+		function openX(x0, x1, y) {
+			var k = pickCell(x0, x1, y, y, -1);
+			return k < 0 ? rnd(x0, x1) : clamp(cellX(k), x0, x1);
+		}
+		function openBandY(y0, y1, edge) {
+			var k = pickCell(0, vw, y0, y1, edge);
+			if (k < 0) { k = pickCell(0, vw, y0, y1, -1); }
+			return k < 0 ? rnd(y0, y1) : clamp(cellY(k), y0, y1);
+		}
+
 		/* --- Seed-time spatial guardrail. --------------------------------
 		 * A uniform random position is free to bunch: modelled offline, 16
 		 * particles put six or more into the same ninth of the canvas in
@@ -1178,11 +1349,24 @@
 		 * growers, off-screen entrances) and the hero never come through
 		 * here. Pass y1 <= y0 for a fixed y (an entrance): the field is then
 		 * spread across x alone, against column totals. --- */
-		var SPREAD_TRIES = 8;
+		/* A small field can afford to look harder, and wants more room
+		 * between its members: at density 10 there are 90 candidate throws
+		 * in a whole seeding pass, which costs nothing. */
+		var SPREAD_TRIES = maxParts <= 12 ? 16 : 8;
+		var SEP_K = maxParts <= 12 ? 0.6 : 0.45;
 		var occ = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		var qta = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+		var sepRun = 0;
+		/* The pitch an even lattice of this field would have over the part of
+		 * the page a sprite can be SEEN in. Seeding and the runtime
+		 * anti-clump share it, so they cannot pull against each other. */
+		function sepTarget() {
+			sepRun = MT.sqrt(mx2(1, vw * vh * (mapUsable() ? omFrac : 1)) / mx2(1, maxParts)) * SEP_K;
+		}
 		function spreadPlace(p, x0, x1, y0, y1) {
 			var flat = !(y1 > y0);
-			var i, j, q, c, r, ct, near, dx, dy, d2, x, y, sc;
+			var useMap = mapUsable();
+			var i, j, q, c, r, ct, near, dx, dy, d2, x, y, sc, k, op;
 			var live = 0;
 			for (i = 0; i < 9; i++) { occ[i] = 0; }
 			for (i = 0; i < parts.length; i++) {
@@ -1198,16 +1382,36 @@
 				occ[r * 3 + c]++;
 				live++;
 			}
-			var quota = mx2(1, MT.ceil((live + 1) / (flat ? 3 : 9)));
-			/* Spacing target: 0.45 of the pitch an even lattice would have. */
+			/* The even share is a share of the OPEN cells, not of the area.
+			 * A third of a canvas that is 15% visible is not a third of what
+			 * anyone can see — sharing by area is exactly what made the field
+			 * look random below the fold while obeying the rule. A ninth with
+			 * nothing open takes no one. */
+			var cells = flat ? 3 : 9;
+			for (i = 0; i < cells; i++) {
+				op = useMap ? (flat ? omCol[i] : omNine[i]) : 0;
+				qta[i] = useMap
+					? (op === 0 ? 0 : mx2(1, MT.ceil((live + 1) * op / omN)))
+					: mx2(1, MT.ceil((live + 1) / cells));
+			}
+			var vis = useMap ? omFrac : 1;
 			var sep = flat
-				? (x1 - x0) / mx2(1, live + 1) * 0.45
-				: MT.sqrt(mx2(1, (x1 - x0) * (y1 - y0)) / mx2(1, live + 1)) * 0.45;
+				? (x1 - x0) * vis / mx2(1, live + 1) * SEP_K
+				: MT.sqrt(mx2(1, (x1 - x0) * (y1 - y0) * vis) / mx2(1, live + 1)) * SEP_K;
 			var sep2 = sep * sep;
 			var bx = x0, by = y0, best = -1e18;
 			for (i = 0; i < SPREAD_TRIES; i++) {
-				x = rnd(x0, x1);
-				y = flat ? y0 : rnd(y0, y1);
+				/* Draw the candidate from an OPEN cell when there is a map;
+				 * fall back to the whole range when the wanted box has none
+				 * (a narrow band can be entirely painted over). */
+				k = useMap ? pickCell(x0, x1, flat ? 0 : y0, flat ? 0 : y1, -1) : -1;
+				if (k >= 0) {
+					x = clamp(cellX(k), x0, x1);
+					y = flat ? y0 : clamp(cellY(k), y0, y1);
+				} else {
+					x = rnd(x0, x1);
+					y = flat ? y0 : rnd(y0, y1);
+				}
 				c = mn(2, mx2(0, (x / vw * 3) | 0));
 				r = flat ? 0 : mn(2, mx2(0, (y / vh * 3) | 0));
 				ct = occ[r * 3 + c];
@@ -1219,11 +1423,51 @@
 					d2 = dx * dx + dy * dy;
 					if (d2 < near) { near = d2; }
 				}
-				if (ct < quota && near >= sep2) { bx = x; by = y; best = 1e18; break; }
+				if (ct < qta[flat ? c : r * 3 + c] && near >= sep2) { bx = x; by = y; best = 1e18; break; }
 				sc = (near > 1e6 ? 1e6 : near) - ct * 1e7;
 				if (sc > best) { best = sc; bx = x; by = y; }
 			}
 			p.x = bx; p.y = by;
+		}
+
+		/* --- Runtime anti-clump. ------------------------------------------
+		 * Seeding decides where a sprite STARTS; motion decides where the
+		 * field actually is a minute later, and free-air motion re-bunches —
+		 * "isn't as bad but still needs to be better" is what a seed-only
+		 * rule feels like once it has been running a while. So: a soft
+		 * pairwise separation, free-air behaviours only. Below the shared
+		 * spacing target the push fades linearly to nothing AT it, so it
+		 * never oscillates, never chases a sprite that is already far enough
+		 * away, and never becomes the per-frame repulsion 3.14.0 warned
+		 * against — it cannot pull a field apart faster than 14px a second.
+		 * Sprites that are off the canvas are skipped and the result is
+		 * clamped to the box, so a nudge can never push one over an edge and
+		 * trigger the respawn 3.13.0 spent a release removing. At most 16
+		 * particles is at most 120 pairs. Reduced motion never reaches here:
+		 * the loop does not run at all. --- */
+		var REPEL_V = 14, repMs = 0, repN = 0;
+		function deClump(dt) {
+			var s = sepRun;
+			if (!(s > 0)) { return; }
+			var t0 = CFG.diag ? nowMs() : 0;
+			var n = parts.length, i, j, a, b2, dx, dy, d2, d, f, ux, uy, s2 = s * s;
+			for (i = 0; i < n; i++) {
+				a = parts[i];
+				if (!a.free || a.dormant || a.x < 0 || a.x > vw || a.y < 0 || a.y > vh) { continue; }
+				for (j = i + 1; j < n; j++) {
+					b2 = parts[j];
+					if (!b2.free || b2.dormant || b2.x < 0 || b2.x > vw || b2.y < 0 || b2.y > vh) { continue; }
+					dx = b2.x - a.x; dy = b2.y - a.y;
+					d2 = dx * dx + dy * dy;
+					if (d2 >= s2 || d2 < 0.01) { continue; }
+					d = MT.sqrt(d2);
+					f = (1 - d / s) * REPEL_V * dt;
+					ux = dx / d * f; uy = dy / d * f;
+					a.x = clamp(a.x - ux, 0, vw); a.y = clamp(a.y - uy, 0, vh);
+					b2.x = clamp(b2.x + ux, 0, vw); b2.y = clamp(b2.y + uy, 0, vh);
+				}
+			}
+			if (t0) { repMs = repN ? repMs + (nowMs() - t0 - repMs) * 0.05 : nowMs() - t0; repN++; }
 		}
 
 		function seed(p, anywhere) {
@@ -1252,6 +1496,10 @@
 			 * free-air behaviors — staged/bottom actors stay NEAR. */
 			var canFar = 'fall sway tumble flutter fly pulse rise twinkle spin vee wobble'.indexOf(p.b) >= 0;
 			p.far = FX.parallax && canFar && rand() < 0.35;
+			/* Which behaviours the guardrail owns: free air, nothing staged.
+			 * Space-delimited on purpose — a bare indexOf would match 'fly'
+			 * inside 'firefly' and hand the crossers to the anti-clump. */
+			p.free = FREEAIR.indexOf(' ' + p.b + ' ') >= 0 ? 1 : 0;
 			var slow = (def.slow ? 0.45 : 1) * (p.far ? 0.5 : 1);
 			var b = p.b;
 			var offY = up ? vh + 30 : -30;
@@ -1293,11 +1541,15 @@
 			if (b === 'fly' || b === 'vee') {
 				p.dir = sgn();
 				p.x = p.dir > 0 ? -50 : vw + 50;
-				p.y = def.low ? rnd(vh * 0.72, vh * 0.88) : rnd(vh * 0.08, vh * 0.55);
+				/* A crosser is only worth watching on a row where something
+				 * can be seen, and it enters from one edge — so weight the
+				 * band toward open cells on THAT side. */
+				p.y = def.low ? openBandY(vh * 0.72, vh * 0.88, p.dir > 0 ? 0 : 2)
+					: openBandY(vh * 0.08, vh * 0.55, p.dir > 0 ? 0 : 2);
 				p.vx = p.dir * rnd(30, 70) * slow;
 				p.vy = 0; p.vr = 0;
 				p.n = b === 'vee' ? 2 + ((rand() * 3) | 0) : 1;
-				if (anywhere) { p.x = rnd(0, vw); }
+				if (anywhere) { p.x = openX(0, vw, p.y); }
 			}
 			if (b === 'cruise') {
 				p.dir = sgn();
@@ -1337,7 +1589,7 @@
 			}
 			if (b === 'hop' || b === 'waddle' || b === 'chatter') {
 				p.dir = sgn();
-				p.x = anywhere ? rnd(0, vw) : (p.dir > 0 ? -30 : vw + 30);
+				p.x = anywhere ? openX(0, vw, p.y) : (p.dir > 0 ? -30 : vw + 30);
 				p.vx = p.dir * (b === 'hop' ? rnd(40, 80) : b === 'chatter' ? rnd(50, 90) : rnd(15, 30));
 				p.vy = 0; p.vr = 0;
 				p.hopH = rnd(20, 40);
@@ -1586,7 +1838,6 @@
 					p.x += p.vx * dt;
 					p.y = ground + sin(p.ph * 6) * 2;
 					p.rot = sin(p.ph * 6) * 0.08;
-					if (b === 'chatter') { p.frame = ((t / 160) | 0) % 2; }
 					if (p.x < -60 || p.x > vw + 60) { seed(p); }
 					break;
 				case 'dart':
@@ -1706,7 +1957,7 @@
 				if (sp.kind === 't') { cx.fillStyle = sp.color; }
 				cx.fillText(sp.g, 0, 0);
 			} else if (sp.kind === 's') {
-				var key = p.sKey === 'cushion' ? 'cushion' + (p.frame || 0) : p.sKey;
+				var key = p.sKey;
 				if (sp.def.fx === 'letter') { key = p.y > vh * 0.5 ? 'letter1' : 'letter0'; }
 				if (sp.def.glow) { /* jack-o'-lantern flicker glow */
 					var fl = 0.3 + 0.15 * sin(p.ph * 7) + (evening ? 0.12 : 0);
@@ -2434,7 +2685,9 @@
 				}
 				return st.t2 > 6;
 			} },
-			/* New Year's: cork pop from a corner */
+			/* New Year's: the cork goes off in a corner. The cork sprite was
+			 * retired in 3.15.0 (it read as a mushroom); what flies is the
+			 * theme's own sparkle, on the same arc and trail. */
 			corkpop: { actors: 3, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.t2 = 0; st.bx = 40; st.by = vh - 40; st.trail = []; }
 				st.t2 += dt;
@@ -2447,7 +2700,7 @@
 					if (u < 1) {
 						st.trail.push([cxx, cyy]);
 						if (st.trail.length > 14) { st.trail.shift(); }
-						dspr('popper', cxx, cyy, 14, false, u * 9);
+						dspr('sparkle', cxx, cyy, 14, false, u * 9);
 					}
 					cx.save(); cx.globalAlpha = VA * 0.8; cx.strokeStyle = '#F783AC'; cx.lineWidth = 1.6;
 					cx.beginPath();
@@ -2743,6 +2996,10 @@
 
 		/* --- Boot + main loop with the degrade ladder. --- */
 		applySize();
+		/* Before the first field, not after: seeding without a map would put
+		 * this field where 3.14.0 put it, and it would stay there until every
+		 * one of its members had respawned. */
+		buildOpenMap();
 		for (var i = 0; i < maxParts && pool.length; i++) { parts.push(seed({}, true)); }
 
 		var running = !D.hidden, last = 0, raf = 0;
@@ -2788,6 +3045,7 @@
 			 * the canvas, so re-run the corrective loop rather than assume the
 			 * old decision still holds. Bounded, and at most once a second. */
 			if (host) { fixCoverage(true); }
+			buildOpenMap();
 			if (remounts === 1 && W.console && W.console.info) {
 				W.console.info('DCC Seasons: the ambient canvas was removed from the page (the host re-rendered its children) and has been re-mounted.');
 			}
@@ -2825,6 +3083,7 @@
 				}
 			}
 			var k, p;
+			deClump(dt);
 			for (k = 0; k < parts.length; k++) {
 				p = parts[k];
 				if (p.dormant) { continue; }
@@ -2884,6 +3143,14 @@
 				get vw() { return vw; },
 				get vh() { return vh; },
 				get waterY() { return waterY; },
+				get sep() { return sepRun; },
+				get openMap() {
+					return { n: omN, total: omTot, frac: omFrac, ms: omMs, builds: omBuilds,
+						cell: MAP_CELL, usable: mapUsable(), measured: omMeas, openMeasured: omOpen,
+						nine: omNine.slice(0), col: omCol.slice(0) };
+				},
+				get repel() { return { ms: repMs, frames: repN }; },
+				buildMap: function () { buildOpenMap(); return omFrac; },
 				/* Re-seeding the live array is exactly what a restart does. */
 				reseed: function (anywhere) { for (var k = 0; k < parts.length; k++) { seed(parts[k], anywhere); } }
 			};

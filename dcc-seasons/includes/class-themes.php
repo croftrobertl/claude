@@ -347,7 +347,10 @@ class Themes {
                         ['s' => 'banana', 'b' => 'tumble', 'w' => 2],
                         ['s' => 'jester', 'b' => 'fall', 'w' => 3],
                         ['s' => 'disguise', 'b' => 'fall', 'sz' => [24, 30]],
-                        ['s' => 'cushion', 'b' => 'chatter'],
+                        // The whoopee cushion was retired in 3.15.0 (it read as
+                        // neither a cushion nor a joke at 30px); the disguise
+                        // skitters across instead.
+                        ['s' => 'disguise', 'b' => 'chatter', 'sz' => [20, 26]],
                     ],
                 ],
                 'egg' => [
@@ -363,8 +366,10 @@ class Themes {
                     'water'     => true,
                     'particles' => [
                         ['s' => 'lilypad', 'b' => 'float', 'w' => 2, 'sz' => [26, 34]],
-                        // The frog hops lily pad to lily pad.
-                        ['s' => 'frog', 'b' => 'frogger', 'sz' => [16, 20]],
+                        // The frog sprite was retired in 3.15.0 (it was legless);
+                        // a dragonfly touches down pad to pad instead, which is
+                        // what the behaviour actually does.
+                        ['s' => 'dragonfly', 'b' => 'frogger', 'sz' => [16, 20]],
                         ['s' => 'petal', 'b' => 'sway', 'st' => 1, 'w' => 2],
                         ['s' => 'dragonfly', 'b' => 'dart'],
                         ['s' => 'kayak', 'b' => 'cruise', 'face' => 'L'],

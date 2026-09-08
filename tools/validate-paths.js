@@ -61,6 +61,50 @@ function validatePath(d) {
   return problems;
 }
 
+/* Every way a sprite key can be named, because all of them have fooled us:
+ * a plain 's' => 'key', an 's' => ['a','b'] array, an 's' => $variable
+ * defined elsewhere in the theme file, and keys COMPUTED by concatenation
+ * ('heron' + frame). A theme that names a retired sprite draws nothing at
+ * all and reports nothing, so this has to be mechanical. Heroes are not
+ * sprites — they are drawn by their own `kind` branches — so they are
+ * checked against the kinds the engine actually implements. */
+function collectRefs(js, php) {
+  const refs = new Map();          // key -> where it was named
+  const add = (k, where) => { if (k && !refs.has(k)) refs.set(k, where); };
+  const strings = t => [...t.matchAll(/'([A-Za-z0-9_]+)'/g)].map(m => m[1]);
+  for (const m of js.matchAll(/\bdspr\('([A-Za-z0-9_]+)'/g)) add(m[1], 'engine dspr()');
+  for (const m of js.matchAll(/\bsprite\('([A-Za-z0-9_]+)'/g)) add(m[1], 'engine sprite()');
+  for (const m of js.matchAll(/\bkey = '([A-Za-z0-9_]+)'/g)) add(m[1], 'engine key');
+  for (const m of js.matchAll(/\? '([A-Za-z0-9_]+)' : '([A-Za-z0-9_]+)';/g)) {
+    // key = cond ? 'a' : 'b' — only where the assignment target is `key`
+    if (/key = [^;]*$/.test(js.slice(0, m.index).split('\n').pop())) {
+      add(m[1], 'engine key'); add(m[2], 'engine key');
+    }
+  }
+  const vars = new Map();
+  for (const m of php.matchAll(/\$([a-z_]+)\s*=\s*\[([^\]]*)\];/g)) vars.set(m[1], strings(m[2]));
+  for (const m of php.matchAll(/'s'\s*=>\s*'([A-Za-z0-9_]+)'/g)) add(m[1], 'theme particle');
+  for (const m of php.matchAll(/'s'\s*=>\s*\[([^\]]*)\]/g)) strings(m[1]).forEach(k => add(k, 'theme particle (array)'));
+  for (const m of php.matchAll(/'s'\s*=>\s*\$([a-z_]+)/g)) (vars.get(m[1]) || []).forEach(k => add(k, `theme particle ($${m[1]})`));
+  return refs;
+}
+/* Concatenated keys ('heron' + frame): the prefix must have sprites behind
+ * it, and every sprite behind it counts as referenced. */
+function collectPrefixes(js, keys) {
+  const out = new Map();
+  for (const m of js.matchAll(/'([A-Za-z0-9_]+)' \+ /g)) {
+    const hits = [...keys].filter(k => k.startsWith(m[1]));
+    if (hits.length) out.set(m[1], hits);
+  }
+  return out;
+}
+/* A theme's 'hero' => names a hero KIND, drawn by its own branch. */
+function collectHeroes(js, php) {
+  const kinds = new Set([...js.matchAll(/kind === '([a-z0-9_]+)'/g)].map(m => m[1]));
+  const named = [...php.matchAll(/'hero'\s*=>\s*'([a-z0-9_]+)'/g)].map(m => m[1]);
+  return { kinds, missing: named.filter(h => !kinds.has(h)) };
+}
+
 function main() {
   const file = process.argv[2] || 'dcc-seasons/assets/js/engine.js';
   const src = fs.readFileSync(file, 'utf8');
@@ -88,8 +132,32 @@ function main() {
       b.probs.forEach(p => console.log(`      -> ${p}`));
     }
   }
-  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed`);
+  // ---- dangling and dead sprite keys ----
+  const keys = new Set([...block.matchAll(/\n\t\t([A-Za-z0-9_]+): (?:'|function)/g)].map(m => m[1]));
+  const themeFile = file.replace(/assets\/js\/engine\.js$/, 'includes/class-themes.php');
+  const php = fs.existsSync(themeFile) ? fs.readFileSync(themeFile, 'utf8') : '';
+  const refs = collectRefs(src, php);
+  const prefixes = collectPrefixes(src, keys);
+  const heroes = collectHeroes(src, php);
+  /* For the DEAD direction only, any quoted occurrence of a key counts —
+   * sprites reach the screen through scene factories, frame arrays and the
+   * accent map as well as the four positional forms above, and a false
+   * "referenced" here only means a dead sprite survives one more release.
+   * The DANGLING direction stays strict: it decides the build. */
+  const used = new Set([...refs.keys()].filter(k => keys.has(k)));
+  for (const hits of prefixes.values()) hits.forEach(k => used.add(k));
+  for (const text of [src, php]) {
+    for (const m of text.matchAll(/'([A-Za-z0-9_]+)'/g)) { if (keys.has(m[1])) used.add(m[1]); }
+  }
+  const dangling = [...refs].filter(([k]) => !keys.has(k) && !prefixes.has(k));
+  const dead = [...keys].filter(k => !used.has(k));
+  for (const [k, where] of dangling) console.log(`DANGLING  '${k}' named by ${where} — no such sprite`);
+  for (const h of heroes.missing) console.log(`DANGLING  hero '${h}' — the engine implements no such kind`);
+  if (dead.length) console.log(`unreferenced sprite(s): ${dead.join(' ')}`);
+
+  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${dangling.length + heroes.missing.length} dangling`);
   if (badSprites) { console.log('BUILD FAILURE: malformed path data would render with parts missing.'); process.exit(1); }
+  if (dangling.length || heroes.missing.length) { console.log('BUILD FAILURE: a theme or scene names a sprite that does not exist; it would draw nothing.'); process.exit(1); }
   console.log('all paths valid');
 }
 if (require.main === module) main();
