@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.13.0
+Stable tag: 3.14.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,29 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.14.0 =
+* FIXED: "too many in the same area versus more evenly distributed throughout
+  the page/viewport." A particle used to take a uniform random position, which
+  is free to pile up. Measured against the shipped 3.13.0 engine over 200
+  fields of 16 particles on a 390x844 phone: six or more of them landed in the
+  SAME ninth of the canvas in 27 fields, as many as eight at once, and the
+  closest pair in a field averaged 23px apart.
+* Placement now throws up to eight candidate positions and takes the first
+  that lands in a ninth still under its even share AND no closer than the
+  spacing target to a live particle; if none qualifies, the best candidate
+  seen. Same 200 fields on the same phone: worst ninth 3 of 16, never a
+  bunched field, closest pair averaging 47px. Respawns that enter from
+  off-screen are spread across the width the same way (worst column 11 of 16
+  before, 7 after).
+* The rule runs at SEED time only, never per frame, so it cannot fight the
+  motion and 3.13.0's rescale-on-resize is untouched (re-verified: a same-size
+  resize still moves nothing, a real one still rescales to 0.01px). Sprites
+  that are placed on purpose keep their staging exactly — water-line riders
+  still sit on the water line, growers still start below the fold, off-screen
+  entrances and the hero flyover are not routed through it at all.
+* Cost, measured in the browser: 0.004ms per seed, the same as before within
+  noise. Seeding is rare; nothing was added to the frame loop.
 
 = 3.13.0 =
 * FIXED: "the sprites reset whenever I tap or scroll." They did, on every

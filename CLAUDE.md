@@ -279,6 +279,23 @@ bump so the tracked zip never lags the source.
   coordinates instead of re-seeding, restarting only when the box has more
   than doubled or halved. The host ResizeObserver goes through `queueSize`,
   not `applySize` directly.
+- **Even spacing is a SEED-TIME rule, and it must stay one.** Uniform random
+  placement bunches: measured over 200 fields of 16 particles at 390x844, the
+  pre-3.14.0 engine put six or more into the same ninth of the canvas in 27 of
+  them (worst 8). `spreadPlace()` in `engine.js` throws up to
+  `SPREAD_TRIES` candidates and takes the first in a ninth still under its
+  even share and no closer than the spacing target to a live particle, else
+  the best it saw. Never turn this into a per-frame repulsion — it would fight
+  the motion and undo 3.13.0's rescale-on-resize. Behaviours that place
+  themselves (`float`/`cruise`/`frogger` on the water line, `grow`/
+  `berrycycle` below the fold, `fly`/`vee`/`toss`/`hop`/`waddle`/`chatter`
+  entering off-screen) and the hero are exempt BY NOT BEING ROUTED THROUGH IT;
+  `scratchpad/test-spread.js` asserts their staging is still exact, so a new
+  behaviour that wants deliberate placement must set its own x/y after the
+  generic call, as they all do. Pass `y1 <= y0` for a fixed y and the pass
+  spreads across x alone, against column totals — and note that pass counts
+  OFF-SCREEN particles, which the ninth pass must not: without that, a field
+  respawning together sees an empty grid and the guardrail does nothing.
 - **`test-v21.js`'s bass-hero check is load-sensitive, not flaky-by-design.**
   It polls canvas pixels for 30s of WALL time waiting for a hero jump, so a
   machine busy with other Chromium instances runs too few animation frames in
