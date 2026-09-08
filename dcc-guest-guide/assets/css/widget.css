@@ -1934,6 +1934,36 @@ dialog.dccgg-wrapper::backdrop {
     background: color-mix(in srgb, var(--dccgg-primary) 20%, transparent);
 }
 
+/* v0.12.2: tap-to-reveal value (Wi-Fi passwords). The real value lives in a
+   data attribute and is painted by ::before, so the unrevealed state has no
+   password text anywhere on screen — screenshots and shoulder-surfing show
+   dots. Not a security boundary: it is still in the page source, which the
+   host has accepted. */
+.dccgg-secret {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+}
+.dccgg-secret-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.12em;
+    color: var(--dccgg-text);
+}
+.dccgg-secret-value::before { content: '\2022\2022\2022\2022\2022\2022\2022\2022'; }
+.dccgg-secret.is-revealed .dccgg-secret-value::before { content: attr(data-secret-value); letter-spacing: normal; }
+.dccgg-secret-toggle {
+    border: 1px solid var(--dccgg-tile-border);
+    background: transparent;
+    color: var(--dccgg-text);
+    border-radius: 999px;
+    padding: 4px 12px;
+    min-height: 32px;
+    font: inherit;
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
 /* ---- Read-time chip ---- */
 .dccgg-read-time {
     display: inline-flex;
@@ -3238,6 +3268,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-quick-action,
     .dccgg-root .dccgg-item-report,
     .dccgg-root .dccgg-item-check,
+    .dccgg-root .dccgg-secret-toggle,
     .dccgg-root .dccgg-item-tts,
     .dccgg-root .dccgg-read-time,
     .dccgg-root .dccgg-read-more,
@@ -3281,6 +3312,8 @@ dialog.dccgg-wrapper::backdrop {
         transform: none !important;
     }
     .dccgg-root .dccgg-detail[hidden] { display: block !important; }
+    /* The binder copy needs the real password, not dots. */
+    .dccgg-root .dccgg-secret-value::before { content: attr(data-secret-value) !important; letter-spacing: normal !important; }
     .dccgg-root .dccgg-wrapper {
         /* v0.9.7.23: display override — a closed <dialog> is display:none
            per UA stylesheet, but printing the guide must include the FAB

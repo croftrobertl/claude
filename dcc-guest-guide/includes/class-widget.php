@@ -488,6 +488,14 @@ final class Widget extends Widget_Base
             'default'   => ['url' => '', 'is_external' => false, 'nofollow' => false],
         ]);
 
+        $this->add_control('enable_offline', [
+            'label'        => __('Work offline (Add to Home Screen)', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default'      => '',
+            'description'  => __('Lets guests keep the guide on their phone and open it with no signal — useful on the canal where coverage is patchy. After turning this on, open the guide on the phone, then Share → Add to Home Screen. Only the guide page and its own files are stored; nothing from the admin or booking areas is. AI search still needs a connection and says so. Turning this off again removes what was stored on the next visit.', 'dcc-guest-guide'),
+        ]);
+
         $this->add_control('enable_print', [
             'label'        => __('Enable Print button', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -1102,6 +1110,14 @@ final class Widget extends Widget_Base
             'condition' => ['item_copy' => 'yes'],
         ]);
 
+        $repeater->add_control('item_mask_value', [
+            'label'        => __('Hide the value until tapped', 'dcc-guest-guide'),
+            'type'         => Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'condition'    => ['item_copy' => 'yes'],
+            'description'  => __('Shows the value as dots with a Show button, so a Wi-Fi password is not sitting in plain view in screenshots, over a shoulder, or on a phone left on a table. Copy still works without revealing it, read-aloud never speaks it, and it prints in full for the cottage binder. This is privacy, not security — the value is still in the page source. It only covers the value in this field: if the same password is also typed into the item text above, that copy stays visible.', 'dcc-guest-guide'),
+        ]);
+
         $repeater->add_control('item_wifi_mode', [
             'label'        => __('WiFi credentials mode', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -1286,9 +1302,10 @@ final class Widget extends Widget_Base
             'description' => __('Tapping renders as a tel: link. Leave blank if the contact is a map destination instead.', 'dcc-guest-guide'),
         ]);
         $contacts->add_control('contact_map', [
-            'label'       => __('Map URL or address', 'dcc-guest-guide'),
+            'label'       => __('Directions address or URL', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
-            'description' => __('Optional. If set and phone is blank, the chip opens a maps link instead.', 'dcc-guest-guide'),
+            'label_block' => true,
+            'description' => __('Optional. If set and the phone field is blank, the chip opens driving directions instead of dialling. Type a plain address (e.g. "AdventHealth Waterman, Tavares") and it becomes a Google Maps directions link that routes from wherever the guest is. Paste a full https:// link only if you need something specific — and never a maps.app.goo.gl share link, those fail to open in the Maps app.', 'dcc-guest-guide'),
         ]);
         $contacts->add_control('contact_icon', [
             'label'   => __('Chip emoji', 'dcc-guest-guide'),
@@ -1459,6 +1476,9 @@ final class Widget extends Widget_Base
             'str_wizard_prev'  => [__('Wizard back button', 'dcc-guest-guide'),  __('Back', 'dcc-guest-guide')],
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
+            'str_ai_offline'     => [__('AI search offline message', 'dcc-guest-guide'), __('Ask anything needs a connection. The rest of the guide works offline.', 'dcc-guest-guide')],
+            'str_secret_show'    => [__('Reveal hidden value button', 'dcc-guest-guide'), __('Show', 'dcc-guest-guide')],
+            'str_secret_hide'    => [__('Re-hide value button', 'dcc-guest-guide'), __('Hide', 'dcc-guest-guide')],
             'str_tts_play'       => [__('Read-aloud button label', 'dcc-guest-guide'), __('Read this item aloud', 'dcc-guest-guide')],
             'str_tts_stop'       => [__('Read-aloud STOP button label', 'dcc-guest-guide'), __('Stop reading', 'dcc-guest-guide')],
             'str_lightbox_close' => [__('Lightbox close aria-label', 'dcc-guest-guide'), __('Close image', 'dcc-guest-guide')],
@@ -2921,6 +2941,7 @@ final class Widget extends Widget_Base
         // neither the toolbar button nor the in-popup one is emitted at all.
         $s['enable_detail_more_menu'] = '';  // toolbar "…" button
         $s['enable_popup_more_menu']  = '';  // "…" inside a section popup
+        $s['enable_offline']          = '';  // the marketing page is not an offline app
     }
 
     protected function render(): void
@@ -3096,6 +3117,7 @@ final class Widget extends Widget_Base
                 'thinking' => (string) ($s['ai_search_thinking'] ?? __('Thinking…', 'dcc-guest-guide')),
                 'error'    => (string) ($s['ai_search_error'] ?? __('Sorry — I couldn\'t answer that. Try contacting the host.', 'dcc-guest-guide')),
                 'askAgain' => (string) __('Ask another question', 'dcc-guest-guide'),
+                'offline'  => (string) ($s['str_ai_offline'] ?? __('Ask anything needs a connection. The rest of the guide works offline.', 'dcc-guest-guide')),
                 'voiceLabel' => (string) ($s['str_ai_voice'] ?? __('Ask by voice', 'dcc-guest-guide')),
             ],
             'savePdf'              => [
@@ -3706,7 +3728,13 @@ final class Widget extends Widget_Base
                     $href     = 'tel:' . preg_replace('/[^0-9+]/', '', $phone);
                     $external = false;
                 } elseif ($map !== '') {
-                    $href     = (preg_match('~^https?://~i', $map) ? $map : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($map));
+                    // v0.12.2: a bare address becomes DIRECTIONS, not a dropped pin. The
+                    // documented dir/?api=1 form carries no origin, so Google routes from
+                    // wherever the guest is standing — the point of the chip in an
+                    // emergency. A full URL the host pasted is used verbatim.
+                    $href     = (preg_match('~^https?://~i', $map)
+                        ? $map
+                        : 'https://www.google.com/maps/dir/?api=1&destination=' . rawurlencode($map));
                     $external = true;
                 } else {
                     $href     = '';
@@ -3810,6 +3838,7 @@ final class Widget extends Widget_Base
         $read_more      = ($item['enable_read_more'] ?? '') === 'yes' && $source === 'wysiwyg';
         $copy_on        = ($item['item_copy'] ?? '') === 'yes';
         $copy_val       = (string) ($item['item_copy_value'] ?? '');
+        $mask_on        = ($item['item_mask_value'] ?? '') === 'yes';
         $media_type     = (string) ($item['media_type'] ?? 'none');
         $map_on         = ($item['enable_map'] ?? '') === 'yes';
         $map_url        = (string) ($item['map_url']['url'] ?? '');
@@ -3966,6 +3995,21 @@ final class Widget extends Widget_Base
                             <i class="fas fa-map-marker-alt" aria-hidden="true"></i> <?php echo esc_html($strings['str_directions']); ?>
                         </a>
                     <?php endif; ?>
+                    <?php if ($copy_on && $copy_val !== '' && $mask_on) : ?>
+                        <?php // v0.12.2: the value is never rendered as text — it rides in a
+                        // data attribute and the dots/plain text come from CSS ::before, so
+                        // a screenshot of the unrevealed state shows nothing. Print reveals
+                        // it (see @media print) for the cottage binder. ?>
+                        <span class="dccgg-secret">
+                            <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
+                            <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+                                    aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
+                                    data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
+                                    data-label-hide="<?php echo esc_attr($strings['str_secret_hide'] ?? __('Hide', 'dcc-guest-guide')); ?>">
+                                <?php echo esc_html($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>
+                            </button>
+                        </span>
+                    <?php endif; ?>
                     <?php if ($copy_on && $copy_val !== '') : ?>
                         <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
@@ -4014,7 +4058,10 @@ final class Widget extends Widget_Base
                 $parts[] = $tpl_cache[$tpl_id];
             }
         }
-        if (($item['item_copy'] ?? '') === 'yes') {
+        // A masked value is deliberately left out of the search index: that
+        // index is inlined into data-config, so including it would put the
+        // password straight back into the page as plain text.
+        if (($item['item_copy'] ?? '') === 'yes' && ($item['item_mask_value'] ?? '') !== 'yes') {
             $parts[] = (string) ($item['item_copy_value'] ?? '');
         }
         return mb_substr(trim(preg_replace('/\s+/u', ' ', implode(' ', $parts)) ?: ''), 0, 1500);

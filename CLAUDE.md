@@ -173,7 +173,19 @@ so the Elementor editor's re-rendered roots get init(); per-root document/window
 listeners go through `bindGlobal(root, …)` so `disposeStaleRoots()` can release
 them. Use bindGlobal for any new global listener inside a wire*() function.
 
-Run `php tests/public-mode.test.php` after touching any of it. Those tests guard
+Guide auto-detect (`discover_guide_source`) must never return the page doing
+the asking, and its meta LIKE searches the full token `"widgetType":"dccgg_guide"`
+— a bare `dccgg_guide` also matches `dccgg_guide_public`. See
+`tests/discovery.test.php`.
+
+Offline support is opt-in per widget (`enable_offline`, forced off in public
+mode). The manifest and service worker are served from the site ROOT via
+`/?dccgg_sw=1` so the worker can claim a scope like `/guest/`; one served from
+the plugin directory could not. The worker never caches wp-admin, wp-json,
+admin-ajax, logins or previews, and turning the toggle off unregisters it.
+
+Run `php tests/public-mode.test.php`, `php tests/discovery.test.php` and
+`node tests/popup.test.js` after touching any of it. Those tests guard
 a security property (one guest-only section holds Wi-Fi passwords and the public
 page is indexable), not a cosmetic one.
 

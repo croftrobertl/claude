@@ -256,6 +256,7 @@
         wireQr(root, config);
         wireSearch(root, config);
         wireSearchMic(root, config);
+        wireSecrets(root);
         wireTts(root, config);
         wireTilt(root);
         wireClickFeedback(root, config);
@@ -1466,6 +1467,8 @@
             }
         }
 
+        reportSearchMiss(root, config, query);
+
         const parts = [];
         parts.push('<p class="dccgg-search-no-results">' + escHtml(noResultsTxt) + '</p>');
 
@@ -1561,6 +1564,15 @@
         btn.disabled = true;
         answer.hidden = false;
         answer.dataset.state = 'loading';
+        // v0.12.2: the guide itself works offline; this one feature cannot.
+        // Say so immediately instead of firing a request that will hang.
+        if (navigator.onLine === false) {
+            answer.hidden = false;
+            answer.textContent = config.aiSearch.offline
+                || 'Ask anything needs a connection. The rest of the guide works offline.';
+            btn.disabled = false;
+            return;
+        }
         answer.textContent = config.aiSearch.thinking;
         const context = buildAiContext(root);
         const body = new URLSearchParams();
@@ -3247,6 +3259,48 @@
                 mic.classList.add('is-listening');
                 input.focus();
             } catch (_) { stop(); }
+        });
+    }
+
+    // v0.12.2: tell the host what guests searched for and did not find. Sends
+    // the query and nothing else — no identifier, no page, no user agent. Fired
+    // at most once per distinct query per page view, and only for queries long
+    // enough to mean something, so a half-typed word is not logged on its way
+    // to a real one.
+    const _missSent = new Set();
+    function reportSearchMiss(root, config, q) {
+        const query = String(q || '').trim();
+        if (query.length < 3 || query.length > 80) return;
+        const key = query.toLowerCase();
+        if (_missSent.has(key)) return;
+        _missSent.add(key);
+        if (!config || !config.ajaxUrl || !config.nonce) return;
+        try {
+            const body = new URLSearchParams();
+            body.set('action', 'dccgg_search_miss');
+            body.set('q', query);
+            dccggFetch(config, body).catch(() => {});
+        } catch (_) {}
+    }
+
+    // -- Tap-to-reveal values (Wi-Fi passwords) ---------------------------
+    // The value itself is never in the text layer: CSS paints either dots or
+    // attr(data-secret-value). This only flips a class, so nothing here has to
+    // handle the secret.
+    function wireSecrets(root) {
+        root.querySelectorAll('.dccgg-secret-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wrap = btn.closest('.dccgg-secret');
+                if (!wrap) return;
+                const revealed = wrap.classList.toggle('is-revealed');
+                btn.setAttribute('aria-pressed', revealed ? 'true' : 'false');
+                const label = revealed
+                    ? (btn.dataset.labelHide || 'Hide')
+                    : (btn.dataset.labelShow || 'Show');
+                btn.textContent = label;
+                btn.setAttribute('aria-label', label);
+            });
         });
     }
 

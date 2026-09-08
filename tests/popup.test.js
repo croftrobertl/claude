@@ -645,6 +645,97 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario L: masked values, search misses, print (v0.12.2) -------
+    {
+        console.log('\nL. Tap-to-reveal values, failed-search reporting, print output');
+        const errors = [];
+        const secret = `<span class="dccgg-secret">
+            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+                    data-label-show="Show" data-label-hide="Hide">Show</button></span>`;
+        const cfg = JSON.stringify({ revealMode: 'stage', strings: {}, enableSearch: true,
+            ajaxUrl: 'https://dccgg.test/ajax', nonce: 'n1',
+            searchIndex: [{ section: 'wifi', item_idx: 0, title: 'Wifi Name', text: 'network' }] });
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1"><style>${CSS}</style></head>
+            <body><div class="dccgg-root" data-config='${cfg.replace(/'/g, '&#39;')}'>
+            <div class="dccgg-search"><input type="search" class="dccgg-search-input">
+            <div class="dccgg-search-results" role="group" hidden></div></div>
+            <div class="dccgg-detail-items"><article class="dccgg-item" data-tts-text="Join the network.">
+            <div class="dccgg-item-utils">${secret}
+            <button class="dccgg-btn dccgg-copy" data-copy="DCC32586">Copy</button></div></article></div>
+            </div><script>${JS}</script></body></html>`;
+        const { ctx, page } = await newPage(browser, PHONE, html, errors);
+
+        // (e) masked by default — the password must not be in the rendered text.
+        const shown = () => page.evaluate(() => {
+            const v = document.querySelector('.dccgg-secret-value');
+            return { css: getComputedStyle(v, '::before').content,
+                     text: document.body.innerText,
+                     pressed: document.querySelector('.dccgg-secret-toggle').getAttribute('aria-pressed'),
+                     label: document.querySelector('.dccgg-secret-toggle').textContent.trim() };
+        });
+        let st = await shown();
+        check('password is not visible before revealing', !st.text.includes('DCC32586'), st.text.slice(0, 60));
+        check('dots are shown instead', /•/.test(st.css), st.css);
+        check('toggle reads Show', st.label === 'Show' && st.pressed === 'false');
+
+        await page.click('.dccgg-secret-toggle');
+        st = await shown();
+        check('tapping Show reveals the value', st.css.includes('DCC32586'), st.css);
+        check('toggle flips to Hide', st.label === 'Hide' && st.pressed === 'true');
+        await page.click('.dccgg-secret-toggle');
+        check('tapping again re-hides it', !(await shown()).css.includes('DCC32586'));
+
+        // Copy still works without revealing.
+        check('copy button carries the real value',
+            await page.$eval('.dccgg-copy', (b) => b.dataset.copy === 'DCC32586'));
+
+        // (f) print: the binder copy needs the real password and no toggle.
+        await page.emulateMedia({ media: 'print' });
+        const printed = await page.evaluate(() => ({
+            val: getComputedStyle(document.querySelector('.dccgg-secret-value'), '::before').content,
+            toggle: getComputedStyle(document.querySelector('.dccgg-secret-toggle')).display,
+            search: getComputedStyle(document.querySelector('.dccgg-search')).display,
+        }));
+        check('print shows the real password', printed.val.includes('DCC32586'), printed.val);
+        check('print hides the reveal toggle', printed.toggle === 'none');
+        check('print hides the search box', printed.search === 'none');
+        await page.emulateMedia({ media: 'screen' });
+
+        // (d) a search with no matches is reported once, with only the query.
+        // Served from a real origin: with setContent the page sits on
+        // about:blank, where a relative /ajax URL cannot resolve at all.
+        const posts = [];
+        const ctx2 = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true });
+        const page2 = await ctx2.newPage();
+        page2.on('pageerror', (e) => errors.push(String(e)));
+        await ctx2.route('https://dccgg.test/**', async (route) => {
+            const u = new URL(route.request().url());
+            if (u.pathname === '/ajax') {
+                posts.push(route.request().postData() || '');
+                return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"data":{}}' });
+            }
+            return route.fulfill({ status: 200, contentType: 'text/html', body: html });
+        });
+        await page2.goto('https://dccgg.test/guest/', { waitUntil: 'load' });
+        await page2.fill('.dccgg-search-input', 'hot tub');
+        await page2.waitForTimeout(400);
+        check('a zero-result search is reported', posts.some(b => b.includes('dccgg_search_miss')), posts.join('|').slice(0, 80));
+        const body = posts.find(b => b.includes('dccgg_search_miss')) || '';
+        check('the query is sent', /q=hot(\+|%20)tub/.test(body), body);
+        check('no identifying data is sent', !/user_agent|ip=|referer|post_id/i.test(body), body);
+        const before = posts.length;
+        await page2.fill('.dccgg-search-input', '');
+        await page2.fill('.dccgg-search-input', 'hot tub');
+        await page2.waitForTimeout(400);
+        check('the same query is not reported twice', posts.length === before, `${before} -> ${posts.length}`);
+
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx2.close();
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

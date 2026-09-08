@@ -74,6 +74,11 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_usgs',         [$this, 'handle_usgs']);
         add_action('wp_ajax_dccgg_search_index',        [$this, 'handle_search_index']);
         add_action('wp_ajax_nopriv_dccgg_search_index', [$this, 'handle_search_index']);
+        // v0.12.2: record searches that found nothing, so the host can see what
+        // content guests expect and cannot find.
+        add_action('wp_ajax_dccgg_search_miss',         [$this, 'handle_search_miss']);
+        add_action('wp_ajax_nopriv_dccgg_search_miss',  [$this, 'handle_search_miss']);
+        add_action('admin_post_dccgg_clear_misses',     [$this, 'handle_clear_search_misses']);
         // v0.9.7.15: stale-nonce refresh path. When SpeedyCache serves a
         // cached page populated by an anonymous visitor to a logged-in
         // admin, the inlined nonce is for user 0 and every dccgg_nonce
@@ -91,6 +96,12 @@ final class Plugin
         // guide paints unstyled for a beat. Still enqueued in the callback too,
         // for shortcodes rendered from a template or another plugin's content.
         add_action('wp_enqueue_scripts', [$this, 'maybe_enqueue_for_shortcode']);
+
+        // v0.12.2: offline support for the guest guide. Both endpoints are
+        // served from the site root path so the worker can claim a scope like
+        // /guest/ without needing a Service-Worker-Allowed header.
+        add_action('init', [$this, 'maybe_serve_pwa_assets']);
+        add_action('wp_head', [$this, 'render_pwa_head'], 5);
 
         // v0.9.4: server-side Export / Import — the editor-panel JS API
         // path broke in Elementor 4.x, so read/write _elementor_data
@@ -294,12 +305,13 @@ final class Plugin
      * the plugin version so an upgrade re-resolves it, and a stale/missing post
      * simply falls through to a fresh scan.
      */
-    public function discover_guide_source(): int
+    public function discover_guide_source(int $exclude_post_id = 0): int
     {
         $cached = get_option('dccgg_guide_source_post', []);
         if (is_array($cached)
             && ($cached['version'] ?? '') === DCCGG_VERSION
             && (int) ($cached['post_id'] ?? 0) > 0
+            && (int) $cached['post_id'] !== $exclude_post_id
             && get_post_status((int) $cached['post_id']) === 'publish') {
             return (int) $cached['post_id'];
         }
@@ -318,13 +330,20 @@ final class Plugin
             'fields'                 => 'ids',
             'no_found_rows'          => true,
             'update_post_term_cache' => false,
+            // v0.12.2: match the full JSON token INCLUDING the closing quote.
+            // A bare 'dccgg_guide' LIKE also matches "dccgg_guide_public", so
+            // every page carrying the PUBLIC widget came back as a candidate —
+            // including the very page asking the question.
             'meta_query'             => [[
                 'key'     => '_elementor_data',
-                'value'   => 'dccgg_guide',
+                'value'   => '"widgetType":"dccgg_guide"',
                 'compare' => 'LIKE',
             ]],
         ]);
         foreach ($q->posts as $pid) {
+            // Never resolve to the page the asking widget sits on: a public
+            // widget auto-detecting itself renders an empty guide.
+            if ((int) $pid === $exclude_post_id) { continue; }
             if ($this->find_widget_element((int) $pid)) { $found = (int) $pid; break; }
         }
         if ($found > 0) {
@@ -370,7 +389,10 @@ final class Plugin
         if (!$this->dependencies_present() || !class_exists('\Elementor\Plugin')) {
             return '';
         }
-        if ($post_id <= 0) { $post_id = $this->discover_guide_source(); }
+        // v0.12.2: exclude the page being rendered from auto-detect, and
+        // re-resolve if an explicit source somehow points at this same page.
+        $here = (int) (get_the_ID() ?: 0);
+        if ($post_id <= 0 || $post_id === $here) { $post_id = $this->discover_guide_source($here); }
         $element = $this->find_widget_element($post_id, $widget_id);
         if (!$element) {
             // Silent for visitors; editors get a pointer, since a blank space
@@ -827,6 +849,62 @@ final class Plugin
         ]);
     }
 
+    /**
+     * "What guests searched for and didn't find" — the cheapest signal for
+     * which content is missing from the guide.
+     */
+    private function render_search_misses_panel(): void
+    {
+        $misses = get_option('dccgg_search_misses', []);
+        if (!is_array($misses)) { $misses = []; }
+        uasort($misses, static function ($a, $b) {
+            $bn = (int) ($b['n'] ?? 0); $an = (int) ($a['n'] ?? 0);
+            if ($an !== $bn) { return $bn <=> $an; }
+            return ((int) ($b['t'] ?? 0)) <=> ((int) ($a['t'] ?? 0));
+        });
+        ?>
+        <h2><?php echo esc_html__('Searches that found nothing', 'dcc-guest-guide'); ?></h2>
+        <p class="description">
+            <?php echo esc_html__('What guests typed into the guide search that returned no results, most frequent first. Only the words and when they were last searched are kept — no visitor information of any kind. Use it to spot content the guide is missing.', 'dcc-guest-guide'); ?>
+        </p>
+        <?php if (!empty($_GET['dccgg_cleared'])) : ?>
+            <div class="notice notice-success inline"><p><?php echo esc_html__('Cleared.', 'dcc-guest-guide'); ?></p></div>
+        <?php endif; ?>
+        <?php if (!$misses) : ?>
+            <p><em><?php echo esc_html__('Nothing recorded yet.', 'dcc-guest-guide'); ?></em></p>
+        <?php else : ?>
+            <table class="widefat striped" style="max-width:640px">
+                <thead><tr>
+                    <th><?php echo esc_html__('Search', 'dcc-guest-guide'); ?></th>
+                    <th style="width:6em"><?php echo esc_html__('Times', 'dcc-guest-guide'); ?></th>
+                    <th style="width:12em"><?php echo esc_html__('Last searched', 'dcc-guest-guide'); ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach (array_slice($misses, 0, 50, true) as $row) : ?>
+                    <tr>
+                        <td><code><?php echo esc_html((string) ($row['q'] ?? '')); ?></code></td>
+                        <td><?php echo (int) ($row['n'] ?? 0); ?></td>
+                        <td><?php echo esc_html(
+                            ($row['t'] ?? 0)
+                                ? sprintf(
+                                    /* translators: %s: human-readable time difference, e.g. "2 hours" */
+                                    __('%s ago', 'dcc-guest-guide'),
+                                    human_time_diff((int) $row['t'], time())
+                                )
+                                : '—'
+                        ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p>
+                <a class="button" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=dccgg_clear_misses'), 'dccgg_clear_misses')); ?>">
+                    <?php echo esc_html__('Clear this list', 'dcc-guest-guide'); ?>
+                </a>
+            </p>
+        <?php endif;
+    }
+
     public function render_settings_page(): void
     {
         if (!current_user_can('manage_options')) { return; }
@@ -834,6 +912,7 @@ final class Plugin
         <div class="wrap">
             <h1><?php echo esc_html__('DCC Guest Guide', 'dcc-guest-guide'); ?></h1>
             <p><?php echo esc_html__('Server-side settings shared by all DCC Guest Guide widgets on this site. Per-widget settings live in Elementor.', 'dcc-guest-guide'); ?></p>
+            <?php $this->render_search_misses_panel(); ?>
             <form method="post" action="options.php">
                 <?php settings_fields('dccgg_settings_group'); ?>
                 <h2><?php echo esc_html__('AI Fallback Search', 'dcc-guest-guide'); ?></h2>
@@ -1143,6 +1222,274 @@ final class Plugin
         $index = Widget::build_search_index($settings);
         set_transient($key, $index, HOUR_IN_SECONDS);
         wp_send_json_success(['index' => $index]);
+    }
+
+    /**
+     * Settings of the guide widget on the post being viewed, or [].
+     * Used to decide whether this page opts into offline support.
+     */
+    private function current_guide_settings(): array
+    {
+        if (!is_singular()) { return []; }
+        $id = (int) (get_the_ID() ?: 0);
+        if ($id <= 0) { return []; }
+        $el = $this->find_widget_element($id);
+        return $el ? (array) ($el['settings'] ?? []) : [];
+    }
+
+    private function offline_enabled_here(): bool
+    {
+        $s = $this->current_guide_settings();
+        return $s && (($s['enable_offline'] ?? '') === 'yes');
+    }
+
+    /**
+     * Serve the web app manifest and the service worker.
+     *
+     * Both come from the site root ("/?dccgg_sw=1"), because a worker may only
+     * control paths at or below its own script path — one served from
+     * /wp-content/plugins/... could never claim /guest/.
+     */
+    public function maybe_serve_pwa_assets(): void
+    {
+        if (!empty($_GET['dccgg_manifest'])) {
+            $this->serve_manifest();
+        }
+        if (!empty($_GET['dccgg_sw'])) {
+            $this->serve_service_worker();
+        }
+    }
+
+    private function guide_start_url(): string
+    {
+        $cached = $this->discover_guide_source();
+        $url = $cached > 0 ? (string) get_permalink($cached) : '';
+        return $url !== '' ? $url : home_url('/');
+    }
+
+    private function serve_manifest(): void
+    {
+        $start = $this->guide_start_url();
+        $name  = get_bloginfo('name') ?: 'Guest Guide';
+        $data  = [
+            'name'             => $name . ' — ' . __('Guest Guide', 'dcc-guest-guide'),
+            'short_name'       => __('Guest Guide', 'dcc-guest-guide'),
+            'description'      => __('Everything you need during your stay — works without a signal.', 'dcc-guest-guide'),
+            'start_url'        => $start,
+            'scope'            => (string) (wp_parse_url($start, PHP_URL_PATH) ?: '/'),
+            'display'          => 'standalone',
+            'background_color' => '#ffffff',
+            'theme_color'      => '#0f6dbf',
+        ];
+        $icon = function_exists('get_site_icon_url') ? get_site_icon_url(512) : '';
+        if ($icon) {
+            $data['icons'] = [
+                ['src' => get_site_icon_url(192), 'sizes' => '192x192', 'type' => 'image/png'],
+                ['src' => $icon,                  'sizes' => '512x512', 'type' => 'image/png'],
+            ];
+        }
+        nocache_headers();
+        header('Content-Type: application/manifest+json; charset=utf-8');
+        echo wp_json_encode($data);
+        exit;
+    }
+
+    private function serve_service_worker(): void
+    {
+        $ver   = DCCGG_VERSION;
+        $start = $this->guide_start_url();
+        $scope = (string) (wp_parse_url($start, PHP_URL_PATH) ?: '/');
+        $css   = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/css/widget.min.css') ? 'assets/css/widget.min.css' : 'assets/css/widget.css') . '?ver=' . $ver;
+        $js    = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js')  . '?ver=' . $ver;
+        $precache = wp_json_encode(array_values(array_filter([$start, $css, $js])));
+
+        header('Content-Type: application/javascript; charset=utf-8');
+        header('Service-Worker-Allowed: ' . $scope);
+        nocache_headers();
+        $sw = <<<'SWJS'
+/* DCC Guest Guide service worker. Generated per install; do not edit. */
+const CACHE = 'dccgg-__VER__';
+const PRECACHE = __PRECACHE__;
+const SCOPE_PATH = '__SCOPE__';
+
+self.addEventListener('install', (e) => {
+    e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE).catch(() => {})).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+    // Drop caches from previous plugin versions, then take over open pages so
+    // an upgrade cannot leave a stale guide behind.
+    e.waitUntil(caches.keys()
+        .then((keys) => Promise.all(keys.filter((k) => k.startsWith('dccgg-') && k !== CACHE).map((k) => caches.delete(k))))
+        .then(() => self.clients.claim()));
+});
+
+// Anything that is personal, authenticated, or booking-related must never be
+// stored: admin, login, the REST API, admin-ajax and previews are all excluded
+// outright, as is every non-GET request.
+function isCacheable(url, req) {
+    if (req.method !== 'GET') return false;
+    if (url.origin !== self.location.origin) return false;
+    const p = url.pathname;
+    if (p.startsWith('/wp-admin/') || p.startsWith('/wp-json/')) return false;
+    if (p.endsWith('/wp-login.php') || p.endsWith('/wp-cron.php') || p.endsWith('/admin-ajax.php')) return false;
+    if (url.searchParams.has('preview') || url.searchParams.has('dccgg_sw') || url.searchParams.has('dccgg_manifest')) return false;
+    return true;
+}
+
+self.addEventListener('fetch', (event) => {
+    const req = event.request;
+    let url;
+    try { url = new URL(req.url); } catch (_) { return; }
+    if (!isCacheable(url, req)) return;               // straight to the network
+
+    // Pages: fresh when there is a signal, cached when there isn't.
+    if (req.mode === 'navigate') {
+        if (!url.pathname.startsWith(SCOPE_PATH)) return;
+        event.respondWith(
+            fetch(req).then((res) => {
+                if (res && res.ok) {
+                    const copy = res.clone();
+                    caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+                }
+                return res;
+            }).catch(() => caches.match(req).then((hit) => hit || caches.match(PRECACHE[0])))
+        );
+        return;
+    }
+
+    // Assets: serve instantly from cache, refresh in the background.
+    const dest = req.destination;
+    if (dest === 'script' || dest === 'style' || dest === 'image' || dest === 'font') {
+        event.respondWith(
+            caches.match(req).then((hit) => {
+                const net = fetch(req).then((res) => {
+                    if (res && res.ok) {
+                        const copy = res.clone();
+                        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+                    }
+                    return res;
+                }).catch(() => hit);
+                return hit || net;
+            })
+        );
+    }
+});
+
+// Lets the page tear everything down if offline support is switched off.
+self.addEventListener('message', (e) => {
+    if (e.data === 'dccgg-purge') {
+        caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('dccgg-')).map((k) => caches.delete(k))))
+            .then(() => self.registration.unregister());
+    }
+});
+SWJS;
+        echo str_replace(['__VER__', '__PRECACHE__', '__SCOPE__'], [$ver, $precache, $scope], $sw);
+        exit;
+    }
+
+    /**
+     * Manifest link + worker registration on the guide page.
+     *
+     * When the host has NOT enabled offline support, this instead unregisters
+     * any worker a previous visit installed and clears its caches — the escape
+     * hatch if offline behaviour ever needs to be switched off in a hurry.
+     */
+    public function render_pwa_head(): void
+    {
+        $settings = $this->current_guide_settings();
+        if (!$settings) { return; }
+        $on = ($settings['enable_offline'] ?? '') === 'yes';
+
+        if (!$on) { ?>
+            <script>navigator.serviceWorker&&navigator.serviceWorker.getRegistrations&&navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){if(r.active&&r.active.scriptURL.indexOf('dccgg_sw')>-1){r.active.postMessage('dccgg-purge');r.unregister();}});});</script>
+        <?php return; }
+
+        $scope = (string) (wp_parse_url((string) get_permalink(), PHP_URL_PATH) ?: '/');
+        ?>
+        <link rel="manifest" href="<?php echo esc_url(home_url('/?dccgg_manifest=1')); ?>">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="<?php echo esc_attr__('Guest Guide', 'dcc-guest-guide'); ?>">
+        <meta name="theme-color" content="#0f6dbf">
+        <?php $icon = function_exists('get_site_icon_url') ? get_site_icon_url(180) : ''; ?>
+        <?php if ($icon) : ?><link rel="apple-touch-icon" href="<?php echo esc_url($icon); ?>"><?php endif; ?>
+        <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register(<?php echo wp_json_encode(home_url('/?dccgg_sw=1')); ?>,
+                    { scope: <?php echo wp_json_encode($scope); ?> }).catch(function () {});
+            });
+        }
+        </script>
+        <?php
+    }
+
+    /**
+     * AJAX: record a search that returned nothing.
+     *
+     * Stores the query text and when it was last seen, aggregated by query with
+     * a hit count — nothing else. No IP, no user agent, no page, no identifier
+     * of any kind, so the log cannot be tied back to a guest. The per-IP rate
+     * limit below uses a hashed address held only in a short-lived transient,
+     * never written to the log.
+     */
+    public function handle_search_miss(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+
+        $q = isset($_POST['q']) ? sanitize_text_field(wp_unslash((string) $_POST['q'])) : '';
+        $q = trim(preg_replace('/\s+/u', ' ', $q) ?? '');
+        if ($q === '' || mb_strlen($q) < 3) {
+            wp_send_json_success(['stored' => false]);
+        }
+        $q = mb_substr($q, 0, 80);
+
+        // Keeps a bored visitor from filling the option with junk.
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_miss_rl_' . $ip_hash;
+        $count   = (int) get_transient($rl_key);
+        if ($count >= 20) {
+            wp_send_json_success(['stored' => false]);
+        }
+        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
+
+        $misses = get_option('dccgg_search_misses', []);
+        if (!is_array($misses)) { $misses = []; }
+        $key = mb_strtolower($q);
+        if (isset($misses[$key]) && is_array($misses[$key])) {
+            $misses[$key]['n'] = (int) ($misses[$key]['n'] ?? 0) + 1;
+            $misses[$key]['t'] = time();
+        } else {
+            $misses[$key] = ['q' => $q, 'n' => 1, 't' => time()];
+        }
+        // Cap at 200 distinct queries; when full, drop the least useful —
+        // fewest hits first, then oldest — so a one-off typo is evicted
+        // before a repeatedly-missed real question.
+        if (count($misses) > 200) {
+            uasort($misses, static function ($a, $b) {
+                $an = (int) ($a['n'] ?? 0); $bn = (int) ($b['n'] ?? 0);
+                if ($an !== $bn) { return $an <=> $bn; }
+                return ((int) ($a['t'] ?? 0)) <=> ((int) ($b['t'] ?? 0));
+            });
+            $misses = array_slice($misses, count($misses) - 200, 200, true);
+        }
+        update_option('dccgg_search_misses', $misses, false);
+        wp_send_json_success(['stored' => true]);
+    }
+
+    /**
+     * Clear the failed-search log from the settings page.
+     */
+    public function handle_clear_search_misses(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('Insufficient permissions.', 'dcc-guest-guide'), '', ['response' => 403]);
+        }
+        check_admin_referer('dccgg_clear_misses');
+        delete_option('dccgg_search_misses');
+        wp_safe_redirect(add_query_arg('dccgg_cleared', '1', menu_page_url('dccgg-settings', false)));
+        exit;
     }
 
     /**

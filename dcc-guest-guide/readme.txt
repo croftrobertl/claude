@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.1
+Stable tag: 0.12.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,47 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.2 =
+
+**Fixed: the public guide's "auto-detect" could point at the wrong page.**
+Left on auto-detect, the public widget could resolve to the page it was
+sitting on instead of the page holding the guide, and render nothing. It
+now always looks for the page that actually contains a guide and never
+picks its own page. (Your /explore/ page works today because the source
+is set explicitly; it will keep working either way.)
+
+**New: the guide can work with no signal.** Turn on *Work offline* in the
+guide widget, then open the guide on a phone and use Share → Add to Home
+Screen. It opens and shows everything with no bars — useful on the canal.
+Only the guide page and its own files are stored; nothing from the admin
+or booking areas. AI search still needs a connection and now says so
+instead of hanging. Off by default; switching it off again clears what
+was stored on the next visit.
+
+**New: emergency chips can give directions.** Type a plain address into a
+chip's directions field (e.g. "AdventHealth Waterman, Tavares") and it
+opens Google Maps directions routed from wherever the guest is. Leave the
+phone field blank on that chip. Avoid maps.app.goo.gl share links — they
+fail to open in the Maps app.
+
+**New: see what guests searched for and couldn't find.** Searches that
+return nothing are listed on the DCC → Guest Guide settings page, most
+frequent first, so you can spot missing content. Only the words and when
+they were last searched are kept — no visitor information of any kind —
+and the list can be cleared with one button.
+
+**New: hide a value until tapped.** On any item with a Copy button, turn
+on *Hide the value until tapped* to show a Wi-Fi password as dots with a
+Show button. Copy still works without revealing it, read-aloud never
+speaks it, the search index no longer contains it, and it prints in full
+for the cottage binder. This is privacy, not security — the value is
+still in the page source. It only covers the value in that field: if the
+same password is also typed into the item text, that copy stays visible.
+
+**Print** was already covered: the guide has a full print layout (cover,
+contents, a page per section, every section expanded, all controls
+hidden). Nothing needed changing — print any guide page from the browser.
 
 = 0.12.1 =
 

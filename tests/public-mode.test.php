@@ -252,5 +252,26 @@ check('full mode still emits the contacts', count(\DCCGG\Widget::config_emergenc
 check('malformed contact rows are skipped', \DCCGG\Widget::config_emergency_contacts(
     ['emergency_contacts' => ['junk', ['contact_label' => 'X', 'contact_phone' => '1']]], 'emergency') !== [] );
 
+echo "\nK. Public mode also switches off offline support\n";
+$off = $settings; $off['enable_offline'] = 'yes';
+\DCCGG\Widget::apply_public_mode($off);
+check('public guide never installs a service worker', ($off['enable_offline'] ?? '') !== 'yes');
+
+echo "\nL. Masked values stay out of the inlined search index\n";
+$masked = [
+    'guide_mode' => 'full',
+    'guide_sections' => [['section_key' => 'wifi', 'section_title' => 'Internet', 'section_audience' => 'guest']],
+    'guide_items' => [
+        ['item_section' => 'wifi', 'item_title' => 'Cottage WiFi', 'item_content' => 'Join the network.',
+         'item_copy' => 'yes', 'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes'],
+        ['item_section' => 'wifi', 'item_title' => 'Guest WiFi', 'item_content' => 'Open network.',
+         'item_copy' => 'yes', 'item_copy_value' => 'plainvalue123'],
+    ],
+];
+$idx = json_encode(\DCCGG\Widget::build_search_index($masked));
+check('masked password is NOT in the search index', stripos($idx, 'DCC32586') === false);
+check('an unmasked copy value is still indexed', stripos($idx, 'plainvalue123') !== false);
+check('the item itself is still findable by title', stripos($idx, 'Cottage WiFi') !== false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

@@ -13,7 +13,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 }
 
 // Options (settings + the cached public-guide source pointer).
-foreach (['dccgg_gemini_key', 'dccgg_gemini_model', 'dccgg_guide_source_post'] as $option) {
+foreach (['dccgg_gemini_key', 'dccgg_gemini_model', 'dccgg_guide_source_post', 'dccgg_search_misses'] as $option) {
     delete_option($option);
 }
 
