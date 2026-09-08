@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.2
+Stable tag: 0.23.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.3 =
+* **Staff calendar arrows now match the public one exactly** — the same chevrons, size, colour and hover. The staff page was still using thin text arrows. Its buttons also now use the site font instead of the one the theme was forcing on them.
+* **Date numbers in the month grid are now readable.** They were mid-grey on the green, coral and grey day colours — well below the accessibility minimum on all three, and worst on booked days. They are now a dark slate that passes on every colour, including weekends. The number has its own colour setting, separate from the day colours, so re-tinting a day can't quietly make the number unreadable again.
+* **Booking popup:** the "Check-in" and "Check-out" labels are centred over their fields, and the close "x" now has a visible round background and is a proper 44px target instead of a bare character.
+* **Staff booking popup rebuilt to the exact list of fields staff asked for**, in order: Booking Information (accommodation type, check-in, check-out, number of guests, total, paid, balance due), Customer Information (name, contact, address, photo ID, guests 2-4, dog details) and Notes (internal notes). The Reserved Accommodations block is gone.
+* **Empty fields are now left out entirely** rather than shown as a dash — a booking with no dog and no second guest simply has no dog or second-guest rows. Blank, "0", "-" and "N/A" all count as empty. A zero balance still shows, since "nothing owed" is worth seeing.
+* The popup header and section titles are centred.
+* Bookings brought in from Airbnb or Vrbo still say the guest count was not provided rather than showing the channel's placeholder number.
 
 = 0.23.2 =
 Navigation row on the main calendar (back arrow, date range, Today, next arrow).

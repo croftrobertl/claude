@@ -546,10 +546,11 @@
                 sheetBody.appendChild(banner);
             }
             var sec = d.sections || {};
-            sheetBody.appendChild(rowsSection(S.secBooking, sec.booking));
-            sheetBody.appendChild(roomsSection(S.secRooms, sec.rooms));
-            sheetBody.appendChild(customerSection(S.secCustomer, sec.customer, d.id));
-            sheetBody.appendChild(rowsSection(S.secNotes, sec.notes));
+            [[S.secBooking, sec.booking], [S.secCustomer, sec.customer], [S.secNotes, sec.notes]]
+                .forEach(function (pair) {
+                    var el = rowsSection(pair[0], pair[1], d.id);
+                    if (el) sheetBody.appendChild(el);
+                });
         }
 
         function section(title) {
@@ -561,92 +562,62 @@
             return s;
         }
 
-        var MONEY_LABELS = {};
-        [S.total, 'Total', 'Paid', 'Balance due'].forEach(function (l) { if (l) MONEY_LABELS[l] = true; });
-
-        function rowsSection(title, rows) {
+        // Every section is label/value rows. A row the server marked with a
+        // `photo` reference becomes the gated-proxy link instead; a row it
+        // marked `muted` (an OTA-defaulted guest count) is greyed and italic
+        // so it can never be mistaken for a fact.
+        //
+        // The server has already dropped every empty field, so anything that
+        // arrives here has a value. A section with nothing in it is omitted
+        // outright rather than left as a bare heading.
+        function rowsSection(title, rows, bookingId) {
+            if (!rows || !rows.length) return null;
             var s = section(title);
             var dl = document.createElement('dl');
-            (rows || []).forEach(function (r) {
+            rows.forEach(function (r) {
                 if (!r || !r.label) return;
-                addRow(dl, r.label, r.value);
+                if (r.photo) { photoRow(dl, r, bookingId); return; }
+                addRow(dl, r.label, r.value, r);
             });
             s.appendChild(dl);
             return s;
         }
 
-        function roomsSection(title, rooms) {
-            var s = section(title);
-            (rooms || []).forEach(function (r) {
-                var box = document.createElement('div');
-                box.className = 'mphbac-staff-room';
-                var h = document.createElement('h4');
-                h.textContent = (r.cottage || '') + (r.unit && r.unit !== '—' ? ' · ' + r.unit : '');
-                box.appendChild(h);
-
-                var dl = document.createElement('dl');
-                // OTA honesty: never print an imported occupancy as a number.
-                var g = r.guests || {};
-                var dt = document.createElement('dt'); dt.textContent = S.guests || 'Guests';
-                var dd = document.createElement('dd');
-                if (g.provided) {
-                    var parts = [];
-                    if (g.adults !== null && g.adults !== undefined) parts.push((S.adults || 'Adults') + ': ' + g.adults);
-                    if (g.children !== null && g.children !== undefined) parts.push((S.children || 'Children') + ': ' + g.children);
-                    dd.textContent = parts.length ? parts.join(' · ') : '—';
-                } else {
-                    dd.textContent = g.note || '—';
-                    dd.className = 'is-unknown';
-                    dd.title = S.importedTip || '';
-                }
-                dl.appendChild(dt); dl.appendChild(dd);
-
-                addRow(dl, S.guestName || 'Guest name', r.guestName);
-                addRow(dl, S.rate || 'Rate', r.rate);
-                (r.services || []).forEach(function (x) { addRow(dl, S.services || 'Services', x.label + (x.price && x.price !== '—' ? ' — ' + x.price : '')); });
-                (r.fees || []).forEach(function (x) { addRow(dl, S.fees || 'Fees', x.label + (x.price && x.price !== '—' ? ' — ' + x.price : '')); });
-                addRow(dl, S.total || 'Total', r.total);
-                box.appendChild(dl);
-                s.appendChild(box);
-            });
-            return s;
-        }
-
-        function customerSection(title, cust, bookingId) {
-            var s = rowsSection(title, (cust && cust.fields) || []);
-            var photo = cust && cust.photoId;
-            if (photo) {
-                var wrap = document.createElement('p');
-                wrap.className = 'mphbac-staff-photo';
-                var a = document.createElement('a');
-                // Opaque, booking-scoped reference redeemed through the gated
-                // proxy — never an /uploads/ URL.
-                var u = new URL(config.ajaxUrl, window.location.origin);
-                u.searchParams.set('action', 'mphbac_staff_photo');
-                u.searchParams.set('nonce', config.nonce);
-                u.searchParams.set('booking_id', String(bookingId));
-                u.searchParams.set('field', photo.field);
-                a.href = u.toString();
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer nofollow';
-                a.textContent = S.viewPhoto || 'View photo ID';
-                wrap.appendChild(a);
-                var note = document.createElement('span');
-                note.className = 'mphbac-staff-photo-note';
-                note.textContent = S.photoNote || '';
-                wrap.appendChild(note);
-                s.appendChild(wrap);
-            }
-            return s;
+        function photoRow(dl, r, bookingId) {
+            var dt = document.createElement('dt'); dt.textContent = r.label;
+            var dd = document.createElement('dd');
+            var a = document.createElement('a');
+            // Opaque, booking-scoped reference redeemed through the gated
+            // proxy — never an /uploads/ URL.
+            var u = new URL(config.ajaxUrl, window.location.origin);
+            u.searchParams.set('action', 'mphbac_staff_photo');
+            u.searchParams.set('nonce', config.nonce);
+            u.searchParams.set('booking_id', String(bookingId));
+            u.searchParams.set('field', r.photo.field);
+            a.href = u.toString();
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer nofollow';
+            a.textContent = S.viewPhoto || 'View photo ID';
+            dd.appendChild(a);
+            var note = document.createElement('span');
+            note.className = 'mphbac-staff-photo-note';
+            note.textContent = S.photoNote || '';
+            dd.appendChild(note);
+            dd.className = 'mphbac-staff-photo';
+            dl.appendChild(dt); dl.appendChild(dd);
         }
 
         // The ONLY way a value reaches the dialog: textContent.
-        function addRow(dl, label, value) {
-            if (value === undefined || value === null) return;
+        function addRow(dl, label, value, flags) {
+            if (value === undefined || value === null || value === '') return;
             var dt = document.createElement('dt'); dt.textContent = label;
             var dd = document.createElement('dd'); dd.textContent = String(value);
-            if (value === '—') dd.className = 'is-empty';
-            else if (MONEY_LABELS[label]) dd.className = 'is-money';
+            if (flags && flags.muted) {
+                dd.className = 'is-unknown';
+                dd.title = S.importedTip || '';
+            } else if (flags && flags.money) {
+                dd.className = 'is-money';
+            }
             dl.appendChild(dt); dl.appendChild(dd);
         }
 

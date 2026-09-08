@@ -14,6 +14,16 @@
     --mphbac-color-nav-hover: #078732;
     --mphbac-color-legend-text: #111111;
     --mphbac-color-today-outline: #f4da62;
+    /* Month-grid date numbers sit ON the status fill, so they need their own
+       token — the fill colours are configurable and the number must stay
+       legible on all of them. Measured on live at 14px bold #7A7A7A the
+       numbers failed AA on every state (available 2.61:1, booked 1.49:1,
+       past 2.41:1). #1F2937 clears 4.5:1 on all three (5.10 / 8.90 / 8.23)
+       and on their weekend variants, which composite a 3.5% black overlay
+       on top of the fill. White is NOT the fix — it is ~3.1:1 on the coral.
+       Deliberately a SEPARATE token from the fills, so re-tinting a fill
+       cannot silently drag the number colour with it. */
+    --mphbac-color-day-num: #1F2937;
     --mphbac-color-text: #000000;
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 14px;
@@ -388,6 +398,11 @@
 .mphbac-monthgrid .mphbac-day-num {
     font-variant-numeric: tabular-nums;
     line-height: 1;
+}
+/* Class-doubled (0,2,0): the number inherited its colour from whatever the
+   theme/Elementor set on the cell, which is how it ended up mid-grey. */
+.mphbac-day-num.mphbac-day-num {
+    color: var(--mphbac-color-day-num, #1F2937);
 }
 /* In month mode past days must keep occupying their cell or the calendar
    loses its shape, so the strip's "hide past" visibility rule is scoped away
@@ -1336,18 +1351,36 @@ body.mphbac-info-open {
     }
 }
 .mphbac-sheet-close {
-    background: transparent;
+    /* Visible ground: the bare "x" had no fill and read as page furniture.
+       Circular 44x44 so it is also a real touch target (it was ~28x26).
+       Kept in the header's top-RIGHT slot, where it already sat. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     border: 0;
+    border-radius: 50%;
+    background: #ECEFF3;
     font-size: 1.6em;
     line-height: 1;
-    padding: 0 0.3em;
     cursor: pointer;
-    color: #888888;
-    transition: color 0.15s ease;
+    /* #4A5260 on #ECEFF3 = 7.9:1. */
+    color: #4A5260;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 .mphbac-sheet-close:hover,
 .mphbac-sheet-close:focus-visible {
-    color: var(--mphbac-color-nav-bg);
+    background: var(--mphbac-color-nav-bg);
+    color: #ffffff;
+}
+/* The ring has to read against the new ground AND against the red hover
+   fill, so it gets an offset rather than sitting on the edge. */
+.mphbac-sheet-close.mphbac-sheet-close:focus-visible {
+    outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
+    outline-offset: 2px;
 }
 
 /* Universal focus ring for buttons + inputs that don't already define one.
@@ -1399,6 +1432,10 @@ body.mphbac-info-open {
 .mphbac-sheet-field > span {
     font-weight: 600;
     color: #111111;
+    /* Centred over its own field. The label is a block-level flex child of
+       the field, so this centres it across exactly the width the field was
+       granted — it stays centred as the two fields reflow or stack. */
+    text-align: center;
 }
 .mphbac-sheet-error {
     flex-basis: 100%;

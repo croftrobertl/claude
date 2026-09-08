@@ -60,10 +60,21 @@
 .mphbac-staff *::after { box-sizing: inherit; }
 
 /* Font only — every button class below sets its own colour, and a generic
-   (0,1,1) colour reset here would outrank them. */
+   (0,1,1) colour reset here would outrank them.
+   NOT enough on its own for font-family: <button> does not inherit it, and
+   this site carries a global button-typography rule at (0,1,1) that ties
+   with this selector. The class-doubled (0,2,0) rules below are the fix —
+   same pattern the public widget uses. See PROJECT-NOTES. */
 .mphbac-staff button {
     font: inherit;
     -webkit-tap-highlight-color: transparent;
+}
+.mphbac-staff-nav.mphbac-staff-nav,
+.mphbac-staff-view.mphbac-staff-view,
+.mphbac-staff-item.mphbac-staff-item,
+.mphbac-staff-bar.mphbac-staff-bar,
+.mphbac-staff-close.mphbac-staff-close {
+    font-family: inherit;
 }
 .mphbac-staff button:focus-visible,
 .mphbac-staff a:focus-visible,
@@ -121,10 +132,19 @@
     border-radius: 6px;
     background: var(--staff-nav-bg);
     color: var(--staff-nav-text);
-    font-size: 22px;
+    /* 16px to match .mphbac-nav-btn exactly; the chevron is sized in px
+       below, so this governs only the "Today" label's inherited size. */
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
     transition: background-color 0.2s ease;
+}
+
+/* Identical to .mphbac-nav-btn svg in widget.css — same mark, same size. */
+.mphbac-staff-nav svg {
+    display: block;
+    width: 20px;
+    height: 20px;
 }
 .mphbac-staff-nav:hover,
 .mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }
@@ -555,14 +575,18 @@
 .mphbac-staff-sheet.mphbac-staff-sheet *::before,
 .mphbac-staff-sheet.mphbac-staff-sheet *::after { box-sizing: inherit; }
 
-/* Fixed header: the title and the close control never scroll away. */
+/* Fixed header: the title and the close control never scroll away.
+   The close button is taken OUT of the flow and pinned right so the title
+   centres against the dialog itself rather than against the leftover space
+   beside the button. Symmetric 56px padding keeps a long title clear of it. */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head {
+    position: relative;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 0.5em;
-    padding: 12px 12px 12px 18px;
+    padding: 12px 56px;
     border-bottom: 1px solid #e0e0e0;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title {
@@ -573,10 +597,14 @@
     font-size: 19px;
     font-weight: 700;
     line-height: 1.2;
-    text-align: left;
+    text-align: center;
     overflow-wrap: anywhere;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -625,7 +653,7 @@
     font-weight: 700;
     line-height: 1.3;
     letter-spacing: 0.01em;
-    text-align: left;
+    text-align: center;
     text-transform: uppercase;
 }
 /* Label / value rows: left-aligned, label column fixed, value takes the rest. */
@@ -669,12 +697,13 @@
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room dt,
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-room dd { border-bottom-color: #e8e8e8; }
 
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo { margin: 10px 0 0; }
+.mphbac-staff-sheet.mphbac-staff-sheet dd.mphbac-staff-photo { padding: 6px 0; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     padding: 0 16px;
+    margin: 2px 0;
     border-radius: 999px;
     background: #0f6dbf;
     color: #ffffff;
@@ -699,7 +728,7 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff-tools { gap: 8px 12px; }
     .mphbac-staff-legend { font-size: 0.8em; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
-    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px 10px 10px 14px; }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px 52px; }
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body { padding: 12px 14px 18px; }
     .mphbac-staff-sheet.mphbac-staff-sheet dl { grid-template-columns: minmax(6em, 32%) minmax(0, 1fr); }
 }

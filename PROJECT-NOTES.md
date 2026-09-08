@@ -364,6 +364,57 @@ different `top` values (compare vertical CENTRES for "one line"), and a
 programmatic `.focus()` does not set `:focus-visible` in Chromium — press Tab,
 then wait out the 0.2s background transition.
 
+## Staff popup field spec (0.23.3)
+
+The popup carries EXACTLY the operator's three sections and field list, in
+order, and nothing else — Booking Information, Customer Information, Notes.
+The Reserved Accommodations section was removed, and with it Status, the
+guest note, the booking log, and Payment method/status as ROWS
+(`payment_info()` still resolves method/status; only the rows went).
+Everything is built in `Staff_Data`; `strings` now carries section TITLES
+only, so a label outside the spec has nowhere to come from.
+
+- `push()` drops a row whose value is empty AFTER formatting; `is_blank()`
+  defines empty as '', an em/en dash, '-', 'n/a', 'na', 'none', 'null' or a
+  bare '0'. **"$0.00" is deliberately NOT blank** — a paid-in-full Balance Due
+  must show. A section with no rows is omitted by the client rather than
+  rendered as a bare heading.
+- Guest 2-4 and the dog fields are MPHB checkout custom fields matched on a
+  NORMALIZED key (`custom_get()`: strip `mphb_`, lowercase, drop
+  non-alphanumerics), so `mphb_guest_2_first_name`, `guest2FirstName` and
+  `Guest 2 First Name` all resolve. Extend the candidate lists rather than
+  hard-coding one spelling.
+- Rob confirmed the two ambiguities in the spec: "Guest5 Last Name" was a typo
+  for **Guest4 Last Name**, and "Number of Guests" belongs to the **booking
+  section only**.
+- OTA honesty moved here from the deleted `section_rooms()`: an imported
+  booking's "Number of Guests" is the sentence "count not provided by <OTA>"
+  with `muted => true`, never MPHB's max-capacity default.
+  `staff-ota-test.php` used to assert this against a MIRROR of the production
+  logic in a local closure — it now calls the real `section_booking()`.
+
+## Contrast + button treatment (0.23.3)
+
+- Month-grid date numbers: `--mphbac-color-day-num` (#1F2937) applied via a
+  class-doubled `.mphbac-day-num.mphbac-day-num`. The plugin never set the
+  old mid-grey — the numbers INHERITED it from a theme rule at (0,1,1), which
+  is why an explicit rule is needed rather than a value change. Measured
+  against the COMPOSITED fill (weekend cells lay a 3.5% black gradient over
+  it): was 2.61 / 1.49 / 2.41, now 8.91 / 5.10 / 8.24. White is NOT an
+  alternative — ~2.9:1 on the coral. Keep the number and fill as separate
+  tokens so re-tinting a fill cannot drag the number with it.
+- The staff nav uses the same SVG chevrons as the public nav, and
+  `.mphbac-staff-nav`/`-view`/`-item`/`-bar`/`-close` carry the same
+  class-doubled `font-family: inherit` (see the theme-button-typography note).
+- `.mphbac-sheet-close` is a 44x44 circle with a #ECEFF3 ground (glyph
+  #4A5260, 7.9:1) and an offset focus ring, so the ring reads on both the
+  resting ground and the red hover fill. It stays TOP-RIGHT, where it was.
+
+Harness note: `staff-ui/ui-test.js` now regenerates `shell.html` from the live
+PHP on every run — a stale shell silently tested the previous release's
+markup. `nav/public-ui-test.js` reproduces the theme's inherited grey and the
+(0,1,1) button rule, and extracts the booking sheet from `class-widget.php`.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

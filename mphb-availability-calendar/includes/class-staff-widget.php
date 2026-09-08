@@ -93,18 +93,12 @@ final class Staff_Widget
                 'prevDay'      => __('Previous day', 'mphb-availability-calendar'),
                 'nextDay'      => __('Next day', 'mphb-availability-calendar'),
                 'detailTitle'  => __('Booking', 'mphb-availability-calendar'),
-                'secBooking'   => __('Booking information', 'mphb-availability-calendar'),
-                'secRooms'     => __('Reserved accommodations', 'mphb-availability-calendar'),
-                'secCustomer'  => __('Customer information', 'mphb-availability-calendar'),
+                // Section headings. Every FIELD label is built server-side in
+                // Staff_Data, so this list is titles only — a label that is
+                // not in the operator's spec has nowhere to come from.
+                'secBooking'   => __('Booking Information', 'mphb-availability-calendar'),
+                'secCustomer'  => __('Customer Information', 'mphb-availability-calendar'),
                 'secNotes'     => __('Notes', 'mphb-availability-calendar'),
-                'guests'       => __('Guests', 'mphb-availability-calendar'),
-                'adults'       => __('Adults', 'mphb-availability-calendar'),
-                'children'     => __('Children', 'mphb-availability-calendar'),
-                'guestName'    => __('Guest name', 'mphb-availability-calendar'),
-                'rate'         => __('Rate', 'mphb-availability-calendar'),
-                'total'        => __('Total', 'mphb-availability-calendar'),
-                'services'     => __('Services', 'mphb-availability-calendar'),
-                'fees'         => __('Fees', 'mphb-availability-calendar'),
                 'viewPhoto'    => __('View photo ID', 'mphb-availability-calendar'),
                 'photoNote'    => __('Opens the guest\'s uploaded ID. Do not share or download.', 'mphb-availability-calendar'),
                 'importedTip'  => __('This booking came from an external channel, which does not send the real guest count.', 'mphb-availability-calendar'),
@@ -120,13 +114,18 @@ final class Staff_Widget
         ?>
         <div class="mphbac-staff" data-staff-config="<?php echo esc_attr((string) wp_json_encode($config)); ?>">
             <div class="mphbac-staff-topbar">
-                <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>">&#8249;</button>
+                <?php // Same stroked SVG chevrons as the public widget's nav (0.23.2):
+                // the &#8249;/&#8250; glyphs rendered in whatever face the theme
+                // gave the button, so their weight was not ours to control.
+                // stroke="currentColor" keeps them on --staff-nav-text through
+                // hover; the accessible name stays on the BUTTON. ?>
+                <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="<?php echo esc_attr__('Previous month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 <?php // Not a heading element: it ships empty (JS fills it), which is
                 // precisely what tripped the empty-heading check fixed in 0.20.1.
                 // aria-live announces the month/day when it changes. ?>
                 <div class="mphbac-staff-title" aria-live="polite"></div>
                 <button type="button" class="mphbac-staff-nav mphbac-staff-today"><?php echo esc_html__('Today', 'mphb-availability-calendar'); ?></button>
-                <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>">&#8250;</button>
+                <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="<?php echo esc_attr__('Next month', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
             <div class="mphbac-staff-tools">
                 <div class="mphbac-staff-views" role="group" aria-label="<?php echo esc_attr__('View', 'mphb-availability-calendar'); ?>">

@@ -219,151 +219,249 @@ final class Staff_Data
             'imported' => $source['imported'],
             'source'   => $source,
             'sections' => [
-                'booking'   => self::section_booking($booking_id, $post, $booking, $source),
-                'rooms'     => self::section_rooms($booking_id, $booking, $source),
-                'customer'  => self::section_customer($booking_id, $booking),
-                'notes'     => self::section_notes($booking_id, $booking),
+                'booking'  => self::section_booking($booking_id, $booking, $source),
+                'customer' => self::section_customer($booking_id, $booking),
+                'notes'    => self::section_notes($booking_id, $booking),
             ],
         ];
     }
 
-    /** @return array<int,array{label:string,value:string,muted?:bool}> */
-    private static function section_booking(int $id, \WP_Post $post, $b, array $source): array
+    /**
+     * A) Booking Information — Accommodation Type, Check-in, Check-out,
+     * Number of Guests, Total, Paid, Balance Due. In that order, nothing else.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private static function section_booking(int $id, $b, array $source): array
     {
         $total = self::scalar($b, ['getTotalPrice', 'getTotal'], null);
         $pay   = self::payment_info($id, $b);
         $paid  = $pay['paid'];
         $due   = ($total !== null && is_numeric($total) && $paid !== null) ? (float) $total - $paid : null;
 
-        $out = [
-            self::row(__('Booking', 'mphb-availability-calendar'), '#' . $id),
-            self::row(__('Status', 'mphb-availability-calendar'), self::status_label($post->post_status)),
-            self::row(__('Check-in', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN)),
-            self::row(__('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT)),
-            self::row(__('Booked on', 'mphb-availability-calendar'), get_the_date(get_option('date_format') . ' ' . get_option('time_format'), $post) ?: '—'),
-            self::row(__('Total', 'mphb-availability-calendar'), self::money($total)),
-            // A booking with no payment record at all (pay on arrival, an OTA
-            // import) says so in words. "—" here used to be indistinguishable
-            // from "we could not read it".
-            self::row(__('Paid', 'mphb-availability-calendar'),
-                $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid)),
-            self::row(__('Balance due', 'mphb-availability-calendar'), self::money($due)),
-            self::row(__('Payment method', 'mphb-availability-calendar'),
-                $pay['method'] !== '' ? $pay['method'] : self::scalar($b, ['getPaymentMethod', 'getGateway'], null)),
-            self::row(__('Payment status', 'mphb-availability-calendar'),
-                $pay['status'] !== '' ? $pay['status'] : self::scalar($b, ['getPaymentStatus'], null)),
-            self::row(__('Coupon', 'mphb-availability-calendar'), self::scalar($b, ['getCouponCode', 'getCouponId'], null)),
-            self::row(__('Language', 'mphb-availability-calendar'), self::scalar($b, ['getLanguage'], null)),
-        ];
-        if ($source['imported']) {
-            $out[] = self::row(__('Imported from', 'mphb-availability-calendar'), $source['ota']);
-            $out[] = self::row(__('Channel reference', 'mphb-availability-calendar'), $source['uid']);
-            $out[] = self::row(__('iCal summary', 'mphb-availability-calendar'), $source['summary']);
-        }
-        return $out;
-    }
-
-    /** Per reserved accommodation. @return array<int,array<string,mixed>> */
-    private static function section_rooms(int $id, $b, array $source): array
-    {
+        $rooms = self::reserved_entities($id, $b);
         $types = [];
         foreach (Data_Provider::list_room_types() as $t) {
             $types[(int) $t['id']] = $t['title'];
         }
-
-        $reserved = self::reserved_entities($id, $b);
-        $out = [];
-        foreach ($reserved as $r) {
+        $names = [];
+        $adults = 0;
+        $children = 0;
+        $counted = false;
+        foreach ($rooms as $r) {
             $type_id = (int) self::scalar($r['entity'], ['getRoomTypeId'], $r['room_type_id'] ?: 0);
-            $adults   = self::int_or_null(self::scalar($r['entity'], ['getAdults'], null));
-            $children = self::int_or_null(self::scalar($r['entity'], ['getChildren'], null));
-
-            $out[] = [
-                'cottage'  => $types[$type_id] ?? __('(removed accommodation)', 'mphb-availability-calendar'),
-                'unit'     => self::unit_title($r['room_id']),
-                // OTA honesty: an imported booking's occupancy is MPHB's
-                // max-capacity default, not the guest's actual party.
-                'guests'   => [
-                    'provided' => !$source['imported'],
-                    'adults'   => $source['imported'] ? null : $adults,
-                    'children' => $source['imported'] ? null : $children,
-                    'note'     => $source['imported']
-                        ? sprintf(__('not provided by %s', 'mphb-availability-calendar'), $source['ota'])
-                        : '',
-                ],
-                'guestName' => self::str_or_dash(self::scalar($r['entity'], ['getGuestName', 'getFullName'], null)),
-                'rate'      => self::str_or_dash(self::scalar($r['entity'], ['getRateTitle', 'getRateId'], null)),
-                'services'  => self::list_of($r['entity'], ['getServices']),
-                'fees'      => self::list_of($r['entity'], ['getFees']),
-                'total'     => self::money(self::scalar($r['entity'], ['getTotalPrice', 'getTotal'], null)),
-            ];
-        }
-        return $out;
-    }
-
-    /** @return array<string,mixed> */
-    private static function section_customer(int $id, $b): array
-    {
-        $c = self::first_of($b, ['getCustomer']);
-
-        $fields = [
-            self::row(__('First name', 'mphb-availability-calendar'), self::scalar($c, ['getFirstName'], null)),
-            self::row(__('Last name', 'mphb-availability-calendar'), self::scalar($c, ['getLastName'], null)),
-            self::row(__('Email', 'mphb-availability-calendar'), self::scalar($c, ['getEmail'], null)),
-            self::row(__('Phone', 'mphb-availability-calendar'), self::scalar($c, ['getPhone'], null)),
-            self::row(__('Address', 'mphb-availability-calendar'), self::scalar($c, ['getAddress1', 'getAddress'], null)),
-            self::row(__('City', 'mphb-availability-calendar'), self::scalar($c, ['getCity'], null)),
-            self::row(__('State', 'mphb-availability-calendar'), self::scalar($c, ['getState'], null)),
-            self::row(__('Zip', 'mphb-availability-calendar'), self::scalar($c, ['getZip'], null)),
-            self::row(__('Country', 'mphb-availability-calendar'), self::scalar($c, ['getCountry'], null)),
-        ];
-
-        // Custom checkout fields (guest 2, dog details, photo ID, …). MPHB
-        // stores these per install, so they are enumerated rather than named.
-        $custom = self::custom_fields($id, $c);
-        $photo  = null;
-        foreach ($custom as $key => $val) {
-            if (self::looks_like_attachment($key, $val)) {
-                // NEVER emit the /uploads/ URL. The client gets an opaque
-                // reference it can only redeem through the gated proxy.
-                $photo = ['field' => $key, 'label' => self::humanize($key)];
-                continue;
+            $title = $types[$type_id] ?? '';
+            if ($title !== '' && !in_array($title, $names, true)) {
+                $names[] = $title;
             }
-            $fields[] = self::row(self::humanize($key), is_scalar($val) ? (string) $val : wp_json_encode($val));
+            $a = self::int_or_null(self::scalar($r['entity'], ['getAdults'], null));
+            $c = self::int_or_null(self::scalar($r['entity'], ['getChildren'], null));
+            if ($a !== null) { $adults += $a; $counted = true; }
+            if ($c !== null) { $children += $c; $counted = true; }
         }
 
-        return ['fields' => $fields, 'photoId' => $photo];
+        $out = [];
+        self::push($out, __('Accommodation Type', 'mphb-availability-calendar'), implode(', ', $names));
+        self::push($out, __('Check-in', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
+        self::push($out, __('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
+
+        // OTA HONESTY. An imported booking's occupancy is MPHB's max-capacity
+        // default, not the guest's actual party — say so in words rather than
+        // print a number staff would greet the door with.
+        if ($source['imported']) {
+            self::push(
+                $out,
+                __('Number of Guests', 'mphb-availability-calendar'),
+                sprintf(__('count not provided by %s', 'mphb-availability-calendar'), $source['ota']),
+                ['muted' => true]
+            );
+        } elseif ($counted) {
+            $guests = $adults + $children;
+            $label  = (string) $guests;
+            if ($children > 0) {
+                $label .= ' (' . sprintf(
+                    /* translators: 1: adult count, 2: child count, already pluralized */
+                    __('%1$s, %2$s', 'mphb-availability-calendar'),
+                    sprintf(self::plural($adults, 'adult', 'adults'), $adults),
+                    sprintf(self::plural($children, 'child', 'children'), $children)
+                ) . ')';
+            }
+            // A zero count is "empty" per the display rule, so push() drops it.
+            self::push($out, __('Number of Guests', 'mphb-availability-calendar'), $guests > 0 ? $label : '0');
+        }
+
+        self::push($out, __('Total', 'mphb-availability-calendar'), self::money($total), ['money' => true]);
+        // "No payment recorded" is meaningful (pay on arrival / an OTA), so it
+        // is a value, not a blank — see payment_info().
+        self::push(
+            $out,
+            __('Paid', 'mphb-availability-calendar'),
+            $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid),
+            ['money' => $paid !== null]
+        );
+        self::push($out, __('Balance Due', 'mphb-availability-calendar'), self::money($due), ['money' => true]);
+        return $out;
     }
 
     /**
-     * Guest note, then internal notes and the booking log as one row per
-     * entry, newest first. MPHB's getInternalNotes() returns an ARRAY of
-     * {note, date, user} (and getLogs() an array of arrays/objects); those
-     * are never squeezed through scalar() — see note_entry().
+     * B) Customer Information, in the order the operator specified. Every row
+     * is dropped when empty, so a booking without a dog or a second guest
+     * simply has no dog or guest-2 rows.
      *
-     * @return array<int,array{label:string,value:string}>
+     * @return array<int,array<string,mixed>>
+     */
+    private static function section_customer(int $id, $b): array
+    {
+        $c = self::first_of($b, ['getCustomer']);
+        $custom = self::custom_fields($id, is_object($c) ? $c : null);
+
+        // The photo ID is found by SHAPE, not by name, and never emitted as a
+        // URL — the client gets an opaque booking-scoped reference it can only
+        // redeem through the gated proxy.
+        $photo = null;
+        foreach ($custom as $key => $val) {
+            if (self::looks_like_attachment((string) $key, $val)) {
+                $photo = ['field' => (string) $key];
+                break;
+            }
+        }
+
+        $out = [];
+        $pick = static function (array $getters, array $keys) use ($c, $custom) {
+            $v = self::scalar(is_object($c) ? $c : null, $getters, null);
+            if (self::is_blank(self::str_or_dash($v))) {
+                $v = self::custom_get($custom, $keys);
+            }
+            return $v;
+        };
+
+        self::push($out, __('First Name', 'mphb-availability-calendar'), $pick(['getFirstName'], ['firstname', 'fname']));
+        self::push($out, __('Last Name', 'mphb-availability-calendar'), $pick(['getLastName'], ['lastname', 'lname']));
+        self::push($out, __('Email', 'mphb-availability-calendar'), $pick(['getEmail'], ['email']));
+        self::push($out, __('Phone', 'mphb-availability-calendar'), $pick(['getPhone'], ['phone']));
+        self::push($out, __('Address', 'mphb-availability-calendar'), $pick(['getAddress1', 'getAddress'], ['address1', 'address']));
+        self::push($out, __('City', 'mphb-availability-calendar'), $pick(['getCity'], ['city']));
+        self::push($out, __('State', 'mphb-availability-calendar'), $pick(['getState'], ['state']));
+        self::push($out, __('Zip', 'mphb-availability-calendar'), $pick(['getZip'], ['zip', 'postcode', 'postalcode']));
+        self::push($out, __('Country', 'mphb-availability-calendar'), $pick(['getCountry'], ['country']));
+
+        if ($photo !== null) {
+            $out[] = [
+                'label' => __('Photo ID', 'mphb-availability-calendar'),
+                'value' => '',
+                'photo' => $photo,
+            ];
+        }
+
+        // Guest 2-4 and the dog fields are MPHB checkout custom fields, so
+        // they are matched on a NORMALIZED key (see custom_get) rather than an
+        // exact one — installs spell them guest2_first_name, guest_2_fname, …
+        self::push($out, __('Guest2 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2firstname', 'guest2fname', 'guest2first']));
+        self::push($out, __('Guest2 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2lastname', 'guest2lname', 'guest2last']));
+        self::push($out, __('Guest 2 Phone', 'mphb-availability-calendar'), self::custom_get($custom, ['guest2phone', 'guest2telephone', 'guest2tel']));
+        self::push($out, __('Guest3 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest3firstname', 'guest3fname', 'guest3first']));
+        self::push($out, __('Guest3 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest3lastname', 'guest3lname', 'guest3last']));
+        self::push($out, __('Guest4 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest4firstname', 'guest4fname', 'guest4first']));
+        self::push($out, __('Guest4 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest4lastname', 'guest4lname', 'guest4last']));
+        self::push($out, __('Dog Type', 'mphb-availability-calendar'), self::custom_get($custom, ['dogtype', 'typeofdog', 'dogbreed']));
+        self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
+        self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));
+
+        return $out;
+    }
+
+    /**
+     * "%d adult" / "%d adults" — via _n() when WordPress is loaded so a
+     * translation can supply its own plural rules, else the English pair.
+     */
+    private static function plural(int $n, string $one, string $many): string
+    {
+        if (function_exists('_n')) {
+            return _n('%d ' . $one, '%d ' . $many, $n, 'mphb-availability-calendar');
+        }
+        return '%d ' . ($n === 1 ? $one : $many);
+    }
+
+    /**
+     * Append a row unless the value is empty AFTER formatting.
+     *
+     * @param array<int,array<string,mixed>> $out
+     * @param mixed                          $value
+     * @param array<string,bool>             $flags
+     */
+    private static function push(array &$out, string $label, $value, array $flags = []): void
+    {
+        $text = self::str_or_dash($value);
+        if (self::is_blank($text)) {
+            return;
+        }
+        $out[] = ['label' => $label, 'value' => $text] + array_filter($flags);
+    }
+
+    /**
+     * Is this value "empty" for display purposes? Blank, an em/en dash, a
+     * hyphen, "N/A" or a bare "0" — the placeholder values MPHB checkout
+     * fields collect when a guest skips them.
+     *
+     * Note "$0.00" is NOT blank: a Balance Due of zero means "nothing owed",
+     * which staff need to see. Only a bare zero is treated as unset.
+     */
+    private static function is_blank(string $v): bool
+    {
+        $t = strtolower(trim($v));
+        return in_array($t, ['', '—', '–', '-', 'n/a', 'na', 'none', 'null', '0'], true);
+    }
+
+    /**
+     * Look a checkout custom field up by NORMALIZED key: MPHB prefixes vary
+     * and installs punctuate differently, so "mphb_guest_2_first_name",
+     * "guest2FirstName" and "Guest 2 First Name" all reduce to the same thing.
+     *
+     * @param array<string,mixed> $custom
+     * @param string[]            $candidates already normalized
+     */
+    private static function custom_get(array $custom, array $candidates): string
+    {
+        static $norm = [];
+        $sig = array_keys($custom);
+        $key = md5(implode('|', $sig));
+        if (!isset($norm[$key])) {
+            $map = [];
+            foreach ($custom as $k => $v) {
+                $n = preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/^mphb_?/i', '', (string) $k)));
+                if ($n !== '' && !isset($map[$n])) {
+                    $map[$n] = $v;
+                }
+            }
+            $norm[$key] = $map;
+        }
+        foreach ($candidates as $c) {
+            if (isset($norm[$key][$c])) {
+                $v = $norm[$key][$c];
+                if (is_array($v)) {
+                    $v = reset($v);
+                }
+                if (is_scalar($v) && (string) $v !== '') {
+                    return self::plain((string) $v);
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * C) Notes — Internal Notes only.
+     *
+     * MPHB's getInternalNotes() returns an ARRAY of {note, date, user}; it is
+     * rendered as one row per entry and never squeezed through scalar(), which
+     * is what caused the 0.23.0 TypeError. See entry_rows().
+     *
+     * @return array<int,array<string,mixed>>
      */
     private static function section_notes(int $id, $b): array
     {
-        $out = [];
-        $customer_note = self::scalar($b, ['getCustomerNote', 'getNote'], null);
-        $out[] = self::row(__('Guest note', 'mphb-availability-calendar'), $customer_note);
-
         $internal = self::first_of($b, ['getInternalNotes', 'getInternalNote']);
-        $rows = self::entry_rows($internal, __('Internal note', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']);
-        if (!$rows) {
-            $out[] = self::row(__('Internal notes', 'mphb-availability-calendar'), null);
-        }
-        foreach ($rows as $r) {
-            $out[] = $r;
-        }
-
-        // The booking log, if MPHB exposes one.
-        $log = self::first_of($b, ['getLogs', 'getLog']);
-        foreach (self::entry_rows($log, __('Log', 'mphb-availability-calendar'), ['message', 'text', 'note', 'log', 'content']) as $r) {
-            $out[] = $r;
-        }
-        return $out;
+        return self::entry_rows($internal, __('Internal Notes', 'mphb-availability-calendar'), ['note', 'text', 'message', 'content']);
     }
 
     /**
@@ -405,6 +503,9 @@ final class Staff_Data
 
         $out = [];
         foreach ($parsed as $n) {
+            if (self::is_blank($n['text'])) {
+                continue;
+            }
             $bits = [];
             if ($n['ts'] !== null) {
                 $bits[] = self::format_datetime($n['ts']);
