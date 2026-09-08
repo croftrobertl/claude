@@ -55,8 +55,8 @@ and win — `.dccs-root.dccs-root` in the Cottage Selector,
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| **MPHB Availability Calendar** | 0.21.2 | Elementor widget; multi-property grid calendar. Code is NOT in this repo — maintained in its own session/repo. |
-| **Dora Canal Cottage Selector** | 0.22.6 | Client-rendered Elementor widgets + shortcode; helps guests choose a cottage. No MotoPress dep. Code lives in THIS repo. |
+| **MPHB Availability Calendar** | 0.23.3 | Elementor widget; multi-property grid calendar. Code is NOT in this repo — maintained in its own session/repo. |
+| **Dora Canal Cottage Selector** | 0.24.0 | Client-rendered Elementor widgets + shortcode; helps guests choose a cottage. No MotoPress dep. Code lives in THIS repo. |
 | **DCC Guest Guide** | 0.9.7.20 | Elementor widget; sectioned guest guide with multiple layout + reveal modes, Cmd-K search |
 | **Features & Amenities Widget** | 1.6.1 | Elementor widget; sectioned amenity list per cottage |
 

@@ -7,7 +7,7 @@ project for this site. This file is the generic cross-cutting one.
 
 > **Note (2026-09):** every `mphb-availability-calendar/...` path in this document
 > refers to the Availability Calendar's OWN repository, which is maintained in a
-> separate session (live 0.21.2). That code is not in this repo — the stale 0.9.x
+> separate session (live 0.23.3). That code is not in this repo — the stale 0.9.x
 > copy that used to sit here was deleted. This repo holds the DCC Cottage Selector;
 > see its `CLAUDE.md` at the repo root.
 
@@ -580,7 +580,7 @@ Conventions to copy:
 ## 14. Existing plugin: MPHB Availability Calendar
 
 > **Note (2026-09):** the calendar's code is no longer in this repository — it is
-> maintained in its own session/repo (live 0.21.2). The `mphb-availability-calendar/`
+> maintained in its own session/repo (live 0.23.3). The `mphb-availability-calendar/`
 > paths referenced in this section and in §5/§8 describe that separate codebase, not
 > files you will find here. Its Elementor category is now `dcc-widgets`
 > ("Dora Canal Court"), not the "Claude Code" name used below.

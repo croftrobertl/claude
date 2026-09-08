@@ -33,8 +33,15 @@ endpoint (`admin-ajax.php`, `action=mphbac_query`, no nonce by design so
 full-page caches cannot serve a stale one). With the switch off the plugin still
 makes no requests whatsoever.
 
+The request/response contract was recovered from this repo's git history (the
+0.9.x calendar, before deletion) and then **verified against the live calendar
+0.23.3 (2026-09)** — unchanged. Request: POST `from`, `to`, `room_type_ids[]`.
+Response: `{success:true, data:{rooms, availability:{"<roomTypeId>":{"Y-m-d":
+"available"|"booked"}}, from, to, bookedThrough}}`. dom-smoke test 67 pins the
+request shape, so if the calendar ever changes it, that test fails first.
+
 **The MPHB Availability Calendar is no longer in this repo.** It is maintained in a
-separate session (live 0.21.2); the copy that used to sit at
+separate session (live 0.23.3); the copy that used to sit at
 `mphb-availability-calendar/` was stale 0.9.x and was deleted so nobody could ship a
 regressive install from it. It remains in git history if you ever need it:
 `git log --oneline -- mphb-availability-calendar` then
