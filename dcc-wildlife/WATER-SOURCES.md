@@ -386,3 +386,33 @@ beyond the formulae themselves. It is deliberately kept out of the cached HTML
 (client-side, like the season countdown and the live strip). The fishing tie-in it
 prints (full moon → bedding bream / staging crappie) is the same FWC-sourced fact
 already documented above; the moon just says which nights it applies to.
+
+## Phase 2 — batch 1 (1.19.0): "Know before you go" and the snake split
+
+Seasonality rows are activity/encounter likelihood on the property, not
+abundance. Sources are the ones the guide already leans on — FWC species
+profiles, the Florida Museum herpetology accounts, UF/IFAS "Featured
+Creatures" — from knowledge, with confidence noted; the session with network
+access should spot-check the MEDIUM rows against the named page.
+
+| id | row | basis | confidence |
+|---|---|---|---|
+| cottonmouth | Mar–Sep at 3, shoulder Oct/Feb | FWC/Florida Museum: active most of the year in Florida, most encountered in the warm months; out on warm winter days | HIGH |
+| diamondback | Apr–May and Sep–Oct at 3 | Florida Museum: encounters peak in spring and during the autumn mating season; midsummer activity shifts to dawn/dusk | MEDIUM |
+| pygmy | May–Oct at 3 | Florida Museum: warm-season activity; litters born Jul–Sep; the most frequently encountered venomous snake in FL | MEDIUM |
+| coralsnake | Apr–May, Sep–Oct at 3 | Florida Museum: fossorial; surface activity highest in spring and autumn, often after rain | MEDIUM |
+| fireant | Mar–Oct at 3 | UF/IFAS: year-round colonies; mound building and foraging most visible in warm, wet months | HIGH |
+| poisonivy | Apr–Oct at 3 | USF Plant Atlas / UF/IFAS: deciduous in central FL, in leaf roughly Mar–Nov; urushiol in all parts year-round | HIGH |
+| mosquito | May–Oct at 3 | FL Dept of Health / UF/IFAS FMEL: wet-season peak; Culicoides biting midges bite most in spring and autumn at dawn/dusk | HIGH |
+| lovebug | May and Sep at 3, Apr/Aug at 2 | UF/IFAS Featured Creatures: two flights, late Apr–May and late Aug–Sep | HIGH |
+| bandedwater | Apr–Sep at 3 | the former generic "snake" row, unchanged | HIGH |
+| brownwater | Apr–Aug at 3 | Florida Museum: basks on overhanging limbs spring–summer; less conspicuous in cool months | MEDIUM |
+| greenwater | May–Aug at 3 | Florida Museum: warm-season; marsh and weedy-shallows specialist | MEDIUM |
+
+Facts checked against the same accounts: cottonmouth = *Agkistrodon conanti*
+(split from *A. piscivorus* in 2015; the brief's name, kept); the "red touches
+yellow" rule is reliable for the eastern coral snake in the SE US; *Solenopsis
+invicta* entered the US at Mobile, AL in the 1930s (UF/IFAS); the brown
+watersnake's wide head is the classic cause of cottonmouth misidentification
+(Florida Museum). Photos: none for batch 1 yet — every new tile shows the
+group glyph until a vetted image arrives.

@@ -60,6 +60,7 @@
 		if (!w || !Array.isArray(w.species)) { return null; }
 		var peak = 0, spot = 0;
 		w.species.forEach(function (s) {
+			if (s.group === 'safety') { return; }   // a warning list, not a count (1.19.0)
 			var v = (s.months && s.months[m]) || 0;
 			if (v >= 2) { spot += 1; }
 			if (v >= 3) { peak += 1; }

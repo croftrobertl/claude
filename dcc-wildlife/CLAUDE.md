@@ -980,3 +980,38 @@ rounded boxes at the same weight. The rule now:
   the restore and BEFORE the commit — never trust a run that preceded it.
 - **Atlas data-set codes** (`SJRWMD_HYDRO`) are reduced to their agency by
   `Water_Live::humanize_dataset()`; readable names pass through.
+
+## Phase 2 (169 species) — batch 1 shipped in 1.19.0; the rules it set
+
+- **Data model** (`Species::registry()` rows): `group` (four for now; `safety` =
+  "Know before you go" and it is FIRST everywhere groups are listed), `flags`
+  (`danger` / `invasive` / `protected` / `nuisance` — exactly the set
+  `Species::flags()` names, because the legend must explain every mark),
+  `odds` (`Species::odds()` keys), `place` (empty until day-trip entries),
+  `safe` (the plain what-to-do line — required on anything flagged danger or
+  protected). `dataset()` emits all of them plus `thumb`.
+- **The safety list is a warning list, not a spotting list.** It never drives
+  the countdown, the "N at peak" counts, the spotlight strip or the month art
+  (`isSpotting()` in widget.js, the `group === 'safety'` guard in canal.js),
+  and its grid is never month-filtered. The alligator stays a critter and
+  appears on the safety list through `Species::group_members()` (home group
+  ∪ DANGER-flagged). Do not "simplify" that into a second group value.
+- **Photo-first tiles.** The tile face is `Render::tile_media()` /
+  `tileMedia()` in JS — keep them in step. Vetted photo → `<id>-320.jpg`
+  (4:3, built by `tools/make-photo-variants.php`, which also rebuilds the
+  `-600`); no photo → `Sprites::glyphs()[group]`, a neutral group glyph.
+  Never an emoji, never a sprite of a possibly wrong animal. The photo rule
+  in class-species.php (photo only when vetted) is unchanged.
+- **Flag marks** are `Sprites::marks()` symbols on `--dccwl-flag-*` fills
+  (white glyph, every fill ≥ 5.2:1). Fill-only tokens, like the accent.
+- **Every non-public-domain image** is a row in `Species::photo_credits()` and
+  renders in the "Photo credits" `<details>` after the prose guide.
+- **Q-ids ship only as CONFIRMED.** New species get a row in
+  `tools/entities-batch<N>.csv`; `tools/verify-wikidata.py` (needs network)
+  marks each OK / PROPOSED / SYNONYM / MISMATCH. Only OK rows move into
+  `Species::entities()`. Batch 1's ten rows are still pending.
+- **Seasonality** for new species is argued row by row in WATER-SOURCES.md
+  ("Phase 2 — batch 1"); every row keeps a month at 3.
+- Batches 2–7 are listed in the Phase 2 brief; each ships alone, Rob reviews
+  on /explore/ from the phone before the next. The three cut species
+  (roseate spoonbill, snail kite, crested caracara) are never re-added.

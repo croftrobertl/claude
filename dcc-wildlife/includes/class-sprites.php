@@ -40,7 +40,7 @@ final class Sprites {
 			// Domed shell with scutes, head + legs out, basking on a log.
 			'turtle'     => '<rect x="4" y="33" width="40" height="3" rx="1.5" fill="#6e4a30"/><path d="M9.6 32.9 Q9.6 20.4 23 20.4 Q36.4 20.4 36.4 32.9 Z" fill="#17333c"/><path d="M17.6 21.9 Q17 27.4 17.6 32.9 M28.4 21.9 Q29 27.4 28.4 32.9 M10.9 27.4 Q23 25 35.1 27.4" fill="none" stroke="#4d7d86" stroke-width="1.5" stroke-linecap="round"/><path d="M36.2 30.4 Q40.6 30 42.4 26.4 Q44.6 26.6 44.2 29 Q43.6 32.4 39 33 L36.4 33 Z" fill="#3e7257"/><circle cx="42.9" cy="27.9" r="0.95" fill="#17333c"/><path d="M12.4 32.9 L12 35.4 Q13.4 36.4 15 35.6 L15.8 32.9 Z M29.8 32.9 L30.4 35.6 Q32 36.4 33.4 35.4 L33 32.9 Z" fill="#3e7257"/><path d="M9.8 31.4 Q7.6 31 7 32.9 L9.6 32.9 Z" fill="#3e7257"/>',
 			// Gentle S-curve at the surface, banded body, head up.
-			'snake'      => '<rect x="1.5" y="30" width="45" height="2.2" rx="1.1" fill="#4d7d86"/><path d="M4 30.4 Q10 26.6 16 29.8 Q22 33 28 30 Q33 27.6 37.4 28.6 Q40.4 27.9 41.4 25.2" fill="none" stroke="#17333c" stroke-width="4.6" stroke-linecap="round"/><path d="M4 30.4 Q10 26.6 16 29.8 Q22 33 28 30 Q33 27.6 37.4 28.6" fill="none" stroke="#6e8f97" stroke-width="4.6" stroke-linecap="butt" stroke-dasharray="1.9 6.4"/><path d="M39.4 25.1 Q39.4 22.3 42 22.1 Q44.7 21.9 45 23.9 Q45.2 25.7 42.7 26.1 Q40.2 26.5 39.4 25.1 Z" fill="#17333c"/><circle cx="42.9" cy="23.8" r="0.9" fill="#e8b84b"/>',
+			'bandedwater' => '<rect x="1.5" y="30" width="45" height="2.2" rx="1.1" fill="#4d7d86"/><path d="M4 30.4 Q10 26.6 16 29.8 Q22 33 28 30 Q33 27.6 37.4 28.6 Q40.4 27.9 41.4 25.2" fill="none" stroke="#17333c" stroke-width="4.6" stroke-linecap="round"/><path d="M4 30.4 Q10 26.6 16 29.8 Q22 33 28 30 Q33 27.6 37.4 28.6" fill="none" stroke="#6e8f97" stroke-width="4.6" stroke-linecap="butt" stroke-dasharray="1.9 6.4"/><path d="M39.4 25.1 Q39.4 22.3 42 22.1 Q44.7 21.9 45 23.9 Q45.2 25.7 42.7 26.1 Q40.2 26.5 39.4 25.1 Z" fill="#17333c"/><circle cx="42.9" cy="23.8" r="0.9" fill="#e8b84b"/>',
 			// Largemouth bass: deep body, big jaw, dorsal spines, lateral stripe.
 			'fish'       => '<path d="M16.4 18.4 18.4 14.4 20 17.6 22.2 13.9 23.8 17.2 26.2 14.4 27.4 17.6 29 16.4 30.2 19.4 16 19.9 Z" fill="#2e5d46"/><path d="M7.2 24.4 Q9.4 19.4 15.4 17.9 Q24 15.6 30.4 18.9 Q35.4 21.4 36.4 25.1 L43.4 20.4 Q44.9 23.4 43.6 26.1 Q44.9 28.7 43.4 31.4 L36.4 26.9 Q34.4 31.9 27 32.9 Q17.4 34.1 11.4 30.4 Q7.6 28.1 7.2 24.4 Z" fill="#3a6b52"/><path d="M7.2 24.4 Q8 27.9 11.4 30.1 L10.2 26.6 Q9.4 24.9 10.4 22.4 L11.4 20 Q8.4 21.9 7.2 24.4 Z" fill="#c9d8cf"/><path d="M11.4 24.9 Q24 23.4 36 25.6" fill="none" stroke="#17333c" stroke-width="2" stroke-linecap="round"/><path d="M20 32.4 22.4 35.4 24.8 32.6 Z" fill="#2e5d46"/><circle cx="12.9" cy="22.2" r="1.6" fill="#f4f7f2"/><circle cx="13.2" cy="22.2" r="0.85" fill="#17333c"/>',
 			// Apple snail: coiled shell (offset rings read as a spiral), muscular foot, eye-stalks, pink egg cluster above the water.
@@ -82,6 +82,58 @@ final class Sprites {
 		];
 	}
 
+	/**
+	 * Neutral GROUP glyphs (1.19.0): what a tile shows when a species has no
+	 * vetted photo. Honest by design — a paw, a feather, a leaf, a warning
+	 * mark — never a drawing that could be the wrong animal. 48×48, single
+	 * currentColor stroke so the CSS sets the colour.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function glyphs(): array {
+		return [
+			'safety'   => '<path d="M24 8 42 40H6Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 19v10" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><circle cx="24" cy="34.2" r="2" fill="currentColor"/>',
+			'critters' => '<ellipse cx="24" cy="31" rx="8.5" ry="7" fill="currentColor"/><circle cx="13" cy="21" r="4" fill="currentColor"/><circle cx="35" cy="21" r="4" fill="currentColor"/><circle cx="18.5" cy="13" r="4" fill="currentColor"/><circle cx="29.5" cy="13" r="4" fill="currentColor"/>',
+			'birds'    => '<path d="M38 9c-9 0-20 6-24 17-2 5-2 10-3 14 6-2 12-3 16-7 3-3 4-7 5-10 2-1 4-2 6-4 1-3 0-7 0-10Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M11 40 30 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+			'plants'   => '<path d="M39 9c-14 0-26 7-29 22 6 1 13 1 19-3 7-5 9-12 10-19Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M10 40c4-8 12-16 22-22" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+		];
+	}
+
+	public const GLYPH_PREFIX = 'dccwl-gl-';
+	public const MARK_PREFIX  = 'dccwl-fl-';
+
+	/**
+	 * Flag marks (1.19.0), 16×16: the small badge on a tile corner and in the
+	 * legend. One shape per flag in Species::flags(); the colour is the
+	 * flag token in CSS, the shape is white on it.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function marks(): array {
+		return [
+			'danger'    => '<path d="M8 3.2v5.6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="8" cy="12.3" r="1.5" fill="currentColor"/>',
+			'invasive'  => '<path d="M8 8.6V2.6M8 8.6 3 11.6M8 8.6l5 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="8.6" r="1.6" fill="currentColor"/>',
+			'protected' => '<path d="M8 2.2 13 4v4.3c0 3-2.2 5-5 5.8-2.8-.8-5-2.8-5-5.8V4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
+			'nuisance'  => '<path d="M2.4 9.6c1.4-2.2 2.8-2.2 4.2 0s2.8 2.2 4.2 0 2.2-1.8 2.8-1.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+		];
+	}
+
+	/** The badge for one flag: a coloured disc with the mark, labelled for a screen reader. */
+	public static function mark_html( string $flag, string $label ): string {
+		if ( ! isset( self::marks()[ $flag ] ) ) {
+			return '';
+		}
+		$ref = '#' . self::MARK_PREFIX . $flag;
+		return '<span class="dccwl-flag dccwl-flag-' . esc_attr( $flag ) . '" role="img" aria-label="' . esc_attr( $label ) . '"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="' . esc_attr( $ref ) . '" xlink:href="' . esc_attr( $ref ) . '"/></svg></span>';
+	}
+
+	/** An inline <use> of a group glyph; decoration only. */
+	public static function glyph_svg( string $group, string $class ): string {
+		$group = isset( self::glyphs()[ $group ] ) ? $group : 'critters';
+		$ref   = '#' . self::GLYPH_PREFIX . $group;
+		return '<svg class="' . esc_attr( $class ) . '" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><use href="' . esc_attr( $ref ) . '" xlink:href="' . esc_attr( $ref ) . '"/></svg>';
+	}
+
 	public static function has( string $id ): bool {
 		$registry = self::registry();
 		return isset( $registry[ $id ] );
@@ -120,6 +172,12 @@ final class Sprites {
 				$body
 			);
 			$out .= '<symbol id="' . esc_attr( self::PREFIX . $id ) . '" viewBox="0 0 48 48">' . $body . '</symbol>';
+		}
+		foreach ( self::glyphs() as $group => $body ) {
+			$out .= '<symbol id="' . esc_attr( self::GLYPH_PREFIX . $group ) . '" viewBox="0 0 48 48">' . $body . '</symbol>';
+		}
+		foreach ( self::marks() as $flag => $body ) {
+			$out .= '<symbol id="' . esc_attr( self::MARK_PREFIX . $flag ) . '" viewBox="0 0 16 16">' . $body . '</symbol>';
 		}
 		return $out . '</svg>';
 	}

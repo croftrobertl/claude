@@ -268,7 +268,7 @@ final class Render {
 					         more cards among the tiles. */ ?>
 					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide groups', 'dcc-wildlife' ); ?>">
 						<?php $first = true; ?>
-						<?php foreach ( Species::groups() as $slug => $label ) : ?>
+						<?php foreach ( Species::tab_labels() as $slug => $label ) : ?>
 							<button type="button" class="dccwl-tab" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" aria-pressed="<?php echo $first ? 'true' : 'false'; ?>">
 								<?php echo esc_html( $label ); ?>
 							</button>
@@ -280,6 +280,11 @@ final class Render {
 					         carry meaning. */ ?>
 					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
 						<span class="dccwl-legend-item"><span class="dccwl-tile-sub dccwl-tile-peak dccwl-legend-badge" aria-hidden="true"><?php esc_html_e( 'Peak', 'dcc-wildlife' ); ?></span><?php esc_html_e( 'at its best this month', 'dcc-wildlife' ); ?></span>
+						<?php /* The flag marks (1.19.0), explained beside the tiles that
+						         carry them. Only flags some species actually has. */ ?>
+						<?php foreach ( self::flags_in_use() as $flag => $def ) : ?>
+							<span class="dccwl-legend-item"><?php echo Sprites::mark_html( $flag, $def[0] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted markup. ?><span><b><?php echo esc_html( $def[0] ); ?></b> — <?php echo esc_html( $def[1] ); ?></span></span>
+						<?php endforeach; ?>
 					</p>
 					<?php self::render_guide_grids(); ?>
 					<?php /* Month-filtered on the hub (canal.js): a species not likely
@@ -313,7 +318,7 @@ final class Render {
 		$first   = true;
 
 		foreach ( Species::groups() as $slug => $label ) {
-			$group_species = array_values( array_filter( $dataset, static fn( array $sp ): bool => $sp['group'] === $slug ) );
+			$group_species = Species::group_members( $dataset, $slug );
 			if ( ! $group_species ) {
 				continue;
 			}
@@ -322,13 +327,7 @@ final class Render {
 				<?php foreach ( $group_species as $sp ) : ?>
 					<li>
 						<button type="button" class="dccwl-tile" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
-							<span class="dccwl-tile-icon">
-								<?php if ( Sprites::has( $sp['id'] ) ) : ?>
-									<?php echo Sprites::use_svg( $sp['id'], 'dccwl-chip-sprite' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted sprite markup. ?>
-								<?php else : ?>
-									<span class="dccwl-tile-emoji" aria-hidden="true"><?php echo esc_html( $sp['emoji'] ); ?></span>
-								<?php endif; ?>
-							</span>
+							<?php echo self::tile_media( $sp ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside. ?>
 							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
 						</button>
 					</li>
@@ -337,6 +336,82 @@ final class Render {
 			<?php
 			$first = false;
 		}
+	}
+
+	/**
+	 * Photo-first tile face (1.19.0): the vetted photo's 4:3 thumbnail, else
+	 * the neutral GROUP glyph — never a drawing that could be the wrong
+	 * animal. Flag marks sit on the corner. The same face is built
+	 * client-side by widget.js for spotlight tiles; keep the two in step.
+	 */
+	private static function tile_media( array $sp ): string {
+		$out = '<span class="dccwl-tile-media">';
+		if ( '' !== (string) $sp['thumb'] ) {
+			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( DCC_WL_URL . 'assets/photos/' . $sp['thumb'] ) . '" alt="" width="320" height="240" loading="lazy" decoding="async">';
+		} else {
+			$out .= Sprites::glyph_svg( (string) $sp['group'], 'dccwl-glyph dccwl-tile-glyph' );
+		}
+		if ( ! empty( $sp['flags'] ) ) {
+			$labels = Species::flags();
+			$out   .= '<span class="dccwl-tile-flags">';
+			foreach ( (array) $sp['flags'] as $flag ) {
+				$out .= Sprites::mark_html( (string) $flag, (string) ( $labels[ $flag ][0] ?? $flag ) );
+			}
+			$out .= '</span>';
+		}
+		return $out . '</span>';
+	}
+
+	/** The flags at least one species carries, in legend order. */
+	private static function flags_in_use(): array {
+		$used = [];
+		foreach ( Species::dataset() as $sp ) {
+			foreach ( (array) $sp['flags'] as $f ) {
+				$used[ $f ] = true;
+			}
+		}
+		return array_intersect_key( Species::flags(), $used );
+	}
+
+	/**
+	 * "Photo credits" (1.19.0): every non-public-domain image, in a collapsed
+	 * <details> like the prose guide — crawlable, no JS. Printed by
+	 * render_guide_text() so it travels with the prose.
+	 */
+	private static function render_photo_credits( array $dataset ): void {
+		$credits = Species::photo_credits();
+		$rows    = [];
+		foreach ( $dataset as $sp ) {
+			if ( '' !== $sp['photo'] && isset( $credits[ $sp['id'] ] ) ) {
+				$rows[] = [ $sp['name'], $credits[ $sp['id'] ] ];
+			}
+		}
+		if ( ! $rows ) {
+			return;
+		}
+		?>
+		<details class="dccwl-fullguide dccwl-photo-credits">
+			<summary class="dccwl-fullguide-summary">
+				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+				<span class="dccwl-fullguide-text">
+					<h2 class="dccwl-fullguide-h"><?php esc_html_e( 'Photo credits', 'dcc-wildlife' ); ?></h2>
+					<span class="dccwl-fullguide-meta">
+						<?php
+						/* translators: %d: number of photographs. */
+						echo esc_html( sprintf( _n( '%d photograph, and who took it', '%d photographs, and who took them', count( $rows ), 'dcc-wildlife' ), count( $rows ) ) );
+						?>
+					</span>
+				</span>
+			</summary>
+			<div class="dccwl-fullguide-body">
+				<ul class="dccwl-photo-credits-list">
+					<?php foreach ( $rows as [ $name, $c ] ) : ?>
+						<li><b><?php echo esc_html( $name ); ?></b> — <?php echo esc_html( $c[0] ); ?><?php if ( '' !== $c[1] ) : ?>, <?php echo esc_html( $c[1] ); ?><?php endif; ?><?php if ( '' !== $c[2] ) : ?> (<a href="<?php echo esc_url( $c[2] ); ?>" rel="noopener"><?php esc_html_e( 'source', 'dcc-wildlife' ); ?></a>)<?php endif; ?></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		</details>
+		<?php
 	}
 
 	/**
@@ -414,6 +489,12 @@ final class Render {
 							<?php if ( '' !== $sp['fact'] ) : ?>
 								<p class="dccwl-fg-fact"><?php echo esc_html( $sp['fact'] ); ?></p>
 							<?php endif; ?>
+							<?php if ( ! empty( $sp['flags'] ) ) : ?>
+								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Take care', 'dcc-wildlife' ); ?></span> <?php echo esc_html( implode( ' · ', array_map( static fn( string $f ): string => Species::flags()[ $f ][0] ?? $f, (array) $sp['flags'] ) ) ); ?></p>
+							<?php endif; ?>
+							<?php if ( '' !== $sp['safe'] ) : ?>
+								<p class="dccwl-fg-line dccwl-fg-safe"><span class="dccwl-fg-k"><?php esc_html_e( 'What to do', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['safe'] ); ?></p>
+							<?php endif; ?>
 							<?php if ( '' !== $sp['where'] ) : ?>
 								<p class="dccwl-fg-line"><span class="dccwl-fg-k"><?php esc_html_e( 'Where to look', 'dcc-wildlife' ); ?></span> <?php echo esc_html( $sp['where'] ); ?></p>
 							<?php endif; ?>
@@ -437,6 +518,7 @@ final class Render {
 			</div>
 		</details>
 		<?php
+		self::render_photo_credits( $dataset );
 	}
 
 	/** One prose guide and one JSON-LD block per page, however many widgets are placed. */
@@ -581,6 +663,12 @@ final class Render {
 				'monthSub'    => _x( '%1$s: %2$s', 'month subline', 'dcc-wildlife' ),
 				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
 				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
+				// 1.19.0 data model: flag names for the tile marks and sheet
+				// badges, the odds labels, the what-to-do heading.
+				'flagNames'   => array_map( static fn( array $d ): string => $d[0], Species::flags() ),
+				'oddsNames'   => Species::odds(),
+				'safe'        => __( 'What to do', 'dcc-wildlife' ),
+				'place'       => __( 'Where to go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.
 				'where'       => __( 'Where to look', 'dcc-wildlife' ),

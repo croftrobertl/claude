@@ -109,6 +109,7 @@
 	min-height: 44px;
 	padding: 10px 14px 10px 8px;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
+	white-space: nowrap;   /* "All months" wrapped to two lines at 393px */
 }
 .dccwl-canal .dccwl-back.dccwl-back:hover { background: rgba(255, 255, 255, 0.7); }
 .dccwl-canal .dccwl-back.dccwl-back:focus-visible {

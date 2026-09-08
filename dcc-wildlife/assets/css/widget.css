@@ -332,7 +332,6 @@
 	font-weight: 700;
 }
 
-.dccwl-tile-emoji { font-size: 26px; line-height: 1; }
 
 /* Staggered fade-in on a month change. */
 .dccwl-tiles > li {
@@ -391,9 +390,15 @@
 	font-size: var(--dccwl-fs-sm);
 	font-weight: 600;
 	min-height: 44px;
-	padding: 10px 18px;
+	padding: 10px 14px;
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
 		color var(--dccwl-t-fast) var(--dccwl-ease-color);
+}
+/* Four segments since 1.19.0 ("Before you go" joined the three groups):
+ * on a phone they share the row at a smaller size rather than overflow. */
+@media (max-width: 480px) {
+	.dccwl-tabs { display: flex; width: 100%; }
+	.dccwl-root .dccwl-tab.dccwl-tab { font-size: var(--dccwl-fs-xs); padding: 10px 6px; }
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab:hover {
@@ -426,6 +431,48 @@
 }
 .dccwl-legend-item { align-items: center; display: inline-flex; gap: 6px; }
 .dccwl-legend-badge { margin: 0; }
+.dccwl-legend .dccwl-flag { height: 18px; width: 18px; }
+.dccwl-legend .dccwl-flag svg { height: 11px; width: 11px; }
+.dccwl-legend b { color: var(--dccwl-text); font-weight: 700; }
+
+/* Sheet badges for the flags (1.19.0): white text on the flag fill. */
+.dccwl-app .dccwl-badge-flag {
+	align-items: center;
+	color: #ffffff;
+	display: inline-flex;
+	gap: 5px;
+	padding-left: 4px;
+}
+.dccwl-app .dccwl-badge-flag .dccwl-flag { box-shadow: none; height: 18px; width: 18px; }
+.dccwl-app .dccwl-badge-flag .dccwl-flag svg { height: 11px; width: 11px; }
+.dccwl-app .dccwl-badge-flag-danger    { background: var(--dccwl-flag-danger); }
+.dccwl-app .dccwl-badge-flag-invasive  { background: var(--dccwl-flag-invasive); }
+.dccwl-app .dccwl-badge-flag-protected { background: var(--dccwl-flag-protected); }
+.dccwl-app .dccwl-badge-flag-nuisance  { background: var(--dccwl-flag-nuisance); }
+
+/* "What to do" — the plain instruction, set apart on the tinted ground with
+ * the flag's colour as a rule down the left. Text stays --dccwl-text. */
+.dccwl-sheet .dccwl-safe {
+	background: var(--dccwl-primary-soft);
+	border-left: 4px solid var(--dccwl-primary);
+	border-radius: 0 var(--dccwl-radius-sm) var(--dccwl-radius-sm) 0;
+	margin: var(--dccwl-gap) 0;
+	padding: 10px 14px;
+}
+.dccwl-sheet .dccwl-safe .dccwl-detail-h { margin-top: 0; }
+.dccwl-sheet .dccwl-safe .dccwl-detail-p { margin-bottom: 0; }
+.dccwl-sheet .dccwl-safe-danger    { border-left-color: var(--dccwl-flag-danger); }
+.dccwl-sheet .dccwl-safe-invasive  { border-left-color: var(--dccwl-flag-invasive); }
+.dccwl-sheet .dccwl-safe-protected { border-left-color: var(--dccwl-flag-protected); }
+.dccwl-sheet .dccwl-safe-nuisance  { border-left-color: var(--dccwl-flag-nuisance); }
+
+/* The group glyph on the sheet's drawn scene: pale on the teal, like the sprites. */
+.dccwl-sheet .dccwl-medallion .dccwl-glyph { color: #f4f7f2; }
+
+/* Photo credits (1.19.0): the prose guide's card, one list inside. */
+.dccwl-photo-credits-list { margin: 0; padding-left: 1.2em; }
+.dccwl-photo-credits-list li { margin: 0 0 6px; }
+.dccwl-fg-safe .dccwl-fg-k { color: var(--dccwl-accent-text); }
 .dccwl-guide-empty {
 	color: var(--dccwl-text-muted);
 	font-style: italic;
@@ -474,14 +521,6 @@
 	width: 104px;
 }
 
-.dccwl-sheet .dccwl-medallion .dccwl-medallion-emoji {
-	font-size: 62px;
-	left: 50%;
-	line-height: 1;
-	position: absolute;
-	top: 50%;
-	transform: translate(-50%, -52%);
-}
 
 /* Scientific name under the common name — italic, quiet, authoritative. */
 .dccwl-sheet .dccwl-sci {

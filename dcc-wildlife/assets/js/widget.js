@@ -81,6 +81,71 @@
 	/* <svg><use> reference to the server-printed sprite symbol sheet.
 	 * Built with createElementNS (no innerHTML), so species ids from the
 	 * filterable config can never inject markup. */
+	SCENES.safety = SCENES.critters;
+
+	/* The safety group is a warning list, not a spotting list (1.19.0): it
+	 * never drives the countdown, the counts, the spotlight or the art. */
+	function isSpotting(s) { return s.group !== 'safety'; }
+
+	/* A neutral GROUP glyph — what a tile shows with no vetted photo. */
+	function glyphUse(group, cls) {
+		var NS = 'http://www.w3.org/2000/svg';
+		var svg = document.createElementNS(NS, 'svg');
+		svg.setAttribute('class', 'dccwl-glyph ' + cls);
+		svg.setAttribute('viewBox', '0 0 48 48');
+		svg.setAttribute('aria-hidden', 'true');
+		svg.setAttribute('focusable', 'false');
+		var use = document.createElementNS(NS, 'use');
+		var ref = '#dccwl-gl-' + (SCENES[group] ? group : 'critters');
+		use.setAttribute('href', ref);
+		use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', ref);
+		svg.appendChild(use);
+		return svg;
+	}
+
+	/* A flag mark: coloured disc + shape, named for a screen reader. */
+	function flagMark(flag) {
+		var NS = 'http://www.w3.org/2000/svg';
+		var names = CFG.i18n.flagNames || {};
+		var span = el('span', 'dccwl-flag dccwl-flag-' + flag);
+		span.setAttribute('role', 'img');
+		span.setAttribute('aria-label', names[flag] || flag);
+		var svg = document.createElementNS(NS, 'svg');
+		svg.setAttribute('viewBox', '0 0 16 16');
+		svg.setAttribute('aria-hidden', 'true');
+		svg.setAttribute('focusable', 'false');
+		var use = document.createElementNS(NS, 'use');
+		use.setAttribute('href', '#dccwl-fl-' + flag);
+		use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#dccwl-fl-' + flag);
+		svg.appendChild(use);
+		span.appendChild(svg);
+		return span;
+	}
+
+	/* Photo-first tile face (1.19.0) — mirrors Render::tile_media(). */
+	function tileMedia(sp) {
+		var media = el('span', 'dccwl-tile-media');
+		if (sp.thumb && CFG.photoBase) {
+			var img = document.createElement('img');
+			img.className = 'dccwl-tile-photo';
+			img.alt = '';
+			img.width = 320;
+			img.height = 240;
+			img.loading = 'lazy';
+			img.decoding = 'async';
+			img.src = CFG.photoBase + sp.thumb;
+			media.appendChild(img);
+		} else {
+			media.appendChild(glyphUse(sp.group, 'dccwl-tile-glyph'));
+		}
+		if (sp.flags && sp.flags.length) {
+			var flags = el('span', 'dccwl-tile-flags');
+			sp.flags.forEach(function (f) { flags.appendChild(flagMark(f)); });
+			media.appendChild(flags);
+		}
+		return media;
+	}
+
 	function spriteUse(id, cls) {
 		var NS = 'http://www.w3.org/2000/svg';
 		var svg = document.createElementNS(NS, 'svg');
@@ -97,13 +162,13 @@
 
 	/* Species art: bespoke sprite when the registry has one, emoji fallback
 	 * for filter-added species without a sprite. */
-	function speciesArt(sp, spriteCls, emojiCls) {
+	function speciesArt(sp, spriteCls) {
 		if (sp.sprite) {
 			return spriteUse(sp.id, spriteCls);
 		}
-		var emoji = el('span', emojiCls, sp.emoji);
-		emoji.setAttribute('aria-hidden', 'true');
-		return emoji;
+		// 1.19.0: no sprite → the group glyph. Never an emoji, never a
+		// drawing that might be the wrong animal.
+		return glyphUse(sp.group, spriteCls);
 	}
 
 	function fmt(template) {
@@ -121,7 +186,7 @@
 				return { s: s, v: (s.months && s.months[month]) || 0, i: i };
 			})
 			.filter(function (x) {
-				return x.v >= 2;
+				return x.v >= 2 && isSpotting(x.s);
 			})
 			.sort(function (a, b) {
 				if (b.v !== a.v) {
@@ -249,7 +314,7 @@
 				// carries it, so a wrong-species stock image can never appear.
 				medallion = el('div', 'dccwl-medallion dccwl-medallion-' + (SCENES[sp.group] ? sp.group : 'critters'));
 				medallion.innerHTML = SCENES[sp.group] || SCENES.critters; // static trusted constant
-				medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite', 'dccwl-medallion-emoji'));
+				medallion.appendChild(speciesArt(sp, 'dccwl-medallion-sprite'));
 			}
 			body.appendChild(medallion);
 
@@ -268,17 +333,42 @@
 			if ((sp.months[state.month] || 0) >= 3) {
 				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));
 			}
+			// 1.19.0: the flags as badges (mark + name), then the odds.
+			(sp.flags || []).forEach(function (f) {
+				var b = el('span', 'dccwl-badge dccwl-badge-flag dccwl-badge-flag-' + f);
+				b.appendChild(flagMark(f));
+				b.appendChild(document.createTextNode((CFG.i18n.flagNames || {})[f] || f));
+				badges.appendChild(b);
+			});
+			if (sp.odds && (CFG.i18n.oddsNames || {})[sp.odds]) {
+				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-odds', CFG.i18n.oddsNames[sp.odds]));
+			}
 			if (badges.childNodes.length) {
 				body.appendChild(badges);
 			}
 
 			body.appendChild(el('p', 'dccwl-fact', sp.fact));
 
+			// "What to do" (1.19.0): for anything flagged, the plain
+			// instruction right under the fact — the cottonmouth says give it
+			// room before it says anything else about where to look.
+			if (sp.safe) {
+				var safe = el('div', 'dccwl-safe dccwl-safe-' + ((sp.flags && sp.flags[0]) || 'none'));
+				safe.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.safe || 'What to do'));
+				safe.appendChild(el('p', 'dccwl-detail-p', sp.safe));
+				body.appendChild(safe);
+			}
+
 			// Where to look + best time: the two questions a guest on the
 			// dock actually has, given their own headings in the drawer.
 			if (sp.where) {
 				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.where));
 				body.appendChild(el('p', 'dccwl-detail-p', sp.where));
+			}
+			// A day-trip species names its place (1.19.0; empty for the canal).
+			if (sp.place) {
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.place || 'Where to go'));
+				body.appendChild(el('p', 'dccwl-detail-p', sp.place));
 			}
 			// The canal is as much a sound as a sight. Only species with a
 			// verified, distinctive voice carry one — absent renders nothing.
@@ -307,7 +397,7 @@
 					others.forEach(function (o) {
 						var li = el('li', 'dccwl-lookalike');
 						var ic = el('span', 'dccwl-lookalike-icon');
-						ic.appendChild(speciesArt(o, 'dccwl-chip-sprite', 'dccwl-tile-emoji'));
+						ic.appendChild(speciesArt(o, 'dccwl-chip-sprite'));
 						li.appendChild(ic);
 						var tx = el('span', 'dccwl-lookalike-text');
 						tx.appendChild(el('span', 'dccwl-lookalike-name', o.name));
@@ -405,9 +495,7 @@
 			tile.setAttribute('aria-haspopup', 'dialog');
 			tile.setAttribute('aria-expanded', 'false');
 
-			var icon = el('span', 'dccwl-tile-icon');
-			icon.appendChild(speciesArt(sp, 'dccwl-chip-sprite', 'dccwl-tile-emoji'));
-			tile.appendChild(icon);
+			tile.appendChild(tileMedia(sp));
 			tile.appendChild(el('span', 'dccwl-tile-name', sp.name));
 
 			// The tile face carries ONE signal only — the coral "Peak" flag when
@@ -589,7 +677,10 @@
 				// strip that duplicated it is gone), so a species that is not
 				// likely this month is not shown. Same threshold the strip used.
 				var li = tile.closest('li');
-				if (li) { li.hidden = v < 2; }
+				// The safety grid is a warning list: never month-filtered.
+				var grid = tile.closest('.dccwl-guide-grid');
+				var warning = grid && grid.getAttribute('data-dccwl-group') === 'safety';
+				if (li) { li.hidden = !warning && v < 2; }
 				// One signal only: the coral "Peak" flag on species at their best
 				// this month. Everything else stays a plain icon-and-name tile.
 				if (v < 3) { return; }
@@ -721,7 +812,7 @@
 
 		// Icon: the species' own sprite, at hero scale.
 		var icon = el('span', 'dccwl-hero-icon');
-		icon.appendChild(speciesArt(best.s, 'dccwl-hero-sprite', 'dccwl-hero-emoji'));
+		icon.appendChild(speciesArt(best.s, 'dccwl-hero-sprite'));
 		node.appendChild(icon);
 
 		var textWrap = el('div', 'dccwl-hero-text');
@@ -773,7 +864,7 @@
 
 		var today = canalToday(), cur = today.getMonth(), rise = null, current = null;
 		CFG.species.forEach(function (s) {
-			if (!Array.isArray(s.months)) { return; }
+			if (!Array.isArray(s.months) || !isSpotting(s)) { return; }
 			var r = nextRise(s.months, today);
 			if (r && (!rise || r.days < rise.days)) {
 				rise = { days: r.days, here: r.here, month: r.month, s: s };

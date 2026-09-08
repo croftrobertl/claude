@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.18.1
+Stable tag: 1.19.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,16 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.19.0 =
+* Phase 2, batch 1: the field guide grows from 24 to 34 species and gains a data model for the 169 to come.
+* "Know before you go" — a new first group: Florida cottonmouth, eastern diamondback, dusky pygmy rattlesnake, eastern coral snake, the alligator, red imported fire ant, poison ivy, mosquitoes and no-see-ums, lovebugs. Each entry says plainly what to do.
+* The generic "Water Snake" tile is gone. In its place: Florida banded watersnake (with how to tell it from a cottonmouth), brown watersnake and Florida green watersnake, all cross-referenced in the look-alike helper.
+* Flags on tiles — Danger, Invasive, Protected, Nuisance — with a key beside the tiles. Manatee, bald eagle and wood stork now carry Protected.
+* Photo-first tiles: the vetted photo is the tile image; a species without one shows a neutral group glyph, never a drawing that could be the wrong animal. Sprites remain in the month art and the sheet.
+* A "Photo credits" section at the foot of the guide lists every licensed image.
+* Odds ("You will see one" … "A rare treat") on every species; a place field for later day-trip entries.
+* The safety list is a warning list: it never drives the countdown, the peak counts or the month art.
 
 = 1.18.1 =
 * Fixes from the owner's phone review of 1.18.0.

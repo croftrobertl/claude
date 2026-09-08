@@ -101,6 +101,13 @@
 	 * theme's CSS to the height of a sticky site header so the bar tucks under
 	 * it instead of behind it. */
 	--dccwl-sticky-offset: 0px;
+	/* Flag marks (1.19.0): FILLS for a white glyph. Each ≥ 5.2:1 under white,
+	 * measured; the danger fill IS the accent-text value so the coral family
+	 * keeps one hue. Never used as text colour. */
+	--dccwl-flag-danger: #bf4040;
+	--dccwl-flag-invasive: #8e652f;
+	--dccwl-flag-protected: #0f6dbf;
+	--dccwl-flag-nuisance: #546d85;
 
 	/* --- density — the Guide's cozy spacing --------------------------- */
 	--dccwl-density: 1;
@@ -230,7 +237,7 @@
 	gap: calc(var(--dccwl-gap) * 0.6);
 	justify-content: flex-start;
 	min-height: 96px;
-	padding: calc(var(--dccwl-pad) * 0.85);
+	padding: calc(var(--dccwl-pad) * 0.6) calc(var(--dccwl-pad) * 0.6) calc(var(--dccwl-pad) * 0.85);
 	position: relative;
 	text-align: center;
 	transition: transform var(--dccwl-t) var(--dccwl-ease),
@@ -257,15 +264,55 @@
 	box-shadow: var(--dccwl-ring), var(--dccwl-shadow-raised);
 }
 
-.dccwl-app .dccwl-tile-icon {
+/* Photo-first tile face (1.19.0): a 4:3 band — the vetted photo's
+ * thumbnail, or the neutral group glyph on the tinted ground — with the
+ * flag marks on its corner. */
+.dccwl-app .dccwl-tile-media {
 	align-items: center;
+	aspect-ratio: 4 / 3;
 	background: var(--dccwl-primary-soft);
 	border-radius: var(--dccwl-radius-sm);
 	display: flex;
-	height: 42px;
 	justify-content: center;
-	width: 42px;
+	overflow: hidden;
+	position: relative;
+	width: 100%;
 }
+.dccwl-app .dccwl-tile-photo {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+.dccwl-app .dccwl-glyph { fill: none; }
+.dccwl-app .dccwl-tile-glyph {
+	color: var(--dccwl-primary);   /* on the tinted band: 4.74:1 */
+	height: auto;
+	width: 38%;
+}
+.dccwl-app .dccwl-tile-flags {
+	display: flex;
+	gap: 4px;
+	left: 6px;
+	position: absolute;
+	top: 6px;
+}
+.dccwl-app .dccwl-flag {
+	align-items: center;
+	border-radius: 50%;
+	box-shadow: 0 0 0 2px #ffffff;
+	color: #ffffff;
+	display: inline-flex;
+	flex: none;
+	height: 22px;
+	justify-content: center;
+	width: 22px;
+}
+.dccwl-app .dccwl-flag svg { fill: none; height: 14px; width: 14px; }
+.dccwl-app .dccwl-flag-danger    { background: var(--dccwl-flag-danger); }
+.dccwl-app .dccwl-flag-invasive  { background: var(--dccwl-flag-invasive); }
+.dccwl-app .dccwl-flag-protected { background: var(--dccwl-flag-protected); }
+.dccwl-app .dccwl-flag-nuisance  { background: var(--dccwl-flag-nuisance); }
 
 .dccwl-app .dccwl-tile-name {
 	font-weight: 600;
