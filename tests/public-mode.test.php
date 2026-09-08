@@ -273,5 +273,36 @@ check('masked password is NOT in the search index', stripos($idx, 'DCC32586') ==
 check('an unmasked copy value is still indexed', stripos($idx, 'plainvalue123') !== false);
 check('the item itself is still findable by title', stripos($idx, 'Cottage WiFi') !== false);
 
+echo "\nM. Wi-Fi credentials: where the password can still appear\n";
+// Characterises the live finding: the password was in the index twice because
+// the author repeated it in the body text AND the copy value was appended.
+$wifiItem = function (bool $mask, string $body): array {
+    $it = [
+        'item_section' => 'wifi', 'item_title' => 'Wifi Name',
+        'item_content' => $body,
+        'item_copy' => 'yes', 'item_copy_value' => 'DCC32586',
+        'item_wifi_mode' => 'yes', 'wifi_ssid' => 'topoftheworld',
+    ];
+    if ($mask) { $it['item_mask_value'] = 'yes'; }
+    return ['guide_sections' => [['section_key' => 'wifi', 'section_title' => 'Internet']],
+            'guide_items' => [$it]];
+};
+$withBody = '<p>Name: topoftheworld / Password: "DCC32586"</p>';
+$noBody   = '<p>Join the cottage network.</p>';
+$count = fn(array $cfg) => substr_count(json_encode(\DCCGG\Widget::build_search_index($cfg)), 'DCC32586');
+
+check('unmasked + password in body: appears twice', $count($wifiItem(false, $withBody)) === 2,
+    (string) $count($wifiItem(false, $withBody)));
+check('masked: the appended copy value is dropped', $count($wifiItem(true, $withBody)) === 1,
+    (string) $count($wifiItem(true, $withBody)));
+check('masked + body text removed: gone entirely', $count($wifiItem(true, $noBody)) === 0,
+    (string) $count($wifiItem(true, $noBody)));
+
+// The network NAME must stay searchable once the body text is stripped,
+// otherwise removing the duplicate makes the item impossible to find.
+$idxNoBody = json_encode(\DCCGG\Widget::build_search_index($wifiItem(true, $noBody)));
+check('network name is still indexed without body text', stripos($idxNoBody, 'topoftheworld') !== false);
+check('and the item is still findable by title', stripos($idxNoBody, 'Wifi Name') !== false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

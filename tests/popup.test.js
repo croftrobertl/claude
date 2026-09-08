@@ -731,6 +731,37 @@ async function run() {
         await page2.waitForTimeout(400);
         check('the same query is not reported twice', posts.length === before, `${before} -> ${posts.length}`);
 
+        // The structured Wi-Fi pair: one Show toggle, two copy buttons, and no
+        // password anywhere in the visible text before revealing.
+        const creds = `<dl class="dccgg-wifi-creds">
+            <div class="dccgg-wifi-row"><dt>Network</dt><dd>
+              <span class="dccgg-wifi-ssid">topoftheworld</span>
+              <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="topoftheworld">Copy</button></dd></div>
+            <div class="dccgg-wifi-row"><dt>Password</dt><dd>
+              <span class="dccgg-secret"><span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+              <button class="dccgg-secret-toggle" aria-pressed="false" data-label-show="Show" data-label-hide="Hide">Show</button></span>
+              <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="DCC32586">Copy</button></dd></div></dl>`;
+        const html3 = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1"><style>${CSS}</style></head>
+            <body><div class="dccgg-root" data-config='{"revealMode":"stage","strings":{}}'>
+            <article class="dccgg-item" data-tts-text="Join the cottage network.">${creds}</article>
+            </div><script>${JS}</script></body></html>`;
+        const { ctx: ctx3, page: page3 } = await newPage(browser, PHONE, html3, errors);
+        const vis = await page3.evaluate(() => document.body.innerText);
+        check('structured pair: password not in visible text', !vis.includes('DCC32586'), vis.slice(0, 80));
+        check('structured pair: network name IS visible', vis.includes('topoftheworld'));
+        check('structured pair: read-aloud text excludes the password',
+            await page3.$eval('.dccgg-item', (a) => !a.dataset.ttsText.includes('DCC32586')));
+        await page3.click('.dccgg-secret-toggle');
+        check('structured pair: Show reveals it', (await page3.evaluate(() =>
+            getComputedStyle(document.querySelector('.dccgg-secret-value'), '::before').content)).includes('DCC32586'));
+        check('structured pair: both copy buttons carry real values',
+            await page3.evaluate(() => {
+                const b = [...document.querySelectorAll('.dccgg-copy')].map(x => x.dataset.copy);
+                return b.includes('topoftheworld') && b.includes('DCC32586');
+            }));
+        await ctx3.close();
+
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx2.close();
         await ctx.close();

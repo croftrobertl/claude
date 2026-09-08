@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.2
+Stable tag: 0.12.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,30 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.3 =
+
+**Wi-Fi items can now carry the network name and password as fields
+instead of typed-out text.**
+
+Turning on *Hide the value until tapped* for an item that is in WiFi mode
+now renders a proper **Network / Password** pair from the WiFi fields —
+the network name in plain text with a Copy button, and the password as
+dots with Show and Copy. Read-aloud still never speaks the password, and
+it still prints in full for the binder.
+
+This removes the trap in the previous release: masking only ever covered
+the *Value to copy* field, so a password also typed into the item's text
+stayed visible and stayed searchable. Now the fields are the source, and
+the item text does not need to repeat them.
+
+**When you switch an item over, delete the "Name: … / Password: …" lines
+from the item text.** Anything left there is ordinary text the plugin
+cannot recognise as a password. Searching still finds the item: the
+network name is now included in the search index in its own right, so
+removing those lines does not make the item unfindable.
+
+Nothing changes on items you don't switch over.
 
 = 0.12.2 =
 

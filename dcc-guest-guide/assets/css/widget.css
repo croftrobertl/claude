@@ -1934,6 +1934,26 @@ dialog.dccgg-wrapper::backdrop {
     background: color-mix(in srgb, var(--dccgg-primary) 20%, transparent);
 }
 
+/* v0.12.3: structured Wi-Fi credentials, shown when an item is in WiFi mode
+   with its value masked. Built from the existing tokens and button styles —
+   no new colours — so it reads as part of the same card. */
+.dccgg-wifi-creds { margin: 12px 0 0; display: grid; gap: 8px; }
+.dccgg-wifi-row {
+    display: grid;
+    grid-template-columns: minmax(5.5em, auto) 1fr;
+    align-items: center;
+    gap: 4px 12px;
+}
+.dccgg-wifi-creds dt { font-weight: 600; color: var(--dccgg-muted); font-size: 0.9em; }
+.dccgg-wifi-creds dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dccgg-wifi-ssid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.dccgg-root.dccgg-root .dccgg-copy--inline { padding: 6px 12px; min-height: 36px; font-size: 0.82em; }
+@media (max-width: 480px) {
+    /* Stack on narrow phones so a long network name never squeezes the copy
+       button off the row. */
+    .dccgg-wifi-row { grid-template-columns: 1fr; }
+}
+
 /* v0.12.2: tap-to-reveal value (Wi-Fi passwords). The real value lives in a
    data attribute and is painted by ::before, so the unrevealed state has no
    password text anywhere on screen — screenshots and shoulder-surfing show

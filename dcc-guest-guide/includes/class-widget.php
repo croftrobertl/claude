@@ -1115,7 +1115,7 @@ final class Widget extends Widget_Base
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
             'condition'    => ['item_copy' => 'yes'],
-            'description'  => __('Shows the value as dots with a Show button, so a Wi-Fi password is not sitting in plain view in screenshots, over a shoulder, or on a phone left on a table. Copy still works without revealing it, read-aloud never speaks it, and it prints in full for the cottage binder. This is privacy, not security — the value is still in the page source. It only covers the value in this field: if the same password is also typed into the item text above, that copy stays visible.', 'dcc-guest-guide'),
+            'description'  => __('Shows the value as dots with a Show button, so a Wi-Fi password is not sitting in plain view in screenshots, over a shoulder, or on a phone left on a table. Copy still works without revealing it, read-aloud never speaks it, and it prints in full for the cottage binder. On an item with WiFi mode on, this also renders the Network / Password pair from the fields below — so DELETE any "Name: … / Password: …" lines from the item text above, or that copy stays visible and searchable. This is privacy, not security: the value is still in the page source.', 'dcc-guest-guide'),
         ]);
 
         $repeater->add_control('item_wifi_mode', [
@@ -1477,6 +1477,8 @@ final class Widget extends Widget_Base
             'str_wizard_next'  => [__('Wizard next button', 'dcc-guest-guide'),  __('Next', 'dcc-guest-guide')],
             'str_wizard_done'  => [__('Wizard done button', 'dcc-guest-guide'),  __('Done', 'dcc-guest-guide')],
             'str_ai_offline'     => [__('AI search offline message', 'dcc-guest-guide'), __('Ask anything needs a connection. The rest of the guide works offline.', 'dcc-guest-guide')],
+            'str_wifi_network'   => [__('Wi-Fi network label', 'dcc-guest-guide'), __('Network', 'dcc-guest-guide')],
+            'str_wifi_password'  => [__('Wi-Fi password label', 'dcc-guest-guide'), __('Password', 'dcc-guest-guide')],
             'str_secret_show'    => [__('Reveal hidden value button', 'dcc-guest-guide'), __('Show', 'dcc-guest-guide')],
             'str_secret_hide'    => [__('Re-hide value button', 'dcc-guest-guide'), __('Hide', 'dcc-guest-guide')],
             'str_tts_play'       => [__('Read-aloud button label', 'dcc-guest-guide'), __('Read this item aloud', 'dcc-guest-guide')],
@@ -3988,6 +3990,51 @@ final class Widget extends Widget_Base
                 endif;
             endif; ?>
 
+            <?php
+            // v0.12.3: when an item is in Wi-Fi mode AND its value is masked,
+            // render the Name / Password pair from the structured fields
+            // instead of relying on the author repeating them in the body
+            // text. That duplication is exactly how masking got defeated:
+            // the body copy is plain text the plugin cannot recognise as a
+            // password, so it stayed visible and stayed in the search index.
+            // Gated on the mask being ON, so switching it on is what moves an
+            // item to the structured pair — nothing changes until then.
+            $wifi_creds = $wifi_on && $mask_on && ($wifi_ssid !== '' || $copy_val !== '');
+            if ($wifi_creds) : ?>
+                <dl class="dccgg-wifi-creds">
+                    <?php if ($wifi_ssid !== '') : ?>
+                        <div class="dccgg-wifi-row">
+                            <dt><?php echo esc_html($strings['str_wifi_network'] ?? __('Network', 'dcc-guest-guide')); ?></dt>
+                            <dd>
+                                <span class="dccgg-wifi-ssid"><?php echo esc_html($wifi_ssid); ?></span>
+                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($wifi_ssid); ?>">
+                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
+                                </button>
+                            </dd>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($copy_val !== '') : ?>
+                        <div class="dccgg-wifi-row">
+                            <dt><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?></dt>
+                            <dd>
+                                <span class="dccgg-secret">
+                                    <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
+                                    <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+                                            aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
+                                            data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
+                                            data-label-hide="<?php echo esc_attr($strings['str_secret_hide'] ?? __('Hide', 'dcc-guest-guide')); ?>">
+                                        <?php echo esc_html($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>
+                                    </button>
+                                </span>
+                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($copy_val); ?>">
+                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
+                                </button>
+                            </dd>
+                        </div>
+                    <?php endif; ?>
+                </dl>
+            <?php endif; ?>
+
             <?php if ($map_on || $copy_on || $wifi_payload !== '') : ?>
                 <div class="dccgg-item-utils">
                     <?php if ($map_on && $map_url !== '') : ?>
@@ -3995,7 +4042,7 @@ final class Widget extends Widget_Base
                             <i class="fas fa-map-marker-alt" aria-hidden="true"></i> <?php echo esc_html($strings['str_directions']); ?>
                         </a>
                     <?php endif; ?>
-                    <?php if ($copy_on && $copy_val !== '' && $mask_on) : ?>
+                    <?php if ($copy_on && $copy_val !== '' && $mask_on && !$wifi_creds) : ?>
                         <?php // v0.12.2: the value is never rendered as text — it rides in a
                         // data attribute and the dots/plain text come from CSS ::before, so
                         // a screenshot of the unrevealed state shows nothing. Print reveals
@@ -4010,7 +4057,7 @@ final class Widget extends Widget_Base
                             </button>
                         </span>
                     <?php endif; ?>
-                    <?php if ($copy_on && $copy_val !== '') : ?>
+                    <?php if ($copy_on && $copy_val !== '' && !$wifi_creds) : ?>
                         <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
                         </button>
@@ -4057,6 +4104,11 @@ final class Widget extends Widget_Base
                 }
                 $parts[] = $tpl_cache[$tpl_id];
             }
+        }
+        // The network NAME is not a secret, and once the author stops
+        // repeating it in the body text it would otherwise become unfindable.
+        if (($item['item_wifi_mode'] ?? '') === 'yes') {
+            $parts[] = (string) ($item['wifi_ssid'] ?? '');
         }
         // A masked value is deliberately left out of the search index: that
         // index is inlined into data-config, so including it would put the
