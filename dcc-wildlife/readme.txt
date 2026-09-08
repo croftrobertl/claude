@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.19.1
+Stable tag: 1.20.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,15 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.20.0 =
+* Phase 2, batch 2: the wading birds and water birds. The guide grows from 34 species to 51.
+* New waders: great egret, cattle egret, black-crowned and yellow-crowned night herons, least bittern, glossy ibis and the Florida sandhill crane.
+* New water birds: double-crested cormorant, common and purple gallinules, American coot, pied-billed grebe, wood duck, Florida mottled duck, black-bellied whistling duck, American white pelican and fish crow.
+* The look-alike helper was re-cut around them: the five confusable white waders, the two ibises, the tall dark ones, and a new night-heron set. Telling a cormorant from an anhinga, and a sandhill crane from a great blue heron, now has an answer in the app.
+* The bird section is ordered as a field guide reads, so the birds you have to tell apart sit together.
+* A species with a field mark but no look-alikes here (the white pelican, the fish crow) now shows that mark in its sheet, not only in the written guide.
+* The Florida sandhill crane carries Protected: feeding cranes is against Florida law.
 
 = 1.19.1 =
 * The eleven batch-1 species now carry verified Wikidata entities in the field guide's structured data, confirmed against each item's taxon name.

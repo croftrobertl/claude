@@ -669,6 +669,7 @@ final class Render {
 				'flagNames'   => array_map( static fn( array $d ): string => $d[0], Species::flags() ),
 				'oddsNames'   => Species::odds(),
 				'safe'        => __( 'What to do', 'dcc-wildlife' ),
+				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
 				'place'       => __( 'Where to go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.

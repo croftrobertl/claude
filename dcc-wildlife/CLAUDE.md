@@ -1020,6 +1020,16 @@ rounded boxes at the same weight. The rule now:
   the set mixes species, subspecies, a genus and a family.
 - **Seasonality** for new species is argued row by row in WATER-SOURCES.md
   ("Phase 2 — batch 1"); every row keeps a month at 3.
-- Batches 2–7 are listed in the Phase 2 brief; each ships alone, Rob reviews
+- **Look-alike sets (`idgroup` + `mark`) are re-cut whenever a batch adds a
+  member.** A set answers one real question — *which of these am I looking
+  at?* — so membership follows what a guest actually confuses, not taxonomy:
+  `white` (the five confusable white waders), `ibis`, `dark` (the tall ones,
+  incl. anhinga/cormorant and the crane-vs-heron problem), `night`, `swimmer`,
+  `duck`, `raptor`, `snakes`. Every `mark` must read after "Tell this one by
+  …", and a mark now renders in the sheet even when the species has no
+  look-alikes.
+- **Species order inside a group is field-guide order**, not the order they
+  were added: the birds a guest must separate sit together.
+- Batches 3–7 are listed in the Phase 2 brief; each ships alone, Rob reviews
   on /explore/ from the phone before the next. The three cut species
   (roseate spoonbill, snail kite, crested caracara) are never re-added.

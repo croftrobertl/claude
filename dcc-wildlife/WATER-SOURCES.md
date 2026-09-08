@@ -416,3 +416,54 @@ invicta* entered the US at Mobile, AL in the 1930s (UF/IFAS); the brown
 watersnake's wide head is the classic cause of cottonmouth misidentification
 (Florida Museum). Photos: none for batch 1 yet — every new tile shows the
 group glyph until a vetted image arrives.
+
+## Phase 2 — batch 2 (1.20.0): wading birds and water birds
+
+Seventeen new species. Rows are how likely a guest is to SEE one from the
+property or the canal, not abundance; sources are Cornell Lab / All About
+Birds range-and-season accounts and FWC species profiles, from knowledge,
+with confidence noted. The MEDIUM rows are the ones worth a spot-check by a
+session with network access.
+
+| id | row | basis | confidence |
+|---|---|---|---|
+| greategret | year-round 3 | Cornell: common permanent resident throughout FL | HIGH |
+| cattleegret | Mar–Sep at 3 | Cornell/FWC: resident, numbers swell with breeding; disperses in winter | HIGH |
+| bcnightheron | Mar–Aug at 3 | Cornell: resident; most conspicuous around breeding colonies | MEDIUM |
+| ycnightheron | Apr–Aug at 3 | Cornell: breeds through the peninsula, part of the population withdraws south in winter | MEDIUM |
+| leastbittern | May–Aug at 3 | Cornell: summer breeder in central FL; vocal Apr–Aug, secretive otherwise | HIGH |
+| glossyibis | Mar–Sep at 3 | Cornell: resident in peninsular FL, more numerous in the wet season | MEDIUM |
+| sandhill | Oct–Apr at 3 | FWC: *pratensis* is a non-migratory resident; migratory greater sandhills swell numbers Nov–Feb | HIGH |
+| cormorant | Oct–Mar at 3 | Cornell: resident, with northern birds wintering — highest counts in the cool season | MEDIUM |
+| commongallinule | year-round 3 | Cornell: abundant permanent resident in FL freshwater marsh | HIGH |
+| purplegallinule | Apr–Aug at 3 | Cornell: breeds in FL; inland numbers drop sharply in midwinter | HIGH |
+| coot | Nov–Mar at 3, absent Jun–Aug | Cornell: abundant FL winter visitor, very local breeder | HIGH |
+| grebe | Nov–Mar at 3 | Cornell: resident but far more numerous in winter | HIGH |
+| woodduck | Nov–Apr at 3 | Cornell/FWC: resident cavity nester; most visible in the cool season | MEDIUM |
+| mottledduck | Nov–Apr at 3 | FWC: non-migratory FL endemic subspecies; pairs conspicuous winter–spring | HIGH |
+| whistlingduck | Apr–Sep at 3 | Cornell/FWC: established and expanding resident, most numerous in warm months | MEDIUM |
+| pelican | Nov–Mar at 3, absent Jun–Sep | Cornell: winter visitor to FL lakes; breeds on northern prairie lakes | HIGH |
+| fishcrow | Mar–Jul at 3 | Cornell: common resident, most vocal in the breeding season | HIGH |
+
+Facts checked against the same accounts: the great egret is the National
+Audubon Society's emblem, adopted after the plume-hunting fight; cattle egrets
+reached Florida in the 1950s after crossing the Atlantic unaided; *Nycticorax*
+means "night raven"; wood ducklings leave the cavity the day after hatching;
+the Florida mottled duck's main threat is hybridisation with released
+mallards; the American white pelican feeds cooperatively and does not
+plunge-dive. Taxonomy follows the brief: *Antigone canadensis pratensis* and
+*Nannopterum auritum* stay as given.
+
+PROTECTED flags: the Florida sandhill crane is added (state-designated
+threatened, and feeding cranes is illegal in Florida). Two more candidates —
+little blue heron and tricolored heron, both believed state-designated
+threatened since FWC's 2017 rule — are NOT flagged here because that listing
+was not verified from a source in this environment. Worth confirming, then
+adding.
+
+LOOK-ALIKE SETS were re-cut for the new arrivals: `white` is now the five
+confusable white waders, the two ibises get their own pair, `dark` holds the
+tall ones (great blue, tricolored, sandhill, anhinga, cormorant), and a new
+`night` set holds the two night herons, the green heron and the least bittern.
+The green heron moved out of `dark`: nobody confuses a four-foot heron with an
+eighteen-inch one, but people do confuse it with a night heron.

@@ -383,10 +383,19 @@
 			 * each other with the one field mark that settles it. Informational
 			 * only: no navigation, so the shared sheet's history contract is
 			 * untouched. Absent group → nothing renders. */
+			var others = sp.idgroup ? CFG.species.filter(function (o) {
+				return o.idgroup === sp.idgroup && o.id !== sp.id && o.mark;
+			}) : [];
+			// 1.20.0: a species with a field mark but nothing here to confuse it
+			// with (the white pelican, the fish crow) still gets its mark — it
+			// used to render only in the prose guide, so the sheet was silent
+			// about the one thing that identifies it.
+			if (!others.length && sp.mark) {
+				body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.tellApart || 'Tell it apart'));
+				body.appendChild(el('p', 'dccwl-detail-p dccwl-mark-self',
+					fmt(CFG.i18n.tellBy || 'Tell this one by %s.', sp.mark)));
+			}
 			if (sp.idgroup) {
-				var others = CFG.species.filter(function (o) {
-					return o.idgroup === sp.idgroup && o.id !== sp.id && o.mark;
-				});
 				if (others.length) {
 					body.appendChild(el('h4', 'dccwl-detail-h', CFG.i18n.confused || 'Easily confused with'));
 					if (sp.mark) {

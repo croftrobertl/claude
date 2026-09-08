@@ -466,8 +466,19 @@
 .dccwl-sheet .dccwl-safe-protected { border-left-color: var(--dccwl-flag-protected); }
 .dccwl-sheet .dccwl-safe-nuisance  { border-left-color: var(--dccwl-flag-nuisance); }
 
-/* The group glyph on the sheet's drawn scene: pale on the teal, like the sprites. */
-.dccwl-sheet .dccwl-medallion .dccwl-glyph { color: #f4f7f2; }
+/* The group glyph on the sheet's drawn scene (1.20.0). It used to be pale ink
+ * straight onto the plate, which was fine over the dark water of the critters
+ * scene and unreadable over the pale sand of the birds one — 1.73:1, caught by
+ * the scene contrast suite once batch 2 gave the birds group species with no
+ * sprite. It now sits on its own pale disc, exactly as it does on a tile, so
+ * legibility no longer depends on which scene is behind it: primary on this
+ * disc is 4.7:1 on every plate. */
+.dccwl-sheet .dccwl-medallion .dccwl-glyph {
+	background: #eef2f6;
+	border-radius: 50%;
+	color: var(--dccwl-primary);
+	padding: 13px;
+}
 
 /* Photo credits (1.19.0): the prose guide's card, one list inside. */
 .dccwl-photo-credits-list { margin: 0; padding-left: 1.2em; }
