@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Verify proposed Wikidata Q-ids against the scientific names they must match.
 
+Batch 1's twelve rows were confirmed this way on 2026-09-08 (P225 == the
+scientific name on every row) and are recorded in entities-batch1.csv; they
+now live in Species::entities(). Use this for each new batch.
+
 Usage:  python3 verify-wikidata.py entities.csv > result.csv
 CSV in:  id,sci,qid,wiki_slug   (qid like Q193327; wiki_slug like American_alligator)
 CSV out: id,sci,qid,status,detail

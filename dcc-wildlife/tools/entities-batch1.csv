@@ -1,11 +1,13 @@
-id,sci,qid,wiki_slug
-cottonmouth,Agkistrodon conanti,,Florida_cottonmouth
-diamondback,Crotalus adamanteus,,Eastern_diamondback_rattlesnake
-pygmy,Sistrurus miliarius barbouri,,Dusky_pygmy_rattlesnake
-coralsnake,Micrurus fulvius,,Micrurus_fulvius
-fireant,Solenopsis invicta,,Red_imported_fire_ant
-poisonivy,Toxicodendron radicans,,Toxicodendron_radicans
-mosquito,Culicidae,,Mosquito
-lovebug,Plecia nearctica,,Lovebug
-brownwater,Nerodia taxispilota,,Brown_water_snake
-greenwater,Nerodia floridana,,Florida_green_water_snake
+id,sci,qid,verified_on,note
+cottonmouth,Agkistrodon conanti,Q4692725,2026-09-08,species
+diamondback,Crotalus adamanteus,Q744532,2026-09-08,species
+pygmy,Sistrurus miliarius barbouri,Q7531461,2026-09-08,subspecies
+coralsnake,Micrurus fulvius,Q1513945,2026-09-08,species
+fireant,Solenopsis invicta,Q1194382,2026-09-08,species
+poisonivy,Toxicodendron radicans,Q7218532,2026-09-08,species
+lovebug,Plecia nearctica,Q1763509,2026-09-08,species
+mosquito,Culicidae,Q7367,2026-09-08,family — one tile covers two taxa
+mosquito,Culicoides,Q2324817,2026-09-08,genus — one tile covers two taxa
+bandedwater,Nerodia fasciata pictiventris,Q6996593,2026-09-02,subspecies; species-level is Q2065834
+brownwater,Nerodia taxispilota,Q900792,2026-09-08,species
+greenwater,Nerodia floridana,Q2708567,2026-09-08,species

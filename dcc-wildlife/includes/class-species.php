@@ -74,7 +74,7 @@ final class Species {
 	 * These are what the colour legend encodes; a mark that cannot earn a
 	 * line here must not appear on a tile.
 	 *
-	 * @return array<string,array{0:string,1:string}>
+	 * @return array<string,string[]>
 	 */
 	public static function flags(): array {
 		return [
@@ -691,69 +691,111 @@ final class Species {
 	}
 
 	/**
-	 * Verified encyclopedia entities, species id => [ Wikipedia URL, Wikidata Q-id ].
+	 * Verified encyclopedia entities, species id => list of sameAs URLs.
 	 *
 	 * Used ONLY for the JSON-LD `sameAs` on the field guide (1.16.0) — this is
 	 * how a machine learns that our "Limpkin" is the same thing the rest of the
 	 * web calls Aramus guarauna. Deliberately NOT part of dataset(): it never
-	 * reaches the browser, so it costs the client payload nothing.
+	 * reaches the browser, so it costs the client payload nothing. Nothing here
+	 * is a guess; how each row was confirmed is noted beside it.
 	 *
-	 * Every row was resolved by querying the MediaWiki API with the scientific
-	 * name from registry() above, following redirects, and confirming the
-	 * resulting article really is that taxon (2026-09-02). Two judgement calls,
-	 * both deliberate:
-	 *
-	 * - 'manatee' — our subspecies (T. m. latirostris) has no standalone
-	 *   article; "Florida manatee" redirects to the species. The species
-	 *   article is therefore the correct entity, not a loose match.
-	 * - 'turtle' — absent ON PURPOSE. That entry covers Pseudemys spp. AND
-	 *   Apalone ferox; no single entity is true, so it gets none. Same rule as
-	 *   the water module's Fact gate: no verified source, no claim.
-	 *
-	 * @return array<string,array{0:string,1:string}>
+	 * @return array<string,string[]>
 	 */
 	public static function entities(): array {
+		$W = 'https://www.wikidata.org/wiki/';
 		$entities = [
-			'alligator' => [ 'https://en.wikipedia.org/wiki/American_alligator', 'Q193327' ],
-			'manatee'   => [ 'https://en.wikipedia.org/wiki/West_Indian_manatee', 'Q40261' ],
-			'otter'     => [ 'https://en.wikipedia.org/wiki/North_American_river_otter', 'Q327028' ],
-			// 1.19.0: the same verified row the old generic 'snake' entry carried
-			// (that entry WAS N. fasciata pictiventris). The eleven other batch-1
-			// species have NO row yet: their Q-ids are drafted in
-			// tools/entities-batch1.csv for verification from a machine with
-			// network, and land here only as CONFIRMED. A wrong Q-id is worse
-			// than none.
-			'bandedwater' => [ 'https://en.wikipedia.org/wiki/Florida_banded_water_snake', 'Q6996593' ],
-			'fish'      => [ 'https://en.wikipedia.org/wiki/Largemouth_bass', 'Q755105' ],
-			'applesnail' => [ 'https://en.wikipedia.org/wiki/Pomacea_paludosa', 'Q3142468' ],
-			'eagle'     => [ 'https://en.wikipedia.org/wiki/Bald_eagle', 'Q127216' ],
-			'osprey'    => [ 'https://en.wikipedia.org/wiki/Osprey', 'Q25332' ],
-			'anhinga'   => [ 'https://en.wikipedia.org/wiki/Anhinga', 'Q469940' ],
-			'heron'     => [ 'https://en.wikipedia.org/wiki/Great_blue_heron', 'Q333796' ],
-			'egret'     => [ 'https://en.wikipedia.org/wiki/Snowy_egret', 'Q59785' ],
-			'kingfisher' => [ 'https://en.wikipedia.org/wiki/Belted_kingfisher', 'Q736052' ],
-			'limpkin'   => [ 'https://en.wikipedia.org/wiki/Limpkin', 'Q725276' ],
-			'ibis'      => [ 'https://en.wikipedia.org/wiki/American_white_ibis', 'Q589171' ],
-			'woodstork' => [ 'https://en.wikipedia.org/wiki/Wood_stork', 'Q990175' ],
-			'littleblue' => [ 'https://en.wikipedia.org/wiki/Little_blue_heron', 'Q371028' ],
-			'tricolored' => [ 'https://en.wikipedia.org/wiki/Tricolored_heron', 'Q392139' ],
-			'greenheron' => [ 'https://en.wikipedia.org/wiki/Green_heron', 'Q498228' ],
-			'cypress'   => [ 'https://en.wikipedia.org/wiki/Taxodium_distichum', 'Q148950' ],
-			'moss'      => [ 'https://en.wikipedia.org/wiki/Spanish_moss', 'Q311524' ],
-			'fern'      => [ 'https://en.wikipedia.org/wiki/Pleopeltis_michauxiana', 'Q56761285' ],
-			'lily'      => [ 'https://en.wikipedia.org/wiki/Nymphaea_odorata', 'Q635853' ],
-			'palmetto'  => [ 'https://en.wikipedia.org/wiki/Serenoa', 'Q927607' ],
+			// Each row is the list of VERIFIED sameAs targets for that species.
+			// Rows through 1.19.0 carry a Wikipedia article and its Wikidata
+			// item, both resolved by querying the MediaWiki API with the
+			// scientific name and confirming the article is that taxon
+			// (2026-09-02). Two judgement calls, both deliberate:
+			//
+			// - 'manatee' — our subspecies (T. m. latirostris) has no
+			//   standalone article; "Florida manatee" redirects to the species.
+			// - 'turtle' — absent ON PURPOSE. That entry covers Pseudemys spp.
+			//   AND Apalone ferox; no single entity is true, so it gets none.
+			//   Same rule as the water module's Fact gate: no verified source,
+			//   no claim.
+			'alligator'   => [ 'https://en.wikipedia.org/wiki/American_alligator', $W . 'Q193327' ],
+			'manatee'     => [ 'https://en.wikipedia.org/wiki/West_Indian_manatee', $W . 'Q40261' ],
+			'otter'       => [ 'https://en.wikipedia.org/wiki/North_American_river_otter', $W . 'Q327028' ],
+			'fish'        => [ 'https://en.wikipedia.org/wiki/Largemouth_bass', $W . 'Q755105' ],
+			'applesnail'  => [ 'https://en.wikipedia.org/wiki/Pomacea_paludosa', $W . 'Q3142468' ],
+			'eagle'       => [ 'https://en.wikipedia.org/wiki/Bald_eagle', $W . 'Q127216' ],
+			'osprey'      => [ 'https://en.wikipedia.org/wiki/Osprey', $W . 'Q25332' ],
+			'anhinga'     => [ 'https://en.wikipedia.org/wiki/Anhinga', $W . 'Q469940' ],
+			'heron'       => [ 'https://en.wikipedia.org/wiki/Great_blue_heron', $W . 'Q333796' ],
+			'egret'       => [ 'https://en.wikipedia.org/wiki/Snowy_egret', $W . 'Q59785' ],
+			'kingfisher'  => [ 'https://en.wikipedia.org/wiki/Belted_kingfisher', $W . 'Q736052' ],
+			'limpkin'     => [ 'https://en.wikipedia.org/wiki/Limpkin', $W . 'Q725276' ],
+			'ibis'        => [ 'https://en.wikipedia.org/wiki/American_white_ibis', $W . 'Q589171' ],
+			'woodstork'   => [ 'https://en.wikipedia.org/wiki/Wood_stork', $W . 'Q990175' ],
+			'littleblue'  => [ 'https://en.wikipedia.org/wiki/Little_blue_heron', $W . 'Q371028' ],
+			'tricolored'  => [ 'https://en.wikipedia.org/wiki/Tricolored_heron', $W . 'Q392139' ],
+			'greenheron'  => [ 'https://en.wikipedia.org/wiki/Green_heron', $W . 'Q498228' ],
+			'cypress'     => [ 'https://en.wikipedia.org/wiki/Taxodium_distichum', $W . 'Q148950' ],
+			'moss'        => [ 'https://en.wikipedia.org/wiki/Spanish_moss', $W . 'Q311524' ],
+			'fern'        => [ 'https://en.wikipedia.org/wiki/Pleopeltis_michauxiana', $W . 'Q56761285' ],
+			'lily'        => [ 'https://en.wikipedia.org/wiki/Nymphaea_odorata', $W . 'Q635853' ],
+			'palmetto'    => [ 'https://en.wikipedia.org/wiki/Serenoa', $W . 'Q927607' ],
+
+			// Batch 1 (1.19.1). Every Q-id below was confirmed against the
+			// item's taxon name (P225) from a networked machine on 2026-09-08;
+			// the audit record is tools/entities-batch1.csv. WIKIDATA ONLY on
+			// purpose: the Wikipedia slugs were never verified, and a guessed
+			// article URL is the same class of error as a guessed Q-id.
+			'bandedwater' => [ 'https://en.wikipedia.org/wiki/Florida_banded_water_snake', $W . 'Q6996593' ], // subspecies; species-level is Q2065834
+			'cottonmouth' => [ $W . 'Q4692725' ],
+			'diamondback' => [ $W . 'Q744532' ],
+			'pygmy'       => [ $W . 'Q7531461' ],  // subspecies, like the manatee row
+			'coralsnake'  => [ $W . 'Q1513945' ],
+			'fireant'     => [ $W . 'Q1194382' ],
+			'poisonivy'   => [ $W . 'Q7218532' ],
+			'lovebug'     => [ $W . 'Q1763509' ],
+			// One tile, two real taxa — the family and the genus — so it names
+			// both rather than pretending to be one species. This is also why
+			// no @type carries a taxonRank anywhere in the graph.
+			'mosquito'    => [ $W . 'Q7367', $W . 'Q2324817' ],
+			'brownwater'  => [ $W . 'Q900792' ],
+			'greenwater'  => [ $W . 'Q2708567' ],
 		];
 
 		/**
-		 * Filter the verified entity map (species id => [ Wikipedia URL, Wikidata id ]).
+		 * Filter the verified entity map (species id => list of sameAs URLs).
 		 *
 		 * A species added via dcc_wl_species with no row here simply gets no
-		 * sameAs — an unverified guess is worse than silence.
+		 * sameAs — an unverified guess is worse than silence. The legacy
+		 * [ Wikipedia URL, 'Q123' ] pair shape is still accepted; see
+		 * entity_links().
 		 *
-		 * @param array<string,array{0:string,1:string}> $entities
+		 * @param array<string,string[]> $entities
 		 */
 		return (array) apply_filters( 'dcc_wl_entities', $entities );
+	}
+
+	/**
+	 * The sameAs URLs for one species, or [] if none is verified.
+	 *
+	 * Normalizes the pre-1.19.1 row shape, where the second element was a bare
+	 * Q-id rather than a URL, so a site filtering `dcc_wl_entities` with the
+	 * old pair keeps working.
+	 *
+	 * @return string[]
+	 */
+	public static function entity_links( string $id ): array {
+		$row = self::entities()[ $id ] ?? [];
+		$out = [];
+		foreach ( (array) $row as $v ) {
+			$v = (string) $v;
+			if ( 1 === preg_match( '/^Q\d+$/', $v ) ) {
+				$v = 'https://www.wikidata.org/wiki/' . $v;
+			}
+			if ( '' !== $v ) {
+				$out[] = $v;
+			}
+		}
+
+		return array_values( array_unique( $out ) );
 	}
 
 	/**

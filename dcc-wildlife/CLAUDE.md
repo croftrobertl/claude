@@ -1009,7 +1009,15 @@ rounded boxes at the same weight. The rule now:
 - **Q-ids ship only as CONFIRMED.** New species get a row in
   `tools/entities-batch<N>.csv`; `tools/verify-wikidata.py` (needs network)
   marks each OK / PROPOSED / SYNONYM / MISMATCH. Only OK rows move into
-  `Species::entities()`. Batch 1's ten rows are still pending.
+  `Species::entities()`. Batch 1's twelve were confirmed on 2026-09-08.
+- **`Species::entities()` is a LIST of verified sameAs URLs per species**, not
+  a fixed [Wikipedia, Q-id] pair (1.19.1). A row carries a Wikipedia article
+  only where the ARTICLE was checked too — a guessed slug is the same class of
+  error as a guessed Q-id — and may carry two items where one tile honestly
+  covers two taxa (mosquitoes/no-see-ums = Culicidae + Culicoides). Read it
+  through `Species::entity_links()`, which also normalizes the pre-1.19.1 pair
+  shape for anyone filtering `dcc_wl_entities`. Still no `taxonRank` anywhere:
+  the set mixes species, subspecies, a genus and a family.
 - **Seasonality** for new species is argued row by row in WATER-SOURCES.md
   ("Phase 2 — batch 1"); every row keeps a month at 3.
 - Batches 2–7 are listed in the Phase 2 brief; each ships alone, Rob reviews

@@ -546,8 +546,8 @@ final class Render {
 	 *
 	 * An ItemList of Taxon nodes, each carrying the common name, the
 	 * scientific name as alternateName, and `sameAs` pointing at the VERIFIED
-	 * Wikipedia article and Wikidata item (see Species::entities()). That
-	 * sameAs pair is the whole point: it is what tells a machine that this
+	 * Wikipedia article and/or Wikidata item (see Species::entities()). That
+	 * sameAs list is the whole point: it is what tells a machine that this
 	 * page's "Limpkin" is the same entity the rest of the web knows, which is
 	 * the difference between text about birds and data about a species.
 	 *
@@ -574,7 +574,6 @@ final class Render {
 		}
 		self::$jsonld_printed = true;
 
-		$entities = Species::entities();
 		$items    = [];
 
 		foreach ( $dataset as $i => $sp ) {
@@ -591,11 +590,13 @@ final class Render {
 				// rule the water module's Fact gate follows.
 				$taxon['alternateName'] = $sp['sci'];
 			}
-			if ( isset( $entities[ $sp['id'] ] ) ) {
-				$taxon['sameAs'] = [
-					$entities[ $sp['id'] ][0],
-					'https://www.wikidata.org/wiki/' . $entities[ $sp['id'] ][1],
-				];
+			$links = Species::entity_links( $sp['id'] );
+			if ( $links ) {
+				// One or more VERIFIED targets — a Wikipedia article and its
+				// Wikidata item where both were checked, Wikidata alone where
+				// only the item was, and two items for the one tile that
+				// honestly covers two taxa (mosquitoes and no-see-ums).
+				$taxon['sameAs'] = $links;
 			}
 			$items[] = [
 				'@type'    => 'ListItem',
