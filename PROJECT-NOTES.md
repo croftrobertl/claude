@@ -543,6 +543,55 @@ When measuring whether something is centred in `.mphbac-cell-label`, note it
 has a 2px RIGHT border only — judge against the CONTENT box
 (`left + clientLeft + clientWidth / 2`), or everything looks 1px off.
 
+## Availability in the booking popup (0.23.8)
+
+`renderGrid()` publishes its NORMALISED availability map onto `state`
+(`state.availability`), which is how the popup can tell a booked night from a
+free one. Before 0.23.8 that map was local to `renderGrid`, so `rangeState()`
+only ever checked the SHAPE of the dates — the popup quoted a price for
+booked nights and refused them at submit. `blockedNight(ci, co)` walks the
+nights `[ci, co)`, the same half-open interval `verifyAndSubmit()` uses.
+
+- A night ABSENT from the map is not treated as blocked. Refusing dates on no
+  evidence is worse than a late refusal, and the server check in
+  `verifyAndSubmit()` is still there as the backstop for anything outside the
+  loaded window. This is the deliberate boundary of the local check.
+- `fetchEstimate()` gates on `rangeState().ok`, so no price is quoted for a
+  range that cannot be sold.
+- `defaultCheckout()` clamps the grid-click proposal to the first blocked
+  night. When that lands inside the minimum stay the proposal comes out SHORT
+  and the minimum-nights message explains it — honest, where "unavailable" on
+  a range we chose for them was not.
+
+**Harness trap that hid this for a release:** `sheet-validate-test.js` made
+ranges invalid only by their DATES, so it passed while availability was never
+consulted. It now drives an availability-invalid range too, and its stubbed
+endpoint and client-side map are built from ONE `__BLOCKED` set — they
+disagreed once, and the baseline silently submitted a blocked range. There is
+also a control asserting a BOOKABLE range still gets its estimate, without
+which "no estimate for a blocked range" passes vacuously (the stub had no
+price action at all, so no estimate ever rendered).
+
+Baselines that compare against `git show HEAD` go stale the moment the fix
+ships. Prefer a durable invariant ("no rendered glyph is left") over a
+one-time migration comparison.
+
+## Cottage-info carousel (0.23.8, UNVERIFIED)
+
+`reinitElementorWidgets()` re-runs Elementor's ready trigger for widgets
+inside the popup after the sliders settle, once per element for the life of
+the page (the handlers are not documented as idempotent and a double binding
+would open the lightbox twice). `reinitSwipers()` now rebuilds loop clones
+ONLY when the slide on screen is itself a clone — `loopCreate()` makes fresh
+nodes via `cloneNode`, which copies markup but not bindings, so rebuilding
+unconditionally is a plausible CAUSE of the dead-first-photo symptom it was
+added to fix.
+
+**The root cause was never confirmed from inside the popup** — it could not
+be opened synthetically here. If the first photos are still dead, the next
+lever is turning loop OFF for carousels inside the popup: with no loop there
+are no clones at all.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

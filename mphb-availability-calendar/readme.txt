@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.7
+Stable tag: 0.23.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.8 =
+* **The booking popup now tells you a date range is unavailable as soon as you pick it**, instead of after you press Book Now. Previously you could choose dates, see a price quoted for them, and only discover at the last step that they were never bookable.
+* No price is quoted for a range that contains a booked night, and Book Now stays switched off until the dates work. Correcting the dates clears the message, brings the price back and re-enables the button straight away.
+* Clicking a date in the calendar no longer suggests a stay that runs across a booked night — the suggested check-out stops at it.
+* The unavailable-dates message is centred.
+* **The cottage name in the left-hand column is darker and slightly larger** (12px), so it is easier to read against the grey.
+* The cottage number shows as "#22" again, matching the staff calendar.
+* Cottage-info popup: the image carousel's handlers are re-attached after the popup opens, so the first photos should respond to the first tap. Please confirm on a phone — see the note below.
+* Nothing about the staff calendar changes.
 
 = 0.23.7 =
 * **Fixed: the "not all of those dates are available" message would not go away.** Once shown, it stayed on screen even after picking dates that were free, and Book Now still worked underneath it — so you could be sent to checkout with the warning still showing. The message now belongs to the dates currently selected: change either date and it clears immediately.

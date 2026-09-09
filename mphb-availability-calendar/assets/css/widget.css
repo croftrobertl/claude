@@ -594,10 +594,13 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: 0;
 }
+/* 0.23.8: darker and bigger. #5B6470 already passed AA (5.69:1 on #F8F9FA,
+   5.39:1 on the #F1F3F5 alternate rows) — the complaint was legibility at
+   11px, not contrast. #4A5260 is 7.08:1 on the worse of the two grounds. */
 .mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-abbrev {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    color: #5b6470;
+    color: #4A5260;
 }
 /* 16px + 2px + 11px at 1.15 is ~33px; with the old 8px block padding that is
    49px and would push the 45px row taller, so data-row padding is trimmed.
@@ -1528,6 +1531,12 @@ body.mphbac-info-open {
     /* Centred over its own field. The label is a block-level flex child of
        the field, so this centres it across exactly the width the field was
        granted — it stays centred as the two fields reflow or stack. */
+    text-align: center;
+}
+/* Centred like the estimate block above it. Class-doubled: the sheet is
+   portaled to <body> on open, so a .mphbac-root-scoped rule stops matching
+   at exactly the moment the message can appear. */
+.mphbac-sheet-error.mphbac-sheet-error {
     text-align: center;
 }
 .mphbac-sheet-error {

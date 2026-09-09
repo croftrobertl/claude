@@ -769,7 +769,16 @@
             var sw = el.swiper;
             if (!sw) return;
             try {
-                if (sw.params && sw.params.loop && sw.loopDestroy && sw.loopCreate) {
+                // Rebuild loop clones ONLY when the slide actually showing is
+                // a clone. loopCreate() makes FRESH clone nodes via cloneNode,
+                // which copies markup but not event bindings — so rebuilding
+                // unconditionally can itself produce visible slides whose
+                // lightbox links do nothing, the very symptom this was added
+                // to fix. See reinitElementorWidgets() below, which re-attaches
+                // handlers to whatever DOM ends up on screen.
+                var active = el.querySelector('.swiper-slide-active');
+                var activeIsClone = !!(active && active.classList.contains('swiper-slide-duplicate'));
+                if (sw.params && sw.params.loop && activeIsClone && sw.loopDestroy && sw.loopCreate) {
                     sw.loopDestroy();
                     sw.loopCreate();
                 }
@@ -787,6 +796,38 @@
                     sw.slideTo(sw.activeIndex || 0, 0, false);
                 }
             } catch (e) { /* slider refused re-init — leave it as-is */ }
+        });
+    }
+
+    // Re-attach Elementor's own widget handlers to content the popup has
+    // MOVED (and to any slide clones Swiper rebuilt underneath it). Elementor
+    // binds the lightbox when a widget initialises; a node that has been
+    // relocated — or replaced by cloneNode, which does not copy bindings —
+    // can end up on screen with nothing listening, which is what "tapping the
+    // first three photos does nothing" looks like.
+    //
+    // Guarded to run ONCE per widget element for the life of the page: these
+    // handlers are not documented as idempotent, and a double binding would
+    // open the lightbox twice. One re-bind after the first move is what the
+    // moved DOM needs.
+    //
+    // NOTE: this targets the mechanism described in the 0.23.8 report; the
+    // root cause could not be confirmed from inside the popup here. If the
+    // first photos are still dead after this, the next lever is turning loop
+    // OFF for carousels inside the popup — with no loop there are no clones
+    // at all — which is a two-line change in reinitSwipers above.
+    function reinitElementorWidgets(container) {
+        if (!container || !window.elementorFrontend) return;
+        var handler = window.elementorFrontend.elementsHandler;
+        if (!handler || !handler.runReadyTrigger) return;
+        container.querySelectorAll('.elementor-widget').forEach(function (el) {
+            if (el.dataset.mphbacRebound === '1') return;
+            el.dataset.mphbacRebound = '1';
+            try {
+                // runReadyTrigger expects a jQuery scope in every Elementor
+                // version that ships it; fall back to the raw element.
+                handler.runReadyTrigger(window.jQuery ? window.jQuery(el) : el);
+            } catch (e) { /* a handler refused to re-run — leave it be */ }
         });
     }
 
@@ -1021,6 +1062,9 @@
                 settled = true;
                 refreshSwipers(bodyEl);
                 reinitSwipers(bodyEl);
+                // After the sliders are in their final geometry, make sure
+                // whatever is on screen actually has handlers attached.
+                reinitElementorWidgets(bodyEl);
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
                 updateScrollbar();
             };
@@ -1354,6 +1398,15 @@
             availability = normalized;
         }
 
+        // Hand the popup the SAME map the cells are painted from. Before
+        // 0.23.8 this stayed local to renderGrid, which is why the booking
+        // sheet could not tell a booked night from a free one and only found
+        // out at submit time. Assigned after normalisation so the popup sees
+        // the same past/available/booked verdicts the grid does.
+        if (state) {
+            state.availability = availability;
+        }
+
         var empty = root.querySelector('.mphbac-empty');
         var wrap = root.querySelector('.mphbac-grid-wrap');
         if (!wrap) return;
@@ -1471,9 +1524,9 @@
                         '<span class="mphbac-label-num"></span>' +
                         '<span class="mphbac-label-abbrev"></span>';
                     labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
-                    // Bare number ("22"), matching the staff calendar's scale.
-                    // The "#" was dropped in 0.23.4.
-                    labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? String(room.number) : '';
+                    // "#22", matching the staff calendar exactly (restored in
+                    // 0.23.8; the bare form in 0.23.5 was a mistake).
+                    labelBtn.querySelector('.mphbac-label-num').textContent = room.number ? '#' + room.number : '';
                 }
                 row.appendChild(labelBtn);
             }
@@ -1917,8 +1970,10 @@
         function fetchEstimate() {
             var ci = checkinEl.value;
             var co = checkoutEl.value;
-            // Only estimate ranges the sheet itself would accept.
-            if (!context.roomTypeId || !ci || !co || co <= ci || nightsBetween(ci, co) < minNights) {
+            // Only estimate ranges the sheet itself would accept — which now
+            // includes "every night is actually available". Quoting a price
+            // for nights that cannot be sold is worse than quoting nothing.
+            if (!context.roomTypeId || !ci || !co || !rangeState().ok) {
                 hideEstimate();
                 return;
             }
@@ -1980,6 +2035,30 @@
         // after that call and cleared by the next edit — never by a timer.
         var submitting = false;
 
+        // Every night in [ci, co) that the grid KNOWS about and that is not
+        // available. Nights outside the loaded window are absent from the map
+        // and are deliberately NOT treated as blocked — that would refuse
+        // bookable dates on no evidence. Those are still caught by the
+        // server check in verifyAndSubmit() before anything is submitted.
+        function blockedNight(ci, co) {
+            var avail = (state && state.availability && state.availability[context.roomTypeId]) || null;
+            if (!avail) return null;
+            var cursor = new Date(ci + 'T00:00:00');
+            var end = new Date(co + 'T00:00:00');
+            var guard = 0;
+            while (cursor < end && guard++ < 400) {
+                var key = cursor.getFullYear() + '-' +
+                          String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                          String(cursor.getDate()).padStart(2, '0');
+                var status = avail[key];
+                if (status !== undefined && status !== 'available') {
+                    return key;
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return null;
+        }
+
         function rangeState() {
             var ci = checkinEl ? checkinEl.value : '';
             var co = checkoutEl ? checkoutEl.value : '';
@@ -1997,6 +2076,13 @@
                     msg: ((config.strings && config.strings.bookMinNights) ||
                         'Must be a minimum of {nights} nights. Please select new dates.')
                         .replace('{nights}', String(minNights)) };
+            }
+            // Availability, checked HERE rather than only at submit — the
+            // whole point of 0.23.8 item 1. A visitor should not finalise a
+            // range and be told at the last step that it was never bookable.
+            if (blockedNight(ci, co)) {
+                return { ok: false, complete: true,
+                    msg: (config.strings && config.strings.bookUnavail) || 'Unavailable.' };
             }
             return { ok: true, complete: true, msg: '' };
         }
@@ -2051,7 +2137,33 @@
             var raw = own || (row ? row.getAttribute('data-room-type-id') : '');
             var typeId = parseInt(raw, 10) || 0;
             var date = cell.getAttribute('data-date') || '';
-            openSheet(typeId, date, addDays(date, minNights), cell);
+            openSheet(typeId, date, defaultCheckout(typeId, date), cell);
+        }
+
+        // The default check-out is check-in + the minimum stay, but never
+        // past the first blocked night: proposing a range the visitor cannot
+        // book is the thing 0.23.8 exists to stop. When the first blocked
+        // night falls inside the minimum stay the proposal comes out SHORT,
+        // and the minimum-nights message explains why — which is honest,
+        // where "unavailable" on a range we chose for them was not.
+        function defaultCheckout(typeId, date) {
+            var proposed = addDays(date, minNights);
+            var avail = (state && state.availability && state.availability[typeId]) || null;
+            if (!avail || !date) return proposed;
+            var cursor = new Date(date + 'T00:00:00');
+            var end = new Date(proposed + 'T00:00:00');
+            var guard = 0;
+            while (cursor < end && guard++ < 400) {
+                var key = cursor.getFullYear() + '-' +
+                          String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                          String(cursor.getDate()).padStart(2, '0');
+                if (avail[key] !== undefined && avail[key] !== 'available') {
+                    // Stay ends the day the blocked night begins.
+                    return key;
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return proposed;
         }
 
         root.addEventListener('click', function (e) {
