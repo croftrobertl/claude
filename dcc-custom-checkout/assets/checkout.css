@@ -489,6 +489,24 @@ select.dcc_checkout-invalid {
     text-align: left;
 }
 
+/* Column-header rows ("Dates | Amount") read as headers, not as more data:
+   heavier and darker at the SAME size, alignment and row height. #111111 on
+   the white breakdown ground is 18.9:1, well past WCAG AA's 4.5:1. No
+   uppercasing, no letter-spacing, no tinted strip — the restrained option. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-head > td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-head > th {
+    color: #111111;
+    font-weight: 700;
+}
+
+/* The first VISIBLE row of any block carries no rule above it. Structural
+   :first-child still matches a row the plugin hid (the "Rate:" row), which
+   would leave a stray line at the top of the expanded block. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-row-first > td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-row-first > th {
+    border-top: 0;
+}
+
 /* The grand total: heavier rule above, bolder text. */
 .mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total td,
 .mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total th {

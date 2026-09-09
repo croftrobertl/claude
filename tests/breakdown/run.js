@@ -92,6 +92,12 @@ function summary(doc) {
     const rows = visibleRows(doc);
     check('no-service: no figure appears twice',
         rows.filter(r => /\$388\.50|\$38\.50|\$350/.test(r)).length, 4);
+    check('no-service: no "Rate:" row survives',
+        rows.filter(r => /^Rate\b/i.test(r)).length, 0);
+    check('no-service: the expanded block opens on Number of Guests',
+        rows[1], 'Number of Guests | 2');
+    check('no-service: nothing carries a rule where the Rate row was',
+        doc.querySelectorAll('tr.dcc_checkout-section-hidden.dcc_checkout-row-first').length, 0);
     check('no-service: in-block duplicates are gone',
         rows.filter(r => /^(Accommodation Total|Accommodation Taxes Total|Subtotal) \|/.test(r)
                       && !/^Subtotal \| \$350$/.test(r)).length, 0);
@@ -112,6 +118,19 @@ function summary(doc) {
         rows.some(r => r === 'Accommodation Total | $350'), true);
     check('with-service: the extra-guest fee is still shown at $200',
         rows.some(r => /Extra Guest Fee.*\| \$200$/.test(r)), true);
+    check('with-service: no "Rate:" row survives',
+        rows.filter(r => /^Rate\b/i.test(r)).length, 0);
+
+    // Column headers read as headers; summary rows are deliberately left alone.
+    // "Accommodation Taxes | Amount" is a column header too, and is marked —
+    // it just lives behind the tax fold, so a guest never sees it.
+    const heads = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-head'))
+        .filter(r => !r.classList.contains('dcc_checkout-section-hidden'))
+        .map(r => label(r.cells[0]));
+    check('headers: every visible column header is marked, and nothing else',
+        heads, ['Dates', 'Service']);
+    check('headers: Subtotal / Taxes / Total are NOT marked',
+        heads.filter(h => /^(Subtotal|Taxes|Total)/.test(h)).length, 0);
 }
 
 /* --- 3. The tax fold. --------------------------------------------------- */
@@ -146,6 +165,8 @@ function summary(doc) {
         rows.filter(r => r.startsWith('Accommodation Total')).length, 2);
     check('two cottages: the index is kept, since it distinguishes them',
         rows.some(r => r.startsWith('#1 ')), true);
+    check('two cottages: still no "Rate:" rows to remove, and none invented',
+        rows.filter(r => /^Rate\b/i.test(r)).length, 0);
     check('two cottages: no tax fold — one cottage\'s taxes under a combined total would mislead',
         doc.querySelector('.dcc_checkout-tax-toggle'), null);
 }
@@ -164,6 +185,9 @@ function summary(doc) {
         before.doc.querySelector('.dcc_checkout-tax-toggle'), null);
     check('renamed labels: nothing was hidden',
         before.doc.querySelectorAll('.dcc_checkout-section-hidden').length, 0);
+    check('renamed labels: the "Levies Applied | Amount" header is still marked',
+        Array.from(before.doc.querySelectorAll('tr.dcc_checkout-breakdown-head'))
+             .map(r => label(r.cells[0])), ['Levies Applied']);
 }
 
 console.log(failures ? `\n${failures} failing` : '\nall passing');

@@ -224,6 +224,65 @@
         relabelAccommodationRows(rows);
         setLineItemPreTax(rows, subtotal);
         foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
+        dropRateRows(rows);
+        markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
+        markFirstVisibleRows(rows);
+    }
+
+    // "Rate: Cottage 22: The Boathouse" restates the accommodation title
+    // directly above it. Removed unconditionally (owner decision): every rate
+    // on this site is named after its cottage. A rate named anything else —
+    // "Winter Special", say — would therefore not appear on the breakdown
+    // either; see CLAUDE.md.
+    function dropRateRows(rows) {
+        rows.forEach(function (row) {
+            if (/^rate\b/.test(normLabel(row))) {
+                hideRow(row);
+            }
+        });
+    }
+
+    // Make the column-header rows ("Dates | Amount") read as headers rather
+    // than as more data. Bolder and darker at the same size and alignment —
+    // the most restrained of the options offered, chosen deliberately.
+    //
+    // A header row is one whose amount cell holds a word rather than a figure.
+    // The summary rows are passed in and excluded: they carry their own weight
+    // already, and "Subtotal"/"Taxes"/"Total" are not categories.
+    function markColumnHeaders(rows, exclude) {
+        rows.forEach(function (row) {
+            if (exclude.indexOf(row) !== -1) {
+                return;
+            }
+            var cells = row.cells;
+            if (!cells || cells.length < 2) {
+                return;
+            }
+            var amount = rowAmount(row);
+            if (amount === '' || looksLikeMoney(amount)) {
+                return; // Empty, or a real figure — not a column header.
+            }
+            row.classList.add('dcc_checkout-breakdown-head');
+        });
+    }
+
+    // Every table's first VISIBLE row, so the top of a block never carries a
+    // rule. CSS :first-child still matches a row we hid — dropping the "Rate:"
+    // row would otherwise leave a stray line where it used to be.
+    function markFirstVisibleRows(rows) {
+        var seen = [];
+        rows.forEach(function (row) {
+            row.classList.remove('dcc_checkout-row-first');
+            var table = row.closest('table');
+            if (!table || seen.indexOf(table) !== -1) {
+                return;
+            }
+            if (row.classList.contains('dcc_checkout-section-hidden')) {
+                return;
+            }
+            seen.push(table);
+            row.classList.add('dcc_checkout-row-first');
+        });
     }
 
     // "#1 Cottage 36: Sunshine Suite" -> "Cottage 36: Sunshine Suite".

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,28 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.6.1 =
+* The "Rate: Cottage 22: The Boathouse" row is removed from the price
+  breakdown, row and rule together, so the expanded block opens straight on
+  "Number of Guests" with no leftover band or stray line. Removed
+  UNCONDITIONALLY (owner decision): every rate on this site is named after its
+  cottage, so the row only restated the title above it. Consequence worth
+  knowing: a differently-named rate ("Winter Special") would not be shown on
+  the breakdown either — see CLAUDE.md.
+* Column-header rows ("Dates | Amount", "Service | Details | Amount") now read
+  as headers rather than as more data: bold, and #111111 ink, which is 18.9:1
+  on the white breakdown ground (WCAG AA wants 4.5:1). Same font size, same
+  alignment, same row height — no uppercasing, no letter-spacing, no tinted
+  strip. Subtotal, Taxes and Total are deliberately untouched: they are summary
+  rows and already carry their own weight.
+* A block's first VISIBLE row now carries no rule above it. CSS :first-child
+  still matches a row the plugin has hidden, so removing the "Rate:" row would
+  otherwise have left a line floating where it used to be.
+* tests/breakdown: assertions that no "Rate:" row survives on any fixture, that
+  the expanded block opens on "Number of Guests", that nothing is left carrying
+  a rule where that row was, and that exactly the column-header rows are marked
+  while the summary rows are not. 28 assertions, all passing.
 
 = 0.6.0 =
 * Price Breakdown reshaped into standard invoice arithmetic. MotoPress printed

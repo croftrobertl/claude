@@ -133,6 +133,14 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   The folder *inside* the zip stays `dcc-custom-checkout/` — that is the WordPress
   plugin slug and must not change.
 - Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
+- **The "Rate:" row is removed from the price breakdown unconditionally**
+  (owner decision, v0.6.1). Every rate on this site is named after its cottage,
+  so the row only ever restated the accommodation title above it. The
+  consequence: **a rate named anything else — "Winter Special", say — will not
+  appear on the checkout breakdown either.** If a differently-named rate is
+  ever created and its name needs to be visible, `dropRateRows()` in
+  `assets/checkout.js` has to become conditional (drop it only when the label
+  after "Rate:" matches the accommodation title).
 - Price-breakdown behaviour is covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the
