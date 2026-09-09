@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.6
+Stable tag: 0.23.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.7 =
+* **Fixed: the "not all of those dates are available" message would not go away.** Once shown, it stayed on screen even after picking dates that were free, and Book Now still worked underneath it — so you could be sent to checkout with the warning still showing. The message now belongs to the dates currently selected: change either date and it clears immediately.
+* **Book Now is now switched off while the dates don't work** — no second date, check-out before check-in, or fewer than the minimum nights — and switches back on the moment they do. While it is off it looks off and cannot be clicked through.
+* **The close "x" on the popups was tiny and thin for the size of its button.** It is now a drawn cross on the same specification as the calendar's arrows, in the same circle, at the same size.
+* **The cottage cells are centred on every screen size**, matching the centred "Cottages" heading above them. Previously only phones were centred and the desktop column read crooked.
 
 = 0.23.6 =
 * Booking popup: the estimated-price block is now centred, and "Estimated total:" sits on its own line above the amount, so the price is what the eye lands on:

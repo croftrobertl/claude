@@ -1966,11 +1966,71 @@
             });
         }
 
+        // ---- Live validation (0.23.7) --------------------------------------
+        // Before this, the only things that cleared .mphbac-sheet-error were
+        // opening the sheet and clicking Book Now. So an "unavailable dates"
+        // message from one attempt sat there while the visitor picked a
+        // different, perfectly free range — and Book Now stayed live
+        // underneath it, submitted, and redirected with the stale warning
+        // still on screen. Both halves are fixed here: the message is owned
+        // by the CURRENT range, and the button is gated on it.
+        //
+        // Only client-side facts are checked here. Availability needs the
+        // server round-trip in verifyAndSubmit(), so its message is shown
+        // after that call and cleared by the next edit — never by a timer.
+        var submitting = false;
+
+        function rangeState() {
+            var ci = checkinEl ? checkinEl.value : '';
+            var co = checkoutEl ? checkoutEl.value : '';
+            if (!ci || !co) {
+                // Half-filled is not yet an error: nothing has gone wrong,
+                // the visitor simply is not finished.
+                return { ok: false, complete: false, msg: '' };
+            }
+            if (co <= ci) {
+                return { ok: false, complete: true,
+                    msg: (config.strings && config.strings.bookInvalid) || 'Invalid date range.' };
+            }
+            if (nightsBetween(ci, co) < minNights) {
+                return { ok: false, complete: true,
+                    msg: ((config.strings && config.strings.bookMinNights) ||
+                        'Must be a minimum of {nights} nights. Please select new dates.')
+                        .replace('{nights}', String(minNights)) };
+            }
+            return { ok: true, complete: true, msg: '' };
+        }
+
+        // fromEdit=true means the visitor just changed a date, so the message
+        // on screen (whatever its origin) no longer describes what they have
+        // selected and must go. fromEdit=false only re-syncs the button, so a
+        // server-side "unavailable" message survives its own round-trip.
+        function updateSheetValidity(fromEdit) {
+            var st = rangeState();
+            if (confirmBtn) {
+                confirmBtn.disabled = submitting || !st.ok;
+            }
+            if (!fromEdit) {
+                return;
+            }
+            if (st.complete && !st.ok) {
+                showError(st.msg);
+            } else {
+                hideError();
+            }
+        }
+
         if (checkinEl && checkoutEl) {
             // change fires on picker selection; input covers keyboard editing.
             ['change', 'input'].forEach(function (ev) {
-                checkinEl.addEventListener(ev, scheduleEstimate);
-                checkoutEl.addEventListener(ev, scheduleEstimate);
+                checkinEl.addEventListener(ev, function () {
+                    updateSheetValidity(true);
+                    scheduleEstimate();
+                });
+                checkoutEl.addEventListener(ev, function () {
+                    updateSheetValidity(true);
+                    scheduleEstimate();
+                });
             });
         }
 
@@ -2032,8 +2092,10 @@
             // Opening from a day cell prefills a valid range — estimate it
             // right away (still debounced, so a quick date change coalesces).
             scheduleEstimate();
-            errorEl.hidden = true;
-            errorEl.textContent = '';
+            hideError();
+            // The prefilled range decides whether Book Now starts live.
+            submitting = false;
+            updateSheetValidity(true);
             // Portal sheet + overlay to document.body so position:fixed
             // anchors to the viewport, not a transformed Elementor ancestor.
             if (sheet.parentNode !== document.body) {
@@ -2133,24 +2195,19 @@
         wireSwipeToClose(sheet, closeSheet);
 
         confirmBtn.addEventListener('click', function () {
-            errorEl.hidden = true;
-            var ci = checkinEl.value;
-            var co = checkoutEl.value;
-            if (!ci || !co || co <= ci) {
-                showError((config.strings && config.strings.bookInvalid) || 'Invalid date range.');
+            // The button is disabled whenever this would fail, so this is a
+            // guard rather than the primary path — it still has to hold, for
+            // a keyboard/AT activation that races an edit.
+            var st = rangeState();
+            if (!st.ok) {
+                showError(st.msg || ((config.strings && config.strings.bookInvalid) || 'Invalid date range.'));
+                updateSheetValidity(false);
                 return;
             }
-            if (nightsBetween(ci, co) < minNights) {
-                // {nights} tracks the configurable Minimum nights setting —
-                // the old default hard-coded "two nights" and lied for any
-                // other value. No-op for strings without the placeholder.
-                showError(((config.strings && config.strings.bookMinNights) ||
-                    'Must be a minimum of {nights} nights. Please select new dates.')
-                    .replace('{nights}', String(minNights)));
-                return;
-            }
-            confirmBtn.disabled = true;
-            verifyAndSubmit(ci, co);
+            hideError();
+            submitting = true;
+            updateSheetValidity(false);
+            verifyAndSubmit(checkinEl.value, checkoutEl.value);
         });
 
         function nightsBetween(ci, co) {
@@ -2185,7 +2242,8 @@
             }).then(function (r) {
                 return r.json();
             }).then(function (json) {
-                confirmBtn.disabled = false;
+                submitting = false;
+                updateSheetValidity(false);
                 if (!json || !json.success || !json.data) {
                     showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
                     return;
@@ -2207,7 +2265,8 @@
                 }
                 submitToMotoPress(context.roomTypeId, ci, co);
             }).catch(function () {
-                confirmBtn.disabled = false;
+                submitting = false;
+                updateSheetValidity(false);
                 showError((config.strings && config.strings.bookUnavail) || 'Unavailable.');
             }).finally(function () {
                 clearTimeout(timeoutHandle);
@@ -2239,6 +2298,11 @@
         function showError(msg) {
             errorEl.textContent = msg;
             errorEl.hidden = false;
+        }
+
+        function hideError() {
+            errorEl.hidden = true;
+            errorEl.textContent = '';
         }
     }
 

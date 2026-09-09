@@ -1735,7 +1735,11 @@ class Widget extends Widget_Base
             <?php if ($info_has_any) : ?>
                 <div class="mphbac-info-overlay" hidden></div>
                 <div class="mphbac-info-sheet<?php echo $info_full_width ? ' mphbac-info-sheet--full' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="mphbac-info-title" hidden>
-                    <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>">&times;</button>
+                    <?php // Stroked SVG cross on the same spec as the nav chevrons
+                    // (20x20, stroke 2.25, round caps, currentColor). The
+                    // "&times;" glyph rendered at ~41% of a 44px button and
+                    // thin in the theme face, so it read as a speck. ?>
+                    <button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating" aria-label="<?php echo esc_attr($settings['str_info_close']); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     <?php // Custom always-visible scroll indicator. iOS Safari hides native
                     // scrollbars and ignores ::-webkit-scrollbar, so we draw our own:
                     // a sticky right-edge track whose thumb widget.js sizes + positions
@@ -1783,7 +1787,7 @@ class Widget extends Widget_Base
                     <div class="mphbac-sheet-header">
                         <?php // See the note on the info-popup title above — same reasoning. ?>
                         <div class="mphbac-sheet-title" id="mphbac-sheet-title"></div>
-                        <button type="button" class="mphbac-sheet-close" aria-label="<?php echo esc_attr($settings['str_book_close']); ?>">&times;</button>
+                        <button type="button" class="mphbac-sheet-close" aria-label="<?php echo esc_attr($settings['str_book_close']); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
                     <div class="mphbac-sheet-body">
                         <label class="mphbac-sheet-field">

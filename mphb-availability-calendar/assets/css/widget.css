@@ -128,15 +128,9 @@
     .mphbac-root:not(.mphbac-label-number) .mphbac-grid--single:not(.mphbac-monthgrid) {
         grid-template-columns: repeat(var(--mphbac-days), minmax(0, 1fr));
     }
-    /* Center the #N inside the data-row cottage cells so the column reads
-       as an intentional ID column rather than a left-jammed remnant of
-       the pre-v0.9.8 two-line layout. Doubled-class prefix outranks
-       Bravada's (0,3,1) button reset on text-align / justify-content.
-       Scoped to data rows only — the .mphbac-row-header corner cell
-       (the "Cottage" string) keeps its existing left-aligned styling. */
+    /* Centring moved OUT of this block in 0.23.7 — it applies at every width
+       now, not only on a phone. Just the horizontal padding remains here. */
     .mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label {
-        justify-content: center;
-        text-align: center;
         padding-left: 8px;
         padding-right: 8px;
     }
@@ -580,6 +574,16 @@
     font-family: inherit;
     line-height: 1.15;
 }
+/* Cottage cells are centred at every width (0.23.7), matching the centred
+   "Cottages" header above them — the column read crooked on desktop, where
+   only the header was centred, and correct on a phone, where the 600px block
+   happened to centre both. Data rows only: the header cell has its own rule.
+   Doubled root prefix for Bravada's (0,3,1) button reset. */
+.mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label {
+    justify-content: center;
+    text-align: center;
+}
+
 /* No `order` here: widget.js emits the number span first (0.23.5). The
    0.23.4 `order: -1` did not survive the live page, and markup order is one
    fewer thing that a theme rule can switch off. */
@@ -625,12 +629,8 @@
     .mphbac-label-abbrev {
     display: none;
 }
-.mphbac-root.mphbac-root.mphbac-label-number
-    .mphbac-row:not(.mphbac-row-header)
-    .mphbac-cell-label {
-    justify-content: center;
-    text-align: center;
-}
+/* (The number-only mode's own centring rule was removed in 0.23.7 — data
+   rows are centred at every width now, in every mode.) */
 .mphbac-root.mphbac-root.mphbac-label-number
     .mphbac-cell-label .mphbac-label-num {
     opacity: 1;
@@ -1450,12 +1450,19 @@ body.mphbac-info-open {
     border: 0;
     border-radius: 50%;
     background: #ECEFF3;
-    font-size: 1.6em;
     line-height: 1;
     cursor: pointer;
     /* #4A5260 on #ECEFF3 = 7.9:1. */
     color: #4A5260;
     transition: background-color 0.15s ease, color 0.15s ease;
+}
+/* The mark, on the same spec as .mphbac-nav-btn svg — same 20x20 box, same
+   2.25 stroke, same round caps — so the close and the chevrons read as one
+   set. currentColor carries the hover/focus colour change below. */
+.mphbac-sheet-close svg {
+    display: block;
+    width: 20px;
+    height: 20px;
 }
 .mphbac-sheet-close:hover,
 .mphbac-sheet-close:focus-visible {

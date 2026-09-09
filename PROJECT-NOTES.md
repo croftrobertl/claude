@@ -500,6 +500,49 @@ in `abbrev-test.php`.
 The cottage label's number/name order is MARKUP order, not CSS `order`: the
 0.23.4 `order: -1` did not survive the live page.
 
+## Booking-popup validation (0.23.7)
+
+`.mphbac-sheet-error` is owned by the CURRENT range. Before 0.23.7 only
+`openSheet()` and the Book Now click cleared it, so an "unavailable dates"
+message from one attempt sat there while the visitor picked a different, free
+range — and Book Now stayed live underneath it and submitted. Two rules now:
+
+- `rangeState()` is the single source of truth (client-side facts only:
+  both dates present, check-out after check-in, at least `minNights`).
+  Availability needs the server round-trip in `verifyAndSubmit()`, so its
+  message is shown after that call and cleared by the next EDIT, never by a
+  timer.
+- `updateSheetValidity(fromEdit)` — `fromEdit: true` means the visitor just
+  changed a date, so whatever is on screen no longer describes their
+  selection and goes; `false` only re-syncs the button, which is what lets a
+  server-side "unavailable" message survive its own round-trip. In-flight
+  state is the separate `submitting` flag, so re-enabling after a request
+  still respects validity.
+- A HALF-FILLED range disables the button but shows NO error: nothing has
+  gone wrong, the visitor simply is not finished.
+
+**Test the computed style and whether a navigation actually happened**, never
+the `hidden`/`disabled` attribute — the same blind spot that hid the
+Today-button bug. `nav/sheet-validate-test.js` drives the REAL `wirePopup()`
+lifted out of widget.js against the REAL sheet markup lifted out of
+class-widget.php, stubs `HTMLFormElement.prototype.submit`, and reproduces
+the bug on the previous build before asserting the fix.
+
+## Marks and alignment (0.23.7)
+
+Close buttons use a stroked SVG cross on the same spec as the nav chevrons
+(20x20, stroke 2.25, round caps, `currentColor`) — a text `&times;` rendered
+at ~41% of a 44px button and thin in the theme face. Applied to the booking
+and info closes; **the staff close deliberately still uses the glyph**,
+because that round required /staff/ to stay pixel-identical.
+
+Cottage cells are centred at every width, matching the centred header. The
+centring rule used to live only in the 600px block and in the
+`.mphbac-label-number` block, so desktop read crooked. Both copies are gone.
+When measuring whether something is centred in `.mphbac-cell-label`, note it
+has a 2px RIGHT border only — judge against the CONTENT box
+(`left + clientLeft + clientWidth / 2`), or everything looks 1px off.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
