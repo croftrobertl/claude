@@ -538,7 +538,10 @@ class Widget extends Widget_Base
             'size_units'    => ['px', 'em'],
             'default'       => ['size' => 180, 'unit' => 'px'],
             'tablet_default'=> ['size' => 140, 'unit' => 'px'],
-            'mobile_default'=> ['size' => 100, 'unit' => 'px'],
+            // 88px is the narrowest phone track at which none of the two-line
+            // cottage names clips (measured). The stylesheet also floors the
+            // track at 88px on phones, so an older saved value cannot clip.
+            'mobile_default'=> ['size' => 88, 'unit' => 'px'],
             'range'         => [
                 'px' => ['min' => 70, 'max' => 320, 'step' => 2],
                 'em' => ['min' => 4, 'max' => 22, 'step' => 0.5],

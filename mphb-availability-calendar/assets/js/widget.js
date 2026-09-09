@@ -1463,9 +1463,13 @@
                     labelBtn.innerHTML = '<span class="mphbac-label-custom"></span>';
                     labelBtn.querySelector('.mphbac-label-custom').textContent = custom.trim();
                 } else {
+                    // Number FIRST, matching the staff calendar. This is the
+                    // markup order on purpose: a CSS `order` did not survive
+                    // the live page, and DOM order also gives a screen reader
+                    // the same sequence a sighted user sees.
                     labelBtn.innerHTML =
-                        '<span class="mphbac-label-abbrev"></span>' +
-                        '<span class="mphbac-label-num"></span>';
+                        '<span class="mphbac-label-num"></span>' +
+                        '<span class="mphbac-label-abbrev"></span>';
                     labelBtn.querySelector('.mphbac-label-abbrev').textContent = room.abbrev || '';
                     // Bare number ("22"), matching the staff calendar's scale.
                     // The "#" was dropped in 0.23.4.

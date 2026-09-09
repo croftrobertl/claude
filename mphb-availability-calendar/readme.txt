@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.4
+Stable tag: 0.23.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.5 =
+* **Fixed: the "Today" button never went away on the main calendar.** It was meant to disappear whenever today was already on screen, and the code was asking for that correctly — but a styling rule was quietly keeping it visible. It has been dead weight on every public calendar since the button was enlarged for touch. The staff calendar always had the matching rule, which is why it behaved. Both now hide it the same way.
+* **Cottage 35 now reads "Blue Heron" instead of "Blue".** The short name was taking only the first word, which happened to be right for the other seven cottages and wrong for this one. It now keeps the whole name and drops only a trailing generic word ("Hut", "Bungalow", "Hideaway", and so on). All eight cottages are covered by tests.
+* **The cottage number now sits above the name**, matching the staff calendar.
+* **Phones show both lines again.** The name used to be hidden on small screens because two lines were thought to make the rows about 30% taller. Re-measured, it is 8% (38px to 41px), so the name is back at every width — no more tapping a cell to find out what "22" is. The cottage column widens slightly on phones so no name is cut off, which costs about 1px per day column.
+* Nothing about the staff calendar changes.
 
 = 0.23.4 =
 * **The staff calendar's navigation now matches the main calendar's** out of the box — same blue buttons, white chevrons, amber hover and pill shape, with no Elementor editing needed. The staff widget also gains the same Navigation style settings the main widget has (button colour, arrow colour, hover colour, corner radius, label colour), so both can be restyled the same way.

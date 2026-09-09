@@ -455,6 +455,51 @@ plugin cannot and should not override them:
   #F8F9FA. Same for `str_property` ("Cottage" vs the new "Cottages"
   default) and any `namecol_typography` override.
 
+## [hidden] and the label/day-track trade-off (0.23.5)
+
+**`[hidden]` does not hide an element the plugin gives a `display` to.**
+`[hidden] { display: none }` lives in the UA stylesheet, so ANY author rule
+setting `display` outranks it. `.mphbac-nav-btn { display: inline-flex }`
+therefore kept the Back-to-today button on screen from the 44px nav work
+until 0.23.5, while widget.js set the attribute correctly the whole time.
+staff.css had `.mphbac-staff-today[hidden] { display: none }` from the start,
+which is the only reason /staff/ behaved. Any element this plugin both
+`display`s and toggles with `hidden` needs an explicit `[hidden]` rule, at
+(0,4,0) so a theme button rule at (0,3,1) cannot resurrect it.
+**Test the COMPUTED display, never `el.hidden`** — asserting the attribute is
+what let this ship, twice.
+
+**The cottage column and the day columns share one row.** `.mphbac-grid` is
+`grid-template-columns: <label> repeat(7, 1fr)` inside a wrapper with
+`overflow-x: hidden`, so on a 375px phone the label and its seven days split
+~344px: every pixel the label takes comes off the day cells (measured 80px
+label → 35.7px days, 88px → 34.6px, 96px → 33.4px). 88px is the floor at
+which none of the eight live names clips, and the 600px block pins the track
+to `max(var(--mphbac-label-width), 88px)` — a floor rather than a new default,
+because `namecol_width` is a saved per-instance control and a default only
+reaches instances that never set it. Scoped off `.mphbac-label-number`, which
+has no name to fit.
+
+**This is why the staff calendar can afford a 96px label on the same phone**
+and the public one cannot: the staff grid is
+`var(--staff-label-w) repeat(N, calc(var(--staff-day-w) / 2))` with FIXED 44px
+days and horizontal scrolling, so its label costs the day columns nothing. Do
+not "simplify" one grid into the other.
+
+Two lines cost +8% row height (38px → 41px), not the "~30%" the pre-0.23.5
+comment claimed; that comment was justifying a rule that has now been removed.
+
+**Cottage short names** (`Data_Provider::short_name()`): drop a leading
+article, then drop TRAILING generic nouns while more than one word remains
+(filter: `mphbac_generic_room_words`), then cut on a word boundary at 16
+chars. Before 0.23.5 it took the first non-article word and stopped, which
+rendered "Blue Heron Hideaway" as "Blue". The single-word guard is what keeps
+"The Boathouse" from reducing to nothing. All eight live titles are fixtures
+in `abbrev-test.php`.
+
+The cottage label's number/name order is MARKUP order, not CSS `order`: the
+0.23.4 `order: -1` did not survive the live page.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

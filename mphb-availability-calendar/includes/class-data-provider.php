@@ -104,16 +104,7 @@ final class Data_Provider
             $number = $m[1];
             $abbrev = trim($m[2]);
         }
-        $words = array_values(array_filter(preg_split('/\s+/', $abbrev) ?: []));
-        $articles = ['the', 'a', 'an'];
-        $picked = $abbrev;
-        foreach ($words as $word) {
-            if (!in_array(strtolower($word), $articles, true)) {
-                $picked = $word;
-                break;
-            }
-        }
-        $abbrev = mb_substr((string) $picked, 0, 12);
+        $abbrev = self::short_name($abbrev);
 
         return [
             'id'     => $id,
@@ -121,6 +112,54 @@ final class Data_Provider
             'abbrev' => $abbrev,
             'number' => $number,
         ];
+    }
+
+    /**
+     * The short name shown in the cottage column.
+     *
+     * Rule: drop a leading article, then drop TRAILING generic accommodation
+     * nouns while more than one word remains. Everything else is kept.
+     *
+     *   "Cottage 22: The Boathouse"       -> Boathouse
+     *   "Cottage 31: Hibiscus Hut"        -> Hibiscus
+     *   "Cottage 35: Blue Heron Hideaway" -> Blue Heron
+     *
+     * Until 0.23.5 this took the FIRST non-article word and stopped, which
+     * turned "Blue Heron Hideaway" into "Blue" — a name that means nothing to
+     * a guest. The single-word guard is what keeps "The Boathouse" from being
+     * reduced to nothing when the only word left is itself a generic noun.
+     */
+    private static function short_name(string $name): string
+    {
+        $words = array_values(array_filter(preg_split('/\s+/', $name) ?: [], static fn($w) => $w !== ''));
+        if (!$words) {
+            return '';
+        }
+        $articles = ['the', 'a', 'an'];
+        if (count($words) > 1 && in_array(strtolower($words[0]), $articles, true)) {
+            array_shift($words);
+        }
+        /** Generic nouns that add nothing once the distinctive part is shown. */
+        $generic = (array) apply_filters('mphbac_generic_room_words', [
+            'cottage', 'hut', 'bungalow', 'place', 'suite', 'hideaway', 'house',
+            'cabin', 'lodge', 'retreat', 'villa', 'room', 'unit', 'inn',
+            'apartment', 'studio', 'chalet', 'bunkhouse',
+        ]);
+        $generic = array_map('strtolower', array_map('strval', $generic));
+        while (count($words) > 1 && in_array(strtolower(rtrim(end($words), '.,')), $generic, true)) {
+            array_pop($words);
+        }
+        $out = implode(' ', $words);
+
+        // Cap the length, but never mid-word — a cut like "Morning Glor" reads
+        // as a bug. The eight live cottages are all well inside this.
+        $limit = 16;
+        if (mb_strlen($out) > $limit) {
+            $cut = mb_substr($out, 0, $limit);
+            $sp  = mb_strrpos($cut, ' ');
+            $out = ($sp !== false && $sp > 0) ? mb_substr($cut, 0, $sp) : $cut;
+        }
+        return $out;
     }
 
     /**

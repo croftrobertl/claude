@@ -98,22 +98,36 @@
     .mphbac-filter-actions {
         width: 100%;
     }
-    /* Cottage column collapses to just the #number on phones — the
-       truncated name above it was forcing rows ~30% taller than the
-       configured --mphbac-cell-min, which in turn forced every day cell
-       on the same row to be taller and narrower. Guests who need to
-       know "what is #22?" tap the cell → the cottage info popup opens
-       with the full cottage record. Scoped with :has() so a cottage
-       whose post title doesn't match the "Cottage NN:" pattern (no
-       parsed number) keeps its abbrev visible — never blank cells.
-       Custom-label overrides (cottage_labels repeater) emit only a
-       .mphbac-label-custom span with no .mphbac-label-num sibling, so
-       this selector silently doesn't match them either. */
-    .mphbac-cell-label:has(.mphbac-label-num:not(:empty)) .mphbac-label-abbrev {
-        display: none;
+    /* The cottage column shows BOTH lines at every width as of 0.23.5.
+       The rule that used to hide the name here was justified by a comment
+       claiming two lines made rows "~30% taller". Re-measured on the 0.23.4
+       stylesheet at 375px, the real cost is +8% (38px -> 41px), which is
+       affordable — so the name stays and guests no longer have to tap a cell
+       to find out what "22" is.
+
+       THE REAL COST IS HORIZONTAL, NOT VERTICAL, and only when the COLUMN
+       grows. .mphbac-grid is `grid-template-columns: <label> repeat(7, 1fr)`
+       inside a wrapper with overflow-x: hidden, so on a 375px phone the label
+       and its seven day columns share one ~337px row: every pixel the label
+       takes comes off the day cells (80px label -> 35.7px days; 88px -> 34.4px;
+       96px -> 33.4px). 88px is the floor at which none of the eight live names
+       clips, so that is what the phone track is pinned to below.
+
+       This is also why the staff calendar can afford a 96px label on the same
+       phone: its grid is `var(--staff-label-w) repeat(N, var(--staff-day-w)/2)`
+       with FIXED 44px days and horizontal scrolling, so its label costs the
+       day columns nothing. Do not "simplify" one grid into the other. */
+    /* Floor the label track so the names cannot clip, while a WIDER saved
+       value still wins. max() rather than a new default because
+       namecol_width is a saved per-instance control: a default only reaches
+       instances that never set it. Scoped off the number-only mode, which
+       has no name to fit. */
+    .mphbac-root:not(.mphbac-label-number) .mphbac-grid:not(.mphbac-monthgrid) {
+        grid-template-columns: max(var(--mphbac-label-width), 88px) repeat(var(--mphbac-days), minmax(0, 1fr));
     }
-    /* Type scale is now set once, above, at (0,4,0) — this block only has to
-       decide WHAT SHOWS on a phone (the number alone), not how it looks. */
+    .mphbac-root:not(.mphbac-label-number) .mphbac-grid--single:not(.mphbac-monthgrid) {
+        grid-template-columns: repeat(var(--mphbac-days), minmax(0, 1fr));
+    }
     /* Center the #N inside the data-row cottage cells so the column reads
        as an intentional ID column rather than a left-jammed remnant of
        the pre-v0.9.8 two-line layout. Doubled-class prefix outranks
@@ -297,6 +311,22 @@
 .mphbac-nav-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+/* [hidden] MUST actually hide.
+   `.mphbac-nav-btn { display: inline-flex }` is an author rule, so it
+   outranks the UA stylesheet's `[hidden] { display: none }` — which meant
+   the Back-to-today button stayed on screen on every public calendar from
+   the 44px nav work until 0.23.5. widget.js was setting the attribute
+   correctly the whole time; nothing was listening. staff.css has carried
+   the equivalent rule since the staff calendar shipped, which is exactly
+   why /staff/ hid it and /cottages/ did not.
+   (0,4,0) so a theme button rule at (0,3,1) cannot resurrect it either.
+   Asserting `el.hidden` in a test is what let this through — assert
+   getComputedStyle(el).display instead. */
+.mphbac-root.mphbac-root .mphbac-nav-btn[hidden],
+.mphbac-root.mphbac-root .mphbac-btn[hidden] {
+    display: none;
 }
 
 .mphbac-nav-range {
@@ -550,8 +580,10 @@
     font-family: inherit;
     line-height: 1.15;
 }
+/* No `order` here: widget.js emits the number span first (0.23.5). The
+   0.23.4 `order: -1` did not survive the live page, and markup order is one
+   fewer thing that a theme rule can switch off. */
 .mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-num {
-    order: -1;
     opacity: 1;
     font-size: 16px;
     font-weight: 700;
