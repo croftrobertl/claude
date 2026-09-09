@@ -424,6 +424,8 @@ final class Species {
 				'sci'   => 'Egretta caerulea',
 				'group' => 'birds',
 				'odds'  => 'certain',
+				'flags' => [ 'protected' ],
+				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
 				'fact'  => __( 'The only heron that changes color with age — snow-white as a youngster, deep slate-blue as an adult, and a patchy “calico” in between. The white youngsters even hunt alongside snowy egrets.', 'dcc-wildlife' ),
 				'best'  => __( 'mornings', 'dcc-wildlife' ),
 				'where' => __( 'quiet, vegetated edges, hunting slow and deliberate', 'dcc-wildlife' ),
@@ -491,6 +493,8 @@ final class Species {
 				'sci'   => 'Egretta tricolor',
 				'group' => 'birds',
 				'odds'  => 'likely',
+				'flags' => [ 'protected' ],
+				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
 				'fact'  => __( 'A restless, acrobatic hunter — it dashes, pirouettes, and even stirs the bottom with a foot to flush minnows, which make up almost its entire diet.', 'dcc-wildlife' ),
 				'best'  => __( 'mornings', 'dcc-wildlife' ),
 				'where' => __( 'dancing through the shallow edges after small fish', 'dcc-wildlife' ),
@@ -1001,6 +1005,31 @@ final class Species {
 			'mosquito'    => [ $W . 'Q7367', $W . 'Q2324817' ],
 			'brownwater'  => [ $W . 'Q900792' ],
 			'greenwater'  => [ $W . 'Q2708567' ],
+
+			// Batch 2 (1.21.0). Confirmed against P225 from a networked machine
+			// on 2026-09-09; audit record in tools/entities-batch2.csv. Wikidata
+			// only, for the same reason as batch 1 — the enwiki sitelinks exist
+			// on most of these entities but were not read out, and reading them
+			// from the entity is the only way they may be added.
+			'greategret'      => [ $W . 'Q130730' ],
+			'cattleegret'     => [ $W . 'Q132669' ],   // no enwiki sitelink since the 2023 split
+			'glossyibis'      => [ $W . 'Q178811' ],
+			'sandhill'        => [ $W . 'Q62576305' ], // subspecies; species-level is Q503804
+			'bcnightheron'    => [ $W . 'Q126216' ],
+			'ycnightheron'    => [ $W . 'Q764282' ],
+			'leastbittern'    => [ $W . 'Q469586' ],
+			// Q725289 (Phalacrocorax auritus) is a stale duplicate with no
+			// sitelink. This is the live entity — do not "fix" it back.
+			'cormorant'       => [ $W . 'Q117254648' ],
+			'commongallinule' => [ $W . 'Q1263469' ],
+			'purplegallinule' => [ $W . 'Q27074644' ],
+			'coot'            => [ $W . 'Q470016' ],
+			'grebe'           => [ $W . 'Q579718' ],
+			'woodduck'        => [ $W . 'Q322159' ],
+			'mottledduck'     => [ $W . 'Q27601055' ], // subspecies; species-level is Q1002123
+			'whistlingduck'   => [ $W . 'Q752461' ],
+			'pelican'         => [ $W . 'Q735190' ],
+			'fishcrow'        => [ $W . 'Q1420315' ],
 		];
 
 		/**

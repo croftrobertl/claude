@@ -275,6 +275,28 @@ final class Render {
 							<?php $first = false; ?>
 						<?php endforeach; ?>
 					</div>
+					<?php /* Search (1.21.0). At 51 species the tabs alone are not
+					         navigation. It filters the tiles already on the page — no
+					         request, nothing month-dependent, so it is safe in cached
+					         HTML — and it adds no text of its own to the crawlable
+					         prose below. Hidden until the script unhides it: with
+					         JavaScript off there is nothing here that could not work. */ ?>
+					<div class="dccwl-search" data-dccwl-search hidden>
+						<span class="dccwl-search-field">
+							<svg class="dccwl-search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="m13.5 13.5 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+							<input type="search" class="dccwl-search-input" data-dccwl-search-input
+								aria-label="<?php esc_attr_e( 'Search the field guide', 'dcc-wildlife' ); ?>"
+								placeholder="<?php
+									/* translators: %d: number of species in the guide. */
+									echo esc_attr( sprintf( __( 'Search %d species', 'dcc-wildlife' ), count( Species::dataset() ) ) );
+								?>"
+								autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+							<button type="button" class="dccwl-search-clear" data-dccwl-search-clear hidden aria-label="<?php esc_attr_e( 'Clear search', 'dcc-wildlife' ); ?>">
+								<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m6 6 8 8M14 6l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+							</button>
+						</span>
+						<p class="dccwl-sr" role="status" aria-live="polite" data-dccwl-search-status></p>
+					</div>
 					<?php /* The one colour a tile can carry, explained where it is used
 					         (1.18.0). If a colour cannot earn a line here, it must not
 					         carry meaning. */ ?>
@@ -291,6 +313,10 @@ final class Render {
 					         this month is hidden, and this line says so when a whole
 					         category goes quiet. Filled client-side; empty in the HTML. */ ?>
 					<p class="dccwl-guide-empty" data-dccwl-guide-empty hidden></p>
+					<?php /* The cap (1.21.0): a long group opens at its first tiles and
+					         says how many more there are, rather than running for
+					         screens. Label and count are filled client-side. */ ?>
+					<p class="dccwl-guide-morewrap" data-dccwl-guide-morewrap hidden><button type="button" class="dccwl-btn dccwl-btn-quiet dccwl-guide-more" data-dccwl-guide-more></button></p>
 					<?php if ( $opts['guide_prose'] ) { self::render_guide_text(); } ?>
 				</section>
 				<?php self::render_species_jsonld(); ?>
@@ -670,6 +696,14 @@ final class Render {
 				'oddsNames'   => Species::odds(),
 				'safe'        => __( 'What to do', 'dcc-wildlife' ),
 				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
+				/* translators: %s: what the visitor typed. */
+				'searchNone'  => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
+				/* translators: %d: number of matching species. */
+				'searchCount' => __( '%d species match', 'dcc-wildlife' ),
+				'searchOne'   => __( '1 species matches', 'dcc-wildlife' ),
+				/* translators: %d: total number of species in this view. */
+				'showAll'     => __( 'Show all %d', 'dcc-wildlife' ),
+				'showFewer'   => __( 'Show fewer', 'dcc-wildlife' ),
 				'place'       => __( 'Where to go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.

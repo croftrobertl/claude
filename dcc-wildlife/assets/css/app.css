@@ -185,6 +185,14 @@
 .dccwl-app *::before,
 .dccwl-app *::after { box-sizing: border-box; }
 
+/* `hidden` must actually hide (1.21.0). The attribute's UA rule is
+ * display:block-level-none at specificity 0 and loses to any class of ours
+ * that sets display — which is how the capped "Show all" button, hidden and
+ * empty, still occupied 44px on every render before anyone clicked anything.
+ * Every JS-toggled affordance in this plugin uses the attribute, so fix it
+ * once, here, rather than per component. */
+.dccwl-app [hidden] { display: none !important; }
+
 /* The Elementor kit styles EVERY <button> on the site — Rob's sets
  * text-transform: capitalize and a wide letter-spacing, meant for real
  * buttons. Our tiles, doors and month cells are buttons too, so on the phone

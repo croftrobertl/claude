@@ -467,3 +467,19 @@ tall ones (great blue, tricolored, sandhill, anhinga, cormorant), and a new
 `night` set holds the two night herons, the green heron and the least bittern.
 The green heron moved out of `dark`: nobody confuses a four-foot heron with an
 eighteen-inch one, but people do confuse it with a night heron.
+
+### Batch 2 addendum (1.21.0) — the two state-listed herons
+
+Confirmed by the owner from FWC's own species profiles: the little blue heron
+(*Egretta caerulea*) and the tricolored heron (*Egretta tricolor*) are both
+**State-designated Threatened** under Florida's Endangered and Threatened
+Species Rule. Both now carry the PROTECTED flag and a what-to-do line.
+
+- https://myfwc.com/wildlifehabitats/profiles/birds/waterbirds/little-blue-heron/
+- https://myfwc.com/wildlifehabitats/profiles/birds/waterbirds/tricolored-heron/
+
+Batch-2 Wikidata entities were confirmed against P225 on 2026-09-09 and are
+recorded in tools/entities-batch2.csv. Two notes worth keeping: the
+double-crested cormorant's live entity is Q117254648 (*Nannopterum auritum*) —
+Q725289 (*Phalacrocorax auritus*) is a stale duplicate with no sitelink — and
+the cattle egret has had no English Wikipedia sitelink since the 2023 split.

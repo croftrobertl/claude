@@ -673,68 +673,209 @@
 		 * flat legacy widget it is just an extra line on every tile, and it
 		 * measured 41px of rendered height on a phone — over the budget that
 		 * surface has kept since 1.1.0. */
-		function annotateGuide() {
-			var guide = root.querySelector('.dccwl-guide');
-			if (!guide || !root.closest('[data-dccwl-canal]')) { return; }
-			guide.querySelectorAll('.dccwl-tile').forEach(function (tile) {
-				var sp = speciesById[tile.getAttribute('data-dccwl-species')];
-				var old = tile.querySelector('.dccwl-tile-sub');
-				if (old) { old.parentNode.removeChild(old); }
-				if (!sp || !sp.months) { return; }
-				var v = sp.months[state.month] || 0;
-				// 1.18.0: on the hub the grid IS the month view (the spotlight
-				// strip that duplicated it is gone), so a species that is not
-				// likely this month is not shown. Same threshold the strip used.
-				var li = tile.closest('li');
-				// The safety grid is a warning list: never month-filtered.
-				var grid = tile.closest('.dccwl-guide-grid');
-				var warning = grid && grid.getAttribute('data-dccwl-group') === 'safety';
-				if (li) { li.hidden = !warning && v < 2; }
-				// One signal only: the coral "Peak" flag on species at their best
-				// this month. Everything else stays a plain icon-and-name tile.
-				if (v < 3) { return; }
-				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
-			});
-			updateGuideEmpty();
+		/* ---------- the guide: month, search and the cap (1.21.0) ----------
+		 * One pass decides every tile's visibility, so the three filters cannot
+		 * disagree with each other. Order: the tab (or, while searching, every
+		 * group), then the month (hub only), then the cap. */
+		var GUIDE_CAP = 12;
+		var guide = { q: '', expanded: false, group: null };
+
+		/* Lowercased, accent-folded, and cached on the species row. */
+		function fold(v) {
+			v = String(v == null ? '' : v).toLowerCase();
+			return v.normalize ? v.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : v;
 		}
 
-		/* When a whole category has nothing likely this month, say so rather
-		 * than showing an empty grid (1.18.0). */
-		function updateGuideEmpty() {
-			var note = root.querySelector('[data-dccwl-guide-empty]');
-			if (!note) { return; }
-			var grid = root.querySelector('.dccwl-guide-grid:not([hidden])');
-			var visible = grid ? grid.querySelectorAll('li:not([hidden])').length : 1;
-			if (visible) {
-				note.hidden = true;
-				note.textContent = '';
-			} else {
-				note.textContent = fmt(CFG.i18n.guideEmpty || 'Nothing in this group is likely in %s.',
-					(CFG.monthsFull && CFG.monthsFull[state.month]) || '');
-				note.hidden = false;
+		/* Name, scientific name, and the field mark — the three things a guest
+		 * might have in mind. The mark is what makes "golden-yellow feet" or
+		 * "red shield" find the right bird.
+		 *
+		 * Three rules, all of them predictable. There is no letters-in-order
+		 * fallback: it looked clever and was wrong, because "coot" is a
+		 * letters-in-order match for both COttonmOuTh and COrmORanT. A guest
+		 * typing four letters of a bird's name and getting a pit viper has
+		 * been failed by the search, however forgiving it was trying to be. */
+		function speciesMatches(sp, q) {
+			if (!q) { return true; }
+			if (!sp.$hay) {
+				sp.$hay = fold([ sp.name, sp.sci, sp.mark ].join(' \u2022 '));
+				// The same text with punctuation and spaces dropped, so
+				// "blackcrowned" finds the black-crowned night heron and
+				// "nannopterumauritum" finds the cormorant.
+				sp.$squash = sp.$hay.replace(/[^a-z0-9]+/g, '');
 			}
+			if (sp.$hay.indexOf(q) !== -1) { return true; }
+			var toks = q.split(/\s+/).filter(Boolean);
+			// Every word somewhere, in any order: "heron blue" finds the great blue.
+			if (toks.length > 1 && toks.every(function (t) { return sp.$hay.indexOf(t) !== -1; })) { return true; }
+			var squashed = q.replace(/[^a-z0-9]+/g, '');
+			return squashed.length >= 3 && sp.$squash.indexOf(squashed) !== -1;
 		}
 
-		function initGuide() {
-			var guide = root.querySelector('.dccwl-guide');
-			if (!guide) {
-				return;
-			}
-			guide.querySelectorAll('.dccwl-tile').forEach(wireTile);
-			var tabs = guide.querySelectorAll('.dccwl-tab');
-			var grids = guide.querySelectorAll('.dccwl-guide-grid');
-			tabs.forEach(function (tab) {
-				tab.addEventListener('click', function () {
-					var group = tab.getAttribute('data-dccwl-group');
-					tabs.forEach(function (t) {
-						t.setAttribute('aria-pressed', t === tab ? 'true' : 'false');
-					});
-					grids.forEach(function (g) {
-						g.hidden = g.getAttribute('data-dccwl-group') !== group;
-					});
-					updateGuideEmpty();
+		function refreshGuide() {
+			var section = root.querySelector('.dccwl-guide');
+			if (!section) { return; }
+			var isCanal = !!root.closest('[data-dccwl-canal]');
+			var q = guide.q, searching = q.length > 0;
+			var rows = [], i = 0;
+
+			// 1. Who is eligible: the open group (or, while searching, every
+			//    group), then the month, then the search.
+			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+				var group = g.getAttribute('data-dccwl-group');
+				// Searching looks in every group: at 51 species the answer to
+				// "where is the coot?" must not depend on which tab is open.
+				var groupOn = searching || null === guide.group || group === guide.group;
+				g.querySelectorAll('.dccwl-tile').forEach(function (tile) {
+					var sp = speciesById[tile.getAttribute('data-dccwl-species')];
+					var old = tile.querySelector('.dccwl-tile-sub');
+					if (old) { old.parentNode.removeChild(old); }
+					var v = sp && sp.months ? (sp.months[state.month] || 0) : 0;
+					var keep = groupOn;
+					if (keep && sp) {
+						if (searching) {
+							// A search overrides the month: a guest looking for
+							// a species out of season still deserves to find it.
+							keep = speciesMatches(sp, q);
+						} else if (isCanal && sp.months) {
+							// The safety grid is a warning list: never month-filtered.
+							keep = 'safety' === group || v >= 2;
+						}
+					}
+					if (isCanal && v >= 3) {
+						tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
+					}
+					rows.push({ li: tile.closest('li'), grid: g, keep: keep, rank: isCanal ? v : 0, i: i++, show: false });
 				});
 			});
+
+			// 2. The cap keeps the LIKELIEST, not the first. Hiding by document
+			//    order buried the coot and the white pelican in January — the
+			//    two birds that January is actually about — behind twelve
+			//    year-round residents. Ties keep document order, so the tiles
+			//    that survive still read in field-guide order.
+			var kept = rows.filter(function (r) { return r.keep; });
+			var capping = !guide.expanded && kept.length > GUIDE_CAP;
+			(capping
+				? kept.slice().sort(function (a, b) { return b.rank - a.rank || a.i - b.i; }).slice(0, GUIDE_CAP)
+				: kept
+			).forEach(function (r) { r.show = true; });
+
+			// 3. Apply.
+			var perGrid = {};
+			rows.forEach(function (r) {
+				if (r.li) { r.li.hidden = !r.show; }
+				var g = r.grid.getAttribute('data-dccwl-group');
+				perGrid[g] = (perGrid[g] || 0) + (r.show ? 1 : 0);
+			});
+			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+				var group = g.getAttribute('data-dccwl-group');
+				var groupOn = searching || null === guide.group || group === guide.group;
+				g.hidden = !groupOn || (searching && !perGrid[group]);
+			});
+
+			var eligible = kept.length;
+			var more = section.querySelector('[data-dccwl-guide-more]');
+			var morewrap = section.querySelector('[data-dccwl-guide-morewrap]');
+			if (more && morewrap) {
+				var over = eligible > GUIDE_CAP;
+				morewrap.hidden = !over;   // the row collapses with the button
+				if (over) {
+					more.textContent = guide.expanded
+						? (CFG.i18n.showFewer || 'Show fewer')
+						: fmt(CFG.i18n.showAll || 'Show all %d', eligible);
+					more.setAttribute('aria-expanded', guide.expanded ? 'true' : 'false');
+				}
+			}
+
+			var note = section.querySelector('[data-dccwl-guide-empty]');
+			if (note) {
+				if (eligible) {
+					note.hidden = true;
+					note.textContent = '';
+				} else {
+					note.textContent = searching
+						? fmt(CFG.i18n.searchNone || 'Nothing matches “%s”.', guide.raw || q)
+						: fmt(CFG.i18n.guideEmpty || 'Nothing in this group is likely in %s.',
+							(CFG.monthsFull && CFG.monthsFull[state.month]) || '');
+					note.hidden = false;
+				}
+			}
+
+			var status = section.querySelector('[data-dccwl-search-status]');
+			if (status) {
+				status.textContent = !searching ? ''
+					: 1 === eligible ? (CFG.i18n.searchOne || '1 species matches')
+						: fmt(CFG.i18n.searchCount || '%d species match', eligible);
+			}
+			section.querySelectorAll('.dccwl-tab').forEach(function (t) {
+				t.setAttribute('aria-pressed', !searching && t.getAttribute('data-dccwl-group') === guide.group ? 'true' : 'false');
+			});
+		}
+
+		// Kept as the old name so every existing caller still reads clearly.
+		function annotateGuide() { refreshGuide(); }
+
+		function initGuide() {
+			var section = root.querySelector('.dccwl-guide');
+			if (!section) {
+				return;
+			}
+			section.querySelectorAll('.dccwl-tile').forEach(wireTile);
+			var tabs = section.querySelectorAll('.dccwl-tab');
+			var first = section.querySelector('.dccwl-tab[aria-pressed="true"]') || tabs[0];
+			guide.group = first ? first.getAttribute('data-dccwl-group') : null;
+			var input = section.querySelector('[data-dccwl-search-input]');
+			var clear = section.querySelector('[data-dccwl-search-clear]');
+
+			function setQuery(raw) {
+				guide.raw = String(raw || '').trim();
+				guide.q = fold(guide.raw);
+				guide.expanded = false;
+				if (clear) { clear.hidden = '' === guide.q; }
+				refreshGuide();
+			}
+
+			tabs.forEach(function (tab) {
+				tab.addEventListener('click', function () {
+					guide.group = tab.getAttribute('data-dccwl-group');
+					guide.expanded = false;
+					// Picking a group is a way of saying "not that search any more".
+					if (input && input.value) { input.value = ''; }
+					setQuery('');
+				});
+			});
+
+			var wrap = section.querySelector('[data-dccwl-search]');
+			if (wrap && input) {
+				wrap.hidden = false;   // the control only exists where it can work
+				input.addEventListener('input', function () { setQuery(input.value); });
+				input.addEventListener('keydown', function (e) {
+					if ('Escape' === e.key && input.value) {
+						e.stopPropagation();   // clear the search, don't close the panel
+						input.value = '';
+						setQuery('');
+					}
+				});
+				// A search field inside a form must never reload the page.
+				input.addEventListener('keypress', function (e) { if ('Enter' === e.key) { e.preventDefault(); } });
+			}
+			if (clear && input) {
+				clear.addEventListener('click', function () {
+					input.value = '';
+					setQuery('');
+					input.focus();
+				});
+			}
+			var more = section.querySelector('[data-dccwl-guide-more]');
+			if (more) {
+				more.addEventListener('click', function () {
+					guide.expanded = !guide.expanded;
+					refreshGuide();
+					if (!guide.expanded) { more.scrollIntoView({ block: 'nearest' }); }
+				});
+			}
+			refreshGuide();
 		}
 
 		/* ---------- boot this instance ---------- */
@@ -749,8 +890,7 @@
 		if (instance.browser) {
 			buildTimeline();
 		}
-		initGuide();
-		annotateGuide();
+		initGuide();   // refreshes the guide itself
 
 		// Expose this instance so an outer shell can set the month and
 		// re-centre the strip after un-hiding a panel (offsetLeft is 0 while

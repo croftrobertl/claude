@@ -1,18 +1,18 @@
 id,sci,qid,verified_on,note
-greategret,Ardea alba,,,
-cattleegret,Bubulcus ibis,,,
-bcnightheron,Nycticorax nycticorax,,,
-ycnightheron,Nyctanassa violacea,,,
-leastbittern,Ixobrychus exilis,,,
-glossyibis,Plegadis falcinellus,,,
-sandhill,Antigone canadensis pratensis,,,subspecies — Antigone not Grus (brief)
-cormorant,Nannopterum auritum,,,Nannopterum not Phalacrocorax (brief)
-commongallinule,Gallinula galeata,,,
-purplegallinule,Porphyrio martinica,,,
-coot,Fulica americana,,,
-grebe,Podilymbus podiceps,,,
-woodduck,Aix sponsa,,,
-mottledduck,Anas fulvigula fulvigula,,,subspecies — the Florida bird
-whistlingduck,Dendrocygna autumnalis,,,
-pelican,Pelecanus erythrorhynchos,,,
-fishcrow,Corvus ossifragus,,,
+greategret,Ardea alba,Q130730,2026-09-09,species
+cattleegret,Bubulcus ibis,Q132669,2026-09-09,species — no enwiki sitelink since the 2023 split
+bcnightheron,Nycticorax nycticorax,Q126216,2026-09-09,species
+ycnightheron,Nyctanassa violacea,Q764282,2026-09-09,species
+leastbittern,Ixobrychus exilis,Q469586,2026-09-09,species
+glossyibis,Plegadis falcinellus,Q178811,2026-09-09,species
+sandhill,Antigone canadensis pratensis,Q62576305,2026-09-09,subspecies; species-level Q503804
+cormorant,Nannopterum auritum,Q117254648,2026-09-09,species — Q725289 is a stale duplicate with no sitelink
+commongallinule,Gallinula galeata,Q1263469,2026-09-09,species
+purplegallinule,Porphyrio martinica,Q27074644,2026-09-09,species
+coot,Fulica americana,Q470016,2026-09-09,species
+grebe,Podilymbus podiceps,Q579718,2026-09-09,species
+woodduck,Aix sponsa,Q322159,2026-09-09,species
+mottledduck,Anas fulvigula fulvigula,Q27601055,2026-09-09,subspecies; species-level Q1002123
+whistlingduck,Dendrocygna autumnalis,Q752461,2026-09-09,species
+pelican,Pelecanus erythrorhynchos,Q735190,2026-09-09,species
+fishcrow,Corvus ossifragus,Q1420315,2026-09-09,species

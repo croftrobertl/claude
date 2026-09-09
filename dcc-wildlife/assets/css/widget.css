@@ -417,6 +417,64 @@
 	outline: none;
 }
 
+/* Search (1.21.0). A control, so it sits on the control ground with the tabs
+ * rather than reading as another card. Hidden in the HTML; the script unhides
+ * it, so with JS off there is no dead input on the page. */
+.dccwl-search { margin: 0 auto var(--dccwl-gap); max-width: 420px; width: 100%; }
+.dccwl-search[hidden] { display: none; }
+.dccwl-search-field {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-pill);
+	display: flex;
+	gap: 8px;
+	padding: 0 4px 0 14px;
+}
+.dccwl-search-field:focus-within { border-color: var(--dccwl-primary); box-shadow: var(--dccwl-ring); }
+.dccwl-search-icon { color: var(--dccwl-text-muted); flex: none; height: 18px; width: 18px; }
+.dccwl-root .dccwl-search-input.dccwl-search-input {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: var(--dccwl-text);
+	flex: 1 1 auto;
+	font: inherit;
+	/* Never below 16px: iOS zooms the whole page when a smaller field is
+	 * focused, and the guest then has to pinch back out to read the results. */
+	font-size: 16px;
+	min-height: 44px;
+	min-width: 0;
+	outline: none;
+	padding: 0;
+}
+.dccwl-root .dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); opacity: 1; }
+/* Ours is a 44px target and always in the same place; the platform's is not. */
+.dccwl-search-input::-webkit-search-cancel-button,
+.dccwl-search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.dccwl-root .dccwl-search-clear.dccwl-search-clear {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 50%;
+	color: var(--dccwl-text-muted);
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	height: 40px;
+	justify-content: center;
+	padding: 0;
+	width: 40px;
+}
+.dccwl-root .dccwl-search-clear.dccwl-search-clear:hover { background: var(--dccwl-primary-soft); color: var(--dccwl-text); }
+.dccwl-root .dccwl-search-clear.dccwl-search-clear:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
+.dccwl-search-clear svg { height: 20px; width: 20px; }
+.dccwl-search-clear[hidden] { display: none; }
+
+/* The cap's control (1.21.0), centred under the tiles it opens. */
+.dccwl-guide-morewrap { margin: var(--dccwl-gap) 0 0; text-align: center; }
+.dccwl-guide-more[hidden] { display: none; }
+
 /* A key for every colour that carries meaning (1.18.0). Small, muted, and
  * placed where the colour is used. Muted on white: 5.38:1. */
 .dccwl-legend {
@@ -762,11 +820,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.dccwl-tiles > li,
-	.dccwl-root .dccwl-tile.dccwl-tile,
-	.dccwl-root .dccwl-month.dccwl-month,
-	.dccwl-root .dccwl-tab.dccwl-tab,
-	.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow { transition: none; }
+	/* Everything inside the widget, rather than a hand-kept list of selectors:
+	 * the list silently stopped covering the widget the moment 1.21.0 added a
+	 * button it did not name. The sheet's own reduced-motion rules live in
+	 * app.css — it is body-level, outside this root. */
+	.dccwl-root,
+	.dccwl-root *,
+	.dccwl-root *::before,
+	.dccwl-root *::after { animation: none !important; transition: none !important; }
 
 	.dccwl-tiles > li.dccwl-in { opacity: 1; transform: none; }
 	.dccwl-timeline-track { scroll-behavior: auto; }

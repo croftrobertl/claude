@@ -224,14 +224,22 @@ back. A test greps for `prefers-color-scheme` and also renders the module
 under both OS schemes asserting the screenshots are PIXEL-IDENTICAL, so
 any reintroduction fails loudly whatever form it takes.
 
-Height budget for the default render: **≤ 560px desktop / ≤ 760px mobile**
-(measured 533px / 745px). Desktop is back at its original 1.1.0 figure —
-1.9.0 needed 600px to hold the hero stat, and 1.9.1's tighter cozy spacing
-more than paid that back. Mobile moved from 720px because the Guide's
-tile-min resolves to TWO columns on a 375px screen; 1.9.0 forced three
-across to protect the old number, which made the two apps look different
-in exactly the place most guests see them. Matching won.
-Everything else lives behind interaction:
+Height budgets. The honest figures, re-measured 2026-09-09 — the numbers that
+stood here from 1.9.1 (≤ 560px desktop / ≤ 760px mobile) had drifted to less
+than half of reality and were quietly ignored for four releases, so they are
+replaced rather than restated. **Default render: ≤ 1100px desktop /
+≤ 1800px mobile** (measured 1053 / 1737). The growth is all deliberate and
+each step was asked for: the five-row colour key (1.18.0), photo-first tiles
+at 4:3 (1.19.0), a fourth group, the photo-credits card, and the search row
+(1.21.0).
+
+**The number that matters from here is not that one.** At 51 species — and
+much more so at 169 — what threatens the page is the LONGEST GROUP, and since
+1.21.0 the cap holds that constant: no group ever puts more than
+`GUIDE_CAP` (12) tiles on screen, so the birds tab measures ~1530px whether it
+holds 29 species or 90. `search121.js` asserts both halves — never more than
+the cap on screen, and the capped height against what it would otherwise be
+(2000px+ of work at 29 birds). Adding species to a group must not move it.
 
 - **Hero**: JS sets "{Month} on the canal" + "N species at their peak"
   from the calendar data (with a custom title, the month moves into the
@@ -1030,6 +1038,32 @@ rounded boxes at the same weight. The rule now:
   look-alikes.
 - **Species order inside a group is field-guide order**, not the order they
   were added: the birds a guest must separate sit together.
+- **The cap and the search (1.21.0) are what make more species safe to add.**
+  One function, `refreshGuide()`, decides every tile's visibility, in this
+  order: the open group (or, while searching, every group) → the month (hub
+  only; the safety grid is never month-filtered) → the cap. Do not add a
+  fourth filter elsewhere; put it in that pass.
+  - The cap keeps the LIKELIEST twelve, not the first twelve. Hiding by
+    document order buried the coot and the white pelican in January — the two
+    birds January is actually about — behind twelve year-round residents.
+    Ties keep document order, so what survives still reads in field-guide
+    order.
+  - Search covers name, scientific name and the field mark, over the bundled
+    dataset: no request, nothing month-dependent, safe in cached HTML. It
+    OVERRIDES the month filter — a guest looking for a species out of season
+    must still find it — and it adds no text to the crawlable prose block.
+  - Matching is substring, all-words-in-any-order, and punctuation-insensitive
+    ("blackcrowned"). There is deliberately NO letters-in-order fallback: it
+    made "coot" return the cottonmouth and the cormorant. A guest typing four
+    letters of a bird and getting a pit viper has been failed by the search,
+    however forgiving it was trying to be.
+  - The field is 16px or iOS zooms the page on focus, and the row it sits in
+    is a control on the tinted ground, not another card.
+- **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none
+  !important; }` in app.css. The attribute's UA rule has specificity 0 and
+  loses to any class of ours that sets `display` — which is how a hidden,
+  empty "Show all" button occupied 44px on every render. Every JS-toggled
+  affordance here uses the attribute.
 - Batches 3–7 are listed in the Phase 2 brief; each ships alone, Rob reviews
   on /explore/ from the phone before the next. The three cut species
   (roseate spoonbill, snail kite, crested caracara) are never re-added.
