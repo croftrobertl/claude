@@ -1,0 +1,171 @@
+/**
+ * Price-breakdown tests for dcc-custom-checkout/assets/checkout.js.
+ *
+ *   cd tests/breakdown && npm install jsdom && node run.js
+ *
+ * These drive the real checkout.js against real markup in jsdom — no stubs of
+ * the code under test. The point is the money: which figures the guest sees,
+ * and that an unrecognised breakdown is left strictly alone.
+ */
+const fs   = require('fs');
+const path = require('path');
+const { JSDOM } = require('jsdom');
+const F = require('./fixtures');
+
+const SCRIPT = fs.readFileSync(
+    path.join(__dirname, '../../dcc-custom-checkout/assets/checkout.js'), 'utf8'
+);
+
+let failures = 0;
+function check(name, actual, expected) {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) { failures++; }
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+    if (!ok) {
+        console.log(`      expected: ${JSON.stringify(expected)}`);
+        console.log(`      actual:   ${JSON.stringify(actual)}`);
+    }
+}
+
+// Render a fixture through checkout.js and return what a guest would read.
+async function render(fixture) {
+    const dom = new JSDOM(
+        `<body><form class="mphb_sc_checkout-form">${fixture}</form></body>`,
+        { runScripts: 'dangerously', pretendToBeVisual: true }
+    );
+    const { window } = dom;
+    window.DCC_CHECKOUT = {
+        i18n: { subtotal: 'Subtotal', taxDetailShow: 'Show detail', taxDetailHide: 'Hide detail' },
+        guestFeeSteps: {}, guestGroups: [], dogFieldNames: []
+    };
+    const el = window.document.createElement('script');
+    el.textContent = SCRIPT;
+    window.document.body.appendChild(el);
+    // checkout.js waits for DOMContentLoaded, which jsdom fires after parsing.
+    if (window.document.readyState === 'loading') {
+        await new Promise(r => window.document.addEventListener('DOMContentLoaded', r));
+    }
+    return { window, doc: window.document };
+}
+
+// Only the rows a guest can actually see, as "label | amount".
+function label(cell) {
+    // Drop the expander glyph MotoPress renders ahead of the name.
+    return cell.textContent.replace(/\s+/g, ' ').replace(/^\s*[-+\u2212]\s*/, '').trim();
+}
+
+function visibleRows(doc) {
+    return Array.from(doc.querySelectorAll('tr'))
+        .filter(r => !r.classList.contains('dcc_checkout-section-hidden'))
+        .map(r => {
+            const cells = r.cells;
+            // Skip the wrapper row whose single cell holds the nested table.
+            if (!cells || cells.length < 2) { return null; }
+            const name = label(cells[0]);
+            const amount = cells[cells.length - 1].textContent.replace(/\s+/g, ' ').trim();
+            return name ? `${name} | ${amount}` : null;
+        })
+        .filter(Boolean);
+}
+
+// Top-level summary rows only (the collapsed view the owner signed off).
+function summary(doc) {
+    const table = doc.querySelector('table.dcc_checkout-breakdown');
+    return Array.from(table.children)
+        .flatMap(n => n.tagName === 'TBODY' ? Array.from(n.children) : [n])
+        .filter(r => r.tagName === 'TR' && r.cells.length >= 2
+                     && !r.classList.contains('dcc_checkout-section-hidden'))
+        .map(r => `${label(r.cells[0])} | ${r.cells[r.cells.length - 1].textContent.trim()}`);
+}
+
+(async () => {
+/* --- 1. The owner's verified booking, no services. ---------------------- */
+{
+    const { doc } = await render(F.noService);
+    check('no-service: collapsed view reads as an invoice', summary(doc), [
+        'Cottage 36: Sunshine Suite | $350',
+        'Subtotal | $350',
+        'Taxes Show detail | $38.50',
+        'Total | $388.50',
+    ]);
+
+    const rows = visibleRows(doc);
+    check('no-service: no figure appears twice',
+        rows.filter(r => /\$388\.50|\$38\.50|\$350/.test(r)).length, 4);
+    check('no-service: in-block duplicates are gone',
+        rows.filter(r => /^(Accommodation Total|Accommodation Taxes Total|Subtotal) \|/.test(r)
+                      && !/^Subtotal \| \$350$/.test(r)).length, 0);
+}
+
+/* --- 2. The 4-guest booking with the untaxed extra-guest fee. ----------- */
+{
+    const { doc } = await render(F.withService);
+    check('with-service: line item shows pre-tax, matching Subtotal',
+        summary(doc), [
+            'Cottage 36: Sunshine Suite | $550',
+            'Subtotal | $550',
+            'Taxes Show detail | $38.50',
+            'Total | $588.50',
+        ]);
+    const rows = visibleRows(doc);
+    check('with-service: Accommodation Total survives (it is not a duplicate)',
+        rows.some(r => r === 'Accommodation Total | $350'), true);
+    check('with-service: the extra-guest fee is still shown at $200',
+        rows.some(r => /Extra Guest Fee.*\| \$200$/.test(r)), true);
+}
+
+/* --- 3. The tax fold. --------------------------------------------------- */
+{
+    const { window, doc } = await render(F.withService);
+    const toggle = doc.querySelector('.dcc_checkout-tax-toggle');
+    check('tax fold: a toggle exists on the summary Taxes row', !!toggle, true);
+    check('tax fold: it is a link-styled button, never a submit',
+        toggle && toggle.type, 'button');
+    check('tax fold: collapsed by default', toggle.getAttribute('aria-expanded'), 'false');
+    check('tax fold: components hidden until asked for',
+        Array.from(doc.querySelectorAll('tr.dcc_checkout-tax-detail'))
+             .every(r => r.classList.contains('dcc_checkout-section-hidden')), true);
+
+    toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    check('tax fold: opening reveals all three components',
+        Array.from(doc.querySelectorAll('tr.dcc_checkout-tax-detail'))
+            .filter(r => !r.classList.contains('dcc_checkout-section-hidden'))
+            .map(r => r.cells[r.cells.length - 1].textContent.trim()),
+        ['$14', '$3.50', '$21']);
+    check('tax fold: aria-expanded follows', toggle.getAttribute('aria-expanded'), 'true');
+}
+
+/* --- 4. Two cottages: nothing duplicates, so nothing is removed. -------- */
+{
+    const { doc } = await render(F.twoAccommodations);
+    const rows = visibleRows(doc);
+    check('two cottages: both line items keep MotoPress\'s own tax-inclusive figures',
+        rows.filter(r => /^Cottage|^#\d Cottage/.test(r)),
+        ['#1 Cottage 36: Sunshine Suite | $388.50', '#2 Cottage 22: Palm Cottage | $222']);
+    check('two cottages: per-cottage Accommodation Totals both survive',
+        rows.filter(r => r.startsWith('Accommodation Total')).length, 2);
+    check('two cottages: the index is kept, since it distinguishes them',
+        rows.some(r => r.startsWith('#1 ')), true);
+    check('two cottages: no tax fold — one cottage\'s taxes under a combined total would mislead',
+        doc.querySelector('.dcc_checkout-tax-toggle'), null);
+}
+
+/* --- 5. Renamed labels: recognise nothing, change nothing. -------------- */
+{
+    const before = await render(F.renamedLabels);
+    const beforeRows = visibleRows(before.doc);
+    check('renamed labels: every row still visible',
+        beforeRows.length,
+        Array.from(before.doc.querySelectorAll('tr')).filter(r => r.cells.length >= 2).length);
+    check('renamed labels: no figure was rewritten',
+        beforeRows.filter(r => /\$/.test(r)).map(r => r.split(' | ')[1]),
+        ['$388.50', '$350', '$14', '$24.50', '$38.50', '$388.50', '$350', '$38.50', '$388.50']);
+    check('renamed labels: no toggle was injected',
+        before.doc.querySelector('.dcc_checkout-tax-toggle'), null);
+    check('renamed labels: nothing was hidden',
+        before.doc.querySelectorAll('.dcc_checkout-section-hidden').length, 0);
+}
+
+console.log(failures ? `\n${failures} failing` : '\nall passing');
+process.exit(failures ? 1 : 0);
+})();

@@ -68,7 +68,7 @@
 
         showServerError(root);
         cleanRequiredMarkers(root);       // Part B
-        applyBreakdownBreaks(root);       // Part A / item 13
+        formatBreakdown(root);            // Price Breakdown reshaping
         normalizeReservationDates(root);  // 2026-08-30 polish, item 4
 
         var validators = [];
@@ -96,110 +96,256 @@
         observeReRenders(root);
     }
 
-    // Mark up the price-breakdown table so it can be styled without guessing
-    // at a container class: the only breakdown selector verified on this site
-    // is tr.mphb-price-breakdown-booking, so find the table from there.
-    // The last row is the grand total and gets called out.
-    function tagBreakdownTable(root) {
-        var seed = root.querySelector('tr.mphb-price-breakdown-booking');
+    /* ===================================================================== *
+     * Price Breakdown
+     *
+     * Reshaped into standard invoice arithmetic: line items, one Subtotal, one
+     * Taxes line, one Total, with nothing printed twice. MotoPress renders the
+     * same figure in up to three places at once (Accommodation Total ==
+     * Subtotal, Accommodation Taxes Total == Taxes, the in-block Subtotal ==
+     * Total), which reads as though the guest is being charged repeatedly.
+     *
+     * NO ARITHMETIC HAPPENS HERE. Every figure displayed is one MotoPress
+     * already rendered, moved or copied verbatim. A row is only ever removed
+     * when its amount string is IDENTICAL to the row that supersedes it, so a
+     * genuine second figure (a second cottage, an untaxed service) is never
+     * suppressed. Rows are located by their rendered label, so this is
+     * English-only by nature: anything not recognised is left exactly as
+     * MotoPress rendered it. See tests/breakdown/ for the fixtures, including
+     * one with renamed labels that proves the failure is graceful.
+     * ===================================================================== */
+
+    function formatBreakdown(root) {
+        var seed  = root.querySelector('tr.mphb-price-breakdown-booking');
         var table = seed && seed.closest('table');
         if (!table) {
             return;
         }
         table.classList.add('dcc_checkout-breakdown');
-        var rows = table.querySelectorAll('tr');
+        restructureBreakdown(table);
+    }
+
+    // A row's label (first cell) and amount (last cell), normalized for
+    // comparison. Amounts are compared as rendered strings — never parsed,
+    // never summed.
+    function rowLabel(row) {
+        var cell = row.cells && row.cells[0];
+        return cell ? String(cell.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    }
+
+    function normLabel(row) {
+        return rowLabel(row).toLowerCase().replace(/[:\s]+$/, '');
+    }
+
+    function rowAmount(row) {
+        var cells = row.cells;
+        if (!cells || !cells.length) { return ''; }
+        return String(cells[cells.length - 1].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function looksLikeMoney(text) {
+        return /\d/.test(text);
+    }
+
+    function hideRow(row) {
+        row.classList.add('dcc_checkout-section-hidden');
+    }
+
+    function restructureBreakdown(table) {
+        // Drop anything a previous pass added: MotoPress rebuilds this table
+        // whenever the guest count changes, and clones must never stack.
+        Array.prototype.forEach.call(
+            table.querySelectorAll('tr.dcc_checkout-tax-detail'),
+            function (r) { if (r.parentNode) { r.parentNode.removeChild(r); } }
+        );
+
+        var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
         if (!rows.length) {
             return;
         }
-        Array.prototype.forEach.call(rows, function (r) {
-            r.classList.remove('dcc_checkout-breakdown-total');
-        });
-        rows[rows.length - 1].classList.add('dcc_checkout-breakdown-total');
-        collapseTaxDetail(table);
-    }
 
-    // Fold the individual taxes behind the total MotoPress already prints.
-    //
-    // Expanding an accommodation lists every tax line — here: Lake County
-    // Tourist Development Tax, Lake County Discretionary Sales Surtax, Florida
-    // Sales and Use Tax — and then "Accommodation Taxes Total". The total is
-    // the number a guest wants; the three components are detail. So the
-    // components (and their column header) collapse under a toggle on the
-    // total row, which is exactly the "expand or tooltip" the owner asked for.
-    //
-    // No arithmetic is done: the total shown is MotoPress's own, untouched.
-    // Rows are found by their rendered label, so this is English-only — a miss
-    // simply leaves the breakdown as it is. Override with the
-    // dcc_checkout_tax_row_pattern filter if that ever matters.
-    function collapseTaxDetail(table) {
-        var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
-        var re;
-        try {
-            re = new RegExp(CFG.taxRowPattern || 'tax', 'i');
-        } catch (e) {
-            re = /tax/i;
+        rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-total'); });
+        rows[rows.length - 1].classList.add('dcc_checkout-breakdown-total');
+
+        // LAST match wins for the summary rows at the foot of the table; FIRST
+        // match for the in-block rows, which appear above them.
+        function last(test) {
+            var found = null;
+            rows.forEach(function (r) { if (test(normLabel(r))) { found = r; } });
+            return found;
+        }
+        function first(test) {
+            for (var i = 0; i < rows.length; i++) {
+                if (test(normLabel(rows[i]))) { return rows[i]; }
+            }
+            return null;
         }
 
-        rows.forEach(function (row, idx) {
-            var text = rowLabel(row);
-            // The summary row: mentions tax AND total (e.g. "Accommodation
-            // Taxes Total"). The plain top-level "Taxes" row has no detail
-            // above it and is deliberately not matched.
-            if (!re.test(text) || !/total/i.test(text)) {
-                return;
-            }
-            if (row.getAttribute('data-dcc-tax')) {
-                return; // Already wired on this render.
-            }
+        var totalRow   = last(function (l) { return l === 'total'; });
+        var taxesRow   = last(function (l) { return l === 'taxes' || l === 'tax'; });
+        var subtotal   = last(function (l) { return l.indexOf('subtotal (excluding') === 0; });
+        var accTaxTot  = first(function (l) { return l === 'accommodation taxes total'; });
+        var accTotal   = first(function (l) { return l === 'accommodation total'; });
+        var innerSub   = first(function (l) { return l === 'subtotal'; });
 
-            // Walk back over the contiguous run of tax rows above it.
-            var group = [];
-            for (var i = idx - 1; i >= 0; i--) {
-                var label = rowLabel(rows[i]);
-                if (!label || !re.test(label)) {
-                    break;
-                }
-                group.unshift(rows[i]);
-            }
-            if (!group.length) {
-                return; // Nothing to fold away.
-            }
+        // Without a "(excluding taxes)" row, a plain "Subtotal" IS the summary
+        // row — never hide the only subtotal on the page.
+        if (!subtotal) {
+            innerSub = null;
+        }
 
-            row.setAttribute('data-dcc-tax', '1');
-            var open = false;
-            var toggle = document.createElement('button');
-            toggle.type = 'button';           // never submit the checkout
-            toggle.className = 'dcc_checkout-tax-toggle';
-            toggle.setAttribute('aria-expanded', 'false');
+        // --- Duplicates, each removed only when the figures truly match. ----
+        // The in-block tax total is also the gate for the fold below: when it
+        // does NOT equal the summary Taxes line there is more than one
+        // accommodation, and showing one cottage's components under a combined
+        // total would misrepresent the bill. Leave it all alone in that case.
+        var taxesDuplicated = !!(accTaxTot && taxesRow &&
+            rowAmount(accTaxTot) === rowAmount(taxesRow));
+        if (taxesDuplicated) {
+            hideRow(accTaxTot);
+        }
+        if (innerSub && totalRow && rowAmount(innerSub) === rowAmount(totalRow)) {
+            hideRow(innerSub);
+        }
+        // "Accommodation Total" duplicates Subtotal only for a single, untaxed
+        // accommodation with no extras; with a second cottage or a service it
+        // is a real per-cottage figure and stays.
+        if (accTotal && subtotal && rowAmount(accTotal) === rowAmount(subtotal)) {
+            hideRow(accTotal);
+        }
 
-            function apply() {
-                group.forEach(function (r) {
-                    r.classList.toggle('dcc_checkout-section-hidden', !open);
-                });
-                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-                toggle.textContent = open
-                    ? (I18N.taxDetailHide || 'Hide detail')
-                    : (I18N.taxDetailShow || 'Show detail');
-            }
+        // --- "Subtotal (excluding taxes)" -> "Subtotal". --------------------
+        // The qualifier is redundant once Taxes is the very next line.
+        if (subtotal && I18N.subtotal) {
+            var labelCell = subtotal.cells && subtotal.cells[0];
+            if (labelCell) { labelCell.textContent = I18N.subtotal; }
+        }
 
-            toggle.addEventListener('click', function () {
-                open = !open;
-                apply();
-            });
-            apply();
-
-            var cell = row.cells && row.cells[0];
-            if (cell) {
-                cell.appendChild(document.createTextNode(' '));
-                cell.appendChild(toggle);
-            }
-        });
+        relabelAccommodationRows(rows);
+        setLineItemPreTax(rows, subtotal);
+        foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
     }
 
-    // A breakdown row's label — the text of its first cell.
-    function rowLabel(row) {
-        var cell = row.cells && row.cells[0];
-        return cell ? String(cell.textContent || '').trim() : '';
+    // "#1 Cottage 36: Sunshine Suite" -> "Cottage 36: Sunshine Suite".
+    // The index is noise with one accommodation and meaningful with several,
+    // so it is only stripped when there is exactly one.
+    function relabelAccommodationRows(rows) {
+        var booking = rows.filter(function (r) {
+            return r.classList.contains('mphb-price-breakdown-booking');
+        });
+        if (booking.length !== 1) {
+            return;
+        }
+        var cell = booking[0].cells && booking[0].cells[0];
+        if (!cell) {
+            return;
+        }
+        var walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, null);
+        var node;
+        while ((node = walker.nextNode())) {
+            if (/^\s*#\d+\s*/.test(node.textContent)) {
+                node.textContent = node.textContent.replace(/^\s*#\d+\s*/, '');
+                return;
+            }
+        }
+    }
+
+    // Show the line item PRE-TAX so the items sum to Subtotal, tax is added
+    // once, and Total closes it.
+    //
+    // The pre-tax figure is COPIED from MotoPress's own subtotal row, never
+    // derived by subtracting tax. That equivalence only holds for a single
+    // accommodation, so with two or more the row is left exactly as MotoPress
+    // rendered it rather than guessing at a split.
+    function setLineItemPreTax(rows, subtotal) {
+        if (!subtotal) {
+            return;
+        }
+        var booking = rows.filter(function (r) {
+            return r.classList.contains('mphb-price-breakdown-booking');
+        });
+        if (booking.length !== 1) {
+            return;
+        }
+        var preTax = rowAmount(subtotal);
+        if (!looksLikeMoney(preTax)) {
+            return;
+        }
+        var cells = booking[0].cells;
+        var cell  = cells && cells.length ? cells[cells.length - 1] : null;
+        // Only ever overwrite a cell that already holds an amount — never one
+        // carrying the expander or the accommodation name.
+        if (cell && looksLikeMoney(cell.textContent || '')) {
+            cell.textContent = preTax;
+        }
+    }
+
+    // Move the individual taxes to sit under the summary Taxes row, behind a
+    // "Show detail" link.
+    //
+    // They are CLONED rather than shown in place: the originals live inside the
+    // accommodation's own expander, so a control on the summary row could not
+    // reveal them there. The originals are then hidden for good, so the three
+    // components exist in exactly one place on the page.
+    function foldTaxDetail(rows, taxesRow, accTaxTot) {
+        if (!accTaxTot || !taxesRow) {
+            return;
+        }
+        var idx = rows.indexOf(accTaxTot);
+        var group = [];
+        for (var i = idx - 1; i >= 0; i--) {
+            var label = normLabel(rows[i]);
+            if (!label || label.indexOf('tax') === -1) {
+                break;
+            }
+            group.unshift(rows[i]);
+        }
+        // Only the rows carrying a figure are worth showing; the rest of the
+        // run is the "Accommodation Taxes | Amount" column header.
+        var detail = group.filter(function (r) { return looksLikeMoney(rowAmount(r)); });
+        group.forEach(hideRow);
+        if (!detail.length) {
+            return;
+        }
+
+        var ref = taxesRow;
+        var clones = detail.map(function (r) {
+            var clone = r.cloneNode(true);
+            clone.classList.add('dcc_checkout-tax-detail');
+            clone.classList.add('dcc_checkout-section-hidden'); // collapsed by default
+            if (ref.parentNode) {
+                ref.parentNode.insertBefore(clone, ref.nextSibling);
+                ref = clone;
+            }
+            return clone;
+        });
+
+        var open   = false;
+        var toggle = document.createElement('button');
+        toggle.type = 'button';          // never submit the checkout
+        toggle.className = 'dcc_checkout-tax-toggle';
+
+        function apply() {
+            clones.forEach(function (c) {
+                c.classList.toggle('dcc_checkout-section-hidden', !open);
+            });
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.textContent = open
+                ? (I18N.taxDetailHide || 'Hide detail')
+                : (I18N.taxDetailShow || 'Show detail');
+        }
+
+        toggle.addEventListener('click', function () {
+            open = !open;
+            apply();
+        });
+        apply();
+
+        var cell = taxesRow.cells && taxesRow.cells[0];
+        if (cell) {
+            cell.appendChild(document.createTextNode(' '));
+            cell.appendChild(toggle);
+        }
     }
 
     /* ===================================================================== *
@@ -289,41 +435,6 @@
         if (span.lastChild && span.lastChild.nodeType === 3) {
             span.lastChild.textContent = span.lastChild.textContent.replace(/\s+$/, '');
         }
-    }
-
-    /* ===================================================================== *
-     * Part A / item 13 — break the price-breakdown accommodation title
-     * ===================================================================== */
-
-    function applyBreakdownBreaks(root) {
-        tagBreakdownTable(root);
-        var cells = root.querySelectorAll(
-            'tr.mphb-price-breakdown-booking > td, tr.mphb-price-breakdown-booking > th'
-        );
-        Array.prototype.forEach.call(cells, function (cell) {
-            if (cell.getAttribute('data-dcc-break')) {
-                return;
-            }
-            cell.setAttribute('data-dcc-break', '1');
-
-            var walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, null);
-            var node;
-            while ((node = walker.nextNode())) {
-                var idx = node.textContent.indexOf(':');
-                if (idx === -1 || node.textContent.slice(0, idx).trim() === '') {
-                    continue;
-                }
-                // Keep "…Cottage N:" in this node; push the name onto a new line.
-                var after = node.textContent.slice(idx + 1).replace(/^\s+/, '');
-                node.textContent = node.textContent.slice(0, idx + 1);
-                var br   = document.createElement('br');
-                var rest = document.createTextNode(after);
-                var ref  = node.nextSibling;
-                node.parentNode.insertBefore(br, ref);
-                node.parentNode.insertBefore(rest, br.nextSibling);
-                break;
-            }
-        });
     }
 
     /* ===================================================================== *
@@ -1415,7 +1526,7 @@
         var obs = new MutationObserver(function () {
             if (timer) { clearTimeout(timer); }
             timer = setTimeout(function () {
-                applyBreakdownBreaks(root);
+                formatBreakdown(root);
                 // MotoPress re-renders (coupon apply, country change, …) bring
                 // back untouched labels/dates; all passes are idempotent (the
                 // data-dcc-* guards, and text normalization that is a no-op on

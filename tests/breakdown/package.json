@@ -1,0 +1,7 @@
+{
+  "name": "dcc-checkout-breakdown-tests",
+  "private": true,
+  "description": "Price-breakdown tests for the DCC Custom Checkout plugin.",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "jsdom": "^24.0.0" }
+}

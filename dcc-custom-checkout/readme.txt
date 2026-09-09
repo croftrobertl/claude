@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.1
+Stable tag: 0.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,37 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.6.0 =
+* Price Breakdown reshaped into standard invoice arithmetic. MotoPress printed
+  the same figure in three places at once — Accommodation Total == Subtotal,
+  Accommodation Taxes Total == Taxes, the in-block Subtotal == Total — which
+  reads as though the guest is being charged repeatedly. Each of those is now
+  removed, and ONLY when its amount string is identical to the row that
+  supersedes it: with a second cottage, or a service, they are real figures and
+  they stay. "Subtotal (excluding taxes)" is now just "Subtotal", since Taxes
+  is the very next line.
+* The accommodation line item now shows its PRE-TAX amount, so the items sum to
+  Subtotal, tax is added once, and Total closes it. That figure is COPIED from
+  MotoPress's own subtotal row, never derived by subtracting tax — an
+  equivalence that only holds for a single accommodation, so with two or more
+  the row is left exactly as MotoPress rendered it.
+* The accommodation title reads "Cottage 36: Sunshine Suite" on one line. The
+  forced line break after the colon (Part A, item 13) is removed, and the "#1"
+  index is dropped when there is only one accommodation — with several it
+  distinguishes them and stays.
+* "Show detail" is now a quiet underlined text link at the row's own size in
+  the site blue, with a visible focus ring and a 44px touch target, instead of
+  a filled pill. Book Now should be the only control that shouts on this page.
+  It moved onto the surviving summary Taxes row, and stands down entirely when
+  more than one accommodation is booked, where one cottage's components under a
+  combined total would misrepresent the bill.
+* NO ARITHMETIC is performed anywhere in the breakdown: every figure displayed
+  is one MotoPress rendered, moved or copied verbatim.
+* NEW: tests/breakdown/ — jsdom fixtures driving the real checkout.js against
+  real breakdown markup, including one with every label renamed that proves an
+  unrecognised breakdown is passed through completely untouched. Run with
+  `cd tests/breakdown && npm install && npm test`.
 
 = 0.5.1 =
 * VERIFIED on live: 4 guests x 2 nights bills the Extra Guest Fee at

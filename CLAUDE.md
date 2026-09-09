@@ -133,5 +133,9 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   The folder *inside* the zip stays `dcc-custom-checkout/` — that is the WordPress
   plugin slug and must not change.
 - Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
+- Price-breakdown behaviour is covered by jsdom fixtures at `tests/breakdown/`
+  (`npm install && npm test` there). Run them after touching
+  `restructureBreakdown()` or anything else that moves a figure on the
+  checkout — that code decides what a guest is told they owe.
 - Bump the version in all three places whenever behaviour changes:
   the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.
