@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.3
+Stable tag: 0.4.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,20 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.4.4 =
+* Hardening (no live behaviour change): the guest-count options above the
+  offered cap were hidden with the bare `hidden` attribute, which is only a
+  UA-stylesheet rule that any author rule outranks — the same trap that let a
+  button in the availability calendar render while its `hidden` attribute was
+  set. They now also carry a class with an !important rule. Selection was and
+  remains gated on `disabled`, which is honoured everywhere (Safari and iOS
+  honour neither `hidden` nor `display` on an <option>), so this only affects
+  whether a capped option is seen, never whether it can be chosen. The path is
+  dormant while the pull-out couch offering is on, which it is on live.
+* Audited every other hide/reveal path: all use classes carrying
+  `display: none !important`, and the one runtime assertion already tests
+  computed visibility rather than an attribute.
 
 = 0.4.3 =
 * FIX (money path): relabelling the guest-count options was CHANGING THEIR

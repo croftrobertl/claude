@@ -922,8 +922,17 @@
             Array.prototype.forEach.call(sel.options, function (opt) {
                 var v = parseInt(opt.value, 10);
                 if (v > cap) {
+                    // `disabled` is the load-bearing part — it is what actually
+                    // stops the option being chosen, and it is honoured
+                    // everywhere. The hiding is cosmetic and best-effort:
+                    // the bare `hidden` attribute is only a UA-stylesheet rule
+                    // (display:none), which ANY author rule outranks, so carry
+                    // our own !important class as well. Safari/iOS honour
+                    // neither on <option>, which is exactly why selection is
+                    // gated on `disabled` and never on visibility.
                     opt.disabled = true;
-                    opt.hidden = true; // iOS ignores hidden but honours disabled
+                    opt.hidden = true;
+                    opt.classList.add('dcc_checkout-option-hidden');
                     capped = true;
                 }
             });

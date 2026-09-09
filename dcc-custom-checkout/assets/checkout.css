@@ -291,6 +291,14 @@
     display: none !important;
 }
 
+/* Guest-count options above the offered cap. Paired with `disabled`, which is
+   what actually prevents selection; this rule only removes them from view, and
+   carries !important because the `hidden` attribute alone is just a
+   UA-stylesheet rule that any author rule outranks. */
+.mphb_sc_checkout-form option.dcc_checkout-option-hidden {
+    display: none !important;
+}
+
 .mphb_sc_checkout-form .dcc_checkout-section {
     margin-top: 24px;
 }
