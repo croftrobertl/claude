@@ -24,7 +24,7 @@ final class Assets
     }
 
     /**
-     * Rewrite "Accommodation Type:" to "Accommodation:", checkout page only.
+     * Rewrite MotoPress's own wording on the checkout page only.
      *
      * @param mixed  $translation Translated string (post-MO, post-Loco).
      * @param mixed  $text        Original msgid.
@@ -34,7 +34,17 @@ final class Assets
      */
     public function filter_accommodation_label($translation, $text, $domain = '')
     {
-        if ($text !== 'Accommodation Type:') {
+        $map = apply_filters('dcc_checkout_string_overrides', [
+            'Accommodation Type:' => __('Accommodation:', 'dcc-checkout'),
+            // "Service" is MotoPress's word, not the owner's: the pet fee and
+            // the extra-guest fee are not services a guest chose from a menu —
+            // they follow from answers already given. Relabelled in the price
+            // breakdown. A msgid MotoPress doesn't actually use simply never
+            // matches, so a wrong guess here is a no-op, not a bug.
+            'Services'  => __('Extras', 'dcc-checkout'),
+            'Services:' => __('Extras:', 'dcc-checkout'),
+        ]);
+        if (!isset($map[$text])) {
             return $translation;
         }
         // is_page() is only reliable once the main query exists; the checkout
@@ -43,7 +53,7 @@ final class Assets
         if (!did_action('wp') || !self::is_checkout_page()) {
             return $translation;
         }
-        return __('Accommodation:', 'dcc-checkout');
+        return $map[$text];
     }
 
     /**

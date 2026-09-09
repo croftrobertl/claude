@@ -324,6 +324,11 @@ final class Config
             $text = '$' . number_format($amount, 2);
         }
         $text = wp_strip_all_tags($text);
+        // MotoPress stores the currency symbol HTML-encoded ("&#36;"), and this
+        // string is written to the page with textContent, which does NOT decode
+        // entities — so it rendered literally as "&#36;50/night". Decode here,
+        // once, where the value is produced.
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         // "$50.00" -> "$50"; leaves "$49.50" alone.
         $text = (string) preg_replace('/([.,])00\b/', '', $text);
         return (string) apply_filters('dcc_checkout_format_price', trim($text), $amount);

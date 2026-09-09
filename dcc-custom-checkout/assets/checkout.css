@@ -449,3 +449,50 @@ select.dcc_checkout-invalid {
     color: #611a15;
     font-weight: 600;
 }
+
+/* ---------------------------------------------------------------------------
+ * Price Breakdown — structure only.
+ * The rows previously ran together with no separation at all. Rules are
+ * structural (every row gets a rule above it, amounts right-aligned, the last
+ * row called out as the total) rather than keyed to any row's wording, so
+ * nothing here breaks if MotoPress changes or translates a label.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 4px;
+}
+
+.mphb_sc_checkout-form table.dcc_checkout-breakdown td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown th {
+    padding: 10px 0;
+    border-top: 1px solid #e3e3e3;
+    line-height: 1.35;
+    vertical-align: top;
+}
+
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr:first-child td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr:first-child th {
+    border-top: 0;
+}
+
+/* Label left, amount right — the amount column is the last cell in each row. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown td:last-child,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown th:last-child {
+    text-align: right;
+    white-space: nowrap;
+    padding-left: 12px;
+}
+
+.mphb_sc_checkout-form table.dcc_checkout-breakdown td:first-child,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown th:first-child {
+    text-align: left;
+}
+
+/* The grand total: heavier rule above, bolder text. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total th {
+    border-top: 2px solid #111;
+    font-weight: 700;
+    font-size: 1.05em;
+}

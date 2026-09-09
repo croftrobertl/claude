@@ -84,12 +84,37 @@
                                                  // nothing user-fillable, so no
                                                  // submit validator to register
 
+        // The pet toggle and the guest dropdown now cover every service this
+        // site sells, so the native services section is redundant.
+        hideNativeServices(root);
+
         // Last line of defence: nothing above may cost the guest their
         // "Number of Guests" dropdown.
         assertGuestChooserSurvived(root);
 
         setupSubmit(root, validators);
         observeReRenders(root);
+    }
+
+    // Mark up the price-breakdown table so it can be styled without guessing
+    // at a container class: the only breakdown selector verified on this site
+    // is tr.mphb-price-breakdown-booking, so find the table from there.
+    // The last row is the grand total and gets called out.
+    function tagBreakdownTable(root) {
+        var seed = root.querySelector('tr.mphb-price-breakdown-booking');
+        var table = seed && seed.closest('table');
+        if (!table) {
+            return;
+        }
+        table.classList.add('dcc_checkout-breakdown');
+        var rows = table.querySelectorAll('tr');
+        if (!rows.length) {
+            return;
+        }
+        Array.prototype.forEach.call(rows, function (r) {
+            r.classList.remove('dcc_checkout-breakdown-total');
+        });
+        rows[rows.length - 1].classList.add('dcc_checkout-breakdown-total');
     }
 
     /* ===================================================================== *
@@ -186,6 +211,7 @@
      * ===================================================================== */
 
     function applyBreakdownBreaks(root) {
+        tagBreakdownTable(root);
         var cells = root.querySelectorAll(
             'tr.mphb-price-breakdown-booking > td, tr.mphb-price-breakdown-booking > th'
         );
@@ -502,12 +528,28 @@
 
         var block = buildPetBlock();
 
-        // Insert the toggle block where the (now hidden) services were.
-        var anchor = serviceRowWrapper(serviceInputs[ids[0]]);
-        if (anchor && anchor.parentNode) {
-            anchor.parentNode.insertBefore(block.el, anchor);
+        // The toggle belongs with the dog questions, not in "Choose Additional
+        // Services" — that whole section is removed now (hideNativeServices),
+        // and a control left inside it would go with it. Put it at the top of
+        // the Pet Information section, above Dog type / Size / Hair.
+        var petSection = dog && dog.section;
+        if (petSection) {
+            var heading = petSection.querySelector('h3');
+            if (heading && heading.nextSibling) {
+                petSection.insertBefore(block.el, heading.nextSibling);
+            } else {
+                petSection.appendChild(block.el);
+            }
+            // The section itself is revealed only with the dog fields, but the
+            // question has to be askable before the answer is "Yes".
+            petSection.classList.remove('dcc_checkout-section-hidden');
         } else {
-            root.appendChild(block.el);
+            var anchor = serviceRowWrapper(serviceInputs[ids[0]]);
+            if (anchor && anchor.parentNode) {
+                anchor.parentNode.insertBefore(block.el, anchor);
+            } else {
+                root.appendChild(block.el);
+            }
         }
 
         function bucketId() {
@@ -590,12 +632,19 @@
         if (section) {
             insertAfter(section, anchor);
         }
-        var targets = section ? [section] : rows;
-
         function show(yes) {
-            targets.forEach(function (t) {
-                t.classList.toggle('dcc_checkout-section-hidden', !yes);
+            // Always hide/show the dog rows themselves.
+            rows.forEach(function (r) {
+                r.classList.toggle('dcc_checkout-section-hidden', !yes);
             });
+            if (section) {
+                // Hide the whole section only while it holds nothing but those
+                // rows. On a pet cottage the "Traveling with a dog?" toggle is
+                // moved in here, and the question has to stay visible so it can
+                // be answered — only the answers hide.
+                var hasToggle = !!section.querySelector('.dcc_checkout-pet');
+                section.classList.toggle('dcc_checkout-section-hidden', !yes && !hasToggle);
+            }
             inputs.forEach(function (inp) {
                 setRequired(inp, yes, root);
                 if (!yes) { clearInvalid(inp); }
@@ -604,7 +653,7 @@
 
         show(false); // hidden + not required by default, on every cottage
 
-        return { inputs: inputs, show: show };
+        return { inputs: inputs, show: show, section: section };
     }
 
     /* ===================================================================== *
@@ -910,6 +959,53 @@
     function describeEl(el) {
         var cls = String(el.className || '').trim();
         return el.tagName.toLowerCase() + (cls ? '.' + cls.split(/\s+/).join('.') : '');
+    }
+
+    // Remove "Choose Additional Services" outright.
+    //
+    // Every service this site sells is now driven by a control the guest
+    // already used: the pet fee by the "Traveling with a dog?" toggle, the
+    // extra-guest fee by the "Number of Guests" dropdown. Leaving the native
+    // section up means two controls for one decision, which is what the owner
+    // asked twice to be rid of — and it could disagree with the dropdown.
+    //
+    // Hiding does not stop the inputs submitting (display:none never does), so
+    // MotoPress still receives and prices the services this plugin ticked.
+    //
+    // Two guards, because a previous attempt at this hid the guest chooser:
+    //   - never hide a section that contains a guest-count dropdown;
+    //   - the hide uses the same class assertGuestChooserSurvived() undoes, so
+    //     if the chooser vanishes anyway, this is reversed automatically.
+    function hideNativeServices(root) {
+        var inputs = root.querySelectorAll('input[name*="[services]"], .mphb_sc_checkout-service');
+        if (!inputs.length) {
+            return;
+        }
+        var sections = [];
+        Array.prototype.forEach.call(inputs, function (el) {
+            var section = el.closest('.mphb-checkout-section');
+            if (section && sections.indexOf(section) === -1) {
+                sections.push(section);
+            }
+        });
+        if (!sections.length) {
+            // No recognisable section wrapper: fall back to hiding the rows we
+            // know, which is what earlier versions did.
+            Array.prototype.forEach.call(
+                root.querySelectorAll('.mphb_sc_checkout-service'),
+                hideServiceRow
+            );
+            return;
+        }
+        sections.forEach(function (section) {
+            if (roomAdultsSelects(section).length) {
+                return; // Holds the guest chooser — never hide this.
+            }
+            if (section.querySelector('.dcc_checkout-pet')) {
+                return; // Our own control ended up here; leave it visible.
+            }
+            hideServiceRow(section);
+        });
     }
 
     // Disable (never remove, never inject) guest-count options above `cap`, and
@@ -1241,6 +1337,9 @@
                 // already-clean text), so re-running is cheap and loop-safe.
                 cleanRequiredMarkers(root);
                 normalizeReservationDates(root);
+                // MotoPress re-renders the services block when the guest count
+                // changes; re-hide it, then re-prove the chooser survived.
+                hideNativeServices(root);
                 assertGuestChooserSurvived(root);
             }, 150);
         });

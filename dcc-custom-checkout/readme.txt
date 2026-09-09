@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.4.4
+Stable tag: 0.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,30 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.5.0 =
+* FIX: the "$" showed as "&#36;" in the guest-count labels and the note.
+  MotoPress stores the currency symbol HTML-encoded, and those strings are
+  written with textContent, which does not decode entities. Decoded once,
+  where the price is formatted.
+* "Choose Additional Services" is now removed entirely, not just the Extra
+  Guest Fee row. Every service this site sells is driven by a control the
+  guest already used — the pet fee by "Traveling with a dog?", the extra-guest
+  fee by "Number of Guests" — so the native section was a second control for a
+  decision already made. Hiding does not stop the inputs submitting, so
+  MotoPress still receives and prices them exactly as before.
+* The "Traveling with a dog?" toggle moves out of that section and into "Pet
+  Information", above Dog type / Size / Hair, where it belongs.
+* Two guards on that removal, because an earlier attempt at it hid the guest
+  dropdown: a section containing a guest-count dropdown is never hidden, and
+  the hide uses the class the post-pass assertion undoes, so if the chooser
+  disappears anyway the removal reverses itself.
+* Price Breakdown: rules between rows, amounts right-aligned in their own
+  column, and the final total called out with a heavier rule and bolder type.
+  The rules are structural rather than keyed to any row's wording, so nothing
+  breaks if MotoPress changes or translates a label.
+* "Services" reads "Extras" on the checkout. The pet and extra-guest fees are
+  not services chosen from a menu — they follow from answers already given.
 
 = 0.4.4 =
 * Hardening (no live behaviour change): the guest-count options above the
