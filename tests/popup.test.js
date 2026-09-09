@@ -797,6 +797,91 @@ async function run() {
         await ctx.close();
     }
 
+    // ---- Scenario M: swipe-down-to-close the mobile sheet (v0.12.5) ------
+    // From a screen recording: swiping the sheet down moved the sheet AND
+    // scrolled the page behind it, the sheet sometimes stuck mid-drag, and the
+    // swipe usually snapped back instead of closing. Causes: overflow:hidden
+    // does not lock scrolling on iOS; nothing claimed the gesture from the
+    // browser; pointercancel (which iOS fires when it takes a gesture over)
+    // was unhandled; and the dismiss threshold was 30% of sheet height.
+    {
+        console.log('\nM. Mobile sheet: swipe down to close');
+        const errors = [];
+        const html = buildFixture()
+            .replace('<body>', '<body><div style="height:1200px">tall page above</div>');
+        const { ctx, page } = await newPage(browser, PHONE, html, errors);
+
+        await page.evaluate(() => window.scrollTo(0, 900));
+        await openDetail(page);
+        // Read the locked position from the lock itself rather than from a
+        // snapshot taken before the click: Playwright scrolls a target into
+        // view before clicking it, so the page can move between the two.
+        const beforeY = await page.evaluate(() => -parseInt(document.body.style.top || '0', 10));
+
+        check('body is pinned while the sheet is open',
+            (await page.evaluate(() => getComputedStyle(document.body).position)) === 'fixed');
+        check('the lock captured a real scrolled position', beforeY > 0, `locked at ${beforeY}`);
+
+        // THE reported bug: the page behind must not move.
+        await page.evaluate(() => window.scrollBy(0, 400));
+        await page.waitForTimeout(120);
+        check('page behind cannot scroll while the sheet is open',
+            (await page.evaluate(() => window.scrollY)) === 0);
+
+        const box = await page.locator('.dccgg-stage').boundingBox();
+        await page.mouse.move(195, box.y + 20);
+        await page.mouse.down();
+        await page.mouse.move(195, box.y + 90, { steps: 6 });
+        await page.waitForTimeout(60);
+        const mid = await page.evaluate(() => ({
+            tf: document.querySelector('.dccgg-stage').style.transform,
+            trans: getComputedStyle(document.querySelector('.dccgg-stage')).transitionDuration,
+            marked: document.querySelector('.dccgg-stage').classList.contains('is-sheet-dragging'),
+        }));
+        check('sheet tracks the finger', /translateY\(\d+px\)/.test(mid.tf), mid.tf);
+        // The class must be on the STAGE: it is portaled to <body> when open,
+        // so a `.dccgg-root ...` descendant rule never reaches it.
+        check('drag disables the transition (class is on the portaled stage)',
+            mid.marked && mid.trans.split(',')[0].trim() === '0s', `${mid.trans.slice(0, 18)} marked=${mid.marked}`);
+
+        await page.mouse.up();
+        await page.waitForTimeout(500);
+        check('a short drag snaps back and stays open',
+            await page.evaluate(() => document.body.classList.contains('dccgg-detail-open')));
+
+        await page.mouse.move(195, box.y + 20);
+        await page.mouse.down();
+        await page.mouse.move(195, box.y + 200, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(800);
+        check('a deliberate drag closes the sheet',
+            !(await page.evaluate(() => document.body.classList.contains('dccgg-detail-open'))));
+        check('scroll position is restored exactly on close',
+            (await page.evaluate(() => window.scrollY)) === beforeY,
+            `${beforeY} -> ${await page.evaluate(() => window.scrollY)}`);
+        check('body is unpinned after close',
+            (await page.evaluate(() => getComputedStyle(document.body).position)) !== 'fixed');
+
+        // iOS fires pointercancel when it takes a gesture over; that used to
+        // leave the sheet stranded mid-transform with dragging still true.
+        await openDetail(page);
+        const box2 = await page.locator('.dccgg-stage').boundingBox();
+        await page.mouse.move(195, box2.y + 20);
+        await page.mouse.down();
+        await page.mouse.move(195, box2.y + 80, { steps: 4 });
+        await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true })));
+        await page.waitForTimeout(400);
+        const after = await page.evaluate(() => ({
+            tf: document.querySelector('.dccgg-stage').style.transform,
+            dragging: document.querySelector('.dccgg-stage').classList.contains('is-sheet-dragging'),
+        }));
+        await page.mouse.up();
+        check('a cancelled gesture resets instead of stranding the sheet',
+            after.tf === '' && !after.dragging, `transform="${after.tf}" dragging=${after.dragging}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

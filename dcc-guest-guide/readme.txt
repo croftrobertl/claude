@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.4
+Stable tag: 0.12.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,30 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.5 =
+
+**Fixed: swiping a section popup down behaved erratically on iPhone.**
+
+Swiping down to close moved the popup and scrolled the page behind it at
+the same time, the popup could stick part-way down, and most swipes
+snapped back instead of closing. Four causes, all fixed:
+
+* **The page behind is now properly locked.** The method used to hold it
+  still is ignored by iPhone Safari, so the page underneath scrolled
+  along with the swipe. The page is now genuinely pinned while a section
+  is open, and returns to exactly where you left it when it closes.
+* **The swipe now belongs to the popup.** Nothing previously told Safari
+  to stop its own scrolling during the gesture, so two things moved at
+  once. Ordinary scrolling inside a section is unaffected.
+* **An interrupted swipe no longer strands the popup part-way.** If the
+  phone took the gesture over, the popup was left mid-slide; it now
+  settles back cleanly.
+* **Swipes close more readily.** Closing needed a drag of nearly a third
+  of the popup's height; a normal swipe, or a quick flick, now closes it.
+
+The popup also tracks your finger exactly during the swipe instead of
+lagging behind it.
 
 = 0.12.4 =
 

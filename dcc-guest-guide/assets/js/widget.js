@@ -1995,6 +1995,9 @@
         }, 400);
     }
 
+    // Scroll offset captured when the body is pinned (see showDetailModal).
+    let lockedScrollY = 0;
+
     // -- Detail-modal portal + scroll-lock + ESC + backdrop -----------------
     // Ancestors of the widget often have transform/overflow that breaks
     // position:fixed containment. Lifting the stage + overlay to <body>
@@ -2155,6 +2158,15 @@
         // move and were the direct cause of the "jumps and overflows the
         // top after the first tap/scroll" bug. A static svh cap can't
         // overflow, so nothing needs to track the viewport.
+        // v0.12.5: `overflow: hidden` on html/body does NOT stop iOS Safari
+        // scrolling the page — the guest's swipe dragged the sheet AND scrolled
+        // the page behind it at the same time. Pinning the body and offsetting
+        // it by the current scroll position is the lock iOS actually honours;
+        // the offset is restored on close so the page does not jump.
+        if (!document.body.classList.contains('dccgg-detail-open')) {
+            lockedScrollY = window.scrollY || window.pageYOffset || 0;
+            document.body.style.top = (-lockedScrollY) + 'px';
+        }
         document.documentElement.classList.add('dccgg-detail-open');
         document.body.classList.add('dccgg-detail-open');
         // Force a layout flush so the closed-state CSS commits before we
@@ -2245,6 +2257,9 @@
         state.closeTimer = setTimeout(() => {
             document.documentElement.classList.remove('dccgg-detail-open');
             document.body.classList.remove('dccgg-detail-open');
+            // Unpin and put the page back exactly where the guest left it.
+            document.body.style.top = '';
+            window.scrollTo(0, lockedScrollY);
             if (state.overlay) state.overlay.hidden = true;
             if (state.stageMarker && state.stageMarker.parentNode) {
                 state.stageMarker.parentNode.insertBefore(state.stage, state.stageMarker);
@@ -3695,7 +3710,28 @@
 
         let startY = 0;
         let currentY = 0;
+        let startT = 0;
         let dragging = false;
+
+        // v0.12.5: one exit for every way a drag can end. Previously only
+        // pointerup was handled, so when iOS took the gesture over for its own
+        // scrolling it fired pointercancel instead and the sheet was left
+        // stranded mid-transform with the dragging flag still set — the sheet
+        // stuck at an angle, and the next touch behaving oddly.
+        const endDrag = (commit) => {
+            if (!dragging) return;
+            dragging = false;
+            root.classList.remove('is-sheet-dragging');
+            stage.classList.remove('is-sheet-dragging');
+            const dy = Math.max(0, currentY - startY);
+            const dt = Math.max(1, Date.now() - startT);
+            // Either a deliberate drag or a quick flick dismisses. The old test
+            // was 30% of sheet height — on a tall sheet that is ~225px, far more
+            // than a guest expects to drag, so swipes kept snapping back.
+            const dismiss = commit && (dy > Math.min(140, stage.offsetHeight * 0.25) || (dy / dt) > 0.5);
+            stage.style.transform = '';
+            if (dismiss) closeDetail(root);
+        };
 
         stage.addEventListener('pointerdown', (e) => {
             if (!isMobileSheet() || !root.classList.contains('is-detail')) return;
@@ -3708,7 +3744,9 @@
             dragging = true;
             startY = e.clientY;
             currentY = e.clientY;
+            startT = Date.now();
             root.classList.add('is-sheet-dragging');
+            stage.classList.add('is-sheet-dragging');
         });
         bindGlobal(root, document, 'pointermove', (e) => {
             if (!dragging) return;
@@ -3716,15 +3754,19 @@
             const dy = Math.max(0, currentY - startY);
             stage.style.transform = 'translateY(' + dy + 'px)';
         });
-        bindGlobal(root, document, 'pointerup', () => {
-            if (!dragging) return;
-            dragging = false;
-            root.classList.remove('is-sheet-dragging');
-            const dy = Math.max(0, currentY - startY);
-            const dismiss = dy > (stage.offsetHeight * 0.3);
-            stage.style.transform = '';
-            if (dismiss) closeDetail(root);
-        });
+        // The gesture must be claimed from the browser explicitly. Without a
+        // non-passive touchmove that calls preventDefault, Safari scrolls the
+        // sheet's own content (and the page) while the JS is also translating
+        // the sheet — two things moving at once, which is what the recording
+        // shows. Only preventDefault while a drag is actually in progress, so
+        // ordinary scrolling inside the popup is untouched.
+        bindGlobal(root, document, 'touchmove', (e) => {
+            if (dragging && e.cancelable) e.preventDefault();
+        }, { passive: false });
+
+        bindGlobal(root, document, 'pointerup',     () => endDrag(true));
+        bindGlobal(root, document, 'pointercancel', () => endDrag(false));
+        bindGlobal(root, document, 'touchcancel',   () => endDrag(false));
     }
 
     // -- Sticky TOC current-item highlight --------------------------------

@@ -773,6 +773,23 @@ html.dccgg-detail-open,
 body.dccgg-detail-open {
     overflow: hidden;
 }
+/* v0.12.5: iOS Safari ignores overflow:hidden for scroll-locking, so the page
+   scrolled behind the open sheet while the guest was swiping it. Pinning the
+   body is the lock iOS honours; showDetailModal() offsets it by the current
+   scroll position and restores that on close. */
+body.dccgg-detail-open {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+}
+/* No transition while the finger is down — the sheet must track the finger
+   exactly. It returns on release so the snap-back animates. */
+/* Matched on the stage itself: while the modal is open the stage is portaled
+   to <body>, so a `.dccgg-root ...` descendant rule would never reach it. */
+.dccgg-stage.is-sheet-dragging {
+    transition: none !important;
+}
 
 /* -------- Menu hub: layouts -------- */
 .dccgg-menu {
