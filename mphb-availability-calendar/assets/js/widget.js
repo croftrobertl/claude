@@ -1582,6 +1582,10 @@
     function renderEstimateLine(lineEl, strings, nights, priceHtml, avgHtml) {
         lineEl.textContent = '';
         var label = document.createElement('strong');
+        // Own row (see .mphbac-estimate-label). The space text node below is
+        // kept so the line still reads correctly if that CSS never lands —
+        // leading whitespace collapses when it does.
+        label.className = 'mphbac-estimate-label';
         label.textContent = (strings.priceLabel || 'Estimated total:');
         lineEl.appendChild(label);
         lineEl.appendChild(document.createTextNode(' '));

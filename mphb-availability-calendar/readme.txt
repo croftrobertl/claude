@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.5
+Stable tag: 0.23.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.6 =
+* Booking popup: the estimated-price block is now centred, and "Estimated total:" sits on its own line above the amount, so the price is what the eye lands on:
+  Estimated total:
+  $350 for 2 nights ($175/night avg)
+  for 2 guests, before any taxes/fees — final price shown at checkout
+* The wording is unchanged — the disclaimer is still the editable text set in Elementor.
 
 = 0.23.5 =
 * **Fixed: the "Today" button never went away on the main calendar.** It was meant to disappear whenever today was already on screen, and the code was asking for that correctly — but a styling rule was quietly keeping it visible. It has been dead weight on every public calendar since the button was enlarged for touch. The staff calendar always had the matching rule, which is why it behaved. Both now hide it the same way.

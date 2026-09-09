@@ -1545,7 +1545,19 @@ body.mphbac-info-open {
     font-size: 0.9em;
     line-height: 1.4;
 }
+/* The whole estimate block is centred (0.23.6). Class-doubled because the
+   sheet is portaled to <body> when the popup opens, so no .mphbac-root
+   ancestor is left to scope by, and (0,2,0) also outranks a theme rule that
+   left-aligns paragraphs. */
+.mphbac-sheet-estimate.mphbac-sheet-estimate {
+    text-align: center;
+}
 .mphbac-sheet-estimate[hidden] { display: none; }
+/* "Estimated total:" sits on its own row above the amount, so the number is
+   the thing the eye lands on rather than the tail of a sentence. */
+.mphbac-estimate-label {
+    display: block;
+}
 .mphbac-estimate-note {
     display: block;
     font-size: 0.85em;
