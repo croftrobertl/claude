@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,22 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.5.1 =
+* VERIFIED on live: 4 guests x 2 nights bills the Extra Guest Fee at
+  $50 x 2 nights x 2 guests = $200, subtotal $550, total $588.50 — exactly what
+  the "4 (+$100/night)" label promises. Taxes were unchanged at $38.50 with and
+  without the fee, confirming it stays untaxed as intended. This is the first
+  end-to-end confirmation of the extra-guest money path.
+* Price Breakdown: expanding an accommodation listed every individual tax and
+  then MotoPress's own "Accommodation Taxes Total". The components (and their
+  column header) now collapse under a "Show detail" toggle on that total row.
+  The total shown is MotoPress's own — no arithmetic is done here. Rows are
+  matched on their rendered label, so this is English-only and a miss simply
+  leaves the breakdown unchanged; override with dcc_checkout_tax_row_pattern.
+* "Service" and "Services Total" join "Services" in reading as Extras wording
+  on the checkout, so the fees are no longer presented as services a guest
+  picked from a menu.
 
 = 0.5.0 =
 * FIX: the "$" showed as "&#36;" in the guest-count labels and the note.

@@ -41,8 +41,10 @@ final class Assets
             // they follow from answers already given. Relabelled in the price
             // breakdown. A msgid MotoPress doesn't actually use simply never
             // matches, so a wrong guess here is a no-op, not a bug.
-            'Services'  => __('Extras', 'dcc-checkout'),
-            'Services:' => __('Extras:', 'dcc-checkout'),
+            'Services'       => __('Extras', 'dcc-checkout'),
+            'Services:'      => __('Extras:', 'dcc-checkout'),
+            'Service'        => __('Item', 'dcc-checkout'),
+            'Services Total' => __('Extras Total', 'dcc-checkout'),
         ]);
         if (!isset($map[$text])) {
             return $translation;
@@ -161,6 +163,9 @@ final class Assets
             'guestFeeSteps'       => Config::guest_fee_steps(),
             'couchBedsText'       => Config::couch_beds_text(),
             'guestsSelector'   => Config::guests_selector(),
+            // Which price-breakdown rows count as tax detail. Matched against
+            // the rendered label, so it is language-specific; filterable.
+            'taxRowPattern'    => (string) apply_filters('dcc_checkout_tax_row_pattern', 'tax'),
             // Surfaces misconfiguration notices (e.g. a double-prefixed
             // Checkout Field slug) on the page for administrators only.
             'isAdmin'          => current_user_can('manage_options'),
@@ -190,6 +195,8 @@ final class Assets
                 'errPet'        => __('There was a problem applying the pet fee. Please review the "Traveling with a dog?" section and try again.', 'dcc-checkout'),
                 'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
                 'adminNoticePrefix' => __('Visible to administrators only:', 'dcc-checkout'),
+                'taxDetailShow' => __('Show detail', 'dcc-checkout'),
+                'taxDetailHide' => __('Hide detail', 'dcc-checkout'),
             ],
         ];
     }

@@ -115,6 +115,91 @@
             r.classList.remove('dcc_checkout-breakdown-total');
         });
         rows[rows.length - 1].classList.add('dcc_checkout-breakdown-total');
+        collapseTaxDetail(table);
+    }
+
+    // Fold the individual taxes behind the total MotoPress already prints.
+    //
+    // Expanding an accommodation lists every tax line — here: Lake County
+    // Tourist Development Tax, Lake County Discretionary Sales Surtax, Florida
+    // Sales and Use Tax — and then "Accommodation Taxes Total". The total is
+    // the number a guest wants; the three components are detail. So the
+    // components (and their column header) collapse under a toggle on the
+    // total row, which is exactly the "expand or tooltip" the owner asked for.
+    //
+    // No arithmetic is done: the total shown is MotoPress's own, untouched.
+    // Rows are found by their rendered label, so this is English-only — a miss
+    // simply leaves the breakdown as it is. Override with the
+    // dcc_checkout_tax_row_pattern filter if that ever matters.
+    function collapseTaxDetail(table) {
+        var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+        var re;
+        try {
+            re = new RegExp(CFG.taxRowPattern || 'tax', 'i');
+        } catch (e) {
+            re = /tax/i;
+        }
+
+        rows.forEach(function (row, idx) {
+            var text = rowLabel(row);
+            // The summary row: mentions tax AND total (e.g. "Accommodation
+            // Taxes Total"). The plain top-level "Taxes" row has no detail
+            // above it and is deliberately not matched.
+            if (!re.test(text) || !/total/i.test(text)) {
+                return;
+            }
+            if (row.getAttribute('data-dcc-tax')) {
+                return; // Already wired on this render.
+            }
+
+            // Walk back over the contiguous run of tax rows above it.
+            var group = [];
+            for (var i = idx - 1; i >= 0; i--) {
+                var label = rowLabel(rows[i]);
+                if (!label || !re.test(label)) {
+                    break;
+                }
+                group.unshift(rows[i]);
+            }
+            if (!group.length) {
+                return; // Nothing to fold away.
+            }
+
+            row.setAttribute('data-dcc-tax', '1');
+            var open = false;
+            var toggle = document.createElement('button');
+            toggle.type = 'button';           // never submit the checkout
+            toggle.className = 'dcc_checkout-tax-toggle';
+            toggle.setAttribute('aria-expanded', 'false');
+
+            function apply() {
+                group.forEach(function (r) {
+                    r.classList.toggle('dcc_checkout-section-hidden', !open);
+                });
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.textContent = open
+                    ? (I18N.taxDetailHide || 'Hide detail')
+                    : (I18N.taxDetailShow || 'Show detail');
+            }
+
+            toggle.addEventListener('click', function () {
+                open = !open;
+                apply();
+            });
+            apply();
+
+            var cell = row.cells && row.cells[0];
+            if (cell) {
+                cell.appendChild(document.createTextNode(' '));
+                cell.appendChild(toggle);
+            }
+        });
+    }
+
+    // A breakdown row's label — the text of its first cell.
+    function rowLabel(row) {
+        var cell = row.cells && row.cells[0];
+        return cell ? String(cell.textContent || '').trim() : '';
     }
 
     /* ===================================================================== *
