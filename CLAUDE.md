@@ -154,6 +154,16 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
+- **The engine's size baseline is 93,845 raw / 32,920 gzipped (3.15.0,
+  verified live). Cite that, not the 66KB/23KB ceiling.** That ceiling was
+  real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
+  backdrop machinery landed: 3.6.0 70,945 / 24,580 · 3.7.0 79,866 / 27,382 ·
+  3.8.0 87,865 / 29,863 · 3.10.0 90,137 / 30,849 · 3.13.0 92,296 / 31,724 ·
+  3.14.0 92,990 / 32,123 · 3.15.0 93,845 / 32,920. Eight releases shipped over
+  it, so a brief that budgets against 66KB/23KB is budgeting against a number
+  that has not been true for months — measure the current build and quote
+  that. Retiring four sprites in 3.15.0 bought back roughly 2.9KB raw, which
+  is the scale a sprite cull returns.
 - **Never run a numeric-precision regex over the sprite path data.** A trim regex
   in 3.2.0 fused compact SVG number pairs (`8.2.4` is two numbers, not one),
   silently corrupting four sprites; the corrupted output is an ordinary-looking
@@ -295,6 +305,14 @@ bump so the tracked zip never lags the source.
   fallback never fires. Keep the build under 2ms: it is 136 hit tests on a
   phone and `getComputedStyle` dominates, so each build stamps its verdict on
   the element (`_dccPb`/`_dccPo`) and every ancestor answers once.
+  The live homepage, measured: 99-100% open in the band between the hero and
+  the Cottage Selector, then 8-69% open per 300px band below it. There is
+  genuinely little else to seed into on a phone, so if clustering is still
+  reported the next lever is DENSITY, not placement. Note the interaction:
+  `SPREAD_TRIES`/`SEP_K` step up at `maxParts <= 12`, and `maxParts` is
+  `density - 3` on a water theme — so the owner's density 16 on
+  `florida_keys` gives 13 and just misses the tighter tuning. Dropping to 15
+  removes one sprite AND switches it on.
 - **Even spacing is a SEED-TIME rule, and it must stay one.** Uniform random
   placement bunches: measured over 200 fields of 16 particles at 390x844, the
   pre-3.14.0 engine put six or more into the same ninth of the canvas in 27 of
@@ -333,6 +351,8 @@ bump so the tracked zip never lags the source.
   that window and it fails. Measured: 2 failures in 9 runs under concurrent
   load, 0 in 6 when alternated against the previous build on an idle machine
   (which was also 0/5). Re-run it alone before treating it as a regression.
+- **No weather coupling.** Weather-driven rain/fog has been proposed and
+  explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with
   the backdrop-host decision and the content column's ancestor chain. Ask the
   owner for that text before theorising about the live layering.
