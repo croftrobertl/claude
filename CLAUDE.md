@@ -154,12 +154,13 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 93,845 raw / 32,920 gzipped (3.15.0,
-  verified live). Cite that, not the 66KB/23KB ceiling.** That ceiling was
+- **The engine's size baseline is 95,220 raw / 33,372 gzipped (3.16.0;
+  3.15.0 was 93,845 / 32,920, verified live). Cite that, not the 66KB/23KB
+  ceiling.** That ceiling was
   real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
   backdrop machinery landed: 3.6.0 70,945 / 24,580 · 3.7.0 79,866 / 27,382 ·
   3.8.0 87,865 / 29,863 · 3.10.0 90,137 / 30,849 · 3.13.0 92,296 / 31,724 ·
-  3.14.0 92,990 / 32,123 · 3.15.0 93,845 / 32,920. Eight releases shipped over
+  3.14.0 92,990 / 32,123 · 3.15.0 93,845 / 32,920 · 3.16.0 95,220 / 33,372. Nine releases shipped over
   it, so a brief that budgets against 66KB/23KB is budgeting against a number
   that has not been true for months — measure the current build and quote
   that. Retiring four sprites in 3.15.0 bought back roughly 2.9KB raw, which
@@ -233,6 +234,23 @@ bump so the tracked zip never lags the source.
      at 20, and re-runs `fixCoverage` afterwards because the re-render may
      have changed what paints over it.
   Override the host with the `dcc_seasons_backdrop_host` filter.
+- **REACH IS NOT THE SAME AS BEING SEEN, and a host too short is worse than
+  a host partly painted over.** `coverage()` answers "what fraction of the
+  CANVAS does nothing paint over", so a 300px canvas nobody can see scores
+  100% and the panel says "behind is working". For three releases the descend
+  step traded the whole page for that number: an opaque 300px section inside
+  the article won the descend, the canvas was refitted to 300px, and sprites
+  could only ever appear in that band — the owner's "they begin after the hero
+  image and stop above the text row". `worth(el, reach)` = the host's own
+  height (a sticky canvas slides through its host) x the reach it would end up
+  with, and `fixCoverage()` refuses a descend into a host shorter than the
+  screen, or one that gives up more than 40% of the paintable page. Cost
+  STAYING honestly too: `canTransfer()` says whether the covering element's
+  background can move onto the canvas, in which case staying is worth full
+  reach over the whole host. Keep 3.10.0's ordinary descend into the opaque
+  article working — `scratchpad/test-mount.js` asserts it — and check
+  `SCREEN REACH` in `?dcc_debug=1`, not just `CANVAS REACH`, before believing
+  the backdrop is fine. `scratchpad/test-host.js` holds the whole trade.
 - **A new theme does NOT reach an edited schedule by itself.** `migrate()`
   only replaces a stored schedule outright when it recognises it as the
   unmodified pre-3.7.0 default; anything the owner touched is converted row

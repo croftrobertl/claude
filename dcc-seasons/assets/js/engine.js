@@ -747,11 +747,18 @@
 		 * fully opaque colour can move this way — an image or a gradient
 		 * cannot be faked, so those are left alone and reported. */
 		var bgFills = [];
-		function transferBg(el) {
+		/* Asked twice: once by the descend decision, which needs to know what
+		 * STAYING would be worth, and once by the transfer itself. */
+		function canTransfer(el) {
 			if (!el || el === cv || bgFills.length >= 3) { return false; }
 			var cs2 = W.getComputedStyle(el);
 			if (cs2.backgroundImage !== 'none' || alphaOf(cs2) < 0.95) { return false; }
 			for (var i = 0; i < bgFills.length; i++) { if (bgFills[i].el === el) { return false; } }
+			return true;
+		}
+		function transferBg(el) {
+			if (!canTransfer(el)) { return false; }
+			var cs2 = W.getComputedStyle(el);
 			/* getComputedStyle returns a LIVE declaration, so read the colour
 			 * out before clearing it — reading after gives 'transparent'. */
 			var col = cs2.backgroundColor;
@@ -836,6 +843,31 @@
 		 * not exist a moment later — a column whose images have not loaded is
 		 * a few pixels tall, and a canvas fitted to it has no measurable box
 		 * at all. Only the settled run is allowed to complain. */
+		/* WHAT A HOST IS WORTH: the page area the canvas can ever paint in
+		 * it. A sticky canvas slides through its host as the visitor scrolls,
+		 * so that is the host's own height times the fraction of the canvas
+		 * nothing paints over.
+		 *
+		 * Reach alone is a trap, and it cost three rounds of reports: a 300px
+		 * section that nothing paints over scores 100%, so the descend below
+		 * moved into one and reported "behind is working" about a canvas that
+		 * could only ever show sprites in a 300px band anchored to that
+		 * section — measured on the live homepage, where sprites "begin after
+		 * the hero image and stop above the text row" and nothing appears
+		 * below it at any scroll position. Descending is only ever worth it
+		 * if the new host can paint MORE of the page than the one we are in.
+		 * A fixed canvas is viewport-sized wherever it lands, so this
+		 * question is only about sticky hosts. */
+		function worth(el, reach) {
+			return el ? mx2(0, rectOf(el).height) * clamp(reach, 0, 1) : 0;
+		}
+		/* How much of the SCREEN the canvas can paint right now. The number
+		 * "behind is working" should have been quoting all along. */
+		function viewShare() {
+			var r = cv.getBoundingClientRect();
+			var vis = mn(r.bottom, W.innerHeight) - mx2(r.top, 0);
+			return W.innerHeight > 0 ? clamp(vis / W.innerHeight, 0, 1) : 0;
+		}
 		function fixCoverage(settled) {
 			var cov, pass, c2, moved, m2, prev2, prevMode;
 			for (pass = 0; pass < 4; pass++) {
@@ -847,8 +879,33 @@
 						: 'not measurable yet — none of the canvas is on screen'));
 				if (!cov.measurable || cov.reach >= 0.75 || !cov.cover) { break; }
 				c2 = cov.cover; moved = false;
-				if (viable(c2)) {
-					m2 = trapped(c2) ? 'sticky' : 'fixed';
+				m2 = trapped(c2) ? 'sticky' : 'fixed';
+				/* Would moving there paint more of the page than staying? A
+				 * sticky host can only ever paint its own height. */
+				/* What staying is worth is not today's reach: if the covering
+				 * element's background can be moved onto the canvas, staying
+				 * ends at full reach over the whole host. Compare the two
+				 * outcomes, not one outcome and one starting point. */
+				var stay = canTransfer(c2) ? 1 : cov.reach;
+				var keep = worth(host, stay), gain = worth(c2, 1);
+				/* Two ways a descend is a bad deal, and only two — 3.10.0's
+				 * ordinary descend into the opaque article is neither, and
+				 * the mount suite holds that line. A host SHORTER THAN THE
+				 * SCREEN can never fill it, whatever its reach; and a host
+				 * that gives up most of the paintable page is a bad trade
+				 * even when it is taller than the screen. */
+				var tall = mn(svhPx(), mx2(W.innerHeight, 1));
+				var short2 = rectOf(c2).height < tall;
+				var worse = m2 === 'sticky' && (short2 || gain < keep * 0.6);
+				if (worse) {
+					diag.notes.push('NOT descending into ' + pathOf(c2) + ': it is ' +
+						MT.round(rectOf(c2).height) + 'px tall' + (short2 ? ', shorter than the ' + MT.round(tall) +
+						'px screen' : '') + ', so the canvas could paint ' + MT.round(gain) +
+						'px of page there against ' + MT.round(keep) + 'px where it is' +
+						(stay === 1 ? ' once its background moves onto the canvas' : '') +
+						' — a taller host that is partly painted over beats a short one that is not');
+				}
+				if (viable(c2) && !worse) {
 					prev2 = host; prevMode = hostMode;
 					if (mountIn(c2, m2)) {
 						diag.tried.push('USED   ' + desc(c2) + '  (descend, ' + m2 + ')');
@@ -873,6 +930,15 @@
 			diag.reach = fin.measurable ? fin.reach : null;
 			diag.covers = fin.cover ? pathOf(fin.cover) : '';
 			diag.distinct = fin.distinct;
+			diag.share = viewShare();
+			diag.paint = MT.round(worth(host, fin.measurable ? fin.reach : 1));
+			/* A canvas can be 100% unpainted-over and still be a letterbox
+			 * nobody sees. Say so, in the same breath as the reach. */
+			if (settled && diag.share < 0.5 && W.console && W.console.warn) {
+				W.console.warn('DCC Seasons: the ambient canvas covers only ' + MT.round(diag.share * 100) +
+					'% of the screen (' + MT.round(cv.getBoundingClientRect().height) + 'px of ' + W.innerHeight +
+					'px), so sprites can only appear in that band. Run ?dcc_debug=1 as an administrator for the mount decision.');
+			}
 			if (settled && fin.measurable && fin.reach < 0.5 && W.console && W.console.warn) {
 				W.console.warn('DCC Seasons: the ambient canvas is mounted but ' + MT.round((1 - fin.reach) * 100) +
 					'% of it is painted over by ' + (fin.cover ? pathOf(fin.cover) : 'the theme') +
@@ -934,6 +1000,10 @@
 					: 'not built (front layering or no host) — the canvas is above the page'));
 				lines.push('anti-clump: ' + (repN ? repMs.toFixed(3) + 'ms/frame over ' + repN + ' frames' : 'no frames measured yet') +
 					'  spacing target ' + MT.round(sepRun) + 'px  free-air ' + frn + '/' + parts.length + ' particles');
+				lines.push('SCREEN REACH: ' + MT.round((diag.share || 0) * 100) + '% of the viewport is canvas' +
+					(diag.share >= 0.5 ? '' : '  — LETTERBOX: sprites can only appear in that band') +
+					'  (canvas ' + MT.round(r.height) + 'px of ' + W.innerHeight + 'px; the host can hold ' +
+					(diag.paint || 0) + 'px of page)');
 				lines.push('backdropHost filter=' + (CFG.backdropHost || '(none)') + '  candidates=' + cand.length);
 				for (var di = 0; di < diag.tried.length; di++) { lines.push('  ' + diag.tried[di]); }
 				for (di = 0; di < diag.notes.length; di++) { lines.push('  ! ' + diag.notes[di]); }
@@ -3144,6 +3214,8 @@
 				get vh() { return vh; },
 				get waterY() { return waterY; },
 				get sep() { return sepRun; },
+				get share() { return viewShare(); },
+				get paintable() { return worth(host, 1); },
 				get openMap() {
 					return { n: omN, total: omTot, frac: omFrac, ms: omMs, builds: omBuilds,
 						cell: MAP_CELL, usable: mapUsable(), measured: omMeas, openMeasured: omOpen,

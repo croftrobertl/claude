@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.15.0
+Stable tag: 3.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,41 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.16.0 =
+* FIXED: "the floating items only show above the top part of the About Us
+  section — it begins after the hero image and stops above the text row." They
+  did, and no amount of placement work could have helped, because the canvas
+  was only that tall. Measured off the screen recording (patriot-red and navy
+  sprite pixels, DPR 3): a band roughly 300 CSS px tall, anchored to the page
+  rather than the viewport, in a ~660px screen.
+* The cause was the descend step of the backdrop self-check. When something
+  inside the host paints over the canvas, the engine moves the canvas INTO
+  that element — and it never asked whether the new host was big enough to be
+  worth having. Reproduced with the shipped 3.15.0 engine on a fixture in the
+  live shape: an opaque 300px section inside the transformed article wins the
+  descend, the canvas is refitted to 300px, and after scrolling 1,200px it
+  covers 0 of 660 screen pixels. There are no sprites below that section at
+  any scroll position. The panel called it "behind is working", because reach
+  measures the fraction of the CANVAS nothing paints over — a 1px canvas
+  scores 100%.
+* A host is now judged by the page area the canvas can actually paint in it:
+  its own height (a sticky canvas slides through its host) times the reach it
+  would end up with. Two descends are refused: into a host SHORTER THAN THE
+  SCREEN, which can never fill one whatever its reach, and into a host that
+  gives up more than 40% of the paintable page. Staying is costed honestly —
+  if the covering element's background can be moved onto the canvas, staying
+  is worth full reach over the whole host, not today's reach. 3.10.0's
+  ordinary descend into the opaque article is neither case and is unchanged;
+  the mount suite holds that line. On the same fixture the canvas now stays on
+  the article and covers 660 of 660 screen pixels at every section height
+  tested (120px through 2,400px), and a tall section whose background CANNOT
+  be moved still wins the descend.
+* ?dcc_debug=1 gained SCREEN REACH — how much of the viewport is canvas, and
+  the word LETTERBOX when it is under half — and the console says so once at
+  the settled pass. The old CANVAS REACH line stays: both are true at once,
+  and only having the first is what let this run for three releases.
+* engine.min.js is 95,220 raw / 33,372 gzipped (3.15.0 was 93,845 / 32,920).
 
 = 3.15.0 =
 * FIXED: "sprites only show up in the area underneath the hero image and above
