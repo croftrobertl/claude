@@ -536,12 +536,13 @@ class Widget extends Widget_Base
             'label'         => __('Column width', 'mphb-availability-calendar'),
             'type'          => Controls_Manager::SLIDER,
             'size_units'    => ['px', 'em'],
-            'default'       => ['size' => 180, 'unit' => 'px'],
-            'tablet_default'=> ['size' => 140, 'unit' => 'px'],
-            // 88px is the narrowest phone track at which none of the two-line
-            // cottage names clips (measured). The stylesheet also floors the
-            // track at 88px on phones, so an older saved value cannot clip.
-            'mobile_default'=> ['size' => 88, 'unit' => 'px'],
+            // 0.23.9: 96px at every breakpoint — the width both live
+            // calendars use, and comfortably clear of the longest name
+            // ("Blue Heron"). The stylesheet still floors the phone track at
+            // 88px so an OLDER saved value cannot clip.
+            'default'       => ['size' => 96, 'unit' => 'px'],
+            'tablet_default'=> ['size' => 96, 'unit' => 'px'],
+            'mobile_default'=> ['size' => 96, 'unit' => 'px'],
             'range'         => [
                 'px' => ['min' => 70, 'max' => 320, 'step' => 2],
                 'em' => ['min' => 4, 'max' => 22, 'step' => 0.5],
@@ -716,7 +717,8 @@ class Widget extends Widget_Base
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
             'range'      => ['px' => ['min' => 10, 'max' => 22, 'step' => 1]],
-            'default'    => ['unit' => 'px', 'size' => 14],
+            // 0.23.9: the /cottages/ value, so a fresh widget needs no styling.
+            'default'    => ['unit' => 'px', 'size' => 18],
             'selectors'  => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-font-size: {{SIZE}}{{UNIT}};',
             ],

@@ -719,6 +719,15 @@
         swiperEls.forEach(function (el) {
             var sw = el.swiper;
             if (!sw) return;
+            // Never update against a zero width. Swiper's watchOverflow
+            // decides from the measured width whether there is anything to
+            // scroll, and at width 0 it concludes there is not: it sets
+            // isLocked and stamps swiper-button-lock on the arrows, which is
+            // exactly the "arrows appear then immediately hide" report. A
+            // real swipe later forces a recompute, which is why swiping
+            // brought them back. Bailing here leaves the slider in its
+            // page-load state until settle(), which runs at full width.
+            if (!el.getBoundingClientRect().width) return;
             try {
                 // Full re-measure sequence: a slider (Stratum Advanced Slider,
                 // Elementor carousel) that initialized while the popup content
@@ -831,6 +840,70 @@
         });
     }
 
+    // Undo a navigation lock that was applied against a bad measurement.
+    // Swiper adds swiper-button-lock when it believes every slide fits; if
+    // that verdict was reached at zero width it survives until the user
+    // swipes. Re-running checkOverflow at real width is the authoritative
+    // recompute; the class sweep is for versions that do not clear it
+    // themselves. swiper-button-disabled is deliberately left alone — at the
+    // ends of a non-looping carousel it is correct.
+    function unlockSwiperNav(container) {
+        if (!container) return;
+        container.querySelectorAll('.swiper, .swiper-container').forEach(function (el) {
+            var sw = el.swiper;
+            if (!sw || !el.getBoundingClientRect().width) return;
+            try {
+                if (sw.checkOverflow) sw.checkOverflow();
+                if (sw.isLocked === false) {
+                    el.querySelectorAll('.swiper-button-lock').forEach(function (b) {
+                        b.classList.remove('swiper-button-lock');
+                    });
+                }
+                if (sw.navigation && sw.navigation.update) sw.navigation.update();
+            } catch (e) { /* older Swiper without checkOverflow — leave it */ }
+        });
+    }
+
+    // Which modality opened the last thing. A <button> fires a synthesised
+    // click for Enter/Space, so the event type alone cannot tell a tap from a
+    // keypress — this mirrors the browser's own :focus-visible heuristic and
+    // is the only signal available at open time.
+    var lastInputWasKeyboard = false;
+    (function trackInputModality() {
+        if (!document.addEventListener) return;
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                lastInputWasKeyboard = true;
+            }
+        }, true);
+        ['pointerdown', 'touchstart', 'mousedown'].forEach(function (ev) {
+            document.addEventListener(ev, function () { lastInputWasKeyboard = false; }, true);
+        });
+    }());
+
+    // Return focus to whatever opened a dialog, WITHOUT leaving a focus ring
+    // behind after a tap. A popup opened with the keyboard must land focus
+    // visibly on its trigger; one opened by tapping must not, or the trigger
+    // keeps the gold outline until the next tap elsewhere — which is what
+    // Rob saw on the cottage cell after closing the info popup.
+    //
+    // The browser's own :focus-visible heuristic is not enough here: focus()
+    // called while the heuristic is in keyboard mode (it was, because the
+    // dialog's close button held focus) matches :focus-visible even though
+    // the user last touched the screen. So the opening modality is recorded
+    // and honoured explicitly.
+    function restoreTriggerFocus(trigger, viaKeyboard) {
+        if (!trigger || !trigger.focus) return;
+        try {
+            trigger.focus({ preventScroll: true });
+            if (!viaKeyboard && trigger.blur) {
+                // Tapped open: hand focus back to the document, exactly as a
+                // tap on the page would. No ring can linger.
+                trigger.blur();
+            }
+        } catch (e) { /* ignore */ }
+    }
+
     function wireInfoPopup(root, config) {
         var sheet = root.querySelector('.mphbac-info-sheet');
         var overlay = root.querySelector('.mphbac-info-overlay');
@@ -873,6 +946,7 @@
         window.addEventListener('resize', updateScrollbar);
 
         var lastTrigger = null;
+        var openedViaKeyboard = false;
         var closeTimer = null; // pending 200ms close cleanup; cancelled on reopen
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
@@ -933,6 +1007,7 @@
         }, { passive: true });
 
         function openInfo(typeId, content, trigger) {
+            openedViaKeyboard = lastInputWasKeyboard;
             // A close may still be mid-flight (200ms slide-out). Cancel its
             // cleanup so it can't hide the sheet we're about to show; the
             // portal / movedContent checks below handle whichever state the
@@ -1062,6 +1137,9 @@
                 settled = true;
                 refreshSwipers(bodyEl);
                 reinitSwipers(bodyEl);
+                // Now that the popup is at full width, re-decide whether the
+                // arrows are genuinely lockable (item 3).
+                unlockSwiperNav(bodyEl);
                 // After the sliders are in their final geometry, make sure
                 // whatever is on screen actually has handlers attached.
                 reinitElementorWidgets(bodyEl);
@@ -1079,8 +1157,12 @@
             // scrollbar in sync as they arrive.
             bodyEl.querySelectorAll('img').forEach(function (img) {
                 if (img.complete) return;
-                img.addEventListener('load', updateScrollbar, { once: true });
-                img.addEventListener('error', updateScrollbar, { once: true });
+                // A late-loading image changes the slider's content width, so
+                // the overflow verdict has to be taken again, not just the
+                // scrollbar height.
+                var onSettled = function () { updateScrollbar(); unlockSwiperNav(bodyEl); };
+                img.addEventListener('load', onSettled, { once: true });
+                img.addEventListener('error', onSettled, { once: true });
             });
             document.addEventListener('keydown', onKeydown);
         }
@@ -1116,9 +1198,7 @@
                 }
             }, 200);
             document.removeEventListener('keydown', onKeydown);
-            if (lastTrigger && lastTrigger.focus) {
-                try { lastTrigger.focus(); } catch (e) { /* ignore */ }
-            }
+            restoreTriggerFocus(lastTrigger, openedViaKeyboard);
         }
 
         function restoreMovedContent() {
@@ -1933,7 +2013,7 @@
         var cancelBtn = sheet.querySelector('.mphbac-sheet-cancel');
         var closeBtn = sheet.querySelector('.mphbac-sheet-close');
 
-        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false, closeTimer: null };
+        var context = { roomTypeId: 0, lastTrigger: null, focusRaf: 0, isOpen: false, closeTimer: null, viaKeyboard: false };
         var minNights = Math.max(1, parseInt(config.minNights, 10) || 2);
 
         // ---- Price estimate (0.20.0) --------------------------------------
@@ -2193,6 +2273,7 @@
             }
             context.roomTypeId = typeId;
             context.lastTrigger = trigger || null;
+            context.viaKeyboard = lastInputWasKeyboard;
             var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
             var roomTitle = (config.roomTitles && config.roomTitles[typeId]) || '';
             // Split at the first colon (e.g. "Book Cottage 32: Flamingo
@@ -2268,9 +2349,7 @@
                 }
             }, 200);
             document.removeEventListener('keydown', onKeydown);
-            if (context.lastTrigger && context.lastTrigger.focus) {
-                try { context.lastTrigger.focus(); } catch (e) { /* ignore */ }
-            }
+            restoreTriggerFocus(context.lastTrigger, context.viaKeyboard);
         }
 
         function onKeydown(e) {

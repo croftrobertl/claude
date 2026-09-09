@@ -592,6 +592,88 @@ be opened synthetically here. If the first photos are still dead, the next
 lever is turning loop OFF for carousels inside the popup: with no loop there
 are no clones at all.
 
+## Info-popup content is NOT cached by this plugin (answer, 0.23.9)
+
+There is no plugin-side cache of popup content. `Widget::render()` builds
+each `.mphbac-info-content` div at PAGE RENDER TIME from one of three
+sources, per `cottage_info` row:
+
+- `template` -> `render_template($tpl_id)` ->
+  `Elementor\Plugin::$instance->frontend->get_builder_content_for_display($tpl_id, true)`
+- `mphb_accommodation` -> `render_motopress_accommodation($cid)`, where `$cid`
+  IS the `mphb_room_type` post id
+- `text` -> the literal string from the repeater
+
+`Cache` (the `mphbac_` transients) holds AVAILABILITY only — it never touches
+content. So any staleness is upstream of this plugin, and the chain to bust is:
+
+1. The SOURCE post's Elementor caches — `_elementor_css` and
+   `_elementor_element_cache` on **whichever post the row points at**. This is
+   the likely miss: if a row is set to `mphb_accommodation`, the source is the
+   ACCOMMODATION post, not the cottage template you edited, so clearing the
+   template's meta changes nothing in the popup.
+2. Elementor's generated CSS file for that source (`post-<sourceId>.css`).
+3. The full-page cache of the CALENDAR pages (1005 and 620) — NOT the cottage
+   pages. The popup markup is embedded in the calendar page's HTML, so the
+   calendar page has to be re-rendered before an edit can reach the popup.
+
+Diagnostic that settles it in one step: view-source on the calendar page and
+search for the changed markup inside `.mphbac-info-content`. Present ->
+caching downstream (page cache/CDN/browser). Absent -> the source was not
+re-rendered, so work back up 1-3.
+
+## Hover, focus and touch (0.23.9)
+
+**iOS Safari applies `:hover` on tap and keeps it until the next tap
+elsewhere.** Every hover rule lives in ONE block at the end of widget.css
+behind `@media (hover: hover) and (pointer: fine)`; the `:focus-visible`
+halves stay outside it. Add new hover rules inside that block, never beside
+their focus-visible twin. `polish-test.js` asserts no `:hover` survives
+outside the guard, and drives a real touch context — a CSS grep cannot check
+this.
+
+`restoreTriggerFocus(trigger, viaKeyboard)` is the single focus-return path
+for both popups. A popup opened from the keyboard restores focus visibly; one
+opened by tapping restores and then blurs, or the trigger keeps the gold ring
+until the next tap. The browser's own `:focus-visible` heuristic is NOT
+enough: `focus()` called while the heuristic is in keyboard mode (it is — the
+dialog's close button held focus) matches `:focus-visible` even after a tap.
+`lastInputWasKeyboard` records the modality at OPEN time.
+
+**Swiper measured at zero width hides its own arrows.** `watchOverflow`
+decides from the measured width whether anything can scroll; at width 0 it
+concludes not, sets `isLocked` and stamps `swiper-button-lock` on the
+navigation, which survives until a real swipe forces a recompute.
+`refreshSwipers()` now bails on a zero-width container and `unlockSwiperNav()`
+re-runs `checkOverflow()` at full width (and again as images load).
+
+## Defaults vs saved values (0.23.9)
+
+The `mphbac_calendar` defaults now ship the /cottages/ look: `font_size` 18px,
+`namecol_width` 96px on all three breakpoints, `label_style` `abbrev_number`,
+`str_property` "Cottages", the `#F8F9FA`/`#F1F3F5` greys. Elementor merges
+saved settings OVER defaults, so a widget with an explicit value keeps it —
+a default only reaches controls the user never touched.
+
+The stylesheet's `--mphbac-font-size` / `--mphbac-label-width` fallbacks were
+moved to match (18px / 96px). They MUST agree with the control defaults:
+Elementor's per-post CSS does not regenerate on a plugin update, so an
+existing widget can render from these alone.
+
+## Harness note: baselines go stale
+
+`widget-before.css` is a FIXED snapshot from the 0.23.1 era, kept because the
+older harnesses assert against that specific era. Anything wanting "the
+PREVIOUS release" must generate it from `git show HEAD` at run time
+(`widget-prev.css`, `widget-before.js`) — and those comparisons stop being
+"before" the moment the fix ships, so convert them to durable invariants or
+to guards against a silent revert. Three did exactly that in 0.23.9.
+
+When a harness extracts functions out of widget.js, it must also carry the
+MODULE-SCOPE things they call (`lastInputWasKeyboard`, `restoreTriggerFocus`)
+— a missing one throws on the first line of `openSheet` and every field comes
+back empty, which reads like a layout bug.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

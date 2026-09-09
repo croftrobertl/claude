@@ -7,6 +7,12 @@
     --mphbac-color-header: #0A50B2;
     --mphbac-color-namecol: #F8F9FA;
     --mphbac-color-namecol-alt: #F1F3F5;
+    /* Separator between cottage name cells. Chosen against BOTH grounds:
+       #CBD0D7 is 1.46:1 on #F8F9FA and 1.39:1 on the #F1F3F5 alternate row,
+       where the old --mphbac-color-frame #e0e0e0 managed only 1.20 / 1.14
+       and disappeared into them. Deliberately a separate token from the
+       frame so the day-cell borders are unaffected. */
+    --mphbac-color-namecol-sep: #CBD0D7;
     --mphbac-color-namecol-text: #111111;
     --mphbac-color-frame: #e0e0e0;
     --mphbac-color-nav-bg: #C43A3A;
@@ -26,11 +32,11 @@
     --mphbac-color-day-num: #1F2937;
     --mphbac-color-text: #000000;
     --mphbac-color-bg: #fdfdfd;
-    --mphbac-font-size: 14px;
+    --mphbac-font-size: 18px;
     --mphbac-days: 7;
     --mphbac-cell-min: 38px;
     --mphbac-header-min: 38px;
-    --mphbac-label-width: 180px;
+    --mphbac-label-width: 96px;
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
     --mphbac-info-prerender-width: 720px;
@@ -264,7 +270,6 @@
     height: 20px;
 }
 
-.mphbac-nav-btn:hover,
 .mphbac-nav-btn:focus-visible {
     background-color: var(--mphbac-color-nav-hover);
 }
@@ -522,8 +527,6 @@
 .mphbac-row-toggle--info {
     cursor: pointer;
 }
-.mphbac-row-toggle--info:hover .mphbac-label-abbrev,
-.mphbac-row-toggle--info:hover .mphbac-label-custom,
 .mphbac-row-toggle--info:focus-visible .mphbac-label-abbrev,
 .mphbac-row-toggle--info:focus-visible .mphbac-label-custom {
     text-decoration: underline;
@@ -574,6 +577,15 @@
     font-family: inherit;
     line-height: 1.15;
 }
+/* A rule between cottage name cells (0.23.9) — the two greys read as one
+   block against the white page without it. General-sibling selector so it
+   lands on every data row EXCEPT the first, which gives dividers BETWEEN
+   rows and none above the first or below the last. Label cells only: no
+   vertical rules, and the day cells are untouched. */
+.mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) ~ .mphbac-row .mphbac-cell-label {
+    border-top: 1px solid var(--mphbac-color-namecol-sep);
+}
+
 /* Cottage cells are centred at every width (0.23.7), matching the centred
    "Cottages" header above them — the column read crooked on desktop, where
    only the header was centred, and correct on a phone, where the 600px block
@@ -744,7 +756,6 @@
     transition: opacity 0.15s ease;
     z-index: 20;
 }
-.mphbac-cell-status:hover .mphbac-cell-tip,
 .mphbac-cell-status:focus-visible .mphbac-cell-tip {
     opacity: 1;
 }
@@ -1044,7 +1055,6 @@
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
-.mphbac-info-view-link.mphbac-info-view-link:hover,
 .mphbac-info-view-link.mphbac-info-view-link:focus-visible {
     background: #0a4f8c;
     color: #ffffff;
@@ -1298,7 +1308,6 @@ body.mphbac-info-open {
     text-underline-offset: 3px;
     text-decoration-thickness: 1px;
 }
-.mphbac-sheet-title-link:hover,
 .mphbac-sheet-title-link:focus-visible {
     text-decoration-thickness: 2px;
 }
@@ -1467,7 +1476,6 @@ body.mphbac-info-open {
     width: 20px;
     height: 20px;
 }
-.mphbac-sheet-close:hover,
 .mphbac-sheet-close:focus-visible {
     background: var(--mphbac-color-nav-bg);
     color: #ffffff;
@@ -1714,7 +1722,7 @@ body.mphbac-info-open {
 .ui-datepicker table { border-collapse: collapse; width: 100%; }
 .ui-datepicker th, .ui-datepicker td { padding: 0.2em; text-align: center; }
 .ui-datepicker td a { display: block; padding: 0.25em; color: inherit; text-decoration: none; border-radius: 3px; }
-.ui-datepicker td a:hover { background: #0f6dbf; color: #fff; }
+
 .ui-datepicker .ui-state-active { background: #0f6dbf; color: #fff; border-radius: 3px; }
 
 /* Print stylesheet — a property manager firing Cmd-P should get a clean
@@ -1753,4 +1761,40 @@ body.mphbac-info-open {
     }
     .mphbac-root .mphbac-cell-tip { display: none; }
     .mphbac-root .mphbac-row-toggle { background: transparent !important; box-shadow: none !important; }
+}
+
+/* HOVER IS A POINTER FEATURE, NOT A TAP FEATURE (0.23.9).
+   iOS Safari applies :hover on tap and KEEPS it until the next tap
+   elsewhere, so a tapped close button stayed coral and a tapped cottage
+   cell kept its hover treatment long after the interaction ended. Every
+   hover rule below is therefore behind (hover: hover) and (pointer: fine).
+   The :focus-visible halves stay OUTSIDE the guard — keyboard users need
+   them on every device. Add new hover rules inside this guard, never
+   beside their focus-visible twin. */
+@media (hover: hover) and (pointer: fine) {
+    .mphbac-nav-btn:hover {
+        background-color: var(--mphbac-color-nav-hover);
+    }
+    .mphbac-row-toggle--info:hover .mphbac-label-abbrev,
+    .mphbac-row-toggle--info:hover .mphbac-label-custom {
+        text-decoration: underline;
+    }
+    .mphbac-cell-status:hover .mphbac-cell-tip {
+        opacity: 1;
+    }
+    .mphbac-info-view-link.mphbac-info-view-link:hover {
+        background: #0a4f8c;
+        color: #ffffff;
+    }
+    .mphbac-sheet-title-link:hover {
+        text-decoration-thickness: 2px;
+    }
+    .mphbac-sheet-close:hover {
+        background: var(--mphbac-color-nav-bg);
+        color: #ffffff;
+    }
+    .ui-datepicker td a:hover {
+        background: #0f6dbf;
+        color: #fff;
+    }
 }

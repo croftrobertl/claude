@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.8
+Stable tag: 0.23.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.23.9 =
+* **A thin line now separates the cottage name cells**, so the column reads as distinct rows instead of one block. Backgrounds are unchanged.
+* **A brand-new calendar now looks like the one on the Cottages page without any styling** — two-line labels, 18px text, a 96px cottage column at every screen size, the soft alternating greys and the "Cottages" heading are all defaults now. Calendars where you have already set these values keep exactly what you set.
+* Fixed: **the image carousel's arrows appeared then vanished** in the cottage-info popup on a phone. The plugin was measuring the carousel before the popup had finished opening, and at zero width the carousel concluded there was nothing to scroll and hid its own arrows. It now waits for real dimensions, and re-checks after images finish loading.
+* Fixed: **buttons and cottage cells stayed highlighted after a tap** on a phone — the close button kept its coral colour, and a cottage cell kept a coloured background and outline until you tapped elsewhere. Hover effects are now limited to devices with a real pointer, and closing a popup no longer leaves a focus ring on whatever opened it. Keyboard focus outlines are unchanged on desktop.
+* Nothing about the staff calendar changes.
 
 = 0.23.8 =
 * **The booking popup now tells you a date range is unavailable as soon as you pick it**, instead of after you press Book Now. Previously you could choose dates, see a price quoted for them, and only discover at the last step that they were never bookable.
