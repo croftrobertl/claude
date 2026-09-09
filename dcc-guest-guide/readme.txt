@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.3
+Stable tag: 0.12.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,28 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.12.4 =
+
+**Made the password reveal genuinely usable, so it can be read off a
+phone and typed into a laptop.**
+
+* **The revealed password is now real, selectable text.** It was being
+  painted by the stylesheet, which looks identical but cannot be
+  selected, long-pressed on iPhone, or found with find-on-page. Now a
+  guest can select it, or long-press to copy. While hidden it is still
+  nowhere in the page text, so screenshots of the masked state show
+  nothing.
+* **The Show button is now a full-size 44px touch target** (it was
+  32px), which is the minimum comfortable size on a phone.
+* Print still shows the password in full for the binder — and now
+  exactly once whether or not it was revealed on screen first.
+
+Everything else about the pair was already working and is unchanged:
+the button is labelled Show / Hide rather than a bare icon, the revealed
+state stays put through scrolling and taps elsewhere, Copy works while
+the password is hidden and confirms with "Copied!", read-aloud never
+speaks it, and the network name stays as plain visible text.
 
 = 0.12.3 =
 

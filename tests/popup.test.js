@@ -225,6 +225,7 @@ async function run() {
         // Open a detail from inside the hub: must be visible ABOVE the hub
         // (the top-layer paints-behind class of bug).
         await openDetail(page);
+        await page.waitForTimeout(250);   // let both open transitions settle
         const visible = await page.evaluate(() => {
             const stage = document.querySelector('.dccgg-stage');
             const r = stage.getBoundingClientRect();
@@ -682,10 +683,13 @@ async function run() {
 
         await page.click('.dccgg-secret-toggle');
         st = await shown();
-        check('tapping Show reveals the value', st.css.includes('DCC32586'), st.css);
+        check('tapping Show reveals the value as real text',
+            (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === 'DCC32586', st.css);
         check('toggle flips to Hide', st.label === 'Hide' && st.pressed === 'true');
         await page.click('.dccgg-secret-toggle');
-        check('tapping again re-hides it', !(await shown()).css.includes('DCC32586'));
+        check('tapping again re-hides it',
+            (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === ''
+            && !(await page.evaluate(() => document.body.innerText.includes('DCC32586'))));
 
         // Copy still works without revealing.
         check('copy button carries the real value',
@@ -753,8 +757,34 @@ async function run() {
         check('structured pair: read-aloud text excludes the password',
             await page3.$eval('.dccgg-item', (a) => !a.dataset.ttsText.includes('DCC32586')));
         await page3.click('.dccgg-secret-toggle');
-        check('structured pair: Show reveals it', (await page3.evaluate(() =>
-            getComputedStyle(document.querySelector('.dccgg-secret-value'), '::before').content)).includes('DCC32586'));
+        check('structured pair: Show reveals it as selectable text',
+            (await page3.$eval('.dccgg-secret-value', (v) => v.textContent)) === 'DCC32586');
+        // v0.12.4 regressions, both from Rob's usability condition:
+        // the value must be REAL selectable text when revealed (it was CSS
+        // generated content — readable but impossible to select, long-press or
+        // find-on-page), and the toggle must be a 44px touch target (was 32px).
+        const tog = await page3.$eval('.dccgg-secret-toggle', (b) => {
+            const r = b.getBoundingClientRect();
+            return { h: r.height, w: r.width, label: b.textContent.trim() };
+        });
+        check('reveal toggle is a 44px labelled target', tog.h >= 44 && tog.w >= 44 && tog.label.length > 1,
+            `${tog.w.toFixed(0)}x${tog.h.toFixed(0)} "${tog.label}"`);
+        const selectable = await page3.evaluate(() => {
+            const v = document.querySelector('.dccgg-secret-value');
+            const sel = window.getSelection(); sel.removeAllRanges();
+            const rg = document.createRange(); rg.selectNodeContents(v); sel.addRange(rg);
+            return { text: v.textContent, selected: sel.toString(),
+                     occurrences: (document.body.innerText.match(/DCC32586/g) || []).length };
+        });
+        check('revealed value is selectable text, present exactly once',
+            selectable.selected === 'DCC32586' && selectable.occurrences === 1,
+            `selection="${selectable.selected}" occurrences=${selectable.occurrences}`);
+        await page3.click('.dccgg-secret-toggle');
+        check('re-hiding takes it back out of the DOM',
+            await page3.evaluate(() => document.querySelector('.dccgg-secret-value').textContent === ''
+                && !document.body.innerText.includes('DCC32586')));
+        await page3.click('.dccgg-secret-toggle');
+
         check('structured pair: both copy buttons carry real values',
             await page3.evaluate(() => {
                 const b = [...document.querySelectorAll('.dccgg-copy')].map(x => x.dataset.copy);

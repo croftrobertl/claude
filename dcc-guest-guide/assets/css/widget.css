@@ -1969,18 +1969,33 @@ dialog.dccgg-wrapper::backdrop {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: 0.12em;
     color: var(--dccgg-text);
+    /* v0.12.4: the revealed value is REAL text (the JS writes it into the
+       element), so a guest can select it, long-press it on iOS, and find it
+       with find-on-page. It used to be painted with ::before content, which
+       renders but cannot be selected or searched — readable but not usable,
+       which is the opposite of the point. Some themes disable selection
+       globally, so it is asserted here. */
+    user-select: text;
+    -webkit-user-select: text;
+    -webkit-touch-callout: default;
 }
-.dccgg-secret-value::before { content: '\2022\2022\2022\2022\2022\2022\2022\2022'; }
-.dccgg-secret.is-revealed .dccgg-secret-value::before { content: attr(data-secret-value); letter-spacing: normal; }
+/* Masked: the element is empty and the dots come from CSS, so the value is
+   nowhere in the text layer. Revealed: the element holds the real text and
+   the dots must step aside or they would print/echo twice. */
+.dccgg-secret:not(.is-revealed) .dccgg-secret-value::before { content: '\2022\2022\2022\2022\2022\2022\2022\2022'; }
+.dccgg-secret.is-revealed .dccgg-secret-value { letter-spacing: normal; }
 .dccgg-secret-toggle {
     border: 1px solid var(--dccgg-tile-border);
     background: transparent;
     color: var(--dccgg-text);
     border-radius: 999px;
-    padding: 4px 12px;
-    min-height: 32px;
+    /* v0.12.4: 44px is the minimum comfortable touch target, and this control
+       is aimed at guests reading a password off a phone. It was 32px. */
+    padding: 8px 16px;
+    min-height: 44px;
+    min-width: 44px;
     font: inherit;
-    font-size: 0.82em;
+    font-size: 0.9em;
     cursor: pointer;
 }
 
@@ -3333,7 +3348,9 @@ dialog.dccgg-wrapper::backdrop {
     }
     .dccgg-root .dccgg-detail[hidden] { display: block !important; }
     /* The binder copy needs the real password, not dots. */
-    .dccgg-root .dccgg-secret-value::before { content: attr(data-secret-value) !important; letter-spacing: normal !important; }
+    /* The binder copy needs the real password. When it is already revealed the
+       text is in the element, so only the still-masked case needs painting. */
+    .dccgg-root .dccgg-secret:not(.is-revealed) .dccgg-secret-value::before { content: attr(data-secret-value) !important; letter-spacing: normal !important; }
     .dccgg-root .dccgg-wrapper {
         /* v0.9.7.23: display override — a closed <dialog> is display:none
            per UA stylesheet, but printing the guide must include the FAB

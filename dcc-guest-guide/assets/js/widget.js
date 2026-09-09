@@ -3294,6 +3294,14 @@
                 const wrap = btn.closest('.dccgg-secret');
                 if (!wrap) return;
                 const revealed = wrap.classList.toggle('is-revealed');
+                // Put the real characters in the DOM while revealed so they can
+                // be selected, long-pressed and searched; take them straight
+                // back out when re-hidden, so the masked state has the value
+                // nowhere in the text layer.
+                const valEl = wrap.querySelector('.dccgg-secret-value');
+                if (valEl) {
+                    valEl.textContent = revealed ? (valEl.dataset.secretValue || '') : '';
+                }
                 btn.setAttribute('aria-pressed', revealed ? 'true' : 'false');
                 const label = revealed
                     ? (btn.dataset.labelHide || 'Hide')
