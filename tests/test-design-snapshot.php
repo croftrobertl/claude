@@ -350,7 +350,7 @@ namespace {
     // OVERRIDES inline defaults by design — it must override them rather than defer.
     ok('preset is enabled by default', \DCCS\Preset_Defaults::enabled() === true);
     ok('apply() overrides an inline factory default',
-        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === 'Cottage Wizard');
+        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === '🏠 Cottage Wizard 🧙‍♂️');
     ok('apply() seeds a control that had no default',
         \DCCS\Preset_Defaults::apply('color_accent', [])['default'] === '#002E7A');
     ok('apply() leaves the rest of the control args intact',
@@ -364,7 +364,7 @@ namespace {
     $preset = \DCCS\Preset_Defaults::map();
     ok('preset defines a non-trivial set of defaults', count($preset) > 50);
     ok('preset carries the site heading + palette',
-        ($preset['str_heading'] ?? null) === 'Cottage Wizard' &&
+        ($preset['str_heading'] ?? null) === '🏠 Cottage Wizard 🧙‍♂️' &&
         ($preset['color_accent'] ?? null) === '#002E7A');
     ok('preset carries the enabled modes', ($preset['enabled_modes'] ?? null) === ['quick', 'compare']);
 
@@ -388,6 +388,19 @@ namespace {
     $orphans = array_values(array_diff(array_keys($preset), array_keys($reg)));
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
+
+    // 0.25.0: the heading defaults to the decorated form site-wide (asserted above),
+    // and the Mini Entry prompt already carried it — the two must not drift apart.
+    ok('the Mini Entry prompt uses the same decorated wording',
+        ($preset['copy'] ?? null) === ($preset['str_heading'] ?? null));
+    // The guarantee Rob depends on: a preset is a control DEFAULT, and a widget's
+    // OWN saved value must still win. Anything else would silently overwrite the
+    // hand-tuned settings across this site.
+    $savedWins = Selector_Widget::design_snapshot(['str_heading' => 'Rob\'s own heading']);
+    ok('a saved heading beats the preset default',
+        ($savedWins['string_overrides']['heading'] ?? null) === "Rob's own heading");
+    ok('a widget with no saved heading contributes no override',
+        !array_key_exists('heading', Selector_Widget::design_snapshot([])['string_overrides']));
 
     ok('map still holds the captured site wording', ($preset['str_q_desk'] ?? null) === 'Do you need a computer desk?');
     ok('map still holds the captured icons', is_array($preset['icon_submit'] ?? null));

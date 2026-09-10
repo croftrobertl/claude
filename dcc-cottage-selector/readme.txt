@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.0
+Stable tag: 0.25.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,14 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.25.0 =
+* Heading: a newly placed Cottage Selector now starts with the site's decorated
+  heading "🏠 Cottage Wizard 🧙‍♂️" instead of the plain "Cottage Wizard", matching
+  the Mini Entry prompt, which already carried it. This is a control DEFAULT only:
+  Elementor merges a widget's saved settings over defaults, so every widget that
+  already has its own heading saved keeps it exactly as-is. Tests pin both halves —
+  the new default, and a saved value still winning.
 
 = 0.24.0 =
 * **The selector can now recommend only what is actually free.** Turn on

@@ -45,7 +45,11 @@ final class Preset_Defaults
             'str_compare_scroll_all' => 'Scroll the list to see all %d cottages.',
             'str_count_zero_hint' => 'Your closest matches are shown at the end.',
             'str_edit_answers' => 'Edit Answers',
-            'str_heading' => 'Cottage Wizard',
+            // The decorated form is what the live homepage widget carries, so a
+            // freshly dropped Selector matches the site without editing. This is a
+            // control DEFAULT: Elementor merges saved settings over defaults, so any
+            // widget with its own saved heading keeps it untouched.
+            'str_heading' => '🏠 Cottage Wizard 🧙‍♂️',
             'str_intro' => 'Answer a few quick questions to find your best match.',
             'str_lvl_high' => 'High',
             'str_lvl_low' => 'Low',
