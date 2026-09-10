@@ -45,11 +45,12 @@ final class Preset_Defaults
             'str_compare_scroll_all' => 'Scroll the list to see all %d cottages.',
             'str_count_zero_hint' => 'Your closest matches are shown at the end.',
             'str_edit_answers' => 'Edit Answers',
-            // The decorated form is what the live homepage widget carries, so a
-            // freshly dropped Selector matches the site without editing. This is a
-            // control DEFAULT: Elementor merges saved settings over defaults, so any
-            // widget with its own saved heading keeps it untouched.
-            'str_heading' => '🏠 Cottage Wizard 🧙‍♂️',
+            // Plain text, because 0.26.0 draws the marks: the heading renders as
+            // [cottage] Cottage Wizard [heron in a wizard's hat], so emoji in the
+            // string would double them up. This is a control DEFAULT — Elementor
+            // merges saved settings over defaults, so a widget that already stores
+            // its own heading keeps it, emoji and all, until someone edits the panel.
+            'str_heading' => 'Cottage Wizard',
             'str_intro' => 'Answer a few quick questions to find your best match.',
             'str_lvl_high' => 'High',
             'str_lvl_low' => 'Low',

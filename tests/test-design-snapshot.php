@@ -83,6 +83,7 @@ namespace Elementor {
 
 namespace {
     require DCCS_DIR . 'includes/class-data.php';
+    require DCCS_DIR . 'includes/class-heading-marks.php';
     require DCCS_DIR . 'includes/class-config.php';
     require DCCS_DIR . 'includes/class-selector-widget.php';
 
@@ -342,6 +343,58 @@ namespace {
     }
     ok('a malformed after_save payload is ignored, not fatal', $survived);
 
+    // ---- Heading marks (0.26.0) ------------------------------------------------
+    $marksCfg = \DCCS\Config::build([], []);
+    $mk = $marksCfg['icons'] ?? [];
+    ok('the config carries both heading marks',
+        isset($mk['heading_cottage'], $mk['heading_wizard']));
+    ok('both marks are SVG',
+        strpos((string) ($mk['heading_cottage'] ?? ''), '<svg') === 0 &&
+        strpos((string) ($mk['heading_wizard'] ?? ''), '<svg') === 0);
+    foreach (['heading_cottage' => 'cottage', 'heading_wizard' => 'wizard'] as $k => $label) {
+        $svg = (string) ($mk[$k] ?? '');
+        // Decorative: the heading's accessible name must come from its text alone.
+        ok("the $label mark is hidden from assistive tech",
+            strpos($svg, 'aria-hidden="true"') !== false && strpos($svg, 'focusable="false"') !== false);
+        // Follows the heading colour rather than hard-coding one.
+        ok("the $label mark paints with currentColor", strpos($svg, 'currentColor') !== false);
+        // The single accent stays themable without editing PHP.
+        ok("the $label mark's accent is themable", strpos($svg, '--dccs-mark-accent') !== false);
+        // No viewBox, no em sizing — the mark would render at some fixed default.
+        ok("the $label mark declares a viewBox", strpos($svg, 'viewBox="0 0 ') !== false);
+        ok("the $label mark carries the sizing class", strpos($svg, 'class="dccs-mark"') !== false);
+    }
+    // The marks belong to every instance, not to one widget's saved settings: they
+    // must NOT ride the design snapshot into the published-design registry option.
+    $snapIcons = Selector_Widget::design_snapshot(['icon_next' => ['value' => 'fas fa-x']])['icons'] ?? [];
+    ok('the marks stay out of the design snapshot',
+        !array_key_exists('heading_cottage', $snapIcons) && !array_key_exists('heading_wizard', $snapIcons));
+    // ...but a mirrored Mini Entry still gets them, because they are added in
+    // Config::build(), which every config path funnels through.
+    $mirrored = Selector_Widget::config_from_snapshot(['string_overrides' => []], []);
+    ok('a mirrored config still gets the marks',
+        isset($mirrored['icons']['heading_cottage'], $mirrored['icons']['heading_wizard']));
+    // An admin-set Elementor icon must survive the merge that adds the marks.
+    $withAdmin = \DCCS\Config::build([], ['icons' => ['next' => '<i class="fas"></i>']]);
+    ok('admin-set icons survive alongside the marks',
+        ($withAdmin['icons']['next'] ?? null) === '<i class="fas"></i>' &&
+        isset($withAdmin['icons']['heading_cottage']));
+
+    // ---- The dates step is off unless a widget switches it on (0.26.0) ---------
+    // avail_enable is the control that governs the check-in/check-out question. It
+    // is a switcher defaulting to off, and it is deliberately NOT in the preset, so
+    // a widget that has never stored it gets no dates step at all.
+    ok('availability is off in a config built with no settings',
+        (\DCCS\Config::build([], [])['availability']['enabled'] ?? null) === false);
+    ok('a widget that never saved avail_enable leaves it off',
+        (Selector_Widget::design_snapshot([])['availability']['enabled'] ?? null) === false);
+    ok('avail_enable is absent from the preset, so the default stands',
+        !array_key_exists('avail_enable', \DCCS\Preset_Defaults::map()));
+    ok('a widget that saved avail_enable=yes still turns it on',
+        (Selector_Widget::design_snapshot(['avail_enable' => 'yes'])['availability']['enabled'] ?? null) === true);
+    ok('the dates question copy is past tense',
+        (\DCCS\Config::strings()['q_dates'] ?? null) === 'When were you thinking of staying?');
+
     // ---- Site preset defaults (Preset_Defaults) --------------------------------
     require_once DCCS_DIR . 'includes/class-preset-defaults.php';
     require_once DCCS_DIR . 'includes/class-control-design-io.php';
@@ -350,7 +403,7 @@ namespace {
     // OVERRIDES inline defaults by design — it must override them rather than defer.
     ok('preset is enabled by default', \DCCS\Preset_Defaults::enabled() === true);
     ok('apply() overrides an inline factory default',
-        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === '🏠 Cottage Wizard 🧙‍♂️');
+        \DCCS\Preset_Defaults::apply('str_heading', ['default' => 'Factory'])['default'] === 'Cottage Wizard');
     ok('apply() seeds a control that had no default',
         \DCCS\Preset_Defaults::apply('color_accent', [])['default'] === '#002E7A');
     ok('apply() leaves the rest of the control args intact',
@@ -364,7 +417,7 @@ namespace {
     $preset = \DCCS\Preset_Defaults::map();
     ok('preset defines a non-trivial set of defaults', count($preset) > 50);
     ok('preset carries the site heading + palette',
-        ($preset['str_heading'] ?? null) === '🏠 Cottage Wizard 🧙‍♂️' &&
+        ($preset['str_heading'] ?? null) === 'Cottage Wizard' &&
         ($preset['color_accent'] ?? null) === '#002E7A');
     ok('preset carries the enabled modes', ($preset['enabled_modes'] ?? null) === ['quick', 'compare']);
 
@@ -389,10 +442,15 @@ namespace {
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
 
-    // 0.25.0: the heading defaults to the decorated form site-wide (asserted above),
-    // and the Mini Entry prompt already carried it — the two must not drift apart.
-    ok('the Mini Entry prompt uses the same decorated wording',
-        ($preset['copy'] ?? null) === ($preset['str_heading'] ?? null));
+    // 0.26.0: the heading default is PLAIN, because the widget now draws the marks
+    // either side of it (see Heading_Marks). The Mini Entry prompt deliberately
+    // keeps its emoji — it is a button, it gets no marks, and it would otherwise be
+    // left with nothing. The two are meant to differ now; this pins that on purpose
+    // so nobody "fixes" the heading back to matching it.
+    ok('the heading default carries no emoji, since the marks supply them',
+        !preg_match('/[\x{1F300}-\x{1FAFF}]/u', (string) ($preset['str_heading'] ?? '')));
+    ok('the Mini Entry prompt keeps its emoji (it gets no marks)',
+        ($preset['copy'] ?? null) === '🏠 Cottage Wizard 🧙‍♂️');
     // The guarantee Rob depends on: a preset is a control DEFAULT, and a widget's
     // OWN saved value must still win. Anything else would silently overwrite the
     // hand-tuned settings across this site.

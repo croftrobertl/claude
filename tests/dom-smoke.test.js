@@ -1905,6 +1905,87 @@ defer(async function () {
   ok('room-type ids are unique', new Set(cottages.map(c => c.roomTypeId)).size === 8);
 })();
 
+// ---- 69. heading marks (0.26.0) ----
+(function () {
+  const w = freshDom();
+  const root = mountSelector(w, CONFIG);
+  const h = root.querySelector('.dccs-heading');
+  ok('the heading renders two marks', h && h.querySelectorAll('svg.dccs-mark').length === 2);
+  ok('a mark sits on each side of the text', h &&
+    h.firstElementChild.classList.contains('dccs-mark') &&
+    h.lastElementChild.classList.contains('dccs-mark'));
+  ok('the heading text is still its own element',
+    h && h.querySelector('.dccs-heading-t').textContent === JSON.parse(CONFIG).strings.heading);
+  // Decorative: the heading's accessible name is the text, not the drawings.
+  ok('both marks are hidden from assistive tech', h &&
+    Array.prototype.every.call(h.querySelectorAll('svg.dccs-mark'),
+      s => s.getAttribute('aria-hidden') === 'true' && s.getAttribute('focusable') === 'false'));
+  ok('neither mark is focusable', h && !h.querySelector('svg [tabindex], svg a'));
+
+  // The marks are injected raw; the heading STRING must still be escaped. This is
+  // the whole reason they travel the icons channel rather than the string.
+  const evil = configWith({ strings: Object.assign({}, JSON.parse(CONFIG).strings,
+    { heading: '<img src=x onerror=alert(1)>Boom' }) });
+  const w2 = freshDom();
+  const r2 = mountSelector(w2, evil);
+  ok('a heading string is still escaped alongside the raw marks',
+    !r2.querySelector('.dccs-heading img') &&
+    r2.querySelector('.dccs-heading-t').textContent.indexOf('<img') === 0);
+  ok('and the marks still render on that heading',
+    r2.querySelectorAll('.dccs-heading svg.dccs-mark').length === 2);
+
+  // showHeading off means no heading at all — and therefore no orphaned marks.
+  const w3 = freshDom();
+  const r3 = mountSelector(w3, configWith({ showHeading: false }));
+  ok('no heading means no marks', !r3.querySelector('.dccs-mark'));
+})();
+
+// ---- 70. with availability off, nothing anywhere refers to dates (0.26.0) ----
+// avail_enable defaults off, so this is what every widget that has not switched
+// it on renders. The requirement is not just "no dates step" but no blank or
+// orphaned date row downstream: review, share link, results.
+(function () {
+  const cfg = JSON.parse(CONFIG);
+  ok('the baseline config really does have availability off',
+    cfg.availability && cfg.availability.enabled === false);
+
+  const w = freshDom();
+  const root = mountSelector(w, configWith({ showReview: true }));
+  enter(root, 'quick');
+  ok('the first question is not the dates step',
+    !root.querySelector('.dccs-dates') && !root.querySelector('.dccs-date-in'));
+
+  let sawDates = false;
+  for (let i = 0; i < 12; i++) {
+    if (root.querySelector('.dccs-dates, .dccs-date-in, .dccs-date-out, .dccs-date-skip')) { sawDates = true; }
+    if (root.querySelector('.dccs-review-list')) { break; }
+    stepThrough(root, 'either');
+  }
+  ok('no dates step appears anywhere in the quiz', !sawDates);
+
+  const items = Array.prototype.map.call(
+    root.querySelectorAll('.dccs-review-list li'), li => li.textContent);
+  ok('the review screen lists only the real questions', items.length === 8);
+  ok('the review screen has no date row',
+    !items.some(t => /Dates|Check-in|Check-out|No dates yet/i.test(t)));
+  ok('no review row is blank', items.every(t => t.trim() !== ''));
+
+  seeMatches(root);
+  ok('results still render with no dates', root.querySelectorAll('.dccs-card').length >= 1);
+  ok('no availability badge or note without dates',
+    !root.querySelector('.dccs-avail, .dccs-avail-note, .dccs-avail-booked, .dccs-avail-free'));
+
+  // Share link. The button writes the URL back with history.replaceState, so the
+  // assertion must first prove that actually happened — otherwise "no date params"
+  // is true of any unchanged address bar and tells us nothing.
+  const share = root.querySelector('.dccs-share');
+  ok('the results screen offers a share button', !!share);
+  if (share) { share.click(); }
+  const url = String((w.location && w.location.href) || '');
+  ok('sharing rewrote the URL with the answers', /[?&]q=|[?&]a=|[?&]seed=/.test(url));
+  ok('the share link carries no date params', !/[?&](in|out|dates)=/.test(url));
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

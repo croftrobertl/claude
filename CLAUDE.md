@@ -172,6 +172,27 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **Weigh Priorities is disabled on the live widget** (preset `enabled_modes` is
   quick + compare) and the owner considers it redundant with the quiz. Keep it
   working and tested, but don't invest in it without asking.
+- **The heading marks are plugin-authored and travel the `icons` channel.**
+  `Heading_Marks::all()` is merged into the config inside `Config::build()` — after
+  `$extra`, so every path (widget, Mini Entry, shortcode pop-up) gets them — and
+  deliberately NOT into `design_snapshot()`, which would push SVG into the
+  published-design registry option. The heading STRING stays escaped; that is the
+  whole reason the marks go through `icons` rather than being interpolated into it.
+  The drawing notes in `class-heading-marks.php` are load-bearing: they record why
+  the brim rather than the cone carries the hat at 22px, and the three ways a beard
+  failed. Read them before redrawing anything at heading size.
+- **The dates step is governed by the `avail_enable` control, not by code.** It is a
+  switcher defaulting to off and deliberately absent from the preset, so a widget
+  that never stored it shows no check-in/check-out question at all. There is no
+  second switch — adding one would create exactly the two-copies-must-agree hazard
+  the preset notes warn about. A widget that HAS saved `avail_enable=yes` can only
+  be turned off in its own Elementor panel.
+- **Buttons inherit the page font via `.dccs-root.dccs-root button`** (0,4,1), which
+  outranks an Elementor kit's `.elementor-kit-N button` (0,1,1) without
+  `!important`. It targets the ELEMENT on purpose: the widget has 16+ button classes
+  and an enumeration would silently miss new ones. Weight, size, text-transform and
+  letter-spacing are deliberately left alone — the kit forces those site-wide and
+  they are standardised outside this plugin.
 - **Elementor stores saved widget settings on the page, and stored values beat every
   plugin default.** A string edited in the panel before a release is frozen there; no
   plugin update can change it. Say so plainly rather than shipping a "fix" that

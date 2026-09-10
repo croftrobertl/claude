@@ -41,7 +41,7 @@ final class Config
             // matrix's "Sleeps (max)" caption was borrowed for this before 0.23.0 and
             // read oddly as a question topic.)
             'party_short'       => __('Guests', 'dcc-cottage-selector'),
-            'q_dates'           => __('When are you thinking of staying?', 'dcc-cottage-selector'),
+            'q_dates'           => __('When were you thinking of staying?', 'dcc-cottage-selector'),
             'dates_short'       => __('Dates', 'dcc-cottage-selector'),
             'dates_in'          => __('Check-in', 'dcc-cottage-selector'),
             'dates_out'         => __('Check-out', 'dcc-cottage-selector'),
@@ -212,7 +212,7 @@ final class Config
         // otherwise omit the keys entirely, and selector.js reads a missing key as
         // "on" (`config.showReview !== false`). That silently gave the shortcode
         // pop-up the review step the widget skips. $extra still overrides both.
-        return array_merge([
+        $config = array_merge([
             'cottages'     => Data::all(),
             'diffFields'   => Data::DIFF_FIELDS,
             'strings'      => $strings,
@@ -229,5 +229,16 @@ final class Config
             // MPHB Availability Calendar plugin being active to answer it.
             'availability'   => ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
         ], $extra);
+
+        // The heading marks (0.26.0) are plugin-authored, not admin-set, so they
+        // are merged in AFTER $extra: they belong to every instance rather than to
+        // one widget's settings, and keeping them out of the design snapshot keeps
+        // the SVG out of the published-design registry option. They ride the icons
+        // channel because selector.js already treats it as trusted server-rendered
+        // HTML — the heading STRING is escaped, so inline SVG cannot go through it.
+        $icons = isset($config['icons']) && is_array($config['icons']) ? $config['icons'] : [];
+        $config['icons'] = array_merge($icons, Heading_Marks::all());
+
+        return $config;
     }
 }

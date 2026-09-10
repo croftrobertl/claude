@@ -1345,7 +1345,7 @@ msgid "What Matters Most"
 msgstr ""
 
 #: includes/class-config.php:44
-msgid "When are you thinking of staying?"
+msgid "When were you thinking of staying?"
 msgstr ""
 
 #: includes/class-config.php:134

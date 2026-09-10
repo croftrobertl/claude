@@ -52,6 +52,15 @@
 
 .dccs-root.dccs-root .dccs-head { margin-bottom: 14px; text-align: var(--dccs-align, center); }
 .dccs-root.dccs-root .dccs-heading { margin: 0 0 6px; font-size: 1.4rem; line-height: 1.2; }
+/* Heading marks (0.26.0). Sized in em so they track the heading type at every
+   breakpoint, and inline-block rather than flex so the head's text-align and the
+   natural wrap of a long heading both keep working. 1.18em matches the optical
+   weight of the emoji they replaced, which rendered close to the full em box. */
+.dccs-root.dccs-root .dccs-heading .dccs-mark {
+  height: 1.18em; width: auto; display: inline-block; vertical-align: -0.24em;
+}
+.dccs-root.dccs-root .dccs-heading .dccs-mark:first-child { margin-right: 0.3em; }
+.dccs-root.dccs-root .dccs-heading .dccs-mark:last-child { margin-left: 0.3em; }
 .dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
@@ -155,6 +164,17 @@
 .dccs-root.dccs-root .dccs-ico-right { margin-inline-start: 0.45em; margin-inline-end: 0; }
 .dccs-root.dccs-root .dccs-ico svg { width: 1em; height: 1em; fill: currentColor; }
 .dccs-root.dccs-root .dccs-ico:empty { display: none; }
+
+/* Buttons inherit the page's body font instead of the Elementor kit's button
+   font. The kit rule is `.elementor-kit-N button, ...` = (0,1,1); this is (0,4,1)
+   via the doubled root, so it wins without !important. Measured before/after with
+   the kit rule reproduced: every button went from the kit family to the inherited
+   page family, across 7 screens and 10 button types.
+   Deliberately the ELEMENT, not a list of classes — the widget has 16+ button
+   classes and more will be added; an enumeration would silently miss them.
+   Weight, size, text-transform and letter-spacing are NOT touched here: the kit
+   forces those globally and they are being standardised site-side separately. */
+.dccs-root.dccs-root button { font-family: inherit; }
 
 /* Motion: smooth hover transitions + a subtle lift on the action buttons. */
 .dccs-root.dccs-root .dccs-primary,

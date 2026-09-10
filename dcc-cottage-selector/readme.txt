@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.0
+Stable tag: 0.26.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,27 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.26.0 =
+* Heading marks: the 🏠 / 🧙‍♂️ emoji are replaced by two hand-drawn SVG marks — a
+  canal cottage (gable, chimney, lit window, dock, canal) and a heron in a
+  wizard's hat. Emoji render differently on every platform; these are drawn in
+  the site palette, follow the heading colour via currentColor, scale with the
+  heading type (sized in em), and are hidden from assistive tech so the heading's
+  accessible name is still its text. They ride the icons channel in the config
+  because the heading string itself is escaped.
+* Heading default is now plain "Cottage Wizard" — the marks supply the pictures.
+  A widget that already stores its own heading KEEPS it: Elementor merges saved
+  settings over defaults. Both live widgets have a saved heading and will show
+  their emoji alongside the new marks until that text is edited in the panel.
+* Buttons now inherit the page's body font instead of the Elementor kit's button
+  font. Scoped `.dccs-root.dccs-root button` (0,4,1), which outranks the kit's
+  (0,1,1) rule without !important, and targets the element so every button is
+  covered — including any added later. Weight, size, text-transform and
+  letter-spacing are untouched; those are forced site-wide and standardised
+  elsewhere.
+* Dates question copy: "When are you thinking of staying?" is now "When were you
+  thinking of staying?".
 
 = 0.25.0 =
 * Heading: a newly placed Cottage Selector now starts with the site's decorated

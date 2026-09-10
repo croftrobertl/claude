@@ -47,6 +47,15 @@
     return h ? '<span class="dccs-ico">' + h + '</span>' : '';
   }
 
+  /** A plugin-authored heading mark (the cottage / the heron in a wizard's hat).
+      Same trusted channel as ico(): config.icons carries server-rendered HTML, so
+      it is injected raw. The heading TEXT is still escaped — that is exactly why
+      the marks travel this way instead of being interpolated into the string. */
+  function mark(config, key) {
+    var h = config && config.icons && config.icons[key];
+    return h ? h : '';
+  }
+
   /** Wrap an admin-set icon in a side-aware span ('left' | 'right'). */
   function icoSpan(html, side) {
     return '<span class="dccs-ico dccs-ico-' + (side === 'right' ? 'right' : 'left') + '">' + html + '</span>';
@@ -841,7 +850,11 @@
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
     var head = '';
     if (config.showHeading !== false) {
-      head = '<div class="dccs-head"><h2 class="dccs-heading">' + esc(S.heading) + '</h2>' +
+      head = '<div class="dccs-head"><h2 class="dccs-heading">' +
+        mark(config, 'heading_cottage') +
+        '<span class="dccs-heading-t">' + esc(S.heading) + '</span>' +
+        mark(config, 'heading_wizard') +
+        '</h2>' +
         '<p class="dccs-intro">' + esc(S.intro) + '</p></div>';
     }
     var choices = modes.map(function (m) {
