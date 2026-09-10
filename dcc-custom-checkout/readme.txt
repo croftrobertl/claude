@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.7.0
+Stable tag: 0.8.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,33 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.8.0 =
+* Buttons follow the site button spec — the "Send Message" button at /contact/,
+  which the owner has made the standard for every plugin. Applied to Submit
+  Booking and to every other button this plugin renders:
+    Raleway 20px / weight 500 / line-height 50px / letter-spacing 0.5px /
+    text-transform none / #ffffff on #006BCF / no border / radius 30px /
+    no box-shadow / transition background-color .15s, opacity .15s.
+* This REVERSES 0.8.0's predecessor. In 0.7.0 the plugin's button block was
+  removed so the theme would own the button; the owner has since decided the
+  reference button IS the standard and every plugin declares it.
+* No !important anywhere in that block. Bravada forces text-transform:
+  uppercase at (0,0,1) and the Elementor kit forces 18px / 900 /
+  letter-spacing 1.5px / capitalize at (0,1,1); the doubled form class takes
+  these selectors to (0,3,1)-(0,3,2) and wins on specificity alone, so a later
+  deliberate override still works.
+* One deviation from the measured reference, and why: the reference measures
+  padding 0 because its width comes from its container, so the zero never
+  shows. On a button whose width follows its content that would put the label
+  inside the 30px corner radius. Vertical padding is 0 as measured — height is
+  exactly the 50px line-height — with symmetric horizontal padding for the
+  radius. Set it to 0 if the button is ever given a width.
+* The asterisk that opens the tax footnote is excluded by selector: it is a
+  control this plugin draws, not a site button.
+* Everything from 0.7.0 is untouched — the "Rate:" row removal, the breakdown
+  column headers, the tax footnote, the services-section hiding and the
+  runtime width-matching on the file input. All 44 assertions still pass.
 
 = 0.7.0 =
 * FIX: "Choose Additional Services" is now actually removed. hideNativeServices()

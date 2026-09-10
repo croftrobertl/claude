@@ -93,29 +93,76 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Buttons: the THEME owns them (v0.7.0, owner decision).
+ * Buttons — the site button spec (v0.8.0, owner decision).
  *
- * This block used to force background, border, colour, radius, font-family and
- * text-transform with !important, which is why Submit Booking looked unlike
- * every other button on the site. It is gone entirely — font family, size,
- * weight, padding and radius now come from the theme, and Submit Booking
- * inherits whatever a theme button looks like.
+ * This REVERSES v0.7.0, which handed the buttons back to the theme. The owner
+ * is standardising blue buttons site-wide on the "Send Message" button at
+ * /contact/, and every plugin now declares that spec rather than inheriting.
  *
- * text-transform:none went with it. Keeping that one line would have left
- * Submit Booking the only button on the site with a different case treatment,
- * which is the mismatch being fixed. Restore it here if the uppercase is
- * genuinely unwanted — one line, and it will then differ from the theme on
- * purpose rather than by accident.
+ * Two stylesheets fight this and both are out-specified, WITHOUT !important:
+ *   - Bravada          text-transform: uppercase                       (0,0,1)
+ *   - Elementor kit    18px / weight 900 / letter-spacing 1.5px /
+ *                      text-transform: capitalize                      (0,1,1)
+ * The doubled form class takes these selectors to (0,3,1)-(0,3,2), which wins
+ * on specificity alone. Nothing here is !important, so a later deliberate
+ * override still works — which is the point of not using it.
  *
- * The coupon "Apply" button rode on the same selector list. Coupons are
- * switched off site-wide (mphb_enable_coupons = 0) so it does not render; if
- * coupons are ever turned back on it takes the theme button style too, which
- * keeps it consistent rather than orphaned.
+ * PADDING, and the one deviation from the measured reference: the reference
+ * measures padding: 0 because its width comes from its container, so the zero
+ * never shows. Reproduced literally on a button whose width follows its
+ * content, "Submit Booking" would sit inside a 30px corner radius with its
+ * text touching the curve. Vertical padding is 0 as measured — the height is
+ * exactly the 50px line-height — and symmetric horizontal padding gives the
+ * radius its clearance. Set it to 0 here if the button is ever given a width.
  *
- * The file field's ::file-selector-button is NOT a theme button and keeps its
- * blue treatment below — it is a part this plugin draws.
+ * NOT included: .dcc_checkout-tax-asterisk. That is a control this plugin
+ * draws, not a site button, and it is excluded by selector rather than by
+ * having to out-!important this rule afterwards.
  * ------------------------------------------------------------------------- */
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk),
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"],
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .button,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button {
+    font-family: "Raleway", -apple-system, "system-ui", "Segoe UI", Arial, sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 50px;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    color: #ffffff;
+    background-color: var(--dcc-blue);
+    background-image: none;
+    border: none;
+    border-radius: var(--dcc-field-radius);
+    padding: 0 36px;
+    box-shadow: none;
+    /* iOS refuses the radius and background on a submit input without this. */
+    -webkit-appearance: none;
+    appearance: none;
+    /* A long label must not push past the viewport at 375px. */
+    max-width: 100%;
+    cursor: pointer;
+    transition: background-color 0.15s, opacity 0.15s;
+}
 
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .button:hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button:hover {
+    /* The reference transitions background-color, so it changes on hover; it
+       does not state to what. Uses this plugin's existing darker blue. */
+    background-color: var(--dcc-blue-hover);
+    color: #ffffff;
+}
+
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):focus-visible,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:focus-visible,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
+    outline: 3px solid var(--dcc-gold);
+    outline-offset: 2px;
+}
 
 /* ---------------------------------------------------------------------------
  * Item 6 — Upload helper text was 20px/700, competing with "Total". Calm it.

@@ -154,6 +154,15 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   submits and MotoPress still prices it. Never switch it to `disabled`,
   `remove()`, or anything that stops the input submitting — that would silently
   stop charging the $50 extra-guest fee.
+- **Buttons follow the site button spec** (owner decision, v0.8.0): the "Send
+  Message" button at /contact/ — Raleway 20px/500, line-height 50px,
+  letter-spacing 0.5px, text-transform none, #fff on #006BCF, no border,
+  radius 30px. Every DCC plugin declares it rather than inheriting from the
+  theme. It is asserted **without `!important`**: Bravada forces
+  `text-transform: uppercase` (0,0,1) and the Elementor kit forces
+  18px/900/1.5px/capitalize (0,1,1), and the doubled `form.mphb_sc_checkout-form`
+  class reaches (0,3,1)-(0,3,2), which wins outright. Keep it that way — a
+  later deliberate override should still be able to win.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the
