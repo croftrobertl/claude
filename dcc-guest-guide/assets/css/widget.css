@@ -380,7 +380,10 @@
     --dccgg-tile-border: rgba(15, 109, 191, 0.15);
     --dccgg-detail-bg: #ffffff;
 
-    --dccgg-btn-bg: var(--dccgg-primary);
+    /* v0.14.0: the site's reference button (Contact form "Send Message") is
+       #006BCF. Only the button fill moves — --dccgg-primary still drives
+       links, focus rings and accents. Theme presets below override both. */
+    --dccgg-btn-bg: #006bcf;
     --dccgg-btn-txt: #ffffff;
 
     --dccgg-glass-blur: 10px;
@@ -1801,6 +1804,71 @@ dialog.dccgg-wrapper::backdrop {
     box-sizing: border-box;
 }
 
+/* ---- v0.14.0: every action button matches the site's reference button ----
+   The reference is the Contact form's "Send Message" on /contact/, measured
+   at 1280px: Raleway 20px/500, line-height 50px, letter-spacing 0.5px, no
+   transform, white on #006BCF, no border, radius 30px, no shadow.
+
+   THREE HOSTS, not one. `.dccgg-root ...` alone does NOT reach an open
+   popup: showDetailModal() appends .dccgg-stage to <body>, so the stage has
+   no .dccgg-root ancestor while a detail is open (only the --dccgg-* custom
+   properties are copied onto it). The report dialog is appended to <body>
+   too. Anchor on all three or the kit wins exactly where the guest is
+   looking — which is what was happening: .dccgg-review-yes/-no are styled
+   under .dccgg-root and rendered as unstyled grey system buttons inside the
+   portaled Review popup.
+
+   SPECIFICITY, deliberately (0,4,0): Bravada resets buttons at (0,3,1)
+   (text-transform: uppercase) and the Elementor kit at (0,1,1) (18px/900/
+   1.5px/capitalize), both emitted after this file. A doubled host class
+   (0,2,0) plus a doubled :is() of single classes (0,2,0) clears both with
+   no !important. :is() takes the highest specificity among its arguments,
+   so every argument here is a single class — do not add a compound one.
+
+   WIDTH is the one property that does not come from the reference: 210px is
+   that button's box with its own label. Width follows content here, so the
+   210px is reproduced as the clear space around the label (~28px a side —
+   the reference carries ~35px around "Send Message"). padding: 0 verbatim
+   would push short labels like "Copy" into the 30px radius. */
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: Raleway, -apple-system, "system-ui", "Segoe UI", Arial, sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 50px;          /* the 50px height comes from here, not padding */
+    letter-spacing: 0.5px;
+    text-transform: none;
+    color: var(--dccgg-btn-txt, #ffffff);
+    background: var(--dccgg-btn-bg, #006bcf);
+    border: none;
+    border-radius: 30px;
+    padding: 0 28px;
+    box-shadow: none;
+    white-space: nowrap;        /* a label may never break mid-word */
+    text-decoration: none;
+    cursor: pointer;
+    /* The reference transitions background-color and opacity at .15s. filter
+       is carried along at the same duration so the existing brightness hover
+       (v0.9.7.31, which the host asked to keep) does not become a hard snap. */
+    transition: background-color .15s, opacity .15s, filter .15s;
+}
+/* Phones: the type spec holds, but the clear space either side comes in so a
+   two-button row ("Show" beside "Copy") still fits a 375px popup without the
+   row breaking. Height, family, size, weight, tracking and colour are
+   untouched — only the horizontal padding moves. */
+@media (max-width: 420px) {
+    .dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+    .dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+    .dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
+        padding: 0 18px;
+    }
+}
+
 /* v0.9.7.30: button labels render as authored ("Back", "Copy password")
    rather than ALL CAPS. The plugin never set text-transform on buttons —
    the shouting comes from the site theme's button styles, so this has to
@@ -2011,11 +2079,10 @@ dialog.dccgg-wrapper::backdrop {
    inline copy is set here. Font size is deliberately NOT set: the site's kit
    sizes buttons globally, and both controls should take that together.
    min-height keeps the 44px touch target from v0.12.4. */
-.dccgg-root.dccgg-root .dccgg-secret-toggle,
-.dccgg-root.dccgg-root .dccgg-copy--inline {
-    padding: 8px 16px;
-    min-height: 44px;
-}
+/* v0.14.0: the bespoke compact sizing that used to live here is gone — the
+   reference-button spec above sizes both controls, and it already clears the
+   44px touch target at 50px tall. The v0.13.0 point still holds: the reveal
+   toggle and the Copy button beside it must be the same control visually. */
 
 
 /* v0.13.0: detail-popup body text renders at the theme's paragraph weight.

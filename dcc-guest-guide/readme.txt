@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,31 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.14.0 =
+
+**Changed: every button in the guide now matches the site's reference button.**
+
+The reference is the Contact form's "Send Message": Raleway 20px/500,
+50px tall, 0.5px letter-spacing, no capitalisation, white on #006BCF,
+no border, 30px radius, no shadow. Buttons previously took the Elementor
+kit's 18px / weight 900 / 1.5px / capitalised type, and a few — the Review
+prompt's two buttons and the report dialog's Send and Cancel — were falling
+all the way back to unstyled system buttons inside an open popup.
+
+Covered: Back, Copy, Show/Hide, View in Maps, Reset, Click to Review,
+Copy & open (each review platform), Print guide, Show WiFi QR, the wizard's
+Back and Next, and the report dialog's Send report and Cancel.
+
+Width still follows the label — only the height is fixed, so a short button
+stays short. On phones the space either side of the label tightens so a
+two-button row still fits without breaking.
+
+Unchanged on purpose: the More dropdown and its menu, the section tiles,
+the floating help button, the close and arrow controls, the read-aloud,
+checkbox and per-item report icons, and the emergency chips. Those are
+either icons or cards rather than buttons, and restyling them as pills
+would change the guide's layout.
 
 = 0.13.0 =
 

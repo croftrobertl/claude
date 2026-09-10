@@ -33,7 +33,14 @@ src = open(sys.argv[1]).read()
 src = re.sub(r'/\*[\s\S]*?\*/', '', src)
 # Collapse whitespace around CSS metacharacters.
 src = re.sub(r'\s+', ' ', src)
-src = re.sub(r'\s*([{};:,>+~])\s*', r'\1', src)
+src = re.sub(r'\s*([{};,>+~])\s*', r'\1', src)
+# The colon is NOT in the set above, deliberately. A space BEFORE a colon is
+# a descendant combinator when a pseudo follows it: `.a .b :is(x)` means "an
+# x inside .b", while `.a .b:is(x)` means ".b which is also x" — a different
+# selector that silently matches nothing. Stripping it broke the v0.14.0
+# button rule in the minified bundle while the unminified file was correct.
+# Only the space after a colon is safe to remove (`color: red`).
+src = re.sub(r':\s+', ':', src)
 # Remove trailing semicolons before close-brace.
 src = src.replace(';}', '}')
 # Strip leading whitespace.

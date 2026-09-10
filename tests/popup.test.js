@@ -383,7 +383,12 @@ async function run() {
         // (1) Buttons render as authored, not ALL CAPS, despite the theme.
         check('Back button not uppercased by theme', r.backTransform === 'none', r.backTransform);
         check('Copy button not uppercased by theme', r.copyTransform === 'none', r.copyTransform);
-        check('button letter-spacing reset', r.backSpacing === 'normal', r.backSpacing);
+        // v0.14.0: buttons carry the reference button's 0.5px tracking. The
+        // point of this assertion is unchanged — the Elementor kit's 1.5px
+        // must not reach them — but the expected value is now the spec's,
+        // not "normal".
+        check('button letter-spacing is the reference 0.5px, not the kit 1.5px',
+            r.backSpacing === '0.5px', r.backSpacing);
         // (2) Section title matches item title even while shrunk.
         check('section title == item title size', Math.abs(r.detailTitlePx - r.itemTitlePx) < 0.5,
             `${r.detailTitlePx}px vs ${r.itemTitlePx}px`);
@@ -1036,6 +1041,123 @@ async function run() {
 
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
+    }
+
+
+    // ---- Scenario O: every action button matches the reference (v0.14.0) --
+    // The site's reference button is the Contact form's "Send Message". The
+    // widget's buttons have to beat two stylesheets that load after ours:
+    // Bravada's reset (uppercase, (0,3,1)) and the Elementor kit (18px/900/
+    // 1.5px/capitalize, (0,1,1)). This scenario reproduces both and measures.
+    {
+        console.log('\nO. Buttons match the site reference button, in both versions');
+        const errors = [];
+        const KIT = `
+            body{font-family:Raleway,-apple-system,"system-ui","Segoe UI",Arial,sans-serif;
+                 font-size:16px;color:#333;margin:0}
+            .site .content .entry button{text-transform:uppercase;border-radius:3px;
+                 background:#444;color:#fff;padding:12px 20px}
+            .elementor-kit-5 button,.elementor-kit-5 a.elementor-button{
+                 font-family:Raleway,sans-serif;font-size:18px;font-weight:900;
+                 letter-spacing:1.5px;text-transform:capitalize}
+            #reference{font-family:Raleway,-apple-system,"system-ui","Segoe UI",Arial,sans-serif;
+                 font-size:20px;font-weight:500;line-height:50px;letter-spacing:.5px;
+                 text-transform:none;color:#FFFFFF;background:#006BCF;border:none;
+                 border-radius:30px;padding:0;box-shadow:none;width:210px}`;
+        // Every button the guide can show in a popup, plus the More dropdown,
+        // which v0.14.0 must NOT touch (the host is copying its styling).
+        const utils = `<div class="dccgg-item-utils">
+            <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
+                    data-label-show="Show" data-label-hide="Hide">Show</button></span>
+            <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="DCC32586">Copy</button>
+            <a class="dccgg-btn dccgg-map" href="#">View in Maps</a>
+            <button type="button" class="dccgg-review-yes">Click to Review</button>
+            <button type="button" class="dccgg-review-platform">Copy &amp; open Google</button></div>`;
+        const mk = (rootClass) => `<div class="${rootClass}" data-config='${
+            JSON.stringify({ revealMode: 'stage', enableSectionNav: true, strings: {} }).replace(/'/g, '&#39;')}'>
+            <div class="dccgg-wrapper"><div class="dccgg-stage-container">
+            <div class="dccgg-menu"><div class="dccgg-tile-wrap" data-section-key="wifi">
+            <button class="dccgg-tile" data-key="wifi">Internet</button></div></div>
+            <div class="dccgg-stage"><div class="dccgg-detail" data-key="wifi" hidden>
+            <span class="dccgg-shrink-sentinel"></span>
+            <div class="dccgg-detail-header"><div class="dccgg-detail-header-titlebar">
+            <span class="dccgg-detail-titlebar-spacer"></span>
+            <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-text">Internet</span></h2>
+            <details class="dccgg-more"><summary class="dccgg-more-summary--text">
+            <span class="dccgg-more-summary-text">User Manuals</span></summary>
+            <div class="dccgg-more-popover"><button type="button" class="dccgg-more-item">Print guide</button></div>
+            </details></div>
+            <div class="dccgg-detail-header-actions">
+            <button type="button" class="dccgg-btn dccgg-back">Back</button>
+            <button type="button" class="dccgg-checklist-reset" data-section-key="wifi">Reset</button></div></div>
+            <div class="dccgg-detail-layout"><div class="dccgg-detail-items"><article class="dccgg-item">
+            <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Wifi</span></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Body.</p></div></div>
+            ${utils}</article></div></div></div></div></div></div></div>`;
+        const htmlO = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style><style>${KIT}</style></head>
+            <body class="site elementor-kit-5"><div class="content"><div class="entry">
+            <button id="reference">Send Message</button>
+            ${mk('dccgg-root')}${mk('dccgg-root dccgg-root--public')}
+            </div></div><script>${JS}</script></body></html>`;
+
+        for (const [vpName, vp] of [['desktop', DESKTOP], ['phone', PHONE]]) {
+            const { ctx, page } = await newPage(browser, vp, htmlO, errors);
+            // Open the popup in BOTH roots — the second stands in for the
+            // public mini guide, which renders the same markup.
+            for (const idx of [0, 1]) {
+                await page.evaluate((i) => document.querySelectorAll('.dccgg-tile')[i].click(), idx);
+                await page.waitForTimeout(450);
+            }
+            const m = await page.evaluate(() => {
+                const read = (el) => {
+                    const c = getComputedStyle(el), r = el.getBoundingClientRect();
+                    return { family: c.fontFamily.split(',')[0].replace(/["']/g, ''),
+                             size: c.fontSize, weight: c.fontWeight, lh: c.lineHeight,
+                             ls: c.letterSpacing, tt: c.textTransform, color: c.color,
+                             bg: c.backgroundColor, bw: c.borderTopWidth, radius: c.borderRadius,
+                             shadow: c.boxShadow, w: Math.round(r.width), h: Math.round(r.height),
+                             label: el.textContent.trim().slice(0, 18) };
+                };
+                const ref = read(document.querySelector('#reference'));
+                // Only visible controls; a popup is open, so these live on the
+                // portaled stage, which has no .dccgg-root ancestor.
+                const sel = '.dccgg-btn, .dccgg-checklist-reset, .dccgg-review-yes,'
+                          + '.dccgg-review-no, .dccgg-review-platform, .dccgg-btn-send, .dccgg-btn-cancel';
+                const btns = [...document.querySelectorAll(sel)]
+                    .filter((el) => el.offsetParent !== null).map(read);
+                const drop = read(document.querySelector('.dccgg-more > summary'));
+                const overflowing = [...document.querySelectorAll('.dccgg-detail-layout')]
+                    .filter((el) => el.scrollWidth > el.clientWidth + 1).length;
+                return { ref, btns, drop,
+                         docScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+                         overflowing,
+                         wrapped: btns.filter((b) => b.h > parseFloat(b.lh) * 1.6).map((b) => b.label) };
+            });
+            const spec = ['family', 'size', 'weight', 'lh', 'ls', 'tt', 'color', 'bg', 'bw', 'radius', 'shadow'];
+            const off = m.btns.filter((b) => spec.some((k) => b[k] !== m.ref[k]));
+            check(`${vpName}: every action button matches the reference (${m.btns.length} measured)`,
+                m.btns.length >= 12 && off.length === 0,
+                off.map((b) => b.label + ': ' + spec.filter((k) => b[k] !== m.ref[k])
+                    .map((k) => `${k}=${b[k]}≠${m.ref[k]}`).join(',')).join(' | '));
+            check(`${vpName}: height is the reference 50px, width follows content`,
+                m.btns.every((b) => b.h === 50) && new Set(m.btns.map((b) => b.w)).size > 1,
+                m.btns.map((b) => `${b.label}=${b.w}x${b.h}`).join(' '));
+            check(`${vpName}: nothing overflows and no label wraps`,
+                !m.docScroll && m.overflowing === 0 && m.wrapped.length === 0,
+                `docScroll=${m.docScroll} overflowing=${m.overflowing} wrapped=${JSON.stringify(m.wrapped)}`);
+            // The host is copying this control's styling into an Elementor
+            // widget of their own, so v0.14.0 must leave it exactly as it was.
+            check(`${vpName}: the More dropdown is NOT restyled as a button`,
+                m.drop.size === '16px' && m.drop.weight === '400'
+                && m.drop.radius === '6px' && m.drop.ls === 'normal',
+                `${m.drop.size}/${m.drop.weight}/r${m.drop.radius}/ls${m.drop.ls}`);
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
     }
 
     await browser.close();
