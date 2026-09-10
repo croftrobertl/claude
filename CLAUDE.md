@@ -369,6 +369,19 @@ bump so the tracked zip never lags the source.
   that window and it fails. Measured: 2 failures in 9 runs under concurrent
   load, 0 in 6 when alternated against the previous build on an idle machine
   (which was also 0/5). Re-run it alone before treating it as a regression.
+- **The Schedule settings UI has two layouts and one markup.** Above 782px it
+  is the six-column table the owner approved in 3.16.1 — treat that rendering
+  as frozen and prove it with a pixel diff of the 1280px screenshot
+  (`scratchpad/render-sched6.php` + `scratchpad/shot-sched.js`) before shipping
+  any change to `class-settings.php` or `admin.css`. At 782px and below the
+  same rows become cards, driven entirely by CSS plus the `data-dcc-label`
+  attribute each cell carries (its own column heading, inert on the table).
+  Two traps: `td:nth-child(n)` column widths are MORE specific than a
+  `tbody td` reset, so the card rules must name them to undo them; and the
+  offset/unit and month/day pairs are nowrap spans on purpose — the original
+  complaint was "days" wrapping below the box it labels. Keep the 66 `name=`
+  attributes byte-identical; that diff is what guarantees no saved schedule
+  data moves.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

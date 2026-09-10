@@ -659,9 +659,13 @@ class Settings {
         $none = ['on' => 'fixed', 'm' => 1, 'd' => 1, 'off' => 0];
         ?>
         <tr>
-            <td><?php self::render_rule($name . '[start]', is_array($row['start'] ?? null) ? $row['start'] : $none); ?></td>
-            <td><?php self::render_rule($name . '[end]', is_array($row['end'] ?? null) ? $row['end'] : $none); ?></td>
-            <td>
+            <?php /* data-dcc-label repeats the column heading INSIDE the cell.
+                     It is inert on the table layout and becomes the field's
+                     label when the rows turn into cards at <=782px, so the
+                     phone layout needs no second markup path. */ ?>
+            <td data-dcc-label="<?php esc_attr_e('Starts', 'dcc-seasons'); ?>"><?php self::render_rule($name . '[start]', is_array($row['start'] ?? null) ? $row['start'] : $none); ?></td>
+            <td data-dcc-label="<?php esc_attr_e('Ends', 'dcc-seasons'); ?>"><?php self::render_rule($name . '[end]', is_array($row['end'] ?? null) ? $row['end'] : $none); ?></td>
+            <td data-dcc-label="<?php esc_attr_e('Theme', 'dcc-seasons'); ?>">
                 <select name="<?php echo esc_attr($name); ?>[theme]">
                     <?php foreach ($labels as $key => $label) : ?>
                         <option value="<?php echo esc_attr($key); ?>" <?php selected($row['theme'] ?? '', $key); ?>>
@@ -670,17 +674,17 @@ class Settings {
                     <?php endforeach; ?>
                 </select>
             </td>
-            <td>
+            <td data-dcc-label="<?php esc_attr_e('Label', 'dcc-seasons'); ?>">
                 <input type="text" name="<?php echo esc_attr($name); ?>[label]"
                        value="<?php echo esc_attr($row['label'] ?? ''); ?>" />
             </td>
-            <td>
+            <td data-dcc-label="<?php esc_attr_e('Year', 'dcc-seasons'); ?>">
                 <input type="number" class="dcc-seasons-year" name="<?php echo esc_attr($name); ?>[year]" min="2000" max="2100" step="1"
                        value="<?php echo esc_attr(!empty($row['year']) ? (string) (int) $row['year'] : ''); ?>"
                        placeholder="<?php esc_attr_e('every', 'dcc-seasons'); ?>"
                        aria-label="<?php esc_attr_e('Year (blank = every year)', 'dcc-seasons'); ?>" />
             </td>
-            <td>
+            <td class="dcc-seasons-remove-cell">
                 <button type="button" class="button-link-delete dcc-seasons-remove-row"
                         aria-label="<?php esc_attr_e('Remove row', 'dcc-seasons'); ?>">&#10005;</button>
             </td>

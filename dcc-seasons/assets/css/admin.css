@@ -194,14 +194,131 @@
 	background: #fcf0f1;
 	color: #8a2424;
 }
+/* Focus has to be visible on every control in here, card or table. */
+.dcc-seasons-wrap .dcc-seasons-schedule select:focus-visible,
+.dcc-seasons-wrap .dcc-seasons-schedule input:focus-visible,
+.dcc-seasons-wrap .dcc-seasons-remove-row:focus-visible,
+.dcc-seasons-wrap #dcc-seasons-add-row:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 1px;
+}
+
+/* --- <=782px: ONE ROW PER CARD. -----------------------------------------
+ * Six columns cannot be read on a phone. Even after the 3.16.1 repair the
+ * table was 573px of content scrolling inside a 374px box — better than the
+ * 967px before it, but still a sideways drag to reach Theme and Label. So
+ * below the breakpoint the rows stop being table rows: each becomes a card
+ * with its fields stacked and labelled from the column heading it already
+ * carries (data-dcc-label). Same markup, same six fields, same names — only
+ * the display changes, and the table above 783px is untouched. */
 @media (max-width: 782px) {
-	/* One column of the table per screen is unreadable; the groups stack and
-	   each takes the full width instead. */
-	.dcc-seasons-wrap .dcc-seasons-rule { width: 100%; }
-	.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(1),
-	.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(1),
-	.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(2),
-	.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(2) { width: 260px; }
+	.dcc-seasons-wrap .dcc-seasons-scroll { overflow-x: visible; }
+	.dcc-seasons-wrap .dcc-seasons-schedule,
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody,
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody tr,
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td {
+		display: block;
+		width: auto;
+	}
+	.dcc-seasons-wrap .dcc-seasons-schedule {
+		table-layout: auto;
+		max-width: none;
+		border: 0;
+		background: transparent;
+	}
+	/* The headings move into the cards, one per field. */
+	.dcc-seasons-wrap .dcc-seasons-schedule thead { display: none; }
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody tr {
+		border: 1px solid #c3c4c7;
+		border-radius: 6px;
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+		margin: 0 0 14px;
+		padding: 12px 12px 0;
+	}
+	/* One card is already one object; the stripe would only muddy it. */
+	.dcc-seasons-wrap .dcc-seasons-schedule.striped tbody tr:nth-child(odd) { background: #fff; }
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td {
+		border: 0;
+		padding: 0 0 12px;
+	}
+	/* The desktop column widths are more specific than the reset above
+	   (td:nth-child beats tbody td), so they have to be named to be undone —
+	   otherwise every card field renders at 26% or 9% of the card. */
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(1),
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(2),
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(3),
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(4),
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(5),
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td:nth-child(6) {
+		width: auto;
+		padding-left: 0;
+		padding-right: 0;
+	}
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td::before {
+		content: attr(data-dcc-label);
+		display: block;
+		margin: 0 0 5px;
+		font-size: 12px;
+		font-weight: 600;
+		color: #50575e;
+	}
+	/* Full width, and never under the 44px a finger needs. 16px text because
+	   anything smaller makes iOS zoom the page on focus. */
+	.dcc-seasons-wrap .dcc-seasons-schedule select,
+	.dcc-seasons-wrap .dcc-seasons-schedule input[type="text"],
+	.dcc-seasons-wrap .dcc-seasons-schedule input[type="number"] {
+		width: 100%;
+		max-width: 100%;
+		min-height: 44px;
+		font-size: 16px;
+	}
+	/* Starts and Ends stay the two grouped objects they are on the desktop:
+	   the holiday takes its own line, the offset stays glued to "days". */
+	.dcc-seasons-wrap .dcc-seasons-rule {
+		width: 100%;
+		padding: 10px;
+		gap: 8px;
+	}
+	.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-on {
+		flex: 1 1 100%;
+		min-width: 0;
+	}
+	.dcc-seasons-wrap .dcc-seasons-md-pair { flex: 1 1 auto; gap: 8px; }
+	.dcc-seasons-wrap .dcc-seasons-md-pair select.dcc-seasons-md {
+		flex: 1 1 0;
+		max-width: none;
+		width: auto;
+	}
+	.dcc-seasons-wrap .dcc-seasons-offset { flex: 0 0 auto; }
+	.dcc-seasons-wrap .dcc-seasons-rule input.dcc-seasons-off {
+		width: 88px;
+		flex: 0 0 88px;
+	}
+	.dcc-seasons-wrap .dcc-seasons-rule .dcc-seasons-off-label { font-size: 13px; }
+	/* The one irreversible control sits alone under a rule, a card's width
+	   away from the field above it. */
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td.dcc-seasons-remove-cell {
+		border-top: 1px solid #f0f0f1;
+		border-left: 0;
+		padding: 10px 0;
+		margin-top: 2px;
+		text-align: right;
+	}
+	.dcc-seasons-wrap .dcc-seasons-schedule tbody td.dcc-seasons-remove-cell::before { content: none; }
+	.dcc-seasons-wrap .dcc-seasons-remove-row {
+		min-width: 44px;
+		min-height: 44px;
+		font-size: 18px;
+	}
+	/* Still the last thing on the list, and now a full-width target. */
+	.dcc-seasons-wrap #dcc-seasons-add-row {
+		display: block;
+		width: 100%;
+		min-height: 44px;
+		line-height: 42px;
+		text-align: center;
+	}
 }
 .dcc-seasons-wrap .dcc-seasons-year { width: 72px; }
 .dcc-seasons-wrap .dcc-seasons-resolved td.win { font-weight: 600; }

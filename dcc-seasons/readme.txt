@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.16.1
+Stable tag: 3.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,33 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.17.0 =
+* The Schedule is now ONE ROW PER CARD at 782px and below. The repaired table
+  still scrolled sideways inside its own box on a phone — 573px of content in
+  a 374px window, better than the 967px before 3.16.1 but still a drag to
+  reach Theme and Label. Each row is now a card with its six fields stacked
+  and labelled, and nothing scrolls sideways at either the page or the card:
+  measured at 374px, document 374, card 334, no row overflowing.
+* The desktop table Rob approved is untouched. Every cell carries its column
+  heading in a data-dcc-label attribute, which nothing reads above the
+  breakpoint — the label only becomes visible when the rows turn into cards.
+  Proved by pixel diff: the 1280px screenshot of the six-row Schedule is
+  identical before and after, 0 differing pixels of 2224x1436. The breakpoint
+  itself is exact — 783px still renders the table, 782px the cards.
+* Same six fields, same names, same values: the 66 name= attributes in the
+  table diff clean against 3.16.1, so no saved schedule data is touched.
+* Inside a card, Starts and Ends stay the two grouped objects they are on the
+  desktop, offsets glued to their unit ("Easter Sunday" over "-10 days"),
+  Theme / Label / Year each labelled, and the x sits alone under a rule at the
+  card's foot rather than beside the Year field. Every visible control is at
+  least 44x44 (72 of them, measured), text is 16px so iOS does not zoom the
+  page on focus, and focus draws a visible outline. "Add row" is the last
+  thing on the list, full width, 334x44.
+* Worth noting for the desktop: at phone width the holiday names are NOT
+  truncated — "Memorial Day (last Mon May)" and "Thanksgiving (4th Thu Nov)"
+  both render in full in a card, where the desktop table clips them at about
+  150px. The card layout gives those names room that six columns cannot.
 
 = 3.16.1 =
 * The Schedule table was "confusing and hard to visually read — the sections
