@@ -209,10 +209,34 @@
     cursor: pointer;
     transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-/* No :hover rule by design. The site's Elementor kit owns the global button
-   hover treatment (.elementor-kit-331 button:hover). A rule here would either
-   lose to it on specificity or have to out-specify it, and the site is
-   deliberately converging on one global button hover. */
+/* Hover + keyboard focus. The selector list MIRRORS the resting rule above and
+   appends the pseudo-class, giving 0,4,1 against the resting rule's 0,3,1. This
+   is deliberate and load-bearing: a resting rule applies during hover too, so a
+   lower-specificity hover rule (or the site kit's 0,2,1 one) silently loses and
+   the button never changes colour at all. Do not simplify these selectors.
+
+   Contrast note: #FFFFFF on #F08080 is 2.59:1, below WCAG AA 4.5:1 for normal
+   text. This is a deliberate site-wide brand decision, not an oversight — the
+   focus ring below is what carries perceivability. */
+.dcc-contact-form .dcc-submit:hover,
+.dcc-contact-form button[type="submit"].dcc-submit:hover,
+.dcc-contact-form .dcc-submit:focus-visible,
+.dcc-contact-form button[type="submit"].dcc-submit:focus-visible {
+    background-color: #F08080;
+    color: #FFFFFF;
+}
+
+/* Keyboard focus must be perceivable WITHOUT relying on the coral fill, since
+   that fill is low-contrast by design and also appears on plain hover. A white
+   separation ring sits between the button and a dark outline, so the indicator
+   reads against the resting blue, the coral, and the page behind it alike —
+   independent of whatever colour the fill happens to be. */
+.dcc-contact-form .dcc-submit:focus-visible,
+.dcc-contact-form button[type="submit"].dcc-submit:focus-visible {
+    outline: 3px solid #00294d;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
+}
 .dcc-submit[disabled] {
     opacity: 0.7;
     cursor: default;

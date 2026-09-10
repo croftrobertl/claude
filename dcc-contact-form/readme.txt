@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,7 @@ Highlights:
 == Installation ==
 
 1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
-   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.3.1.zip`).
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.4.0.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -101,6 +101,34 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.4.0 =
+* The button's hover treatment is now declared by this plugin rather than
+  deferred to the site's Elementor kit: hover and keyboard focus set
+  `background-color: #F08080` with `#FFFFFF` text.
+* The hover selector deliberately mirrors the resting rule's doubled selector
+  and appends the pseudo-class (0,4,1 vs the resting rule's 0,3,1). This is
+  load-bearing, not defensive: a resting rule applies during hover too, so any
+  lower-specificity hover rule — including the kit's 0,2,1 one — silently loses
+  and the button never changes colour. Do not simplify those selectors.
+* The resting rule and its `text-transform: none` are unchanged, and the
+  resting appearance is byte-identical to 1.3.1 (verified: 0 differences across
+  every computed property). **The ALL-CAPS trap still stands**: that doubled
+  selector exists to beat the Bravada theme's forced
+  `text-transform: uppercase` on submit buttons, so de-specifying the resting
+  rule brings ALL-CAPS straight back.
+* Keyboard focus gets an indicator that does not depend on the fill: a 3px
+  `#00294D` outline at 3px offset, with a 2px white ring separating it from the
+  button. The coral fill alone is not relied on, since it is low-contrast and
+  also appears on plain mouse hover.
+* Accessibility, stated plainly: `#FFFFFF` on `#F08080` measures **2.59:1**,
+  below the WCAG AA 4.5:1 for normal text. This is a deliberate site-wide brand
+  decision taken with the contrast known, not an oversight. The focus ring is
+  what carries perceivability (14.7:1 against the gap around it).
+* The Elementor panel's button hover colour controls were re-pointed to a
+  higher-specificity selector (0,5,1) so they still override the stylesheet.
+  Left as they were, they would have silently stopped working against the new
+  0,4,1 hover rule.
 
 = 1.3.1 =
 * Removed the plugin's `.dcc-submit:hover` rule. The site's Elementor kit now

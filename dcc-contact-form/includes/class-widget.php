@@ -19,6 +19,21 @@ if (!defined('ABSPATH')) {
  */
 final class Widget extends Widget_Base
 {
+    /**
+     * Selector for the button's hover/focus Style controls.
+     *
+     * It mirrors widget.css's doubled button selector and appends the
+     * pseudo-classes, so the panel value lands at 0,5,1 and still beats the
+     * stylesheet's own 0,4,1 hover rule. A plain "{{WRAPPER}} .dcc-submit:hover"
+     * is only 0,3,0 and would lose to the stylesheet, leaving these controls
+     * looking broken — set a colour in the panel and nothing would change.
+     */
+    private const BUTTON_HOVER_SELECTOR =
+        '{{WRAPPER}} .dcc-contact-form .dcc-submit:hover,'
+        . ' {{WRAPPER}} .dcc-contact-form button[type="submit"].dcc-submit:hover,'
+        . ' {{WRAPPER}} .dcc-contact-form .dcc-submit:focus-visible,'
+        . ' {{WRAPPER}} .dcc-contact-form button[type="submit"].dcc-submit:focus-visible';
+
     public function get_name(): string
     {
         return 'dcc_contact_form';
@@ -526,12 +541,12 @@ final class Widget extends Widget_Base
         $this->add_control('button_text_color_hover', [
             'label'     => __('Text Color', 'dcc-contact-form'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => ['{{WRAPPER}} .dcc-submit:hover, {{WRAPPER}} .dcc-submit:focus' => 'color: {{VALUE}};'],
+            'selectors' => [self::BUTTON_HOVER_SELECTOR => 'color: {{VALUE}};'],
         ]);
         $this->add_control('button_bg_hover', [
             'label'     => __('Background', 'dcc-contact-form'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => ['{{WRAPPER}} .dcc-submit:hover, {{WRAPPER}} .dcc-submit:focus' => 'background-color: {{VALUE}};'],
+            'selectors' => [self::BUTTON_HOVER_SELECTOR => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
         $this->end_controls_tabs();
