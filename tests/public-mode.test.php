@@ -26,6 +26,15 @@ function wp_kses_post($s) { return $s; }
 function do_shortcode($s) { return $s; }
 function apply_filters($t, $v) { return $v; }
 function mb_substr_compat($s, $a, $b) { return mb_substr($s, $a, $b); }
+// v0.13.0: scenario N renders real item markup, which reaches a little more of
+// the WP surface. Each stub is the identity/plain-text behaviour of the real
+// function, so none of them can manufacture a pass.
+function wpautop($s) { return (string) $s; }
+function esc_url($s) { return htmlspecialchars((string) $s, ENT_QUOTES); }
+function esc_url_raw($s) { return (string) $s; }
+function sanitize_html_class($s) { return preg_replace('/[^A-Za-z0-9_-]/', '', (string) $s); }
+function wp_unique_id($p = '') { static $i = 0; return $p . (++$i); }
+function absint($n) { return abs((int) $n); }
 
 require __DIR__ . '/_elementor-stub.php';
 require __DIR__ . '/../dcc-guest-guide/includes/class-widget.php';
@@ -303,6 +312,84 @@ check('masked + body text removed: gone entirely', $count($wifiItem(true, $noBod
 $idxNoBody = json_encode(\DCCGG\Widget::build_search_index($wifiItem(true, $noBody)));
 check('network name is still indexed without body text', stripos($idxNoBody, 'topoftheworld') !== false);
 check('and the item is still findable by title', stripos($idxNoBody, 'Wifi Name') !== false);
+
+
+echo "\nN. Rendered markup: a masked password lives only in attributes\n";
+// v0.13.0 drives the REAL renderer (private, so via reflection) because the
+// constraint is about the HTML that actually ships: a password may appear in
+// the visible text layer ONLY while the guest has explicitly revealed it, and
+// a reveal is client-side, so freshly rendered markup must never contain it.
+// Both versions render through this same method, so both are covered.
+$render = function (array $item, array $strings) {
+    $w = (new ReflectionClass('\DCCGG\Widget'))->newInstanceWithoutConstructor();
+    $m = new ReflectionMethod('\DCCGG\Widget', 'render_item');
+    $m->setAccessible(true);
+    ob_start();
+    $m->invoke($w, $item, $strings, false, false, 0, 'wifi');
+    return (string) ob_get_clean();
+};
+// Only the strings this row reads; each falls back to its own default, which
+// is the point of str_copy_short being independent of the host's str_copy.
+$strs = ['str_copy' => 'Copy Password', 'str_directions' => 'Directions'];
+$visibleText = function (string $html): string {
+    // Everything outside a tag — i.e. exactly what a guest can read, select or
+    // screenshot. Attribute values (data-copy, data-secret-value) are not text.
+    return trim(preg_replace('/\s+/', ' ', strip_tags($html)));
+};
+
+$maskedWifi = ['item_section' => 'wifi', 'item_title' => 'Wifi Name',
+    'item_content' => '<p>Join the cottage network.</p>',
+    'item_copy' => 'yes', 'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes',
+    'item_wifi_mode' => 'yes', 'wifi_ssid' => 'topoftheworld'];
+$outWifi = $render($maskedWifi, $strs);
+$txtWifi = $visibleText($outWifi);
+
+check('wifi row: password is absent from the visible text', strpos($txtWifi, 'DCC32586') === false, $txtWifi);
+check('wifi row: it does ride in the copy + secret attributes',
+    substr_count($outWifi, 'data-copy="DCC32586"') === 1
+    && substr_count($outWifi, 'data-secret-value="DCC32586"') === 1);
+check('wifi row: the value is labelled Password:', strpos($txtWifi, 'Password:') !== false, $txtWifi);
+check('wifi row: the network name is labelled Network:', strpos($txtWifi, 'Network:') !== false, $txtWifi);
+// Read the buttons themselves rather than the flattened text: the SSID row's
+// "Copy" sits immediately before the next row's "Password:" label, so a naive
+// substring search for "Copy Password" matches across the two rows.
+$buttonLabels = function (string $html): array {
+    preg_match_all('/<button\b[^>]*>(.*?)<\/button>/s', $html, $m);
+    return array_map(fn($t) => trim(preg_replace('/\s+/', ' ', strip_tags($t))), $m[1]);
+};
+$labelsWifi = $buttonLabels($outWifi);
+check('wifi row: the copy buttons say just Copy, not Copy Password',
+    !in_array('Copy Password', $labelsWifi, true) && in_array('Copy', $labelsWifi, true),
+    implode(' | ', $labelsWifi));
+// aria-pressed is right for .dccgg-item-check and .dccgg-item-tts, which are
+// genuine two-state toggles; it is wrong here, where the button discloses
+// content. So the assertion is scoped to the toggle's own tag.
+preg_match('/<button\b[^>]*dccgg-secret-toggle[^>]*>/', $outWifi, $tag);
+check('wifi row: reveal toggle is a disclosure, collapsed',
+    !empty($tag) && strpos($tag[0], 'aria-expanded="false"') !== false
+    && strpos($tag[0], 'aria-pressed') === false, $tag[0] ?? 'no toggle rendered');
+check('wifi row: reveal toggle carries the same .dccgg-btn treatment as Copy',
+    substr_count($outWifi, 'dccgg-btn dccgg-secret-toggle') === 1
+    && substr_count($outWifi, 'dccgg-btn dccgg-copy') === 2);
+
+// The same contract for an item that masks a value WITHOUT Wi-Fi mode: this
+// path renders a standalone chip and needed its own "Password:" label.
+$maskedChip = ['item_section' => 'wifi', 'item_title' => 'Gate code',
+    'item_content' => '<p>The side gate.</p>',
+    'item_copy' => 'yes', 'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes'];
+$outChip = $render($maskedChip, $strs);
+$txtChip = $visibleText($outChip);
+check('masked chip: password is absent from the visible text', strpos($txtChip, 'DCC32586') === false, $txtChip);
+check('masked chip: the value is labelled Password:', strpos($txtChip, 'Password:') !== false, $txtChip);
+check('masked chip: copy label drops the repeated word', strpos($txtChip, 'Copy Password') === false, $txtChip);
+
+// Negative control: with masking OFF the host's own verbose label is kept and
+// the value is plainly visible — proving the checks above test the mask, not
+// some unrelated always-true property of the markup.
+$plain = $maskedChip; unset($plain['item_mask_value']);
+$txtPlain = $visibleText($render($plain, $strs));
+check('control: unmasked keeps the host label and shows nothing masked',
+    strpos($txtPlain, 'Copy Password') !== false && strpos($txtPlain, 'Password:') === false, $txtPlain);
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

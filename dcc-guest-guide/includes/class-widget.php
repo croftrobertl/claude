@@ -1479,6 +1479,7 @@ final class Widget extends Widget_Base
             'str_ai_offline'     => [__('AI search offline message', 'dcc-guest-guide'), __('Ask anything needs a connection. The rest of the guide works offline.', 'dcc-guest-guide')],
             'str_wifi_network'   => [__('Wi-Fi network label', 'dcc-guest-guide'), __('Network', 'dcc-guest-guide')],
             'str_wifi_password'  => [__('Wi-Fi password label', 'dcc-guest-guide'), __('Password', 'dcc-guest-guide')],
+            'str_copy_short'     => [__('Copy button (inside a labelled value row)', 'dcc-guest-guide'), __('Copy', 'dcc-guest-guide')],
             'str_secret_show'    => [__('Reveal hidden value button', 'dcc-guest-guide'), __('Show', 'dcc-guest-guide')],
             'str_secret_hide'    => [__('Re-hide value button', 'dcc-guest-guide'), __('Hide', 'dcc-guest-guide')],
             'str_tts_play'       => [__('Read-aloud button label', 'dcc-guest-guide'), __('Read this item aloud', 'dcc-guest-guide')],
@@ -4004,30 +4005,40 @@ final class Widget extends Widget_Base
                 <dl class="dccgg-wifi-creds">
                     <?php if ($wifi_ssid !== '') : ?>
                         <div class="dccgg-wifi-row">
-                            <dt><?php echo esc_html($strings['str_wifi_network'] ?? __('Network', 'dcc-guest-guide')); ?></dt>
+                            <dt><?php echo esc_html($strings['str_wifi_network'] ?? __('Network', 'dcc-guest-guide')); ?>:</dt>
                             <dd>
                                 <span class="dccgg-wifi-ssid"><?php echo esc_html($wifi_ssid); ?></span>
                                 <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($wifi_ssid); ?>">
-                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
+                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide')); ?>
                                 </button>
                             </dd>
                         </div>
                     <?php endif; ?>
                     <?php if ($copy_val !== '') : ?>
                         <div class="dccgg-wifi-row">
-                            <dt><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?></dt>
+                            <dt><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</dt>
                             <dd>
                                 <span class="dccgg-secret">
                                     <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
-                                    <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+                                    <?php // v0.13.0: .dccgg-btn so the reveal toggle and the Copy
+                                    // button beside it are the same control, visually. They do
+                                    // equivalent jobs on the same value; the toggle used to be a
+                                    // bare outlined pill, which read as a different kind of thing.
+                                    // aria-expanded (not aria-pressed): this discloses content. ?>
+                                    <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                                             aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                             data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                             data-label-hide="<?php echo esc_attr($strings['str_secret_hide'] ?? __('Hide', 'dcc-guest-guide')); ?>">
                                         <?php echo esc_html($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>
                                     </button>
                                 </span>
+                                <?php // The row opens with "Password:", so a button reading
+                                // "Copy Password" repeats it — and the extra word is what made
+                                // the two buttons wildly different widths. Deliberately a
+                                // separate string from the general Copy label, which the host
+                                // may want to keep verbose elsewhere. ?>
                                 <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($copy_val); ?>">
-                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
+                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide')); ?>
                                 </button>
                             </dd>
                         </div>
@@ -4047,9 +4058,12 @@ final class Widget extends Widget_Base
                         // data attribute and the dots/plain text come from CSS ::before, so
                         // a screenshot of the unrevealed state shows nothing. Print reveals
                         // it (see @media print) for the cottage binder. ?>
+                        <?php // v0.13.0: the same "Password: •••• [Show] [Copy]" row as the
+                        // structured pair, for items that mask a value without WiFi mode on. ?>
                         <span class="dccgg-secret">
+                            <span class="dccgg-secret-label"><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</span>
                             <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
-                            <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+                            <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                                     aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                     data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                     data-label-hide="<?php echo esc_attr($strings['str_secret_hide'] ?? __('Hide', 'dcc-guest-guide')); ?>">
@@ -4059,7 +4073,12 @@ final class Widget extends Widget_Base
                     <?php endif; ?>
                     <?php if ($copy_on && $copy_val !== '' && !$wifi_creds) : ?>
                         <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
-                            <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy']); ?>
+                            <i class="fas fa-copy" aria-hidden="true"></i> <?php
+                            // Beside a masked value the row already reads "Password:", so use
+                            // the short label there; an unmasked item keeps the host's own.
+                            echo esc_html($mask_on
+                                ? ($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide'))
+                                : $strings['str_copy']); ?>
                         </button>
                     <?php endif; ?>
                     <?php if ($wifi_payload !== '') : ?>

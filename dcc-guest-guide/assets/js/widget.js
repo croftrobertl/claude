@@ -256,7 +256,7 @@
         wireQr(root, config);
         wireSearch(root, config);
         wireSearchMic(root, config);
-        wireSecrets(root);
+        wireSecrets(root, config);
         wireTts(root, config);
         wireTilt(root);
         wireClickFeedback(root, config);
@@ -1909,6 +1909,7 @@
     }
     function openDetailImpl(root, key, onShown) {
         if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
+        if (typeof root.__dccggHideSecrets === 'function') root.__dccggHideSecrets();
         root.__dccggActiveKey = key;
         // v0.9.7.5: after the first open, showDetailModal portals .dccgg-stage
         // (and its .dccgg-detail children) to <body>, so root.querySelectorAll
@@ -1984,6 +1985,7 @@
     function closeDetail(root) {
         if (!root.classList.contains('is-detail')) return;
         if (typeof root.__dccggStopSpeech === 'function') root.__dccggStopSpeech();
+        if (typeof root.__dccggHideSecrets === 'function') root.__dccggHideSecrets();
         const wasModal = !!root.__dccggModal;
         withViewTransition(() => root.classList.remove('is-detail'));
         if (wasModal) hideDetailModal(root);
@@ -3302,27 +3304,55 @@
     // The value itself is never in the text layer: CSS paints either dots or
     // attr(data-secret-value). This only flips a class, so nothing here has to
     // handle the secret.
-    function wireSecrets(root) {
-        root.querySelectorAll('.dccgg-secret-toggle').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const wrap = btn.closest('.dccgg-secret');
-                if (!wrap) return;
-                const revealed = wrap.classList.toggle('is-revealed');
-                // Put the real characters in the DOM while revealed so they can
-                // be selected, long-pressed and searched; take them straight
-                // back out when re-hidden, so the masked state has the value
-                // nowhere in the text layer.
-                const valEl = wrap.querySelector('.dccgg-secret-value');
-                if (valEl) {
-                    valEl.textContent = revealed ? (valEl.dataset.secretValue || '') : '';
-                }
-                btn.setAttribute('aria-pressed', revealed ? 'true' : 'false');
+    function wireSecrets(root, config) {
+        // The stage (and every secret inside it) is portaled to <body> while the
+        // modal is open, so anything that has to find these later must look in
+        // BOTH places — a root.querySelectorAll alone silently finds nothing
+        // once the popup is open, which is precisely when re-masking matters.
+        const scopes = () => {
+            const out = [root];
+            const staged = root.__dccggModal && root.__dccggModal.stage;
+            if (staged && staged !== root && !root.contains(staged)) { out.push(staged); }
+            return out;
+        };
+
+        const setRevealed = (wrap, revealed) => {
+            const btn   = wrap.querySelector('.dccgg-secret-toggle');
+            const valEl = wrap.querySelector('.dccgg-secret-value');
+            wrap.classList.toggle('is-revealed', revealed);
+            // Real characters in the DOM only while revealed: selectable and
+            // long-pressable then, and nowhere in the text layer otherwise.
+            if (valEl) { valEl.textContent = revealed ? (valEl.dataset.secretValue || '') : ''; }
+            if (btn) {
+                btn.setAttribute('aria-expanded', revealed ? 'true' : 'false');
                 const label = revealed
                     ? (btn.dataset.labelHide || 'Hide')
                     : (btn.dataset.labelShow || 'Show');
                 btn.textContent = label;
                 btn.setAttribute('aria-label', label);
+            }
+        };
+
+        // v0.13.0: re-mask on leaving the section and on switching sections.
+        // The popup is NOT torn down between opens — the same nodes are reused
+        // — so a revealed password stayed revealed on the next visit. Resets
+        // the label and aria-expanded in the same place, so the control can
+        // never disagree with what it is showing.
+        root.__dccggHideSecrets = () => {
+            scopes().forEach((scope) => {
+                scope.querySelectorAll('.dccgg-secret.is-revealed').forEach((wrap) => setRevealed(wrap, false));
+            });
+        };
+
+        root.querySelectorAll('.dccgg-secret-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const wrap = btn.closest('.dccgg-secret');
+                if (!wrap) return;
+                setRevealed(wrap, !wrap.classList.contains('is-revealed'));
+                // Same tap feedback as the Copy button beside it — they are
+                // presented as peers, so they should behave as peers.
+                if (config && config.copyEffect) { spawnCopyEffect(btn, config.copyEffect); }
             });
         });
     }

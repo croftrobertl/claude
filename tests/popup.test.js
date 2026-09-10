@@ -651,8 +651,9 @@ async function run() {
         console.log('\nL. Tap-to-reveal values, failed-search reporting, print output');
         const errors = [];
         const secret = `<span class="dccgg-secret">
+            <span class="dccgg-secret-label">Password:</span>
             <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
-            <button type="button" class="dccgg-secret-toggle" aria-pressed="false"
+            <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                     data-label-show="Show" data-label-hide="Hide">Show</button></span>`;
         const cfg = JSON.stringify({ revealMode: 'stage', strings: {}, enableSearch: true,
             ajaxUrl: 'https://dccgg.test/ajax', nonce: 'n1',
@@ -673,19 +674,21 @@ async function run() {
             const v = document.querySelector('.dccgg-secret-value');
             return { css: getComputedStyle(v, '::before').content,
                      text: document.body.innerText,
-                     pressed: document.querySelector('.dccgg-secret-toggle').getAttribute('aria-pressed'),
+                     expanded: document.querySelector('.dccgg-secret-toggle').getAttribute('aria-expanded'),
                      label: document.querySelector('.dccgg-secret-toggle').textContent.trim() };
         });
         let st = await shown();
         check('password is not visible before revealing', !st.text.includes('DCC32586'), st.text.slice(0, 60));
         check('dots are shown instead', /•/.test(st.css), st.css);
-        check('toggle reads Show', st.label === 'Show' && st.pressed === 'false');
+        check('toggle reads Show and is collapsed', st.label === 'Show' && st.expanded === 'false',
+            `"${st.label}" aria-expanded=${st.expanded}`);
 
         await page.click('.dccgg-secret-toggle');
         st = await shown();
         check('tapping Show reveals the value as real text',
             (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === 'DCC32586', st.css);
-        check('toggle flips to Hide', st.label === 'Hide' && st.pressed === 'true');
+        check('toggle flips to Hide and is expanded', st.label === 'Hide' && st.expanded === 'true',
+            `"${st.label}" aria-expanded=${st.expanded}`);
         await page.click('.dccgg-secret-toggle');
         check('tapping again re-hides it',
             (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === ''
@@ -738,12 +741,12 @@ async function run() {
         // The structured Wi-Fi pair: one Show toggle, two copy buttons, and no
         // password anywhere in the visible text before revealing.
         const creds = `<dl class="dccgg-wifi-creds">
-            <div class="dccgg-wifi-row"><dt>Network</dt><dd>
+            <div class="dccgg-wifi-row"><dt>Network:</dt><dd>
               <span class="dccgg-wifi-ssid">topoftheworld</span>
               <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="topoftheworld">Copy</button></dd></div>
-            <div class="dccgg-wifi-row"><dt>Password</dt><dd>
+            <div class="dccgg-wifi-row"><dt>Password:</dt><dd>
               <span class="dccgg-secret"><span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
-              <button class="dccgg-secret-toggle" aria-pressed="false" data-label-show="Show" data-label-hide="Hide">Show</button></span>
+              <button class="dccgg-btn dccgg-secret-toggle" aria-expanded="false" data-label-show="Show" data-label-hide="Hide">Show</button></span>
               <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="DCC32586">Copy</button></dd></div></dl>`;
         const html3 = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1"><style>${CSS}</style></head>
@@ -878,6 +881,159 @@ async function run() {
         await page.mouse.up();
         check('a cancelled gesture resets instead of stranding the sheet',
             after.tf === '' && !after.dragging, `transform="${after.tf}" dragging=${after.dragging}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
+
+    // ---- Scenario N: Wi-Fi password row parity + auto-hide (v0.13.0) -----
+    // The host's complaint: the masked value and the Show toggle both read as
+    // black-on-white so the value looked like a third button, the two controls
+    // acting on the same password looked nothing alike, and a revealed password
+    // survived closing the popup and switching sections.
+    {
+        console.log('\nN. Password row reads as a labelled value, and re-masks itself');
+        const errors = [];
+        // The site kit as of 2026-09: Raleway everywhere, buttons 900/18px.
+        // Measuring under it is the point — the fix relies on inheritance.
+        const KIT = `body{font-family:Raleway,sans-serif;font-size:16px;font-weight:400;color:#333}
+            button{font-family:Raleway,sans-serif;font-weight:900;font-size:18px;
+                   text-transform:capitalize;letter-spacing:1.5px}`;
+        const row = `<div class="dccgg-item-utils">
+            <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
+                    data-label-show="Show" data-label-hide="Hide">Show</button></span>
+            <button type="button" class="dccgg-btn dccgg-copy" data-copy="DCC32586">Copy</button></div>`;
+        const detail = (key, title, body, prev, next) => `
+            <div class="dccgg-detail" data-key="${key}" hidden><span class="dccgg-shrink-sentinel"></span>
+            <div class="dccgg-detail-header"><div class="dccgg-detail-header-titlebar">
+            <span class="dccgg-detail-titlebar-spacer"></span>
+            <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-text">${title}</span></h2></div>
+            <div class="dccgg-detail-header-actions">
+            <button type="button" class="dccgg-btn dccgg-back">Back</button>
+            <button type="button" class="dccgg-section-prev" ${prev ? `data-target-key="${prev}"` : 'disabled'}>Prev</button>
+            <button type="button" class="dccgg-section-next" ${next ? `data-target-key="${next}"` : 'disabled'}>Next</button>
+            </div></div>
+            <div class="dccgg-detail-layout"><div class="dccgg-detail-items"><article class="dccgg-item">
+            <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Wifi #1</span></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body">${body}</div></div>
+            ${key === 'wifi' ? row : ''}</article></div></div></div>`;
+        const cfgN = JSON.stringify({ revealMode: 'stage', copyEffect: 'bubbles',
+            enableSectionNav: true, strings: {} });
+        const htmlN = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${KIT}${CSS}</style></head><body>
+            <div class="dccgg-root" data-config='${cfgN.replace(/'/g, '&#39;')}'>
+            <div class="dccgg-wrapper"><div class="dccgg-stage-container">
+            <div class="dccgg-menu">
+              <div class="dccgg-tile-wrap" data-section-key="wifi"><button class="dccgg-tile" data-key="wifi">Internet</button></div>
+              <div class="dccgg-tile-wrap" data-section-key="other"><button class="dccgg-tile" data-key="other">Amenities</button></div>
+            </div><div class="dccgg-stage">
+            ${detail('wifi', 'Internet',
+                '<p class="ref">Plain line.</p><p><strong>Editor bold</strong></p>'
+                + '<p style="font-weight:700">Pasted inline bold</p>', '', 'other')}
+            ${detail('other', 'Amenities', '<p>Other section.</p>', 'wifi', '')}
+            </div></div><div class="dccgg-detail-overlay" hidden></div></div></div>
+            <script>${JS}</script></body></html>`;
+        const { ctx, page } = await newPage(browser, PHONE, htmlN, errors);
+        const leaked = () => page.evaluate(() => document.body.innerText.includes('DCC32586'));
+        const state = () => page.evaluate(() => {
+            const t = document.querySelector('.dccgg-secret-toggle');
+            return { revealed: document.querySelector('.dccgg-secret').classList.contains('is-revealed'),
+                     text: document.querySelector('.dccgg-secret-value').textContent,
+                     label: t.textContent.trim(), expanded: t.getAttribute('aria-expanded') };
+        });
+
+        await page.click('.dccgg-tile[data-key="wifi"]');
+        await page.waitForTimeout(500);
+
+        // (a) the row reads Password: •••••••• [Show] [Copy], as peers.
+        const look = await page.evaluate(() => {
+            const g = (el) => { const c = getComputedStyle(el), r = el.getBoundingClientRect();
+                return { w: Math.round(r.width), bg: c.backgroundColor, color: c.color,
+                         size: c.fontSize, family: c.fontFamily.split(',')[0], radius: c.borderRadius }; };
+            return { label: document.querySelector('.dccgg-secret-label').textContent,
+                     dots: getComputedStyle(document.querySelector('.dccgg-secret-value'), '::before').content,
+                     copyText: document.querySelector('.dccgg-copy').textContent.trim(),
+                     toggle: g(document.querySelector('.dccgg-secret-toggle')),
+                     copy: g(document.querySelector('.dccgg-copy')) };
+        });
+        check('the value is labelled "Password:"', look.label === 'Password:', look.label);
+        check('it is masked with dots', /•/.test(look.dots), look.dots);
+        check('the copy button says just "Copy"', look.copyText === 'Copy', look.copyText);
+        check('Show and Copy share one visual treatment',
+            look.toggle.bg === look.copy.bg && look.toggle.color === look.copy.color
+            && look.toggle.size === look.copy.size && look.toggle.family === look.copy.family
+            && look.toggle.radius === look.copy.radius,
+            `${look.toggle.bg}/${look.toggle.size}/${look.toggle.family} vs ${look.copy.bg}/${look.copy.size}/${look.copy.family}`);
+        check('their widths are comparable, not 76 vs 144',
+            Math.abs(look.copy.w - look.toggle.w) <= 40, `${look.toggle.w} vs ${look.copy.w}`);
+        check('nothing has leaked before the guest reveals anything', !(await leaked()));
+
+        // (b) revealed, the password IS body copy — not a third control.
+        await page.click('.dccgg-secret-toggle');
+        await page.waitForTimeout(150);
+        const type = await page.evaluate(() => {
+            const g = (el) => { const c = getComputedStyle(el);
+                return { family: c.fontFamily.split(',')[0], size: c.fontSize,
+                         weight: c.fontWeight, color: c.color }; };
+            return { par: g(document.querySelector('.dccgg-item-body p.ref')),
+                     val: g(document.querySelector('.dccgg-secret-value')) };
+        });
+        check('a revealed password matches a paragraph exactly',
+            JSON.stringify(type.par) === JSON.stringify(type.val),
+            `${JSON.stringify(type.val)} vs ${JSON.stringify(type.par)}`);
+        let st = await state();
+        check('revealing shows the value and flips the label',
+            st.text === 'DCC32586' && st.label === 'Hide' && st.expanded === 'true');
+
+        // (c) auto-hide on a section switch. The popup is NOT torn down here,
+        // which is exactly why the reveal used to survive.
+        await page.click('.dccgg-detail[data-key="wifi"] .dccgg-section-next');
+        await page.waitForTimeout(700);
+        check('the section actually changed',
+            await page.evaluate(() => document.querySelector('.dccgg-detail[data-key="other"]').hidden === false));
+        st = await state();
+        check('switching sections re-masks the password',
+            !st.revealed && st.text === '', `revealed=${st.revealed} text="${st.text}"`);
+        check('and resets the label and aria-expanded',
+            st.label === 'Show' && st.expanded === 'false', `${st.label}/${st.expanded}`);
+        check('nothing is left in the text layer after that auto-hide', !(await leaked()));
+
+        // (c) auto-hide on close, the other lifecycle point.
+        await page.click('.dccgg-detail[data-key="other"] .dccgg-section-prev');
+        await page.waitForTimeout(600);
+        await page.click('.dccgg-secret-toggle');
+        await page.waitForTimeout(150);
+        await page.click('.dccgg-detail[data-key="wifi"] .dccgg-back');
+        await page.waitForTimeout(800);
+        st = await state();
+        check('closing the popup re-masks the password',
+            !st.revealed && st.text === '', `revealed=${st.revealed} text="${st.text}"`);
+        check('and resets the label and aria-expanded there too',
+            st.label === 'Show' && st.expanded === 'false', `${st.label}/${st.expanded}`);
+        check('nothing is left in the text layer after that auto-hide', !(await leaked()));
+        check('the value survives in data attributes, so Copy still works',
+            await page.evaluate(() => document.querySelector('.dccgg-copy').dataset.copy === 'DCC32586'
+                && document.querySelector('.dccgg-secret-value').dataset.secretValue === 'DCC32586'));
+
+        // (e) no bold body text. Both an editor <strong> and a pasted inline
+        // font-weight must come back to the paragraph weight; the guide and the
+        // public mini guide render the same markup from the same method, so one
+        // unqualified rule covers both versions.
+        const weights = await page.evaluate(() =>
+            [...document.querySelectorAll('.dccgg-item-body p, .dccgg-item-body strong')]
+                .map((el) => ({ t: el.textContent.slice(0, 20), w: getComputedStyle(el).fontWeight })));
+        check('no detail-popup body text is bold',
+            weights.every((x) => parseInt(x.w, 10) < 600), JSON.stringify(weights));
+        check('the rule is not scoped to one version',
+            !/dccgg-item-body[^{]*\{[^}]*font-weight: inherit/.test(CSS.replace(/\s+/g, ' '))
+            || /\.dccgg-root \.dccgg-item-body,/.test(CSS));
+        check('item titles keep their own weight',
+            await page.evaluate(() => parseInt(getComputedStyle(
+                document.querySelector('.dccgg-item-title')).fontWeight, 10) >= 600));
+
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
     }

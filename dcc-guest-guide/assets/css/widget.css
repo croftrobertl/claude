@@ -1964,7 +1964,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-wifi-creds dt { font-weight: 600; color: var(--dccgg-muted); font-size: 0.9em; }
 .dccgg-wifi-creds dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dccgg-wifi-ssid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.dccgg-root.dccgg-root .dccgg-copy--inline { padding: 6px 12px; min-height: 36px; font-size: 0.82em; }
 @media (max-width: 480px) {
     /* Stack on narrow phones so a long network name never squeezes the copy
        button off the row. */
@@ -1983,9 +1982,10 @@ dialog.dccgg-wrapper::backdrop {
     vertical-align: middle;
 }
 .dccgg-secret-value {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.12em;
-    color: var(--dccgg-text);
+    /* v0.13.0: no family, size, weight or colour of its own — a revealed
+       password must read as body copy, identical to a paragraph. It was
+       monospace in --dccgg-text, which (next to two pale controls) made it
+       look like a third button rather than the value itself. */
     /* v0.12.4: the revealed value is REAL text (the JS writes it into the
        element), so a guest can select it, long-press it on iOS, and find it
        with find-on-page. It used to be painted with ::before content, which
@@ -2000,20 +2000,38 @@ dialog.dccgg-wrapper::backdrop {
    nowhere in the text layer. Revealed: the element holds the real text and
    the dots must step aside or they would print/echo twice. */
 .dccgg-secret:not(.is-revealed) .dccgg-secret-value::before { content: '\2022\2022\2022\2022\2022\2022\2022\2022'; }
-.dccgg-secret.is-revealed .dccgg-secret-value { letter-spacing: normal; }
-.dccgg-secret-toggle {
-    border: 1px solid var(--dccgg-tile-border);
-    background: transparent;
-    color: var(--dccgg-text);
-    border-radius: 999px;
-    /* v0.12.4: 44px is the minimum comfortable touch target, and this control
-       is aimed at guests reading a password off a phone. It was 32px. */
+/* Tracking applies to the dots only; on the revealed value it would stop the
+   text matching a paragraph. */
+.dccgg-secret:not(.is-revealed) .dccgg-secret-value { letter-spacing: 0.12em; }
+/* The inline "Password:" label, matching the <dt> in the structured pair. */
+.dccgg-secret-label { font-weight: 600; color: var(--dccgg-muted); font-size: 0.9em; }
+/* v0.13.0: appearance now comes entirely from .dccgg-btn — the reveal toggle
+   and the Copy button beside it are peers doing equivalent jobs on the same
+   value, so they must look identical. Only the compact sizing shared with an
+   inline copy is set here. Font size is deliberately NOT set: the site's kit
+   sizes buttons globally, and both controls should take that together.
+   min-height keeps the 44px touch target from v0.12.4. */
+.dccgg-root.dccgg-root .dccgg-secret-toggle,
+.dccgg-root.dccgg-root .dccgg-copy--inline {
     padding: 8px 16px;
     min-height: 44px;
-    min-width: 44px;
-    font: inherit;
-    font-size: 0.9em;
-    cursor: pointer;
+}
+
+
+/* v0.13.0: detail-popup body text renders at the theme's paragraph weight.
+   Bold typed into an item (a <strong>, or the editor's Bold button) made
+   passages read as headings; the host asked for content text to match the
+   paragraph settings exactly. Scoped to the item body, so item titles and
+   section headings keep their own weight. Applies to the public mini guide
+   and the full guide alike — same markup, same rule.
+
+   !important is deliberate and is the only thing that works here: a pasted
+   passage carries style="font-weight:700" inline, and an inline style beats
+   any author rule that is not important. Headings typed INTO an item content
+   are excluded so they keep their own weight, per the host's instruction. */
+.dccgg-root .dccgg-item-body,
+.dccgg-root .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+    font-weight: inherit !important;
 }
 
 /* ---- Read-time chip ---- */

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.5
+Stable tag: 0.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,38 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.13.0 =
+
+**Changed: the Wi-Fi password row now reads as a value, not as three buttons.**
+
+In the Internet section the hidden password and the Show button were both
+dark text on white, so the password looked like another button, and "Copy
+Password" was nearly twice the width of "Show" beside it. The row now reads
+`Password: •••••••• [Show] [Copy]`:
+
+* The masked value is preceded by a plain "Password:" label.
+* Show and Copy are the same kind of button, with the same tap effect, and
+  are close to the same width. They do equivalent jobs on the same value.
+* The copy button says "Copy" — the row already says what is being copied.
+  It keeps the longer label everywhere a value is not labelled.
+* A revealed password is typeset as ordinary body copy: same font, size,
+  weight and colour as a paragraph, instead of monospace.
+
+**Fixed: a revealed password stayed revealed.**
+
+Tapping Show then closing the section — or moving to another section and
+coming back — left the password on screen, because the popup is reused
+rather than rebuilt. It is now re-masked on both, with the button reset to
+"Show". While masked the password exists only in an attribute the copy
+button reads; it is never in the page's text, including after an automatic
+re-mask.
+
+**Changed: detail text is no longer bold.**
+
+Bold typed into an item made whole passages read as headings. Content text
+now renders at the theme's paragraph weight in both the guest guide and the
+public guide. Item titles and section headings are unaffected.
 
 = 0.12.5 =
 
