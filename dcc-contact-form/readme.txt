@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,7 @@ Highlights:
 == Installation ==
 
 1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
-   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.3.0.zip`).
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.3.1.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -101,6 +101,21 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.3.1 =
+* Removed the plugin's `.dcc-submit:hover` rule. The site's Elementor kit now
+  owns the global button hover treatment, and this rule was a losing override
+  left in the stylesheet for someone to trip over later. No specificity was
+  raised to compete with the kit.
+* Note for the site's button standardisation pass: the resting button rule still
+  uses a doubled selector (`.dcc-contact-form button[type="submit"].dcc-submit`,
+  specificity 0,3,1) which out-ranks a kit hover rule at 0,2,1, so the kit's
+  hover colour cannot take effect while that rule sets `background-color`. That
+  selector exists to beat the Bravada theme's forced `text-transform: uppercase`
+  on submit buttons, so simply lowering its specificity brings the ALL-CAPS bug
+  back. Splitting it — high specificity for `text-transform`, and dropping or
+  de-specifying `background-color` — lets the kit own button colour without
+  regressing the capitalisation fix.
 
 = 1.3.0 =
 * Fix: saving the Settings page now shows the "Settings saved." confirmation.

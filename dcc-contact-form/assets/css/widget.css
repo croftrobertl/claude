@@ -209,9 +209,10 @@
     cursor: pointer;
     transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-.dcc-submit:hover {
-    background-color: #0059ab;
-}
+/* No :hover rule by design. The site's Elementor kit owns the global button
+   hover treatment (.elementor-kit-331 button:hover). A rule here would either
+   lose to it on specificity or have to out-specify it, and the site is
+   deliberately converging on one global button hover. */
 .dcc-submit[disabled] {
     opacity: 0.7;
     cursor: default;
