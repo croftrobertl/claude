@@ -577,13 +577,79 @@
     font-family: inherit;
     line-height: 1.15;
 }
-/* A rule between cottage name cells (0.23.9) — the two greys read as one
-   block against the white page without it. General-sibling selector so it
-   lands on every data row EXCEPT the first, which gives dividers BETWEEN
-   rows and none above the first or below the last. Label cells only: no
-   vertical rules, and the day cells are untouched. */
-.mphbac-root.mphbac-root .mphbac-row:not(.mphbac-row-header) ~ .mphbac-row .mphbac-cell-label {
+/* ---- Cottage column: two treatments, chosen by the "Cottage column style"
+   control (root class mphbac-namecol-scales / -dividers). ----
+
+   PLAIN DIVIDERS is the 0.23.9 behaviour: one line between cells, none above
+   the first or below the last. General-sibling selector, label cells only —
+   no vertical rules, and the day cells are untouched. */
+.mphbac-root.mphbac-root.mphbac-namecol-dividers
+    .mphbac-row:not(.mphbac-row-header) ~ .mphbac-row .mphbac-cell-label {
     border-top: 1px solid var(--mphbac-color-namecol-sep);
+}
+
+/* SCALES. Each cottage is a rounded tile that overhangs the row below and
+   tucks under the row above, reading down the column like fish scales.
+
+   Why it is drawn on a pseudo-element rather than the cell: the tile has to
+   extend BEYOND its own grid row to overlap, and the cell is a grid item
+   whose box must keep the row's height exactly — the day cells beside it
+   depend on it. The ::before is out of flow, so the overlap is free: rows do
+   not grow, the 96px column does not move, and nothing clips.
+
+   Stacking: DOM order paints later rows on top, which would put each scale
+   OVER the one above it — backwards. widget.js sets --mphbac-row-i per row
+   so the z-index can descend instead. The header sits above all of them.
+
+   The asymmetry Rob spotted is gone by construction: a tile is closed on
+   every side, not dark on top and open at the bottom.
+
+   Decoration only. The grounds are the existing greys, so the name keeps its
+   measured 5.4-5.7:1; the tile edge is the same #CBD0D7 as the divider. */
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label {
+    position: relative;
+    /* The tile carries the fill now. */
+    background: transparent;
+    /* Grid items default to overflow: visible, but .mphbac-cell-label sets
+       hidden for its own text; the label spans clip themselves, so releasing
+       it here costs nothing and is what lets the tile overhang. */
+    overflow: visible;
+    z-index: calc(40 - var(--mphbac-row-i, 0));
+}
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-row:not(.mphbac-row-header) .mphbac-cell-label::before {
+    content: "";
+    position: absolute;
+    /* Overhang below; the row beneath is 41-42px, so 10px reads as a scale
+       without hiding the next cottage's number. */
+    inset: 0 0 -10px 0;
+    background: var(--mphbac-color-namecol);
+    border-radius: 0 0 14px 14px;
+    border-bottom: 1px solid var(--mphbac-color-namecol-sep);
+    z-index: -1;
+}
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-row.mphbac-row-alt:not(.mphbac-row-header) .mphbac-cell-label::before {
+    background: var(--mphbac-color-namecol-alt);
+}
+/* The last tile has nothing to overlap, so it keeps its square bottom and
+   sits flush with the grid's edge. widget.js marks it. */
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-row.mphbac-row-last:not(.mphbac-row-header) .mphbac-cell-label::before {
+    inset: 0;
+    border-radius: 0;
+    border-bottom: 0;
+}
+/* Text above its own tile. */
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-cell-label .mphbac-label-num,
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-cell-label .mphbac-label-abbrev,
+.mphbac-root.mphbac-root.mphbac-namecol-scales
+    .mphbac-cell-label .mphbac-label-custom {
+    position: relative;
+    z-index: 1;
 }
 
 /* Cottage cells are centred at every width (0.23.7), matching the centred
@@ -1006,6 +1072,24 @@
     margin-bottom: -2.1em;
     margin-right: -0.25em;
 }
+/* A dialog opened by TAP must not leave its close button ringed. The
+   browser's own :focus-visible heuristic is not enough — focus() called
+   while the heuristic sits in keyboard mode (it does; the dialog focuses
+   this button on open) matches :focus-visible even after a tap. So the
+   opening modality is recorded on the sheet as .is-pointer-open, and
+   removed the moment the visitor presses Tab, which hands the rings back to
+   keyboard users mid-session. Same mechanism for both dialogs. */
+.mphbac-info-sheet.is-pointer-open .mphbac-info-close--floating:focus-visible,
+.mphbac-sheet.is-pointer-open .mphbac-sheet-close:focus-visible {
+    outline: none;
+    background: rgba(60, 60, 60, 0.45);
+    color: rgba(255, 255, 255, 0.96);
+}
+.mphbac-sheet.is-pointer-open .mphbac-sheet-close:focus-visible {
+    background: #ECEFF3;
+    color: #4A5260;
+}
+
 .mphbac-info-close--floating:focus-visible {
     outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
     outline-offset: 2px;
@@ -1312,8 +1396,16 @@ body.mphbac-info-open {
     text-decoration-thickness: 2px;
 }
 
-/* Cottage info popup body */
+/* Cottage info popup body.
+   text-align is CENTRE here (0.24.0) because that is the context the same
+   content sits in on a cottage page: the centring there comes from a page
+   ancestor that does not travel with the moved markup, so without this the
+   spec block ("Guests:" through the couch fee) reads left-aligned in the
+   popup and centred on the page. Deliberately (0,1,0) — any Elementor
+   alignment the author set on a block still wins, so this restores the
+   page's default rather than overriding anyone's choice. */
 .mphbac-info-body {
+    text-align: center;
     overflow-wrap: anywhere;
     /* Hard-contain the popup width. min-width:0 lets flex/grid children
        shrink below their declared min-content; max-width:100% prevents
@@ -1476,7 +1568,15 @@ body.mphbac-info-open {
     width: 20px;
     height: 20px;
 }
-.mphbac-sheet-close:focus-visible {
+/* TRACED (0.24.0): this is what painted the INFO popup's close coral.
+   That button's markup is
+   class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating",
+   so it matches .mphbac-sheet-close too — and at (0,2,0) this rule beat its
+   own frosted-pill background at (0,1,0). It was never a hover state: the
+   popup focuses its close button on open, so the fill appeared immediately.
+   The floating variant is excluded here and gets its own focus treatment
+   below, next to its outline. */
+.mphbac-sheet-close:not(.mphbac-info-close--floating):focus-visible {
     background: var(--mphbac-color-nav-bg);
     color: #ffffff;
 }

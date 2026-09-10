@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.9
+Stable tag: 0.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,15 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.24.0 =
+* **The cottage column now reads as overlapping scales** — each cottage sits on a rounded tile that tucks under the one above, in the same two greys. A new "Cottage column style" setting switches back to plain dividing lines in one click if you prefer them.
+* Fixed: **the cottage-info popup's close button turned coral with a gold outline as soon as the popup opened.** Both were the plugin's own doing. That button shares a class with the booking popup's close, so it was picking up the booking popup's highlight colour, and the outline is the keyboard-focus ring appearing after a tap. Neither happens now; keyboard focus outlines are unchanged.
+* **The specification text in the cottage-info popup is centred**, matching the cottage pages. The centring on those pages comes from the page itself, which does not travel with the content when it moves into the popup.
+* Further work on the carousel arrows disappearing on a phone — see the note below.
+* Nothing about the staff calendar changes.
+
+**Carousel arrows — please retest.** The previous attempt did not hold. Two changes this time: the arrow unlock now runs after Elementor's own handlers have finished (re-running one can build a fresh carousel that takes its own decision), and the popup now watches its real size rather than assuming it is ready. If the arrows are still hidden, the next thing to check is whether they are set to appear on hover only, which a phone can never satisfy — that would be an Elementor setting rather than the plugin.
 
 = 0.23.9 =
 * **A thin line now separates the cottage name cells**, so the column reads as distinct rows instead of one block. Backgrounds are unchanged.

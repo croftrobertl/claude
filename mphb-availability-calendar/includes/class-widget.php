@@ -689,6 +689,17 @@ class Widget extends Widget_Base
             ],
         ]);
 
+        $this->add_control('namecol_style', [
+            'label'       => __('Cottage column style', 'mphb-availability-calendar'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => 'scales',
+            'options'     => [
+                'scales'   => __('Overlapping scales', 'mphb-availability-calendar'),
+                'dividers' => __('Plain dividing lines', 'mphb-availability-calendar'),
+            ],
+            'description' => __('"Overlapping scales" gives each cottage a rounded tile that tucks under the one above. "Plain dividing lines" draws a single line between cells instead.', 'mphb-availability-calendar'),
+        ]);
+
         $this->add_control('show_legend', [
             'label'        => __('Show color legend', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
@@ -1643,6 +1654,9 @@ class Widget extends Widget_Base
             $root_classes[] = 'mphbac-popup-enabled';
         }
         $root_classes[] = 'mphbac-label-' . ($settings['label_style'] === 'number_only' ? 'number' : 'abbrev');
+        $root_classes[] = ($settings['namecol_style'] ?? 'scales') === 'dividers'
+            ? 'mphbac-namecol-dividers'
+            : 'mphbac-namecol-scales';
         if ($this->single_mode()) {
             // Drops the label column in CSS and (via config.singleMode) stops
             // widget.js emitting the label cells at all.

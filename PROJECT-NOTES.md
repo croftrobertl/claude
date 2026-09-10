@@ -674,6 +674,64 @@ MODULE-SCOPE things they call (`lastInputWasKeyboard`, `restoreTriggerFocus`)
 — a missing one throws on the first line of `openSheet` and every field comes
 back empty, which reads like a layout bug.
 
+## THREE close buttons, and one of them wears two hats (0.24.0)
+
+`.mphbac-sheet-close` (booking), `.mphbac-info-close--floating` (info popup),
+`.mphbac-staff-close` (staff). **The info popup's close carries BOTH public
+classes** — its markup is
+`class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating"` —
+so any `.mphbac-sheet-close` rule lands on it too, at (0,2,0), beating its own
+frosted-pill background at (0,1,0). That is what painted it coral: not a hover
+state, but `.mphbac-sheet-close:focus-visible`, firing because the popup
+focuses its close button on open. Searching for `--floating` rules alone will
+not find it. Fix any close-button rule for all three, or exclude explicitly
+(`:not(.mphbac-info-close--floating)`).
+
+`.is-pointer-open` on a sheet records that it was opened by TAP and suppresses
+the focus ring/fill on its close button; the class is dropped the moment the
+visitor presses Tab, so keyboard rings come back mid-session. Same reasoning
+as `restoreTriggerFocus`: the browser's `:focus-visible` heuristic sits in
+keyboard mode when we call `focus()`, so it cannot be relied on alone.
+
+## Cottage column: scales (0.24.0)
+
+Two treatments behind the "Cottage column style" control (`namecol_style`,
+default `scales`), emitted as a root class. Scales draw on a `::before`, NOT
+on the cell: the tile has to extend past its own grid row to overlap, while
+the cell's box must keep the row height exactly because the day cells depend
+on it. Out of flow means rows do not grow and the 96px column does not move.
+
+DOM order paints later rows on top, which is backwards for scales, so
+`widget.js` sets `--mphbac-row-i` per row and the z-index descends from it.
+The last row gets `mphbac-row-last` and stays square.
+
+Specificity trap: the base tile rule is (0,5,0); the `-alt` and `-last`
+overrides were written at (0,4,0) and silently lost to it. Any override of
+that rule needs the same selector shape.
+
+## Info popup content alignment (0.24.0)
+
+`.mphbac-info-body` is `text-align: center` at (0,1,0). The plugin has exactly
+ONE `text-align: left` in the whole stylesheet and it is on `.mphbac-cell-label`
+— so the popup was not left-aligning anything. The centring on a cottage page
+comes from a PAGE ancestor that does not travel with the moved markup, and
+this restores it. Deliberately low specificity: an alignment the author set on
+a block still wins.
+
+## Harness traps met in 0.24.0
+
+- `getComputedStyle(el, '::before')` — a local `cs = el => getComputedStyle(el)`
+  helper silently drops the second argument and returns the ELEMENT's styles,
+  so every pseudo-element assertion passes or fails for the wrong reason.
+- A block extracted from `widget.js` inherits its original scope's variables.
+  When the label builder started reading `index` and `rooms`, the harness
+  wrapper had to pass them or the page script threw and NO rows were built —
+  which looked like a CSS failure. Attach `page.on('pageerror')` to every
+  fixture page; the ones without it hid this.
+- Baselines built from `git show HEAD` stop being "before" the moment a fix
+  ships. Five more were converted this round into guards against a silent
+  revert.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

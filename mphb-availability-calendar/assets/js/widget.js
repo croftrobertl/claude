@@ -854,14 +854,48 @@
             if (!sw || !el.getBoundingClientRect().width) return;
             try {
                 if (sw.checkOverflow) sw.checkOverflow();
-                if (sw.isLocked === false) {
-                    el.querySelectorAll('.swiper-button-lock').forEach(function (b) {
+                sw.update();
+                if (sw.navigation && sw.navigation.update) sw.navigation.update();
+                // Clear the lock whenever there is genuinely more than one
+                // slide. isLocked is the verdict Swiper reached from a width
+                // that may have been 0 when the popup was still closed;
+                // slide count is not. Elementor's arrows live OUTSIDE the
+                // .swiper element (they are siblings in the widget wrapper),
+                // so the sweep has to run from the widget, not from el.
+                var slides = el.querySelectorAll('.swiper-slide:not(.swiper-slide-duplicate)').length;
+                if (slides > 1) {
+                    var scope = el.closest('.elementor-widget') || el.parentNode || el;
+                    scope.querySelectorAll('.swiper-button-lock').forEach(function (b) {
                         b.classList.remove('swiper-button-lock');
                     });
+                    if (sw.params && sw.params.loop) {
+                        // A looping carousel is never at an end, so a
+                        // disabled arrow there is also a stale verdict.
+                        scope.querySelectorAll('.swiper-button-disabled').forEach(function (b) {
+                            b.classList.remove('swiper-button-disabled');
+                        });
+                    }
                 }
-                if (sw.navigation && sw.navigation.update) sw.navigation.update();
             } catch (e) { /* older Swiper without checkOverflow — leave it */ }
         });
+    }
+
+    // Re-run the unlock whenever the popup body actually changes size. The
+    // 0.23.9 fix inferred readiness from transitionend plus a timeout; if
+    // either fires while the sheet is still animating (or a late webfont or
+    // image reflows it), Swiper re-locks and nothing runs again. Observing
+    // the real box removes the inference.
+    function watchSwiperWidth(container) {
+        if (!container || typeof ResizeObserver === 'undefined') return null;
+        var lastWidth = 0;
+        var ro = new ResizeObserver(function (entries) {
+            var w = entries[0] && entries[0].contentRect ? entries[0].contentRect.width : 0;
+            if (!w || w === lastWidth) return;
+            lastWidth = w;
+            unlockSwiperNav(container);
+        });
+        try { ro.observe(container); } catch (e) { return null; }
+        return ro;
     }
 
     // Which modality opened the last thing. A <button> fires a synthesised
@@ -947,6 +981,7 @@
 
         var lastTrigger = null;
         var openedViaKeyboard = false;
+        var widthWatcher = null;
         var closeTimer = null; // pending 200ms close cleanup; cancelled on reopen
         // When the popup opens we MOVE (not clone) the cottage's hidden
         // .mphbac-info-content node into the popup body. Same DOM identity
@@ -1008,6 +1043,13 @@
 
         function openInfo(typeId, content, trigger) {
             openedViaKeyboard = lastInputWasKeyboard;
+            // See .is-pointer-open in widget.css: suppresses the focus ring
+            // and fill on the close button when the dialog was tapped open.
+            sheet.classList.toggle('is-pointer-open', !openedViaKeyboard);
+            // Observe the body's real width for as long as the popup is open,
+            // so the arrows are re-decided whenever it actually changes size.
+            if (widthWatcher) { try { widthWatcher.disconnect(); } catch (e) {} }
+            widthWatcher = watchSwiperWidth(bodyEl);
             // A close may still be mid-flight (200ms slide-out). Cancel its
             // cleanup so it can't hide the sheet we're about to show; the
             // portal / movedContent checks below handle whichever state the
@@ -1137,12 +1179,14 @@
                 settled = true;
                 refreshSwipers(bodyEl);
                 reinitSwipers(bodyEl);
-                // Now that the popup is at full width, re-decide whether the
-                // arrows are genuinely lockable (item 3).
-                unlockSwiperNav(bodyEl);
                 // After the sliders are in their final geometry, make sure
                 // whatever is on screen actually has handlers attached.
                 reinitElementorWidgets(bodyEl);
+                // LAST, not before reinitElementorWidgets: re-running an
+                // Elementor handler can construct a fresh Swiper, which takes
+                // its own overflow verdict. Unlocking before that happened is
+                // why 0.23.9 did not stick.
+                unlockSwiperNav(bodyEl);
                 try { window.dispatchEvent(new Event('resize')); } catch (e) {}
                 updateScrollbar();
             };
@@ -1168,6 +1212,10 @@
         }
 
         function closeInfo() {
+            if (widthWatcher) {
+                try { widthWatcher.disconnect(); } catch (e) { /* ignore */ }
+                widthWatcher = null;
+            }
             sheet.classList.remove('is-open');
             overlay.classList.remove('is-open');
             if (scrollbar) scrollbar.hidden = true;
@@ -1212,7 +1260,12 @@
 
         function onKeydown(e) {
             if (e.key === 'Escape') closeInfo();
-            if (e.key === 'Tab') trapFocus(e);
+            if (e.key === 'Tab') {
+                // The visitor has moved to the keyboard — hand the focus
+                // rings back for the rest of this open.
+                sheet.classList.remove('is-pointer-open');
+                trapFocus(e);
+            }
         }
 
         function trapFocus(e) {
@@ -1580,6 +1633,8 @@
             var row = document.createElement('div');
             row.className = 'mphbac-row'
                 + (index % 2 === 1 ? ' mphbac-row-alt' : '')
+                // The last scale has nothing to overlap, so it stays square.
+                + (index === rooms.length - 1 ? ' mphbac-row-last' : '')
                 + (hasInfo ? ' mphbac-has-info' : '');
             row.setAttribute('role', 'row');
             row.setAttribute('data-room-type-id', String(room.id));
@@ -1587,6 +1642,11 @@
             if (!single) {
                 var labelBtn = document.createElement('button');
                 labelBtn.type = 'button';
+                // Scale overlap: each tile must paint OVER the one below, but
+                // DOM order paints later rows on top. A descending z-index per
+                // row is the only way to reverse that without reordering the
+                // grid, and the index is only known here.
+                labelBtn.style.setProperty('--mphbac-row-i', String(index));
                 labelBtn.className = 'mphbac-cell mphbac-cell-label mphbac-row-toggle'
                     + (hasInfo ? ' mphbac-row-toggle--info' : '');
                 labelBtn.title = room.title || '';
@@ -2274,6 +2334,7 @@
             context.roomTypeId = typeId;
             context.lastTrigger = trigger || null;
             context.viaKeyboard = lastInputWasKeyboard;
+            sheet.classList.toggle('is-pointer-open', !context.viaKeyboard);
             var title = (config.strings && config.strings.bookHeading) ? config.strings.bookHeading : 'Book';
             var roomTitle = (config.roomTitles && config.roomTitles[typeId]) || '';
             // Split at the first colon (e.g. "Book Cottage 32: Flamingo
