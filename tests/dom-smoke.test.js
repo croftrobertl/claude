@@ -1683,18 +1683,32 @@ const flush = () => new Promise(r => setTimeout(r, 0));
 
 // ---- 60. (a) booked cottages are marked and ranked below free ones ----
 defer(async function () {
-  const w = freshDom('https://example.com/?in=2026-09-10&out=2026-09-13');
-  stubAvail(w, { booked: ['22', '23', '31'] });   // the usual leaders are taken
+  const URL60 = 'https://example.com/?in=2026-09-10&out=2026-09-13';
+  // Which cottages LEAD when nothing is booked? Derive them; never hard-code the
+  // names. Score ties break on a daily rotation, so a fixed name list silently
+  // rots: this block asserted 'Cottage 22'/'Cottage 23' and passed only until the
+  // calendar rotated past the day it was written, then failed on an untouched repo.
+  const freeDom = freshDom(URL60);
+  stubAvail(freeDom, { booked: [] });
+  const freeRoot = mountSelector(freeDom, availConfig());
+  await flush(); await flush();
+  const leaders = cardNames(freeRoot);
+  const leaderIds = leaders.map(n => (n.match(/\d+/) || [''])[0]).filter(Boolean);
+  ok('baseline: three cottages lead when everything is free',
+    leaders.length === 3 && leaderIds.length === 3);
+
+  const w = freshDom(URL60);
+  stubAvail(w, { booked: leaderIds });   // the actual leaders are taken
   const root = mountSelector(w, availConfig());
   await flush(); await flush();
   const names = cardNames(root);
   const bookedShown = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'))
     .filter(c => c.querySelector('.dccs-avail-booked'));
-  // The two best matches are booked here, so they must still appear — appended
-  // below the free ones — rather than being sunk out of the visible top three.
+  // Every best match is booked here, so they must still appear — appended below
+  // the free ones — rather than being sunk out of the visible top three.
   ok('booked top matches are still shown, never dropped', names.length > 3);
-  ok('the booked best-matches are present by name',
-    /Cottage 22/.test(names.join('|')) && /Cottage 23/.test(names.join('|')));
+  ok('every would-be leader is still present, none silently dropped',
+    leaders.every(n => names.indexOf(n) !== -1));
   ok('a booked cottage is labelled "Booked for your dates"',
     !bookedShown.length || /Booked for your dates/.test(bookedShown[0].textContent));
   const order = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'))
