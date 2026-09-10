@@ -65,7 +65,10 @@ final class Config
             'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
-            'compare_btn'       => /* translators: %d: number of cottages selected */ __('Compare %d cottages', 'dcc-cottage-selector'),
+            // Title Case is carried by the STRING now, not by a text-transform:
+            // the site button spec sets text-transform:none (0.27.0), so whatever
+            // is stored here is what renders.
+            'compare_btn'       => /* translators: %d: number of cottages selected */ __('Compare %d Cottages', 'dcc-cottage-selector'),
 
             // No-match "what it misses" tags
             'tag_pet'           => __('Not pet-friendly', 'dcc-cottage-selector'),
@@ -180,7 +183,7 @@ final class Config
             'avail_checking'    => __('Checking availability…', 'dcc-cottage-selector'),
             'avail_error'       => __('We could not check availability just now — these are ranked without it.', 'dcc-cottage-selector'),
             'avail_none_free'   => __('None of your matches are free for those dates. They are listed below so you can pick other dates.', 'dcc-cottage-selector'),
-            'share_btn'         => __('Share these results', 'dcc-cottage-selector'),
+            'share_btn'         => __('Share These Results', 'dcc-cottage-selector'),
             'share_done'        => __('Link copied', 'dcc-cottage-selector'),
             'share_fail'        => __('Copy the link from your address bar to share it.', 'dcc-cottage-selector'),
 

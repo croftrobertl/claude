@@ -187,12 +187,28 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   second switch — adding one would create exactly the two-copies-must-agree hazard
   the preset notes warn about. A widget that HAS saved `avail_enable=yes` can only
   be turned off in its own Elementor panel.
-- **Buttons inherit the page font via `.dccs-root.dccs-root button`** (0,4,1), which
-  outranks an Elementor kit's `.elementor-kit-N button` (0,1,1) without
-  `!important`. It targets the ELEMENT on purpose: the widget has 16+ button classes
-  and an enumeration would silently miss new ones. Weight, size, text-transform and
-  letter-spacing are deliberately left alone — the kit forces those site-wide and
-  they are standardised outside this plugin.
+- **The site button spec lives in `--dccs-btn-*` tokens** at the top of
+  `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
+  `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
+  per-button rules. `font-family` is `inherit`, not a named stack, so it survives a
+  theme font change — that is deliberate, don't "fix" it.
+- **Count specificity per selector, not per file.** `.dccs-root.dccs-root button` is
+  **(0,2,1)** — two classes plus an element. That beats an Elementor kit's
+  `.elementor-kit-N button` (0,1,1), which is all it has to do, but it does NOT beat
+  this stylesheet's own class rules (`.dccs-root.dccs-root .dccs-chip` is (0,3,0)).
+  0.26.0 recorded it as (0,4,1), which was wrong. Because of this, the button rules
+  were REFACTORED onto the spec rather than overridden by a blanket rule — a blanket
+  rule at (0,2,1) would have been silently inert wherever a class rule already set
+  the property.
+- **Per-button Style sections outrank the spec.** They emit
+  `{{WRAPPER}} .dccs-root.dccs-root .<class>` = (0,4,0). Anything preset there pins
+  that button off the spec while everything else appears to comply — which is what
+  `style_comparebtn_*` was doing to the Compare button before 0.27.0 removed it from
+  the preset. A SAVED value on a live widget still wins and only the panel can clear it.
+- **Anything outside `.dccs-root` gets neither the button rule nor the tokens.** The
+  modal close button is pinned to the modal box, a sibling of the root, so
+  `var(--dccs-text)` there resolves to nothing and the property falls back to its
+  initial value. Every `var()` in a rule outside the root needs a literal fallback.
 - **Elementor stores saved widget settings on the page, and stored values beat every
   plugin default.** A string edited in the panel before a release is frozen there; no
   plugin update can change it. Say so plainly rather than shipping a "fix" that

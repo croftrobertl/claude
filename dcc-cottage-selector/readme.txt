@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.0
+Stable tag: 0.27.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,36 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.27.0 =
+* Every button in the widget is on the site button spec: 20px / 500 / 50px line
+  height / 0.5px tracking / no text-transform, white on #006BCF, no border, 30px
+  radius, no shadow. Held as --dccs-btn-* tokens declared once, so the spec is
+  stated in one place. The cottage CTA ("View this cottage") is an <a>, not a
+  <button>, and is brought onto the same spec explicitly.
+* font-family stays `inherit` rather than naming Raleway: it resolves to the same
+  face today and keeps resolving to the right one if the theme font ever changes.
+* Two deliberate departures, both documented in the stylesheet: horizontal padding
+  is 24px, not the spec's 0 (the reference button is full-width; ours size to
+  their content, and at radius 30px a zero-padding label sits inside the curve),
+  and three controls that are buttons only for accessibility keep their own
+  geometry — the stepper dots, the compare-table arrows and the modal close icon.
+* Paired button rows (Back/Next, Edit Answers/Restart) now size to their content
+  and wrap instead of splitting the row in equal halves. At 20px the old equal
+  halves CLIPPED "Edit Answers" inside its own pill.
+* Two labels are now Title Case in the string itself — "Compare %d Cottages" and
+  "Share These Results". The Elementor kit's text-transform:capitalize was doing
+  that; the spec sets text-transform:none, so the stored casing is what renders.
+* Fixed: the modal close button rendered as a transparent circle with a black
+  glyph. It sits outside .dccs-root, where --dccs-text/--dccs-surface are not
+  defined, so its background resolved to an invalid value. Its var() calls now
+  carry literal fallbacks. The two !important declarations it carried were never
+  needed and are gone.
+* The distinct green for action buttons is retired — the spec is one blue. The
+  "Action button color" control still works and still wins when set.
+* style_comparebtn_* removed from the site preset: those controls emit a (0,4,0)
+  selector that outranks the spec rule, so presetting the old navy would have
+  pinned the Compare button — the one button named in the brief — off the spec.
 
 = 0.26.0 =
 * Heading marks: the 🏠 / 🧙‍♂️ emoji are replaced by two hand-drawn SVG marks — a

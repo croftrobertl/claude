@@ -704,8 +704,13 @@ function configWith(overrides) {
     !!nav && nav.children.length === 2 && !!nav.querySelector('.dccs-back') && !!nav.querySelector('.dccs-next'));
   // jsdom has no CSS cascade, so verify the responsive rules in the stylesheet source.
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
-  ok('wizard-nav is set to nowrap', /\.dccs-wizard-nav\s*\{[^}]*flex-wrap:\s*nowrap/.test(css));
-  ok('Back/Next are equal-flex (1 1 0)', /\.dccs-back[\s\S]*?\.dccs-next[\s\S]*?flex:\s*1 1 0/.test(css));
+  // 0.27.0 supersedes the old nowrap + equal-halves pairing. At the spec's 20px
+  // the two labels no longer fit two-to-a-row on a phone, and equal halves CLIPPED
+  // "Edit Answers" inside its pill. The row now wraps and each button's basis is
+  // its content, so the label always survives; width is not part of the spec.
+  ok('paired nav rows may wrap rather than clip a label',
+    /\.dccs-wizard-nav\s*\{[^}]*flex-wrap:\s*wrap/.test(css));
+  ok('Back/Next size to their content', /\.dccs-back,[\s\S]{0,200}?flex:\s*1 1 auto/.test(css));
   // Back/Next labels must never wrap, or a single step's buttons grow taller than the rest.
   ok('Back/Next labels are white-space:nowrap (equal height every step)',
     /\.dccs-wizard-nav\s+\.dccs-back,\s*\.dccs-root\.dccs-root\s+\.dccs-wizard-nav\s+\.dccs-next\s*\{[^}]*white-space:\s*nowrap/.test(css));
@@ -827,8 +832,8 @@ function configWith(overrides) {
   // CSS consumes the new vars with baked fallbacks so the look is unchanged when unset.
   ok('cards read --dccs-results-bg with a surface fallback',
     /\.dccs-card\s*\{[\s\S]*?var\(--dccs-results-bg,\s*var\(--dccs-surface\)\)/.test(css));
-  ok('primary button reads --dccs-btn-bg with an action fallback',
-    /\.dccs-primary\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-action\)\)/.test(css));
+  ok('primary button reads --dccs-btn-bg, then the action control, then spec blue',
+    /var\(--dccs-btn-bg,\s*var\(--dccs-action,\s*var\(--dccs-btn-blue\)\)\)/.test(css));
   ok('dropdown items read --dccs-item-bg / --dccs-item-text',
     /var\(--dccs-item-bg,\s*transparent\)/.test(css) && /var\(--dccs-item-text,\s*var\(--dccs-text\)\)/.test(css));
   ok('button hover honours --dccs-btn-bg-hover', /var\(--dccs-btn-bg-hover,/.test(css));
@@ -838,13 +843,21 @@ function configWith(overrides) {
 (function () {
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
   const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
-  ok('a distinct --dccs-action green is defined', /--dccs-action:\s*#/.test(css));
-  ok('tail buttons fall back to --dccs-action (distinct from accent answers)',
-    /\.dccs-edit-answers,[\s\S]*?\.dccs-reset\s*\{[\s\S]*?var\(--dccs-btn-bg,\s*var\(--dccs-action\)\)/.test(css));
-  // Still visually secondary to .dccs-primary (48px / 1rem), but never below the
-  // 44px minimum tap target — the lighter weight now comes from the font size alone.
-  ok('tail buttons are secondary but still a 44px tap target',
-    /\.dccs-reset\s*\{[\s\S]*?min-height:\s*44px[\s\S]*?font-size:\s*0\.9rem/.test(css));
+  // 0.27.0: the distinct action green is gone. The site button spec is ONE blue
+  // and ONE size, so action buttons no longer read differently from a selected
+  // chip, and the old primary-vs-secondary size step no longer exists. The
+  // --dccs-action control still works and still wins when set — it just must not
+  // carry a baked default, or var() would always resolve and never reach the spec.
+  ok('no baked default for --dccs-action, so the spec blue is reachable',
+    !/--dccs-action:\s*#/.test(css));
+  ok('the "Action button color" control is still wired to something',
+    /--dccs-action/.test(css) && /'color_action'\s*=>\s*'--dccs-action'/.test(sel));
+  ok('action buttons resolve btn-bg -> action -> spec blue',
+    /var\(--dccs-btn-bg,\s*var\(--dccs-action,\s*var\(--dccs-btn-blue\)\)\)/.test(css));
+  // The 50px spec line-height is what keeps every labelled button over the 44px
+  // tap floor now that the per-button min-heights are gone.
+  ok('the spec height still clears the 44px tap floor',
+    /--dccs-btn-line:\s*50px/.test(css));
   ok('answer chips stay on the accent (not action) when selected',
     /\.dccs-chip\.is-active\s*\{[\s\S]*?var\(--dccs-accent\)/.test(css));
   ok('an editable Action button color control exists', /'color_action'[\s\S]{0,120}--dccs-action/.test(sel));
@@ -928,9 +941,49 @@ function configWith(overrides) {
 
   // (4+5) tap-target sizes baked into the stylesheet.
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
-  ok('card compare toggle has a 44px tap area', /\.dccs-cmp-toggle\s*\{[\s\S]*?min-height:\s*44px/.test(css));
-  ok('review Edit buttons are 44px', /\.dccs-edit\s*\{[\s\S]*?min-height:\s*44px/.test(css));
-  ok('compare CTA is 48px like the primary buttons', /\.dccs-open-compare\s*\{[\s\S]*?min-height:\s*48px/.test(css));
+  // Read ONE rule body, bounded by its closing brace. The previous form here was
+  // /<selector>\s*\{[\s\S]*?<decl>/, whose lazy run crosses rule boundaries: it
+  // matched a declaration in some LATER rule and kept passing after .dccs-edit
+  // stopped setting min-height at all. Bound it or it proves nothing.
+  const ruleBody = (sel) => {
+    const i = css.indexOf(sel + ' {');
+    if (i === -1) { return ''; }
+    const j = css.indexOf('}', i);
+    return j === -1 ? '' : css.slice(i, j);
+  };
+  ok('card compare toggle has a 44px tap area',
+    /min-height:\s*44px/.test(ruleBody('.dccs-root.dccs-root .dccs-cmp-toggle')));
+
+  // (0.27.0) The site button spec is declared once as tokens and consumed by the
+  // element-level rule, so every button gets it — including buttons added later.
+  const tokens = ruleBody('.dccs-root.dccs-root');
+  const SPEC = { '--dccs-btn-size': '20px', '--dccs-btn-weight': '500', '--dccs-btn-line': '50px',
+                 '--dccs-btn-track': '0.5px', '--dccs-btn-radius': '30px', '--dccs-btn-blue': '#006BCF',
+                 '--dccs-btn-on-blue': '#FFFFFF' };
+  Object.keys(SPEC).forEach(k => {
+    ok('spec token ' + k + ' is ' + SPEC[k],
+      new RegExp(k.replace(/-/g, '\\-') + ':\\s*' + SPEC[k].replace(/[.#]/g, m => '\\' + m)).test(tokens));
+  });
+  const btnRule = ruleBody('.dccs-root.dccs-root button');
+  ['font-family:\\s*inherit', 'font-size:\\s*var\\(--dccs-btn-size', 'font-weight:\\s*var\\(--dccs-btn-weight',
+   'line-height:\\s*var\\(--dccs-btn-line', 'letter-spacing:\\s*var\\(--dccs-btn-track',
+   'text-transform:\\s*none'].forEach(re => {
+    ok('every button takes ' + re.split(':')[0].replace(/\\\\/g, ''),
+      new RegExp(re).test(btnRule));
+  });
+  // The 50px line-height is what now guarantees the 44px tap floor on every
+  // labelled button, which is why the per-button min-heights could be dropped.
+  ok('the spec height clears the 44px tap-target floor', 50 >= 44 && /50px/.test(tokens));
+  // Rob named these two; they must be in the group that takes the blue skin.
+  const skin = css.slice(css.indexOf('.dccs-root.dccs-root .dccs-primary,'));
+  ok('the Compare / Compare N button takes the blue skin',
+    skin.slice(0, skin.indexOf('}')).indexOf('.dccs-open-compare') !== -1);
+  // Answer chips must NOT be painted the action blue: an unchosen option would
+  // look chosen. They take the type spec and the radius only.
+  ok('answer chips keep their own fill',
+    skin.slice(0, skin.indexOf('}')).indexOf('.dccs-chip') === -1);
+  ok('no !important was introduced for the button spec',
+    !/--dccs-btn-[a-z-]+[^;]*!important/.test(css) && !new RegExp('important').test(btnRule));
 })();
 
 // ---- 34. Style controls exist for the mode switcher + the Compare button ----

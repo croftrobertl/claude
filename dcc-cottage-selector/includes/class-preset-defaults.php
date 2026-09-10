@@ -140,10 +140,13 @@ final class Preset_Defaults
             'modetab_color_active' => '#FFFFFF',
             'progress_label_color' => '#000000',
             'question_color' => '#000000',
-            'style_comparebtn_bg' => '#002E7A',
-            'style_comparebtn_bg_hover' => '#F08080',
-            'style_comparebtn_color' => '#FFFFFF',
-            'style_comparebtn_color_hover' => '#FCFCFC',
+            // NOTE: style_comparebtn_* is deliberately NOT preset (0.27.0). Those
+            // controls emit `{{WRAPPER}} .dccs-root.dccs-root .dccs-open-compare`
+            // = (0,4,0), which outranks the stylesheet's button-spec rule (0,3,0) —
+            // so presetting the old navy #002E7A would have pinned the ONE button
+            // Rob named off the site button spec, while the spec appeared to be
+            // applied everywhere else. Unset, the Compare button takes the spec;
+            // a widget that wants something else can still set the control.
         ];
     }
 

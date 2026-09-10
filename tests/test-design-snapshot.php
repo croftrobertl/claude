@@ -343,6 +343,21 @@ namespace {
     }
     ok('a malformed after_save payload is ignored, not fatal', $survived);
 
+    // ---- Site button spec (0.27.0) ---------------------------------------------
+    // The per-button Style sections emit {{WRAPPER}} .dccs-root.dccs-root .<class>
+    // = (0,4,0) and beat the stylesheet's spec rule (0,3,0). Anything preset there
+    // silently overrides the spec for that button, which is exactly what happened
+    // to the Compare button, so these must stay out of the preset.
+    foreach (['style_comparebtn_bg', 'style_comparebtn_bg_hover',
+              'style_comparebtn_color', 'style_comparebtn_color_hover'] as $k) {
+        ok("preset does not pin '$k' off the button spec",
+            !array_key_exists($k, \DCCS\Preset_Defaults::map()));
+    }
+    ok('the Compare button label is Title Case in the string itself',
+        (\DCCS\Config::strings()['compare_btn'] ?? null) === 'Compare %d Cottages');
+    ok('the Share button label is Title Case in the string itself',
+        (\DCCS\Config::strings()['share_btn'] ?? null) === 'Share These Results');
+
     // ---- Heading marks (0.26.0) ------------------------------------------------
     $marksCfg = \DCCS\Config::build([], []);
     $mk = $marksCfg['icons'] ?? [];
