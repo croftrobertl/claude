@@ -93,32 +93,29 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Item 5 — Buttons: kill the uppercase transform, keep the blue pill.
- * (Live: submit = input.button "Submit Booking"; apply =
- *  button.mphb-apply-coupon-code-button. There is no .mphb_sc_checkout-submit-button.)
+ * Buttons: the THEME owns them (v0.7.0, owner decision).
+ *
+ * This block used to force background, border, colour, radius, font-family and
+ * text-transform with !important, which is why Submit Booking looked unlike
+ * every other button on the site. It is gone entirely — font family, size,
+ * weight, padding and radius now come from the theme, and Submit Booking
+ * inherits whatever a theme button looks like.
+ *
+ * text-transform:none went with it. Keeping that one line would have left
+ * Submit Booking the only button on the site with a different case treatment,
+ * which is the mismatch being fixed. Restore it here if the uppercase is
+ * genuinely unwanted — one line, and it will then differ from the theme on
+ * purpose rather than by accident.
+ *
+ * The coupon "Apply" button rode on the same selector list. Coupons are
+ * switched off site-wide (mphb_enable_coupons = 0) so it does not render; if
+ * coupons are ever turned back on it takes the theme button style too, which
+ * keeps it consistent rather than orphaned.
+ *
+ * The file field's ::file-selector-button is NOT a theme button and keeps its
+ * blue treatment below — it is a part this plugin draws.
  * ------------------------------------------------------------------------- */
-.mphb_sc_checkout-form button,
-.mphb_sc_checkout-form input[type="submit"],
-.mphb_sc_checkout-form .button,
-.mphb_sc_checkout-form input.button,
-.mphb_sc_checkout-form .mphb-apply-coupon-code-button {
-    text-transform: none !important;
-    background-color: var(--dcc-blue) !important;
-    border-color: var(--dcc-blue) !important;
-    color: #ffffff !important;
-    border-radius: var(--dcc-field-radius) !important;
-    font-family: "Raleway", sans-serif;
-}
 
-.mphb_sc_checkout-form button:hover,
-.mphb_sc_checkout-form input[type="submit"]:hover,
-.mphb_sc_checkout-form .button:hover,
-.mphb_sc_checkout-form input.button:hover,
-.mphb_sc_checkout-form .mphb-apply-coupon-code-button:hover {
-    background-color: var(--dcc-blue-hover) !important;
-    border-color: var(--dcc-blue-hover) !important;
-    color: #ffffff !important;
-}
 
 /* ---------------------------------------------------------------------------
  * Item 6 — Upload helper text was 20px/700, competing with "Total". Calm it.
@@ -207,7 +204,10 @@
  * widening the element (no horizontal scroll at 320px).
  * ------------------------------------------------------------------------- */
 .mphb_sc_checkout-form input[type="file"] {
-    width: 100% !important;
+    /* No width here. matchFileFieldWidth() in checkout.js measures the Country
+       select and pins this field to the same figure, at whatever viewport, so
+       the two cannot diverge and no number has to be hard-coded. max-width
+       keeps it inside its column if that measurement is ever unavailable. */
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: hidden;
@@ -396,7 +396,9 @@
    "sleeps up to N" cap note (offering off). */
 .mphb_sc_checkout-form .dcc_checkout-guest-note {
     margin: 6px 0 0;
-    font-size: 13px;
+    /* 14px: readable enough not to look like fine print a guest is meant to
+       miss, one step below the field labels so it still reads as a note. */
+    font-size: 14px;
     line-height: 1.4;
     color: #6b7280;
     text-align: center;
@@ -515,51 +517,56 @@ select.dcc_checkout-invalid {
     font-size: 1.05em;
 }
 
-/* The "Show detail" control that folds the individual taxes away.
-   A quiet text link at the row's own size, not a button: Book Now should be
-   the only control that shouts on this page, and this one sits inside a table
-   row. The vertical padding gives it a >=44px touch target; the matching
-   negative margin stops the row growing to suit. */
-.mphb_sc_checkout-form .dcc_checkout-tax-toggle {
-    display: inline-block;
-    margin: -12px 0 -12px 8px;
-    padding: 12px 2px;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    color: #006bcf;
+/* ---------------------------------------------------------------------------
+ * The tax footnote (v0.7.0). Replaces the "Show detail" control and the cloned
+ * tax rows, both retired.
+ *
+ * A small asterisk beside "Taxes" reveals ONE quiet line beneath the
+ * breakdown. Deliberately NOT a floating tooltip: a popover gets clipped by
+ * scroll containers on iOS and needs positioning maths, and this page has
+ * enough of both. This is in normal flow — nothing to clip, nothing to
+ * position.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form .dcc_checkout-tax-asterisk {
+    /* The theme fills bare <button>s blue with white text; this is our own
+       control, not a theme button, so it resets explicitly. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 44x44 touch target around a glyph a fraction of that size. The negative
+       margin pulls the box back out of the layout so the row keeps its height
+       and "Taxes" keeps its position. */
+    min-width: 44px;
+    min-height: 44px;
+    margin: -14px -12px;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    color: #006bcf !important;
     font: inherit;
-    font-weight: 400;
-    text-transform: none;
-    text-decoration: underline;
-    line-height: 1.25;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: none !important;
+    text-decoration: none;
     cursor: pointer;
     vertical-align: baseline;
 }
 
-.mphb_sc_checkout-form .dcc_checkout-tax-toggle:hover {
-    text-decoration: none;
+.mphb_sc_checkout-form .dcc_checkout-tax-asterisk:hover {
+    text-decoration: underline;
 }
 
-.mphb_sc_checkout-form .dcc_checkout-tax-toggle:focus-visible {
+.mphb_sc_checkout-form .dcc_checkout-tax-asterisk:focus-visible {
     outline: 3px solid #f4da62;
     outline-offset: 2px;
-    text-decoration: none;
 }
 
-/* The individual taxes, revealed under the summary Taxes row. */
-.mphb_sc_checkout-form tr.dcc_checkout-tax-detail td,
-.mphb_sc_checkout-form tr.dcc_checkout-tax-detail th {
-    border-top: 0;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    font-size: 0.92em;
-    font-weight: 400;
-    color: #444;
-}
-
-.mphb_sc_checkout-form tr.dcc_checkout-tax-detail td:first-child,
-.mphb_sc_checkout-form tr.dcc_checkout-tax-detail th:first-child {
-    padding-left: 18px;
+.mphb_sc_checkout-form .dcc_checkout-tax-footnote {
+    margin: 8px 0 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #4b5563;
+    text-align: left;
 }

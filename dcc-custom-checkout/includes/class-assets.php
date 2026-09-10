@@ -196,8 +196,9 @@ final class Assets
                 'errGuests'     => __('There was a problem applying the extra-guest fee. Please review the number of guests and try again.', 'dcc-checkout'),
                 'adminNoticePrefix' => __('Visible to administrators only:', 'dcc-checkout'),
                 'subtotal'      => __('Subtotal', 'dcc-checkout'),
-                'taxDetailShow' => __('Show detail', 'dcc-checkout'),
-                'taxDetailHide' => __('Hide detail', 'dcc-checkout'),
+                'taxNoteLead'   => __('Taxes applied:', 'dcc-checkout'),
+                'taxNoteLabel'  => __('Show which taxes apply', 'dcc-checkout'),
+
             ],
         ];
     }

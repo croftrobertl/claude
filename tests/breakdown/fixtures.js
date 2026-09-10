@@ -118,4 +118,39 @@ const renamedLabels = `
   <tr><td>Amount Due</td><td>$388.50</td></tr>
 </table>`;
 
-module.exports = { withService, noService, twoAccommodations, renamedLabels };
+// The checkout form as MotoPress actually renders it on this site: the guest
+// chooser and "Choose Additional Services" live in the SAME
+// .mphb-checkout-section. That is why hiding the ancestor section could never
+// work — the guard protecting the chooser protected the services with it.
+const sharedSection = `
+<div class="mphb-checkout-section">
+  <h3>Accommodation Details</h3>
+  <input type="hidden" name="mphb_check_in_date" value="2026-09-17">
+  <input type="hidden" name="mphb_check_out_date" value="2026-09-19">
+  <p>Accommodation: <a href="#">Cottage 36: Sunshine Suite</a></p>
+  <p class="mphb-adults-chooser">
+    <label>Number of Guests</label>
+    <select name="mphb_room_details[0][adults]" class="mphb_sc_checkout-guests-chooser">
+      <option value="">— Select —</option>
+      <option>1</option><option>2</option><option>3</option><option selected>4</option>
+    </select>
+  </p>
+  <h3 class="services-heading">Choose Additional Services</h3>
+  <ul class="mphb_sc_checkout-services-list">
+    <li class="mphb_sc_checkout-service">
+      <label>
+        <input type="checkbox" checked
+               name="mphb_room_details[0][services][0][id]" value="18063">
+        Extra Guest Fee (per guest beyond 2) ($50 / Per Day) for
+      </label>
+      <select name="mphb_room_details[0][services][0][adults]">
+        <option>1</option><option selected>2</option>
+      </select>
+      guest(s)
+    </li>
+  </ul>
+</div>`;
+
+module.exports = {
+    withService, noService, twoAccommodations, renamedLabels, sharedSection
+};

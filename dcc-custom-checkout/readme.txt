@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.1
+Stable tag: 0.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,44 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.7.0 =
+* FIX: "Choose Additional Services" is now actually removed. hideNativeServices()
+  looked for the enclosing .mphb-checkout-section and skipped it whenever it
+  contained a guest-count dropdown — and on this site MotoPress renders the
+  services and the chooser inside the SAME section, so that guard fired every
+  time and nothing was ever hidden. It now hides the services SUBTREE: the
+  rows, the heading (located by position, not wording), and only those wrappers
+  left holding nothing else. The chooser is out of the blast radius
+  structurally instead of by a guard that has to be right.
+  Hiding stays display-based, so the ticked service input still submits and
+  MotoPress still prices it — the $50 extra-guest fee is unaffected, and that
+  is asserted.
+* FIX: the safety net that reverses this if the guest chooser disappears now
+  judges visibility on computed styles rather than measured boxes.
+  offsetParent / getClientRects report "invisible" for anything not yet laid
+  out, which could make the net un-hide everything during first paint.
+* The "Choose File" field is pinned to the Country select's width, measured at
+  runtime and re-measured on resize, so the two match at every viewport without
+  a hard-coded figure. The ::file-selector-button treatment and the long-filename
+  ellipsis are unchanged.
+* "Show detail" is replaced by an asterisk beside "Taxes" that reveals one
+  quiet line beneath the breakdown naming the taxes applied — no amounts, since
+  they already sum to the line above. Deliberately in normal flow, not a
+  floating tooltip: a popover gets clipped by scroll containers on iOS. The
+  asterisk is a real button with an accessible name, aria-expanded,
+  aria-controls, a focus ring and a 44x44 touch target.
+* The guest note is 14px (was 13px), keeping its existing colour treatment.
+* Buttons: the THEME owns them again. The block forcing background, border,
+  colour, radius, font-family and text-transform with !important is gone, so
+  Submit Booking now matches every other button on the site. text-transform:none
+  went with it — keeping it would have left Submit Booking the only button with
+  a different case treatment, which is the mismatch being fixed. Restore that
+  one line if the uppercase is genuinely unwanted. The coupon "Apply" button
+  shared the selector list; coupons are off site-wide so it does not render, and
+  if they are re-enabled it takes the theme style too.
+  The file field's ::file-selector-button is NOT a theme button and keeps its
+  blue treatment.
 
 = 0.6.1 =
 * The "Rate: Cottage 22: The Boathouse" row is removed from the price

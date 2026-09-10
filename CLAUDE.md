@@ -141,7 +141,20 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   ever created and its name needs to be visible, `dropRateRows()` in
   `assets/checkout.js` has to become conditional (drop it only when the label
   after "Rate:" matches the accommodation title).
-- Price-breakdown behaviour is covered by jsdom fixtures at `tests/breakdown/`
+- **The native "Choose Additional Services" section is hidden on the checkout**
+  (owner decision, v0.7.0). Both fees this site charges are driven by controls
+  the guest already used — the pet fee by "Traveling with a dog?", the
+  extra-guest fee by "Number of Guests" — so the native section was a second
+  control for a decision already made. The consequence: **any service added in
+  MotoPress in future that is NOT driven by one of this plugin's own controls
+  will be uncheckable, because a guest never sees it.** Whoever adds one must
+  either wire a control for it in `checkout.js` or narrow
+  `hideNativeServices()` to skip that service's row.
+- Hiding there is display-based on purpose: a hidden-but-checked input still
+  submits and MotoPress still prices it. Never switch it to `disabled`,
+  `remove()`, or anything that stops the input submitting — that would silently
+  stop charging the $50 extra-guest fee.
+- Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the
   checkout — that code decides what a guest is told they owe.

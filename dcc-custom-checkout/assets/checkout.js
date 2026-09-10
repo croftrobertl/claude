@@ -87,6 +87,7 @@
         // The pet toggle and the guest dropdown now cover every service this
         // site sells, so the native services section is redundant.
         hideNativeServices(root);
+        matchFileFieldWidth(root);
 
         // Last line of defence: nothing above may cost the guest their
         // "Number of Guests" dropdown.
@@ -154,10 +155,12 @@
     function restructureBreakdown(table) {
         // Drop anything a previous pass added: MotoPress rebuilds this table
         // whenever the guest count changes, and clones must never stack.
-        Array.prototype.forEach.call(
-            table.querySelectorAll('tr.dcc_checkout-tax-detail'),
-            function (r) { if (r.parentNode) { r.parentNode.removeChild(r); } }
-        );
+        if (table.parentNode) {
+            Array.prototype.forEach.call(
+                table.parentNode.querySelectorAll('.dcc_checkout-tax-footnote'),
+                function (n) { if (n.parentNode) { n.parentNode.removeChild(n); } }
+            );
+        }
 
         var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
         if (!rows.length) {
@@ -339,13 +342,15 @@
         }
     }
 
-    // Move the individual taxes to sit under the summary Taxes row, behind a
-    // "Show detail" link.
+    // Name the taxes in a footnote, behind an asterisk beside "Taxes".
     //
-    // They are CLONED rather than shown in place: the originals live inside the
-    // accommodation's own expander, so a control on the summary row could not
-    // reveal them there. The originals are then hidden for good, so the three
-    // components exist in exactly one place on the page.
+    // v0.7.0 — replaces the "Show detail" control and the cloned tax rows.
+    // Deliberately NOT a tooltip: a floating layer gets clipped by scroll
+    // containers on iOS and needs positioning maths. This is one quiet line in
+    // normal flow beneath the breakdown — nothing to clip, nothing to position.
+    //
+    // Names only, no figures: the components already add up to the Taxes line
+    // above, and repeating the amounts is what made the breakdown noisy.
     function foldTaxDetail(rows, taxesRow, accTaxTot) {
         if (!accTaxTot || !taxesRow) {
             return;
@@ -359,39 +364,42 @@
             }
             group.unshift(rows[i]);
         }
-        // Only the rows carrying a figure are worth showing; the rest of the
-        // run is the "Accommodation Taxes | Amount" column header.
-        var detail = group.filter(function (r) { return looksLikeMoney(rowAmount(r)); });
+        // Only the rows carrying a figure are actual taxes; the rest of the run
+        // is the "Accommodation Taxes | Amount" column header.
+        var named = group
+            .filter(function (r) { return looksLikeMoney(rowAmount(r)); })
+            .map(function (r) { return rowLabel(r); })
+            .filter(Boolean);
         group.forEach(hideRow);
-        if (!detail.length) {
+        if (!named.length) {
             return;
         }
 
-        var ref = taxesRow;
-        var clones = detail.map(function (r) {
-            var clone = r.cloneNode(true);
-            clone.classList.add('dcc_checkout-tax-detail');
-            clone.classList.add('dcc_checkout-section-hidden'); // collapsed by default
-            if (ref.parentNode) {
-                ref.parentNode.insertBefore(clone, ref.nextSibling);
-                ref = clone;
-            }
-            return clone;
-        });
+        var table = taxesRow.closest('table');
+        if (!table || !table.parentNode) {
+            return;
+        }
+
+        var id = 'dcc-tax-footnote';
+        var note = document.createElement('p');
+        note.className = 'dcc_checkout-tax-footnote dcc_checkout-section-hidden';
+        note.id = id;
+        note.textContent = '* ' + (I18N.taxNoteLead || 'Taxes applied:') + ' ' +
+            named.join(', ') + '.';
+        insertAfter(note, table);
 
         var open   = false;
         var toggle = document.createElement('button');
         toggle.type = 'button';          // never submit the checkout
-        toggle.className = 'dcc_checkout-tax-toggle';
+        toggle.className = 'dcc_checkout-tax-asterisk';
+        toggle.textContent = '*';
+        // The glyph is not a name; give assistive tech a real one.
+        toggle.setAttribute('aria-label', I18N.taxNoteLabel || 'Show which taxes apply');
+        toggle.setAttribute('aria-controls', id);
 
         function apply() {
-            clones.forEach(function (c) {
-                c.classList.toggle('dcc_checkout-section-hidden', !open);
-            });
+            note.classList.toggle('dcc_checkout-section-hidden', !open);
             toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            toggle.textContent = open
-                ? (I18N.taxDetailHide || 'Hide detail')
-                : (I18N.taxDetailShow || 'Show detail');
         }
 
         toggle.addEventListener('click', function () {
@@ -402,7 +410,6 @@
 
         var cell = taxesRow.cells && taxesRow.cells[0];
         if (cell) {
-            cell.appendChild(document.createTextNode(' '));
             cell.appendChild(toggle);
         }
     }
@@ -1150,9 +1157,14 @@
         if (!selects.length) {
             return false;
         }
+        // Judged on computed styles, not on measured boxes. offsetParent and
+        // getClientRects are layout-dependent and report "invisible" for an
+        // element that simply has not been laid out yet — which would make this
+        // safety net un-hide everything during early paint. hidingAncestor()
+        // answers the question actually being asked: is anything up the tree
+        // set to display:none / visibility:hidden?
         return selects.every(function (sel) {
-            // offsetParent is null for an element hidden anywhere up the tree.
-            return sel.offsetParent !== null || sel.getClientRects().length > 0;
+            return hidingAncestor(sel) === null;
         });
     }
 
@@ -1216,51 +1228,165 @@
         return el.tagName.toLowerCase() + (cls ? '.' + cls.split(/\s+/).join('.') : '');
     }
 
+    // Pin the "Choose File" field to the Country select's width.
+    //
+    // The owner's rule is "same width as Country", not a figure — and Country's
+    // width comes from the theme/MotoPress, which differs by viewport. So the
+    // width is MEASURED from the select at runtime rather than hard-coded:
+    // correct at desktop and at 375px alike, and it follows the theme if that
+    // ever changes. Re-measured on resize, and again after a re-render.
+    //
+    // If the select cannot be found or measured (layout not yet resolved), the
+    // field is left alone: max-width:100% in the CSS still keeps it in its
+    // column, it just is not pinned.
+    function matchFileFieldWidth(root) {
+        var files = root.querySelectorAll('input[type="file"]');
+        if (!files.length) {
+            return;
+        }
+        var ref = referenceSelect(root);
+        if (!ref) {
+            return;
+        }
+
+        function apply() {
+            var width = ref.getBoundingClientRect
+                ? ref.getBoundingClientRect().width
+                : 0;
+            if (!(width > 0)) {
+                return;
+            }
+            Array.prototype.forEach.call(files, function (file) {
+                // setProperty with 'important' so the field's own !important
+                // rules cannot out-rank the measured width.
+                file.style.setProperty('width', width + 'px', 'important');
+            });
+        }
+
+        apply();
+        var timer = null;
+        window.addEventListener('resize', function () {
+            if (timer) { clearTimeout(timer); }
+            timer = setTimeout(apply, 150);
+        });
+        // Fonts and late layout can change the select's width after first paint.
+        setTimeout(apply, 400);
+        return apply;
+    }
+
+    // The Country select the owner named, with fallbacks that never pick a
+    // guest-count chooser (whose width is deliberately different).
+    function referenceSelect(root) {
+        var tries = ['select[name*="country" i]', 'select[name*="country"]',
+                     '.mphb-customer-details select', 'select'];
+        for (var i = 0; i < tries.length; i++) {
+            var found;
+            try {
+                found = Array.prototype.slice.call(root.querySelectorAll(tries[i]));
+            } catch (e) {
+                continue;
+            }
+            found = found.filter(function (sel) {
+                return String(sel.name || '').indexOf('[adults]') === -1
+                    && String(sel.name || '').indexOf('[services]') === -1;
+            });
+            if (found.length) {
+                return found[0];
+            }
+        }
+        return null;
+    }
+
     // Remove "Choose Additional Services" outright.
     //
-    // Every service this site sells is now driven by a control the guest
-    // already used: the pet fee by the "Traveling with a dog?" toggle, the
-    // extra-guest fee by the "Number of Guests" dropdown. Leaving the native
-    // section up means two controls for one decision, which is what the owner
-    // asked twice to be rid of — and it could disagree with the dropdown.
+    // Every service this site sells is driven by a control the guest already
+    // used: the pet fee by "Traveling with a dog?", the extra-guest fee by
+    // "Number of Guests". The native section is a second control for a
+    // decision already made.
     //
-    // Hiding does not stop the inputs submitting (display:none never does), so
-    // MotoPress still receives and prices the services this plugin ticked.
+    // v0.7.0 — this hides the services SUBTREE, not the ancestor section.
+    // The previous version looked for the enclosing .mphb-checkout-section and
+    // skipped it if it contained a guest-count dropdown. On this site MotoPress
+    // renders the services and the chooser inside the SAME section, so that
+    // guard fired every time and nothing was ever hidden. Hiding the rows, the
+    // heading, and only those wrappers left holding nothing else keeps the
+    // chooser out of the blast radius structurally, instead of relying on a
+    // guard that has to be right.
     //
-    // Two guards, because a previous attempt at this hid the guest chooser:
-    //   - never hide a section that contains a guest-count dropdown;
-    //   - the hide uses the same class assertGuestChooserSurvived() undoes, so
-    //     if the chooser vanishes anyway, this is reversed automatically.
+    // Hiding stays display-based, so a ticked service input still submits and
+    // MotoPress still prices it — the $50 extra-guest fee is unaffected.
     function hideNativeServices(root) {
-        var inputs = root.querySelectorAll('input[name*="[services]"], .mphb_sc_checkout-service');
-        if (!inputs.length) {
+        var rows = [];
+        function addRow(el) {
+            if (el && el.nodeType === 1 && rows.indexOf(el) === -1) {
+                rows.push(el);
+            }
+        }
+        Array.prototype.forEach.call(
+            root.querySelectorAll('.mphb_sc_checkout-service'), addRow
+        );
+        Array.prototype.forEach.call(
+            root.querySelectorAll('input[name*="[services]"]'),
+            function (input) { addRow(serviceRowWrapper(input)); }
+        );
+        if (!rows.length) {
             return;
         }
-        var sections = [];
-        Array.prototype.forEach.call(inputs, function (el) {
-            var section = el.closest('.mphb-checkout-section');
-            if (section && sections.indexOf(section) === -1) {
-                sections.push(section);
+
+        rows.forEach(hideServiceRow);
+        hideServicesHeading(rows[0], root);
+        rows.forEach(function (row) { hideEmptiedAncestors(row, root); });
+    }
+
+    // The "Choose Additional Services" heading. Found by position, not by its
+    // wording: the last heading before the first service row — unless a guest
+    // chooser sits between the two, which would mean that heading belongs to
+    // the chooser's block ("Accommodation Details") and must be left alone.
+    function hideServicesHeading(firstRow, root) {
+        var scope = firstRow.closest('.mphb-checkout-section') || root;
+        var chooser = roomAdultsSelects(scope)[0] || null;
+        var heading = null;
+        Array.prototype.forEach.call(
+            scope.querySelectorAll('h1, h2, h3, h4, h5, h6'),
+            function (h) {
+                if (h.contains(firstRow) || !precedes(h, firstRow)) {
+                    return;
+                }
+                heading = h; // keep the last one before the rows
             }
-        });
-        if (!sections.length) {
-            // No recognisable section wrapper: fall back to hiding the rows we
-            // know, which is what earlier versions did.
-            Array.prototype.forEach.call(
-                root.querySelectorAll('.mphb_sc_checkout-service'),
-                hideServiceRow
-            );
+        );
+        if (!heading) {
             return;
         }
-        sections.forEach(function (section) {
-            if (roomAdultsSelects(section).length) {
-                return; // Holds the guest chooser — never hide this.
+        if (chooser && precedes(heading, chooser) && precedes(chooser, firstRow)) {
+            return; // Belongs to the block holding the chooser.
+        }
+        hideServiceRow(heading);
+    }
+
+    // Walk up hiding wrappers that now hold nothing visible, so no empty
+    // bordered box or padded gap is left where the services were. Stops dead at
+    // anything holding the guest chooser or our own pet control, so it can
+    // never climb into the rest of the form.
+    function hideEmptiedAncestors(el, root) {
+        var node = el.parentNode;
+        while (node && node.nodeType === 1 && node !== root && node !== document.body) {
+            if (roomAdultsSelects(node).length) { return; }
+            if (node.querySelector('.dcc_checkout-pet')) { return; }
+            var kids = node.children;
+            for (var i = 0; i < kids.length; i++) {
+                if (!kids[i].classList.contains('dcc_checkout-service-hidden')) {
+                    return; // Still holds something a guest should see.
+                }
             }
-            if (section.querySelector('.dcc_checkout-pet')) {
-                return; // Our own control ended up here; leave it visible.
-            }
-            hideServiceRow(section);
-        });
+            hideServiceRow(node);
+            node = node.parentNode;
+        }
+    }
+
+    // Does `a` come before `b` in document order?
+    function precedes(a, b) {
+        return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     }
 
     // Disable (never remove, never inject) guest-count options above `cap`, and

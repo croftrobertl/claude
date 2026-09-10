@@ -28,16 +28,20 @@ function check(name, actual, expected) {
 }
 
 // Render a fixture through checkout.js and return what a guest would read.
-async function render(fixture) {
+async function render(fixture, cfg) {
     const dom = new JSDOM(
         `<body><form class="mphb_sc_checkout-form">${fixture}</form></body>`,
         { runScripts: 'dangerously', pretendToBeVisual: true }
     );
     const { window } = dom;
-    window.DCC_CHECKOUT = {
-        i18n: { subtotal: 'Subtotal', taxDetailShow: 'Show detail', taxDetailHide: 'Hide detail' },
+    window.DCC_CHECKOUT = Object.assign({
+        i18n: {
+            subtotal: 'Subtotal',
+            taxNoteLead: 'Taxes applied:',
+            taxNoteLabel: 'Show which taxes apply'
+        },
         guestFeeSteps: {}, guestGroups: [], dogFieldNames: []
-    };
+    }, cfg || {});
     const el = window.document.createElement('script');
     el.textContent = SCRIPT;
     window.document.body.appendChild(el);
@@ -85,7 +89,7 @@ function summary(doc) {
     check('no-service: collapsed view reads as an invoice', summary(doc), [
         'Cottage 36: Sunshine Suite | $350',
         'Subtotal | $350',
-        'Taxes Show detail | $38.50',
+        'Taxes* | $38.50',
         'Total | $388.50',
     ]);
 
@@ -110,7 +114,7 @@ function summary(doc) {
         summary(doc), [
             'Cottage 36: Sunshine Suite | $550',
             'Subtotal | $550',
-            'Taxes Show detail | $38.50',
+            'Taxes* | $38.50',
             'Total | $588.50',
         ]);
     const rows = visibleRows(doc);
@@ -133,26 +137,7 @@ function summary(doc) {
         heads.filter(h => /^(Subtotal|Taxes|Total)/.test(h)).length, 0);
 }
 
-/* --- 3. The tax fold. --------------------------------------------------- */
-{
-    const { window, doc } = await render(F.withService);
-    const toggle = doc.querySelector('.dcc_checkout-tax-toggle');
-    check('tax fold: a toggle exists on the summary Taxes row', !!toggle, true);
-    check('tax fold: it is a link-styled button, never a submit',
-        toggle && toggle.type, 'button');
-    check('tax fold: collapsed by default', toggle.getAttribute('aria-expanded'), 'false');
-    check('tax fold: components hidden until asked for',
-        Array.from(doc.querySelectorAll('tr.dcc_checkout-tax-detail'))
-             .every(r => r.classList.contains('dcc_checkout-section-hidden')), true);
-
-    toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    check('tax fold: opening reveals all three components',
-        Array.from(doc.querySelectorAll('tr.dcc_checkout-tax-detail'))
-            .filter(r => !r.classList.contains('dcc_checkout-section-hidden'))
-            .map(r => r.cells[r.cells.length - 1].textContent.trim()),
-        ['$14', '$3.50', '$21']);
-    check('tax fold: aria-expanded follows', toggle.getAttribute('aria-expanded'), 'true');
-}
+/* Suite 3 (the old "Show detail" fold) is retired; see suite 7. */
 
 /* --- 4. Two cottages: nothing duplicates, so nothing is removed. -------- */
 {
@@ -188,6 +173,77 @@ function summary(doc) {
     check('renamed labels: the "Levies Applied | Amount" header is still marked',
         Array.from(before.doc.querySelectorAll('tr.dcc_checkout-breakdown-head'))
              .map(r => label(r.cells[0])), ['Levies Applied']);
+}
+
+/* --- 6. Services removed; chooser kept; the fee still bills. ------------ */
+{
+    const { doc } = await render(F.sharedSection, {
+        guestFeeEnabled: '1',
+        guestServiceIds: { daily: 18063, weekly: 18063, monthly: 18063 },
+        guestServiceIdList: [18063],
+        guestAccommodations: [1742],
+        includedGuests: 2,
+        guestFeeSteps: { 1: '$50', 2: '$100' },
+        couchBedsText: '1 queen-sized bed and a pull-out couch'
+    });
+    const shown = el => el && !el.classList.contains('dcc_checkout-service-hidden');
+
+    check('services: the "Choose Additional Services" heading is gone',
+        shown(doc.querySelector('.services-heading')), false);
+    check('services: no service row is visible',
+        Array.from(doc.querySelectorAll('.mphb_sc_checkout-service')).filter(shown).length, 0);
+    check('services: the emptied list wrapper went too — no bordered gap left',
+        shown(doc.querySelector('.mphb_sc_checkout-services-list')), false);
+
+    // The guard that used to defeat all of this.
+    check('services: the section SURVIVES (it also holds the guest chooser)',
+        shown(doc.querySelector('.mphb-checkout-section')), true);
+    check('services: "Number of Guests" is still visible',
+        shown(doc.querySelector('.mphb-adults-chooser')), true);
+    check('services: the Accommodation Details heading is untouched',
+        shown(doc.querySelectorAll('h3')[0]), true);
+
+    // The money. Hiding is display-based, so the input still submits.
+    const fee = doc.querySelector('input[name="mphb_room_details[0][services][0][id]"]');
+    check('fee: the $50 service input is still in the DOM', !!fee, true);
+    check('fee: it is still checked, so MotoPress still prices it', fee.checked, true);
+    check('fee: it is not disabled — a disabled input would not submit', fee.disabled, false);
+    check('fee: 4 guests still bills 2 extra guests',
+        doc.querySelector('select[name="mphb_room_details[0][services][0][adults]"]').value, '2');
+}
+
+/* --- 7. The tax footnote replaces the old toggle. ----------------------- */
+{
+    const { window, doc } = await render(F.withService);
+    const star = doc.querySelector('.dcc_checkout-tax-asterisk');
+    const note = doc.querySelector('.dcc_checkout-tax-footnote');
+
+    check('footnote: the old "Show detail" control is retired',
+        doc.querySelector('.dcc_checkout-tax-toggle'), null);
+    check('footnote: the cloned tax rows are retired',
+        doc.querySelectorAll('tr.dcc_checkout-tax-detail').length, 0);
+    check('footnote: an asterisk sits beside Taxes', star && star.textContent, '*');
+    check('footnote: it is a button, never a submit', star.type, 'button');
+    check('footnote: it has an accessible name',
+        star.getAttribute('aria-label'), 'Show which taxes apply');
+    check('footnote: aria-controls points at the footnote',
+        star.getAttribute('aria-controls'), note.id);
+    check('footnote: collapsed by default', star.getAttribute('aria-expanded'), 'false');
+    check('footnote: it is in normal flow after the table, not a floating layer',
+        note.previousElementSibling.tagName, 'TABLE');
+    check('footnote: hidden until asked for',
+        note.classList.contains('dcc_checkout-section-hidden'), true);
+
+    star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    check('footnote: opening names the taxes, without repeating the amounts',
+        note.textContent,
+        '* Taxes applied: Lake County Tourist Development Tax, ' +
+        'Lake County Discretionary Sales Surtax, Florida Sales and Use Tax.');
+    check('footnote: aria-expanded follows', star.getAttribute('aria-expanded'), 'true');
+
+    star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    check('footnote: tapping again hides it',
+        note.classList.contains('dcc_checkout-section-hidden'), true);
 }
 
 console.log(failures ? `\n${failures} failing` : '\nall passing');
