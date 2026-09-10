@@ -42,6 +42,10 @@
 		Array.prototype.forEach.call(wrap.querySelectorAll('.dcc-seasons-md'), function (el) {
 			el.hidden = !fixed;
 		});
+		/* Hide the pair too: an empty flex item still costs the group a gap,
+		 * which was enough to wrap a one-line holiday rule onto two. */
+		var pair = wrap.querySelector('.dcc-seasons-md-pair');
+		if (pair) { pair.hidden = !fixed; }
 	}
 	Array.prototype.forEach.call(table.querySelectorAll('.dcc-seasons-rule select.dcc-seasons-on'), syncRule);
 	table.addEventListener('change', function (e) {

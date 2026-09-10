@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.16.0
+Stable tag: 3.16.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,31 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.16.1 =
+* The Schedule table was "confusing and hard to visually read — the sections
+  look like they're all part of each other without borders or separation".
+  Layout only: every control, field name and value is byte-identical, and no
+  saved schedule data is touched.
+* Rows now have a real boundary. They were separated by the zebra stripe and
+  wp-admin's #f0f0f1 hairline alone, which stops reading as a boundary once a
+  row is two lines tall and there are six of them.
+* Each end of a range is one field group with a card edge, so "Starts" and
+  "Ends" read as two objects rather than four loose controls. The offset is
+  glued to its unit — "Easter Sunday  -10 days" on one line — where before the
+  word "days" could wrap below the box it labelled, which is what made a row
+  look like two unrelated half-rows. Month and day are paired the same way and
+  can no longer split across lines.
+* The Theme <select> used to set its column's width from its longest option
+  ("Florida Keys (year-round base)") and starved Label to about sixty pixels —
+  "Snov", "Mem". The table is now fixed-layout with explicit column widths, so
+  Label and Year are readable and the Year field shows all four digits.
+* The × is an outlined destructive button in its own ruled-off column, no
+  longer sharing an edge with the Year field.
+* Measured at 1280px with six rows: the page does not scroll sideways, and the
+  table fits the admin column at 1080px. At phone width the table still scrolls
+  inside its own box, as before — and less far than it did (573px of content
+  against 967px).
 
 = 3.16.0 =
 * FIXED: "the floating items only show above the top part of the About Us

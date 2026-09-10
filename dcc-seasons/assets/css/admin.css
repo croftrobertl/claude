@@ -1,6 +1,8 @@
 /* DCC Seasons — settings page styles. */
 .dcc-seasons-wrap .dcc-seasons-schedule {
-	max-width: 860px;
+	/* 860px could not hold six columns without squeezing Label to nothing;
+	   1100 is still narrower than the admin column at 1280. */
+	max-width: 1100px;
 	margin-top: 8px;
 }
 .dcc-seasons-wrap .dcc-seasons-schedule td {
@@ -66,18 +68,141 @@
 	}
 }
 
-/* Rule editor: [holiday ▾] [±days] or [Fixed ▾] [month ▾] [day ▾] [±days] */
+/* --- The Schedule table. -------------------------------------------------
+ * Reported: "the sections look like they're all part of each other without
+ * borders or separation between them." Three things caused that, and none of
+ * them is decoration:
+ *   1. rows were separated only by the zebra stripe and wp-admin's #f0f0f1
+ *      hairline, which stops reading as a boundary once a row is two lines
+ *      tall and there are six of them;
+ *   2. each end of a range was four loose controls with nothing saying which
+ *      offset belonged to which date, and the word "days" could wrap below
+ *      the box it labels;
+ *   3. the Theme <select> sized itself to its longest option and starved the
+ *      Label field to about sixty pixels.
+ * So: a real rule under every row, each end boxed as one field group with its
+ * offset glued inline, and column widths that leave Label readable. Layout
+ * only — every control, name and value is untouched. */
+/* FIXED layout, or the column widths below are only a suggestion: a <select>
+   contributes its longest option to the auto algorithm, so Starts and Ends
+   took ~700px each and squeezed Label down to about sixty pixels — the
+   "Snov" and "Mem" in the owner's screenshot. */
+.dcc-seasons-wrap .dcc-seasons-schedule { table-layout: fixed; }
+.dcc-seasons-wrap .dcc-seasons-schedule thead th {
+	border-bottom: 2px solid #c3c4c7;
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+.dcc-seasons-wrap .dcc-seasons-schedule tbody td {
+	/* One entry, one object: the boundary has to be visible on both the white
+	   and the striped rows. */
+	border-bottom: 1px solid #c3c4c7;
+	padding-top: 12px;
+	padding-bottom: 12px;
+	vertical-align: middle;
+}
+.dcc-seasons-wrap .dcc-seasons-schedule tbody tr:last-child td { border-bottom: 0; }
+/* Widths in percentages so the table breathes with the admin column instead
+   of forcing a horizontal scrollbar at laptop widths. */
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(1),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(1),
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(2),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(2) { width: 26%; }
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(3),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(3) { width: 18%; }
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(4),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(4) { width: 16%; }
+/* Wide enough for a four-digit year AND the "every" placeholder: at 7% it
+   showed "202" and "ever". */
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(5),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(5) { width: 9%; }
+.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(6),
+.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(6) {
+	width: 5%;
+	text-align: center;
+	/* Kept away from the fields either side of it: the one irreversible
+	   control on the row should not share an edge with one people tab into. */
+	border-left: 1px solid #e6e7e8;
+	padding-left: 14px;
+	padding-right: 10px;
+}
+/* The Theme select used to set the column's width from its longest option. */
+.dcc-seasons-wrap .dcc-seasons-schedule select[name$="[theme]"],
+.dcc-seasons-wrap .dcc-seasons-schedule input[type="text"],
+.dcc-seasons-wrap .dcc-seasons-schedule input.dcc-seasons-year {
+	width: 100%;
+	max-width: 100%;
+}
+
+/* One END of a range = one field group: [Fixed ▾][Mon ▾][Day ▾] [±  days],
+   or [Labor Day ▾] [−2 days]. The border is what says "these belong
+   together"; it also survives the group wrapping to a second line inside a
+   narrow column, which is where the old layout fell apart. */
 .dcc-seasons-wrap .dcc-seasons-rule {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px;
-	min-width: 220px;
+	gap: 6px;
+	min-width: 0;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+	padding: 7px 8px;
 }
-.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-on { max-width: 190px; }
-.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-md { max-width: 74px; }
-.dcc-seasons-wrap .dcc-seasons-rule input.dcc-seasons-off { width: 62px; }
-.dcc-seasons-wrap .dcc-seasons-rule .dcc-seasons-off-label { color: #646970; font-size: 12px; }
+.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-on {
+	/* Shrinkable: the offset keeps its natural size and the holiday name
+	   takes what is left, so "Memorial Day  -2 days" stays on one line. */
+	/* Basis 0 so the line is packed by what the other items actually need;
+	   the select then takes the remainder, down to a floor that still shows
+	   the holiday's own name. */
+	flex: 1 1 0;
+	width: auto;
+	min-width: 140px;
+	max-width: 100%;
+}
+/* Month and day are ONE date: they share a line or wrap together. */
+.dcc-seasons-wrap .dcc-seasons-md-pair {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 0 auto;
+}
+.dcc-seasons-wrap .dcc-seasons-md-pair[hidden] { display: none; }
+.dcc-seasons-wrap .dcc-seasons-rule select.dcc-seasons-md { flex: 0 0 auto; max-width: 84px; }
+/* The offset and its unit never separate. */
+.dcc-seasons-wrap .dcc-seasons-offset {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+	flex: 0 0 auto;
+}
+.dcc-seasons-wrap .dcc-seasons-rule input.dcc-seasons-off { width: 58px; }
+.dcc-seasons-wrap .dcc-seasons-rule .dcc-seasons-off-label { color: #50575e; font-size: 12px; }
+/* Destructive, and it has to look it. */
+.dcc-seasons-wrap .dcc-seasons-remove-row {
+	border: 1px solid #d1cfd0;
+	border-radius: 4px;
+	min-width: 30px;
+	min-height: 30px;
+	line-height: 1;
+	font-size: 15px;
+}
+.dcc-seasons-wrap .dcc-seasons-remove-row:hover,
+.dcc-seasons-wrap .dcc-seasons-remove-row:focus {
+	border-color: #b32d2e;
+	background: #fcf0f1;
+	color: #8a2424;
+}
+@media (max-width: 782px) {
+	/* One column of the table per screen is unreadable; the groups stack and
+	   each takes the full width instead. */
+	.dcc-seasons-wrap .dcc-seasons-rule { width: 100%; }
+	.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(1),
+	.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(1),
+	.dcc-seasons-wrap .dcc-seasons-schedule th:nth-child(2),
+	.dcc-seasons-wrap .dcc-seasons-schedule td:nth-child(2) { width: 260px; }
+}
 .dcc-seasons-wrap .dcc-seasons-year { width: 72px; }
 .dcc-seasons-wrap .dcc-seasons-resolved td.win { font-weight: 600; }
 .dcc-seasons-wrap .dcc-seasons-gaps { color: #b32d2e; }

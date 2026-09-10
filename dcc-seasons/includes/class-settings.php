@@ -704,6 +704,9 @@ class Settings {
                     <option value="<?php echo esc_attr($key); ?>" <?php selected($on, $key); ?>><?php echo esc_html($a['label']); ?></option>
                 <?php endforeach; ?>
             </select>
+            <?php /* Month and day are one date, and must never break across
+                     lines the way the loose controls used to. */ ?>
+            <span class="dcc-seasons-md-pair" <?php echo $on === 'fixed' ? '' : 'hidden'; ?>>
             <select class="dcc-seasons-md" name="<?php echo esc_attr($name); ?>[m]" aria-label="<?php esc_attr_e('Month', 'dcc-seasons'); ?>" <?php echo $on === 'fixed' ? '' : 'hidden'; ?>>
                 <?php for ($i = 1; $i <= 12; $i++) : ?>
                     <option value="<?php echo (int) $i; ?>" <?php selected($m, $i); ?>><?php echo esc_html(date_i18n('M', mktime(12, 0, 0, $i, 1, 2001))); ?></option>
@@ -714,9 +717,14 @@ class Settings {
                     <option value="<?php echo (int) $i; ?>" <?php selected($d, $i); ?>><?php echo (int) $i; ?></option>
                 <?php endfor; ?>
             </select>
-            <input type="number" class="dcc-seasons-off" name="<?php echo esc_attr($name); ?>[off]" value="<?php echo (int) $off; ?>" min="-60" max="60" step="1"
-                   aria-label="<?php esc_attr_e('Offset in days', 'dcc-seasons'); ?>" />
-            <span class="dcc-seasons-off-label"><?php esc_html_e('days', 'dcc-seasons'); ?></span>
+            </span>
+            <?php /* The offset and its unit are ONE thing: glued so a wrap can
+                     never leave "days" hanging under the box it labels. */ ?>
+            <span class="dcc-seasons-offset">
+                <input type="number" class="dcc-seasons-off" name="<?php echo esc_attr($name); ?>[off]" value="<?php echo (int) $off; ?>" min="-60" max="60" step="1"
+                       aria-label="<?php esc_attr_e('Offset in days', 'dcc-seasons'); ?>" />
+                <span class="dcc-seasons-off-label"><?php esc_html_e('days', 'dcc-seasons'); ?></span>
+            </span>
         </span>
         <?php
     }
