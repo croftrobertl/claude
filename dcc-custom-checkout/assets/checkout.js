@@ -131,7 +131,23 @@
     // never summed.
     function rowLabel(row) {
         var cell = row.cells && row.cells[0];
-        return cell ? String(cell.textContent || '').replace(/\s+/g, ' ').trim() : '';
+        if (!cell) {
+            return '';
+        }
+        // Read MotoPress's text ONLY. The asterisk this plugin appends to the
+        // Taxes cell is text content too, so on a second pass "Taxes" read as
+        // "Taxes*", the row stopped matching, foldTaxDetail bailed — and the
+        // cleanup at the top of the pass had already removed the footnote,
+        // leaving a live button pointing at an id that no longer existed.
+        // Every re-render of the breakdown hit this.
+        var text = '';
+        Array.prototype.forEach.call(cell.childNodes, function (node) {
+            if (node.nodeType === 1 && node.hasAttribute('data-dcc-injected')) {
+                return;
+            }
+            text += node.textContent || '';
+        });
+        return text.replace(/\s+/g, ' ').trim();
     }
 
     function normLabel(row) {
@@ -155,12 +171,18 @@
     function restructureBreakdown(table) {
         // Drop anything a previous pass added: MotoPress rebuilds this table
         // whenever the guest count changes, and clones must never stack.
+        // Clear BOTH halves of the footnote control, symmetrically. Removing
+        // the note while leaving the button is what produced a dead asterisk.
         if (table.parentNode) {
             Array.prototype.forEach.call(
                 table.parentNode.querySelectorAll('.dcc_checkout-tax-footnote'),
                 function (n) { if (n.parentNode) { n.parentNode.removeChild(n); } }
             );
         }
+        Array.prototype.forEach.call(
+            table.querySelectorAll('.dcc_checkout-tax-asterisk'),
+            function (b) { if (b.parentNode) { b.parentNode.removeChild(b); } }
+        );
 
         var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
         if (!rows.length) {
@@ -227,7 +249,7 @@
         relabelAccommodationRows(rows);
         setLineItemPreTax(rows, subtotal);
         foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
-        dropRateRows(rows);
+        dropRateRows(rows, table);
         markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
         markFirstVisibleRows(rows);
     }
@@ -237,12 +259,33 @@
     // on this site is named after its cottage. A rate named anything else —
     // "Winter Special", say — would therefore not appear on the breakdown
     // either; see CLAUDE.md.
-    function dropRateRows(rows) {
-        rows.forEach(function (row) {
-            if (/^rate\b/.test(normLabel(row))) {
-                hideRow(row);
+    //
+    // It is NOT a row. MotoPress renders it as
+    //   <div class="mphb-price-breakdown-rate">
+    // nested in a <td> that also holds the rest of the expanded detail. Three
+    // releases matched row labels starting with "Rate" and never touched it —
+    // and worse, when that div happened to be the first thing in the cell the
+    // row's label BEGAN with "Rate:", so the match hid the entire detail block
+    // instead. Target the element by its class: exact, and it survives
+    // translation, which the text match never could.
+    function dropRateRows(rows, root) {
+        var scope = root || (rows[0] && rows[0].closest('table')) || null;
+        if (!scope) {
+            return;
+        }
+        Array.prototype.forEach.call(
+            scope.querySelectorAll('.mphb-price-breakdown-rate'),
+            function (el) {
+                var row = el.closest('tr');
+                if (el.parentNode) {
+                    el.parentNode.removeChild(el);
+                }
+                // Take the row too, but only if the rate was all it held.
+                if (row && !String(row.textContent || '').trim()) {
+                    hideRow(row);
+                }
             }
-        });
+        );
     }
 
     // Make the column-header rows ("Dates | Amount") read as headers rather
@@ -393,6 +436,9 @@
         toggle.type = 'button';          // never submit the checkout
         toggle.className = 'dcc_checkout-tax-asterisk';
         toggle.textContent = '*';
+        // Excluded from rowLabel(), so this control can never change the text
+        // the next pass matches on.
+        toggle.setAttribute('data-dcc-injected', '1');
         // The glyph is not a name; give assistive tech a real one.
         toggle.setAttribute('aria-label', I18N.taxNoteLabel || 'Show which taxes apply');
         toggle.setAttribute('aria-controls', id);
@@ -1323,7 +1369,12 @@
             }
         }
         Array.prototype.forEach.call(
-            root.querySelectorAll('.mphb_sc_checkout-service'), addRow
+            root.querySelectorAll('.mphb_sc_checkout-service'),
+            function (el) {
+                // The class sits on the checkbox on this site; resolve it to
+                // the row that actually carries the visible text.
+                addRow(/^(INPUT|SELECT)$/.test(el.tagName) ? serviceRowWrapper(el) : el);
+            }
         );
         Array.prototype.forEach.call(
             root.querySelectorAll('input[name*="[services]"]'),
@@ -1548,6 +1599,14 @@
         ];
         for (var i = 0; i < candidates.length; i++) {
             var el = candidates[i];
+            // closest() matches the element itself, and MotoPress puts
+            // .mphb_sc_checkout-service ON THE CHECKBOX — so the first
+            // candidate used to be the input, and hiding it left the label
+            // text, the price, the quantity select and "guest(s)" on screen.
+            // A form control is never a row.
+            if (el === input || (el && el.nodeType === 1 && /^(INPUT|SELECT|TEXTAREA|OPTION)$/.test(el.tagName))) {
+                continue;
+            }
             if (el && el.nodeType === 1 && isServiceRowSized(el, input)) {
                 return el;
             }

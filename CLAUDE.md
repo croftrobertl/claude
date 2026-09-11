@@ -174,6 +174,19 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   (`npm install && npm test`). It renders the button in isolation, because
   `/submit-booking/` only exists with a live reservation. Run it after touching
   any button rule.
+- **Fixtures must come from real /submit-booking/ markup.** Three defects
+  survived several releases with a green suite because the fixtures were
+  plausible rather than real (v0.9.0). Two traps worth knowing:
+  `.mphb_sc_checkout-service` is on the CHECKBOX, not its row, and
+  `Element.closest()` matches the element itself — so resolving a row from a
+  service input needs an explicit "a form control is never a row" guard. And
+  the "Rate:" line is a `<div class="mphb-price-breakdown-rate">` inside a
+  `<td>`, not a row.
+- **Never match on text this plugin has written into the page.** The tax
+  asterisk is appended to the Taxes cell, so a second pass read that row as
+  "Taxes*" and the whole footnote control died. Injected elements carry
+  `data-dcc-injected` and `rowLabel()` skips them. Anything that reads a label
+  and might run twice must do the same.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

@@ -53,6 +53,20 @@ async function render(fixture, cfg) {
 }
 
 // Only the rows a guest can actually see, as "label | amount".
+// Visible = neither the element nor any ancestor carries one of the plugin's
+// hide classes. The real page uses display:none; jsdom has no layout, so the
+// classes are the honest proxy.
+function visible(el) {
+    if (!el) { return false; }
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+        if (n.classList.contains('dcc_checkout-service-hidden') ||
+            n.classList.contains('dcc_checkout-section-hidden')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function label(cell) {
     // Drop the expander glyph MotoPress renders ahead of the name.
     return cell.textContent.replace(/\s+/g, ' ').replace(/^\s*[-+\u2212]\s*/, '').trim();
@@ -96,8 +110,10 @@ function summary(doc) {
     const rows = visibleRows(doc);
     check('no-service: no figure appears twice',
         rows.filter(r => /\$388\.50|\$38\.50|\$350/.test(r)).length, 4);
-    check('no-service: no "Rate:" row survives',
-        rows.filter(r => /^Rate\b/i.test(r)).length, 0);
+    check('no-service: no .mphb-price-breakdown-rate element survives',
+        visible(doc.querySelector('.mphb-price-breakdown-rate')), false);
+    check('no-service: removing the rate did NOT take the detail block with it',
+        rows.includes('Number of Guests | 2'), true);
     check('no-service: the expanded block opens on Number of Guests',
         rows[1], 'Number of Guests | 2');
     check('no-service: nothing carries a rule where the Rate row was',
@@ -122,8 +138,8 @@ function summary(doc) {
         rows.some(r => r === 'Accommodation Total | $350'), true);
     check('with-service: the extra-guest fee is still shown at $200',
         rows.some(r => /Extra Guest Fee.*\| \$200$/.test(r)), true);
-    check('with-service: no "Rate:" row survives',
-        rows.filter(r => /^Rate\b/i.test(r)).length, 0);
+    check('with-service: no .mphb-price-breakdown-rate element survives',
+        visible(doc.querySelector('.mphb-price-breakdown-rate')), false);
 
     // Column headers read as headers; summary rows are deliberately left alone.
     // "Accommodation Taxes | Amount" is a column header too, and is marked —
@@ -137,7 +153,31 @@ function summary(doc) {
         heads.filter(h => /^(Subtotal|Taxes|Total)/.test(h)).length, 0);
 }
 
-/* Suite 3 (the old "Show detail" fold) is retired; see suite 7. */
+/* --- 3. A SECOND pass must leave the page in the same state. ------------ *
+ * MotoPress re-renders the breakdown (country change, guest count, its own
+ * init), and the MutationObserver runs the whole pipeline again. Everything
+ * here is supposed to be idempotent. */
+{
+    const { window, doc } = await render(F.withService);
+    const before = doc.querySelectorAll('.dcc_checkout-tax-asterisk').length;
+
+    // Provoke the observer the way a re-render would.
+    doc.querySelector('.mphb_sc_checkout-form').appendChild(doc.createElement('span'));
+    await new Promise(r => setTimeout(r, 400));
+
+    const star = doc.querySelector('.dcc_checkout-tax-asterisk');
+    check('re-render: exactly one asterisk, not one per pass',
+        doc.querySelectorAll('.dcc_checkout-tax-asterisk').length, before);
+    check('re-render: the footnote still exists',
+        !!doc.getElementById('dcc-tax-footnote'), true);
+    check('re-render: aria-controls still resolves — a dangling one is a dead control',
+        !!doc.getElementById(star.getAttribute('aria-controls')), true);
+    star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const after = doc.getElementById('dcc-tax-footnote');
+    check('re-render: the asterisk still works after a re-render',
+        !!after && !after.classList.contains('dcc_checkout-section-hidden'), true);
+}
+
 
 /* --- 4. Two cottages: nothing duplicates, so nothing is removed. -------- */
 {
@@ -186,22 +226,27 @@ function summary(doc) {
         guestFeeSteps: { 1: '$50', 2: '$100' },
         couchBedsText: '1 queen-sized bed and a pull-out couch'
     });
-    const shown = el => el && !el.classList.contains('dcc_checkout-service-hidden');
 
     check('services: the "Choose Additional Services" heading is gone',
-        shown(doc.querySelector('.services-heading')), false);
+        visible(doc.querySelector('.services-heading')), false);
     check('services: no service row is visible',
-        Array.from(doc.querySelectorAll('.mphb_sc_checkout-service')).filter(shown).length, 0);
+        Array.from(doc.querySelectorAll('.mphb_sc_checkout-service')).filter(visible).length, 0);
+    check('services: the "Extra Guest Fee" label text is not visible',
+        visible(doc.querySelector('label.mphb-checkbox-label')), false);
+    check('services: the quantity select is not visible',
+        visible(doc.querySelector('.mphb_sc_checkout-service-adults')), false);
+    check('services: the <li> carrying the text and price is hidden, not just the checkbox',
+        visible(doc.querySelector('.mphb_sc_checkout-services-list li')), false);
     check('services: the emptied list wrapper went too — no bordered gap left',
-        shown(doc.querySelector('.mphb_sc_checkout-services-list')), false);
+        visible(doc.querySelector('.mphb_sc_checkout-services-list')), false);
 
     // The guard that used to defeat all of this.
     check('services: the section SURVIVES (it also holds the guest chooser)',
-        shown(doc.querySelector('.mphb-checkout-section')), true);
+        visible(doc.querySelector('.mphb-checkout-section')), true);
     check('services: "Number of Guests" is still visible',
-        shown(doc.querySelector('.mphb-adults-chooser')), true);
+        visible(doc.querySelector('.mphb-adults-chooser')), true);
     check('services: the Accommodation Details heading is untouched',
-        shown(doc.querySelectorAll('h3')[0]), true);
+        visible(doc.querySelectorAll('h3')[0]), true);
 
     // The money. Hiding is display-based, so the input still submits.
     const fee = doc.querySelector('input[name="mphb_room_details[0][services][0][id]"]');
@@ -227,7 +272,11 @@ function summary(doc) {
     check('footnote: it has an accessible name',
         star.getAttribute('aria-label'), 'Show which taxes apply');
     check('footnote: aria-controls points at the footnote',
-        star.getAttribute('aria-controls'), note.id);
+        star.getAttribute('aria-controls'), note && note.id);
+    // A button whose aria-controls dangles is an accessibility defect and a
+    // dead control. This must hold after EVERY pass, not just the first.
+    check('footnote: aria-controls resolves to a real element',
+        !!doc.getElementById(star.getAttribute('aria-controls')), true);
     check('footnote: collapsed by default', star.getAttribute('aria-expanded'), 'false');
     check('footnote: it is in normal flow after the table, not a floating layer',
         note.previousElementSibling.tagName, 'TABLE');

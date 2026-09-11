@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.1
+Stable tag: 0.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,38 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.9.0 =
+Three defects, all found by rebuilding the test fixtures from real
+/submit-booking/ markup. The old fixtures were plausible but wrong, which is
+why two of these survived several releases with a passing suite.
+
+* FIX: the Extra Guest Fee row was still fully visible — the label text, the
+  price, the quantity select and "guest(s)". MotoPress puts the class
+  .mphb_sc_checkout-service ON THE CHECKBOX, and Element.closest() matches the
+  element itself, so serviceRowWrapper() returned the input and the plugin hid
+  the tick box while leaving its row. It now refuses to treat a form control as
+  a row and resolves to the enclosing <li>. The checkbox stays in the DOM,
+  checked and enabled, so the $50 still bills — asserted.
+* FIX: the tax asterisk did nothing. The plugin appends the "*" to the Taxes
+  cell, and the asterisk is text content, so on the NEXT pass that row read
+  "Taxes*" and stopped matching. foldTaxDetail() bailed — after the cleanup at
+  the top of the pass had already removed the footnote — leaving a live button
+  whose aria-controls pointed at an id that no longer existed. Every re-render
+  of the breakdown hit it. Row labels are now read from MotoPress's own nodes
+  only, ignoring anything this plugin injected, and both halves of the control
+  are cleared together. The suite now runs the pipeline twice and fails if the
+  target does not survive.
+* FIX (third attempt, first correct one): "Rate: Cottage 22: The Boathouse" is
+  not a row. It is <div class="mphb-price-breakdown-rate"> inside a <td> that
+  holds the rest of the expanded detail, so matching row labels beginning
+  "Rate" never touched it — and when that div was the first thing in the cell,
+  the match hid the ENTIRE detail block instead. Now targeted by its class,
+  which is exact and survives translation. The enclosing row goes only if the
+  rate was all it held.
+* Fixtures rebuilt from production markup, and every new assertion was watched
+  failing against 0.8.1 before the fix: 7 failures, now 53 assertions passing.
+* Submit Booking is untouched and still measures to spec.
 
 = 0.8.1 =
 * Buttons now hover to the site standard #F08080 with #FFFFFF text. 0.8.0 used

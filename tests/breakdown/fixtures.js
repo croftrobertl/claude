@@ -13,8 +13,8 @@ const withService = `
     <td><a href="#" class="exp">-</a> #1 Cottage 36: Sunshine Suite</td><td>$588.50</td>
   </tr>
   <tr><td>
+    <div class="mphb-price-breakdown-rate">Rate: Cottage 36: Sunshine Suite</div>
     <table>
-      <tr><td>Rate: Cottage 36: Sunshine Suite</td><td></td></tr>
       <tr><td>Number of Guests</td><td>4</td></tr>
       <tr><td>Nights</td><td>2</td></tr>
       <tr><td>Dates</td><td>Amount</td></tr>
@@ -45,8 +45,8 @@ const noService = `
     <td><a href="#" class="exp">-</a> #1 Cottage 36: Sunshine Suite</td><td>$388.50</td>
   </tr>
   <tr><td>
+    <div class="mphb-price-breakdown-rate">Rate: Cottage 36: Sunshine Suite</div>
     <table>
-      <tr><td>Rate: Cottage 36: Sunshine Suite</td><td></td></tr>
       <tr><td>Number of Guests</td><td>2</td></tr>
       <tr><td>Nights</td><td>2</td></tr>
       <tr><td>Dates</td><td>Amount</td></tr>
@@ -123,7 +123,7 @@ const renamedLabels = `
 // .mphb-checkout-section. That is why hiding the ancestor section could never
 // work — the guard protecting the chooser protected the services with it.
 const sharedSection = `
-<div class="mphb-checkout-section">
+<div class="mphb-booking-details mphb-checkout-section">
   <h3>Accommodation Details</h3>
   <input type="hidden" name="mphb_check_in_date" value="2026-09-17">
   <input type="hidden" name="mphb_check_out_date" value="2026-09-19">
@@ -137,16 +137,20 @@ const sharedSection = `
   </p>
   <h3 class="services-heading">Choose Additional Services</h3>
   <ul class="mphb_sc_checkout-services-list">
-    <li class="mphb_sc_checkout-service">
-      <label>
+    <li>
+      <label for="mphb_room_details-0-service-18063-id" class="mphb-checkbox-label">
         <input type="checkbox" checked
-               name="mphb_room_details[0][services][0][id]" value="18063">
-        Extra Guest Fee (per guest beyond 2) ($50 / Per Day) for
+               id="mphb_room_details-0-service-18063-id"
+               name="mphb_room_details[0][services][0][id]"
+               class="mphb_sc_checkout-service mphb_checkout-service"
+               value="18063">
+        Extra Guest Fee (per guest beyond 2) <em>($50 / Per Day)</em> for
+        <select name="mphb_room_details[0][services][0][adults]"
+                class="mphb_sc_checkout-service-adults">
+          <option>1</option><option selected>2</option>
+        </select>
+        guest(s)
       </label>
-      <select name="mphb_room_details[0][services][0][adults]">
-        <option>1</option><option selected>2</option>
-      </select>
-      guest(s)
     </li>
   </ul>
 </div>`;
