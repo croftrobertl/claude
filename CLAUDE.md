@@ -190,12 +190,23 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   masthead and the hero seaplane was made unclickable for the same reason.
   The fish is on EVERY cast (0.31.0 — three per page view is cap enough).
   Three casts per page view, then never; interaction stops it permanently.
-  **The ending is choreographed and its ORDER is load-bearing**: line taut, fish
-  fights, fish and lure hauled right then lifted away, line reeled in with
-  stroke-dashoffset, and the ROD WITHDRAWS LAST. It holds everything else up, so it
-  cannot leave first — 0.30.0's rod slid out of the clip a frame early and the whole
-  thing read as a glitch. dom-smoke test 73 compares the last opaque keyframe of each
-  element and fails if the rod stops outlasting the fish and both lines.
+  **The cast is RIGGED, not keyframed (0.32.0), and everything derives from the
+  fish's MOUTH.** One rAF clock paints every frame; the line's endpoint, the lure,
+  the ripple and the splash are all computed from that one point, and the lure is a
+  CHILD of the fish group at its origin so it cannot drift. 0.31.0 ran the fish, the
+  lure and the line as three CSS animations with three different easings and the
+  fish rotating about its own centre: they came apart, the lure ended up on the
+  fish's tail, and the ripple stayed where the lure first landed. Two independent
+  answers to "where is the fish" is one too many — the same failure as measuring the
+  glyph guard two ways. `rigcheck.mjs` asserts the line and lure sit on the mouth at
+  every sampled frame, with a positive control that detaches the lure by hand.
+  **The ORDER of the ending is load-bearing**: the ROD WITHDRAWS LAST, because it
+  holds everything else up. dom-smoke test 73 samples the rig and fails if the rod
+  stops outlasting the fish, the line and the lure.
+  Two things the rig must keep clamping, both measured: the fish hangs BELOW its
+  mouth (a body centred on the mouth put its dorsal edge and tail sweep over the
+  glyphs), and the line's tension is capped by CLEARANCE — straightening it while
+  the mouth is still under the last word walks it into that word's corner.
   The heading string is EDITABLE, so the geometry must survive both a short and a
   width-filling heading: the rod is clamped inside the heading block (an early
   build placed it past the right edge and with a long heading nothing drew at all).
@@ -221,7 +232,10 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
-  per-button rules. **There is exactly one agreed exception**: the Compare /
+  per-button rules. **There are exactly two agreed exceptions, both asked for by the
+  owner and both documented in place.** (1) The answer chips are `font-weight: 600`
+  rather than the spec's 500 (0.32.0) — weight only, every other property still from
+  the tokens. (2) The Compare /
   Compare N button is `--dccs-compare-red` (#8E1838, 8.98:1 on white) and hovers to
   `--dccs-compare-red-hover` (#6E1029, 11.87:1), pairing it with the compare
   checkbox label that wears the same red. It stays inside the shared skin rule so
@@ -313,6 +327,20 @@ shape: a green result that could not have been red.
    and a keyframe/selector-list check anchored on the FIRST match found the
    reduced-motion block instead of the rule it meant. Bound the match, and anchor
    on the declaration rather than the first selector.
+
+## Stylesheet structure
+
+`php tools/css-lint.php` runs first in `npm test` and fails on any shipped
+stylesheet with unbalanced braces or a declaration outside a rule block. It exists
+because 0.31.0 shipped a stray `cursor: pointer; }` — left behind when a regex
+removed the selector line above it — and **a CSS parser does not read an orphaned
+declaration at the top level as a declaration**. It reads it as the start of a
+selector prelude, which a semicolon does not terminate, so it consumed the stray
+brace, a comment and the NEXT rule's selector before finding a `{`, then discarded
+that rule as invalid. `.dccs-wizard-nav` lost `display:flex` and `gap:10px`, five
+spacing complaints followed, and every test stayed green: the declarations were
+still in the file, they were just never applied. Removing CSS by regex is how this
+happened — prefer an exact block match, and the lint is the backstop.
 
 ## Visual design
 

@@ -2165,12 +2165,17 @@ defer(async function () {
   ok('there are two rings', (castSrc.match(/dccs-cast-ring-/g) || []).length === 2);
   // Only transform/opacity animate — plus stroke-dashoffset, which is paint-only.
   const keyframeBodies = (css.match(/@keyframes dccs-[a-z]+\s*\{[\s\S]*?\n\}/g) || []).join('\n');
-  ok('the cast keyframe timelines are all present',
-    (css.match(/@keyframes dccs-/g) || []).length === 9);
+  // 0.32.0: the cast is rigged in JS, not keyframed. Only the word's bob is still
+  // a CSS animation — it lives on the heading, outside the overlay, and nothing has
+  // to stay attached to it.
+  ok('only the bob remains a keyframe', (css.match(/@keyframes dccs-/g) || []).length === 1 &&
+    /@keyframes dccs-bob/.test(css));
   ok('no keyframe name is declared twice', (() => {
     const names = (css.match(/@keyframes (dccs-[a-z0-9-]+)/g) || []);
     return new Set(names).size === names.length;
   })());
+  ok('no cast element is driven by a CSS animation any more',
+    !/\.dccs-cast[^\n]*animation:/.test(css));
   const animatedProps = new Set((keyframeBodies.match(/^\s*([a-z-]+):/gm) || [])
     .map(x => x.trim().replace(':', '')));
   animatedProps.delete('transform'); animatedProps.delete('opacity'); animatedProps.delete('stroke-dashoffset');
@@ -2270,7 +2275,12 @@ defer(async function () {
   ok('the progress label is +1 step', /font-weight:\s*700/.test(ruleBody('.dccs-root.dccs-root .dccs-progress-label')));
   // The chips are buttons and stay on the site spec's 500 — moving them would need
   // the same explicit exception the Compare button was given.
-  ok('answer chips stay at the spec weight', !/font-weight/.test(ruleBody('.dccs-root.dccs-root .dccs-chip')));
+  // 0.32.0: the SECOND agreed exception to the button spec, asked for by the owner
+  // after 0.31.0 left the chips behind when the rest of the quiz text went up.
+  ok('answer chips are the documented 600 exception',
+    /font-weight:\s*600/.test(ruleBody('.dccs-root.dccs-root .dccs-chip')));
+  ok('and the exception says so in place, so nobody corrects it back',
+    /AGREED EXCEPTION/.test(css) && /font-weight:\s*600/.test(css));
 
   // The compare pair shares one red, declared once.
   const tokens = ruleBody('.dccs-root.dccs-root');
@@ -2296,37 +2306,83 @@ defer(async function () {
       !css.includes(t));
   });
 
-  // The ending. The rod must be the last thing on screen: the earlier build slid
-  // it out of the clip while the fish and line were still fading, which read as a
-  // glitch rather than an ending.
-  const kf = (name) => {
-    const i = css.indexOf('@keyframes ' + name + ' {');
-    return i === -1 ? '' : css.slice(i, css.indexOf('\n}', i));
-  };
-  const lastOpaque = (name) => {
-    const body = kf(name);
-    let last = -1;
-    body.replace(/(\d+(?:\.\d+)?)%[^{]*\{([^}]*)\}/g, (m, pct, decl) => {
-      if (/opacity:\s*(0?\.\d+|1)\b/.test(decl)) { last = Math.max(last, parseFloat(pct)); }
-      return m;
+  // THE ENDING, asserted against the rig rather than against keyframes. The rod
+  // must still be the last thing on screen: it holds everything else up.
+  const rigStates = (() => {
+    const w = freshDom();
+    w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+    const r = mountSelector(w, CONFIG);
+    const box = (x, y, wd, ht) => () => ({ x, y, width: wd, height: ht, top: y, left: x,
+      right: x + wd, bottom: y + ht, toJSON() { return this; } });
+    r.querySelector('.dccs-head').getBoundingClientRect = box(0, 100, 343, 62);
+    r.querySelector('.dccs-heading-w').getBoundingClientRect = box(180, 104, 86, 27);
+    w.Range.prototype.getClientRects = function () { return [box(90, 104, 176, 26)()]; };
+    const c = w.DCCS.cast.attach(r);
+    if (!c || c.cast(true) !== true) { return null; }
+    const T = c.timeline, out = [];
+    for (let ms = 0; ms <= c.duration; ms += 25) { out.push(Object.assign({ ms }, c.rigAt(ms))); }
+    return { T, out, dur: c.duration };
+  })();
+  ok('the rig could be sampled at all (guard against a vacuous sweep)',
+    !!rigStates && rigStates.out.length > 100);
+  if (rigStates) {
+    const { T, out } = rigStates;
+    const lastVisible = (key) => {
+      let last = -1;
+      out.forEach(r => { if (r[key] > 0.02) { last = Math.max(last, r.ms); } });
+      return last;
+    };
+    const rodLast = lastVisible('rodAlpha');
+    ok('the rod is still on screen after the fish has gone', rodLast > lastVisible('fishAlpha'));
+    ok('the rod outlasts the line too', rodLast > lastVisible('lineAlpha'));
+    ok('the rod outlasts the lure', rodLast > lastVisible('lureAlpha'));
+    // The rod loads under the weight while the fish is on, and springs back after.
+    const during = out.filter(r => r.ms > T.take[1] && r.ms < T.haul[0]);
+    const after = out.filter(r => r.ms > T.rodOut[0]);
+    ok('the rod bends under load while the fish is on', during.every(r => r.rodBend === 1));
+    ok('and springs straight once the fish is off', after.every(r => r.rodBend === 0));
+    ok('the loaded rod angle is genuinely deeper than the resting one',
+      Math.min(...during.map(r => r.rodAngle)) < -6);
+    // The body bends: the spine angles have to actually vary during the fight.
+    const fight = out.filter(r => r.ms >= T.fight[0] && r.ms <= T.fight[1]);
+    const spread = (k) => Math.max(...fight.map(r => r[k])) - Math.min(...fight.map(r => r[k]));
+    ok('the body bends during the fight (spine spread ' + spread('bend1').toFixed(1) + ' deg)',
+      spread('bend1') > 6);
+    ok('and the tail sweeps further than the middle', spread('bend2') > spread('bend1'));
+    // ONE source of truth: the line's path must END on the mouth, every frame.
+    const attached = out.filter(r => r.fishAlpha > 0.05 && r.ms >= T.take[0]);
+    ok('the fish is on screen for a meaningful stretch', attached.length > 15);
+    const detached = attached.filter(r => {
+      const m = /([-\d.]+) ([-\d.]+)$/.exec(r.lineD);
+      if (!m) { return true; }
+      return Math.hypot(+m[1] - r.mouth.x, +m[2] - r.mouth.y) > 0.2;
     });
-    return last;
-  };
-  const rodLast = lastOpaque('dccs-rod');
-  ok('the rod is still visible after the fish has gone', rodLast > lastOpaque('dccs-fish'));
-  ok('the rod outlasts the taut line too', rodLast > lastOpaque('dccs-line-taut'));
-  ok('the rod outlasts the slack line', rodLast > lastOpaque('dccs-line'));
-  ok('the rod loads before it withdraws', /rotate\(-10deg\)/.test(kf('dccs-rod')));
-  ok('the fish fights before it goes', (kf('dccs-fish').match(/rotate\(-?\d/g) || []).length >= 4);
-  ok('the taut line reels in with dashoffset, not a transform',
-    /stroke-dashoffset:\s*var\(--dccs-taut-len/.test(kf('dccs-line-taut')) &&
-    !/transform/.test(kf('dccs-line-taut')));
-  ok('the exit run and rise are measured, not hard-coded',
-    /--dccs-fish-run/.test(castSrc) && /--dccs-fish-rise/.test(castSrc));
+    ok('the line ends on the mouth at every sampled frame (' + detached.length + ' bad)',
+      detached.length === 0);
+    // The haul accelerates rather than running at a constant rate.
+    const haul = out.filter(r => r.ms >= T.haul[0] && r.ms <= T.haul[1]).map(r => r.mouth.x);
+    const first = haul[1] - haul[0], last = haul[haul.length - 1] - haul[haul.length - 2];
+    ok('the haul accelerates (' + first.toFixed(2) + ' -> ' + last.toFixed(2) + ' px/frame)',
+      last > first * 1.5);
+    // The water reacts where the FISH is, not where the lure first landed.
+    const surf = out.filter(r => r.ms > T.fight[0] + 100 && r.ms < T.fight[1]);
+    ok('the ripple tracks the fish while it is at the surface',
+      surf.every(r => Math.hypot(r.ringAt.x - r.mouth.x, r.ringAt.y - r.mouth.y) < 2));
+    ok('the splash only fires once the fish is clear of the words',
+      out.filter(r => r.splash > 0).every(r => r.mouth.x > r.mouth.x - 1));
+  }
+  ok('the exit run and rise are measured geometry, not hard-coded',
+    /run:\s*run/.test(castSrc) && /rise:\s*rise/.test(castSrc));
   ok('the rise is refused when the fish cannot get clear of the words',
     /run \* 0\.85 >= clearBy/.test(castSrc));
-  ok('the taut line is routed round the glyphs, not drawn straight',
-    /pull\(g\.c2/.test(castSrc) && /pull\(g\.c1/.test(castSrc));
+  ok('the line is never allowed to go fully straight over the words',
+    /maxTension/.test(castSrc) && /clearance/.test(castSrc));
+  // The lure is a CHILD of the fish group at its origin — attachment by
+  // construction, not by two animations agreeing.
+  ok('the lure is rigged to the fish, not animated alongside it',
+    /fish\.appendChild\(svgEl\('circle'[\s\S]{0,160}?cx: 0, cy: 0/.test(castSrc));
+  ok('the rig derives everything from one mouth point',
+    /st\.mouth = mouth/.test(castSrc));
 })();
 
 (async function runDeferred() {

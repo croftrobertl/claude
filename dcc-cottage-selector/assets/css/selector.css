@@ -140,143 +140,40 @@
 /* Everything starts invisible; the is-running class drives the timeline. */
 .dccs-root.dccs-root .dccs-cast-rod,
 .dccs-root.dccs-root .dccs-cast-line,
-.dccs-root.dccs-root .dccs-cast-line-taut,
 .dccs-root.dccs-root .dccs-cast-lure,
 .dccs-root.dccs-root .dccs-cast-ring,
 .dccs-root.dccs-root .dccs-cast-fish { opacity: 0; }
-.dccs-root.dccs-root .dccs-cast-line { stroke-dasharray: 400; stroke-dashoffset: 400; }
-.dccs-root.dccs-root .dccs-cast-line-taut { opacity: 0; stroke-dashoffset: 0; }
+.dccs-root.dccs-root .dccs-cast-splash { opacity: 0; }
 
-/* THE TIMELINE. 3000ms, up from 2600 in 0.31.0 — the extra 400ms all went to the
-   ENDING, not to the hold. At 2600 the take, the haul and the rod's withdrawal had
-   to share 364ms and the fish's lift happened entirely inside its own fade, so it
-   read as vanishing rather than being pulled away. The beats before the take keep
-   their old wall-clock timing; the percentages moved because the total did.
-   Ordering is load-bearing: the fish and the line are gone by 86%, and the rod is
-   still fully drawn at 88%. It is the thing holding everything else up, so it
-   cannot leave first — which is exactly the glitch 0.30.0 shipped. */
-
-/* b + c: the rod enters from the right, flicks back, then forward. */
-@keyframes dccs-rod {
-  0%   { opacity: 0; transform: translateX(62px) rotate(11deg); }
-  8%   { opacity: 1; }
-  23%  { transform: translateX(0) rotate(9deg); }
-  35%  { transform: translateX(0) rotate(17deg); }   /* back */
-  48%  { transform: translateX(0) rotate(-4deg); }   /* and forward */
-  59%  { transform: translateX(0) rotate(2deg); }
-  72%  { opacity: 1; transform: translateX(0) rotate(2deg); }
-  76%  { transform: translateX(0) rotate(-10deg); }  /* loaded by the take */
-  88%  { opacity: 1; transform: translateX(0) rotate(-6deg); }
-  100% { opacity: 0; transform: translateX(62px) rotate(8deg); }   /* g: withdraws LAST */
-}
-/* The flick rotates about the butt, off-frame right, so a few degrees moves the
-   tip a lot. When the rod has to come in low (a heading wide enough to leave no
-   margin beside it) that swing would lift the tip back into the words, so the low
-   variant flicks shallowly. */
-@keyframes dccs-rod-low {
-  0%   { opacity: 0; transform: translateX(62px) rotate(3deg); }
-  8%   { opacity: 1; }
-  23%  { transform: translateX(0) rotate(2.5deg); }
-  35%  { transform: translateX(0) rotate(4.5deg); }
-  48%  { transform: translateX(0) rotate(-1deg); }
-  59%  { transform: translateX(0) rotate(0.5deg); }
-  76%  { transform: translateX(0) rotate(-2.5deg); }
-  88%  { opacity: 1; transform: translateX(0) rotate(-1.5deg); }
-  100% { opacity: 0; transform: translateX(62px) rotate(3deg); }
-}
-/* c: the line unspools over the words, then gives way to the taut line. */
-@keyframes dccs-line {
-  0%   { opacity: 0; stroke-dashoffset: 400; }
-  19%  { opacity: 1; stroke-dashoffset: 400; }
-  43%  { stroke-dashoffset: 0; }
-  70%  { opacity: 1; stroke-dashoffset: 0; }
-  74%  { opacity: 0; stroke-dashoffset: 0; }
-  100% { opacity: 0; stroke-dashoffset: 0; }
-}
-/* The line under tension, reeled in with stroke-dashoffset so its geometry never
-   moves: if the path clears the glyphs at rest it clears them at every frame. */
-@keyframes dccs-line-taut {
-  0%, 70% { opacity: 0; stroke-dashoffset: 0; }
-  74%     { opacity: 1; stroke-dashoffset: 0; }
-  82%     { opacity: 1; stroke-dashoffset: calc(var(--dccs-taut-len, 0px) * 0.5); }
-  86%     { opacity: 0; stroke-dashoffset: var(--dccs-taut-len, 0px); }
-  100%    { opacity: 0; stroke-dashoffset: var(--dccs-taut-len, 0px); }
-}
-/* d: the lure lands. It arrives from the lower right and leaves with the fish —
-   NEVER from above. Approaching from -12px put it above the guard during the
-   fade-in and clipped the descender box of the last word. */
-@keyframes dccs-lure {
-  0%, 36% { opacity: 0; transform: translate(16px, 3px) scale(0.5); }
-  46%     { opacity: 1; transform: translate(0, 0) scale(1.25); }
-  51%     { transform: translate(0, 0) scale(1); }
-  72%     { opacity: 1; transform: translate(0, 0) scale(1); }
-  78%     { transform: translate(calc(var(--dccs-fish-run) * 0.5), 0) scale(1); }
-  82%     { transform: translate(calc(var(--dccs-fish-run) * 0.85), 0) scale(0.92); }
-  85%     { opacity: 1; transform: translate(var(--dccs-fish-run), calc(var(--dccs-fish-rise) * 0.7)) scale(0.8); }
-  88%     { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) scale(0.7); }
-  100%    { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) scale(0.7); }
-}
-/* e: rings spread from where it landed. A ripple is an EDGE, not a fill. */
-@keyframes dccs-ripple {
-  0%, 46% { opacity: 0; transform: scale(0.25); }
-  52%     { opacity: 0.8; transform: scale(0.5); }
-  100%    { opacity: 0; transform: scale(2.4); }
-}
-@keyframes dccs-ripple2 {
-  0%, 54% { opacity: 0; transform: scale(0.25); }
-  61%     { opacity: 0.45; transform: scale(0.7); }
-  100%    { opacity: 0; transform: scale(3); }
-}
-/* e: the last word bobs once, as if floating. Nothing else on the line moves. */
+/* THE CAST IS RIGGED IN JS (0.32.0), not keyframed. cast.js paints every frame
+   from one clock and one source of truth — the fish's MOUTH — and the line's
+   endpoint, the lure, the ripple and the splash are all derived from it.
+   0.31.0 ran the fish, the lure and the line as three separate CSS animations with
+   three different easings; they drifted apart the moment their curves diverged,
+   the lure ended up on the fish's tail, and the ripple stayed where the lure first
+   landed. Only the word's bob is still a keyframe: it is on the heading, outside
+   the overlay, and nothing has to stay attached to it.
+   Still transforms, opacity and the line's path data only — no layout property is
+   touched, which is the rule that matters. */
 @keyframes dccs-bob {
-  0%, 46% { transform: translateY(0); }
-  58%     { transform: translateY(-3px); }
-  70%     { transform: translateY(1px); }
+  0%, 28% { transform: translateY(0); }
+  46%     { transform: translateY(-3px); }
+  64%     { transform: translateY(1px); }
   100%    { transform: translateY(0); }
 }
-/* f: the fish swims in from the right, takes the lure, FIGHTS it, and is hauled
-   up and away. The head-shake between 65% and 74% fills what used to be half a
-   second of the fish hanging motionless before an abrupt cut.
-   The haul is horizontal until 82% and only then rises: "up" is where the words
-   are, so the lift may not begin until the fish is clear of the last glyph, and
-   --dccs-fish-rise is 0 when a wide heading means it never gets clear. */
-@keyframes dccs-fish {
-  0%, 46% { opacity: 0; transform: translate(30px, 3px) rotate(0deg); }
-  57%     { opacity: 1; transform: translate(9px, 2px) rotate(0deg); }
-  65%     { opacity: 1; transform: translate(0, 0) rotate(0deg); }
-  68%     { transform: translate(1px, 0) rotate(-9deg); }
-  71%     { transform: translate(-1px, 1px) rotate(7deg); }
-  74%     { transform: translate(1px, 0) rotate(-5deg); }
-  78%     { opacity: 1; transform: translate(calc(var(--dccs-fish-run) * 0.5), 0) rotate(-6deg); }
-  82%     { opacity: 1; transform: translate(calc(var(--dccs-fish-run) * 0.85), 0) rotate(-10deg); }
-  85%     { opacity: 1; transform: translate(var(--dccs-fish-run), calc(var(--dccs-fish-rise) * 0.7)) rotate(-16deg); }
-  88%     { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) rotate(-22deg); }
-  100%    { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) rotate(-22deg); }
-}
 
-.dccs-root.dccs-root .dccs-cast-rod,
-.dccs-root.dccs-root .dccs-cast-lure,
-.dccs-root.dccs-root .dccs-cast-ring,
-.dccs-root.dccs-root .dccs-cast-fish {
-  /* Transforms on SVG children need a box to resolve percentages/origins against. */
-  transform-box: fill-box; transform-origin: center;
-}
-.dccs-root.dccs-root .dccs-cast-rod { transform-origin: right center; }
+/* No transform-box/transform-origin here on purpose: the rig uses SVG transform
+   ATTRIBUTES, which resolve in the parent's user space, so each group pivots on the
+   point the rig names — the fish on its mouth, the rod on its butt. The CSS
+   fill-box/center origins this replaces are what made the fish rotate about its own
+   centre and swing its mouth away from the lure. */
 
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-rod    { animation: dccs-rod var(--dccs-cast-dur) ease-in-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running.is-lowrod .dccs-cast-rod { animation-name: dccs-rod-low; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line   { animation: dccs-line var(--dccs-cast-dur) ease-in-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line-taut { animation: dccs-line-taut var(--dccs-cast-dur) ease-in both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-lure   { animation: dccs-lure var(--dccs-cast-dur) ease-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-1 { animation: dccs-ripple var(--dccs-cast-dur) ease-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-fish { animation: dccs-fish var(--dccs-cast-dur) ease-in-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-2 { animation: dccs-ripple2 var(--dccs-cast-dur) ease-out both; }
 /* The fish is on every cast (0.30.0). Three casts per page view is cap enough. */
 .dccs-root.dccs-root .dccs-cast { --dccs-cast-dur: 3000ms; }
 
 .dccs-root.dccs-root .dccs-heading-w { display: inline-block; }
 .dccs-root.dccs-root .dccs-heading-w.dccs-bob {
-  animation: dccs-bob var(--dccs-cast-bob, 3000ms) ease-in-out both;
+  animation: dccs-bob 1600ms ease-in-out both;
 }
 /* Reduced motion: cast.js builds no DOM at all, but belt-and-braces for a
    preference that flips after the overlay is already on screen. */
@@ -519,9 +416,6 @@
 .dccs-root.dccs-root .dccs-avail-booked { color: #a8322e; font-weight: 600; }
 .dccs-root.dccs-root .dccs-avail-link { color: var(--dccs-accent); font-weight: 700; }
 
-  cursor: pointer;
-}
-
 /* Paired button rows. At 20px the labels no longer fit two-to-a-row at phone
    width, and the old `flex: 1 1 0` forced equal halves — so "Edit Answers" was
    CLIPPED by its own pill (not wrapped: clipped, which is why a wrap check does
@@ -530,7 +424,11 @@
    wraps to a second line when both will not fit. Every button keeps its full
    label and its 50px height at every width. */
 .dccs-root.dccs-root .dccs-wizard-nav {
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; justify-content: space-between; margin-top: auto; padding-top: 18px;
+  /* padding-top matches the 10px gap between the answer chips (0.32.0): whatever
+     sits directly above the nav row — the last chip on most steps, the question
+     note on the two that have one — should clear it by the same amount the answers
+     clear each other. It was 18px, and read as an inconsistent step. */
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; justify-content: space-between; margin-top: auto; padding-top: 10px;
 }
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-back,
 .dccs-root.dccs-root .dccs-wizard-nav .dccs-next,
@@ -602,6 +500,13 @@
   padding: 0 var(--dccs-btn-pad-x); border-radius: var(--dccs-btn-radius);
   border: 1px solid var(--dccs-border); background: var(--dccs-surface);
   color: var(--dccs-text); cursor: pointer;
+  /* THE SECOND AGREED EXCEPTION to the site button spec (0.32.0). Rob asked for the
+     answer chips a step heavier than the spec's 500; 0.31.0 raised the rest of the
+     quiz's text and left these alone precisely because they are buttons, and he
+     then said to include them. Weight only — every other spec property still comes
+     from --dccs-btn-*. Measured 500 -> 600. Do not "correct" this back to the spec:
+     it is deliberate, it was asked for, and the exception is the point. */
+  font-weight: 600;
 }
 .dccs-root.dccs-root .dccs-chip.is-active {
   background: var(--dccs-accent); color: var(--dccs-accent-text); border-color: var(--dccs-accent);

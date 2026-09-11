@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.31.0
+Stable tag: 0.32.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,34 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.32.0 =
+* FIXED: an unbalanced brace in 0.31.0's stylesheet was silently discarding a whole
+  rule. A stray `cursor: pointer; }` was left behind when the Share button's CSS was
+  removed, and a CSS parser reads an orphaned declaration at the top level as the
+  start of a SELECTOR PRELUDE — so it swallowed the stray brace, a comment and the
+  next rule's selector before finding a `{`, then threw the rule away as invalid.
+  `.dccs-wizard-nav` lost display:flex and gap:10px and nothing failed anywhere.
+  That one rule is why Back/Next, Edit Answers/Restart and Restart/Submit were all
+  touching. A new lint (tools/css-lint.php, wired into npm test) fails on any
+  stylesheet with unbalanced braces or a declaration outside a rule block.
+* Spacing: every gap Rob reported now measures 10px, matching the answer chips.
+  Three of the five were the brace alone; the other two were the nav's padding-top,
+  which is now 10px rather than 18px.
+* The answer chips are font-weight 600 — the second agreed exception to the site
+  button spec, documented in place alongside the Compare button's.
+* THE CAST IS RIGGED. The fish, the lure and the line were three CSS animations on
+  three easings, the fish rotating about its own centre; they came apart, the lure
+  ended up on the fish's tail, and the ripple stayed where the lure first landed.
+  Everything is now painted from one clock and one source of truth — the fish's
+  MOUTH — with the lure a child of the fish group at that exact point. Measured at
+  every frame from the take to the exit: the line ends within 0.07px of the mouth
+  and the lure within 0.00px.
+* And it is worth watching now: the body bends with a travelling wave down the
+  spine, the rod loads under the weight and springs straight when the fish comes
+  off, the line bows under tension and straightens as the fish is hauled clear, the
+  ripple follows the fish instead of the old lure position, there is a splash as it
+  breaks out, and the haul accelerates instead of sliding at a constant rate.
 
 = 0.31.0 =
 * The cast has a real ending. It used to cross-fade out where it sat, with the rod
