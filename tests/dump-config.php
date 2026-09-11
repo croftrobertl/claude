@@ -11,7 +11,6 @@ if (!function_exists('__')) {
 }
 
 require DCCS_DIR . 'includes/class-data.php';
-require DCCS_DIR . 'includes/class-heading-marks.php';
 require DCCS_DIR . 'includes/class-config.php';
 
 echo json_encode(\DCCS\Config::build([], [

@@ -233,15 +233,10 @@ final class Config
             'availability'   => ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
         ], $extra);
 
-        // The heading marks (0.26.0) are plugin-authored, not admin-set, so they
-        // are merged in AFTER $extra: they belong to every instance rather than to
-        // one widget's settings, and keeping them out of the design snapshot keeps
-        // the SVG out of the published-design registry option. They ride the icons
-        // channel because selector.js already treats it as trusted server-rendered
-        // HTML — the heading STRING is escaped, so inline SVG cannot go through it.
-        $icons = isset($config['icons']) && is_array($config['icons']) ? $config['icons'] : [];
-        $config['icons'] = array_merge($icons, Heading_Marks::all());
-
+        // 0.26.0 merged Heading_Marks::all() in here so the drawn cottage/heron
+        // marks flanked the heading. 0.29.0 retired them — see the note at the top
+        // of class-heading-marks.php. The class is deliberately left in the repo,
+        // unreferenced: the drawing notes in it are the useful part.
         return $config;
     }
 }

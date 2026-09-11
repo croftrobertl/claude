@@ -38,7 +38,11 @@ function freshDom(url) {
   const dom = new JSDOM('<!DOCTYPE html><body></body>', {
     url: url || 'https://example.com/', pretendToBeVisual: true, runScripts: 'dangerously'
   });
-  ['score.js', 'labels.js', 'availability.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
+  // cast.js before selector.js: selector.js calls DCCS.cast.attach() on mount, so
+  // every mount in this suite exercises attach() as a side-effect. In jsdom the
+  // heading has no box, so visibleEnough() is false and nothing ever fires on its
+  // own — casts in these tests are forced explicitly.
+  ['score.js', 'labels.js', 'availability.js', 'cast.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
   return dom.window;
 }
 
@@ -1958,39 +1962,40 @@ defer(async function () {
   ok('room-type ids are unique', new Set(cottages.map(c => c.roomTypeId)).size === 8);
 })();
 
-// ---- 69. heading marks (0.26.0) ----
+// ---- 69. the heading is plain type again (0.29.0) ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w, CONFIG);
   const h = root.querySelector('.dccs-heading');
-  ok('the heading renders two marks', h && h.querySelectorAll('svg.dccs-mark').length === 2);
-  ok('a mark sits on each side of the text', h &&
-    h.firstElementChild.classList.contains('dccs-mark') &&
-    h.lastElementChild.classList.contains('dccs-mark'));
-  ok('the heading text is still its own element',
-    h && h.querySelector('.dccs-heading-t').textContent === JSON.parse(CONFIG).strings.heading);
-  // Decorative: the heading's accessible name is the text, not the drawings.
-  ok('both marks are hidden from assistive tech', h &&
-    Array.prototype.every.call(h.querySelectorAll('svg.dccs-mark'),
-      s => s.getAttribute('aria-hidden') === 'true' && s.getAttribute('focusable') === 'false'));
-  ok('neither mark is focusable', h && !h.querySelector('svg [tabindex], svg a'));
+  const S = JSON.parse(CONFIG).strings;
+  ok('the heading renders no marks at all',
+    h && h.querySelectorAll('svg').length === 0 && !h.querySelector('.dccs-mark'));
+  ok('the heading reads exactly the heading string',
+    h && h.textContent.replace(/\s+/g, ' ').trim() === S.heading.replace(/\s+/g, ' ').trim());
+  // The last word is its own element so the cast can bob it. That is the ONLY
+  // extra markup the heading carries.
+  const word = h && h.querySelector('.dccs-heading-w');
+  ok('the last word is wrapped for the bob',
+    !!word && word.textContent === S.heading.trim().split(/\s+/).pop());
+  ok('nothing else was added to the heading',
+    h && h.querySelectorAll('*').length === 2);   // .dccs-heading-t + .dccs-heading-w
 
-  // The marks are injected raw; the heading STRING must still be escaped. This is
-  // the whole reason they travel the icons channel rather than the string.
-  const evil = configWith({ strings: Object.assign({}, JSON.parse(CONFIG).strings,
-    { heading: '<img src=x onerror=alert(1)>Boom' }) });
-  const w2 = freshDom();
-  const r2 = mountSelector(w2, evil);
-  ok('a heading string is still escaped alongside the raw marks',
+  // The heading string is still escaped; the marks are gone but the guard stands.
+  const evil = configWith({ strings: Object.assign({}, S, { heading: '<img src=x onerror=alert(1)> Boom' }) });
+  const r2 = mountSelector(freshDom(), evil);
+  ok('a heading string is still escaped',
     !r2.querySelector('.dccs-heading img') &&
-    r2.querySelector('.dccs-heading-t').textContent.indexOf('<img') === 0);
-  ok('and the marks still render on that heading',
-    r2.querySelectorAll('.dccs-heading svg.dccs-mark').length === 2);
+    r2.querySelector('.dccs-heading').textContent.indexOf('<img') === 0);
+  ok('and the bob wrapper does not break escaping',
+    r2.querySelector('.dccs-heading-w').textContent === 'Boom');
 
-  // showHeading off means no heading at all — and therefore no orphaned marks.
-  const w3 = freshDom();
-  const r3 = mountSelector(w3, configWith({ showHeading: false }));
-  ok('no heading means no marks', !r3.querySelector('.dccs-mark'));
+  // A single-word heading still gets a bob target.
+  const r3 = mountSelector(freshDom(), configWith({ strings: Object.assign({}, S, { heading: 'Wizard' }) }));
+  ok('a one-word heading is entirely the bob target',
+    r3.querySelector('.dccs-heading-w').textContent === 'Wizard');
+
+  const r4 = mountSelector(freshDom(), configWith({ showHeading: false }));
+  ok('no heading means no bob target', !r4.querySelector('.dccs-heading-w'));
 })();
 
 // ---- 70. with availability off, nothing anywhere refers to dates (0.26.0) ----
@@ -2105,6 +2110,104 @@ defer(async function () {
     !/--dccs-btn-blue-hover\)\);\s*\n?\s*opacity:/.test(css));
   ok('no !important anywhere in the button spec or its hover',
     !/dccs-btn-(blue-hover|on-blue-hover)[^;]*!important/.test(css));
+})();
+
+// ---- 72. the cast: gating, cap, fish ordering, interaction stop (0.29.0) ----
+// jsdom has no layout and no animations, so this covers the LOGIC. The sequence,
+// the zero-shift guarantee and the 375px arc are verified in Chromium separately.
+(function () {
+  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+
+  ok('cast.js is registered as a selector dependency',
+    /wp_register_script\('dccs-cast'/.test(fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-plugin.php'), 'utf8')));
+
+  // --- the non-negotiables, asserted on the source ---
+  ok('the overlay is aria-hidden', /setAttribute\('aria-hidden', 'true'\)/.test(castSrc));
+  ok('the overlay is pointer-events:none',
+    /\.dccs-cast \{[^}]*pointer-events:\s*none/.test(css));
+  ok('the overlay is absolutely positioned and reserves nothing',
+    /\.dccs-cast \{[^}]*position:\s*absolute[^}]*inset:\s*0/.test(css));
+  ok('the overlay clips, so the arc can never widen the page',
+    /\.dccs-cast \{[^}]*overflow:\s*hidden/.test(css));
+  ok('the head block is only made a positioning context, with no offsets',
+    /\.dccs-head \{ position: relative; \}/.test(css));
+  ok('rod and line follow currentColor', /stroke:\s*'currentColor'/.test(castSrc));
+  ok('the lure is the single amber accent', /#FFA000/.test(castSrc));
+  // Only transform/opacity animate — plus stroke-dashoffset, which is paint-only.
+  const keyframeBodies = (css.match(/@keyframes dccs-[a-z]+\s*\{[\s\S]*?\n\}/g) || []).join('\n');
+  ok('six keyframe timelines exist — rod, line, lure, ripple, bob, fish',
+    (css.match(/@keyframes dccs-/g) || []).length === 6);
+  const animatedProps = new Set((keyframeBodies.match(/^\s*([a-z-]+):/gm) || [])
+    .map(x => x.trim().replace(':', '')));
+  animatedProps.delete('transform'); animatedProps.delete('opacity'); animatedProps.delete('stroke-dashoffset');
+  ok('nothing but transform / opacity / stroke-dashoffset is animated' +
+     (animatedProps.size ? ' (found ' + [...animatedProps].join(', ') + ')' : ''), animatedProps.size === 0);
+  ok('no layout property appears in any keyframe',
+    !/(^|\s)(width|height|top|left|right|bottom|margin|padding):/m.test(keyframeBodies));
+
+  // --- reduced motion builds nothing ---
+  const w = freshDom();
+  w.matchMedia = () => ({ matches: true, addListener() {}, removeListener() {} });
+  const root = mountSelector(w, CONFIG);
+  ok('reduced motion returns no controller at all', w.DCCS.cast.attach(root) === null);
+  ok('and puts no overlay in the DOM', !root.querySelector('.dccs-cast'));
+  ok('reduced motion is also belt-and-braced in CSS',
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.dccs-cast \{ display: none/.test(css));
+
+  // --- the cap, the fish ordering, and the interaction stop ---
+  const w2 = freshDom();
+  w2.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+  const root2 = mountSelector(w2, CONFIG);
+  // jsdom has no layout, so every box is 0x0 and cast() correctly refuses to build
+  // an overlay it cannot place. Give the heading a plausible box rather than
+  // loosening that guard — a real zero-size heading must still build nothing.
+  const box = (x, y, wd, ht) => () => ({ x, y, width: wd, height: ht, top: y, left: x,
+    right: x + wd, bottom: y + ht, toJSON() { return this; } });
+  const head2 = root2.querySelector('.dccs-head');
+  head2.getBoundingClientRect = box(0, 100, 343, 62);
+  root2.querySelector('.dccs-heading-w').getBoundingClientRect = box(180, 104, 86, 27);
+  const c = w2.DCCS.cast.attach(root2);
+  ok('a zero-size heading builds nothing', (() => {
+    const rz = mountSelector(w2, CONFIG);
+    const cz = w2.DCCS.cast.attach(rz);
+    return cz.cast(true) === false && !rz.querySelector('.dccs-cast');
+  })());
+  ok('a controller is returned when motion is allowed', !!c);
+  ok('it starts unstopped with no casts', c.state().casts === 0 && !c.state().stopped);
+
+  // force:true bypasses the visibility/settle gate only — not the cap or the stop.
+  ok('first cast renders an overlay', c.cast(true) === true && !!root2.querySelector('.dccs-cast'));
+  ok('the FIRST cast is the one with the fish',
+    root2.querySelector('.dccs-cast').classList.contains('is-fishing'));
+  ok('the first cast bobs the last word',
+    !!root2.querySelector('.dccs-heading-w.dccs-bob'));
+  ok('a cast is counted', c.state().casts === 1);
+  ok('a cast will not start on top of a running one', c.cast(true) === false);
+
+  ok('MAX_CASTS is three', w2.DCCS.cast.MAX_CASTS === 3);
+  ok('the gate is 50% visible and a 600ms settle',
+    w2.DCCS.cast.VISIBLE === 0.5 && w2.DCCS.cast.SETTLE_MS === 600);
+
+  // Interaction ends it permanently, for pointer, keyboard and change alike.
+  const w3 = freshDom();
+  w3.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+  ['pointerdown', 'keydown', 'change'].forEach(ev => {
+    const r = mountSelector(w3, CONFIG);
+    const ctl = w3.DCCS.cast.attach(r);
+    r.dispatchEvent(new w3.Event(ev, { bubbles: true }));
+    ok('casting stops for good on ' + ev, ctl.state().stopped === true);
+    ok('and a forced cast after ' + ev + ' is refused', ctl.cast(true) === false);
+    ok('and the overlay is cleared on ' + ev, !r.querySelector('.dccs-cast'));
+  });
+  ok('the cap is enforced in the source, not just by the caller',
+    /casts < MAX_CASTS/.test(castSrc));
+  ok('interaction listeners cover pointer, keyboard and change',
+    /\['pointerdown', 'keydown', 'change'\]/.test(castSrc));
+  ok('the tab being hidden blocks a cast', /!document\.hidden/.test(castSrc));
+  ok('arming waits for load and two frames, so it cannot race page load',
+    /readyState === 'complete'/.test(castSrc) &&
+    (castSrc.match(/requestAnimationFrame/g) || []).length >= 2);
 })();
 
 (async function runDeferred() {

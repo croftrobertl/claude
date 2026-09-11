@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.28.0
+Stable tag: 0.29.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,29 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.29.0 =
+* The drawn heading marks are retired. The heading is the words "Cottage Wizard"
+  in type and nothing else. The problem was structural rather than craft: a 38px
+  pictogram asked to say "cottage" and "wizard" and "canal" at once always
+  resolved as a puzzle. The source is kept in the repo, unreferenced and marked
+  PARKED, for its notes on what does and does not survive at 22px.
+* New: the cast. A fishing rod enters from the right of the heading, flicks, and
+  drops an amber lure just past the last word; a ripple spreads, the word bobs
+  once, and on the FIRST cast of a visit a fish takes it. Later casts run the same
+  sequence without the fish. A fishing rod rather than a wand on purpose — the
+  whimsy on this site is of the place, not generic fantasy.
+* Fires when the widget is at least 50% visible and the scroll has been still for
+  600ms, then every 45-75 seconds jittered, capped at three casts per page view.
+  It stops permanently the moment the guest touches the widget. It waits for the
+  page load and two frames before arming, so it never competes with load — which
+  matters on /cottages/, where the heading is on screen without any scrolling.
+* Decoration, strictly: aria-hidden, pointer-events:none, paused when the tab is
+  hidden or the widget is off screen, and under prefers-reduced-motion it builds
+  no DOM at all — not a slower version, nothing. Transform and opacity only (plus
+  stroke-dashoffset to unspool the line, which is paint-only). The overlay is
+  absolutely positioned and reserves no space: the heading's box is identical
+  before, during and after a cast, verified in a real browser.
 
 = 0.28.0 =
 * Every spec button hovers to #F08080 with #FFFFFF text, matching the site: Next,

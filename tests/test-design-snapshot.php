@@ -83,7 +83,6 @@ namespace Elementor {
 
 namespace {
     require DCCS_DIR . 'includes/class-data.php';
-    require DCCS_DIR . 'includes/class-heading-marks.php';
     require DCCS_DIR . 'includes/class-config.php';
     require DCCS_DIR . 'includes/class-selector-widget.php';
 
@@ -358,42 +357,39 @@ namespace {
     ok('the Share button label is Title Case in the string itself',
         (\DCCS\Config::strings()['share_btn'] ?? null) === 'Share These Results');
 
-    // ---- Heading marks (0.26.0) ------------------------------------------------
+    // ---- Heading marks are PARKED (0.29.0) -------------------------------------
+    // The drawn marks were retired after four rounds: a 38px pictogram cannot carry
+    // "cottage" + "wizard" + "canal" at once. The class stays in the repo for its
+    // size notes, but nothing may render it — the heading is plain type again.
     $marksCfg = \DCCS\Config::build([], []);
     $mk = $marksCfg['icons'] ?? [];
-    ok('the config carries both heading marks',
-        isset($mk['heading_cottage'], $mk['heading_wizard']));
-    ok('both marks are SVG',
-        strpos((string) ($mk['heading_cottage'] ?? ''), '<svg') === 0 &&
-        strpos((string) ($mk['heading_wizard'] ?? ''), '<svg') === 0);
-    foreach (['heading_cottage' => 'cottage', 'heading_wizard' => 'wizard'] as $k => $label) {
-        $svg = (string) ($mk[$k] ?? '');
-        // Decorative: the heading's accessible name must come from its text alone.
-        ok("the $label mark is hidden from assistive tech",
-            strpos($svg, 'aria-hidden="true"') !== false && strpos($svg, 'focusable="false"') !== false);
-        // Follows the heading colour rather than hard-coding one.
-        ok("the $label mark paints with currentColor", strpos($svg, 'currentColor') !== false);
-        // The single accent stays themable without editing PHP.
-        ok("the $label mark's accent is themable", strpos($svg, '--dccs-mark-accent') !== false);
-        // No viewBox, no em sizing — the mark would render at some fixed default.
-        ok("the $label mark declares a viewBox", strpos($svg, 'viewBox="0 0 ') !== false);
-        ok("the $label mark carries the sizing class", strpos($svg, 'class="dccs-mark"') !== false);
-    }
-    // The marks belong to every instance, not to one widget's saved settings: they
-    // must NOT ride the design snapshot into the published-design registry option.
-    $snapIcons = Selector_Widget::design_snapshot(['icon_next' => ['value' => 'fas fa-x']])['icons'] ?? [];
-    ok('the marks stay out of the design snapshot',
-        !array_key_exists('heading_cottage', $snapIcons) && !array_key_exists('heading_wizard', $snapIcons));
-    // ...but a mirrored Mini Entry still gets them, because they are added in
-    // Config::build(), which every config path funnels through.
-    $mirrored = Selector_Widget::config_from_snapshot(['string_overrides' => []], []);
-    ok('a mirrored config still gets the marks',
-        isset($mirrored['icons']['heading_cottage'], $mirrored['icons']['heading_wizard']));
-    // An admin-set Elementor icon must survive the merge that adds the marks.
+    ok('the config carries no heading marks',
+        !array_key_exists('heading_cottage', $mk) && !array_key_exists('heading_wizard', $mk));
+    // Tokenise rather than grep: the comment in Config::build() that records what
+    // 0.26.0 did and how to bring the marks back is a reference we WANT to keep,
+    // and a plain string search cannot tell it from a live call.
+    ok('no CODE in the plugin references Heading_Marks any more', (function () {
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(DCCS_DIR)) as $f) {
+            if (!$f->isFile() || substr($f->getFilename(), -4) !== '.php') { continue; }
+            if ($f->getFilename() === 'class-heading-marks.php') { continue; }
+            foreach (token_get_all((string) file_get_contents($f->getPathname())) as $t) {
+                if (is_array($t) && $t[0] === T_STRING && $t[1] === 'Heading_Marks') { return false; }
+            }
+        }
+        return true;
+    })());
+    // Parked, not deleted: the drawing notes are the durable part of that work.
+    $marksSrc = (string) file_get_contents(DCCS_DIR . 'includes/class-heading-marks.php');
+    ok('the marks source is still in the repo', $marksSrc !== '');
+    ok('it says plainly that it is parked and why',
+        strpos($marksSrc, 'PARKED') !== false && strpos($marksSrc, '0.29.0') !== false);
+    ok('the 22px drawing notes are kept',
+        strpos($marksSrc, 'THE BRIM CARRIES THE HAT') !== false &&
+        strpos($marksSrc, 'THERE IS NO BEARD') !== false);
+    // The icons channel itself still works — it carries the admin-set Elementor icons.
     $withAdmin = \DCCS\Config::build([], ['icons' => ['next' => '<i class="fas"></i>']]);
-    ok('admin-set icons survive alongside the marks',
-        ($withAdmin['icons']['next'] ?? null) === '<i class="fas"></i>' &&
-        isset($withAdmin['icons']['heading_cottage']));
+    ok('admin-set icons still come through the icons channel',
+        ($withAdmin['icons']['next'] ?? null) === '<i class="fas"></i>');
 
     // ---- The dates step is off unless a widget switches it on (0.26.0) ---------
     // avail_enable is the control that governs the check-in/check-out question. It

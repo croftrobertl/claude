@@ -99,6 +99,115 @@
 .dccs-root.dccs-root .dccs-heading .dccs-mark:first-child { margin-right: 0.3em; }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:last-child { margin-left: 0.3em; }
 .dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
+
+/* ---- The cast (0.29.0) --------------------------------------------------
+   A fishing rod flicks a line over the heading. Decoration only: see cast.js.
+   position:relative on the head block adds no offset and so shifts nothing; it
+   only gives the absolutely-positioned overlay something to anchor to.
+   The overlay reserves NO space and clips to the heading block, which is what
+   keeps the line arc from ever widening the page at 375px.
+   Everything that moves uses transform/opacity. The single exception is
+   stroke-dashoffset on the line: paint-only, no layout, and there is no
+   transform that draws a line. */
+.dccs-root.dccs-root .dccs-head { position: relative; }
+.dccs-root.dccs-root .dccs-cast {
+  /* Exactly covers the heading block and reserves nothing. overflow:hidden is what
+     makes it impossible for the line arc to widen the page at 375px — cast.js also
+     clamps the rod inside the block, so nothing relies on the clip alone. */
+  position: absolute; inset: 0; overflow: hidden;
+  pointer-events: none;            /* never a competitor for a tap */
+  color: inherit;                  /* rod + line follow the heading colour */
+  z-index: 1;
+}
+.dccs-root.dccs-root .dccs-cast-svg { position: absolute; top: 0; left: 0; overflow: visible; }
+/* Everything starts invisible; the is-running class drives the timeline. */
+.dccs-root.dccs-root .dccs-cast-rod,
+.dccs-root.dccs-root .dccs-cast-line,
+.dccs-root.dccs-root .dccs-cast-lure,
+.dccs-root.dccs-root .dccs-cast-ripple,
+.dccs-root.dccs-root .dccs-cast-fish { opacity: 0; }
+.dccs-root.dccs-root .dccs-cast-line { stroke-dasharray: 400; stroke-dashoffset: 400; }
+
+/* b + c: the rod enters from the right, flicks back, then forward. */
+@keyframes dccs-rod {
+  0%   { opacity: 0; transform: translateX(34px) rotate(9deg); }
+  12%  { opacity: 1; }
+  26%  { transform: translateX(0) rotate(9deg); }
+  40%  { transform: translateX(0) rotate(17deg); }   /* back */
+  56%  { transform: translateX(0) rotate(-4deg); }   /* and forward */
+  68%  { transform: translateX(0) rotate(2deg); }
+  86%  { opacity: 1; transform: translateX(0) rotate(2deg); }
+  100% { opacity: 0; transform: translateX(34px) rotate(9deg); }   /* g: withdraws */
+}
+/* c: the line unspools over the words, then reels back in. */
+@keyframes dccs-line {
+  0%   { opacity: 0; stroke-dashoffset: 400; }
+  22%  { opacity: 1; stroke-dashoffset: 400; }
+  50%  { stroke-dashoffset: 0; }
+  84%  { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 400; }
+}
+/* d: the lure lands. */
+@keyframes dccs-lure {
+  0%, 42% { opacity: 0; transform: translate(10px, -12px) scale(0.5); }
+  54%     { opacity: 1; transform: translate(0, 0) scale(1.25); }
+  60%     { transform: translate(0, 0) scale(1); }
+  88%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  100%    { opacity: 0; transform: translate(6px, -10px) scale(0.6); }
+}
+/* e: a ripple ring spreads from where it landed. */
+@keyframes dccs-ripple {
+  0%, 54% { opacity: 0; transform: scale(0.2); }
+  58%     { opacity: 0.85; transform: scale(0.4); }
+  100%    { opacity: 0; transform: scale(2.6); }
+}
+/* e: the last word bobs once, as if floating. Nothing else on the line moves. */
+@keyframes dccs-bob {
+  0%, 54% { transform: translateY(0); }
+  68%     { transform: translateY(-3px); }
+  82%     { transform: translateY(1px); }
+  100%    { transform: translateY(0); }
+}
+/* f: first cast only — a fish rises, takes it, and flicks away. */
+@keyframes dccs-fish {
+  0%, 60% { opacity: 0; transform: translateY(13px); }
+  70%     { opacity: 1; transform: translateY(2px); }
+  78%     { opacity: 1; transform: translateY(0); }
+  88%     { opacity: 1; transform: translate(7px, -7px) rotate(-16deg); }
+  100%    { opacity: 0; transform: translate(16px, -16px) rotate(-26deg); }
+}
+
+.dccs-root.dccs-root .dccs-cast-rod,
+.dccs-root.dccs-root .dccs-cast-lure,
+.dccs-root.dccs-root .dccs-cast-ripple,
+.dccs-root.dccs-root .dccs-cast-fish {
+  /* Transforms on SVG children need a box to resolve percentages/origins against. */
+  transform-box: fill-box; transform-origin: center;
+}
+.dccs-root.dccs-root .dccs-cast-rod { transform-origin: right center; }
+
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-rod    { animation: dccs-rod var(--dccs-cast-dur) ease-in-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line   { animation: dccs-line var(--dccs-cast-dur) ease-in-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-lure   { animation: dccs-lure var(--dccs-cast-dur) ease-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ripple { animation: dccs-ripple var(--dccs-cast-dur) ease-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running.is-fishing .dccs-cast-fish { animation: dccs-fish var(--dccs-cast-dur) ease-in-out both; }
+/* Casts after the first run the same sequence without the fish — quieter, so it
+   does not become a tic for someone who lingers. */
+.dccs-root.dccs-root .dccs-cast.is-plain .dccs-cast-fish { display: none; }
+.dccs-root.dccs-root .dccs-cast.is-fishing { --dccs-cast-dur: 2600ms; }
+.dccs-root.dccs-root .dccs-cast.is-plain   { --dccs-cast-dur: 1900ms; }
+
+.dccs-root.dccs-root .dccs-heading-w { display: inline-block; }
+.dccs-root.dccs-root .dccs-heading-w.dccs-bob {
+  animation: dccs-bob var(--dccs-cast-bob, 2600ms) ease-in-out both;
+}
+/* Reduced motion: cast.js builds no DOM at all, but belt-and-braces for a
+   preference that flips after the overlay is already on screen. */
+@media (prefers-reduced-motion: reduce) {
+  .dccs-root.dccs-root .dccs-cast { display: none; }
+  .dccs-root.dccs-root .dccs-heading-w.dccs-bob { animation: none; }
+}
+
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
 /* Landing / start screen — heading + intro + the three mode choices. */

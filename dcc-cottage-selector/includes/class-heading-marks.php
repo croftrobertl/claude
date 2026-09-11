@@ -6,8 +6,26 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * The two hand-drawn marks that flank the heading: a canal cottage and a heron
- * in a wizard's hat. They replaced the 🏠 / 🧙‍♂️ emoji in 0.26.0.
+ * PARKED — NOT RENDERED ANYWHERE SINCE 0.29.0. Nothing calls this class.
+ *
+ * The two hand-drawn marks that flanked the heading: a canal cottage and a heron
+ * in a wizard's hat. They replaced the 🏠 / 🧙‍♂️ emoji in 0.26.0 and were retired
+ * in 0.29.0 after four rounds of revision.
+ *
+ * WHY THEY WERE RETIRED, so nobody re-litigates it as a craft problem: it was
+ * structural. A 38px pictogram was being asked to say "cottage" and "wizard" and
+ * "canal" simultaneously, and at that size it always resolved as a puzzle to be
+ * worked out rather than a thing to be recognised. No amount of redrawing fixes
+ * a mark that is carrying three ideas. The character moved into motion instead
+ * (assets/js/cast.js) — an animation reads at any size, where a 38px drawing does
+ * not.
+ *
+ * The file is kept, unreferenced, for the size notes below. They are the durable
+ * part: they were learned by rendering at 22px and looking, four times over, and
+ * anyone who later draws ANYTHING for this widget at heading size will otherwise
+ * rediscover them the same slow way. To bring the marks back, merge
+ * Heading_Marks::all() into the icons map in Config::build() and render them in
+ * selector.js renderLanding() — that is all 0.26.0 did.
  *
  * WHY CUSTOM SVG AND NOT EMOJI
  * Emoji render differently on iOS, Android and Windows — the owner cannot see

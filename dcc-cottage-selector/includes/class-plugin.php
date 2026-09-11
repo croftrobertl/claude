@@ -279,7 +279,8 @@ final class Plugin
         wp_register_script('dccs-score', DCCS_URL . 'assets/js/score.js', [], DCCS_VERSION, true);
         wp_register_script('dccs-labels', DCCS_URL . 'assets/js/labels.js', [], DCCS_VERSION, true);
         wp_register_script('dccs-availability', DCCS_URL . 'assets/js/availability.js', [], DCCS_VERSION, true);
-        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/selector.js', ['dccs-score', 'dccs-labels', 'dccs-availability'], DCCS_VERSION, true);
+        wp_register_script('dccs-cast', DCCS_URL . 'assets/js/cast.js', [], DCCS_VERSION, true);
+        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/selector.js', ['dccs-score', 'dccs-labels', 'dccs-availability', 'dccs-cast'], DCCS_VERSION, true);
     }
 
     public function enqueue_for_preview(): void
@@ -293,6 +294,7 @@ final class Plugin
         wp_enqueue_script('dccs-score');
         wp_enqueue_script('dccs-labels');
         wp_enqueue_script('dccs-availability');
+        wp_enqueue_script('dccs-cast');
         wp_enqueue_script('dccs-selector');
     }
 }

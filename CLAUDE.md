@@ -172,15 +172,29 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **Weigh Priorities is disabled on the live widget** (preset `enabled_modes` is
   quick + compare) and the owner considers it redundant with the quiz. Keep it
   working and tested, but don't invest in it without asking.
-- **The heading marks are plugin-authored and travel the `icons` channel.**
-  `Heading_Marks::all()` is merged into the config inside `Config::build()` — after
-  `$extra`, so every path (widget, Mini Entry, shortcode pop-up) gets them — and
-  deliberately NOT into `design_snapshot()`, which would push SVG into the
-  published-design registry option. The heading STRING stays escaped; that is the
-  whole reason the marks go through `icons` rather than being interpolated into it.
-  The drawing notes in `class-heading-marks.php` are load-bearing: they record why
-  the brim rather than the cone carries the hat at 22px, and the three ways a beard
-  failed. Read them before redrawing anything at heading size.
+- **The heading is plain type. `class-heading-marks.php` is PARKED — nothing may
+  render it.** The drawn marks were retired in 0.29.0 after four rounds, for a
+  structural reason worth remembering: a 38px pictogram cannot carry "cottage" and
+  "wizard" and "canal" at once, and at that size it reads as a puzzle rather than a
+  thing. The file stays for its notes on what survives at 22px (why the brim not the
+  cone carries the hat; the three ways a beard failed) — read them before drawing
+  anything for this widget at heading size. A PHP test tokenises the plugin and
+  fails if any CODE references the class again; the comment in `Config::build()`
+  recording how to bring it back is deliberate and must survive that check.
+- **The cast (`assets/js/cast.js`) is decoration and must stay that way.**
+  `aria-hidden`, `pointer-events: none`, absolutely positioned over the heading
+  block reserving nothing, transform/opacity only (`stroke-dashoffset` for the line
+  is the one allowed exception — paint-only, no layout). Under
+  `prefers-reduced-motion: reduce` `attach()` returns null and builds NO DOM. The
+  overlay must never be tappable: the Seasons easter egg counts taps on the
+  masthead and the hero seaplane was made unclickable for the same reason.
+  The fish is on the FIRST cast, not the last — most visitors see exactly one.
+  Three casts per page view, then never; interaction stops it permanently.
+  The heading string is EDITABLE, so the geometry must survive both a short and a
+  width-filling heading: the rod is clamped inside the heading block (an early
+  build placed it past the right edge and with a long heading nothing drew at all),
+  and the line arc lives in the margin right of the last word, not across it (an
+  arc "over the words" on a 34px line box draws a strikethrough).
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no
