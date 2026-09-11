@@ -88,7 +88,11 @@
 }
 
 .dccs-root.dccs-root .dccs-head { margin-bottom: 14px; text-align: var(--dccs-align, center); }
-.dccs-root.dccs-root .dccs-heading { margin: 0 0 6px; font-size: 1.4rem; line-height: 1.2; }
+/* margin-bottom is 16px, not 6px (0.30.0, approved): it roughly doubles the
+   clearance under the baseline so the fish has somewhere to crest that is not on
+   top of a letter. Everything below shifts down 10px on both live widgets. Do not
+   take more without asking — this is a conversion widget. */
+.dccs-root.dccs-root .dccs-heading { margin: 0 0 16px; font-size: 1.4rem; line-height: 1.2; }
 /* Heading marks (0.26.0). Sized in em so they track the heading type at every
    breakpoint, and inline-block rather than flex so the head's text-align and the
    natural wrap of a long heading both keep working. 1.18em matches the optical
@@ -124,20 +128,20 @@
 .dccs-root.dccs-root .dccs-cast-rod,
 .dccs-root.dccs-root .dccs-cast-line,
 .dccs-root.dccs-root .dccs-cast-lure,
-.dccs-root.dccs-root .dccs-cast-ripple,
+.dccs-root.dccs-root .dccs-cast-ring,
 .dccs-root.dccs-root .dccs-cast-fish { opacity: 0; }
 .dccs-root.dccs-root .dccs-cast-line { stroke-dasharray: 400; stroke-dashoffset: 400; }
 
 /* b + c: the rod enters from the right, flicks back, then forward. */
 @keyframes dccs-rod {
-  0%   { opacity: 0; transform: translateX(34px) rotate(9deg); }
-  12%  { opacity: 1; }
+  0%   { opacity: 0; transform: translateX(62px) rotate(11deg); }
+  9%   { opacity: 1; }
   26%  { transform: translateX(0) rotate(9deg); }
   40%  { transform: translateX(0) rotate(17deg); }   /* back */
   56%  { transform: translateX(0) rotate(-4deg); }   /* and forward */
   68%  { transform: translateX(0) rotate(2deg); }
   86%  { opacity: 1; transform: translateX(0) rotate(2deg); }
-  100% { opacity: 0; transform: translateX(34px) rotate(9deg); }   /* g: withdraws */
+  100% { opacity: 0; transform: translateX(62px) rotate(11deg); }  /* g: withdraws */
 }
 /* c: the line unspools over the words, then reels back in. */
 @keyframes dccs-line {
@@ -147,19 +151,31 @@
   84%  { opacity: 1; stroke-dashoffset: 0; }
   100% { opacity: 0; stroke-dashoffset: 400; }
 }
-/* d: the lure lands. */
+/* d: the lure lands. It arrives from the lower right and leaves the same way —
+   NEVER from above. Approaching from -12px meant that during the fade-in it sat
+   above the guard line and clipped the descender box of the last word: the only
+   element still failing the glyph check, and invisible to anything that only
+   looked at where it came to rest. Nothing in the cast may travel above the
+   glyph bottom, including on its way in. */
 @keyframes dccs-lure {
-  0%, 42% { opacity: 0; transform: translate(10px, -12px) scale(0.5); }
+  0%, 42% { opacity: 0; transform: translate(16px, 3px) scale(0.5); }
   54%     { opacity: 1; transform: translate(0, 0) scale(1.25); }
   60%     { transform: translate(0, 0) scale(1); }
   88%     { opacity: 1; transform: translate(0, 0) scale(1); }
-  100%    { opacity: 0; transform: translate(6px, -10px) scale(0.6); }
+  100%    { opacity: 0; transform: translate(16px, 2px) scale(0.6); }
 }
-/* e: a ripple ring spreads from where it landed. */
+/* e: rings spread from where it landed. A ripple is an EDGE, not a fill — the
+   single ellipse this replaces read as a grey smudge at size. Two rings, the
+   second trailing the first, both fading as they widen. */
 @keyframes dccs-ripple {
-  0%, 54% { opacity: 0; transform: scale(0.2); }
-  58%     { opacity: 0.85; transform: scale(0.4); }
-  100%    { opacity: 0; transform: scale(2.6); }
+  0%, 54% { opacity: 0; transform: scale(0.25); }
+  60%     { opacity: 0.8; transform: scale(0.5); }
+  100%    { opacity: 0; transform: scale(2.4); }
+}
+@keyframes dccs-ripple2 {
+  0%, 62% { opacity: 0; transform: scale(0.25); }
+  70%     { opacity: 0.45; transform: scale(0.7); }
+  100%    { opacity: 0; transform: scale(3); }
 }
 /* e: the last word bobs once, as if floating. Nothing else on the line moves. */
 @keyframes dccs-bob {
@@ -169,33 +185,52 @@
   100%    { transform: translateY(0); }
 }
 /* f: first cast only — a fish rises, takes it, and flicks away. */
+/* f: the fish takes the lure. It swims in from the RIGHT and leaves the same way.
+   The band between the heading's glyphs and the intro's is only about 17px on the
+   live widgets, so there is no room to rise through it: a version that entered
+   from 15px below and left 14px lower passed every heading check and sat squarely
+   on "queen bed" both times. Vertical travel is capped at 3px — the rest of the
+   movement is horizontal, which costs nothing. */
 @keyframes dccs-fish {
-  0%, 60% { opacity: 0; transform: translateY(13px); }
-  70%     { opacity: 1; transform: translateY(2px); }
-  78%     { opacity: 1; transform: translateY(0); }
-  88%     { opacity: 1; transform: translate(7px, -7px) rotate(-16deg); }
-  100%    { opacity: 0; transform: translate(16px, -16px) rotate(-26deg); }
+  0%, 54% { opacity: 0; transform: translate(30px, 3px); }
+  66%     { opacity: 1; transform: translate(9px, 2px); }
+  76%     { opacity: 1; transform: translate(0, 0); }
+  84%     { opacity: 1; transform: translate(6px, 2px) rotate(-5deg); }
+  100%    { opacity: 0; transform: translate(30px, 3px) rotate(-8deg); }
 }
 
 .dccs-root.dccs-root .dccs-cast-rod,
 .dccs-root.dccs-root .dccs-cast-lure,
-.dccs-root.dccs-root .dccs-cast-ripple,
+.dccs-root.dccs-root .dccs-cast-ring,
 .dccs-root.dccs-root .dccs-cast-fish {
   /* Transforms on SVG children need a box to resolve percentages/origins against. */
   transform-box: fill-box; transform-origin: center;
 }
 .dccs-root.dccs-root .dccs-cast-rod { transform-origin: right center; }
 
+/* The flick rotates about the butt, off-frame right, so a few degrees moves the
+   tip a lot. When the rod has to come in low (a heading wide enough to leave no
+   margin beside it) that swing would lift the tip back up into the words, so the
+   low variant flicks shallowly. */
+@keyframes dccs-rod-low {
+  0%   { opacity: 0; transform: translateX(62px) rotate(3deg); }
+  9%   { opacity: 1; }
+  26%  { transform: translateX(0) rotate(2.5deg); }
+  40%  { transform: translateX(0) rotate(4.5deg); }
+  56%  { transform: translateX(0) rotate(-1deg); }
+  68%  { transform: translateX(0) rotate(0.5deg); }
+  86%  { opacity: 1; transform: translateX(0) rotate(0.5deg); }
+  100% { opacity: 0; transform: translateX(62px) rotate(3deg); }
+}
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-rod    { animation: dccs-rod var(--dccs-cast-dur) ease-in-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running.is-lowrod .dccs-cast-rod { animation-name: dccs-rod-low; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line   { animation: dccs-line var(--dccs-cast-dur) ease-in-out both; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-lure   { animation: dccs-lure var(--dccs-cast-dur) ease-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ripple { animation: dccs-ripple var(--dccs-cast-dur) ease-out both; }
-.dccs-root.dccs-root .dccs-cast.is-running.is-fishing .dccs-cast-fish { animation: dccs-fish var(--dccs-cast-dur) ease-in-out both; }
-/* Casts after the first run the same sequence without the fish — quieter, so it
-   does not become a tic for someone who lingers. */
-.dccs-root.dccs-root .dccs-cast.is-plain .dccs-cast-fish { display: none; }
-.dccs-root.dccs-root .dccs-cast.is-fishing { --dccs-cast-dur: 2600ms; }
-.dccs-root.dccs-root .dccs-cast.is-plain   { --dccs-cast-dur: 1900ms; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-1 { animation: dccs-ripple var(--dccs-cast-dur) ease-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-fish { animation: dccs-fish var(--dccs-cast-dur) ease-in-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-2 { animation: dccs-ripple2 var(--dccs-cast-dur) ease-out both; }
+/* The fish is on every cast (0.30.0). Three casts per page view is cap enough. */
+.dccs-root.dccs-root .dccs-cast { --dccs-cast-dur: 2600ms; }
 
 .dccs-root.dccs-root .dccs-heading-w { display: inline-block; }
 .dccs-root.dccs-root .dccs-heading-w.dccs-bob {

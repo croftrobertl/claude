@@ -2130,14 +2130,34 @@ defer(async function () {
     /\.dccs-cast \{[^}]*position:\s*absolute[^}]*inset:\s*0/.test(css));
   ok('the overlay clips, so the arc can never widen the page',
     /\.dccs-cast \{[^}]*overflow:\s*hidden/.test(css));
+  ok('the heading carries 16px of clearance below it (0.30.0)',
+    /\.dccs-heading \{ margin: 0 0 16px;/.test(css));
   ok('the head block is only made a positioning context, with no offsets',
     /\.dccs-head \{ position: relative; \}/.test(css));
   ok('rod and line follow currentColor', /stroke:\s*'currentColor'/.test(castSrc));
   ok('the lure is the single amber accent', /#FFA000/.test(castSrc));
+  // The fish takes the Wildlife plugin's palette, not its paths — at ~20px the
+  // 48px bass's spines, gill plate and eye highlight all turn to mush.
+  ['#3a6b52', '#2e5d46', '#c9d8cf', '#17333c'].forEach(hex =>
+    ok('the fish uses the Wildlife palette value ' + hex, castSrc.indexOf(hex) !== -1));
+  // The guard everything below the heading clears is measured with a Range over
+  // the heading's text nodes — the same way the acceptance check measures it.
+  ok('the glyph guard is measured with a Range, not from the block box',
+    /selectNodeContents/.test(castSrc) && /getClientRects/.test(castSrc));
+  ok('the guard takes the LOWEST line and the WIDEST, which a wrapped heading splits',
+    /b > bottom/.test(castSrc) && /r > right/.test(castSrc));
+  // Nothing may travel above the glyph bottom, including on the way in.
+  ok('the lure never approaches from above',
+    !/@keyframes dccs-lure \{[\s\S]*?translate\([^)]*,\s*-/.test(css));
+  ok('the fish never translates upward past its resting position',
+    !/@keyframes dccs-fish \{[\s\S]*?translate[^)]*,\s*-\d/.test(css));
+  ok('the ripple is a stroked ring, not a fill',
+    /dccs-cast-ring[^>]*/.test(castSrc) && /fill: 'none', stroke: 'currentColor'/.test(castSrc));
+  ok('there are two rings', (castSrc.match(/dccs-cast-ring-/g) || []).length === 2);
   // Only transform/opacity animate — plus stroke-dashoffset, which is paint-only.
   const keyframeBodies = (css.match(/@keyframes dccs-[a-z]+\s*\{[\s\S]*?\n\}/g) || []).join('\n');
-  ok('six keyframe timelines exist — rod, line, lure, ripple, bob, fish',
-    (css.match(/@keyframes dccs-/g) || []).length === 6);
+  ok('the cast keyframe timelines are all present',
+    (css.match(/@keyframes dccs-/g) || []).length === 8);
   const animatedProps = new Set((keyframeBodies.match(/^\s*([a-z-]+):/gm) || [])
     .map(x => x.trim().replace(':', '')));
   animatedProps.delete('transform'); animatedProps.delete('opacity'); animatedProps.delete('stroke-dashoffset');
@@ -2167,6 +2187,11 @@ defer(async function () {
   const head2 = root2.querySelector('.dccs-head');
   head2.getBoundingClientRect = box(0, 100, 343, 62);
   root2.querySelector('.dccs-heading-w').getBoundingClientRect = box(180, 104, 86, 27);
+  // cast.js measures the glyph guard with a Range over the heading's text nodes.
+  // jsdom returns no rects for a Range, so supply them — the same reasoning as the
+  // element boxes above: stub the layout the engine cannot do, never loosen the
+  // guard that depends on it.
+  w2.Range.prototype.getClientRects = function () { return [box(90, 104, 176, 26)()]; };
   const c = w2.DCCS.cast.attach(root2);
   ok('a zero-size heading builds nothing', (() => {
     const rz = mountSelector(w2, CONFIG);
@@ -2178,8 +2203,12 @@ defer(async function () {
 
   // force:true bypasses the visibility/settle gate only — not the cap or the stop.
   ok('first cast renders an overlay', c.cast(true) === true && !!root2.querySelector('.dccs-cast'));
-  ok('the FIRST cast is the one with the fish',
-    root2.querySelector('.dccs-cast').classList.contains('is-fishing'));
+  // 0.30.0: the fish is on EVERY cast, so there is no longer a with/without class.
+  ok('the fish is built on every cast, not gated by a class',
+    !!root2.querySelector('.dccs-cast-fish') &&
+    !/is-fishing|is-plain/.test(root2.querySelector('.dccs-cast').className));
+  ok('the fish is never display:none for a later cast',
+    !/is-plain[^{]*\{[^}]*display:\s*none/.test(css));
   ok('the first cast bobs the last word',
     !!root2.querySelector('.dccs-heading-w.dccs-bob'));
   ok('a cast is counted', c.state().casts === 1);

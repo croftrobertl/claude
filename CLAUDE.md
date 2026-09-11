@@ -192,9 +192,20 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   Three casts per page view, then never; interaction stops it permanently.
   The heading string is EDITABLE, so the geometry must survive both a short and a
   width-filling heading: the rod is clamped inside the heading block (an early
-  build placed it past the right edge and with a long heading nothing drew at all),
-  and the line arc lives in the margin right of the last word, not across it (an
-  arc "over the words" on a 34px line box draws a strikethrough).
+  build placed it past the right edge and with a long heading nothing drew at all).
+- **The cast is measured against the GLYPHS, never the heading's block box.** The
+  block is 322px wide while the words are ~150px, which is exactly how a fish came
+  to sit on the "d" of "Wizard" while every check passed. `cast.js` measures the
+  guard with a Range over the heading's text nodes — the same method
+  `glyphcheck.mjs` uses, deliberately, so the two agree by construction. A canvas
+  font-metrics version was consistently ~6px higher and let the lure inside the
+  rect. The cast lives in a **water band** between the heading's glyph bottom and
+  the INTRO's glyph top: about 17px on the live widgets, which is why the fish
+  swims in horizontally instead of rising. Nothing may leave that band **at any
+  frame, including on the way in and out** — three separate bugs were an entry or
+  exit excursion, invisible to anything that only checked resting positions.
+  `.dccs-heading` margin-bottom is 16px to create that band; do not take more
+  without asking, this is a conversion widget.
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no
@@ -268,6 +279,29 @@ There is no WordPress in this environment, so the suites stub what they need:
 When a test asserts old behaviour that a deliberate change supersedes, update the
 assertion — but check first that the premise still holds; several briefs in this
 repo's history rested on premises the code had already moved past.
+
+### Two standing rules for assertions
+
+Four vacuous assertions have been found on this project in four releases. Both
+rules below exist because of specific ones, and the failures were identical in
+shape: a green result that could not have been red.
+
+1. **Never trust a negative until the detector has produced a positive.** If an
+   assertion says "X never happens", something in the same run must prove the
+   check can SEE an X. The 0.29.0 harness asserted "no overlay ever entered the
+   DOM" against a MutationObserver that `setContent`'s `document.open()` had
+   detached — it was watching a dead node and would have passed however the code
+   behaved. `glyphcheck.mjs` now parks a probe element on a glyph and asserts the
+   detector reports it, and every sweep asserts it found the glyphs and the
+   overlay elements before trusting a zero.
+2. **Never match on text you wrote.** An assertion that greps for a comment, a
+   class name or a string that the same change introduced tests nothing but your
+   own typing. Assert on computed values, measured geometry or parsed structure.
+   The corollary bit twice: a `/<selector>\s*\{[\s\S]*?<decl>/` regex whose lazy
+   run crossed rule boundaries kept passing after the rule lost the declaration,
+   and a keyframe/selector-list check anchored on the FIRST match found the
+   reduced-motion block instead of the rule it meant. Bound the match, and anchor
+   on the declaration rather than the first selector.
 
 ## Visual design
 

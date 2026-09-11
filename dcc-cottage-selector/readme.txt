@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.29.0
+Stable tag: 0.30.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,25 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.30.0 =
+* The cast lands in the water instead of beside the title. The lure now drops
+  UNDER the tail of the last word, the ripple spreads there, and the fish swims in
+  at the water line, takes it and leaves. Nothing the cast draws touches a letter.
+* The heading gains 10px of clearance (margin-bottom 6px to 16px) to make room for
+  it. Everything below shifts down 10px on both live widgets. No other layout change.
+* The fish is on every cast now, not just the first.
+* The ripple is two expanding stroked rings rather than one filled ellipse, which
+  read as a grey smudge at size; the rod enters longer and with more travel.
+* The fish takes the DCC Wildlife palette (#3a6b52 body, #2e5d46 dorsal and tail,
+  #c9d8cf belly, #17333c stripe) but is purpose-drawn and scaled to the space —
+  the 48px bass's spines, gill plate and eye highlight turn to mush at ~12px.
+* The geometry is now measured against the heading's GLYPHS, via a Range over its
+  text nodes, rather than against the heading's block box. The block is 322px wide
+  while the words are ~150px, which is how a fish came to sit on the "d" of
+  "Wizard" while passing every check. Everything lives in a measured band between
+  the heading's glyph bottom and the intro's glyph top, and may not leave it at any
+  frame — including on the way in and out.
 
 = 0.29.0 =
 * The drawn heading marks are retired. The heading is the words "Cottage Wizard"

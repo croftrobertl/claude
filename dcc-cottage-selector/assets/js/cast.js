@@ -36,13 +36,63 @@
   var MAX_CASTS = 3;          // per page view, then never again
   var GAP_MIN = 45000;        // jittered so it never feels metronomic
   var GAP_MAX = 75000;
-  var DUR_FISH = 2600;        // must match the longest animation in selector.css
-  var DUR_PLAIN = 1900;
+  var DUR = 2600;             // must match the animations in selector.css
 
   function reducedMotion() {
     try {
       return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     } catch (e) { return false; }
+  }
+
+  /**
+   * The rendered glyph bounds of the heading, as the union of Range rects over its
+   * text nodes, in the heading block's coordinates. Returns the bottom of the
+   * lowest line and the right edge of the widest.
+   *
+   * This is measured EXACTLY the way the acceptance check measures it, on purpose.
+   * 0.29.0 placed the cast against the heading's block box — 322px wide while the
+   * words are ~150px — so the fish sat on the "d" of "Wizard" and every check
+   * passed. An earlier attempt at this guard used canvas font metrics, which put
+   * it at the baseline while the Range rect runs to the font's descender line:
+   * close, consistently wrong by ~6px, and the lure landed inside the rect. Two
+   * different measurements of "where the letters are" is one too many.
+   */
+  function textRects(el) {
+    var out = [];
+    if (!el) { return out; }
+    try {
+      var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+      for (var n = walk.nextNode(); n; n = walk.nextNode()) {
+        if (!n.textContent || !n.textContent.trim()) { continue; }
+        var rg = document.createRange();
+        rg.selectNodeContents(n);
+        var rects = rg.getClientRects();
+        for (var i = 0; i < rects.length; i++) {
+          if (rects[i].width > 0.5) { out.push(rects[i]); }
+        }
+      }
+    } catch (e) { return []; }
+    return out;
+  }
+
+  function glyphBounds(heading, intro, hb) {
+    var hr = textRects(heading);
+    if (!hr.length) { return null; }
+    var bottom = null, right = null, i;
+    for (i = 0; i < hr.length; i++) {
+      var b = hr[i].bottom - hb.top, r = hr[i].right - hb.left;
+      if (bottom === null || b > bottom) { bottom = b; }
+      if (right === null || r > right) { right = r; }
+    }
+    // The intro's first line is the floor of the water band. It is only ~17px
+    // below the heading's glyphs, so it has to be measured, not assumed: the fish
+    // was landing squarely on "queen bed" while passing every heading check.
+    var ir = textRects(intro), top = null;
+    for (i = 0; i < ir.length; i++) {
+      var t = ir[i].top - hb.top;
+      if (top === null || t < top) { top = t; }
+    }
+    return { bottom: Math.ceil(bottom), right: Math.ceil(right), introTop: top };
   }
 
   function svgEl(name, attrs) {
@@ -56,39 +106,77 @@
    * cast so it follows reflow, breakpoint changes, a heading that wraps, and an
    * edited heading string.
    *
-   * The heading string is editable, so the geometry has to survive both extremes.
-   * The first build placed the rod at lure.x + 26 with no upper clamp: with a
-   * heading long enough to fill the width, the whole rod sat outside the overlay's
-   * clip and NOTHING was drawn. Clamping the rod inside the block is what fixes
-   * that — lifting the overlay above the block was the wrong answer, and put the
-   * rod outside the card.
+   * THE RULE EVERYTHING HERE SERVES: no part of the cast may touch the heading's
+   * GLYPHS. 0.29.0 kept the gesture inside the heading BLOCK, which is 322px wide
+   * while the words are far narrower — so the fish sat on the "d" of "Wizard" and
+   * every check passed. `guard` is the glyph bottom; the lure, ripple and fish all
+   * live below it, and the rod and line stay to the right of the last word until
+   * they are below it.
+   *
+   * The heading string is editable, so this also has to survive a heading wide
+   * enough to leave no margin at all: when there is no room to the right of the
+   * last word the rod comes in low, at the water, instead of up in the corner.
    */
   function geometry(head, word) {
     var hb = head.getBoundingClientRect();
     var W = Math.round(hb.width), H = Math.round(hb.height);
     if (!W || !H) { return null; }
+    if (!word) { return null; }
+    var wb = word.getBoundingClientRect();
+    if (!wb.width) { return null; }
 
-    // Where the lure lands: just past the end of the last word, on its baseline.
-    var lure = { x: W - 16, y: Math.round(H * 0.4) };
-    if (word) {
-      var wb = word.getBoundingClientRect();
-      if (wb.width) {
-        lure.x = Math.min(W - 9, Math.round(wb.right - hb.left) + 11);
-        lure.y = Math.round(wb.bottom - hb.top) - Math.max(2, Math.round(wb.height * 0.2));
-      }
+    var heading = head.querySelector('.dccs-heading') || word;
+    var gb = glyphBounds(heading, head.querySelector('.dccs-intro'), hb);
+    if (!gb) { return null; }
+    var wl = Math.round(wb.left - hb.left);
+    var wr = Math.round(wb.right - hb.left);
+    var wt = Math.round(wb.top - hb.top);
+    // Everything below the words clears the LOWEST line; everything beside them
+    // clears the WIDEST. A wrapped heading has both, and they are not the same line.
+    var guard = gb.bottom;
+    var glyphRight = gb.right;
+    // The strip of water the cast gets: below the heading's glyphs, above the
+    // intro's. On the live widgets this is about 17px, which is why the fish swims
+    // in from the side rather than rising through it — vertical travel it does not
+    // have. Every moving part is sized and clamped to this band.
+    var bandTop = guard + 2;
+    var bandBottom = (gb.introTop !== null ? gb.introTop : H) - 2;
+    var bandH = Math.max(9, bandBottom - bandTop);
+
+    // d. The lure drops UNDER the tail of the last word, not past it.
+    var lure = { x: Math.max(wl + 6, wr - 13), y: Math.round(bandTop + bandH * 0.42) };
+    // Everything that follows the lure lives in the space below the glyphs.
+    var roomRight = W - glyphRight;
+    var highRod = roomRight >= 52;
+
+    var rodTip, rodButt, c1, c2;
+    if (highRod) {
+      // b. Enters top right, angled down and to the left. Longer and with more
+      // travel than 0.29.0 — this beat announces the whole effect and was easy to
+      // miss. Both ends stay right of the last word.
+      rodTip = { x: Math.min(W - 26, glyphRight + 22), y: Math.max(4, wt + 3) };
+      rodButt = { x: W + 44, y: Math.max(0, rodTip.y - 26) };
+      // c. Down the right-hand side, then in under the words to the lure. Three of
+      // the four control points sit right of the word and the fourth is below the
+      // guard, so the curve has nowhere to cross a letter.
+      c1 = { x: rodTip.x + 14, y: guard + 4 };
+      c2 = { x: glyphRight + 10, y: guard + 14 };
+    } else {
+      // No margin beside the words: bring the rod in low, at the water. It sits
+      // further below the guard than the high variant needs to, because the flick
+      // rotates about the butt end and a 5 degree swing on a 130px rod still lifts
+      // the tip by ~11px. The low variant also gets a shallower flick (is-lowrod).
+      rodTip = { x: Math.max(30, W - 110), y: guard + 20 };
+      rodButt = { x: W + 40, y: guard + 12 };
+      c1 = { x: rodTip.x - 12, y: guard + 26 };
+      c2 = { x: lure.x + 26, y: guard + 22 };
     }
-    // Only the last third of a rod — no hand, no angler, no boat. It enters from
-    // the right edge angled down and to the left: the butt is off-frame right and
-    // HIGHER than the tip. Both ends are clamped inside the block.
-    var rodTip = { x: Math.min(W - 22, lure.x + 22), y: Math.max(6, lure.y - 26) };
-    var rodButt = { x: W + 18, y: Math.max(0, rodTip.y - 26) };
-    // The arc lives in the margin to the RIGHT of the last word, not across it. An
-    // earlier pass put the control point left of the lure and at the top of the
-    // block: with a heading line only ~34px tall there is no room above the glyphs,
-    // and the "arc over the words" drew a line straight through them — it read as a
-    // strikethrough. The cast still sweeps; it just sweeps where there is space.
-    var ctrl = { x: Math.round((rodTip.x + lure.x) / 2) + 4, y: Math.max(2, rodTip.y - 13) };
-    return { W: W, H: H, lure: lure, rodTip: rodTip, rodButt: rodButt, ctrl: ctrl };
+    // The fish is drawn to fit the band rather than at a fixed size.
+    var fishH = Math.min(12, bandH - 3);
+    return { W: W, H: H, wl: wl, wr: wr, guard: guard, glyphRight: glyphRight,
+             bandTop: bandTop, bandBottom: bandBottom, bandH: bandH, fishH: fishH,
+             lowRod: !highRod, lure: lure,
+             rodTip: rodTip, rodButt: rodButt, c1: c1, c2: c2 };
   }
 
   function buildOverlay(g) {
@@ -106,7 +194,8 @@
       'class': 'dccs-cast-line', fill: 'none', stroke: 'currentColor',
       'stroke-width': '1.4', 'stroke-linecap': 'round',
       d: 'M' + g.rodTip.x + ' ' + g.rodTip.y +
-         ' Q' + g.ctrl.x + ' ' + g.ctrl.y + ' ' + g.lure.x + ' ' + g.lure.y
+         ' C' + g.c1.x + ' ' + g.c1.y + ' ' + g.c2.x + ' ' + g.c2.y +
+         ' ' + g.lure.x + ' ' + g.lure.y
     });
 
     var rod = svgEl('g', { 'class': 'dccs-cast-rod' });
@@ -115,27 +204,57 @@
       d: 'M' + g.rodButt.x + ' ' + g.rodButt.y + ' L' + g.rodTip.x + ' ' + g.rodTip.y
     }));
 
-    var ripple = svgEl('ellipse', {
-      'class': 'dccs-cast-ripple', cx: g.lure.x, cy: g.lure.y, rx: '9', ry: '3',
-      fill: 'none', stroke: 'currentColor', 'stroke-width': '1.3'
-    });
+    // A ripple is an EDGE, not a fill: two open rings expanding and fading. The
+    // single filled-looking ellipse this replaces read as a grey smudge.
+    var ripple = svgEl('g', { 'class': 'dccs-cast-ripple' });
+    ripple.appendChild(svgEl('ellipse', {
+      'class': 'dccs-cast-ring dccs-cast-ring-1', cx: g.lure.x, cy: g.lure.y + 1,
+      rx: 8, ry: Math.max(1.4, Math.min(2.6, (g.bandH - 4) / 6)),
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '1.1'
+    }));
+    ripple.appendChild(svgEl('ellipse', {
+      'class': 'dccs-cast-ring dccs-cast-ring-2', cx: g.lure.x, cy: g.lure.y + 1,
+      rx: 8, ry: Math.max(1.2, Math.min(2.2, (g.bandH - 4) / 7)),
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '1'
+    }));
 
     var lure = svgEl('circle', {
       'class': 'dccs-cast-lure', cx: g.lure.x, cy: g.lure.y, r: '2.6', fill: '#FFA000'
     });
 
-    // The fish: a silhouette in the same vocabulary as the rest of the site's
-    // wildlife marks — solid body, swept tail, no interior detail at this size.
+    // The fish. Purpose-drawn and scaled to the measured band, not a copy of the
+    // Wildlife plugin's 48px bass: its dorsal spines, gill plate and eye highlight
+    // all turn to mush at this size, which is the same failure that killed the
+    // heading marks. What carries over is the PALETTE and the character — deep
+    // body, big jaw, one dark lateral stripe.
+    var k = g.fishH / 12;                       // 12 is the size the path is drawn at
+    var fx = g.lure.x, fy = Math.round(g.bandTop + g.fishH / 2) + 1;
+    var X = function (d) { return (fx + d * k).toFixed(1); };
+    var Y = function (d) { return (fy + d * k).toFixed(1); };
     var fish = svgEl('g', { 'class': 'dccs-cast-fish' });
-    fish.appendChild(svgEl('path', {
-      fill: 'currentColor',
-      d: 'M' + (g.lure.x - 15) + ' ' + (g.lure.y + 4) +
-         ' c4.4 -4.6 11.6 -4.6 15.4 0 c-3.8 4.6 -11 4.6 -15.4 0 Z'
+    fish.appendChild(svgEl('path', {           // tail
+      fill: '#2e5d46',
+      d: 'M' + X(-15.5) + ' ' + Y(0) + ' L' + X(-20.5) + ' ' + Y(-4.2) +
+         ' L' + X(-20.5) + ' ' + Y(4.2) + ' Z'
     }));
-    fish.appendChild(svgEl('path', {
-      fill: 'currentColor',
-      d: 'M' + (g.lure.x - 16.6) + ' ' + (g.lure.y + 1.2) +
-         ' l-4.6 -3.6 l0 7.2 Z'
+    fish.appendChild(svgEl('path', {           // body: deep, with a blunt jaw
+      fill: '#3a6b52',
+      d: 'M' + X(-16) + ' ' + Y(0) +
+         ' C' + X(-13.4) + ' ' + Y(-4.6) + ' ' + X(-8.6) + ' ' + Y(-6.6) + ' ' + X(-4.6) + ' ' + Y(-6.6) +
+         ' C' + X(-1) + ' ' + Y(-6.6) + ' ' + X(1.2) + ' ' + Y(-4.2) + ' ' + X(1.2) + ' ' + Y(-2) +
+         ' C' + X(1.2) + ' ' + Y(0.6) + ' ' + X(-1.2) + ' ' + Y(3) + ' ' + X(-5) + ' ' + Y(3.6) +
+         ' C' + X(-9.4) + ' ' + Y(4.3) + ' ' + X(-13.8) + ' ' + Y(3) + ' ' + X(-16) + ' ' + Y(0) + ' Z'
+    }));
+    fish.appendChild(svgEl('path', {           // pale belly
+      fill: '#c9d8cf',
+      d: 'M' + X(-13.6) + ' ' + Y(1.8) +
+         ' C' + X(-11.2) + ' ' + Y(4.2) + ' ' + X(-7) + ' ' + Y(5) + ' ' + X(-3.4) + ' ' + Y(4.4) +
+         ' C' + X(-5.6) + ' ' + Y(6.2) + ' ' + X(-11.4) + ' ' + Y(6.4) + ' ' + X(-13.6) + ' ' + Y(1.8) + ' Z'
+    }));
+    fish.appendChild(svgEl('path', {           // the one dark lateral stripe
+      fill: 'none', stroke: '#17333c', 'stroke-width': Math.max(1, 1.6 * k),
+      'stroke-linecap': 'round',
+      d: 'M' + X(-13.2) + ' ' + Y(-0.6) + ' L' + X(-2.6) + ' ' + Y(-1.2)
     }));
 
     svg.appendChild(line);
@@ -200,9 +319,11 @@
 
       clearOverlay();
       running = true;
-      var withFish = casts === 0;      // the first cast of a visit is the good one
+      // The fish is on EVERY cast. An earlier build made later casts quieter, which
+      // worked against the point of having it: with a three-cast cap there is no
+      // risk of it wearing out, and a guest who lingers should see it again.
       overlay = buildOverlay(g);
-      overlay.classList.add(withFish ? 'is-fishing' : 'is-plain');
+      if (g.lowRod) { overlay.classList.add('is-lowrod'); }
       head.appendChild(overlay);
       // Force a style resolve so the animations start from their 0% frame even
       // when the node was appended in the same frame.
@@ -211,7 +332,7 @@
       if (word) { word.classList.add('dccs-bob'); }
 
       casts += 1;
-      var dur = withFish ? DUR_FISH : DUR_PLAIN;
+      var dur = DUR;
       setTimeout(function () {
         running = false;
         clearOverlay();
