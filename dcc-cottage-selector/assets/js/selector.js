@@ -715,9 +715,11 @@
     // "Edit answers" always appears on results and opens the review screen on demand —
     // even when the forced review STEP (config.showReview) is turned off. That keeps a
     // full edit path from results without making review a mandatory extra step.
-    var share = '<div class="dccs-share-row"><button type="button" class="dccs-share">' +
-      esc(S.share_btn) + '</button><span class="dccs-share-msg" role="status"></span></div>';
-    return share + '<div class="dccs-wizard-nav dccs-tail-nav">' +
+    // The Share button was removed in 0.31.0: no practical use, and it made a third
+    // near-identical blue button at the foot of the results. Deep links still WORK —
+    // the URL parser that reads ?mode=/?party=/?seed= on load is untouched — there is
+    // simply nothing in the widget that produces one any more.
+    return '<div class="dccs-wizard-nav dccs-tail-nav">' +
       '<button type="button" class="dccs-edit-answers">' + withIcon(config, 'edit_answers', 'edit_answers', esc(S.edit_answers)) + '</button>' +
       '<button type="button" class="dccs-reset">' + ico(config, 'restart') + esc(S.reset) + '</button></div>';
   }
@@ -981,29 +983,6 @@
       });
     }
 
-    /** A URL that reopens these exact results — answers, compare picks, dates, order. */
-    function shareUrl() {
-      var u = new URL(window.location.href);
-      var p = u.searchParams;
-      ['mode', 'party', 'desk', 'pullout', 'layout', 'dining', 'pet', 'ground', 'porch',
-       'compare', 'in', 'out', 'dates', 'seed', 'highlight'].forEach(function (k) { p.delete(k); });
-      p.set('mode', state.mode);
-      var q = state.quick;
-      if (q.party !== '') { p.set('party', q.party === '2' || q.party === 2 ? '2' : (String(q.party) === '34' ? '3-4' : 'either')); }
-      [['desk', q.desk], ['pullout', q.pullout], ['pet', q.pet], ['ground', q.ground],
-       ['porch', q.screenedporch]].forEach(function (pair) {
-        if (pair[1] !== '') { p.set(pair[0], pair[1] === 'yes' ? 'true' : 'false'); }
-      });
-      if (q.layout !== '') { p.set('layout', String(q.layout)); }
-      if (q.dining !== '') { p.set('dining', String(q.dining)); }
-      if (state.dates.mode === 'set') { p.set('in', state.dates.from); p.set('out', state.dates.to); }
-      else if (state.dates.mode === 'skip') { p.set('dates', 'skip'); }
-      if (state.compareIds.length) { p.set('compare', state.compareIds.join(',')); }
-      // Pin the tie-break so the recipient sees the same order on any day.
-      p.set('seed', String(state.rotation));
-      return u.toString();
-    }
-
     function rerender() {
       if (state.stage === 'results') { refreshAvailability(); }
       var key = root.contains(document.activeElement) ? focusKey(document.activeElement) : null;
@@ -1106,19 +1085,6 @@
         rerender(); return;
       }
       // --- share: copy a link that reopens these results ---
-      if (cl.contains('dccs-share')) {
-        var url = shareUrl();
-        var msg = root.querySelector('.dccs-share-msg');
-        var say = function (text) { if (msg) { msg.textContent = text; } };
-        try { window.history.replaceState(null, '', url); } catch (e) { /* file:// etc. */ }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(
-            function () { say(config.strings.share_done); },
-            function () { say(config.strings.share_fail); }
-          );
-        } else { say(config.strings.share_fail); }
-        return;
-      }
       // --- answer chip: select only (no auto-advance) ---
       if (cl.contains('dccs-chip')) {
         if (state.mode === 'weights') { state.weights[t.dataset.group] = Number(t.dataset.value); }

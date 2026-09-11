@@ -395,10 +395,6 @@ msgstr ""
 msgid "Copy text code"
 msgstr ""
 
-#: includes/class-config.php:188
-msgid "Copy the link from your address bar to share it."
-msgstr ""
-
 #: includes/class-selector-widget.php:637
 #: includes/class-selector-widget.php:1051
 msgid "Corner radius"
@@ -682,10 +678,6 @@ msgstr ""
 msgid "Less square footage"
 msgstr ""
 
-#: includes/class-config.php:187
-msgid "Link copied"
-msgstr ""
-
 #: includes/class-config.php:35
 msgid "Loading…"
 msgstr ""
@@ -767,7 +759,7 @@ msgid "Next cottages"
 msgstr ""
 
 #: includes/class-config.php:87
-#: includes/class-config.php:192
+#: includes/class-config.php:191
 msgid "No"
 msgstr ""
 
@@ -1165,10 +1157,6 @@ msgstr ""
 msgid "Shape"
 msgstr ""
 
-#: includes/class-config.php:186
-msgid "Share These Results"
-msgstr ""
-
 #: includes/class-selector-widget.php:243
 msgid "Share this design"
 msgstr ""
@@ -1373,7 +1361,7 @@ msgid "Writes the pasted Selector wording into this widget’s own text fields, 
 msgstr ""
 
 #: includes/class-config.php:86
-#: includes/class-config.php:191
+#: includes/class-config.php:190
 msgid "Yes"
 msgstr ""
 

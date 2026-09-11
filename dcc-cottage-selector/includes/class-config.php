@@ -183,9 +183,8 @@ final class Config
             'avail_checking'    => __('Checking availability…', 'dcc-cottage-selector'),
             'avail_error'       => __('We could not check availability just now — these are ranked without it.', 'dcc-cottage-selector'),
             'avail_none_free'   => __('None of your matches are free for those dates. They are listed below so you can pick other dates.', 'dcc-cottage-selector'),
-            'share_btn'         => __('Share These Results', 'dcc-cottage-selector'),
-            'share_done'        => __('Link copied', 'dcc-cottage-selector'),
-            'share_fail'        => __('Copy the link from your address bar to share it.', 'dcc-cottage-selector'),
+            // share_btn / share_done / share_fail were removed in 0.31.0 with the
+            // Share button. Deep links still work; nothing produces one any more.
 
             // Misc value labels
             'val_yes'           => __('Yes', 'dcc-cottage-selector'),

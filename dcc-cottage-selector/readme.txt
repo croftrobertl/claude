@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.30.0
+Stable tag: 0.31.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,29 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.31.0 =
+* The cast has a real ending. It used to cross-fade out where it sat, with the rod
+  blinking away a frame early because its slide pushed it out of the overlay's clip
+  while the fish and line were still fading. Now: the line goes taut, the fish
+  fights it, then fish and lure are hauled right and lifted away, the line reels
+  in, and the rod withdraws LAST. The timeline is 3000ms, up from 2600 — all 400ms
+  went to the ending, and the half-second the fish used to hang motionless is now
+  a head-shake.
+* Mode switcher weight 500 -> 700 (two steps): it read too light as a menu header.
+* Matching-quiz body text one step each — question 700 -> 800, note 400 -> 500,
+  progress label 600 -> 700. The answer chips stay at the button spec's 500.
+* The "Compare" label beside the result-card checkboxes is now #8E1838, the red
+  from the site's sticky header menu.
+* "Compare N Cottages" is right-aligned under those checkboxes and carries the same
+  #8E1838 — a deliberate, agreed exception to the site button spec, and the only
+  one. Every other spec property is unchanged (Raleway / 20px / 500 / 0.5px / none
+  / 30px radius / 50px tall). White on #8E1838 measures 8.98:1; it hovers to
+  #6E1029 at 11.87:1 rather than to the site coral, which on red would read as a
+  different button and drops white text to 2.59:1.
+* The "Share These Results" button is removed, along with its strings and the
+  share-URL builder. Deep links still open the same results in the same order —
+  nothing in the widget produces one any more.
 
 = 0.30.0 =
 * The cast lands in the water instead of beside the title. The lure now drops

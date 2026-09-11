@@ -56,6 +56,19 @@
      on the fill, so the button is never identified by this colour alone. */
   --dccs-btn-blue-hover: #F08080;
   --dccs-btn-on-blue-hover: #FFFFFF;
+  /* The Compare pair (0.31.0): the checkbox label and the Compare button share the
+     red from the site's sticky header menu, so the two read as one control group
+     rather than blending into the blue around them. This is a DELIBERATE, agreed
+     exception to the site button spec and applies to that one button only —
+     every other spec property (Raleway / 20px / 500 / 0.5px / none / 30px / 50px)
+     is unchanged. White on #8E1838 measures 8.98:1, so unlike the coral it is
+     comfortably above 4.5:1.
+     The hover is a darker shade of the SAME red rather than the site's #F08080:
+     coral on red reads as a different button rather than the same one pressed,
+     and white on coral is 2.59:1 where white on #6E1029 is about 12:1. Proposed,
+     not assumed — say the word and it becomes the coral. */
+  --dccs-compare-red: #8E1838;
+  --dccs-compare-red-hover: #6E1029;
   --dccs-btn-motion: background-color 0.15s, opacity 0.15s;
 
   box-sizing: border-box;
@@ -127,76 +140,118 @@
 /* Everything starts invisible; the is-running class drives the timeline. */
 .dccs-root.dccs-root .dccs-cast-rod,
 .dccs-root.dccs-root .dccs-cast-line,
+.dccs-root.dccs-root .dccs-cast-line-taut,
 .dccs-root.dccs-root .dccs-cast-lure,
 .dccs-root.dccs-root .dccs-cast-ring,
 .dccs-root.dccs-root .dccs-cast-fish { opacity: 0; }
 .dccs-root.dccs-root .dccs-cast-line { stroke-dasharray: 400; stroke-dashoffset: 400; }
+.dccs-root.dccs-root .dccs-cast-line-taut { opacity: 0; stroke-dashoffset: 0; }
+
+/* THE TIMELINE. 3000ms, up from 2600 in 0.31.0 — the extra 400ms all went to the
+   ENDING, not to the hold. At 2600 the take, the haul and the rod's withdrawal had
+   to share 364ms and the fish's lift happened entirely inside its own fade, so it
+   read as vanishing rather than being pulled away. The beats before the take keep
+   their old wall-clock timing; the percentages moved because the total did.
+   Ordering is load-bearing: the fish and the line are gone by 86%, and the rod is
+   still fully drawn at 88%. It is the thing holding everything else up, so it
+   cannot leave first — which is exactly the glitch 0.30.0 shipped. */
 
 /* b + c: the rod enters from the right, flicks back, then forward. */
 @keyframes dccs-rod {
   0%   { opacity: 0; transform: translateX(62px) rotate(11deg); }
-  9%   { opacity: 1; }
-  26%  { transform: translateX(0) rotate(9deg); }
-  40%  { transform: translateX(0) rotate(17deg); }   /* back */
-  56%  { transform: translateX(0) rotate(-4deg); }   /* and forward */
-  68%  { transform: translateX(0) rotate(2deg); }
-  86%  { opacity: 1; transform: translateX(0) rotate(2deg); }
-  100% { opacity: 0; transform: translateX(62px) rotate(11deg); }  /* g: withdraws */
+  8%   { opacity: 1; }
+  23%  { transform: translateX(0) rotate(9deg); }
+  35%  { transform: translateX(0) rotate(17deg); }   /* back */
+  48%  { transform: translateX(0) rotate(-4deg); }   /* and forward */
+  59%  { transform: translateX(0) rotate(2deg); }
+  72%  { opacity: 1; transform: translateX(0) rotate(2deg); }
+  76%  { transform: translateX(0) rotate(-10deg); }  /* loaded by the take */
+  88%  { opacity: 1; transform: translateX(0) rotate(-6deg); }
+  100% { opacity: 0; transform: translateX(62px) rotate(8deg); }   /* g: withdraws LAST */
 }
-/* c: the line unspools over the words, then reels back in. */
+/* The flick rotates about the butt, off-frame right, so a few degrees moves the
+   tip a lot. When the rod has to come in low (a heading wide enough to leave no
+   margin beside it) that swing would lift the tip back into the words, so the low
+   variant flicks shallowly. */
+@keyframes dccs-rod-low {
+  0%   { opacity: 0; transform: translateX(62px) rotate(3deg); }
+  8%   { opacity: 1; }
+  23%  { transform: translateX(0) rotate(2.5deg); }
+  35%  { transform: translateX(0) rotate(4.5deg); }
+  48%  { transform: translateX(0) rotate(-1deg); }
+  59%  { transform: translateX(0) rotate(0.5deg); }
+  76%  { transform: translateX(0) rotate(-2.5deg); }
+  88%  { opacity: 1; transform: translateX(0) rotate(-1.5deg); }
+  100% { opacity: 0; transform: translateX(62px) rotate(3deg); }
+}
+/* c: the line unspools over the words, then gives way to the taut line. */
 @keyframes dccs-line {
   0%   { opacity: 0; stroke-dashoffset: 400; }
-  22%  { opacity: 1; stroke-dashoffset: 400; }
-  50%  { stroke-dashoffset: 0; }
-  84%  { opacity: 1; stroke-dashoffset: 0; }
-  100% { opacity: 0; stroke-dashoffset: 400; }
+  19%  { opacity: 1; stroke-dashoffset: 400; }
+  43%  { stroke-dashoffset: 0; }
+  70%  { opacity: 1; stroke-dashoffset: 0; }
+  74%  { opacity: 0; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 0; }
 }
-/* d: the lure lands. It arrives from the lower right and leaves the same way —
-   NEVER from above. Approaching from -12px meant that during the fade-in it sat
-   above the guard line and clipped the descender box of the last word: the only
-   element still failing the glyph check, and invisible to anything that only
-   looked at where it came to rest. Nothing in the cast may travel above the
-   glyph bottom, including on its way in. */
+/* The line under tension, reeled in with stroke-dashoffset so its geometry never
+   moves: if the path clears the glyphs at rest it clears them at every frame. */
+@keyframes dccs-line-taut {
+  0%, 70% { opacity: 0; stroke-dashoffset: 0; }
+  74%     { opacity: 1; stroke-dashoffset: 0; }
+  82%     { opacity: 1; stroke-dashoffset: calc(var(--dccs-taut-len, 0px) * 0.5); }
+  86%     { opacity: 0; stroke-dashoffset: var(--dccs-taut-len, 0px); }
+  100%    { opacity: 0; stroke-dashoffset: var(--dccs-taut-len, 0px); }
+}
+/* d: the lure lands. It arrives from the lower right and leaves with the fish —
+   NEVER from above. Approaching from -12px put it above the guard during the
+   fade-in and clipped the descender box of the last word. */
 @keyframes dccs-lure {
-  0%, 42% { opacity: 0; transform: translate(16px, 3px) scale(0.5); }
-  54%     { opacity: 1; transform: translate(0, 0) scale(1.25); }
-  60%     { transform: translate(0, 0) scale(1); }
-  88%     { opacity: 1; transform: translate(0, 0) scale(1); }
-  100%    { opacity: 0; transform: translate(16px, 2px) scale(0.6); }
+  0%, 36% { opacity: 0; transform: translate(16px, 3px) scale(0.5); }
+  46%     { opacity: 1; transform: translate(0, 0) scale(1.25); }
+  51%     { transform: translate(0, 0) scale(1); }
+  72%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  78%     { transform: translate(calc(var(--dccs-fish-run) * 0.5), 0) scale(1); }
+  82%     { transform: translate(calc(var(--dccs-fish-run) * 0.85), 0) scale(0.92); }
+  85%     { opacity: 1; transform: translate(var(--dccs-fish-run), calc(var(--dccs-fish-rise) * 0.7)) scale(0.8); }
+  88%     { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) scale(0.7); }
+  100%    { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) scale(0.7); }
 }
-/* e: rings spread from where it landed. A ripple is an EDGE, not a fill — the
-   single ellipse this replaces read as a grey smudge at size. Two rings, the
-   second trailing the first, both fading as they widen. */
+/* e: rings spread from where it landed. A ripple is an EDGE, not a fill. */
 @keyframes dccs-ripple {
-  0%, 54% { opacity: 0; transform: scale(0.25); }
-  60%     { opacity: 0.8; transform: scale(0.5); }
+  0%, 46% { opacity: 0; transform: scale(0.25); }
+  52%     { opacity: 0.8; transform: scale(0.5); }
   100%    { opacity: 0; transform: scale(2.4); }
 }
 @keyframes dccs-ripple2 {
-  0%, 62% { opacity: 0; transform: scale(0.25); }
-  70%     { opacity: 0.45; transform: scale(0.7); }
+  0%, 54% { opacity: 0; transform: scale(0.25); }
+  61%     { opacity: 0.45; transform: scale(0.7); }
   100%    { opacity: 0; transform: scale(3); }
 }
 /* e: the last word bobs once, as if floating. Nothing else on the line moves. */
 @keyframes dccs-bob {
-  0%, 54% { transform: translateY(0); }
-  68%     { transform: translateY(-3px); }
-  82%     { transform: translateY(1px); }
+  0%, 46% { transform: translateY(0); }
+  58%     { transform: translateY(-3px); }
+  70%     { transform: translateY(1px); }
   100%    { transform: translateY(0); }
 }
-/* f: first cast only — a fish rises, takes it, and flicks away. */
-/* f: the fish takes the lure. It swims in from the RIGHT and leaves the same way.
-   The band between the heading's glyphs and the intro's is only about 17px on the
-   live widgets, so there is no room to rise through it: a version that entered
-   from 15px below and left 14px lower passed every heading check and sat squarely
-   on "queen bed" both times. Vertical travel is capped at 3px — the rest of the
-   movement is horizontal, which costs nothing. */
+/* f: the fish swims in from the right, takes the lure, FIGHTS it, and is hauled
+   up and away. The head-shake between 65% and 74% fills what used to be half a
+   second of the fish hanging motionless before an abrupt cut.
+   The haul is horizontal until 82% and only then rises: "up" is where the words
+   are, so the lift may not begin until the fish is clear of the last glyph, and
+   --dccs-fish-rise is 0 when a wide heading means it never gets clear. */
 @keyframes dccs-fish {
-  0%, 54% { opacity: 0; transform: translate(30px, 3px); }
-  66%     { opacity: 1; transform: translate(9px, 2px); }
-  76%     { opacity: 1; transform: translate(0, 0); }
-  84%     { opacity: 1; transform: translate(6px, 2px) rotate(-5deg); }
-  100%    { opacity: 0; transform: translate(30px, 3px) rotate(-8deg); }
+  0%, 46% { opacity: 0; transform: translate(30px, 3px) rotate(0deg); }
+  57%     { opacity: 1; transform: translate(9px, 2px) rotate(0deg); }
+  65%     { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  68%     { transform: translate(1px, 0) rotate(-9deg); }
+  71%     { transform: translate(-1px, 1px) rotate(7deg); }
+  74%     { transform: translate(1px, 0) rotate(-5deg); }
+  78%     { opacity: 1; transform: translate(calc(var(--dccs-fish-run) * 0.5), 0) rotate(-6deg); }
+  82%     { opacity: 1; transform: translate(calc(var(--dccs-fish-run) * 0.85), 0) rotate(-10deg); }
+  85%     { opacity: 1; transform: translate(var(--dccs-fish-run), calc(var(--dccs-fish-rise) * 0.7)) rotate(-16deg); }
+  88%     { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) rotate(-22deg); }
+  100%    { opacity: 0; transform: translate(var(--dccs-fish-run), var(--dccs-fish-rise)) rotate(-22deg); }
 }
 
 .dccs-root.dccs-root .dccs-cast-rod,
@@ -208,33 +263,20 @@
 }
 .dccs-root.dccs-root .dccs-cast-rod { transform-origin: right center; }
 
-/* The flick rotates about the butt, off-frame right, so a few degrees moves the
-   tip a lot. When the rod has to come in low (a heading wide enough to leave no
-   margin beside it) that swing would lift the tip back up into the words, so the
-   low variant flicks shallowly. */
-@keyframes dccs-rod-low {
-  0%   { opacity: 0; transform: translateX(62px) rotate(3deg); }
-  9%   { opacity: 1; }
-  26%  { transform: translateX(0) rotate(2.5deg); }
-  40%  { transform: translateX(0) rotate(4.5deg); }
-  56%  { transform: translateX(0) rotate(-1deg); }
-  68%  { transform: translateX(0) rotate(0.5deg); }
-  86%  { opacity: 1; transform: translateX(0) rotate(0.5deg); }
-  100% { opacity: 0; transform: translateX(62px) rotate(3deg); }
-}
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-rod    { animation: dccs-rod var(--dccs-cast-dur) ease-in-out both; }
 .dccs-root.dccs-root .dccs-cast.is-running.is-lowrod .dccs-cast-rod { animation-name: dccs-rod-low; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line   { animation: dccs-line var(--dccs-cast-dur) ease-in-out both; }
+.dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-line-taut { animation: dccs-line-taut var(--dccs-cast-dur) ease-in both; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-lure   { animation: dccs-lure var(--dccs-cast-dur) ease-out both; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-1 { animation: dccs-ripple var(--dccs-cast-dur) ease-out both; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-fish { animation: dccs-fish var(--dccs-cast-dur) ease-in-out both; }
 .dccs-root.dccs-root .dccs-cast.is-running .dccs-cast-ring-2 { animation: dccs-ripple2 var(--dccs-cast-dur) ease-out both; }
 /* The fish is on every cast (0.30.0). Three casts per page view is cap enough. */
-.dccs-root.dccs-root .dccs-cast { --dccs-cast-dur: 2600ms; }
+.dccs-root.dccs-root .dccs-cast { --dccs-cast-dur: 3000ms; }
 
 .dccs-root.dccs-root .dccs-heading-w { display: inline-block; }
 .dccs-root.dccs-root .dccs-heading-w.dccs-bob {
-  animation: dccs-bob var(--dccs-cast-bob, 2600ms) ease-in-out both;
+  animation: dccs-bob var(--dccs-cast-bob, 3000ms) ease-in-out both;
 }
 /* Reduced motion: cast.js builds no DOM at all, but belt-and-braces for a
    preference that flips after the overlay is already on screen. */
@@ -274,6 +316,10 @@
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid var(--dccs-border); border-radius: var(--dccs-btn-radius);
   background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-text);
+  /* Two steps up the weight scale from the button spec's 500 (0.31.0): as a menu
+     header it read too light against the rest of the widget. A deliberate
+     exception to the spec, agreed, and it applies to the menu items too. */
+  font-weight: 700;
 }
 .dccs-root.dccs-root .dccs-caret { font-size: 0.8em; color: var(--dccs-muted); }
 .dccs-root.dccs-root .dccs-modeselect-list {
@@ -288,6 +334,7 @@
 .dccs-root.dccs-root .dccs-modetab {
   display: block; width: 100%; text-align: var(--dccs-menu-align, center); padding: 0 var(--dccs-btn-pad-x); cursor: pointer;
   border: 0; background: var(--dccs-item-bg, transparent); color: var(--dccs-item-text, var(--dccs-text));
+  font-weight: 700;                 /* with the trigger, +2 from the spec's 500 */
 }
 .dccs-root.dccs-root .dccs-modetab + .dccs-modetab { border-top: 1px solid var(--dccs-border); }
 .dccs-root.dccs-root .dccs-modetab.is-active { background: var(--dccs-accent); color: var(--dccs-accent-text); }
@@ -297,7 +344,7 @@
 .dccs-root.dccs-root .dccs-progress-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;
 }
-.dccs-root.dccs-root .dccs-progress-label { font-weight: 600; color: var(--dccs-muted); font-size: 0.9rem; }
+.dccs-root.dccs-root .dccs-progress-label { font-weight: 700; color: var(--dccs-muted); font-size: 0.9rem; }
 .dccs-root.dccs-root .dccs-nav-spacer { flex: 0 0 auto; }
 
 /* Clickable stepper dots — buttons and spans must render identically (the theme
@@ -323,7 +370,12 @@
 .dccs-root.dccs-root .dccs-step-dot.is-done { background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-step-dot.is-current { background: var(--dccs-accent); opacity: 0.5; }
 
-.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; text-align: var(--dccs-question-align, center); }
+/* Matching-quiz body text, one step up the weight scale each (0.31.0). Measured
+   before -> after: question 700 -> 800, note 400 -> 500, progress label 600 -> 700.
+   The answer chips are NOT bumped: they are buttons and the site button spec sets
+   their weight at 500. Moving them would need the same explicit exception the
+   Compare button got. */
+.dccs-root.dccs-root .dccs-step-q { font-size: 1.3rem; line-height: 1.25; margin: 0 0 18px; outline: none; text-align: var(--dccs-question-align, center); font-weight: 800; }
 .dccs-root.dccs-root .dccs-step-q:focus-visible { text-decoration: underline; }
 .dccs-root.dccs-root .dccs-chips-wizard { flex-direction: column; gap: 10px; align-items: center; }
 .dccs-root.dccs-root .dccs-chips-wizard .dccs-chip {
@@ -375,7 +427,6 @@
 .dccs-root.dccs-root .dccs-edit-answers,
 .dccs-root.dccs-root .dccs-see-matches,
 .dccs-root.dccs-root .dccs-reset,
-.dccs-root.dccs-root .dccs-share,
 .dccs-root.dccs-root .dccs-open-compare,
 .dccs-root.dccs-root .dccs-landing-choice,
 .dccs-root.dccs-root a.dccs-view {
@@ -441,7 +492,7 @@
    Muted, centered like the question; the optional link inherits the accent. */
 .dccs-root.dccs-root .dccs-q-note {
   margin: 12px auto 0; max-width: 46ch; text-align: var(--dccs-question-align, center);
-  color: var(--dccs-muted); font-size: 0.88rem; line-height: 1.4;
+  color: var(--dccs-muted); font-size: 0.88rem; line-height: 1.4; font-weight: 500;
 }
 .dccs-root.dccs-root .dccs-q-note-link { color: var(--dccs-accent); font-weight: 600; }
 
@@ -468,13 +519,8 @@
 .dccs-root.dccs-root .dccs-avail-booked { color: #a8322e; font-weight: 600; }
 .dccs-root.dccs-root .dccs-avail-link { color: var(--dccs-accent); font-weight: 700; }
 
-/* Share row above the results nav. */
-.dccs-root.dccs-root .dccs-share-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-.dccs-root.dccs-root .dccs-share {
   cursor: pointer;
 }
-.dccs-root.dccs-root .dccs-share:focus-visible { outline: 2px solid var(--dccs-accent); outline-offset: 2px; }
-.dccs-root.dccs-root .dccs-share-msg { font-size: 0.85rem; color: var(--dccs-muted); }
 
 /* Paired button rows. At 20px the labels no longer fit two-to-a-row at phone
    width, and the old `flex: 1 1 0` forced equal halves — so "Edit Answers" was
@@ -532,12 +578,19 @@
 .dccs-root.dccs-root .dccs-open-compare {
   cursor: pointer; white-space: nowrap;
 }
+/* The one button off the spec's blue. Same (0,3,0) as the skin rule and written
+   after it, so only the background changes and every other property still comes
+   from the spec — including the 50px height and the 30px radius. */
+.dccs-root.dccs-root .dccs-open-compare {
+  background: var(--dccs-btn-bg, var(--dccs-compare-red));
+}
 .dccs-root.dccs-root .dccs-open-compare[disabled] { opacity: 0.5; cursor: not-allowed; }
 /* Compare mode: the button that opens the comparison popup, centred under the checklist. */
-.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: center; }
+/* Right-aligned so it sits under the compare checkboxes it belongs to. */
+.dccs-root.dccs-root .dccs-compare-actions { margin-top: 14px; text-align: right; }
 /* On the results screen the same button sits below the cards (where the recap used to be),
    separated from the cards above and the edit/restart nav below. */
-.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; }
+.dccs-root.dccs-root .dccs-results-compare { margin: 18px 0 4px; text-align: right; }
 
 /* "What it misses" tags */
 .dccs-root.dccs-root .dccs-misses { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -633,8 +686,6 @@
 .dccs-root.dccs-root .dccs-see-matches:focus-visible,
 .dccs-root.dccs-root .dccs-reset:hover,
 .dccs-root.dccs-root .dccs-reset:focus-visible,
-.dccs-root.dccs-root .dccs-share:hover,
-.dccs-root.dccs-root .dccs-share:focus-visible,
 .dccs-root.dccs-root .dccs-open-compare:hover,
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:hover,
@@ -642,6 +693,13 @@
 .dccs-root.dccs-root a.dccs-view:hover,
 .dccs-root.dccs-root a.dccs-view:focus-visible {
   background: var(--dccs-btn-bg-hover, var(--dccs-btn-blue-hover));
+  color: var(--dccs-btn-on-blue-hover);
+}
+/* The Compare button hovers within its own red rather than to the site coral —
+   see the token block for the reasoning and the contrast numbers. */
+.dccs-root.dccs-root .dccs-open-compare:hover,
+.dccs-root.dccs-root .dccs-open-compare:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-compare-red-hover));
   color: var(--dccs-btn-on-blue-hover);
 }
 /* Not spec buttons — they keep their own surface fill, so they keep their own
@@ -724,9 +782,12 @@
 }
 /* "Add to compare" on result cards: min 44px tap area (was a 19px-tall strip —
    the smallest target in the widget, hardest for less-dexterous guests to hit). */
+/* The red from the site's sticky header menu (0.31.0). It ties the compare
+   checkboxes to the Compare button below them, which carries the same colour. */
 .dccs-root.dccs-root .dccs-cmp-toggle {
   margin-left: auto; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;
   cursor: pointer; min-height: 44px; padding: 6px 10px; border-radius: 10px;
+  color: var(--dccs-compare-red);
 }
 .dccs-root.dccs-root .dccs-cmp-toggle input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
 

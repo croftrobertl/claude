@@ -36,7 +36,7 @@
   var MAX_CASTS = 3;          // per page view, then never again
   var GAP_MIN = 45000;        // jittered so it never feels metronomic
   var GAP_MAX = 75000;
-  var DUR = 2600;             // must match the animations in selector.css
+  var DUR = 3000;             // must match --dccs-cast-dur in selector.css
 
   function reducedMotion() {
     try {
@@ -173,8 +173,20 @@
     }
     // The fish is drawn to fit the band rather than at a fixed size.
     var fishH = Math.min(12, bandH - 3);
+    var k = fishH / 12;
+
+    // THE EXIT. The fish is hauled up and away, but "up" is where the words are,
+    // so it may only rise once it is horizontally clear of them. `run` is how far
+    // right it travels; `rise` is 0 unless it gets clear early enough that the
+    // lift happens entirely past the last glyph. On a heading wide enough to leave
+    // no margin there is nowhere to rise to, and the fish simply runs and fades.
+    var fishLeftAtRest = lure.x - 20.5 * k;
+    var clearBy = Math.max(0, glyphRight - fishLeftAtRest) + 6;
+    var run = Math.min(76, Math.max(34, W - lure.x + 22));
+    var rise = (run * 0.85 >= clearBy) ? -Math.min(22, bandTop + 10) : 0;
     return { W: W, H: H, wl: wl, wr: wr, guard: guard, glyphRight: glyphRight,
              bandTop: bandTop, bandBottom: bandBottom, bandH: bandH, fishH: fishH,
+             k: k, run: run, rise: rise,
              lowRod: !highRod, lure: lure,
              rodTip: rodTip, rodButt: rodButt, c1: c1, c2: c2 };
   }
@@ -196,6 +208,33 @@
       d: 'M' + g.rodTip.x + ' ' + g.rodTip.y +
          ' C' + g.c1.x + ' ' + g.c1.y + ' ' + g.c2.x + ' ' + g.c2.y +
          ' ' + g.lure.x + ' ' + g.lure.y
+    });
+
+    // The line goes TAUT at the take, then reels in. Two things it must not be:
+    //   - actually straight. A straight rod-tip-to-lure line cuts the bottom-right
+    //     corner of the last word, because the lure sits UNDER that word. It is
+    //     drawn as the slack curve pulled 40% of the way toward straight, which
+    //     reads as tension and still routes around the glyphs.
+    //   - reeled in by scaling toward the rod tip. Scaling maps every point onto
+    //     the segment between it and the tip — and that segment is the straight
+    //     line that cuts the corner, so mid-scale frames put the line through the
+    //     word even though both endpoints are clear.
+    // It is reeled with stroke-dashoffset instead, so the geometry never moves:
+    // if the path is clear at rest it is clear at every frame. The path runs from
+    // the LURE to the rod tip so the offset retracts it from the catch end.
+    var pull = function (a, b) { return { x: a.x + (b.x - a.x) * 0.4, y: a.y + (b.y - a.y) * 0.4 }; };
+    var straight = function (f) {
+      return { x: g.lure.x + (g.rodTip.x - g.lure.x) * f, y: g.lure.y + (g.rodTip.y - g.lure.y) * f };
+    };
+    var t1 = pull(g.c2, straight(0.33));
+    var t2 = pull(g.c1, straight(0.66));
+    var taut = svgEl('path', {
+      'class': 'dccs-cast-line-taut', fill: 'none', stroke: 'currentColor',
+      'stroke-width': '1.6', 'stroke-linecap': 'round',
+      d: 'M' + g.lure.x + ' ' + g.lure.y +
+         ' C' + t1.x.toFixed(1) + ' ' + t1.y.toFixed(1) +
+         ' ' + t2.x.toFixed(1) + ' ' + t2.y.toFixed(1) +
+         ' ' + g.rodTip.x + ' ' + g.rodTip.y
     });
 
     var rod = svgEl('g', { 'class': 'dccs-cast-rod' });
@@ -227,7 +266,7 @@
     // all turn to mush at this size, which is the same failure that killed the
     // heading marks. What carries over is the PALETTE and the character — deep
     // body, big jaw, one dark lateral stripe.
-    var k = g.fishH / 12;                       // 12 is the size the path is drawn at
+    var k = g.k;                                // 12 is the size the path is drawn at
     var fx = g.lure.x, fy = Math.round(g.bandTop + g.fishH / 2) + 1;
     var X = function (d) { return (fx + d * k).toFixed(1); };
     var Y = function (d) { return (fy + d * k).toFixed(1); };
@@ -258,6 +297,7 @@
     }));
 
     svg.appendChild(line);
+    svg.appendChild(taut);
     svg.appendChild(rod);
     svg.appendChild(ripple);
     svg.appendChild(fish);
@@ -324,7 +364,24 @@
       // risk of it wearing out, and a guest who lingers should see it again.
       overlay = buildOverlay(g);
       if (g.lowRod) { overlay.classList.add('is-lowrod'); }
+      // The exit distances are geometry, not style, so they are measured here and
+      // handed to the keyframes. rise is 0 when there is nowhere safe to rise to.
+      overlay.style.setProperty('--dccs-fish-run', g.run + 'px');
+      overlay.style.setProperty('--dccs-fish-rise', g.rise + 'px');
+      overlay.style.setProperty('--dccs-rodtip-x', g.rodTip.x + 'px');
+      overlay.style.setProperty('--dccs-rodtip-y', g.rodTip.y + 'px');
       head.appendChild(overlay);
+      // The taut line's dash length is its own measured length, which needs the
+      // node in the document. A fixed guess would either fail to hide it or hide
+      // it instantly.
+      var tautEl = overlay.querySelector('.dccs-cast-line-taut');
+      if (tautEl && tautEl.getTotalLength) {
+        try {
+          var tl = Math.ceil(tautEl.getTotalLength()) + 2;
+          tautEl.style.strokeDasharray = tl;
+          overlay.style.setProperty('--dccs-taut-len', tl + 'px');
+        } catch (e) { /* no layout yet; the line simply does not retract */ }
+      }
       // Force a style resolve so the animations start from their 0% frame even
       // when the node was appended in the same frame.
       void overlay.offsetWidth;

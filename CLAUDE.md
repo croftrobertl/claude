@@ -188,8 +188,14 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `prefers-reduced-motion: reduce` `attach()` returns null and builds NO DOM. The
   overlay must never be tappable: the Seasons easter egg counts taps on the
   masthead and the hero seaplane was made unclickable for the same reason.
-  The fish is on the FIRST cast, not the last — most visitors see exactly one.
+  The fish is on EVERY cast (0.31.0 — three per page view is cap enough).
   Three casts per page view, then never; interaction stops it permanently.
+  **The ending is choreographed and its ORDER is load-bearing**: line taut, fish
+  fights, fish and lure hauled right then lifted away, line reeled in with
+  stroke-dashoffset, and the ROD WITHDRAWS LAST. It holds everything else up, so it
+  cannot leave first — 0.30.0's rod slid out of the clip a frame early and the whole
+  thing read as a glitch. dom-smoke test 73 compares the last opaque keyframe of each
+  element and fails if the rod stops outlasting the fish and both lines.
   The heading string is EDITABLE, so the geometry must survive both a short and a
   width-filling heading: the rod is clamped inside the heading block (an early
   build placed it past the right edge and with a long heading nothing drew at all).
@@ -215,7 +221,12 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
-  per-button rules. `font-family` is `inherit`, not a named stack, so it survives a
+  per-button rules. **There is exactly one agreed exception**: the Compare /
+  Compare N button is `--dccs-compare-red` (#8E1838, 8.98:1 on white) and hovers to
+  `--dccs-compare-red-hover` (#6E1029, 11.87:1), pairing it with the compare
+  checkbox label that wears the same red. It stays inside the shared skin rule so
+  only its background differs; the hover harness knows about the exception rather
+  than being silenced. `font-family` is `inherit`, not a named stack, so it survives a
   theme font change — that is deliberate, don't "fix" it.
 - **Count specificity per selector, not per file.** `.dccs-root.dccs-root button` is
   **(0,2,1)** — two classes plus an element. That beats an Elementor kit's

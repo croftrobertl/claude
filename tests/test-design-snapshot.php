@@ -354,8 +354,13 @@ namespace {
     }
     ok('the Compare button label is Title Case in the string itself',
         (\DCCS\Config::strings()['compare_btn'] ?? null) === 'Compare %d Cottages');
-    ok('the Share button label is Title Case in the string itself',
-        (\DCCS\Config::strings()['share_btn'] ?? null) === 'Share These Results');
+    // 0.31.0 removed the Share button. Its strings went with it, so the casing
+    // assertion is retired — replaced by one that keeps them gone, since a
+    // translatable string with nothing rendering it is dead weight in Loco.
+    foreach (['share_btn', 'share_done', 'share_fail'] as $k) {
+        ok("the removed share string '$k' is gone from Config",
+            !array_key_exists($k, \DCCS\Config::strings()));
+    }
 
     // ---- Heading marks are PARKED (0.29.0) -------------------------------------
     // The drawn marks were retired after four rounds: a 38px pictogram cannot carry

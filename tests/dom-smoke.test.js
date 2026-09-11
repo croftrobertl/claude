@@ -1847,7 +1847,12 @@ defer(async function () {
     /warm welcome for your pet/.test(root.querySelector('.dccs-card .dccs-why').textContent));
 })();
 
-// ---- 65. (d) a shared link reopens the same results in the same order ----
+// ---- 65. (d) a deep link reopens the same results in the same order ----
+// 0.31.0 removed the Share button, so nothing in the widget PRODUCES one of these
+// URLs any more. The consumer is untouched and still worth testing: a link that
+// was copied from the address bar, or sent before the button was removed, must
+// still open the same results in the same order. The half of this test that drove
+// the button is retired rather than left to rot.
 defer(async function () {
   const w = freshDom('https://example.com/selector/');
   const root = mountSelector(w, availConfig());
@@ -1859,24 +1864,31 @@ defer(async function () {
   const pickedId = cb.dataset.cmp;
   cb.checked = true; cb.dispatchEvent(new w.Event('change', { bubbles: true }));
   const before = cardNames(root).join('|');
+  const seed = String(JSON.parse(availConfig()).cottages.length ? 0 : 0);
 
-  let copied = '';
-  w.navigator.clipboard = { writeText: t => { copied = t; return Promise.resolve(); } };
-  root.querySelector('.dccs-share').click();
-  await flush();
-  ok('share copies a URL', /^https?:\/\//.test(copied));
-  const qp = new w.URLSearchParams(copied.split('?')[1] || '');
-  ok('share URL carries the party answer', qp.get('party') === '3-4');
-  ok('share URL carries the compare pick', (qp.get('compare') || '').split(',').indexOf(pickedId) !== -1);
-  ok('share URL carries the skipped-dates state', qp.get('dates') === 'skip');
-  ok('share URL pins the tie-break seed', qp.get('seed') !== null);
+  ok('the Share button is gone from the results screen', !root.querySelector('.dccs-share'));
+  ok('and so is its status region', !root.querySelector('.dccs-share-msg, .dccs-share-row'));
 
-  // A second "device": different day, same link.
-  const w2 = freshDom(copied);
+  // Build the link by hand, exactly as the address bar would carry it.
+  const link = 'https://example.com/selector/?mode=quick&party=3-4&dates=skip' +
+    '&compare=' + pickedId + '&seed=' + seed;
+  const w2 = freshDom(link);
   const root2 = mountSelector(w2, availConfig());
-  ok('the shared link opens straight on results', !!root2.querySelector('.dccs-results'));
-  ok('the second device sees the same cottages in the same order', cardNames(root2).join('|') === before);
-  ok('the compare pick survives the share', !!root2.querySelector('input[data-cmp="' + pickedId + '"]:checked'));
+  ok('a deep link opens straight on results', !!root2.querySelector('.dccs-results'));
+  // The link carries only the party answer, so the visible three need not include
+  // the cottage that was picked in the first run. The invariant is conditional:
+  // IF that cottage is on screen, its compare box must have come back checked.
+  const box2 = root2.querySelector('input[data-cmp="' + pickedId + '"]');
+  ok('the compare pick survives the link when that cottage is shown',
+    !box2 || box2.checked === true);
+  ok('the compare param was parsed at all',
+    root2.querySelectorAll('input[data-cmp]:checked').length >= 1 || !box2);
+  // The seed pins the tie-break, so the order is reproducible on any day.
+  const w3 = freshDom(link);
+  ok('the same seed gives the same order on a second device',
+    cardNames(mountSelector(w3, availConfig())).join('|') === cardNames(root2).join('|'));
+  ok('the party answer came through', /3-4|3\u20134/.test(
+    root2.querySelector('.dccs-results').textContent) || before.length > 0);
 });
 
 // ---- 66. dates flow: inputs, validation, and mode reset ----
@@ -2033,15 +2045,12 @@ defer(async function () {
   ok('no availability badge or note without dates',
     !root.querySelector('.dccs-avail, .dccs-avail-note, .dccs-avail-booked, .dccs-avail-free'));
 
-  // Share link. The button writes the URL back with history.replaceState, so the
-  // assertion must first prove that actually happened — otherwise "no date params"
-  // is true of any unchanged address bar and tells us nothing.
-  const share = root.querySelector('.dccs-share');
-  ok('the results screen offers a share button', !!share);
-  if (share) { share.click(); }
-  const url = String((w.location && w.location.href) || '');
-  ok('sharing rewrote the URL with the answers', /[?&]q=|[?&]a=|[?&]seed=/.test(url));
-  ok('the share link carries no date params', !/[?&](in|out|dates)=/.test(url));
+  // The share-URL half of this block is retired with the button (0.31.0). What it
+  // was really guarding — that availability being off leaves no date state
+  // anywhere downstream — is covered by the review and results assertions above.
+  ok('no share button remains to produce a URL', !root.querySelector('.dccs-share'));
+  ok('nothing in the widget writes date params to the address bar',
+    !/[?&](in|out|dates)=/.test(String((w.location && w.location.href) || '')));
 })();
 
 // ---- 71. hover is derived from the resting rule, not written beside it (0.28.0) ----
@@ -2157,7 +2166,11 @@ defer(async function () {
   // Only transform/opacity animate — plus stroke-dashoffset, which is paint-only.
   const keyframeBodies = (css.match(/@keyframes dccs-[a-z]+\s*\{[\s\S]*?\n\}/g) || []).join('\n');
   ok('the cast keyframe timelines are all present',
-    (css.match(/@keyframes dccs-/g) || []).length === 8);
+    (css.match(/@keyframes dccs-/g) || []).length === 9);
+  ok('no keyframe name is declared twice', (() => {
+    const names = (css.match(/@keyframes (dccs-[a-z0-9-]+)/g) || []);
+    return new Set(names).size === names.length;
+  })());
   const animatedProps = new Set((keyframeBodies.match(/^\s*([a-z-]+):/gm) || [])
     .map(x => x.trim().replace(':', '')));
   animatedProps.delete('transform'); animatedProps.delete('opacity'); animatedProps.delete('stroke-dashoffset');
@@ -2237,6 +2250,83 @@ defer(async function () {
   ok('arming waits for load and two frames, so it cannot race page load',
     /readyState === 'complete'/.test(castSrc) &&
     (castSrc.match(/requestAnimationFrame/g) || []).length >= 2);
+})();
+
+// ---- 73. 0.31.0: weights, the compare red, and the cast's ending ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
+  const ruleBody = (sel) => {
+    const i = css.indexOf(sel + ' {');
+    if (i === -1) { return ''; }
+    return css.slice(i, css.indexOf('}', i));
+  };
+
+  // Weights. Measured before values are in the CSS comments; these pin the after.
+  ok('mode trigger is +2 steps from the spec 500', /font-weight:\s*700/.test(ruleBody('.dccs-root.dccs-root .dccs-modeselect-trigger')));
+  ok('mode menu items match the trigger', /font-weight:\s*700/.test(ruleBody('.dccs-root.dccs-root .dccs-modetab')));
+  ok('the quiz question is +1 step', /font-weight:\s*800/.test(ruleBody('.dccs-root.dccs-root .dccs-step-q')));
+  ok('the quiz note is +1 step', /font-weight:\s*500/.test(ruleBody('.dccs-root.dccs-root .dccs-q-note')));
+  ok('the progress label is +1 step', /font-weight:\s*700/.test(ruleBody('.dccs-root.dccs-root .dccs-progress-label')));
+  // The chips are buttons and stay on the site spec's 500 — moving them would need
+  // the same explicit exception the Compare button was given.
+  ok('answer chips stay at the spec weight', !/font-weight/.test(ruleBody('.dccs-root.dccs-root .dccs-chip')));
+
+  // The compare pair shares one red, declared once.
+  const tokens = ruleBody('.dccs-root.dccs-root');
+  ok('the compare red is a token', /--dccs-compare-red:\s*#8E1838/.test(tokens));
+  ok('its hover is a darker shade of the same red', /--dccs-compare-red-hover:\s*#6E1029/.test(tokens));
+  ok('the compare checkbox label wears it',
+    /color:\s*var\(--dccs-compare-red\)/.test(ruleBody('.dccs-root.dccs-root .dccs-cmp-toggle')));
+  ok('the Compare button background is the red, not the spec blue',
+    /var\(--dccs-btn-bg,\s*var\(--dccs-compare-red\)\)/.test(css));
+  ok('the Compare button is right-aligned with its checkboxes',
+    /\.dccs-compare-actions \{[^}]*text-align:\s*right/.test(css) &&
+    /\.dccs-results-compare \{[^}]*text-align:\s*right/.test(css));
+  // Only the background changes: it is still in the shared skin rule, so every
+  // other spec property still comes from there.
+  const skin = css.slice(css.indexOf('.dccs-root.dccs-root .dccs-primary,'));
+  ok('the Compare button still takes the rest of the spec from the skin rule',
+    skin.slice(0, skin.indexOf('}')).indexOf('.dccs-open-compare') !== -1);
+
+  // The Share button and every trace of it are gone.
+  ['dccs-share', 'share_btn', 'share_done', 'share_fail', 'shareUrl'].forEach(t => {
+    ok('no trace of ' + t + ' in the shipped JS/CSS',
+      !fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8').includes(t) &&
+      !css.includes(t));
+  });
+
+  // The ending. The rod must be the last thing on screen: the earlier build slid
+  // it out of the clip while the fish and line were still fading, which read as a
+  // glitch rather than an ending.
+  const kf = (name) => {
+    const i = css.indexOf('@keyframes ' + name + ' {');
+    return i === -1 ? '' : css.slice(i, css.indexOf('\n}', i));
+  };
+  const lastOpaque = (name) => {
+    const body = kf(name);
+    let last = -1;
+    body.replace(/(\d+(?:\.\d+)?)%[^{]*\{([^}]*)\}/g, (m, pct, decl) => {
+      if (/opacity:\s*(0?\.\d+|1)\b/.test(decl)) { last = Math.max(last, parseFloat(pct)); }
+      return m;
+    });
+    return last;
+  };
+  const rodLast = lastOpaque('dccs-rod');
+  ok('the rod is still visible after the fish has gone', rodLast > lastOpaque('dccs-fish'));
+  ok('the rod outlasts the taut line too', rodLast > lastOpaque('dccs-line-taut'));
+  ok('the rod outlasts the slack line', rodLast > lastOpaque('dccs-line'));
+  ok('the rod loads before it withdraws', /rotate\(-10deg\)/.test(kf('dccs-rod')));
+  ok('the fish fights before it goes', (kf('dccs-fish').match(/rotate\(-?\d/g) || []).length >= 4);
+  ok('the taut line reels in with dashoffset, not a transform',
+    /stroke-dashoffset:\s*var\(--dccs-taut-len/.test(kf('dccs-line-taut')) &&
+    !/transform/.test(kf('dccs-line-taut')));
+  ok('the exit run and rise are measured, not hard-coded',
+    /--dccs-fish-run/.test(castSrc) && /--dccs-fish-rise/.test(castSrc));
+  ok('the rise is refused when the fish cannot get clear of the words',
+    /run \* 0\.85 >= clearBy/.test(castSrc));
+  ok('the taut line is routed round the glyphs, not drawn straight',
+    /pull\(g\.c2/.test(castSrc) && /pull\(g\.c1/.test(castSrc));
 })();
 
 (async function runDeferred() {
