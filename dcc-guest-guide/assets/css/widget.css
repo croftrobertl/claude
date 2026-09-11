@@ -385,6 +385,10 @@
        links, focus rings and accents. Theme presets below override both. */
     --dccgg-btn-bg: #006bcf;
     --dccgg-btn-txt: #ffffff;
+    /* v0.15.0: the site's standard button hover, applied to every button on
+       the 0.14.0 spec. Presets below may override, as with the resting fill. */
+    --dccgg-btn-hover-bg: #f08080;
+    --dccgg-btn-hover-txt: #ffffff;
 
     --dccgg-glass-blur: 10px;
 
@@ -1861,6 +1865,47 @@ dialog.dccgg-wrapper::backdrop {
    two-button row ("Show" beside "Copy") still fits a 375px popup without the
    row breaking. Height, family, size, weight, tracking and colour are
    untouched — only the horizontal padding moves. */
+/* ---- v0.15.0: the site's standard button hover ----
+   Every blue button on the site hovers to #F08080 with #FFFFFF text.
+
+   The selector is DERIVED from the resting rule above, not copied from
+   anywhere: same three hosts, same doubled :is(), plus the pseudo-class.
+   That makes it (0,5,0) against the resting (0,4,0), so the fill is
+   replaced rather than silently losing to it — the failure mode here is
+   invisible, because a hover that never applies looks like no CSS at all.
+   It also clears the two per-control hovers further down the file
+   (.dccgg-review-yes / .dccgg-review-platform, both (0,4,0)).
+
+   filter is reset because the old hover was a brightness(1.1) lift; left
+   alone it would tint the coral instead of showing it. transform is NOT
+   touched — the press/hover nudge is the host's, and stays.
+
+   Contrast is 2.59:1 for white on #F08080. That is the host's deliberate
+   site-wide choice, so focus-visible below does not depend on the fill: it
+   adds a ring separated from the button by the surface behind it. */
+@media (hover: hover) {
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover {
+        background: var(--dccgg-btn-hover-bg, #f08080);
+        color: var(--dccgg-btn-hover-txt, #ffffff);
+        filter: none;
+        opacity: 1;
+    }
+}
+/* Deliberately OUTSIDE the hover media query: a keyboard user on a touch
+   device still needs to see focus. The ring is dark and offset, so it reads
+   on the resting blue and on the coral alike. */
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible {
+    background: var(--dccgg-btn-hover-bg, #f08080);
+    color: var(--dccgg-btn-hover-txt, #ffffff);
+    filter: none;
+    outline: 3px solid var(--dccgg-text, #111111);
+    outline-offset: 2px;
+}
+
 @media (max-width: 420px) {
     .dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
     .dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
@@ -2906,6 +2951,27 @@ dialog.dccgg-wrapper::backdrop {
     border-radius: 6px;
     font: inherit;
     width: 100%;
+}
+/* v0.15.0: `font: inherit` above is the right intent and was simply losing.
+   The popover opens inside the portaled stage, which has no .dccgg-root
+   ancestor, so nothing in this file was re-asserting it there and the
+   Elementor kit's button rule (0,1,1) took the items to 18px/900/1.5px/
+   capitalize — heavier than the "User Manuals" label that opens them, and
+   enough to wrap "Report a problem" onto two lines at 375px.
+
+   Re-assert the same intent at (0,4,0) on the two hosts a popover can live
+   under. `font: inherit` carries family, size, weight and line-height from
+   the popover, so the menu matches its own summary by construction rather
+   than by a number repeated in two places. letter-spacing and text-transform
+   are not part of the font shorthand, so they are reset explicitly.
+
+   Nothing else moves: colour, radius, padding, gap, width and the hover
+   tint are all as the host approved them in 0.14.0. */
+.dccgg-root.dccgg-root .dccgg-more-item.dccgg-more-item,
+.dccgg-stage.dccgg-stage .dccgg-more-item.dccgg-more-item {
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
 }
 @media (hover: hover) {
     .dccgg-more-item:hover,

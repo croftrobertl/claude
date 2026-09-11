@@ -1160,6 +1160,169 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario P: standard hover + the More menu's own type (v0.15.0) --
+    {
+        console.log('\nP. Buttons hover to the site standard; the More menu reads as one object');
+        const errors = [];
+        const KIT = `
+            body{font-family:Raleway,-apple-system,"system-ui","Segoe UI",Arial,sans-serif;
+                 font-size:16px;color:#333;margin:0}
+            .site .content .entry button{text-transform:uppercase;background:#444;color:#fff}
+            .elementor-kit-5 button{font-family:Raleway,sans-serif;font-size:18px;font-weight:900;
+                 letter-spacing:1.5px;text-transform:capitalize}`;
+        const htmlP = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style><style>${KIT}</style></head>
+            <body class="site elementor-kit-5"><div class="content"><div class="entry">
+            <div class="dccgg-root" data-config='${JSON.stringify({ revealMode: 'stage', enableSectionNav: true, strings: {} }).replace(/'/g, '&#39;')}'>
+            <div class="dccgg-wrapper"><div class="dccgg-stage-container">
+            <div class="dccgg-menu"><div class="dccgg-tile-wrap" data-section-key="amenities">
+            <button class="dccgg-tile" data-key="amenities">Amenities</button></div></div>
+            <div class="dccgg-stage"><div class="dccgg-detail" data-key="amenities" hidden>
+            <span class="dccgg-shrink-sentinel"></span>
+            <div class="dccgg-detail-header"><div class="dccgg-detail-header-titlebar">
+            <span class="dccgg-detail-titlebar-spacer"></span>
+            <h2 class="dccgg-detail-title"><span class="dccgg-detail-title-text">Amenities</span></h2>
+            <details class="dccgg-more"><summary class="dccgg-more-summary--text">
+            <span class="dccgg-more-summary-text">User Manuals</span></summary>
+            <div class="dccgg-more-popover" role="menu">
+            <button type="button" class="dccgg-more-item">Print guide</button>
+            <button type="button" class="dccgg-more-item">Save as PDF</button>
+            <button type="button" class="dccgg-more-item">Report a problem</button>
+            </div></details></div>
+            <div class="dccgg-detail-header-actions">
+            <button type="button" class="dccgg-btn dccgg-back">Back</button>
+            <button type="button" class="dccgg-checklist-reset" data-section-key="amenities">Reset</button></div></div>
+            <div class="dccgg-detail-layout"><div class="dccgg-detail-items"><article class="dccgg-item">
+            <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Boat lift</span></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Body.</p></div></div>
+            <div class="dccgg-item-utils">
+            <button type="button" class="dccgg-btn dccgg-copy" data-copy="x">Copy</button>
+            <a class="dccgg-btn dccgg-map" href="#">View in Maps</a>
+            <button type="button" class="dccgg-review-yes">Click to Review</button>
+            <button type="button" class="dccgg-review-platform">Copy &amp; open Google</button></div>
+            </article></div></div></div></div></div>
+            <div class="dccgg-detail-overlay" hidden></div></div></div>
+            </div></div><script>${JS}</script></body></html>`;
+
+        // -- Hover, driven by a real pointer. A hover that loses to the
+        // resting fill is invisible in the CSS, so this is measured, never
+        // reasoned about: the resting rule is (0,4,0) and the hover adds a
+        // pseudo-class to that same selector to reach (0,5,0).
+        {
+            const { ctx, page } = await newPage(browser, DESKTOP, htmlP, errors);
+            await page.click('.dccgg-tile[data-key="amenities"]');
+            await page.waitForTimeout(450);
+            const read = (el) => { const c = getComputedStyle(el);
+                return { bg: c.backgroundColor, color: c.color, filter: c.filter }; };
+            const sels = ['.dccgg-back', '.dccgg-checklist-reset', '.dccgg-copy',
+                          '.dccgg-map', '.dccgg-review-yes', '.dccgg-review-platform'];
+            const seen = [];
+            for (const sel of sels) {
+                const el = await page.$(sel);
+                if (!el) continue;
+                await el.hover();
+                await page.waitForTimeout(240);
+                seen.push({ sel, ...await page.evaluate((e) => {
+                    const c = getComputedStyle(e);
+                    return { bg: c.backgroundColor, color: c.color, filter: c.filter };
+                }, el) });
+                await page.mouse.move(2, 2);
+                await page.waitForTimeout(140);
+            }
+            const off = seen.filter((h) => h.bg !== 'rgb(240, 128, 128)'
+                || h.color !== 'rgb(255, 255, 255)' || h.filter !== 'none');
+            check(`every spec button hovers to #F08080 on white (${seen.length} measured)`,
+                seen.length === sels.length && off.length === 0,
+                off.map((h) => `${h.sel}=${h.bg}/${h.color}/${h.filter}`).join(' '));
+
+            // (d) focus must not rely on the fill — the hover fill and the
+            // focus fill are the same colour, so a ring is what distinguishes
+            // a focused button from a hovered one.
+            await page.keyboard.press('Tab');
+            const foc = await page.evaluate(() => {
+                const el = document.querySelector('.dccgg-back');
+                el.focus();
+                const c = getComputedStyle(el);
+                return { w: c.outlineWidth, style: c.outlineStyle, color: c.outlineColor,
+                         offset: c.outlineOffset, isFv: el.matches(':focus-visible') };
+            });
+            check('focus-visible draws a ring that does not depend on the fill',
+                foc.isFv && foc.style !== 'none' && parseFloat(foc.w) >= 2
+                && parseFloat(foc.offset) > 0,
+                `${foc.w} ${foc.style} ${foc.color} offset ${foc.offset}`);
+            await ctx.close();
+        }
+
+        // -- The More menu: items take the dropdown's own type, and the
+        // dropdown's chrome does not move. The host is mirroring this control
+        // in a widget of their own, so the summary and popover box are fixed.
+        for (const [vpName, vp] of [['desktop', DESKTOP], ['phone', PHONE]]) {
+            const { ctx, page } = await newPage(browser, vp, htmlP, errors);
+            await page.click('.dccgg-tile[data-key="amenities"]');
+            await page.waitForTimeout(450);
+            await page.click('.dccgg-more > summary');
+            await page.mouse.move(4, 4);
+            await page.waitForTimeout(700);
+            const m = await page.evaluate(() => {
+                const g = (el) => getComputedStyle(el);
+                const sum = document.querySelector('.dccgg-more > summary');
+                const pop = document.querySelector('.dccgg-more-popover');
+                const cs = g(sum), cp = g(pop);
+                return {
+                    summary: { size: cs.fontSize, weight: cs.fontWeight, ls: cs.letterSpacing,
+                               tt: cs.textTransform, bg: cs.backgroundColor, color: cs.color,
+                               radius: cs.borderRadius, padding: cs.padding,
+                               border: cs.borderTopWidth + ' ' + cs.borderTopStyle },
+                    popover: { bg: cp.backgroundColor, radius: cp.borderRadius, padding: cp.padding,
+                               shadow: cp.boxShadow, minWidth: cp.minWidth, gap: cp.rowGap },
+                    items: [...document.querySelectorAll('.dccgg-more-item')].map((el) => {
+                        const c = g(el), r = el.getBoundingClientRect();
+                        return { label: el.textContent.trim(), size: c.fontSize, weight: c.fontWeight,
+                                 ls: c.letterSpacing, tt: c.textTransform, color: c.color,
+                                 radius: c.borderRadius, padding: c.padding,
+                                 family: c.fontFamily, lines: (() => {
+                                     const rg = document.createRange();
+                                     rg.selectNodeContents(el);
+                                     return rg.getClientRects().length || 1;
+                                 })(), h: Math.round(r.height) };
+                    }),
+                };
+            });
+            check(`${vpName}: menu items take the dropdown's own type`,
+                m.items.length === 3 && m.items.every((i) => i.size === '16px' && i.weight === '400'
+                    && i.ls === 'normal' && i.tt === 'none'),
+                m.items.map((i) => `${i.label}=${i.size}/${i.weight}/${i.ls}/${i.tt}`).join(' '));
+            check(`${vpName}: items match the summary that opens them`,
+                m.items.every((i) => i.size === m.summary.size && i.weight === m.summary.weight
+                    && i.ls === m.summary.ls && i.tt === m.summary.tt));
+            check(`${vpName}: no menu item wraps to a second line`,
+                m.items.every((i) => i.lines === 1)
+                && new Set(m.items.map((i) => i.h)).size === 1,
+                m.items.map((i) => `${i.label}=${i.lines} line(s) ${i.h}px`).join(' '));
+            check(`${vpName}: item colour, radius and padding are untouched`,
+                m.items.every((i) => i.color === 'rgb(17, 17, 17)' && i.radius === '6px'
+                    && i.padding === '8px 10px'),
+                m.items.map((i) => `${i.color}/${i.radius}/${i.padding}`).join(' '));
+            // The summary is NOT on the button spec — it must not have been
+            // swept up by the button or hover rules.
+            check(`${vpName}: the dropdown summary is unchanged`,
+                m.summary.size === '16px' && m.summary.weight === '400'
+                && m.summary.ls === 'normal' && m.summary.radius === '6px'
+                && m.summary.padding === '6px 12px' && m.summary.border === '1px solid'
+                && m.summary.bg === 'rgb(15, 109, 191)' && m.summary.color === 'rgb(255, 255, 255)',
+                JSON.stringify(m.summary));
+            check(`${vpName}: the popover box is unchanged`,
+                m.popover.bg === 'rgb(255, 255, 255)' && m.popover.radius === '10px'
+                && m.popover.padding === '6px' && m.popover.minWidth === '180px'
+                && m.popover.gap === '2px' && m.popover.shadow !== 'none',
+                JSON.stringify(m.popover));
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

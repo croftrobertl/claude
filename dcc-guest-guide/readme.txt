@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.14.0
+Stable tag: 0.15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,24 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.15.0 =
+
+**Changed: buttons hover to the site's standard coral.**
+
+Every button brought onto the reference spec in 0.14.0 now hovers to
+#F08080 with white text, matching the rest of the site. The old hover was a
+slight brightening of the blue. Keyboard focus draws a dark ring offset from
+the button, so a focused button is still distinguishable from a hovered one.
+
+**Fixed: the More menu's items were heavier than the button that opens them.**
+
+"Print guide", "Save as PDF" and "Report a problem" were picking up the
+theme's button styling — 18px, weight 900, capitalised — which made them
+heavier than the menu's own label and wrapped "Report a problem" onto two
+lines on a phone. They now use the same 16px regular text as the button that
+opens them, so the menu reads as one object. Nothing else about the menu
+changed: same colour, spacing, corners, shadow and hover tint.
 
 = 0.14.0 =
 
