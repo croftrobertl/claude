@@ -200,6 +200,20 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   were REFACTORED onto the spec rather than overridden by a blanket rule — a blanket
   rule at (0,2,1) would have been silently inert wherever a class rule already set
   the property.
+- **Hover selectors are DERIVED from the resting rule's selector list**, each with
+  `:hover` and `:focus-visible` appended — never written as a parallel list. A
+  pseudo-class adds exactly one class point, so a derived hover always out-qualifies
+  its own resting rule; a hand-written one can lose, and then nothing applies and
+  nothing in the CSS looks wrong. dom-smoke test 71 fails if the two lists drift.
+  Hover is `--dccs-btn-blue-hover` (#F08080 on #FFFFFF). That is 2.59:1, chosen
+  deliberately site-wide — do NOT darken it to satisfy a contrast checker, and do
+  not add `opacity` to the hover, which would lighten it further. Keyboard focus
+  keeps a 2px outline so focus is never signalled by fill alone.
+- **Removing an Elementor control neutralises its saved values.** Elementor only
+  generates CSS for controls a widget still registers, so dropping a control is
+  sufficient — the stored values stay in the database and nothing reads them. This
+  is why 0.27.0 removing `style_comparebtn_*` fixed the live widget with no panel
+  edit (confirmed on live, 0.28.0).
 - **Per-button Style sections outrank the spec.** They emit
   `{{WRAPPER}} .dccs-root.dccs-root .<class>` = (0,4,0). Anything preset there pins
   that button off the spec while everything else appears to comply — which is what

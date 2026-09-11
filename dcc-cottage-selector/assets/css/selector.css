@@ -49,6 +49,13 @@
   --dccs-btn-pad-x: 24px;
   --dccs-btn-blue: #006BCF;
   --dccs-btn-on-blue: #FFFFFF;
+  /* Hover, site-wide (0.28.0). White on #F08080 is 2.59:1 — below the 4.5:1 text
+     threshold, chosen deliberately and measured site-side. Do NOT substitute a
+     darker coral to "fix" the ratio; it is the site's hover colour. The resting
+     state is 4.9:1, and keyboard focus keeps a 2px outline that does not depend
+     on the fill, so the button is never identified by this colour alone. */
+  --dccs-btn-blue-hover: #F08080;
+  --dccs-btn-on-blue-hover: #FFFFFF;
   --dccs-btn-motion: background-color 0.15s, opacity 0.15s;
 
   box-sizing: border-box;
@@ -102,10 +109,6 @@
 .dccs-root.dccs-root .dccs-landing-choice {
   display: flex; align-items: center; justify-content: center; gap: 0.5em; width: 100%;
   cursor: pointer;
-}
-.dccs-root.dccs-root .dccs-landing-choice:hover,
-.dccs-root.dccs-root .dccs-landing-choice:focus-visible {
-  background: var(--dccs-btn-bg-hover, var(--dccs-accent));
 }
 
 /* Match-count pill + chips */
@@ -276,9 +279,18 @@
 .dccs-root.dccs-root .dccs-modeselect-trigger:focus-visible,
 .dccs-root.dccs-root .dccs-modetab:focus-visible,
 .dccs-root.dccs-root .dccs-landing-choice:focus-visible,
-.dccs-root.dccs-root .dccs-matrix-nav button:focus-visible,
-.dccs-modal .dccs-modal-close:focus-visible {
+.dccs-root.dccs-root .dccs-matrix-nav button:focus-visible {
   outline: 2px solid var(--dccs-accent); outline-offset: 2px;
+}
+/* The modal close button was in the list above and got NO focus ring at all:
+   --dccs-accent is declared on .dccs-root and this button is outside it, so
+   `outline: 2px solid var(--dccs-accent)` resolved to an invalid value and the
+   whole declaration was dropped. Measured, not inferred — computed outline was
+   `0px none`. It needs the ring more than most now that focus also turns it
+   coral: white on #F08080 is 2.59:1, so the ring is what makes focus perceivable
+   without relying on the fill. */
+.dccs-modal.dccs-modal .dccs-modal-close:focus-visible {
+  outline: 2px solid var(--dccs-accent, #1a2330); outline-offset: 2px;
 }
 
 /* Informational note under specific wizard questions (capacity, pet policy).
@@ -453,28 +465,43 @@
   background: var(--dccs-accent); color: var(--dccs-accent-text);
 }
 
-/* "Button background (hover)" override for every button + menu trigger. When unset it
-   falls through to the normal button background, so the baked look is unchanged; a set
-   value recolors all of them. Per-button Style sections (View cottage, Edit answers)
-   carry the {{WRAPPER}} prefix and still win. Grouped by baked normal background. */
+/* HOVER FOR THE SPEC BUTTONS (0.28.0).
+   The selector list below is the resting skin rule's list, verbatim, with
+   :hover/:focus-visible appended to each — derived from it, not written beside
+   it. That is what guarantees it out-qualifies its own resting rule: every
+   selector gains exactly one class point (.dccs-primary (0,3,0) -> (0,4,0);
+   a.dccs-view (0,3,1) -> (0,4,1)). A hover rule that merely looks parallel can
+   lose to its resting rule and then nothing applies and nothing looks wrong —
+   so if you add a button to the resting list, add it here in the same edit.
+
+   Three separate hover rules used to live here, grouped by whatever the baked
+   resting background happened to be BEFORE the spec. That grouping stopped being
+   true in 0.27.0: the .dccs-open-compare group still fell through to
+   --dccs-surface, so Compare hovered to WHITE while its text stayed white. One
+   rule fed by one token is why that class of drift cannot recur.
+
+   The "Button background (hover)" control still wins over the token when set. */
 .dccs-root.dccs-root .dccs-primary:hover,
 .dccs-root.dccs-root .dccs-primary:focus-visible,
-.dccs-root.dccs-root .dccs-reset:hover,
-.dccs-root.dccs-root .dccs-reset:focus-visible,
+.dccs-root.dccs-root .dccs-edit-answers:hover,
+.dccs-root.dccs-root .dccs-edit-answers:focus-visible,
 .dccs-root.dccs-root .dccs-see-matches:hover,
 .dccs-root.dccs-root .dccs-see-matches:focus-visible,
-.dccs-root.dccs-root .dccs-edit-answers:hover,
-.dccs-root.dccs-root .dccs-edit-answers:focus-visible {
-  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue))));
-  opacity: 0.9;
-}
-.dccs-root.dccs-root .dccs-view:hover,
-.dccs-root.dccs-root .dccs-view:focus-visible {
-  background: var(--dccs-btn-bg-hover, var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue))));
-  opacity: 0.9;
-}
+.dccs-root.dccs-root .dccs-reset:hover,
+.dccs-root.dccs-root .dccs-reset:focus-visible,
+.dccs-root.dccs-root .dccs-share:hover,
+.dccs-root.dccs-root .dccs-share:focus-visible,
 .dccs-root.dccs-root .dccs-open-compare:hover,
 .dccs-root.dccs-root .dccs-open-compare:focus-visible,
+.dccs-root.dccs-root .dccs-landing-choice:hover,
+.dccs-root.dccs-root .dccs-landing-choice:focus-visible,
+.dccs-root.dccs-root a.dccs-view:hover,
+.dccs-root.dccs-root a.dccs-view:focus-visible {
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-blue-hover));
+  color: var(--dccs-btn-on-blue-hover);
+}
+/* Not spec buttons — they keep their own surface fill, so they keep their own
+   hover. (The mode trigger and the review-row Edit are outline-style controls.) */
 .dccs-root.dccs-root .dccs-edit:hover,
 .dccs-root.dccs-root .dccs-edit:focus-visible,
 .dccs-root.dccs-root .dccs-modeselect-trigger:hover,
@@ -631,6 +658,15 @@
   font-weight: var(--dccs-btn-weight, 500); letter-spacing: normal; text-transform: none;
   cursor: pointer;
   -webkit-appearance: none; appearance: none; box-shadow: none; -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+/* Same hover as every other button. Resting is (0,3,0), this is (0,4,0), so it
+   out-qualifies it. The literal fallbacks are mandatory, not belt-and-braces:
+   --dccs-btn-blue-hover is declared on .dccs-root and does not exist out here. */
+.dccs-modal.dccs-modal .dccs-modal-close:hover,
+.dccs-modal.dccs-modal .dccs-modal-close:focus-visible {
+  background: var(--dccs-btn-blue-hover, #F08080);
+  color: var(--dccs-btn-on-blue-hover, #FFFFFF);
 }
 .dccs-modal-content .dccs-compare-modal { padding: 4px; }
 .dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }

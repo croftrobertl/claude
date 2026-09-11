@@ -2039,6 +2039,74 @@ defer(async function () {
   ok('the share link carries no date params', !/[?&](in|out|dates)=/.test(url));
 })();
 
+// ---- 71. hover is derived from the resting rule, not written beside it (0.28.0) ----
+// The trap: a hover rule that does not out-qualify its own resting rule never
+// applies, and nothing in the CSS looks wrong. The guard is structural — every
+// selector in the resting skin rule must appear in the hover rule with BOTH
+// :hover and :focus-visible — so adding a button to one list and forgetting the
+// other fails here instead of shipping a button that never changes on hover.
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  // Anchor on the DECLARATION, not on the first selector: several blocks begin
+  // with `.dccs-primary:hover` (the reduced-motion block, for one), and matching
+  // the wrong one made this assertion report nonsense.
+  const selectorsOfRuleWith = (decl) => {
+    const d = css.indexOf(decl);
+    if (d === -1) { return []; }
+    const open = css.lastIndexOf('{', d);
+    // The selector list runs back to the end of the previous rule or comment.
+    const brace = css.lastIndexOf('}', open);
+    const cmt = css.lastIndexOf('*/', open);
+    // '*/' is two characters; slicing from +1 leaves a stray '/' in the list.
+    const start = cmt > brace ? cmt + 2 : brace + 1;
+    return css.slice(start, open).split(',').map(x => x.trim()).filter(Boolean);
+  };
+  const resting = selectorsOfRuleWith('background: var(--dccs-btn-bg, var(--dccs-action, var(--dccs-btn-blue)));');
+  const hover = selectorsOfRuleWith('background: var(--dccs-btn-bg-hover, var(--dccs-btn-blue-hover));');
+  ok('the resting skin rule lists several buttons', resting.length >= 7);
+  ok('the hover rule covers both states for each', hover.length === resting.length * 2);
+  let missing = [];
+  resting.forEach(sel => {
+    if (hover.indexOf(sel + ':hover') === -1) { missing.push(sel + ':hover'); }
+    if (hover.indexOf(sel + ':focus-visible') === -1) { missing.push(sel + ':focus-visible'); }
+  });
+  ok('every resting selector has a :hover and a :focus-visible twin' +
+     (missing.length ? ' (missing ' + missing.join(', ') + ')' : ''), missing.length === 0);
+
+  // Appending a pseudo-class adds exactly one class point, so the hover rule
+  // always out-qualifies the resting one. Assert the shape that guarantees it
+  // rather than the arithmetic: each hover selector is a resting selector + one.
+  ok('each hover selector is its resting selector plus a pseudo-class',
+    hover.every(h => resting.indexOf(h.replace(/:(hover|focus-visible)$/, '')) !== -1));
+
+  const tokens = css.slice(css.indexOf('.dccs-root.dccs-root {'), css.indexOf('}', css.indexOf('.dccs-root.dccs-root {')));
+  ok('hover token is the site coral', /--dccs-btn-blue-hover:\s*#F08080/.test(tokens));
+  ok('hover text token is white', /--dccs-btn-on-blue-hover:\s*#FFFFFF/.test(tokens));
+  ok('the hover rule is fed by the tokens, not a literal',
+    /background:\s*var\(--dccs-btn-bg-hover,\s*var\(--dccs-btn-blue-hover\)\)/.test(css));
+  // The 0.27.0 leftover: a hover falling through to --dccs-surface on a button
+  // whose resting state is now blue turned Compare white-on-white.
+  ok('no spec button hovers to the surface colour',
+    !/\.dccs-open-compare:hover[\s\S]{0,400}?var\(--dccs-surface\)/.test(css));
+
+  // Outside .dccs-root the tokens do not exist, so every var() needs a literal.
+  const closeHover = css.slice(css.indexOf('.dccs-modal.dccs-modal .dccs-modal-close:hover'));
+  ok('modal close hover carries literal fallbacks',
+    /var\(--dccs-btn-blue-hover,\s*#F08080\)/.test(closeHover) &&
+    /var\(--dccs-btn-on-blue-hover,\s*#FFFFFF\)/.test(closeHover));
+  ok('modal close has a focus ring with a literal fallback',
+    /\.dccs-modal\.dccs-modal \.dccs-modal-close:focus-visible \{[^}]*outline:\s*2px solid var\(--dccs-accent,\s*#[0-9a-fA-F]{6}\)/.test(css));
+  ok('the modal close is no longer in the root-scoped focus-ring list, which never applied to it',
+    !/\.dccs-modal \.dccs-modal-close:focus-visible,/.test(css));
+  // Focus must not be signalled by fill alone: white on #F08080 is 2.59:1.
+  ok('focus keeps an outline independent of the fill',
+    /:focus-visible[^{]*\{[^}]*outline:\s*2px solid/.test(css));
+  ok('hover does not dim the fill (opacity would worsen a deliberate 2.59:1)',
+    !/--dccs-btn-blue-hover\)\);\s*\n?\s*opacity:/.test(css));
+  ok('no !important anywhere in the button spec or its hover',
+    !/dccs-btn-(blue-hover|on-blue-hover)[^;]*!important/.test(css));
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

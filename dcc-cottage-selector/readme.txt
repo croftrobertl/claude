@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.0
+Stable tag: 0.28.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -229,6 +229,27 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.28.0 =
+* Every spec button hovers to #F08080 with #FFFFFF text, matching the site: Next,
+  Back, Submit, Edit Answers, Restart, Share These Results, Compare / Compare N,
+  the landing mode choices, the cottage CTA and the modal close. Measured by
+  hovering each one and reading computed style, not inferred from the source.
+* The hover selector list is DERIVED from the resting rule's list — each selector
+  plus :hover / :focus-visible — so it always out-qualifies its own resting rule by
+  exactly one class point. A test now fails if the two lists drift apart, because a
+  hover rule that loses to its resting rule silently never applies.
+* Fixed a 0.27.0 regression this surfaced: the Compare button's hover still fell
+  through to --dccs-surface from before the spec, so it hovered to WHITE while its
+  text stayed white. Three hover rules grouped by pre-spec backgrounds are now one
+  rule fed by one token.
+* Fixed: the modal close button had no keyboard focus ring at all. Its focus rule
+  used var(--dccs-accent), which does not exist outside .dccs-root, so the whole
+  outline declaration was invalid. It now carries a literal fallback — which
+  matters because focus also turns it coral, and white on #F08080 is 2.59:1.
+* Resting appearance is unchanged from 0.27.0, verified button by button.
+* Hover no longer dims the fill; the 0.27.0 opacity would have lightened a
+  deliberately chosen colour.
 
 = 0.27.0 =
 * Every button in the widget is on the site button spec: 20px / 500 / 50px line
