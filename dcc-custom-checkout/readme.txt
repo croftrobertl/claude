@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,27 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.8.1 =
+* Buttons now hover to the site standard #F08080 with #FFFFFF text. 0.8.0 used
+  this plugin's older darker blue because the spec transitioned
+  background-color without saying to what; the standard has since been settled.
+  --dcc-blue-hover stays defined, since other rules use it.
+* The hover selectors are the resting selectors with :hover appended, so each
+  is (0,4,2) against the resting (0,3,2). A hover rule that loses to its own
+  resting rule fails silently and still reads correctly in the file, so this is
+  now measured rather than assumed.
+* White on #F08080 is 2.59:1, below WCAG AA. The owner has chosen it knowingly.
+  Focus stays a gold outline and never depends on the fill, so a keyboard user
+  can still see where they are.
+* NEW: tests/button/ — measures COMPUTED styles in real Chromium, rendering the
+  button in isolation with the competing theme and Elementor-kit rules
+  reproduced and loaded first. /submit-booking/ only renders with a live
+  reservation, so this is how the button gets verified without making a booking
+  on a live site. It caught a false failure on its first run (reading the hover
+  colour mid-transition) and now waits for the transition to settle.
+* Resting appearance is unchanged from 0.8.0, and the tax asterisk is still
+  excluded — both asserted.
 
 = 0.8.0 =
 * Buttons follow the site button spec — the "Send Message" button at /contact/,

@@ -5,3 +5,4 @@ Custom Checkout *.zip
 
 # Test dependencies (installed locally, never committed)
 node_modules/
+

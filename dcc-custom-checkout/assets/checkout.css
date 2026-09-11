@@ -14,7 +14,14 @@
 .mphb_sc_checkout-form {
     --dcc-gold: #f4da62;
     --dcc-blue: #006bcf;
+    /* Kept: other rules still reference it. It is NO LONGER the button hover —
+       the site standard is coral, below. */
     --dcc-blue-hover: #0059ac;
+    /* Site standard button hover (v0.8.1): every blue button goes coral.
+       White on #f08080 is 2.59:1, below WCAG AA. The owner has chosen it
+       knowingly, so the focus treatment below must not depend on the fill. */
+    --dcc-button-hover-bg: #f08080;
+    --dcc-button-hover-fg: #ffffff;
     --dcc-label: #000000;
     --dcc-required: #c62828;
     --dcc-muted: #6b7280;
@@ -151,15 +158,23 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form .button:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button:hover {
-    /* The reference transitions background-color, so it changes on hover; it
-       does not state to what. Uses this plugin's existing darker blue. */
-    background-color: var(--dcc-blue-hover);
-    color: #ffffff;
+    /* The site standard, settled after 0.8.0 shipped: every blue button hovers
+       to coral. Not the darker blue this plugin guessed at when the spec was
+       silent.
+       These selectors are the resting ones with :hover appended, so each is
+       (0,4,2) against the resting (0,3,2) — a hover rule that loses to its own
+       resting rule fails silently and still looks correct in the file, so it
+       is derived from the resting selector rather than written fresh. */
+    background-color: var(--dcc-button-hover-bg);
+    color: var(--dcc-button-hover-fg);
 }
 
 form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):focus-visible,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:focus-visible,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
+    /* An outline, deliberately not a fill change: white on the coral hover is
+       2.59:1, so focus must be legible without depending on colour contrast
+       between text and background. */
     outline: 3px solid var(--dcc-gold);
     outline-offset: 2px;
 }

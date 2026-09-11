@@ -163,6 +163,17 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   18px/900/1.5px/capitalize (0,1,1), and the doubled `form.mphb_sc_checkout-form`
   class reaches (0,3,1)-(0,3,2), which wins outright. Keep it that way — a
   later deliberate override should still be able to win.
+- **Blue buttons hover to coral** `#F08080` with `#FFFFFF` text (site standard,
+  v0.8.1) — not the older `--dcc-blue-hover`, which is kept only because other
+  rules use it. White on `#F08080` is 2.59:1, below WCAG AA; the owner has
+  chosen it knowingly, so the focus treatment must stay an outline and never
+  depend on the fill. Any hover selector must be **the resting selector with
+  `:hover` appended** — a hover rule that loses to its own resting rule fails
+  silently and still looks right in the file.
+- Button appearance is measured in real Chromium at `tests/button/`
+  (`npm install && npm test`). It renders the button in isolation, because
+  `/submit-booking/` only exists with a live reservation. Run it after touching
+  any button rule.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the
