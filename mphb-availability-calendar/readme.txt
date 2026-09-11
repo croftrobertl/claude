@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.0
+Stable tag: 0.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.25.0 =
+* **Fixed: the Filter Fields font weight setting did nothing on the live site.** Setting it to 300 in Elementor showed correctly in the editor but rendered bold on the page. The plugin's own stylesheet was resetting the whole font on those inputs, which quietly discarded the weight — and because the editor loads stylesheets in a different order, the preview looked right the whole time.
+* **The same fault was found and fixed on the "View Cottage Page" button**, which had not been reported yet. Its typography settings were being discarded the same way.
+* Everything else about the fields is unchanged: padding, border, corners, background, colour, sizing and the line-height fix that keeps the date text from collapsing.
+* A note has been added in the stylesheet so this cannot be reintroduced, and every one of the ten typography settings the panel offers is now covered by a test that loads the stylesheets in the real page order.
 
 = 0.24.0 =
 * **The cottage column now reads as overlapping scales** — each cottage sits on a rounded tile that tucks under the one above, in the same two greys. A new "Cottage column style" setting switches back to plain dividing lines in one click if you prefer them.

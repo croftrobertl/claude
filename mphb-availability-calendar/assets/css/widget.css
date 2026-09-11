@@ -142,6 +142,17 @@
     }
 }
 
+/* NEVER put a `font:` SHORTHAND on an element that has an Elementor
+   typography control. The shorthand resets EVERY font longhand it does not
+   name — family, size, style, variant, weight AND line-height — to the value
+   given, so `font: inherit` silently discards whatever the panel emitted for
+   the properties you were not thinking about. The panel's rule and this
+   stylesheet's rule are the same (0,2,0) specificity, and the plugin
+   stylesheet loads LAST on a real page, so the shorthand wins every tie.
+   It looks correct in the Elementor editor, which loads them in a different
+   order — which is exactly why this survived so long.
+   Set the longhands you actually need, and leave the rest to the control. */
+
 /* Class-doubled selector (.mphbac-input.mphbac-input) instead of
    .mphbac-root .mphbac-input so the rule matches both the filter-row
    inputs AND the booking popup's date inputs after v0.8.6's portal to
@@ -155,11 +166,18 @@
     border-radius: 6px;
     background: #ffffff;
     color: #111111;
-    font: inherit;
+    /* Longhands, NOT `font: inherit` — see the note above this rule. Only
+       these two are load-bearing: family and size are what the theme resets
+       on inputs. font-weight is deliberately absent so the "Filter Fields"
+       typography control owns it (it was being swallowed: the panel set 300,
+       the page rendered 700). font-style and font-variant are left to the
+       control as well; nothing in the theme resets them on inputs. */
+    font-family: inherit;
+    font-size: inherit;
     /* !important defeats Bravada's Elementor kit, which resets every input to
        line-height:1px and would otherwise collapse these date fields. The
        Elementor "Filter Fields" typography control excludes line-height for
-       this reason. */
+       this reason — and the shorthand above used to re-break it anyway. */
     line-height: 1.4 !important;
     min-width: 8.5em;
     min-height: 2.4em;
@@ -1133,7 +1151,12 @@
     border: 0;
     border-radius: 999px;
     padding: 0.5em 1.1em;
-    font: inherit;
+    /* Same trap as .mphbac-input, found by the 0.25.0 audit and NOT reported
+       from the site: VSEL — the "Cottage Page Button" typography control's
+       selector — is this exact doubled class, so the shorthand tied and won
+       on source order, swallowing weight/size/family from the panel. */
+    font-family: inherit;
+    font-size: inherit;
     line-height: 1.3;
     text-decoration: none;
     cursor: pointer;

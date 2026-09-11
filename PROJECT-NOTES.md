@@ -732,6 +732,51 @@ a block still wins.
   ships. Five more were converted this round into guards against a silent
   revert.
 
+## `font:` shorthand vs an Elementor typography control (0.25.0)
+
+**They cannot coexist on the same element.** The shorthand resets EVERY font
+longhand it does not name — family, size, style, variant, weight AND
+line-height — so `font: inherit` discards whatever the panel emitted for the
+properties you were not thinking about.
+
+It is decided by SOURCE ORDER, not specificity: Elementor's generated CSS is
+inline in the page (~byte 33k on /cottages/) and widget.css is enqueued after
+it (~121k). Where the two selectors tie — and they tie exactly, because the
+control's selector IS the doubled class (`FSEL`, `VSEL`) — the later sheet
+wins. **The Elementor editor preview loads them in a different order, so it
+shows the setting working.** That is why this survived: the preview was right
+and the page was wrong.
+
+Two rules carried it, both now longhands:
+- `.mphbac-input.mphbac-input` — the reported one. Filter Fields weight 300
+  rendered 700.
+- `.mphbac-info-view-link.mphbac-info-view-link` — found by the audit, never
+  reported. Same exact-selector tie with the Cottage Page Button control.
+
+Only `font-family: inherit` and `font-size: inherit` are load-bearing there —
+family and size are what the theme resets on inputs. `font-weight` is
+deliberately absent so the control owns it, and style/variant are left to the
+control too.
+
+The remaining `font:` shorthands are harmless and should stay: `.mphbac-btn`
+and `.mphbac-cell-label` are (0,1,0) against controls at (0,2,0)+wrapper and
+(0,4,0)+wrapper, so the control wins whatever the order. **Whether a shorthand
+clashes is a question about the two selectors' specificity, not about the
+element being mentioned** — which is why `typography-test.js` tests BEHAVIOUR:
+it emits the panel's rule for all ten controls, loads widget.css last, and
+asserts each one still owns font-weight. A string-match audit called
+`.mphbac-btn` a clash and would have had us "fix" a rule that works.
+
+RELATED, not the same, and NOT changed: the class-doubled `font-family:
+inherit` pins added in 0.23.2/0.23.4 (`.mphbac-btn.mphbac-btn`,
+`.mphbac-cell-label.mphbac-cell-label`, the close buttons) are (0,2,0) and so
+tie with `BSEL`/`VSEL` and win on order — but they contest FAMILY ONLY, not
+weight or size. If someone sets a font family in the Buttons control and it
+does not take, that is why. The fix would be to drop them to (0,1,1)
+(`button.mphbac-btn`), which still beats the theme's (0,1,1) on order while
+yielding to the panel — left alone here because it is a behaviour change
+outside this brief.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
