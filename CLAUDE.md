@@ -136,12 +136,17 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   the `tools/` dev scripts, the tracked `dcc-seasons.zip` build artifact, and the
   site context docs.
 
-## Delivering DCC Seasons zips
+## Delivering DCC Seasons files
 
-When sending the user an installable zip for a new **DCC Seasons** version, name
-the file **`Seasons <version>.zip`** — e.g. `Seasons 3.7.0.zip`. Build it from
-the `dcc-seasons/` folder as usual (the folder inside the zip keeps its own
-name, which is what WordPress installs); only the delivered filename changes.
+**Every file handed to the user is named with the prefix `Seasons - `** — not
+just the zips. So `Seasons - 3.18.1.zip`, `Seasons - footer 1280.png`,
+`Seasons - schedule cards 374.png`. (Superseded the older `Seasons <version>.zip`
+pattern on 2026-09-13 at the owner's request; older deliveries in the history
+carry the previous name.)
+
+Build the zip from the `dcc-seasons/` folder as usual — the folder INSIDE the
+zip keeps its own name, which is what WordPress installs; only the delivered
+filename changes.
 
 The repo keeps one tracked build artifact at `dcc-seasons.zip` so a version-named
 copy isn't accumulated per release; rebuild it in the same commit as the version
