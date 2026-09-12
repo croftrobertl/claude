@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,7 @@ Highlights:
 == Installation ==
 
 1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
-   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.4.0.zip`).
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.5.0.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -87,6 +87,31 @@ disabled see the captcha failure message rather than a silent bypass.
 To turn any individual layer on or off per form, use the **Spam Protection**
 section of the Elementor panel.
 
+== Email deliverability ==
+
+The site publishes DMARC `p=reject`, so only a sender aligned with the site's
+own domain is delivered at all. The plugin therefore **forces the From address
+onto the site domain**: if the From field is blank, malformed, or points at any
+other domain (including, by mistake, the visitor's own address) it falls back to
+`contact@<site domain>`. The visitor's address goes in **Reply-To**, never From,
+so hitting Reply in the notification still answers the guest.
+
+A site whose DNS authorises a third-party sender can opt out:
+
+`add_filter( 'dcc_contact_allow_unaligned_from', '__return_true' );`
+
+== "Send me a copy" ==
+
+An opt-in checkbox, off by default, under **Submit & Confirmation** in the
+Elementor panel (with an editable label). When a visitor ticks it, the same
+branded message is also sent to the address they entered.
+
+It is only ever sent to the address typed into the form's own email field, and
+only after every spam layer has passed — so the form cannot be driven as a relay
+to a third party. The copy is sent From the site's aligned address with Reply-To
+pointing back at the site, and carries `Auto-Submitted: auto-generated` so it
+does not trip vacation responders.
+
 == Admin: submissions ==
 
 **DCC → Form Submissions** lists every submission (newest first) with a
@@ -101,6 +126,28 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.5.0 =
+* Verified (not changed): the honeypot field and the time-trap token are both
+  genuinely emitted in the rendered form, and all four spam layers reject and
+  record correctly. The honeypot is invisible on the page by design — it is a
+  real input named `dcc_contact_code` inside a wrapper positioned off-screen —
+  which is why inspecting the page visually shows only the reCAPTCHA script.
+  Exercised end to end: honeypot, time-trap, keyword filter and a low reCAPTCHA
+  score each reject, store the matching `spam:*` status, and send no email.
+* Deliverability: the From address is now forced onto the site's own domain.
+  It was correct by default but nothing enforced it — the field is free text, so
+  an off-domain address (or the visitor's own) passed straight into From and,
+  under the site's DMARC `p=reject`, would have been discarded silently by the
+  receiving server. Overridable via the `dcc_contact_allow_unaligned_from`
+  filter. Reply-To continues to carry the visitor's address.
+* New: an opt-in "Send me a copy" checkbox (off by default, label editable).
+  The copy goes only to the address entered in the form's email field and only
+  after every spam layer has passed, so it cannot be used as a relay. It is sent
+  From the aligned site address with Reply-To pointing back at the site, and is
+  marked `Auto-Submitted: auto-generated` so it does not trigger auto-replies.
+* The submit button is unchanged: resting appearance measured identical to
+  1.4.0 across every computed property, hover still #F08080 with #FFFFFF text.
 
 = 1.4.0 =
 * The button's hover treatment is now declared by this plugin rather than

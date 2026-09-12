@@ -197,8 +197,19 @@ final class Form_Handler
         $entry_id = Entries::insert($rows, $subject, $form_id, Entries::STATUS_OK);
 
         $config_for_email = $config;
+        $submitter = self::submitter_email($config['fields'], $values);
         $config_for_email['reply_to'] = self::resolve_reply_to($config, $config['fields'], $values);
         $sent = Email::send($config_for_email, $rows, $subject);
+
+        // Opt-in courtesy copy. Reached only after every spam layer has passed,
+        // and only ever addressed to the email the visitor typed into the form's
+        // own email field — so this cannot be driven as a relay to a third party.
+        if (!empty($config['copy_enabled']) && $submitter !== '') {
+            $wants_copy = isset($post['dcc_copy']) && (string) wp_unslash($post['dcc_copy']) !== '';
+            if ($wants_copy) {
+                Email::send_copy($config_for_email, $rows, $submitter);
+            }
+        }
 
         // The entry is stored first, so a mail failure never loses the enquiry —
         // but it would otherwise be invisible. Flag it on the entry so the
@@ -393,17 +404,22 @@ final class Form_Handler
         }, $text) ?? $text;
     }
 
+    /** The address the visitor typed into the form's first email field. */
+    private static function submitter_email(array $fields, array $values): string
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'email') {
+                return (string) ($values[$field['id']] ?? '');
+            }
+        }
+        return '';
+    }
+
     private static function resolve_reply_to(array $config, array $fields, array $values): string
     {
         $raw = trim((string) ($config['reply_to'] ?? ''));
 
-        $submitter = '';
-        foreach ($fields as $field) {
-            if ($field['type'] === 'email') {
-                $submitter = (string) ($values[$field['id']] ?? '');
-                break;
-            }
-        }
+        $submitter = self::submitter_email($fields, $values);
 
         if ($raw === '') {
             return $submitter;

@@ -25,10 +25,7 @@ final class Email
             $to = get_option('admin_email');
         }
 
-        $from_email = sanitize_email((string) ($config['from_email'] ?? ''));
-        if ($from_email === '' || !is_email($from_email)) {
-            $from_email = 'contact@' . self::site_domain();
-        }
+        $from_email = self::aligned_from($config);
         $from_name = trim((string) ($config['from_name'] ?? ''));
         if ($from_name === '') {
             $from_name = get_bloginfo('name');
@@ -130,6 +127,85 @@ final class Email
 </body>
 </html>
 HTML;
+    }
+
+    /**
+     * Resolve the From address, forcing it onto the site's own domain.
+     *
+     * The site publishes DMARC p=reject, so only a domain-aligned sender
+     * delivers: an off-domain From (or, worse, the guest's own address) is
+     * silently discarded by the receiver and the enquiry is simply lost. The
+     * From field is free text in the Elementor panel, so this guard is what
+     * makes a typo survivable. Reply-To is where the guest's address belongs.
+     *
+     * Deliberately overridable for a site whose DNS is set up to authorise a
+     * third-party sender:
+     *   add_filter( 'dcc_contact_allow_unaligned_from', '__return_true' );
+     */
+    private static function aligned_from(array $config): string
+    {
+        $domain   = self::site_domain();
+        $fallback = 'contact@' . $domain;
+
+        $from = sanitize_email((string) ($config['from_email'] ?? ''));
+        if ($from === '' || !is_email($from)) {
+            return $fallback;
+        }
+
+        $host = strrchr($from, '@');
+        $host = is_string($host) ? strtolower(substr($host, 1)) : '';
+        $host = preg_replace('/^www\./', '', $host) ?? $host;
+
+        if ($host === $domain) {
+            return $from;
+        }
+
+        return apply_filters('dcc_contact_allow_unaligned_from', false, $from) ? $from : $fallback;
+    }
+
+    /**
+     * Opt-in courtesy copy to the person who filled the form.
+     *
+     * Only ever sent to the address typed into the form's own email field, and
+     * only after every spam layer has passed — so the form cannot be used to
+     * relay mail to an arbitrary third party. From stays domain-aligned; the
+     * Reply-To points back at the site so a reply to the copy reaches the owner
+     * rather than bouncing off the sending mailbox.
+     */
+    public static function send_copy(array $config, array $fields, string $to): bool
+    {
+        $to = sanitize_email($to);
+        if ($to === '' || !is_email($to)) {
+            return false;
+        }
+
+        $from_email = self::aligned_from($config);
+        $from_name  = trim((string) ($config['from_name'] ?? ''));
+        if ($from_name === '') {
+            $from_name = get_bloginfo('name');
+        }
+
+        $reply_to = sanitize_email((string) ($config['recipient'] ?? ''));
+        if ($reply_to === '' || !is_email($reply_to)) {
+            $reply_to = $from_email;
+        }
+
+        $subject = sprintf(
+            /* translators: %s: site name */
+            __('Copy of your message to %s', 'dcc-contact-form'),
+            get_bloginfo('name')
+        );
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            sprintf('From: %s <%s>', self::encode_name($from_name), $from_email),
+            'Reply-To: ' . $reply_to,
+            // A courtesy auto-copy should not trigger vacation responders.
+            'Auto-Submitted: auto-generated',
+            'X-Auto-Response-Suppress: All',
+        ];
+
+        return (bool) wp_mail($to, $subject, self::render($fields), $headers);
     }
 
     private static function site_domain(): string

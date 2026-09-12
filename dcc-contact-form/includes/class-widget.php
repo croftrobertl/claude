@@ -299,6 +299,22 @@ final class Widget extends Widget_Base
             'default' => __('Thank you. We will contact you shortly.', 'dcc-contact-form'),
         ]);
 
+        $this->add_control('copy_to_sender', [
+            'label'        => __('"Send me a copy" checkbox', 'dcc-contact-form'),
+            'type'         => Controls_Manager::SWITCHER,
+            'default'      => '',
+            'return_value' => 'yes',
+            'description'  => __('Shows an opt-in checkbox. When ticked, a copy of the message is emailed to the address the visitor entered.', 'dcc-contact-form'),
+        ]);
+
+        $this->add_control('copy_label', [
+            'label'       => __('Checkbox Label', 'dcc-contact-form'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => __('Send me a copy of this message', 'dcc-contact-form'),
+            'label_block' => true,
+            'condition'   => ['copy_to_sender' => 'yes'],
+        ]);
+
         $this->end_controls_section();
     }
 
@@ -656,6 +672,7 @@ final class Widget extends Widget_Base
             'from_name'    => (string) ($settings['email_from_name'] ?? ''),
             'reply_to'     => (string) ($settings['email_reply_to'] ?? ''),
             'confirmation' => (string) ($settings['confirmation'] ?? ''),
+            'copy_enabled' => (($settings['copy_to_sender'] ?? '') === 'yes'),
             'spam'         => [
                 'honeypot'       => (($settings['spam_honeypot'] ?? 'yes') === 'yes'),
                 'time_trap'      => (($settings['spam_time_trap'] ?? 'yes') === 'yes'),
@@ -712,6 +729,19 @@ final class Widget extends Widget_Base
                         $this->render_field($field, $uid);
                     } ?>
                 </div>
+
+                <?php if (!empty($config['copy_enabled'])) :
+                    $copy_label = (string) ($settings['copy_label'] ?? '');
+                    if ($copy_label === '') {
+                        $copy_label = __('Send me a copy of this message', 'dcc-contact-form');
+                    } ?>
+                    <div class="dcc-copy">
+                        <label class="dcc-copy-label" for="<?php echo esc_attr($uid); ?>-copy">
+                            <input type="checkbox" class="dcc-checkbox" id="<?php echo esc_attr($uid); ?>-copy" name="dcc_copy" value="1">
+                            <span><?php echo esc_html($copy_label); ?></span>
+                        </label>
+                    </div>
+                <?php endif; ?>
 
                 <div class="dcc-form-error" role="alert" aria-live="assertive"></div>
 
