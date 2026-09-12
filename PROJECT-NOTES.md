@@ -777,6 +777,57 @@ does not take, that is why. The fix would be to drop them to (0,1,1)
 yielding to the panel — left alone here because it is a behaviour change
 outside this brief.
 
+## The three-tier specificity rule for typography (0.26.0)
+
+Every font declaration in widget.css must sit in ONE of three tiers, and the
+tier is chosen by what has to win:
+
+| Tier | Selector shape | Beats | Loses to | Use for |
+|---|---|---|---|---|
+| (0,1,1) | `button.mphbac-btn`, `input.mphbac-input`, `a.mphbac-info-view-link` | the theme's kit rule, also (0,1,1), on load order | any typography control | FONT properties |
+| (0,2,0) | `.mphbac-input.mphbac-input` | the theme AND the control | — | structure: padding, border, background, min sizes |
+| control | `FSEL`/`BSEL`/`VSEL` (0,2,0) or `SEL .x` (0,4,0)+wrapper | the (0,1,1) tier | the (0,2,0) tier | whatever the panel sets |
+
+widget.css is enqueued AFTER Elementor's inline CSS, so a specificity TIE is
+a win for the plugin. That is the whole mechanism: (0,2,0) does not merely
+match the control, it beats it.
+
+Element-qualifying also survives the popup's portal to `<body>` — it never
+depended on a `.mphbac-root` ancestor, which is what the doubled class was
+originally for.
+
+Fixed in 0.26.0: `.mphbac-nav-btn`, `.mphbac-btn`, the two close buttons and
+`.mphbac-cell-label` dropped from `.x.x` to `button.x`; and the
+`font-family`/`font-size` longhands that 0.25.0 put INSIDE the (0,2,0) blocks
+for `.mphbac-input` and `.mphbac-info-view-link` moved out to their own
+(0,1,1) rules — 0.25.0 fixed weight on those two and left family and size
+still being swallowed.
+
+`typography-test.js` tests this behaviourally for all ten controls, on BOTH
+weight and family: it emits the panel's rule, loads widget.css last, and
+asserts the panel wins. Weight alone could not see the family bug. It also
+asserts the three buttons with NO control still get the inherited face rather
+than the theme's.
+
+**Not changed, worth knowing:** the view link's NON-font defaults
+(background, colour, radius, padding) are still (0,2,0) and so also outrank
+the "Cottage Page Button" control's colour settings. Same mechanism, wider
+blast radius — moving that whole rule to `a.mphbac-info-view-link` would fix
+it in one line but changes how that button looks on any site relying on the
+current precedence.
+
+## Font weights this plugin asks for (0.26.0)
+
+It loads NO webfont — it inherits the page's family, so every weight it names
+must exist in whatever the site loads.
+- widget.css: **400, 600, 700**
+- staff.css: **600, 700, 800** (800 is the OTA badge initial on the chart; if
+  the site drops 800 it falls back to the nearest weight, which is cosmetic)
+- **NOT 300.** The 300 on the filter fields is Rob's Elementor setting, which
+  the plugin now honours. Keep 300 loaded while that control is set to 300 —
+  trimming it would silently change those fields, and nothing in the plugin
+  would explain why.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

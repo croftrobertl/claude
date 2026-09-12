@@ -166,14 +166,10 @@
     border-radius: 6px;
     background: #ffffff;
     color: #111111;
-    /* Longhands, NOT `font: inherit` — see the note above this rule. Only
-       these two are load-bearing: family and size are what the theme resets
-       on inputs. font-weight is deliberately absent so the "Filter Fields"
-       typography control owns it (it was being swallowed: the panel set 300,
-       the page rendered 700). font-style and font-variant are left to the
-       control as well; nothing in the theme resets them on inputs. */
-    font-family: inherit;
-    font-size: inherit;
+    /* The font longhands live in their own (0,1,1) rule below, NOT here —
+       0.25.0 put them in this (0,2,0) block, which ties FSEL and wins on
+       order, so the panel's family and size were still being swallowed even
+       after the weight was fixed. */
     /* !important defeats Bravada's Elementor kit, which resets every input to
        line-height:1px and would otherwise collapse these date fields. The
        Elementor "Filter Fields" typography control excludes line-height for
@@ -191,6 +187,22 @@
     border-color: var(--mphbac-color-today-outline, #f4da62);
     box-shadow: 0 0 0 3px rgba(244, 218, 98, 0.35);
 }
+/* Font longhands at (0,1,1) — `input.x`, not `.x.x`.
+   Only family and size are load-bearing: they are what the theme's input
+   reset changes. Both must beat that reset, which is `.elementor-kit-N input`
+   at (0,1,1) — a tie this stylesheet wins on load order — while staying
+   BELOW the "Filter Fields" typography control at FSEL (0,2,0), emitted
+   earlier in the page, so the panel owns family, size, weight and style
+   whenever it sets them. font-weight is not declared here at all.
+   The structural rule above stays at (0,2,0): padding, border, background
+   and the min-width/height floors have no typography control and do have to
+   beat the theme. Element-qualified, so it survives the popup's portal to
+   <body> — it never depended on a .mphbac-root ancestor. */
+input.mphbac-input {
+    font-family: inherit;
+    font-size: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mphbac-input.mphbac-input { transition: none; }
 }
@@ -298,18 +310,32 @@
    font-family from its ancestor. A single class — including the existing
    `font: inherit` on .mphbac-btn — therefore LOSES: measured, the nav and
    Today buttons computed Pavanam while the range label beside them computed
-   the theme's Raleway. These rules are the fix, at (0,2,0).
-   Class-DOUBLED rather than `.mphbac-root .x`: both reach (0,2,0), but the
-   sheet and its buttons are portaled to <body> when a popup opens, at which
-   point no .mphbac-root ancestor exists to match. Doubling survives that,
-   and it is the pattern already used here for .mphbac-input and .mphbac-sheet.
-   family ONLY, deliberately: `font: inherit` would also pull size and weight
-   in and change how these buttons look today. Not !important — an inline
-   style was verified to win, so the theme rule is not !important either. */
-.mphbac-nav-btn.mphbac-nav-btn,
-.mphbac-btn.mphbac-btn,
-.mphbac-sheet-close.mphbac-sheet-close,
-.mphbac-info-close--floating.mphbac-info-close--floating {
+   the theme's Raleway.
+
+   SPECIFICITY IS DELIBERATELY (0,1,1) — `button.x`, not `.x.x` (0.26.0).
+   The kit rule is `.elementor-kit-N button`, also (0,1,1), and this
+   stylesheet loads AFTER it on a real page, so a tie is a win over the
+   theme. A doubled class reaches (0,2,0) and would ALSO beat the Elementor
+   "Buttons" / "Cottage Page Button" typography controls, whose selectors
+   (BSEL/VSEL) are themselves (0,2,0) and emitted earlier in the page — the
+   same mechanism by which the `font:` shorthand swallowed the panel in
+   0.25.0, differing only in that this contests family alone. (0,1,1) sits
+   between the two: above the theme, below the panel. Do not "strengthen" it.
+
+   `button` as the element half is safe: every selector here IS a <button>,
+   and being element-qualified is also why it survives the portal to <body>
+   — it never depended on a .mphbac-root ancestor.
+
+   family ONLY, deliberately: `font: inherit` would also pull size, weight
+   and line-height in — see the note above the .mphbac-input rule. Not
+   !important — an inline style was verified to win, so the theme rule is not
+   !important either.
+   The STAFF widget's buttons keep their doubled class: that widget exposes
+   no typography controls, so there is nothing there for them to outrank. */
+button.mphbac-nav-btn,
+button.mphbac-btn,
+button.mphbac-sheet-close,
+button.mphbac-info-close--floating {
     font-family: inherit;
 }
 
@@ -584,9 +610,13 @@
    override (.mphbac-label-custom, no siblings) is untouched either way. */
 /* The family has to be pinned on the BUTTON, not on the spans: the theme
    rule targets `button`, so a span's `font-family: inherit` faithfully
-   inherits the theme face from its own parent. Class-doubled (0,2,0) beats
-   the (0,1,1) kit rule — the same pattern as .mphbac-btn in 0.23.2. */
-.mphbac-cell-label.mphbac-cell-label {
+   inherits the theme face from its own parent. `button.x` is (0,1,1): it
+   ties the kit rule and wins on load order, while still yielding to the
+   "Cottage Name Column" typography control (0.26.0 — it was (0,2,0) and
+   outranked that control's family). The header corner is a <div>, so it is
+   deliberately not matched: a div inherits family natively, and that cell
+   has its own typography control. */
+button.mphbac-cell-label {
     font-family: inherit;
 }
 .mphbac-root.mphbac-root .mphbac-cell-label .mphbac-label-num,
@@ -1151,12 +1181,10 @@
     border: 0;
     border-radius: 999px;
     padding: 0.5em 1.1em;
-    /* Same trap as .mphbac-input, found by the 0.25.0 audit and NOT reported
-       from the site: VSEL — the "Cottage Page Button" typography control's
-       selector — is this exact doubled class, so the shorthand tied and won
-       on source order, swallowing weight/size/family from the panel. */
-    font-family: inherit;
-    font-size: inherit;
+    /* Font longhands moved out to (0,1,1) below in 0.26.0, for the same
+       reason as .mphbac-input: at this doubled class they tie VSEL — the
+       "Cottage Page Button" typography control's own selector — and win on
+       order, swallowing the panel's family and size. */
     line-height: 1.3;
     text-decoration: none;
     cursor: pointer;
@@ -1166,6 +1194,12 @@
     background: #0a4f8c;
     color: #ffffff;
 }
+/* (0,1,1), below VSEL, above the theme's link rules — see input.mphbac-input. */
+a.mphbac-info-view-link {
+    font-family: inherit;
+    font-size: inherit;
+}
+
 .mphbac-info-view-link[hidden] {
     display: none;
 }

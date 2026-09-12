@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.0
+Stable tag: 0.26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.26.0 =
+* **Every typography setting in the panel now takes effect** — font family as well as weight and size. The plugin's own rules sat at the same strength as Elementor's and loaded later, so they were quietly winning ties on the font family for buttons, the cottage cells, the filter fields and the "View Cottage Page" button. They now sit deliberately below the panel and above the theme.
+* This completes the fix started in 0.25.0: that release stopped the weight being discarded, and while verifying it the same fault turned up on family and size for the filter fields and the View button.
+* Font weights the plugin asks for, for anyone tuning the site's font loading: the calendar uses **400, 600 and 700**; the staff calendar uses **600, 700 and 800**. The plugin loads no fonts of its own. It does not ask for 300 itself — the 300 on the filter fields comes from the Elementor setting, so keep 300 available while that setting is in use.
 
 = 0.25.0 =
 * **Fixed: the Filter Fields font weight setting did nothing on the live site.** Setting it to 300 in Elementor showed correctly in the editor but rendered bold on the page. The plugin's own stylesheet was resetting the whole font on those inputs, which quietly discarded the weight — and because the editor loads stylesheets in a different order, the preview looked right the whole time.
