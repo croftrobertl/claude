@@ -1,5 +1,7 @@
 mphb-availability-calendar.zip
 dcc-wildlife.zip
 Wildlife *.zip
-Wildlife - *.zip
+# Delivery copies at the repo root: a build zip, or a repo doc copied to its
+# "Wildlife - <Title>" delivery name. Never the source, which keeps its own name.
+/Wildlife - *
 .DS_Store
