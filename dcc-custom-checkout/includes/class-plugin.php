@@ -52,6 +52,9 @@ final class Plugin
         // accommodations that can use them. Show/hide only — the deliberate
         // wp-admin exemptions in the backstops above are untouched.
         (new Admin_Fields())->register();
+        // Guest ID images: one-click deletion, deletion with the booking, and
+        // keeping the protected store unreadable.
+        (new Id_Files())->register();
     }
 
     public function load_textdomain(): void

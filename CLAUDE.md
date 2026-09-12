@@ -187,6 +187,22 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   "Taxes*" and the whole footnote control died. Injected elements carry
   `data-dcc-injected` and `rowLabel()` skips them. Anything that reads a label
   and might run twice must do the same.
+- **Guest photo IDs are deleted on request only** — no schedule (owner
+  decision, v0.10.0). The button is on the booking screen; the file also goes
+  when a booking is PERMANENTLY deleted, but not when it is trashed. The image
+  is never rendered in the admin, only its filename.
+- **`Id_Files::contain()` is the only thing between post meta and `unlink()`.**
+  It is a pure static function for exactly that reason, and it is tested
+  directly at `tests/id-files/` (`php tests/id-files/run.php`) against
+  symlinks, encoded traversal and prefix-colliding sibling directories. If you
+  add any code path that deletes a file, route it through `contain()` — never
+  build a path from meta and unlink it.
+- The protected store's `index.php` and `.htaccess` are self-healing (on
+  activation, after a checkout upload, hourly in admin) because /privacy/
+  promises IDs are blocked and a host migration can drop dotfiles. Whether the
+  server honours them is checked live by **DCC → Custom Checkout → Guest ID
+  storage → "Check public access now"**, which probes over real HTTP; no local
+  test can answer that.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

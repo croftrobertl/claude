@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.9.0
+Stable tag: 0.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,41 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.10.0 =
+Guest photo IDs. Retention is ON REQUEST ONLY (owner decision) — there is no
+schedule — so the manual path is the whole practice, and until now that path
+was SSH and rm.
+
+* NEW: a "Delete ID image" button on the booking screen. Nonce'd, gated on
+  manage_options, with a confirm dialog. Deletes the file from the protected
+  store, clears mphb_upload_id, and records what was deleted, when, and by whom
+  in a deletion history shown on the same screen.
+* The booking screen shows the FILENAME and size only. The image itself is
+  never rendered — not there, and nothing is added to any list view.
+* NEW: the ID file follows a booking into PERMANENT deletion. Trash does not
+  trigger it, so a booking that is trashed and restored keeps its ID.
+* NEW: the protected store is kept unreadable. It had .htaccess but no
+  index.php; both are now written on activation, after any checkout upload, and
+  at most hourly on an admin request — so a host migration that drops dotfiles
+  cannot silently expose sixteen driving licences. Existing files are never
+  overwritten, in case a host or admin has hardened them further.
+* NEW: "Check public access now" on the settings page writes a throwaway probe
+  file, fetches it over HTTP and deletes it, then reports the status code.
+  /privacy/ promises IDs are "blocked from public access — we verify this"; a
+  filesystem check cannot verify that, only asking the web server can.
+* NEW: tests/id-files/ — 28 assertions on the path safety. delete_for_booking()
+  unlinks a path derived from post meta, so contain() and resolve() are pure
+  functions tested directly against real symlinks, encoded and Windows-style
+  traversal, a sibling directory sharing the store's name prefix, directories,
+  and attachment IDs resolving outside the store. Nothing reaches unlink()
+  without passing contain().
+* The MotoPress booking-note API is not confirmed on this install, so the
+  guaranteed audit trail is the deletion history on the booking screen. A
+  dcc_checkout_id_deleted action fires for anyone who wants to forward it into
+  MPHB's own notes.
+* Checkout behaviour is untouched: 53 jsdom and 21 Chromium assertions still
+  pass, and the $50 extra-guest fee still bills.
 
 = 0.9.0 =
 Three defects, all found by rebuilding the test fixtures from real

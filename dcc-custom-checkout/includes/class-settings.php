@@ -297,6 +297,8 @@ final class Settings
 
                 <?php $this->render_guest_field_reference(); ?>
 
+                <?php $this->render_id_storage_status(); ?>
+
                 <?php submit_button(); ?>
             </form>
 
@@ -420,6 +422,72 @@ final class Settings
         }
         echo $extra_html; // phpcs:ignore WordPress.Security.EscapeOutput -- built escaped in field_name_status_html()
         echo '</td></tr>';
+    }
+
+    /**
+     * Guest ID storage: where it is, whether the guards are in place, and —
+     * on demand — whether the web server will actually serve a file from it.
+     *
+     * /privacy/ tells guests their ID is "blocked from public access — we
+     * verify this". A stat() cannot verify that; only asking the web server
+     * can. The check writes a throwaway probe file, requests it over HTTP and
+     * deletes it, so it tests the real path a stranger would use.
+     */
+    private function render_id_storage_status(): void
+    {
+        $dir     = Id_Files::store_dir();
+        $guards  = Id_Files::guard_files();
+        $probed  = isset($_GET['dcc_probe']) && check_admin_referer('dcc_probe_id_store');
+
+        echo '<hr><h2>' . esc_html__('Guest ID storage', 'dcc-checkout') . '</h2>';
+        echo '<p class="description" style="max-width:640px">'
+            . esc_html__('Guests upload a photo ID at checkout. Retention is on request only — there is no schedule — so IDs are deleted from the booking screen, one button per booking. The image is never displayed in the admin; only its filename is.', 'dcc-checkout')
+            . '</p>';
+
+        echo '<table class="form-table" role="presentation"><tr><th scope="row">'
+            . esc_html__('Store', 'dcc-checkout') . '</th><td><code style="word-break:break-all">'
+            . esc_html($dir) . '</code>';
+        if ($dir === '' || !is_dir($dir)) {
+            echo '<p class="description" style="color:#b32d2e">'
+                . esc_html__('⚠ Directory not found.', 'dcc-checkout') . '</p>';
+        }
+        echo '</td></tr><tr><th scope="row">' . esc_html__('Guard files', 'dcc-checkout') . '</th><td>';
+        foreach (array_keys($guards) as $name) {
+            $there = $dir !== '' && file_exists($dir . '/' . $name);
+            printf(
+                '<p class="description" style="color:%1$s">%2$s <code>%3$s</code></p>',
+                $there ? '#1a7f37' : '#b32d2e',
+                $there ? '&#10003;' : '&#9888;',
+                esc_html($name)
+            );
+        }
+        echo '<p class="description">'
+            . esc_html__('Re-created automatically on activation, after any checkout upload, and hourly — so a host migration that drops dotfiles cannot quietly expose the store.', 'dcc-checkout')
+            . '</p></td></tr>';
+
+        echo '<tr><th scope="row">' . esc_html__('Public access', 'dcc-checkout') . '</th><td>';
+        if ($probed) {
+            $result = Id_Files::probe_public_access();
+            printf(
+                '<p class="description" style="color:%1$s"><strong>%2$s</strong> %3$s</p>',
+                $result['ok'] ? '#1a7f37' : '#b32d2e',
+                esc_html($result['ok']
+                    ? sprintf(__('✓ Blocked (HTTP %d).', 'dcc-checkout'), $result['code'])
+                    : sprintf(__('⚠ NOT BLOCKED (HTTP %d).', 'dcc-checkout'), $result['code'])),
+                esc_html($result['note'])
+            );
+        }
+        printf(
+            '<p><a href="%1$s" class="button">%2$s</a></p>',
+            esc_url(wp_nonce_url(
+                add_query_arg('dcc_probe', '1'),
+                'dcc_probe_id_store'
+            )),
+            esc_html__('Check public access now', 'dcc-checkout')
+        );
+        echo '<p class="description">'
+            . esc_html__('Writes a temporary probe file, fetches it over HTTP, and deletes it. Anything other than a refusal means guest IDs are readable by anyone with the URL.', 'dcc-checkout')
+            . '</p></td></tr></table>';
     }
 
     /**
