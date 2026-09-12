@@ -16,6 +16,14 @@
  */
 
 define('ABSPATH', __DIR__);
+
+// Minimal i18n shims so the pure functions can be exercised without loading
+// WordPress. Only note_text() needs them; contain() and resolve() touch
+// nothing outside PHP itself, which is the point of keeping them pure.
+if (!function_exists('__')) {
+    function __($text, $domain = null) { return $text; }
+}
+
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-id-files.php';
 
 use DCC_Checkout\Id_Files;
@@ -110,6 +118,18 @@ check('guards: .htaccess denies pre-2.4 Apache too',
     (bool) preg_match('/Deny from all/', $guards['.htaccess']), true);
 check('guards: .htaccess allows nothing',
     (bool) preg_match('/^\s*(Allow|Require all granted)/mi', $guards['.htaccess']), false);
+
+/* --- The audit line. This is the record of a deletion, so its wording is
+       worth pinning: the file, what happened, and who did it. ------------- */
+check('note: a manual deletion names the file, the act and the actor',
+    Id_Files::note_text('licence.jpg', 'manual', 'Rob Croft (rob)'),
+    'Guest ID image "licence.jpg" deleted on request by Rob Croft (rob).');
+check('note: a deletion with the booking says so',
+    Id_Files::note_text('licence.jpg', 'booking-deleted', 'Rob Croft (rob)'),
+    'Guest ID image "licence.jpg" deleted with the booking by Rob Croft (rob).');
+check('note: an unknown reason is passed through, never dropped',
+    Id_Files::note_text('licence.jpg', 'some-future-reason', 'system'),
+    'Guest ID image "licence.jpg" some-future-reason by system.');
 
 /* --- Clean up. ---------------------------------------------------------- */
 exec('rm -rf ' . escapeshellarg($root));

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.0
+Stable tag: 0.10.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,27 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.10.1 =
+* The deletion note now goes into MotoPress's own booking log, so it appears in
+  the Logs box on the booking screen rather than in a panel of this plugin's
+  own. Uses \MPHB\Entities\Booking::addLog() via
+  MPHB()->getBookingRepository()->findById(), guarded by method_exists and
+  wrapped so a MotoPress update can never make a deletion fatal.
+* The write is VERIFIED, not assumed: mphb_booking_log comment rows are counted
+  before and after. addLog() returning nothing and silently doing nothing would
+  otherwise look like success and leave no audit trail at all — and a renamed
+  comment_type on some future MotoPress version would do exactly that.
+* The plugin's own history panel is now a real fallback rather than a duplicate:
+  it renders ONLY for deletions that did not reach MotoPress's log. One visible
+  record per deletion, either way. Entries that did land are still written to
+  post meta as an independent copy, since MotoPress's logs are comments and
+  anything that prunes comments would take them.
+* The audit line reads: Guest ID image "licence.jpg" deleted on request by
+  Rob Croft (rob). — file, act and actor, in MotoPress's own log voice. Pinned
+  by three assertions; 31 PHP assertions now.
+* Note for the permanent-delete path: the booking's logs are comments on the
+  booking post, so they go with it. Nothing is lost that could have been kept.
 
 = 0.10.0 =
 Guest photo IDs. Retention is ON REQUEST ONLY (owner decision) — there is no

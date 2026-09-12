@@ -197,6 +197,13 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   symlinks, encoded traversal and prefix-colliding sibling directories. If you
   add any code path that deletes a file, route it through `contain()` — never
   build a path from meta and unlink it.
+- **Deletion notes go into MotoPress's own booking log** (v0.10.1):
+  `\MPHB\Entities\Booking::addLog()` via
+  `MPHB()->getBookingRepository()->findById()`. Logs are `wp_comments` rows
+  with `comment_type` `mphb_booking_log`. The write is verified by counting
+  those rows before and after — `addLog()` returns nothing, so a silent no-op
+  would otherwise pass for success. If the count does not rise, the plugin's
+  own history panel renders instead; it is a fallback, never a second copy.
 - The protected store's `index.php` and `.htaccess` are self-healing (on
   activation, after a checkout upload, hourly in admin) because /privacy/
   promises IDs are blocked and a host migration can drop dotfiles. Whether the

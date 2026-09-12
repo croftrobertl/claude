@@ -355,13 +355,35 @@ final class Id_Files
         echo '</div>';
     }
 
+    /**
+     * The fallback history — shown ONLY for deletions that did not reach
+     * MotoPress's own log.
+     *
+     * When addLog() works, the note is already in the Logs box on this screen;
+     * a second copy under the button would read as two separate deletions.
+     * When it does not work, this is the only audit trail there is, so it
+     * appears. Exactly one visible record per deletion, either way.
+     *
+     * Entries that DID land are still stored in post meta as an independent
+     * record — MotoPress's logs are wp_comments rows, and anything that prunes
+     * comments would take them.
+     */
     private function render_log(int $booking_id): void
     {
         $log = get_post_meta($booking_id, self::LOG_META, true);
-        if (!is_array($log) || empty($log)) {
+        if (!is_array($log)) {
             return;
         }
-        echo '<hr><p><strong>' . esc_html__('Deletion history', 'dcc-checkout') . '</strong></p><ul>';
+        $log = array_filter($log, static function ($entry) {
+            return is_array($entry) && empty($entry['logged']);
+        });
+        if (empty($log)) {
+            return;
+        }
+        echo '<hr><p><strong>' . esc_html__('Deletion history', 'dcc-checkout') . '</strong></p>';
+        echo '<p class="description">'
+            . esc_html__('Recorded here because MotoPress\'s booking log could not be written.', 'dcc-checkout')
+            . '</p><ul>';
         foreach (array_reverse($log) as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -450,18 +472,95 @@ final class Id_Files
 
         if ($deleted) {
             delete_post_meta($booking_id, self::META_KEY);
-            self::log($booking_id, $name, $reason);
+            $logged = self::add_native_log($booking_id, $name, $reason);
+            self::log($booking_id, $name, $reason, $logged);
             /**
              * Fires after a guest ID image is deleted.
              *
-             * MotoPress's own booking-note API has not been confirmed on this
-             * install, so the audit trail this plugin guarantees is the log
-             * meta rendered on the booking screen. Hook this to forward the
-             * event into MPHB's notes once that API is known.
+             * @param int    $booking_id
+             * @param string $name    File that was deleted.
+             * @param string $reason  'manual' or 'booking-deleted'.
+             * @param bool   $logged  Whether it reached MotoPress's own log.
              */
-            do_action('dcc_checkout_id_deleted', $booking_id, $name, $reason);
+            do_action('dcc_checkout_id_deleted', $booking_id, $name, $reason, $logged);
         }
         return $deleted;
+    }
+
+    /**
+     * The audit line, in MotoPress's own log voice ("Status changed from New
+     * to Auto Draft."). Pure, so the wording can be asserted in a test.
+     */
+    public static function note_text(string $file, string $reason, string $who): string
+    {
+        $reasons = [
+            'manual'          => __('deleted on request', 'dcc-checkout'),
+            'booking-deleted' => __('deleted with the booking', 'dcc-checkout'),
+        ];
+        return sprintf(
+            /* translators: 1: file name, 2: what happened, 3: who did it. */
+            __('Guest ID image "%1$s" %2$s by %3$s.', 'dcc-checkout'),
+            $file,
+            $reasons[$reason] ?? $reason,
+            $who
+        );
+    }
+
+    /** Who is doing this, for the audit line. */
+    private static function current_actor(): string
+    {
+        $user = wp_get_current_user();
+        return ($user && $user->exists())
+            ? $user->display_name . ' (' . $user->user_login . ')'
+            : __('system', 'dcc-checkout');
+    }
+
+    /**
+     * Write the deletion into MotoPress's own booking log.
+     *
+     * \MPHB\Entities\Booking::addLog() (includes/entities/booking.php:393)
+     * stores a wp_comments row with comment_type 'mphb_booking_log', which is
+     * what the Logs box on the booking screen reads — so the note lands where
+     * the admin is already looking.
+     *
+     * Called with the message only. addLog's second parameter is an author
+     * whose expected type is not documented, and the actor is already named in
+     * the message, so there is nothing to gain by guessing it.
+     *
+     * VERIFIED, not assumed: the log rows are counted before and after against
+     * the storage the API actually uses. addLog() returning nothing and
+     * silently doing nothing would otherwise look like success, and the admin
+     * would get no audit trail at all. If the count does not rise — a
+     * MotoPress update, a renamed comment_type, the plugin deactivated — this
+     * returns false and the on-screen fallback history renders instead.
+     * Every failure mode here is non-fatal by construction.
+     */
+    private static function add_native_log(int $booking_id, string $file, string $reason): bool
+    {
+        if (!function_exists('MPHB')) {
+            return false;
+        }
+        $count_args = [
+            'post_id' => $booking_id,
+            'type'    => 'mphb_booking_log',
+            'status'  => 'any',
+            'count'   => true,
+        ];
+        try {
+            $repo = MPHB()->getBookingRepository();
+            if (!$repo || !method_exists($repo, 'findById')) {
+                return false;
+            }
+            $booking = $repo->findById($booking_id);
+            if (!is_object($booking) || !method_exists($booking, 'addLog')) {
+                return false;
+            }
+            $before = (int) get_comments($count_args);
+            $booking->addLog(self::note_text($file, $reason, self::current_actor()));
+            return (int) get_comments($count_args) > $before;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -469,24 +568,21 @@ final class Id_Files
      * Post meta, not a file — an audit trail in a log file on shared hosting
      * is neither readable by the owner nor safe to leave lying about.
      */
-    private static function log(int $booking_id, string $file, string $reason): void
+    private static function log(int $booking_id, string $file, string $reason, bool $logged): void
     {
         $log = get_post_meta($booking_id, self::LOG_META, true);
         if (!is_array($log)) {
             $log = [];
         }
-        $user = wp_get_current_user();
-        $who  = ($user && $user->exists())
-            ? $user->display_name . ' (' . $user->user_login . ')'
-            : __('system', 'dcc-checkout');
-
         $log[] = [
             'file'   => $file,
             'when'   => current_time('Y-m-d H:i:s'),
-            'who'    => $reason === 'booking-deleted'
-                ? sprintf(__('%s — booking permanently deleted', 'dcc-checkout'), $who)
-                : $who,
+            'who'    => self::current_actor(),
             'reason' => $reason,
+            // Whether MotoPress's own log took it. Entries that DID land are
+            // recorded here but not rendered — the note is already on screen
+            // in the Logs box, and printing it twice reads like two deletions.
+            'logged' => $logged,
         ];
         // Keep the history bounded; it is a note, not a ledger.
         update_post_meta($booking_id, self::LOG_META, array_slice($log, -20));
