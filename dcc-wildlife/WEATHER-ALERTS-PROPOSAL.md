@@ -1,6 +1,16 @@
 # Proposal: a Lake County weather-alert banner
 
-Not built. Rob decides. Written 2026-09-12 against `dcc_wx_alerts()` as
+> **ADOPTED AND BUILT — 2026-09-12, in `dcc-weather.php`, site-wide.** Kept
+> here as the design record, not as an open question. Shipped essentially as
+> written, with the three decisions resolved: site-wide rather than inside
+> this plugin (§0), Flash Flood Warning included (§2), tornado warnings
+> dismissible (§3). `dcc_wx_alerts()` now returns `id`, `event`, `severity`,
+> `headline`, `ends` and `url`, plus `level` and `rank` for the
+> one-banner-at-a-time choice in §1. Nothing in DCC Wildlife renders alerts;
+> if that ever changes, read the built implementation first — it is ahead of
+> this document.
+
+Not built here. Rob decided. Written 2026-09-12 against `dcc_wx_alerts()` as
 described in the audit — **`dcc-weather.php` is not in this repo**, so nothing
 below assumes anything about its internals beyond "it returns NWS alerts for
 the canal". Every number here is a design decision, not a measurement.
