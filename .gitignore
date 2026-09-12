@@ -1,7 +1,10 @@
 mphb-availability-calendar.zip
 dcc-guest-guide.zip
-# Guest Guide zips are named 'Guest Guide <version>.zip' (see CLAUDE.md).
+# Guest Guide deliverables are prefixed 'Guest Guide - ' (see CLAUDE.md).
 # Build artifacts: regenerable from source, so not committed.
 Guest Guide *.zip
+# Anything handed to the owner carries the 'Guest Guide - ' prefix and is a
+# build artifact (zip, screenshot, report), regenerable from source.
+Guest Guide - *
 .DS_Store
 node_modules/
