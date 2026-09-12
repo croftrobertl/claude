@@ -1,17 +1,25 @@
 # Repo conventions
 
-## Delivering plugin zips
+## Naming files delivered to the user
 
-Name every new DCC Contact Form zip:
+Every file handed to the user is named with the prefix:
 
 ```
-Contact Form <version>.zip
+Contact Form - <name>
 ```
 
-e.g. `Contact Form 1.3.0.zip`. The version in the filename is the plugin's own
-version, not the date and not the other plugin's version. Zips delivered before
-this convention kept the bare `dcc-contact-form.zip` name; they are not renamed
-retroactively.
+The plugin zip is therefore `Contact Form - <version>.zip`, e.g.
+`Contact Form - 1.6.0.zip`. Anything else delivered takes the same prefix, e.g.
+`Contact Form - Spam Report.md`.
+
+The prefix REPLACES any earlier one rather than stacking: it is
+`Contact Form - 1.6.0.zip`, never `Contact Form - Contact Form 1.6.0.zip`.
+
+Files delivered before a naming convention changed keep the name they were
+delivered under; they are not renamed retroactively. So the repo history
+contains `dcc-contact-form.zip` (pre-convention) and `Contact Form 1.3.0.zip`
+through `Contact Form 1.5.0.zip` (the earlier space-only prefix), and that is
+expected.
 
 The zip still contains a single top-level `dcc-contact-form/` folder — only the
 archive's filename changes, so Plugins -> Upload Plugin continues to install and

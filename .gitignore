@@ -2,3 +2,6 @@ mphb-availability-calendar.zip
 dcc-contact-form.zip
 .DS_Store
 Contact Form *.zip
+# Delivered files carry the "Contact Form - " prefix and are build output,
+# not source; ignore them whatever the extension.
+Contact Form - *
