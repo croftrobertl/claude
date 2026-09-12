@@ -1059,6 +1059,13 @@ rounded boxes at the same weight. The rule now:
     however forgiving it was trying to be.
   - The field is 16px or iOS zooms the page on focus, and the row it sits in
     is a control on the tinted ground, not another card.
+- **Sprites for sibling plugins are EXPORTS, never copies.**
+  `tools/export-sprites.php` writes `assets/sprites/<id>.svg` straight from
+  `Sprites::registry()`, and `test-sprites.php` fails if a file drifts from
+  it — a stale export means another DCC surface ships the wrong animal and
+  nobody notices. Add an id to the tool's EXPORT list and re-run; never
+  hand-edit a file in `assets/sprites/`. The palette note beside them is
+  checked against the colours the files actually use.
 - **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none
   !important; }` in app.css. The attribute's UA rule has specificity 0 and
   loses to any class of ours that sets `display` — which is how a hidden,

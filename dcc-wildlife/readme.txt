@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.21.0
+Stable tag: 1.22.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,9 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.22.0 =
+* The bass, great blue heron and snowy egret drawings are now also shipped as standalone SVG files in assets/sprites/, so other Dora Canal Court plugins can show the same animal instead of redrawing it. No change to how the guide looks.
 
 = 1.21.0 =
 * Search. Type any part of a name, a scientific name, or the "tell it apart" description — "golden-yellow feet" finds the snowy egret, "red shield" the common gallinule — and it looks across every group, not just the tab you are on.
