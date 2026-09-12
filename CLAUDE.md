@@ -73,11 +73,18 @@ php tools/makepot.php
 # `--check` first and fails loudly if the committed bundle has gone stale.
 php tools/build-bundle.php
 
-# Build the deliverable zip. Filename MUST state the version (user convention),
-# so a downloaded build is identifiable without opening it. Read the version
-# from the plugin header first.
-( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.24.0.zip" dcc-cottage-selector -x '*.DS_Store' )
+# Build the deliverable zip. Read the version from the plugin header first.
+( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector - 0.33.0.zip" dcc-cottage-selector -x '*.DS_Store' )
 ```
+
+## Naming files handed to the user
+
+**Every file delivered to the user is named `Cottage Selector - <what it is>`.**
+Not just the zips — screenshots, strips, exports, anything. The user collects these
+outside the repo alongside deliverables from the other DCC plugins, and the prefix
+is what keeps them sorted and identifiable without opening them. The version goes
+in the name too for builds (`Cottage Selector - 0.33.0.zip`), so a downloaded build
+is identifiable on its own.
 
 ## Releasing
 
