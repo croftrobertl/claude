@@ -514,21 +514,27 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 (
   cd "$(git rev-parse --show-toplevel)" &&
   V=$(sed -n 's/^ \* Version: *//p' dcc-wildlife/dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
-  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*'
+  zip -r "Wildlife - $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*'
 )
 
 # Verify the build before handing it over: no dev files, readme.txt present,
 # and (1.17.0) the bundled Leaflet actually in the archive — the map's default
 # URLs point at it, so a zip without it ships a broken map.
-unzip -l "Wildlife $V.zip" | grep -E '\.md$'  && echo 'FAIL: a dev doc shipped'
-unzip -l "Wildlife $V.zip" | grep -E 'tools/' && echo 'FAIL: dev tools shipped'
-unzip -l "Wildlife $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
+unzip -l "Wildlife - $V.zip" | grep -E '\.md$'  && echo 'FAIL: a dev doc shipped'
+unzip -l "Wildlife - $V.zip" | grep -E 'tools/' && echo 'FAIL: dev tools shipped'
+unzip -l "Wildlife - $V.zip" | grep -q 'dcc-wildlife/readme.txt' || echo 'FAIL: readme.txt missing'
 for f in leaflet.js leaflet.css; do
-  unzip -l "Wildlife $V.zip" | grep -q "dcc-wildlife/assets/vendor/leaflet/$f" || echo "FAIL: vendor/leaflet/$f missing"
+  unzip -l "Wildlife - $V.zip" | grep -q "dcc-wildlife/assets/vendor/leaflet/$f" || echo "FAIL: vendor/leaflet/$f missing"
 done
 ```
 
 Deliver that file to the owner for the Plugins → Add New → Upload route.
+
+**Every file handed to the owner is named `Wildlife - …`** (his request,
+2026-09-12): the release zip is `Wildlife - <version>.zip`, and a document
+sent over is copied to `Wildlife - <Title>.<ext>` before sending, whatever it
+is called in the repo. Repo filenames themselves do not change — a checked-in
+doc keeps its repo-conventional name.
 `Wildlife *.zip` is gitignored, so build artifacts never get committed.
 
 Note: a few code comments point at CLAUDE.md / WATER-SOURCES.md for context
