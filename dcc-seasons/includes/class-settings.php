@@ -57,6 +57,21 @@ class Settings {
      *
      * @return array<string, string>
      */
+    /**
+     * WHERE on a page the ambient decorations are allowed to be. This is a
+     * different question from scope(), which decides WHICH PAGES load the
+     * plugin at all, and the two are deliberately separate: "homepage only,
+     * footer only" is a sentence with two independent halves.
+     *
+     * @return array<string, string> key => label.
+     */
+    public static function placements(): array {
+        return [
+            'footer'  => __('Site footer only (recommended)', 'dcc-seasons'),
+            'content' => __('Across the page content', 'dcc-seasons'),
+        ];
+    }
+
     public static function scopes(): array {
         return [
             'home'         => __('Homepage only', 'dcc-seasons'),
@@ -284,6 +299,7 @@ class Settings {
             'egg'             => 1,
             'layering'        => 'behind',
             'scope'           => 'all',
+            'placement'       => 'footer',
             'tap_selector'    => '#branding, .header-image .entry-title, .entry-title, #site-title',
             'tap_count'       => 5,
             'density'         => 10,
@@ -398,6 +414,9 @@ class Settings {
         $scope        = sanitize_key((string) ($in['scope'] ?? $d['scope']));
         $out['scope'] = array_key_exists($scope, self::scopes()) ? $scope : 'all';
 
+        $placement        = sanitize_key((string) ($in['placement'] ?? $d['placement']));
+        $out['placement'] = array_key_exists($placement, self::placements()) ? $placement : 'footer';
+
         $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
         $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
         foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
@@ -478,6 +497,20 @@ class Settings {
                     </tr>
                     <tr>
                         <th scope="row">
+                            <label for="dcc-seasons-placement"><?php esc_html_e('Placement', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <select id="dcc-seasons-placement" name="<?php echo esc_attr(self::OPTION); ?>[placement]">
+                                <?php foreach (self::placements() as $key => $label) : ?>
+                                    <option value="<?php echo esc_attr($key); ?>" <?php selected($opt['placement'], $key); ?>><?php echo esc_html($label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description"><?php esc_html_e('WHERE on a page the decorations may appear — a different question from "Where effects appear" above, which decides which PAGES load the plugin at all. "Site footer only" keeps them off the body copy entirely: the canvas is mounted inside the footer, sized to it, and nothing is drawn over footer text either. "Across the page content" is the older behaviour, where the canvas spans the content column.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('If the theme has no footer element the decorations render nowhere rather than falling back into the content; the footer element can be named with the dcc_seasons_footer_host filter.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
                             <label for="dcc-seasons-layering"><?php esc_html_e('Layering', 'dcc-seasons'); ?></label>
                         </th>
                         <td>
@@ -485,7 +518,7 @@ class Settings {
                                 <option value="behind" <?php selected($opt['layering'], 'behind'); ?>><?php esc_html_e('Behind interactive widgets (recommended)', 'dcc-seasons'); ?></option>
                                 <option value="front" <?php selected($opt['layering'], 'front'); ?>><?php esc_html_e('In front of everything', 'dcc-seasons'); ?></option>
                             </select>
-                            <p class="description"><?php esc_html_e('"Behind" keeps the ambient particles under the cottage selector and availability calendars (the widgets are raised above the canvas). The Matrix easter egg always covers everything regardless.', 'dcc-seasons'); ?></p>
+                            <p class="description"><?php esc_html_e('Applies to "Across the page content" placement. "Behind" keeps the ambient particles under the cottage selector and availability calendars (the widgets are raised above the canvas). The Matrix easter egg always covers everything regardless.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>

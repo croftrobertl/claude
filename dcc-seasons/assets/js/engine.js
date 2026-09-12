@@ -528,6 +528,43 @@
 			for (i = 0; i < t2.length; i++) { if (out.indexOf(t2[i]) < 0) { out.push(t2[i]); } }
 			return out;
 		}
+		/* --- Footer placement. -----------------------------------------
+		 * "It basically only appears over my About Us text, which blocks
+		 * exactly the type of stuff I want guests to be able to read easily."
+		 * Decoration must not sit on body copy, so the default placement
+		 * mounts the canvas INSIDE the site footer and draws nothing outside
+		 * it. The canvas is absolutely positioned to the footer's padding box,
+		 * which takes no flow space — the footer's own height cannot change.
+		 * If the theme has no footer, nothing renders: falling back into the
+		 * content would be the one outcome the setting exists to prevent. */
+		/* A page cached before the upgrade carries a config with no placement
+		 * key. Default it to footer, not to the old whole-column backdrop:
+		 * the safe direction is the one that cannot cover body copy. */
+		var footMode = (CFG.placement || 'footer') === 'footer';
+		function footerHosts() {
+			var out = [], i, el, list;
+			if (CFG.footerHost) {
+				try { el = D.querySelector(CFG.footerHost); } catch (e2) { el = null; }
+				if (el) { out.push(el); }
+			}
+			list = D.querySelectorAll('footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer');
+			for (i = 0; i < list.length; i++) {
+				el = list[i];
+				/* A footer inside an article is a post footer, not the site's. */
+				if (el.closest && el.closest('article')) { continue; }
+				if (!hasArea(el) || rectOf(el).height < 40) { continue; }
+				if (out.indexOf(el) < 0) { out.push(el); }
+			}
+			return out;
+		}
+		var footRO = null;
+		function footWatch(el) {
+			if (footRO) { footRO.disconnect(); footRO = null; }
+			if (el && W.ResizeObserver) {
+				footRO = new W.ResizeObserver(function () { queueSize(); });
+				footRO.observe(el);
+			}
+		}
 		function mountOnBody(z) {
 			cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + z + ';';
 			D.body.appendChild(cv);
@@ -631,7 +668,21 @@
 				el.style.isolation = 'isolate';
 				diag.notes.push('isolation:isolate applied to ' + pathOf(el) + ' so z-index:-1 resolves inside it');
 			}
-			if (mode === 'sticky') {
+			if (mode === 'footer') {
+				/* Absolute against the footer's padding box: no flow space, so
+				 * no layout shift. display:block for the same reason a sticky
+				 * canvas needs it — an inline canvas sits on a text baseline. */
+				stickyWatch(null);
+				if (W.getComputedStyle(el).position === 'static') { el.style.position = 'relative'; }
+				/* width/height 100% are NOT redundant next to inset:0. A canvas
+				 * is a REPLACED element, and an absolutely positioned replaced
+				 * element with width:auto takes its INTRINSIC size (300x150) —
+				 * the insets are then over-constrained and ignored. Without
+				 * these two the mount is rejected and nothing renders. */
+				cv.style.cssText = 'position:absolute;display:block;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1;';
+				el.insertBefore(cv, el.firstChild);
+				footWatch(el);
+			} else if (mode === 'sticky') {
 				/* display:block matters: a canvas is inline by default, so it would
 				 * sit on a text baseline and add descender space — a layout
 				 * shift, which this plugin promises never to cause. */
@@ -648,7 +699,12 @@
 			}
 			var r = cv.getBoundingClientRect();
 			var ok;
-			if (mode === 'sticky') {
+			if (mode === 'footer') {
+				/* Did the canvas get the footer's box? Same question the sticky
+				 * acceptance asks: what the canvas GOT, not what the host is
+				 * now. */
+				ok = r.width >= 1 && MT.abs(r.width - el.clientWidth) <= 2 && r.height >= 40;
+			} else if (mode === 'sticky') {
 				/* width:100% resolves against the host's CONTENT box, so a
 				 * padded column legitimately yields a narrower canvas —
 				 * comparing against the border box rejected every padded
@@ -804,7 +860,22 @@
 				' ' + MT.round(r.width) + 'x' + MT.round(r.height) +
 				(cs.transform !== 'none' ? ' TRANSFORM' : '') + (cs.filter && cs.filter !== 'none' ? ' FILTER' : '') + (cs.overflow !== 'visible' ? ' overflow=' + cs.overflow : '');
 		}
-		if (CFG.layer) {
+		if (footMode) {
+			cand = footerHosts();
+			for (var fi2 = 0; fi2 < cand.length; fi2++) {
+				var okf = mountIn(cand[fi2], 'footer');
+				diag.tried.push((okf ? 'USED   ' : 'reject ') + desc(cand[fi2]) + '  (footer)');
+				if (okf) { host = cand[fi2]; hostMode = 'footer'; break; }
+			}
+			if (!host) {
+				diag.notes.push('no footer element found, and footer placement never falls back into the page content — nothing is rendered');
+				if (W.console && W.console.warn) {
+					W.console.warn('DCC Seasons: placement is "Site footer only" but no footer element was found, so nothing is rendered. Name one with the dcc_seasons_footer_host filter, or switch Placement to "Across the page content".');
+				}
+				printDiag();
+				return;
+			}
+		} else if (CFG.layer) {
 			cand = backdropHosts();
 			for (var hi = 0; hi < cand.length; hi++) {
 				var hm = trapped(cand[hi]) ? 'sticky' : 'fixed';
@@ -905,7 +976,10 @@
 						(stay === 1 ? ' once its background moves onto the canvas' : '') +
 						' — a taller host that is partly painted over beats a short one that is not');
 				}
-				if (viable(c2) && !worse) {
+				/* Never descend in footer placement: the canvas belongs to the
+				 * footer box, and a footer child is smaller by definition. The
+				 * background transfer below is still allowed. */
+				if (viable(c2) && !worse && !footMode) {
 					prev2 = host; prevMode = hostMode;
 					if (mountIn(c2, m2)) {
 						diag.tried.push('USED   ' + desc(c2) + '  (descend, ' + m2 + ')');
@@ -992,14 +1066,24 @@
 				/* Where a sprite can be SEEN, and what the two new guardrails
 				 * cost — the numbers to quote when the field still looks
 				 * wrong on a page this build has never seen. */
+				/* The panel prints from the settled pass NORMALLY, but also from the
+				 * one path that gives up before the scene exists — footer placement
+				 * with no footer. Everything it reads must tolerate that: `var`
+				 * hoists the declaration and not the value, so parts and textBoxes
+				 * are undefined up there, and an unguarded .length made the panel
+				 * throw in precisely the state the owner needs it. */
+				var plist = parts || [], tb = textBoxes || [];
 				var frn = 0;
-				for (var fi = 0; fi < parts.length; fi++) { if (parts[fi].free) { frn++; } }
+				for (var fi = 0; fi < plist.length; fi++) { if (plist[fi].free) { frn++; } }
+				lines.push('placement=' + (footMode ? 'footer only' : 'page content') +
+					(footMode ? '  footer=' + (host ? pathOf(host) : 'NONE') + '  text boxes kept clear=' + tb.length +
+						' (' + (textMs || 0).toFixed(2) + 'ms)' : ''));
 				lines.push('open map: ' + (omList
 					? omN + '/' + omTot + ' cells open (' + MT.round(omFrac * 100) + '%) in ' + omMs.toFixed(2) + 'ms, ' + omBuilds + ' build(s), cell ' + MAP_CELL + 'px' +
 						(mapUsable() ? '' : ' — under 10% open, seeding falls back to even coverage')
 					: 'not built (front layering or no host) — the canvas is above the page'));
 				lines.push('anti-clump: ' + (repN ? repMs.toFixed(3) + 'ms/frame over ' + repN + ' frames' : 'no frames measured yet') +
-					'  spacing target ' + MT.round(sepRun) + 'px  free-air ' + frn + '/' + parts.length + ' particles');
+					'  spacing target ' + MT.round(sepRun || 0) + 'px  free-air ' + frn + '/' + plist.length + ' particles');
 				lines.push('SCREEN REACH: ' + MT.round((diag.share || 0) * 100) + '% of the viewport is canvas' +
 					(diag.share >= 0.5 ? '' : '  — LETTERBOX: sprites can only appear in that band') +
 					'  (canvas ' + MT.round(r.height) + 'px of ' + W.innerHeight + 'px; the host can hold ' +
@@ -1071,7 +1155,9 @@
 		}, 1200);
 
 		/* Corner accents ride on the same decision as the canvas. */
-		for (var ai = 0; ai < accents.length; ai++) {
+		/* Corner accents are page-corner decoration by definition, so they
+		 * have no place in a footer-only scene. */
+		for (var ai = 0; !footMode && ai < accents.length; ai++) {
 			accents[ai].style.zIndex = host ? '-1' : (CFG.layer ? '5' : '99990');
 			/* position:fixed inside a transformed host resolves against that
 			 * host, not the viewport: the accent lands in the column's corner
@@ -1282,6 +1368,69 @@
 		/* 48px: finer than a sprite (16-34px) and coarse enough that a phone
 		 * viewport is ~8x17 = 136 hit tests. At 40px it was 210 and the build
 		 * ran 1.8-3.4ms in the test container — over the 2ms ceiling. */
+		/* --- Footer text: the boxes nothing may be drawn over. -----------
+		 * Measured from RANGE rects over the text nodes themselves, not from
+		 * the elements' block boxes: a footer link's block box is the width
+		 * of its column, while the range rect is the width of the words. One
+		 * rect per line box, so it is glyph-tight horizontally and line-tight
+		 * vertically. Images and inline SVG count as content too.
+		 * These become holes in the clip region, so no pixel of any sprite,
+		 * ripple, trail or reflection can land on a word. --- */
+		var TEXT_PAD = 3, textBoxes = [], textMs = 0;
+		function collectRects(el, out, r0) {
+			var rects = el.getClientRects ? el.getClientRects() : [], i, rr;
+			for (i = 0; i < rects.length; i++) {
+				rr = rects[i];
+				if (rr.width < 2 || rr.height < 2) { continue; }
+				out.push({ x: rr.left - r0.left - TEXT_PAD, y: rr.top - r0.top - TEXT_PAD,
+					w: rr.width + TEXT_PAD * 2, h: rr.height + TEXT_PAD * 2 });
+			}
+		}
+		function buildTextBoxes() {
+			var t0 = nowMs();
+			textBoxes.length = 0;
+			if (!footMode || !host) { textMs = 0; return; }
+			var r0 = cv.getBoundingClientRect();
+			var walk = D.createTreeWalker(host, W.NodeFilter ? W.NodeFilter.SHOW_TEXT : 4, null, false);
+			var n, pe, cs2, rg;
+			while ((n = walk.nextNode())) {
+				if (!n.nodeValue || !/\S/.test(n.nodeValue)) { continue; }
+				pe = n.parentElement;
+				if (!pe || pe === cv) { continue; }
+				cs2 = W.getComputedStyle(pe);
+				if (cs2.visibility === 'hidden' || cs2.display === 'none' || +cs2.opacity === 0) { continue; }
+				rg = D.createRange();
+				rg.selectNodeContents(n);
+				collectRects(rg, textBoxes, r0);
+			}
+			var imgs = host.querySelectorAll('img, svg, picture, video');
+			for (n = 0; n < imgs.length; n++) { collectRects(imgs[n], textBoxes, r0); }
+			textMs = nowMs() - t0;
+		}
+		function onText(x, y) {
+			for (var i = 0; i < textBoxes.length; i++) {
+				var b = textBoxes[i];
+				if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { return true; }
+			}
+			return false;
+		}
+		/* The guarantee, applied once a frame: everything drawn is clipped to
+		 * the canvas MINUS the text boxes. Cheap — one path of a few dozen
+		 * rects — and unlike a per-sprite test it also covers trails, ripples
+		 * and reflections. */
+		function clipText() {
+			if (!textBoxes.length) { return false; }
+			cx.save();
+			cx.beginPath();
+			cx.rect(0, 0, vw, vh);
+			for (var i = 0; i < textBoxes.length; i++) {
+				var b = textBoxes[i];
+				cx.rect(b.x, b.y, b.w, b.h);
+			}
+			cx.clip('evenodd');
+			return true;
+		}
+
 		var MAP_CELL = 48, MAP_MIN = 400;
 		var omC = 0, omR = 0, omCell = null, omList = null, omN = 0, omTot = 0, omMeas = 0, omOpen = 0;
 		var omNine = [0, 0, 0, 0, 0, 0, 0, 0, 0], omCol = [0, 0, 0];
@@ -1311,9 +1460,10 @@
 			omAt = t0; omBuilds++;
 			/* In front mode the canvas is above the page: everything is open,
 			 * and sampling would be a lie dressed as a measurement. */
-			if (!CFG.layer || !host || vw < 1 || vh < 1) {
+			if ((!CFG.layer && !footMode) || !host || vw < 1 || vh < 1) {
 				omList = null; omFrac = 1; omMs = 0; sepTarget(); return;
 			}
+			buildTextBoxes();
 			var r = cv.getBoundingClientRect();
 			var sx = vw > 0 ? r.width / vw : 1, sy = vh > 0 ? r.height / vh : 1;
 			var c, rw, i, k, x, y, vx, vy, open;
@@ -1341,6 +1491,10 @@
 						open = 1;                       /* unmeasurable, so not covered */
 					} else {
 						open = openAt(vx, vy) ? 1 : 0;
+						/* A cell over footer text is not somewhere to seed
+						 * into: the clip would only make the sprite invisible
+						 * there, which wastes it. */
+						if (open && onText(x, y)) { open = 0; }
 						omMeas++; omOpen += open;
 					}
 					omCell[k] = open;
@@ -3128,6 +3282,7 @@
 			var dt = last ? mn((t - last) / 1000, 0.05) : 0.016;
 			last = t;
 			cx.clearRect(0, 0, vw, vh);
+			var clipped = footMode && clipText();
 			drawBgFills();
 			drawSnow();
 			if (burstMode) {
@@ -3177,6 +3332,7 @@
 				var until = performance.now() + W.DCCSeasonsEngine._slow;
 				while (performance.now() < until) { /* synthetic load for tests */ }
 			}
+			if (clipped) { cx.restore(); }
 			if (t0) { degrade(performance.now() - t0, t); }
 			raf = W.requestAnimationFrame(frame);
 		}
@@ -3215,6 +3371,10 @@
 				get waterY() { return waterY; },
 				get sep() { return sepRun; },
 				get share() { return viewShare(); },
+				get placement() { return footMode ? 'footer' : 'content'; },
+				get hostPath() { return host ? pathOf(host) : ''; },
+				get textBoxes() { return textBoxes.slice(0); },
+				get textMs() { return textMs; },
 				get paintable() { return worth(host, 1); },
 				get openMap() {
 					return { n: omN, total: omTot, frac: omFrac, ms: omMs, builds: omBuilds,

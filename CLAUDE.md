@@ -154,8 +154,8 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 95,220 raw / 33,372 gzipped (3.16.0;
-  3.15.0 was 93,845 / 32,920, verified live). Cite that, not the 66KB/23KB
+- **The engine's size baseline is 97,933 raw / 34,373 gzipped (3.18.0;
+  3.16.0 was 95,220 / 33,372, verified live). Cite that, not the 66KB/23KB
   ceiling.** That ceiling was
   real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
   backdrop machinery landed: 3.6.0 70,945 / 24,580 · 3.7.0 79,866 / 27,382 ·
@@ -382,6 +382,29 @@ bump so the tracked zip never lags the source.
   complaint was "days" wrapping below the box it labels. Keep the 66 `name=`
   attributes byte-identical; that diff is what guarantees no saved schedule
   data moves.
+- **Decorations live in the FOOTER by default, and never on a word.** The
+  owner's "it only appears over my About Us text, which blocks exactly the
+  stuff I want guests to read" is settled by `placement` (Settings: footer |
+  content, default footer) — a different question from `scope`, which decides
+  which PAGES load the plugin; keep them separate. Footer mode mounts the
+  canvas inside the footer, `position:absolute;inset:0` — and `width:100%`
+  and `height:100%` are NOT redundant there: a canvas is a REPLACED element,
+  so an absolutely positioned one with `width:auto` takes its intrinsic
+  300x150 and the insets are ignored, which rejects the mount and renders
+  nothing. Footer text is protected by clipping every frame to the footer box
+  minus `textBoxes`, measured with RANGE rects over text nodes (glyph-tight
+  horizontally, line-box tall) plus img/svg — never element block boxes. No
+  footer means nothing renders; never fall back into the content, that is the
+  one outcome the setting exists to prevent. `scratchpad/test-footer.js` reads
+  the canvas's own pixels inside each text rect every frame, and
+  `scratchpad/gen-config.php` pins `placement: 'content'` so the older suites
+  keep testing the content backdrop they were written for.
+- **A diagnostic must survive the state it exists to explain.** `printDiag()`
+  is also called from the one path that gives up before the scene is built
+  (footer placement, no footer). `var` hoists declarations, not values, so
+  `parts` and `textBoxes` are undefined there — an unguarded `.length` made
+  the panel throw in precisely the state the owner needed it. Anything new in
+  that function has to tolerate a half-built engine.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

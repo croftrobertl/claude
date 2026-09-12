@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.17.0
+Stable tag: 3.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,41 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.18.0 =
+* "It basically only appears over my About Us text, which blocks exactly the
+  type of stuff that I want guests to be able to read easily." The seasonal
+  decorations now live in the SITE FOOTER and nowhere else. Placement is a
+  setting — Settings > DCC Seasons > Placement — with "Site footer only" as
+  the default, so the next change to this is a choice rather than a release.
+* The canvas is mounted inside the footer element and absolutely positioned to
+  its padding box, which takes no flow space: the footer and the document are
+  the same height with the decorations and without them, measured. Nothing
+  renders outside that box on any page — verified on a homepage, a listing
+  page and a cottage page.
+* Nothing is drawn over footer text either. Every frame is clipped to the
+  footer box MINUS the rects of the words in it, measured with Range rects
+  over the text nodes rather than the elements' block boxes — a footer link's
+  block box is the width of its column, the range rect is the width of the
+  word. Images and inline SVG are protected the same way. The test does not
+  trust the clip: it reads the canvas's own pixels inside each text rect on
+  every frame — 1,820 rect-samples over 140 frames, zero pixels on a word,
+  with the canvas confirmed painting in all 140.
+* Placement is a different question from "Where effects appear", which decides
+  which PAGES load the plugin at all; the two settings stay independent. An
+  option array saved before this release reads back as footer without
+  disturbing the schedule or any other setting. If a theme has no footer,
+  nothing renders rather than falling back into the page content, and the
+  console and ?dcc_debug=1 both say so — name the element with the
+  dcc_seasons_footer_host filter.
+* Verified rather than assumed: aria-hidden="true", pointer-events:none (a tap
+  in the footer lands on the footer, never the canvas), nothing at all under
+  prefers-reduced-motion, no CSS transition or animation on the canvas, and no
+  horizontal scrolling at 375px. Corner accents are page-corner decoration by
+  definition and are not rendered under footer placement.
+* The season schedule, the ?dcc_season= share previews and the tap-the-logo
+  Matrix easter egg are unaffected and still pass their suites.
+* engine.min.js is 97,933 raw / 34,373 gzipped.
 
 = 3.17.0 =
 * The Schedule is now ONE ROW PER CARD at 782px and below. The repaired table

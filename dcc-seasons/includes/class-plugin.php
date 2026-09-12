@@ -547,6 +547,18 @@ final class Plugin {
             'density'     => (int) $opt['density'],
             'opacity'     => (float) $opt['opacity'],
             'layer'       => $opt['layering'] === 'behind' ? 1 : 0,
+            /* WHERE on the page the decorations may be. 'footer' mounts the
+             * canvas inside the site footer and draws nothing anywhere else;
+             * 'content' is the older whole-column backdrop. */
+            'placement'   => (string) $opt['placement'],
+            /**
+             * CSS selector for the footer element the ambient canvas mounts
+             * inside under 'footer' placement. Empty (the default) means the
+             * engine looks for the usual footer landmarks.
+             *
+             * @param string $selector
+             */
+            'footerHost'  => (string) apply_filters('dcc_seasons_footer_host', ''),
             /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque
