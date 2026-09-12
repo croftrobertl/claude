@@ -116,6 +116,28 @@
 	 * plugin's year-round signature. Not loaded under reduced motion. */
 	function ambient() {
 		if (!CFG.ambient || reduced() || !CFG.engineSrc) { return; }
+		/* Footer placement with no footer renders nothing, so fetching the
+		 * engine to discover that costs ~96KB for no effect. Measured: on a
+		 * page with no footer the engine was fetched in full and produced
+		 * zero canvases. The selector is the config's, the same one the
+		 * engine mounts by, so the two cannot disagree. */
+		/* ...but NOT when an administrator has asked for the diagnostics
+		 * panel: that panel is drawn by the engine, and skipping the fetch
+		 * would leave ?dcc_debug=1 silent in precisely the state it exists to
+		 * explain. The saving is for visitors; the explanation is for whoever
+		 * is debugging. */
+		if (!CFG.diag && (CFG.placement || 'footer') === 'footer') {
+			var sel = CFG.footerSel || CFG.footerHost ||
+				'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer';
+			var found;
+			try { found = D.querySelector(sel); } catch (e) { found = null; }
+			if (!found) {
+				if (W.console && W.console.warn) {
+					W.console.warn('DCC Seasons: placement is "Site footer only" but this page has no footer element, so the ambient engine was not loaded. Name one with the dcc_seasons_footer_host filter, or switch Placement to "Across the page content".');
+				}
+				return;
+			}
+		}
 		var loading = false;
 		function go() {
 			if (loading) { return; }

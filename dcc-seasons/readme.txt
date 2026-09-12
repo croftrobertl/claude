@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.18.0
+Stable tag: 3.18.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,35 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 3.18.1 =
+* From a script audit: "ambient.min.js and engine.min.js load on the homepage
+  on 12 September, when no season is active." Measured, and mostly the other
+  way round. A season IS active on 12 September — Fall Fishing on the shipped
+  defaults — and there are ZERO days in 2026 with no active row: the season
+  rows tile the year and florida_keys sits under them as the year-round base.
+  Gating the enqueue on "a schedule row is live" would never fire. It also
+  could not be done server-side: the row is resolved from the VISITOR'S local
+  date so that page caching can never serve a stale season.
+* What the homepage actually loads, measured with the network timeline: ONE
+  script is enqueued, ambient.min.js at 4,392 bytes, in the footer with
+  defer. The 96KB engine is not enqueued at all — the loader fetches it on
+  requestIdleCallback, measured at +215ms AFTER the load event, so it never
+  competes for the critical path. Under prefers-reduced-motion, or with the
+  ambient layer switched off, the engine is never fetched and the page pays
+  4,392 bytes in total.
+* FIXED, and the one real waste the audit's instinct was right about: under
+  footer placement on a page with NO footer, the engine was fetched in full
+  and rendered nothing — 97,900 bytes for no effect. The loader now looks for
+  the footer before fetching, so such a page pays 4KB instead of 100KB. The
+  selector is emitted once by PHP (config footerSel, still overridable with
+  the dcc_seasons_footer_host filter) and read by both the loader and the
+  engine, so the two cannot disagree about what a footer is.
+* That optimisation does NOT apply when an administrator has asked for
+  ?dcc_debug=1: the diagnostics panel is drawn by the engine, and skipping the
+  fetch would have left the panel silent in exactly the state it exists to
+  explain. Visitors save the bytes; whoever is debugging still gets the
+  explanation.
 
 = 3.18.0 =
 * "It basically only appears over my About Us text, which blocks exactly the

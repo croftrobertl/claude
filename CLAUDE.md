@@ -398,13 +398,29 @@ bump so the tracked zip never lags the source.
   one outcome the setting exists to prevent. `scratchpad/test-footer.js` reads
   the canvas's own pixels inside each text rect every frame, and
   `scratchpad/gen-config.php` pins `placement: 'content'` so the older suites
-  keep testing the content backdrop they were written for.
+  keep testing the content backdrop they were written for. The footer selector
+  lives in ONE place — the PHP config's `footerSel` — because the loader uses
+  it to decide whether to fetch the engine at all and the engine uses it to
+  mount; two copies could disagree. The loader's skip is suspended when
+  `CFG.diag` is set: the panel is drawn by the engine, so skipping the fetch
+  would silence `?dcc_debug=1` in the state it exists to explain.
 - **A diagnostic must survive the state it exists to explain.** `printDiag()`
   is also called from the one path that gives up before the scene is built
   (footer placement, no footer). `var` hoists declarations, not values, so
   `parts` and `textBoxes` are undefined there — an unguarded `.length` made
   the panel throw in precisely the state the owner needed it. Anything new in
   that function has to tolerate a half-built engine.
+- **There is no "out of season", and the enqueue cannot be gated on one.**
+  The season rows tile the year and `florida_keys` is the year-round base
+  under them: 0 of 365 days in 2026 resolve to nothing. And the row is
+  resolved from the VISITOR'S local date on purpose, so the server cannot know
+  which season is live without breaking cache-safety. What loads, measured:
+  ONE enqueued script, `ambient.min.js` (~4.4KB, footer, defer); the ~96KB
+  engine is fetched by it on `requestIdleCallback`, +215ms AFTER the load
+  event, and not at all under reduced motion, with the ambient layer off, or
+  (since 3.18.1) under footer placement on a page with no footer. Re-measure
+  with `scratchpad/audit-load.js` before accepting any claim about what this
+  plugin costs a page.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

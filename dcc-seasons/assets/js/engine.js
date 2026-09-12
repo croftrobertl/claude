@@ -543,11 +543,12 @@
 		var footMode = (CFG.placement || 'footer') === 'footer';
 		function footerHosts() {
 			var out = [], i, el, list;
-			if (CFG.footerHost) {
-				try { el = D.querySelector(CFG.footerHost); } catch (e2) { el = null; }
-				if (el) { out.push(el); }
-			}
-			list = D.querySelectorAll('footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer');
+			/* The selector comes from the config so the loader and the engine
+			 * cannot disagree about what a footer is; the constant is only for
+			 * a page cached before the key existed. */
+			var sel = CFG.footerSel || CFG.footerHost ||
+				'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer';
+			try { list = D.querySelectorAll(sel); } catch (e2) { list = []; }
 			for (i = 0; i < list.length; i++) {
 				el = list[i];
 				/* A footer inside an article is a post footer, not the site's. */

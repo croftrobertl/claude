@@ -553,12 +553,18 @@ final class Plugin {
             'placement'   => (string) $opt['placement'],
             /**
              * CSS selector for the footer element the ambient canvas mounts
-             * inside under 'footer' placement. Empty (the default) means the
-             * engine looks for the usual footer landmarks.
+             * inside under 'footer' placement. ONE copy, here: both the
+             * loader (which skips fetching the 96KB engine when nothing
+             * matches) and the engine (which mounts into the first match)
+             * read this same string, so they cannot disagree about what a
+             * footer is.
              *
-             * @param string $selector
+             * @param string $selector Comma-separated, most specific first.
              */
-            'footerHost'  => (string) apply_filters('dcc_seasons_footer_host', ''),
+            'footerSel'   => (string) apply_filters(
+                'dcc_seasons_footer_host',
+                'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer'
+            ),
             /**
              * CSS selector for the element the ambient canvas is mounted
              * inside in "behind" mode — the one that paints the opaque
