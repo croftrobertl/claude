@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.32.0
+Stable tag: 0.33.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,18 +179,19 @@ buttons) is configurable in the Elementor editor.
 
 == Caching (SpeedyCache / HostGator) ==
 
-The front end loads three small scripts that must keep their order:
-`dccs-score` and `dccs-labels` before `dccs-selector` (the selector reads the data
-layer the other two define). WordPress and Elementor enqueue them in the right
-order automatically.
+Since 0.33.0 the front end loads ONE script, `assets/js/dccs.js`, under the single
+handle `dccs-selector`. It replaced five separate files that had to keep their
+order; there is no ordering to get wrong any more.
 
 If you turn on JavaScript "combine"/"merge" or "defer" in SpeedyCache (or any
 optimizer) and the widget ever shows "Loading…" too long, exclude the plugin's
-scripts — match `dcc-cottage-selector/assets/js/` (or the handles `dccs-score`,
-`dccs-labels`, `dccs-selector`) in the optimizer's JS-exclusion list. The selector
-also has a built-in self-healing retry, so most setups need no change. After
-updating the plugin, clear SpeedyCache and run Elementor → Tools → Regenerate Files
-& Data so the new CSS/JS is served.
+script — match `dcc-cottage-selector/assets/js/` or the handle `dccs-selector` in
+the optimizer's JS-exclusion list. (If you set that exclusion up before 0.33.0 and
+listed `dccs-score` / `dccs-labels` / `dccs-availability` / `dccs-cast`, those
+handles no longer exist and can be removed; the path match covers everything.) The
+selector also has a built-in self-healing retry, so most setups need no change.
+After updating the plugin, clear SpeedyCache and run Elementor → Tools → Regenerate
+Files & Data so the new CSS/JS is served.
 
 == Editing the cottage data ==
 
@@ -229,6 +230,22 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.33.0 =
+* One script instead of five. score / labels / availability / cast / selector are
+  concatenated into assets/js/dccs.js by tools/build-bundle.php and loaded under a
+  single handle. The sources stay split and remain the source of truth; `npm test`
+  fails if the committed bundle has drifted from them. Payload is unchanged — the
+  saving is four fewer requests on every page carrying the widget.
+* The cast no longer polls while it is off screen. It used to re-check five times a
+  second for the life of the page, which on the homepage — where the heading sits
+  two screens down — was the common case. Being off screen or in a hidden tab is an
+  event-driven wait, so there is now no timer at all until the widget is in view.
+* Compare picks survive a page change. Tick three cottages, open one to read about
+  it, come back, and the ticks are still there. Stored in sessionStorage so they
+  last the visit and no longer, keyed per widget instance so the homepage and
+  /cottages/ keep separate lists. Cleared by Restart and by switching modes.
+  Quiz answers are still never persisted.
 
 = 0.32.0 =
 * FIXED: an unbalanced brace in 0.31.0's stylesheet was silently discarding a whole

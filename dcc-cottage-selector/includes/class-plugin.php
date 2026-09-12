@@ -276,25 +276,22 @@ final class Plugin
     {
         wp_register_style('dccs-selector', DCCS_URL . 'assets/css/selector.css', [], DCCS_VERSION);
 
-        wp_register_script('dccs-score', DCCS_URL . 'assets/js/score.js', [], DCCS_VERSION, true);
-        wp_register_script('dccs-labels', DCCS_URL . 'assets/js/labels.js', [], DCCS_VERSION, true);
-        wp_register_script('dccs-availability', DCCS_URL . 'assets/js/availability.js', [], DCCS_VERSION, true);
-        wp_register_script('dccs-cast', DCCS_URL . 'assets/js/cast.js', [], DCCS_VERSION, true);
-        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/selector.js', ['dccs-score', 'dccs-labels', 'dccs-availability', 'dccs-cast'], DCCS_VERSION, true);
+        // ONE request, not five (0.33.0). assets/js/dccs.js is generated from
+        // score/labels/availability/cast/selector by tools/build-bundle.php; the
+        // sources stay split and remain the source of truth. The old per-file
+        // handles are gone rather than aliased: an alias would let a stray
+        // wp_enqueue_script('dccs-score') load a second copy of the same code.
+        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/dccs.js', [], DCCS_VERSION, true);
     }
 
     public function enqueue_for_preview(): void
     {
         $this->register_assets();
         wp_enqueue_style('dccs-selector');
-        // Enqueue the dependency chain explicitly and in order. In the editor
-        // preview the widget markup is injected dynamically, and relying on
-        // implicit dependency resolution alone can leave the data layer
-        // (dccs-score / dccs-labels) unavailable when the widget boots.
-        wp_enqueue_script('dccs-score');
-        wp_enqueue_script('dccs-labels');
-        wp_enqueue_script('dccs-availability');
-        wp_enqueue_script('dccs-cast');
+        // One handle now carries the whole data layer, so the ordering problem this
+        // used to work around cannot arise: in the editor preview the widget markup
+        // is injected dynamically, and relying on implicit dependency resolution
+        // could leave DCCS.score / DCCS.labels undefined when the widget booted.
         wp_enqueue_script('dccs-selector');
     }
 }

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "Dev tooling (DOM smoke tests) for the Dora Canal Cottage Selector plugin. Not shipped in the plugin zip.",
   "scripts": {
-    "test": "php tools/css-lint.php && php tests/test-design-snapshot.php && node tests/dom-smoke.test.js"
+    "test": "php tools/build-bundle.php --check && php tools/css-lint.php && php tests/test-design-snapshot.php && node tests/dom-smoke.test.js",
+    "build": "php tools/build-bundle.php"
   },
   "devDependencies": {
     "jsdom": "^29.1.1"

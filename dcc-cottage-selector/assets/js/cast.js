@@ -666,8 +666,18 @@
     function tick() {
       if (stopped) { return; }
       if (canCast()) { cast(false); return; }
-      // Declined (hidden tab, scrolled away, still scrolling). Re-check later
-      // rather than dropping the cast: scrolling back must re-arm it.
+      // Declined. WHY it was declined decides whether to set a timer at all.
+      //
+      // Until 0.33.0 this rescheduled unconditionally, and schedule() has a 200ms
+      // floor — so a widget two screens down woke five times a second for the whole
+      // life of the page and never cast. On the homepage, where the heading sits at
+      // 1696px, that was the common case.
+      //
+      // Being off-screen or in a hidden tab is an EVENT-driven wait: the
+      // IntersectionObserver and visibilitychange both call tick(), so there is
+      // nothing to poll for. Only a wait on the clock — the cast is not due yet, or
+      // the scroll has not settled — needs a timer.
+      if (document.hidden || !visibleEnough()) { return; }
       schedule();
     }
 

@@ -2128,8 +2128,17 @@ defer(async function () {
   const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
 
-  ok('cast.js is registered as a selector dependency',
-    /wp_register_script\('dccs-cast'/.test(fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-plugin.php'), 'utf8')));
+  // 0.33.0: five handles became one bundled handle.
+  const pluginSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-plugin.php'), 'utf8');
+  ok('the front end registers exactly one script for the widget',
+    (pluginSrc.match(/wp_register_script\(/g) || []).length === 1 &&
+    /wp_register_script\('dccs-selector', DCCS_URL \. 'assets\/js\/dccs\.js'/.test(pluginSrc));
+  // Strip comments first: the rule against matching text you wrote cuts both ways.
+  // The plugin comments EXPLAIN why the old handles are gone by naming one of them,
+  // and a raw match found that sentence and called it a live registration.
+  const pluginCode = pluginSrc.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('the old per-file handles are gone from the CODE, not merely aliased',
+    !/'dccs-(score|labels|availability|cast)'/.test(pluginCode));
 
   // --- the non-negotiables, asserted on the source ---
   ok('the overlay is aria-hidden', /setAttribute\('aria-hidden', 'true'\)/.test(castSrc));
@@ -2383,6 +2392,95 @@ defer(async function () {
     /fish\.appendChild\(svgEl\('circle'[\s\S]{0,160}?cx: 0, cy: 0/.test(castSrc));
   ok('the rig derives everything from one mouth point',
     /st\.mouth = mouth/.test(castSrc));
+})();
+
+// ---- 74. 0.33.0: one bundle, an idle cast, and remembered compare picks ----
+(function () {
+  const selSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
+  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
+  const bundlePath = path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'dccs.js');
+
+  // --- the bundle is generated, and a stale one must fail loudly --------------
+  ok('the bundle exists', fs.existsSync(bundlePath));
+  const bundle = fs.readFileSync(bundlePath, 'utf8');
+  ok('it says it is generated and must not be hand-edited', /DO NOT EDIT/.test(bundle));
+  // Every source must actually be IN it — a bundle missing one boots a broken
+  // widget, and the header naming the file proves nothing about the contents.
+  ['score', 'labels', 'availability', 'cast', 'selector'].forEach(name => {
+    const src = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', name + '.js'), 'utf8').trim();
+    ok('the bundle contains the whole of ' + name + '.js', bundle.indexOf(src) !== -1);
+  });
+  // Order matters: selector.js reads the others when it boots.
+  const at = (n) => bundle.indexOf('/* ---- assets/js/' + n + '.js ---- */');
+  ok('sources are concatenated in dependency order',
+    at('score') < at('labels') && at('labels') < at('availability') &&
+    at('availability') < at('cast') && at('cast') < at('selector'));
+
+  // --- the cast stops polling when it cannot cast ----------------------------
+  // It used to reschedule unconditionally against a 200ms floor, so a widget two
+  // screens down woke five times a second for the life of the page.
+  ok('tick() does not set a timer while off-screen or hidden',
+    /if \(document\.hidden \|\| !visibleEnough\(\)\) \{ return; \}/.test(castSrc));
+  ok('and the observer / visibilitychange are what wake it again',
+    /IntersectionObserver\(function \(\) \{ tick\(\); \}/.test(castSrc) &&
+    /visibilitychange', tick/.test(castSrc));
+
+  // --- compare picks are remembered for the visit ----------------------------
+  ok('picks are stored in sessionStorage, not localStorage',
+    /window\.sessionStorage/.test(selSrc) && !/window\.localStorage/.test(selSrc));
+  ok('storage failures are swallowed, never thrown at the guest',
+    (selSrc.match(/catch \(e\) \{ return null; \}/g) || []).length >= 1 &&
+    /storage unavailable/.test(selSrc));
+  ok('the key is per widget instance, not global',
+    /function cmpKey\(root\)/.test(selSrc) && /dataset\.id/.test(selSrc));
+  ok('the pop-up never shares a key with the page widget',
+    /dccs-in-modal.*\?\s*':modal'/.test(selSrc));
+  ok('an explicit ?compare= deep link still wins over what was remembered',
+    selSrc.indexOf('var remembered = cmpLoad(root)') < selSrc.indexOf('applyDeeplink(state, config)'));
+  // resetForMode must not decide what is remembered: its two callers differ, and
+  // conflating them wiped the picks on the way into compare mode from the landing.
+  const resetBody = selSrc.slice(selSrc.indexOf('function resetForMode(st)'),
+                                 selSrc.indexOf('root.addEventListener(\'click\''));
+  ok('resetForMode clears live state but not the remembered picks',
+    /st\.compareIds = \[\]/.test(resetBody) && !/cmpSave/.test(resetBody));
+  ok('a genuine mode switch does clear them', /cmpSave\(root, \[\]\);\s*\/\/ the 0\.23\.0/.test(selSrc));
+  ok('re-selecting the mode you are in is a no-op', /t\.dataset\.mode === state\.mode/.test(selSrc));
+  ok('Restart clears them', /cmpSave\(root, \[\]\);\s*\n\s*rerender\(\); focusStep\(\)/.test(selSrc));
+
+  // Behavioural: ticking writes through, and a fresh mount reads it back.
+  const w = freshDom();
+  const r1 = mountSelector(w, CONFIG);
+  enter(r1, 'compare');
+  const boxes = r1.querySelectorAll('.dccs-cmp-list input[type="checkbox"]');
+  ok('the compare list rendered in jsdom', boxes.length >= 2);
+  if (boxes.length >= 2) {
+    const ids = [boxes[0].dataset.cmp, boxes[1].dataset.cmp];
+    // Re-query per tick: every change re-renders and detaches the nodes held from
+    // before it, so a second click on a stale node silently does nothing. That is
+    // the trap this suite has hit repeatedly, and it hit this assertion too.
+    ids.forEach(id => {
+      const box = r1.querySelector('.dccs-cmp-list input[data-cmp="' + id + '"]');
+      box.checked = true;
+      box.dispatchEvent(new w.Event('change', { bubbles: true }));
+    });
+    const keys = Object.keys(w.sessionStorage).filter(k => k.indexOf('dccs:cmp:') === 0);
+    ok('ticking wrote the picks to sessionStorage', keys.length === 1);
+    ok('and it wrote the ids that were ticked',
+      JSON.parse(w.sessionStorage.getItem(keys[0])).sort().join() === ids.slice().sort().join());
+
+    // A fresh page load in the SAME session reads them back. The first root has to
+    // go first: with no Elementor data-id in jsdom the key falls back to the
+    // widget's index, and leaving both mounted would make the second root a
+    // SECOND widget with its own key — which is correct behaviour, but not the
+    // thing being tested here.
+    r1.remove();
+    const r2 = mountSelector(w, CONFIG);
+    enter(r2, 'compare');
+    const back = Array.prototype.map.call(
+      r2.querySelectorAll('.dccs-cmp-list input:checked'), i => i.dataset.cmp).sort();
+    ok('a fresh page load in the same session restores the ticks',
+      back.join() === ids.slice().sort().join());
+  }
 })();
 
 (async function runDeferred() {

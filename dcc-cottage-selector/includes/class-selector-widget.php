@@ -61,7 +61,9 @@ class Selector_Widget extends Widget_Base
     {
         // List the whole chain so the data layer is guaranteed present at boot,
         // on the front-end and in the Elementor editor preview alike.
-        return ['dccs-score', 'dccs-labels', 'dccs-availability', 'dccs-selector'];
+        // One bundled handle (0.33.0). It also no longer omits 'dccs-cast', which
+        // this list did while the handles were separate.
+        return ['dccs-selector'];
     }
 
     public function get_style_depends(): array
