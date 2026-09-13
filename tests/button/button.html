@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DCC Custom Checkout — button harness</title>
+
+<!--
+  Renders the checkout's Submit Booking button in isolation, so its computed
+  style can be read WITHOUT creating a reservation on the live site.
+
+  The two stylesheets that fight the plugin are reproduced here from their
+  measured values, and loaded BEFORE the plugin's own CSS so the cascade order
+  matches the real page. That makes this a real test of whether the plugin's
+  selectors out-specify them.
+
+  What this proves: the plugin's rule beats Bravada and the Elementor kit.
+  What it CANNOT prove: that no OTHER rule on the live page also targets this
+  button. Only a real checkout can answer that.
+-->
+
+<style>
+  /* --- Bravada, as measured: (0,0,1) ------------------------------------ */
+  button, input[type="submit"] {
+      text-transform: uppercase;
+      background-color: #0f6dbf;
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      font-family: Pavanam, sans-serif;
+  }
+
+  /* --- Elementor kit, as measured: (0,1,1) ------------------------------ */
+  .elementor-kit-9 button,
+  .elementor-kit-9 input[type="submit"] {
+      font-family: Pavanam, sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: capitalize;
+  }
+
+  body { margin: 0; padding: 40px; background: #fff; }
+  .viewport { max-width: 375px; outline: 1px dashed #ccc; padding: 16px; margin-top: 32px; }
+  h2 { font: 600 13px system-ui; color: #666; margin: 0 0 8px; }
+</style>
+
+<!-- The plugin's stylesheet, loaded after the theme exactly as on the page. -->
+<link rel="stylesheet" href="../../dcc-custom-checkout/assets/checkout.css">
+</head>
+
+<body class="elementor-kit-9">
+  <h2>Desktop</h2>
+  <form class="mphb_sc_checkout-form" id="desktop">
+    <button type="submit" id="submit-desktop">Submit Booking</button>
+    <table><tr><td>Taxes<button type="button" class="dcc_checkout-tax-asterisk"
+      id="asterisk" aria-label="Show which taxes apply">*</button></td><td>$38.50</td></tr></table>
+  </form>
+
+  <h2>375px</h2>
+  <div class="viewport">
+    <form class="mphb_sc_checkout-form">
+      <button type="submit" id="submit-narrow">Submit Booking</button>
+    </form>
+  </div>
+</body>
+</html>
