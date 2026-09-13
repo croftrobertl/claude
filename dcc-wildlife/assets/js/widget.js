@@ -329,8 +329,28 @@
 			}
 
 			// Quiet photo credit, only where a licensed photo is shown.
+			// Per-photo since 1.24.0: sp.credit is set when this photo is not
+			// the default Adobe one, and three of the Commons photos are CC BY,
+			// which REQUIRES the photographer and the licence wherever the
+			// image is shown. This sheet is where it is shown at size, so the
+			// line is not decorative. Where a source page exists the credit
+			// links to it — that is where the licence is actually stated.
 			if (sp.photo && CFG.photoBase) {
-				body.appendChild(el('p', 'dccwl-photo-credit', CFG.i18n.photoCredit || 'Photo: Adobe Stock'));
+				var credit = el('p', 'dccwl-photo-credit');
+				var text = sp.credit || CFG.i18n.photoCredit || 'Photo: Adobe Stock';
+				// http(s) only: the credit map is filterable, so a site could
+				// put anything in this field. A javascript: URL would be a
+				// scripting hole, so an unrecognised scheme renders as plain
+				// text rather than as a link.
+				if (sp.creditUrl && /^https?:\/\//i.test(sp.creditUrl)) {
+					var a = el('a', 'dccwl-photo-credit-link', text);
+					a.href = sp.creditUrl;
+					a.rel = 'noopener';
+					credit.appendChild(a);
+				} else {
+					credit.textContent = text;
+				}
+				body.appendChild(credit);
 			}
 
 			var badges = el('p', 'dccwl-detail-badges');

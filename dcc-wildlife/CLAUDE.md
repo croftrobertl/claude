@@ -31,18 +31,40 @@ git history at the v1.1.0 commit; any old sighting posts and the
   third remote source without the same conversation.
 - **Image files: allowed since v1.11.0 for VETTED species photos only
   (owner-authorised 2026-09-01).** The "no image files, ever" rule was
-  relaxed on purpose. As of 1.23.1, 23 species carry a real licensed photo
+  relaxed on purpose. As of 1.24.0, 29 species carry a real licensed photo
   in `assets/photos/<id>.jpg` — the hero of the detail sheet, and since
-  1.19.0 the tile face too, at `-320`. Each photo is a free-tier **Adobe
-  Stock** license, visually vetted for the correct species, and optimised;
-  they load `loading="lazy"`, so a guest who never scrolls to a species
-  pays nothing for it. Species with no accurate free photo DELIBERATELY
-  keep their drawn scene or their group glyph — never swap in a
-  wrong-species photo to fill the gap. `Species::photos()` is the map;
-  `photo_credits()` derives from it, and the credit line and the
-  `photoCredit` string are load-bearing (the licence expects attribution).
-  DO NOT delete `assets/photos/` as a "no image files" cleanup — it is now
-  sanctioned. Still no webfonts, no CDN, no non-species images.
+  1.19.0 the tile face too, at `-320`. Each is visually vetted for the
+  correct species and optimised; they load `loading="lazy"`, so a guest who
+  never scrolls to a species pays nothing for it. Species with no accurate
+  free photo DELIBERATELY keep their drawn scene or their group glyph —
+  never swap in a wrong-species photo to fill the gap. `Species::photos()`
+  is the map. DO NOT delete `assets/photos/` as a "no image files"
+  cleanup — it is now sanctioned. Still no webfonts, no CDN, no
+  non-species images.
+- **ATTRIBUTION IS PER-PHOTO DATA, AND IT IS A LICENCE OBLIGATION, NOT
+  DECORATION (1.24.0).** Through 1.23.1 every photo was free-tier Adobe
+  Stock and one hard-coded string ("Photo: Adobe Stock") served the lot.
+  Photo batch 2 broke that: Adobe's free pool is thin for North American
+  species — no pied-billed grebe at all — so six came from **Wikimedia
+  Commons**, and three of those are **CC BY**, which REQUIRES the
+  photographer and the licence wherever the image is shown. So:
+  `Species::PHOTO_SOURCES` is `id => [ credit, licence, source URL ]`;
+  `photo_credits()` reads it and falls back to the Adobe row for anything
+  with no row of its own; `photo_credit_line()` composes the one-liner the
+  sheet shows. Both the sheet (JS) and the crawlable credits panel (PHP)
+  must show it — the sheet is where the photo is displayed at size, so a
+  sheet printing the wrong credit is a licence breach, not a typo. On the
+  wire, `dataset()` sends `credit` only when it differs from the default;
+  that is transport economy, not the data model, and `photo_credit_line()`
+  is always complete server-side. Never invent a source URL: no URL renders
+  no link.
+- **The shape a photo-batch manifest must arrive in.** One row per photo
+  with exactly three fields, in this order: (1) the credit as it should
+  read, photographer first — `lwolfartist / CC BY 2.0`,
+  `USFWS Pacific (public domain)`; (2) the licence in full —
+  `Creative Commons Attribution 2.0 Generic`; (3) the source page URL, or
+  empty. Slug, species name and the three renditions alongside. That maps
+  one-to-one onto a `PHOTO_SOURCES` row with no interpretation.
 - **Intake rule for a photo batch (Phase 2 ships about five of them).**
   The supplied slugs are guesses and the captions are not evidence: rename
   to this plugin's ids, and OPEN EVERY IMAGE AND IDENTIFY THE SPECIES BY
@@ -56,7 +78,11 @@ git history at the v1.1.0 commit; any old sighting posts and the
   `photos()` and `PHOTO_W`; credits follow automatically. The harness loop
   in `test-batch1.php` then gates the renditions for you: original +
   `-600` + `-320` on disk, the thumb exactly 320×240, the `-600` exactly
-  600 wide, and `PHOTO_W` equal to the original's real width.
+  600 wide, and `PHOTO_W` equal to the original's real width. An original
+  may be portrait (the coot's is 1100×1216) — `PHOTO_W` is the srcset
+  width descriptor, so only the width is ever recorded. Check the `-320`
+  too, not just the full frame: it is the tile face, and a correctly
+  identified bird can still crop to mostly water.
 - **PHP must never bake "the current month" into HTML.** The site is
   aggressively page-cached (SpeedyCache + Endurance + advanced-cache.php).
   The full 12-month dataset ships to the client in the inline `DCC_WL_CFG`
@@ -1114,7 +1140,7 @@ rounded boxes at the same weight. The rule now:
   out of both ends, and the water deck opened on its ninth card because of it.
 - **The tile face has three tiers (1.23.0):** a vetted photo, else the
   species' own sprite where one exists, else the neutral group glyph. Today
-  that is 23 / 7 / 21 species (24 / 7 / 21 tile faces — the alligator
+  that is 29 / 7 / 15 species (30 / 7 / 15 tile faces — the alligator
   appears in both Critters and the safety group). Never invent artwork to
   fill the third tier. Those three counts are asserted in build-page.php,
   test-1230.php and test-batch1.php; a photo batch has to move all of them.

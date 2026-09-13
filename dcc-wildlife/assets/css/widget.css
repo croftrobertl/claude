@@ -644,6 +644,17 @@
 	text-align: right;
 }
 
+/* 1.24.0: a CC BY credit links to the source page, where the licence is
+ * actually stated. The theme's own link colour is not ours to trust, so the
+ * link takes the same AA-measured muted colour as the line it sits in and is
+ * marked as a link by its underline — not by colour alone. Doubled class to
+ * outrank a theme's (0,3,1) anchor reset. */
+.dccwl-sheet .dccwl-photo-credit .dccwl-photo-credit-link.dccwl-photo-credit-link {
+	color: var(--dccwl-text-muted);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
 @media (max-width: 600px) {
 	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 210px; }
 }

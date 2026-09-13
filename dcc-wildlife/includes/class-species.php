@@ -890,6 +890,11 @@ final class Species {
 		// Batch 1 of the Phase 2 photo run (1.23.1), Adobe Stock free tier.
 		'greategret' => 1100, 'cattleegret' => 1100, 'glossyibis' => 1100,
 		'sandhill' => 1100, 'bcnightheron' => 1100, 'cormorant' => 1100,
+		// Batch 2 (1.24.0), Wikimedia Commons. The coot's original is
+		// portrait (1100x1216) and the grebe's landscape; PHOTO_W is the
+		// srcset width descriptor, so only the width is recorded either way.
+		'ycnightheron' => 1100, 'purplegallinule' => 1100, 'commongallinule' => 1100,
+		'grebe' => 1100, 'woodduck' => 1100, 'coot' => 1100,
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
@@ -901,19 +906,103 @@ final class Species {
 	}
 
 	/**
-	 * Photo credits, species id => [ photographer/holder, licence, source URL ]
-	 * (1.19.0). Every image that is not public domain is listed here and
-	 * rendered in the "Photo credits" <details> at the foot of the guide.
-	 * Public-domain US-government images need no line and carry none.
+	 * Where each photo actually came from: species id => [ credit, licence,
+	 * source URL ] (1.24.0).
+	 *
+	 * Until 1.23.1 every photo was free-tier Adobe Stock and the credit line
+	 * was one hard-coded string. Batch 2 broke that assumption: Adobe's free
+	 * pool is thin for North American species (no pied-billed grebe at all),
+	 * so those came from Wikimedia Commons, and three of the six are CC BY —
+	 * a licence that REQUIRES the photographer, the licence and, properly,
+	 * the source. So attribution is per-photo data now, and arbitrary: any
+	 * source with any licence can be added by writing its row here.
+	 *
+	 * A species with a photo but no row falls back to the Adobe line, which
+	 * is what the original seventeen and batch 1 rely on. CC0 and
+	 * public-domain images legally need nothing, but they get a row anyway —
+	 * it costs nothing and the photographer did the work.
+	 *
+	 * FUTURE MANIFESTS: one row per photo, exactly these three fields, in
+	 * this order — (1) the credit as it should read, photographer first
+	 * ("lwolfartist / CC BY 2.0", "USFWS Pacific (public domain)"); (2) the
+	 * licence in full ("Creative Commons Attribution 2.0 Generic"); (3) the
+	 * source page URL, or '' when there is none. Nothing is derived and
+	 * nothing is guessed: a missing URL renders no link rather than a made-up
+	 * one.
+	 */
+	private const PHOTO_SOURCES = [
+		// Batch 2 (1.24.0), Wikimedia Commons. URLs are the file pages, which
+		// is where the licence and the photographer are actually stated.
+		'ycnightheron'    => [
+			'lwolfartist / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Estero_llano_sp_4.8.23_estero_llano_4.8.23_DSC_9189-topaz-denoiseraw-sharpen.jpg',
+		],
+		'purplegallinule' => [
+			'JeffreyGammon / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Gallinule_Purple_JG.jpg',
+		],
+		'commongallinule' => [
+			'Wildreturn / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Common_Gallinule_-_26918569238.jpg',
+		],
+		'grebe'           => [
+			'ALAN SCHMIERER / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:096_-_PIED-BILLED_GREBE_(3-25-09)_SLOCO,_CA_(8722115638).jpg',
+		],
+		'woodduck'        => [
+			'Jusotil_1943 / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:C180518_(42165614602).jpg',
+		],
+		'coot'            => [
+			'USFWS Pacific (public domain)',
+			'Public domain (US Fish and Wildlife Service)',
+			'https://commons.wikimedia.org/wiki/File:American_Coot_(52760260350).jpg',
+		],
+	];
+
+	/**
+	 * Photo credits, species id => [ credit, licence, source URL ] (1.19.0,
+	 * per-photo since 1.24.0). Rendered in the "Photo credits" <details> at
+	 * the foot of the guide — crawlable, no JS, so the attribution is there
+	 * whether or not anybody opens a species.
 	 *
 	 * @return array<string,array{0:string,1:string,2:string}>
 	 */
 	public static function photo_credits(): array {
+		$adobe   = [ 'Adobe Stock', __( 'Adobe Stock standard licence', 'dcc-wildlife' ), '' ];
 		$credits = [];
 		foreach ( array_keys( self::photos() ) as $id ) {
-			$credits[ $id ] = [ 'Adobe Stock', __( 'Adobe Stock standard licence', 'dcc-wildlife' ), '' ];
+			$credits[ $id ] = self::PHOTO_SOURCES[ $id ] ?? $adobe;
 		}
 		return (array) apply_filters( 'dcc_wl_photo_credits', $credits );
+	}
+
+	/**
+	 * The one-line credit shown under the photo in the detail sheet, e.g.
+	 * "Photo: lwolfartist / CC BY 2.0" (1.24.0). The sheet is where the image
+	 * is actually displayed at size, so this is the line that discharges the
+	 * CC BY obligation; the credits panel carries the same facts in full.
+	 *
+	 * Returns '' for a species with no photo.
+	 */
+	public static function photo_credit_line( string $id ): string {
+		$credits = self::photo_credits();
+		if ( ! isset( $credits[ $id ] ) ) {
+			return '';
+		}
+		/* translators: %s: photographer or rights holder, with the licence. */
+		return sprintf( __( 'Photo: %s', 'dcc-wildlife' ), (string) $credits[ $id ][0] );
+	}
+
+	/** The default credit line, used when a species carries no row of its own. */
+	public static function default_credit_line(): string {
+		/* translators: %s: photographer or rights holder, with the licence. */
+		return sprintf( __( 'Photo: %s', 'dcc-wildlife' ), 'Adobe Stock' );
 	}
 
 	/** The 4:3 tile thumbnail beside each photo: <id>-320.jpg (1.19.0). */
@@ -933,6 +1022,14 @@ final class Species {
 			// carries. photo_credits() picks these up automatically.
 			'greategret', 'cattleegret', 'glossyibis', 'sandhill',
 			'bcnightheron', 'cormorant',
+			// Batch 2 (1.24.0) — Wikimedia Commons, not Adobe Stock, whose
+			// free pool is thin for North American species. Commons files
+			// are filed by taxonomic category rather than a seller's
+			// caption, and each was still identified by eye here. Three of
+			// the six carry a CC BY obligation, so PHOTO_SOURCES below has
+			// a real row for every one of them.
+			'ycnightheron', 'purplegallinule', 'commongallinule',
+			'grebe', 'woodduck', 'coot',
 		];
 		$photos = [];
 		foreach ( $ids as $id ) {
@@ -1089,6 +1186,8 @@ final class Species {
 	public static function dataset(): array {
 		$calendar = self::calendar();
 		$photos   = self::photos();
+		$credits  = self::photo_credits();
+		$default  = self::default_credit_line();
 		$dataset  = [];
 
 		foreach ( self::registry() as $id => $sp ) {
@@ -1116,6 +1215,16 @@ final class Species {
 				'photo'     => (string) ( $photos[ $id ] ?? '' ),
 				'photoW'    => self::photo_width( $id ),
 				'thumb'     => self::photo_thumb( (string) ( $photos[ $id ] ?? '' ) ),
+				// Per-photo attribution for the detail sheet (1.24.0). Sent
+				// only when it differs from the default Adobe line, which the
+				// browser already holds as an i18n string — so the twenty-three
+				// Adobe photos still cost the payload nothing and only a photo
+				// with its own credit carries one. photo_credit_line() is
+				// always complete; this is transport, not the data model.
+				'credit'    => isset( $credits[ $id ] ) && self::photo_credit_line( $id ) !== $default
+					? self::photo_credit_line( $id )
+					: '',
+				'creditUrl' => (string) ( $credits[ $id ][2] ?? '' ),
 				'group'     => (string) ( $sp['group'] ?? 'critters' ),
 				// 1.19.0 data model: flags the legend encodes, how likely a
 				// meeting is, where to drive for it (empty = here), and the
