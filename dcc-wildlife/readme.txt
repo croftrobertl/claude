@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.23.0
+Stable tag: 1.23.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.23.1 =
+* Six more species now show a photograph on their tile instead of a group mark: Great Egret, Cattle Egret, Glossy Ibis, Florida Sandhill Crane, Black-crowned Night Heron and Double-crested Cormorant. Every image was checked against the species by eye before it went in.
+* The photo credits at the foot of the guide list all twenty-three.
+* Nothing else changed: the tile still falls back to the species' own drawing, then to the group mark, and no tile is ever left blank.
 
 = 1.23.0 =
 * The guide opens on what is out now. The month step is gone; the month is a chip in the bar that still says how many species are at their peak, and tapping it opens the picker — which still shows the count for all twelve months, so you can still see that April beats September.

@@ -887,6 +887,9 @@ final class Species {
 	 * on every render. Update if a photo is replaced.
 	 */
 	private const PHOTO_W = [
+		// Batch 1 of the Phase 2 photo run (1.23.1), Adobe Stock free tier.
+		'greategret' => 1100, 'cattleegret' => 1100, 'glossyibis' => 1100,
+		'sandhill' => 1100, 'bcnightheron' => 1100, 'cormorant' => 1100,
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
@@ -923,6 +926,13 @@ final class Species {
 			'alligator', 'manatee', 'otter', 'turtle', 'fish', 'eagle', 'osprey',
 			'anhinga', 'heron', 'egret', 'kingfisher', 'limpkin', 'greenheron',
 			'cypress', 'moss', 'lily', 'palmetto',
+			// Batch 1 of the Phase 2 photo run (1.23.1). Each was checked
+			// against the species by eye before it was licensed AND again
+			// here — the cormorant in particular, because the classic bad
+			// substitution for it is an anhinga, which this guide also
+			// carries. photo_credits() picks these up automatically.
+			'greategret', 'cattleegret', 'glossyibis', 'sandhill',
+			'bcnightheron', 'cormorant',
 		];
 		$photos = [];
 		foreach ( $ids as $id ) {

@@ -31,20 +31,32 @@ git history at the v1.1.0 commit; any old sighting posts and the
   third remote source without the same conversation.
 - **Image files: allowed since v1.11.0 for VETTED species photos only
   (owner-authorised 2026-09-01).** The "no image files, ever" rule was
-  relaxed on purpose: 17 of the 24 species now carry a real licensed photo
-  in `assets/photos/<id>.jpg`, shown as the hero of the detail sheet only
-  (the small tiles keep the SVG sprite, so the spotlight/guide grids still
-  ship no images). Each photo is a free-tier **Adobe Stock** license,
-  visually vetted for the correct species, and optimised to ≤ ~210KB; they
-  load `loading="lazy"`, one at a time, so a guest who never opens a species
-  pays nothing. The 7 species with no accurate free photo (ibis, wood stork,
-  little blue / tricolored heron, water snake, apple snail, resurrection
-  fern) DELIBERATELY keep their drawn scene — never swap in a wrong-species
-  photo to fill the gap. `Species::photos()` is the map; the credit line and
-  the `photoCredit` string are load-bearing (the licence expects
-  attribution). DO NOT delete `assets/photos/` as a "no image files"
-  cleanup — it is now sanctioned. Still no webfonts, no CDN, no per-tile
-  images.
+  relaxed on purpose. As of 1.23.1, 23 species carry a real licensed photo
+  in `assets/photos/<id>.jpg` — the hero of the detail sheet, and since
+  1.19.0 the tile face too, at `-320`. Each photo is a free-tier **Adobe
+  Stock** license, visually vetted for the correct species, and optimised;
+  they load `loading="lazy"`, so a guest who never scrolls to a species
+  pays nothing for it. Species with no accurate free photo DELIBERATELY
+  keep their drawn scene or their group glyph — never swap in a
+  wrong-species photo to fill the gap. `Species::photos()` is the map;
+  `photo_credits()` derives from it, and the credit line and the
+  `photoCredit` string are load-bearing (the licence expects attribution).
+  DO NOT delete `assets/photos/` as a "no image files" cleanup — it is now
+  sanctioned. Still no webfonts, no CDN, no non-species images.
+- **Intake rule for a photo batch (Phase 2 ships about five of them).**
+  The supplied slugs are guesses and the captions are not evidence: rename
+  to this plugin's ids, and OPEN EVERY IMAGE AND IDENTIFY THE SPECIES BY
+  EYE before registering it — filenames lie, and the classic bad
+  substitution here is an anhinga sold as a cormorant. For the four
+  venomous snakes in the "Before you go" group (Florida cottonmouth,
+  eastern diamondback, dusky pygmy rattlesnake, eastern coral snake) a
+  wrong photo could get somebody hurt, so those are checked personally and
+  never taken on trust — cottonmouth against the three watersnakes we
+  already draw, and coral snake against its harmless mimic. Register in
+  `photos()` and `PHOTO_W`; credits follow automatically. The harness loop
+  in `test-batch1.php` then gates the renditions for you: original +
+  `-600` + `-320` on disk, the thumb exactly 320×240, the `-600` exactly
+  600 wide, and `PHOTO_W` equal to the original's real width.
 - **PHP must never bake "the current month" into HTML.** The site is
   aggressively page-cached (SpeedyCache + Endurance + advanced-cache.php).
   The full 12-month dataset ships to the client in the inline `DCC_WL_CFG`
@@ -1102,7 +1114,10 @@ rounded boxes at the same weight. The rule now:
   out of both ends, and the water deck opened on its ninth card because of it.
 - **The tile face has three tiers (1.23.0):** a vetted photo, else the
   species' own sprite where one exists, else the neutral group glyph. Today
-  that is 17 / 7 / 27. Never invent artwork to fill the third tier.
+  that is 23 / 7 / 21 species (24 / 7 / 21 tile faces — the alligator
+  appears in both Critters and the safety group). Never invent artwork to
+  fill the third tier. Those three counts are asserted in build-page.php,
+  test-1230.php and test-batch1.php; a photo batch has to move all of them.
 - **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none
   !important; }` in app.css. The attribute's UA rule has specificity 0 and
   loses to any class of ours that sets `display` — which is how a hidden,
