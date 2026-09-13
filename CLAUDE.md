@@ -193,25 +193,28 @@ page is indexable), not a cosmetic one.
 
 This branch also carries the **DCC Guest Guide** plugin (`dcc-guest-guide/`).
 
-**EVERY file handed to the owner is named with the prefix `Guest Guide - `.**
-Set 2026-09-12 and it applies to everything, not just builds: zips,
-screenshots, reports, exports. Examples:
+Two naming rules, and they differ. Corrected 2026-09-13 — the prefix does
+NOT go on plugin zips.
 
-    Guest Guide - 0.16.0.zip
+**Plugin zips: `Guest Guide <version>.zip`** — no dash, no prefix.
+
+    Guest Guide 0.34.0.zip
+
+**Every other file handed to the owner: prefix `Guest Guide - `** — images,
+markdown, JS, reports, exports, anything.
+
     Guest Guide - user-manuals-open-375.png
     Guest Guide - page-4645-checklist.md
 
-Zips keep the version in the name — `Guest Guide - <version>.zip`. That half
-of the convention was set after an audit found two different builds sharing
-one version number; a version-stamped filename makes a stale download
-obvious in the Downloads folder. The prefix extends the same idea to every
-other deliverable, so they group together in the owner's Downloads.
+The version in a zip's name was set after an audit found two different
+builds sharing one version number; a version-stamped filename makes a stale
+download obvious in the Downloads folder.
 
 ```bash
 # Build the installable zip (run from the repo root)
 V=$(grep -m1 "define('DCCGG_VERSION'" dcc-guest-guide/dcc-guest-guide.php | sed "s/.*'\(0[^']*\)'.*/\1/")
-rm -f "Guest Guide - $V.zip"
-zip -rq "Guest Guide - $V.zip" dcc-guest-guide -x "*.DS_Store"
+rm -f "Guest Guide $V.zip"
+zip -rq "Guest Guide $V.zip" dcc-guest-guide -x "*.DS_Store"
 ```
 
 The **folder inside the zip must stay `dcc-guest-guide/`** — WordPress takes
