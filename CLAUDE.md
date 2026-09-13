@@ -128,17 +128,17 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## DCC Custom Checkout — release artifacts
 
-- **Every file handed to the owner is prefixed `Custom Checkout - `** (owner
-  preference, 2026-09-12). Deliverable zips are therefore
-  **`Custom Checkout - <version>.zip`** (e.g. `Custom Checkout - 0.11.0.zip`),
-  matching the version in the plugin header. The same prefix applies to any
-  other deliverable — a report, an audit, an export — not just zips.
-  Releases up to and including 0.10.1 went out as `Custom Checkout <version>.zip`
-  without the dash; do not rename those retrospectively.
+- **Naming of files handed to the owner** (owner preference, corrected
+  2026-09-13). Two rules, and the distinction matters:
+  - **Plugin zips take NO dash**: `Custom Checkout <version>.zip` (e.g.
+    `Custom Checkout 0.34.0.zip`), matching the version in the plugin header.
+  - **Everything else takes the dash**: `Custom Checkout - <name>.<ext>` —
+    images, markdown, JS, reports, audits, exports, anything that is not the
+    plugin zip.
+
   The folder *inside* the zip stays `dcc-custom-checkout/` — that is the
   WordPress plugin slug and must not change.
-- Build zips are gitignored (pattern `Custom Checkout *.zip`, which also covers
-  the dashed form); never commit them.
+- Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
 - **The "Rate:" row is removed from the price breakdown unconditionally**
   (owner decision, v0.6.1). Every rate on this site is named after its cottage,
   so the row only ever restated the accommodation title above it. The
