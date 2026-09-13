@@ -193,11 +193,6 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   this browser happened to tick. Every storage call is wrapped: private mode and
   disabled storage must degrade to "does not persist", never throw. Quiz answers
   are still never persisted.
-- **The cast must not poll while it cannot cast.** Off screen or in a hidden tab is
-  an event-driven wait — the IntersectionObserver and `visibilitychange` call
-  `tick()` — so `tick()` returns without setting a timer. Before 0.33.0 it
-  rescheduled unconditionally against a 200ms floor and woke five times a second
-  for the life of the page; measured at 14 timers in 2.5s and climbing.
 - **Weigh Priorities is disabled on the live widget** (preset `enabled_modes` is
   quick + compare) and the owner considers it redundant with the quiz. Keep it
   working and tested, but don't invest in it without asking.
@@ -210,54 +205,42 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   anything for this widget at heading size. A PHP test tokenises the plugin and
   fails if any CODE references the class again; the comment in `Config::build()`
   recording how to bring it back is deliberate and must survive that check.
-- **The cast (`assets/js/cast.js`) is decoration and must stay that way.**
-  `aria-hidden`, `pointer-events: none`, absolutely positioned over the heading
-  block reserving nothing, transform/opacity only (`stroke-dashoffset` for the line
-  is the one allowed exception — paint-only, no layout). Under
-  `prefers-reduced-motion: reduce` `attach()` returns null and builds NO DOM. The
-  overlay must never be tappable: the Seasons easter egg counts taps on the
-  masthead and the hero seaplane was made unclickable for the same reason.
-  The fish is on EVERY cast (0.31.0 — three per page view is cap enough).
-  Three casts per page view, then never; interaction stops it permanently.
-  **The cast is RIGGED, not keyframed (0.32.0), and everything derives from the
-  fish's MOUTH.** One rAF clock paints every frame; the line's endpoint, the lure,
-  the ripple and the splash are all computed from that one point, and the lure is a
-  CHILD of the fish group at its origin so it cannot drift. 0.31.0 ran the fish, the
-  lure and the line as three CSS animations with three different easings and the
-  fish rotating about its own centre: they came apart, the lure ended up on the
-  fish's tail, and the ripple stayed where the lure first landed. Two independent
-  answers to "where is the fish" is one too many — the same failure as measuring the
-  glyph guard two ways. `rigcheck.mjs` asserts the line and lure sit on the mouth at
-  every sampled frame, with a positive control that detaches the lure by hand.
-  **The ORDER of the ending is load-bearing**: the ROD WITHDRAWS LAST, because it
-  holds everything else up. dom-smoke test 73 samples the rig and fails if the rod
-  stops outlasting the fish, the line and the lure.
-  Two things the rig must keep clamping, both measured: the fish hangs BELOW its
-  mouth (a body centred on the mouth put its dorsal edge and tail sweep over the
-  glyphs), and the line's tension is capped by CLEARANCE — straightening it while
-  the mouth is still under the last word walks it into that word's corner.
-  The heading string is EDITABLE, so the geometry must survive both a short and a
-  width-filling heading: the rod is clamped inside the heading block (an early
-  build placed it past the right edge and with a long heading nothing drew at all).
-- **The cast is measured against the GLYPHS, never the heading's block box.** The
-  block is 322px wide while the words are ~150px, which is exactly how a fish came
-  to sit on the "d" of "Wizard" while every check passed. `cast.js` measures the
-  guard with a Range over the heading's text nodes — the same method
-  `glyphcheck.mjs` uses, deliberately, so the two agree by construction. A canvas
-  font-metrics version was consistently ~6px higher and let the lure inside the
-  rect. The cast lives in a **water band** between the heading's glyph bottom and
-  the INTRO's glyph top: about 17px on the live widgets, which is why the fish
-  swims in horizontally instead of rising. Nothing may leave that band **at any
-  frame, including on the way in and out** — three separate bugs were an entry or
-  exit excursion, invisible to anything that only checked resting positions.
-  `.dccs-heading` margin-bottom is 16px to create that band; do not take more
-  without asking, this is a conversion widget.
+  Its own header still points at `assets/js/cast.js` as where the character went.
+  That file left in 0.34.0 and the animation now lives in a site mu-plugin; the
+  parked file was left untouched on instruction, so treat that line as history.
+  **The heading renders as bare text** — the `.dccs-heading-t` / `.dccs-heading-w`
+  wrappers existed only for the marks and the cast's word-bob and went with them.
+  Verified byte-identical geometry at 375px and 1280px across the removal.
+- **Animations, if any are ever added back, are transform and opacity only.**
+  0.32.0 widened this to "and a path's `d` recomputed per frame", purely so the
+  cast's fishing line could be drawn, and recorded it as a deliberate carve-out
+  rather than absorbing it. The cast moved to a site mu-plugin in 0.34.0 and the
+  carve-out went with it: nothing in this plugin writes path data, uses
+  `stroke-dashoffset`, or declares a keyframe any more (checked, not assumed). The
+  narrow rule is the one in force — a future animation does not inherit permission
+  the cast earned. Never animate a layout property.
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no
   second switch — adding one would create exactly the two-copies-must-agree hazard
   the preset notes warn about. A widget that HAS saved `avail_enable=yes` can only
   be turned off in its own Elementor panel.
+- **Colours come from the site's existing palette.** The owner keeps a list of the
+  hexes already in use and prefers an existing one over a new one, so the site stays
+  visually consistent. It is a starting guide, not a permitted-colours list: if a
+  design genuinely needs a value that is not on it, propose the hex explicitly and
+  say why rather than introducing it quietly. 0.34.0 replaced `#8E1838` — asked for
+  in an earlier round, then not recognised, and not a site colour — with `#bc003e`,
+  the sticky-menu link red.
+- **The Elementor kit styles `input:focus` and will beat a rule that has no focus
+  variant.** It sets `accent-color: #F4DA62` at (0,4,1); the plugin's checkbox rules
+  were (0,3,1) with no `:focus`, so both compare checkboxes turned gold for exactly
+  as long as they held focus. The fix is (0,5,1) — root×2 + wrapper + `[type]` +
+  `:focus` — which WINS rather than tying and depending on load order. Anything the
+  kit styles on a state the plugin only styles at rest is the same trap.
+  The boxes also carry a real 2px focus ring, offset clear of the control: that gold
+  had accidentally been their only focus signal, and removing a colour that was
+  doing an accessibility job without replacing it would have been a regression.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
@@ -265,11 +248,11 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   owner and both documented in place.** (1) The answer chips are `font-weight: 600`
   rather than the spec's 500 (0.32.0) — weight only, every other property still from
   the tokens. (2) The Compare /
-  Compare N button is `--dccs-compare-red` (#8E1838, 8.98:1 on white) and hovers to
-  `--dccs-compare-red-hover` (#6E1029, 11.87:1), pairing it with the compare
-  checkbox label that wears the same red. It stays inside the shared skin rule so
-  only its background differs; the hover harness knows about the exception rather
-  than being silenced. `font-family` is `inherit`, not a named stack, so it survives a
+  Compare N button is `--dccs-compare-red` (#bc003e, 6.55:1 on white), pairing it
+  with the compare checkbox label that wears the same red. It stays inside the
+  shared skin rule so only its BACKGROUND differs — it hovers to
+  `--dccs-btn-blue-hover` (#F08080) like every other button. The hover harness knows
+  about the exception rather than being silenced. `font-family` is `inherit`, not a named stack, so it survives a
   theme font change — that is deliberate, don't "fix" it.
 - **Count specificity per selector, not per file.** `.dccs-root.dccs-root button` is
   **(0,2,1)** — two classes plus an element. That beats an Elementor kit's
@@ -310,8 +293,8 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 ## The shipped bundle
 
 The front end loads ONE script, `assets/js/dccs.js`, generated by
-`tools/build-bundle.php` from score / labels / availability / cast / selector in
-that order. **The sources are the source of truth; the bundle is generated and must
+`tools/build-bundle.php` from score / labels / availability / selector in that
+order. **The sources are the source of truth; the bundle is generated and must
 never be hand-edited.** Rebuild after touching any source — `npm test` runs
 `php tools/build-bundle.php --check` first and fails if they have drifted, because
 a stale bundle is worse than none: the repo and the site disagree while every other

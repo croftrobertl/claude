@@ -61,8 +61,7 @@ class Selector_Widget extends Widget_Base
     {
         // List the whole chain so the data layer is guaranteed present at boot,
         // on the front-end and in the Elementor editor preview alike.
-        // One bundled handle (0.33.0). It also no longer omits 'dccs-cast', which
-        // this list did while the handles were separate.
+        // One bundled handle (0.33.0).
         return ['dccs-selector'];
     }
 

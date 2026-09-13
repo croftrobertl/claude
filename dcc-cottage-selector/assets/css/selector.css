@@ -56,19 +56,23 @@
      on the fill, so the button is never identified by this colour alone. */
   --dccs-btn-blue-hover: #F08080;
   --dccs-btn-on-blue-hover: #FFFFFF;
-  /* The Compare pair (0.31.0): the checkbox label and the Compare button share the
-     red from the site's sticky header menu, so the two read as one control group
-     rather than blending into the blue around them. This is a DELIBERATE, agreed
-     exception to the site button spec and applies to that one button only —
-     every other spec property (Raleway / 20px / 500 / 0.5px / none / 30px / 50px)
-     is unchanged. White on #8E1838 measures 8.98:1, so unlike the coral it is
-     comfortably above 4.5:1.
-     The hover is a darker shade of the SAME red rather than the site's #F08080:
-     coral on red reads as a different button rather than the same one pressed,
-     and white on coral is 2.59:1 where white on #6E1029 is about 12:1. Proposed,
-     not assumed — say the word and it becomes the coral. */
-  --dccs-compare-red: #8E1838;
-  --dccs-compare-red-hover: #6E1029;
+  /* The Compare pair: the checkbox label and the Compare button share the site's
+     red, so the two read as one control group rather than blending into the blue
+     around them. A DELIBERATE, agreed exception to the site button spec and the
+     only one of its kind — every other spec property (Raleway / 20px / 500 /
+     0.5px / none / 30px / 50px) is unchanged.
+     #bc003e is the site's established red, the sticky-menu link colour (0.34.0).
+     It replaced #8E1838, which was asked for in an earlier round but is not a site
+     colour and was not recognised later. White on it measures 6.55:1 — lower than
+     the 8.98:1 of the colour it replaces, still comfortably past 4.5:1, and being
+     an existing site value matters more than the extra margin.
+     There is NO separate hover here. It hovers to --dccs-btn-blue-hover (#F08080)
+     like every other button. The 0.31.0 build carried a --dccs-compare-red-hover
+     of #6E1029, but the widgets save color_btn_bg_hover (#F08080), which feeds
+     --dccs-btn-bg-hover and wins the var() chain ahead of it — so that value never
+     rendered on either live widget. Keeping it would only have meant a NEWLY
+     placed widget hovering to a colour that is not on the site's list. */
+  --dccs-compare-red: #bc003e;
   --dccs-btn-motion: background-color 0.15s, opacity 0.15s;
 
   box-sizing: border-box;
@@ -116,71 +120,6 @@
 .dccs-root.dccs-root .dccs-heading .dccs-mark:first-child { margin-right: 0.3em; }
 .dccs-root.dccs-root .dccs-heading .dccs-mark:last-child { margin-left: 0.3em; }
 .dccs-root.dccs-root .dccs-intro { margin: 0 auto; max-width: 46ch; color: var(--dccs-muted); font-size: 0.95rem; }
-
-/* ---- The cast (0.29.0) --------------------------------------------------
-   A fishing rod flicks a line over the heading. Decoration only: see cast.js.
-   position:relative on the head block adds no offset and so shifts nothing; it
-   only gives the absolutely-positioned overlay something to anchor to.
-   The overlay reserves NO space and clips to the heading block, which is what
-   keeps the line arc from ever widening the page at 375px.
-   Everything that moves uses transform/opacity. The single exception is
-   stroke-dashoffset on the line: paint-only, no layout, and there is no
-   transform that draws a line. */
-.dccs-root.dccs-root .dccs-head { position: relative; }
-.dccs-root.dccs-root .dccs-cast {
-  /* Exactly covers the heading block and reserves nothing. overflow:hidden is what
-     makes it impossible for the line arc to widen the page at 375px — cast.js also
-     clamps the rod inside the block, so nothing relies on the clip alone. */
-  position: absolute; inset: 0; overflow: hidden;
-  pointer-events: none;            /* never a competitor for a tap */
-  color: inherit;                  /* rod + line follow the heading colour */
-  z-index: 1;
-}
-.dccs-root.dccs-root .dccs-cast-svg { position: absolute; top: 0; left: 0; overflow: visible; }
-/* Everything starts invisible; the is-running class drives the timeline. */
-.dccs-root.dccs-root .dccs-cast-rod,
-.dccs-root.dccs-root .dccs-cast-line,
-.dccs-root.dccs-root .dccs-cast-lure,
-.dccs-root.dccs-root .dccs-cast-ring,
-.dccs-root.dccs-root .dccs-cast-fish { opacity: 0; }
-.dccs-root.dccs-root .dccs-cast-splash { opacity: 0; }
-
-/* THE CAST IS RIGGED IN JS (0.32.0), not keyframed. cast.js paints every frame
-   from one clock and one source of truth — the fish's MOUTH — and the line's
-   endpoint, the lure, the ripple and the splash are all derived from it.
-   0.31.0 ran the fish, the lure and the line as three separate CSS animations with
-   three different easings; they drifted apart the moment their curves diverged,
-   the lure ended up on the fish's tail, and the ripple stayed where the lure first
-   landed. Only the word's bob is still a keyframe: it is on the heading, outside
-   the overlay, and nothing has to stay attached to it.
-   Still transforms, opacity and the line's path data only — no layout property is
-   touched, which is the rule that matters. */
-@keyframes dccs-bob {
-  0%, 28% { transform: translateY(0); }
-  46%     { transform: translateY(-3px); }
-  64%     { transform: translateY(1px); }
-  100%    { transform: translateY(0); }
-}
-
-/* No transform-box/transform-origin here on purpose: the rig uses SVG transform
-   ATTRIBUTES, which resolve in the parent's user space, so each group pivots on the
-   point the rig names — the fish on its mouth, the rod on its butt. The CSS
-   fill-box/center origins this replaces are what made the fish rotate about its own
-   centre and swing its mouth away from the lure. */
-
-/* The fish is on every cast (0.30.0). Three casts per page view is cap enough. */
-.dccs-root.dccs-root .dccs-cast { --dccs-cast-dur: 3000ms; }
-
-.dccs-root.dccs-root .dccs-heading-w { display: inline-block; }
-.dccs-root.dccs-root .dccs-heading-w.dccs-bob {
-  animation: dccs-bob 1600ms ease-in-out both;
-}
-/* Reduced motion: cast.js builds no DOM at all, but belt-and-braces for a
-   preference that flips after the overlay is already on screen. */
-@media (prefers-reduced-motion: reduce) {
-  .dccs-root.dccs-root .dccs-cast { display: none; }
-  .dccs-root.dccs-root .dccs-heading-w.dccs-bob { animation: none; }
-}
 
 .dccs-root.dccs-root .dccs-hint { margin: 0 0 10px; color: var(--dccs-muted); font-size: 0.9rem; }
 
@@ -604,7 +543,7 @@
    see the token block for the reasoning and the contrast numbers. */
 .dccs-root.dccs-root .dccs-open-compare:hover,
 .dccs-root.dccs-root .dccs-open-compare:focus-visible {
-  background: var(--dccs-btn-bg-hover, var(--dccs-compare-red-hover));
+  background: var(--dccs-btn-bg-hover, var(--dccs-btn-blue-hover));
   color: var(--dccs-btn-on-blue-hover);
 }
 /* Not spec buttons — they keep their own surface fill, so they keep their own
@@ -695,6 +634,38 @@
   color: var(--dccs-compare-red);
 }
 .dccs-root.dccs-root .dccs-cmp-toggle input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--dccs-accent); }
+
+/* THE CHECKBOXES MUST NOT FLASH GOLD WHILE FOCUSED (0.34.0).
+   The Elementor kit ships
+     .elementor-kit-331 input:focus:not([type="button"]):not([type="submit"])
+       { accent-color: #F4DA62 }
+   at (0,4,1). The rules above are (0,3,1) and had no :focus variant, so the kit
+   won for exactly as long as the box held focus — gold on first click, back to
+   navy on blur, in both wrappers.
+   These are (0,5,1): two root classes + the wrapper class + the [type] attribute
+   + :focus, over one element. That BEATS (0,4,1) outright rather than tying and
+   depending on which stylesheet loaded last.
+   :focus rather than :focus-visible for the colour, because the kit's rule is
+   :focus and a mouse click must not show gold either. */
+.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus,
+.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,
+.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus,
+.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible {
+  accent-color: var(--dccs-accent);
+}
+/* …and a real focus signal to replace it. That gold had accidentally become the
+   only visible marker of which box has focus: the browser default here is a 1px
+   auto outline, which is close to invisible on a 20px control. Taking the colour
+   away without this would leave a keyboard user with nothing.
+   An outline with an offset, never a background: offset by 2px it sits on the row
+   rather than on the control, so it reads against the checked navy fill and the
+   unchecked white one alike. Same 2px accent ring every other control in the
+   widget uses. */
+.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,
+.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--dccs-accent);
+  outline-offset: 2px;
+}
 
 .dccs-root.dccs-root .dccs-empty {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px dashed var(--dccs-accent-2);

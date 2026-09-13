@@ -13,7 +13,7 @@
  * and fails if the committed bundle is not byte-identical to a fresh build.
  *
  * Order is the dependency order: selector.js reads DCCS.score / DCCS.labels /
- * DCCS.availability / DCCS.cast when it boots, and each source is an IIFE that
+ * DCCS.availability when it boots, and each source is an IIFE that
  * assigns onto window.DCCS, so concatenation in this order is equivalent to the
  * five <script> tags it replaces.
  *
@@ -21,7 +21,7 @@
  *      php tools/build-bundle.php --check  (fails if it is stale; no write)
  */
 
-const DCCS_BUNDLE_SOURCES = ['score.js', 'labels.js', 'availability.js', 'cast.js', 'selector.js'];
+const DCCS_BUNDLE_SOURCES = ['score.js', 'labels.js', 'availability.js', 'selector.js'];
 
 function dccs_bundle_dir(): string
 {

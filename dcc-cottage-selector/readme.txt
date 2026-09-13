@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.33.0
+Stable tag: 0.34.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,7 +187,7 @@ If you turn on JavaScript "combine"/"merge" or "defer" in SpeedyCache (or any
 optimizer) and the widget ever shows "Loading…" too long, exclude the plugin's
 script — match `dcc-cottage-selector/assets/js/` or the handle `dccs-selector` in
 the optimizer's JS-exclusion list. (If you set that exclusion up before 0.33.0 and
-listed `dccs-score` / `dccs-labels` / `dccs-availability` / `dccs-cast`, those
+listed `dccs-score` / `dccs-labels` / `dccs-availability`, those
 handles no longer exist and can be removed; the path match covers everything.) The
 selector also has a built-in self-healing retry, so most setups need no change.
 After updating the plugin, clear SpeedyCache and run Elementor → Tools → Regenerate
@@ -230,6 +230,27 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.34.0 =
+* The fishing-cast animation is removed. It has moved to the site's hero as a
+  mu-plugin, where the canal photograph gives it a real waterline and it can be
+  watched on the live site while being worked on. cast.js, its CSS, its entry in
+  the bundle and its tests are all gone, along with the two heading wrappers that
+  existed only for it and for the retired drawn marks — the heading is bare text
+  again, with byte-identical geometry at 375px and 1280px across the removal.
+* The bundle drops from five sources to four: 129,661 bytes to 92,095 raw, 40,937
+  to 28,508 gzipped. Still one script request per page.
+* The Compare button rests on #bc003e, the site's established red (its sticky-menu
+  link colour), replacing a red that was not a site value. White on it is 6.55:1.
+  It hovers to #F08080 like every other button; the bespoke hover it used to carry
+  never rendered anyway, because the widget's own saved hover colour outranked it.
+* FIXED: the compare checkboxes flashed gold while focused. The Elementor kit sets
+  accent-color on input:focus at a higher specificity than the plugin's rule, which
+  had no focus variant, so the kit won for exactly as long as the box held focus.
+  Both wrappers now carry focus rules that outrank it outright rather than tying.
+* That gold had accidentally been the only visible focus marker on those boxes, so
+  they also gain a real 2px focus ring, offset clear of the control — measured at
+  4.98:1 against the row, or 11.81:1 with the navy accent the live widgets use.
 
 = 0.33.0 =
 * One script instead of five. score / labels / availability / cast / selector are

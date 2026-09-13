@@ -47,21 +47,6 @@
     return h ? '<span class="dccs-ico">' + h + '</span>' : '';
   }
 
-  /** The heading, as plain type. 0.29.0 retired the drawn marks: a 38px pictogram
-      asked to say "cottage" and "wizard" and "canal" at once always resolved as a
-      puzzle, so the character moved into the cast animation (cast.js) instead —
-      motion reads at any size. The last word is wrapped so cast.js can bob it;
-      inline-block is required because transforms do not apply to inline boxes, and
-      on a single word it is layout-identical to the bare text (asserted). */
-  function headingHtml(text) {
-    var t = String(text == null ? '' : text);
-    var i = t.replace(/\s+$/, '').lastIndexOf(' ');
-    if (i === -1) {
-      return '<span class="dccs-heading-w">' + esc(t) + '</span>';
-    }
-    return esc(t.slice(0, i + 1)) + '<span class="dccs-heading-w">' + esc(t.slice(i + 1)) + '</span>';
-  }
-
   /** Wrap an admin-set icon in a side-aware span ('left' | 'right'). */
   function icoSpan(html, side) {
     return '<span class="dccs-ico dccs-ico-' + (side === 'right' ? 'right' : 'left') + '">' + html + '</span>';
@@ -906,9 +891,7 @@
     var modes = config.enabledModes || ['quick', 'weights', 'compare'];
     var head = '';
     if (config.showHeading !== false) {
-      head = '<div class="dccs-head"><h2 class="dccs-heading">' +
-        '<span class="dccs-heading-t">' + headingHtml(S.heading) + '</span>' +
-        '</h2>' +
+      head = '<div class="dccs-head"><h2 class="dccs-heading">' + esc(S.heading) + '</h2>' +
         '<p class="dccs-intro">' + esc(S.intro) + '</p></div>';
     }
     var choices = modes.map(function (m) {
@@ -1042,10 +1025,6 @@
       announce(live, config, state, res);
       wireCmpScrollbar(root);
       if (key) { var keep = root.querySelector(key); if (keep && keep.focus) { keep.focus(); } }
-      // rerender() rebuilds the root, so the cast overlay is destroyed with it.
-      // sync() re-binds to the new heading, or stands down once the landing screen
-      // is gone. Casting that has already stopped stays stopped.
-      if (cast) { cast.sync(); }
     }
 
     // Size + position the custom always-visible compare scrollbar to mirror the list's
@@ -1085,16 +1064,7 @@
       thumb.addEventListener('pointercancel', end);
       layout();
     }
-    // Decoration over the heading (0.29.0). Returns null under reduced motion, in
-    // which case nothing is built and nothing is scheduled.
-    var cast = null;
     rerender();
-    if (DCCS.cast && DCCS.cast.attach) {
-      cast = DCCS.cast.attach(root);
-      // Handle for the headless audit, which has to force casts two and three
-      // rather than wait 45-75s for them. Reading it changes nothing.
-      root._dccsCast = cast;
-    }
 
     // After a wizard navigation, move focus to the new step/results heading.
     function focusStep() {

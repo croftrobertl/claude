@@ -38,11 +38,7 @@ function freshDom(url) {
   const dom = new JSDOM('<!DOCTYPE html><body></body>', {
     url: url || 'https://example.com/', pretendToBeVisual: true, runScripts: 'dangerously'
   });
-  // cast.js before selector.js: selector.js calls DCCS.cast.attach() on mount, so
-  // every mount in this suite exercises attach() as a side-effect. In jsdom the
-  // heading has no box, so visibleEnough() is false and nothing ever fires on its
-  // own — casts in these tests are forced explicitly.
-  ['score.js', 'labels.js', 'availability.js', 'cast.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
+  ['score.js', 'labels.js', 'availability.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
   return dom.window;
 }
 
@@ -1974,7 +1970,7 @@ defer(async function () {
   ok('room-type ids are unique', new Set(cottages.map(c => c.roomTypeId)).size === 8);
 })();
 
-// ---- 69. the heading is plain type again (0.29.0) ----
+// ---- 69. the heading is bare text, no wrappers (0.34.0) ----
 (function () {
   const w = freshDom();
   const root = mountSelector(w, CONFIG);
@@ -1984,30 +1980,32 @@ defer(async function () {
     h && h.querySelectorAll('svg').length === 0 && !h.querySelector('.dccs-mark'));
   ok('the heading reads exactly the heading string',
     h && h.textContent.replace(/\s+/g, ' ').trim() === S.heading.replace(/\s+/g, ' ').trim());
-  // The last word is its own element so the cast can bob it. That is the ONLY
-  // extra markup the heading carries.
-  const word = h && h.querySelector('.dccs-heading-w');
-  ok('the last word is wrapped for the bob',
-    !!word && word.textContent === S.heading.trim().split(/\s+/).pop());
-  ok('nothing else was added to the heading',
-    h && h.querySelectorAll('*').length === 2);   // .dccs-heading-t + .dccs-heading-w
+  // 0.34.0: the heading is bare text again. The two wrappers it used to carry
+  // (.dccs-heading-t for the drawn marks, .dccs-heading-w so the cast could bob
+  // the last word) existed only for those features and went with them. No element
+  // inside the heading means no container that could reserve space.
+  ok('the heading contains no elements at all', h && h.children.length === 0);
+  ok('and no leftover wrappers by name',
+    h && !h.querySelector('.dccs-heading-t, .dccs-heading-w'));
+  ok('nothing in the stylesheet still targets them', (() => {
+    const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+    return !/dccs-heading-[tw]/.test(css);
+  })());
 
-  // The heading string is still escaped; the marks are gone but the guard stands.
+  // The heading string is still escaped — the guard outlives every wrapper.
   const evil = configWith({ strings: Object.assign({}, S, { heading: '<img src=x onerror=alert(1)> Boom' }) });
   const r2 = mountSelector(freshDom(), evil);
   ok('a heading string is still escaped',
     !r2.querySelector('.dccs-heading img') &&
     r2.querySelector('.dccs-heading').textContent.indexOf('<img') === 0);
-  ok('and the bob wrapper does not break escaping',
-    r2.querySelector('.dccs-heading-w').textContent === 'Boom');
+  ok('and the whole string survives escaping',
+    r2.querySelector('.dccs-heading').textContent.indexOf('Boom') !== -1);
 
-  // A single-word heading still gets a bob target.
   const r3 = mountSelector(freshDom(), configWith({ strings: Object.assign({}, S, { heading: 'Wizard' }) }));
-  ok('a one-word heading is entirely the bob target',
-    r3.querySelector('.dccs-heading-w').textContent === 'Wizard');
+  ok('a one-word heading renders as bare text', r3.querySelector('.dccs-heading').textContent === 'Wizard');
 
   const r4 = mountSelector(freshDom(), configWith({ showHeading: false }));
-  ok('no heading means no bob target', !r4.querySelector('.dccs-heading-w'));
+  ok('no heading means no heading element', !r4.querySelector('.dccs-heading'));
 })();
 
 // ---- 70. with availability off, nothing anywhere refers to dates (0.26.0) ----
@@ -2121,155 +2119,9 @@ defer(async function () {
     !/dccs-btn-(blue-hover|on-blue-hover)[^;]*!important/.test(css));
 })();
 
-// ---- 72. the cast: gating, cap, fish ordering, interaction stop (0.29.0) ----
-// jsdom has no layout and no animations, so this covers the LOGIC. The sequence,
-// the zero-shift guarantee and the 375px arc are verified in Chromium separately.
-(function () {
-  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
-  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
-
-  // 0.33.0: five handles became one bundled handle.
-  const pluginSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-plugin.php'), 'utf8');
-  ok('the front end registers exactly one script for the widget',
-    (pluginSrc.match(/wp_register_script\(/g) || []).length === 1 &&
-    /wp_register_script\('dccs-selector', DCCS_URL \. 'assets\/js\/dccs\.js'/.test(pluginSrc));
-  // Strip comments first: the rule against matching text you wrote cuts both ways.
-  // The plugin comments EXPLAIN why the old handles are gone by naming one of them,
-  // and a raw match found that sentence and called it a live registration.
-  const pluginCode = pluginSrc.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  ok('the old per-file handles are gone from the CODE, not merely aliased',
-    !/'dccs-(score|labels|availability|cast)'/.test(pluginCode));
-
-  // --- the non-negotiables, asserted on the source ---
-  ok('the overlay is aria-hidden', /setAttribute\('aria-hidden', 'true'\)/.test(castSrc));
-  ok('the overlay is pointer-events:none',
-    /\.dccs-cast \{[^}]*pointer-events:\s*none/.test(css));
-  ok('the overlay is absolutely positioned and reserves nothing',
-    /\.dccs-cast \{[^}]*position:\s*absolute[^}]*inset:\s*0/.test(css));
-  ok('the overlay clips, so the arc can never widen the page',
-    /\.dccs-cast \{[^}]*overflow:\s*hidden/.test(css));
-  ok('the heading carries 16px of clearance below it (0.30.0)',
-    /\.dccs-heading \{ margin: 0 0 16px;/.test(css));
-  ok('the head block is only made a positioning context, with no offsets',
-    /\.dccs-head \{ position: relative; \}/.test(css));
-  ok('rod and line follow currentColor', /stroke:\s*'currentColor'/.test(castSrc));
-  ok('the lure is the single amber accent', /#FFA000/.test(castSrc));
-  // The fish takes the Wildlife plugin's palette, not its paths — at ~20px the
-  // 48px bass's spines, gill plate and eye highlight all turn to mush.
-  ['#3a6b52', '#2e5d46', '#c9d8cf', '#17333c'].forEach(hex =>
-    ok('the fish uses the Wildlife palette value ' + hex, castSrc.indexOf(hex) !== -1));
-  // The guard everything below the heading clears is measured with a Range over
-  // the heading's text nodes — the same way the acceptance check measures it.
-  ok('the glyph guard is measured with a Range, not from the block box',
-    /selectNodeContents/.test(castSrc) && /getClientRects/.test(castSrc));
-  ok('the guard takes the LOWEST line and the WIDEST, which a wrapped heading splits',
-    /b > bottom/.test(castSrc) && /r > right/.test(castSrc));
-  // Nothing may travel above the glyph bottom, including on the way in.
-  ok('the lure never approaches from above',
-    !/@keyframes dccs-lure \{[\s\S]*?translate\([^)]*,\s*-/.test(css));
-  ok('the fish never translates upward past its resting position',
-    !/@keyframes dccs-fish \{[\s\S]*?translate[^)]*,\s*-\d/.test(css));
-  ok('the ripple is a stroked ring, not a fill',
-    /dccs-cast-ring[^>]*/.test(castSrc) && /fill: 'none', stroke: 'currentColor'/.test(castSrc));
-  ok('there are two rings', (castSrc.match(/dccs-cast-ring-/g) || []).length === 2);
-  // Only transform/opacity animate — plus stroke-dashoffset, which is paint-only.
-  const keyframeBodies = (css.match(/@keyframes dccs-[a-z]+\s*\{[\s\S]*?\n\}/g) || []).join('\n');
-  // 0.32.0: the cast is rigged in JS, not keyframed. Only the word's bob is still
-  // a CSS animation — it lives on the heading, outside the overlay, and nothing has
-  // to stay attached to it.
-  ok('only the bob remains a keyframe', (css.match(/@keyframes dccs-/g) || []).length === 1 &&
-    /@keyframes dccs-bob/.test(css));
-  ok('no keyframe name is declared twice', (() => {
-    const names = (css.match(/@keyframes (dccs-[a-z0-9-]+)/g) || []);
-    return new Set(names).size === names.length;
-  })());
-  ok('no cast element is driven by a CSS animation any more',
-    !/\.dccs-cast[^\n]*animation:/.test(css));
-  const animatedProps = new Set((keyframeBodies.match(/^\s*([a-z-]+):/gm) || [])
-    .map(x => x.trim().replace(':', '')));
-  animatedProps.delete('transform'); animatedProps.delete('opacity'); animatedProps.delete('stroke-dashoffset');
-  ok('nothing but transform / opacity / stroke-dashoffset is animated' +
-     (animatedProps.size ? ' (found ' + [...animatedProps].join(', ') + ')' : ''), animatedProps.size === 0);
-  ok('no layout property appears in any keyframe',
-    !/(^|\s)(width|height|top|left|right|bottom|margin|padding):/m.test(keyframeBodies));
-
-  // --- reduced motion builds nothing ---
-  const w = freshDom();
-  w.matchMedia = () => ({ matches: true, addListener() {}, removeListener() {} });
-  const root = mountSelector(w, CONFIG);
-  ok('reduced motion returns no controller at all', w.DCCS.cast.attach(root) === null);
-  ok('and puts no overlay in the DOM', !root.querySelector('.dccs-cast'));
-  ok('reduced motion is also belt-and-braced in CSS',
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.dccs-cast \{ display: none/.test(css));
-
-  // --- the cap, the fish ordering, and the interaction stop ---
-  const w2 = freshDom();
-  w2.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
-  const root2 = mountSelector(w2, CONFIG);
-  // jsdom has no layout, so every box is 0x0 and cast() correctly refuses to build
-  // an overlay it cannot place. Give the heading a plausible box rather than
-  // loosening that guard — a real zero-size heading must still build nothing.
-  const box = (x, y, wd, ht) => () => ({ x, y, width: wd, height: ht, top: y, left: x,
-    right: x + wd, bottom: y + ht, toJSON() { return this; } });
-  const head2 = root2.querySelector('.dccs-head');
-  head2.getBoundingClientRect = box(0, 100, 343, 62);
-  root2.querySelector('.dccs-heading-w').getBoundingClientRect = box(180, 104, 86, 27);
-  // cast.js measures the glyph guard with a Range over the heading's text nodes.
-  // jsdom returns no rects for a Range, so supply them — the same reasoning as the
-  // element boxes above: stub the layout the engine cannot do, never loosen the
-  // guard that depends on it.
-  w2.Range.prototype.getClientRects = function () { return [box(90, 104, 176, 26)()]; };
-  const c = w2.DCCS.cast.attach(root2);
-  ok('a zero-size heading builds nothing', (() => {
-    const rz = mountSelector(w2, CONFIG);
-    const cz = w2.DCCS.cast.attach(rz);
-    return cz.cast(true) === false && !rz.querySelector('.dccs-cast');
-  })());
-  ok('a controller is returned when motion is allowed', !!c);
-  ok('it starts unstopped with no casts', c.state().casts === 0 && !c.state().stopped);
-
-  // force:true bypasses the visibility/settle gate only — not the cap or the stop.
-  ok('first cast renders an overlay', c.cast(true) === true && !!root2.querySelector('.dccs-cast'));
-  // 0.30.0: the fish is on EVERY cast, so there is no longer a with/without class.
-  ok('the fish is built on every cast, not gated by a class',
-    !!root2.querySelector('.dccs-cast-fish') &&
-    !/is-fishing|is-plain/.test(root2.querySelector('.dccs-cast').className));
-  ok('the fish is never display:none for a later cast',
-    !/is-plain[^{]*\{[^}]*display:\s*none/.test(css));
-  ok('the first cast bobs the last word',
-    !!root2.querySelector('.dccs-heading-w.dccs-bob'));
-  ok('a cast is counted', c.state().casts === 1);
-  ok('a cast will not start on top of a running one', c.cast(true) === false);
-
-  ok('MAX_CASTS is three', w2.DCCS.cast.MAX_CASTS === 3);
-  ok('the gate is 50% visible and a 600ms settle',
-    w2.DCCS.cast.VISIBLE === 0.5 && w2.DCCS.cast.SETTLE_MS === 600);
-
-  // Interaction ends it permanently, for pointer, keyboard and change alike.
-  const w3 = freshDom();
-  w3.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
-  ['pointerdown', 'keydown', 'change'].forEach(ev => {
-    const r = mountSelector(w3, CONFIG);
-    const ctl = w3.DCCS.cast.attach(r);
-    r.dispatchEvent(new w3.Event(ev, { bubbles: true }));
-    ok('casting stops for good on ' + ev, ctl.state().stopped === true);
-    ok('and a forced cast after ' + ev + ' is refused', ctl.cast(true) === false);
-    ok('and the overlay is cleared on ' + ev, !r.querySelector('.dccs-cast'));
-  });
-  ok('the cap is enforced in the source, not just by the caller',
-    /casts < MAX_CASTS/.test(castSrc));
-  ok('interaction listeners cover pointer, keyboard and change',
-    /\['pointerdown', 'keydown', 'change'\]/.test(castSrc));
-  ok('the tab being hidden blocks a cast', /!document\.hidden/.test(castSrc));
-  ok('arming waits for load and two frames, so it cannot race page load',
-    /readyState === 'complete'/.test(castSrc) &&
-    (castSrc.match(/requestAnimationFrame/g) || []).length >= 2);
-})();
-
-// ---- 73. 0.31.0: weights, the compare red, and the cast's ending ----
+// ---- 73. 0.31.0/0.32.0: weights and the compare colours ----
 (function () {
   const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
-  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
   const ruleBody = (sel) => {
     const i = css.indexOf(sel + ' {');
     if (i === -1) { return ''; }
@@ -2293,8 +2145,17 @@ defer(async function () {
 
   // The compare pair shares one red, declared once.
   const tokens = ruleBody('.dccs-root.dccs-root');
-  ok('the compare red is a token', /--dccs-compare-red:\s*#8E1838/.test(tokens));
-  ok('its hover is a darker shade of the same red', /--dccs-compare-red-hover:\s*#6E1029/.test(tokens));
+  // 0.34.0: the site's own red, and no bespoke hover — it hovers to the same
+  // #F08080 as every other button, which is what the live widgets already showed.
+  // Strip comments first: the token block EXPLAINS the change by naming the old
+  // values, and a raw match reads that history as live code. Same rule as the
+  // plugin-handle check above.
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('the compare red is the site red', /--dccs-compare-red:\s*#bc003e/i.test(cssCode));
+  ok('the old non-site red is gone from the CODE', !/8E1838/i.test(cssCode));
+  ok('there is no bespoke compare hover left', !/--dccs-compare-red-hover/.test(cssCode));
+  ok('the Compare button hovers to the shared site coral',
+    /\.dccs-open-compare:focus-visible \{[^}]*var\(--dccs-btn-bg-hover,\s*var\(--dccs-btn-blue-hover\)\)/.test(cssCode));
   ok('the compare checkbox label wears it',
     /color:\s*var\(--dccs-compare-red\)/.test(ruleBody('.dccs-root.dccs-root .dccs-cmp-toggle')));
   ok('the Compare button background is the red, not the spec blue',
@@ -2315,89 +2176,11 @@ defer(async function () {
       !css.includes(t));
   });
 
-  // THE ENDING, asserted against the rig rather than against keyframes. The rod
-  // must still be the last thing on screen: it holds everything else up.
-  const rigStates = (() => {
-    const w = freshDom();
-    w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
-    const r = mountSelector(w, CONFIG);
-    const box = (x, y, wd, ht) => () => ({ x, y, width: wd, height: ht, top: y, left: x,
-      right: x + wd, bottom: y + ht, toJSON() { return this; } });
-    r.querySelector('.dccs-head').getBoundingClientRect = box(0, 100, 343, 62);
-    r.querySelector('.dccs-heading-w').getBoundingClientRect = box(180, 104, 86, 27);
-    w.Range.prototype.getClientRects = function () { return [box(90, 104, 176, 26)()]; };
-    const c = w.DCCS.cast.attach(r);
-    if (!c || c.cast(true) !== true) { return null; }
-    const T = c.timeline, out = [];
-    for (let ms = 0; ms <= c.duration; ms += 25) { out.push(Object.assign({ ms }, c.rigAt(ms))); }
-    return { T, out, dur: c.duration };
-  })();
-  ok('the rig could be sampled at all (guard against a vacuous sweep)',
-    !!rigStates && rigStates.out.length > 100);
-  if (rigStates) {
-    const { T, out } = rigStates;
-    const lastVisible = (key) => {
-      let last = -1;
-      out.forEach(r => { if (r[key] > 0.02) { last = Math.max(last, r.ms); } });
-      return last;
-    };
-    const rodLast = lastVisible('rodAlpha');
-    ok('the rod is still on screen after the fish has gone', rodLast > lastVisible('fishAlpha'));
-    ok('the rod outlasts the line too', rodLast > lastVisible('lineAlpha'));
-    ok('the rod outlasts the lure', rodLast > lastVisible('lureAlpha'));
-    // The rod loads under the weight while the fish is on, and springs back after.
-    const during = out.filter(r => r.ms > T.take[1] && r.ms < T.haul[0]);
-    const after = out.filter(r => r.ms > T.rodOut[0]);
-    ok('the rod bends under load while the fish is on', during.every(r => r.rodBend === 1));
-    ok('and springs straight once the fish is off', after.every(r => r.rodBend === 0));
-    ok('the loaded rod angle is genuinely deeper than the resting one',
-      Math.min(...during.map(r => r.rodAngle)) < -6);
-    // The body bends: the spine angles have to actually vary during the fight.
-    const fight = out.filter(r => r.ms >= T.fight[0] && r.ms <= T.fight[1]);
-    const spread = (k) => Math.max(...fight.map(r => r[k])) - Math.min(...fight.map(r => r[k]));
-    ok('the body bends during the fight (spine spread ' + spread('bend1').toFixed(1) + ' deg)',
-      spread('bend1') > 6);
-    ok('and the tail sweeps further than the middle', spread('bend2') > spread('bend1'));
-    // ONE source of truth: the line's path must END on the mouth, every frame.
-    const attached = out.filter(r => r.fishAlpha > 0.05 && r.ms >= T.take[0]);
-    ok('the fish is on screen for a meaningful stretch', attached.length > 15);
-    const detached = attached.filter(r => {
-      const m = /([-\d.]+) ([-\d.]+)$/.exec(r.lineD);
-      if (!m) { return true; }
-      return Math.hypot(+m[1] - r.mouth.x, +m[2] - r.mouth.y) > 0.2;
-    });
-    ok('the line ends on the mouth at every sampled frame (' + detached.length + ' bad)',
-      detached.length === 0);
-    // The haul accelerates rather than running at a constant rate.
-    const haul = out.filter(r => r.ms >= T.haul[0] && r.ms <= T.haul[1]).map(r => r.mouth.x);
-    const first = haul[1] - haul[0], last = haul[haul.length - 1] - haul[haul.length - 2];
-    ok('the haul accelerates (' + first.toFixed(2) + ' -> ' + last.toFixed(2) + ' px/frame)',
-      last > first * 1.5);
-    // The water reacts where the FISH is, not where the lure first landed.
-    const surf = out.filter(r => r.ms > T.fight[0] + 100 && r.ms < T.fight[1]);
-    ok('the ripple tracks the fish while it is at the surface',
-      surf.every(r => Math.hypot(r.ringAt.x - r.mouth.x, r.ringAt.y - r.mouth.y) < 2));
-    ok('the splash only fires once the fish is clear of the words',
-      out.filter(r => r.splash > 0).every(r => r.mouth.x > r.mouth.x - 1));
-  }
-  ok('the exit run and rise are measured geometry, not hard-coded',
-    /run:\s*run/.test(castSrc) && /rise:\s*rise/.test(castSrc));
-  ok('the rise is refused when the fish cannot get clear of the words',
-    /run \* 0\.85 >= clearBy/.test(castSrc));
-  ok('the line is never allowed to go fully straight over the words',
-    /maxTension/.test(castSrc) && /clearance/.test(castSrc));
-  // The lure is a CHILD of the fish group at its origin — attachment by
-  // construction, not by two animations agreeing.
-  ok('the lure is rigged to the fish, not animated alongside it',
-    /fish\.appendChild\(svgEl\('circle'[\s\S]{0,160}?cx: 0, cy: 0/.test(castSrc));
-  ok('the rig derives everything from one mouth point',
-    /st\.mouth = mouth/.test(castSrc));
 })();
 
-// ---- 74. 0.33.0: one bundle, an idle cast, and remembered compare picks ----
+// ---- 74. 0.33.0: one bundle and remembered compare picks ----
 (function () {
   const selSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
-  const castSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'cast.js'), 'utf8');
   const bundlePath = path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'dccs.js');
 
   // --- the bundle is generated, and a stale one must fail loudly --------------
@@ -2406,7 +2189,7 @@ defer(async function () {
   ok('it says it is generated and must not be hand-edited', /DO NOT EDIT/.test(bundle));
   // Every source must actually be IN it — a bundle missing one boots a broken
   // widget, and the header naming the file proves nothing about the contents.
-  ['score', 'labels', 'availability', 'cast', 'selector'].forEach(name => {
+  ['score', 'labels', 'availability', 'selector'].forEach(name => {
     const src = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', name + '.js'), 'utf8').trim();
     ok('the bundle contains the whole of ' + name + '.js', bundle.indexOf(src) !== -1);
   });
@@ -2414,16 +2197,7 @@ defer(async function () {
   const at = (n) => bundle.indexOf('/* ---- assets/js/' + n + '.js ---- */');
   ok('sources are concatenated in dependency order',
     at('score') < at('labels') && at('labels') < at('availability') &&
-    at('availability') < at('cast') && at('cast') < at('selector'));
-
-  // --- the cast stops polling when it cannot cast ----------------------------
-  // It used to reschedule unconditionally against a 200ms floor, so a widget two
-  // screens down woke five times a second for the life of the page.
-  ok('tick() does not set a timer while off-screen or hidden',
-    /if \(document\.hidden \|\| !visibleEnough\(\)\) \{ return; \}/.test(castSrc));
-  ok('and the observer / visibilitychange are what wake it again',
-    /IntersectionObserver\(function \(\) \{ tick\(\); \}/.test(castSrc) &&
-    /visibilitychange', tick/.test(castSrc));
+    at('availability') < at('selector'));
 
   // --- compare picks are remembered for the visit ----------------------------
   ok('picks are stored in sessionStorage, not localStorage',
@@ -2481,6 +2255,55 @@ defer(async function () {
     ok('a fresh page load in the same session restores the ticks',
       back.join() === ids.slice().sort().join());
   }
+})();
+
+// ---- 75. 0.34.0: the cast is gone, and the checkboxes never flash gold ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const selSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
+  const jsDir = path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js');
+
+  // --- the cast is gone, everywhere -----------------------------------------
+  ok('cast.js no longer exists', !fs.existsSync(path.join(jsDir, 'cast.js')));
+  ok('no cast rules survive in the stylesheet', !/dccs-cast|dccs-bob/.test(cssCode));
+  ok('no cast wiring survives in the controller',
+    !/DCCS\.cast|_dccsCast|cast\.sync/.test(selSrc));
+  ok('the bundler no longer lists it',
+    !/cast\.js/.test(fs.readFileSync(path.join(ROOT, 'tools', 'build-bundle.php'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')));
+  ok('the bundle itself carries no cast code',
+    !/dccs-cast/.test(fs.readFileSync(path.join(jsDir, 'dccs.js'), 'utf8')));
+  // The narrow paint-only invariant is back: nothing animates at all now.
+  ok('nothing writes path data or dash offsets any more',
+    !/setAttribute\('d'|strokeDashoffset|stroke-dashoffset/.test(selSrc));
+  ok('no keyframes remain in the stylesheet', !/@keyframes/.test(cssCode));
+  // The heading is bare: no wrapper that could reserve space.
+  ok('no heading wrapper classes remain anywhere',
+    !/dccs-heading-[tw]/.test(cssCode) && !/dccs-heading-[tw]/.test(selSrc));
+
+  // --- the focus rules outrank the kit --------------------------------------
+  // The kit ships input:focus at (0,4,1). Ties resolve on load order, which is not
+  // ours to control, so these must WIN on specificity: two root classes + the
+  // wrapper + the [type] attribute + :focus = (0,5,1).
+  ['dccs-cmp-option', 'dccs-cmp-toggle'].forEach(w => {
+    ok(w + ' has a :focus accent rule at (0,5,1)',
+      new RegExp('\\.dccs-root\\.dccs-root \\.' + w +
+        ' input\\[type="checkbox"\\]:focus[ ,]').test(cssCode));
+    ok(w + ' covers :focus-visible too',
+      new RegExp('\\.dccs-root\\.dccs-root \\.' + w +
+        ' input\\[type="checkbox"\\]:focus-visible').test(cssCode));
+  });
+  ok('the focus accent is the widget accent, never a literal',
+    /input\[type="checkbox"\]:focus-visible \{\s*accent-color: var\(--dccs-accent\);/.test(cssCode));
+  // C2: a real ring, not a background, and not left to the 1px browser default.
+  const ringRule = cssCode.slice(cssCode.indexOf('.dccs-root.dccs-root .dccs-cmp-option input[type="checkbox"]:focus-visible,\n.dccs-root.dccs-root .dccs-cmp-toggle input[type="checkbox"]:focus-visible'));
+  const ringBody = ringRule.slice(ringRule.indexOf('{'), ringRule.indexOf('}'));
+  ok('the focus ring is an outline of at least 2px', /outline:\s*2px solid/.test(ringBody));
+  ok('it is offset off the control, so it sits on the row',
+    /outline-offset:\s*2px/.test(ringBody));
+  ok('and it is not faked with a background', !/background/.test(ringBody));
+  ok('no gold anywhere in the plugin', !/F4DA62/i.test(cssCode) && !/F4DA62/i.test(selSrc));
 })();
 
 (async function runDeferred() {
