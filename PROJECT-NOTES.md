@@ -99,11 +99,11 @@ inherited `enable_popup` switch.
 find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
 
 # Build the installable zip the user uploads via WP Admin → Plugins → Add New → Upload.
-# Deliverable filename convention: EVERY file handed to Rob is prefixed
-# "Availability Calendar - ", so the zip is
-# "Availability Calendar - <version>.zip" and a screenshot or report is
-# "Availability Calendar - <what it is>.png". (Superseded the older
-# "Availability Calendar <version>.zip" form on 2026-09-12.)
+# Deliverable filename convention (settled 2026-09-13):
+#   PLUGIN ZIPS  -> "Availability Calendar <version>.zip"  — NO dash.
+#   EVERY OTHER FILE handed to Rob (png, md, js, csv, …)
+#                -> "Availability Calendar - <what it is>.<ext>"  — with dash.
+# The dash prefix was briefly applied to zips too; it is not.
 # The version is DERIVED from MPHBAC_VERSION rather than typed, so the filename
 # can never disagree with the build inside it.
 # NOTE: the folder INSIDE the zip must stay `mphb-availability-calendar/` —
@@ -111,7 +111,7 @@ find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
 # renaming the zip is safe but renaming the folder would orphan the install.
 cd $(git rev-parse --show-toplevel)
 V=$(grep -oE "MPHBAC_VERSION', '[0-9.]+" mphb-availability-calendar/mphb-availability-calendar.php | grep -oE "[0-9.]+$")
-zip -rq "Availability Calendar - $V.zip" mphb-availability-calendar
+zip -rq "Availability Calendar $V.zip" mphb-availability-calendar
 ```
 
 There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` for the manual smoke-test checklist.
