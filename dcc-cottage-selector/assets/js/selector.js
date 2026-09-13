@@ -61,6 +61,18 @@
     return side === 'right' ? innerHtml + icoSpan(h, 'right') : icoSpan(h, 'left') + innerHtml;
   }
 
+  /** The CTA carries BOTH labels and the stylesheet shows one, keyed to viewport
+      width. Doing it in CSS rather than JS keeps the markup identical for every
+      device, so a full-page cache cannot serve one width's label to another. The
+      <a> has an explicit aria-label built from the long form, so the accessible
+      name is the full "View this cottage: <name>" at every width regardless of
+      which span is painted, and the visible word is contained in it (WCAG 2.5.3).
+      A display:none span is not exposed, so nothing is announced twice. */
+  function viewLabel(S) {
+    return '<span class="dccs-view-long">' + esc(S.view_cottage) + '</span>' +
+      '<span class="dccs-view-short">' + esc(S.view_cottage_short || S.view_cottage) + '</span>';
+  }
+
   /** A Next/Back directional affordance: the chosen icon if set, otherwise the
       default arrow glyph — rendered on the button's fixed side so the icon simply
       replaces the arrow in place. */
@@ -849,7 +861,8 @@
         (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>'
       : '';
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" aria-label="' + esc(S.view_cottage + ': ' + nameLabel) + '">' + withIcon(config, 'view', 'view', esc(S.view_cottage)) + '</a>' +
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" aria-label="' + esc(S.view_cottage + ': ' + nameLabel) + '">' +
+        withIcon(config, 'view', 'view', viewLabel(S)) + '</a>' +
       cmpToggle +
       '</div></div>';
     return html;

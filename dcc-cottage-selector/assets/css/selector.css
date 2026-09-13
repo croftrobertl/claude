@@ -643,6 +643,20 @@
   font-family: inherit; font-size: var(--dccs-btn-size); font-weight: var(--dccs-btn-weight);
   line-height: var(--dccs-btn-line); letter-spacing: var(--dccs-btn-track); text-transform: none;
 }
+/* The CTA's label is short on narrow screens so it can share the action row with
+   the Compare checkbox. Mobile-first: the short word is the default and the full
+   label takes over at 480px, the same breakpoint the highlights already use for
+   their second column. Below that the two controls cannot share a row — the full
+   label makes the button 207px against a 117px Compare control and 313px of card
+   at 375px. Both spans are always in the markup and CSS picks one, so the HTML is
+   identical for every device and a full-page cache cannot mismatch them. */
+.dccs-root.dccs-root .dccs-view-long { display: none; }
+.dccs-root.dccs-root .dccs-view-short { display: inline; }
+@media (min-width: 480px) {
+  .dccs-root.dccs-root .dccs-view-long { display: inline; }
+  .dccs-root.dccs-root .dccs-view-short { display: none; }
+}
+
 /* "Add to compare" on result cards: min 44px tap area (was a 19px-tall strip —
    the smallest target in the widget, hardest for less-dexterous guests to hit). */
 /* The red from the site's sticky header menu (0.31.0). It ties the compare

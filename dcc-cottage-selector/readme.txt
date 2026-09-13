@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.37.0
+Stable tag: 0.38.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,33 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.38.0 =
+* NEW: the cottage CTA now shows a short label on narrow screens — "View" below
+  480px, the full label from 480px up — so it shares the action row with the
+  Compare checkbox at every width, down to 320px. Measured on the live widget's
+  configuration: one row with bottom edges 0.0px apart at 320, 360, 375, 390, 414,
+  479, 480, 600, 768 and 1280px, with the correct label painted on each side of
+  the breakpoint and never both.
+* The short label is a new translatable string, "View", baked in as the shipped
+  default. It is editable per widget in the Elementor panel as "View cottage
+  button (narrow screens)", beside the existing full-label control. It is NOT
+  added to the site preset: nothing was captured from a live widget for it, and
+  duplicating a Config default into the preset creates the two-copies-must-agree
+  drift hazard the preset notes warn about. The control default carries it to new
+  and existing widgets alike, so no panel edit is needed.
+* BOTH labels always ship in the markup and CSS paints one. The choice is not made
+  in JS and not made server-side, so the HTML is byte-identical for every device
+  and a full-page cache cannot serve one width's label to another.
+* The accessible name is unchanged at every width: the link keeps an explicit
+  aria-label built from the FULL label, so a screen reader still announces
+  "View Cottage: Cottage 35: Blue Heron Hideaway" when the button reads "View".
+  The visible word is contained in that name, as WCAG 2.5.3 requires, and the
+  hidden span is display:none so nothing is announced twice.
+* 480px was chosen because the stylesheet already breaks there for the highlights'
+  second column; the full label has 114px of slack at that width on the live
+  configuration, so the switch happens well clear of the point where it stops
+  fitting.
 
 = 0.37.0 =
 * FIXED: on a result tile the "View this cottage" button and the "Compare"

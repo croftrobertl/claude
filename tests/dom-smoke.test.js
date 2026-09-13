@@ -2528,6 +2528,72 @@ defer(async function () {
   ok('and it clears the 8px the copy block already contributes', Number(mt) > 8);
 })();
 
+// ---- 81. 0.38.0: the CTA's short label on narrow screens ----
+// Both labels ship in the markup and CSS paints one, so the HTML is identical for
+// every device and a cache cannot mismatch them. jsdom has no media queries, so
+// the DOM half is checked here and which span is PAINTED is measured in Chromium
+// (short below 480px, long from 480px, one row and level bottoms at every width).
+(function () {
+  const w = freshDom('https://example.com/?highlight=35');
+  const root = mountSelector(w, CONFIG);
+  const cfg = JSON.parse(CONFIG);
+
+  const links = Array.prototype.slice.call(root.querySelectorAll('.dccs-view'));
+  ok('result tiles render a cottage CTA', links.length > 0);
+
+  const longs = links.map(a => a.querySelector('.dccs-view-long'));
+  const shorts = links.map(a => a.querySelector('.dccs-view-short'));
+  ok('every CTA carries both labels', longs.every(Boolean) && shorts.every(Boolean));
+  ok('the long span holds view_cottage',
+    longs.every(e => e.textContent === cfg.strings.view_cottage));
+  ok('the short span holds view_cottage_short',
+    shorts.every(e => e.textContent === cfg.strings.view_cottage_short));
+  ok('and the two strings actually differ, so the test is not self-satisfying',
+    cfg.strings.view_cottage !== cfg.strings.view_cottage_short);
+
+  // The accessible name must stay the FULL label at every width — the short word
+  // is a visual abbreviation, not a reduction of what a screen reader announces.
+  ok('the accessible name is built from the long label',
+    links.every(a => a.getAttribute('aria-label').indexOf(cfg.strings.view_cottage) === 0));
+  // WCAG 2.5.3: the visible word must be contained in the accessible name.
+  ok('the visible short word is contained in the accessible name',
+    links.every(a => a.getAttribute('aria-label').indexOf(cfg.strings.view_cottage_short) !== -1));
+})();
+
+// ---- 82. 0.38.0: exactly one CTA label is painted at a time ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Split at the 480px media query so a declaration is never read from the wrong
+  // side of the breakpoint (the failure mode rule 2 warns about). There is MORE
+  // THAN ONE 480px block in this sheet — the highlights' second column uses the
+  // same breakpoint and comes first — so anchoring on the first match reads the
+  // wrong block entirely. Pick the one that contains the rule under test.
+  let mq = -1;
+  for (let from = 0; ;) {
+    const i = cssCode.indexOf('@media (min-width: 480px)', from);
+    if (i === -1) { break; }
+    if (cssCode.slice(i, cssCode.indexOf('\n}', i)).indexOf('.dccs-view-long') !== -1) { mq = i; break; }
+    from = i + 1;
+  }
+  ok('the 480px block holding the CTA labels was found', mq !== -1);
+  ok('and the sheet really does have more than one 480px block to confuse it',
+    cssCode.indexOf('@media (min-width: 480px)') !== mq);
+  const base = cssCode.slice(0, mq);
+  const inside = cssCode.slice(mq, cssCode.indexOf('\n}', mq));
+
+  const decl = (chunk, cls) => {
+    const i = chunk.indexOf('.dccs-view-' + cls + ' {');
+    if (i === -1) { return null; }
+    return (chunk.slice(i, chunk.indexOf('}', i)).match(/display:\s*([a-z-]+)/) || [])[1];
+  };
+  // Mobile-first: short is the default, long takes over at the breakpoint.
+  ok('below the breakpoint the long label is hidden', decl(base, 'long') === 'none');
+  ok('below the breakpoint the short label shows', decl(base, 'short') === 'inline');
+  ok('at the breakpoint the long label shows', decl(inside, 'long') === 'inline');
+  ok('at the breakpoint the short label is hidden', decl(inside, 'short') === 'none');
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

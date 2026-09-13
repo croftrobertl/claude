@@ -445,6 +445,7 @@ class Selector_Widget extends Widget_Base
             'reset'           => __('Reset button', 'dcc-cottage-selector'),
             'edit_answers'    => __('Edit answers button', 'dcc-cottage-selector'),
             'view_cottage'    => __('View cottage button', 'dcc-cottage-selector'),
+            'view_cottage_short' => __('View cottage button (narrow screens)', 'dcc-cottage-selector'),
             'compare_prompt'  => __('Compare subheader', 'dcc-cottage-selector'),
             'compare_need_two' => __('Compare “pick 2” tip', 'dcc-cottage-selector'),
             'compare_scroll_all' => __('Compare “scroll to see all” cue', 'dcc-cottage-selector'),

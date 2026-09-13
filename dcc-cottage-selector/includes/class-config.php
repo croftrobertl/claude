@@ -135,6 +135,9 @@ final class Config
             // Results
             'results_heading'   => __('Your top matches', 'dcc-cottage-selector'),
             'view_cottage'      => __('View this cottage', 'dcc-cottage-selector'),
+            /* The narrow-screen form of view_cottage. Both ship in the markup and CSS
+               picks one, so a full-page cache can serve the same HTML to every device. */
+            'view_cottage_short' => __('View', 'dcc-cottage-selector'),
             'add_compare'       => __('Compare', 'dcc-cottage-selector'),
             'reset'             => __('Restart', 'dcc-cottage-selector'),
             'see_matches'       => __('Submit', 'dcc-cottage-selector'),

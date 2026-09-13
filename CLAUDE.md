@@ -266,6 +266,25 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   travels with the text. **The page's `text-align` is not this plugin's to set** —
   nothing here centres the card, and the fix deliberately preserves whatever the
   page inherits rather than left-aligning to dodge the problem.
+- **The cottage CTA carries two labels and CSS paints one.** `view_cottage` and
+  `view_cottage_short` ("View") both ship in the markup; the stylesheet shows the
+  short one below 480px so the button can share the action row with the Compare
+  checkbox, which it cannot do with the full label (the full label needs 324px
+  before any gap, against 313px of card at 375px and 258px at 320px). The choice
+  is made in CSS, never in JS and never server-side, so the HTML is identical for
+  every device and a full-page cache cannot serve one width's label to another.
+  **The `<a>` keeps an explicit `aria-label` built from the FULL label**, so the
+  accessible name never shrinks with the viewport and the visible word stays
+  contained in it (WCAG 2.5.3). 480px is reused from the highlights' two-column
+  breakpoint rather than invented. `view_cottage_short` is deliberately absent
+  from the preset — the control default carries it, and a preset copy would be
+  the two-copies-must-agree hazard.
+- **The result tile's action row is bottom-aligned, not centred.** The CTA is 50px
+  tall (its line-height) and the Compare toggle 44px (its tap target), so `center`
+  left their bottom edges 3px apart. It also carries a `margin-top` that must
+  exceed 8px to do anything at all: margins COLLAPSE against the preceding copy
+  block's own 8px bottom margin rather than adding to it, and a first attempt at
+  6px changed nothing and looked like the rule had not applied.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
@@ -385,7 +404,11 @@ shape: a green result that could not have been red.
    run crossed rule boundaries kept passing after the rule lost the declaration,
    and a keyframe/selector-list check anchored on the FIRST match found the
    reduced-motion block instead of the rule it meant. Bound the match, and anchor
-   on the declaration rather than the first selector.
+   on the declaration rather than the first selector. It recurred in 0.38.0: the
+   sheet now has TWO `@media (min-width: 480px)` blocks — the highlights' second
+   column and the CTA's label switch — and a test that took the first one read the
+   wrong block and failed four assertions outright. Select the block that contains
+   the rule under test, and assert that a decoy exists so the selection is real.
 
 ### Never undo a mutation with `git checkout`
 
