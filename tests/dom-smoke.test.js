@@ -2505,6 +2505,29 @@ defer(async function () {
   ok('the outside-marker indent is gone', !/padding-left:\s*18px/.test(hl));
 })();
 
+// ---- 80. 0.37.0: the card's action row is bottom-aligned and clear of the copy ----
+// jsdom has no layout, so this pins the DECLARATIONS; the geometry that matters —
+// the CTA's bottom edge against the Compare checkbox's, and the gap above the row —
+// is measured in Chromium (0.0px and 14.0px at 768px and 1280px).
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const i = cssCode.indexOf('.dccs-root.dccs-root .dccs-card-actions');
+  const open = cssCode.indexOf('{', i);
+  const body = i === -1 ? '' : cssCode.slice(open, cssCode.indexOf('}', open));
+  ok('the card-actions rule was found at all', body.length > 0);
+
+  // The CTA is 50px tall (line-height) and the compare toggle 44px (tap target),
+  // so `center` left their bottom edges 3px apart.
+  ok('the action row bottom-aligns its items', /align-items:\s*flex-end/.test(body));
+  ok('and it is not back on center', !/align-items:\s*center/.test(body));
+  // Margins COLLAPSE against the preceding text block's 8px, so anything at or
+  // under 8px would be inert — the value has to clear that to do anything.
+  const mt = (body.match(/margin-top:\s*(\d+)px/) || [])[1];
+  ok('the row declares a top margin', mt !== undefined);
+  ok('and it clears the 8px the copy block already contributes', Number(mt) > 8);
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.36.0
+Stable tag: 0.37.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.37.0 =
+* FIXED: on a result tile the "View this cottage" button and the "Compare"
+  checkbox shared a row but were centred against each other, so the 44px checkbox
+  sat 3px above the 50px button's bottom edge — close enough to read as a mistake.
+  The row is bottom-aligned now: measured 0.0px apart at 768px and 1280px.
+* The action row was also jammed 8px under the tile's copy, so the button read as
+  part of the text block rather than as the thing to press. It now clears it by
+  14px. The margin COLLAPSES against the copy block's own 8px bottom margin rather
+  than adding to it, so any value at or under 8px would have changed nothing.
+* KNOWN, unchanged: on phones the two still wrap onto separate lines. They cannot
+  share a row at that width — the button is 207px and the Compare control 117px,
+  which needs 324px before any gap, against 313px of card at 375px and 258px at
+  320px. Shortening the button label is the lever: "View cottage" fits from 375px
+  up, "See cottage" from 360px, and nothing longer than about "Details" fits at
+  320px. That string is "View cottage button" in the widget's Elementor panel, so
+  it can be tried without a release.
 
 = 0.36.0 =
 * CHANGED: the identical-layout note is now a fact about the GROUP rather than a

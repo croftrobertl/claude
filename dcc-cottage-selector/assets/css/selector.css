@@ -624,7 +624,17 @@
 }
 
 .dccs-root.dccs-root .dccs-dup { margin: 0 0 8px; font-size: 0.82rem; color: var(--dccs-muted); font-style: italic; }
-.dccs-root.dccs-root .dccs-card-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* Bottom-aligned, not centred: the CTA is 50px tall (its line-height) and the
+   compare toggle 44px (its tap target), so `center` left their bottom edges 3px
+   apart — close enough to read as a mistake rather than a choice. `flex-end`
+   sits them on one baseline wherever they share a row. The top margin keeps the
+   CTA off the details above it; without it the button sat 8px under the text and
+   read as part of the copy block. Note the margin COLLAPSES against the text
+   block's own 8px bottom margin rather than adding to it, so this value is the
+   resulting gap, not an increment — anything at or under 8px changes nothing. */
+.dccs-root.dccs-root .dccs-card-actions {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-top: 14px;
+}
 /* The cottage CTA is an <a>, so `.dccs-root.dccs-root button` never reaches it.
    It looks and behaves like a button and sits directly beneath them, so it takes
    the same spec, restated here rather than left to drift. */
