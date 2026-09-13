@@ -74,17 +74,20 @@ php tools/makepot.php
 php tools/build-bundle.php
 
 # Build the deliverable zip. Read the version from the plugin header first.
-( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector - 0.33.0.zip" dcc-cottage-selector -x '*.DS_Store' )
+( cd $(git rev-parse --show-toplevel) && zip -rq "Cottage Selector 0.34.0.zip" dcc-cottage-selector -x '*.DS_Store' )
 ```
 
 ## Naming files handed to the user
 
-**Every file delivered to the user is named `Cottage Selector - <what it is>`.**
-Not just the zips — screenshots, strips, exports, anything. The user collects these
-outside the repo alongside deliverables from the other DCC plugins, and the prefix
-is what keeps them sorted and identifiable without opening them. The version goes
-in the name too for builds (`Cottage Selector - 0.33.0.zip`), so a downloaded build
-is identifiable on its own.
+Two different conventions, and the difference is deliberate:
+
+- **Plugin zips: `Cottage Selector <version>.zip`** — no dash. Example:
+  `Cottage Selector 0.34.0.zip`. This is the long-standing format and the one the
+  user's installed-build history is named in; a dash here breaks that run.
+- **Everything else: `Cottage Selector - <what it is>`** — screenshots, frame
+  strips, markdown, exported JS, anything that is not the build. The user collects
+  these outside the repo alongside deliverables from the other DCC plugins, and the
+  prefix is what keeps them sorted and identifiable without opening them.
 
 ## Releasing
 
