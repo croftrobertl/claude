@@ -214,6 +214,18 @@
 		if (chainWrap && chainShown > 0) { chainWrap.hidden = false; }
 		shown += chainShown;
 
+		/* The same deck the species tiles use (1.23.0), on the lists that just
+		 * received cards. Attached after filling, because a deck measures what
+		 * is in it; refreshed as well as attached, since a later /conditions
+		 * refresh replaces these cards wholesale. */
+		if (window.DCCWL_Deck) {
+			[ [ list, shown - chainShown ], [ chainList, chainShown ] ].forEach(function (pair) {
+				if (!pair[0] || pair[1] < 1) { return; }
+				window.DCCWL_Deck.attach(pair[0], CFG.i18n || {});
+				window.DCCWL_Deck.refresh(pair[0], CFG.i18n || {});
+			});
+		}
+
 		// Nothing usable: leave the strip hidden rather than showing an
 		// empty box or an error. The almanac below stands on its own.
 		if (shown > 0) {

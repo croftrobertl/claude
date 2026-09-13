@@ -458,6 +458,11 @@ final class Water_Render {
 					'coords'     => Water_Data::coords(),
 					'i18n'     => [
 						'asOf'        => __( 'reading', 'dcc-wildlife' ),
+						// The tile deck (1.23.0), shared with the species side.
+						'deckPrev'    => __( 'Previous readings', 'dcc-wildlife' ),
+						'deckNext'    => __( 'Next readings', 'dcc-wildlife' ),
+						/* translators: 1: first item shown, 2: last item shown, 3: total. */
+						'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
 						'moon' => [
 							'label' => __( 'Tonight on the canal', 'dcc-wildlife' ),
 							/* translators: 1: sunrise time, 2: sunset time. */
@@ -500,6 +505,10 @@ final class Water_Render {
 						'satellite'   => __( 'Satellite', 'dcc-wildlife' ),
 						'streets'     => __( 'Streets', 'dcc-wildlife' ),
 						'noImagery'   => __( 'Map imagery is unavailable right now — the markers below are still accurate.', 'dcc-wildlife' ),
+						/* translators: %s: station identifier. */
+						'stationTitle' => __( 'Station %s', 'dcc-wildlife' ),
+						'stationPage'  => __( 'Station page', 'dcc-wildlife' ),
+						'stationNone'  => __( 'No current reading from this station.', 'dcc-wildlife' ),
 						'closed'      => __( 'CLOSED', 'dcc-wildlife' ),
 						'milesAway'   => __( 'mi from the cottages, straight line', 'dcc-wildlife' ),
 						'depthMap'    => __( 'Depth map (PDF)', 'dcc-wildlife' ),

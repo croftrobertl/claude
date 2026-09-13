@@ -101,10 +101,19 @@ final class Plugin {
 			[ 'dcc-wildlife-app' ],
 			DCC_WL_VERSION
 		);
+		// The tile deck (1.23.0): one implementation, used by the species
+		// tiles and the water cards, so the two cannot drift apart.
+		wp_register_script(
+			'dcc-wildlife-deck',
+			DCC_WL_URL . 'assets/js/deck.js',
+			[],
+			DCC_WL_VERSION,
+			true
+		);
 		wp_register_script(
 			'dcc-wildlife',
 			DCC_WL_URL . 'assets/js/widget.js',
-			[ 'dcc-wildlife-sheet' ],
+			[ 'dcc-wildlife-sheet', 'dcc-wildlife-deck' ],
 			DCC_WL_VERSION,
 			true
 		);
@@ -137,7 +146,7 @@ final class Plugin {
 		wp_register_script(
 			'dcc-wildlife-water',
 			DCC_WL_URL . 'assets/js/water.js',
-			[ 'dcc-wildlife-sheet' ],
+			[ 'dcc-wildlife-sheet', 'dcc-wildlife-deck' ],
 			DCC_WL_VERSION,
 			true
 		);

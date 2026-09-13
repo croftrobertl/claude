@@ -605,3 +605,26 @@
 	.dccwl-water .dccwl-card-srcname { max-width: 20ch; }
 	.dccwl-fishing-seasons { grid-template-columns: 1fr; }
 }
+
+/* A station with nothing current to say (1.23.0). Muted, not alarming — an
+ * absent reading is normal, and the pin still shows where the number comes
+ * from when there is one. Muted on the popup's white: 5.38:1. */
+.dccwl-pop-none {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	margin: 4px 0 0;
+}
+
+/* The deck (1.23.0). Water cards are prose, not thumbnails, so they get one
+ * full-width column on a phone and two on a wide screen — a half-width card
+ * would break the reading line the fact + source + age rely on. */
+.dccwl-app .dccwl-cards.dccwl-deck {
+	grid-auto-columns: 100%;
+	grid-template-rows: repeat(2, auto);
+}
+@media (min-width: 700px) {
+	.dccwl-app .dccwl-cards.dccwl-deck {
+		grid-auto-columns: calc((100% - var(--dccwl-gap)) / 2);
+		grid-template-rows: repeat(2, auto);
+	}
+}

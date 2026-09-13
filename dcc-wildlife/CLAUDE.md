@@ -1076,6 +1076,33 @@ rounded boxes at the same weight. The rule now:
   nobody notices. Add an id to the tool's EXPORT list and re-run; never
   hand-edit a file in `assets/sprites/`. The palette note beside them is
   checked against the colours the files actually use.
+- **There is no month step (1.23.0).** The Wildlife door opens the species
+  list for the canal's current month; the month is a CHIP in the level bar
+  carrying the month AND its peak count, and the picker hangs off it. Two
+  rules that are easy to break:
+  - Choosing a month leaves the picker by the door it came in (`back()`), not
+    by pushing a second species entry. Otherwise Back from the species list
+    reopens the picker you just finished with.
+  - `#canal-month=` / `?canal-month=` is READ on init and never written. The
+    level navigation already owns history; a second writer fights the Back
+    button. Read client-side only — the page is cached, so PHP must never see
+    a month.
+- **The tile deck (`assets/js/deck.js`) is one implementation for both the
+  species tiles and the water cards.** It adds no tiles: the same `<li>`s,
+  laid out in columns, scrolled natively. That is what makes it accessible
+  for free — the accessibility tree, Tab order and focus-scrolling are the
+  browser's, not ours. Three things must stay true, and each has a test:
+  Previous/Next are real buttons (swipe is never the only way through), arrow
+  keys move FOCUS rather than just the viewport, and `prefers-reduced-motion`
+  makes it jump instead of glide. Its layout lives in `app.css` scoped to
+  `.dccwl-deck.dccwl-deck` — NOT to `.dccwl-tiles`, or the water cards
+  silently get none of it, and doubled because `.dccwl-tiles`/`.dccwl-cards`
+  set their own columns later in the same file.
+  A deck must also pack from the START: a centred grid that overflows spills
+  out of both ends, and the water deck opened on its ninth card because of it.
+- **The tile face has three tiers (1.23.0):** a vetted photo, else the
+  species' own sprite where one exists, else the neutral group glyph. Today
+  that is 17 / 7 / 27. Never invent artwork to fill the third tier.
 - **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none
   !important; }` in app.css. The attribute's UA rule has specificity 0 and
   loses to any class of ours that sets `display` — which is how a hidden,

@@ -293,6 +293,12 @@
 	width: 100%;
 }
 .dccwl-app .dccwl-glyph { fill: none; }
+/* The species' own drawing, filling the tile's media band (1.23.0). Bigger
+ * than the group glyph because it IS the subject rather than a category mark. */
+.dccwl-app .dccwl-tile-sprite {
+	height: 82%;
+	width: 82%;
+}
 .dccwl-app .dccwl-tile-glyph {
 	color: var(--dccwl-primary);   /* on the tinted band: 4.74:1 */
 	height: auto;
@@ -331,6 +337,72 @@
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	margin-top: auto;
+}
+
+/* ---- the tile deck (1.23.0) ----------------------------------------
+ * Shared by the species tiles and the water cards: deck.js is one
+ * implementation, so its layout is one rule set too. Deliberately NOT scoped
+ * to .dccwl-tiles — the water cards are .dccwl-cards, and the first version
+ * of this silently did nothing to them for exactly that reason. Each consumer
+ * sets only its own column width and row count. */
+.dccwl-app .dccwl-deck.dccwl-deck {
+	display: grid;
+	grid-auto-flow: column;
+	/* Doubled class on purpose: .dccwl-tiles and .dccwl-cards set their own
+	 * grid-template-columns later in this file at the same specificity, and
+	 * a single .dccwl-deck lost to them — leaving a stray first column at the
+	 * grid's old auto-fill width. */
+	grid-template-columns: none;
+	/* A CENTRED grid that overflows spills out of BOTH ends, and the start is
+	 * then unreachable: at scrollLeft 0 the water deck was showing its ninth
+	 * card, because cards one to eight sat at negative x. A deck always packs
+	 * from the start. */
+	align-content: start;
+	justify-content: start;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	padding-bottom: 2px;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+.dccwl-app .dccwl-deck::-webkit-scrollbar { display: none; }
+.dccwl-app .dccwl-deck > li { scroll-snap-align: start; }
+
+/* The controls. Visible, 44px, and never the only way through — a swipe is an
+ * addition to these, not a replacement for them. */
+.dccwl-deck-nav {
+	align-items: center;
+	display: flex;
+	gap: var(--dccwl-gap);
+	justify-content: center;
+	margin: var(--dccwl-gap) 0 0;
+}
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: 50%;
+	color: var(--dccwl-primary);
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	height: 44px;
+	justify-content: center;
+	padding: 0;
+	width: 44px;
+}
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:hover:not(:disabled) { background: var(--dccwl-primary-soft); }
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
+/* Disabled, not removed: the control keeps its place so the row does not
+ * reflow at either end of the deck. */
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:disabled { color: var(--dccwl-line-strong); cursor: default; }
+.dccwl-deck-status {
+	color: var(--dccwl-text-muted);
+	font-size: var(--dccwl-fs-xs);
+	margin: 0;
+	min-width: 6em;
+	text-align: center;
 }
 
 /* --- badges + chips ------------------------------------------------- */

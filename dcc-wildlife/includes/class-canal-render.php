@@ -114,7 +114,7 @@ final class Canal_Render {
 					</noscript>
 					<ul class="dccwl-hub-tiles">
 						<li>
-							<button type="button" class="dccwl-hub-tile" data-dccwl-go="month">
+							<button type="button" class="dccwl-hub-tile" data-dccwl-go="species">
 								<span class="dccwl-hub-name"><?php esc_html_e( 'Wildlife', 'dcc-wildlife' ); ?></span>
 								<?php /* Filled client-side from the bundled species
 								         calendar — always available, never cached. */ ?>
@@ -146,7 +146,7 @@ final class Canal_Render {
 					</ul>
 				</section>
 
-				<?php /* ---------- L2a: the month picker ---------- */ ?>
+				<?php /* ---------- L2a: the month picker, reached from the species chip ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-month" data-dccwl-panel="month" tabindex="-1" hidden>
 					<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ) ] ); ?>
 					<h2 class="dccwl-panel-title"><?php esc_html_e( 'The canal year', 'dcc-wildlife' ); ?></h2>
@@ -167,9 +167,12 @@ final class Canal_Render {
 
 				<?php /* ---------- L3a: species for the chosen month ---------- */ ?>
 				<section class="dccwl-panel dccwl-panel-species" data-dccwl-panel="species" tabindex="-1" hidden>
-					<?php /* The month segment is filled client-side (canal.js setMonth): a
-					         cached page must never name a month. */ ?>
-					<?php self::level_bar( __( 'All months', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ), '' ], 'month' ); ?>
+					<?php /* 1.23.0: this is where the Wildlife door now lands — on what is
+					         out THIS month, with no step to get past first. The month
+					         chip in the bar opens the picker for anyone who wants a
+					         different one, and it is filled client-side: a cached page
+					         must never name a month or count its species. */ ?>
+					<?php self::level_bar( __( 'Back', 'dcc-wildlife' ), [ __( 'Wildlife', 'dcc-wildlife' ) ], '', true ); ?>
 					<?php echo $species_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Render::render() escapes its own output. ?>
 				</section>
 
@@ -208,8 +211,11 @@ final class Canal_Render {
 	 * @param string[] $crumbs  Breadcrumb segments; an empty string is a
 	 *                          client-filled slot (the month name).
 	 * @param string   $fill    data-dccwl-crumb key for the client-filled slot.
+	 * @param bool     $chip    Render the month chip (1.23.0) in the bar's third
+	 *                          cell — the way to a different month now that the
+	 *                          month step is gone.
 	 */
-	private static function level_bar( string $back, array $crumbs, string $fill = '' ): void {
+	private static function level_bar( string $back, array $crumbs, string $fill = '', bool $chip = false ): void {
 		?>
 		<div class="dccwl-levelbar">
 			<button type="button" class="dccwl-back" data-dccwl-back>
@@ -223,6 +229,17 @@ final class Canal_Render {
 					<span class="dccwl-crumb<?php echo $i === $last ? ' dccwl-crumb-here' : ''; ?>"<?php echo $i === $last ? ' aria-current="location"' : ''; ?><?php echo ( '' === $crumb && '' !== $fill ) ? ' data-dccwl-crumb="' . esc_attr( $fill ) . '"' : ''; ?>><?php echo esc_html( $crumb ); ?></span>
 				<?php endforeach; ?>
 			</nav>
+			<?php if ( $chip ) : ?>
+				<?php /* The month, and what that month is worth (1.23.0). Both are
+				         filled client-side — a cached page must never name a month
+				         or count its species. Hidden until the script fills it, so
+				         with JS off there is no empty control. */ ?>
+				<button type="button" class="dccwl-monthchip" data-dccwl-monthchip hidden aria-haspopup="true">
+					<span class="dccwl-monthchip-name" data-dccwl-monthchip-name></span>
+					<span class="dccwl-monthchip-count" data-dccwl-monthchip-count></span>
+					<span class="dccwl-monthchip-caret" aria-hidden="true"><svg viewBox="0 0 20 20" width="14" height="14" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+				</button>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -253,6 +270,8 @@ final class Canal_Render {
 						'monthAria'  => __( 'Wildlife in %s', 'dcc-wildlife' ),
 						/* translators: %d: number of species at peak. */
 						'atPeak'     => __( '%d at peak', 'dcc-wildlife' ),
+						/* translators: 1: month name, 2: e.g. "15 at peak". */
+						'monthChipAria' => __( '%1$s, %2$s. Choose a different month.', 'dcc-wildlife' ),
 						/* translators: %d: number of species worth looking for. */
 						'toSpot'     => __( '%d to spot', 'dcc-wildlife' ),
 						'quiet'      => __( 'a quiet month', 'dcc-wildlife' ),

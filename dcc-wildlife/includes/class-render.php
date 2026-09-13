@@ -374,6 +374,12 @@ final class Render {
 		$out = '<span class="dccwl-tile-media">';
 		if ( '' !== (string) $sp['thumb'] ) {
 			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( DCC_WL_URL . 'assets/photos/' . $sp['thumb'] ) . '" alt="" width="320" height="240" loading="lazy" decoding="async">';
+		} elseif ( Sprites::has( (string) $sp['id'] ) ) {
+			// 1.23.0: the species' own drawing before the group glyph. It is
+			// still not a photograph, but it is THIS animal rather than a
+			// feather standing in for every bird — and the drawings already
+			// exist, so seven tiles stopped being interchangeable for nothing.
+			$out .= Sprites::use_svg( (string) $sp['id'], 'dccwl-tile-sprite' );
 		} else {
 			$out .= Sprites::glyph_svg( (string) $sp['group'], 'dccwl-glyph dccwl-tile-glyph' );
 		}
@@ -696,6 +702,10 @@ final class Render {
 				'oddsNames'   => Species::odds(),
 				'safe'        => __( 'What to do', 'dcc-wildlife' ),
 				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
+				'deckPrev'    => __( 'Previous species', 'dcc-wildlife' ),
+				'deckNext'    => __( 'Next species', 'dcc-wildlife' ),
+				/* translators: 1: first item shown, 2: last item shown, 3: total. */
+				'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
 				/* translators: %s: what the visitor typed. */
 				'searchNone'  => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
 				/* translators: %d: number of matching species. */

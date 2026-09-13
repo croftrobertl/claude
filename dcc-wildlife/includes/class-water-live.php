@@ -353,7 +353,14 @@ final class Water_Live {
 		// rather than being starved into a half-drawn map.
 		self::$fetch_budget = (int) min( self::MAP_FETCH_CEILING, ( count( $chain ) * 2 ) + 2 );
 
-		$waters = [];
+		$waters   = [];
+		/* Measuring stations as their own pins (1.23.0). Until now the map drew
+		 * a "station" marker on top of the WATERBODY's coordinates showing the
+		 * waterbody's popup, which is a dot that tells you nothing you did not
+		 * already have. A station is a real place with a real reading, so it
+		 * gets its own coordinates and its own card — and if it has no current
+		 * reading it is still pinned, and says so. */
+		$stations = [];
 		foreach ( $chain as $w ) {
 			$wq = self::atlas_report( 'WaterQuality', $w['id'] );
 			$lf = self::atlas_report( 'LevelsFlows', $w['id'] );
@@ -426,6 +433,34 @@ final class Water_Live {
 				}
 			}
 
+			/* One pin per station that reports for this water. Built from the
+			 * components already fetched — no extra request, now or on tap. A
+			 * station with no coordinates is NOT pinned: a marker in the wrong
+			 * place is worse than no marker. */
+			foreach ( [ 'clarity' => $sec, 'level' => $lvl ] as $kind => $comp ) {
+				if ( null === $comp ) {
+					continue;
+				}
+				$sid = self::comp_str( $comp, 'stationId' );
+				$geo = self::coords_in( $comp );
+				if ( '' === $sid || null === $geo ) {
+					continue;
+				}
+				$stations[] = [
+					'id'      => $sid,
+					'kind'    => $kind,
+					'water'   => $w['name'],
+					'lat'     => $geo[0],
+					'lon'     => $geo[1],
+					'source'  => self::atlas_source_name( $comp, __( 'Water Atlas', 'dcc-wildlife' ) ),
+					'url'     => self::station_url( $comp ),
+					// The reading itself, already gated above: absent when the
+					// component carried no usable number, and carrying its own
+					// age and stale flag when it did.
+					'reading' => $entry[ $kind ] ?? null,
+				];
+			}
+
 			foreach ( self::atlas_bathymetry( $lf ) as $b ) {
 				$entry['depthMap'] = [
 					'url'  => $b['source_url'],
@@ -442,8 +477,25 @@ final class Water_Live {
 
 		$property = Water_Data::coords();
 
+		// Two stations can sit on the same structure; one pin is enough.
+		$seen = [];
+		$stations = array_values( array_filter( $stations, static function ( array $s ) use ( &$seen ): bool {
+			$k = $s['id'] . '|' . $s['kind'];
+			if ( isset( $seen[ $k ] ) ) {
+				return false;
+			}
+			$seen[ $k ] = true;
+			return true;
+		} ) );
+
+		foreach ( $stations as &$s ) {
+			$s['miles'] = self::miles_from_property( $s['lat'], $s['lon'] );
+		}
+		unset( $s );
+
 		return [
 			'waters'   => $waters,
+			'stations' => $stations,
 			'ramps'    => self::fwc_ramps(),
 			'property' => null !== $property ? [ 'lat' => $property['lat'], 'lon' => $property['lon'] ] : null,
 			'levelMaxAgeDays' => self::LEVEL_MAX_AGE_DAYS,

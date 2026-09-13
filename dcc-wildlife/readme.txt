@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.22.0
+Stable tag: 1.23.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,15 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.23.0 =
+* The guide opens on what is out now. The month step is gone; the month is a chip in the bar that still says how many species are at their peak, and tapping it opens the picker — which still shows the count for all twelve months, so you can still see that April beats September.
+* A month named in the address still lands there: /explore/#canal-month=4 or ?canal-month=april.
+* Species tiles now swipe sideways within the group you are on, with Previous and Next buttons, full keyboard control, and no animation if your device asks for none. A group's tiles take the same height whether it holds twelve species or ninety.
+* The water readings swipe the same way.
+* Seven species that had a drawing but no photograph now show their own drawing on the tile instead of a generic group mark.
+* The chain map pins every measuring station at its own location, with that station's own readings. A station with nothing current to report says so rather than showing an old number.
+* The map still loads nothing at all until you open it.
 
 = 1.22.0 =
 * The bass, great blue heron and snowy egret drawings are now also shipped as standalone SVG files in assets/sprites/, so other Dora Canal Court plugins can show the same animal instead of redrawing it. No change to how the guide looks.

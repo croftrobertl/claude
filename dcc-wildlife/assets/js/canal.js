@@ -143,8 +143,12 @@
 			}
 		}
 
+		/* 1.23.0: the month step is gone from the path. The Wildlife door opens
+		 * the species list directly, and the picker is a detour from it — so
+		 * "back" from species goes home, and back from the picker returns to
+		 * the list it was opened from. */
 		function parentOf(level) {
-			return level === 'species' ? 'month' : 'hub';
+			return level === 'month' ? 'species' : 'hub';
 		}
 
 		window.addEventListener('popstate', function (e) {
@@ -179,10 +183,26 @@
 				t.setAttribute('aria-pressed', i === m ? 'true' : 'false');
 				t.classList.toggle('dccwl-month-tile-on', i === m);
 			});
-			// The level bar's breadcrumb: "Wildlife › September" (1.18.0). Filled
-			// here, never server-side, so a cached page cannot name a month.
-			var crumb = root.querySelector('[data-dccwl-crumb="month"]');
-			if (crumb && Array.isArray(wCfg.monthsFull)) { crumb.textContent = wCfg.monthsFull[m] || ''; }
+			// The month chip (1.23.0), which replaced both the month step and the
+			// breadcrumb's month segment. It carries the month AND what the month
+			// is worth — "September · 15 at peak" — because that count was the
+			// best thing on the old picker and dropping it would have been a
+			// regression dressed as a simplification. Filled here, never
+			// server-side, so a cached page cannot name a month.
+			var chip = root.querySelector('[data-dccwl-monthchip]');
+			if (chip && Array.isArray(wCfg.monthsFull)) {
+				var name = wCfg.monthsFull[m] || '';
+				var c = monthCounts(m);
+				var count = c ? (c.peak > 0 ? fmt(I18N.atPeak || '%d at peak', c.peak)
+					: c.spot > 0 ? fmt(I18N.toSpot || '%d to spot', c.spot) : '') : '';
+				chip.querySelector('[data-dccwl-monthchip-name]').textContent = name;
+				chip.querySelector('[data-dccwl-monthchip-count]').textContent = count;
+				// The visible text is two fragments; give a screen reader one
+				// sentence that also says what the control does.
+				chip.setAttribute('aria-label',
+					fmt(I18N.monthChipAria || '%1$s, %2$s. Choose a different month.', name, count));
+				chip.hidden = false;
+			}
 			// The existing widget owns every month behaviour — headline,
 			// spotlight, timeline, guide chips. Drive it; never re-implement.
 			if (drive !== false && speciesRoot && window.DCCWL_Widget) {
@@ -235,7 +255,13 @@
 
 				t.addEventListener('click', function () {
 					setMonth(m);
-					go('species', t);
+					/* Step BACK out of the picker rather than forward into a
+					 * second species entry (1.23.0). The picker is a detour off
+					 * the species list: once a month is chosen it should not be
+					 * behind you, or Back from the list reopens the picker you
+					 * just finished with. Leaving by the same door you came in
+					 * keeps the stack [hub, species], so Back then goes home. */
+					back();
 				});
 				li.appendChild(t);
 				list.appendChild(li);
@@ -443,10 +469,44 @@
 			queueSticky();
 		}
 
+		var chipBtn = root.querySelector('[data-dccwl-monthchip]');
+		if (chipBtn) {
+			chipBtn.addEventListener('click', function () { go('month', chipBtn); });
+		}
+
+		/* A month named in the URL still lands on that month (1.23.0).
+		 * READ ONLY, and read here rather than on the server: the page is
+		 * cached, so PHP must never see a month. Accepts a number (1-12) or a
+		 * month name, in the hash or the query:
+		 *     /explore/#canal-month=4      /explore/?canal-month=april
+		 * Nothing writes it back — the level navigation already owns history,
+		 * and a second writer there would fight the Back button. */
+		function monthFromUrl() {
+			var raw = '';
+			try {
+				var m1 = (location.hash || '').match(/canal-month=([^&]+)/i);
+				var m2 = (location.search || '').match(/[?&]canal-month=([^&]+)/i);
+				raw = decodeURIComponent((m1 || m2 || [])[1] || '').trim();
+			} catch (e) { return null; }
+			if (!raw) { return null; }
+			if (/^\d{1,2}$/.test(raw)) {
+				var n = parseInt(raw, 10);
+				return n >= 1 && n <= 12 ? n - 1 : null;
+			}
+			var want = raw.toLowerCase();
+			var names = Array.isArray(wCfg.monthsFull) ? wCfg.monthsFull : [];
+			for (var i = 0; i < names.length; i++) {
+				var full = String(names[i]).toLowerCase();
+				if (full === want || full.slice(0, 3) === want) { return i; }
+			}
+			return null;
+		}
+
 		buildMonths();
 		fillYearNote();
 		fillWildlifePreview();
-		setMonth(state.month);
+		var deep = monthFromUrl();
+		setMonth(null === deep ? state.month : deep);
 		show('hub', false);
 	}
 

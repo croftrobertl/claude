@@ -213,6 +213,48 @@
 		return box;
 	}
 
+	/* A station's own card (1.23.0). The fact gate applies exactly as it does
+	 * everywhere else in this module: a station with no usable reading says
+	 * so. It never prints a zero, and a reading past its staleness limit is
+	 * shown as old rather than dressed up as current. */
+	function stationPopup(s, i18n) {
+		var box = el('div', 'dccwl-pop');
+		var kindName = 'level' === s.kind ? (i18n.lblLevel || 'Level:') : (i18n.lblClarity || 'Clarity:');
+		box.appendChild(el('h4', 'dccwl-pop-title',
+			tpl(i18n.stationTitle || 'Station %s', s.id || '')));
+		line(box, i18n.lblWater || 'Water:', s.water || '');
+
+		var r = s.reading;
+		if (!r) {
+			box.appendChild(el('p', 'dccwl-pop-none', i18n.stationNone || 'No current reading from this station.'));
+		} else if ('level' === s.kind && r.stale) {
+			line(box, kindName, (i18n.staleLevel || 'level reading is old') + (r.date ? ' — ' + r.date : ''));
+		} else if ('level' === s.kind && typeof r.inches === 'number') {
+			var inches = Math.abs(Math.round(r.inches));
+			line(box, kindName, (r.inches > 0
+				? tpl(i18n.levelAbove || '%s in above its monthly norm', inches)
+				: tpl(i18n.levelBelow || '%s in below its monthly norm', inches)) + (r.date ? ' — ' + r.date : ''));
+		} else if (typeof r.value === 'number') {
+			line(box, kindName, fmt(r.value) + (r.units ? ' ' + r.units : ''));
+			line(box, (i18n.sampled || 'sampled') + ':', r.date || '');
+		} else {
+			box.appendChild(el('p', 'dccwl-pop-none', i18n.stationNone || 'No current reading from this station.'));
+		}
+
+		if (typeof s.miles === 'number') {
+			line(box, i18n.lblDistance || 'Distance:', s.miles + ' ' + (i18n.milesAway || 'mi, straight line'));
+		}
+		if (s.url) {
+			var a = el('a', 'dccwl-pop-link', i18n.stationPage || 'Station page');
+			a.href = s.url;
+			a.target = '_blank';
+			a.rel = 'noopener nofollow';
+			box.appendChild(a);
+		}
+		if (s.source) { box.appendChild(el('p', 'dccwl-pop-src', s.source)); }
+		return box;
+	}
+
 	function rampPopup(r, i18n) {
 		var box = el('div', 'dccwl-pop');
 		box.appendChild(el('h4', 'dccwl-pop-title', r.name || i18n.rampName || 'Boat ramp'));
@@ -267,17 +309,24 @@
 			waterMarkers.push({ marker: m, water: w });
 			bounds.push([w.lat, w.lon]);
 
-			// The station that produced the reading, as its own layer, so a
-			// guest can see exactly where each figure comes from.
-			['clarity', 'level'].forEach(function (k) {
-				var r = w[k];
-				if (!r || !r.station) { return; }
-				var sm = L.circleMarker([w.lat, w.lon], {
-					radius: 5, weight: 1, color: '#fff', fillOpacity: 1, fillColor: C.navy
-				});
-				sm.bindPopup(waterPopup(w, i18n));
-				sm.addTo(groups.stations);
+			// Stations are drawn from data.stations below, at their OWN
+			// coordinates. They used to be drawn here, on top of the
+			// waterbody's dot and showing the waterbody's popup — a marker
+			// that could only ever repeat what was already under it.
+		});
+
+		(data.stations || []).forEach(function (s) {
+			if (typeof s.lat !== 'number' || typeof s.lon !== 'number') { return; }
+			var live = !!(s.reading && ('level' !== s.kind || !s.reading.stale));
+			var sm = L.circleMarker([s.lat, s.lon], {
+				radius: 6, weight: 2, color: '#fff', fillOpacity: 1,
+				// A station with nothing current to say is drawn quiet rather
+				// than hidden: it is still where the number would come from.
+				fillColor: live ? C.navy : C.usual
 			});
+			sm.bindPopup(stationPopup(s, i18n));
+			sm.addTo(groups.stations);
+			bounds.push([s.lat, s.lon]);
 		});
 
 		(data.ramps || []).forEach(function (r) {

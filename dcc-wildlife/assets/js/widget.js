@@ -135,6 +135,10 @@
 			img.decoding = 'async';
 			img.src = CFG.photoBase + sp.thumb;
 			media.appendChild(img);
+		} else if (sp.sprite) {
+			// The species' own drawing before the group glyph (1.23.0) —
+			// mirrors Render::tile_media().
+			media.appendChild(spriteUse(sp.id, 'dccwl-tile-sprite'));
 		} else {
 			media.appendChild(glyphUse(sp.group, 'dccwl-tile-glyph'));
 		}
@@ -811,6 +815,13 @@
 			section.querySelectorAll('.dccwl-tab').forEach(function (t) {
 				t.setAttribute('aria-pressed', !searching && t.getAttribute('data-dccwl-group') === guide.group ? 'true' : 'false');
 			});
+			// The deck's controls describe what is actually in the deck, so they
+			// are recomputed after every filter — month, search or cap.
+			if (window.DCCWL_Deck) {
+				section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+					window.DCCWL_Deck.refresh(g, CFG.i18n);
+				});
+			}
 		}
 
 		// Kept as the old name so every existing caller still reads clearly.
@@ -822,6 +833,14 @@
 				return;
 			}
 			section.querySelectorAll('.dccwl-tile').forEach(wireTile);
+			// One deck per group grid (1.23.0). Attaching per grid rather than
+			// once for the section means the visible group is the one being
+			// paged, and changing tab changes decks with it.
+			if (window.DCCWL_Deck) {
+				section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
+					window.DCCWL_Deck.attach(g, CFG.i18n);
+				});
+			}
 			var tabs = section.querySelectorAll('.dccwl-tab');
 			var first = section.querySelector('.dccwl-tab[aria-pressed="true"]') || tabs[0];
 			guide.group = first ? first.getAttribute('data-dccwl-group') : null;

@@ -417,6 +417,29 @@
 	outline: none;
 }
 
+/* The species deck's own shape (1.23.0): the mechanics live in app.css,
+ * because the water cards use the same deck. Three rows on a phone at two
+ * columns a screen = six species a swipe. */
+.dccwl-app .dccwl-tiles.dccwl-deck {
+	grid-auto-columns: calc((100% - var(--dccwl-gap)) / 2);
+	grid-template-rows: repeat(3, auto);
+}
+@media (min-width: 700px) {
+	.dccwl-app .dccwl-tiles.dccwl-deck {
+		grid-auto-columns: calc((100% - (var(--dccwl-gap) * 3)) / 4);
+		grid-template-rows: repeat(2, auto);
+	}
+}
+/* Wider still: MORE columns, not wider tiles. A four-column deck on a desktop
+ * made every tile half as wide again as the grid it replaced, and since the
+ * media band is 4:3 the whole page grew by ~180px. Tiles keep their size and
+ * the deck simply holds more of them. */
+@media (min-width: 1000px) {
+	.dccwl-app .dccwl-tiles.dccwl-deck {
+		grid-auto-columns: calc((100% - (var(--dccwl-gap) * 5)) / 6);
+	}
+}
+
 /* Search (1.21.0). A control, so it sits on the control ground with the tabs
  * rather than reading as another card. Hidden in the HTML; the script unhides
  * it, so with JS off there is no dead input on the page. */
