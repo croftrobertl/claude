@@ -152,7 +152,16 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   "waterfront vs not".
 - **Two cottages are "identical" only when the CARD shows the same thing** —
   `signature()` folds the highlights in alongside the comparison-matrix fields
-  (0.22.6), because 31 lists a paved sun area that 32 genuinely lacks.
+  (0.22.6), because 31 lists a paved sun area that 32 genuinely lacks. Editing a
+  cottage's `highlights` can therefore make a pair stop or start being twins.
+- **The identical-layout note is a fact about the GROUP, not a remark from one
+  tile.** `dedupe()` sets `duplicateGroup` — every member's id, ascending — on
+  EVERY member, so the same sentence renders on every tile in the group and a
+  group of three names all three. Until 0.36.0 it set `duplicateOf` on the
+  lowest-id member only, pointing at one sibling: the other twin showed nothing,
+  and a trio would have named one partner and silently dropped the other. A group
+  of one is not a duplicate and is left unmarked. The note is built from the
+  CURRENT display list, so it never names a cottage that is not on screen.
 - **The Elementor widget category is `dcc-widgets`** ("Dora Canal Court") — the slug
   every live DCC plugin registers. Elementor groups the panel by *slug*, so any
   other value creates a duplicate "Dora Canal Court" section (the 0.17.1 incident).
@@ -244,6 +253,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   The boxes also carry a real 2px focus ring, offset clear of the control: that gold
   had accidentally been their only focus signal, and removing a colour that was
   doing an accessibility job without replacing it would have been a regression.
+- **A result tile's body copy declares its own weight and its own list geometry.**
+  Neither `.dccs-why` nor `.dccs-highlights` declared `font-weight` before 0.36.0,
+  so both inherited the page's — bold, on the live site — and nothing in this
+  repo looked wrong. An inherited value loses to any rule matching the element
+  itself, so a plain (0,3,0) declaration settles it wherever the widget is
+  dropped; that is why the fix needed no specificity games. The bullets use
+  `list-style-position: inside` because the page centres the text: with the
+  default `outside` the markers stay at a fixed x while each line centres
+  independently, stranding every marker a different distance from its own text
+  (measured: 105-146px at 375px). `inside` puts the marker in the line box so it
+  travels with the text. **The page's `text-align` is not this plugin's to set** —
+  nothing here centres the card, and the fix deliberately preserves whatever the
+  page inherits rather than left-aligning to dodge the problem.
 - **The site button spec lives in `--dccs-btn-*` tokens** at the top of
   `selector.css` (20px / 500 / 50px line-height / 0.5px / no transform, white on
   `#006BCF`, 30px radius). State the spec once there; don't restate numbers in
@@ -364,6 +386,18 @@ shape: a green result that could not have been red.
    and a keyframe/selector-list check anchored on the FIRST match found the
    reduced-motion block instead of the rule it meant. Bound the match, and anchor
    on the declaration rather than the first selector.
+
+### Never undo a mutation with `git checkout`
+
+Mutation-testing a new assertion means breaking the code on purpose and checking
+the assertion goes red. Undo that with a **file snapshot** (`cp` the sources aside
+first, `cp` them back after), never `git checkout -- <path>`: the release changes
+are uncommitted at that point, so checkout reverts them too and every later
+mutation then runs against the PREVIOUS release. It happened twice in 0.36.0 and
+the second time it silently discarded a whole test suite's worth of new
+assertions. The first symptom is a mutation that fails assertions it does not
+touch — if that appears, stop and check `git status` before believing any of it.
+Better still: commit the work as a checkpoint before starting the mutation round.
 
 ## Stylesheet structure
 

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.35.0
+Stable tag: 0.36.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,40 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.36.0 =
+* CHANGED: the identical-layout note is now a fact about the GROUP rather than a
+  remark made from one cottage's point of view. It reads "Note: Cottages 35 & 36
+  have identical layouts & features" — cottage numbers, not full names, no trailing
+  full stop — and the SAME sentence appears on every tile in the group.
+* Duplicate detection was one-directional and could only ever name one sibling:
+  dedupe() marked the lowest-id member with duplicateOf = the next id up, so the
+  higher-id twin carried no note at all and a group of three would have named one
+  of its two partners and silently ignored the other. Every member now carries
+  duplicateGroup — the whole group's ids in ascending order — so a trio renders
+  "Note: Cottages 31, 32 & 35 have identical layouts & features" on all three
+  tiles. A group of one is not a duplicate and is left unmarked, so nothing
+  renders; that was already true and still is.
+* REMOVED: the "Why this fits your trip:" heading before the reasons paragraph,
+  and the why_heading string with it. The paragraph now opens on its own lead.
+* FIXED: the bullet markers in the per-cottage details did not follow the centred
+  text. The list inherited text-align: center from the page while the markers sat
+  at the fixed left edge the default list-style-position: outside puts them at.
+  Measured at 375px: every marker pinned to the same x, stranded between 105 and
+  146 pixels from its own text, by a different distance on each row.
+  list-style-position: inside puts the marker in the line box so it travels with
+  the text; the marker now sits a constant 18.4-19px from its text on every row
+  (spread 0.6px) and the marker-plus-text run is centred to within 1px. Verified
+  in one column at 375px and in the two-column layout at 1280px.
+* The 18px padding-left went with it: it existed only to make room for markers
+  sitting outside the box, and with the marker back in the flow it was pushing
+  every centred line 9px right of the card's centre.
+* FIXED: both blocks of body copy on a result tile — the reasons paragraph and the
+  bulleted details — rendered bold. Neither declared a weight, so both inherited
+  the page's. Both now declare regular weight; titles, badges and buttons are
+  untouched.
+* No cottage description text changed in this release: the highlights in
+  cottages.json and the why_* fragments are exactly as they were.
 
 = 0.35.0 =
 * FIXED: the Compare pop-up's close button sat on top of the scrollbar. It was

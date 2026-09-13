@@ -917,12 +917,13 @@ function configWith(overrides) {
   ok('340 sq ft cottage never claims "most square footage"', !DCCS.labels.whyFits(c340, crit).includes('space'));
   ok('400 sq ft cottage still gets the space reason', DCCS.labels.whyFits(c400, crit).includes('space'));
 
-  // (2) duplicateOf cleared on every run — no stale note across renders.
+  // (2) duplicateGroup cleared on every run — no stale note across renders.
   // 35/36 are the genuine twins (31/32 differ by a highlight — see test 48).
   DCCS.score.dedupe(cfg.cottages.filter(c => c.id === '35' || c.id === '36'), cfg.diffFields);
-  ok('dedupe marks the twin pair', cfg.cottages.find(c => c.id === '35').duplicateOf === '36');
+  ok('dedupe marks the twin pair',
+    String(cfg.cottages.find(c => c.id === '35').duplicateGroup) === '35,36');
   DCCS.score.run(cfg.cottages, { hard: [] });
-  ok('run() clears stale duplicateOf flags', !cfg.cottages.some(c => c.duplicateOf));
+  ok('run() clears stale duplicateGroup flags', !cfg.cottages.some(c => c.duplicateGroup));
 
   // (3) answering "table for two" no longer excludes the 4-seat Boathouse.
   enter(root, 'quick');
@@ -1520,7 +1521,7 @@ function configWith(overrides) {
   ok('Cottage 31 no longer claims to be identical to 32',
     !!c31 && !c31.querySelector('.dccs-dup'));
   D.score.dedupe([by('35'), by('36')], cfg.diffFields);
-  ok('a real twin still gets the duplicate note', by('35').duplicateOf === '36');
+  ok('a real twin still gets the duplicate note', String(by('35').duplicateGroup) === '35,36');
   D.score.run(cfg.cottages, { hard: [] });
 })();
 
@@ -2388,6 +2389,120 @@ defer(async function () {
     /buildOverlay\(trigger, config\.strings && config\.strings\.heading, host \? host\.inner : null\)/.test(selSrc));
   ok('and buildOverlay renders a header either way',
     /title \? '<h2 class="dccs-modal-title">'/.test(selSrc));
+})();
+
+// ---- 77. 0.36.0: the identical-layout note is a fact about the GROUP ----
+// It names every member by NUMBER and reads identically on every tile in the group,
+// so it can no longer be the one-directional "this one is the same as that one".
+(function () {
+  const w = freshDom('https://example.com/?highlight=35');
+  const root = mountSelector(w, CONFIG);
+  const D = w.DCCS;
+
+  const cards = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'));
+  const idOf = (el) => (el.querySelector('h4').textContent.match(/Cottage (\d+)/) || [])[1];
+  const noteOf = (el) => { const p = el.querySelector('.dccs-dup'); return p ? p.textContent : null; };
+  const noted = cards.filter(noteOf);
+
+  // POSITIVE FIRST (standing rule 1): the detector can see a note at all.
+  ok('the twin pair still carries a note', noted.length > 0);
+  // The note is a fact about the pair, so it is the SAME text on both tiles.
+  ok('both tiles in the pair carry the identical sentence',
+    noted.length === 2 && noteOf(noted[0]) === noteOf(noted[1]));
+  // ...and it names the members by NUMBER, never by name (the pre-0.36.0 behaviour).
+  ok('the note names both cottage numbers',
+    /\b35\b/.test(noteOf(noted[0]) || '') && /\b36\b/.test(noteOf(noted[0]) || ''));
+  ok('the note no longer names a cottage',
+    !/Blue Heron|Sunshine Suite/.test(noteOf(noted[0]) || ''));
+  // The results list is capped, so "no note off the group" is only meaningful if a
+  // non-member was actually on screen to fail it. Assert that before trusting it.
+  ok('a card outside the group was on screen to test the negative against',
+    cards.length > noted.length);
+  ok('and only the group members carry a note',
+    String(noted.map(idOf).sort()) === '35,36');
+
+  // A group of THREE: every member marked, with the whole group, in id order.
+  const trio = ['31', '32', '35'].map(id => ({ id: id, guests: 2, layoutType: 'Studio', highlights: ['x'] }));
+  D.score.dedupe(trio, ['guests', 'layoutType']);
+  ok('a group of three marks every member', trio.every(c => c.duplicateGroup));
+  ok('and every member carries the same whole group in id order',
+    trio.every(c => String(c.duplicateGroup) === '31,32,35'));
+
+  // End-to-end on a REAL trio: a config of exactly three cottages made identical
+  // (same diffFields, same highlights) so all three group and all three render.
+  const trioCfg = JSON.parse(CONFIG);
+  const src = ['31', '32', '35'].map(id => trioCfg.cottages.find(c => c.id === id));
+  src.slice(1).forEach(c => {
+    trioCfg.diffFields.forEach(f => { c[f] = src[0][f]; });
+    c.highlights = src[0].highlights.slice();
+  });
+  trioCfg.cottages = src;
+  const rootTrio = mountSelector(freshDom('https://example.com/?highlight=31'), JSON.stringify(trioCfg));
+  const trioNotes = Array.prototype.map.call(rootTrio.querySelectorAll('.dccs-card'),
+    el => { const p = el.querySelector('.dccs-dup'); return p ? p.textContent : null; });
+  ok('all three tiles of a trio render a note', trioNotes.length === 3 && trioNotes.every(t => !!t));
+  ok('and all three read identically', new Set(trioNotes).size === 1);
+  ok('the trio note lists all three numbers, comma then ampersand',
+    /\b31,\s*32\s*&\s*35\b/.test(trioNotes[0]));
+
+  // A group of ONE is not a duplicate and is left unmarked, so nothing renders.
+  const solo = [{ id: '22', guests: 2, layoutType: 'Studio', highlights: ['x'] }];
+  D.score.dedupe(solo, ['guests', 'layoutType']);
+  ok('a group of one is never marked', !solo[0].duplicateGroup);
+})();
+
+// ---- 78. 0.36.0: the "why this fits" heading is gone; the lead is untouched ----
+(function () {
+  const w = freshDom('https://example.com/?highlight=35');
+  const root = mountSelector(w, CONFIG);
+  const cfg = JSON.parse(CONFIG);
+
+  const whys = Array.prototype.slice.call(root.querySelectorAll('.dccs-why'));
+  ok('result tiles still render a why paragraph', whys.length > 0);
+
+  // POSITIVE CONTROL (standing rule 1): park a <strong> in one paragraph and
+  // confirm the detector reports it, so the zero below means something.
+  const probe = w.document.createElement('strong');
+  probe.textContent = 'probe';
+  whys[0].appendChild(probe);
+  ok('the bold-heading detector reports a <strong> when one is present',
+    whys.some(p => !!p.querySelector('strong')));
+  whys[0].removeChild(probe);
+
+  ok('no why paragraph carries a bolded heading any more',
+    whys.every(p => !p.querySelector('strong')));
+  // The paragraph now opens on the lead, which this release does NOT change.
+  ok('the paragraph opens on why_lead, unchanged',
+    whys.every(p => p.textContent.indexOf(cfg.strings.why_lead) === 0));
+  ok('why_heading no longer ships as a string at all', !('why_heading' in cfg.strings));
+})();
+
+// ---- 79. 0.36.0: card body copy is regular weight; markers follow the text ----
+// jsdom has no layout, so this covers the DECLARATIONS. That the markers and the
+// text actually share a centre, in one and two columns, is measured in Chromium.
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const ruleBody = (sel) => {
+    const i = cssCode.indexOf(sel + ' ');
+    if (i === -1) { return ''; }
+    const open = cssCode.indexOf('{', i);
+    return cssCode.slice(open, cssCode.indexOf('}', open));
+  };
+
+  const why = ruleBody('.dccs-root.dccs-root .dccs-why');
+  const hl = ruleBody('.dccs-root.dccs-root .dccs-highlights');
+  const li = ruleBody('.dccs-root.dccs-root .dccs-highlights li');
+  ok('the why/highlights rules were found at all', why.length > 0 && hl.length > 0 && li.length > 0);
+
+  ok('the why paragraph declares a regular weight', /font-weight:\s*400/.test(why));
+  ok('the highlights list declares a regular weight', /font-weight:\s*400/.test(hl));
+  ok('and each highlight item does too, over a theme li rule', /font-weight:\s*400/.test(li));
+
+  // Markers live inside the line box, so they move with the inherited text-align.
+  ok('bullet markers sit inside the line box', /list-style-position:\s*inside/.test(hl));
+  // The 18px indent existed only to make room for outside markers.
+  ok('the outside-marker indent is gone', !/padding-left:\s*18px/.test(hl));
 })();
 
 (async function runDeferred() {

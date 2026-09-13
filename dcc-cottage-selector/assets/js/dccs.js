@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.35.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.36.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -16,7 +16,7 @@
  * Two-phase scoring pipeline for the Dora Canal cottage selector.
  *
  * Functions operate ONLY on data keys — no display strings live here. The single
- * side effect is the per-render duplicateOf display flag (set by dedupe, cleared
+ * side effect is the per-render duplicateGroup display flag (set by dedupe, cleared
  * by run). Exposed on the global DCCS namespace so labels.js and selector.js can
  * use them without a build step.
  *
@@ -110,9 +110,16 @@
   }
 
   /**
-   * Annotate identical-signature cottages within a displayed list. The
-   * lower-id member of each duplicate group gets duplicateOf = the other id, so
-   * the UI can explain why both appear.
+   * Annotate identical-signature cottages within a displayed list. EVERY member
+   * of a duplicate group gets duplicateGroup = the ids of the whole group, in
+   * ascending numeric order, so the note reads as a fact about the group
+   * ("Cottages 35 & 36 have identical layouts & features") and is identical on
+   * every tile in it. Groups of three or more work by construction.
+   *
+   * Until 0.36.0 only the lowest-id member was marked, with a single reference
+   * to the next one up; that could not say what the note now has to say, and on
+   * a group of three it named one sibling and silently ignored the other.
+   * A group of one is not a duplicate and is left unmarked, so nothing renders.
    */
   function dedupe(list, diffFields) {
     var groups = {};
@@ -124,8 +131,8 @@
       var g = groups[sig];
       if (g.length < 2) { return; }
       g.sort(function (a, b) { return Number(a.id) - Number(b.id); });
-      // Lower-id option references the next one in the group.
-      g[0].duplicateOf = g[1].id;
+      var ids = g.map(function (c) { return c.id; });
+      g.forEach(function (c) { c.duplicateGroup = ids; });
     });
     return list;
   }
@@ -135,11 +142,10 @@
    * @returns {{results: Array, excluded: Array, bypassed: boolean, empty: boolean}}
    */
   function run(cottages, crit) {
-    // dedupe() marks duplicateOf on the shared cottage objects for the CURRENT
-    // display list. Clear all marks at the start of every run so a pair flagged in
-    // one render can't leak a stale "identical to Cottage X" note into a later
-    // render where X isn't on screen.
-    cottages.forEach(function (c) { delete c.duplicateOf; });
+    // dedupe() marks duplicateGroup on the shared cottage objects for the CURRENT
+    // display list. Clear all marks at the start of every run so a group flagged in
+    // one render can't leak a stale note naming a cottage that isn't on screen.
+    cottages.forEach(function (c) { delete c.duplicateGroup; });
     var p1 = phase1(cottages, crit);
     var pool = p1.pool;
 
@@ -1239,8 +1245,9 @@
 
     var reasons = DCCS.labels.whyFits(c, crit).map(function (k) { return S['why_' + k]; }).filter(Boolean);
     if (reasons.length) {
-      html += '<p class="dccs-why"><strong>' + esc(S.why_heading) + ':</strong> ' +
-        esc(S.why_lead) + ' ' + esc(joinList(reasons)) + '.</p>';
+      // No heading since 0.36.0: the paragraph carries itself.
+      html += '<p class="dccs-why">' + esc(S.why_lead) + ' ' +
+        esc(joinList(reasons)) + '.</p>';
     }
 
     // Owner-supplied per-cottage facts (data/cottages.json "highlights") — short
@@ -1251,9 +1258,11 @@
       }).join('') + '</ul>';
     }
 
-    if (c.duplicateOf) {
-      var other = findCottage(config, c.duplicateOf);
-      if (other) { html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, cname(config, other))) + '</p>'; }
+    // One note per group, identical on every tile in it, naming every member by
+    // NUMBER. joinList gives "35 & 36" and "31, 32 & 35". dedupe only marks
+    // groups of two or more, so there is no one-member case to render.
+    if (c.duplicateGroup && c.duplicateGroup.length > 1) {
+      html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, joinList(c.duplicateGroup))) + '</p>';
     }
 
     // The per-card Compare checkbox renders only when the page shows 2+ cards —

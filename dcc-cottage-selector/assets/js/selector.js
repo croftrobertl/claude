@@ -817,8 +817,9 @@
 
     var reasons = DCCS.labels.whyFits(c, crit).map(function (k) { return S['why_' + k]; }).filter(Boolean);
     if (reasons.length) {
-      html += '<p class="dccs-why"><strong>' + esc(S.why_heading) + ':</strong> ' +
-        esc(S.why_lead) + ' ' + esc(joinList(reasons)) + '.</p>';
+      // No heading since 0.36.0: the paragraph carries itself.
+      html += '<p class="dccs-why">' + esc(S.why_lead) + ' ' +
+        esc(joinList(reasons)) + '.</p>';
     }
 
     // Owner-supplied per-cottage facts (data/cottages.json "highlights") — short
@@ -829,9 +830,11 @@
       }).join('') + '</ul>';
     }
 
-    if (c.duplicateOf) {
-      var other = findCottage(config, c.duplicateOf);
-      if (other) { html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, cname(config, other))) + '</p>'; }
+    // One note per group, identical on every tile in it, naming every member by
+    // NUMBER. joinList gives "35 & 36" and "31, 32 & 35". dedupe only marks
+    // groups of two or more, so there is no one-member case to render.
+    if (c.duplicateGroup && c.duplicateGroup.length > 1) {
+      html += '<p class="dccs-dup">' + esc(fmt(S.dup_note, joinList(c.duplicateGroup))) + '</p>';
     }
 
     // The per-card Compare checkbox renders only when the page shows 2+ cards —

@@ -3,6 +3,9 @@ dcc-cottage-selector.zip
 dcc-cottage-selector-*.zip
 # Delivered Cottage Selector builds — "Cottage Selector <version>.zip".
 Cottage Selector *.zip
+# Delivered non-build files — "Cottage Selector - <what it is>". Images, frame
+# strips and exported notes handed to the owner; they live outside the repo.
+Cottage Selector - *
 .DS_Store
 node_modules/
 package-lock.json

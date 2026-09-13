@@ -604,12 +604,21 @@
   background: rgba(15,109,191,0.1); color: var(--dccs-accent);
   border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600;
 }
-.dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; }
+/* Both blocks of card body copy are REGULAR weight (0.36.0). Neither declared a
+   weight before, so both inherited whatever the page set — bold, on the live
+   site. An inherited value loses to any rule that matches the element itself, so
+   declaring it here at (0,3,0) settles it wherever the widget is dropped. */
+.dccs-root.dccs-root .dccs-why { margin: 0 0 8px; font-size: 0.92rem; font-weight: 400; }
+/* list-style-position: inside puts the marker INSIDE the line box, so it moves
+   with the text under the page's inherited text-align instead of sitting at a
+   fixed x while centred text drifts away from it (0.36.0). The 18px
+   padding-left went with it: with the marker in the flow that padding only
+   pushed the optical centre of every line 9px right of the card's. */
 .dccs-root.dccs-root .dccs-highlights {
-  margin: 0 0 8px; padding-left: 18px; font-size: 0.85rem; line-height: 1.45;
-  color: var(--dccs-muted);
+  margin: 0 0 8px; padding-left: 0; font-size: 0.85rem; line-height: 1.45;
+  color: var(--dccs-muted); list-style-position: inside; font-weight: 400;
 }
-.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0; break-inside: avoid; }
+.dccs-root.dccs-root .dccs-highlights li { margin: 1px 0; break-inside: avoid; font-weight: 400; }
 @media (min-width: 480px) {
   .dccs-root.dccs-root .dccs-highlights { columns: 2; column-gap: 22px; }
 }

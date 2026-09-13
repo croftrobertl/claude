@@ -134,13 +134,12 @@ final class Config
 
             // Results
             'results_heading'   => __('Your top matches', 'dcc-cottage-selector'),
-            'why_heading'       => __('Why this fits your trip', 'dcc-cottage-selector'),
             'view_cottage'      => __('View this cottage', 'dcc-cottage-selector'),
             'add_compare'       => __('Compare', 'dcc-cottage-selector'),
             'reset'             => __('Restart', 'dcc-cottage-selector'),
             'see_matches'       => __('Submit', 'dcc-cottage-selector'),
             'rank_label'        => /* translators: %d: ranking position */ __('Ranked #%d for you', 'dcc-cottage-selector'),
-            'dup_note'          => /* translators: %s: other cottage name */ __('Note: this cottage has an identical layout and features to %s.', 'dcc-cottage-selector'),
+            'dup_note'          => /* translators: %s: list of cottage numbers, e.g. "35 & 36" */ __('Note: Cottages %s have identical layouts & features', 'dcc-cottage-selector'),
 
             // Empty state
             'empty_heading'     => __('No Perfect Matches', 'dcc-cottage-selector'),
