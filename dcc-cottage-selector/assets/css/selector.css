@@ -701,16 +701,35 @@
   position: relative; width: 100%; max-width: 760px; margin: 0 auto;
   max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
   display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  /* Literal fallbacks: --dccs-radius / --dccs-surface live on .dccs-root and this
+     box is outside it (the 0.27.0 lesson). */
+  border-radius: var(--dccs-radius, 12px); background: var(--dccs-surface, #ffffff);
+}
+/* A real, non-scrolling header row (0.35.0). The close button sits IN the layout
+   here, so it cannot land on the scroll area's scrollbar however wide that
+   scrollbar is — which the old absolutely-positioned button did on any platform
+   with classic scrollbars. It also keeps the title on screen while the table
+   scrolls, which the old in-content heading did not. */
+.dccs-modal-head {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 8px 8px 8px 16px; min-height: 60px;
+  background: var(--dccs-surface, #ffffff);
+  border-bottom: 1px solid var(--dccs-border, #dfe5ec);
+}
+.dccs-modal-title {
+  margin: 0; font-size: 1.2rem; line-height: 1.2; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--dccs-text, #1a2330);
 }
 /* min-height:0 lets the scroll area shrink inside the flex-column box so it scrolls
    within the viewport instead of overflowing it. */
-.dccs-modal-content { overflow: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-radius: var(--dccs-radius); }
+.dccs-modal-content { flex: 1 1 auto; overflow: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 /* Body-level scope host for the Mini-Entry popup (see openModal): the overlay is its only,
    fixed-positioned child, so the host adds no layout. */
 .dccs-modal-host { position: static; }
-/* The card must fill the box so the close button (pinned to the box) sits inside it.
-   54px clears the 44px close button anchored at top:8. */
-.dccs-modal-content .dccs-in-modal { padding-top: 54px; max-width: none; margin: 0; }
+/* No top padding any more: it existed only to clear the floating close button, and
+   the header row now occupies that space for real. */
+.dccs-modal-content .dccs-in-modal { max-width: none; margin: 0; }
 /* The close button is pinned to the modal BOX, which is a sibling of the
    `.dccs-root` inside the overlay — so it is outside the root in every sense.
    Two consequences, both fixed here in 0.27.0:
@@ -725,8 +744,9 @@
    Doubling the class reaches (0,3,0), which beats the kit's (0,1,1) on its own —
    the two `!important`s this rule used to carry were never doing any work. */
 .dccs-modal.dccs-modal .dccs-modal-close {
-  position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0;
-  /* 44px minimum tap target, same floor as every other control in the widget. */
+  flex: 0 0 auto; padding: 0;
+  /* 44px minimum tap target, same floor as every other control in the widget.
+     Unchanged in 0.35.0 — only what is drawn inside it changed. */
   width: 44px; height: 44px; border-radius: 999px; border: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--dccs-text, #1a2330); color: var(--dccs-surface, #ffffff);
@@ -750,7 +770,9 @@
   color: var(--dccs-btn-on-blue-hover, #FFFFFF);
 }
 .dccs-modal-content .dccs-compare-modal { padding: 4px; }
-.dccs-modal-content .dccs-modal-h { margin: 0 0 12px; font-size: 1.2rem; }
+/* The cross itself. Sized in px rather than em so it cannot follow the inherited
+   font the way the × character did. */
+.dccs-modal.dccs-modal .dccs-modal-x { display: block; width: 19px; height: 19px; }
 
 /* Inside the popup the mode-switcher panel must flow in the scrollable content. When
    absolutely positioned it is laid out against its .dccs-modeselect parent, not the

@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.34.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.35.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -1690,10 +1690,35 @@
 
   /** Shared overlay scaffold: focus-trap, background scroll-lock, Esc/click close.
       `label` names the dialog for screen readers. */
-  function buildOverlay(trigger, label, mount) {
+  /**
+   * @param {string} label   accessible name for the dialog
+   * @param {string} [title] optional VISIBLE title, rendered in the header row
+   *
+   * The close button lives in a real header row above the scroll area, not
+   * absolutely positioned over it (0.35.0). It used to be pinned 8px from the
+   * modal BOX's right edge — but the element that scrolls is .dccs-modal-content,
+   * a child filling that box, so a classic scrollbar takes the outer ~15px of the
+   * same edge and the button landed on top of it. Measured: the button's right
+   * edge at 1012 inside a band running 1005-1020. Invisible on overlay scrollbars,
+   * which is why it shipped. A header row removes the overlap by construction
+   * instead of by arithmetic, and keeps the title from scrolling out of view.
+   */
+  function buildOverlay(trigger, label, mount, title) {
+    var head = '<div class="dccs-modal-head">' +
+      (title ? '<h2 class="dccs-modal-title">' + esc(title) + '</h2>' : '<span></span>') +
+      '<button type="button" class="dccs-modal-close" aria-label="Close">' +
+      // An SVG cross, not the × character: font-family is inherit here, so the
+      // glyph's size depended on whichever face the theme happened to serve. The
+      // × measured 19x13 of ink in a 44px button — 43% wide but only 29.5% tall,
+      // which is what read as a small mark in a big circle. Two lines on a 24
+      // viewBox at 19px render square and ~43% of the button in both directions.
+      '<svg class="dccs-modal-x" viewBox="0 0 24 24" width="19" height="19" ' +
+      'aria-hidden="true" focusable="false">' +
+      '<path d="M5 5 L19 19 M19 5 L5 19" fill="none" stroke="currentColor" ' +
+      'stroke-width="2.6" stroke-linecap="round"/></svg>' +
+      '</button></div>';
     var overlay = el('<div class="dccs-modal" role="dialog" aria-modal="true" aria-label="' + esc(label || '') + '"><div class="dccs-modal-box">' +
-      '<button type="button" class="dccs-modal-close" aria-label="Close">&times;</button>' +
-      '<div class="dccs-modal-content"></div></div></div>');
+      head + '<div class="dccs-modal-content"></div></div></div>');
     (mount || document.body).appendChild(overlay);
 
     var prevOverflow = document.body.style.overflow;
@@ -1747,14 +1772,13 @@
 
   function openCompareModal(config, state, trigger) {
     if (state.compareIds.length < 2) { return; }
-    var o = buildOverlay(trigger, config.strings.mode_compare);
+    var o = buildOverlay(trigger, config.strings.mode_compare, null, config.strings.mode_compare);
     var start = 0;
     function paint() {
       // Wrap in a ready-marked .dccs-root so the scoped styles + CSS vars apply
       // (data-dccs-ready stops bootAll from trying to initialize this shell).
       o.content.innerHTML = '<div class="dccs-root dccs-in-modal" data-dccs-ready="1">' +
         '<div class="dccs-compare dccs-compare-modal">' +
-        '<h3 class="dccs-modal-h">' + esc(config.strings.mode_compare) + '</h3>' +
         compareMatrixHtml(config, state, start) + '</div></div>';
     }
     o.content.addEventListener('click', function (e) {

@@ -2306,6 +2306,90 @@ defer(async function () {
   ok('no gold anywhere in the plugin', !/F4DA62/i.test(cssCode) && !/F4DA62/i.test(selSrc));
 })();
 
+// ---- 76. 0.35.0: the modal's header row and its close mark ----
+// jsdom has no layout, so this covers STRUCTURE. The geometry — the button's right
+// edge against the scroll area's scrollbar band in both scrollbar modes, and the
+// mark's share of the button — is measured in Chromium separately.
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const ruleBody = (sel) => {
+    const i = cssCode.indexOf(sel + ' {');
+    return i === -1 ? '' : cssCode.slice(i, cssCode.indexOf('}', i));
+  };
+
+  const w = freshDom();
+  const root = mountSelector(w, CONFIG);
+  enter(root, 'compare');
+  // Two picks are the minimum the Compare button needs.
+  const ids = Array.prototype.map.call(
+    root.querySelectorAll('.dccs-cmp-list input[data-cmp]'), i => i.dataset.cmp).slice(0, 2);
+  ids.forEach(id => {
+    const box = root.querySelector('.dccs-cmp-list input[data-cmp="' + id + '"]');
+    box.checked = true;
+    box.dispatchEvent(new w.Event('change', { bubbles: true }));
+  });
+  const openBtn = root.querySelector('.dccs-open-compare');
+  ok('the Compare button is enabled with two picks', !!openBtn && !openBtn.disabled);
+  openBtn.click();
+  const modal = w.document.querySelector('.dccs-modal');
+  ok('the compare modal opened', !!modal);
+
+  const head = modal && modal.querySelector('.dccs-modal-head');
+  const close = modal && modal.querySelector('.dccs-modal-close');
+  const content = modal && modal.querySelector('.dccs-modal-content');
+  ok('there is a header row', !!head);
+  ok('the close button lives IN the header, not over the content',
+    !!close && close.closest('.dccs-modal-head') === head);
+  ok('the header is a sibling of the scroll area, above it',
+    !!head && !!content && head.nextElementSibling === content &&
+    head.parentElement === content.parentElement);
+  ok('the close button is no longer absolutely positioned',
+    !/position:\s*absolute/.test(ruleBody('.dccs-modal.dccs-modal .dccs-modal-close')));
+  ok('and no longer offset from the box edge',
+    !/(^|;)\s*(top|right):\s*8px/.test(ruleBody('.dccs-modal.dccs-modal .dccs-modal-close')));
+  // The padding existed only to clear the floating button.
+  ok('the 54px clearance hack is gone', !/54px/.test(cssCode));
+
+  // The title moved out of the scroll area, so it cannot scroll away.
+  const title = modal && modal.querySelector('.dccs-modal-title');
+  ok('the modal title is in the header', !!title && title.closest('.dccs-modal-head') === head);
+  ok('and no longer inside the scrolling content',
+    !!content && !content.querySelector('.dccs-modal-title'));
+  ok('it reads the Compare label',
+    !!title && title.textContent === JSON.parse(CONFIG).strings.mode_compare);
+
+  // The mark: an SVG cross, not a font glyph.
+  const svg = close && close.querySelector('svg.dccs-modal-x');
+  ok('the close mark is an inline SVG', !!svg);
+  ok('the × character is gone', !!close && close.textContent.indexOf('\u00d7') === -1);
+  ok('the cross is drawn with two stroked lines, round-capped', (() => {
+    const d = svg && svg.querySelector('path');
+    return !!d && /M5 5 L19 19 M19 5 L5 19/.test(d.getAttribute('d')) &&
+      d.getAttribute('stroke-linecap') === 'round' && d.getAttribute('fill') === 'none';
+  })());
+  ok('it is sized in px, so it cannot follow the inherited font',
+    /width:\s*19px/.test(ruleBody('.dccs-modal.dccs-modal .dccs-modal-x')));
+  ok('the mark is hidden from assistive tech', !!svg && svg.getAttribute('aria-hidden') === 'true');
+  ok('the button keeps its accessible name', !!close && close.getAttribute('aria-label') === 'Close');
+
+  // Unchanged by this release, and asserted so a later edit cannot drift them.
+  const btn = ruleBody('.dccs-modal.dccs-modal .dccs-modal-close');
+  ok('the 44px tap target is preserved', /width:\s*44px/.test(btn) && /height:\s*44px/.test(btn));
+  ok('the hover is still the site coral',
+    /\.dccs-modal-close:hover[\s\S]{0,120}var\(--dccs-btn-blue-hover,\s*#F08080\)/.test(cssCode));
+  ok('the focus ring rule is still there with its offset',
+    /\.dccs-modal-close:focus-visible \{\s*outline:\s*2px solid[^}]*outline-offset:\s*2px/.test(cssCode));
+
+  // The mini-entry pop-up shares buildOverlay and must get a header with NO title,
+  // since the widget it contains renders its own heading.
+  const selSrc = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js', 'selector.js'), 'utf8');
+  ok('the pop-up passes no visible title, so the heading is not duplicated',
+    /buildOverlay\(trigger, config\.strings && config\.strings\.heading, host \? host\.inner : null\)/.test(selSrc));
+  ok('and buildOverlay renders a header either way',
+    /title \? '<h2 class="dccs-modal-title">'/.test(selSrc));
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

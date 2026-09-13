@@ -284,6 +284,17 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   that button off the spec while everything else appears to comply — which is what
   `style_comparebtn_*` was doing to the Compare button before 0.27.0 removed it from
   the preset. A SAVED value on a live widget still wins and only the panel can clear it.
+- **The modal's close button belongs in the header row, never floating over the
+  scroll area.** `.dccs-modal-content` is the element that scrolls, and it fills
+  `.dccs-modal-box` — so anything positioned against the BOX's right edge lands on
+  the content's scrollbar wherever scrollbars take layout space. Pinned at
+  `right: 8px` it overlapped a 15px band by 7px (0.35.0). The header row is a flex
+  sibling above the content: the overlap cannot recur, the title stays on screen
+  while the table scrolls, and the `padding-top: 54px` that existed only to clear
+  the floating button is gone. **This class of fault is invisible on overlay
+  scrollbars** — test it with `scrollbar-gutter: stable`, because headless Chromium
+  ignores both `--disable-features=OverlayScrollbar` and `::-webkit-scrollbar`
+  styling (both probed).
 - **Anything outside `.dccs-root` gets neither the button rule nor the tokens.** The
   modal close button is pinned to the modal box, a sibling of the root, so
   `var(--dccs-text)` there resolves to nothing and the property falls back to its

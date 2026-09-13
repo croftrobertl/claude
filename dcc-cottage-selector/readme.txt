@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.34.0
+Stable tag: 0.35.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,23 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.35.0 =
+* FIXED: the Compare pop-up's close button sat on top of the scrollbar. It was
+  pinned 8px from the modal box's right edge, but the element that scrolls is a
+  child filling that box, so a classic scrollbar takes the outer ~15px of the same
+  edge. Measured: the button's right edge at 1012 inside a band running 1005-1020.
+  Invisible with macOS-style overlay scrollbars, which is why it shipped.
+* The pop-up now has a real header row holding the title and the close button,
+  above the scrolling area rather than floating over it. The overlap is gone by
+  construction rather than by arithmetic, the 54px padding that existed only to
+  clear the floating button is gone, and the title no longer scrolls out of view
+  when a guest scrolls the comparison table.
+* The close mark is an inline SVG cross instead of the × character. The character
+  drew 19x13 of ink in a 44px button — 43% wide but only 29.5% tall — because its
+  size followed whichever font the theme served. The cross renders 19x19, square
+  and 43% of the button in both directions. The 44px tap target, the hover and the
+  keyboard focus ring are all unchanged.
 
 = 0.34.0 =
 * The fishing-cast animation is removed. It has moved to the site's hero as a
