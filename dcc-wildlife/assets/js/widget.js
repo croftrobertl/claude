@@ -353,6 +353,15 @@
 				body.appendChild(credit);
 			}
 
+			// What this photograph's identification rests on, where that is
+			// something other than what you can see in it (1.25.0). Only the
+			// fish crow carries one today: fish and American crows are not
+			// separable by sight, so the photo alone cannot establish the
+			// species and the page says so rather than implying otherwise.
+			if (sp.photo && CFG.photoBase && sp.photoNote) {
+				body.appendChild(el('p', 'dccwl-photo-note', sp.photoNote));
+			}
+
 			var badges = el('p', 'dccwl-detail-badges');
 			if ((sp.months[state.month] || 0) >= 3) {
 				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));

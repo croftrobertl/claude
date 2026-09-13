@@ -895,6 +895,9 @@ final class Species {
 		// srcset width descriptor, so only the width is recorded either way.
 		'ycnightheron' => 1100, 'purplegallinule' => 1100, 'commongallinule' => 1100,
 		'grebe' => 1100, 'woodduck' => 1100, 'coot' => 1100,
+		// Batch 3 (1.25.0), Wikimedia Commons.
+		'mottledduck' => 1100, 'whistlingduck' => 1100, 'pelican' => 1100,
+		'fishcrow' => 1100,
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
@@ -963,7 +966,68 @@ final class Species {
 			'Public domain (US Fish and Wildlife Service)',
 			'https://commons.wikimedia.org/wiki/File:American_Coot_(52760260350).jpg',
 		],
+		// Batch 3 (1.25.0), Wikimedia Commons.
+		'mottledduck'     => [
+			'DuckQuacker9 / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Mottled_Duck,_drake,_Florida_1.jpg',
+		],
+		'whistlingduck'   => [
+			'Alan Schmierer / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:003_-_BLACK-BELLIED_WHISTLING-DUCK_(10-27-2015)_estero_llano_grande_s_p,_hidalgo_co,_tx_-01_(22433393000).jpg',
+		],
+		'pelican'         => [
+			'Wildreturn / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:American_White_Pelican_at_Riverlands_-_51985223838.jpg',
+		],
+		'fishcrow'        => [
+			'lwolfartist / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Crow_JN_Ding_Darling_NWR_4.20.19_DSC_0085.jpg',
+		],
 	];
+
+	/**
+	 * What a photograph's identification actually rests on, species id =>
+	 * one short line (1.25.0). Shown under the photo in the detail sheet.
+	 *
+	 * Almost every photo in this guide was identified by eye from features
+	 * visible in the frame, and needs no note. This is for the exceptions —
+	 * and the fish crow is the honest case for it. Fish and American crows
+	 * are NOT separable by sight; the accepted field mark is voice. So a
+	 * fish crow photograph cannot be verified the way the other thirty-two
+	 * were, and shipping one silently would be the guide asserting something
+	 * nobody checked. The species entry already tells the reader that the
+	 * call is the whole identification; this line says the same thing about
+	 * the photograph in front of them, and says where it was taken, so the
+	 * claim they see is one the evidence supports.
+	 *
+	 * This is the fact gate applied to photographs: where the basis is
+	 * weaker than "you can see it", say so on the page rather than in a
+	 * commit message. Expect the four venomous snakes to need rows here too
+	 * — though for those the bar is higher, because a wrong snake on a
+	 * safety page can get somebody hurt: a note explains an identification,
+	 * it never rescues a doubtful one.
+	 */
+	private const PHOTO_NOTES = [
+		// Not wrapped in __() here: a const cannot hold a function call. The
+		// read path below translates it, so Loco still sees one string.
+		'fishcrow' => 'Photographed at J.N. “Ding” Darling National Wildlife Refuge, Sanibel Island, Florida. Fish and American crows cannot be told apart by sight — this is a crow at a place where both occur, and the call is what settles it.',
+	];
+
+	/** The provenance line for a species photo, or '' where none is needed. */
+	public static function photo_note( string $id ): string {
+		$notes = (array) apply_filters( 'dcc_wl_photo_notes', self::PHOTO_NOTES );
+		$note  = (string) ( $notes[ $id ] ?? '' );
+		// A note describes a photograph. Without one there is nothing to say.
+		if ( '' === (string) ( self::photos()[ $id ] ?? '' ) || '' === $note ) {
+			return '';
+		}
+		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText
+		return __( $note, 'dcc-wildlife' );
+	}
 
 	/**
 	 * Photo credits, species id => [ credit, licence, source URL ] (1.19.0,
@@ -1030,6 +1094,13 @@ final class Species {
 			// a real row for every one of them.
 			'ycnightheron', 'purplegallinule', 'commongallinule',
 			'grebe', 'woodduck', 'coot',
+			// Batch 3 (1.25.0), Wikimedia Commons. Four of the five shipped:
+			// the least bittern is held back because its frame carries a
+			// "(c) Steve Arena 2013 - USFWS Volunteer" notice that its
+			// public-domain claim does not account for. The crow ships with
+			// a PHOTO_NOTES line rather than a bare claim, because fish and
+			// American crows cannot be told apart by sight at all.
+			'mottledduck', 'whistlingduck', 'pelican', 'fishcrow',
 		];
 		$photos = [];
 		foreach ( $ids as $id ) {
@@ -1225,6 +1296,10 @@ final class Species {
 					? self::photo_credit_line( $id )
 					: '',
 				'creditUrl' => (string) ( $credits[ $id ][2] ?? '' ),
+				// Where a photograph's identification rests on something
+				// other than what is visible in it (1.25.0). Empty for all
+				// but the fish crow today.
+				'photoNote' => self::photo_note( (string) $id ),
 				'group'     => (string) ( $sp['group'] ?? 'critters' ),
 				// 1.19.0 data model: flags the legend encodes, how likely a
 				// meeting is, where to drive for it (empty = here), and the

@@ -644,6 +644,16 @@
 	text-align: right;
 }
 
+/* 1.25.0: what a photograph's identification rests on, where that is not
+ * simply "look at it". Muted like the credit it follows, but left-aligned and
+ * full width — it is a sentence to read, not a signature. */
+.dccwl-sheet .dccwl-photo-note {
+	color: var(--dccwl-text-muted);
+	font-size: 0.78rem;
+	line-height: 1.45;
+	margin: calc(var(--dccwl-gap) * -0.5) 0 var(--dccwl-gap);
+}
+
 /* 1.24.0: a CC BY credit links to the source page, where the licence is
  * actually stated. The theme's own link colour is not ours to trust, so the
  * link takes the same AA-measured muted colour as the line it sits in and is

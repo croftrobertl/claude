@@ -58,6 +58,27 @@ git history at the v1.1.0 commit; any old sighting posts and the
   that is transport economy, not the data model, and `photo_credit_line()`
   is always complete server-side. Never invent a source URL: no URL renders
   no link.
+- **A PHOTOGRAPH IS A CLAIM, AND THE FACT GATE APPLIES TO IT (1.25.0).**
+  Putting a photo on a tile asserts "this is that species". Almost every
+  photo here is identified from features visible in the frame and needs
+  nothing more. Where the identification rests on something else,
+  `Species::PHOTO_NOTES` carries one line saying what — rendered under the
+  credit in the detail sheet, never in the credits panel, because it is
+  provenance and not attribution. The fish crow is the case that built it:
+  fish and American crows are NOT separable by sight (voice is the field
+  mark, which the entry has always said), so its photo says where it was
+  taken and that the call is what settles it. A note EXPLAINS an
+  identification; it never RESCUES a doubtful one — for the four venomous
+  snakes the bar stays "the diagnostic features are visible in the frame",
+  because a wrong snake on the safety page can get somebody hurt and no
+  caption undoes that.
+- **A photo whose licence does not add up does not ship.** Batch 3's least
+  bittern was held: the frame carries a "© Steve Arena 2013 - USFWS
+  Volunteer" notice, and "work of the US federal government" does not cover
+  a volunteer's copyright assertion. It is not registered AND its files are
+  not in `assets/photos/`, so nobody wires it in later without learning
+  why it was held. Check every frame for a burned-in credit or watermark:
+  it is evidence about the licence, and it contradicted the manifest here.
 - **The shape a photo-batch manifest must arrive in.** One row per photo
   with exactly three fields, in this order: (1) the credit as it should
   read, photographer first — `lwolfartist / CC BY 2.0`,
@@ -1140,7 +1161,7 @@ rounded boxes at the same weight. The rule now:
   out of both ends, and the water deck opened on its ninth card because of it.
 - **The tile face has three tiers (1.23.0):** a vetted photo, else the
   species' own sprite where one exists, else the neutral group glyph. Today
-  that is 29 / 7 / 15 species (30 / 7 / 15 tile faces — the alligator
+  that is 33 / 7 / 11 species (34 / 7 / 11 tile faces — the alligator
   appears in both Critters and the safety group). Never invent artwork to
   fill the third tier. Those three counts are asserted in build-page.php,
   test-1230.php and test-batch1.php; a photo batch has to move all of them.
