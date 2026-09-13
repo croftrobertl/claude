@@ -138,11 +138,15 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Delivering DCC Seasons files
 
-**Every file handed to the user is named with the prefix `Seasons - `** — not
-just the zips. So `Seasons - 3.18.1.zip`, `Seasons - footer 1280.png`,
-`Seasons - schedule cards 374.png`. (Superseded the older `Seasons <version>.zip`
-pattern on 2026-09-13 at the owner's request; older deliveries in the history
-carry the previous name.)
+Two naming rules, and they differ — the plugin zip is the exception:
+
+- **Plugin zips: `Seasons <version>.zip`**, no dash. e.g. `Seasons 3.18.1.zip`.
+- **Everything else: prefix `Seasons - `.** Images, markdown, JS, logs,
+  anything. e.g. `Seasons - footer 1280.png`, `Seasons - schedule cards 374.png`.
+
+(Set 2026-09-13 by the owner, correcting a same-day instruction that had put
+the dash on the zips too. Deliveries earlier in the history carry whichever
+name was current then.)
 
 Build the zip from the `dcc-seasons/` folder as usual — the folder INSIDE the
 zip keeps its own name, which is what WordPress installs; only the delivered
