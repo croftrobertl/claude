@@ -116,30 +116,9 @@
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
-.dccwl-canal .dccwl-monthchip.dccwl-monthchip {
-	align-items: baseline;
-	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text);
-	cursor: pointer;
-	display: inline-flex;
-	flex-wrap: wrap;
-	font: inherit;
-	gap: 2px 6px;
-	justify-content: center;
-	justify-self: end;
-	line-height: 1.2;
-	min-height: 44px;
-	padding: 6px 10px 6px 12px;
-	text-align: left;
-}
-.dccwl-canal .dccwl-monthchip.dccwl-monthchip:hover { border-color: var(--dccwl-primary); }
-.dccwl-canal .dccwl-monthchip.dccwl-monthchip:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
-.dccwl-monthchip-name { font-size: var(--dccwl-fs-sm); font-weight: 700; }
-/* Muted on white: 5.38:1. */
-.dccwl-monthchip-count { color: var(--dccwl-text-muted); font-size: var(--dccwl-fs-xs); white-space: nowrap; }
-.dccwl-monthchip-caret { align-self: center; color: var(--dccwl-text-muted); display: inline-flex; }
+/* The month chip left the navigation bar in 1.27.0; its rules went with it.
+ * The month picker panel it opened is unchanged and is reached from the
+ * footnote row (.dccwl-footnote-link). */
 
 /* At 320px the bar is Back + crumb + chip; the crumb is the one that can go,
  * because the chip says where you are more usefully than "Wildlife" does. */
@@ -257,7 +236,8 @@
 }
 
 .dccwl-hub-name {
-	font-size: 1.5rem;
+	/* 1.27.0: was a bare 1.5rem off the scale; same size, now a named role. */
+	font-size: var(--dccwl-fs-hub);
 	font-weight: 700;
 	letter-spacing: -0.01em;
 }
@@ -267,6 +247,7 @@
 .dccwl-hub-preview {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* Tile art: the species a Wildlife preview is counting, and the provenance
@@ -293,6 +274,7 @@
 	font-size: 0.72rem;
 	max-width: 100%;
 	padding: 2px 9px;
+	font-weight: var(--dccwl-fw-label);
 }
 
 .dccwl-hub-chip-src {
@@ -378,6 +360,7 @@
 	font-size: var(--dccwl-fs-xs);
 	max-width: 100%;
 	overflow-wrap: anywhere;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* "April and May are the canal's fullest months" — the planning line under the
@@ -387,6 +370,7 @@
 	font-size: var(--dccwl-fs-sm);
 	margin: calc(var(--dccwl-gap-lg) * -0.5) auto var(--dccwl-gap-lg);
 	max-width: 44ch;
+	font-weight: var(--dccwl-fw-body);
 }
 
 .dccwl-year-note:empty { display: none; }
@@ -516,7 +500,7 @@
 	.dccwl-month-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 	.dccwl-month-tiles > li { min-width: 0; }
 	.dccwl-canal .dccwl-month-tile.dccwl-month-tile { min-width: 0; padding-left: 4px; padding-right: 4px; }
-	.dccwl-month-name { font-size: clamp(0.875rem, 4.2vw, 1.0625rem); }
+	.dccwl-month-name { font-size: clamp(0.875rem, 4.2vw, 1.0625rem); font-weight: var(--dccwl-fw-body); }
 	.dccwl-canal .dccwl-water-attr { max-width: 100%; }
 }
 

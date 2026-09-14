@@ -26,6 +26,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Render {
 
+	/**
+	 * The tab slug of the Peak Now filter (1.27.0). Not a section: it cannot
+	 * collide with one because sections() is a fixed list and this is not in
+	 * it, and the leading underscores say so at a glance in the DOM.
+	 */
+	public const PEAK_TAB = '__peak';
+
 	private static bool $config_added  = false;
 	private static bool $sheet_printed = false;
 
@@ -44,9 +51,26 @@ final class Render {
 
 	/** Countdown renders: toggle on, mu-plugin gone, species data present. */
 	private static function countdown_possible(): bool {
-		return Water_Admin::countdown_enabled()
-			&& ! self::mu_countdown_active()
-			&& [] !== Species::dataset();
+		/*
+		 * RETIRED IN 1.27.0. The season countdown was the hero card at the top
+		 * of the widget: fillCountdown() in widget.js stamped .dccwl-hero-stat
+		 * into one of three states — "is here now" at peak, "through April"
+		 * mid-run, "42 days away" while counting down.
+		 *
+		 * The owner asked for the "is here now" state to go. Removing only that
+		 * string would have left the card counting down all year and never
+		 * arriving, so the choice put to him was the whole card, and he took
+		 * it. The feature is retired, not one of its sentences.
+		 *
+		 * This is the single gate every path runs through — the widget, the
+		 * canal hub, and the standalone countdown widget and shortcode — so
+		 * returning false here retires all of them at once while leaving those
+		 * registrations in place. An Elementor page that already places the
+		 * countdown widget therefore renders nothing rather than erroring.
+		 * fillCountdown() and the cd* strings are gone with it; bringing the
+		 * feature back means restoring those too, not just this line.
+		 */
+		return false;
 	}
 
 	/**
@@ -266,14 +290,23 @@ final class Render {
 					<?php /* A segmented control (1.18.0): one bordered group, so the
 					         three categories read as a single switch, not as three
 					         more cards among the tiles. */ ?>
-					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide groups', 'dcc-wildlife' ); ?>">
+					<div class="dccwl-tabs" role="group" aria-label="<?php esc_attr_e( 'Field guide sections', 'dcc-wildlife' ); ?>">
 						<?php $first = true; ?>
-						<?php foreach ( Species::tab_labels() as $slug => $label ) : ?>
+						<?php foreach ( Species::sections() as $slug => $label ) : ?>
 							<button type="button" class="dccwl-tab" data-dccwl-group="<?php echo esc_attr( $slug ); ?>" aria-pressed="<?php echo $first ? 'true' : 'false'; ?>">
 								<?php echo esc_html( $label ); ?>
 							</button>
 							<?php $first = false; ?>
 						<?php endforeach; ?>
+						<?php /* Peak Now (1.27.0) is a FILTER, not a section: it cuts
+						         across all three, safety included, and shows everything
+						         at its best in the month the VISITOR is in. So it names
+						         no month and counts nothing here — widget.js fills it
+						         from canal time, exactly as the spotlight does, and a
+						         cached page can never carry a stale month. */ ?>
+						<button type="button" class="dccwl-tab dccwl-tab-peak" data-dccwl-group="<?php echo esc_attr( self::PEAK_TAB ); ?>" aria-pressed="false">
+							<?php esc_html_e( 'Peak Now', 'dcc-wildlife' ); ?>
+						</button>
 					</div>
 					<?php /* Search (1.21.0). At 51 species the tabs alone are not
 					         navigation. It filters the tiles already on the page — no
@@ -301,7 +334,6 @@ final class Render {
 					         (1.18.0). If a colour cannot earn a line here, it must not
 					         carry meaning. */ ?>
 					<p class="dccwl-legend" aria-label="<?php esc_attr_e( 'Key', 'dcc-wildlife' ); ?>">
-						<span class="dccwl-legend-item"><span class="dccwl-tile-sub dccwl-tile-peak dccwl-legend-badge" aria-hidden="true"><?php esc_html_e( 'Peak', 'dcc-wildlife' ); ?></span><?php esc_html_e( 'at its best this month', 'dcc-wildlife' ); ?></span>
 						<?php /* The flag marks (1.19.0), explained beside the tiles that
 						         carry them. Only flags some species actually has. */ ?>
 						<?php foreach ( self::flags_in_use() as $flag => $def ) : ?>
@@ -343,8 +375,8 @@ final class Render {
 		$dataset = Species::dataset();
 		$first   = true;
 
-		foreach ( Species::groups() as $slug => $label ) {
-			$group_species = Species::group_members( $dataset, $slug );
+		foreach ( Species::sections() as $slug => $label ) {
+			$group_species = Species::section_members( $dataset, $slug );
 			if ( ! $group_species ) {
 				continue;
 			}
@@ -426,7 +458,7 @@ final class Render {
 			<summary class="dccwl-fullguide-summary">
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
-					<h2 class="dccwl-fullguide-h"><?php esc_html_e( 'Photo credits', 'dcc-wildlife' ); ?></h2>
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Photo credits', 'dcc-wildlife' ); ?></span>
 					<span class="dccwl-fullguide-meta">
 						<?php
 						/* translators: %d: number of photographs. */
@@ -493,15 +525,30 @@ final class Render {
 		}
 		self::$fullguide_printed = true;
 		?>
+		<?php /* THE FOOTNOTE ROW (1.27.0). The prose guide and the photo credits
+		         used to be two H2-headed sections stacked at the foot of the
+		         page, which gave them the visual weight of destinations. They
+		         are references. One row of small links, side by side, wrapping
+		         on a narrow phone. The content behind them is unchanged and
+		         still native <details> — what shrank is the entry point.
+		         Third link: the month picker, which lost its chip in the
+		         navigation bar this release and would otherwise be stranded.
+		         It is hidden until canal.js wires it, because the panel it
+		         opens only exists inside the hub app. */ ?>
+		<div class="dccwl-footnotes">
 		<details class="dccwl-fullguide">
-			<summary class="dccwl-fullguide-summary">
+			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'The whole field guide', 'dcc-wildlife' ); ?>">
 				<?php /* A real affordance (1.18.0): chevron that turns on open, a label
 				   that is the section's H2 (so Critters/Birds/Plants own a place in
 				   the outline), and a meta line. Still a native <details>, still
 				   server-rendered — this is the crawlable prose. */ ?>
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
-					<h2 class="dccwl-fullguide-h"><?php esc_html_e( 'The whole field guide', 'dcc-wildlife' ); ?></h2>
+					<?php /* Short in the row, long to a screen reader (1.27.0). Three
+					         full-length labels do not fit on one line at 393px, which is
+					         the width this was measured at, and the ask was one row. The
+					         meta line under it still says what the panel holds. */ ?>
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Field guide', 'dcc-wildlife' ); ?></span>
 					<span class="dccwl-fullguide-meta">
 						<?php
 						printf(
@@ -514,9 +561,11 @@ final class Render {
 				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">
-				<?php foreach ( Species::groups() as $slug => $label ) : ?>
+				<?php foreach ( Species::sections() as $slug => $label ) : ?>
 					<?php
-					$in_group = array_values( array_filter( $dataset, static fn( array $sp ): bool => $sp['group'] === $slug ) );
+					// false: no dual membership in the PROSE. The alligator has
+					// two tiles on purpose; it must not have two write-ups.
+					$in_group = Species::section_members( $dataset, $slug, false );
 					if ( ! $in_group ) {
 						continue;
 					}
@@ -563,6 +612,13 @@ final class Render {
 		</details>
 		<?php
 		self::render_photo_credits( $dataset );
+		?>
+		<button type="button" class="dccwl-footnote-link" data-dccwl-go="month" data-dccwl-monthlink hidden
+			aria-label="<?php esc_attr_e( 'Browse the guide by month', 'dcc-wildlife' ); ?>">
+			<?php esc_html_e( 'By month', 'dcc-wildlife' ); ?>
+		</button>
+		</div>
+		<?php
 	}
 
 	/** One prose guide and one JSON-LD block per page, however many widgets are placed. */
@@ -700,8 +756,11 @@ final class Render {
 				/* translators: %s: month name, e.g. "August". */
 				'headline'    => __( '%s on the canal', 'dcc-wildlife' ),
 				/* translators: %d: number of species (2 or more). */
-				'subPeak'     => __( '%d species at their peak', 'dcc-wildlife' ),
-				'subPeakOne'  => __( '1 species at its peak', 'dcc-wildlife' ),
+				/*
+				 * 1.27.0: "%d species at their peak" is gone from the subline
+				 * under the navigation. subSpot carries it now, which counts
+				 * what is worth looking for without ranking it.
+				 */
 				/* translators: %d: number of species worth looking for. */
 				'subSpot'     => __( '%d species to spot', 'dcc-wildlife' ),
 				/* translators: 1: month name, 2: species-count phrase. */
@@ -711,7 +770,20 @@ final class Render {
 				// 1.19.0 data model: flag names for the tile marks and sheet
 				// badges, the odds labels, the what-to-do heading.
 				'flagNames'   => array_map( static fn( array $d ): string => $d[0], Species::flags() ),
-				'oddsNames'   => Species::odds(),
+				/*
+				 * 1.27.0: the odds labels are no longer sent, so no tile and no
+				 * sheet can show one. The owner's reason, and it is a good one:
+				 * "You will see one" is a guarantee he cannot make, and he does
+				 * not want to offer probabilities at all, so that nobody arrives
+				 * with an expectation the canal has not agreed to.
+				 *
+				 * odds() and the per-species `odds` value stay — they are data,
+				 * used for ranking — but nothing renders them. Do not reinstate
+				 * this key: five labels would come back, not three. The one that
+				 * carried real information rather than a probability was
+				 * 'daytrip' ("A day trip away"), and the `place` field already
+				 * says that in its own "Where to go" section.
+				 */
 				'safe'        => __( 'What to do', 'dcc-wildlife' ),
 				'tellApart'   => __( 'Tell it apart', 'dcc-wildlife' ),
 				'deckPrev'    => __( 'Previous species', 'dcc-wildlife' ),
@@ -751,24 +823,17 @@ final class Render {
 				'likeGood'    => __( 'good chance', 'dcc-wildlife' ),
 				'likePeak'    => __( 'peak season', 'dcc-wildlife' ),
 
-				// Hero stat (1.9.0). The countdown reads as a headline stat
-				// rather than a sentence, so its parts are separate strings.
-				/* translators: %s: species name, e.g. "Manatee". */
-				'cdLabel'     => __( '%s season', 'dcc-wildlife' ),
-				'cdDays'      => __( 'days away', 'dcc-wildlife' ),
-				'cdDay'       => __( 'day away', 'dcc-wildlife' ),
-				'cdNow'       => __( 'is here now', 'dcc-wildlife' ),
-				/* translators: %s: month name, e.g. "December". */
-				'cdWhy'       => __( 'Peak sightings begin in %s.', 'dcc-wildlife' ),
-				/* translators: %s: month name, e.g. "December". */
-				'cdWhyNow'    => __( 'Peak sightings run through %s.', 'dcc-wildlife' ),
-				/* translators: %s: month name. Value line while a season is still on, e.g. "through April". */
-				'cdThrough'   => __( 'through %s', 'dcc-wildlife' ),
-				/* translators: %s: month name. Shown when no species in a category is likely that month. */
+				/*
+				 * The cd* strings were the season countdown's — cdLabel, cdDays,
+				 * cdDay, cdNow, cdWhy, cdWhyNow, cdThrough, cdNext. The card was
+				 * retired in 1.27.0 (see countdown_possible()) and they went with
+				 * it. Nothing reads them; do not reinstate them alone.
+				 */
+				/* translators: %s: month name. Shown when no species in a section is likely that month. */
 				'guideEmpty'  => __( 'Nothing in this group is likely in %s.', 'dcc-wildlife' ),
+				/* translators: %s: month name. Peak Now (1.27.0) with nothing in it. */
+				'peakNone'    => __( 'Nothing is at its peak in %s.', 'dcc-wildlife' ),
 				'likeKey'     => __( 'Key', 'dcc-wildlife' ),
-				/* translators: 1: species name, 2: "N days away". The next rise, shown under a season that is still on. */
-				'cdNext'      => __( 'Next up: %1$s season, %2$s.', 'dcc-wildlife' ),
 			],
 		];
 

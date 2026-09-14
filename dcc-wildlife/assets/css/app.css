@@ -125,7 +125,21 @@
 	--dccwl-fs-xs: 0.78rem;
 	--dccwl-fs-lg: 1.25rem;
 	--dccwl-fs-hero: clamp(1.75rem, 1.1rem + 2.1vw, 2.5rem);
+	/* Two sizes used to sit off the scale as bare rem values. They are named
+	 * roles now, at the SAME rendered sizes: tokenising them is about future
+	 * rules reusing a role instead of inventing 1.4rem, not about making the
+	 * hub tiles 10% smaller, which nobody asked for. */
+	--dccwl-fs-value: 1.35rem;      /* a reading: the water card's number */
+	--dccwl-fs-hub: 1.5rem;         /* a hub tile's name */
 	--dccwl-lh: 1.45;
+
+	/* --- weights (1.27.0) ---------------------------------------------
+	 * Named rather than numeric at the call site, because the question a
+	 * rule is answering is "is this body text or a label", not "is this
+	 * 400 or 600". */
+	--dccwl-fw-body: 400;
+	--dccwl-fw-label: 600;
+	--dccwl-fw-strong: 700;
 
 	/* --- motion — the Guide's signature springy overshoot -------------
 	 * The overshoot is what makes the two pages feel like one app, so it
@@ -145,6 +159,7 @@
 	color: var(--dccwl-text);
 	font-size: var(--dccwl-fs-base);
 	line-height: var(--dccwl-lh);
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* Density modifiers — same three steps as the Guest Guide's control. */
@@ -204,6 +219,7 @@
 .dccwl-app.dccwl-app button {
 	letter-spacing: normal;
 	text-transform: none;
+	font-weight: var(--dccwl-fw-body);
 }
 
 .dccwl-sr {
@@ -337,6 +353,7 @@
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
 	margin-top: auto;
+	font-weight: var(--dccwl-fw-label);
 }
 
 /* ---- the tile deck (1.23.0) ----------------------------------------
@@ -403,6 +420,7 @@
 	margin: 0;
 	min-width: 6em;
 	text-align: center;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* --- badges + chips ------------------------------------------------- */
@@ -436,6 +454,7 @@
 	gap: 6px;
 	padding: 3px 10px;
 	white-space: nowrap;
+	font-weight: var(--dccwl-fw-label);
 }
 
 /* --- buttons -------------------------------------------------------- */
@@ -543,7 +562,8 @@
 .dccwl-sheet-title {
 	flex: 1 1 auto;
 	font-size: var(--dccwl-fs-lg);
-	font-weight: 700;
+	font-weight: var(--dccwl-fw-strong);
+	text-align: center;
 	margin: 0;
 	min-width: 0;
 }
@@ -629,3 +649,73 @@
 /* While a sheet is open the page behind it must not scroll under the
  * finger; the class is applied to <html> by sheet.js. */
 .dccwl-sheet-lock { overflow: hidden; }
+
+
+/* ===================================================================
+ * TYPE: WEIGHT, COLOUR AND ALIGNMENT ARE OURS, NOT THE THEME'S (1.27.0)
+ * ===================================================================
+ * The deployment theme serves `html { font-family: Raleway; font-size: 20px;
+ * font-weight: 700; line-height: 1.8 }`. The font-size is fine and the rem
+ * scale above is deliberately relative so a visitor's own text-size setting
+ * still works — never convert it to px. The WEIGHT was the defect: about 68
+ * of 77 text elements declared none of their own and inherited 700, so every
+ * paragraph in the guide rendered bold.
+ *
+ * Two layers fix it. First, the app root declares the normal case, which
+ * every descendant inherits. Second, the element rules below beat a theme
+ * that styles bare tags (`.dccwl-app p` is 0,1,1 and outranks `p` at 0,0,1),
+ * because inheritance loses to any rule that names the element directly.
+ *
+ * Anything with its own weight — labels, values, headings — declares it in
+ * its own rule and wins on specificity or source order. This block is the
+ * floor, not the design. */
+.dccwl-app {
+	color: var(--dccwl-text);
+	font-weight: var(--dccwl-fw-body);
+	text-align: start;
+}
+
+.dccwl-app p,
+.dccwl-app li,
+.dccwl-app dd,
+.dccwl-app dt,
+.dccwl-app small,
+.dccwl-app figcaption,
+.dccwl-app label,
+.dccwl-app td,
+.dccwl-app th,
+.dccwl-app input,
+.dccwl-app textarea,
+.dccwl-app select,
+.dccwl-app summary,
+.dccwl-app details,
+.dccwl-app span,
+.dccwl-app a,
+.dccwl-app i,
+.dccwl-app em {
+	font-weight: var(--dccwl-fw-body);
+}
+
+/* Emphasis is ours too: 700 inside a 700 page says nothing, and the theme's
+ * own <b> would otherwise be indistinguishable from its body text. */
+.dccwl-app b,
+.dccwl-app strong {
+	font-weight: var(--dccwl-fw-label);
+}
+
+/* Headings carry weight by role, not by tag depth. Weight only: this block
+ * is a floor, and a floor that also set text-align would out-specify the
+ * single-class rules that give each heading its role — `.dccwl-app h3` is
+ * (0,1,1) and `.dccwl-sheet-title` is (0,1,0), so the floor would win and
+ * the sheet title would never centre. Alignment belongs to the role. */
+.dccwl-app h2,
+.dccwl-app h3,
+.dccwl-app h4,
+.dccwl-app h5 {
+	font-weight: var(--dccwl-fw-strong);
+}
+
+/* A button's label is a label. */
+.dccwl-app button {
+	font-weight: var(--dccwl-fw-label);
+}

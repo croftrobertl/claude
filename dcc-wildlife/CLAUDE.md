@@ -133,6 +133,81 @@ git history at the v1.1.0 commit; any old sighting posts and the
   width descriptor, so only the width is ever recorded. Check the `-320`
   too, not just the full frame: it is the tile face, and a correctly
   identified bird can still crop to mostly water.
+- **TYPE IS OURS, NOT THE THEME'S (1.27.0).** The deployment theme serves
+  `html { font-family: Raleway; font-size: 20px; font-weight: 700;
+  line-height: 1.8 }`. About 68 of 77 text elements declared no weight of
+  their own and inherited 700, so every paragraph in the guide rendered bold
+  on live while every test passed on a neutral fixture. Two layers fix it and
+  both must stay: `.dccwl-app` declares the normal case, and a block of
+  element rules (`.dccwl-app p`, `li`, `span`, …) beats a theme that styles
+  bare tags, because inheritance loses to any rule naming the element. A
+  source lint in test-1270.php fails any rule that sets a text property
+  without a weight; ui127.js measures the rest ON theme-page.html, a fixture
+  that reproduces the hostile root. NEVER assert typography on the neutral
+  page — it passes while the site stays bold, which is the whole history of
+  this defect.
+- **THE SIZES ARE rem AND MUST STAY rem.** `--dccwl-fs-*` are relative on
+  purpose: the "older clientele" comment on `--dccwl-fs-base` means a
+  visitor's own text-size setting has to work. The 20px root makes everything
+  render 25% larger than the 16px design, and that is not a bug to "fix" with
+  px. The one px font-size in the plugin is the 16px floor on the search
+  input, which stops iOS zooming the page on focus; the lint allows exactly
+  that one and fails any other.
+- **Weights are named, not numeric**: `--dccwl-fw-body` 400,
+  `--dccwl-fw-label` 600, `--dccwl-fw-strong` 700. A rule answers "is this
+  body or a label", not "is this 400 or 600".
+- **Alignment is by ROLE.** Titles and section headers centre
+  (`.dccwl-title`, `.dccwl-sheet-title`, `.dccwl-detail-h`, `.dccwl-fg-group`,
+  `.dccwl-water-sub`, `.dccwl-water-title`, `.dccwl-sci`); body text starts.
+  The heading floor in app.css sets WEIGHT ONLY — adding `text-align` there
+  made `.dccwl-app h3` (0,1,1) out-specify `.dccwl-sheet-title` (0,1,0) and
+  the sheet title would never centre.
+- **NAVIGATION IS BY SECTION, NOT BY GROUP (1.27.0).** `Species::groups()`
+  is still the DATA taxonomy — it keys the group glyph a species falls back
+  to, and a bird glyph is not a critter glyph. `Species::sections()` is what
+  the guide is navigated by: Animals (critters + birds, 38), Plants (5),
+  Safety (8, plus the alligator, which is flagged `danger` and appears in
+  both). `section_members()` carries that dual membership, and
+  `$include_flagged = false` switches it off for the PROSE guide, which must
+  describe each species exactly once — a tile shown twice is a convenience,
+  a species written out twice is duplicated content for a crawler.
+- **SAFETY IS ITS OWN DESTINATION. DO NOT MERGE IT.** The owner asked to
+  delete it, was shown that it holds the four venomous snakes plus the fire
+  ant, mosquitoes, lovebugs and poison ivy, and chose to keep it under the
+  plain name — the objection was the wording. It is no longer FIRST (the row
+  is Animals | Plants | Safety | Peak Now), which reverses the 1.19.0
+  "safety renders first everywhere" rule on his instruction. What did not
+  change: it is its own section, it holds all four snakes, and it is never
+  month-filtered. test-1270.php asserts the snakes by name.
+- **Peak Now is a FILTER, not a section.** It renders no grid: the month it
+  means is the visitor's, so widget.js fills it in canal time exactly as the
+  spotlight does, and a cached page can never carry a stale one. It crosses
+  all three sections including Safety — a venomous snake at its most active
+  is what a guest should be shown — and it is NEVER capped, because
+  "everything at peak" means everything.
+- **The twelve-tile cap now covers 38 species, not 29.** Merging Critters and
+  Birds halved what a guest sees before "Show all" (12 of 38, where two tabs
+  used to show up to 24 of the same 38). The ranking rule is unchanged. The
+  cap size is the owner's decision and was deliberately left alone.
+- **The season countdown is RETIRED (1.27.0)**, at one gate:
+  `Render::countdown_possible()` returns false. That closes the widget, the
+  hub, the standalone Elementor widget and the shortcode at once while
+  leaving their registrations in place, so an existing Elementor placement
+  renders nothing instead of erroring. `fillCountdown()` and the cd* strings
+  went with it; restoring the feature means restoring all three.
+- **No odds labels, ever.** `Species::odds()` survives as data and still
+  ranks species, but `oddsNames` is not sent to the browser and nothing
+  renders a label. "You will see one" is a guarantee the canal cannot make.
+  Note there were FIVE tiers, not the three usually named; the one that
+  carried information rather than probability was `daytrip`, and the `place`
+  field already says that in its own "Where to go" section.
+- **The footnote row is one row of links**, not sections: the prose guide,
+  the photo credits and the month picker. Visible labels are short so three
+  fit at 393px; the full phrasing is the accessible name. THE PHOTO CREDITS
+  CONTENT IS A LICENCE SURFACE — every credit plus the modification notice —
+  and only the entry point shrank. The month link is the ONLY door to the
+  month picker (`go('month')` appears nowhere else) and ships hidden because
+  a standalone widget has no panel to open; canal.js unhides it.
 - **PHP must never bake "the current month" into HTML.** The site is
   aggressively page-cached (SpeedyCache + Endurance + advanced-cache.php).
   The full 12-month dataset ships to the client in the inline `DCC_WL_CFG`

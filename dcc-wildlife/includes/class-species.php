@@ -60,13 +60,69 @@ final class Species {
 	}
 
 	/**
-	 * Shorter labels for the segmented switch, where four words do not fit
-	 * beside three other groups on a phone. Falls back to groups().
+	 * DISPLAY SECTIONS (1.27.0) — what the guide is navigated by, which is no
+	 * longer the same thing as groups().
+	 *
+	 * Critters and Birds were folded into one "Animals" section: the split was
+	 * folksy rather than useful, and at 38 species between them a guest looking
+	 * for a heron does not first ask whether a heron is a critter. Safety keeps
+	 * its own destination — it holds the four venomous snakes, the fire ant,
+	 * the mosquitoes, the lovebugs and the poison ivy, and merging it would
+	 * scatter them through 38 animals with no read-this-first surface. It is
+	 * renamed to the plain word, which was the actual objection. DO NOT let a
+	 * later tidy-up merge it into Animals.
+	 *
+	 * groups() is unchanged and still the DATA taxonomy: it keys the group
+	 * glyph a species falls back to when it has neither a photograph nor its
+	 * own drawing, and a bird glyph is not a critter glyph.
 	 *
 	 * @return array<string,string>
 	 */
-	public static function tab_labels(): array {
-		return [ 'safety' => __( 'Before you go', 'dcc-wildlife' ) ] + self::groups();
+	public static function sections(): array {
+		return [
+			'animals' => __( 'Animals', 'dcc-wildlife' ),
+			'plants'  => __( 'Plants', 'dcc-wildlife' ),
+			'safety'  => __( 'Safety', 'dcc-wildlife' ),
+		];
+	}
+
+	/** Which display section a data group belongs to. */
+	public static function section_of( string $group ): string {
+		return in_array( $group, [ 'critters', 'birds' ], true ) ? 'animals' : $group;
+	}
+
+	/**
+	 * The species of one display section, in registry order.
+	 *
+	 * @param array<int,array<string,mixed>> $dataset
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function section_members( array $dataset, string $section, bool $include_flagged = true ): array {
+		return array_values( array_filter( $dataset, static function ( array $sp ) use ( $section, $include_flagged ): bool {
+			if ( self::section_of( (string) ( $sp['group'] ?? '' ) ) === $section ) {
+				return true;
+			}
+			if ( ! $include_flagged ) {
+				return false;
+			}
+			/*
+			 * The same dual membership group_members() has, and it must not be
+			 * lost in the section merge: anything flagged `danger` also shows
+			 * in Safety whatever group it belongs to. That is the alligator,
+			 * which lives in Animals and appears in the safety list too — 52
+			 * tile faces across 51 species. Filtering on the group alone drops
+			 * it from Safety, which is a safety regression however tidy the
+			 * code looks.
+			 *
+			 * $include_flagged = false switches it off for the one caller that
+			 * must not have it: the PROSE guide. A tile shown twice is a
+			 * convenience; a species written out twice is duplicated content
+			 * for a crawler and a second helping for a screen reader. The
+			 * prose has always listed each species exactly once and must keep
+			 * doing so.
+			 */
+			return 'safety' === $section && in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true );
+		} ) );
 	}
 
 	/**

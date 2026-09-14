@@ -183,26 +183,6 @@
 				t.setAttribute('aria-pressed', i === m ? 'true' : 'false');
 				t.classList.toggle('dccwl-month-tile-on', i === m);
 			});
-			// The month chip (1.23.0), which replaced both the month step and the
-			// breadcrumb's month segment. It carries the month AND what the month
-			// is worth — "September · 15 at peak" — because that count was the
-			// best thing on the old picker and dropping it would have been a
-			// regression dressed as a simplification. Filled here, never
-			// server-side, so a cached page cannot name a month.
-			var chip = root.querySelector('[data-dccwl-monthchip]');
-			if (chip && Array.isArray(wCfg.monthsFull)) {
-				var name = wCfg.monthsFull[m] || '';
-				var c = monthCounts(m);
-				var count = c ? (c.peak > 0 ? fmt(I18N.atPeak || '%d at peak', c.peak)
-					: c.spot > 0 ? fmt(I18N.toSpot || '%d to spot', c.spot) : '') : '';
-				chip.querySelector('[data-dccwl-monthchip-name]').textContent = name;
-				chip.querySelector('[data-dccwl-monthchip-count]').textContent = count;
-				// The visible text is two fragments; give a screen reader one
-				// sentence that also says what the control does.
-				chip.setAttribute('aria-label',
-					fmt(I18N.monthChipAria || '%1$s, %2$s. Choose a different month.', name, count));
-				chip.hidden = false;
-			}
 			// The existing widget owns every month behaviour — headline,
 			// spotlight, timeline, guide chips. Drive it; never re-implement.
 			if (drive !== false && speciesRoot && window.DCCWL_Widget) {
@@ -310,9 +290,8 @@
 			var m = canalMonth();
 			var c = monthCounts(m);
 			var i = wCfg.i18n || {};
-			var phrase = c.peak > 1 ? fmt(i.subPeak, c.peak)
-				: c.peak === 1 ? i.subPeakOne
-					: fmt(i.subSpot, c.spot);
+			// 1.27.0: no peak ranking in the subline. See widget.js.
+			var phrase = fmt(i.subSpot, c.spot);
 			node.textContent = fmt(I18N.hubMonth || '%1$s in %2$s', phrase, wCfg.monthsFull[m]);
 
 			// Show the species the line is counting. Decorative — the sentence
@@ -469,10 +448,16 @@
 			queueSticky();
 		}
 
-		var chipBtn = root.querySelector('[data-dccwl-monthchip]');
-		if (chipBtn) {
-			chipBtn.addEventListener('click', function () { go('month', chipBtn); });
-		}
+		/* The month picker's entry point moved to the footnote row in 1.27.0,
+		 * beside the field guide and the photo credits. The chip that used to
+		 * open it is gone from the navigation bar, and this link is the ONLY
+		 * way into that panel — go('month') appears nowhere else. It ships
+		 * hidden because the panel lives in this hub app: a standalone
+		 * [dcc_wildlife] has nothing to open, so the control must not exist
+		 * there. Unhiding it here is what makes it real. */
+		root.querySelectorAll('[data-dccwl-monthlink]').forEach(function (link) {
+			link.hidden = false;
+		});
 
 		/* A month named in the URL still lands on that month (1.23.0).
 		 * READ ONLY, and read here rather than on the server: the page is

@@ -211,9 +211,10 @@ final class Canal_Render {
 	 * @param string[] $crumbs  Breadcrumb segments; an empty string is a
 	 *                          client-filled slot (the month name).
 	 * @param string   $fill    data-dccwl-crumb key for the client-filled slot.
-	 * @param bool     $chip    Render the month chip (1.23.0) in the bar's third
-	 *                          cell — the way to a different month now that the
-	 *                          month step is gone.
+	 * @param bool     $chip    Retained for call-site compatibility and ignored
+	 *                          since 1.27.0, when the month chip left the
+	 *                          navigation bar. The month picker is reached from
+	 *                          the footnote row now; the panel is unchanged.
 	 */
 	private static function level_bar( string $back, array $crumbs, string $fill = '', bool $chip = false ): void {
 		?>
@@ -229,17 +230,6 @@ final class Canal_Render {
 					<span class="dccwl-crumb<?php echo $i === $last ? ' dccwl-crumb-here' : ''; ?>"<?php echo $i === $last ? ' aria-current="location"' : ''; ?><?php echo ( '' === $crumb && '' !== $fill ) ? ' data-dccwl-crumb="' . esc_attr( $fill ) . '"' : ''; ?>><?php echo esc_html( $crumb ); ?></span>
 				<?php endforeach; ?>
 			</nav>
-			<?php if ( $chip ) : ?>
-				<?php /* The month, and what that month is worth (1.23.0). Both are
-				         filled client-side — a cached page must never name a month
-				         or count its species. Hidden until the script fills it, so
-				         with JS off there is no empty control. */ ?>
-				<button type="button" class="dccwl-monthchip" data-dccwl-monthchip hidden aria-haspopup="true">
-					<span class="dccwl-monthchip-name" data-dccwl-monthchip-name></span>
-					<span class="dccwl-monthchip-count" data-dccwl-monthchip-count></span>
-					<span class="dccwl-monthchip-caret" aria-hidden="true"><svg viewBox="0 0 20 20" width="14" height="14" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-				</button>
-			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -269,6 +259,9 @@ final class Canal_Render {
 						/* translators: %s: a month name. */
 						'monthAria'  => __( 'Wildlife in %s', 'dcc-wildlife' ),
 						/* translators: %d: number of species at peak. */
+						/* translators: %d: number of species at peak. Still used by
+						   the month picker's own tiles; the navigation-bar chip that
+						   also used it was removed in 1.27.0. */
 						'atPeak'     => __( '%d at peak', 'dcc-wildlife' ),
 						/* translators: 1: month name, 2: e.g. "15 at peak". */
 						'monthChipAria' => __( '%1$s, %2$s. Choose a different month.', 'dcc-wildlife' ),

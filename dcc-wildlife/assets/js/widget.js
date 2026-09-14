@@ -373,9 +373,11 @@
 				b.appendChild(document.createTextNode((CFG.i18n.flagNames || {})[f] || f));
 				badges.appendChild(b);
 			});
-			if (sp.odds && (CFG.i18n.oddsNames || {})[sp.odds]) {
-				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-odds', CFG.i18n.oddsNames[sp.odds]));
-			}
+			// 1.27.0: no odds badge. The guide does not offer probabilities —
+			// "You will see one" is a guarantee the canal cannot make. The
+			// `odds` value is still in the payload and still ranks species;
+			// it just never becomes a sentence a guest can be disappointed by.
+
 			if (badges.childNodes.length) {
 				body.appendChild(badges);
 			}
@@ -509,10 +511,9 @@
 		function updateHead() {
 			var m = state.month;
 			var entries = speciesForMonth(m);
-			var peaks = entries.filter(function (x) { return x.v >= 3; }).length;
-			var phrase = peaks > 1 ? fmt(CFG.i18n.subPeak, peaks)
-				: peaks === 1 ? CFG.i18n.subPeakOne
-					: fmt(CFG.i18n.subSpot, entries.length);
+			// 1.27.0: the subline no longer says "%d species at their peak".
+			// It counts what is worth looking for and leaves it at that.
+			var phrase = fmt(CFG.i18n.subSpot, entries.length);
 			if (instance.customTitle) {
 				if (subEl) {
 					subEl.textContent = fmt(CFG.i18n.monthSub, CFG.monthsFull[m], phrase);
@@ -711,6 +712,9 @@
 		 * disagree with each other. Order: the tab (or, while searching, every
 		 * group), then the month (hub only), then the cap. */
 		var GUIDE_CAP = 12;
+		// Must match Render::PEAK_TAB. The tab row is server-rendered and this
+		// reads the slug back off it, so the two have to agree.
+		var PEAK_TAB = '__peak';
 		var guide = { q: '', expanded: false, group: null };
 
 		/* Lowercased, accent-folded, and cached on the species row. */
@@ -750,6 +754,13 @@
 			if (!section) { return; }
 			var isCanal = !!root.closest('[data-dccwl-canal]');
 			var q = guide.q, searching = q.length > 0;
+			// Peak Now (1.27.0) is a filter, not a section: it cuts across
+			// Animals, Plants and Safety at once and keeps whatever is at its
+			// best in the month the VISITOR is in. state.month is canal time,
+			// computed in the browser, so this can never be baked into a
+			// cached page — which is why there is no server-rendered peak
+			// grid and no peak count in the HTML.
+			var peaking = guide.group === PEAK_TAB;
 			var rows = [], i = 0;
 
 			// 1. Who is eligible: the open group (or, while searching, every
@@ -758,7 +769,7 @@
 				var group = g.getAttribute('data-dccwl-group');
 				// Searching looks in every group: at 51 species the answer to
 				// "where is the coot?" must not depend on which tab is open.
-				var groupOn = searching || null === guide.group || group === guide.group;
+				var groupOn = searching || peaking || null === guide.group || group === guide.group;
 				g.querySelectorAll('.dccwl-tile').forEach(function (tile) {
 					var sp = speciesById[tile.getAttribute('data-dccwl-species')];
 					var old = tile.querySelector('.dccwl-tile-sub');
@@ -770,6 +781,11 @@
 							// A search overrides the month: a guest looking for
 							// a species out of season still deserves to find it.
 							keep = speciesMatches(sp, q);
+						} else if (peaking) {
+							// At peak means at peak, in every section including
+							// safety — a venomous snake at its most active is
+							// exactly what a guest should be shown, not spared.
+							keep = !!(sp.months && (sp.months[state.month] || 0) >= 3);
 						} else if (isCanal && sp.months) {
 							// The safety grid is a warning list: never month-filtered.
 							keep = 'safety' === group || v >= 2;
@@ -788,7 +804,13 @@
 			//    year-round residents. Ties keep document order, so the tiles
 			//    that survive still read in field-guide order.
 			var kept = rows.filter(function (r) { return r.keep; });
-			var capping = !guide.expanded && kept.length > GUIDE_CAP;
+			// Peak Now is never capped. The cap exists so a 38-species section
+			// does not open as a wall of tiles; this filter has already cut the
+			// list to what is at its best right now, and capping it to twelve
+			// would silently drop whole sections — the first run showed twelve
+			// animals and hid Plants and Safety entirely, which is the opposite
+			// of "everything at peak, from all three".
+			var capping = !peaking && !guide.expanded && kept.length > GUIDE_CAP;
 			(capping
 				? kept.slice().sort(function (a, b) { return b.rank - a.rank || a.i - b.i; }).slice(0, GUIDE_CAP)
 				: kept
@@ -803,15 +825,15 @@
 			});
 			section.querySelectorAll('.dccwl-guide-grid').forEach(function (g) {
 				var group = g.getAttribute('data-dccwl-group');
-				var groupOn = searching || null === guide.group || group === guide.group;
-				g.hidden = !groupOn || (searching && !perGrid[group]);
+				var groupOn = searching || peaking || null === guide.group || group === guide.group;
+				g.hidden = !groupOn || ((searching || peaking) && !perGrid[group]);
 			});
 
 			var eligible = kept.length;
 			var more = section.querySelector('[data-dccwl-guide-more]');
 			var morewrap = section.querySelector('[data-dccwl-guide-morewrap]');
 			if (more && morewrap) {
-				var over = eligible > GUIDE_CAP;
+				var over = !peaking && eligible > GUIDE_CAP;
 				morewrap.hidden = !over;   // the row collapses with the button
 				if (over) {
 					more.textContent = guide.expanded
@@ -844,6 +866,17 @@
 			section.querySelectorAll('.dccwl-tab').forEach(function (t) {
 				t.setAttribute('aria-pressed', !searching && t.getAttribute('data-dccwl-group') === guide.group ? 'true' : 'false');
 			});
+			// Peak Now names no month in the markup, so say which one it means
+			// where a guest can read it, and say plainly when nothing is at its
+			// best rather than showing an empty page.
+			if (peaking && !searching) {
+				var pNote = section.querySelector('[data-dccwl-guide-empty]');
+				if (pNote && !kept.length) {
+					pNote.textContent = fmt(CFG.i18n.peakNone || 'Nothing is at its peak in %s.',
+						(CFG.monthsFull && CFG.monthsFull[state.month]) || '');
+					pNote.hidden = false;
+				}
+			}
 			// The deck's controls describe what is actually in the deck, so they
 			// are recomputed after every filter — month, search or cap.
 			if (window.DCCWL_Deck) {
@@ -1003,54 +1036,12 @@
 	/* Fill a countdown div: emoji span + text, with the day count in its own
 	 * styled span. Built with createElement/textContent throughout — the
 	 * species list passes through a filter, so nothing here may be innerHTML. */
-	function fillCountdown(node, best, i18n) {
-		node.textContent = '';
-		node.classList.add('dccwl-hero-stat');
-
-		// Icon: the species' own sprite, at hero scale.
-		var icon = el('span', 'dccwl-hero-icon');
-		icon.appendChild(speciesArt(best.s, 'dccwl-hero-sprite'));
-		node.appendChild(icon);
-
-		var textWrap = el('div', 'dccwl-hero-text');
-
-		// "Manatee season" — the label, quiet above the number.
-		textWrap.appendChild(el('p', 'dccwl-hero-label',
-			fmt(i18n.cdLabel || '%s season', best.s.name)));
-
-		var value = el('p', 'dccwl-hero-value');
-		if (best.mode === 'through') {
-			// Still at peak, rose in an earlier month: "through April". Same
-			// coral-text style as "is here now" — both mean "the season is on".
-			value.appendChild(el('span', 'dccwl-hero-now',
-				fmt(i18n.cdThrough || 'through %s', (CFG.monthsFull && CFG.monthsFull[best.month]) || '')));
-		} else if (best.here) {
-			value.appendChild(el('span', 'dccwl-hero-now', i18n.cdNow || 'is here now'));
-		} else {
-			value.appendChild(el('span', 'dccwl-hero-num', String(best.days)));
-			value.appendChild(el('span', 'dccwl-hero-unit',
-				best.days === 1 ? (i18n.cdDay || 'day') : (i18n.cdDays || 'days')));
-		}
-		textWrap.appendChild(value);
-
-		// One line of reason, so the number is never a bare assertion.
-		var monthName = (CFG.monthsFull && CFG.monthsFull[best.month]) || '';
-		var why;
-		if (best.next) {
-			// Current season on the value line; the NEXT rise down here, so the
-			// count-down never disappears just because something is in season.
-			var n = best.next, unit = n.days === 1 ? (i18n.cdDay || 'day away') : (i18n.cdDays || 'days away');
-			why = fmt(i18n.cdNext || 'Next up: %1$s season, %2$s.', n.s.name, n.days + ' ' + unit);
-		} else if (best.here || best.mode === 'through') {
-			why = fmt(i18n.cdWhyNow || 'Peak sightings run through %s.', monthName);
-		} else {
-			why = fmt(i18n.cdWhy || 'Peak sightings begin in %s.', monthName);
-		}
-		textWrap.appendChild(el('p', 'dccwl-hero-why', why));
-
-		node.appendChild(textWrap);
-		node.hidden = false;
-	}
+	/* fillCountdown() was here. The season countdown card was retired in
+	 * 1.27.0 — see Render::countdown_possible(), which is now hard-false and
+	 * is the single gate every path ran through. Nothing stamps
+	 * .dccwl-hero-stat any more, in any of its three states. Restoring the
+	 * feature means restoring this function AND that gate AND the cd* strings.
+	 */
 
 	function initCountdown() {
 		// While the old mu-plugin exists, PHP sets countdown:false and emits
@@ -1089,14 +1080,11 @@
 			return;
 		}
 
-		// Publish which species the countdown is featuring, so the hub's
-		// "right now" line can avoid naming it twice on the same screen.
-		// Set before filling, and only ever read by canal.js.
+		// Publish which species WOULD have been featured, so the hub's
+		// "right now" line still avoids naming it twice on the same screen.
+		// The card itself is retired (1.27.0); this value is read by canal.js
+		// and costs nothing.
 		if (window.DCCWL_Widget) { window.DCCWL_Widget.countdownId = best.s.id; }
-
-		Array.prototype.forEach.call(shells, function (node) {
-			fillCountdown(node, best, CFG.i18n || {});
-		});
 	}
 
 	window.DCCWL_Widget = {

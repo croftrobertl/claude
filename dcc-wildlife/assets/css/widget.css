@@ -55,7 +55,9 @@
 	width: 56px;
 }
 
-.dccwl-hero-emoji { font-size: 34px; line-height: 1; }
+/* .dccwl-hero-emoji was the retired countdown card's glyph (1.27.0).
+ * Nothing renders it any more, and it carried the plugin's only other px
+ * font-size. */
 
 .dccwl-hero-text { min-width: 0; }
 
@@ -101,6 +103,7 @@
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	margin: 4px 0 0;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* =====================================================================
@@ -114,10 +117,11 @@
 .dccwl-root .dccwl-title {
 	color: var(--dccwl-text);
 	font-size: var(--dccwl-fs-lg);
-	font-weight: 700;
+	font-weight: var(--dccwl-fw-strong);
 	letter-spacing: -0.01em;
 	margin: 0;
 	min-height: 1.4em;
+	text-align: center;
 }
 
 .dccwl-root .dccwl-sub {
@@ -125,6 +129,7 @@
 	font-size: var(--dccwl-fs-sm);
 	margin: 2px 0 0;
 	min-height: 1.3em;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* =====================================================================
@@ -398,7 +403,7 @@
  * on a phone they share the row at a smaller size rather than overflow. */
 @media (max-width: 480px) {
 	.dccwl-tabs { display: flex; width: 100%; }
-	.dccwl-root .dccwl-tab.dccwl-tab { font-size: var(--dccwl-fs-xs); padding: 10px 6px; }
+	.dccwl-root .dccwl-tab.dccwl-tab { font-size: var(--dccwl-fs-xs); padding: 10px 6px; font-weight: var(--dccwl-fw-body); }
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab:hover {
@@ -464,14 +469,22 @@
 	flex: 1 1 auto;
 	font: inherit;
 	/* Never below 16px: iOS zooms the whole page when a smaller field is
-	 * focused, and the guest then has to pinch back out to read the results. */
+	 * focused, and the guest then has to pinch back out to read the results.
+	 * THE ONE px FONT-SIZE IN THE PLUGIN, and it is a platform workaround
+	 * rather than a type choice. The rem scale everywhere else is relative on
+	 * purpose, so a visitor's own text-size setting still works. */
 	font-size: 16px;
+	font-weight: var(--dccwl-fw-body);
 	min-height: 44px;
 	min-width: 0;
 	outline: none;
 	padding: 0;
+	/* 1.27.0, owner's request: centred, which covers both the placeholder and
+	 * what a guest types. Declared here because the host theme styles form
+	 * fields and would otherwise decide it. */
+	text-align: center;
 }
-.dccwl-root .dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); opacity: 1; }
+.dccwl-root .dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; }
 /* Ours is a 44px target and always in the same place; the platform's is not. */
 .dccwl-search-input::-webkit-search-cancel-button,
 .dccwl-search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
@@ -509,6 +522,7 @@
 	gap: 4px 14px;
 	justify-content: center;
 	margin: 0 0 var(--dccwl-gap-lg);
+	font-weight: var(--dccwl-fw-body);
 }
 .dccwl-legend-item { align-items: center; display: inline-flex; gap: 6px; }
 .dccwl-legend-badge { margin: 0; }
@@ -564,7 +578,7 @@
 /* Photo credits (1.19.0): the prose guide's card, one list inside. */
 /* 1.26.0: the blanket "these are cropped and resized" line that indicates
  * modification for every CC photo at once. */
-.dccwl-photo-credits-note { color: var(--dccwl-text-muted); margin: 0 0 10px; }
+.dccwl-photo-credits-note { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); margin: 0 0 10px; text-align: start; }
 .dccwl-photo-credits-list { margin: 0; padding-left: 1.2em; }
 .dccwl-photo-credits-list li { margin: 0 0 6px; }
 .dccwl-fg-safe .dccwl-fg-k { color: var(--dccwl-accent-text); }
@@ -617,12 +631,17 @@
 }
 
 
-/* Scientific name under the common name — italic, quiet, authoritative. */
+/* Scientific name under the common name — italic, quiet, authoritative.
+ * 1.27.0: the same content was styled two ways — this one declared no weight
+ * and inherited the theme's 700, while .dccwl-fg-sci in the prose guide
+ * declared 400. One piece of content, one treatment: 400 in both places. */
 .dccwl-sheet .dccwl-sci {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	font-style: italic;
+	font-weight: var(--dccwl-fw-body);
 	margin: 0 0 var(--dccwl-gap);
+	text-align: center;
 }
 
 /* Real-photo hero (v1.11.0) — a licensed photo fills the medallion where we
@@ -645,6 +664,7 @@
 	letter-spacing: 0.02em;
 	margin: 0 0 var(--dccwl-gap);
 	text-align: right;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* 1.25.0: what a photograph's identification rests on, where that is not
@@ -655,6 +675,7 @@
 	font-size: 0.78rem;
 	line-height: 1.45;
 	margin: calc(var(--dccwl-gap) * -0.5) 0 var(--dccwl-gap);
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* 1.24.0: a CC BY credit links to the source page, where the licence is
@@ -682,20 +703,34 @@
 .dccwl-sheet .dccwl-fact {
 	color: var(--dccwl-text);
 	margin: 0 0 var(--dccwl-gap-lg);
+	font-weight: var(--dccwl-fw-body);
 }
 
+/* 1.27.0, at the owner's request. This WAS a small uppercase muted label
+ * above larger body text — a standard pattern, and deliberate. He wants the
+ * section title to read as the larger of the two, so the sizes swap. Both
+ * declare a size now: leaving the content sizeless is what let the host
+ * theme's 20px root decide it. Still tokens, never px — the scale is
+ * relative on purpose so a visitor's own text-size setting keeps working. */
 .dccwl-sheet .dccwl-detail-h {
 	color: var(--dccwl-text-muted);
-	font-size: var(--dccwl-fs-xs);
-	font-weight: 700;
+	font-size: var(--dccwl-fs-base);
+	font-weight: var(--dccwl-fw-strong);
 	letter-spacing: 0.06em;
 	margin: var(--dccwl-gap-lg) 0 4px;
+	text-align: center;
 	text-transform: uppercase;
 }
 
 .dccwl-sheet .dccwl-detail-p {
 	color: var(--dccwl-text);
+	font-size: var(--dccwl-fs-sm);
+	/* Explicit, and the whole point of this release's typography work: with
+	 * no weight of its own this inherited the theme's html { font-weight:700 }
+	 * and every paragraph in every sheet rendered bold. */
+	font-weight: var(--dccwl-fw-body);
 	margin: 0;
+	text-align: start;
 }
 
 .dccwl-sheet .dccwl-detail-chips {
@@ -749,6 +784,7 @@
 	display: block;
 	font-size: var(--dccwl-fs-sm);
 	line-height: 1.4;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* --- the 12-month likelihood strip --- */
@@ -791,6 +827,7 @@
 	color: var(--dccwl-text-muted);
 	font-size: 0.62rem;
 	letter-spacing: -0.01em;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* The strip's key (1.18.0): the same cells, as samples, each named. */
@@ -804,6 +841,7 @@
 	list-style: none;
 	margin: var(--dccwl-gap) 0 0;
 	padding: 0;
+	font-weight: var(--dccwl-fw-body);
 }
 .dccwl-sheet .dccwl-like-key-item { align-items: flex-end; display: inline-flex; gap: 5px; }
 .dccwl-sheet .dccwl-like-sample { display: inline-flex; align-items: flex-end; height: 21px; width: 10px; }
@@ -964,6 +1002,7 @@
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	text-align: left;
+	font-weight: var(--dccwl-fw-body);
 }
 /* Scoped to .dccwl-app, NOT .dccwl-root: the prose guide appears both inside
    the standalone widget (.dccwl-root) AND at the canal hub's top level
@@ -983,10 +1022,11 @@
 	border-top: 1px solid var(--dccwl-line);
 	color: var(--dccwl-primary);
 	font-size: var(--dccwl-fs-sm);
-	font-weight: 700;
+	font-weight: var(--dccwl-fw-strong);
 	letter-spacing: 0.06em;
 	margin: var(--dccwl-gap-lg) auto var(--dccwl-gap);
 	padding-top: var(--dccwl-gap-lg);
+	text-align: center;
 	text-transform: uppercase;
 }
 .dccwl-fg-group:first-child { border-top: 0; padding-top: 0; }
@@ -1020,12 +1060,14 @@
 .dccwl-fg-fact {
 	color: var(--dccwl-text);
 	margin: 0 0 6px;
+	font-weight: var(--dccwl-fw-body);
 }
 
 .dccwl-fg-line {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-sm);
 	margin: 0 0 3px;
+	font-weight: var(--dccwl-fw-body);
 }
 
 /* The label reads as a key, but stays AA-legible rather than dropping to faint. */
@@ -1037,3 +1079,95 @@
 .dccwl-fg-k::after {
 	content: ":";
 }
+
+
+/* ===================================================================
+ * THE FOOTNOTE ROW (1.27.0)
+ * ===================================================================
+ * The prose guide and the photo credits were two H2-headed sections stacked
+ * at the foot of the widget, which gave references the weight of
+ * destinations. They are one row of small links now, with the month picker
+ * beside them. What shrank is the ENTRY POINT: both still open the same
+ * native <details>, and the photo credits content — every licensed credit
+ * plus the modification notice that CC BY 4.0 and CC BY-SA 4.0 require — is
+ * untouched and still crawlable. Never "tidy" that content away. */
+.dccwl-footnotes {
+	/* center, not baseline: the month link is a 44px touch target and a
+	 * baseline row left it sitting 2px below its neighbours. */
+	align-items: center;
+	border-top: 1px solid var(--dccwl-line);
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--dccwl-gap) var(--dccwl-gap-lg);
+	justify-content: center;
+	margin-top: var(--dccwl-gap-lg);
+	padding-top: var(--dccwl-gap);
+}
+
+/* Each <details> is a row item; when one is open it takes the full width so
+ * its body is not squeezed into a column beside its neighbours. */
+/* Strip the card: .dccwl-fullguide is a panel elsewhere, with a background,
+ * a border and a 60px summary. Inside this row it is a link, and the card
+ * chrome is exactly what made two of them too wide to sit side by side on a
+ * 393px phone. */
+.dccwl-footnotes > .dccwl-fullguide {
+	background: none;
+	border: 0;
+	border-radius: 0;
+	flex: 0 0 auto;
+	margin: 0;
+	overflow: visible;
+	padding: 0;
+}
+.dccwl-footnotes > .dccwl-fullguide[open] { flex: 1 0 100%; }
+
+.dccwl-footnotes .dccwl-fullguide-summary {
+	background: none;
+	gap: 4px;
+	min-height: 44px;   /* still a 44px touch target, just not a 60px card */
+	padding: 0;
+}
+/* No chevron in the row. Three labels plus two chevrons came to 366px inside
+ * a 361px row and wrapped; the chevrons are 32px of that. The underline marks
+ * these as links, the <details> still toggles, and a footnote does not need a
+ * disclosure triangle. This also leaves headroom for a longer translation. */
+.dccwl-footnotes .dccwl-fullguide-chev { display: none; }
+.dccwl-footnotes .dccwl-fullguide-text { display: inline; }
+
+/* A footnote link, not a heading: the same size and colour as the meta line
+ * it used to sit above. */
+.dccwl-footnotes .dccwl-fullguide-h,
+.dccwl-footnote-link {
+	background: none;
+	border: 0;
+	color: var(--dccwl-text-muted);
+	/* Footnote-sized, so three of them fit on one row at 393px — the width
+	 * the owner measured. --fs-sm did not: two labels alone came to 398px
+	 * inside a 361px row and wrapped. */
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-label);
+	letter-spacing: 0;
+	margin: 0;
+	padding: 0;
+	text-align: center;
+	text-decoration: underline;
+	text-transform: none;
+	text-underline-offset: 2px;
+}
+
+.dccwl-footnote-link {
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-label);
+	min-height: 44px;
+}
+
+.dccwl-footnotes .dccwl-fullguide-h:hover,
+.dccwl-footnote-link:hover { color: var(--dccwl-primary); }
+.dccwl-footnote-link:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
+
+/* The meta line ("44 species, in words") is detail for an open panel, not
+ * part of the link, so it only shows once the panel is open. */
+.dccwl-footnotes .dccwl-fullguide-meta { display: none; }
+.dccwl-footnotes > .dccwl-fullguide[open] .dccwl-fullguide-meta { display: block; text-align: center; }
