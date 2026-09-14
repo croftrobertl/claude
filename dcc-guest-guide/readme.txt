@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.0
+Stable tag: 0.16.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,17 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.16.1 =
+
+**Fixed: the public guide still ignored its style settings.**
+
+0.16.0 worked out the right CSS for the public guide and then lost it on the
+way to the page: it was handed to WordPress after the stylesheet it belonged
+to had already been sent, so WordPress dropped it without an error. The
+settings are now printed with the guide itself, which does not depend on
+timing. The public guide's menu shows the configured columns, tile size and
+spacing again.
 
 = 0.16.0 =
 

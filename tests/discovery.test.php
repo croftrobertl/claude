@@ -149,5 +149,44 @@ check('control: the untransformed CSS is scoped to a wrapper the host page lacks
     strpos($css, '.elementor-4645 .elementor-element') !== false
     && strpos($scoped, '.elementor-4645 .elementor-element') === false);
 
+echo "\nF. The scoped CSS has to reach the page (v0.16.1)\n";
+// v0.16.0 got the transform right and the delivery wrong: it handed the CSS to
+// wp_add_inline_style('dccgg-widget', …) from inside the body, by which point
+// that handle had already been printed in wp_head, so WordPress discarded it
+// without a word. Every unit assertion passed and the live page had no rule.
+// These guard the delivery, not the transform.
+$tag = \DCCGG\Plugin::source_css_style_tag(4645, '.elementor-element.elementor-element-2afb24b .dccgg-menu{--dccgg-tile-min:120px;}');
+check('the CSS is wrapped in a <style> element, ready to print with the widget',
+    strpos($tag, '<style id="dccgg-source-4645">') === 0 && substr($tag, -8) === '</style>', $tag);
+check('the rules survive the wrapping', strpos($tag, '--dccgg-tile-min:120px') !== false);
+// Two public guides on one page share a source: print it once, and keep the
+// element id unique while we are at it.
+$again = \DCCGG\Plugin::source_css_style_tag(4645, '.elementor-element.elementor-element-2afb24b .dccgg-menu{--dccgg-tile-min:120px;}');
+check('a second widget with the same source prints nothing', $again === '', $again);
+$other = \DCCGG\Plugin::source_css_style_tag(4646, '.x{color:red}');
+check('a different source still prints', strpos($other, 'dccgg-source-4646') !== false);
+check('nothing is emitted for empty CSS', \DCCGG\Plugin::source_css_style_tag(4647, '') === '');
+// A stylesheet ends at the first </style, wherever it appears.
+$hostile = \DCCGG\Plugin::source_css_style_tag(4648, '.a{color:red}</style><script>alert(1)</script>');
+check('a </style> sequence in the CSS cannot break out of the block',
+    stripos($hostile, '</style>') === strlen($hostile) - 8
+    && substr_count(strtolower($hostile), '</style>') === 1, $hostile);
+
+// The delivery mechanism itself, asserted over the source. This is a lint
+// rather than a behavioural test on purpose: the failure mode it guards is
+// "WordPress silently drops it", which produces no error to observe and no
+// output to measure — exactly why it shipped.
+$plugin = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-plugin.php');
+$render = strstr($plugin, 'public function render_source_guide');
+$render = $render === false ? '' : substr($render, 0, strpos($render, "\n    /** Source posts"));
+// Comments are stripped first: the method explains WHY it no longer uses that
+// function, and the explanation must not read as the thing it warns about.
+$renderCode = preg_replace('#^\s*//.*$#m', '', $render);
+check('render_source_guide() does not hand the scoped CSS to wp_add_inline_style',
+    $render !== '' && strpos($renderCode, 'wp_add_inline_style(') === false);
+check('render_source_guide() returns the style markup with the widget',
+    strpos($render, 'source_css_style_tag(') !== false
+    && preg_match('/return \$styles \. \(string\) ob_get_clean\(\);/', $render) === 1);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

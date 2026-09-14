@@ -1594,38 +1594,100 @@ async function run() {
             await ctx.close();
         }
 
-        // (m) The re-scoped source CSS must compute the SAME custom properties
-        // on a page whose Elementor wrapper id is different. The transform
-        // itself is asserted in tests/discovery.test.php; this is the other
-        // half — that its output actually applies where the guide is rendered.
+        // (m) The public guide must end up with the source guide's values ON
+        // THE PAGE. v0.16.0 failed here in production while every unit-level
+        // assertion passed: the re-scoping was right and the delivery was not —
+        // wp_add_inline_style() on a handle already printed in wp_head is
+        // discarded silently. So this asks PHP for the markup the plugin
+        // ACTUALLY emits, puts it in a page, and measures the result. A test
+        // that only calls the transform cannot see that class of bug.
         {
+            const { execFileSync } = require('child_process');
+            const os = require('os');
+            const cssFile = path.join(os.tmpdir(), 'dccgg-source-' + process.pid + '.css');
+            fs.writeFileSync(cssFile, [
+                '.elementor-4645 .elementor-element.elementor-element-2afb24b'
+                    + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}',
+                '@media(max-width:767px){.elementor-4645 .elementor-element.elementor-element-2afb24b'
+                    + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-grid-cols-mobile-tpl:repeat(2,1fr);}}',
+                '.elementor-4645{--page-padding:20px;}',
+            ].join('\n'));
+            const emit = (args = []) => execFileSync('php',
+                [path.join(__dirname, '_emit-source-css.php'), cssFile, '4645', '2afb24b', ...args],
+                { encoding: 'utf8' });
+            const emitted = emit();
+            const twice = emit(['--twice']);
+            fs.unlinkSync(cssFile);
+
+            check('(m) the plugin emits the scoped CSS as markup, not as a late enqueue',
+                emitted.startsWith('<style') && emitted.includes('--dccgg-tile-min:120px'),
+                emitted.slice(0, 80) || '(nothing emitted)');
+            check('(m) two public guides sharing a source print it once',
+                (twice.match(/id="dccgg-source-4645"/g) || []).length === 1,
+                `${(twice.match(/id="dccgg-source-4645"/g) || []).length} style blocks`);
+
             const ctx = await browser.newContext({ viewport: PHONE });
             const page = await ctx.newPage();
-            const SOURCE = '.elementor-4645 .elementor-element.elementor-element-2afb24b'
-                         + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}';
-            const RESCOPED = '.elementor-element.elementor-element-2afb24b'
-                         + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}';
-            const pageHtml = (extra) => `<!DOCTYPE html><html><head><meta charset="utf-8">
-                <style>${CSS}</style><style>${extra}</style></head><body>
+            page.on('pageerror', (e) => errors.push(String(e)));
+            // The host page's Elementor wrapper is a DIFFERENT post id — that
+            // difference is the whole bug.
+            const hostPage = (styleTag) => `<!DOCTYPE html><html><head><meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>${CSS}</style></head><body>
                 <div class="elementor elementor-18119">
                 <div class="elementor-element elementor-element-2afb24b">
+                ${styleTag}
                 <div class="dccgg-root"><div class="dccgg-wrapper"><div class="dccgg-stage-container">
                 ${menu(4)}</div></div></div></div></div></body></html>`;
             const read = () => page.evaluate(() => {
                 const m = document.querySelector('.dccgg-menu');
                 const cs = getComputedStyle(m);
                 return { tile: cs.getPropertyValue('--dccgg-tile-min').trim(),
-                         gap: cs.getPropertyValue('--dccgg-gap').trim() };
+                         gap: cs.getPropertyValue('--dccgg-gap').trim(),
+                         rules: document.querySelectorAll('style').length,
+                         names: document.documentElement.outerHTML
+                             .split('elementor-element-2afb24b').length - 1 };
             });
-            await page.setContent(pageHtml(SOURCE), { waitUntil: 'load' });
+
+            // Control: the source page's own stylesheet, unmodified, is what
+            // 0.15.0 shipped — present in the page and unable to match.
+            await page.setContent(hostPage(
+                '<style>.elementor-4645 .elementor-element.elementor-element-2afb24b'
+                + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}</style>'),
+                { waitUntil: 'load' });
             const before = await read();
-            await page.setContent(pageHtml(RESCOPED), { waitUntil: 'load' });
+            check('(m) control: the source-scoped CSS is present but cannot apply here',
+                before.tile !== '120px',
+                `--dccgg-tile-min=${before.tile || '(plugin default)'}`);
+
+            // Control: emitting nothing at all — which is what 0.16.0 did on
+            // the live site — must fail this assertion, not pass it.
+            await page.setContent(hostPage(''), { waitUntil: 'load' });
+            const none = await read();
+            check('(m) control: with nothing emitted the guide falls back to defaults',
+                none.tile !== '120px' && none.names >= 1,
+                `--dccgg-tile-min=${none.tile || '(plugin default)'}`);
+
+            await page.setContent(hostPage(emitted), { waitUntil: 'load' });
             const after = await read();
-            check('(m) control: the source-scoped CSS does NOT apply on another page',
-                before.tile !== '120px', `--dccgg-tile-min=${before.tile || '(plugin default)'}`);
-            check('(m) the re-scoped CSS gives the public guide the source guide\'s values',
+            check('(m) the rendered page carries a rule naming the re-rendered element',
+                after.names > 1, `${after.names} mentions of the element id`);
+            check('(m) and the public guide computes the source guide\'s values',
                 after.tile === '120px' && after.gap === '5px',
                 `--dccgg-tile-min=${after.tile} --dccgg-gap=${after.gap}`);
+
+            // The responsive value has to survive too — it is the one that
+            // decides whether the mobile menu is one column or two.
+            const cols = await page.evaluate(() => {
+                const m = document.querySelector('.dccgg-menu');
+                document.querySelector('.dccgg-root').classList.add('dccgg-layout-grid');
+                return { tpl: getComputedStyle(m).getPropertyValue('--dccgg-grid-cols-mobile-tpl').trim(),
+                         tracks: getComputedStyle(m).gridTemplateColumns.split(' ')
+                             .map(parseFloat).filter((w) => w > 0).length };
+            });
+            check('(m) the mobile column count comes across, so the menu is 2 columns',
+                cols.tpl === 'repeat(2,1fr)' && cols.tracks === 2,
+                `tpl="${cols.tpl}" tracks=${cols.tracks}`);
             await ctx.close();
         }
         check('no JS errors', errors.length === 0, errors[0]);

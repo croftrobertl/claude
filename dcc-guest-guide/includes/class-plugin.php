@@ -519,13 +519,24 @@ final class Plugin
         // what made it look like it was working.
         //
         // So: take that file's rules for THIS element, drop the source page's
-        // prefix, and inline them against our own handle. Only rules naming the
-        // element we are re-rendering come across; a page-wide rule from the
-        // source page's own page settings is deliberately left behind, since it
-        // was never about this widget and this is someone else's page.
-        $scoped = $this->source_element_css($post_id, (string) ($element['id'] ?? ''));
+        // prefix, and print them WITH the widget. Only rules naming the element
+        // we are re-rendering come across; a page-wide rule from the source
+        // page's own page settings is deliberately left behind, since it was
+        // never about this widget and this is someone else's page.
+        //
+        // v0.16.1: printed as a <style> in the returned markup, NOT via
+        // wp_add_inline_style(). This method runs while the body renders, by
+        // which time the 'dccgg-widget' stylesheet has already gone out in
+        // wp_head — and an inline style added to an already-printed handle is
+        // discarded silently. No error, no output, and the fallback below could
+        // not catch it either, because re-scoping had succeeded; only the
+        // delivery failed. A <style> in the body is valid HTML5, applies
+        // whenever it is printed, and does not depend on enqueue ordering at
+        // all, which is the point: ordering was the bug.
+        $styles = '';
+        $scoped  = $this->source_element_css($post_id, (string) ($element['id'] ?? ''));
         if ($scoped !== '') {
-            wp_add_inline_style('dccgg-widget', $scoped);
+            $styles = self::source_css_style_tag($post_id, $scoped);
         } elseif (class_exists('\Elementor\Core\Files\CSS\Post')) {
             // Could not read or re-scope it — fall back to the old behaviour so a
             // future Elementor change degrades to "no worse than before".
@@ -541,7 +552,28 @@ final class Plugin
 
         ob_start();
         $instance->print_element();
-        return (string) ob_get_clean();
+        return $styles . (string) ob_get_clean();
+    }
+
+    /** Source posts whose scoped CSS has already been printed this request. */
+    private static $printed_source_css = [];
+
+    /**
+     * Wrap re-scoped CSS in a <style> for printing alongside the widget.
+     * Returns '' when this source post's CSS has already been printed, so two
+     * public guides sharing one source emit it once and the id stays unique.
+     */
+    public static function source_css_style_tag(int $post_id, string $css): string
+    {
+        if ($css === '' || isset(self::$printed_source_css[$post_id])) {
+            return '';
+        }
+        self::$printed_source_css[$post_id] = true;
+        // A stylesheet ends at the first `</style`, wherever it appears — so the
+        // sequence is removed rather than escaped. Valid CSS never contains it,
+        // and a backslash escape would be read as a CSS escape, not an HTML one.
+        $css = preg_replace('#</\s*style#i', '', $css);
+        return '<style id="dccgg-source-' . $post_id . '">' . $css . '</style>';
     }
 
     /**
