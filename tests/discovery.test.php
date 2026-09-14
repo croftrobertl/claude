@@ -104,5 +104,50 @@ $GLOBALS['OPTIONS']['dccgg_guide_source_post'] = ['version' => DCCGG_VERSION, 'p
 $GLOBALS['TRANSIENTS'] = [];
 check('cached self-reference is re-resolved to the guide', $p->discover_guide_source(18119) === 4645);
 
+echo "\nE. Re-scoping the source page's Elementor CSS (v0.16.0)\n";
+// The public guide re-renders a widget that lives on another post, and the
+// host's style-control values are compiled into THAT post's stylesheet —
+// scoped to that post's wrapper:
+//
+//   .elementor-4645 .elementor-element.elementor-element-2afb24b … { --dccgg-tile-min:120px }
+//
+// Rendered on /explore/ the wrapper is .elementor-18119, so the selector
+// matches nothing and every configured value falls back to a plugin default.
+// Enqueueing the file (which is what the plugin used to do) puts the CSS in
+// the page but cannot make it apply — which is exactly why the bug looked
+// fixed. These assertions are about the transform that makes it real.
+$css = implode("\n", [
+    '.elementor-4645 .elementor-element.elementor-element-2afb24b .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}',
+    '@media(max-width:767px){.elementor-4645 .elementor-element.elementor-element-2afb24b .dccgg-root.dccgg-root .dccgg-menu{--dccgg-grid-cols-mobile-tpl:repeat(2,1fr);}}',
+    '@media(min-width:768px){.elementor-4645 .elementor-element.elementor-element-9999zzz .other{color:red;}}',
+    '.elementor-4645{--page-padding:20px;}',
+    '.elementor-4645 .elementor-element.elementor-element-9999zzz .other-widget{color:red;}',
+    '.elementor-46450 .elementor-element.elementor-element-2afb24b .dccgg-root{color:blue;}',
+    '@font-face{font-family:X;src:url(x.woff2);}',
+]);
+$scoped = \DCCGG\Plugin::rescope_element_css($css, 4645, '2afb24b');
+
+check('the configured values survive the transform',
+    strpos($scoped, '--dccgg-tile-min:120px') !== false && strpos($scoped, '--dccgg-gap:5px') !== false, $scoped);
+check('the source page prefix is stripped', strpos($scoped, '.elementor-4645 ') === false, $scoped);
+check('the element scope is kept, so the rule still targets this widget',
+    strpos($scoped, '.elementor-element-2afb24b') !== false);
+check('a responsive value survives inside its @media',
+    strpos($scoped, '@media(max-width:767px){') !== false
+    && strpos($scoped, '--dccgg-grid-cols-mobile-tpl') !== false);
+// The source page's own page-settings rules are NOT this widget's business,
+// and importing them would style someone else's page.
+check('a page-wide rule is not imported', strpos($scoped, '--page-padding') === false);
+check('another element\'s rule is not imported', strpos($scoped, 'other-widget') === false);
+check('an @media emptied by the filter is not emitted', strpos($scoped, '@media(min-width:768px)') === false);
+check('a lookalike page id (.elementor-46450) is neither matched nor mangled',
+    strpos($scoped, 'color:blue') === false);
+check('@font-face is left behind with the source page', strpos($scoped, '@font-face') === false);
+// Negative control: without the transform the same CSS is inert on any page
+// whose wrapper is not .elementor-4645 — this is the bug, asserted directly.
+check('control: the untransformed CSS is scoped to a wrapper the host page lacks',
+    strpos($css, '.elementor-4645 .elementor-element') !== false
+    && strpos($scoped, '.elementor-4645 .elementor-element') === false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

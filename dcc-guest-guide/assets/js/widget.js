@@ -253,7 +253,6 @@
         wireBack(root, config);
         wireReadMore(root, config);
         wireCopy(root, config);
-        wireQr(root, config);
         wireSearch(root, config);
         wireSearchMic(root, config);
         wireSecrets(root, config);
@@ -2215,7 +2214,7 @@
             if (e.key === 'Tab') {
                 // Modal Tab containment. The overlay blocks the pointer from
                 // the page behind, but nothing blocked the keyboard.
-                if (document.querySelector('.dccgg-qr-dialog:not([hidden]), .dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
+                if (document.querySelector('.dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
                 const focusables = Array.from(state.stage.querySelectorAll(
                     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
                 )).filter(el => el.getClientRects().length > 0);
@@ -2228,9 +2227,9 @@
                 return;
             }
             if (e.key !== 'Escape') return;
-            // Don't steal Escape from QR / lightbox / report dialogs that
+            // Don't steal Escape from the lightbox or report dialogs that
             // open on top of the detail modal.
-            if (document.querySelector('.dccgg-qr-dialog:not([hidden]), .dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
+            if (document.querySelector('.dccgg-lightbox[open], .dccgg-report-dialog[open]')) return;
             e.preventDefault();
             closeDetail(root);
         };
@@ -2338,7 +2337,14 @@
     }
     function flashCopied(btn, label) {
         const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> ' + (label || 'Copied!');
+        // v0.16.0: confirm with the check icon alone. "Copied!" is ~18px wider
+        // than "Copy", which was enough to wrap a credential row onto a second
+        // line at 360px for a second and a half — the row length, not the
+        // password, was the thing that broke. The word stays in the DOM inside
+        // .dccgg-sr-only so screen readers still announce the confirmation; it
+        // is simply taken out of layout rather than deleted.
+        btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>'
+            + '<span class="dccgg-sr-only">' + escHtml(label || 'Copied!') + '</span>';
         setTimeout(() => { btn.innerHTML = orig; }, 1500);
     }
 
@@ -2749,62 +2755,6 @@
 
     function slugify(s) {
         return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    }
-
-    // -- QR ----------------------------------------------------------------
-    function wireQr(root, config) {
-        const dialog  = root.querySelector('.dccgg-qr-dialog');
-        const overlay = root.querySelector('.dccgg-qr-overlay');
-        const title   = root.querySelector('.dccgg-qr-title');
-        const canvas  = root.querySelector('.dccgg-qr-canvas');
-        const caption = root.querySelector('.dccgg-qr-caption');
-        const close   = root.querySelector('.dccgg-qr-close');
-        if (!dialog) return;
-
-        const closeDlg = () => {
-            dialog.hidden = true;
-            overlay.hidden = true;
-            document.removeEventListener('keydown', escClose);
-        };
-        const escClose = (e) => { if (e.key === 'Escape') closeDlg(); };
-
-        root.querySelectorAll('.dccgg-qr').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const value = btn.dataset.qr || '';
-                if (!value) return;
-                title.textContent = btn.dataset.qrTitle || '';
-                caption.textContent = btn.dataset.qrCaption || value;
-                canvas.innerHTML = '';
-                canvas.appendChild(renderQrSvg(value));
-                // v0.9.7.23: when the FAB hub is an open top-layer <dialog>,
-                // a root-level sibling would paint BEHIND it no matter its
-                // z-index. Move the QR overlay + dialog inside the hub so
-                // they share its top-layer stacking context (position:fixed
-                // still resolves against the viewport — the open hub keeps
-                // transform:none).
-                const topDlg = root.querySelector('dialog.dccgg-wrapper[open]');
-                if (topDlg && !topDlg.contains(dialog)) {
-                    topDlg.appendChild(overlay);
-                    topDlg.appendChild(dialog);
-                }
-                overlay.hidden = false;
-                dialog.hidden = false;
-                document.addEventListener('keydown', escClose);
-                if (close) close.focus();
-            });
-        });
-        if (close) close.addEventListener('click', closeDlg);
-        if (overlay) overlay.addEventListener('click', closeDlg);
-    }
-    function renderQrSvg(value) {
-        const img = document.createElement('img');
-        img.alt = '';
-        img.width = 240;
-        img.height = 240;
-        img.loading = 'lazy';
-        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(value);
-        return img;
     }
 
     // -- Search normalization (v0.9.6) ------------------------------------

@@ -1122,30 +1122,13 @@ final class Widget extends Widget_Base
             'label'        => __('WiFi credentials mode', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'description'  => __('Adds a "Show WiFi QR" button on this item. Guests scan it with their phone camera to join the network. Password is taken from the "Value to copy" field above — turn on the Copy button and fill the password there.', 'dcc-guest-guide'),
+            'description'  => __('Renders this item as a Network / Password pair using the fields below, instead of plain body text. Combine with "Mask the value" so the password shows as dots with a Show button.', 'dcc-guest-guide'),
         ]);
         $repeater->add_control('wifi_ssid', [
             'label'       => __('Network name (SSID)', 'dcc-guest-guide'),
             'type'        => Controls_Manager::TEXT,
             'label_block' => true,
             'condition'   => ['item_wifi_mode' => 'yes'],
-        ]);
-        $repeater->add_control('wifi_security', [
-            'label'     => __('Security', 'dcc-guest-guide'),
-            'type'      => Controls_Manager::SELECT,
-            'default'   => 'WPA',
-            'options'   => [
-                'WPA'    => __('WPA / WPA2 / WPA3', 'dcc-guest-guide'),
-                'WEP'    => __('WEP', 'dcc-guest-guide'),
-                'nopass' => __('Open (no password)', 'dcc-guest-guide'),
-            ],
-            'condition' => ['item_wifi_mode' => 'yes'],
-        ]);
-        $repeater->add_control('wifi_hidden', [
-            'label'        => __('Hidden network', 'dcc-guest-guide'),
-            'type'         => Controls_Manager::SWITCHER,
-            'return_value' => 'yes',
-            'condition'    => ['item_wifi_mode' => 'yes'],
         ]);
 
         $repeater->add_control('media_type', [
@@ -1469,8 +1452,6 @@ final class Widget extends Widget_Base
             'str_directions'   => [__('Directions button', 'dcc-guest-guide'),  __('Directions', 'dcc-guest-guide')],
             'str_fab_open'     => [__('FAB tooltip / aria-label', 'dcc-guest-guide'), __('Open guest guide', 'dcc-guest-guide')],
             'str_fab_close'    => [__('FAB close aria-label', 'dcc-guest-guide'),     __('Close guide', 'dcc-guest-guide')],
-            'str_qr_close'     => [__('QR close aria-label', 'dcc-guest-guide'),      __('Close QR code', 'dcc-guest-guide')],
-            'str_wifi_qr'      => [__('WiFi QR button label', 'dcc-guest-guide'),    __('Show WiFi QR', 'dcc-guest-guide')],
             'str_prev_section' => [__('Previous-section aria-label', 'dcc-guest-guide'), __('Previous section', 'dcc-guest-guide')],
             'str_next_section' => [__('Next-section aria-label', 'dcc-guest-guide'),     __('Next section', 'dcc-guest-guide')],
             'str_wizard_prev'  => [__('Wizard back button', 'dcc-guest-guide'),  __('Back', 'dcc-guest-guide')],
@@ -3222,7 +3203,6 @@ final class Widget extends Widget_Base
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
                 'didYouMean'    => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
-                'qrClose'       => (string) ($s['str_qr_close'] ?? 'Close'),
                 'lightboxClose' => (string) ($s['str_lightbox_close'] ?? __('Close image', 'dcc-guest-guide')),
                 'lightboxPrev'  => (string) ($s['str_lightbox_prev']  ?? __('Previous image', 'dcc-guest-guide')),
                 'lightboxNext'  => (string) ($s['str_lightbox_next']  ?? __('Next image', 'dcc-guest-guide')),
@@ -3377,14 +3357,6 @@ final class Widget extends Widget_Base
                 <?php endif; ?>
             </<?php echo $wrapper_tag; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 
-            <?php // Shared dialogs portaled out of the widget at runtime. ?>
-            <div class="dccgg-qr-overlay" hidden></div>
-            <div class="dccgg-qr-dialog" role="dialog" aria-modal="true" aria-labelledby="dccgg-qr-title-<?php echo esc_attr($this->get_id()); ?>" hidden>
-                <button type="button" class="dccgg-qr-close" aria-label="<?php echo esc_attr($s['str_qr_close']); ?>">&times;</button>
-                <h3 id="dccgg-qr-title-<?php echo esc_attr($this->get_id()); ?>" class="dccgg-qr-title"></h3>
-                <div class="dccgg-qr-canvas" aria-hidden="true"></div>
-                <p class="dccgg-qr-caption"></p>
-            </div>
         </div>
         <?php
     }
@@ -3474,7 +3446,10 @@ final class Widget extends Widget_Base
                 </div>
             <?php endforeach; ?>
 
-            <?php if (empty($sections)) : ?>
+            <?php // v0.16.0: editors only. A logged-out guest was being told to "add
+        // sections in the widget panel" — the same mistake the sibling notice in
+        // class-plugin.php already avoids with this exact check. ?>
+        <?php if (empty($sections) && current_user_can('edit_posts')) : ?>
                 <p class="dccgg-empty-hint"><?php esc_html_e('Add sections in the widget panel to populate the guide.', 'dcc-guest-guide'); ?></p>
             <?php endif; ?>
         </div>
@@ -3850,11 +3825,6 @@ final class Widget extends Widget_Base
         $checkable      = $section_checklist || ($item['item_checkable'] ?? '') === 'yes';
         $wifi_on        = ($item['item_wifi_mode'] ?? '') === 'yes';
         $wifi_ssid      = trim((string) ($item['wifi_ssid'] ?? ''));
-        $wifi_security  = (string) ($item['wifi_security'] ?? 'WPA');
-        $wifi_hidden    = ($item['wifi_hidden'] ?? '') === 'yes';
-        $wifi_payload   = ($wifi_on && $wifi_ssid !== '')
-            ? self::wifi_qr_payload($wifi_ssid, $copy_val, $wifi_security, $wifi_hidden)
-            : '';
 
         // Auto-fold (v0.6): when the WYSIWYG word count exceeds the global
         // threshold, force read-more even when the per-item toggle is off.
@@ -4007,10 +3977,11 @@ final class Widget extends Widget_Base
                         <div class="dccgg-wifi-row">
                             <dt><?php echo esc_html($strings['str_wifi_network'] ?? __('Network', 'dcc-guest-guide')); ?>:</dt>
                             <dd>
+                                <?php // v0.16.0: no Copy beside the network name. A guest types
+                                // an SSID into a picker, they do not paste it, so the button was
+                                // a second identical control earning nothing. The password's
+                                // Show and Copy below are the two that carry their weight. ?>
                                 <span class="dccgg-wifi-ssid"><?php echo esc_html($wifi_ssid); ?></span>
-                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($wifi_ssid); ?>">
-                                    <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide')); ?>
-                                </button>
                             </dd>
                         </div>
                     <?php endif; ?>
@@ -4046,14 +4017,25 @@ final class Widget extends Widget_Base
                 </dl>
             <?php endif; ?>
 
-            <?php if ($map_on || $copy_on || $wifi_payload !== '') : ?>
+            <?php
+            // v0.16.0: work out what will actually render BEFORE deciding whether
+            // the row exists. The old condition tested $copy_on while the children
+            // tested $copy_on && $copy_val !== '' && !$wifi_creds, so a Wi-Fi item —
+            // where $wifi_creds is true and both copy children are suppressed —
+            // emitted an empty <div> that still carried margin-top: 12px. The QR
+            // button used to be the one child that condition was right about.
+            $show_map    = $map_on  && $map_url !== '';
+            $show_secret = $copy_on && $copy_val !== '' && $mask_on && !$wifi_creds;
+            $show_copy   = $copy_on && $copy_val !== '' && !$wifi_creds;
+            ?>
+            <?php if ($show_map || $show_secret || $show_copy) : ?>
                 <div class="dccgg-item-utils">
-                    <?php if ($map_on && $map_url !== '') : ?>
+                    <?php if ($show_map) : ?>
                         <a class="dccgg-btn dccgg-map" href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener">
                             <i class="fas fa-map-marker-alt" aria-hidden="true"></i> <?php echo esc_html($strings['str_directions']); ?>
                         </a>
                     <?php endif; ?>
-                    <?php if ($copy_on && $copy_val !== '' && $mask_on && !$wifi_creds) : ?>
+                    <?php if ($show_secret) : ?>
                         <?php // v0.12.2: the value is never rendered as text — it rides in a
                         // data attribute and the dots/plain text come from CSS ::before, so
                         // a screenshot of the unrevealed state shows nothing. Print reveals
@@ -4071,7 +4053,7 @@ final class Widget extends Widget_Base
                             </button>
                         </span>
                     <?php endif; ?>
-                    <?php if ($copy_on && $copy_val !== '' && !$wifi_creds) : ?>
+                    <?php if ($show_copy) : ?>
                         <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php
                             // Beside a masked value the row already reads "Password:", so use
@@ -4079,14 +4061,6 @@ final class Widget extends Widget_Base
                             echo esc_html($mask_on
                                 ? ($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide'))
                                 : $strings['str_copy']); ?>
-                        </button>
-                    <?php endif; ?>
-                    <?php if ($wifi_payload !== '') : ?>
-                        <button type="button" class="dccgg-btn dccgg-qr dccgg-qr--wifi"
-                                data-qr="<?php echo esc_attr($wifi_payload); ?>"
-                                data-qr-title="<?php echo esc_attr(sprintf(/* translators: %s: WiFi network name */ __('Join WiFi: %s', 'dcc-guest-guide'), $wifi_ssid)); ?>"
-                                data-qr-caption="<?php echo esc_attr($wifi_ssid . ($copy_val !== '' && $wifi_security !== 'nopass' ? '  ·  ' . sprintf(/* translators: %s: WiFi password */ __('Password: %s', 'dcc-guest-guide'), $copy_val) : '')); ?>">
-                            <i class="fas fa-wifi" aria-hidden="true"></i> <?php echo esc_html($strings['str_wifi_qr'] ?? __('Show WiFi QR', 'dcc-guest-guide')); ?>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -4583,21 +4557,6 @@ final class Widget extends Widget_Base
         return $by_image;
     }
 
-    public static function wifi_qr_payload(string $ssid, string $password, string $security, bool $hidden): string
-    {
-        $escape = static function (string $v): string {
-            return preg_replace('/([\\\\;,":])/', '\\\\$1', $v);
-        };
-        $security = in_array($security, ['WPA', 'WEP', 'nopass'], true) ? $security : 'WPA';
-        $parts = ['T:' . $security, 'S:' . $escape($ssid)];
-        if ($security !== 'nopass' && $password !== '') {
-            $parts[] = 'P:' . $escape($password);
-        }
-        if ($hidden) {
-            $parts[] = 'H:true';
-        }
-        return 'WIFI:' . implode(';', $parts) . ';;';
-    }
 
     private static function render_template(int $template_id): string
     {

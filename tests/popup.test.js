@@ -775,7 +775,13 @@ async function run() {
             const r = b.getBoundingClientRect();
             return { h: r.height, w: r.width, label: b.textContent.trim() };
         });
-        check('reveal toggle is a 44px labelled target', tog.h >= 44 && tog.w >= 44 && tog.label.length > 1,
+        // v0.16.0: was 44px (WCAG 2.5.5, AAA). The host asked for the credential
+        // controls to be visibly smaller than Back so the card stops looking
+        // busy, and approved ~38px on the live site, so the AAA target is
+        // deliberately given up here. 24px is the AA floor (WCAG 2.5.8) and
+        // this assertion holds that line — it must not drift lower by accident.
+        check('reveal toggle clears the 24px AA target and is labelled',
+            tog.h >= 24 && tog.w >= 24 && tog.label.length > 1,
             `${tog.w.toFixed(0)}x${tog.h.toFixed(0)} "${tog.label}"`);
         const selectable = await page3.evaluate(() => {
             const v = document.querySelector('.dccgg-secret-value');
@@ -986,8 +992,15 @@ async function run() {
             return { par: g(document.querySelector('.dccgg-item-body p.ref')),
                      val: g(document.querySelector('.dccgg-secret-value')) };
         });
-        check('a revealed password matches a paragraph exactly',
-            JSON.stringify(type.par) === JSON.stringify(type.val),
+        // v0.16.0 supersedes part of 0.13.0's acceptance: the revealed value is
+        // 0.75em, not body size, because "Password: <value> [Show] [Copy]" has
+        // to survive on ONE line at 360px. Everything else still has to match a
+        // paragraph — the original complaint was that the value read as a third
+        // button, and family/weight/colour are what carried that.
+        check('a revealed password still reads as body copy, one notch smaller',
+            type.val.family === type.par.family && type.val.weight === type.par.weight
+            && type.val.color === type.par.color
+            && parseFloat(type.val.size) < parseFloat(type.par.size),
             `${JSON.stringify(type.val)} vs ${JSON.stringify(type.par)}`);
         let st = await state();
         check('revealing shows the value and flips the label',
@@ -1135,17 +1148,37 @@ async function run() {
                 return { ref, btns, drop,
                          docScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
                          overflowing,
-                         wrapped: btns.filter((b) => b.h > parseFloat(b.lh) * 1.6).map((b) => b.label) };
+                         wrapped: [...document.querySelectorAll(sel)]
+                             .filter((el) => el.offsetParent !== null)
+                             .filter((el) => { const rg = document.createRange();
+                                 rg.selectNodeContents(el);
+                                 return rg.getClientRects().length > 1; })
+                             .map((el) => el.textContent.trim().slice(0, 18)) };
             });
-            const spec = ['family', 'size', 'weight', 'lh', 'ls', 'tt', 'color', 'bg', 'bw', 'radius', 'shadow'];
-            const off = m.btns.filter((b) => spec.some((k) => b[k] !== m.ref[k]));
+            // v0.16.0: Show/Hide, the Copy beside a secret, and the checklist
+            // Reset are deliberately smaller than the reference — the host asked
+            // for them to be differentiated from Back. They keep every other
+            // property of the spec, so size and line-height come out of the
+            // comparison for those three only, and are checked below instead.
+            const SMALLER = ['Show', 'Hide', 'Copy', 'Reset'];
+            const isSmall = (b) => SMALLER.includes(b.label) && b.h < 50;
+            const spec = ['family', 'weight', 'ls', 'tt', 'color', 'bg', 'bw', 'radius', 'shadow'];
+            const sized = ['size', 'lh'];
+            const off = m.btns.filter((b) => spec.some((k) => b[k] !== m.ref[k])
+                || (!isSmall(b) && sized.some((k) => b[k] !== m.ref[k])));
             check(`${vpName}: every action button matches the reference (${m.btns.length} measured)`,
                 m.btns.length >= 12 && off.length === 0,
                 off.map((b) => b.label + ': ' + spec.filter((k) => b[k] !== m.ref[k])
                     .map((k) => `${k}=${b[k]}≠${m.ref[k]}`).join(',')).join(' | '));
-            check(`${vpName}: height is the reference 50px, width follows content`,
-                m.btns.every((b) => b.h === 50) && new Set(m.btns.map((b) => b.w)).size > 1,
+            check(`${vpName}: full-size buttons are 50px, width follows content`,
+                m.btns.filter((b) => !isSmall(b)).every((b) => b.h === 50)
+                && new Set(m.btns.map((b) => b.w)).size > 1,
                 m.btns.map((b) => `${b.label}=${b.w}x${b.h}`).join(' '));
+            const small = m.btns.filter(isSmall);
+            check(`${vpName}: the credential controls are smaller than Back, and equal to each other`,
+                small.length >= 2 && small.every((b) => b.h >= 24 && b.h < 50)
+                && new Set(small.filter((b) => b.label !== 'Reset').map((b) => b.h)).size === 1,
+                small.map((b) => `${b.label}=${b.w}x${b.h}`).join(' '));
             check(`${vpName}: nothing overflows and no label wraps`,
                 !m.docScroll && m.overflowing === 0 && m.wrapped.length === 0,
                 `docScroll=${m.docScroll} overflowing=${m.overflowing} wrapped=${JSON.stringify(m.wrapped)}`);
@@ -1318,6 +1351,281 @@ async function run() {
                 && m.popover.padding === '6px' && m.popover.minWidth === '180px'
                 && m.popover.gap === '2px' && m.popover.shadow !== 'none',
                 JSON.stringify(m.popover));
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
+
+    // ---- Scenario Q: v0.16.0 — the live look becomes the default ---------
+    {
+        console.log('\nQ. Credential row, theme immunity, menu tracks, copied state');
+        const errors = [];
+        // The kit that ships on this host. The coral button rule is the one
+        // that washed behind the plain icon buttons; it also sets color:#FFF,
+        // which is the trap — clearing only the background leaves white icons
+        // on a white card.
+        const KIT = `
+            body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0}
+            .elementor-kit-331 button:hover,.elementor-kit-331 button:focus,
+            .elementor-kit-331 button:active{background-color:#F08080;color:#FFFFFF;
+              border-radius:30px 30px 30px 30px;}
+            .elementor-kit-331 button{line-height:50px;}`;
+        const creds = `<dl class="dccgg-wifi-creds">
+            <div class="dccgg-wifi-row"><dt>Network:</dt><dd>
+              <span class="dccgg-wifi-ssid">topoftheworld</span></dd></div>
+            <div class="dccgg-wifi-row"><dt>Password:</dt><dd>
+              <span class="dccgg-secret">
+                <span class="dccgg-secret-value" data-secret-value="DCC32586x9"></span>
+                <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
+                        data-label-show="Show" data-label-hide="Hide">Show</button></span>
+              <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline"
+                      data-copy="DCC32586x9">Copy</button></dd></div></dl>`;
+        const menu = (n) => `<div class="dccgg-menu">${
+            Array.from({ length: n }, (_, i) =>
+                `<div class="dccgg-tile-wrap" data-section-key="s${i}">
+                 <button class="dccgg-tile" data-key="s${i}">Section ${i}</button></div>`).join('')}</div>`;
+        const htmlQ = (bodyExtra = '') => `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style><style>${KIT}</style></head>
+            <body class="elementor-kit-331">
+            <div class="dccgg-root" data-config='{"revealMode":"stage","strings":{"copied":"Copied!"}}'>
+            <div class="dccgg-wrapper"><div class="dccgg-stage-container">${menu(4)}
+            <div class="dccgg-stage"><div class="dccgg-detail" data-key="s0" hidden>
+            <span class="dccgg-shrink-sentinel"></span>
+            <div class="dccgg-detail-header"><div class="dccgg-detail-header-actions">
+            <button type="button" class="dccgg-btn dccgg-back">Back</button></div></div>
+            <div class="dccgg-detail-layout"><div class="dccgg-detail-items">
+            <article class="dccgg-item">
+            <h3 class="dccgg-item-title">
+              <button class="dccgg-item-check" aria-pressed="false"><span class="dccgg-item-check-box"></span></button>
+              <span class="dccgg-item-title-text">Cottage Wi-Fi</span>
+              <button class="dccgg-item-tts" aria-pressed="false">🔊</button>
+              <button class="dccgg-item-report">⚑</button></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Join the network.</p></div></div>
+            ${creds}</article></div></div></div></div>
+            <div class="dccgg-detail-overlay" hidden></div></div></div>${bodyExtra}
+            <script>${JS}</script></body></html>`;
+
+        // (7) One centred row at 360px — and it must STAY one row when the
+        // value is revealed, which is where the old two-column grid gave up.
+        {
+            const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(htmlQ(), { waitUntil: 'load' });
+            await page.click('.dccgg-tile[data-key="s0"]');
+            await page.waitForTimeout(500);
+            const rowTops = () => page.evaluate(() => {
+                const row = document.querySelectorAll('.dccgg-wifi-row')[1];
+                const kids = [row.querySelector('dt'), row.querySelector('.dccgg-secret-value'),
+                              row.querySelector('.dccgg-secret-toggle'), row.querySelector('.dccgg-copy')]
+                    .filter((el) => el && el.getBoundingClientRect().width > 0);
+                // Centres, not tops: a 19px label and a 35px button sitting on
+                // the same centred row have different tops by design.
+                const mids = kids.map((el) => { const r = el.getBoundingClientRect();
+                    return Math.round((r.top + r.bottom) / 2); });
+                const lines = mids.filter((m, i) => mids.findIndex((n) => Math.abs(n - m) <= 6) === i).length;
+                const r = row.getBoundingClientRect();
+                return { lines, count: kids.length, height: Math.round(r.height),
+                         overflow: r.right > document.documentElement.clientWidth + 0.5,
+                         labels: kids.map((el) => el.className || el.tagName) };
+            });
+            const masked = await rowTops();
+            check('360px: label, value and both buttons sit on one row',
+                masked.lines === 1 && masked.count === 4 && !masked.overflow,
+                `${masked.lines} line(s) of ${masked.count} controls ${JSON.stringify(masked.labels)}`);
+            await page.click('.dccgg-secret-toggle');
+            await page.waitForTimeout(150);
+            const revealed = await rowTops();
+            check('360px: revealing the password does NOT push it onto a second row',
+                revealed.lines === 1 && !revealed.overflow
+                && revealed.height <= masked.height + 2,
+                `${revealed.lines} line(s), ${masked.height}px -> ${revealed.height}px`);
+
+            // (o) The copied confirmation must not lengthen the row, and the
+            // word must still reach a screen reader.
+            const restW = await page.$eval('.dccgg-copy', (b) => Math.round(b.getBoundingClientRect().width));
+            await page.click('.dccgg-copy');
+            await page.waitForTimeout(120);
+            const copied = await page.evaluate(() => {
+                const b = document.querySelector('.dccgg-copy');
+                const sr = b.querySelector('.dccgg-sr-only');
+                const row = document.querySelectorAll('.dccgg-wifi-row')[1];
+                const kids = [row.querySelector('dt'), ...row.querySelectorAll('dd > *, .dccgg-secret > *')]
+                    .filter((el) => el && el.getBoundingClientRect().width > 0);
+                const mids = kids.map((el) => { const r = el.getBoundingClientRect();
+                    return Math.round((r.top + r.bottom) / 2); });
+                return { w: Math.round(b.getBoundingClientRect().width),
+                         srText: sr ? sr.textContent : null,
+                         srWidth: sr ? Math.round(sr.getBoundingClientRect().width) : -1,
+                         hidden: sr ? sr.getAttribute('aria-hidden') : 'missing',
+                         geom: kids.map((el) => { const r = el.getBoundingClientRect();
+                             return `${(el.className || el.tagName).split(' ').pop()}:${Math.round(r.left)}-${Math.round(r.right)}@${Math.round((r.top + r.bottom) / 2)}`; }).join(' '),
+                         lines: mids.filter((m, i) => mids.findIndex((n) => Math.abs(n - m) <= 6) === i).length };
+            });
+            check('(o) the copied state never widens the button',
+                copied.w <= restW, `${restW}px -> ${copied.w}px`);
+            check('(o) the row still does not wrap while confirming', copied.lines === 1, copied.geom);
+            check('(o) the confirmation text stays in the accessibility tree',
+                copied.srText === 'Copied!' && copied.hidden !== 'true' && copied.srWidth <= 1,
+                `"${copied.srText}" hidden=${copied.hidden} width=${copied.srWidth}`);
+            await ctx.close();
+        }
+
+        // (10) The kit must not paint the plain icon buttons — and must not
+        // leave them white on white either.
+        {
+            const ctx = await browser.newContext({ viewport: DESKTOP });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(htmlQ(), { waitUntil: 'load' });
+            await page.click('.dccgg-tile[data-key="s0"]');
+            await page.waitForTimeout(500);
+            const probe = [];
+            for (const sel of ['.dccgg-item-check', '.dccgg-item-tts', '.dccgg-item-report']) {
+                const el = await page.$(sel);
+                await el.hover();
+                await page.waitForTimeout(200);
+                probe.push({ sel, ...await page.evaluate((e) => {
+                    const c = getComputedStyle(e);
+                    return { bg: c.backgroundColor, color: c.color };
+                }, el) });
+            }
+            check('no host-theme coral washes behind the plain buttons on hover',
+                probe.every((p) => p.bg !== 'rgb(240, 128, 128)'),
+                probe.map((p) => `${p.sel}=${p.bg}`).join(' '));
+            check('and none of them is left white on a white card',
+                probe.every((p) => p.color !== 'rgb(255, 255, 255)'),
+                probe.map((p) => `${p.sel}=${p.color}`).join(' '));
+            // A key press first: after a click the interaction modality is
+            // "mouse" and a programmatic focus() does not match :focus-visible.
+            await page.keyboard.press('Tab');
+            const ring = await page.evaluate(() => {
+                const el = document.querySelector('.dccgg-item-tts');
+                el.focus();
+                const c = getComputedStyle(el);
+                return { w: c.outlineWidth, style: c.outlineStyle, fv: el.matches(':focus-visible') };
+            });
+            check('keyboard focus is still visible on them without the coral fill',
+                ring.fv && ring.style !== 'none' && parseFloat(ring.w) >= 2,
+                `${ring.w} ${ring.style} focus-visible=${ring.fv}`);
+            await ctx.close();
+        }
+
+        // (n) auto-fit: four tiles in a container wide enough for five tracks.
+        {
+            const ctx = await browser.newContext({ viewport: DESKTOP });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(htmlQ(), { waitUntil: 'load' });
+            const tracks = await page.evaluate(() => {
+                const m = document.querySelector('.dccgg-menu');
+                document.querySelector('.dccgg-root').classList.add('dccgg-layout-grid');
+                m.style.width = '1200px';   // fits 5 x 200px tracks + 4 x 20px gaps
+                // auto-fit does not omit the track it collapses — it reports it
+                // as 0px — so "no empty track" means no NON-ZERO spare one.
+                const cols = getComputedStyle(m).gridTemplateColumns.split(' ')
+                    .map(parseFloat).filter((w) => w > 0);
+                const widths = [...document.querySelectorAll('.dccgg-tile-wrap')]
+                    .map((t) => Math.round(t.getBoundingClientRect().width));
+                return { cols, widths };
+            });
+            check('(n) 4 tiles in a 5-track container render 4 equal tracks, no empty one',
+                tracks.cols.length === 4 && new Set(tracks.widths).size === 1,
+                `${tracks.cols.length} tracks, widths ${JSON.stringify(tracks.widths)}`);
+            // The real question is not "how many tracks" — that depends on the
+            // container and the gap — but "does auto-fit change anything for a
+            // menu that fills its row". So compare the two directly.
+            const ab = await page.evaluate(() => {
+                const wrap = document.querySelector('.dccgg-menu');
+                const count = () => getComputedStyle(wrap).gridTemplateColumns.split(' ')
+                    .map(parseFloat).filter((w) => w > 0).length;
+                const fitFour = count();
+                wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr))';
+                const fillFour = count();
+                wrap.style.removeProperty('grid-template-columns');
+                for (let i = 4; i < 8; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'dccgg-tile-wrap';
+                    d.innerHTML = '<button class="dccgg-tile">x</button>';
+                    wrap.appendChild(d);
+                }
+                const fitEight = count();
+                wrap.style.gridTemplateColumns = 'repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr))';
+                const fillEight = count();
+                return { fitFour, fillFour, fitEight, fillEight };
+            });
+            check('(n) auto-fit drops the empty track that auto-fill kept',
+                ab.fitFour === 4 && ab.fillFour > ab.fitFour,
+                `4 tiles: auto-fit ${ab.fitFour} tracks vs auto-fill ${ab.fillFour}`);
+            check('(n) a menu that fills every track is bit-for-bit unaffected',
+                ab.fitEight === ab.fillEight,
+                `8 tiles: auto-fit ${ab.fitEight} tracks vs auto-fill ${ab.fillEight}`);
+            await ctx.close();
+        }
+
+        // (l) Escape must still belong to the lightbox and the report dialog.
+        // The QR selector came out of those guards; the other two had to stay.
+        {
+            const ctx = await browser.newContext({ viewport: DESKTOP });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(htmlQ(
+                '<dialog class="dccgg-lightbox"></dialog><dialog class="dccgg-report-dialog"></dialog>'),
+                { waitUntil: 'load' });
+            const guards = await page.evaluate(() => {
+                const lb = document.querySelector('.dccgg-lightbox');
+                const rd = document.querySelector('.dccgg-report-dialog');
+                lb.showModal();
+                const lbSeen = !!document.querySelector('.dccgg-lightbox[open], .dccgg-report-dialog[open]');
+                lb.close(); rd.showModal();
+                const rdSeen = !!document.querySelector('.dccgg-lightbox[open], .dccgg-report-dialog[open]');
+                rd.close();
+                const none = !!document.querySelector('.dccgg-lightbox[open], .dccgg-report-dialog[open]');
+                return { lbSeen, rdSeen, none };
+            });
+            check('(l) the Escape guard still sees an open lightbox and report dialog',
+                guards.lbSeen && guards.rdSeen && !guards.none);
+            const src = JS;
+            check('(l) and the guard no longer mentions the removed QR dialog',
+                !src.includes('.dccgg-qr-dialog') && (src.match(/dccgg-lightbox\[open\]/g) || []).length >= 2,
+                `lightbox guards: ${(src.match(/dccgg-lightbox\[open\]/g) || []).length}`);
+            await ctx.close();
+        }
+
+        // (m) The re-scoped source CSS must compute the SAME custom properties
+        // on a page whose Elementor wrapper id is different. The transform
+        // itself is asserted in tests/discovery.test.php; this is the other
+        // half — that its output actually applies where the guide is rendered.
+        {
+            const ctx = await browser.newContext({ viewport: PHONE });
+            const page = await ctx.newPage();
+            const SOURCE = '.elementor-4645 .elementor-element.elementor-element-2afb24b'
+                         + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}';
+            const RESCOPED = '.elementor-element.elementor-element-2afb24b'
+                         + ' .dccgg-root.dccgg-root .dccgg-menu{--dccgg-gap:5px;--dccgg-tile-min:120px;}';
+            const pageHtml = (extra) => `<!DOCTYPE html><html><head><meta charset="utf-8">
+                <style>${CSS}</style><style>${extra}</style></head><body>
+                <div class="elementor elementor-18119">
+                <div class="elementor-element elementor-element-2afb24b">
+                <div class="dccgg-root"><div class="dccgg-wrapper"><div class="dccgg-stage-container">
+                ${menu(4)}</div></div></div></div></div></body></html>`;
+            const read = () => page.evaluate(() => {
+                const m = document.querySelector('.dccgg-menu');
+                const cs = getComputedStyle(m);
+                return { tile: cs.getPropertyValue('--dccgg-tile-min').trim(),
+                         gap: cs.getPropertyValue('--dccgg-gap').trim() };
+            });
+            await page.setContent(pageHtml(SOURCE), { waitUntil: 'load' });
+            const before = await read();
+            await page.setContent(pageHtml(RESCOPED), { waitUntil: 'load' });
+            const after = await read();
+            check('(m) control: the source-scoped CSS does NOT apply on another page',
+                before.tile !== '120px', `--dccgg-tile-min=${before.tile || '(plugin default)'}`);
+            check('(m) the re-scoped CSS gives the public guide the source guide\'s values',
+                after.tile === '120px' && after.gap === '5px',
+                `--dccgg-tile-min=${after.tile} --dccgg-gap=${after.gap}`);
             await ctx.close();
         }
         check('no JS errors', errors.length === 0, errors[0]);

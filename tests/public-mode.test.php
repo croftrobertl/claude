@@ -368,9 +368,12 @@ preg_match('/<button\b[^>]*dccgg-secret-toggle[^>]*>/', $outWifi, $tag);
 check('wifi row: reveal toggle is a disclosure, collapsed',
     !empty($tag) && strpos($tag[0], 'aria-expanded="false"') !== false
     && strpos($tag[0], 'aria-pressed') === false, $tag[0] ?? 'no toggle rendered');
+// v0.16.0: ONE copy button on a Wi-Fi card, not two. The network name lost
+// its Copy (a guest types an SSID into a picker, they do not paste it); the
+// password's Show and Copy are the pair that earn their place.
 check('wifi row: reveal toggle carries the same .dccgg-btn treatment as Copy',
     substr_count($outWifi, 'dccgg-btn dccgg-secret-toggle') === 1
-    && substr_count($outWifi, 'dccgg-btn dccgg-copy') === 2);
+    && substr_count($outWifi, 'dccgg-btn dccgg-copy') === 1);
 
 // The same contract for an item that masks a value WITHOUT Wi-Fi mode: this
 // path renders a standalone chip and needed its own "Password:" label.
@@ -390,6 +393,124 @@ $plain = $maskedChip; unset($plain['item_mask_value']);
 $txtPlain = $visibleText($render($plain, $strs));
 check('control: unmasked keeps the host label and shows nothing masked',
     strpos($txtPlain, 'Copy Password') !== false && strpos($txtPlain, 'Password:') === false, $txtPlain);
+
+
+echo "\nO. v0.16.0 — the QR is gone, and nothing it propped up went with it\n";
+// The QR button sent the network name and the PLAINTEXT password to a third
+// party (api.qrserver.com) in a URL query string, which is logged by default
+// across the path. It is deleted, not switched off. These assertions are the
+// standing guard that it does not come back, and — more importantly — that
+// removing it did not take the masked credential pair with it.
+
+$wifiItem = ['item_section' => 'internet', 'item_title' => 'Cottage Wi-Fi',
+    'item_content' => '<p>Join the cottage network.</p>',
+    'item_copy' => 'yes', 'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes',
+    'item_wifi_mode' => 'yes', 'wifi_ssid' => 'topoftheworld'];
+$out  = $render($wifiItem, $strs);
+$text = $visibleText($out);
+
+check('(a) no QR element of any kind',
+    !preg_match('/dccgg-qr(-dialog|-overlay|--wifi)?\b/', $out), $out);
+check('(b) no data-qr attribute of any kind',
+    strpos($out, 'data-qr') === false);
+check('(c) the string "WIFI:" appears nowhere', strpos($out, 'WIFI:') === false);
+check('(e) no Copy beside the network name',
+    substr_count($out, 'data-copy="topoftheworld"') === 0);
+check('(e) the SSID still renders as text',
+    strpos($out, '<span class="dccgg-wifi-ssid">topoftheworld</span>') !== false
+    && strpos($text, 'topoftheworld') !== false);
+check('(f) the password row is unchanged: masked value + Show/Hide + Copy',
+    substr_count($out, 'dccgg-secret-value') === 1
+    && substr_count($out, 'dccgg-secret-toggle') === 1
+    && substr_count($out, 'data-copy="DCC32586"') === 1
+    && strpos($out, 'data-label-hide="Hide"') !== false);
+// (g) the password may exist ONLY in the two attributes that feed Copy and
+// the reveal. Count every occurrence in the whole string, then subtract those.
+$total  = substr_count($out, 'DCC32586');
+$inAttr = substr_count($out, 'data-copy="DCC32586"') + substr_count($out, 'data-secret-value="DCC32586"');
+check('(g) the password appears ONLY in data-copy and data-secret-value',
+    $total === 2 && $inAttr === 2 && strpos($text, 'DCC32586') === false,
+    "occurrences=$total inAttr=$inAttr");
+check('(h) no empty .dccgg-item-utils is emitted',
+    !preg_match('/<div class="dccgg-item-utils">\s*<\/div>/', $out),
+    preg_match('/<div class="dccgg-item-utils">.{0,60}/s', $out, $m) ? $m[0] : 'absent');
+check('(j) LANDMINE: wifi mode + mask still renders both credential rows',
+    substr_count($out, 'dccgg-wifi-creds') === 1
+    && substr_count($out, 'dccgg-wifi-row') === 2
+    && strpos($text, 'Network:') !== false && strpos($text, 'Password:') !== false, $text);
+
+// (i) An item that masks a value WITHOUT Wi-Fi mode keeps the fallback row.
+// This is the path that would silently disappear if the container gating were
+// tightened one step too far.
+$maskOnly = $wifiItem; unset($maskOnly['item_wifi_mode'], $maskOnly['wifi_ssid']);
+$outMask  = $render($maskOnly, $strs);
+check('(i) masked WITHOUT wifi mode still renders the fallback secret + copy',
+    strpos($outMask, 'dccgg-item-utils') !== false
+    && substr_count($outMask, 'dccgg-secret-toggle') === 1
+    && substr_count($outMask, 'data-copy="DCC32586"') === 1
+    && strpos($outMask, 'dccgg-wifi-creds') === false);
+check('(g) and its password is still only in attributes',
+    strpos($visibleText($outMask), 'DCC32586') === false);
+
+// (h) again, from the other side: an item with a copy value in Wi-Fi mode used
+// to emit the utils row purely because the QR lived in it. And an item with
+// the map switch on but no URL is the same latent shape.
+$mapNoUrl = ['item_section' => 'amenities', 'item_title' => 'Boat lift',
+    'item_content' => '<p>Body.</p>', 'item_map' => 'yes', 'item_map_url' => ''];
+check('(h) map switch on with no URL emits no empty utils row',
+    strpos($render($mapNoUrl, $strs), 'dccgg-item-utils') === false);
+$plain = ['item_section' => 'amenities', 'item_title' => 'Plain', 'item_content' => '<p>Body.</p>'];
+check('(h) a plain item emits no utils row at all',
+    strpos($render($plain, $strs), 'dccgg-item-utils') === false);
+// Positive control: the row still appears when something belongs in it.
+$copyItem = ['item_section' => 'amenities', 'item_title' => 'Gate code',
+    'item_content' => '<p>Body.</p>', 'item_copy' => 'yes', 'item_copy_value' => '4192'];
+check('(h) control: an item with a copy value DOES get the utils row',
+    strpos($render($copyItem, $strs), 'dccgg-item-utils') !== false);
+
+echo "\nP. Editor-facing strings never reach a visitor\n";
+// (d) and (k) are properties of the shipped files, so they are checked against
+// the files rather than one render at a time.
+$shipped = [];
+foreach (['includes/class-widget.php', 'includes/class-widget-public.php', 'includes/class-plugin.php',
+          'assets/js/widget.js', 'assets/css/widget.css',
+          'assets/js/widget.min.js', 'assets/css/widget.min.css'] as $rel) {
+    $f = __DIR__ . '/../dcc-guest-guide/' . $rel;
+    if (is_file($f)) { $shipped[$rel] = (string) file_get_contents($f); }
+}
+$hits = [];
+foreach ($shipped as $rel => $body) {
+    if (stripos($body, 'qrserver') !== false) { $hits[] = $rel; }
+}
+check('(d) "qrserver" appears in no shipped PHP, JS or CSS file',
+    empty($hits), implode(', ', $hits));
+$wifiHits = [];
+foreach ($shipped as $rel => $body) {
+    if (strpos($body, 'WIFI:') !== false) { $wifiHits[] = $rel; }
+}
+check('(d) no WIFI: payload builder survives in any shipped file',
+    empty($wifiHits), implode(', ', $wifiHits));
+
+// (k) Every editor-intended string must sit behind a capability check. Asserted
+// over the source because the alternative — rendering as two different users —
+// needs a WordPress far larger than this harness. A new editor string added
+// without a guard fails here.
+$editorStrings = ['Add sections in the widget panel', 'Point the Source setting'];
+$ungated = [];
+foreach (['includes/class-widget.php', 'includes/class-plugin.php'] as $rel) {
+    $lines = explode("\n", $shipped[$rel]);
+    foreach ($lines as $i => $line) {
+        foreach ($editorStrings as $needle) {
+            if (strpos($line, $needle) === false) { continue; }
+            $window = implode("\n", array_slice($lines, max(0, $i - 6), 7));
+            if (strpos($window, "current_user_can('edit_posts')") === false) {
+                $ungated[] = $rel . ':' . ($i + 1);
+            }
+        }
+    }
+}
+check('(k) every editor-facing string is behind current_user_can(edit_posts)',
+    empty($ungated), implode(', ', $ungated));
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

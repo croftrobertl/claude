@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.15.0
+Stable tag: 0.16.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,56 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.16.0 =
+
+**Removed: the "Show WiFi QR" button, permanently.**
+
+Tapping it sent the network name and the password in plain text to a
+third-party QR service (api.qrserver.com) in a URL — the part of a request
+that servers and proxies log by default. The QR was never generated on this
+site. It is deleted rather than switched off, along with the Security and
+Hidden-network fields that existed only to build that payload.
+
+Wi-Fi mode itself is unchanged and still required: it is what renders the
+masked Network / Password pair. Its description used to describe only the QR
+button, which was wrong and made it look optional.
+
+**Removed: the Copy button beside the network name.** A guest picks the
+network from a list rather than pasting it. The password's Show and Copy
+remain.
+
+**Fixed: an empty box under every Wi-Fi card.** The row of buttons decided
+whether to exist using a different test than its buttons used to decide
+whether to appear, so a Wi-Fi item drew an empty 12px-tall row. The same
+applied to an item with directions switched on but no address.
+
+**Fixed: visitors could be shown an editor instruction.** A guide with no
+visible sections told everyone to "add sections in the widget panel". Now
+only logged-in editors see it.
+
+**Fixed: the public guide ignored every style setting.** It re-renders the
+guide from another page, and the settings for that guide are compiled into
+that page's own stylesheet — scoped to that page, so on the public page they
+matched nothing and everything fell back to plugin defaults. A two-column
+mobile menu became one column. The settings now come across correctly.
+
+**Changed: a menu row no longer leaves a gap.** Four sections in a row with
+space for five left an empty slot on the right; the tiles now share the row.
+
+**Changed: Wi-Fi credentials sit on one line.** Label, password, Show and
+Copy stay on a single centred row on a phone, including once the password is
+revealed. Copy confirms with a check mark rather than the word "Copied!",
+which was long enough to push the row onto two lines. Screen readers still
+announce it.
+
+**Changed: the credential buttons and checklist Reset are slightly smaller**,
+so they read as secondary to Back.
+
+**Fixed: a coral wash behind the checkboxes, read-aloud and report icons.**
+The site theme was painting the plugin's own plain buttons on tap, and those
+controls now keep their own appearance and show a visible keyboard focus
+ring.
 
 = 0.15.0 =
 

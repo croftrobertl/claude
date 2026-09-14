@@ -832,8 +832,17 @@ body.dccgg-detail-open {
 }
 
 /* Grid (default) */
+/* v0.16.0: auto-FIT, not auto-fill. auto-fill keeps empty tracks, so a guide
+   with four sections in a five-track row left a dead slot on the right and
+   the row read as lopsided. auto-fit collapses a track nothing is placed in,
+   so four tiles stretch and fill the row. A guide whose tiles fill every
+   track (the eight-section guest guide) renders identically either way.
+   The mobile rule below is deliberately NOT changed in the same sweep: its
+   value comes from var(--dccgg-grid-cols-mobile-tpl, …) and only the
+   FALLBACK inside the var() is this layout — rewriting the property there
+   would break a fixed mobile column count chosen in the panel. */
 .dccgg-layout-grid .dccgg-menu {
-    grid-template-columns: repeat(auto-fill, minmax(var(--dccgg-tile-min), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(var(--dccgg-tile-min), 1fr));
 }
 /* v0.9.9: phones in portrait follow the tile width by default, exactly as
    wider viewports do, instead of collapsing to one column. The old rule
@@ -1401,6 +1410,11 @@ video.dccgg-media {
     gap: 8px;
     margin-top: 12px;
     flex-wrap: wrap;
+    /* v0.16.0: a flex row defaults to align-items: stretch, so the smaller
+       credential buttons grew to match a full-height neighbour like
+       Directions — the same control measured 35px alone and 50px beside one.
+       Height should come from the control, not from what sits next to it. */
+    align-items: center;
 }
 
 /* -------- Buttons -------- */
@@ -1417,6 +1431,12 @@ video.dccgg-media {
     text-decoration: none;
     font: inherit;
     font-weight: 500;
+    /* v0.16.0: own the line-height. A host kit that styles bare `button` with
+       line-height: 50px makes these controls 50px tall with zero vertical
+       padding — and REDUCING padding or font-size then makes them TALLER,
+       because the line box, not the content, is setting the height. Every
+       size below depends on this being ours. */
+    line-height: 1.4;
     transition: filter var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 background var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing);
@@ -1636,61 +1656,6 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-overlay[hidden] { display: none; }
 
-/* -------- QR dialog -------- */
-.dccgg-qr-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    z-index: 10000;
-}
-.dccgg-qr-overlay[hidden] { display: none; }
-.dccgg-qr-dialog {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(90vw, 360px);
-    background: var(--dccgg-detail-bg);
-    color: var(--dccgg-text);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    z-index: 10001;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.3);
-}
-.dccgg-qr-dialog[hidden] { display: none; }
-.dccgg-qr-close {
-    position: absolute;
-    top: 8px; right: 8px;
-    width: 44px; height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: rgba(0,0,0,0.06);
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.25em;
-}
-.dccgg-qr-title {
-    margin: 0 0 16px;
-    font-size: 1.15em;
-}
-.dccgg-qr-canvas {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 12px;
-}
-.dccgg-qr-canvas svg {
-    width: 240px; height: 240px;
-    display: block;
-}
-.dccgg-qr-caption {
-    margin: 0;
-    word-break: break-all;
-    font-size: 0.85em;
-    color: var(--dccgg-muted);
-}
 
 /* -------- Dark mode palette -------- */
 .dccgg-root.dccgg-is-dark {
@@ -1802,7 +1767,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-item-tts,
 .dccgg-root.dccgg-root .dccgg-flip-close,
 .dccgg-root.dccgg-root .dccgg-fab-close,
-.dccgg-root.dccgg-root .dccgg-qr-close,
 .dccgg-root.dccgg-root .dccgg-btn-text {
     line-height: 1.4;
     box-sizing: border-box;
@@ -1951,7 +1915,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root .dccgg-item-tts:focus-visible,
 .dccgg-root .dccgg-flip-close:focus-visible,
 .dccgg-root .dccgg-fab-close:focus-visible,
-.dccgg-root .dccgg-qr-close:focus-visible,
 .dccgg-root .dccgg-btn-text:focus-visible,
 .dccgg-fab:focus-visible {
     outline: 2px solid var(--dccgg-primary);
@@ -1965,8 +1928,6 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root *::after,
     .dccgg-fab,
     .dccgg-overlay,
-    .dccgg-qr-dialog,
-    .dccgg-qr-overlay,
     .dccgg-lightbox,
     .dccgg-sheet {
         animation: none !important;
@@ -2067,21 +2028,41 @@ dialog.dccgg-wrapper::backdrop {
 /* v0.12.3: structured Wi-Fi credentials, shown when an item is in WiFi mode
    with its value masked. Built from the existing tokens and button styles —
    no new colours — so it reads as part of the same card. */
-.dccgg-wifi-creds { margin: 12px 0 0; display: grid; gap: 8px; }
-.dccgg-wifi-row {
+.dccgg-wifi-creds {
+    margin: 12px 0 0;
     display: grid;
-    grid-template-columns: minmax(5.5em, auto) 1fr;
+    gap: 8px;
+    /* The row has to hold "Password:" + the value + two buttons on one line at
+       360px. Everything in it is already as small as it should be, so the last
+       14px a side comes from letting ONLY these rows sit closer to the panel
+       edge than the surrounding copy. Nothing else in the item moves, and no
+       text shrinks to buy the space. */
+    margin-inline: -14px;
+}
+/* v0.16.0: one centred row, and it STAYS one row when the value is revealed —
+   the old two-column grid put the label above the value on every phone, and
+   the 480px rule below it made that certain. */
+.dccgg-wifi-creds .dccgg-wifi-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
-    gap: 4px 12px;
+    gap: 4px;
 }
 .dccgg-wifi-creds dt { font-weight: 600; color: var(--dccgg-muted); font-size: 0.9em; }
-.dccgg-wifi-creds dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.dccgg-wifi-ssid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-@media (max-width: 480px) {
-    /* Stack on narrow phones so a long network name never squeezes the copy
-       button off the row. */
-    .dccgg-wifi-row { grid-template-columns: 1fr; }
+.dccgg-wifi-creds dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
 }
+.dccgg-wifi-creds .dccgg-secret { gap: 4px; }
+.dccgg-wifi-ssid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* The revealed password is the longest thing on the row; a notch below body
+   size keeps it there without touching the labels or the buttons. */
+.dccgg-secret .dccgg-secret-value { font-size: 0.75em; }
 
 /* v0.12.2: tap-to-reveal value (Wi-Fi passwords). The real value lives in a
    data attribute and is painted by ::before, so the unrevealed state has no
@@ -2144,6 +2125,85 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root .dccgg-item-body,
 .dccgg-root .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
     font-weight: inherit !important;
+}
+
+/* ---- v0.16.0: the two controls on a credential row are smaller ----------
+   The reference-button spec (0.14.0) sizes every action button at 50px tall
+   so they read as peers of the site's own buttons. On a credential row that
+   is too much: Show and Copy sit beside a "Password:" label inside a card,
+   and at full size the row read as busy and competed with Back. The host
+   approved these smaller sizes on the live site.
+
+   Specificity (0,6,0) — a doubled host plus a doubled :is() whose widest
+   argument is a compound — so this lands ON TOP of the (0,4,0) spec rule
+   rather than beside it. It overrides size only: family, weight, tracking,
+   colour, fill, radius and the hover all still come from the spec.
+
+   Sizes are NOT copied as numbers. The same declarations render differently
+   in different type contexts — these buttons sit in an 18px context and the
+   checklist Reset in a 16.2px one, which is a 3px height difference from
+   identical rules. em-based padding and font-size keep each one sized by the
+   context it is actually in. */
+.dccgg-root.dccgg-root :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy),
+.dccgg-stage.dccgg-stage :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy) {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    line-height: 1.5;
+    gap: 6px;
+}
+.dccgg-root.dccgg-root :is(.dccgg-checklist-reset):is(.dccgg-checklist-reset),
+.dccgg-stage.dccgg-stage :is(.dccgg-checklist-reset):is(.dccgg-checklist-reset) {
+    padding: 9px 14px;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+/* ---- v0.16.0: a host theme may not paint the plugin's plain buttons ----
+   This host's Elementor kit carries
+       .elementor-kit-331 button:hover, … { background-color:#F08080; color:#FFF; border-radius:30px; }
+   at (0,2,1) with no !important. The checkbox, the read-aloud speaker and
+   the per-item report flag are all bare <button>s styled transparent at
+   (0,1,0), so a coral pill washed in behind them on tap.
+
+   THE TRAP: that rule also sets color:#FFFFFF. Clearing only the background
+   leaves these icons white on a white card — a worse bug than the one being
+   fixed — so each control's own colour is restored here too.
+
+   And these live in the DETAIL panel, which is NOT inside .dccgg-root: the
+   stage is portaled to <body> when a detail opens, so a .dccgg-root-prefixed
+   rule never reaches them. Hence the .dccgg-stage host, as with the buttons. */
+.dccgg-root.dccgg-root :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next),
+.dccgg-stage.dccgg-stage :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next) {
+    background: transparent;
+    border-radius: 6px;
+}
+.dccgg-root.dccgg-root :is(.dccgg-item-tts):is(.dccgg-item-tts),
+.dccgg-stage.dccgg-stage :is(.dccgg-item-tts):is(.dccgg-item-tts) { color: var(--dccgg-muted); }
+.dccgg-root.dccgg-root :is(.dccgg-item-report):is(.dccgg-item-report),
+.dccgg-stage.dccgg-stage :is(.dccgg-item-report):is(.dccgg-item-report) { color: color-mix(in srgb, var(--dccgg-text, #111) 55%, transparent); }
+.dccgg-root.dccgg-root :is(.dccgg-item-check):is(.dccgg-item-check),
+.dccgg-stage.dccgg-stage :is(.dccgg-item-check):is(.dccgg-item-check) { color: inherit; }
+.dccgg-root.dccgg-root :is(.dccgg-section-prev, .dccgg-section-next):is(.dccgg-section-prev, .dccgg-section-next),
+.dccgg-stage.dccgg-stage :is(.dccgg-section-prev, .dccgg-section-next):is(.dccgg-section-prev, .dccgg-section-next) { color: var(--dccgg-text); }
+@media (hover: hover) {
+    /* Re-assert the plugin's own hover tints above the kit's coral. */
+.dccgg-root.dccgg-root :is(.dccgg-item-tts):is(.dccgg-item-tts):hover,
+.dccgg-stage.dccgg-stage :is(.dccgg-item-tts):is(.dccgg-item-tts):hover {
+        background: color-mix(in srgb, var(--dccgg-primary) 10%, transparent);
+        color: var(--dccgg-primary);
+    }
+.dccgg-root.dccgg-root :is(.dccgg-item-report):is(.dccgg-item-report):hover,
+.dccgg-stage.dccgg-stage :is(.dccgg-item-report):is(.dccgg-item-report):hover {
+        background: color-mix(in srgb, #d54040 12%, transparent);
+        color: #d54040;
+    }
+}
+/* With the coral wash gone there was nothing left showing keyboard focus on
+   these, so they get a real ring — outside the hover query, and not a fill. */
+.dccgg-root.dccgg-root :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):focus-visible {
+    outline: 3px solid var(--dccgg-text, #111111);
+    outline-offset: 2px;
 }
 
 /* ---- Read-time chip ---- */
@@ -3466,8 +3526,6 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-fab,
     .dccgg-root .dccgg-fab-close,
     .dccgg-root .dccgg-overlay,
-    .dccgg-root .dccgg-qr-overlay,
-    .dccgg-root .dccgg-qr-dialog,
     .dccgg-root .dccgg-quick-action,
     .dccgg-root .dccgg-item-report,
     .dccgg-root .dccgg-item-check,
@@ -3911,7 +3969,6 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root.dccgg-root .dccgg-section-next,
 .dccgg-root.dccgg-root .dccgg-more > summary,
 .dccgg-root.dccgg-root .dccgg-flip-close,
-.dccgg-root.dccgg-root .dccgg-qr-close,
 .dccgg-root.dccgg-root .dccgg-fab,
 .dccgg-root.dccgg-root .dccgg-sos-fab,
 .dccgg-root.dccgg-root .dccgg-emoji-pick,

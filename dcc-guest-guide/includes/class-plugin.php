@@ -277,6 +277,93 @@ final class Plugin
     /** Recursively collect every widget with widgetType=dccgg_guide in
      *  an Elementor element tree. */
     /**
+     * The source post's generated Elementor CSS, reduced to the rules for one
+     * element and re-scoped so they apply wherever that element is rendered.
+     * Returns '' when the file cannot be read, which the caller treats as
+     * "fall back to the old enqueue".
+     */
+    private function source_element_css(int $post_id, string $element_id): string
+    {
+        if ($post_id <= 0 || $element_id === '' || !class_exists('\Elementor\Core\Files\CSS\Post')) {
+            return '';
+        }
+        try {
+            $css = (string) \Elementor\Core\Files\CSS\Post::create($post_id)->get_content();
+        } catch (\Throwable $e) {
+            error_log('DCCGG: could not read source Elementor CSS for post ' . $post_id . ' — ' . $e->getMessage());
+            return '';
+        }
+        return $css === '' ? '' : self::rescope_element_css($css, $post_id, $element_id);
+    }
+
+    /**
+     * Keep only the rules that target `.elementor-element-<id>`, and strip the
+     * `.elementor-<post id>` page prefix from them.
+     *
+     * Brace-aware rather than a regex over the whole file: at-rules nest, and
+     * the responsive values this exists to rescue (the mobile column count, for
+     * one) live inside @media blocks. An at-rule survives only if something
+     * inside it did, so no empty @media shells are emitted.
+     */
+    public static function rescope_element_css(string $css, int $post_id, string $element_id): string
+    {
+        $prefix = '.elementor-' . $post_id;
+        $needle = '.elementor-element-' . $element_id;
+
+        $walk = static function (string $block) use (&$walk, $prefix, $needle, $post_id): string {
+            $out = '';
+            $len = strlen($block);
+            $i   = 0;
+            while ($i < $len) {
+                $open = strpos($block, '{', $i);
+                if ($open === false) { break; }
+                $prelude = trim(substr($block, $i, $open - $i));
+                // Matching close brace, counting nesting.
+                $depth = 1;
+                $j     = $open + 1;
+                while ($j < $len && $depth > 0) {
+                    if ($block[$j] === '{') { $depth++; }
+                    elseif ($block[$j] === '}') { $depth--; }
+                    $j++;
+                }
+                $body = substr($block, $open + 1, $j - $open - 2);
+                $i    = $j;
+
+                if ($prelude === '') { continue; }
+                if ($prelude[0] === '@') {
+                    // Only at-rules that wrap other rules are worth descending
+                    // into; @font-face and @keyframes belong to the source page.
+                    if (preg_match('/^@(media|supports|layer|container)\b/i', $prelude)) {
+                        $inner = $walk($body);
+                        if (trim($inner) !== '') { $out .= $prelude . '{' . $inner . '}'; }
+                    }
+                    continue;
+                }
+                $kept = [];
+                foreach (explode(',', $prelude) as $sel) {
+                    $sel = trim($sel);
+                    if ($sel === '' || strpos($sel, $needle) === false) { continue; }
+                    // A page prefix that is NOT this source post belongs to some
+                    // other page and could never match here, so drop the rule
+                    // rather than import dead weight. Matching on the whole
+                    // numeric token also means .elementor-46450 is never mistaken
+                    // for .elementor-4645.
+                    if (preg_match('/\.elementor-([0-9]+)(?![0-9-])/', $sel, $m)) {
+                        if ($m[1] !== (string) $post_id) { continue; }
+                        $sel = preg_replace('/' . preg_quote($prefix, '/') . '(?![0-9-])/', '', $sel);
+                    }
+                    $sel = trim(preg_replace('/\s+/', ' ', (string) $sel));
+                    if ($sel !== '') { $kept[] = $sel; }
+                }
+                if ($kept) { $out .= implode(',', $kept) . '{' . $body . '}'; }
+            }
+            return $out;
+        };
+
+        return $walk($css);
+    }
+
+    /**
      * Locate the guide widget's raw Elementor element data on a given post.
      * Returns the full node (id, settings, widgetType) or [] when absent.
      * When $widget_id is empty the first guide on the page is used, which is
@@ -412,12 +499,36 @@ final class Plugin
         wp_enqueue_style('dccgg-widget');
         wp_enqueue_script('dccgg-widget');
 
-        // The host's Elementor style-control settings for the guide are
-        // compiled into the SOURCE post's generated stylesheet, which this page
-        // would otherwise never load — the guide would render with plugin
-        // defaults and none of the configured colours or typography. Rules are
-        // scoped to their own element ids, so pulling the file in is safe.
-        if (class_exists('\Elementor\Core\Files\CSS\Post')) {
+        // The host's Elementor style-control settings for the guide are compiled
+        // into the SOURCE post's generated stylesheet, which this page would
+        // otherwise never load — the guide would render with plugin defaults and
+        // none of the configured colours, spacing or typography.
+        //
+        // v0.16.0: enqueueing that file was not enough, and the comment that used
+        // to sit here ("rules are scoped to their own element ids, so pulling the
+        // file in is safe") drew the wrong conclusion from a true fact. Elementor
+        // scopes every rule to the SOURCE PAGE's wrapper as well:
+        //
+        //   .elementor-4645 .elementor-element.elementor-element-2afb24b .dccgg-menu
+        //       { --dccgg-tile-min: 120px; --dccgg-gap: 5px; }
+        //
+        // Rendered on another page the wrapper is .elementor-18119, so
+        // .elementor-4645 matches nothing and every configured value silently
+        // falls back to the plugin default — a two-column mobile menu became one
+        // column. The stylesheet was present in the page the whole time, which is
+        // what made it look like it was working.
+        //
+        // So: take that file's rules for THIS element, drop the source page's
+        // prefix, and inline them against our own handle. Only rules naming the
+        // element we are re-rendering come across; a page-wide rule from the
+        // source page's own page settings is deliberately left behind, since it
+        // was never about this widget and this is someone else's page.
+        $scoped = $this->source_element_css($post_id, (string) ($element['id'] ?? ''));
+        if ($scoped !== '') {
+            wp_add_inline_style('dccgg-widget', $scoped);
+        } elseif (class_exists('\Elementor\Core\Files\CSS\Post')) {
+            // Could not read or re-scope it — fall back to the old behaviour so a
+            // future Elementor change degrades to "no worse than before".
             try {
                 \Elementor\Core\Files\CSS\Post::create($post_id)->enqueue();
             } catch (\Throwable $e) {
