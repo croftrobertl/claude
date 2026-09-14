@@ -3099,18 +3099,48 @@ dialog.dccgg-wrapper::backdrop {
     font-weight: 700;
     padding-right: 36px;
 }
+/* v0.16.2: the close mark is an inline SVG, not a &times; entity, and the
+   button is sized against a host theme rather than hoping to out-rank it.
+   Two separate faults produced a 72x36 button with a 12%-wide mark:
+     - the kit's `padding: 0 18px` on bare `button` landed OUTSIDE the
+       declared 36px width, so the box doubled. box-sizing + padding: 0 fix
+       that half;
+     - `.elementor-kit-331 button` (0,2,0) beat `.dccgg-report-close`
+       (0,1,0), so font-size: 1.5em never applied and the glyph rendered at
+       the kit's 18px/900. Hence the doubled host class below — the same
+       treatment the other icon buttons got in 0.16.0. This button was simply
+       not in that list.
+   A text glyph also cannot be measured: a Range over the text node returns
+   the LINE BOX, not the ink, so an assertion written against it measures the
+   wrong thing. 19px inside 44px is 43.2% on both axes, matching the Cottage
+   Selector's Compare modal. */
 .dccgg-report-close {
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 36px;
-    height: 36px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: transparent; border: 0; cursor: pointer;
-    font-size: 1.5em; color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
+    color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
     line-height: 1;
+}
+.dccgg-root.dccgg-root .dccgg-report-close.dccgg-report-close,
+.dccgg-stage.dccgg-stage .dccgg-report-close.dccgg-report-close,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-close.dccgg-report-close {
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: transparent;
+    border-radius: 6px;
+    /* The kit's hover sets color:#FFFFFF as well as the coral fill, which on
+       this dialog would leave an invisible mark — the same trap as 0.16.0. */
+    color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
+}
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-close.dccgg-report-close:focus-visible {
+    outline: 3px solid var(--dccgg-text, #111111);
+    outline-offset: 2px;
 }
 .dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
 .dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }

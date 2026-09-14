@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.1
+Stable tag: 0.16.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,18 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.16.2 =
+
+**Fixed: the Request Support popup's close button was tiny and lopsided.**
+
+It rendered as a 72x36 button with a small × in it, instead of the 36px
+square it was meant to be: the site theme added side padding outside the
+declared width, and its own text styling overrode the plugin's, so the mark
+came out at the theme's size rather than the one set here. The × is now a
+drawn mark rather than a text character, so the theme's font cannot change
+its shape, in a 44x44 button — the same proportions as the Cottage
+Selector's Compare popup.
 
 = 0.16.1 =
 

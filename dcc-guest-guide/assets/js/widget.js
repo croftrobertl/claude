@@ -402,7 +402,12 @@
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
                     <h3>${escHtml(STR.title || 'Report a problem')}</h3>
-                    <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">&times;</button>
+                    <button type="button" class="dccgg-report-close" aria-label="${escAttr(STR.close || 'Close')}">
+                        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" focusable="false"
+                             fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+                            <path d="M6 6L18 18M18 6L6 18"/>
+                        </svg>
+                    </button>
                 </div>
                 <div class="dccgg-report-body">
                     ${catField}

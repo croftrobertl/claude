@@ -1693,6 +1693,102 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario R: the Request Support close button (v0.16.2) ----------
+    {
+        console.log('\nR. The report dialog\'s close button is a real 44px target');
+        const errors = [];
+        // The kit as served on this host. Both halves of the bug are here: the
+        // horizontal padding on bare `button`, which landed outside a declared
+        // width and doubled the box, and the (0,2,0) type rule that beat the
+        // plugin's (0,1,0) font-size so the glyph rendered at 18px/900.
+        const KIT = `
+            body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0}
+            .elementor-kit-331 button{padding:0 18px;font-family:Raleway,sans-serif;
+              font-size:18px;font-weight:900;letter-spacing:1.5px;line-height:50px;}
+            .elementor-kit-331 button:hover{background-color:#F08080;color:#FFFFFF;}`;
+        const cfg = JSON.stringify({ revealMode: 'stage', strings: {},
+            report: { enabled: true, categories: ['Something is broken'],
+                      strings: { title: 'Request Support', close: 'Close', send: 'Send report',
+                                 cancel: 'Cancel', desc: 'Describe the problem' } } });
+        const htmlR = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style><style>${KIT}</style></head>
+            <body class="elementor-kit-331">
+            <div class="dccgg-root" data-config='${cfg.replace(/'/g, '&#39;')}'>
+            <div class="dccgg-wrapper"><div class="dccgg-stage-container">
+            <article class="dccgg-item">
+            <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Boat lift</span>
+            <button type="button" class="dccgg-item-report" data-report-section="Amenities"
+                    data-report-item="Boat lift">⚑</button></h3>
+            </article></div></div></div><script>${JS}</script></body></html>`;
+
+        const { ctx, page } = await newPage(browser, { width: 393, height: 852 }, htmlR, errors);
+        await page.click('.dccgg-item-report');
+        await page.waitForTimeout(300);
+        const m = await page.evaluate(() => {
+            const btn = document.querySelector('.dccgg-report-close');
+            if (!btn) return null;
+            const svg = btn.querySelector('svg');
+            const b = btn.getBoundingClientRect();
+            const g = svg ? svg.getBoundingClientRect() : null;
+            const c = getComputedStyle(btn);
+            return {
+                w: Math.round(b.width), h: Math.round(b.height),
+                svgW: g ? Math.round(g.width) : -1, svgH: g ? Math.round(g.height) : -1,
+                padding: c.padding, boxSizing: c.boxSizing, color: c.color,
+                label: btn.getAttribute('aria-label'),
+                svgHidden: svg ? svg.getAttribute('aria-hidden') : null,
+                // A text × would leave ink the SVG does not: assert the button
+                // carries no visible text of its own.
+                text: btn.textContent.trim(),
+                open: !!document.querySelector('.dccgg-report-dialog[open]'),
+            };
+        });
+        check('the dialog opened and has a close button', m && m.open);
+        check('the close button is 44x44 despite the kit\'s horizontal padding',
+            m.w === 44 && m.h === 44, `${m.w}x${m.h} padding=${m.padding} box-sizing=${m.boxSizing}`);
+        check('the mark is an SVG of 19x19 — 43.2% on BOTH axes',
+            m.svgW === 19 && m.svgH === 19
+            && Math.abs(m.svgW / m.w - m.svgH / m.h) < 0.01,
+            `${m.svgW}x${m.svgH} = ${(m.svgW / m.w * 100).toFixed(1)}% x ${(m.svgH / m.h * 100).toFixed(1)}%`);
+        check('no text glyph is left behind to be sized by the theme\'s font',
+            m.text === '', `"${m.text}"`);
+        check('the button keeps its accessible name and the mark stays decorative',
+            m.label === 'Close' && m.svgHidden === 'true', `aria-label="${m.label}" svg aria-hidden=${m.svgHidden}`);
+
+        // The kit's hover also sets color:#FFFFFF, and the mark is drawn in
+        // currentColor — so a white hover would erase it on a white dialog.
+        await page.hover('.dccgg-report-close');
+        await page.waitForTimeout(200);
+        const hov = await page.evaluate(() => {
+            const c = getComputedStyle(document.querySelector('.dccgg-report-close'));
+            return { color: c.color, bg: c.backgroundColor };
+        });
+        check('hovering does not erase the mark by turning currentColor white',
+            hov.color !== 'rgb(255, 255, 255)', `${hov.color} on ${hov.bg}`);
+
+        // It still has to close the dialog.
+        await page.click('.dccgg-report-close');
+        await page.waitForTimeout(250);
+        check('clicking it still closes the dialog',
+            !(await page.evaluate(() => !!document.querySelector('.dccgg-report-dialog[open]'))));
+
+        // Scope: ONLY report-close changed. The other three close buttons are
+        // left exactly as they were, deliberately — including the fact that
+        // they too are &times; entities rather than icons. Asserting that keeps
+        // the scope honest: if a later change sweeps them up, this fails and
+        // the decision gets made on purpose rather than in passing.
+        check('report-close no longer uses a text entity',
+            !JS.includes('dccgg-report-close" aria-label="${escAttr(STR.close || \'Close\')}">&times;')
+            && /dccgg-report-close[\s\S]{0,200}<svg/.test(JS));
+        check('the other close buttons are untouched by this change',
+            /class="dccgg-lightbox-close"[\s\S]{0,120}&times;/.test(JS),
+            'lightbox-close still renders &times;, as before');
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);
