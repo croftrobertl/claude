@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.29.0
+Stable tag: 1.30.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.30.0 =
+* The species photographs are no longer inside the plugin. It drops from about 12MB to about 1MB, so updating it from a phone stops being a chore.
+* Install this only after 1.29.0's import has run and the guide still shows every photograph — this release has none to fall back on.
+* Nothing else changes. If a photograph is ever missing, that species shows its drawing or its group mark, exactly as it always has, and never a broken image.
 
 = 1.29.0 =
 * The species photographs can now live in your media library instead of inside the plugin. This release adds the one-time import and still carries the photographs, so nothing can break: install it, run the import from DCC → Wildlife (or with WP-CLI), and check the guide. The next release removes them from the plugin and it drops from about 12MB to about 1MB.

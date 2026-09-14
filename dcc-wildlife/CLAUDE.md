@@ -41,8 +41,7 @@ git history at the v1.1.0 commit; any old sighting posts and the
   is the map. DO NOT delete `assets/photos/` as a "no image files"
   cleanup — it is now sanctioned. Still no webfonts, no CDN, no
   non-species images.
-- **THE PHOTOGRAPHS LIVE IN THE MEDIA LIBRARY (1.29.0 imports them, 1.30.0
-  stops shipping them).** `assets/photos` was 11MB of a 12MB plugin and every
+- **THE PHOTOGRAPHS LIVE IN THE MEDIA LIBRARY. 1.30.0 SHIPS NONE.** `assets/photos` was 11MB of a 12MB plugin and every
   update carried all of it, uploaded from a phone. `Photo_Library` owns this.
   Two things it exists to prevent, both invisible in production:
   1. **NOTHING COMPOSES A URL.** The old client built the srcset by replacing
