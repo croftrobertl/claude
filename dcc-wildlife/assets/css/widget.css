@@ -562,6 +562,9 @@
 }
 
 /* Photo credits (1.19.0): the prose guide's card, one list inside. */
+/* 1.26.0: the blanket "these are cropped and resized" line that indicates
+ * modification for every CC photo at once. */
+.dccwl-photo-credits-note { color: var(--dccwl-text-muted); margin: 0 0 10px; }
 .dccwl-photo-credits-list { margin: 0; padding-left: 1.2em; }
 .dccwl-photo-credits-list li { margin: 0 0 6px; }
 .dccwl-fg-safe .dccwl-fg-k { color: var(--dccwl-accent-text); }

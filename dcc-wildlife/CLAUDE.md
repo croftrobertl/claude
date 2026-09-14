@@ -41,6 +41,15 @@ git history at the v1.1.0 commit; any old sighting posts and the
   is the map. DO NOT delete `assets/photos/` as a "no image files"
   cleanup — it is now sanctioned. Still no webfonts, no CDN, no
   non-species images.
+- **SIZE, measured at 1.26.0: `assets/photos` is 8.4MB of a 9.5MB plugin, or
+  88%.** The zip is about 9MB, which uploads fine under WordPress's usual
+  limits, but it roughly doubled with the last batch and there is no
+  compression lever that changes the order of magnitude: q6 costs visible
+  detail for about a third, and the 1100/600/320 recipe is asserted by the
+  harness. The real answer is architectural — photographs are content, not
+  code, and belong in the media library where they leave the repo and every
+  update zip. That is the owner's decision, not one to take unilaterally.
+  Do not restructure this without being asked.
 - **ATTRIBUTION IS PER-PHOTO DATA, AND IT IS A LICENCE OBLIGATION, NOT
   DECORATION (1.24.0).** Through 1.23.1 every photo was free-tier Adobe
   Stock and one hard-coded string ("Photo: Adobe Stock") served the lot.
@@ -71,7 +80,27 @@ git history at the v1.1.0 commit; any old sighting posts and the
   identification; it never RESCUES a doubtful one — for the four venomous
   snakes the bar stays "the diagnostic features are visible in the frame",
   because a wrong snake on the safety page can get somebody hurt and no
-  caption undoes that.
+  caption undoes that. Five photos carry a note as of 1.26.0: the fish crow
+  (not separable by sight at all), the cottonmouth (the gape identifies it,
+  but the frame is head-on so the vertical pupil and facial pit it also
+  claims are absent), the green watersnake (identified by an ABSENCE of
+  pattern, which is only diagnostic once you know the others have one), the
+  fire ant (the tile names a species; the photograph is a mound Commons files
+  as unidentified Solenopsis), and the mosquito (the tile promises
+  "Mosquitoes and No-see-ums" and shows one Culex). Each is a different way a
+  photograph can fall short of the claim its tile makes — that is the test
+  for whether a note is needed.
+- **Indicating modification is part of attribution (1.26.0).** Every photo
+  is cropped and resized into three renditions, which makes each an adapted
+  work, and CC BY 4.0 / CC BY-SA 4.0 both require that modification be
+  indicated. One sentence at the head of the credits panel covers all of
+  them; do not remove it, and do not "tidy" it into the per-photo lines.
+- **The one ShareAlike photo is the cottonmouth**, CC BY-SA 4.0. Because our
+  renditions are adaptations they are offered under the same licence, which
+  its licence field states outright. That does not reach the plugin's code:
+  an image shipped beside code is an aggregation, not a derivative. A CC BY
+  4.0 alternate exists on the Commons file page if that obligation ever
+  becomes unwanted — swapping it is a PHOTO_SOURCES row and three files.
 - **A photo whose licence does not add up does not ship.** Batch 3's least
   bittern was held: the frame carries a "© Steve Arena 2013 - USFWS
   Volunteer" notice, and "work of the US federal government" does not cover
@@ -1160,9 +1189,13 @@ rounded boxes at the same weight. The rule now:
   A deck must also pack from the START: a centred grid that overflows spills
   out of both ends, and the water deck opened on its ninth card because of it.
 - **The tile face has three tiers (1.23.0):** a vetted photo, else the
-  species' own sprite where one exists, else the neutral group glyph. Today
-  that is 33 / 7 / 11 species (34 / 7 / 11 tile faces — the alligator
-  appears in both Critters and the safety group). Never invent artwork to
+  species' own sprite where one exists, else the neutral group glyph. Since
+  1.26.0 that is 44 / 7 / 0 species (45 / 7 / 0 tile faces — the alligator
+  appears in both Critters and the safety group): the photo programme is
+  complete and the third tier renders for nobody. DO NOT DELETE IT. A species
+  added tomorrow arrives without artwork and still needs a face; test-1260.php
+  asserts all four group glyphs remain defined precisely so an empty tier is
+  not mistaken for a dead one. Never invent artwork to
   fill the third tier. Those three counts are asserted in build-page.php,
   test-1230.php and test-batch1.php; a photo batch has to move all of them.
 - **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none

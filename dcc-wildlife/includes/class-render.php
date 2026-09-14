@@ -436,6 +436,18 @@ final class Render {
 				</span>
 			</summary>
 			<div class="dccwl-fullguide-body">
+				<?php
+				/*
+				 * Indicating modification (1.26.0). Every photograph here is
+				 * cropped and resized into three renditions, which makes each
+				 * one an adapted work. CC BY 4.0 and CC BY-SA 4.0 both
+				 * require that modification be indicated, and until now
+				 * nothing on the page said so. One sentence covers all of
+				 * them, which is better than appending "(cropped)" to
+				 * forty-four credit lines.
+				 */
+				?>
+				<p class="dccwl-photo-credits-note"><?php esc_html_e( 'Every photograph here has been cropped and resized for this guide.', 'dcc-wildlife' ); ?></p>
 				<ul class="dccwl-photo-credits-list">
 					<?php foreach ( $rows as [ $name, $c ] ) : ?>
 						<li><b><?php echo esc_html( $name ); ?></b> — <?php echo esc_html( $c[0] ); ?><?php if ( '' !== $c[1] ) : ?>, <?php echo esc_html( $c[1] ); ?><?php endif; ?><?php if ( '' !== $c[2] ) : ?> (<a href="<?php echo esc_url( $c[2] ); ?>" rel="noopener"><?php esc_html_e( 'source', 'dcc-wildlife' ); ?></a>)<?php endif; ?></li>

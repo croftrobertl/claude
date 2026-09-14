@@ -898,6 +898,13 @@ final class Species {
 		// Batch 3 (1.25.0), Wikimedia Commons.
 		'mottledduck' => 1100, 'whistlingduck' => 1100, 'pelican' => 1100,
 		'fishcrow' => 1100,
+		// Batch 4 (1.26.0). The pygmy rattlesnake and the fire ant mound are
+		// portrait and square respectively; PHOTO_W is the srcset width
+		// descriptor, so only the width is recorded.
+		'cottonmouth' => 1100, 'diamondback' => 1100, 'pygmy' => 1100,
+		'coralsnake' => 1100, 'brownwater' => 1100, 'greenwater' => 1100,
+		'fireant' => 1100, 'poisonivy' => 1100, 'mosquito' => 1100,
+		'lovebug' => 1100, 'leastbittern' => 1100,
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
@@ -987,6 +994,82 @@ final class Species {
 			'Creative Commons Attribution 2.0 Generic',
 			'https://commons.wikimedia.org/wiki/File:Crow_JN_Ding_Darling_NWR_4.20.19_DSC_0085.jpg',
 		],
+		// ---- Batch 4 (1.26.0), the last one ------------------------------
+		// The cottonmouth is the only ShareAlike file in the guide. Because
+		// our three renditions are crops and resizes of it, they are
+		// adaptations and must themselves be offered under the same licence,
+		// which the licence field below states outright. It does not reach
+		// the plugin's own code: an image shipped alongside code is an
+		// aggregation, not a derivative of it.
+		'cottonmouth'     => [
+			'Rstanton13 / CC BY-SA 4.0',
+			'Creative Commons Attribution-ShareAlike 4.0 International — these renditions are offered under the same licence',
+			'https://commons.wikimedia.org/wiki/File:Agkistrodon_conanti_Stanton_1.jpg',
+		],
+		'diamondback'     => [
+			'Peter Paplanus / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Eastern_Diamondback_Rattlesnake_(Crotalus_adamanteus)_(25055449725).jpg',
+		],
+		'pygmy'           => [
+			'Jana Miller / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Sistrurus_miliarius_barbouri_46949362.jpg',
+		],
+		'coralsnake'      => [
+			'daniel_e / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Micrurus_fulvius,_Polk_County,_FL,_USA_imported_from_iNaturalist_photo_286627672.jpg',
+		],
+		'brownwater'      => [
+			'U.S. Fish and Wildlife Service (public domain)',
+			'Public domain (US Fish and Wildlife Service)',
+			'https://commons.wikimedia.org/wiki/File:Brown_watersnake_reptile_nerodia_taxispilota.jpg',
+		],
+		'greenwater'      => [
+			'Alex Abair / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Nerodia_floridana_371403343.jpg',
+		],
+		// Not a Creative Commons licence: the Commons {{attribution}}
+		// template, which permits any use provided the holder is credited.
+		// Worded as prose because there is no CC name to give.
+		'fireant'         => [
+			'© James G. Howes, 2021',
+			'Attribution required; free to use with credit (Wikimedia Commons attribution licence)',
+			'https://commons.wikimedia.org/wiki/File:Fire_Ant_mound.jpg',
+		],
+		'poisonivy'       => [
+			'Scott Crawford / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Poison_Ivy_02.jpg',
+		],
+		'mosquito'        => [
+			'James Gathany, Centers for Disease Control and Prevention (public domain)',
+			'Public domain (work of the US federal government)',
+			'https://commons.wikimedia.org/wiki/File:Culexquinquefasciatus.png',
+		],
+		'lovebug'         => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Love_Bug_-_Plecia_nearctica,_Okaloacoochee_Slough_State_Forest,_Felda,_Florida.jpg',
+		],
+		// Held back in 1.25.0 because the frame's "(c) Steve Arena 2013 -
+		// USFWS Volunteer" notice did not sit with the public-domain claim
+		// it arrived under. Resolved: the Commons file carries TWO tags, and
+		// the verified one is CC-BY-2.0 (FlickreviewR checked it against the
+		// Flickr source in 2016). The PD-USGov-FWS tag is the uploader's own
+		// unchecked assertion, and a USFWS volunteer is not a federal
+		// employee. So we rely on CC BY 2.0 — the verified tag and the more
+		// restrictive one — and the PD question never has to be answered. A
+		// (c) notice and a CC licence sit together normally: a CC licence is
+		// a grant BY the holder. Credit is the photographer, not the agency
+		// whose Flickr stream hosted it.
+		'leastbittern'    => [
+			'Steve Arena / U.S. Fish and Wildlife Service / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Least_Bittern_(Ixobrychus_exilis)_-_male_(8723031747).jpg',
+		],
 	];
 
 	/**
@@ -1015,6 +1098,22 @@ final class Species {
 		// Not wrapped in __() here: a const cannot hold a function call. The
 		// read path below translates it, so Loco still sees one string.
 		'fishcrow' => 'Photographed at J.N. “Ding” Darling National Wildlife Refuge, Sanibel Island, Florida. Fish and American crows cannot be told apart by sight — this is a crow at a place where both occur, and the call is what settles it.',
+		// Batch 4 (1.26.0). Four more, each for a different reason.
+		// The gape is diagnostic on its own — no harmless watersnake does
+		// it — but the frame is head-on, so two of the marks this entry
+		// names, the vertical pupil and the facial pit, are not in it.
+		'cottonmouth' => 'Photographed in Everglades National Park. The open white mouth is the display this snake gives when cornered, and no harmless watersnake does it. The head is face-on here, so the vertical pupil and the facial pit are not visible in this frame.',
+		// An absence is the identification here, which is worth saying out
+		// loud: a plain back is only diagnostic once you know the others are
+		// not plain.
+		'greenwater' => 'Photographed near Gainesville, Florida. The plain, unpatterned back is the identification — our other watersnakes are blotched or banded.',
+		// The tile names a species; the photograph shows a mound, and
+		// Wikimedia Commons files it only as an unidentified Solenopsis. The
+		// recognition lesson is what the entry is for, and it holds either
+		// way, but the species is not what this frame establishes.
+		'fireant' => 'A mound in a Central Florida lawn, about sixteen inches across — the shape to look for before you put a chair, a towel or a bare foot down. The mound was not identified to species by the photographer.',
+		// The tile covers two very different animals and shows one of them.
+		'mosquito' => 'A southern house mosquito, Culex quinquefasciatus, the common biter here at dusk. No-see-ums are far smaller and are not shown.',
 	];
 
 	/** The provenance line for a species photo, or '' where none is needed. */
@@ -1101,6 +1200,14 @@ final class Species {
 			// a PHOTO_NOTES line rather than a bare claim, because fish and
 			// American crows cannot be told apart by sight at all.
 			'mottledduck', 'whistlingduck', 'pelican', 'fishcrow',
+			// Batch 4 (1.26.0), the last one. This closes the programme:
+			// after these eleven no species falls through to a group glyph.
+			// The six snakes were each checked against the mark and fact
+			// fields this registry already claims for them — see the notes
+			// in PHOTO_SOURCES and PHOTO_NOTES.
+			'cottonmouth', 'diamondback', 'pygmy', 'coralsnake',
+			'brownwater', 'greenwater', 'fireant', 'poisonivy',
+			'mosquito', 'lovebug', 'leastbittern',
 		];
 		$photos = [];
 		foreach ( $ids as $id ) {

@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.25.0
+Stable tag: 1.26.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,13 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.26.0 =
+* Every species in the guide now shows a photograph or its own drawing. The last eleven arrived in this release: the four venomous snakes, both harmless watersnakes, fire ants, poison ivy, mosquitoes, lovebugs and the Least Bittern.
+* Each of the six snakes was checked against the same field marks the guide itself teaches. Where a photograph does not show one of them, it says so: the cottonmouth is identified by its open white gape, and the caption notes that the vertical pupil and the facial pit are not visible in that frame.
+* The fire ant tile shows a mound rather than an ant, because a mound beside a path is the thing you are being asked to spot. Its caption says the mound was not identified to species.
+* The credits list now notes that photographs are cropped and resized for the guide, which the Creative Commons licences ask for.
+* The Least Bittern held back last release is in: its licence turned out to be Creative Commons, verified, and it is credited to the photographer.
 
 = 1.25.0 =
 * Four more species now show a photograph: Florida Mottled Duck, Black-bellied Whistling Duck, American White Pelican and Fish Crow. Thirty-four of the fifty-two tiles are photographs.
