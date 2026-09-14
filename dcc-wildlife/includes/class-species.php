@@ -961,6 +961,9 @@ final class Species {
 		'coralsnake' => 1100, 'brownwater' => 1100, 'greenwater' => 1100,
 		'fireant' => 1100, 'poisonivy' => 1100, 'mosquito' => 1100,
 		'lovebug' => 1100, 'leastbittern' => 1100,
+		// Batch 5 (1.28.0).
+		'bandedwater' => 1100, 'applesnail' => 1100, 'littleblue' => 1100,
+		'tricolored' => 1100, 'woodstork' => 1100, 'ibis' => 1100, 'fern' => 1100,
 		'alligator' => 1100, 'anhinga' => 1100, 'cypress' => 950, 'eagle' => 1100,
 		'egret' => 950, 'fish' => 1100, 'greenheron' => 1100, 'heron' => 1100,
 		'kingfisher' => 1100, 'lily' => 733, 'limpkin' => 1100, 'manatee' => 1100,
@@ -1126,6 +1129,45 @@ final class Species {
 			'Creative Commons Attribution 2.0 Generic',
 			'https://commons.wikimedia.org/wiki/File:Least_Bittern_(Ixobrychus_exilis)_-_male_(8723031747).jpg',
 		],
+		// ---- Batch 5 (1.28.0), the last seven -----------------------------
+		// Six from Wikimedia Commons; the applesnail from iNaturalist, which
+		// is the first non-Commons source in the guide. Four of the seven
+		// carry a real attribution obligation.
+		'bandedwater'     => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Florida_Banded_Water_Snake_-_Nerodia_fasciata_pictiventris,_Highland_Hammock_State_Park,_Sebring,_Florida.jpg',
+		],
+		'applesnail'      => [
+			'John G. Phillips / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/279237196',
+		],
+		'littleblue'      => [
+			'Russ / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Blue_heron_strolling_on_bunche_beach.jpg',
+		],
+		'tricolored'      => [
+			'lwolfartist / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:South_padre_island_birding_and_nature_center_4.3.23_NOT_green_island_4.3.23_DSC_9779-topaz-denoiseraw.jpg',
+		],
+		'woodstork'       => [
+			'Steve Hillibrand, U.S. Fish and Wildlife Service (public domain)',
+			'Public domain (work of the US federal government)',
+			'https://commons.wikimedia.org/wiki/File:Mycteria_americana_foraging.jpg',
+		],
+		'ibis'            => [
+			'National Park Service (public domain)',
+			'Public domain (work of the US federal government)',
+			'https://commons.wikimedia.org/wiki/File:A_white_ibis_seen_within_Cape_Hatteras_National_Seashore._(c8a31394-1dd8-b71c-073e-3137f49397ad).jpg',
+		],
+		'fern'            => [
+			'JamesDeMers / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://commons.wikimedia.org/wiki/File:Pleopeltis_polypodioides-440348.jpg',
+		],
 	];
 
 	/**
@@ -1170,6 +1212,13 @@ final class Species {
 		'fireant' => 'A mound in a Central Florida lawn, about sixteen inches across — the shape to look for before you put a chair, a towel or a bare foot down. The mound was not identified to species by the photographer.',
 		// The tile covers two very different animals and shows one of them.
 		'mosquito' => 'A southern house mosquito, Culex quinquefasciatus, the common biter here at dusk. No-see-ums are far smaller and are not shown.',
+		// Batch 5 (1.28.0). Deliberately the DARK morph: this is the animal
+		// people mistake for a cottonmouth and kill, and a brightly banded
+		// juvenile would be prettier and useless, because nobody mistakes
+		// those. The narrow head reads clearly; the round pupil this entry
+		// also names is not crisply resolvable at this angle, so the note
+		// says what the frame does show rather than implying both.
+		'bandedwater' => 'A dark adult, the form most often mistaken for a cottonmouth. The head is barely wider than the neck — a cottonmouth’s is blocky, with a dark stripe through the eye.',
 	];
 
 	/** The provenance line for a species photo, or '' where none is needed. */
@@ -1264,6 +1313,12 @@ final class Species {
 			'cottonmouth', 'diamondback', 'pygmy', 'coralsnake',
 			'brownwater', 'greenwater', 'fireant', 'poisonivy',
 			'mosquito', 'lovebug', 'leastbittern',
+			// Batch 5 (1.28.0) — the last seven, and the end of the photo
+			// programme: every species in the guide has a photograph now and
+			// the group-glyph tier and the species sprites both render for
+			// nobody. Neither is deleted; see CLAUDE.md.
+			'bandedwater', 'applesnail', 'littleblue', 'tricolored',
+			'woodstork', 'ibis', 'fern',
 		];
 		$photos = [];
 		foreach ( $ids as $id ) {

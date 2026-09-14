@@ -179,16 +179,37 @@ git history at the v1.1.0 commit; any old sighting posts and the
   "safety renders first everywhere" rule on his instruction. What did not
   change: it is its own section, it holds all four snakes, and it is never
   month-filtered. test-1270.php asserts the snakes by name.
+- **A CATEGORY TAB SHOWS EVERYTHING IN IT (1.28.0).** Animals, Plants and
+  Safety are not month-filtered by default. They were, silently, and nothing
+  on screen said so: in September that made SEVEN species unreachable from
+  any tab — the manatee, bald eagle, river otter, white pelican, wood stork,
+  American coot and pied-billed grebe, every one a winter species. A guest
+  could not find the manatee by browsing.
+  The filter now runs only when `state.monthPicked` is true, which `setMonth`
+  sets when a PERSON chose the month: a timeline button, an arrow, a month
+  tile, or a month named in the URL. The canal-time month the page opens on
+  is not a choice. Peak Now is where seasonality belongs — it says so in its
+  own name. test-1280.php asserts those seven by name, in every month.
+- **THERE IS NO TILE CAP (1.28.0).** A twelve-tile cap with a "Show all"
+  control used to sit under each section. It saved no vertical space — the
+  deck lays a section out sideways, so 38 tiles cost the same height as 12,
+  which the old suite asserted itself — and it hid 19 of 31 animals. Its
+  tests were RETIRED, not inverted: unlike the season countdown there is no
+  feature here that could come back. Do not reintroduce one without the
+  owner.
 - **Peak Now is a FILTER, not a section.** It renders no grid: the month it
   means is the visitor's, so widget.js fills it in canal time exactly as the
   spotlight does, and a cached page can never carry a stale one. It crosses
   all three sections including Safety — a venomous snake at its most active
   is what a guest should be shown — and it is NEVER capped, because
   "everything at peak" means everything.
-- **The twelve-tile cap now covers 38 species, not 29.** Merging Critters and
-  Birds halved what a guest sees before "Show all" (12 of 38, where two tabs
-  used to show up to 24 of the same 38). The ranking rule is unchanged. The
-  cap size is the owner's decision and was deliberately left alone.
+- **The footnote row must fit ONE line at 360px**, not 361. It wrapped on
+  live at 393px after passing the harness at 361px, because this sandbox has
+  no Raleway and fell back to a narrower face — "By month" measured 66px here
+  and 80px on the site. ui128.js therefore asserts the row at 360px AND
+  requires 12% headroom, so a wider face still fits. Labels are short for the
+  same reason ("Credits", not "Photo credits"); the full phrasing is the
+  accessible name.
 - **The season countdown is RETIRED (1.27.0)**, at one gate:
   `Render::countdown_possible()` returns false. That closes the widget, the
   hub, the standalone Elementor widget and the shortcode at once while
@@ -1265,12 +1286,13 @@ rounded boxes at the same weight. The rule now:
   out of both ends, and the water deck opened on its ninth card because of it.
 - **The tile face has three tiers (1.23.0):** a vetted photo, else the
   species' own sprite where one exists, else the neutral group glyph. Since
-  1.26.0 that is 44 / 7 / 0 species (45 / 7 / 0 tile faces — the alligator
-  appears in both Critters and the safety group): the photo programme is
-  complete and the third tier renders for nobody. DO NOT DELETE IT. A species
-  added tomorrow arrives without artwork and still needs a face; test-1260.php
-  asserts all four group glyphs remain defined precisely so an empty tier is
-  not mistaken for a dead one. Never invent artwork to
+  1.28.0 that is 51 / 0 / 0 species (52 / 0 / 0 tile faces — the alligator
+  appears in both Animals and Safety): the photo programme is FINISHED and
+  BOTH lower tiers render for nobody. DO NOT DELETE EITHER. A species added
+  tomorrow arrives without artwork and still needs a face; test-1260.php
+  asserts the four group glyphs remain defined and test-1280.php asserts the
+  species sprites are still in the codebase, precisely so an empty tier is not
+  mistaken for a dead one. Never invent artwork to
   fill the third tier. Those three counts are asserted in build-page.php,
   test-1230.php and test-batch1.php; a photo batch has to move all of them.
 - **`hidden` must actually hide.** `.dccwl-app [hidden] { display: none

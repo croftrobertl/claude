@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.27.0
+Stable tag: 1.28.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,13 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.28.0 =
+* Every species in the guide now has a photograph — the last seven arrived in this release: the Florida Banded Watersnake, Apple Snail, Little Blue Heron, Tricolored Heron, Wood Stork, White Ibis and Resurrection Fern.
+* Animals, Plants and Safety now show everything in them. They used to hide anything unlikely in the current month, which in September meant the manatee, the bald eagle, the otter, the white pelican, the wood stork, the coot and the grebe could not be found by browsing at all.
+* Peak Now is where the season lives, and picking a month in the month picker still shows you that month.
+* No more "Show all": every tile in a section is on the page.
+* The row of links at the foot of the guide fits on one line on a phone.
 
 = 1.27.0 =
 * The guide is navigated by Animals, Plants, Safety and Peak Now. Critters and Birds are one Animals list; Safety keeps its own place under a plainer name; Peak Now gathers everything at its best right now, from all three at once.

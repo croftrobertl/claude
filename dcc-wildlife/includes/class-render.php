@@ -348,7 +348,10 @@ final class Render {
 					<?php /* The cap (1.21.0): a long group opens at its first tiles and
 					         says how many more there are, rather than running for
 					         screens. Label and count are filled client-side. */ ?>
-					<p class="dccwl-guide-morewrap" data-dccwl-guide-morewrap hidden><button type="button" class="dccwl-btn dccwl-btn-quiet dccwl-guide-more" data-dccwl-guide-more></button></p>
+					<?php /* The "Show all" control was here, under each section. The
+					         twelve-tile cap it opened was removed in 1.28.0 — see the
+					         note in widget.js where GUIDE_CAP used to be. Every species
+					         in a section is on the page now. */ ?>
 					<?php if ( $opts['guide_prose'] ) { self::render_guide_text(); } ?>
 				</section>
 				<?php self::render_species_jsonld(); ?>
@@ -455,10 +458,14 @@ final class Render {
 		}
 		?>
 		<details class="dccwl-fullguide dccwl-photo-credits">
-			<summary class="dccwl-fullguide-summary">
+			<summary class="dccwl-fullguide-summary" aria-label="<?php esc_attr_e( 'Photo credits', 'dcc-wildlife' ); ?>">
 				<span class="dccwl-fullguide-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
 				<span class="dccwl-fullguide-text">
-					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Photo credits', 'dcc-wildlife' ); ?></span>
+					<?php /* "Credits" in the row, "Photo credits" to a screen reader
+					         (1.28.0). Measured on live at 393px, three full labels came
+					         to 350px in a 337px row and "By month" dropped to a second
+					         line; this label was the cheapest 55px. */ ?>
+					<span class="dccwl-fullguide-h"><?php esc_html_e( 'Credits', 'dcc-wildlife' ); ?></span>
 					<span class="dccwl-fullguide-meta">
 						<?php
 						/* translators: %d: number of photographs. */
@@ -796,8 +803,6 @@ final class Render {
 				'searchCount' => __( '%d species match', 'dcc-wildlife' ),
 				'searchOne'   => __( '1 species matches', 'dcc-wildlife' ),
 				/* translators: %d: total number of species in this view. */
-				'showAll'     => __( 'Show all %d', 'dcc-wildlife' ),
-				'showFewer'   => __( 'Show fewer', 'dcc-wildlife' ),
 				'place'       => __( 'Where to go', 'dcc-wildlife' ),
 				// Detail-drawer headings (1.9.0): these label their own
 				// sections now, so they carry no trailing colon.

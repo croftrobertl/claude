@@ -603,9 +603,19 @@
 
 		var monthButtons = [];
 
-		function setMonth(m) {
+		/*
+		 * `explicit` says a PERSON chose this month — a timeline button, an
+		 * arrow, a month tile in the picker, or a month named in the URL. The
+		 * canal-time month the page opens on is not a choice, and since 1.28.0
+		 * that difference decides whether the category tabs filter at all. Set
+		 * before the early return: choosing the month already shown is still
+		 * choosing it, and the guide has to be refreshed either way.
+		 */
+		function setMonth(m, explicit) {
 			m = ((m % 12) + 12) % 12;
+			if (false !== explicit) { state.monthPicked = true; }
 			if (m === state.month) {
+				refreshGuide();
 				return;
 			}
 			state.month = m;
@@ -677,16 +687,16 @@
 				btn.setAttribute('aria-label', CFG.monthsFull[m] || abbrev);
 				btn.setAttribute('aria-pressed', m === state.month ? 'true' : 'false');
 				btn.addEventListener('click', function () {
-					setMonth(m);
+					setMonth(m, true);
 				});
 				track.appendChild(btn);
 				monthButtons.push(btn);
 			});
 			nav.querySelector('.dccwl-timeline-prev').addEventListener('click', function () {
-				setMonth(state.month - 1);
+				setMonth(state.month - 1, true);
 			});
 			nav.querySelector('.dccwl-timeline-next').addEventListener('click', function () {
-				setMonth(state.month + 1);
+				setMonth(state.month + 1, true);
 			});
 			attachEdgeFades(track, nav);
 			track.addEventListener('scroll', trimSoon, { passive: true });
@@ -711,11 +721,23 @@
 		 * One pass decides every tile's visibility, so the three filters cannot
 		 * disagree with each other. Order: the tab (or, while searching, every
 		 * group), then the month (hub only), then the cap. */
-		var GUIDE_CAP = 12;
+		/*
+		 * GUIDE_CAP was here, at 12, with a "Show all" control under each
+		 * section. REMOVED IN 1.28.0 by the owner's decision, and it is not
+		 * coming back — unlike the season countdown there is no feature here
+		 * to restore, so its tests were retired rather than inverted.
+		 *
+		 * The reasoning it failed on: the deck holds a section's tiles at a
+		 * constant height, so the cap saved no vertical space — expanding it
+		 * moved the page by under 120px, which the old suite asserted itself.
+		 * What it did do was hide nineteen of thirty-one animals behind a tap.
+		 * As two tabs, Critters and Birds showed twenty-one of the same set
+		 * with no tap at all; merging them into Animals halved that.
+		 */
 		// Must match Render::PEAK_TAB. The tab row is server-rendered and this
 		// reads the slug back off it, so the two have to agree.
 		var PEAK_TAB = '__peak';
-		var guide = { q: '', expanded: false, group: null };
+		var guide = { q: '', group: null };
 
 		/* Lowercased, accent-folded, and cached on the species row. */
 		function fold(v) {
@@ -786,8 +808,26 @@
 							// safety — a venomous snake at its most active is
 							// exactly what a guest should be shown, not spared.
 							keep = !!(sp.months && (sp.months[state.month] || 0) >= 3);
-						} else if (isCanal && sp.months) {
-							// The safety grid is a warning list: never month-filtered.
+						} else if (isCanal && sp.months && state.monthPicked) {
+							/*
+							 * ONLY WHEN A MONTH WAS EXPLICITLY CHOSEN (1.28.0).
+							 *
+							 * The category tabs used to filter by the current
+							 * month always, and silently — nothing on screen
+							 * said a filter was on. In September that made
+							 * seven species unreachable by browsing at all:
+							 * the manatee, the bald eagle, the river otter,
+							 * the white pelican, the wood stork, the coot and
+							 * the pied-billed grebe, every one a winter
+							 * species. A guest could not find the manatee.
+							 *
+							 * So the default browse shows everything in the
+							 * section, and Peak Now — which says what it does
+							 * in its own name — is where seasonality lives.
+							 * Picking a month in the picker is still an
+							 * explicit request to see that month, and still
+							 * filters.
+							 */
 							keep = 'safety' === group || v >= 2;
 						}
 					}
@@ -798,23 +838,10 @@
 				});
 			});
 
-			// 2. The cap keeps the LIKELIEST, not the first. Hiding by document
-			//    order buried the coot and the white pelican in January — the
-			//    two birds that January is actually about — behind twelve
-			//    year-round residents. Ties keep document order, so the tiles
-			//    that survive still read in field-guide order.
+			// 2. Everything eligible is shown. No cap since 1.28.0 — see the
+			//    note where GUIDE_CAP used to be.
 			var kept = rows.filter(function (r) { return r.keep; });
-			// Peak Now is never capped. The cap exists so a 38-species section
-			// does not open as a wall of tiles; this filter has already cut the
-			// list to what is at its best right now, and capping it to twelve
-			// would silently drop whole sections — the first run showed twelve
-			// animals and hid Plants and Safety entirely, which is the opposite
-			// of "everything at peak, from all three".
-			var capping = !peaking && !guide.expanded && kept.length > GUIDE_CAP;
-			(capping
-				? kept.slice().sort(function (a, b) { return b.rank - a.rank || a.i - b.i; }).slice(0, GUIDE_CAP)
-				: kept
-			).forEach(function (r) { r.show = true; });
+			kept.forEach(function (r) { r.show = true; });
 
 			// 3. Apply.
 			var perGrid = {};
@@ -830,18 +857,6 @@
 			});
 
 			var eligible = kept.length;
-			var more = section.querySelector('[data-dccwl-guide-more]');
-			var morewrap = section.querySelector('[data-dccwl-guide-morewrap]');
-			if (more && morewrap) {
-				var over = !peaking && eligible > GUIDE_CAP;
-				morewrap.hidden = !over;   // the row collapses with the button
-				if (over) {
-					more.textContent = guide.expanded
-						? (CFG.i18n.showFewer || 'Show fewer')
-						: fmt(CFG.i18n.showAll || 'Show all %d', eligible);
-					more.setAttribute('aria-expanded', guide.expanded ? 'true' : 'false');
-				}
-			}
 
 			var note = section.querySelector('[data-dccwl-guide-empty]');
 			if (note) {
@@ -912,7 +927,6 @@
 			function setQuery(raw) {
 				guide.raw = String(raw || '').trim();
 				guide.q = fold(guide.raw);
-				guide.expanded = false;
 				if (clear) { clear.hidden = '' === guide.q; }
 				refreshGuide();
 			}
@@ -920,7 +934,6 @@
 			tabs.forEach(function (tab) {
 				tab.addEventListener('click', function () {
 					guide.group = tab.getAttribute('data-dccwl-group');
-					guide.expanded = false;
 					// Picking a group is a way of saying "not that search any more".
 					if (input && input.value) { input.value = ''; }
 					setQuery('');
@@ -946,14 +959,6 @@
 					input.value = '';
 					setQuery('');
 					input.focus();
-				});
-			}
-			var more = section.querySelector('[data-dccwl-guide-more]');
-			if (more) {
-				more.addEventListener('click', function () {
-					guide.expanded = !guide.expanded;
-					refreshGuide();
-					if (!guide.expanded) { more.scrollIntoView({ block: 'nearest' }); }
 				});
 			}
 			refreshGuide();
@@ -1094,9 +1099,9 @@
 			return speciesForMonth(m).filter(function (x) { return x.v >= 3; })
 				.map(function (x) { return x.s; });
 		},
-		setMonth: function (root, m) {
+		setMonth: function (root, m, explicit) {
 			var h = roots.get(root);
-			if (h) { h.setMonth(m); h.recenter(); }
+			if (h) { h.setMonth(m, explicit); h.recenter(); }
 		},
 		recenter: function (root) {
 			var h = roots.get(root);

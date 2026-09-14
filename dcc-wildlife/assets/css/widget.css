@@ -508,8 +508,8 @@
 .dccwl-search-clear[hidden] { display: none; }
 
 /* The cap's control (1.21.0), centred under the tiles it opens. */
-.dccwl-guide-morewrap { margin: var(--dccwl-gap) 0 0; text-align: center; }
-.dccwl-guide-more[hidden] { display: none; }
+/* The .dccwl-guide-morewrap / .dccwl-guide-more rules were the twelve-tile
+ * cap's "Show all" control, removed in 1.28.0 with the cap itself. */
 
 /* A key for every colour that carries meaning (1.18.0). Small, muted, and
  * placed where the colour is used. Muted on white: 5.38:1. */
@@ -1098,7 +1098,11 @@
 	border-top: 1px solid var(--dccwl-line);
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--dccwl-gap) var(--dccwl-gap-lg);
+	/* Tight column gap on purpose: this row has to fit three labels at 360px,
+	 * and every pixel of gap is a pixel the labels cannot have. flex-wrap
+	 * stays as the safety valve for a long translation — wrapping beats
+	 * overflowing — but at the sizes we ship it must not be reached. */
+	gap: var(--dccwl-gap) 8px;
 	justify-content: center;
 	margin-top: var(--dccwl-gap-lg);
 	padding-top: var(--dccwl-gap);

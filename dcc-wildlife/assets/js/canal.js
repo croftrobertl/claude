@@ -177,7 +177,10 @@
 
 		var monthTiles = [];
 
-		function setMonth(m, drive) {
+		/* `explicit` is threaded through to the widget: the month a visitor
+		 * PICKS filters the category tabs, the canal-time month the page opens
+		 * on does not (1.28.0). */
+		function setMonth(m, drive, explicit) {
 			state.month = m;
 			monthTiles.forEach(function (t, i) {
 				t.setAttribute('aria-pressed', i === m ? 'true' : 'false');
@@ -186,7 +189,7 @@
 			// The existing widget owns every month behaviour — headline,
 			// spotlight, timeline, guide chips. Drive it; never re-implement.
 			if (drive !== false && speciesRoot && window.DCCWL_Widget) {
-				window.DCCWL_Widget.setMonth(speciesRoot, m);
+				window.DCCWL_Widget.setMonth(speciesRoot, m, explicit);
 			}
 		}
 
@@ -234,7 +237,7 @@
 				}
 
 				t.addEventListener('click', function () {
-					setMonth(m);
+					setMonth(m, undefined, true);
 					/* Step BACK out of the picker rather than forward into a
 					 * second species entry (1.23.0). The picker is a detour off
 					 * the species list: once a month is chosen it should not be
@@ -490,8 +493,9 @@
 		buildMonths();
 		fillYearNote();
 		fillWildlifePreview();
+		// A month named in the URL IS an explicit choice; the default is not.
 		var deep = monthFromUrl();
-		setMonth(null === deep ? state.month : deep);
+		setMonth(null === deep ? state.month : deep, undefined, null !== deep);
 		show('hub', false);
 	}
 
