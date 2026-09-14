@@ -1501,9 +1501,27 @@ final class Species {
 				// to, and the field mark that settles it. Both optional.
 				'idgroup'   => (string) ( $sp['idgroup'] ?? '' ),
 				'mark'      => (string) ( $sp['mark'] ?? '' ),
+				// The filenames stay in the payload: they say a species HAS a
+				// photograph, and the importer finds files by them. They are no
+				// longer used to build a URL — see `src` below.
 				'photo'     => (string) ( $photos[ $id ] ?? '' ),
 				'photoW'    => self::photo_width( $id ),
 				'thumb'     => self::photo_thumb( (string) ( $photos[ $id ] ?? '' ) ),
+				/*
+				 * REAL URLs, resolved per rendition (1.29.0). Media library
+				 * first, a bundled file second, '' when neither has it — and
+				 * '' is how the client knows to fall through to the drawing
+				 * and then the glyph. The widths come from the attachment
+				 * metadata where there is one, so the srcset descriptor cannot
+				 * drift from the file the way a hand-kept table can.
+				 */
+				'src'       => '' === (string) ( $photos[ $id ] ?? '' ) ? null : [
+					'thumb' => Photo_Library::url( (string) $id, 'thumb' ),
+					'mid'   => Photo_Library::url( (string) $id, 'mid' ),
+					'full'  => Photo_Library::url( (string) $id, 'full' ),
+					'w'     => Photo_Library::width( (string) $id, 'full' ),
+					'midW'  => Photo_Library::width( (string) $id, 'mid' ),
+				],
 				// Per-photo attribution for the detail sheet (1.24.0). Sent
 				// only when it differs from the default Adobe line, which the
 				// browser already holds as an i18n string — so the twenty-three

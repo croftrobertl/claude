@@ -41,15 +41,48 @@ git history at the v1.1.0 commit; any old sighting posts and the
   is the map. DO NOT delete `assets/photos/` as a "no image files"
   cleanup — it is now sanctioned. Still no webfonts, no CDN, no
   non-species images.
-- **SIZE, measured at 1.26.0: `assets/photos` is 8.4MB of a 9.5MB plugin, or
-  88%.** The zip is about 9MB, which uploads fine under WordPress's usual
-  limits, but it roughly doubled with the last batch and there is no
-  compression lever that changes the order of magnitude: q6 costs visible
-  detail for about a third, and the 1100/600/320 recipe is asserted by the
-  harness. The real answer is architectural — photographs are content, not
-  code, and belong in the media library where they leave the repo and every
-  update zip. That is the owner's decision, not one to take unilaterally.
-  Do not restructure this without being asked.
+- **THE PHOTOGRAPHS LIVE IN THE MEDIA LIBRARY (1.29.0 imports them, 1.30.0
+  stops shipping them).** `assets/photos` was 11MB of a 12MB plugin and every
+  update carried all of it, uploaded from a phone. `Photo_Library` owns this.
+  Two things it exists to prevent, both invisible in production:
+  1. **NOTHING COMPOSES A URL.** The old client built the srcset by replacing
+     ".jpg" with "-600.jpg" on a base URL. WordPress dedupes filenames on
+     upload: one pre-existing fern.jpg makes ours fern-1.jpg and the replace
+     asks for fern-1-600.jpg — a 404, silent, visible only on a retina screen,
+     and `fern`, `heron`, `lily`, `moss` and `turtle` are all plausible
+     collisions. Every rendition is its own attachment, found by its own meta
+     (`_dcc_wl_species`, `_dcc_wl_rendition`), and the URL comes from
+     `wp_get_attachment_url()` — which is also what Jetpack Photon rewrites.
+     NEVER reintroduce a base-plus-filename scheme.
+  2. **WORDPRESS MUST NOT RE-CROP THEM.** The -320 faces are hand-cropped onto
+     the animal; a centre crop of the white pelican in a big sky is a speck.
+     The import suppresses `intermediate_image_sizes_advanced` and
+     `big_image_size_threshold` for its duration, in a `finally`.
+- **The credits do NOT move.** `Species::PHOTO_SOURCES` stays in code. Four
+  photographs carry a real CC BY obligation and a licence living in a database
+  row is one accidental media edit away from a breach. The attachment caption
+  is a convenience copy for anyone browsing Media; the credits panel never
+  reads it.
+- **One import function, two callers**: `wp dcc-wildlife import-photos` and a
+  button on the Wildlife admin screen. The owner works from a phone and must
+  never need a shell, or anyone else, to rebuild after a reinstall. It is
+  idempotent — a rendition already carrying our meta is skipped — so a second
+  run creates nothing rather than 306 attachments.
+- **UNINSTALL NEVER DELETES THEM.** They are the owner's media now and may be
+  used elsewhere. `uninstall.php` says so; do not add a sweep of attachments
+  carrying our meta, not even behind `delete_on_uninstall`.
+- **WHERE A FRESH INSTALL GETS THEM.** `assets/photos` stays in the REPOSITORY
+  as the provenance record and is excluded from the plugin zip. The build
+  recipe produces a second artifact, `Wildlife - Photo Pack <version>.zip`,
+  which is unzipped into `wp-content/uploads/dcc-wildlife-photos/`. The
+  importer reads that folder as well as the bundled directory, and `url()`
+  reads the SAME source list — so a dropped pack serves immediately, before
+  the import has even run. A plugin zip alone can no longer rebuild a site's
+  tiles; ship the pack beside it.
+- **The fallback chain is unchanged and must stay graceful**: media library,
+  then any source folder that has the file, then the species' own drawing,
+  then the group glyph. An empty URL is never an error and must never become
+  an `<img>` with an empty src.
 - **ATTRIBUTION IS PER-PHOTO DATA, AND IT IS A LICENCE OBLIGATION, NOT
   DECORATION (1.24.0).** Through 1.23.1 every photo was free-tier Adobe
   Stock and one hard-coded string ("Photo: Adobe Stock") served the lot.
@@ -695,10 +728,30 @@ find dcc-wildlife -name '*.php' -print0 | xargs -0 -n1 php -l
 # docs and this one was the last still shipping them (*.md dropped in 1.16.1,
 # tools/ in 1.16.2). readme.txt is NOT excluded — WordPress reads it for the
 # plugin listing, so keep it .txt and keep it in the zip.
+#
+# PHOTOGRAPHS (1.30.0): assets/photos/ is EXCLUDED from the zip and KEPT in
+# the repository. The repo is the provenance record — 153 files, every one
+# checked by eye against the species, with its credit in PHOTO_SOURCES. The
+# zip carries none of them: the plugin went from 12MB to about 1MB, and the
+# owner uploads it from a phone.
+#
+# A FRESH INSTALL GETS THEM FROM THE PHOTO PACK, built by the second command
+# below and dropped into wp-content/uploads/dcc-wildlife-photos/ once, then
+# imported from Wildlife admin or `wp dcc-wildlife import-photos`. Build the
+# pack whenever the photographs change and keep it beside the plugin zip;
+# a plugin zip on its own can no longer rebuild a site's tiles.
 (
   cd "$(git rev-parse --show-toplevel)" &&
   V=$(sed -n 's/^ \* Version: *//p' dcc-wildlife/dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
-  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*'
+  zip -r "Wildlife $V.zip" dcc-wildlife -x '*.DS_Store' '*.md' 'dcc-wildlife/tools/*' 'dcc-wildlife/assets/photos/*'
+)
+
+# The photo pack — the files themselves, flat, named exactly as the importer
+# looks for them. Not a plugin; it is unzipped into the uploads drop folder.
+(
+  cd "$(git rev-parse --show-toplevel)/dcc-wildlife/assets/photos" &&
+  V=$(sed -n 's/^ \* Version: *//p' ../../dcc-wildlife.php | head -1 | tr -d '[:space:]') &&
+  zip -q "$(git rev-parse --show-toplevel)/Wildlife - Photo Pack $V.zip" *.jpg
 )
 
 # Verify the build before handing it over: no dev files, readme.txt present,

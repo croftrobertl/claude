@@ -269,7 +269,10 @@ final class Canal_Render {
 						'toSpot'     => __( '%d to spot', 'dcc-wildlife' ),
 						'quiet'      => __( 'a quiet month', 'dcc-wildlife' ),
 						/* translators: %s: month name — the Wildlife tile's preview. */
-						'hubMonth'   => __( '%1$s in %2$s', 'dcc-wildlife' ),
+						/* hubMonth wrapped the wildlife preview in its month. Since
+						   1.29.0 subSpot names the month itself, so nothing reads
+						   this; kept out of the payload rather than left to be
+						   wired back in by accident. */
 						/* translators: joins the last two items of a list, e.g. "April and May". */
 						'and'        => __( 'and', 'dcc-wildlife' ),
 						/* translators: 1: a month name, 2: number of species at peak. */

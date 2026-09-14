@@ -125,7 +125,10 @@
 	/* Photo-first tile face (1.19.0) — mirrors Render::tile_media(). */
 	function tileMedia(sp) {
 		var media = el('span', 'dccwl-tile-media');
-		if (sp.thumb && CFG.photoBase) {
+		// 1.29.0: a resolved URL from the server, never a base plus a filename.
+		// An empty one means "no photograph available" and falls through to
+		// the drawing and then the glyph, exactly as the server does.
+		if (sp.src && sp.src.thumb) {
 			var img = document.createElement('img');
 			img.className = 'dccwl-tile-photo';
 			img.alt = '';
@@ -133,7 +136,7 @@
 			img.height = 240;
 			img.loading = 'lazy';
 			img.decoding = 'async';
-			img.src = CFG.photoBase + sp.thumb;
+			img.src = sp.src.thumb;
 			media.appendChild(img);
 		} else if (sp.sprite) {
 			// The species' own drawing before the group glyph (1.23.0) —
@@ -292,24 +295,33 @@
 
 		function buildDetail(body, sp) {
 			var medallion;
-			if (sp.photo && CFG.photoBase) {
+			if (sp.src && sp.src.full) {
 				// A real, licensed photo leads the sheet where we have a vetted
 				// one. Lazy — it loads only when a species is opened, one at a
-				// time. src is set as an ATTRIBUTE (never innerHTML), and the
-				// filename comes from a fixed server-side map.
+				// time. src is set as an ATTRIBUTE (never innerHTML), and every
+				// URL is resolved server-side from the media library.
 				medallion = el('div', 'dccwl-medallion dccwl-medallion-photo');
 				var img = document.createElement('img');
 				img.className = 'dccwl-photo';
 				img.loading = 'lazy';
 				img.decoding = 'async';
 				img.alt = sp.name;
-				img.src = CFG.photoBase + sp.photo;
-				// 1.17.0: a 600px-wide variant beside each original. The hero is
-				// at most 720px wide, so 1x screens and small phones take the
-				// lighter file; high-DPR phones still get the full original.
-				if (sp.photoW) {
-					img.srcset = CFG.photoBase + sp.photo.replace(/\.jpg$/, '-600.jpg') + ' 600w, ' +
-						CFG.photoBase + sp.photo + ' ' + sp.photoW + 'w';
+				img.src = sp.src.full;
+				/*
+				 * 1.17.0: a 600px-wide variant beside each original. The hero
+				 * is at most 720px wide, so 1x screens and small phones take
+				 * the lighter file; high-DPR phones still get the full one.
+				 *
+				 * 1.29.0: THE SRCSET IS NO LONGER BUILT BY STRING SURGERY. It
+				 * used to replace ".jpg" with "-600.jpg" on a base URL, which
+				 * WordPress's filename dedupe would have broken silently the
+				 * first time a fern.jpg already existed in that month folder.
+				 * Both URLs are resolved attachments now, and either may be
+				 * missing without taking the other down.
+				 */
+				if (sp.src.mid && sp.src.w) {
+					img.srcset = sp.src.mid + ' ' + (sp.src.midW || 600) + 'w, ' +
+						sp.src.full + ' ' + sp.src.w + 'w';
 					img.sizes = '(max-width: 720px) 100vw, 720px';
 				}
 				medallion.appendChild(img);
@@ -335,7 +347,7 @@
 			// image is shown. This sheet is where it is shown at size, so the
 			// line is not decorative. Where a source page exists the credit
 			// links to it — that is where the licence is actually stated.
-			if (sp.photo && CFG.photoBase) {
+			if (sp.src && sp.src.full) {
 				var credit = el('p', 'dccwl-photo-credit');
 				var text = sp.credit || CFG.i18n.photoCredit || 'Photo: Adobe Stock';
 				// http(s) only: the credit map is filterable, so a site could
@@ -358,7 +370,7 @@
 			// fish crow carries one today: fish and American crows are not
 			// separable by sight, so the photo alone cannot establish the
 			// species and the page says so rather than implying otherwise.
-			if (sp.photo && CFG.photoBase && sp.photoNote) {
+			if (sp.src && sp.src.full && sp.photoNote) {
 				body.appendChild(el('p', 'dccwl-photo-note', sp.photoNote));
 			}
 
@@ -513,10 +525,12 @@
 			var entries = speciesForMonth(m);
 			// 1.27.0: the subline no longer says "%d species at their peak".
 			// It counts what is worth looking for and leaves it at that.
-			var phrase = fmt(CFG.i18n.subSpot, entries.length);
+			// The month is part of the phrase (1.29.0), so the count reads as
+			// "what is out in September" rather than "how big the guide is".
+			var phrase = fmt(CFG.i18n.subSpot, entries.length, (CFG.monthsFull && CFG.monthsFull[m]) || '');
 			if (instance.customTitle) {
 				if (subEl) {
-					subEl.textContent = fmt(CFG.i18n.monthSub, CFG.monthsFull[m], phrase);
+					subEl.textContent = phrase;
 				}
 			} else {
 				if (titleEl) {

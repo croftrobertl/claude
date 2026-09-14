@@ -80,6 +80,7 @@ final class Water_Admin {
 		// (top-level registered around 58–62).
 		add_action( 'admin_menu', [ self::class, 'add_page' ], 63 );
 		add_action( 'admin_init', [ self::class, 'register' ] );
+		add_action( 'admin_post_' . self::IMPORT_ACTION, [ self::class, 'handle_photo_import' ] );
 		add_action( 'admin_notices', [ self::class, 'notices' ] );
 		add_action( 'admin_enqueue_scripts', [ self::class, 'assets' ] );
 	}
@@ -366,6 +367,8 @@ final class Water_Admin {
 					<?php esc_html_e( 'Place the module with the "DCC Water — Fishing & Conditions" Elementor widget, or the [dcc_water] shortcode. It renders nowhere until you place it — and once placed it stays completely invisible until it has something sourced to say, so you can put it on the Guest Guide now and let it light up as it fills.', 'dcc-wildlife' ); ?>
 				</p>
 			</div>
+
+			<?php self::render_photo_import(); ?>
 
 			<form action="options.php" method="post">
 				<?php settings_fields( 'dcc_wl_water' ); ?>
@@ -703,5 +706,68 @@ final class Water_Admin {
 		</table>
 		<p><button type="button" class="button dccwl-add-row" data-target="<?php echo esc_attr( $id ); ?>"><?php esc_html_e( '+ Add row', 'dcc-wildlife' ); ?></button></p>
 		<?php
+	}
+
+	/**
+	 * The photo import, on the screen the owner already has (1.29.0).
+	 *
+	 * The same Photo_Library::import() the WP-CLI command calls. He works from
+	 * a phone: a reinstall must never need a shell, or someone else.
+	 */
+	public const IMPORT_ACTION = 'dcc_wl_import_photos';
+
+	private static function render_photo_import(): void {
+		$done  = Photo_Library::map();
+		$have  = 0;
+		foreach ( array_keys( Species::photos() ) as $slug ) {
+			if ( 3 === count( $done[ $slug ] ?? [] ) ) {
+				++$have;
+			}
+		}
+		$total  = count( Species::photos() );
+		$notice = get_transient( 'dcc_wl_photo_import_notice' );
+		if ( $notice ) {
+			delete_transient( 'dcc_wl_photo_import_notice' );
+		}
+		?>
+		<div class="notice notice-info inline" style="margin:12px 0;padding:8px 12px">
+			<p style="margin:.4em 0">
+				<strong><?php esc_html_e( 'Species photographs', 'dcc-wildlife' ); ?></strong>
+				<?php
+				printf(
+					/* translators: 1: species with all three renditions in the library, 2: species with a photo. */
+					esc_html__( '%1$d of %2$d species are in the media library.', 'dcc-wildlife' ),
+					(int) $have,
+					(int) $total
+				);
+				?>
+			</p>
+			<p style="margin:.4em 0">
+				<?php esc_html_e( 'The photographs live in the media library, not in the plugin, so a plugin update no longer carries eleven megabytes of them. This is safe to run as many times as you like: anything already imported is left alone.', 'dcc-wildlife' ); ?>
+			</p>
+			<?php if ( $notice ) : ?>
+				<p style="margin:.4em 0"><strong><?php echo esc_html( (string) $notice ); ?></strong></p>
+			<?php endif; ?>
+			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" style="margin:.6em 0">
+				<input type="hidden" name="action" value="<?php echo esc_attr( self::IMPORT_ACTION ); ?>">
+				<?php wp_nonce_field( self::IMPORT_ACTION ); ?>
+				<button type="submit" class="button button-secondary">
+					<?php esc_html_e( 'Import species photographs', 'dcc-wildlife' ); ?>
+				</button>
+			</form>
+		</div>
+		<?php
+	}
+
+	/** admin-post handler for the button above. */
+	public static function handle_photo_import(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'dcc-wildlife' ) );
+		}
+		check_admin_referer( self::IMPORT_ACTION );
+		$report = Photo_Library::import();
+		set_transient( 'dcc_wl_photo_import_notice', Photo_Library::summarise( $report ), 60 );
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::$slug ) );
+		exit;
 	}
 }

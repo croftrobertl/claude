@@ -294,8 +294,10 @@
 			var c = monthCounts(m);
 			var i = wCfg.i18n || {};
 			// 1.27.0: no peak ranking in the subline. See widget.js.
-			var phrase = fmt(i.subSpot, c.spot);
-			node.textContent = fmt(I18N.hubMonth || '%1$s in %2$s', phrase, wCfg.monthsFull[m]);
+			// subSpot names the month itself since 1.29.0, so the hub card must
+			// NOT wrap it in the month again — that read "36 at their best in
+			// September in September".
+			node.textContent = fmt(i.subSpot, c.spot, (wCfg.monthsFull && wCfg.monthsFull[m]) || '');
 
 			// Show the species the line is counting. Decorative — the sentence
 			// above carries the meaning, so the art is aria-hidden — but it

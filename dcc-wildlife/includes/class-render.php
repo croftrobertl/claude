@@ -407,8 +407,14 @@ final class Render {
 	 */
 	private static function tile_media( array $sp ): string {
 		$out = '<span class="dccwl-tile-media">';
-		if ( '' !== (string) $sp['thumb'] ) {
-			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( DCC_WL_URL . 'assets/photos/' . $sp['thumb'] ) . '" alt="" width="320" height="240" loading="lazy" decoding="async">';
+		// 1.29.0: the URL comes from the media library, then from a bundled
+		// file if this release still ships one, and is '' when neither has it.
+		// An empty URL is not an error — it falls through to the drawing and
+		// then the glyph, the same landing a species with no photograph has
+		// always had. A missing attachment must never be a broken image.
+		$thumb = Photo_Library::url( (string) $sp['id'], 'thumb' );
+		if ( '' !== $thumb ) {
+			$out .= '<img class="dccwl-tile-photo" src="' . esc_url( $thumb ) . '" alt="" width="320" height="240" loading="lazy" decoding="async">';
 		} elseif ( Sprites::has( (string) $sp['id'] ) ) {
 			// 1.23.0: the species' own drawing before the group glyph. It is
 			// still not a photograph, but it is THIS animal rather than a
@@ -753,6 +759,15 @@ final class Render {
 
 		$config = [
 			'species'    => $species,
+			/*
+			 * 1.29.0: real URLs, resolved per species, NOT a base the client
+			 * sticks a filename onto. The old scheme built the srcset by
+			 * replacing ".jpg" with "-600.jpg"; WordPress dedupes filenames on
+			 * upload, so one pre-existing fern.jpg would have made ours
+			 * fern-1.jpg and that species would have silently lost its srcset.
+			 * photoBase remains only so an older cached script does not break
+			 * outright; nothing current composes with it.
+			 */
 			'photoBase'  => esc_url_raw( DCC_WL_URL . 'assets/photos/' ),
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
@@ -769,9 +784,18 @@ final class Render {
 				 * what is worth looking for without ranking it.
 				 */
 				/* translators: %d: number of species worth looking for. */
-				'subSpot'     => __( '%d species to spot', 'dcc-wildlife' ),
+				/*
+				 * 1.29.0: the month is IN the sentence now. Since 1.28.0 the
+				 * category tabs are unfiltered, so this line sat above a guide
+				 * showing 38 animals while saying "36 species to spot" — a
+				 * guest who counts finds that wrong. Naming the month makes it
+				 * a claim about the month, which is what it always measured,
+				 * rather than a claim about the size of the guide.
+				 */
+				'subSpot'     => __( '%1$d at their best in %2$s', 'dcc-wildlife' ),
 				/* translators: 1: month name, 2: species-count phrase. */
-				'monthSub'    => _x( '%1$s: %2$s', 'month subline', 'dcc-wildlife' ),
+				/* monthSub wrapped the subline in "September: …". Since 1.29.0
+				   subSpot names the month itself, so nothing reads this. */
 				'peak'        => __( 'Peak season', 'dcc-wildlife' ),
 				'peakShort'   => __( 'Peak', 'dcc-wildlife' ),
 				// 1.19.0 data model: flag names for the tile marks and sheet

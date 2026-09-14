@@ -58,3 +58,19 @@ $sightings = get_posts(
 foreach ( $sightings as $post_id ) {
 	wp_delete_post( (int) $post_id, true );
 }
+
+/*
+ * THE SPECIES PHOTOGRAPHS ARE NOT DELETED, EVER (1.29.0).
+ *
+ * Since 1.29.0 they live in the media library as ordinary attachments, marked
+ * with _dcc_wl_species so they can be found. They are the owner's media now:
+ * he may have used one in a post, a header, an email. Removing a plugin must
+ * not destroy a hundred and fifty images.
+ *
+ * This block exists to say so. Do not add a sweep of attachments carrying our
+ * meta here, not even behind the delete_on_uninstall opt-in — that setting is
+ * about this plugin's own data, and a photograph in the media library has
+ * stopped being that. Deleting them is a Media-library job, done deliberately,
+ * by a person who can see what they are deleting.
+ */
+
