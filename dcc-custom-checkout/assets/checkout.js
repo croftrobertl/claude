@@ -17,6 +17,31 @@
     var CFG  = window.DCC_CHECKOUT || {};
     var I18N = CFG.i18n || {};
 
+    // The tax disclosure's open state, held OUTSIDE foldTaxDetail.
+    // formatBreakdown() rebuilds the breakdown table from MotoPress's seed row
+    // on every re-render, destroying the note and its button and recreating
+    // them — so a state variable inside that function was reset to closed each
+    // time. That is the "text flashes then vanishes" the owner reported: the
+    // note appeared, a re-render landed, and it came back closed.
+    var taxDetailPinned = false;
+
+    // Match a breakdown row's label to a configured tax. Mirrors
+    // Config::tax_key() — keep the two in step.
+    function taxKey(label) {
+        return String(label || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    // Does this device actually have a hover state? Anything that answers no —
+    // or cannot answer — gets tap only.
+    function pointerHasHover() {
+        try {
+            return !!(window.matchMedia &&
+                window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+        } catch (e) {
+            return false;
+        }
+    }
+
     function esc(sel) {
         return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
     }
@@ -423,15 +448,26 @@
             return;
         }
 
+        // Names come from the breakdown — those are the taxes actually charged
+        // on THIS booking. Rates come from the mphb_accommodation_taxes option,
+        // which is what MotoPress prices from, so changing a rate in MotoPress
+        // changes what the guest reads here. A name with no matching entry is
+        // shown WITHOUT a rate rather than with a guessed one.
+        var rates = CFG.taxRates || {};
+        var lines = named.map(function (label) {
+            var rate = rates[taxKey(label)];
+            return rate ? label + ' ' + rate : label;
+        });
+
         var id = 'dcc-tax-footnote';
         var note = document.createElement('p');
         note.className = 'dcc_checkout-tax-footnote dcc_checkout-section-hidden';
         note.id = id;
         note.textContent = '* ' + (I18N.taxNoteLead || 'Taxes applied:') + ' ' +
-            named.join(', ') + '.';
+            lines.join(', ') + '.';
         insertAfter(note, table);
 
-        var open   = false;
+        var hovered = false;
         var toggle = document.createElement('button');
         toggle.type = 'button';          // never submit the checkout
         toggle.className = 'dcc_checkout-tax-asterisk';
@@ -444,14 +480,26 @@
         toggle.setAttribute('aria-controls', id);
 
         function apply() {
+            var open = taxDetailPinned || hovered;
             note.classList.toggle('dcc_checkout-section-hidden', !open);
             toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
 
         toggle.addEventListener('click', function () {
-            open = !open;
+            taxDetailPinned = !taxDetailPinned;
             apply();
         });
+
+        // Hover opens it on a mouse; a tap pins it on anything. Hover listeners
+        // are added ONLY where hover exists: on iOS the first tap applies
+        // :hover and it sticks until you tap elsewhere, so a hover-driven
+        // control there needs two taps and then will not close.
+        if (pointerHasHover()) {
+            toggle.addEventListener('mouseenter', function () { hovered = true; apply(); });
+            toggle.addEventListener('mouseleave', function () { hovered = false; apply(); });
+        }
+
+        // Restore whatever the guest had open before this rebuild.
         apply();
 
         var cell = taxesRow.cells && taxesRow.cells[0];

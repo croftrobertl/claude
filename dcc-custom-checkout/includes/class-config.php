@@ -360,6 +360,64 @@ final class Config
         return $steps;
     }
 
+    /**
+     * The accommodation taxes MotoPress applies, as label => rendered rate.
+     *
+     * Read from the mphb_accommodation_taxes option — the same value MotoPress
+     * prices from — so changing a rate in MotoPress changes what the guest is
+     * told. This is a tax disclosure shown to paying guests; a hard-coded "4%"
+     * that has since become 5% is a real problem, not a cosmetic one.
+     *
+     * The `type` decides how `amount` reads. Only *_percentage types render as
+     * a percentage; anything else is a money amount and renders as one. A
+     * fixed-amount tax rendered as "6%" would be a lie, so the type is checked
+     * rather than assumed — all three are per_room_percentage today, and that
+     * is not guaranteed to last.
+     *
+     * @return array<string,string> Lower-cased label => rate ("4%", "$6.00").
+     */
+    public static function accommodation_tax_rates(): array
+    {
+        $raw = get_option('mphb_accommodation_taxes', []);
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $rates = [];
+        foreach ($raw as $tax) {
+            if (!is_array($tax)) {
+                continue;
+            }
+            $label = trim((string) ($tax['label'] ?? ''));
+            $amount = $tax['amount'] ?? null;
+            if ($label === '' || !is_numeric($amount)) {
+                continue;
+            }
+            $type = (string) ($tax['type'] ?? '');
+            $rates[self::tax_key($label)] = strpos($type, 'percentage') !== false
+                ? self::format_rate((float) $amount)
+                : self::format_price((float) $amount);
+        }
+        return (array) apply_filters('dcc_checkout_tax_rates', $rates);
+    }
+
+    /** Normalized key for matching a breakdown row's label to a configured tax. */
+    public static function tax_key(string $label): string
+    {
+        return strtolower(trim(preg_replace('/\s+/', ' ', $label) ?? ''));
+    }
+
+    /** "4" -> "4%", "4.5" -> "4.5%", "4.00" -> "4%". */
+    public static function format_rate(float $amount): string
+    {
+        $text = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+        return $text . '%';
+    }
+
     /** Sleeping arrangement named in the guest-facing extra-guest note. */
     public static function couch_beds_text(): string
     {

@@ -216,6 +216,25 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   server honours them is checked live by **DCC → Custom Checkout → Guest ID
   storage → "Check public access now"**, which probes over real HTTP; no local
   test can answer that.
+- **The fields here are the site standard** for the Guest Guide Support Report
+  form and the Availability Calendar — those two only, not site-wide (owner
+  decision, v0.11.0). Each of those repos keeps its OWN copy of the values;
+  exported as `Custom Checkout - Field Standard.css`. Not a shared mu-plugin
+  layer: mu-plugins cannot be installed from the WP Admin upload screen, which
+  is how these are deployed, and it would be a single point of failure across
+  three plugins. Tokens read an optional `--dcc-site-*` first and fall back to
+  the literal, so a shared layer can still be added later without anything
+  depending on it.
+- **The typed-value and `::placeholder` colours are declared, not inherited.**
+  They had no rules until v0.11.0 and inherited black and a UA grey. That is
+  invisible on the checkout and wrong in any other cascade — do not delete them
+  as redundant.
+- **Every hover rule on the checkout lives inside
+  `@media (hover: hover) and (pointer: fine)`.** On iOS the first tap applies
+  `:hover` and it sticks until the next tap elsewhere, so a hover-styled
+  control eats a tap and will not revert. Focus rules stay OUTSIDE that query.
+  Touch behaviour is asserted in `tests/button/` with an emulated coarse-pointer
+  context — that proves the rules are gated, not that iOS behaves.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

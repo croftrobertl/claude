@@ -11,22 +11,35 @@
  * properties so they can be retuned in one place.
  */
 
+/* ---------------------------------------------------------------------------
+ * THE FIELD STANDARD (v0.11.0).
+ *
+ * These fields are the site standard for the Guest Guide Support Report form
+ * and the Availability Calendar. Those are separate repos, so each one carries
+ * its own copy of these values rather than importing them — see
+ * "Custom Checkout - Field Standard.css", which is generated from this file.
+ *
+ * Each token reads an optional --dcc-site-* first and falls back to the
+ * literal. Nothing declares --dcc-site-* today, so the literal always wins and
+ * this plugin is entirely self-contained. If a shared layer is ever added on
+ * :root, all three follow it without any of them depending on it existing.
+ * ------------------------------------------------------------------------- */
 .mphb_sc_checkout-form {
-    --dcc-gold: #f4da62;
-    --dcc-blue: #006bcf;
+    --dcc-gold: var(--dcc-site-gold, #f4da62);
+    --dcc-blue: var(--dcc-site-blue, #006bcf);
     /* Kept: other rules still reference it. It is NO LONGER the button hover —
        the site standard is coral, below. */
     --dcc-blue-hover: #0059ac;
     /* Site standard button hover (v0.8.1): every blue button goes coral.
        White on #f08080 is 2.59:1, below WCAG AA. The owner has chosen it
        knowingly, so the focus treatment below must not depend on the fill. */
-    --dcc-button-hover-bg: #f08080;
-    --dcc-button-hover-fg: #ffffff;
-    --dcc-label: #000000;
+    --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
+    --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
+    --dcc-label: var(--dcc-site-label, #000000);
     --dcc-required: #c62828;
-    --dcc-muted: #6b7280;
-    --dcc-field-radius: 30px;
-    --dcc-field-border: 2px;
+    --dcc-muted: var(--dcc-site-muted, #6b7280);
+    --dcc-field-radius: var(--dcc-site-field-radius, 30px);
+    --dcc-field-border: var(--dcc-site-field-border, 2px);
 }
 
 /* ---------------------------------------------------------------------------
@@ -59,6 +72,19 @@
 .mphb_sc_checkout-form select {
     text-align: center !important;
     font-family: "Raleway", sans-serif;
+    /* Declared, not inherited (v0.11.0). The typed-in value and the
+       placeholder had NO rules of their own — they inherited black from the
+       form's ancestors and a UA grey respectively. That is invisible here but
+       fatal to a standard: the other two plugins sit in different cascades and
+       would inherit something else. #000000 is what this form already
+       computes to, so nothing changes on the checkout. */
+    color: var(--dcc-label) !important;
+}
+
+.mphb_sc_checkout-form input::placeholder,
+.mphb_sc_checkout-form textarea::placeholder {
+    color: var(--dcc-muted) !important;
+    opacity: 1; /* Firefox dims placeholders by default. */
 }
 
 .mphb_sc_checkout-form select,
@@ -153,6 +179,8 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button 
     transition: background-color 0.15s, opacity 0.15s;
 }
 
+@media (hover: hover) and (pointer: fine) {
+
 form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:hover,
@@ -167,6 +195,33 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button:
        is derived from the resting selector rather than written fresh. */
     background-color: var(--dcc-button-hover-bg);
     color: var(--dcc-button-hover-fg);
+}
+
+/* MotoPress's price-breakdown expand/collapse link.
+   It has no hover colour of its own, so on hover it fell back to the black it
+   inherits from the table — measured: rgb(15,109,191) at rest, rgb(0,0,0) on
+   hover. On iOS the first tap applies :hover and it STICKS, so the link turned
+   black and did not open. Giving it a real hover colour, inside this media
+   query, means a touch device never enters that state at all. */
+form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-accommodation:hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:hover {
+    color: var(--dcc-button-hover-bg);
+}
+
+.mphb_sc_checkout-form .dcc_checkout-tax-asterisk:hover {
+    text-decoration: underline;
+}
+
+} /* end @media (hover: hover) and (pointer: fine) */
+
+/* Focus is NOT inside the hover query: a keyboard user needs it, and on iOS a
+   tapped link keeps focus — without this it would fall back to the same black.
+   Deliberately the resting blue, not the hover coral: focus is not hover. */
+form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-accommodation:focus-visible,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:focus-visible {
+    color: #0f6dbf;
+    outline: 3px solid var(--dcc-gold);
+    outline-offset: 2px;
 }
 
 form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):focus-visible,
@@ -458,9 +513,9 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
    "sleeps up to N" cap note (offering off). */
 .mphb_sc_checkout-form .dcc_checkout-guest-note {
     margin: 6px 0 0;
-    /* 14px: readable enough not to look like fine print a guest is meant to
-       miss, one step below the field labels so it still reads as a note. */
-    font-size: 14px;
+    /* 15px (v0.11.0), one step up the existing scale — 13px helper text,
+       15px note, 20px button. Colour and weight deliberately unchanged. */
+    font-size: 15px;
     line-height: 1.4;
     color: #6b7280;
     text-align: center;
@@ -614,10 +669,6 @@ select.dcc_checkout-invalid {
     text-decoration: none;
     cursor: pointer;
     vertical-align: baseline;
-}
-
-.mphb_sc_checkout-form .dcc_checkout-tax-asterisk:hover {
-    text-decoration: underline;
 }
 
 .mphb_sc_checkout-form .dcc_checkout-tax-asterisk:focus-visible {

@@ -40,7 +40,12 @@ async function render(fixture, cfg) {
             taxNoteLead: 'Taxes applied:',
             taxNoteLabel: 'Show which taxes apply'
         },
-        guestFeeSteps: {}, guestGroups: [], dogFieldNames: []
+        guestFeeSteps: {}, guestGroups: [], dogFieldNames: [],
+        taxRates: {
+            'lake county tourist development tax': '4%',
+            'lake county discretionary sales surtax': '1%',
+            'florida sales and use tax': '6%'
+        }
     }, cfg || {});
     const el = window.document.createElement('script');
     el.textContent = SCRIPT;
@@ -172,10 +177,25 @@ function summary(doc) {
         !!doc.getElementById('dcc-tax-footnote'), true);
     check('re-render: aria-controls still resolves — a dangling one is a dead control',
         !!doc.getElementById(star.getAttribute('aria-controls')), true);
+    // One click opens it.
     star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     const after = doc.getElementById('dcc-tax-footnote');
     check('re-render: the asterisk still works after a re-render',
         !!after && !after.classList.contains('dcc_checkout-section-hidden'), true);
+
+    // THE BUG THE OWNER SAW. It is open; force another re-render. Before
+    // v0.11.0 the open state lived inside foldTaxDetail, which formatBreakdown
+    // destroys and rebuilds on every pass — so the note flashed and vanished.
+    doc.querySelector('.mphb_sc_checkout-form').appendChild(doc.createElement('span'));
+    await new Promise(r => setTimeout(r, 400));
+
+    const reopened = doc.getElementById('dcc-tax-footnote');
+    check('re-render: the open note SURVIVES a rebuild — no flash-and-vanish',
+        !!reopened && !reopened.classList.contains('dcc_checkout-section-hidden'), true);
+    check('re-render: aria-expanded survives with it',
+        doc.querySelector('.dcc_checkout-tax-asterisk').getAttribute('aria-expanded'), 'true');
+    check('re-render: the rebuilt note still carries the rates',
+        /4%.+1%.+6%/.test(reopened ? reopened.textContent : ''), true);
 }
 
 
@@ -284,10 +304,10 @@ function summary(doc) {
         note.classList.contains('dcc_checkout-section-hidden'), true);
 
     star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    check('footnote: opening names the taxes, without repeating the amounts',
+    check('footnote: opening names the taxes AND their rates',
         note.textContent,
-        '* Taxes applied: Lake County Tourist Development Tax, ' +
-        'Lake County Discretionary Sales Surtax, Florida Sales and Use Tax.');
+        '* Taxes applied: Lake County Tourist Development Tax 4%, ' +
+        'Lake County Discretionary Sales Surtax 1%, Florida Sales and Use Tax 6%.');
     check('footnote: aria-expanded follows', star.getAttribute('aria-expanded'), 'true');
 
     star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));

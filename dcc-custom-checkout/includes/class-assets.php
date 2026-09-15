@@ -166,6 +166,9 @@ final class Assets
             // Which price-breakdown rows count as tax detail. Matched against
             // the rendered label, so it is language-specific; filterable.
             'taxRowPattern'    => (string) apply_filters('dcc_checkout_tax_row_pattern', 'tax'),
+            // label => rate, read from MotoPress's own mphb_accommodation_taxes
+            // option so a rate change there reaches the guest-facing note.
+            'taxRates'         => Config::accommodation_tax_rates(),
             // Surfaces misconfiguration notices (e.g. a double-prefixed
             // Checkout Field slug) on the page for administrators only.
             'isAdmin'          => current_user_can('manage_options'),

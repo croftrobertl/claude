@@ -106,7 +106,62 @@ const read = (page, sel, props) => page.$eval(sel, (el, props) => {
     console.log(`\n      measured at 375px: ${narrow._width}px wide x ${narrow._height}px tall`);
     console.log(`      measured at 1280px: ${rest._width}px wide x ${rest._height}px tall`);
 
+    /* --- The breakdown toggle: never black, on any device. -------------- */
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const linkRest = await read(page, '#expand', ['color']);
+    check('toggle: blue at rest', linkRest.color, 'rgb(15, 109, 191)');
+    await page.hover('#expand');
+    await page.waitForTimeout(200);
+    const linkHover = await read(page, '#expand', ['color']);
+    check('toggle: coral on hover, NOT the inherited black',
+        linkHover.color, 'rgb(240, 128, 128)');
+    check('toggle: specifically not black', linkHover.color === 'rgb(0, 0, 0)', false);
+    await page.mouse.move(0, 0);
+
     await browser.close();
+
+    /* --- Touch device: no hover state may exist at all. ------------------ *
+     * On iOS the first tap applies :hover and it STICKS until you tap
+     * elsewhere, so a hover-styled control eats a tap and then will not
+     * revert. Every hover rule is inside @media (hover: hover) and
+     * (pointer: fine); this proves a coarse-pointer device never matches it.
+     *
+     * This is emulation, not an iPhone: it proves the rules are gated, which
+     * is the mechanism of the fix. It cannot reproduce iOS's sticky-hover
+     * behaviour itself. */
+    const touch = await chromium.launch({ executablePath: chromiumPath() });
+    const tctx = await touch.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 3,
+    });
+    const tpage = await tctx.newPage();
+    await tpage.goto('file://' + path.join(__dirname, 'button.html'));
+
+    const coarse = await tpage.evaluate(() => ({
+        noHover: matchMedia('(hover: none)').matches,
+        coarse:  matchMedia('(pointer: coarse)').matches,
+        gated:   matchMedia('(hover: hover) and (pointer: fine)').matches,
+    }));
+    check('touch: the device reports no hover', coarse.noHover, true);
+    check('touch: and a coarse pointer', coarse.coarse, true);
+    check('touch: so the hover media query does NOT match', coarse.gated, false);
+
+    // Tap the link and the button; neither may take a hover appearance.
+    await tpage.tap('#expand');
+    await tpage.waitForTimeout(200);
+    const tappedLink = await read(tpage, '#expand', ['color']);
+    check('touch: tapping the toggle leaves it blue — no stuck hover, no black',
+        tappedLink.color, 'rgb(15, 109, 191)');
+
+    await tpage.tap('#submit-desktop');
+    await tpage.waitForTimeout(200);
+    const tappedBtn = await read(tpage, '#submit-desktop', ['backgroundColor']);
+    check('touch: tapping Submit Booking leaves it blue, not stuck coral',
+        tappedBtn.backgroundColor, 'rgb(0, 107, 207)');
+
+    await touch.close();
     console.log(failures ? `\n${failures} failing` : '\nall passing');
     process.exit(failures ? 1 : 0);
 })();

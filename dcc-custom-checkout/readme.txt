@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.10.1
+Stable tag: 0.11.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,41 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.11.0 =
+* The tax asterisk no longer flashes and vanishes. foldTaxDetail() held its
+  open state in a local variable, and formatBreakdown() rebuilds the breakdown
+  table on EVERY re-render — destroying the note and its button and recreating
+  them closed. The state now lives outside that function and is restored on
+  rebuild. Reproduced as a failing assertion against 0.10.1 before the fix.
+* The tax note now gives the RATES as well as the names:
+  "Lake County Tourist Development Tax 4%, ... Florida Sales and Use Tax 6%".
+  Read from MotoPress's own mphb_accommodation_taxes option, so changing a rate
+  in MotoPress changes what the guest is told. The `type` is checked, not
+  assumed — a fixed-amount tax renders as money, never as a percentage.
+* It opens on hover on a mouse AND on tap on anything. A hover-only tooltip was
+  asked for and is deliberately not what shipped: hover does not exist on a
+  touch screen, and most of this site's traffic is touch. It also stays a
+  disclosure in normal flow rather than a floating layer, which would be
+  clipped by scroll containers on iOS.
+* The price-breakdown expand link has a hover colour for the first time
+  (#f08080). It had none, so hovering dropped it to the black it inherits from
+  the table — measured rgb(15,109,191) at rest, rgb(0,0,0) on hover. On iOS the
+  first tap applies :hover and it sticks, which is why it turned black and did
+  not open.
+* EVERY hover rule on the checkout is now inside
+  @media (hover: hover) and (pointer: fine), so a touch device cannot enter a
+  sticky hover state it has no way to leave. Focus is deliberately outside that
+  query — a keyboard user needs it, and a tapped link keeps focus.
+* The guest note is 15px (was 14px). Colour and weight unchanged.
+* The field styling is now portable. Tokens read an optional --dcc-site-* and
+  fall back to the literal, so a shared layer can be added later without any
+  plugin depending on one. Two rules that were only ever INHERITED are now
+  declared: the typed-in value colour and the ::placeholder colour. On this
+  form they compute to the same thing as before; in another plugin's cascade
+  they would not have.
+* Tests: 56 jsdom, 25 Chromium (including a touch-emulated context asserting
+  that the hover media query does not match a coarse pointer), 31 PHP.
 
 = 0.10.1 =
 * The deletion note now goes into MotoPress's own booking log, so it appears in

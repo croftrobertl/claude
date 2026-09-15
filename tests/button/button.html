@@ -39,6 +39,12 @@
       text-transform: capitalize;
   }
 
+  /* The theme, as measured on live: anchors are blue, and there is no hover
+     colour anywhere — which is why hovering dropped the link to the black it
+     inherits from the table. Reproduced so the fix can be tested. */
+  a { color: #0f6dbf; }
+  table, td { color: #000000; }
+
   body { margin: 0; padding: 40px; background: #fff; }
   .viewport { max-width: 375px; outline: 1px dashed #ccc; padding: 16px; margin-top: 32px; }
   h2 { font: 600 13px system-ui; color: #666; margin: 0 0 8px; }
@@ -54,6 +60,15 @@
     <button type="submit" id="submit-desktop">Submit Booking</button>
     <table><tr><td>Taxes<button type="button" class="dcc_checkout-tax-asterisk"
       id="asterisk" aria-label="Show which taxes apply">*</button></td><td>$38.50</td></tr></table>
+  </form>
+
+  <h2>Price-breakdown toggle (MotoPress markup)</h2>
+  <form class="mphb_sc_checkout-form" id="breakdown">
+    <table><tr><td>
+      <a href="#" id="expand"
+         class="mphb-price-breakdown-accommodation mphb-price-breakdown-expand">
+        Cottage 36: Sunshine Suite</a>
+    </td><td>$350</td></tr></table>
   </form>
 
   <h2>375px</h2>
