@@ -276,6 +276,7 @@
         foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
         dropRateRows(rows, table);
         markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
+        markBreakdownRules(rows);
         markFirstVisibleRows(rows);
     }
 
@@ -335,6 +336,49 @@
             }
             row.classList.add('dcc_checkout-breakdown-head');
         });
+    }
+
+    // The two extra dividers: above the "Dates" header (separating it from
+    // Nights), and above whatever follows the last booked date (separating the
+    // dates from the subtotal). Both use the SAME class as the grand total's
+    // divider, so one CSS rule governs all three.
+    //
+    // The run of date rows is found by asking whether each label parses as a
+    // date — "September 17, 2026" does, "Accommodation Total" does not. That is
+    // English-shaped; a label it cannot read ends the run early, so the second
+    // divider is simply not drawn rather than drawn in the wrong place.
+    function markBreakdownRules(rows) {
+        rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-rule'); });
+
+        var head = null;
+        for (var i = 0; i < rows.length && !head; i++) {
+            if (rows[i].classList.contains('dcc_checkout-breakdown-head')) {
+                head = rows[i];
+            }
+        }
+        if (!head) {
+            return;
+        }
+        head.classList.add('dcc_checkout-breakdown-rule');
+
+        var start = rows.indexOf(head) + 1;
+        var j = start;
+        while (j < rows.length && isDateLabel(rowLabel(rows[j]))) {
+            j++;
+        }
+        if (j > start && j < rows.length) {
+            rows[j].classList.add('dcc_checkout-breakdown-rule');
+        }
+    }
+
+    function isDateLabel(label) {
+        var text = String(label || '').trim();
+        // Require a digit AND a letter: "September 17, 2026" passes, "$175"
+        // and "Nights" do not.
+        if (!/\d/.test(text) || !/[A-Za-z]/.test(text)) {
+            return false;
+        }
+        return !isNaN(Date.parse(text));
     }
 
     // Every table's first VISIBLE row, so the top of a block never carries a
@@ -529,9 +573,15 @@
             abbr.classList.add('dcc_checkout-req');   // item 14: solid *, no dotted line
         }
 
-        // Labels that wrap a form control (consent checkboxes etc.) — only clean
-        // the marker; reordering children would detach the input.
+        // Labels that WRAP a form control (consent checkboxes, MotoPress's
+        // service rows). The control must not be moved — reordering children
+        // would detach it — but the label's text-decoration is inherited by the
+        // field's own text, and an input cannot switch off an ancestor's
+        // underline. So: tag the label (CSS drops the underline there) and put
+        // the label's OWN words in the usual span, which keeps it.
         if (label.querySelector('input, select, textarea')) {
+            label.classList.add('dcc_checkout-label-wraps-control');
+            wrapLabelText(label, abbr);
             return;
         }
 
@@ -580,6 +630,24 @@
             label.style.textDecoration = 'none';
         }
         label.classList.add('dcc_checkout-label-fixed');
+    }
+
+    // Put a wrapping label's text nodes into the underline span, leaving the
+    // form control exactly where it is. Each run is wrapped in place, so
+    // nothing moves and nothing is detached.
+    function wrapLabelText(label, abbr) {
+        Array.prototype.slice.call(label.childNodes).forEach(function (node) {
+            if (node === abbr) { return; }
+            if (node.nodeType === 1 &&
+                /^(INPUT|SELECT|TEXTAREA)$/.test(node.tagName)) { return; }
+            if (node.nodeType === 1 &&
+                node.classList.contains('dcc_checkout-label-text')) { return; }
+            if (node.nodeType === 3 && !node.textContent.trim()) { return; }
+            var span = document.createElement('span');
+            span.className = 'dcc_checkout-label-text';
+            label.insertBefore(span, node);
+            span.appendChild(node);
+        });
     }
 
     function trimEdgeWhitespace(span) {

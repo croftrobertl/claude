@@ -154,6 +154,16 @@ function summary(doc) {
         .map(r => label(r.cells[0]));
     check('headers: every visible column header is marked, and nothing else',
         heads, ['Dates', 'Service']);
+    // Items 15/16: the two extra dividers, using the grand total's own class-
+    // mate so one CSS rule governs all three.
+    const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
+        .map(r => label(r.cells[0]));
+    check('dividers: above "Dates", and above what follows the last date',
+        ruled, ['Dates', 'Accommodation Total']);
+    check('dividers: the date rows themselves carry none',
+        Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
+             .some(r => /September/.test(label(r.cells[0]))), false);
+
     check('headers: Subtotal / Taxes / Total are NOT marked',
         heads.filter(h => /^(Subtotal|Taxes|Total)/.test(h)).length, 0);
 }
@@ -255,6 +265,17 @@ function summary(doc) {
         visible(doc.querySelector('label.mphb-checkbox-label')), false);
     check('services: the quantity select is not visible',
         visible(doc.querySelector('.mphb_sc_checkout-service-adults')), false);
+    // Item 18: a label that wraps its field must not pass an underline down to
+    // the guest's typed text. An input cannot switch off an ancestor's
+    // text-decoration, so the label has to.
+    check('nested label: tagged so CSS can drop its underline',
+        doc.querySelector('label.mphb-checkbox-label')
+           .classList.contains('dcc_checkout-label-wraps-control'), true);
+    check('nested label: its own words keep the underline span',
+        !!doc.querySelector('label.mphb-checkbox-label .dcc_checkout-label-text'), true);
+    check('nested label: the control was NOT moved out of it',
+        !!doc.querySelector('label.mphb-checkbox-label > input[type="checkbox"]'), true);
+
     check('services: the <li> carrying the text and price is hidden, not just the checkbox',
         visible(doc.querySelector('.mphb_sc_checkout-services-list li')), false);
     check('services: the emptied list wrapper went too — no bordered gap left',

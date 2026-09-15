@@ -235,6 +235,21 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   control eats a tap and will not revert. Focus rules stay OUTSIDE that query.
   Touch behaviour is asserted in `tests/button/` with an emulated coarse-pointer
   context — that proves the rules are gated, not that iOS behaves.
+- **Tap diagnostic**: `?dcc_tap_debug=1` on the checkout, administrators only
+  (v0.12.0). Records pointer/touch/mouse/click with defaultPrevented and the
+  real topmost element at the touch coordinates. Listener-only — it must never
+  gain a preventDefault or a stopPropagation, or it stops being a measurement.
+  Gated on capability AND the URL flag, so nothing persists and there is no
+  default to get wrong.
+- **Mobile multi-tap is still open.** Gating the hover rules (v0.11.0) fixed
+  desktop and did not fix mobile, so sticky hover is not the whole cause. Two
+  in-plugin candidates were tested in v0.12.0: a self-feeding MutationObserver
+  loop was refuted, and the tax asterisk's 44x44 box was measured overflowing
+  its 20px row by 12px each way (real, but its neighbours are static text, so
+  not the page-wide cause). The untested lead is Elementor's two delegated
+  document-level click handlers bound to `a, [data-elementor-lightbox]`
+  (frontend.js:1102 and :1254); the next step is enumerating document- and
+  body-level handlers on /submit-booking/ versus a page that behaves.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

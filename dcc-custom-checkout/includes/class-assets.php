@@ -110,6 +110,32 @@ final class Assets
         );
 
         wp_localize_script('dcc-checkout', 'DCC_CHECKOUT', $this->script_config());
+
+        $this->maybe_enqueue_tap_debug();
+    }
+
+    /**
+     * The tap diagnostic: administrators only, and only on request.
+     *
+     * Gating is BOTH the capability and an explicit ?dcc_tap_debug=1 — a guest
+     * cannot reach it by guessing a URL, and an admin cannot leave it switched
+     * on by accident, because it does not persist anywhere. Nothing is stored,
+     * so there is no setting with a wrong default to worry about.
+     *
+     * It only listens. See assets/tap-debug.js for what it records and why.
+     */
+    private function maybe_enqueue_tap_debug(): void
+    {
+        if (empty($_GET['dcc_tap_debug']) || !current_user_can('manage_options')) {
+            return;
+        }
+        wp_enqueue_script(
+            'dcc-checkout-tap-debug',
+            DCC_CHECKOUT_URL . 'assets/tap-debug.js',
+            [],
+            DCC_CHECKOUT_VERSION,
+            true
+        );
     }
 
     /**

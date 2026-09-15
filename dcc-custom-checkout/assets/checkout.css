@@ -53,6 +53,24 @@
 .mphb_sc_checkout-form .mphb-room-number,
 .mphb_sc_checkout-form .mphb-customer-details-title {
     color: var(--dcc-label) !important;
+    text-align: center !important;
+}
+
+/* A label that WRAPS its field (consent checkboxes, and MotoPress's service
+   rows) passes its text-decoration down to the field's own text, and
+   `text-decoration: none` on the input cannot remove an ancestor's underline —
+   only the ancestor can. The Elementor kit underlines every label, so a nested
+   input would render the guest's typed text underlined. cleanLabel() tags
+   these; this is where the underline stops. */
+.mphb_sc_checkout-form label.dcc_checkout-label-wraps-control {
+    text-decoration: none !important;
+}
+
+/* The wrapping label's OWN words keep the underline, via the span cleanLabel()
+   puts them in — so the convention survives without reaching the field. */
+.mphb_sc_checkout-form label.dcc_checkout-label-wraps-control
+    > .dcc_checkout-label-text {
+    text-decoration: underline;
 }
 
 /* ---------------------------------------------------------------------------
@@ -85,6 +103,10 @@
 .mphb_sc_checkout-form textarea::placeholder {
     color: var(--dcc-muted) !important;
     opacity: 1; /* Firefox dims placeholders by default. */
+    /* Declared, not inherited. A placeholder does inherit text-align from its
+       input, but the exported standard must not depend on that — the other two
+       plugins sit in different cascades. */
+    text-align: center;
 }
 
 .mphb_sc_checkout-form select,
@@ -616,6 +638,10 @@ select.dcc_checkout-invalid {
 .mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-head > th {
     color: #111111;
     font-weight: 700;
+    /* Underline means "label" on this site — the Elementor kit underlines every
+       form label (.elementor-kit-331 label). "Dates" and "Amount" are column
+       labels, so they follow the same convention. */
+    text-decoration: underline;
 }
 
 /* The first VISIBLE row of any block carries no rule above it. Structural
@@ -626,10 +652,20 @@ select.dcc_checkout-invalid {
     border-top: 0;
 }
 
-/* The grand total: heavier rule above, bolder text. */
+/* THE divider. One rule, three places: above the grand total, above the
+   "Dates" header, and above whatever follows the last booked date. Adding a
+   fourth means adding a class here, not authoring a second border — if this is
+   ever restyled all of them move together. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total th,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-rule td,
+.mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-rule th {
+    border-top: 2px solid #111;
+}
+
+/* The grand total additionally carries the weight; a divider alone does not. */
 .mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total td,
 .mphb_sc_checkout-form table.dcc_checkout-breakdown tr.dcc_checkout-breakdown-total th {
-    border-top: 2px solid #111;
     font-weight: 700;
     font-size: 1.05em;
 }
@@ -663,6 +699,11 @@ select.dcc_checkout-invalid {
     box-shadow: none !important;
     color: #006bcf !important;
     font: inherit;
+    /* One step up (v0.12.0): the glyph was too small to recognise as a
+       control. font-size ONLY — the 44px box and the -14px/-12px margin that
+       pulls it back out of the flow are untouched, so the Taxes row keeps its
+       height and "Taxes" keeps its position. Measured: box stays 44x44. */
+    font-size: 1.4em;
     font-weight: 700;
     line-height: 1;
     text-transform: none !important;
@@ -682,4 +723,54 @@ select.dcc_checkout-invalid {
     line-height: 1.4;
     color: #4b5563;
     text-align: left;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tap diagnostic panel. Admin-only, and only with ?dcc_tap_debug=1 — see
+ * assets/tap-debug.js. Never shipped to a guest.
+ * ------------------------------------------------------------------------- */
+.dcc_tap_debug {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2147483647;
+    max-height: 45vh;
+    display: flex;
+    flex-direction: column;
+    background: #111827;
+    color: #e5e7eb;
+    font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    border-top: 3px solid #f4da62;
+}
+
+.dcc_tap_debug__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #1f2937;
+    font-weight: 700;
+}
+
+.dcc_tap_debug__btn {
+    margin-left: auto;
+    padding: 4px 10px;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    background: #374151;
+    color: #e5e7eb;
+    font: inherit;
+    cursor: pointer;
+}
+
+.dcc_tap_debug__btn + .dcc_tap_debug__btn {
+    margin-left: 0;
+}
+
+.dcc_tap_debug__body {
+    margin: 0;
+    padding: 8px 10px;
+    overflow: auto;
+    white-space: pre;
 }

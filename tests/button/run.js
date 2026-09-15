@@ -96,6 +96,10 @@ const read = (page, sel, props) => page.$eval(sel, (el, props) => {
     check('asterisk is not 20px button type', star.fontSize !== '20px', true);
     check('asterisk keeps a >=44px touch target', star._height >= 44, true);
     check('asterisk did not inherit the 30px pill radius', star.borderRadius, '0px');
+    // Item 17: the glyph grew; the BOX must not, or the Taxes row shifts.
+    check('asterisk glyph is bigger than the row text', star.fontSize, '22.4px');
+    check('asterisk box is still exactly 44x44 — row height unchanged',
+        star._width + 'x' + star._height, '44x44');
 
     /* --- 375px: still a button, still inside the viewport. -------------- */
     await page.setViewportSize({ width: 375, height: 800 });

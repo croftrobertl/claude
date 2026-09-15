@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.11.0
+Stable tag: 0.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,37 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.12.0 =
+* Price Breakdown: "Dates" and "Amount" are underlined, matching the site's
+  convention that underline means label (.elementor-kit-331 label).
+* Price Breakdown: dividers above the "Dates" header and above the row that
+  follows the last booked date. Both use the SAME class-mate as the grand
+  total's divider, so one CSS rule governs all three and restyling one moves
+  all of them.
+* The "*" beside Taxes is one step larger (font-size only). The 44x44 box and
+  the negative margin that pulls it out of the flow are untouched, so the Taxes
+  row keeps its height — asserted in Chromium at exactly 44x44.
+* Field labels, the typed-in value and the placeholder are all centred, and the
+  typed value and placeholder are DECLARED rather than inherited.
+* A label that WRAPS its field no longer passes an underline down to the
+  guest's typed text. An input cannot switch off an ancestor's text-decoration,
+  so the label does: it is tagged, CSS drops the underline there, and the
+  label's own words keep it via the usual span. The control is never moved.
+* NEW: an admin-only tap diagnostic at ?dcc_tap_debug=1 on the checkout. It
+  records pointer/touch/mouse/click on the device where the multi-tap problem
+  actually happens, including whether the event was defaultPrevented, whether
+  a click followed its touchstart, and what element is really topmost at those
+  coordinates. It only listens — no preventDefault, no stopPropagation, nothing
+  stored. Guests can never reach it; it is gated on manage_options AND the
+  explicit URL flag, so there is no setting with a wrong default.
+* Mobile multi-tap: two candidate causes in this plugin were tested. A
+  self-feeding MutationObserver loop was REFUTED (the pipeline settles after
+  one pass). The asterisk's 44x44 box was MEASURED overflowing its 20px row by
+  12px above and below, and elementFromPoint above the row returns the
+  asterisk — real, but local to the Taxes row and its neighbours are static
+  text, so it is not the page-wide cause. Left as-is: shrinking it would cost
+  the accessible target, and moving the row is explicitly unwanted.
 
 = 0.11.0 =
 * The tax asterisk no longer flashes and vanishes. foldTaxDetail() held its
