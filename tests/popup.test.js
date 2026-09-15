@@ -1703,6 +1703,7 @@ async function run() {
         // width and doubled the box, and the (0,2,0) type rule that beat the
         // plugin's (0,1,0) font-size so the glyph rendered at 18px/900.
         const KIT = `
+            html{font-weight:700}
             body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0}
             .elementor-kit-331 button{padding:0 18px;font-family:Raleway,sans-serif;
               font-size:18px;font-weight:900;letter-spacing:1.5px;line-height:50px;}
@@ -1757,16 +1758,41 @@ async function run() {
         check('the button keeps its accessible name and the mark stays decorative',
             m.label === 'Close' && m.svgHidden === 'true', `aria-label="${m.label}" svg aria-hidden=${m.svgHidden}`);
 
-        // The kit's hover also sets color:#FFFFFF, and the mark is drawn in
-        // currentColor — so a white hover would erase it on a white dialog.
+        // v0.17.0: the close button takes the site's standard coral hover. The
+        // mark is currentColor, so white ON the coral is what keeps it visible
+        // — the pairing matters more than either value alone.
         await page.hover('.dccgg-report-close');
-        await page.waitForTimeout(200);
+        await page.waitForTimeout(220);
         const hov = await page.evaluate(() => {
             const c = getComputedStyle(document.querySelector('.dccgg-report-close'));
             return { color: c.color, bg: c.backgroundColor };
         });
-        check('hovering does not erase the mark by turning currentColor white',
-            hov.color !== 'rgb(255, 255, 255)', `${hov.color} on ${hov.bg}`);
+        check('the close button hovers to the site coral with a white mark',
+            hov.bg === 'rgb(240, 128, 128)' && hov.color === 'rgb(255, 255, 255)',
+            `${hov.color} on ${hov.bg}`);
+        await page.mouse.move(2, 2);
+        await page.waitForTimeout(150);
+
+        // (B) The dialog's copy is black and not bold — the site sets
+        // html{font-weight:700}, so anything that does not declare a weight
+        // inherits bold, which is half of why the old copy read as grey mush.
+        const copy = await page.evaluate(() => {
+            const g = (sel) => { const el = document.querySelector(sel);
+                if (!el) return null;
+                const c = getComputedStyle(el);
+                return { color: c.color, weight: c.fontWeight, opacity: c.opacity }; };
+            return { dialog: g('.dccgg-report-dialog'), body: g('.dccgg-report-body'),
+                     label: g('.dccgg-report-body label'), privacy: g('.dccgg-report-privacy'),
+                     textarea: g('.dccgg-report-desc') };
+        });
+        const parts = Object.entries(copy).filter(([, v]) => v);
+        check('(B) every line of the dialog is black, not grey',
+            parts.every(([, v]) => v.color === 'rgb(0, 0, 0)' && v.opacity === '1'),
+            parts.map(([k, v]) => `${k}=${v.color}@${v.opacity}`).join(' '));
+        check('(B) body copy is not bold despite html{font-weight:700}',
+            copy.body.weight === '400' && copy.privacy.weight === '400'
+            && copy.textarea.weight === '400' && copy.label.weight === '600',
+            parts.map(([k, v]) => `${k}=${v.weight}`).join(' '));
 
         // It still has to close the dialog.
         await page.click('.dccgg-report-close');

@@ -3138,7 +3138,20 @@ dialog.dccgg-wrapper::backdrop {
        this dialog would leave an invisible mark — the same trap as 0.16.0. */
     color: color-mix(in srgb, var(--dccgg-text, #111) 60%, transparent);
 }
+/* v0.17.0: the site's standard button hover, on the close button too. The
+   mark is drawn in currentColor, so the white here is what keeps it visible
+   on the coral — the same pair every other button uses (0.15.0). */
+@media (hover: hover) {
+    .dccgg-root.dccgg-root .dccgg-report-close.dccgg-report-close:hover,
+    .dccgg-stage.dccgg-stage .dccgg-report-close.dccgg-report-close:hover,
+    .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-close.dccgg-report-close:hover {
+        background: var(--dccgg-btn-hover-bg, #f08080);
+        color: var(--dccgg-btn-hover-txt, #ffffff);
+    }
+}
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-close.dccgg-report-close:focus-visible {
+    background: var(--dccgg-btn-hover-bg, #f08080);
+    color: var(--dccgg-btn-hover-txt, #ffffff);
     outline: 3px solid var(--dccgg-text, #111111);
     outline-offset: 2px;
 }
@@ -3170,7 +3183,39 @@ dialog.dccgg-wrapper::backdrop {
     background: var(--dccgg-detail-bg, #fff);
     color: var(--dccgg-text, #111);
 }
-.dccgg-report-privacy { font-size: 0.78em; opacity: 0.7; margin: 0; text-align: center; }
+.dccgg-report-privacy { font-size: 0.78em; margin: 0; text-align: center; }
+
+/* v0.17.0: the dialog's copy is black, matching the rest of the site
+   (Custom Checkout's --dcc-label: #000000). The privacy note used to be
+   opacity: 0.7, which renders as mid-grey on white and was the hardest line
+   in the dialog to read.
+
+   font-weight is declared for the same reason the colour is: this site sets
+   `html { font-weight: 700 }`, so any text that does not say otherwise comes
+   out bold. Labels keep their own 600; body copy is 400 explicitly rather
+   than by inheritance. The doubled host class is there because the dialog is
+   appended to <body> and the kit styles reach it. */
+.dccgg-report-dialog.dccgg-report-dialog {
+    color: var(--dccgg-report-text, #000000);
+    font-weight: 400;
+}
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-privacy,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body label,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body select,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body input,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body textarea {
+    color: var(--dccgg-report-text, #000000);
+    opacity: 1;
+}
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-privacy,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body select,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body input,
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body textarea {
+    font-weight: 400;
+}
+.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body label { font-weight: 600; }
 /* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
    paint behind the top-layer dialog in Chrome, so the error message
    needs to live inside the dialog itself. */

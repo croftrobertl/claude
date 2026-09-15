@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.2
+Stable tag: 0.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,17 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.17.0 =
+
+**Changed: the Request Support popup's close button highlights on hover**,
+filling with the site's coral and turning the × white, like every other
+button on the site.
+
+**Fixed: the popup's text was grey and hard to read.** All of it is black
+now, matching the rest of the site, and the small print at the bottom is no
+longer faded. The text also came out bolder than intended on this site; every
+line now sets its own weight rather than inheriting one.
 
 = 0.16.2 =
 
