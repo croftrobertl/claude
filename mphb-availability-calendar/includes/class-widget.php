@@ -564,7 +564,10 @@ class Widget extends Widget_Base
         $this->add_control('nav_btn_bg', [
             'label'     => __('Button background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#C43A3A',
+            // The site's blue. Shipped as the DEFAULT rather than left to
+            // stored widget settings so a ninth cottage, or a settings reset,
+            // is born correct — see PROJECT-NOTES, "Defaults are the contract".
+            'default'   => '#0A50B2',
             'selectors' => [self::SEL . '.mphbac-nav-btn' => 'background-color: {{VALUE}};'],
         ]);
 
@@ -578,7 +581,7 @@ class Widget extends Widget_Base
         $this->add_control('nav_btn_hover_bg', [
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#078732',
+            'default'   => '#f08080',
             'selectors' => [
                 self::SEL . '.mphbac-nav-btn:hover'         => 'background-color: {{VALUE}};',
                 self::SEL . '.mphbac-nav-btn:focus-visible' => 'background-color: {{VALUE}};',
@@ -1030,7 +1033,12 @@ class Widget extends Widget_Base
         $this->add_control('button_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#0f6dbf',
+            // See the BSEL note at the top of this class: this selector is
+            // GLOBAL, so every calendar on a page emits a rule for it and the
+            // last one in source order wins. Identical defaults are what stop
+            // that being a coin flip — a per-widget value cannot, it just adds
+            // another competing rule.
+            'default'   => '#0A50B2',
             'selectors' => [self::BSEL => 'background-color: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
@@ -1049,7 +1057,7 @@ class Widget extends Widget_Base
         $this->add_control('button_bg_color_hover', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#0a4f8c',
+            'default'   => '#f08080',
             'selectors' => [
                 self::BSEL . ':hover'         => 'background-color: {{VALUE}};',
                 self::BSEL . ':focus-visible' => 'background-color: {{VALUE}};',
@@ -1214,14 +1222,19 @@ class Widget extends Widget_Base
         $this->start_controls_tab('view_tab_normal', [
             'label' => __('Normal', 'mphb-availability-calendar'),
         ]);
+        // These four shipped with NO default at all, so a fresh widget's view
+        // toggle had no colour until somebody set one by hand. Defaulted to the
+        // same blue/coral pair as the buttons above.
         $this->add_control('view_text_color', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFFFFF',
             'selectors' => [self::VSEL => 'color: {{VALUE}};'],
         ]);
         $this->add_control('view_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#0A50B2',
             'selectors' => [self::VSEL => 'background-color: {{VALUE}};'],
         ]);
         $this->add_control('view_icon_color', [
@@ -1238,6 +1251,7 @@ class Widget extends Widget_Base
         $this->add_control('view_text_color_hover', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#FFFFFF',
             'selectors' => [
                 self::VSEL . ':hover'         => 'color: {{VALUE}};',
                 self::VSEL . ':focus-visible' => 'color: {{VALUE}};',
@@ -1246,6 +1260,7 @@ class Widget extends Widget_Base
         $this->add_control('view_bg_color_hover', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            'default'   => '#f08080',
             'selectors' => [
                 self::VSEL . ':hover'         => 'background-color: {{VALUE}};',
                 self::VSEL . ':focus-visible' => 'background-color: {{VALUE}};',
@@ -1430,9 +1445,13 @@ class Widget extends Widget_Base
         // Elementor's empty-string-for-untouched-slot storage, so the 8
         // already-placed instances (which have no stored value at all) land
         // on 3/2/1 automatically after the update.
-        $months_desktop = self::device_number($settings['months_shown']        ?? null, 3, 1, 4);
+        // These fallbacks must match the control defaults in Widget_Single
+        // exactly. They are not belt-and-braces: none of the eight cottage
+        // templates store a months value, so for those widgets one of these
+        // two paths IS the shipped behaviour.
+        $months_desktop = self::device_number($settings['months_shown']        ?? null, 4, 1, 4);
         $months_tablet  = self::device_number($settings['months_shown_tablet'] ?? null, 2, 1, 4);
-        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, 1, 1, 4);
+        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, 2, 1, 4);
         $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
 
         $property_label = (string) ($settings['str_property'] ?? '');

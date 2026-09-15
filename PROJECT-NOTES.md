@@ -965,6 +965,81 @@ The standard's `::placeholder` rule is kept verbatim although it cannot match
 a date input — it is what makes the first text field added here correct, and
 is exactly the line the standard warns gets dropped as redundant.
 
+## Defaults are the contract (0.29.0)
+
+The owner's rule, in his words: "as solidified and durable as the Walls of
+Dubrovnik." The site's choices ship as CONTROL DEFAULTS, not as stored widget
+settings, so a ninth cottage or a settings reset is born correct. None of the
+eight cottage templates store colours or month counts, so for them the default
+is not a fallback — it IS the behaviour.
+
+**Three places have to agree, and nothing warns you when they drift:**
+1. the control `'default'` in `class-widget.php` / `class-widget-single.php`;
+2. the PHP fallback in `Widget::render_config()` (`$settings[x] ?? null, N`),
+   which is the live path for a widget storing nothing;
+3. the baked-in value in `widget.css`.
+`defaults-test.php` pins all three together, including that the months
+fallbacks equal the responsive control's defaults device by device.
+
+**Why (3) matters more than it looks: Elementor's cached per-post CSS does NOT
+regenerate on a plugin update.** Changing a control default therefore changes
+nothing on an existing page until that page is re-saved or CSS is regenerated.
+Until then the `widget.css` value is what paints — so if it disagrees, the fix
+looks like it did not ship.
+
+**BSEL is global, and that is load-order roulette.** `.mphbac-btn.mphbac-btn`
+is not scoped to the widget, deliberately: the booking popup portals outside
+the widget's subtree, so a scoped selector would silently miss it. That was
+"correct for this single-calendar site" and stopped being true when the eight
+per-cottage minis arrived. Measured on a cottage page, THREE inline Elementor
+blocks emit that same global selector, and the last one in source order wins —
+the cottage buttons were the right colour only because the home page's
+stylesheet happened to load last. **Identical defaults close this; per-widget
+values cannot, they just add a fourth competing rule.** A scoped fix would
+mean giving the portaled sheet an Elementor-derived class, which risks
+dragging the widget container's own styles into the popup — not taken.
+
+Retinting the nav also needed `--mphbac-color-alert`: the error text and the
+sheet close button were borrowing `--mphbac-color-nav-bg` for a RED they
+needed, so recolouring the nav to blue would have put blue text on the error's
+red ground. Same separation-of-meaning as `--mphbac-color-day-num`.
+
+## auto-fit cannot work inside a shrink-wrapped container (0.29.0, item 8)
+
+The multi-month grid used `repeat(auto-fit, minmax(min(240px,100%), 1fr))` and
+could never produce more than one column on a cottage page. The cause is not
+in the CSS: the Elementor container uses `justify-items: center`, which
+shrink-wraps the widget, and **auto-fit inside a fit-content box is circular** —
+the track count depends on the available width, the available width depends on
+the content. Explicit `repeat(2, minmax(0, 1fr))` breaks the circularity.
+
+Measured bonus: with explicit tracks the shrink-wrapped widget now sizes to
+TWO months' max-content (955px) instead of collapsing to one, so the 2x2
+appears without the Elementor width change — no coordinated deploy needed.
+
+**Reproducing shrink-wrap needs BOTH** a definite width on the container AND
+the Elementor widget wrapper between it and `.mphbac-root`. With either
+missing the fixture silently becomes the healthy case and the bug vanishes.
+No hard px floor on the tracks: a floor OVERFLOWS a narrow container instead
+of degrading. The 1024px breakpoint is the floor.
+
+## Two different rows (0.29.0, items 6 and 11)
+
+The booking popup's field row and the filter row above the calendar are
+separate places, and one screenshot showed both. Item 6 (popup) was already
+fixed in 0.27.0; item 11 (filter row) had never been touched — the `≤600px`
+block said `flex-direction: column` + `width: 100%`, putting label, field,
+label, field on four rows. Measured on 0.26.0: the popup fields overlapped at
+360px but NOT at 393px, the same width-dependence as the 0.27.0 finding.
+
+The filter row is now a two-column grid with `display: contents` on the
+wrapping `<label>`, which promotes its span and input into the grid without
+touching the markup — so the implicit label-for-control association survives
+(that is a DOM relationship, not a layout one). Rows are assigned explicitly;
+auto-placement alone fills row-by-row in source order and would reproduce the
+label/field pairing being removed. Splitting the rows in PHP instead would
+need explicit `for`/`id` pairs, and a page can carry nine of these widgets.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

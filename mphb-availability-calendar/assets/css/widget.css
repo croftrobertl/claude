@@ -15,9 +15,19 @@
     --mphbac-color-namecol-sep: #CBD0D7;
     --mphbac-color-namecol-text: #111111;
     --mphbac-color-frame: #e0e0e0;
-    --mphbac-color-nav-bg: #C43A3A;
+    /* The site's blue, matching the nav_btn_bg control default (0.29.0).
+       The CSS token and the control default have to agree: Elementor's cached
+       per-post CSS does NOT regenerate on a plugin update, so until a page is
+       re-saved this token is what actually paints. Three things used to
+       borrow this token for a RED they needed — the error text and the close
+       button's fill — and they now have --mphbac-color-alert instead, so
+       retinting the nav cannot drag them with it. */
+    --mphbac-color-nav-bg: #0A50B2;
+    /* Error text and the sheet close button's fill. Deliberately separate
+       from the nav colour, which is a user-facing style control. */
+    --mphbac-color-alert: #C43A3A;
     --mphbac-color-nav-text: #FFFFFF;
-    --mphbac-color-nav-hover: #078732;
+    --mphbac-color-nav-hover: #f08080;
     --mphbac-color-legend-text: #111111;
     --mphbac-color-today-outline: #f4da62;
     /* Month-grid date numbers sit ON the status fill, so they need their own
@@ -114,15 +124,55 @@
     gap: 0.5em;
 }
 
-/* Mobile: stack each filter element on its own full-width row, centered */
+/* Mobile filter row (0.29.0, item 11). This block used to say
+   `flex-direction: column` + `width: 100%`, which put every filter on its own
+   full-width row — label, field, label, field stacked four deep. The ask is
+   two rows: both LABELS across the top, both FIELDS directly beneath.
+
+   A two-column grid does that, but only if the label/field pairs are taken
+   apart. `display: contents` on the wrapping <label> promotes its span and
+   its input into the grid as siblings WITHOUT touching the markup, so the
+   implicit label-for-control association is untouched (that is a DOM
+   relationship, not a layout one). The alternative — splitting the rows in
+   PHP — would need explicit for/id pairs, and a page can carry nine of these
+   widgets, so it would need generated unique ids too.
+
+   The row is assigned explicitly. Auto-placement alone fills row-by-row in
+   source order, which would give label/field on row 1 — the thing being
+   fixed. With a definite row and an auto column each item lands in the next
+   free cell of its own row: labels 1,1 / 1,2 and fields 2,1 / 2,2.
+
+   NOT a change above 600px: there the flex row already reads as labels over
+   fields, and the DCC field standard's centring keeps them aligned. */
 @media (max-width: 600px) {
     .mphbac-filters {
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 0.75em;
+        row-gap: 0.25em;
+        align-items: end;
+        justify-content: stretch;
     }
-    .mphbac-filter,
-    .mphbac-filter-actions {
+    .mphbac-filter {
+        display: contents;
+    }
+    .mphbac-filter-label {
+        grid-row: 1;
+    }
+    .mphbac-filter .mphbac-input {
+        grid-row: 2;
+        /* Same release of the 8.5em floor as the booking popup got in 0.27.0,
+           and for the same reason: two date inputs at their intrinsic width
+           plus the gap exceed a 320-360px row, so the pair would wrap and the
+           trailing one clip. Flex/grid grants more than 8.5em resolves to
+           here, so the date text ends up with MORE room, not less. */
+        min-width: 0;
         width: 100%;
+    }
+    .mphbac-filter-actions {
+        /* Below both rows, spanning them. */
+        grid-column: 1 / -1;
+        margin-top: 0.5em;
     }
     /* The cottage column shows BOTH lines at every width as of 0.23.5.
        The rule that used to hide the name here was justified by a comment
@@ -329,7 +379,10 @@ input.mphbac-input {
     padding: 0.5em 0.9em;
     border: 0;
     border-radius: var(--mphbac-radius);
-    background: #0f6dbf;
+    /* Kept in step with the button_bg_color control default (0.29.0).
+       Elementor's cached per-post CSS does not regenerate on a plugin update,
+       so on a page that has not been re-saved THIS is what paints. */
+    background: #0A50B2;
     color: #ffffff;
     font: inherit;
     line-height: 1.3;
@@ -563,9 +616,19 @@ button.mphbac-info-close--floating {
     gap: 12px;
     align-items: start;
 }
+/* Two columns, written explicitly (0.29.0, item 8). `auto-fit` was measured
+   on a cottage page to be incapable of producing more than one column: the
+   Elementor container uses justify-items: center, which shrink-wraps the
+   widget, and auto-fit inside a fit-content box is circular — the track count
+   depends on the available width and the available width depends on the
+   content. It collapsed to a single 314px column.
+   Explicit tracks break the circularity, and 4 months in 2 columns is the
+   2x2 the owner asked for. minmax(0, 1fr) rather than a 240px minimum
+   because a hard floor would OVERFLOW a narrow container instead of degrading
+   — the floor's job is done by the 1024px breakpoint itself. */
 @media (min-width: 1024px) {
     .mphbac-months {
-        grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 .mphbac-monthbox {
@@ -1304,7 +1367,9 @@ button.mphbac-cell-label {
     align-items: center;
     gap: 0.4em;
     align-self: flex-start;
-    background: #0f6dbf;
+    /* Matches the view_bg_color control default, which 0.29.0 gave a value
+       for the first time — before that a fresh widget had no colour here. */
+    background: #0A50B2;
     color: #ffffff;
     border: 0;
     border-radius: 999px;
@@ -1319,7 +1384,7 @@ button.mphbac-cell-label {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 .mphbac-info-view-link.mphbac-info-view-link:focus-visible {
-    background: #0a4f8c;
+    background: #f08080;
     color: #ffffff;
 }
 /* (0,1,1), below VSEL, above the theme's link rules — see input.mphbac-input. */
@@ -1762,7 +1827,7 @@ body.mphbac-info-open {
    The floating variant is excluded here and gets its own focus treatment
    below, next to its outline. */
 .mphbac-sheet-close:not(.mphbac-info-close--floating):focus-visible {
-    background: var(--mphbac-color-nav-bg);
+    background: var(--mphbac-color-alert);
     color: #ffffff;
 }
 /* The ring has to read against the new ground AND against the red hover
@@ -1877,7 +1942,7 @@ body.mphbac-info-open {
     margin: 0;
     padding: 0.5em 0.7em;
     background: rgba(196, 58, 58, 0.12);
-    color: var(--mphbac-color-nav-bg);
+    color: var(--mphbac-color-alert);
     border-radius: var(--mphbac-radius);
     font-size: 0.9em;
 }
@@ -2048,7 +2113,7 @@ body.mphbac-info-open {
 .ui-datepicker th, .ui-datepicker td { padding: 0.2em; text-align: center; }
 .ui-datepicker td a { display: block; padding: 0.25em; color: inherit; text-decoration: none; border-radius: 3px; }
 
-.ui-datepicker .ui-state-active { background: #0f6dbf; color: #fff; border-radius: 3px; }
+.ui-datepicker .ui-state-active { background: #0A50B2; color: #fff; border-radius: 3px; }
 
 /* Print stylesheet — a property manager firing Cmd-P should get a clean
    availability snapshot, not the interactive filters / nav / popups.
@@ -2121,18 +2186,18 @@ body.mphbac-info-open {
         opacity: 1;
     }
     .mphbac-info-view-link.mphbac-info-view-link:hover {
-        background: #0a4f8c;
+        background: #f08080;
         color: #ffffff;
     }
     .mphbac-sheet-title-link:hover {
         text-decoration-thickness: 2px;
     }
     .mphbac-sheet-close:hover {
-        background: var(--mphbac-color-nav-bg);
+        background: var(--mphbac-color-alert);
         color: #ffffff;
     }
     .ui-datepicker td a:hover {
-        background: #0f6dbf;
+        background: #0A50B2;
         color: #fff;
     }
 }
