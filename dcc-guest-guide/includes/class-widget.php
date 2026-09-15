@@ -1433,6 +1433,12 @@ final class Widget extends Widget_Base
             'str_report_problem'  => [__('Report a problem button', 'dcc-guest-guide'),        __('Report a problem', 'dcc-guest-guide')],
             'str_report_title'    => [__('Report dialog title', 'dcc-guest-guide'),            __('Report a problem', 'dcc-guest-guide')],
             'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
+            // v0.18.0: the category <option> used to reuse the LABEL string, so
+            // whatever the host typed appeared twice — once as the label and
+            // again as the placeholder, where the caret clipped it. Its own key,
+            // with the right value already shipped: nobody should have to type
+            // "Select" into a panel to make a fresh widget correct.
+            'str_report_category_placeholder' => [__('Report dialog category placeholder', 'dcc-guest-guide'), __('Select', 'dcc-guest-guide')],
             'str_report_desc'     => [__('Report dialog description label', 'dcc-guest-guide'),__('Describe the problem', 'dcc-guest-guide')],
             'str_report_contact'  => [__('Report dialog contact-back label', 'dcc-guest-guide'),__('Email to reach you back (optional)', 'dcc-guest-guide')],
             'str_report_name'     => [__('Report dialog "Your name" label', 'dcc-guest-guide'),  __('Your name (optional)', 'dcc-guest-guide')],
@@ -3125,6 +3131,7 @@ final class Widget extends Widget_Base
                     'menuLabel'  => (string) ($s['str_report_problem'] ?? __('Report a problem', 'dcc-guest-guide')),
                     'title'      => (string) ($s['str_report_title'] ?? __('Report a problem', 'dcc-guest-guide')),
                     'category'   => (string) ($s['str_report_category'] ?? __('What\'s the issue?', 'dcc-guest-guide')),
+                    'categoryPlaceholder' => (string) ($s['str_report_category_placeholder'] ?? __('Select', 'dcc-guest-guide')),
                     'desc'       => (string) ($s['str_report_desc'] ?? __('Describe the problem', 'dcc-guest-guide')),
                     'contact'    => (string) ($s['str_report_contact'] ?? __('Email to reach you back (optional)', 'dcc-guest-guide')),
                     'privacy'    => (string) ($s['str_report_privacy'] ?? __('Your report is emailed straight to the host. It is not stored on this site.', 'dcc-guest-guide')),

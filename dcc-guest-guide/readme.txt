@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.2
+Stable tag: 0.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,20 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.18.0 =
+
+**Fixed: text typed into the Request Support form appeared underlined.** The
+site underlines form labels, and this form places each field inside its
+label, so the underline carried onto whatever the guest typed. Labels keep
+their underline; typed answers no longer get one.
+
+**Fixed: the category dropdown showed its own question twice.** The prompt
+inside the dropdown repeated the label above it. It now reads "Select",
+which can be changed in the widget's Labels & Strings panel.
+
+**Changed: the form reads down the middle.** The dialog heading, all six
+field labels and every field — the description box included — are centred.
 
 = 0.17.2 =
 

@@ -396,8 +396,19 @@
             // v0.9.7.1: leading blank option, selected + disabled by default,
             // so the guest must pick a category. Combined with `required`,
             // the form blocks submission until something is chosen.
+            // v0.18.0: every label's own text sits in a span. The site's kit
+            // underlines `label` at (0,1,1) — deliberately, it is the site's
+            // form-label convention — and text decoration propagates from an
+            // ancestor box to its in-flow descendants, which a descendant
+            // CANNOT switch off. Since this dialog nests each field inside its
+            // label, that underline was landing on the guest's typed value in
+            // every browser. Moving the underline onto the span keeps the
+            // convention and takes the field out from under it.
+            const labelText = (text) => `<span class="dccgg-report-label">${escHtml(text)}</span>`;
+            // The placeholder is its own string now; it used to repeat the
+            // label verbatim, and the caret clipped it.
             const catField = CATS.length
-                ? `<label>${escHtml(STR.category || 'Category')}<select class="dccgg-report-cat" required><option value="" selected disabled>${escHtml(STR.category || 'What’s the issue?')}</option>${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
+                ? `<label>${labelText(STR.category || 'Category')}<select class="dccgg-report-cat" required><option value="" selected disabled>${escHtml(STR.categoryPlaceholder || 'Select')}</option>${CATS.map(c => `<option value="${escAttr(c)}">${escHtml(c)}</option>`).join('')}</select></label>`
                 : '';
             dialog.innerHTML = `
                 <div class="dccgg-report-head">
@@ -412,23 +423,23 @@
                 <div class="dccgg-report-body">
                     ${catField}
                     <label>
-                        ${escHtml(STR.name || 'Your name (optional)')}
+                        ${labelText(STR.name || 'Your name (optional)')}
                         <input type="text" class="dccgg-report-name" maxlength="100" autocomplete="name">
                     </label>
                     <label>
-                        ${escHtml(STR.cottage || 'Which cottage are you staying in?')}
+                        ${labelText(STR.cottage || 'Which cottage are you staying in?')}
                         <input type="text" class="dccgg-report-cottage" maxlength="100" autocomplete="off">
                     </label>
                     <label>
-                        ${escHtml(STR.phone || 'Phone (optional)')}
+                        ${labelText(STR.phone || 'Phone (optional)')}
                         <input type="tel" class="dccgg-report-phone" maxlength="40" inputmode="tel" autocomplete="tel">
                     </label>
                     <label>
-                        ${escHtml(STR.contact || 'Email to reach you back (optional)')}
+                        ${labelText(STR.contact || 'Email to reach you back (optional)')}
                         <input type="email" class="dccgg-report-contact" autocomplete="email">
                     </label>
                     <label>
-                        ${escHtml(STR.desc || 'Describe the problem')}
+                        ${labelText(STR.desc || 'Describe the problem')}
                         <textarea class="dccgg-report-desc" required maxlength="1500" rows="5"></textarea>
                     </label>
                     <p class="dccgg-report-privacy">${escHtml(STR.privacy || '')}</p>

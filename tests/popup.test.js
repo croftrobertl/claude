@@ -1717,7 +1717,12 @@ async function run() {
               padding:6px 8px;text-align:left;font-size:13px;color:#555;}
             .elementor-kit-331 textarea{border:2px solid #F4DA62;border-radius:30px;
               background-color:#f7f7f7;padding:6px 8px;text-align:left;font-size:13px;color:#555;}
-            .elementor-kit-331 select{background-color:#f7f7f7;font-size:13px;color:#555;}`;
+            .elementor-kit-331 select{background-color:#f7f7f7;font-size:13px;color:#555;}
+            /* The site's form-label typography, served inline in the head. The
+               underline is deliberate and stays; it is the propagation onto a
+               nested field that has to be stopped. */
+            .elementor-kit-331 label{color:rgba(2,0,0,.58);font-family:Raleway;
+              font-size:19px;text-decoration:underline;}`;
         const cfg = JSON.stringify({ revealMode: 'stage', strings: {},
             report: { enabled: true, categories: ['Something is broken'],
                       strings: { title: 'Request Support', close: 'Close', send: 'Send report',
@@ -1851,13 +1856,11 @@ async function run() {
             all.every(([, v]) => v.h >= 44 && v.family === 'Raleway' && v.size === '16px'
                 && v.lh === '20.8px' && v.box === 'border-box'),
             all.map(([k, v]) => `${k}=${v.h}px ${v.family} ${v.size}/${v.lh}`).join(' | '));
-        // Alignment splits on field shape, and that split is an exception to
-        // the standard itself rather than a local override: a one-line value
-        // centres, a paragraph does not, because a ragged left edge breaks the
-        // eye's return sweep on every line.
-        check('(8C) short-value fields are centred; the free-text box is left-aligned',
-            all.filter(([k]) => k !== 'area').every(([, v]) => v.align === 'center')
-            && fields.area.align === 'left',
+        // v0.18.0: the textarea rejoins the rest. The 0.17.2 left-align
+        // exception was tried in place and the owner chose consistency across
+        // the form over the reading argument for prose.
+        check('(8C) every field is centred, the textarea included',
+            all.every(([, v]) => v.align === 'center'),
             all.map(([k, v]) => `${k}=${v.align}`).join(' '));
         check('(8C) padding is 10px 20px (the select keeps room for its caret)',
             fields.text.padding === '10px 20px' && fields.area.padding === '10px 20px'
@@ -1913,6 +1916,98 @@ async function run() {
             && foc.color === 'rgb(0, 107, 207)' && foc.offset === '2px'
             && foc.bg === 'rgb(255, 255, 255)',
             `${foc.w} ${foc.style} ${foc.color} offset ${foc.offset} on ${foc.bg}`);
+
+        // ---- item 2: the placeholder is its own string ----------------------
+        const cat = await page.evaluate(() => {
+            const sel = document.querySelector('.dccgg-report-cat');
+            const lab = sel.closest('label').querySelector('.dccgg-report-label');
+            return { placeholder: sel.options[0].textContent, label: lab ? lab.textContent : null,
+                     disabled: sel.options[0].disabled, value: sel.options[0].value };
+        });
+        check('(2) the category placeholder ships as "Select"',
+            cat.placeholder === 'Select', `"${cat.placeholder}"`);
+        check('(2) it no longer repeats the label verbatim',
+            cat.placeholder !== cat.label, `label="${cat.label}" placeholder="${cat.placeholder}"`);
+        check('(2) and it is still an unselectable prompt, not a choice',
+            cat.disabled === true && cat.value === '');
+
+        // ---- item 3: labels, fields and heading all centred -----------------
+        const centred = await page.evaluate(() => {
+            const labels = [...document.querySelectorAll('.dccgg-report-body label')];
+            const h3 = document.querySelector('.dccgg-report-head h3');
+            const dialog = document.querySelector('.dccgg-report-dialog');
+            // Where the heading's INK actually sits, not where its box does:
+            // centring inside a flex item that hugs its text would measure as
+            // "center" and still look wrong.
+            const rg = document.createRange();
+            rg.selectNodeContents(h3);
+            const ink = rg.getBoundingClientRect();
+            const d = dialog.getBoundingClientRect();
+            return {
+                labels: labels.length,
+                labelAligns: [...new Set(labels.map((l) => getComputedStyle(l).textAlign))],
+                h3Align: getComputedStyle(h3).textAlign,
+                inkOffset: Math.abs((ink.left + ink.right) / 2 - (d.left + d.right) / 2),
+            };
+        });
+        check('(3) all six labels are centred',
+            centred.labels === 6 && centred.labelAligns.length === 1
+            && centred.labelAligns[0] === 'center',
+            `${centred.labels} labels, aligns=${JSON.stringify(centred.labelAligns)}`);
+        check('(3) the heading is centred in the DIALOG, not in the space the close button left',
+            centred.h3Align === 'center' && centred.inkOffset <= 2,
+            `text-align=${centred.h3Align}, ink is ${centred.inkOffset.toFixed(1)}px off the dialog's centre`);
+
+        // ---- item 4: the underline, measured where it bites -----------------
+        // The kit underlines `label`; decoration propagates from an ancestor
+        // box to its in-flow descendants and a descendant CANNOT switch it off.
+        // So asserting `text-decoration: none` on the input proves nothing —
+        // it computed none while visibly underlined. Walk the ancestors.
+        const underline = await page.evaluate(() => {
+            const fields = ['.dccgg-report-cat', '.dccgg-report-name', '.dccgg-report-cottage',
+                            '.dccgg-report-phone', '.dccgg-report-contact', '.dccgg-report-desc'];
+            const offenders = [];
+            fields.forEach((sel) => {
+                const el = document.querySelector(sel);
+                if (!el) { offenders.push(sel + ':missing'); return; }
+                for (let n = el; n && n !== document.body; n = n.parentElement) {
+                    const line = getComputedStyle(n).textDecorationLine;
+                    if (line && line.includes('underline')) {
+                        offenders.push(sel + ' under ' + n.tagName.toLowerCase()
+                            + '.' + (n.className || '').split(' ')[0]);
+                        break;
+                    }
+                }
+            });
+            const spans = [...document.querySelectorAll('.dccgg-report-label')];
+            return { offenders,
+                     spans: spans.length,
+                     spanLines: [...new Set(spans.map((x) => getComputedStyle(x).textDecorationLine))],
+                     labelLines: [...new Set([...document.querySelectorAll('.dccgg-report-body label')]
+                         .map((l) => getComputedStyle(l).textDecorationLine))] };
+        });
+        check('(4) no field has an underlined ancestor — the typed value is clean',
+            underline.offenders.length === 0, underline.offenders.join(', '));
+        check('(4) the label BOX no longer carries the decoration',
+            underline.labelLines.length === 1 && underline.labelLines[0] === 'none',
+            JSON.stringify(underline.labelLines));
+        check('(4) the underline is kept, on the label text itself',
+            underline.spans === 6 && underline.spanLines.length === 1
+            && underline.spanLines[0] === 'underline',
+            `${underline.spans} spans, ${JSON.stringify(underline.spanLines)}`);
+        // Control: without the span the kit's underline reaches the field, which
+        // is the bug — proof the structure is doing the work, not the test.
+        const ctrlUnderline = await page.evaluate(() => {
+            const lab = document.querySelector('.dccgg-report-name').closest('label');
+            lab.style.textDecoration = 'underline';          // as the kit had it
+            const inputLine = getComputedStyle(document.querySelector('.dccgg-report-name')).textDecorationLine;
+            const labLine = getComputedStyle(lab).textDecorationLine;
+            lab.style.removeProperty('text-decoration');
+            return { inputLine, labLine };
+        });
+        check('(4) control: an underlined label still reports "none" on the field it underlines',
+            ctrlUnderline.labLine === 'underline' && ctrlUnderline.inputLine === 'none',
+            `label=${ctrlUnderline.labLine} input=${ctrlUnderline.inputLine} — why the input's own value proves nothing`);
 
         // Control: the kit wins at a doubled scope, which is why the rules use
         // a third repeat. Proven by re-running the same declarations one class

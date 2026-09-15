@@ -3157,25 +3157,26 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
-/* --- EXCEPTIONS TO THE STANDARD: free-text fields ----------------------- *
- * These two belong to the standard itself, not to this plugin. Every field
- * the checkout styles holds a SHORT value — a name, an email, a phone number
- * — and the standard's defaults were derived from those. Neither generalises
- * to a multi-line box, so any plugin adopting the standard with a free-text
- * field should copy this block across rather than rediscover it.
+/* --- EXCEPTION TO THE STANDARD: free-text fields ------------------------ *
+ * This belongs to the standard itself, not to this plugin. Every field the
+ * checkout styles holds a SHORT value — a name, an email, a phone number —
+ * and the standard's defaults were derived from those, so any plugin adopting
+ * it with a free-text field should copy this across rather than rediscover it.
  *
  *   min-height: five rows of description need the room, so the 44px tap-target
  *   floor is raised. 44px is a minimum, not a target.
  *
- *   text-align: centred prose is harder to read AND harder to edit, because a
- *   ragged left edge breaks the eye's return sweep on every line. Centring is
- *   right for a one-line value and wrong for a paragraph.
+ * The text-align exception that stood here in 0.17.2 is WITHDRAWN as of
+ * v0.18.0: the owner looked at it in place and chose consistency across the
+ * form over the reading argument for prose. The standard's `text-align:
+ * center` now applies to the textarea like every other field. Recorded rather
+ * than deleted so the other adopters of the standard know the exception was
+ * tried and dropped, and do not reintroduce it on the old reasoning.
  *
  * The Availability Calendar has four date inputs and no free-text field, so
- * neither exception applies there today. */
+ * the height exception does not apply there today. */
 .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea {
     min-height: 100px;
-    text-align: left;
 }
 
 /* -------- Print (scoped) -------- */
@@ -3233,7 +3234,17 @@ dialog.dccgg-wrapper::backdrop {
     margin: 0;
     font-size: 1.05em;
     font-weight: 700;
-    padding-right: 36px;
+    /* v0.18.0: centred in the DIALOG, not in its own flex item — the two are
+       different answers and this is the deliberate one. The heading is the
+       only in-flow child of a flex row (the close button is positioned), so
+       left alone the box hugs its text and text-align would do nothing
+       visible. It grows to fill the row, and the room reserved for the close
+       button is mirrored on the left, so the optical centre is the dialog's
+       centre rather than the centre of the space the button left over.
+       36px clears the 44px button sitting 6px from the edge. */
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 0 36px;
 }
 /* v0.16.2: the close mark is an inline SVG, not a &times; entity, and the
    button is sized against a host theme rather than hoping to out-rank it.
@@ -3334,6 +3345,29 @@ dialog.dccgg-wrapper::backdrop {
     font-weight: 400;
 }
 .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body label { font-weight: 600; }
+
+/* v0.18.0: labels centred over their fields, and the site's underline moved
+   off the label box onto the label's own text.
+   
+   The kit's rule is `.elementor-kit-331 label { text-decoration: underline }`
+   at (0,1,1), served inline in the head. It is the site's form-label
+   convention and it stays. The problem is structural, not stylistic: this
+   dialog nests each field INSIDE its label, and text decoration propagates
+   from an ancestor box to its in-flow descendants — a descendant cannot turn
+   it off, which is why `text-decoration: none` on the input did nothing and
+   why it reproduced identically in Chrome, Edge and Safari.
+   
+   So the label box declares none (at (0,4,1), which beats the kit outright
+   rather than tying it and hoping for source order), and the span carries the
+   underline instead. Same look, and the guest's typed value is no longer a
+   descendant of an underlined box. */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-body label {
+    text-align: center;
+    text-decoration: none;
+}
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog .dccgg-report-label {
+    text-decoration: underline;
+}
 /* v0.9.7.10: inline error region inside the <dialog>. Body-level toasts
    paint behind the top-layer dialog in Chrome, so the error message
    needs to live inside the dialog itself. */

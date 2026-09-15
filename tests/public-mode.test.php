@@ -512,5 +512,28 @@ foreach (['includes/class-widget.php', 'includes/class-plugin.php'] as $rel) {
 check('(k) every editor-facing string is behind current_user_can(edit_posts)',
     empty($ungated), implode(', ', $ungated));
 
+
+echo "\nQ. Shipped defaults (v0.18.0)\n";
+// The owner's standing rule: a value that lives only in a stored Elementor
+// setting is half a fix — a FRESH widget has to be born correct. Elementor's
+// control registry is not reachable from this harness, so the two places the
+// default is written are asserted against the source. Both must say "Select",
+// and neither may quietly revert to reusing the label string.
+$widgetSrc = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-widget.php');
+$jsSrc     = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/js/widget.js');
+
+check('the category placeholder is a control of its own',
+    strpos($widgetSrc, "'str_report_category_placeholder'") !== false);
+check('its SHIPPED default is "Select", not the label string',
+    preg_match("/'str_report_category_placeholder'\s*=>\s*\[[^\]]*__\('Select',\s*'dcc-guest-guide'\)\]/", $widgetSrc) === 1);
+check('the config falls back to "Select" too, so a widget saved before this version behaves',
+    preg_match("/'categoryPlaceholder'\s*=>.*\?\?\s*__\('Select',\s*'dcc-guest-guide'\)/", $widgetSrc) === 1);
+check('the <option> reads the placeholder string, not the label string',
+    strpos($jsSrc, "escHtml(STR.categoryPlaceholder || 'Select')") !== false
+    && strpos($jsSrc, "<option value=\"\" selected disabled>\${escHtml(STR.category ") === false);
+// The label keeps the host's own wording — the fix must not have touched it.
+check('the category LABEL default is untouched',
+    strpos($widgetSrc, "'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\\'s the issue?', 'dcc-guest-guide')]") !== false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }
