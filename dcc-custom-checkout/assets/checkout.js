@@ -1411,6 +1411,7 @@
             return;
         }
 
+        var lastWritten = '';
         function apply() {
             var width = ref.getBoundingClientRect
                 ? ref.getBoundingClientRect().width
@@ -1418,6 +1419,14 @@
             if (!(width > 0)) {
                 return;
             }
+            var value = width + 'px';
+            // Writing the same width again is not free: it is a style mutation
+            // on a laid-out page, and this runs on a debounce that lands right
+            // after a scroll settles -- exactly when the guest is about to tap.
+            if (value === lastWritten) {
+                return;
+            }
+            lastWritten = value;
             Array.prototype.forEach.call(files, function (file) {
                 // setProperty with 'important' so the field's own !important
                 // rules cannot out-rank the measured width.
@@ -1427,7 +1436,18 @@
 
         apply();
         var timer = null;
+        // WIDTH ONLY (v0.13.0). On iOS Safari 'resize' fires when the URL bar
+        // collapses or expands, which happens on ordinary scrolling -- so this
+        // handler was re-measuring and re-writing layout a few times per scroll
+        // on the owner's phone, on a 150ms debounce that lands just as the page
+        // settles and he taps. The field's width follows the Country select's
+        // WIDTH, so a height-only resize can never change the answer.
+        var lastWidth = window.innerWidth;
         window.addEventListener('resize', function () {
+            if (window.innerWidth === lastWidth) {
+                return;
+            }
+            lastWidth = window.innerWidth;
             if (timer) { clearTimeout(timer); }
             timer = setTimeout(apply, 150);
         });

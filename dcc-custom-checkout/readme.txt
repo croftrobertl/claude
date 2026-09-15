@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.12.0
+Stable tag: 0.13.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,47 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.13.0 =
+* FIXED, and this is the likely cause of a good part of the multi-tap problem:
+  this plugin never styled MotoPress's OWN text inputs. It styled `select` and
+  its own injected pet fields and left First Name, Last Name, Email, Phone,
+  Address, Apartment and Note to the theme -- while the standard this plugin
+  publishes, "Custom Checkout - Field Standard.css", had declared the full pill
+  all along. The export and its source had diverged and the checkout was
+  running on the wrong one. Those fields now get the standard: full width of
+  their wrapper, border-box, 44px minimum height, 16px text, the gold pill.
+  Three consequences, all of them visible in the owner's tap log:
+  - WIDTH. The input did not fill its <p>, so each row carried a dead strip
+    that looks tappable and is not. On his 390px screen the presses that
+    reached an input were at x 261-277; the ones that hit nothing were at
+    x 339-374. Tapping a <p> does nothing, so the tap is lost and he taps
+    again. This alone costs taps on every field on the page.
+  - HEIGHT. Without a min-height the target could be under 44px.
+  - FONT SIZE. Under 16px, iOS Safari ZOOMS THE WHOLE PAGE when the field takes
+    focus. That is a page-wide movement under the finger, and a tap arriving
+    while the page is still moving is spent stopping it.
+* FIXED: the handler that keeps the ID upload field the same width as the
+  Country select fired on every window resize. On iOS, resize fires when the
+  URL bar collapses or expands -- which happens on ordinary scrolling -- so it
+  was re-writing layout several times per scroll on a 150ms debounce that lands
+  exactly as the page settles and the guest taps. It now ignores height-only
+  resizes (the field follows a WIDTH, so a height change cannot alter the
+  answer) and skips the write when the measured width has not changed.
+* The tap diagnostic (?dcc_tap_debug=1, administrators only) is round two. It
+  now measures, per press: whether the page scrolled or the target moved,
+  whether the page ZOOMED, whether the touched node was still connected at
+  touchend, whether the DOM changed mid-press and whether any of it was on the
+  touched node's own ancestor chain, whether Google Places' pac-container is
+  open, and -- when the press lands on a wrapper rather than a control -- where
+  the control actually is and by how much the tap missed. It logs a verdict
+  line, "NO CLICK FOLLOWED THIS PRESS", instead of leaving that to be inferred
+  from an absent line. Separately it names what moves the page after load, via
+  layout-shift entries and page-height changes. Still listener-only: no
+  preventDefault, no stopPropagation, nothing stored.
+* New test suite, tests/fields/, in real Chromium at 390x844 with touch
+  emulation. It asserts the geometry above and then re-checks the symptom in
+  the owner's own coordinates. Against the 0.12.0 stylesheet it fails 33 ways.
 
 = 0.12.0 =
 * Price Breakdown: "Dates" and "Amount" are underlined, matching the site's

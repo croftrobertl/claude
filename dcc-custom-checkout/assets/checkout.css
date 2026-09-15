@@ -90,6 +90,37 @@
 .mphb_sc_checkout-form select {
     text-align: center !important;
     font-family: "Raleway", sans-serif;
+    /* THE PILL ITSELF (v0.13.0). Until now this block set only alignment,
+       family and colour, so MotoPress's own First Name / Last Name / Address /
+       Apartment inputs were sized and bordered by the THEME, not by this
+       plugin -- while "Custom Checkout - Field Standard.css", which this file
+       is supposed to generate, had declared the full pill all along. The
+       export and its source had silently diverged, and the checkout was
+       running on the wrong one.
+
+       Three consequences, all visible in the owner's tap log:
+       - width. The input did not fill its <p> wrapper, so the wrapper carried
+         a dead margin on each side. Nearly every press in the log targeted
+         p.mphb-customer-* or the <section>, not an input: at 390px wide the
+         presses that DID reach an input were at x 261-277, while the presses
+         that hit dead space were at x 339-374. Tapping a <p> does nothing, so
+         the guest taps again.
+       - height. Without min-height the target could be under 44px.
+       - font-size. Under 16px, iOS Safari ZOOMS THE PAGE on focus. That is a
+         page-wide movement, and a tap arriving while the page is still moving
+         is spent stopping it. 16px is not cosmetic here.
+
+       !important for the same reason the select block below uses it: the
+       Elementor kit's input reset out-specifies a single class. */
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background-color: #ffffff !important;
+    border: var(--dcc-field-border) solid var(--dcc-gold) !important;
+    border-radius: var(--dcc-field-radius) !important;
+    min-height: 44px !important;
+    padding: 10px 20px !important;
+    font-size: 16px !important;
+    line-height: 1.3 !important;
     /* Declared, not inherited (v0.11.0). The typed-in value and the
        placeholder had NO rules of their own — they inherited black from the
        form's ancestors and a UA grey respectively. That is invisible here but

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DCC Custom Checkout — field geometry harness</title>
+
+<!--
+  Reproduces the customer-details block of /submit-booking/ at phone width, so
+  the FIELDS' GEOMETRY can be measured without creating a reservation on a live
+  booking site.
+
+  The markup is MotoPress's own, taken from the element names in the owner's
+  tap log: each control sits in a <p class="mphb-customer-* mphb-text-control">
+  inside <section id="mphb-customer-details">. That nesting is the whole point
+  of this harness — the log showed nearly every press landing on the <p> rather
+  than on the input inside it.
+
+  The Elementor kit's input reset is reproduced first, at its measured
+  specificity, because until v0.13.0 the kit was what actually sized these
+  fields: the plugin styled only `select` and its own injected pet fields, and
+  left MotoPress's text inputs alone.
+
+  What this proves: the plugin's rule now sizes MotoPress's own fields and
+  out-specifies the kit. What it CANNOT prove: that nothing else on the live
+  page also targets them.
+-->
+
+<style>
+  html, body { margin: 0; padding: 0; }
+
+  /* --- Elementor kit input reset, as measured: (0,1,1) ------------------ */
+  .elementor-kit-331 input[type="text"],
+  .elementor-kit-331 input[type="email"],
+  .elementor-kit-331 input[type="tel"],
+  .elementor-kit-331 textarea,
+  .elementor-kit-331 select {
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 3px;
+      /* THE DEFECT THIS HARNESS EXISTS FOR: a field narrower than its block.
+         On the owner's 390px screen this left a dead strip on each side that
+         looks tappable and is not. */
+      width: 260px;
+      box-sizing: content-box;
+  }
+  .elementor-kit-331 label { text-decoration: underline; }
+
+  /* MotoPress's own wrapper spacing. */
+  #mphb-customer-details p { margin: 0 0 16px; padding: 0; }
+  #mphb-customer-details label { display: block; margin-bottom: 4px; }
+  #mphb-customer-details { padding: 0 16px; }
+</style>
+
+<link rel="stylesheet" href="../../dcc-custom-checkout/assets/checkout.css">
+</head>
+<body class="elementor-kit-331">
+
+<form class="mphb_sc_checkout-form mphb_sc_checkout-form">
+  <section id="mphb-customer-details" class="mphb-checkout-section mphb-customer-details">
+
+    <p class="mphb-customer-first-name mphb-customer-name mphb-text-control">
+      <label for="mphb_first_name">First Name</label>
+      <input type="text" id="mphb_first_name" name="mphb_first_name" value="">
+    </p>
+
+    <p class="mphb-customer-last-name mphb-text-control">
+      <label for="mphb_last_name">Last Name</label>
+      <input type="text" id="mphb_last_name" name="mphb_last_name" value="">
+    </p>
+
+    <p class="mphb-customer-email mphb-text-control">
+      <label for="mphb_email">Email</label>
+      <input type="email" id="mphb_email" name="mphb_email" value="">
+    </p>
+
+    <p class="mphb-customer-phone mphb-text-control">
+      <label for="mphb_phone">Phone</label>
+      <input type="tel" id="mphb_phone" name="mphb_phone" value="">
+    </p>
+
+    <!-- Google Places binds to this one on the live page; the class is carried
+         here so a selector that accidentally excludes it would show up. -->
+    <p class="mphb-customer-address1 mphb-text-control">
+      <label for="mphb_address1">Address</label>
+      <input type="text" id="mphb_address1" name="mphb_address1"
+             class="pac-target-input" autocomplete="off" value="">
+    </p>
+
+    <p class="mphb-customer-apartment-units mphb-text-control">
+      <label for="mphb_apartment_units">Apartment / Unit</label>
+      <input type="text" id="mphb_apartment_units" name="mphb_apartment_units" value="">
+    </p>
+
+    <p class="mphb-customer-country mphb-text-control">
+      <label for="mphb_country">Country</label>
+      <select id="mphb_country" name="mphb_country">
+        <option>United States</option>
+      </select>
+    </p>
+
+    <p class="mphb-customer-note mphb-text-control">
+      <label for="mphb_note">Note</label>
+      <textarea id="mphb_note" name="mphb_note" rows="3"></textarea>
+    </p>
+
+  </section>
+</form>
+
+</body>
+</html>

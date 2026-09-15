@@ -241,15 +241,42 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   gain a preventDefault or a stopPropagation, or it stops being a measurement.
   Gated on capability AND the URL flag, so nothing persists and there is no
   default to get wrong.
-- **Mobile multi-tap is still open.** Gating the hover rules (v0.11.0) fixed
+- **The published standard is the source of truth, and it drifted once.**
+  Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
+  injected pet fields, while `Custom Checkout - Field Standard.css` — which is
+  generated from it and is the standard for the other two plugins — declared
+  the full pill for text inputs too. MotoPress's own First Name / Address /
+  Apartment fields were therefore sized by the THEME for several releases.
+  **After editing either file, diff the two.** Three of those declarations are
+  load-bearing, not cosmetic: `width: 100%` (a field narrower than its wrapper
+  leaves a dead strip that looks tappable and is not), `min-height: 44px`, and
+  `font-size: 16px` — **under 16px iOS Safari zooms the whole page on focus**,
+  which moves everything under the finger.
+- **Nothing on the checkout may write layout on a bare `resize` event.** On iOS
+  `resize` fires when the URL bar collapses during ordinary scrolling.
+  `matchFileFieldWidth()` did exactly that on a 150ms debounce, landing just as
+  the page settled and the guest tapped. It now ignores height-only resizes and
+  skips no-op writes. Any new resize handler must do the same.
+- **Mobile multi-tap: cause partly identified (v0.13.0).** Gating the hover rules (v0.11.0) fixed
   desktop and did not fix mobile, so sticky hover is not the whole cause. Two
   in-plugin candidates were tested in v0.12.0: a self-feeding MutationObserver
   loop was refuted, and the tax asterisk's 44x44 box was measured overflowing
   its 20px row by 12px each way (real, but its neighbours are static text, so
   not the page-wide cause). The untested lead is Elementor's two delegated
   document-level click handlers bound to `a, [data-elementor-lightbox]`
-  (frontend.js:1102 and :1254); the next step is enumerating document- and
-  body-level handlers on /submit-booking/ versus a page that behaves.
+  (frontend.js:1102 and :1254) — but the owner's own enumeration came back
+  NEGATIVE: /submit-booking/ and /cottages/ carry identical document- and
+  body-level click handlers, so there is no extra handler on the misbehaving
+  page. What his tap log did establish: nothing intercepts clicks (no
+  defaultPrevented anywhere, every click that fired reached the document) — the
+  browser is not GENERATING the click. The dead-strip defect above explains the
+  lost taps that landed on a wrapper; it does NOT explain three stationary taps
+  on an input that produced no click. Still open, and the round-2 diagnostic
+  measures the remaining candidates directly (page movement, page zoom, node
+  replacement mid-press, Places' pac-container).
+- Field geometry (tap targets) is asserted in real Chromium at 390x844 with
+  touch emulation at `tests/fields/` (`npm install && npm test`). Run it after
+  touching any field rule.
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

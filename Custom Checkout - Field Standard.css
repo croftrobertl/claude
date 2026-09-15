@@ -59,7 +59,21 @@
     text-align: center;
     color: var(--dcc-label);       /* declared, not inherited — see header */
     box-sizing: border-box;
+    width: 100%;                   /* fill the wrapper: see the note below */
 }
+
+/* WIDTH IS PART OF THE STANDARD, not a layout preference (added v0.13.0).
+   A field narrower than the block that contains it leaves a dead strip down
+   each side that looks tappable and is not. On the checkout this was measured
+   from a real phone: on a 390px-wide screen the presses that reached an input
+   were at x 261-277, while the presses that hit dead space were at x 339-374,
+   and tapping dead space does nothing at all. The guest reads that as "the
+   field did not respond" and taps again.
+
+   min-height: 44px and font-size: 16px above are load-bearing for the same
+   reason. 44px is the smallest comfortable target; under 16px, iOS Safari
+   zooms the whole page when the field takes focus, which moves everything
+   under the finger. */
 
 .YOUR-SCOPE input::placeholder,
 .YOUR-SCOPE textarea::placeholder {
