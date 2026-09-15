@@ -1847,10 +1847,18 @@ async function run() {
             all.every(([, v]) => v.bg === 'rgb(255, 255, 255)'
                 && v.border === '2px solid rgb(244, 218, 98)' && v.radius === '30px'),
             all.map(([k, v]) => `${k}=${v.bg}/${v.border}/${v.radius}`).join(' | '));
-        check('(8C) 44px floor, Raleway 16px/1.3, centred, border-box',
+        check('(8C) 44px floor, Raleway 16px/1.3, border-box',
             all.every(([, v]) => v.h >= 44 && v.family === 'Raleway' && v.size === '16px'
-                && v.lh === '20.8px' && v.align === 'center' && v.box === 'border-box'),
-            all.map(([k, v]) => `${k}=${v.h}px ${v.family} ${v.size}/${v.lh} ${v.align}`).join(' | '));
+                && v.lh === '20.8px' && v.box === 'border-box'),
+            all.map(([k, v]) => `${k}=${v.h}px ${v.family} ${v.size}/${v.lh}`).join(' | '));
+        // Alignment splits on field shape, and that split is an exception to
+        // the standard itself rather than a local override: a one-line value
+        // centres, a paragraph does not, because a ragged left edge breaks the
+        // eye's return sweep on every line.
+        check('(8C) short-value fields are centred; the free-text box is left-aligned',
+            all.filter(([k]) => k !== 'area').every(([, v]) => v.align === 'center')
+            && fields.area.align === 'left',
+            all.map(([k, v]) => `${k}=${v.align}`).join(' '));
         check('(8C) padding is 10px 20px (the select keeps room for its caret)',
             fields.text.padding === '10px 20px' && fields.area.padding === '10px 20px'
             && fields.select.padding === '10px 40px 10px 20px',

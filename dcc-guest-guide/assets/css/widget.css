@@ -3157,11 +3157,25 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
-/* A textarea is the one field the pill shape does not fully fit: five rows
-   of description need room, so the 44px floor is raised here. Deliberate
-   deviation, recorded rather than silent. */
+/* --- EXCEPTIONS TO THE STANDARD: free-text fields ----------------------- *
+ * These two belong to the standard itself, not to this plugin. Every field
+ * the checkout styles holds a SHORT value — a name, an email, a phone number
+ * — and the standard's defaults were derived from those. Neither generalises
+ * to a multi-line box, so any plugin adopting the standard with a free-text
+ * field should copy this block across rather than rediscover it.
+ *
+ *   min-height: five rows of description need the room, so the 44px tap-target
+ *   floor is raised. 44px is a minimum, not a target.
+ *
+ *   text-align: centred prose is harder to read AND harder to edit, because a
+ *   ragged left edge breaks the eye's return sweep on every line. Centring is
+ *   right for a one-line value and wrong for a paragraph.
+ *
+ * The Availability Calendar has four date inputs and no free-text field, so
+ * neither exception applies there today. */
 .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea {
     min-height: 100px;
+    text-align: left;
 }
 
 /* -------- Print (scoped) -------- */

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.1
+Stable tag: 0.17.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,12 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.17.2 =
+
+**Changed: the description box in the Request Support form reads left to
+right again.** The other fields hold short answers and stay centred; a
+paragraph is easier to read and to edit against a straight left edge.
 
 = 0.17.1 =
 
