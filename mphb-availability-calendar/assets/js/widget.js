@@ -423,6 +423,7 @@
         };
         applyDefaultWindow(config, state);
 
+        wireEmptyState(root);
         wireFilters(root, config, state);
         wireNav(root, config, state);
         wireInfoPopup(root, config);
@@ -463,6 +464,40 @@
                 var el = root.querySelector(pair[0]);
                 if (el) el.min = pair[1];
             });
+    }
+
+    // Empty-state hook for the date fields (0.28.0, DCC field standard).
+    // The standard colours a field's empty text --dcc-muted and its typed
+    // value --dcc-label. On an <input type="date"> the typed value comes for
+    // free (the input's own `color` cascades into ::-webkit-datetime-edit),
+    // but the empty mm/dd/yyyy is painted through that SAME pseudo tree, and
+    // no CSS selector separates the two states: an empty, non-required date
+    // input matches :valid and :in-range and does NOT match
+    // :placeholder-shown. So the state is published as a class instead.
+    // Cosmetic only — with JS off the fields simply keep the typed colour.
+    // Setting .value from script fires neither `input` nor `change`, so every
+    // programmatic write calls this directly — see doReset(), the checkout
+    // force-shift, and the booking popup's prefill.
+    function markEmpty(el) {
+        if (el && el.classList) el.classList.toggle('mphbac-input--empty', !el.value);
+    }
+
+    function syncEmptyState(root) {
+        var inputs = root.querySelectorAll('.mphbac-input');
+        for (var i = 0; i < inputs.length; i++) markEmpty(inputs[i]);
+    }
+
+    // Delegated on the root so it also covers the booking popup's fields,
+    // which are created before the popup portals to <body> — the listener
+    // rides along with the element, so the move does not unbind it.
+    function wireEmptyState(root) {
+        ['input', 'change'].forEach(function (evt) {
+            root.addEventListener(evt, function (e) {
+                var t = e.target;
+                if (t && t.classList && t.classList.contains('mphbac-input')) markEmpty(t);
+            });
+        });
+        syncEmptyState(root);
     }
 
     function deviceBucket() {
@@ -604,8 +639,8 @@
         }
 
         function doReset() {
-            if (checkin) checkin.value = '';
-            if (checkout) checkout.value = '';
+            if (checkin) { checkin.value = ''; markEmpty(checkin); }
+            if (checkout) { checkout.value = ''; markEmpty(checkout); }
             applyDefaultWindow(config, state);
             request(root, config, state);
         }
@@ -631,6 +666,7 @@
                 var wasInvalid = hadValue && checkout.value <= checkin.value;
                 if (!hadValue || wasInvalid) {
                     checkout.value = newMin;
+                    markEmpty(checkout);
                     if (wasInvalid) {
                         // Brief visual highlight (CSS handles the fade-out).
                         checkout.classList.add('mphbac-input--just-changed');
@@ -2343,6 +2379,8 @@
             renderSplitTitle(titleEl, roomTitle ? (title + ' ' + roomTitle) : title);
             checkinEl.value = checkin || '';
             checkoutEl.value = checkout || '';
+            markEmpty(checkinEl);
+            markEmpty(checkoutEl);
             // Opening from a day cell prefills a valid range — estimate it
             // right away (still debounced, so a quick date change coalesces).
             scheduleEstimate();

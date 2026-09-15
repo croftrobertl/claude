@@ -893,6 +893,78 @@ transition, and count Swiper instances on the element
 (`document.querySelectorAll('.mphbac-info-body .swiper').length` vs how many
 have `.swiper` set). Two instances on one element would explain it exactly.
 
+## The DCC field standard (0.28.0) — and what it exposed
+
+The widget's four date fields now follow `dcc-custom-checkout` 0.11.0's field
+standard, kept as a deliberate COPY (an mu-plugin shared layer cannot be
+installed from the WP Admin upload screen, which is how this is deployed).
+Every token reads an optional `--dcc-site-*` first, so a future shared layer
+is picked up with no edit here.
+
+**Two live bugs came out of adopting it, both invisible until the harness
+modelled the kit at its real specificity.**
+
+1. **The old field styling was never landing.** PROJECT-NOTES §4 has always
+   recorded Bravada's kit resetting inputs at `(0,3,1)`. The field rules sat
+   at `(0,2,0)`, BELOW it — so on a real page the fields were the kit's grey
+   `#eeeeee` box with a dotted border and `1px 2px` padding, not the plugin's
+   white 6px-radius pill. Only `line-height` ever won, because it carried
+   `!important`. `typography-test.js` modelled the kit at `(0,1,1)`, where
+   `(0,2,0)` wins, so every harness said the pill was fine.
+   *Lesson: a fixture that models the adversary too weakly is worse than no
+   fixture — it converts an unknown into a false positive.*
+   `field-standard-test.js` carries BOTH forms; block 0 asserts the previous
+   release really did lose, so this cannot quietly come back.
+
+2. **The booking popup's fields were 15.2px and zoomed iOS Safari on tap.**
+   `font-size: inherit` reads the PARENT, and the popup's fields sit in
+   `.mphbac-sheet-field { font-size: 0.95em }` which — once the sheet portals
+   to `<body>` — is 0.95 x the theme's 16px. Under 16px Safari zooms the page
+   on focus. The filter row was fine at 18px, so this only ever affected the
+   popup guests actually book through. Fixed with `max(16px, 1em)`, which
+   keeps `inherit`'s behaviour with a floor and leaves the Elementor control
+   on top.
+
+**Tiers now in play on `.mphbac-input`** — three deliberate levels:
+
+| specificity | selector | what | why |
+|---|---|---|---|
+| (0,1,1) | `input.mphbac-input` | font-family, font-size | beats the theme, YIELDS to the panel — the 0.26.0 pin |
+| (0,2,0) | `.mphbac-input.mphbac-input` | min-width, box-sizing, transition | beatable by the ≤600px override at (0,4,0) |
+| (0,4,0) | `.mphbac-input` x4 | the pill | must beat the kit's (0,3,1) outright |
+| (0,5,0) | + `--just-changed` | forced-shift highlight | a shorthand at (0,4,0) beats a longhand below it |
+
+`line-height: 1.3 !important` is **kept deliberately**, not left by accident.
+At (0,4,0) it would already beat a (0,3,1) kit rule, so the guard is in
+principle removable — it stays because the Filter Fields typography control
+excludes line-height by design, so nothing legitimate needs to outrank it,
+while being wrong about the kit's ceiling collapses every date field on the
+site to a 1px slice. Asymmetric downside, zero cost.
+
+**Two knock-on changes the standard forces, both intended:**
+- The `--just-changed` highlight went from gold to `--dcc-blue`. The pill's
+  border is now gold, so the gold highlight had become gold-on-gold and
+  stopped reading — which defeats the entire point of the class.
+- Fields take the standard's 3px blue focus ring; buttons keep gold. The old
+  shared rule was `.mphbac-root`-scoped, so the **portaled popup's fields had
+  no focus ring at all** — a keyboard user tabbing the booking popup could
+  not see where they were.
+
+**Empty vs typed on a date input.** The standard colours empty text
+`--dcc-muted` and the typed value `--dcc-label`. The typed value is free
+(`color` cascades into `::-webkit-datetime-edit`), but Blink paints the empty
+`mm/dd/yyyy` through that SAME pseudo tree, and **no CSS selector separates
+the states**: measured, an empty non-required date input matches `:valid` and
+`:in-range` and does NOT match `:placeholder-shown`. So `widget.js` publishes
+`.mphbac-input--empty`. Every programmatic `.value` write calls `markEmpty()`
+— assigning `.value` fires neither `input` nor `change`.
+`getComputedStyle(el, '::-webkit-datetime-edit')` returns the HOST's style and
+cannot verify this; the test compares **pixels**.
+
+The standard's `::placeholder` rule is kept verbatim although it cannot match
+a date input — it is what makes the first text field added here correct, and
+is exactly the line the standard warns gets dropped as redundant.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

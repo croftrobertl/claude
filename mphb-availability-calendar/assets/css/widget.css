@@ -50,6 +50,26 @@
     line-height: 1.3;
 }
 
+/* DCC FIELD STANDARD tokens (0.28.0). Declared on the portaled popups as
+   well as on the root: .mphbac-sheet and .mphbac-info-sheet are moved to
+   <body> when opened, so a custom property inherited only from .mphbac-root
+   stops resolving there — and an unresolved var() is invalid at
+   computed-value time, which for `border-color` silently means currentColor.
+   Each token reads an optional --dcc-site-* first, so a future shared layer
+   on :root is picked up here with no change to this file. */
+.mphbac-root,
+.mphbac-sheet,
+.mphbac-info-sheet {
+    --dcc-gold:            var(--dcc-site-gold, #f4da62);
+    --dcc-blue:            var(--dcc-site-blue, #006bcf);
+    --dcc-label:           var(--dcc-site-label, #000000);
+    --dcc-muted:           var(--dcc-site-muted, #6b7280);
+    --dcc-field-radius:    var(--dcc-site-field-radius, 30px);
+    --dcc-field-border:    var(--dcc-site-field-border, 2px);
+    --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
+    --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
+}
+
 .mphbac-root *,
 .mphbac-root *::before,
 .mphbac-root *::after {
@@ -161,31 +181,106 @@
    collapses the date text to a thin slice. Same pattern as the
    .mphbac-sheet.mphbac-sheet centering fix from v0.8.7. */
 .mphbac-input.mphbac-input {
-    padding: 10px 12px;
-    border: 1px solid var(--mphbac-color-frame);
-    border-radius: 6px;
-    background: #ffffff;
-    color: #111111;
-    /* The font longhands live in their own (0,1,1) rule below, NOT here —
-       0.25.0 put them in this (0,2,0) block, which ties FSEL and wins on
-       order, so the panel's family and size were still being swallowed even
-       after the weight was fixed. */
-    /* !important defeats Bravada's Elementor kit, which resets every input to
-       line-height:1px and would otherwise collapse these date fields. The
-       Elementor "Filter Fields" typography control excludes line-height for
-       this reason — and the shorthand above used to re-break it anyway. */
-    line-height: 1.4 !important;
     min-width: 8.5em;
-    min-height: 2.4em;
     box-sizing: border-box;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    /* Everything visual moved to the (0,4,0) DCC FIELD STANDARD block below
+       in 0.28.0 — see the tier note there. min-width stays at (0,2,0) so the
+       ≤600px `min-width: 0` override (0,4,0) still beats it on specificity
+       rather than on source order. The font longhands live in their own
+       (0,1,1) rule below, NOT here: 0.25.0 put them in this block, which ties
+       FSEL and wins on order, so the panel's family and size were still being
+       swallowed even after the weight was fixed. */
+}
+
+/* =======================================================================
+   DCC FIELD STANDARD  (0.28.0)
+   Source of truth: dcc-custom-checkout 0.11.0, assets/checkout.css.
+   Scope here: this widget's date fields only — never theme forms.
+
+   A deliberate COPY, not an @import. A shared layer would have to ship as
+   an mu-plugin, and mu-plugins cannot be installed from the WP Admin upload
+   screen, which is how this plugin is deployed. Every token still reads an
+   optional --dcc-site-* first, so if a shared layer is ever added this
+   follows it without depending on it existing.
+
+   TRANSLATED, NOT PASTED, in three places — all forced by this widget:
+
+   1. SELECTOR. The standard scopes by a root class. This widget's booking
+      popup is portaled to <body> on open (v0.8.6), so a root-scoped rule
+      stops matching the sheet's two date fields at exactly the moment they
+      appear. The class on the input itself is used instead, which has no
+      ancestor to lose.
+   2. SPECIFICITY TIER (0,4,0), four repeats of the same class. Bravada's
+      Elementor kit resets inputs at (0,3,1) — recorded independently in
+      PROJECT-NOTES §4, and the reason the line-height below still carries
+      !important. (0,2,0), where these properties lived until 0.28.0, sits
+      BELOW that kit rule: only properties the kit does not set were ever
+      really landing. (0,4,0) is the same tier the Elementor style controls
+      use for the same reason, and stays under the Filter Fields control's
+      (0,5,0) so the panel keeps the last word.
+   3. NO select/textarea RULES. This widget has neither — four date inputs
+      and nothing else. Any field added later gets .mphbac-input and is
+      covered by this one rule, which is broader than the standard's
+      type-by-type list, not narrower.
+
+   font-family and font-size are deliberately NOT here. They stay at (0,1,1)
+   below so the Elementor typography control still owns them — see the pin
+   note there, and the iOS zoom guard that goes with it.
+   ======================================================================= */
+.mphbac-input.mphbac-input.mphbac-input.mphbac-input {
+    background-color: #ffffff;
+    border: var(--dcc-field-border) solid var(--dcc-gold);
+    border-radius: var(--dcc-field-radius);
+    min-height: 44px;              /* also the minimum comfortable tap target */
+    padding: 10px 20px;
+    text-align: center;
+    color: var(--dcc-label);       /* declared, not inherited — see the standard's header */
+    box-sizing: border-box;
+    /* The standard's 1.3, but !important is KEPT — checked, not assumed.
+       At (0,4,0) this would already beat a (0,3,1) kit rule, so the guard is
+       in principle removable. It stays because nothing legitimate is blocked
+       by it: the Filter Fields typography control deliberately excludes
+       line-height (adding it would re-collapse the date text), so no panel
+       setting needs to outrank this. Against that, being wrong about the
+       kit's true ceiling collapses every date field on the site to a 1px
+       slice. Asymmetric downside, zero cost — keep it. */
+    line-height: 1.3 !important;
+}
+
+/* The typed-in value needs nothing of its own: `color` above cascades into
+   ::-webkit-datetime-edit. The EMPTY state does need help — Blink paints
+   mm/dd/yyyy through that same pseudo tree, and there is no CSS selector
+   that distinguishes an empty date input from a filled one (measured: an
+   empty non-required date input is :valid, :in-range, and NOT
+   :placeholder-shown). So widget.js sets .mphbac-input--empty, and this is
+   the date-input equivalent of the standard's ::placeholder rule. */
+.mphbac-input.mphbac-input.mphbac-input.mphbac-input--empty::-webkit-datetime-edit {
+    color: var(--dcc-muted);
+    opacity: 1;
+}
+
+/* The standard's ::placeholder rule, kept verbatim and deliberately. It
+   cannot match a date input, so it does nothing today — it is here so the
+   first text field added to this widget is already correct, which is the
+   reason the standard calls it out as the line most likely to be dropped. */
+.mphbac-input::placeholder {
+    color: var(--dcc-muted);
+    opacity: 1;                    /* Firefox dims placeholders by default */
 }
 /* When the checkin date moves and we have to force-shift the checkout to
    stay valid, briefly highlight the checkout input so the change isn't
    silent. JS adds this class for ~1.5s. */
-.mphbac-input.mphbac-input--just-changed {
-    border-color: var(--mphbac-color-today-outline, #f4da62);
-    box-shadow: 0 0 0 3px rgba(244, 218, 98, 0.35);
+/* (0,5,0): the pill above sets the `border` SHORTHAND at (0,4,0), and a
+   shorthand at higher specificity beats a longhand at lower — at the old
+   (0,2,0) this highlight would simply stop appearing. */
+.mphbac-input.mphbac-input.mphbac-input.mphbac-input.mphbac-input--just-changed {
+    /* Blue, not the old gold. The pill's own border is now gold, so the
+       gold highlight became gold-on-gold and stopped reading at all — the
+       whole point of this class is that the forced change is not silent.
+       Blue is already the standard's attention colour here (focus ring). */
+    border-color: var(--dcc-blue);
+    box-shadow: 0 0 0 3px rgba(0, 107, 207, 0.35);
 }
 /* Font longhands at (0,1,1) — `input.x`, not `.x.x`.
    Only family and size are load-bearing: they are what the theme's input
@@ -194,13 +289,26 @@
    BELOW the "Filter Fields" typography control at FSEL (0,2,0), emitted
    earlier in the page, so the panel owns family, size, weight and style
    whenever it sets them. font-weight is not declared here at all.
-   The structural rule above stays at (0,2,0): padding, border, background
-   and the min-width/height floors have no typography control and do have to
-   beat the theme. Element-qualified, so it survives the popup's portal to
-   <body> — it never depended on a .mphbac-root ancestor. */
+   The structural properties live at (0,4,0) in the DCC FIELD STANDARD block
+   above, which is a different fight: they have no typography control and
+   have to beat the kit outright. Element-qualified, so this survives the
+   popup's portal to <body> — it never depended on a .mphbac-root ancestor. */
 input.mphbac-input {
     font-family: inherit;
-    font-size: inherit;
+    /* iOS ZOOM GUARD — functional, not cosmetic, and it was NOT already
+       satisfied. The DCC field standard names 16px because Safari zooms the
+       whole page when a field under that size takes focus. Plain `inherit`
+       looked fine in the filter row (18px from --mphbac-font-size) but the
+       BOOKING POPUP's two fields sit inside .mphbac-sheet-field, which sets
+       font-size: 0.95em, and the sheet is portaled to <body> — so they
+       inherited 0.95 x the theme's 16px = 15.2px and zoomed the page on tap.
+       Measured, not theorised: field-standard-test.js block 2.
+       max(16px, 1em) keeps `inherit`'s behaviour (1em IS the parent's size)
+       with a floor under it, so the pin stays open — the Filter Fields
+       typography control at (0,5,0) still overrides this outright. A panel
+       value below 16px would reintroduce the zoom; the test asserts >= 16px
+       so that fails loudly here rather than shipping. */
+    font-size: max(16px, 1em);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1668,9 +1776,22 @@ body.mphbac-info-open {
    Keyboard users need a visible indicator of where focus is. Uses a 2px
    outline + 2px offset so it doesn't clip against rounded button edges. */
 .mphbac-root.mphbac-root .mphbac-btn:focus-visible,
-.mphbac-root.mphbac-root .mphbac-input:focus-visible,
 .mphbac-root.mphbac-root .mphbac-row-toggle:focus-visible {
     outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
+    outline-offset: 2px;
+}
+/* Fields take the DCC field standard's focus ring instead of the gold one
+   (0.28.0). Two reasons beyond matching the standard:
+   a) the old rule was .mphbac-root-scoped, so the booking popup's two date
+      fields had NO focus ring at all once the popup portaled to <body> —
+      a keyboard user tabbing the popup could not see where they were;
+   b) the fill is now gold, so a gold ring on a gold border is invisible.
+   The standard's note applies directly here: because white on #f08080 is
+   2.59:1 and knowingly accepted, focus must stay an outline and must never
+   depend on the fill colour. Buttons keep their gold ring — they are not
+   fields and the standard's focus block does not cover them. */
+.mphbac-input.mphbac-input.mphbac-input:focus-visible {
+    outline: 3px solid var(--dcc-blue);
     outline-offset: 2px;
 }
 
@@ -1982,9 +2103,12 @@ body.mphbac-info-open {
        treatment is deliberately an OUTLINE (see the focus-visible block),
        never a fill, so keyboard users are not relying on this contrast.
        No transition, for the same reason as the nav buttons above. */
+    /* Now reading the DCC field standard's tokens (0.28.0) rather than
+       repeating the literals, so a future --dcc-site-* layer moves this
+       with the checkout. The resolved values are unchanged. */
     .mphbac-btn:hover {
-        background: #F08080;
-        color: #FFFFFF;
+        background-color: var(--dcc-button-hover-bg);
+        color: var(--dcc-button-hover-fg);
     }
     .mphbac-nav-btn:hover {
         background-color: var(--mphbac-color-nav-hover);
