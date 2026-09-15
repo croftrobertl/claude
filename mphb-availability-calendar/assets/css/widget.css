@@ -161,18 +161,26 @@
     }
     .mphbac-filter .mphbac-input {
         grid-row: 2;
-        /* Same release of the 8.5em floor as the booking popup got in 0.27.0,
-           and for the same reason: two date inputs at their intrinsic width
-           plus the gap exceed a 320-360px row, so the pair would wrap and the
-           trailing one clip. Flex/grid grants more than 8.5em resolves to
-           here, so the date text ends up with MORE room, not less. */
-        min-width: 0;
-        width: 100%;
+        /* The min-width/width pair that used to live here was (0,2,0) and sat
+           EARLIER in the file than the (0,2,0) base rule, so it lost the tie
+           on source order and never applied — the filter fields kept the
+           8.5em floor throughout 0.29.0. Both properties now live in the
+           field-standard block at (0,4,0), where they apply everywhere and
+           cannot be undone by source order. */
     }
     .mphbac-filter-actions {
         /* Below both rows, spanning them. */
         grid-column: 1 / -1;
         margin-top: 0.5em;
+    }
+    /* The standard's 20px side padding is generous for a field that is ~135px
+       wide at 320px: 40px of it is padding, leaving too little for
+       "mm/dd/yyyy" plus the picker. Trimmed to 12px on phones only, which
+       buys back 16px of content width. Block padding is untouched, so the
+       44px tap target is unaffected. */
+    .mphbac-input.mphbac-input.mphbac-input.mphbac-input {
+        padding-left: 12px;
+        padding-right: 12px;
     }
     /* The cottage column shows BOTH lines at every width as of 0.23.5.
        The rule that used to hide the name here was justified by a comment
@@ -231,13 +239,19 @@
    collapses the date text to a thin slice. Same pattern as the
    .mphbac-sheet.mphbac-sheet centering fix from v0.8.7. */
 .mphbac-input.mphbac-input {
-    min-width: 8.5em;
     box-sizing: border-box;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    /* The 0.20.2 `min-width: 8.5em` guard is GONE as of 0.30.0. It was added
+       to stop Bravada collapsing the date text, but that job is done by the
+       line-height and padding in the standard block below — and the floor
+       itself became the fault: 8.5em resolves to ~138px, which forces each
+       filter track wider than half a 320px row and pushes the second field
+       off-screen. See the sizing block below, which pins the floor to 0. */
     /* Everything visual moved to the (0,4,0) DCC FIELD STANDARD block below
-       in 0.28.0 — see the tier note there. min-width stays at (0,2,0) so the
-       ≤600px `min-width: 0` override (0,4,0) still beats it on specificity
-       rather than on source order. The font longhands live in their own
+       in 0.28.0 — see the tier note there, which now also owns the sizing.
+       Nothing at (0,2,0) sets a width or a floor any more: that split was
+       what let a (0,2,0) override earlier in the file lose a tie on source
+       order and silently do nothing. The font longhands live in their own
        (0,1,1) rule below, NOT here: 0.25.0 put them in this block, which ties
        FSEL and wins on order, so the panel's family and size were still being
        swallowed even after the weight was fixed. */
@@ -296,6 +310,46 @@
        kit's true ceiling collapses every date field on the site to a 1px
        slice. Asymmetric downside, zero cost — keep it. */
     line-height: 1.3 !important;
+
+    /* ---- NATIVE CONTROL SIZING (0.30.0) — the iPhone overlap ----
+       These are <input type="date">. With appearance:auto they are NATIVE
+       controls, and iOS Safari will not shrink a native date control below
+       its intrinsic content width: it ignores the width its grid area or
+       flex base granted and overflows. Measured from the owner's screenshots
+       at 393 CSS px, each control rendered ~215px inside a ~172px track —
+       29.7px of overlap, with the second field ending 25px off-screen.
+
+       Chromium shrinks the same control without complaint, which is why this
+       passed in two harnesses and still failed on the phone. Do NOT treat a
+       width measurement in a Chromium harness as evidence about this; the
+       property assertions in mobile-test.js block "A" are what guard it.
+
+       The same refusal exists in Chromium in latent form: a date input's
+       min-content width measures 186px here, so `min-width: auto` on a grid
+       or flex item resolves to 186px. The old explicit 8.5em floor masked it
+       by being SMALLER. min-width: 0 is what actually removes it, in both
+       engines; max-width: 100% then caps the used width to the containing
+       block whatever the control's intrinsic width turns out to be. */
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Removing `appearance` also removes the native affordance, so the picker
+   button is styled deliberately rather than left to chance: a real tap target
+   at the pill's right edge, in the field's own ink. The field keeps its gold
+   pill and centred text, so it still reads as a control. */
+.mphbac-input.mphbac-input.mphbac-input.mphbac-input::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+    cursor: pointer;
+    /* NO padding or margin here. The first attempt gave the indicator 6px of
+       padding and a 4px margin, which is 16px taken out of a content box that
+       is only ~111px wide at 360px — and the date text was clipped to
+       "mm/dd/yyy". The whole field is the tap target on a phone anyway; the
+       indicator does not need its own. Asserted by the scrollWidth check in
+       mobile-test.js block B. */
 }
 
 /* The typed-in value needs nothing of its own: `color` above cascades into
@@ -1918,15 +1972,12 @@ body.mphbac-info-open {
    intrinsic width of its own, and on a 360px screen two of those plus the
    gap exceed the row, so they wrap AND the trailing one is clipped by the
    right edge — items 15 and 16 are the same cause.
-   Releasing the floor here is safe: flex still grants each field ~150px,
-   wider than 8.5em resolves to at this font size, so the date text has MORE
-   room than before, not less. Asserted at 320, 360 and 393. */
+   The floor itself is gone as of 0.30.0 — it now lives nowhere, because
+   `min-width: 0` in the field-standard block covers every field in both
+   places. Asserted at 320, 360 and 393. */
 @media (max-width: 600px) {
     .mphbac-sheet .mphbac-sheet-field {
         flex: 1 1 0;
-        min-width: 0;
-    }
-    .mphbac-sheet .mphbac-sheet-field .mphbac-input.mphbac-input {
         min-width: 0;
     }
     /* Equal air on both sides. The sheet is centred with a 12px viewport
@@ -2174,6 +2225,9 @@ body.mphbac-info-open {
     .mphbac-btn:hover {
         background-color: var(--dcc-button-hover-bg);
         color: var(--dcc-button-hover-fg);
+    }
+    .mphbac-input.mphbac-input.mphbac-input.mphbac-input::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
     }
     .mphbac-nav-btn:hover {
         background-color: var(--mphbac-color-nav-hover);

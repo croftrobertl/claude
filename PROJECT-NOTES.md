@@ -1040,6 +1040,57 @@ auto-placement alone fills row-by-row in source order and would reproduce the
 label/field pairing being removed. Splitting the rows in PHP instead would
 need explicit `for`/`id` pairs, and a page can carry nine of these widgets.
 
+## The native date control (0.30.0) — and why two harnesses missed it
+
+`<input type="date">` with `appearance: auto` is a NATIVE control, and **iOS
+Safari will not shrink one below its intrinsic content width**. It ignores the
+width its grid track or flex base granted and overflows. Decoded from the
+owner's iPhone 15 Pro screenshots at 393 CSS px: the track sizing was
+*correct* (18 + 171.75 + 13.5 = 203.25, matching the measured second-field
+left edge to the pixel) and each control still rendered ~215px inside that
+171.75px track — 29.7px of overlap, second field ending 25px off-screen.
+
+**Chromium shrinks the same control without complaint.** So a width
+measurement in a Chromium harness cannot see this fault, and never will. It
+passed here and it passed in the intermediary's Chromium too. The guards that
+DO hold are property assertions, in `mobile-test.js` block A: `appearance` and
+`-webkit-appearance` compute to `none`, `min-width` is `0px`, `max-width` is
+not `none`, `box-sizing` is `border-box`, `font-size` >= 16px. A simulation
+using `min-width: … !important` is worthless here — min-width is applied after
+max-width by spec, so nothing can clamp it and the "fix" never passes.
+
+The same refusal exists latently in Chromium: a date input's **min-content
+width measures 186px**, so `min-width: auto` on a grid or flex item resolves
+to 186px. The 0.20.2 `min-width: 8.5em` floor masked that by being *smaller* —
+and then became a fault of its own (below).
+
+**Fault B, device-independent, and the fixture lesson.** The 8.5em floor
+resolves to ~138px (153px at 18px font). At 320px that forced
+`grid-template-columns: 137.7px 137.7px` — 288.9px with the gap — into a
+284px grid, pushing the second field 4.9px past the container. It is gone;
+`min-width: 0` lives in the field-standard block at (0,4,0) and covers both
+places. **The 0.29.0 attempt to zero it in the `≤600px` filter block was
+(0,2,0) and sat EARLIER in the file than the (0,2,0) base rule, so it lost the
+tie on source order and never applied at all.** Nothing at (0,2,0) sets a
+width or a floor any more, precisely so that cannot recur.
+
+**THE 18px INSET IS LOAD-BEARING IN THE FIXTURE.** The widget sits in an
+Elementor container with horizontal padding; the owner's screenshots put the
+first field's left edge at 18px. A fixture whose root spans the full viewport
+hands the grid 320px instead of 284px — enough room to hide fault B entirely.
+That is why 0.29.0's own 320px assertion passed on a build that overflowed.
+
+**Fitting the track is not the same as fitting the content.** The first
+attempt at the appearance reset gave `::-webkit-calendar-picker-indicator`
+6px of padding and a 4px margin — 16px out of a ~111px content box — and
+clipped the date text to "mm/dd/yyy" in a field that measured perfectly.
+Assert `scrollWidth <= clientWidth` with a value filled in, not just geometry.
+The pill's side padding is trimmed 20px -> 12px below 600px to buy that room
+back; block padding is untouched so the 44px tap target stands.
+
+**Do not close an iOS-only fault on a harness pass.** That is exactly what
+happened with items 6 and 11, twice, with both parties signing off.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
