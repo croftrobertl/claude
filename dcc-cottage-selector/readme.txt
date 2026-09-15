@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.39.0
+Stable tag: 0.40.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,28 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.40.0 =
+* The capacity and pet note controls are now PLACEHOLDER-only, so the packaged
+  copy cannot be re-frozen into the database. Elementor materialises a control
+  default into the settings it saves, so with a default in place the next Update
+  in the editor would have re-created the per-widget override that was just
+  removed from all three live instances — pinning today's English text and
+  bypassing Loco with it. A placeholder shows the packaged text in the panel
+  without storing it, and an empty field falls through because Config::build()
+  applies an override only when it is a non-empty string. Typing in the field
+  still overrides, exactly as before; the panel looks unchanged.
+* FIXED: the identical-layout note could go missing when a guest arrived on a
+  deep link. dedupe() ran over the scored top three, but a highlighted cottage
+  that misses the top three is appended OUTSIDE that list — so both twins could
+  be on screen, one ranked and one as the extra, with neither saying they were
+  identical. It now runs over the displayed set, honouring the 0.36.0 rule that
+  the note describes what is on screen.
+* That bug was intermittent by the calendar: which twin landed where depends on
+  the daily tie-break rotation. Walking all eight days of the cycle with
+  ?highlight=35, the pair shares the screen on three of them, and before this
+  release one of those three showed no note at all. All three are correct now,
+  and the test walks the whole cycle rather than whichever day it runs on.
 
 = 0.39.0 =
 * COPY: the packaged capacity note and pet note now carry the owner's current

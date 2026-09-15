@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.39.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.40.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -1145,9 +1145,9 @@
       var missed = ranked.slice(0, 3).filter(function (c) {
         return isBooked(c) && free.indexOf(c) === -1;
       });
-      top = DCCS.score.dedupe(free.concat(missed), config.diffFields);
+      top = free.concat(missed);
     } else {
-      top = DCCS.score.dedupe(ranked.slice(0, 3), config.diffFields);
+      top = ranked.slice(0, 3);
     }
     html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
     html += availNote(config, st, top);
@@ -1162,6 +1162,17 @@
       var hIdx = ranked.map(function (c) { return String(c.id); }).indexOf(String(st.highlight));
       if (hc && hIdx !== -1) { extra = { c: hc, rank: hIdx + 1 }; }
     }
+
+    // Dedupe over the DISPLAYED set, not the scored one (0.40.0). The note
+    // describes what is on screen, so the highlighted card has to be part of the
+    // comparison: with it left out, a guest deep-linked to one twin could see
+    // both twins — one in the top three, the other as the ranked extra — and
+    // neither would say they were identical. Which twin landed where depends on
+    // the daily tie-break rotation, so the note appeared or vanished by the day.
+    // dedupe() only annotates and never reorders, so passing the union here does
+    // not disturb the order the cards are rendered in below.
+    DCCS.score.dedupe(extra ? top.concat([extra.c]) : top, config.diffFields);
+
     var showCmp = (top.length + (extra ? 1 : 0)) >= 2;
 
     top.forEach(function (c) { html += buildCard(c, config, st, crit, '', null, showCmp); });

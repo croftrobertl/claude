@@ -455,13 +455,31 @@ class Selector_Widget extends Widget_Base
             'fee_link'        => __('Fee-details link text', 'dcc-cottage-selector'),
         ];
 
+        // LOAD-BEARING PACKAGED COPY (0.40.0). These two notes have no stored
+        // override left on any live widget — the plugin is the only copy of that
+        // wording on the site — and a `default` would put it back: Elementor
+        // materialises control defaults into the settings it saves, so the next
+        // person to open the widget and press Update would silently re-create the
+        // override that was just removed, freezing today's English text in the
+        // database and bypassing Loco with it. A `placeholder` shows the packaged
+        // text in the panel without storing it, and an empty field then falls
+        // through to Config::strings() because Config::build() applies an override
+        // only when it is a NON-EMPTY string. Same pattern, same reason, as the
+        // questions/answers and badge controls below.
+        $placeholder_only = ['capacity_note' => true, 'pet_note' => true];
+
         foreach ($editable as $key => $label) {
-            $this->preset_control('str_' . $key, [
+            $args = [
                 'label'       => $label,
                 'type'        => $key === 'intro' ? Controls_Manager::TEXTAREA : Controls_Manager::TEXT,
-                'default'     => $defaults[$key] ?? '',
                 'label_block' => true,
-            ]);
+            ];
+            if (isset($placeholder_only[$key])) {
+                $args['placeholder'] = $defaults[$key] ?? '';
+            } else {
+                $args['default'] = $defaults[$key] ?? '';
+            }
+            $this->preset_control('str_' . $key, $args);
         }
 
         // Optional links after the capacity / pet notes. DEFAULT EMPTY: no link

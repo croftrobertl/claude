@@ -508,6 +508,36 @@ namespace {
     ok('every preset key maps to a registered control' . ($orphans ? ' [' . implode(', ', $orphans) . ']' : ''),
         $orphans === []);
 
+    // 0.40.0: the two load-bearing notes are PLACEHOLDER-only controls. Elementor
+    // materialises a control DEFAULT into the settings it saves, so leaving one on
+    // these would let the next Update in the editor re-create the per-widget
+    // override that was just removed from all three live instances — refreezing
+    // today's English text in the database and bypassing Loco with it. A
+    // placeholder shows the packaged text in the panel without storing it, and an
+    // empty field falls through because Config::build() only applies a NON-EMPTY
+    // override. Assert on the registered args, not on the source text.
+    foreach (['str_capacity_note', 'str_pet_note'] as $noteKey) {
+        ok($noteKey . ' is registered at all', isset($reg[$noteKey]));
+        ok($noteKey . ' carries NO default Elementor could store',
+            !array_key_exists('default', $reg[$noteKey] ?? []));
+        ok($noteKey . ' shows the packaged copy as a placeholder instead',
+            ($reg[$noteKey]['placeholder'] ?? null)
+                === (\DCCS\Config::strings()[substr($noteKey, 4)] ?? null));
+    }
+    // Positive control: a sibling in the SAME loop still carries a default, so the
+    // assertions above are not passing because defaults vanished wholesale.
+    // It must be a key the PRESET does not cover: Preset_Defaults::apply() adds a
+    // default to every preset key after the loop runs, so a preset-backed control
+    // would keep its default however the loop behaved and prove nothing. (The
+    // first version of this control used str_results_heading and did exactly that
+    // — a mutation making EVERY key a placeholder sailed through it.)
+    ok('the control used for the positive check is genuinely not preset-backed',
+        !array_key_exists('str_fee_link', $preset));
+    ok('a non-preset sibling in the same loop still carries its default',
+        array_key_exists('default', $reg['str_fee_link'] ?? []));
+    ok('and that default is the packaged string',
+        ($reg['str_fee_link']['default'] ?? null) === (\DCCS\Config::strings()['fee_link'] ?? null));
+
     // 0.26.0: the heading default is PLAIN, because the widget now draws the marks
     // either side of it (see Heading_Marks). The Mini Entry prompt deliberately
     // keeps its emoji — it is a button, it gets no marks, and it would otherwise be

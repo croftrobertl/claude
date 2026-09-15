@@ -2625,6 +2625,47 @@ defer(async function () {
   ok('at the breakpoint the short label is hidden', decl(inside, 'short') === 'none');
 })();
 
+// ---- 83. 0.40.0: the twin note follows what is ON SCREEN, not the scored top 3 ----
+// dedupe() used to run over the scored top three only, while the highlighted card
+// is appended outside it. A guest deep-linked to one twin could therefore see both
+// twins — one ranked, one as the extra — with neither saying they were identical.
+// Which twin landed where depends on the DAILY tie-break rotation, so the note
+// appeared or vanished by the day. Walk the whole rotation cycle rather than
+// trusting the one the clock hands this run.
+(function () {
+  const base = JSON.parse(CONFIG);
+  const pinned = JSON.parse(CONFIG);
+  // 35/36 are the genuine twins; 22/23 are not twins of anything here.
+  pinned.cottages = ['22', '23', '35', '36'].map(id => base.cottages.find(c => c.id === id));
+  const cfgStr = JSON.stringify(pinned);
+  const idOf = (el) => (el.querySelector('h4').textContent.match(/Cottage (\d+)/) || [])[1];
+
+  let bothShown = 0, bothNoted = 0, extraCase = 0, anyNoteSeen = 0;
+  for (let d = 0; d < pinned.cottages.length; d++) {
+    const w = freshDom('https://example.com/?highlight=35');
+    const realNow = w.Date.now;
+    w.Date.now = () => realNow() + d * 864e5;   // step the daily rotation
+    const root = mountSelector(w, cfgStr);
+    const cards = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'));
+    const ids = cards.map(idOf);
+    const noted = cards.filter(el => el.querySelector('.dccs-dup')).map(idOf);
+    if (noted.length) { anyNoteSeen++; }
+    if (ids.indexOf('35') !== -1 && ids.indexOf('36') !== -1) {
+      bothShown++;
+      if (noted.indexOf('35') !== -1 && noted.indexOf('36') !== -1) { bothNoted++; }
+      // 4 cards means the highlight did NOT make the top three and was appended
+      // as the ranked extra — the arrangement this fix exists for.
+      if (cards.length > 3) { extraCase++; }
+    }
+  }
+  // POSITIVE FIRST (standing rule 1): the detector can see a note at all.
+  ok('a twin note was rendered on at least one rotation', anyNoteSeen > 0);
+  ok('the pair appeared together on at least one rotation', bothShown > 0);
+  ok('and the highlighted-extra arrangement was actually exercised', extraCase > 0);
+  // The invariant: on screen together => both annotated, on every rotation.
+  ok('whenever both twins are on screen, both carry the note', bothNoted === bothShown);
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

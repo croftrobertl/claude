@@ -158,6 +158,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the per-widget `str_` overrides that carried it are being removed from all three
   live instances, so editing either string sends new words straight to guests.
   Treat a change to them as a content decision with the owner, never a tidy-up.
+- **`str_capacity_note` and `str_pet_note` are PLACEHOLDER-only controls, and
+  must stay that way.** Elementor materialises a control DEFAULT into the settings
+  it saves, so a default on these would let the next Update in the editor
+  re-create the per-widget override removed in 0.40.0 — refreezing that day's
+  English text in the database and bypassing Loco with it. A placeholder shows the
+  packaged copy in the panel without storing it; typing still overrides. The
+  `$placeholder_only` map in `register_text_controls()` is what enforces it, and a
+  PHP test asserts these two carry no `default` while a NON-PRESET sibling still
+  does. The sibling must not be preset-backed: `Preset_Defaults::apply()` adds a
+  default to every preset key after the loop runs, so a preset-backed control keeps
+  its default however the loop behaves and proves nothing — the first version of
+  that check used `str_results_heading` and a mutation making every key a
+  placeholder sailed straight through it.
 - **An EMPTY string override falls through to the packaged default.**
   `design_snapshot()` copies any *scalar* `str_` setting into `string_overrides`,
   empty strings included — but `Config::build()` applies an override only when it
@@ -181,6 +194,15 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   and a trio would have named one partner and silently dropped the other. A group
   of one is not a duplicate and is left unmarked. The note is built from the
   CURRENT display list, so it never names a cottage that is not on screen.
+  **"Display list" means every card rendered, including the highlighted extra.**
+  Until 0.40.0 `dedupe()` ran over the scored top three while a highlighted
+  cottage that misses the top three is appended OUTSIDE it, so a deep-linked guest
+  could see both twins — one ranked, one as the extra — and neither carried the
+  note. It was intermittent by the calendar, because which twin lands where
+  depends on the daily rotation: across the eight-day cycle with `?highlight=35`
+  the pair shares the screen on three days and exactly one of those was wrong.
+  `dedupe()` only annotates and never reorders, so passing it the union of the
+  top list and the extra is safe for render order.
 - **The Elementor widget category is `dcc-widgets`** ("Dora Canal Court") — the slug
   every live DCC plugin registers. Elementor groups the panel by *slug*, so any
   other value creates a duplicate "Dora Canal Court" section (the 0.17.1 incident).
