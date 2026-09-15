@@ -3042,6 +3042,128 @@ dialog.dccgg-wrapper::backdrop {
     }
 }
 
+/* =========================================================================
+ * DCC FIELD STANDARD — Guest Guide copy
+ *
+ * Source of truth: dcc-custom-checkout 0.11.0, assets/checkout.css. Copied
+ * rather than shared on purpose: a shared layer would have to ship as an
+ * mu-plugin, which cannot be installed from the WP Admin upload screen —
+ * which is how this plugin is deployed, from a phone — and disabling it
+ * would strip three plugins of their field styling at once. Each token still
+ * reads an optional --dcc-site-* first, so a shared layer added later is
+ * followed by all three without any of them depending on it.
+ *
+ * SCOPE is the dialog, not .dccgg-root: the report dialog is appended to
+ * <body>, so it has no .dccgg-root ancestor (the same trap that made the
+ * public guide render unstyled in 0.16.0).
+ *
+ * SPECIFICITY is a THIRD repeat of the class, not the second the standard
+ * suggests. Measured against the kit as served:
+ *     .elementor-kit-331 input:not([type="button"]):not([type="submit"])  (0,3,1)
+ *     .elementor-kit-331 textarea                                         (0,1,1)
+ * A doubled scope puts `...input[type="text"]` at (0,3,1) — an attribute
+ * selector counts at class level — which TIES the kit and is then settled by
+ * source order. It happens to win today only because 0.16.1 prints this
+ * stylesheet from the body; move it back to a head enqueue and every input
+ * rule silently flips. The third repeat reaches (0,4,1) and wins outright,
+ * so nothing here rests on document order. All eight selectors take the same
+ * prefix, so there is one rule to follow rather than a per-selector judgement.
+ *
+ * The kit already supplies the 2px gold border and the 30px radius. What the
+ * standard adds on top is the white ground, the 44px floor, centred text, the
+ * two declared colours, and the focus ring.
+ * ========================================================================= */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog {
+    --dcc-gold:            var(--dcc-site-gold, #f4da62);
+    --dcc-blue:            var(--dcc-site-blue, #006bcf);
+    --dcc-label:           var(--dcc-site-label, #000000);
+    --dcc-muted:           var(--dcc-site-muted, #6b7280);
+    --dcc-field-radius:    var(--dcc-site-field-radius, 30px);
+    --dcc-field-border:    var(--dcc-site-field-border, 2px);
+    --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
+    --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
+}
+
+/* --- The pill ---------------------------------------------------------- */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="text"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="email"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="tel"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="number"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="url"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="date"],
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog select {
+    background-color: #ffffff;
+    border: var(--dcc-field-border) solid var(--dcc-gold);
+    border-radius: var(--dcc-field-radius);
+    min-height: 44px;              /* also the minimum comfortable tap target */
+    padding: 10px 20px;
+    font-family: "Raleway", sans-serif;
+    font-size: 16px;               /* 16px or more, or iOS zooms on focus */
+    font-weight: 400;              /* this site sets html { font-weight: 700 } */
+    line-height: 1.3;
+    text-align: center;
+    color: var(--dcc-label);       /* declared, not inherited — see header */
+    box-sizing: border-box;
+}
+
+/* The typed-in value colour above and the placeholder colour below had no
+   rules on the checkout at all; they inherited. This plugin sits in another
+   cascade, so both are declared. They look redundant and are not — the suite
+   asserts each of them by name. */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input::placeholder,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea::placeholder {
+    color: var(--dcc-muted);
+    opacity: 1;                    /* Firefox dims placeholders by default */
+}
+
+/* --- Select: same pill, native chrome removed, own caret ---------------- */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    height: auto;
+    padding: 10px 40px 10px 20px;  /* room on the right for the caret */
+    text-align-last: center;       /* text-align alone does not centre a select */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23006bcf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+}
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog select::-ms-expand { display: none; }
+
+/* --- Focus: an outline, never a fill change ---------------------------- *
+ * White on #f08080 is 2.59:1, below AA, and the owner has chosen it
+ * knowingly — which is exactly why focus may never be carried by the fill. */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="text"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="email"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="tel"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="number"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="url"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="date"]:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea:focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog select:focus-visible {
+    outline: 3px solid var(--dcc-blue);
+    outline-offset: 2px;
+}
+
+/* --- Hover: ONLY where hover exists ------------------------------------ *
+ * On iOS the first tap applies :hover and it sticks until the next tap
+ * elsewhere, so a hover-styled control eats a tap and then will not revert. */
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog button:hover,
+    .dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog input[type="submit"]:hover {
+        background-color: var(--dcc-button-hover-bg);
+        color: var(--dcc-button-hover-fg);
+    }
+}
+
+/* A textarea is the one field the pill shape does not fully fit: five rows
+   of description need room, so the 44px floor is raised here. Deliberate
+   deviation, recorded rather than silent. */
+.dccgg-report-dialog.dccgg-report-dialog.dccgg-report-dialog textarea {
+    min-height: 100px;
+}
+
 /* -------- Print (scoped) -------- */
 
 /* -------------------------------------------------------------- *
@@ -3141,7 +3263,7 @@ dialog.dccgg-wrapper::backdrop {
 /* v0.17.0: the site's standard button hover, on the close button too. The
    mark is drawn in currentColor, so the white here is what keeps it visible
    on the coral — the same pair every other button uses (0.15.0). */
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-report-close.dccgg-report-close:hover,
     .dccgg-stage.dccgg-stage .dccgg-report-close.dccgg-report-close:hover,
     .dccgg-report-dialog.dccgg-report-dialog .dccgg-report-close.dccgg-report-close:hover {
@@ -3157,32 +3279,14 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-report-body { padding: 16px 20px; display: grid; gap: 14px; }
 .dccgg-report-body label { font-size: 0.88em; font-weight: 600; display: grid; gap: 4px; }
+/* v0.17.1: border, radius, padding, ground and colour for these fields now
+   come from the DCC field standard below — one source of truth, not two.
+   What stays here is what the standard does not speak to: how wide they are
+   and whether they can be dragged. */
 .dccgg-report-body select,
-.dccgg-report-body input[type="email"] {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid color-mix(in srgb, var(--dccgg-text, #111) 18%, transparent);
-    border-radius: 8px;
-    background: var(--dccgg-detail-bg, #fff);
-    color: var(--dccgg-text, #111);
-    font: inherit;
-    box-sizing: border-box;
-}
-/* v0.9.7.34: the description textarea was the only report field without the
-   gold pill treatment the others get — give it the same border, radius and
-   padding explicitly (dropped from the shared grey rule above). */
-.dccgg-report-body textarea {
-    width: 100%;
-    box-sizing: border-box;
-    font: inherit;
-    resize: vertical;
-    min-height: 100px;
-    padding: 12px 16px;
-    border: 2px solid #f4da62;
-    border-radius: 24px;
-    background: var(--dccgg-detail-bg, #fff);
-    color: var(--dccgg-text, #111);
-}
+.dccgg-report-body input,
+.dccgg-report-body textarea { width: 100%; }
+.dccgg-report-body textarea { resize: vertical; }
 .dccgg-report-privacy { font-size: 0.78em; margin: 0; text-align: center; }
 
 /* v0.17.0: the dialog's copy is black, matching the rest of the site

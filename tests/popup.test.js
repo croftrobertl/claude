@@ -1707,7 +1707,17 @@ async function run() {
             body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0}
             .elementor-kit-331 button{padding:0 18px;font-family:Raleway,sans-serif;
               font-size:18px;font-weight:900;letter-spacing:1.5px;line-height:50px;}
-            .elementor-kit-331 button:hover{background-color:#F08080;color:#FFFFFF;}`;
+            .elementor-kit-331 button:hover{background-color:#F08080;color:#FFFFFF;}
+            /* The kit's own field reset, at the specificity it really carries:
+               (0,3,1) for inputs, (0,1,1) for textareas. A doubled scope ties
+               the first of those and is then settled by source order — which is
+               why the plugin uses a third repeat. */
+            .elementor-kit-331 input:not([type="button"]):not([type="submit"]){
+              border:2px solid #F4DA62;border-radius:30px;background-color:#f7f7f7;
+              padding:6px 8px;text-align:left;font-size:13px;color:#555;}
+            .elementor-kit-331 textarea{border:2px solid #F4DA62;border-radius:30px;
+              background-color:#f7f7f7;padding:6px 8px;text-align:left;font-size:13px;color:#555;}
+            .elementor-kit-331 select{background-color:#f7f7f7;font-size:13px;color:#555;}`;
         const cfg = JSON.stringify({ revealMode: 'stage', strings: {},
             report: { enabled: true, categories: ['Something is broken'],
                       strings: { title: 'Request Support', close: 'Close', send: 'Send report',
@@ -1799,6 +1809,119 @@ async function run() {
         await page.waitForTimeout(250);
         check('clicking it still closes the dialog',
             !(await page.evaluate(() => !!document.querySelector('.dccgg-report-dialog[open]'))));
+
+        // (8C) The DCC field standard, measured on the rendered dialog against
+        // the kit's real reset. Every value here is the checkout's, not a
+        // lookalike — that is the point of copying the file rather than
+        // matching by eye.
+        //
+        // Reopen first: the close-button assertions above shut the dialog, and
+        // a closed <dialog> is display:none — every field measures 0px and
+        // ::placeholder resolves against an unrendered element, which reads as
+        // a styling failure when it is really a measuring one.
+        await page.click('.dccgg-item-report');
+        await page.waitForTimeout(300);
+        const fields = await page.evaluate(() => {
+            const read = (sel) => {
+                const el = document.querySelector(sel);
+                if (!el) return null;
+                const c = getComputedStyle(el);
+                const ph = getComputedStyle(el, '::placeholder');
+                const r = el.getBoundingClientRect();
+                return { bg: c.backgroundColor, border: c.borderTopWidth + ' ' + c.borderTopStyle + ' ' + c.borderTopColor,
+                         radius: c.borderTopLeftRadius, minH: c.minHeight, h: Math.round(r.height),
+                         padding: c.padding, family: c.fontFamily.split(',')[0].replace(/["']/g, ''),
+                         size: c.fontSize, weight: c.fontWeight, lh: c.lineHeight,
+                         align: c.textAlign, color: c.color, box: c.boxSizing,
+                         phColor: ph.color, phOpacity: ph.opacity,
+                         appearance: c.appearance, alignLast: c.textAlignLast,
+                         bgImage: c.backgroundImage === 'none' ? 'none' : 'svg' };
+            };
+            return { text: read('.dccgg-report-name'), email: read('.dccgg-report-contact'),
+                     tel: read('.dccgg-report-phone'), area: read('.dccgg-report-desc'),
+                     select: read('.dccgg-report-cat') };
+        });
+        const all = Object.entries(fields).filter(([, v]) => v);
+        const bad = (name, ok) => all.filter(([, v]) => !ok(v)).map(([k, v]) => `${k}=${v[name]}`).join(' ');
+        check('(8C) every field is the white pill: 2px gold, 30px radius',
+            all.every(([, v]) => v.bg === 'rgb(255, 255, 255)'
+                && v.border === '2px solid rgb(244, 218, 98)' && v.radius === '30px'),
+            all.map(([k, v]) => `${k}=${v.bg}/${v.border}/${v.radius}`).join(' | '));
+        check('(8C) 44px floor, Raleway 16px/1.3, centred, border-box',
+            all.every(([, v]) => v.h >= 44 && v.family === 'Raleway' && v.size === '16px'
+                && v.lh === '20.8px' && v.align === 'center' && v.box === 'border-box'),
+            all.map(([k, v]) => `${k}=${v.h}px ${v.family} ${v.size}/${v.lh} ${v.align}`).join(' | '));
+        check('(8C) padding is 10px 20px (the select keeps room for its caret)',
+            fields.text.padding === '10px 20px' && fields.area.padding === '10px 20px'
+            && fields.select.padding === '10px 40px 10px 20px',
+            `text=${fields.text.padding} area=${fields.area.padding} select=${fields.select.padding}`);
+        // The two lines the standard flags as most likely to be deleted as
+        // redundant. Each gets its own named assertion so a tidy-up fails here.
+        check('(8C) FLAGGED LINE 1: the typed-in value colour is declared black',
+            all.every(([, v]) => v.color === 'rgb(0, 0, 0)'), bad('color', (v) => v.color === 'rgb(0, 0, 0)'));
+        // ::placeholder only resolves on an element that HAS a placeholder —
+        // Chromium returns the element's own inherited colour otherwise. None
+        // of this dialog's fields sets one today, so the rule has no visible
+        // effect yet and is that much more likely to be deleted as dead. It is
+        // exercised here by giving a field a placeholder, which is exactly what
+        // a future field would do.
+        const ph = await page.evaluate(() => {
+            const i = document.querySelector('.dccgg-report-name');
+            const t = document.querySelector('.dccgg-report-desc');
+            i.placeholder = 'Your name';
+            t.placeholder = 'What went wrong?';
+            const g = (el) => { const c = getComputedStyle(el, '::placeholder');
+                return { color: c.color, opacity: c.opacity }; };
+            const out = { input: g(i), area: g(t) };
+            i.removeAttribute('placeholder');
+            t.removeAttribute('placeholder');
+            return out;
+        });
+        check('(8C) FLAGGED LINE 2: ::placeholder is the muted grey at full opacity',
+            ph.input.color === 'rgb(107, 114, 128)' && ph.input.opacity === '1'
+            && ph.area.color === 'rgb(107, 114, 128)',
+            `input=${ph.input.color}@${ph.input.opacity} textarea=${ph.area.color}`);
+        check('(8C) not bold, despite html{font-weight:700} and font: inherit on the textarea',
+            all.every(([, v]) => v.weight === '400'), bad('weight', (v) => v.weight === '400'));
+        check('(8C) the select drops native chrome and draws its own caret',
+            fields.select.appearance === 'none' && fields.select.alignLast === 'center'
+            && fields.select.bgImage === 'svg',
+            `appearance=${fields.select.appearance} align-last=${fields.select.alignLast} caret=${fields.select.bgImage}`);
+        check('(8C) a textarea keeps room for five rows',
+            fields.area.minH === '100px', fields.area.minH);
+
+        // Focus is an outline and never a fill change — white on #f08080 is
+        // 2.59:1, so the fill cannot be what carries focus.
+        await page.keyboard.press('Tab');
+        const foc = await page.evaluate(() => {
+            const el = document.querySelector('.dccgg-report-name');
+            el.focus();
+            const c = getComputedStyle(el);
+            return { w: c.outlineWidth, style: c.outlineStyle, color: c.outlineColor,
+                     offset: c.outlineOffset, bg: c.backgroundColor, fv: el.matches(':focus-visible') };
+        });
+        check('(8C) focus draws a 3px blue ring and leaves the fill alone',
+            foc.fv && foc.w === '3px' && foc.style === 'solid'
+            && foc.color === 'rgb(0, 107, 207)' && foc.offset === '2px'
+            && foc.bg === 'rgb(255, 255, 255)',
+            `${foc.w} ${foc.style} ${foc.color} offset ${foc.offset} on ${foc.bg}`);
+
+        // Control: the kit wins at a doubled scope, which is why the rules use
+        // a third repeat. Proven by re-running the same declarations one class
+        // shorter and watching the kit take them back.
+        const control = await page.evaluate(() => {
+            const st = document.createElement('style');
+            st.textContent = '.dccgg-report-dialog.dccgg-report-dialog input[type="text"]'
+                + '{background-color:#ffffff;text-align:center;font-size:16px;}';
+            document.head.appendChild(st);   // head: after the kit, before the body <style>
+            const c = getComputedStyle(document.querySelector('.dccgg-report-name'));
+            const out = { align: c.textAlign, size: c.fontSize };
+            st.remove();
+            return out;
+        });
+        check('(8C) control: a doubled scope only ties the kit — the third repeat is load-bearing',
+            control.align === 'center' && control.size === '16px',
+            `at (0,3,1) the winner is decided by source order: align=${control.align} size=${control.size}`);
 
         // Scope: ONLY report-close changed. The other three close buttons are
         // left exactly as they were, deliberately — including the fact that

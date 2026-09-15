@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.0
+Stable tag: 0.17.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,15 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.17.1 =
+
+**Changed: the Request Support form's fields now match the checkout's.**
+
+Same white rounded fields with the gold edge, same centred text at a readable
+size, same blue outline when you tab into one — so a guest filling in this
+form sees what they see when they book. Tapping a field no longer zooms the
+page on an iPhone, and every field is at least 44px tall.
 
 = 0.17.0 =
 
