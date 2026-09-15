@@ -174,8 +174,8 @@ final class Config
 
             // Informational notes under the party-size / pet questions. No fee
             // amounts anywhere in this plugin (single source of truth elsewhere).
-            'capacity_note'     => __('The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pull-out couch.', 'dcc-cottage-selector'),
-            'pet_note'          => __('Pets are welcome in Cottage 34 only, by pre-approval.', 'dcc-cottage-selector'),
+            'capacity_note'     => __('2 guests are included in the nightly rate and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be charged a nightly fee.', 'dcc-cottage-selector'),
+            'pet_note'          => __('Pets are welcome in Cottage 34 only and must be pre-approved.', 'dcc-cottage-selector'),
             'fee_link'          => __('Fee details', 'dcc-cottage-selector'),
 
             // Availability, when the guest supplied dates (see assets/js/availability.js)

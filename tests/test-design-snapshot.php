@@ -213,14 +213,64 @@ namespace {
     ok('preset no longer carries str_capacity_note', !array_key_exists('str_capacity_note', $presetNow));
     ok('preset no longer carries str_pet_note', !array_key_exists('str_pet_note', $presetNow));
     $fallbackCfg = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]));
+
+    // 0.39.0: OWNER-APPROVED COPY, pinned deliberately. The stored per-widget
+    // overrides that carried this wording are being removed from all three live
+    // instances, so these two strings become the only copy of it on the site.
+    // They are content, not a placeholder — changing either sends new words
+    // straight to guests, so a change here should be a decision, not a tidy-up.
+    $CAPACITY = '2 guests are included in the nightly rate and will have a queen bed. '
+        . 'Guests 3 and 4 will have a pull-out couch and be charged a nightly fee.';
+    $PET = 'Pets are welcome in Cottage 34 only and must be pre-approved.';
+
     ok('capacity note falls back to the Config default (live wording)',
-        ($fallbackCfg['strings']['capacity_note'] ?? null)
-            === 'The 2 guests are included in the nightly rate and will have a queen bed. For guests 3 and 4, a nightly fee will apply and they will have a pull-out couch.');
+        ($fallbackCfg['strings']['capacity_note'] ?? null) === $CAPACITY);
     ok('pet note falls back to the Config default (live wording)',
-        ($fallbackCfg['strings']['pet_note'] ?? null) === 'Pets are welcome in Cottage 34 only, by pre-approval.');
+        ($fallbackCfg['strings']['pet_note'] ?? null) === $PET);
     ok('a widget-stored note still wins over the fallback',
         (Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(
             ['str_capacity_note' => 'CUSTOM NOTE']))['strings']['capacity_note'] ?? null) === 'CUSTOM NOTE');
+
+    // THE GUARANTEE THE OVERRIDE REMOVAL RESTS ON. design_snapshot() copies ANY
+    // scalar str_ setting into string_overrides, including an empty string — but
+    // Config::build() applies an override only when it is a non-empty string, so
+    // a blanked panel field falls through to the packaged copy instead of
+    // publishing nothing. That makes clearing the field equivalent, for what a
+    // guest reads, to deleting the key from the settings array.
+    $blanked = Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(
+        ['str_capacity_note' => '', 'str_pet_note' => '']));
+    ok('an empty capacity override falls through to the packaged copy',
+        ($blanked['strings']['capacity_note'] ?? null) === $CAPACITY);
+    ok('an empty pet override falls through to the packaged copy',
+        ($blanked['strings']['pet_note'] ?? null) === $PET);
+    // Positive control: the same path DOES carry a non-empty override, so the two
+    // assertions above are not passing because overrides are ignored wholesale.
+    ok('the override path is live — a non-empty value still lands',
+        (Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot(
+            ['str_pet_note' => 'OVERRIDDEN']))['strings']['pet_note'] ?? null) === 'OVERRIDDEN');
+
+    // Neither note may name a fee amount — amounts have one source of truth
+    // elsewhere on the site, and the pet fee is tiered ($25/$20/$10 per night by
+    // stay length), so any single figure would be wrong for two of three tiers.
+    // Read the LIVE strings, not the literals above: asserting against our own
+    // copies would only test this file's typing and would pass however Config
+    // changed. (It did exactly that until a mutation adding "$25" to the pet note
+    // sailed through.)
+    $liveNotes = ($fallbackCfg['strings']['capacity_note'] ?? '')
+        . ' ' . ($fallbackCfg['strings']['pet_note'] ?? '');
+    ok('the notes were actually read, so the checks below mean something',
+        strlen($liveNotes) > 40);
+    ok('neither note quotes a fee amount',
+        strpos($liveNotes, '$') === false
+        && preg_match('/\\b\\d+\\s*(dollars?|usd)\\b/i', $liveNotes) === 0);
+    // And the superseded wording is gone from the packaged strings entirely.
+    $allStrings = implode(' ', array_filter(\DCCS\Config::strings(), 'is_string'));
+    ok('the strings table is non-empty, so the search below means something',
+        strlen($allStrings) > 500);
+    ok('no packaged string still carries the superseded capacity wording',
+        strpos($allStrings, 'For guests 3 and 4, a nightly fee will apply') === false);
+    ok('no packaged string still carries the superseded pet wording',
+        strpos($allStrings, 'only, by pre-approval') === false);
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

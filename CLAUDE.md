@@ -145,7 +145,26 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the site uses Loco Translate. Never echo a raw user-facing string.
 - **No fee amounts anywhere in this plugin.** The capacity and pet notes describe
   that a fee applies, never how much; amounts have one source of truth elsewhere on
-  the site. There is a grep check for `$` in the test suite.
+  the site. There is a grep check for `$` in the test suite, and it reads the LIVE
+  strings — an earlier version compared the test file's own copies of them and
+  would have passed with "$25" sitting in Config. The pet fee is tiered by stay
+  length (daily / weekly / monthly rates, tracking the cottage's own rate tiers),
+  so a single figure would be wrong for two of the three tiers even if amounts
+  were allowed. If the quiz is ever asked to disclose it, the only honest form
+  without a number is "a nightly fee that decreases for longer stays" — and that
+  is the owner's wording to approve, not ours to write.
+- **`capacity_note` and `pet_note` are load-bearing content, not placeholders.**
+  From 0.39.0 the packaged strings are the ONLY copy of that wording on the site:
+  the per-widget `str_` overrides that carried it are being removed from all three
+  live instances, so editing either string sends new words straight to guests.
+  Treat a change to them as a content decision with the owner, never a tidy-up.
+- **An EMPTY string override falls through to the packaged default.**
+  `design_snapshot()` copies any *scalar* `str_` setting into `string_overrides`,
+  empty strings included — but `Config::build()` applies an override only when it
+  is a non-empty string. So blanking a field in the Elementor panel renders the
+  packaged copy rather than publishing an empty note, which makes clearing a field
+  and deleting the key equivalent for what a guest reads. Worth knowing before
+  anyone plans surgery on a settings array to get back to the packaged text.
 - **Per-cottage `highlights` are owner-supplied facts only.** Never invent
   amenities. No canal views, boat slips, or dock access — none is confirmed.
   Distance to the canal is an ordering ("closest", "second-closest"), never
@@ -187,10 +206,17 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   bare async block's assertions are silently uncounted — ~26 of the 0.24.0
   availability assertions vanished that way before this was fixed.
 - **Score ties break on a daily rotation, never on cottage ID** (`crit.rotation`,
-  chosen once per page load in `defaultState()`). Tests that read result ORDER must
-  either pass an explicit `rotation` to `score.run()` or assert on the engine's
-  full result set — two assertions passed vacuously for releases because an ID
-  tie-break happened to put 22/23/31 first.
+  chosen once per page load in `defaultState()`; `floor(Date.now()/864e5) % n`).
+  Tests that read result ORDER must either pass an explicit `rotation` to
+  `score.run()` or assert on the engine's full result set — two assertions passed
+  vacuously for releases because an ID tie-break happened to put 22/23/31 first.
+  **The same trap catches tests that read WHICH cottages render, not just their
+  order.** A 0.36.0 block mounted `?highlight=35` and assumed both twins landed in
+  the scored top three; it passed for two releases and then CRASHED on 2026-09-15,
+  when the rotation put 36 in the results and 35 on only as the highlight. A test
+  that depends on the result SET must pin `cottages` in the config it mounts, and
+  should drive `score.run()` through all n rotations rather than trusting the one
+  the clock hands that run. A suite that passes today is not a suite that passes.
 - **Switching modes resets everything except the highlight** (`resetForMode()`):
   answers, weights, compare picks, navigation. The modes are independent tools.
   `resetForMode()` clears LIVE state only and must never touch the remembered

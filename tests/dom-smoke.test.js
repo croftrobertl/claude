@@ -1259,10 +1259,17 @@ function configWith(overrides) {
   const root = mountSelector(w);
   enter(root, 'quick');
   const note = root.querySelector('.dccs-q-note');
+  // 0.39.0 copy. Compared against the string the config actually carries rather
+  // than a second copy typed here, so the assertion tracks Config rather than
+  // testing this file's memory of it.
+  const cfgNotes = JSON.parse(CONFIG).strings;
   ok('party step shows the capacity note',
-    !!note && /The 2 guests are included in the nightly rate and will have a queen bed/.test(note.textContent));
-  ok('capacity note says what guests 3 and 4 sleep on',
-    /guests 3 and 4[\s\S]*pull-out couch/.test(note.textContent));
+    !!note && note.textContent.indexOf(cfgNotes.capacity_note) !== -1);
+  ok('the capacity note is the current wording, not the superseded one',
+    /^2 guests are included in the nightly rate/.test(cfgNotes.capacity_note)
+    && !/For guests 3 and 4, a nightly fee will apply/.test(cfgNotes.capacity_note));
+  ok('capacity note still says what guests 3 and 4 sleep on',
+    /[Gg]uests 3 and 4[\s\S]*pull-out couch/.test(note.textContent));
   ok('no fee link renders while the URL control is empty (default)', !note.querySelector('a'));
   ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
   answerNext(root, 'either');
@@ -1270,8 +1277,11 @@ function configWith(overrides) {
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pullout/layout/dining
   answerNext(root, 'either');                                                          // -> pet (step 6)
   const pnote = root.querySelector('.dccs-q-note');
-  ok('pet step notes Cottage 34 only, by pre-approval',
-    !!pnote && /Cottage 34 only/.test(pnote.textContent) && /pre-approval/.test(pnote.textContent));
+  ok('pet step notes Cottage 34 only and that approval is required',
+    !!pnote && /Cottage 34 only/.test(pnote.textContent) && /pre-approved/.test(pnote.textContent));
+  ok('the pet note is the current wording, not the superseded one',
+    !/only, by pre-approval/.test(cfgNotes.pet_note));
+  ok('pet note carries no fee amount either', pnote.textContent.indexOf('$') === -1);
   ok('pet note has no link while unset', !pnote.querySelector('a'));
 
   // With owner-set URLs, both notes end with a safe link.
@@ -2395,11 +2405,32 @@ defer(async function () {
 // It names every member by NUMBER and reads identically on every tile in the group,
 // so it can no longer be the one-directional "this one is the same as that one".
 (function () {
+  // DETERMINISTIC BY CONSTRUCTION. This block first used the default render with
+  // ?highlight=35 and assumed both twins landed in the scored top three. Ties break
+  // on a DAILY ROTATION, so on 2026-09-15 the rotation put 36 in the results and 35
+  // only on as the highlight — which sits outside the list dedupe() runs over — and
+  // the block crashed. Pin the cottage set instead: 35 and 36 (the twins) plus 22
+  // (no twin), so the pair and a non-member are always on screen whatever the day.
+  const pairCfg = JSON.parse(CONFIG);
+  pairCfg.cottages = ['22', '35', '36'].map(id => pairCfg.cottages.find(c => c.id === id));
   const w = freshDom('https://example.com/?highlight=35');
-  const root = mountSelector(w, CONFIG);
+  const root = mountSelector(w, JSON.stringify(pairCfg));
   const D = w.DCCS;
 
   const cards = Array.prototype.slice.call(root.querySelectorAll('.dccs-card'));
+  ok('all three pinned cottages are on screen today', cards.length === 3);
+  // ...and on every other day too: rotation is floor(Date.now()/864e5) % n, so
+  // there are only n distinct values. Drive the engine through all of them rather
+  // than trusting the one the clock happens to hand this run.
+  const rotN = pairCfg.cottages.length;
+  const everyRotation = [];
+  for (let r = 0; r < rotN; r++) {
+    const res = D.score.run(pairCfg.cottages, { hard: [], rotation: r });
+    everyRotation.push(res.results.length === rotN
+      && ['22', '35', '36'].every(id => res.results.some(c => c.id === id)));
+  }
+  ok('the pinned set survives every rotation, not just today\'s',
+    everyRotation.length === rotN && everyRotation.every(Boolean));
   const idOf = (el) => (el.querySelector('h4').textContent.match(/Cottage (\d+)/) || [])[1];
   const noteOf = (el) => { const p = el.querySelector('.dccs-dup'); return p ? p.textContent : null; };
   const noted = cards.filter(noteOf);

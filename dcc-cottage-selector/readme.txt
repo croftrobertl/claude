@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.38.0
+Stable tag: 0.39.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,34 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.39.0 =
+* COPY: the packaged capacity note and pet note now carry the owner's current
+  wording, so the plugin — not a stored per-widget override — is the source of
+  truth for it. A widget with nothing saved for these keys renders the live text.
+  - Capacity: "2 guests are included in the nightly rate and will have a queen
+    bed. Guests 3 and 4 will have a pull-out couch and be charged a nightly fee."
+    (No leading "The" — deliberate.)
+  - Pet: "Pets are welcome in Cottage 34 only and must be pre-approved."
+* Copy only. No layout, styling or logic change; the strings are the whole diff.
+* Neither note names a fee amount, as ever. The pet fee is tiered by stay length,
+  so any single figure would be wrong for two of the three tiers, and the extra-
+  guest fee has one source of truth elsewhere on the site. The test now reads the
+  LIVE strings for this check rather than a copy of them in the test file.
+* The superseded wording is asserted absent from the whole strings table, and the
+  two notes are pinned as owner-approved content: they are load-bearing now, so a
+  change to either should be a decision rather than a tidy-up.
+* Pinned the behaviour the pending override removal depends on: design_snapshot()
+  copies any scalar str_ setting into string_overrides, INCLUDING an empty string,
+  but Config::build() applies an override only when it is a non-empty string. A
+  blanked panel field therefore falls through to the packaged copy rather than
+  publishing an empty note — so clearing the field and deleting the key are
+  equivalent for what a guest reads.
+* TESTS (no shipped change): a 0.36.0 assertion that mounted the default render
+  and assumed both twins landed in the scored top three crashed the suite on
+  2026-09-15, when the daily tie-break rotation put one twin on only as the
+  highlight. It now pins the cottage set it mounts and drives the engine through
+  every rotation instead of the one the clock hands that run.
 
 = 0.38.0 =
 * NEW: the cottage CTA now shows a short label on narrow screens — "View" below
