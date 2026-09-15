@@ -125,3 +125,161 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+## DCC Custom Checkout — release artifacts
+
+- **Naming of files handed to the owner** (owner preference, corrected
+  2026-09-13). Two rules, and the distinction matters:
+  - **Plugin zips take NO dash**: `Custom Checkout <version>.zip` (e.g.
+    `Custom Checkout 0.34.0.zip`), matching the version in the plugin header.
+  - **Everything else takes the dash**: `Custom Checkout - <name>.<ext>` —
+    images, markdown, JS, reports, audits, exports, anything that is not the
+    plugin zip.
+
+  The folder *inside* the zip stays `dcc-custom-checkout/` — that is the
+  WordPress plugin slug and must not change.
+- Build zips are gitignored (pattern `Custom Checkout *.zip`); never commit them.
+- **The "Rate:" row is removed from the price breakdown unconditionally**
+  (owner decision, v0.6.1). Every rate on this site is named after its cottage,
+  so the row only ever restated the accommodation title above it. The
+  consequence: **a rate named anything else — "Winter Special", say — will not
+  appear on the checkout breakdown either.** If a differently-named rate is
+  ever created and its name needs to be visible, `dropRateRows()` in
+  `assets/checkout.js` has to become conditional (drop it only when the label
+  after "Rate:" matches the accommodation title).
+- **The native "Choose Additional Services" section is hidden on the checkout**
+  (owner decision, v0.7.0). Both fees this site charges are driven by controls
+  the guest already used — the pet fee by "Traveling with a dog?", the
+  extra-guest fee by "Number of Guests" — so the native section was a second
+  control for a decision already made. The consequence: **any service added in
+  MotoPress in future that is NOT driven by one of this plugin's own controls
+  will be uncheckable, because a guest never sees it.** Whoever adds one must
+  either wire a control for it in `checkout.js` or narrow
+  `hideNativeServices()` to skip that service's row.
+- Hiding there is display-based on purpose: a hidden-but-checked input still
+  submits and MotoPress still prices it. Never switch it to `disabled`,
+  `remove()`, or anything that stops the input submitting — that would silently
+  stop charging the $50 extra-guest fee.
+- **Buttons follow the site button spec** (owner decision, v0.8.0): the "Send
+  Message" button at /contact/ — Raleway 20px/500, line-height 50px,
+  letter-spacing 0.5px, text-transform none, #fff on #006BCF, no border,
+  radius 30px. Every DCC plugin declares it rather than inheriting from the
+  theme. It is asserted **without `!important`**: Bravada forces
+  `text-transform: uppercase` (0,0,1) and the Elementor kit forces
+  18px/900/1.5px/capitalize (0,1,1), and the doubled `form.mphb_sc_checkout-form`
+  class reaches (0,3,1)-(0,3,2), which wins outright. Keep it that way — a
+  later deliberate override should still be able to win.
+- **Blue buttons hover to coral** `#F08080` with `#FFFFFF` text (site standard,
+  v0.8.1) — not the older `--dcc-blue-hover`, which is kept only because other
+  rules use it. White on `#F08080` is 2.59:1, below WCAG AA; the owner has
+  chosen it knowingly, so the focus treatment must stay an outline and never
+  depend on the fill. Any hover selector must be **the resting selector with
+  `:hover` appended** — a hover rule that loses to its own resting rule fails
+  silently and still looks right in the file.
+- Button appearance is measured in real Chromium at `tests/button/`
+  (`npm install && npm test`). It renders the button in isolation, because
+  `/submit-booking/` only exists with a live reservation. Run it after touching
+  any button rule.
+- **Fixtures must come from real /submit-booking/ markup.** Three defects
+  survived several releases with a green suite because the fixtures were
+  plausible rather than real (v0.9.0). Two traps worth knowing:
+  `.mphb_sc_checkout-service` is on the CHECKBOX, not its row, and
+  `Element.closest()` matches the element itself — so resolving a row from a
+  service input needs an explicit "a form control is never a row" guard. And
+  the "Rate:" line is a `<div class="mphb-price-breakdown-rate">` inside a
+  `<td>`, not a row.
+- **Never match on text this plugin has written into the page.** The tax
+  asterisk is appended to the Taxes cell, so a second pass read that row as
+  "Taxes*" and the whole footnote control died. Injected elements carry
+  `data-dcc-injected` and `rowLabel()` skips them. Anything that reads a label
+  and might run twice must do the same.
+- **Guest photo IDs are deleted on request only** — no schedule (owner
+  decision, v0.10.0). The button is on the booking screen; the file also goes
+  when a booking is PERMANENTLY deleted, but not when it is trashed. The image
+  is never rendered in the admin, only its filename.
+- **`Id_Files::contain()` is the only thing between post meta and `unlink()`.**
+  It is a pure static function for exactly that reason, and it is tested
+  directly at `tests/id-files/` (`php tests/id-files/run.php`) against
+  symlinks, encoded traversal and prefix-colliding sibling directories. If you
+  add any code path that deletes a file, route it through `contain()` — never
+  build a path from meta and unlink it.
+- **Deletion notes go into MotoPress's own booking log** (v0.10.1):
+  `\MPHB\Entities\Booking::addLog()` via
+  `MPHB()->getBookingRepository()->findById()`. Logs are `wp_comments` rows
+  with `comment_type` `mphb_booking_log`. The write is verified by counting
+  those rows before and after — `addLog()` returns nothing, so a silent no-op
+  would otherwise pass for success. If the count does not rise, the plugin's
+  own history panel renders instead; it is a fallback, never a second copy.
+- The protected store's `index.php` and `.htaccess` are self-healing (on
+  activation, after a checkout upload, hourly in admin) because /privacy/
+  promises IDs are blocked and a host migration can drop dotfiles. Whether the
+  server honours them is checked live by **DCC → Custom Checkout → Guest ID
+  storage → "Check public access now"**, which probes over real HTTP; no local
+  test can answer that.
+- **The fields here are the site standard** for the Guest Guide Support Report
+  form and the Availability Calendar — those two only, not site-wide (owner
+  decision, v0.11.0). Each of those repos keeps its OWN copy of the values;
+  exported as `Custom Checkout - Field Standard.css`. Not a shared mu-plugin
+  layer: mu-plugins cannot be installed from the WP Admin upload screen, which
+  is how these are deployed, and it would be a single point of failure across
+  three plugins. Tokens read an optional `--dcc-site-*` first and fall back to
+  the literal, so a shared layer can still be added later without anything
+  depending on it.
+- **The typed-value and `::placeholder` colours are declared, not inherited.**
+  They had no rules until v0.11.0 and inherited black and a UA grey. That is
+  invisible on the checkout and wrong in any other cascade — do not delete them
+  as redundant.
+- **Every hover rule on the checkout lives inside
+  `@media (hover: hover) and (pointer: fine)`.** On iOS the first tap applies
+  `:hover` and it sticks until the next tap elsewhere, so a hover-styled
+  control eats a tap and will not revert. Focus rules stay OUTSIDE that query.
+  Touch behaviour is asserted in `tests/button/` with an emulated coarse-pointer
+  context — that proves the rules are gated, not that iOS behaves.
+- **Tap diagnostic**: `?dcc_tap_debug=1` on the checkout, administrators only
+  (v0.12.0). Records pointer/touch/mouse/click with defaultPrevented and the
+  real topmost element at the touch coordinates. Listener-only — it must never
+  gain a preventDefault or a stopPropagation, or it stops being a measurement.
+  Gated on capability AND the URL flag, so nothing persists and there is no
+  default to get wrong.
+- **The published standard is the source of truth, and it drifted once.**
+  Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
+  injected pet fields, while `Custom Checkout - Field Standard.css` — which is
+  generated from it and is the standard for the other two plugins — declared
+  the full pill for text inputs too. MotoPress's own First Name / Address /
+  Apartment fields were therefore sized by the THEME for several releases.
+  **After editing either file, diff the two.** Three of those declarations are
+  load-bearing, not cosmetic: `width: 100%` (a field narrower than its wrapper
+  leaves a dead strip that looks tappable and is not), `min-height: 44px`, and
+  `font-size: 16px` — **under 16px iOS Safari zooms the whole page on focus**,
+  which moves everything under the finger.
+- **Nothing on the checkout may write layout on a bare `resize` event.** On iOS
+  `resize` fires when the URL bar collapses during ordinary scrolling.
+  `matchFileFieldWidth()` did exactly that on a 150ms debounce, landing just as
+  the page settled and the guest tapped. It now ignores height-only resizes and
+  skips no-op writes. Any new resize handler must do the same.
+- **Mobile multi-tap: cause partly identified (v0.13.0).** Gating the hover rules (v0.11.0) fixed
+  desktop and did not fix mobile, so sticky hover is not the whole cause. Two
+  in-plugin candidates were tested in v0.12.0: a self-feeding MutationObserver
+  loop was refuted, and the tax asterisk's 44x44 box was measured overflowing
+  its 20px row by 12px each way (real, but its neighbours are static text, so
+  not the page-wide cause). The untested lead is Elementor's two delegated
+  document-level click handlers bound to `a, [data-elementor-lightbox]`
+  (frontend.js:1102 and :1254) — but the owner's own enumeration came back
+  NEGATIVE: /submit-booking/ and /cottages/ carry identical document- and
+  body-level click handlers, so there is no extra handler on the misbehaving
+  page. What his tap log did establish: nothing intercepts clicks (no
+  defaultPrevented anywhere, every click that fired reached the document) — the
+  browser is not GENERATING the click. The dead-strip defect above explains the
+  lost taps that landed on a wrapper; it does NOT explain three stationary taps
+  on an input that produced no click. Still open, and the round-2 diagnostic
+  measures the remaining candidates directly (page movement, page zoom, node
+  replacement mid-press, Places' pac-container).
+- Field geometry (tap targets) is asserted in real Chromium at 390x844 with
+  touch emulation at `tests/fields/` (`npm install && npm test`). Run it after
+  touching any field rule.
+- Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
+  (`npm install && npm test` there). Run them after touching
+  `restructureBreakdown()` or anything else that moves a figure on the
+  checkout — that code decides what a guest is told they owe.
+- Bump the version in all three places whenever behaviour changes:
+  the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.
