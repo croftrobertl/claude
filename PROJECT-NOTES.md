@@ -832,6 +832,67 @@ must exist in whatever the site loads.
   trimming it would silently change those fields, and nothing in the plugin
   would explain why.
 
+## Mobile booking popup (0.27.0)
+
+The two date fields stacked on a phone, and the trailing one was clipped —
+ONE cause, not two: `.mphbac-input { min-width: 8.5em }` (the 0.20.2 guard
+against Bravada collapsing date text) plus a native `<input type=date>`'s own
+intrinsic width exceed the row at 360px. `@media (max-width: 600px)` releases
+the floor (`flex: 1 1 0; min-width: 0`) so flex distributes instead. Each
+field still measures 127px at 320px and 147px at 360px — WIDER than 8.5em
+resolves to, so the date text has more room, not less.
+
+Two labels on one row and two fields beneath is what side-by-side fields
+produce naturally; no DOM change was needed.
+
+MEASURED, and the reason it survived: 0.26.0 stacked at 320 and 360 but NOT
+at 393. A 393px handset looked correct. Assert phone layout at 320/360/393 —
+never at 361, which is the width that shipped the Wildlife footnote broken.
+
+## Multi-month layout breakpoint (0.27.0)
+
+Below 1024px: one month per row. At 1024px and up: across, with a 240px floor
+so three fit a ~770px column instead of needing ~870px (a day cell at 240px
+is ~34px, matching the full calendar at 375px). Months still wrap rather than
+crush.
+
+**Tablet landscape was not specified by the owner** — 1024px is this
+release's call, and it gives a landscape iPad the desktop treatment.
+Confirm before assuming it is settled.
+
+## Button hover (0.27.0)
+
+`#F08080` with white text, set by the owner on 2026-09-15 for site coherence.
+**2.59:1, below WCAG AA, and knowingly accepted** — do not "fix" it by
+darkening the text. The focus treatment is an OUTLINE and must stay one, so
+keyboard users never depend on that contrast.
+
+No transition on any button. A colour fade makes hover read as a flicker
+rather than a state change — the same conclusion the DCC Menu Styling
+mu-plugin reached for the theme menus.
+
+## Carousel item 14 — what is NOT the problem (0.27.0)
+
+Readable from the shipped CSS, so worth not re-testing: the plugin already
+forces `.mphbac-info-body` swiper arrows to `opacity: 1 !important;
+visibility: visible !important` on EVERY viewport, and again at ≤600px with
+`display: flex !important`. No plugin hover rule touches a swiper button.
+
+So "while switching photos only the navigation arrows are visible" is not the
+arrows appearing — they are always forced on. It is the SLIDES going
+invisible, which is the same family as the first-image bug that IS fixed
+(`slideToLoop(0, 0, false)` landing on a real slide). The iOS sticky-hover
+hypothesis explains a click needing two taps; it does not explain a slide's
+visibility, and it cannot be the mechanism for arrows the plugin paints
+unconditionally.
+
+Not reproducible from here: no iOS, and Chromium cannot reproduce WebKit
+sticky `:hover`. Needs Safari remote inspector on the device — read computed
+`opacity`/`transform` on `.swiper-wrapper` and on the active slide DURING a
+transition, and count Swiper instances on the element
+(`document.querySelectorAll('.mphbac-info-body .swiper').length` vs how many
+have `.swiper` set). Two instances on one element would explain it exactly.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

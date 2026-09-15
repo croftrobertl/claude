@@ -288,7 +288,10 @@ input.mphbac-input {
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    /* NO transition (0.27.0). A colour fade makes hover read as a flicker
+       rather than a state change — the same conclusion the DCC Menu Styling
+       mu-plugin reached for the theme menus. State changes here are
+       instantaneous on purpose; do not reintroduce one. */
 }
 
 /* The chevron. Fixed px (not em) so the "Today" label's 13px cannot resize
@@ -434,11 +437,28 @@ button.mphbac-info-close--floating {
    even sub-280px containers safe). How MANY boxes exist per device is the
    JS side (Months shown, 3/2/1); this only lays out whatever is rendered.
    12px gap matches the existing nav spacing value. */
+/* Multi-month layout (0.27.0).
+   BELOW 1024px — tablet PORTRAIT and every phone — months stack one per row.
+   Side by side at those widths puts day cells around 30px, below a
+   comfortable tap target once the label column is gone.
+   AT 1024px AND UP — desktop and tablet LANDSCAPE — they sit across, with a
+   240px floor per month so three fit a ~770px content column instead of
+   needing ~870px. At 240px a day cell is ~34px, matching what the full
+   calendar already ships at 375px. Months still WRAP rather than crush when
+   the container cannot hold three.
+   TABLET LANDSCAPE WAS NOT SPECIFIED by the owner. 1024px is the call, and
+   it gives a landscape iPad the desktop treatment — flagged rather than left
+   for him to discover. */
 .mphbac-months {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
     align-items: start;
+}
+@media (min-width: 1024px) {
+    .mphbac-months {
+        grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    }
 }
 .mphbac-monthbox {
     min-width: 0;
@@ -1704,6 +1724,33 @@ body.mphbac-info-open {
 .mphbac-sheet-error.mphbac-sheet-error {
     text-align: center;
 }
+/* Booking popup on a phone (0.27.0).
+   The two date fields were wrapping onto separate rows, giving
+   label/field/label/field stacked. The cause is NOT the flex basis — it is
+   `.mphbac-input { min-width: 8.5em }`, the guard added in 0.20.2 against
+   Bravada collapsing date text. A native <input type=date> also carries an
+   intrinsic width of its own, and on a 360px screen two of those plus the
+   gap exceed the row, so they wrap AND the trailing one is clipped by the
+   right edge — items 15 and 16 are the same cause.
+   Releasing the floor here is safe: flex still grants each field ~150px,
+   wider than 8.5em resolves to at this font size, so the date text has MORE
+   room than before, not less. Asserted at 320, 360 and 393. */
+@media (max-width: 600px) {
+    .mphbac-sheet .mphbac-sheet-field {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .mphbac-sheet .mphbac-sheet-field .mphbac-input.mphbac-input {
+        min-width: 0;
+    }
+    /* Equal air on both sides. The sheet is centred with a 12px viewport
+       gutter, so this is the only horizontal padding in play. */
+    .mphbac-sheet.mphbac-sheet {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+
 .mphbac-sheet-error {
     flex-basis: 100%;
     margin: 0;
@@ -1929,6 +1976,16 @@ body.mphbac-info-open {
    them on every device. Add new hover rules inside this guard, never
    beside their focus-visible twin. */
 @media (hover: hover) and (pointer: fine) {
+    /* Settled by the owner 2026-09-15 for coherence with the rest of the
+       site. #FFFFFF on #F08080 is 2.59:1, below WCAG AA — a knowing choice,
+       NOT an oversight: do not "fix" it by darkening the text. The focus
+       treatment is deliberately an OUTLINE (see the focus-visible block),
+       never a fill, so keyboard users are not relying on this contrast.
+       No transition, for the same reason as the nav buttons above. */
+    .mphbac-btn:hover {
+        background: #F08080;
+        color: #FFFFFF;
+    }
     .mphbac-nav-btn:hover {
         background-color: var(--mphbac-color-nav-hover);
     }

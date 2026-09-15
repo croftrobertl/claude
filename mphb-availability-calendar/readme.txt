@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.26.0
+Stable tag: 0.27.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,14 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.27.0 =
+* **Booking popup on a phone: the two date fields now sit side by side** — both labels on one row, both fields on the row beneath — and neither is cut off by the right edge. Both problems had the same cause. Checked at 320px, 360px and 393px.
+* **Buttons: hover fill is now #F08080 with white text**, applied instantly with no fade. Hover styling is limited to devices with a real pointer, so a tap on a phone cannot leave a button stuck in its hover colour.
+* **The per-cottage calendars show three months across on desktop and landscape tablets, and stack one per row on portrait tablets and phones.**
+* Item 14 (carousel photos on a phone) is unresolved — see the note below.
+
+**On the carousel.** No change was made this round, deliberately. The plugin already forces those arrows visible on every screen size, so the report that "only the arrows are visible" points at the photos being hidden rather than the arrows being shown. That is a different fault from the one previously chased, and guessing again would risk the first-photo fix that is currently working. What is needed is one look at the live popup on the phone with a browser inspector attached; the exact steps are with your developer.
 
 = 0.26.0 =
 * **Every typography setting in the panel now takes effect** — font family as well as weight and size. The plugin's own rules sat at the same strength as Elementor's and loaded later, so they were quietly winning ties on the font family for buttons, the cottage cells, the filter fields and the "View Cottage Page" button. They now sit deliberately below the panel and above the theme.
