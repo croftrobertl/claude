@@ -520,6 +520,49 @@ function summary(doc) {
         visibleRows(doc).some(r => r.indexOf('Total') === 0), true);
 }
 
+/* ===================================================================== *
+ * v0.16.0 — the breakdown expander stops being a hyperlink.
+ *
+ * Round 4 ended the timing hypothesis: the expander clicked twice at 82ms and
+ * lost taps at 63, 79 and 81ms. An <a> WITH AN HREF is what iOS arms its link
+ * recognisers on, so the href comes off. MotoPress's handler is delegated on
+ * the class, so it still fires; its own preventDefault() shows the href was
+ * never navigated. Accessibility is given back explicitly, because an <a>
+ * without href is neither focusable nor keyboard-operable.
+ * ===================================================================== */
+{
+    const { window, doc } = await render(F.plainSubtotal, {
+        i18n: { subtotal: 'Subtotal' }
+    });
+    const a = doc.querySelector('.mphb-price-breakdown-expand');
+
+    check('the expander is no longer a link', a.hasAttribute('href'), false);
+    check('and the href is remembered, not destroyed',
+        a.getAttribute('data-dcc-href'), '#');
+    check('MotoPress\'s hook still matches it',
+        a.classList.contains('mphb-price-breakdown-expand'), true);
+    check('it is still announced as a control', a.getAttribute('role'), 'button');
+    check('and is still reachable by keyboard', a.getAttribute('tabindex'), '0');
+    check('still marked not-draggable', a.getAttribute('draggable'), 'false');
+
+    let clicks = 0;
+    a.addEventListener('click', () => { clicks++; });
+    a.dispatchEvent(new window.KeyboardEvent('keydown',
+        { key: 'Enter', bubbles: true }));
+    check('Enter activates it', clicks, 1);
+
+    // A re-render must not bind the handler a second time: MotoPress rebuilds
+    // this table often, and a doubled binding would fire the toggle twice and
+    // leave it exactly where it started.
+    doc.querySelector('form').appendChild(doc.createElement('span'));
+    await new Promise(r => setTimeout(r, 250));
+    a.dispatchEvent(new window.KeyboardEvent('keydown',
+        { key: ' ', bubbles: true }));
+    check('Space activates it, and a re-render did not double-bind', clicks, 2);
+    check('the href is not re-stripped into something else',
+        a.getAttribute('data-dcc-href'), '#');
+}
+
 console.log(failures ? `\n${failures} failing` : '\nall passing');
 process.exit(failures ? 1 : 0);
 })();

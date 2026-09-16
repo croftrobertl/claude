@@ -338,6 +338,30 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   80-110ms should now click. If they do not, the hypothesis is wrong — and the
   next step is replacing the anchor with a real `<button>`, which is the one
   control in that log that never failed.
+- **The breakdown expander is deliberately not a hyperlink** (v0.16.0).
+  `hardenTapTargets()` removes its `href` (kept in `data-dcc-href`) and gives
+  back `role="button"`, `tabindex="0"` and Enter/Space activation. iOS arms its
+  link recognisers on the HREF, not on the tag. MotoPress's handler is
+  delegated on the class (`mphb.js:1446`) so it still fires, and its own
+  `preventDefault()` shows the href was never navigated. **Do not "restore" the
+  href as tidy-up**, and if the expander is ever rebuilt, keep the re-run from
+  the MutationObserver — a rebuilt anchor comes back as a link.
+- **Round 4 killed the timing hypothesis** (v0.16.0). With 0.15.0's gesture
+  hints installed the expander clicked twice at 82ms — in round 3 nothing above
+  27ms ever had — but still lost taps at 63ms, 79ms and 81ms. A 63ms failure
+  beside an 82ms success rules out any duration threshold. **The live lead is
+  now sticky `:hover`**: round 4's two successes were each the SECOND tap of a
+  pair. The round-5 diagnostic reads `el.matches(':hover')` at touchstart to
+  settle it. If that is the mechanism, the hover rule responsible is NOT one of
+  this plugin's (all of ours are gated behind `hover: hover`) — look at the
+  theme and at MotoPress's own CSS.
+- **Every tap log must identify its own build.** Round 4 arrived with no
+  version and could not be attributed without asking, which cost a round. The
+  diagnostic now stamps `DCC_CHECKOUT_VERSION` in its header and records, per
+  press, whether the touched element is still a link, its `draggable` state and
+  its computed `touch-action`. Presses are numbered and the 900ms verdict line
+  names its own press — it fires on a later press's clock, which is why round 4
+  appeared to say "+5ms NO CLICK".
 - **The published standard is the source of truth, and it drifted once.**
   Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
   injected pet fields, while `Custom Checkout - Field Standard.css` — which is

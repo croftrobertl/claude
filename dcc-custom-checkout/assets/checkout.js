@@ -2302,6 +2302,46 @@
         var links = root.querySelectorAll('a.mphb-price-breakdown-expand');
         Array.prototype.forEach.call(links, function (a) {
             a.setAttribute('draggable', 'false');
+
+            // v0.16.0 — TAKE THE HREF OFF.
+            //
+            // 0.15.0's gesture hints (touch-action, callout, draggable) moved
+            // the needle and did not close it: in the owner's round-4 log the
+            // expander clicked twice at 82ms, where in round 3 nothing above
+            // 27ms ever clicked — but it still lost taps at 63ms, 79ms and
+            // 81ms. A 63ms failure alongside an 82ms success ends the timing
+            // story for good; no threshold produces that.
+            //
+            // What is left is the element. An <a> WITH AN HREF is a hyperlink,
+            // and iOS arms its link recognisers on that basis — not on the tag.
+            // Remove the href and it is no longer a link: nothing to drag,
+            // nothing to preview, no recogniser to claim the gesture. The
+            // control keeps its classes, so MotoPress's delegated handler
+            // ('.mphb-price-breakdown-expand' click, mphb.js:1446) still fires
+            // exactly as before, and its own preventDefault() on line 1447
+            // shows the href was never navigated anyway.
+            //
+            // The href is REMEMBERED rather than destroyed, so this is
+            // reversible and nothing is lost if it has to come back.
+            if (a.hasAttribute('href')) {
+                a.setAttribute('data-dcc-href', a.getAttribute('href'));
+                a.removeAttribute('href');
+            }
+            // An <a> without href is not focusable and not keyboard-operable,
+            // so it is given both back explicitly. This leaves the control
+            // MORE usable than it was, not less.
+            if (!a.hasAttribute('role')) { a.setAttribute('role', 'button'); }
+            if (!a.hasAttribute('tabindex')) { a.setAttribute('tabindex', '0'); }
+            if (!a.hasAttribute('data-dcc-keys')) {
+                a.setAttribute('data-dcc-keys', '1');
+                a.addEventListener('keydown', function (e) {
+                    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') {
+                        return;
+                    }
+                    e.preventDefault();   // Space must not scroll the page
+                    a.click();            // a real click — the delegated
+                });                       // handler receives it unchanged
+            }
         });
     }
 

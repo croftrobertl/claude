@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.15.0
+Stable tag: 0.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,38 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.16.0 =
+* The breakdown expander stops being a hyperlink. Round 4 of the owner's tap
+  log ended the timing hypothesis 0.15.0 was built on: the expander clicked
+  twice at 82ms, where in round 3 nothing above 27ms had ever clicked -- but it
+  still lost taps at 63ms, 79ms and 81ms. A 63ms failure standing next to an
+  82ms success cannot come from a duration threshold. 0.15.0's gesture hints
+  moved the needle and did not close it.
+  What iOS arms its link recognisers on is not the <a> tag, it is the HREF. So
+  the href now comes off: nothing to drag, nothing to preview, no recogniser to
+  claim the gesture. The control keeps every class, so MotoPress's delegated
+  handler ('.mphb-price-breakdown-expand' click, mphb.js:1446) fires exactly as
+  before -- and its own preventDefault() on the next line shows the href was
+  never navigated anyway. The href is remembered in data-dcc-href rather than
+  destroyed, so this is reversible.
+  An <a> without an href is neither focusable nor keyboard-operable, so both
+  are given back explicitly: role="button", tabindex="0", and Enter/Space
+  activation. The control ends up more usable than it was, not less.
+* Tap diagnostic, round 5, built to settle the ONE thing round 4 pointed at and
+  could not prove. Round 4's successes were both the SECOND tap of a pair --
+  fail, then success, twice over -- and "first tap consumed, second works" is
+  the signature of sticky :hover on iOS. The logger now reads the touched
+  element's own :hover state at touchstart, so if a failing press reads "not
+  hovered" and the success right after it reads "ALREADY :HOVER", that is the
+  mechanism measured rather than argued.
+  Three smaller things that cost a round each: the log now stamps the plugin
+  VERSION in its header (round 4 could not be attributed to a build without
+  asking); presses are NUMBERED and the delayed verdict names its own press
+  (round 4 printed "+5ms NO CLICK" because that line belongs to the press
+  before); and each press records whether the element is still a link, its
+  draggable state and its computed touch-action, so a log says for itself
+  whether the fix under test was even installed.
 
 = 0.15.0 =
 * FIXED, and it is the most serious thing in this release: hideNativeServices()

@@ -354,6 +354,9 @@ final class Assets
             // Surfaces misconfiguration notices (e.g. a double-prefixed
             // Checkout Field slug) on the page for administrators only.
             'isAdmin'          => current_user_can('manage_options'),
+            // Stamped into the tap diagnostic's header. Round 4's log could
+            // not be attributed to a build without asking, which cost a round.
+            'version'          => DCC_CHECKOUT_VERSION,
             'i18n'            => [
                 'petQuestion'   => __('Traveling with a dog?', 'dcc-checkout'),
                 'petNo'         => __('No', 'dcc-checkout'),

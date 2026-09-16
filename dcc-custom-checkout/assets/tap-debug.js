@@ -174,6 +174,8 @@
     var press = null;
     var lastPress = null;
     var lastTouchEnd = 0;
+    var lastTarget = null;
+    var pressNo = 0;
     var mo = ('MutationObserver' in window) ? new MutationObserver(function (records) {
         if (!press) { return; }
         press.mutations += records.length;
@@ -204,10 +206,54 @@
         }
     }) : null;
 
+    /* ------------------------------------------------------------------ *
+     * WHAT THE ELEMENT IS, at the moment it is touched (round 4 -> 5).
+     *
+     * Round 4 ended the timing story: the expander clicked twice at 82ms and
+     * lost taps at 63ms, 79ms and 81ms. A 63ms failure next to an 82ms success
+     * cannot come from a duration threshold. What it CAN come from is state on
+     * the element, and the log showed a pattern the summary lines could not:
+     * the successes were the SECOND tap of a pair, both times.
+     *
+     * "First tap consumed, second works" is the signature of sticky :hover on
+     * iOS. So the element's own :hover state is now read at touchstart. If a
+     * failing press reads `not hovered` and the success right after it reads
+     * `ALREADY :HOVER`, that is the mechanism, measured rather than argued.
+     *
+     * The gesture properties are logged with it so that a future log says for
+     * itself which build produced it — round 4 could not be attributed to one
+     * without asking, and that cost a round.
+     * ------------------------------------------------------------------ */
+    function profile(el) {
+        if (!el || el.nodeType !== 1) { return null; }
+        var bits = [];
+        try {
+            if (el.matches(':hover')) { bits.push('ALREADY :HOVER'); }
+            else { bits.push('not hovered'); }
+        } catch (err) { bits.push('hover unreadable'); }
+        if (el === lastTarget) { bits.push('SAME ELEMENT AS PREVIOUS PRESS'); }
+
+        var tag = el.tagName.toLowerCase();
+        if (tag === 'a') {
+            bits.push(el.hasAttribute('href') ? 'IS A LINK (href present)'
+                                              : 'href removed (not a link)');
+            bits.push('draggable=' + (el.getAttribute('draggable') || '(unset)'));
+        }
+        try {
+            bits.push('touch-action: ' + getComputedStyle(el).touchAction);
+        } catch (err2) { /* not fatal */ }
+        return bits.join(', ');
+    }
+
     function beginPress(e, x, y) {
         start = performance.now();
-        lines.push('--- new press ---');
+        pressNo += 1;
+        lines.push('--- press #' + pressNo + ' ---');
+        var prof = profile(e.target);
+        if (prof) { lines.push('         ' + prof); }
+        lastTarget = e.target;
         press = {
+            no: pressNo,
             target: e.target,
             scrollY: window.scrollY || 0,
             // The round-2 log answered "is the page moving?" with `page still`
@@ -277,7 +323,11 @@
         // and the click lands at the end of it, so a 400ms verdict could fire
         // before the tap had finished succeeding.
         setTimeout(function () {
-            if (!p.clicked) { log('  >>> NO CLICK FOLLOWED THIS PRESS'); }
+            // Named by press number: this fires 900ms late, on whatever press's
+            // clock is current, so an untagged line reads as belonging to the
+            // wrong press. Round 4 printed "+5ms NO CLICK" for exactly that
+            // reason.
+            if (!p.clicked) { log('  >>> PRESS #' + p.no + ' GOT NO CLICK'); }
         }, 900);
         press = null;
     }
@@ -393,6 +443,8 @@
     }
     ready(function () {
         document.body.appendChild(panel);
-        log('listening — tap a field, then the thing that will not respond');
+        var cfg = window.DCC_CHECKOUT || {};
+        log('DCC Custom Checkout v' + (cfg.version || '(unknown)') +
+            ' — listening. Tap the thing that will not respond.');
     });
 })();
