@@ -296,6 +296,15 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   pins.** The owner's line break between the two sentences is applied at
   render (`\n` after the first full stop + `white-space: pre-line`), never in
   the literal — the literal must hash identical.
+- **The upload hints share the tax footnote's rule** (v0.20.0). MotoPress's
+  `mphb-checkout-fields` renders `.mphb-max-upload-file` and
+  `.mphp-accepted-upload-types` (sic — misspelt in its source, target it as
+  written); they are styled, never re-marked-up. One rule with
+  `.dcc_checkout-tax-footnote` so the three cannot drift, and **no
+  `font-weight` on any of them**: the footnote's is inherited from the site's
+  `html{font-weight:700}`, and the hints must match its computed weight, not a
+  number from the standard. The preceding `<br>`s are hidden with `:has()`.
+  Asserted in `tests/fields/` against `html{font-weight:700}`.
 - **Site-level CSS that is not in this repo.** doracanalcourt.com carries
   ~1.3KB of Customizer "Additional CSS" on every page: it hides
   `.mphb-guest-name-wrapper`, forces `.mphb_sc_search-form` to `display: block`

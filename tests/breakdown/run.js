@@ -160,8 +160,8 @@ function summary(doc) {
     // class-mate, so one CSS rule still governs every line on the breakdown.
     const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
         .map(r => label(r.cells[0]));
-    check('dividers: first detail row (item 2), Dates, after the dates, Service, Subtotal',
-        ruled, ['Number of Guests', 'Dates', 'Accommodation Total', 'Service', 'Subtotal']);
+    check('dividers: first detail row, Dates, after the dates, Service, Services Total (v0.20.0), Subtotal',
+        ruled, ['Number of Guests', 'Dates', 'Accommodation Total', 'Service', 'Services Total', 'Subtotal']);
     check('dividers: the date rows themselves carry none',
         Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
              .some(r => /September/.test(label(r.cells[0]))), false);
@@ -457,6 +457,8 @@ function summary(doc) {
         ruled.includes('Service'), true);
     check('item 2: the first detail row under the title carries the divider',
         ruled.includes('Nights'), true);
+    check('v0.20.0: a divider sits above Services Total',
+        ruled.includes('Services Total'), true);
 }
 
 /* ===================================================================== *

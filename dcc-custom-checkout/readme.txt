@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.0
+Stable tag: 0.20.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,24 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.20.0 =
+* A divider above "Extras Total", the shared divider class, keyed on
+  MotoPress's pre-relabel text in either spelling -- the same way the Subtotal
+  divider was fixed in 0.15.0.
+* The two file-upload hint lines ("Maximum upload file size", "Accepted file
+  types") now match the tax footnote: 14px, line-height 1.4, #4b5563, left.
+  They are MotoPress's (mphb-checkout-fields 1.2.3, FileUploadField.php:66-97;
+  the second class is misspelt "mphp-" in its source and is targeted as
+  written) and the markup is untouched. All three share ONE rule so they
+  cannot drift, and font-weight is deliberately not declared: the footnote's
+  is inherited from html{font-weight:700} on this site, so the spans match its
+  COMPUTED weight rather than a value typed from the standard. The <br>
+  MotoPress puts before each span is hidden so the two do not get a blank line
+  between them. Asserted in tests/fields.
+  This supersedes an early rule that calmed only ONE of the hints: its selector
+  for the other, .mphb-accepted-file-types, was a guess that never matched the
+  misspelt class MotoPress actually renders. Fixtures from real markup, again.
 
 = 0.19.0 =
 * Item 2 - a divider between the accommodation title row and the first detail

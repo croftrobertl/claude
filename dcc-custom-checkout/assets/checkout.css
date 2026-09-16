@@ -451,19 +451,15 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
 }
 
 /* ---------------------------------------------------------------------------
- * Item 6 — Upload helper text was 20px/700, competing with "Total". Calm it.
- * (Live: .mphb-max-upload-file; the "Accepted file types" sibling sits near the
- *  file input — .mphb-accepted-file-types targeted defensively.)
+ * The upload-hint rule that used to live here (an early "Item 6": 13px, 400,
+ * muted, !important) was SUPERSEDED in v0.20.0 by the shared hint rule further
+ * down, where the two hints take the tax footnote's typography. Two things
+ * about the old rule are worth keeping on record: its "Accepted file types"
+ * selector, .mphb-accepted-file-types, was a GUESS that never matched —
+ * MotoPress's real class is the misspelt .mphp-accepted-upload-types — so
+ * only one of the two hints was ever styled; and its font-weight: 400
+ * !important would have silently defeated the new rule's inherited weight.
  * ------------------------------------------------------------------------- */
-.mphb_sc_checkout-form .mphb-max-upload-file,
-.mphb_sc_checkout-form span.mphb-max-upload-file,
-.mphb_sc_checkout-form .mphb-accepted-file-types {
-    display: inline-block;
-    font-size: 13px !important;
-    font-weight: 400 !important;
-    color: var(--dcc-muted) !important;
-    line-height: 1.4;
-}
 
 /* ---------------------------------------------------------------------------
  * Item 7 — Unify the four section headers (three h3 at 25px/700, one h4 at
@@ -971,12 +967,44 @@ select.dcc_checkout-invalid {
     outline-offset: 2px;
 }
 
-.mphb_sc_checkout-form .dcc_checkout-tax-footnote {
-    margin: 8px 0 0;
+/* v0.20.0 — ONE typographic rule for every quiet hint line under the form.
+ *
+ * The two file-upload hints are NOT this plugin's: mphb-checkout-fields 1.2.3
+ * renders them (FileUploadField.php:66-97) as
+ *     <br><span class="mphb-max-upload-file">Maximum upload file size: 14 MB.</span>
+ *     <br><span class="mphp-accepted-upload-types">Accepted file types: ...</span>
+ * The second class is misspelt "mphp-" in MotoPress's source and is targeted
+ * exactly as written. The markup is left alone; only the spans are styled.
+ *
+ * They share this rule with the tax footnote so the three cannot drift.
+ * font-weight is deliberately NOT declared: the footnote's weight is inherited
+ * (this site sets html{font-weight:700}), and the spans inherit through the
+ * same form, so they match its COMPUTED weight rather than a value typed from
+ * the standard. Asserted in tests/fields against an html{font-weight:700}. */
+.mphb_sc_checkout-form .dcc_checkout-tax-footnote,
+.mphb_sc_checkout-form .mphb-max-upload-file,
+.mphb_sc_checkout-form .mphp-accepted-upload-types {
     font-size: 14px;
     line-height: 1.4;
     color: #4b5563;
     text-align: left;
+}
+
+/* The spans are inline in a centred wrapper; as blocks they take their own
+   text-align. The <br> MotoPress puts before each would then draw an empty
+   line between them, so it is hidden -- via :has(), which every browser this
+   site serves supports; without it the only cost is that blank line. */
+.mphb_sc_checkout-form .mphb-max-upload-file,
+.mphb_sc_checkout-form .mphp-accepted-upload-types {
+    display: block;
+}
+.mphb_sc_checkout-form br:has(+ .mphb-max-upload-file),
+.mphb_sc_checkout-form br:has(+ .mphp-accepted-upload-types) {
+    display: none;
+}
+
+.mphb_sc_checkout-form .dcc_checkout-tax-footnote {
+    margin: 8px 0 0;
     /* ITEM 4 (v0.14.0) — the footnote must not contribute to the widget's
      * WIDTH. It is a <p> inserted as a sibling of the breakdown table, and the
      * container turns out to be content-sized: opening the footnote stretched

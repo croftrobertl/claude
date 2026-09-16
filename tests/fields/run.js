@@ -206,6 +206,28 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
         el => getComputedStyle(el).borderTopColor);
     check('item 2: and so is its border', border, 'rgb(188, 0, 62)');
 
+    /* --- v0.20.0: the two upload hints match the tax footnote. ----------
+       Weight is the one that matters: it is INHERITED on the footnote (from
+       html{font-weight:700} on this site), so the spans must reach the same
+       computed value without a declaration of their own. ------------- */
+    const hint = await page.evaluate(() => {
+        const read = sel => {
+            const cs = getComputedStyle(document.querySelector(sel));
+            return [cs.fontSize, cs.lineHeight, cs.color, cs.fontWeight, cs.textAlign].join(' | ');
+        };
+        return { fn: read('#footnote'), h1: read('#hint1'), h2: read('#hint2') };
+    });
+    check('v0.20.0: "Maximum upload file size" matches the footnote', hint.h1, hint.fn);
+    check('v0.20.0: "Accepted file types" matches the footnote', hint.h2, hint.fn);
+    check('v0.20.0: and that includes the inherited 700 weight',
+          hint.fn.split(' | ')[3], '700');
+    const gap = await page.evaluate(() => {
+        const a = document.querySelector('#hint1').getBoundingClientRect();
+        const b = document.querySelector('#hint2').getBoundingClientRect();
+        return Math.round(b.top - a.bottom);
+    });
+    atMost('v0.20.0: no blank line between the two hints', gap, 1);
+
     /* --- The label must not underline the guest's typed text (v0.12.0),
            re-asserted here because the kit rule is reproduced. ---------- */
     const labelDeco = await page.$eval('#mphb_first_name',

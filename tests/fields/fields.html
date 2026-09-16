@@ -28,6 +28,8 @@
 
 <style>
   html, body { margin: 0; padding: 0; }
+  /* As on the live site: the footnote's weight is INHERITED from this. */
+  html { font-weight: 700; }
 
   /* --- Elementor kit input reset, as measured: (0,1,1) ------------------ */
   .elementor-kit-331 input[type="text"],
@@ -119,6 +121,17 @@
     Please complete all of the required fields.
   </div>
   <abbr class="dcc_checkout-req" id="req" title="Required">*</abbr>
+
+  <!-- v0.20.0: MotoPress's file-upload hints, exactly as mphb-checkout-fields
+       1.2.3 renders them (FileUploadField.php:66-97), misspelt class and all,
+       next to the tax footnote they must match. -->
+  <p class="mphb-customer-photo-id mphb-file-control">
+    <label for="mphb_photo_id">Photo ID</label>
+    <input type="file" id="mphb_photo_id" name="mphb_photo_id">
+    <br><span class="mphb-max-upload-file" id="hint1">Maximum upload file size: 14 MB.</span>
+    <br><span class="mphp-accepted-upload-types" id="hint2">Accepted file types: jpeg, jpg, png, pdf, webp, heic.</span>
+  </p>
+  <p class="dcc_checkout-tax-footnote" id="footnote">* Taxes applied: Lake County Tourist Development Tax 4%.</p>
 </form>
 
 </body>

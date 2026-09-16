@@ -440,6 +440,12 @@
         // label this plugin wrote, which is the mistake that killed the tax
         // footnote in 0.9.0.
         var subtotalAny = last(function (l) { return l.indexOf('subtotal') === 0; });
+        // v0.20.0 — the divider above "Extras Total". Found here, BEFORE any
+        // relabel, from MotoPress's own text in either of its spellings
+        // (Services Total / Extras Total, via the alias list), the same way
+        // the Subtotal divider was fixed in 0.15.0.
+        var servicesTotalRow = null;
+        rows.forEach(function (r) { if (labelIs(r, 'services total')) { servicesTotalRow = r; } });
 
         // Without a "(excluding taxes)" row, a plain "Subtotal" IS the summary
         // row — never hide the only subtotal on the page.
@@ -481,7 +487,7 @@
         dropRateRows(rows, table);
         markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
         dropServicesHeadingRow(rows);
-        markBreakdownRules(rows, subtotalAny);
+        markBreakdownRules(rows, subtotalAny, servicesTotalRow);
         markFirstVisibleRows(rows);
     }
 
@@ -552,7 +558,7 @@
     // date — "September 17, 2026" does, "Accommodation Total" does not. That is
     // English-shaped; a label it cannot read ends the run early, so the second
     // divider is simply not drawn rather than drawn in the wrong place.
-    function markBreakdownRules(rows, subtotalRow) {
+    function markBreakdownRules(rows, subtotalRow, servicesTotalRow) {
         // Every row that should carry the divider is decided FIRST, and only
         // then is the class written where it differs. The old shape — strip it
         // from every row, add it back to some — was two mutation records per
@@ -575,6 +581,10 @@
         // Item 13: above Subtotal, which separates it from "Services Total".
         if (subtotalRow && !isHiddenRow(subtotalRow)) {
             want.push(subtotalRow);
+        }
+        // v0.20.0: above "Extras Total", separating it from the extras above it.
+        if (servicesTotalRow && !isHiddenRow(servicesTotalRow)) {
+            want.push(servicesTotalRow);
         }
 
         // And above whatever follows the last booked date, separating the date
