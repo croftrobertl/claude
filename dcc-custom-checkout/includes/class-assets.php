@@ -32,9 +32,22 @@ final class Assets
      *                            via the domain-specific hook).
      * @return mixed
      */
-    public function filter_accommodation_label($translation, $text, $domain = '')
+    /**
+     * MotoPress msgid => the word this site uses instead, on the checkout only.
+     *
+     * Shared by the gettext filter AND by the script config, so the JS knows
+     * BOTH spellings of every label it has to find in the price breakdown. That
+     * matters: if this filter fires, the breakdown says "Extras"; if it does
+     * not — because MotoPress passed a different msgid, or a context-qualified
+     * one — it still says "Services". A matcher that knew only one spelling
+     * would silently do nothing on the other, which is the exact failure mode
+     * that cost three releases on the services section.
+     *
+     * @return array<string,string>
+     */
+    public static function string_overrides(): array
     {
-        $map = apply_filters('dcc_checkout_string_overrides', [
+        return (array) apply_filters('dcc_checkout_string_overrides', [
             'Accommodation Type:' => __('Accommodation:', 'dcc-checkout'),
             // "Service" is MotoPress's word, not the owner's: the pet fee and
             // the extra-guest fee are not services a guest chose from a menu —
@@ -46,6 +59,32 @@ final class Assets
             'Service'        => __('Item', 'dcc-checkout'),
             'Services Total' => __('Extras Total', 'dcc-checkout'),
         ]);
+    }
+
+    /**
+     * Every spelling a breakdown label can have: MotoPress's own word and this
+     * site's override, lowercased for matching.
+     *
+     * @return array<string,string[]>
+     */
+    public static function label_aliases(): array
+    {
+        $map = self::string_overrides();
+        $out = [];
+        foreach (['Services', 'Service', 'Services Total'] as $msgid) {
+            $key = strtolower(rtrim($msgid, ':'));
+            $names = [$key];
+            if (isset($map[$msgid])) {
+                $names[] = strtolower(trim((string) $map[$msgid]));
+            }
+            $out[$key] = array_values(array_unique(array_filter($names)));
+        }
+        return $out;
+    }
+
+    public function filter_accommodation_label($translation, $text, $domain = '')
+    {
+        $map = self::string_overrides();
         if (!isset($map[$text])) {
             return $translation;
         }
@@ -195,6 +234,15 @@ final class Assets
             // label => rate, read from MotoPress's own mphb_accommodation_taxes
             // option so a rate change there reaches the guest-facing note.
             'taxRates'         => Config::accommodation_tax_rates(),
+            // Both spellings of every breakdown label the JS has to find.
+            'labelAliases'     => self::label_aliases(),
+            // The extra-guest service's real post_title(s), read from
+            // MotoPress by ID. Item 14 relabels that row FOR DISPLAY ONLY —
+            // matching it by the title MotoPress actually renders, rather than
+            // by a string typed in here that would rot the moment the service
+            // is renamed in the admin.
+            'guestServiceTitles' => Config::guest_service_titles(),
+            'guestFeeAmountText' => Config::format_price(Config::guest_fee_amount()),
             // Surfaces misconfiguration notices (e.g. a double-prefixed
             // Checkout Field slug) on the page for administrators only.
             'isAdmin'          => current_user_can('manage_options'),
@@ -216,7 +264,29 @@ final class Assets
                  * arrangement (e.g. "1 queen-sized bed and a pull-out couch"),
                  * 3: formatted per-night fee (e.g. $50).
                  */
-                'couchNote'     => __('NOTE: Up to %1$s guests can stay since this cottage has %2$s. A per-night fee of %3$s/night applies for each additional guest.', 'dcc-checkout'),
+                // ITEM 9 (v0.14.0) — the owner's replacement wording. This is a
+                // LITERAL, not a template, and deliberately so: the identical
+                // sentence ships in the Cottage Selector this same round and the
+                // two must match CHARACTER FOR CHARACTER. A template that
+                // resolved from per-cottage data could not guarantee that.
+                //
+                // It therefore assumes the layout it describes: 2 guests
+                // included, 4 capacity, queen plus pull-out couch. That holds
+                // for all six cottages that can show it — Cottage 33 (1604) and
+                // Cottage 34 (1607) have capacity 2 and no extra-guest service,
+                // so the note never renders there. Override with the
+                // dcc_checkout_couch_note filter if a cottage ever differs.
+                'couchNote'     => Config::couch_note_text(),
+                // Item 14 — the extra-guest row, relabelled for DISPLAY in the
+                // price breakdown. The MotoPress service itself (18063) keeps
+                // its own title, which is what admin screens and guest emails
+                // show.
+                // Item 7 — MotoPress's own label on the duplicate total below the
+                // upload field. Localised so a translated site can still match it.
+                'totalPriceLabel'   => __('Total Price', 'dcc-checkout'),
+                'extraGuestService' => __('Extra Guest(s) Fee', 'dcc-checkout'),
+                'extraGuestDetail'  => __('%1$s/night x %2$d guest', 'dcc-checkout'),
+                'extraGuestDetails' => __('%1$s/night x %2$d guests', 'dcc-checkout'),
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
                 /* translators: %s: maximum guest count. */

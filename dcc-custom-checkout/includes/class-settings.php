@@ -499,7 +499,6 @@ final class Settings
     {
         $included = Config::included_guests();
         $steps    = Config::guest_fee_steps(4);
-        $beds     = Config::couch_beds_text();
 
         echo '<h3>' . esc_html__('What the guest sees', 'dcc-checkout') . '</h3>';
 
@@ -528,13 +527,10 @@ final class Settings
 
         echo '<p class="description" style="max-width:640px">' . esc_html__('Note under the dropdown:', 'dcc-checkout') . '</p>';
         echo '<p style="max-width:640px;padding:10px 14px;background:#f6f7f7;border-left:4px solid #2271b1">'
-            . esc_html(sprintf(
-                /* translators: 1: maximum guests, 2: sleeping arrangement, 3: formatted per-night fee. */
-                __('NOTE: Up to %1$s guests can stay since this cottage has %2$s. A per-night fee of %3$s/night applies for each additional guest.', 'dcc-checkout'),
-                4,
-                $beds,
-                $steps[1]
-            ))
+            // The SAME sentence the guest sees — read from Config, never a
+            // second copy. A preview that can drift from the live string is
+            // worse than no preview.
+            . esc_html(Config::couch_note_text())
             . '</p>';
         echo '<p class="description" style="max-width:640px">'
             . esc_html__('Neither the labels nor the note appear on a cottage that is not listed above — Cottages 33 and 34 show a plain 1 / 2 dropdown.', 'dcc-checkout')

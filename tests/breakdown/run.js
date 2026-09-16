@@ -154,12 +154,14 @@ function summary(doc) {
         .map(r => label(r.cells[0]));
     check('headers: every visible column header is marked, and nothing else',
         heads, ['Dates', 'Service']);
-    // Items 15/16: the two extra dividers, using the grand total's own class-
-    // mate so one CSS rule governs all three.
+    // Items 15/16, extended by items 12/13 in v0.14.0: a divider above EVERY
+    // visible column header (not just the first), above whatever follows the
+    // last booked date, and above Subtotal. All four use the grand total's own
+    // class-mate, so one CSS rule still governs every line on the breakdown.
     const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
         .map(r => label(r.cells[0]));
-    check('dividers: above "Dates", and above what follows the last date',
-        ruled, ['Dates', 'Accommodation Total']);
+    check('dividers: Dates header, after the dates, Service header, Subtotal',
+        ruled, ['Dates', 'Accommodation Total', 'Service', 'Subtotal']);
     check('dividers: the date rows themselves carry none',
         Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
              .some(r => /September/.test(label(r.cells[0]))), false);
@@ -334,6 +336,101 @@ function summary(doc) {
     star.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     check('footnote: tapping again hides it',
         note.classList.contains('dcc_checkout-section-hidden'), true);
+}
+
+/* ===================================================================== *
+ * v0.14.0 — items 7, 10, 11, 12, 13, 14, against the three-column services
+ * block in the owner's live screenshot.
+ * ===================================================================== */
+{
+    const CFG14 = {
+        labelAliases: {
+            'services': ['services', 'extras'],
+            'service': ['service', 'item'],
+            'services total': ['services total', 'extras total']
+        },
+        guestServiceIdList: [18063],
+        guestServiceTitles: ['extra guest fee (per guest beyond 2)'],
+        guestFeeAmountText: '$50',
+        i18n: {
+            subtotal: 'Subtotal',
+            taxNoteLead: 'Taxes applied:',
+            taxNoteLabel: 'Show which taxes apply',
+            totalPriceLabel: 'Total Price',
+            extraGuestService: 'Extra Guest(s) Fee',
+            extraGuestDetail: '%1$s/night x %2$d guest',
+            extraGuestDetails: '%1$s/night x %2$d guests'
+        }
+    };
+
+    const { window, doc } = await render(F.servicesWithDetails, CFG14);
+    const rows = visibleRows(doc);
+    const labels = rows.map(r => r.split(' | ')[0]);
+
+    // --- Item 11 -----------------------------------------------------------
+    check('item 11: the bare "Services" row above the header is gone',
+        labels.filter(l => l === 'Services').length, 0);
+    check('item 11: the Service | Details | Amount header itself stays',
+        labels.filter(l => l === 'Service').length, 1);
+
+    // --- Item 14 -----------------------------------------------------------
+    const feeRow = Array.from(doc.querySelectorAll('tr')).find(
+        r => r.cells && r.cells.length === 3 &&
+             r.cells[0].textContent.trim() === 'Extra Guest(s) Fee');
+    check('item 14: the service is relabelled for display', !!feeRow, true);
+    if (feeRow) {
+        check('item 14: details read as a nightly rate times guests',
+            feeRow.cells[1].textContent.trim(), '$50/night x 2 guests');
+        check('item 14: the AMOUNT is never touched',
+            feeRow.cells[2].textContent.trim(), '$200');
+    }
+
+    // --- Items 12 + 13 -----------------------------------------------------
+    const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
+        .map(r => r.cells[0].textContent.replace(/\s+/g, ' ').trim());
+    check('item 12: a divider sits above the Service | Details | Amount header',
+        ruled.includes('Service'), true);
+    check('items 15/16 still hold: a divider above the Dates header',
+        ruled.includes('Dates'), true);
+    check('item 13: a divider sits above Subtotal',
+        ruled.some(l => l.indexOf('Subtotal') === 0), true);
+
+    // --- Item 7 ------------------------------------------------------------
+    const dupe = doc.querySelector('p.mphb-total-price');
+    check('item 7: the second "Total Price:" below the upload field is hidden',
+        dupe.classList.contains('dcc_checkout-section-hidden'), true);
+    check('item 7: the breakdown\'s own Total is untouched',
+        labels.filter(l => l === 'Total').length, 1);
+
+    // --- Item 10 -----------------------------------------------------------
+    const tip = doc.querySelector('.mphb-required-fields-tip');
+    check('item 10: the tip\'s asterisk is wrapped so it can be coloured',
+        tip.querySelectorAll('.dcc_checkout-tip-asterisk').length, 1);
+    check('item 10: the sentence itself is unchanged',
+        tip.textContent.replace(/\s+/g, ' ').trim(),
+        'Required fields are followed by *');
+
+    // Re-render: every one of these runs again on a MotoPress re-render, and
+    // the rule this plugin learned the hard way is that a second pass must not
+    // re-read what the first pass wrote.
+    window.document.body.dispatchEvent(new window.Event('dcc-noop'));
+    const sec = window.document.createElement('span');
+    doc.querySelector('form').appendChild(sec);   // provoke the MutationObserver
+    await new Promise(r => setTimeout(r, 250));
+    check('item 10: a second pass does not wrap the asterisk twice',
+        tip.querySelectorAll('.dcc_checkout-tip-asterisk').length, 1);
+    const feeRow2 = Array.from(doc.querySelectorAll('tr')).find(
+        r => r.cells && r.cells.length === 3 &&
+             r.cells[0].textContent.trim() === 'Extra Guest(s) Fee');
+    check('item 14: a second pass leaves the relabelled row alone',
+        feeRow2 ? feeRow2.cells[1].textContent.trim() : null,
+        '$50/night x 2 guests');
+
+    // --- Item 7, the graceful half ----------------------------------------
+    const bare = await render(F.totalWithoutBreakdown, CFG14);
+    check('item 7: with no breakdown above it, the only total is LEFT ALONE',
+        bare.doc.querySelector('p.mphb-total-price')
+            .classList.contains('dcc_checkout-section-hidden'), false);
 }
 
 console.log(failures ? `\n${failures} failing` : '\nall passing');

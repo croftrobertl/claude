@@ -113,6 +113,9 @@
         // site sells, so the native services section is redundant.
         hideNativeServices(root);
         matchFileFieldWidth(root);
+        markFieldRows(root);      // item 6  — cap the wrapper with the field
+        markTipAsterisk(root);    // item 10 — colour the tip's asterisk
+        dropDuplicateTotal(root); // item 7  — the second Total Price
 
         // Last line of defence: nothing above may cost the guest their
         // "Number of Guests" dropdown.
@@ -183,6 +186,133 @@
         var cells = row.cells;
         if (!cells || !cells.length) { return ''; }
         return String(cells[cells.length - 1].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    /* ===================================================================== *
+     * Item 6 — each field's wrapper is capped with the field.
+     *
+     * The CSS caps .dcc_checkout-field-row at --dcc-field-max and centres it;
+     * this decides what a row IS. Both halves are needed: cap the field alone
+     * and the wrapper still stretches the full column, so a tap in the part of
+     * it the field no longer covers does nothing — the dead strip that 0.13.0
+     * measured out of the owner's tap log, straight back.
+     *
+     * A <p> only, which is what MotoPress wraps each control in (confirmed in
+     * that log: p.mphb-customer-last-name.mphb-text-control). Climbing to any
+     * block ancestor would eventually tag a section and cap the whole form.
+     * ===================================================================== */
+    function markFieldRows(root) {
+        var controls = root.querySelectorAll(
+            'input[type="text"], input[type="email"], input[type="tel"],' +
+            'input[type="number"], input[type="url"], input[type="date"],' +
+            'input[type="file"], select, textarea');
+        Array.prototype.forEach.call(controls, function (ctrl) {
+            var row = ctrl.closest('p');
+            if (row && root.contains(row)) {
+                row.classList.add('dcc_checkout-field-row');
+            }
+        });
+    }
+
+    /* ===================================================================== *
+     * Item 7 — the second "Total Price:" below the upload field.
+     *
+     * The price breakdown above already ends in a Total, so this one is the
+     * same figure a third time. Hidden only when the breakdown really is
+     * present: without it this would be the ONLY total on the page, and hiding
+     * the only total a guest is shown before they pay is the one mistake here
+     * that actually costs money.
+     *
+     * Everything inside the breakdown table is skipped, so its own Total can
+     * never be the thing that gets hidden.
+     * ===================================================================== */
+    function dropDuplicateTotal(root) {
+        var table = root.querySelector('table.dcc_checkout-breakdown');
+        if (!table) {
+            return;
+        }
+        var needle = String(I18N.totalPriceLabel || 'Total Price').toLowerCase();
+        var hit = null;
+        var all = root.querySelectorAll('p, div, td, th, span, h2, h3, h4');
+        Array.prototype.forEach.call(all, function (el) {
+            if (table.contains(el) || el.contains(table)) {
+                return;
+            }
+            var text = String(el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (text.indexOf(needle) !== 0) {
+                return;
+            }
+            // Deepest match wins: an ancestor that happens to contain this
+            // text would take half the page with it.
+            if (!hit || hit.contains(el)) {
+                hit = el;
+            }
+        });
+        if (!hit) {
+            return;
+        }
+        var row = hit.closest('tr');
+        hideRow(row || hit);
+    }
+
+    /* ===================================================================== *
+     * Item 10 — the "*" inside "Required fields are followed by *".
+     *
+     * It was black while the "*" marking each required field was red; they are
+     * the same signal. MotoPress gives that asterisk no element of its own, so
+     * this wraps that ONE character — nothing else in the sentence — in a span
+     * the CSS colours.
+     *
+     * Idempotent, and it has to be: this runs again on every MotoPress
+     * re-render. The span carries data-dcc-injected so rowLabel() and the
+     * matchers skip it, and an already-wrapped tip is left untouched rather
+     * than wrapped twice. That is the rule this plugin learned the hard way —
+     * never re-read text this plugin has written into the page.
+     * ===================================================================== */
+    function markTipAsterisk(root) {
+        var tips = root.querySelectorAll('[class*="required-fields-tip" i]');
+        if (!tips.length) {
+            return;
+        }
+        Array.prototype.forEach.call(tips, function (tip) {
+            if (tip.querySelector('.dcc_checkout-tip-asterisk')) {
+                return; // already done
+            }
+            // The last text node that actually ends in an asterisk.
+            var walker = document.createTreeWalker(tip, NodeFilter.SHOW_TEXT, null);
+            var node = null, found = null;
+            while ((node = walker.nextNode())) {
+                if (/\*\s*$/.test(node.nodeValue || '')) { found = node; }
+            }
+            if (!found) {
+                return;
+            }
+            var text = found.nodeValue;
+            var at   = text.lastIndexOf('*');
+            var span = document.createElement('span');
+            span.className = 'dcc_checkout-tip-asterisk';
+            span.setAttribute('data-dcc-injected', '1');
+            span.setAttribute('aria-hidden', 'true');
+            span.textContent = '*';
+            found.nodeValue = text.slice(0, at);
+            var after = document.createTextNode(text.slice(at + 1));
+            found.parentNode.insertBefore(span, found.nextSibling);
+            found.parentNode.insertBefore(after, span.nextSibling);
+        });
+    }
+
+    // Every spelling a MotoPress breakdown label can have on this page: its own
+    // word AND this site's override of it, supplied by the PHP that owns the
+    // gettext filter so the two cannot drift. Matching only one spelling is how
+    // the services section survived three releases: the code looked right and
+    // matched nothing.
+    function labelIs(row, key) {
+        var names = (CFG.labelAliases || {})[key] || [key];
+        var label = normLabel(row);
+        for (var i = 0; i < names.length; i++) {
+            if (label === names[i]) { return true; }
+        }
+        return false;
     }
 
     function looksLikeMoney(text) {
@@ -272,11 +402,13 @@
         }
 
         relabelAccommodationRows(rows);
+        relabelExtraGuestRow(rows);
         setLineItemPreTax(rows, subtotal);
         foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
         dropRateRows(rows, table);
         markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
-        markBreakdownRules(rows);
+        dropServicesHeadingRow(rows);
+        markBreakdownRules(rows, subtotal);
         markFirstVisibleRows(rows);
     }
 
@@ -347,28 +479,177 @@
     // date — "September 17, 2026" does, "Accommodation Total" does not. That is
     // English-shaped; a label it cannot read ends the run early, so the second
     // divider is simply not drawn rather than drawn in the wrong place.
-    function markBreakdownRules(rows) {
+    function markBreakdownRules(rows, subtotal) {
         rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-rule'); });
 
-        var head = null;
-        for (var i = 0; i < rows.length && !head; i++) {
-            if (rows[i].classList.contains('dcc_checkout-breakdown-head')) {
-                head = rows[i];
-            }
+        // EVERY column header gets the divider, not just the first. That is
+        // items 15/16 (the "Dates | Amount" header) and item 12 (the
+        // "Service | Details | Amount" header, which needs separating from
+        // "Accommodation Total" above it) in one rule rather than two — a
+        // second header added by MotoPress later is handled without new code.
+        // Hidden rows are skipped throughout: a divider on a row nobody can see
+        // is invisible at best, and when two adjacent rows are both marked and
+        // one is hidden the guest gets a doubled line.
+        var heads = rows.filter(function (r) {
+            return r.classList.contains('dcc_checkout-breakdown-head') && !isHiddenRow(r);
+        });
+        heads.forEach(function (r) { r.classList.add('dcc_checkout-breakdown-rule'); });
+
+        // Item 13: above Subtotal, which separates it from "Services Total".
+        if (subtotal && !isHiddenRow(subtotal)) {
+            subtotal.classList.add('dcc_checkout-breakdown-rule');
         }
-        if (!head) {
+
+        if (!heads.length) {
             return;
         }
-        head.classList.add('dcc_checkout-breakdown-rule');
 
-        var start = rows.indexOf(head) + 1;
+        // And above whatever follows the last booked date, separating the date
+        // run from the figures. Marking the same row twice is harmless — it is
+        // one class, and one CSS rule governs all of them including the grand
+        // total's, so restyling any divider moves every divider.
+        var start = rows.indexOf(heads[0]) + 1;
         var j = start;
         while (j < rows.length && isDateLabel(rowLabel(rows[j]))) {
             j++;
         }
-        if (j > start && j < rows.length) {
+        if (j > start && j < rows.length && !isHiddenRow(rows[j])) {
             rows[j].classList.add('dcc_checkout-breakdown-rule');
         }
+    }
+
+    function isHiddenRow(row) {
+        for (var n = row; n && n.nodeType === 1; n = n.parentElement) {
+            if (n.classList.contains('dcc_checkout-section-hidden') ||
+                n.classList.contains('dcc_checkout-service-hidden')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ITEM 11 — the bare "Services" row that sits directly above the
+    // "Service | Details | Amount" header and says the same thing.
+    //
+    // Removed ONLY when all three hold: the label is "Services" in one of its
+    // spellings, it carries no figure, and the next visible row really is a
+    // column header. If MotoPress ever renders a "Services" row that has an
+    // amount, or that is not followed by a header, it is left alone — an
+    // unrecognised row keeps MotoPress's output rather than being guessed at.
+    function dropServicesHeadingRow(rows) {
+        for (var i = 0; i < rows.length - 1; i++) {
+            var row = rows[i];
+            if (!labelIs(row, 'services')) {
+                continue;
+            }
+            if (looksLikeMoney(rowAmount(row))) {
+                continue;
+            }
+            var next = null;
+            for (var k = i + 1; k < rows.length && !next; k++) {
+                if (!rows[k].classList.contains('dcc_checkout-section-hidden')) {
+                    next = rows[k];
+                }
+            }
+            if (next && next.classList.contains('dcc_checkout-breakdown-head')) {
+                hideRow(row);
+                // It was a header candidate itself; drop the marks with it so
+                // it cannot attract a divider.
+                row.classList.remove('dcc_checkout-breakdown-head');
+                row.classList.remove('dcc_checkout-breakdown-rule');
+            }
+            return;
+        }
+    }
+
+    // ITEM 14 — the extra-guest fee row, relabelled FOR DISPLAY.
+    //
+    //   Service:  "Extra Guest(s) Fee"      (was the MotoPress service's title)
+    //   Details:  "$50/night x N guests"    (was "$50 x 2 nights x 2 guests")
+    //
+    // The MotoPress service itself is NOT renamed — its title still appears on
+    // admin screens and in guest emails. The row is found by that title, read
+    // from MotoPress by service ID rather than typed into this plugin, so
+    // renaming the service in the admin moves the match with it.
+    //
+    // N is read from the [adults] select on the checked guest-service
+    // checkbox, which this plugin sets itself — a number it wrote, not a label
+    // it wrote, so re-reading it is safe on a second pass. If N cannot be
+    // determined the Details cell is LEFT ALONE: a wrong count on an invoice
+    // line is worse than MotoPress's own wording.
+    function relabelExtraGuestRow(rows) {
+        var titles = (CFG.guestServiceTitles || []).map(function (t) {
+            return String(t || '').toLowerCase().trim();
+        }).filter(Boolean);
+        if (!titles.length || !I18N.extraGuestService) {
+            return;
+        }
+        rows.forEach(function (row) {
+            var label = normLabel(row);
+            if (titles.indexOf(label) === -1) {
+                return;
+            }
+            var cells = row.cells;
+            if (!cells || !cells.length) {
+                return;
+            }
+            setCellText(cells[0], I18N.extraGuestService);
+
+            // Details is the middle cell of Service | Details | Amount. With
+            // only two cells there is no details column to rewrite.
+            if (cells.length < 3) {
+                return;
+            }
+            var n    = extraGuestCount(row.closest('form') || document);
+            var rate = CFG.guestFeeAmountText || '';
+            if (!(n > 0) || !rate) {
+                return;
+            }
+            var tpl = (n === 1 ? I18N.extraGuestDetail : I18N.extraGuestDetails) || '';
+            if (!tpl) {
+                return;
+            }
+            setCellText(cells[1], tpl.replace('%1$s', rate).replace('%2$d', String(n)));
+        });
+    }
+
+    // Replace a cell's text without disturbing anything this plugin injected
+    // into it (the tax asterisk lives in a cell like these).
+    function setCellText(cell, text) {
+        if (!cell) {
+            return;
+        }
+        var kept = cell.querySelectorAll('[data-dcc-injected]');
+        cell.textContent = text;
+        Array.prototype.forEach.call(kept, function (el) { cell.appendChild(el); });
+        cell.setAttribute('data-dcc-relabelled', '1');
+    }
+
+    // Extra guests actually booked: the [adults] value on each CHECKED
+    // extra-guest service checkbox. This plugin sets both, so the figure is its
+    // own arithmetic read back, never MotoPress's prose parsed.
+    function extraGuestCount(scope) {
+        var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) {
+            return id > 0;
+        });
+        if (!ids.length) {
+            return 0;
+        }
+        var total = 0;
+        var boxes = scope.querySelectorAll('input[type="checkbox"][name*="[services]"]');
+        Array.prototype.forEach.call(boxes, function (box) {
+            if (!box.checked || ids.indexOf(parseInt(box.value, 10)) === -1) {
+                return;
+            }
+            var m = /^(.*)\[id\]$/.exec(String(box.name || ''));
+            if (!m) {
+                return;
+            }
+            var adults = scope.querySelector(
+                'select[name="' + esc(m[1] + '[adults]') + '"]');
+            total += adults ? (parseInt(adults.value, 10) || 0) : 0;
+        });
+        return total;
     }
 
     function isDateLabel(label) {
@@ -1259,10 +1540,12 @@
         if (!single || !beds || !I18N.couchNote || max <= included) {
             return;
         }
-        setGuestNote(sel, 'dcc_checkout-fee-note', I18N.couchNote
-            .replace('%1$s', String(max))
-            .replace('%2$s', beds)
-            .replace('%3$s', single));
+        // ITEM 9 (v0.14.0): the sentence is now a fixed literal, owned by
+        // Config::couch_note_text() and shared character-for-character with the
+        // Cottage Selector — so there is nothing to substitute. The guards
+        // above still decide WHETHER it appears: `max <= included` is what
+        // keeps it off Cottages 33 and 34, which have no couch.
+        setGuestNote(sel, 'dcc_checkout-fee-note', I18N.couchNote);
     }
 
     // Highest selectable guest count on this room's dropdown (ignores options
@@ -1913,6 +2196,9 @@
                 // already-clean text), so re-running is cheap and loop-safe.
                 cleanRequiredMarkers(root);
                 normalizeReservationDates(root);
+                markFieldRows(root);
+                markTipAsterisk(root);
+                dropDuplicateTotal(root);
                 // MotoPress re-renders the services block when the guest count
                 // changes; re-hide it, then re-prove the chooser survived.
                 hideNativeServices(root);

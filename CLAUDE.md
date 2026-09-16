@@ -241,6 +241,62 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   gain a preventDefault or a stopPropagation, or it stops being a measurement.
   Gated on capability AND the URL flag, so nothing persists and there is no
   default to get wrong.
+- **Field width is TWO rules, and both are required** (owner decision, v0.14.0:
+  "match the Availability Calendar's date pills"). The calendar's field is
+  `width: 100%; max-width: 100%; min-width: 0` — it fills its track, and the
+  TRACK is what makes it narrow. So the checkout keeps `width: 100%` on the
+  field and caps the WRAPPER (`.dcc_checkout-field-row`, put on by
+  `markFieldRows()`, with `p.mphb-text-control` as the no-JS fallback) at
+  `--dcc-field-max`. Capping the field alone reintroduces the dead strip that
+  v0.13.0 removed, and it looks correct in the stylesheet while doing it.
+  **360px is chosen so the cap is inert on a phone** — at 390px the section's
+  content box is ~358px — so anything below ~358 trades phone tap area for
+  desktop proportions. Asserted at both widths in `tests/fields/`.
+- **`input[type="date"]` needs `appearance: none`.** iOS Safari will not shrink
+  a native date control below its intrinsic content width; it ignores the width
+  its container granted and overflows. Chromium shrinks it without complaint,
+  so **no Chromium harness can catch this** — it is the calendar's measured
+  iPhone overlap bug (a ~215px control in a ~172px track at 393px). The
+  checkout renders its dates as hidden inputs today, so the rule is a guard.
+- **The tax footnote must never contribute to the widget's intrinsic width**
+  (v0.14.0). It is a `<p>` beside the breakdown table, and the container is
+  content-sized: opening it took the widget from 210px to 769px and every field
+  grew with it. `width: 0` + `min-width: 100%` is the pair that fixes it —
+  `width: 100%` alone looks identical in the file and reintroduces the defect.
+  Asserted in `tests/footnote/`.
+- **Breakdown matchers must know BOTH spellings of every label** (v0.14.0).
+  `Assets::string_overrides()` renames Services→Extras, Service→Item and
+  Services Total→Extras Total via a gettext filter on the checkout — but the
+  owner's live screenshots still show MotoPress's original words, so that
+  filter may not be firing. `Assets::label_aliases()` feeds both spellings to
+  the JS (`CFG.labelAliases`, used by `labelIs()`), so a matcher works either
+  way. Never match one spelling only; that is how the services section survived
+  three releases looking right and matching nothing.
+- **The extra-guest row is relabelled for DISPLAY, never renamed** (item 14,
+  v0.14.0). MotoPress service 18063 keeps its post_title, which is what admin
+  screens and guest emails show. `Config::guest_service_titles()` reads that
+  title BY ID so a rename in the MotoPress admin moves the match with it. The
+  guest count in the details cell comes from the `[adults]` select this plugin
+  sets itself — a number it wrote, not prose it parsed — and the cell is left
+  alone when that cannot be read. Verified service terms: $50, per_night,
+  per_adult, min 1, max 2, attached to 1065/1067/1069/1071/1740/1742 (all
+  capacity 4); Cottages 33 (1604) and 34 (1607) are capacity 2 with no
+  extra-guest service, so the row cannot appear there.
+- **`Config::couch_note_text()` is the single copy of the pull-out-couch
+  sentence** (v0.14.0). The checkout, the admin preview and the Cottage
+  Selector all read it, because the owner requires the two plugins to match
+  character for character. It is a LITERAL, not a template, for that reason —
+  and so it assumes 2 included / 4 capacity / queen + pull-out couch, which
+  holds for the six cottages that can show it. The caller's `max <= included`
+  guard is what keeps it off Cottages 33 and 34.
+- **Site-level CSS that is not in this repo.** doracanalcourt.com carries
+  ~1.3KB of Customizer "Additional CSS" on every page: it hides
+  `.mphb-guest-name-wrapper`, forces `.mphb_sc_search-form` to `display: block`
+  (a Safari flexbox workaround), puts `.ui-datepicker` and `.pac-container` at
+  `z-index: 99999`, and fully restyles the Google Places dropdown. None of it
+  sets an input width. The `pac-container` note matters to the tap diagnostic:
+  if a log ever shows it "present/VISIBLE", that z-index is why it would be on
+  top of everything.
 - **The published standard is the source of truth, and it drifted once.**
   Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
   injected pet fields, while `Custom Checkout - Field Standard.css` — which is
@@ -274,9 +330,28 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   on an input that produced no click. Still open, and the round-2 diagnostic
   measures the remaining candidates directly (page movement, page zoom, node
   replacement mid-press, Places' pac-container).
+  **What round 2's log established (v0.14.0).** The page does NOT scroll during
+  a press — every press reported `page still`. What moves is the VIEWPORT: the
+  iOS URL bar swings it 108px (393x665 / 393x712 / 393x773), and every
+  pointercancel press contains one of those resizes. One press measured
+  `MISSED input#mphb_first_name ... off by 0px x, 39px y` — dead on
+  horizontally, 39px out vertically. Three of six failures in that log are the
+  URL-bar resize. The other three are not: two were clean stationary presses
+  that produced no click at all, one of them with 90 mutations. Those three are
+  what is still unexplained. Baseline measured on the live page: 0 mutations at
+  rest and while scrolling, 1 per `resize` (Elementor writing
+  `data-elementor-device-mode` on `<body>`).
+  **Two reading errors the logger itself introduced, fixed in round 3:** iOS
+  splits one tap into a touch block and a synthesised mouse block ~300ms later,
+  and round 2 opened a new press for the second half — so the verdict line
+  fired hardest on the taps that WORKED. And `<body>` is an ancestor of
+  everything, so Elementor's attribute write counted as churn on every touched
+  path. Read any round-2 log with both in mind.
 - Field geometry (tap targets) is asserted in real Chromium at 390x844 with
-  touch emulation at `tests/fields/` (`npm install && npm test`). Run it after
-  touching any field rule.
+  touch emulation, and the width cap at 1280, at `tests/fields/`
+  (`npm install && npm test`). Run it after touching any field rule.
+- The tax footnote's width behaviour is asserted at `tests/footnote/`
+  (`npm install && npm test`).
 - Price-breakdown and services behaviour are covered by jsdom fixtures at `tests/breakdown/`
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the

@@ -155,6 +155,60 @@ const sharedSection = `
   </ul>
 </div>`;
 
+// The shape in the owner's live desktop screenshot (v0.14.0, items 7/10/11/14):
+// the services block has THREE columns — Service | Details | Amount — there is
+// a bare "Services" row above that header saying the same thing, and the page
+// repeats "Total Price:" below the upload field. The service checkbox and its
+// [adults] select are the real ones this plugin sets, which is where the guest
+// count in the Details cell comes from.
+const servicesWithDetails = `
+<table>
+  <tr class="mphb-price-breakdown-booking">
+    <td><a href="#" class="exp">-</a> #1 Cottage 36: Sunshine Suite</td><td>$588.50</td>
+  </tr>
+  <tr><td>
+    <table>
+      <tr><td>Nights</td><td>2</td></tr>
+      <tr><td>Dates</td><td>Amount</td></tr>
+      <tr><td>September 17, 2026</td><td>$175</td></tr>
+      <tr><td>September 18, 2026</td><td>$175</td></tr>
+      <tr><td>Accommodation Total</td><td>$350</td></tr>
+      <tr><td>Services</td><td></td></tr>
+      <tr><td>Service</td><td>Details</td><td>Amount</td></tr>
+      <tr><td>Extra Guest Fee (per guest beyond 2)</td><td>$50 x 2 nights x 2 guests</td><td>$200</td></tr>
+      <tr><td>Services Total</td><td></td><td>$200</td></tr>
+      <tr><td>Subtotal</td><td></td><td>$588.50</td></tr>
+    </table>
+  </td></tr>
+  <tr><td>Subtotal (excluding taxes)</td><td>$550</td></tr>
+  <tr><td>Taxes</td><td>$38.50</td></tr>
+  <tr><td>Total</td><td>$588.50</td></tr>
+</table>
+
+<p class="mphb-required-fields-tip">Required fields are followed by *</p>
+
+<p class="mphb-customer-first-name mphb-text-control">
+  <label for="mphb_first_name">First Name</label>
+  <input type="text" id="mphb_first_name" name="mphb_first_name" value="">
+</p>
+
+<input type="checkbox" class="mphb_sc_checkout-service"
+       name="mphb_room_details[0][services][0][id]" value="18063" checked>
+<select name="mphb_room_details[0][services][0][adults]">
+  <option value="2" selected>2</option>
+</select>
+
+<p>Accepted file types: jpeg, jpg, png, pdf, webp, heic.</p>
+<p class="mphb-total-price">Total Price: $588.50</p>`;
+
+// The same tail WITHOUT a price breakdown above it. Hiding the only total a
+// guest is shown is the one mistake here that costs money, so this must be
+// left alone.
+const totalWithoutBreakdown = `
+<p>Accepted file types: jpeg, jpg, png, pdf, webp, heic.</p>
+<p class="mphb-total-price">Total Price: $588.50</p>`;
+
 module.exports = {
-    withService, noService, twoAccommodations, renamedLabels, sharedSection
+    withService, noService, twoAccommodations, renamedLabels, sharedSection,
+    servicesWithDetails, totalWithoutBreakdown
 };

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,63 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.14.0 =
+* Item 6 - field width. The fields now match the Availability Calendar's date
+  pills. That plugin's field is `width: 100%` and is narrowed by its TRACK, not
+  by a width of its own, so the width: 100% here stays and the WRAPPER is what
+  is capped: 360px, centred, with the field filling it. Both halves or neither
+  -- capping the field alone puts back the dead strip beside it that 0.13.0
+  measured out of the owner's tap log. 360 rather than 320 is deliberate: at a
+  390px viewport the section's content box is about 358px, so the cap is INERT
+  ON A PHONE and the restored tap targets are untouched. Font-size moves to
+  18px to match the calendar; 16px remains an absolute floor, asserted, because
+  below it iOS zooms the whole page when a field takes focus. <input
+  type="date"> also gets appearance:none -- iOS will not shrink a native date
+  control below its intrinsic width, which was the whole of the calendar's
+  iPhone overlap bug. The checkout's dates are hidden inputs today, so that one
+  is a guard rather than a fix.
+* Item 4 - the tax footnote no longer widens the checkout. Measured: in a
+  content-sized container, opening it took the widget from 210px to 769px and
+  every field grew with it. The footnote now contributes nothing to the
+  container's intrinsic width while still filling it.
+* Item 7 - the second "Total Price:" below the upload line is hidden. Only when
+  the price breakdown is actually present above it: without it that would be
+  the only total a guest is shown before paying, and it is left alone.
+* Item 8 - error messages on the checkout, including "Please select the number
+  of guests.", are #bc003e.
+* Item 9 - the extra-guest note is the owner's new wording, and it now lives in
+  ONE place (Config::couch_note_text()) that the checkout, the admin preview
+  and the Cottage Selector all read, so the two plugins cannot drift apart.
+* Item 10 - the "*" inside "Required fields are followed by *" is now the same
+  #bc003e as the "*" that marks a required field. Both asterisks moved to that
+  colour; the required marker was #c62828.
+* Item 11 - the bare "Services" row above the "Service | Details | Amount"
+  header is removed. Only when it carries no figure AND the next visible row
+  really is that header; anything else is left as MotoPress rendered it.
+* Items 12 + 13 - dividers above the "Service | Details | Amount" header and
+  above "Subtotal", using the SAME class as the existing ones, so one CSS rule
+  still governs every line on the breakdown.
+* Item 14 - the extra-guest row reads "Extra Guest(s) Fee" with details
+  "$50/night x N guests". DISPLAY ONLY: the MotoPress service (18063) keeps its
+  own title, which is what admin screens and guest emails show. The row is
+  found by that title read from MotoPress BY ID, so renaming the service in the
+  admin moves the match with it. N comes from the [adults] value this plugin
+  itself sets, never from parsing MotoPress's prose; if it cannot be read the
+  details cell is left alone.
+* The breakdown matchers now know BOTH spellings of every label they look for
+  -- MotoPress's own word and this site's override of it -- supplied by the PHP
+  that owns the rename so the two cannot drift.
+* Tap diagnostic, round three, after two reading errors round two introduced:
+  a successful tap no longer logs "NO CLICK FOLLOWED THIS PRESS" (iOS splits one
+  tap into a touch block and a synthesised mouse block ~300ms later, and round
+  two counted the second as a new press), and Elementor's device-mode attribute
+  write on <body> is reported as a measured baseline instead of as churn on the
+  touched path. It now also records viewport height per press, which is what
+  actually moves on that page -- the log showed "page still" on every press
+  while the URL bar swung the viewport 108px.
+* New suites: tests/footnote (item 4) and desktop-width assertions in
+  tests/fields (item 6).
 
 = 0.13.0 =
 * FIXED, and this is the likely cause of a good part of the multi-tap problem:

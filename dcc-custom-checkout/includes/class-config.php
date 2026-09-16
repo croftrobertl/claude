@@ -418,6 +418,59 @@ final class Config
         return $text . '%';
     }
 
+    /**
+     * THE canonical sentence explaining the pull-out couch to a guest.
+     *
+     * One literal, one place. The identical sentence ships in the Cottage
+     * Selector, and the owner's requirement is that the two match CHARACTER FOR
+     * CHARACTER — so this is not assembled from per-cottage numbers, because a
+     * template could resolve differently in the two plugins and nobody would
+     * notice until a guest read both.
+     *
+     * It describes 2 included / 4 capacity, queen plus pull-out couch. That is
+     * true of all six cottages that can show it; Cottage 33 (1604) and Cottage
+     * 34 (1607) have capacity 2 and no extra-guest service, and the caller's
+     * `max <= included` guard keeps the note off them. Filterable if a cottage
+     * ever differs.
+     */
+    public static function couch_note_text(): string
+    {
+        return (string) apply_filters(
+            'dcc_checkout_couch_note',
+            __('Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be charged an additional nightly fee.', 'dcc-checkout')
+        );
+    }
+
+    /**
+     * The post_title of each configured extra-guest Service, lowercased.
+     *
+     * Item 14 relabels that row in the price breakdown FOR DISPLAY. Matching it
+     * needs the title MotoPress actually renders, and the durable way to get
+     * that is to read it from the service by ID — not to type the title in
+     * here, where it would rot silently the first time the service is renamed
+     * in the MotoPress admin. Renaming the service is also explicitly NOT what
+     * was asked for: that title still appears on admin screens and in guest
+     * emails.
+     *
+     * @return string[]
+     */
+    public static function guest_service_titles(): array
+    {
+        $titles = [];
+        foreach (self::guest_service_id_list() as $id) {
+            $id = (int) $id;
+            if ($id <= 0) {
+                continue;
+            }
+            $post = get_post($id);
+            if (!$post || empty($post->post_title)) {
+                continue;
+            }
+            $titles[] = strtolower(trim((string) $post->post_title));
+        }
+        return array_values(array_unique(array_filter($titles)));
+    }
+
     /** Sleeping arrangement named in the guest-facing extra-guest note. */
     public static function couch_beds_text(): string
     {

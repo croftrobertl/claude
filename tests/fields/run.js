@@ -97,6 +97,10 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
         // Under 16px, iOS Safari zooms the whole page when the field takes
         // focus — a page-wide movement, right under the finger. Not cosmetic.
         atLeast(`${sel} font-size is 16px or more (iOS does not zoom)`, m.fontSize, 16);
+        // 18px matches the Availability Calendar's filter row (item 6). The
+        // assertion above is the one that matters functionally; this one keeps
+        // the two plugins looking like one site.
+        check(`${sel} font-size matches the calendar's 18px`, m.fontSize, 18);
 
         check(`${sel} is border-box`, m.boxSizing, 'border-box');
 
@@ -123,6 +127,39 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
         check(`x=${x} on the Apartment row hits the input, not its <p>`,
               hit, 'mphb_apartment_units');
     }
+
+    /* --- Item 6: the cap, and the half of it that is easy to forget. -----
+       At phone width the cap must be INERT — that is the whole reason it is
+       360px and not 320px. At desktop width it must bind, and the WRAPPER must
+       come with it: cap the field alone and the dead strip 0.13.0 removed
+       comes straight back. ------------------------------------------------ */
+    const phone = await page.$eval('#mphb_first_name', el => ({
+        field: Math.round(el.getBoundingClientRect().width),
+        row:   Math.round(el.closest('p').getBoundingClientRect().width),
+    }));
+    check('phone: the 360px cap does not bite at 390px wide',
+          String(phone.field === phone.row), 'true');
+    atLeast('phone: the field is still the full row', phone.field, 340);
+
+    const desk = await context.newPage();
+    await desk.setViewportSize({ width: 1280, height: 900 });
+    await desk.goto('file://' + path.join(__dirname, 'fields.html'));
+    const wide = await desk.$eval('#mphb_first_name', (el) => {
+        const r = el.getBoundingClientRect();
+        const p = el.closest('p').getBoundingClientRect();
+        return {
+            field: Math.round(r.width),
+            row:   Math.round(p.width),
+            left:  Math.round(r.left - p.left),
+            right: Math.round(p.right - r.right),
+        };
+    });
+    check('desktop: the field is capped at 360px', String(wide.field), '360');
+    check('desktop: THE WRAPPER IS CAPPED TOO — no dead strip beside the field',
+          String(wide.row), '360');
+    atMost('desktop: no dead strip on the left', Math.abs(wide.left), 1);
+    atMost('desktop: no dead strip on the right', Math.abs(wide.right), 1);
+    await desk.close();
 
     /* --- The label must not underline the guest's typed text (v0.12.0),
            re-asserted here because the kit rule is reproduced. ---------- */

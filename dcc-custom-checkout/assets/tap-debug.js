@@ -111,6 +111,12 @@
         body.scrollTop = body.scrollHeight;
     }
 
+    function viewportHeight() {
+        return Math.round(window.visualViewport
+            ? window.visualViewport.height
+            : window.innerHeight);
+    }
+
     function scale() {
         return window.visualViewport ? window.visualViewport.scale : 1;
     }
@@ -166,15 +172,34 @@
      * ones that can explain a missing click.
      * ------------------------------------------------------------------ */
     var press = null;
+    var lastPress = null;
+    var lastTouchEnd = 0;
     var mo = ('MutationObserver' in window) ? new MutationObserver(function (records) {
         if (!press) { return; }
         press.mutations += records.length;
         for (var i = 0; i < records.length; i++) {
-            var t = records[i].target;
-            if (t && press.target && (t === press.target || t.contains(press.target) ||
-                press.target.contains(t))) {
+            var rec = records[i];
+            var t = rec.target;
+            if (!t || !press.target) { continue; }
+            // MEASURED BASELINE, so it is not reported as a finding: on one
+            // `resize` this page produces exactly one mutation — Elementor
+            // writing data-elementor-device-mode on <body>. <body> is an
+            // ancestor of everything, so round 2 counted that against every
+            // press, and on iOS the URL bar makes resize fire DURING taps.
+            // An attribute write on body or html cannot remove the touched
+            // node, so it is counted separately rather than as churn on the
+            // touched path.
+            if (rec.type === 'attributes' &&
+                (t === document.body || t === document.documentElement)) {
+                press.ambient += 1;
+                continue;
+            }
+            if (t === press.target || t.contains(press.target) ||
+                press.target.contains(t)) {
                 press.onPath += 1;
-                if (!press.firstPath) { press.firstPath = describe(t); }
+                if (!press.firstPath) {
+                    press.firstPath = rec.type + ' on ' + describe(t);
+                }
             }
         }
     }) : null;
@@ -185,11 +210,18 @@
         press = {
             target: e.target,
             scrollY: window.scrollY || 0,
+            // The round-2 log answered "is the page moving?" with `page still`
+            // on every press — and then showed a 108px swing in window height
+            // as the iOS URL bar collapsed. The page was not moving; the
+            // VIEWPORT was, which shifts content under a stationary finger just
+            // the same. Measured per press from round 3.
+            vh: viewportHeight(),
             scale: scale(),
             top: top(e.target),
             clicked: false,
             mutations: 0,
             onPath: 0,
+            ambient: 0,
             firstPath: null
         };
         if (mo) {
@@ -212,6 +244,9 @@
         var dTop = (p.top === null) ? null : (top(p.target) - p.top);
         var bits = [];
         bits.push(dScroll ? 'PAGE SCROLLED ' + dScroll + 'px' : 'page still');
+        var dVh = viewportHeight() - p.vh;
+        if (dVh) { bits.push('VIEWPORT HEIGHT ' + p.vh + ' -> ' + viewportHeight() +
+            ' (' + (dVh > 0 ? '+' : '') + dVh + 'px, URL bar)'); }
         if (dTop) { bits.push('TARGET MOVED ' + dTop + 'px'); }
         if (scale() !== p.scale) {
             bits.push('PAGE ZOOMED ' + p.scale + ' -> ' + scale());
@@ -219,19 +254,31 @@
         if (p.target && p.target.isConnected === false) {
             bits.push('TOUCHED NODE WAS REPLACED');
         }
-        if (p.mutations) {
-            bits.push('dom changed mid-press: ' + p.mutations + ' mutation(s)' +
-                (p.onPath ? ', ' + p.onPath + ' ON THE TOUCHED PATH (' +
-                    p.firstPath + ')' : ''));
+        if (p.onPath) {
+            bits.push(p.onPath + ' MUTATION(S) ON THE TOUCHED PATH (' +
+                p.firstPath + ')');
+        }
+        var other = p.mutations - p.onPath - p.ambient;
+        if (other > 0) {
+            bits.push(other + ' mutation(s) elsewhere');
+        }
+        if (p.ambient) {
+            bits.push(p.ambient + ' ambient (Elementor device-mode on body)');
         }
         log('  ' + bits.join(' | '));
+
+        lastPress = p;
+        lastTouchEnd = performance.now();
 
         // The verdict line. If no click arrives shortly after the press ends,
         // say so in the log itself rather than leaving it to be inferred from
         // an absent line.
+        // 900ms, not 400: iOS synthesises the mouse block ~300ms after touchend
+        // and the click lands at the end of it, so a 400ms verdict could fire
+        // before the tap had finished succeeding.
         setTimeout(function () {
             if (!p.clicked) { log('  >>> NO CLICK FOLLOWED THIS PRESS'); }
-        }, 400);
+        }, 900);
         press = null;
     }
 
@@ -242,10 +289,24 @@
         var x = typeof pt.clientX === 'number' ? Math.round(pt.clientX) : null;
         var y = typeof pt.clientY === 'number' ? Math.round(pt.clientY) : null;
 
-        if (e.type === 'touchstart' || e.type === 'pointerdown' || e.type === 'mousedown') {
+        // ROUND 2 READING ERROR, FIXED IN ROUND 3. iOS splits one tap into a
+        // touch sequence and then a SYNTHESISED mouse sequence ~300ms later.
+        // Round 2 opened a new press for that second half, so every successful
+        // tap logged "NO CLICK FOLLOWED THIS PRESS" against its touch block —
+        // the verdict fired hardest on the taps that worked. A mouse block
+        // arriving shortly after a touch block is now recognised as the same
+        // tap, and its click is credited to the press that started it.
+        if (e.type === 'mousedown' && lastTouchEnd &&
+            (performance.now() - lastTouchEnd) < 700) {
+            if (!press) { press = lastPress; }
+        } else if (e.type === 'touchstart' || e.type === 'pointerdown' ||
+                   e.type === 'mousedown') {
             if (!press || e.type !== 'touchstart') { beginPress(e, x, y); }
         }
-        if (e.type === 'click' && press) { press.clicked = true; }
+        if (e.type === 'click') {
+            if (press) { press.clicked = true; }
+            if (lastPress) { lastPress.clicked = true; }
+        }
 
         var bits = [e.type, 'on ' + describe(e.target)];
         if (x !== null) {

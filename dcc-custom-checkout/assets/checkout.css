@@ -36,9 +36,30 @@
     --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
     --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
     --dcc-label: var(--dcc-site-label, #000000);
-    --dcc-required: #c62828;
+    /* Item 10 (v0.14.0): was #c62828. Both asterisks -- the one marking a
+       required field and the one inside "Required fields are followed by *" --
+       are the same signal, so they are now the same ink as every other error
+       on the form. */
+    --dcc-required: var(--dcc-site-required, #bc003e);
     --dcc-muted: var(--dcc-site-muted, #6b7280);
     --dcc-field-radius: var(--dcc-site-field-radius, 30px);
+    /* Item 6 (v0.14.0). The owner asked for "the Availability Calendar's date
+       pills". That plugin's field is `width: 100%; max-width: 100%;
+       min-width: 0` -- it fills its track, and the TRACK is what makes it
+       narrow (a two-column grid on phones, a flex row on desktop). So the
+       width: 100% below is not the thing to remove; the container is. Each
+       field's wrapper is capped here and centred, and the field still fills
+       it, which is what keeps the tap target flush to the visible pill.
+
+       360px, not the 320 also floated: at a 390px viewport the section's
+       content box is about 358px, so 360 is INERT ON A PHONE and the tap
+       targets restored in 0.13.0 are untouched. Anything below ~358px starts
+       trading phone tap area for desktop proportions, and on this site the
+       phone wins. The calendar behaves the same way -- its fields are full
+       width at phone sizes and only narrow once there is room. */
+    --dcc-field-max: var(--dcc-site-field-max, 360px);
+    /* #bc003e -- the error/required ink (items 8 and 10). */
+    --dcc-error: var(--dcc-site-error, #bc003e);
     --dcc-field-border: var(--dcc-site-field-border, 2px);
 }
 
@@ -119,7 +140,13 @@
     border-radius: var(--dcc-field-radius) !important;
     min-height: 44px !important;
     padding: 10px 20px !important;
-    font-size: 16px !important;
+    /* 18px to match the calendar's filter row. 16px REMAINS THE FLOOR and is
+       asserted in tests/fields: below it, iOS Safari zooms the whole page when
+       the field takes focus, which moves everything under the finger. The
+       calendar expresses the same floor as `max(16px, 1em)` because an
+       Elementor panel can override it there; nothing can override it here, so
+       this is a flat value with the floor enforced by the test. */
+    font-size: 18px !important;
     line-height: 1.3 !important;
     /* Declared, not inherited (v0.11.0). The typed-in value and the
        placeholder had NO rules of their own — they inherited black from the
@@ -128,6 +155,47 @@
        would inherit something else. #000000 is what this form already
        computes to, so nothing changes on the checkout. */
     color: var(--dcc-label) !important;
+}
+
+/* Item 6 — the WRAPPER, capped with the field and centred with it.
+ *
+ * This half is not optional. Capping the input alone puts the dead strip
+ * straight back: the <p> would still stretch the full column, and a tap in the
+ * part of it that is no longer covered by the field does nothing at all. That
+ * is the defect 0.13.0 measured out of the owner's tap log, and it is easy to
+ * reintroduce by changing one of these two rules without the other.
+ *
+ * .dcc_checkout-field-row is put on by markFieldRows() in checkout.js, on the
+ * block that directly contains a field. p.mphb-text-control is MotoPress's own
+ * class (confirmed in the owner's log: p.mphb-customer-last-name
+ * .mphb-text-control) and is listed too, so the cap still holds if the script
+ * does not run. */
+.mphb_sc_checkout-form .dcc_checkout-field-row,
+.mphb_sc_checkout-form p.mphb-text-control {
+    max-width: var(--dcc-field-max);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* Item 6, the smaller gap: <input type="date"> is a NATIVE control, and iOS
+ * Safari will not shrink one below its intrinsic content width -- it ignores
+ * the width its container granted and overflows. That was the whole of the
+ * calendar's iPhone overlap bug (measured there at 393px: a ~215px control in
+ * a ~172px track). The checkout renders its dates as hidden inputs today, so
+ * this is a guard rather than a fix, but it costs nothing and the failure it
+ * prevents is invisible in Chromium. The picker affordance is restored with
+ * the indicator rule below, exactly as the calendar does it. */
+.mphb_sc_checkout-form input[type="date"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+.mphb_sc_checkout-form input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+    cursor: pointer;
 }
 
 .mphb_sc_checkout-form input::placeholder,
@@ -421,6 +489,33 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
     cursor: default;
     font-weight: 700;
     margin-left: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Items 8 and 10 (v0.14.0) — ONE error ink, #bc003e, everywhere it belongs.
+ *
+ * Item 10: the "*" that marks a required field was already red; the "*" inside
+ * MotoPress's own "Required fields are followed by *" was black. Both are the
+ * same signal and now carry the same colour. The tip's asterisk has no element
+ * of its own in MotoPress's markup, so markTipAsterisk() in checkout.js wraps
+ * that one character -- and only that character -- in the span targeted below.
+ *
+ * Item 8: "Please select the number of guests." is MotoPress's conditional
+ * validation message, not a string this plugin owns, so there is no reliable
+ * selector for that one message. The attribute match below colours ANY element
+ * inside the checkout form whose class names it as an error, plus anything
+ * carrying role="alert". That is deliberately broad: it sets a colour and
+ * nothing else, so the worst case is that a second error message on the same
+ * form is also the right colour.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form .dcc_checkout-tip-asterisk,
+.mphb_sc_checkout-form [class*="error" i],
+.mphb_sc_checkout-form [role="alert"] {
+    color: var(--dcc-error) !important;
+}
+
+.mphb_sc_checkout-form .dcc_checkout-tip-asterisk {
+    font-weight: 700;
 }
 
 /* Only the visible words are underlined, never the marker or trailing space. */
@@ -754,6 +849,26 @@ select.dcc_checkout-invalid {
     line-height: 1.4;
     color: #4b5563;
     text-align: left;
+    /* ITEM 4 (v0.14.0) — the footnote must not contribute to the widget's
+     * WIDTH. It is a <p> inserted as a sibling of the breakdown table, and the
+     * container turns out to be content-sized: opening the footnote stretched
+     * the container to the width of one long line of text, and every field in
+     * the form widened with it.
+     *
+     * width:0 is what the container measures when it works out its intrinsic
+     * width -- a percentage min-width resolves to zero during that pass, by
+     * specification -- while min-width:100% is what the note is actually laid
+     * out at once the container's width is settled. So it fills the breakdown
+     * and contributes nothing to it. Do not "simplify" this pair to
+     * width:100%: that reintroduces the defect, and it looks identical until
+     * the footnote is opened inside a shrink-to-fit ancestor.
+     *
+     * Asserted in tests/footnote: the container's width must be unchanged
+     * between closed and open. */
+    width: 0;
+    min-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
 }
 
 /* ---------------------------------------------------------------------------
