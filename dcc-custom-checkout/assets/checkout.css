@@ -280,11 +280,46 @@
 /* The callout and selection recognisers are switched off only on controls that
  * are not really links — the breakdown expander is a toggle wearing an <a>.
  * A genuine link keeps its long-press menu, which is a real affordance. */
-.mphb_sc_checkout-form a.mphb-price-breakdown-expand,
+.mphb_sc_checkout-form .mphb-price-breakdown-expand,
 .mphb_sc_checkout-form .dcc_checkout-tax-asterisk {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * v0.17.0 — controls that are NOT site buttons.
+ *
+ * The site button spec above matches a bare `button` at (0,3,1). When the
+ * breakdown expander became a real <button>, it would have inherited the whole
+ * blue 50px pill and appeared as a full-width brand button inside the price
+ * breakdown. The tax asterisk was already excluded by name; that pattern does
+ * not scale, so there is now a class for it and both controls carry it. Give
+ * any future bare control .dcc_checkout-bare-button rather than adding another
+ * :not() to three selectors.
+ *
+ * This resets the control to nothing, so it looks exactly like the <a> it
+ * replaced — same glyph, same size, same colour, no box.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form button.dcc_checkout-bare-button.dcc_checkout-bare-button {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    text-transform: none;
+    box-shadow: none;
+    cursor: pointer;
+    /* The expander sits inline in a table cell; a button is inline-block and
+       would otherwise add a baseline gap and change the row's height. */
+    display: inline;
+    text-align: inherit;
 }
 
 /* Keyboard focus must stay visible on the pill fields even if the theme
@@ -325,7 +360,7 @@
  * draws, not a site button, and it is excluded by selector rather than by
  * having to out-!important this rule afterwards.
  * ------------------------------------------------------------------------- */
-form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk),
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):not(.dcc_checkout-bare-button),
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"],
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form .button,
@@ -354,7 +389,7 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button 
 
 @media (hover: hover) and (pointer: fine) {
 
-form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):not(.dcc_checkout-bare-button):hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:hover,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form .button:hover,
@@ -397,7 +432,7 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:f
     outline-offset: 2px;
 }
 
-form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):focus-visible,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):not(.dcc_checkout-bare-button):focus-visible,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input[type="submit"]:focus-visible,
 form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
     /* An outline, deliberately not a fill change: white on the coral hover is

@@ -468,7 +468,9 @@ function summary(doc) {
     // Item 6: the breakdown expander must not be draggable — link-drag is the
     // iOS recogniser most likely to be eating these taps. This asserts the
     // attribute is applied; only the owner's phone can say whether iOS obeys.
-    const expander = doc.querySelector('a.mphb-price-breakdown-expand');
+    // Selected by class, not by tag: as of v0.17.0 this is a <button>, and a
+    // tag-qualified selector here would silently match nothing.
+    const expander = doc.querySelector('.mphb-price-breakdown-expand');
     check('item 6: the breakdown expander is marked not-draggable',
         expander.getAttribute('draggable'), 'false');
 
@@ -521,46 +523,67 @@ function summary(doc) {
 }
 
 /* ===================================================================== *
- * v0.16.0 — the breakdown expander stops being a hyperlink.
+ * v0.17.0 — the expander becomes a real <button>, and the pipeline stops
+ * rewriting the page while a finger is down.
  *
- * Round 4 ended the timing hypothesis: the expander clicked twice at 82ms and
- * lost taps at 63, 79 and 81ms. An <a> WITH AN HREF is what iOS arms its link
- * recognisers on, so the href comes off. MotoPress's handler is delegated on
- * the class, so it still fires; its own preventDefault() shows the href was
- * never navigated. Accessibility is given back explicitly, because an <a>
- * without href is neither focusable nor keyboard-operable.
+ * Across four tap logs the tax asterisk (a <button>) is 4 of 4 at every
+ * duration from 64ms to 96ms; the expander (an <a>, then an <a> without href)
+ * failed 15 of 18 clean stationary taps. And every press in rounds 3 and 4
+ * that carried the ~100-attribute pipeline burst mid-tap failed, 6 of 6.
  * ===================================================================== */
 {
     const { window, doc } = await render(F.plainSubtotal, {
         i18n: { subtotal: 'Subtotal' }
     });
-    const a = doc.querySelector('.mphb-price-breakdown-expand');
+    const el = doc.querySelector('.mphb-price-breakdown-expand');
 
-    check('the expander is no longer a link', a.hasAttribute('href'), false);
-    check('and the href is remembered, not destroyed',
-        a.getAttribute('data-dcc-href'), '#');
-    check('MotoPress\'s hook still matches it',
-        a.classList.contains('mphb-price-breakdown-expand'), true);
-    check('it is still announced as a control', a.getAttribute('role'), 'button');
-    check('and is still reachable by keyboard', a.getAttribute('tabindex'), '0');
-    check('still marked not-draggable', a.getAttribute('draggable'), 'false');
+    check('the expander is a real button', el.tagName, 'BUTTON');
+    check('and can never submit the checkout', el.getAttribute('type'), 'button');
+    check('MotoPress\'s delegated handler still matches it',
+        el.classList.contains('mphb-price-breakdown-expand'), true);
+    check('it is kept out of the site button spec',
+        el.classList.contains('dcc_checkout-bare-button'), true);
+    check('it is not a link', el.hasAttribute('href'), false);
+    check('the old href is remembered', el.getAttribute('data-dcc-href'), '#');
+    check('still marked not-draggable', el.getAttribute('draggable'), 'false');
+    // A native button activates on Enter and Space by itself. The keyboard
+    // handler v0.16.0 needed for a hrefless <a> must NOT be carried over, or
+    // the toggle fires twice and lands back where it started.
+    check('no duplicate keyboard handler on a native button',
+        el.hasAttribute('data-dcc-keys'), false);
+    check('there is exactly one expander', 
+        doc.querySelectorAll('.mphb-price-breakdown-expand').length, 1);
 
-    let clicks = 0;
-    a.addEventListener('click', () => { clicks++; });
-    a.dispatchEvent(new window.KeyboardEvent('keydown',
-        { key: 'Enter', bubbles: true }));
-    check('Enter activates it', clicks, 1);
+    // The asterisk is a bare control too, and was previously excluded from the
+    // button spec by name. Both now carry the class.
+    const star = doc.querySelector('.dcc_checkout-tax-asterisk');
+    if (star) {
+        check('the tax asterisk carries the same bare-control class',
+            star.classList.contains('dcc_checkout-bare-button'), true);
+    }
+}
 
-    // A re-render must not bind the handler a second time: MotoPress rebuilds
-    // this table often, and a doubled binding would fire the toggle twice and
-    // leave it exactly where it started.
-    doc.querySelector('form').appendChild(doc.createElement('span'));
-    await new Promise(r => setTimeout(r, 250));
-    a.dispatchEvent(new window.KeyboardEvent('keydown',
-        { key: ' ', bubbles: true }));
-    check('Space activates it, and a re-render did not double-bind', clicks, 2);
-    check('the href is not re-stripped into something else',
-        a.getAttribute('data-dcc-href'), '#');
+{
+    // THE HOLD. Nothing may rewrite the page while a tap is resolving.
+    const { window, doc } = await render(F.plainSubtotal, {
+        i18n: { subtotal: 'Subtotal' }
+    });
+    const form = doc.querySelector('form');
+    const expander = () => doc.querySelector('.mphb-price-breakdown-expand');
+
+    // Strip a class the pipeline restores, so its next run is observable.
+    expander().classList.remove('dcc_checkout-bare-button');
+
+    doc.dispatchEvent(new window.Event('touchstart', { bubbles: true }));
+    form.appendChild(doc.createElement('span'));      // provoke the observer
+    await new Promise(r => setTimeout(r, 900));
+    check('the pipeline does NOT run while a finger is down',
+        expander().classList.contains('dcc_checkout-bare-button'), false);
+
+    doc.dispatchEvent(new window.Event('touchend', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 1100));
+    check('and runs once the tap has resolved',
+        expander().classList.contains('dcc_checkout-bare-button'), true);
 }
 
 console.log(failures ? `\n${failures} failing` : '\nall passing');

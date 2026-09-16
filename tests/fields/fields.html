@@ -107,9 +107,12 @@
 
   </section>
 
-  <!-- Item 6 (v0.15.0): the breakdown expander is an <a>, and on iOS an <a>
-       arms gesture recognisers a <button> does not. -->
-  <a href="#" class="mphb-price-breakdown-expand" id="expander">-</a>
+  <!-- v0.17.0: the expander is now a real <button>, as hardenTapTargets()
+       leaves it. The site button spec above matches a bare `button`, so
+       without .dcc_checkout-bare-button this would render as a full-width
+       blue 50px pill inside the price breakdown. -->
+  <button type="button" id="expander"
+          class="mphb-price-breakdown-expand dcc_checkout-bare-button">-</button>
 
   <!-- Item 2 (v0.15.0): the validation banner, in the asterisks' own ink. -->
   <div class="dcc_checkout-error-banner" role="alert" id="banner">

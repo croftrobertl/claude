@@ -176,6 +176,25 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
           tap.touchAction, 'manipulation');
     check('item 6: text selection is off on the expander', tap.select, 'none');
 
+    /* --- v0.17.0: the swapped button must NOT become a site button. ------
+       The spec matches a bare `button` at (0,3,1). Caught before shipping:
+       without the bare-control class this renders as a full-width blue pill
+       in the middle of the price breakdown. --------------------------- */
+    const bare = await page.$eval('#expander', el => {
+        const cs = getComputedStyle(el);
+        return {
+            bg: cs.backgroundColor,
+            radius: cs.borderTopLeftRadius,
+            border: cs.borderTopWidth,
+            size: cs.fontSize,
+            transform: cs.textTransform,
+        };
+    });
+    check('v0.17.0: the expander has no button fill', bare.bg, 'rgba(0, 0, 0, 0)');
+    check('v0.17.0: no pill radius', bare.radius, '0px');
+    check('v0.17.0: no border', bare.border, '0px');
+    check('v0.17.0: it does not take the spec\'s 20px', bare.size !== '20px', true);
+
     /* --- Items 1+2: ONE ink. The whole point is that these cannot drift. -- */
     const inks = await page.evaluate(() => {
         const read = sel => getComputedStyle(document.querySelector(sel)).color;

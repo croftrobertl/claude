@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.16.0
+Stable tag: 0.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,40 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.17.0 =
+* THE EXPANDER IS NOW A REAL <button>. Across four tap logs the tax asterisk --
+  a <button> -- is 4 of 4 at every duration from 64ms to 96ms, while the
+  expander has failed 15 of 18 clean stationary taps, first as an <a> and then
+  as an <a> with its href removed. Removing the href was not enough. Every
+  class is carried over, so MotoPress's delegated handler
+  ('.mphb-price-breakdown-expand' click, mphb.js:1446) still matches it, and
+  type="button" means it can never submit the checkout. The keyboard handler
+  0.16.0 needed for a hrefless <a> is deliberately NOT carried over: a native
+  button activates on Enter and Space by itself, and a second handler would
+  toggle twice and land back where it started.
+  CAUGHT BEFORE SHIPPING: the site button spec matches a bare `button` at
+  (0,3,1), so the swapped control rendered as a full-width blue 50px pill in
+  the middle of the price breakdown -- measured in Chromium at rgb(0,107,207)
+  with a 30px radius. Bare controls now carry .dcc_checkout-bare-button, which
+  the spec excludes; the tax asterisk carries it too, replacing the
+  exclusion-by-name that did not scale. Give any future bare control that class
+  rather than adding another :not() to three selectors.
+* THE PLUGIN NO LONGER REWRITES THE PAGE WHILE A FINGER IS DOWN. The
+  MutationObserver ran the whole restructure pipeline 150ms after any childList
+  change under the form, and that pipeline writes on the order of a hundred
+  attributes and toggles visibility classes. In rounds 3 and 4 of the owner's
+  tap log, every press that carried one of those bursts mid-tap failed -- 6 of
+  6. The pipeline is now held while a finger is down and for 400ms after it
+  lifts, on a 500ms debounce instead of 150ms. There is a 3s ceiling so a
+  finger resting on the screen can delay it but never starve it: this code
+  decides what the guest is told they owe.
+* Both changes are asserted: the button's identity, class, type and the absence
+  of a duplicate keyboard handler in tests/breakdown; that it is NOT styled as
+  a site button in tests/fields (that assertion fails three ways against the
+  unclassed control); and the hold itself, by stripping a class the pipeline
+  restores, holding a finger down, and checking it stays stripped until the
+  touch resolves.
 
 = 0.16.0 =
 * The breakdown expander stops being a hyperlink. Round 4 of the owner's tap

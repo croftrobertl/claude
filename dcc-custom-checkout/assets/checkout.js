@@ -2243,10 +2243,21 @@
         if (!('MutationObserver' in window)) {
             return;
         }
+        armTouchWatch();
         var timer = null;
+        var pendingSince = 0;
         var obs = new MutationObserver(function () {
+            if (!pendingSince) { pendingSince = Date.now(); }
             if (timer) { clearTimeout(timer); }
-            timer = setTimeout(function () {
+            timer = setTimeout(function run() {
+                // Hold off while a tap is still resolving — see the block
+                // comment above armTouchWatch(). The 3s ceiling means a finger
+                // resting on the screen can delay this but never starve it.
+                if (touchSettling() && (Date.now() - pendingSince) < 3000) {
+                    timer = setTimeout(run, 200);
+                    return;
+                }
+                pendingSince = 0;
                 formatBreakdown(root);
                 // MotoPress re-renders (coupon apply, country change, …) bring
                 // back untouched labels/dates; all passes are idempotent (the
@@ -2262,7 +2273,9 @@
                 // changes; re-hide it, then re-prove the chooser survived.
                 hideNativeServices(root);
                 assertGuestChooserSurvived(root);
-            }, 150);
+            // 500ms, up from 150ms. The old value put a ~100-attribute burst
+            // right inside the window a tap needs to resolve.
+            }, 500);
         });
         obs.observe(root, { childList: true, subtree: true });
     }
@@ -2299,51 +2312,100 @@
      * draggable.
      * ===================================================================== */
     function hardenTapTargets(root) {
+        // v0.17.0 — THE EXPANDER BECOMES A REAL <button>.
+        //
+        // Across four tap logs the tax asterisk, a <button>, is 4 of 4 at every
+        // duration from 64ms to 96ms. The expander — first an <a>, then in
+        // 0.16.0 an <a> with its href removed — has failed 15 of 18 clean
+        // stationary taps. Removing the href was not enough; nothing in any log
+        // has ever failed on a button.
+        //
+        // Every class is carried over, so MotoPress's delegated handler
+        // ('.mphb-price-breakdown-expand' click, mphb.js:1446) still matches it
+        // exactly as before. type="button" so it can never submit the checkout.
+        // The keyboard handler 0.16.0 added is NOT carried over and must not be:
+        // a native button already activates on Enter and Space, and a second
+        // handler would toggle twice and land back where it started.
         var links = root.querySelectorAll('a.mphb-price-breakdown-expand');
         Array.prototype.forEach.call(links, function (a) {
-            a.setAttribute('draggable', 'false');
-
-            // v0.16.0 — TAKE THE HREF OFF.
-            //
-            // 0.15.0's gesture hints (touch-action, callout, draggable) moved
-            // the needle and did not close it: in the owner's round-4 log the
-            // expander clicked twice at 82ms, where in round 3 nothing above
-            // 27ms ever clicked — but it still lost taps at 63ms, 79ms and
-            // 81ms. A 63ms failure alongside an 82ms success ends the timing
-            // story for good; no threshold produces that.
-            //
-            // What is left is the element. An <a> WITH AN HREF is a hyperlink,
-            // and iOS arms its link recognisers on that basis — not on the tag.
-            // Remove the href and it is no longer a link: nothing to drag,
-            // nothing to preview, no recogniser to claim the gesture. The
-            // control keeps its classes, so MotoPress's delegated handler
-            // ('.mphb-price-breakdown-expand' click, mphb.js:1446) still fires
-            // exactly as before, and its own preventDefault() on line 1447
-            // shows the href was never navigated anyway.
-            //
-            // The href is REMEMBERED rather than destroyed, so this is
-            // reversible and nothing is lost if it has to come back.
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            Array.prototype.forEach.call(a.attributes, function (at) {
+                // href is what iOS arms its link recognisers on; role and
+                // tabindex are native on a button and would be noise.
+                if (at.name === 'href' || at.name === 'role' ||
+                    at.name === 'tabindex' || at.name === 'data-dcc-keys') {
+                    return;
+                }
+                try { btn.setAttribute(at.name, at.value); } catch (err) {}
+            });
             if (a.hasAttribute('href')) {
-                a.setAttribute('data-dcc-href', a.getAttribute('href'));
-                a.removeAttribute('href');
+                btn.setAttribute('data-dcc-href', a.getAttribute('href'));
             }
-            // An <a> without href is not focusable and not keyboard-operable,
-            // so it is given both back explicitly. This leaves the control
-            // MORE usable than it was, not less.
-            if (!a.hasAttribute('role')) { a.setAttribute('role', 'button'); }
-            if (!a.hasAttribute('tabindex')) { a.setAttribute('tabindex', '0'); }
-            if (!a.hasAttribute('data-dcc-keys')) {
-                a.setAttribute('data-dcc-keys', '1');
-                a.addEventListener('keydown', function (e) {
-                    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') {
-                        return;
-                    }
-                    e.preventDefault();   // Space must not scroll the page
-                    a.click();            // a real click — the delegated
-                });                       // handler receives it unchanged
+            while (a.firstChild) { btn.appendChild(a.firstChild); }
+            if (a.parentNode) { a.parentNode.replaceChild(btn, a); }
+        });
+
+        // Whatever it started as, make sure it is a bare control and not a
+        // gesture target. .dcc_checkout-bare-button keeps it out of the site
+        // button spec, which matches a plain `button` and would otherwise turn
+        // this into a full-width blue pill inside the price breakdown.
+        var bare = root.querySelectorAll(
+            '.mphb-price-breakdown-expand, .dcc_checkout-tax-asterisk');
+        Array.prototype.forEach.call(bare, function (el) {
+            el.classList.add('dcc_checkout-bare-button');
+            el.setAttribute('draggable', 'false');
+            if (el.tagName === 'BUTTON' && !el.getAttribute('type')) {
+                el.setAttribute('type', 'button');
             }
         });
     }
+
+    /* ===================================================================== *
+     * v0.17.0 — THE PLUGIN STOPS REWRITING THE PAGE WHILE A FINGER IS DOWN.
+     *
+     * observeReRenders() ran the whole restructure pipeline 150ms after any
+     * childList change under the form. That pipeline writes on the order of a
+     * hundred attributes and toggles visibility classes (hideNativeServices,
+     * dropDuplicateTotal). In rounds 3 and 4 of the owner's tap log, EVERY
+     * press that carried one of those bursts mid-tap failed — 6 of 6.
+     *
+     * So the pipeline is held: never while a finger is down, and not until
+     * 400ms after it lifts, on a 500ms debounce. There is a 3s ceiling so a
+     * guest resting a finger on the screen cannot postpone it indefinitely —
+     * this code decides what the guest is told they owe, and it must not be
+     * possible to starve it.
+     *
+     * Deliberately NOT passive:false and NOT preventDefault — these listeners
+     * only observe, exactly like the tap diagnostic.
+     * ===================================================================== */
+    var fingerDown = false;
+    var fingerUpAt = 0;
+    var touchWatchArmed = false;
+
+    function armTouchWatch() {
+        if (touchWatchArmed) {
+            return;
+        }
+        touchWatchArmed = true;
+        ['touchstart', 'pointerdown'].forEach(function (type) {
+            document.addEventListener(type, function () {
+                fingerDown = true;
+            }, { capture: true, passive: true });
+        });
+        ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (type) {
+            document.addEventListener(type, function () {
+                fingerDown = false;
+                fingerUpAt = Date.now();
+            }, { capture: true, passive: true });
+        });
+    }
+
+    // True while a tap could still be resolving into a click.
+    function touchSettling() {
+        return fingerDown || (Date.now() - fingerUpAt) < 400;
+    }
+
 
     /* ===================================================================== *
      * Item 1 (v0.15.0) — hold back error messages until a submit attempt.
