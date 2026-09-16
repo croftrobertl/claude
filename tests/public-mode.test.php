@@ -345,9 +345,14 @@ $outWifi = $render($maskedWifi, $strs);
 $txtWifi = $visibleText($outWifi);
 
 check('wifi row: password is absent from the visible text', strpos($txtWifi, 'DCC32586') === false, $txtWifi);
-check('wifi row: it does ride in the copy + secret attributes',
-    substr_count($outWifi, 'data-copy="DCC32586"') === 1
-    && substr_count($outWifi, 'data-secret-value="DCC32586"') === 1);
+// v0.19.0: the value is no longer in the markup AT ALL — not as text, not in
+// data-copy, not in data-secret-value. Both controls carry a reference that
+// only the server can turn back into a password.
+check('wifi row: the password is not in the markup in any form',
+    strpos($outWifi, 'DCC32586') === false, $outWifi);
+check('wifi row: Show and Copy both carry a reference instead',
+    substr_count($outWifi, 'data-secret-ref="') === 2
+    && preg_match('/data-secret-ref="(id|ix):/', $outWifi) === 1);
 check('wifi row: the value is labelled Password:', strpos($txtWifi, 'Password:') !== false, $txtWifi);
 check('wifi row: the network name is labelled Network:', strpos($txtWifi, 'Network:') !== false, $txtWifi);
 // Read the buttons themselves rather than the flattened text: the SSID row's
@@ -419,18 +424,17 @@ check('(e) no Copy beside the network name',
 check('(e) the SSID still renders as text',
     strpos($out, '<span class="dccgg-wifi-ssid">topoftheworld</span>') !== false
     && strpos($text, 'topoftheworld') !== false);
-check('(f) the password row is unchanged: masked value + Show/Hide + Copy',
+check('(f) the password row still has its masked value, Show/Hide and Copy',
     substr_count($out, 'dccgg-secret-value') === 1
     && substr_count($out, 'dccgg-secret-toggle') === 1
-    && substr_count($out, 'data-copy="DCC32586"') === 1
+    && substr_count($out, 'class="dccgg-btn dccgg-copy') === 1   // the class list also contains dccgg-copy--inline
     && strpos($out, 'data-label-hide="Hide"') !== false);
-// (g) the password may exist ONLY in the two attributes that feed Copy and
-// the reveal. Count every occurrence in the whole string, then subtract those.
-$total  = substr_count($out, 'DCC32586');
-$inAttr = substr_count($out, 'data-copy="DCC32586"') + substr_count($out, 'data-secret-value="DCC32586"');
-check('(g) the password appears ONLY in data-copy and data-secret-value',
-    $total === 2 && $inAttr === 2 && strpos($text, 'DCC32586') === false,
-    "occurrences=$total inAttr=$inAttr");
+// (g) v0.19.0 raises this bar from "only in attributes" to "nowhere". The
+// page is noindex but ungated, so an attribute was as readable as body text
+// to anyone with the link, to a crawler and to an archive.
+$total = substr_count($out, 'DCC32586');
+check('(g) the password appears ZERO times in the rendered markup',
+    $total === 0, "occurrences=$total");
 check('(h) no empty .dccgg-item-utils is emitted',
     !preg_match('/<div class="dccgg-item-utils">\s*<\/div>/', $out),
     preg_match('/<div class="dccgg-item-utils">.{0,60}/s', $out, $m) ? $m[0] : 'absent');
@@ -447,8 +451,11 @@ $outMask  = $render($maskOnly, $strs);
 check('(i) masked WITHOUT wifi mode still renders the fallback secret + copy',
     strpos($outMask, 'dccgg-item-utils') !== false
     && substr_count($outMask, 'dccgg-secret-toggle') === 1
-    && substr_count($outMask, 'data-copy="DCC32586"') === 1
+    && substr_count($outMask, 'class="dccgg-btn dccgg-copy') === 1
+    && substr_count($outMask, 'data-secret-ref="') === 2
     && strpos($outMask, 'dccgg-wifi-creds') === false);
+check('(i) and its password is not in the markup either',
+    strpos($outMask, 'DCC32586') === false);
 check('(g) and its password is still only in attributes',
     strpos($visibleText($outMask), 'DCC32586') === false);
 
@@ -534,6 +541,70 @@ check('the <option> reads the placeholder string, not the label string',
 // The label keeps the host's own wording — the fix must not have touched it.
 check('the category LABEL default is untouched',
     strpos($widgetSrc, "'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\\'s the issue?', 'dcc-guest-guide')]") !== false);
+
+
+echo "\nR. No Elementor control emits a hover state (v0.19.0)\n";
+// Elementor writes a control's `selectors` into the PER-POST stylesheet, which
+// this plugin cannot wrap in a media query. On iOS the first tap applies
+// :hover and it sticks until the next tap elsewhere, so a hover colour emitted
+// there stays on after a tap and cannot be guarded away. Controls now write a
+// custom property; widget.css applies the hover inside
+// @media (hover:hover) and (pointer:fine), which is the only place the
+// condition can be stated. This asserts the rule at its source.
+$src = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-widget.php');
+// Strip comments first: the block explaining WHY must not read as a violation.
+$code = preg_replace('#^\s*(//|\*|/\*).*$#m', '', $src);
+preg_match_all('/^.*(:hover|:focus-visible).*$/m', $code, $m);
+$offenders = array_values(array_filter(array_map('trim', $m[0])));
+check('no control selector contains :hover or :focus-visible',
+    empty($offenders), implode(' | ', array_slice($offenders, 0, 3)));
+check('the hover values are emitted as custom properties instead',
+    substr_count($src, '--dccgg-btn-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-back-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-nav-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-reset-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-qa-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-more-bg-hover: {{VALUE}}') === 1
+    && substr_count($src, '--dccgg-ai-bg-hover: {{VALUE}}') === 1);
+// The per-section accent block is inline per-post CSS — the same trap, and the
+// one place a guard can never be retro-fitted.
+check('the per-section accent block emits tokens, not :hover rules',
+    strpos($src, '--dccgg-accent-qa-bg-hover: ') !== false
+    && strpos($code, '.dccgg-quick-action:hover') === false);
+// And every consuming rule in the stylesheet states the full condition.
+$css = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/css/widget.css');
+preg_match_all('/@media\s*\(hover:\s*hover\)(\s*and\s*\(pointer:\s*fine\))?/', $css, $mq);
+$bare = count(array_filter($mq[1], static fn($x) => trim($x) === ''));
+check('every hover media query also requires a fine pointer',
+    $bare === 0, "$bare bare (hover: hover) queries remain");
+
+
+echo "\nS. The minified bundles ship, and are what gets served (v0.19.0)\n";
+// The live page was measured serving 157,552 and 212,906 bytes — EXACTLY the
+// unminified sources, not the .min bundles, which are roughly half the size.
+// register_assets() prefers .min when it exists, so a fallback means the files
+// did not survive the install. That is a silent doubling of every guest's
+// download, so the plugin now says so in the admin, and these guard the parts
+// that can be checked here.
+$dir = __DIR__ . '/../dcc-guest-guide/assets/';
+$pairs = [['css/widget.css', 'css/widget.min.css'], ['js/widget.js', 'js/widget.min.js']];
+foreach ($pairs as [$full, $min]) {
+    check("$min exists to be served", is_file($dir . $min));
+    if (!is_file($dir . $min)) { continue; }
+    $fb = filesize($dir . $full); $mb = filesize($dir . $min);
+    check("$min is materially smaller than the source", $mb < $fb * 0.75,
+        number_format($fb) . ' -> ' . number_format($mb) . ' bytes');
+    // A stale bundle is worse than none: it serves last release's behaviour.
+    check("$min is not older than its source", filemtime($dir . $min) >= filemtime($dir . $full),
+        'rebuild with ./build-min.sh');
+}
+$widget = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-widget.php');
+check('the loader prefers the minified bundle when present',
+    strpos($widget, "file_exists(DCCGG_DIR . 'assets/css/widget.min.css')") !== false
+    && strpos($widget, "file_exists(DCCGG_DIR . 'assets/js/widget.min.js')") !== false);
+check('and an administrator is told when it has fallen back',
+    strpos($widget, 'maybe_notice_unminified') !== false
+    && strpos($widget, "current_user_can('manage_options')") !== false);
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

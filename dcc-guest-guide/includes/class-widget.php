@@ -45,10 +45,32 @@ final class Widget extends Widget_Base
         // v0.9.7.14: prefer the pre-minified bundles when present (built via
         // build-min.sh at release time). Unminified sources stay in the zip
         // so the editor preview / source maps / Loco scan continue to work.
-        $css_path = file_exists(DCCGG_DIR . 'assets/css/widget.min.css') ? 'assets/css/widget.min.css' : 'assets/css/widget.css';
-        $js_path  = file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js';
+        $css_min  = file_exists(DCCGG_DIR . 'assets/css/widget.min.css');
+        $js_min   = file_exists(DCCGG_DIR . 'assets/js/widget.min.js');
+        $css_path = $css_min ? 'assets/css/widget.min.css' : 'assets/css/widget.css';
+        $js_path  = $js_min  ? 'assets/js/widget.min.js'   : 'assets/js/widget.js';
+        // v0.19.0: falling back to the unminified sources is a 2x bytes
+        // regression that is completely silent — the page works, it is just
+        // twice the download. Both bundles ship in the zip, so a fallback means
+        // they did not survive the install. Say so, once, to an administrator.
+        self::$serving_unminified = (!$css_min || !$js_min);
         wp_register_style('dccgg-widget', DCCGG_URL . $css_path, $style_deps, DCCGG_VERSION);
         wp_register_script('dccgg-widget', DCCGG_URL . $js_path, [], DCCGG_VERSION, true);
+    }
+
+    /** Set at registration: true when a .min bundle was missing and the full source is being served. */
+    private static $serving_unminified = false;
+
+    /**
+     * An administrator only, and only when it is actually happening. The
+     * served sizes are roughly double, and nothing else surfaces it.
+     */
+    public static function maybe_notice_unminified(): void
+    {
+        if (!self::$serving_unminified || !current_user_can('manage_options')) { return; }
+        echo '<div class="notice notice-warning"><p><strong>DCC Guest Guide:</strong> '
+           . esc_html__('serving unminified assets — the minified bundles are missing from the plugin folder, so the guide downloads roughly twice the bytes it should. Re-uploading the plugin zip restores them.', 'dcc-guest-guide')
+           . '</p></div>';
     }
 
     /**
@@ -1432,6 +1454,7 @@ final class Widget extends Widget_Base
             'str_save_pdf_tip' => [__('Save-as-PDF tip toast', 'dcc-guest-guide'), __('In the print dialog, choose "Save as PDF" as the destination.', 'dcc-guest-guide')],
             'str_report_problem'  => [__('Report a problem button', 'dcc-guest-guide'),        __('Report a problem', 'dcc-guest-guide')],
             'str_report_title'    => [__('Report dialog title', 'dcc-guest-guide'),            __('Report a problem', 'dcc-guest-guide')],
+            'str_secret_error'    => [__('Reveal-failed toast', 'dcc-guest-guide'), __('Could not load that just now. Please try again.', 'dcc-guest-guide')],
             'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
             // v0.18.0: the category <option> used to reuse the LABEL string, so
             // whatever the host typed appeared twice — once as the label and
@@ -1844,9 +1867,20 @@ final class Widget extends Widget_Base
         $this->end_controls_tab();
 
         $this->start_controls_tab('tile_shadow_hover', ['label' => __('Hover', 'dcc-guest-guide')]);
+        // v0.19.0: a group control has no property to redirect — `selector` is
+        // a selector — so the box-shadow FIELD's own selectors are overridden to
+        // write a token instead. Same value, same picker in the panel; the
+        // hover it feeds is applied by widget.css inside the pointer guard.
         $this->add_group_control(Group_Control_Box_Shadow::get_type(), [
-            'name'     => 'tile_shadow_hover',
-            'selector' => self::SEL . '.dccgg-tile:hover, ' . self::SEL . '.dccgg-tile:focus-visible',
+            'name'           => 'tile_shadow_hover',
+            'selector'       => self::SEL . '.dccgg-tile',
+            'fields_options' => [
+                'box_shadow' => [
+                    'selectors' => [
+                        self::SEL => '--dccgg-tile-shadow-hover: {{HORIZONTAL}}px {{VERTICAL}}px {{BLUR}}px {{SPREAD}}px {{COLOR}};',
+                    ],
+                ],
+            ],
         ]);
         $this->end_controls_tab();
 
@@ -1997,12 +2031,12 @@ final class Widget extends Widget_Base
         $this->add_control('qa_bg_hover', [
             'label'     => __('Background (hover)', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccgg-quick-action:hover, ' . self::SEL . '.dccgg-quick-action:focus-visible' => 'background: {{VALUE}};'],
+            'selectors' => [self::SEL => '--dccgg-qa-bg-hover: {{VALUE}};'],
         ]);
         $this->add_control('qa_color_hover', [
             'label'     => __('Icon color (hover)', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [self::SEL . '.dccgg-quick-action:hover, ' . self::SEL . '.dccgg-quick-action:focus-visible' => 'color: {{VALUE}};'],
+            'selectors' => [self::SEL => '--dccgg-qa-color-hover: {{VALUE}};'],
         ]);
         $this->add_control('qa_size', [
             'label' => __('Size (px)', 'dcc-guest-guide'),
@@ -2066,14 +2100,14 @@ final class Widget extends Widget_Base
             'label'     => __('Text color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-btn:hover, ' . self::SEL . '.dccgg-btn:focus-visible' => 'color: {{VALUE}};',
+                self::SEL => '--dccgg-btn-txt-hover: {{VALUE}};',
             ],
         ]);
         $this->add_control('btn_bg_hover', [
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-btn:hover, ' . self::SEL . '.dccgg-btn:focus-visible' => 'background-color: {{VALUE}};',
+                self::SEL => '--dccgg-btn-bg-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -2092,7 +2126,6 @@ final class Widget extends Widget_Base
     private function register_ai_button_style_controls(): void
     {
         $ai_sel  = self::SEL . '.dccgg-ai-button';
-        $ai_hov  = $ai_sel . ':hover, ' . $ai_sel . ':focus-visible';
 
         $this->start_controls_section('section_style_ai_button', [
             'label'     => __('Ask AI Button', 'dcc-guest-guide'),
@@ -2143,12 +2176,12 @@ final class Widget extends Widget_Base
         $this->add_control('ai_btn_txt_hover', [
             'label'     => __('Text color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [$ai_hov => 'color: {{VALUE}};'],
+            'selectors' => [self::SEL => '--dccgg-ai-txt-hover: {{VALUE}};'],
         ]);
         $this->add_control('ai_btn_bg_hover', [
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
-            'selectors' => [$ai_hov => 'background-color: {{VALUE}};'],
+            'selectors' => [self::SEL => '--dccgg-ai-bg-hover: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
 
@@ -2262,14 +2295,14 @@ final class Widget extends Widget_Base
             'label'     => __('Text color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-detail-header .dccgg-back:hover, ' . self::SEL . '.dccgg-detail-header .dccgg-back:focus-visible' => 'color: {{VALUE}};',
+                self::SEL => '--dccgg-back-txt-hover: {{VALUE}};',
             ],
         ]);
         $this->add_control('popup_back_bg_hover', [
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-detail-header .dccgg-back:hover, ' . self::SEL . '.dccgg-detail-header .dccgg-back:focus-visible' => 'background-color: {{VALUE}};',
+                self::SEL => '--dccgg-back-bg-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -2344,14 +2377,14 @@ final class Widget extends Widget_Base
             'label'     => __('Icon color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-section-prev:hover:not([disabled]), ' . self::SEL . '.dccgg-section-next:hover:not([disabled]), ' . self::SEL . '.dccgg-section-prev:focus-visible:not([disabled]), ' . self::SEL . '.dccgg-section-next:focus-visible:not([disabled])' => 'color: {{VALUE}};',
+                self::SEL => '--dccgg-nav-icon-hover: {{VALUE}};',
             ],
         ]);
         $this->add_control('popup_nav_bg_hover', [
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                self::SEL . '.dccgg-section-prev:hover:not([disabled]), ' . self::SEL . '.dccgg-section-next:hover:not([disabled]), ' . self::SEL . '.dccgg-section-prev:focus-visible:not([disabled]), ' . self::SEL . '.dccgg-section-next:focus-visible:not([disabled])' => 'background-color: {{VALUE}};',
+                self::SEL => '--dccgg-nav-bg-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -2545,14 +2578,14 @@ final class Widget extends Widget_Base
             'label'     => __('Text color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                $reset_sel . ':hover, ' . $reset_sel . ':focus-visible' => 'color: {{VALUE}};',
+                self::SEL => '--dccgg-reset-txt-hover: {{VALUE}};',
             ],
         ]);
         $this->add_control('popup_reset_bg_hover', [
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                $reset_sel . ':hover, ' . $reset_sel . ':focus-visible' => 'background-color: {{VALUE}};',
+                self::SEL => '--dccgg-reset-bg-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -2572,7 +2605,6 @@ final class Widget extends Widget_Base
     private function register_popup_more_style_controls(): void
     {
         $summary_sel = self::SEL . '.dccgg-detail-header .dccgg-more > summary';
-        $hover_sel   = $summary_sel . ':hover, ' . $summary_sel . ':focus-visible';
         $open_sel    = self::SEL . '.dccgg-detail-header .dccgg-more[open] > summary';
 
         $this->start_controls_section('section_style_popup_more', [
@@ -2629,10 +2661,9 @@ final class Widget extends Widget_Base
             'label'     => __('Text / icon color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                $hover_sel       => 'color: {{VALUE}};',
+                self::SEL => '--dccgg-more-txt-hover: {{VALUE}};',
                 $open_sel        => 'color: {{VALUE}};',
-                $hover_sel . ' i'   => 'color: {{VALUE}};',
-                $hover_sel . ' svg' => 'fill: {{VALUE}};',
+
                 $open_sel  . ' i'   => 'color: {{VALUE}};',
                 $open_sel  . ' svg' => 'fill: {{VALUE}};',
             ],
@@ -2641,7 +2672,7 @@ final class Widget extends Widget_Base
             'label'     => __('Background color', 'dcc-guest-guide'),
             'type'      => Controls_Manager::COLOR,
             'selectors' => [
-                $hover_sel => 'background-color: {{VALUE}};',
+                self::SEL => '--dccgg-more-bg-hover: {{VALUE}};',
                 $open_sel  => 'background-color: {{VALUE}};',
             ],
         ]);
@@ -3205,6 +3236,7 @@ final class Widget extends Widget_Base
             'searchIndex'      => $search_index,
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
+                'secretError' => (string) ($s['str_secret_error'] ?? __('Could not load that just now. Please try again.', 'dcc-guest-guide')),
                 'noResults'   => (string) ($s['search_no_results'] ?? __('No matches.', 'dcc-guest-guide')),
                 'didYouMean'  => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
@@ -3813,6 +3845,25 @@ final class Widget extends Widget_Base
         <?php
     }
 
+    /**
+     * v0.19.0: the handle a masked value is fetched by. NOT the value.
+     *
+     * A Wi-Fi password used to ship inside data-secret-value / data-copy, so
+     * it sat in the page source of an ungated page: anyone with the link, any
+     * crawler and any archive read it without tapping anything. The markup now
+     * carries only this reference and the value is fetched, once, from a
+     * nonce-protected endpoint that re-checks the same access the page itself
+     * requires (Plugin::handle_reveal_secret).
+     */
+    private static function secret_ref(array $item, string $section_key, int $item_idx): string
+    {
+        $row_id = trim((string) ($item['_id'] ?? ''));
+        // Elementor gives every repeater row an _id; it survives reordering,
+        // which an index does not. The index form is the fallback for rows
+        // saved before Elementor set one.
+        return $row_id !== '' ? 'id:' . $row_id : 'ix:' . $section_key . ':' . $item_idx;
+    }
+
     private function render_item(array $item, array $strings, bool $compact, bool $section_checklist = false, int $item_idx = 0, string $section_key = ''): void
     {
         $title          = (string) ($item['item_title'] ?? '');
@@ -3977,7 +4028,8 @@ final class Widget extends Widget_Base
             // password, so it stayed visible and stayed in the search index.
             // Gated on the mask being ON, so switching it on is what moves an
             // item to the structured pair — nothing changes until then.
-            $wifi_creds = $wifi_on && $mask_on && ($wifi_ssid !== '' || $copy_val !== '');
+            $secret_ref = self::secret_ref($item, $section_key, $item_idx);
+        $wifi_creds = $wifi_on && $mask_on && ($wifi_ssid !== '' || $copy_val !== '');
             if ($wifi_creds) : ?>
                 <dl class="dccgg-wifi-creds">
                     <?php if ($wifi_ssid !== '') : ?>
@@ -3997,7 +4049,7 @@ final class Widget extends Widget_Base
                             <dt><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</dt>
                             <dd>
                                 <span class="dccgg-secret">
-                                    <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
+                                    <span class="dccgg-secret-value" data-secret-ref="<?php echo esc_attr($secret_ref); ?>"></span>
                                     <?php // v0.13.0: .dccgg-btn so the reveal toggle and the Copy
                                     // button beside it are the same control, visually. They do
                                     // equivalent jobs on the same value; the toggle used to be a
@@ -4015,7 +4067,7 @@ final class Widget extends Widget_Base
                                 // the two buttons wildly different widths. Deliberately a
                                 // separate string from the general Copy label, which the host
                                 // may want to keep verbose elsewhere. ?>
-                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="<?php echo esc_attr($copy_val); ?>">
+                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-secret-ref="<?php echo esc_attr($secret_ref); ?>">
                                     <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide')); ?>
                                 </button>
                             </dd>
@@ -4051,7 +4103,7 @@ final class Widget extends Widget_Base
                         // structured pair, for items that mask a value without WiFi mode on. ?>
                         <span class="dccgg-secret">
                             <span class="dccgg-secret-label"><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</span>
-                            <span class="dccgg-secret-value" data-secret-value="<?php echo esc_attr($copy_val); ?>"></span>
+                            <span class="dccgg-secret-value" data-secret-ref="<?php echo esc_attr($secret_ref); ?>"></span>
                             <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                                     aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                     data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
@@ -4061,7 +4113,12 @@ final class Widget extends Widget_Base
                         </span>
                     <?php endif; ?>
                     <?php if ($show_copy) : ?>
-                        <button type="button" class="dccgg-btn dccgg-copy" data-copy="<?php echo esc_attr($copy_val); ?>">
+                        <?php // Masked values are fetched, not shipped; an unmasked one is
+                        // ordinary content and still rides in data-copy. ?>
+                        <button type="button" class="dccgg-btn dccgg-copy" <?php
+                            echo $mask_on
+                                ? 'data-secret-ref="' . esc_attr($secret_ref) . '"'
+                                : 'data-copy="' . esc_attr($copy_val) . '"'; ?>>
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php
                             // Beside a masked value the row already reads "Password:", so use
                             // the short label there; an unmasked item keeps the host's own.
@@ -4295,8 +4352,10 @@ final class Widget extends Widget_Base
             $sel = '.dccgg-tile-wrap[data-section-key="' . esc_attr($key) . '"]';
             $rules[] = $sel . ' .dccgg-tile-icon { color: ' . esc_attr($color) . '; background: color-mix(in srgb, ' . esc_attr($color) . ' 12%, transparent); }';
             $rules[] = $sel . ' .dccgg-quick-action { color: ' . esc_attr($color) . '; }';
-            $rules[] = $sel . ' .dccgg-quick-action:hover, ' . $sel . ' .dccgg-quick-action:focus-visible { background: ' . esc_attr($color) . '; color: #fff; }';
-            $rules[] = $sel . ' .dccgg-tile:hover { border-color: ' . esc_attr($color) . '; }';
+            // v0.19.0: tokens, not :hover rules. This block is inline per-post
+            // CSS, the one place a (hover:hover) guard can never be added after
+            // the fact — so on iOS the accent stuck to the first tap.
+            $rules[] = $sel . ' { --dccgg-accent-qa-bg-hover: ' . esc_attr($color) . '; --dccgg-accent-tile-border-hover: ' . esc_attr($color) . '; }';
         }
         if (!$rules) {
             return '';

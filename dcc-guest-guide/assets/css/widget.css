@@ -64,11 +64,18 @@
                 background var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-checklist-reset:hover,
     .dccgg-checklist-reset:focus-visible {
         filter: brightness(1.1);
         outline: none;
+    }
+    .dccgg-root.dccgg-root .dccgg-checklist-reset:hover,
+    .dccgg-root.dccgg-root .dccgg-checklist-reset:focus-visible,
+    .dccgg-stage.dccgg-stage .dccgg-checklist-reset:hover,
+    .dccgg-stage.dccgg-stage .dccgg-checklist-reset:focus-visible {
+        color: var(--dccgg-reset-txt-hover, var(--dccgg-btn-hover-txt, #ffffff));
+        background: var(--dccgg-reset-bg-hover, var(--dccgg-btn-hover-bg, #f08080));
     }
 }
 
@@ -162,7 +169,7 @@
     scroll-snap-align: start;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-gallery-thumb:hover,
     .dccgg-gallery-thumb:focus-visible {
         transform: scale(1.03);
@@ -280,7 +287,7 @@
     line-height: 1.2;
     transition: background var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-search-dym-chip:hover,
     .dccgg-search-dym-chip:focus-visible {
         background: color-mix(in srgb, var(--dccgg-primary) 18%, transparent);
@@ -311,7 +318,7 @@
     font-size: 0.9em;
     transition: background var(--dccgg-transition-duration), border-color var(--dccgg-transition-duration);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-search-still-stuck:hover,
     .dccgg-search-still-stuck:focus-visible {
         background: color-mix(in srgb, var(--dccgg-muted) 8%, transparent);
@@ -341,7 +348,7 @@
     align-items: center;
     gap: 8px;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-ai-button:hover { filter: brightness(1.08); }
 }
 .dccgg-ai-button:disabled { opacity: 0.6; cursor: wait; }
@@ -528,7 +535,7 @@
     cursor: pointer;
     font: inherit;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-search-result:hover,
     .dccgg-search-result:focus-visible,
     .dccgg-search-result.is-active {
@@ -983,7 +990,7 @@ body.dccgg-detail-open {
     pointer-events: none;
     opacity: 0;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-tile:hover {
         filter: blur(var(--dccgg-tile-filter-blur))
                 brightness(var(--dccgg-tile-filter-brightness))
@@ -1083,13 +1090,13 @@ body.dccgg-detail-open {
     font-size: 8em;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     /* Hover effects (opt-in via prefix_class) */
     .dccgg-hover-pop .dccgg-tile:hover {
         transform: scale(1.03);
     }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-hover-lift .dccgg-tile:hover {
         transform: translateY(-4px);
         box-shadow: 0 12px 32px rgba(0,0,0,0.15);
@@ -1098,7 +1105,7 @@ body.dccgg-detail-open {
 .dccgg-hover-tilt .dccgg-tile {
     transform-style: preserve-3d;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     /* tilt itself is driven by JS setting --tx/--ty */
     .dccgg-hover-tilt .dccgg-tile:hover {
         transform: perspective(800px) rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
@@ -1113,12 +1120,12 @@ body.dccgg-detail-open {
     transition: transform 0.8s ease;
     pointer-events: none;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-hover-shimmer .dccgg-tile:hover::before {
         transform: translateX(100%);
     }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-hover-overlay .dccgg-tile:hover::after {
         opacity: 1;
         background: color-mix(in srgb, var(--dccgg-primary) 20%, transparent);
@@ -1131,7 +1138,7 @@ body.dccgg-detail-open {
     transition: max-height var(--dccgg-transition-duration) ease,
                 opacity var(--dccgg-transition-duration) ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-hover-reveal .dccgg-tile:hover .dccgg-tile-desc {
         max-height: 100px;
         opacity: 1;
@@ -1211,11 +1218,11 @@ body.dccgg-detail-open {
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-quick-action:hover,
     .dccgg-quick-action:focus-visible {
-        background: var(--dccgg-primary);
-        color: #ffffff;
+        background: var(--dccgg-qa-bg-hover, var(--dccgg-accent-qa-bg-hover, var(--dccgg-primary)));
+        color: var(--dccgg-qa-color-hover, #ffffff);
         transform: scale(1.1);
         outline: none;
     }
@@ -1441,7 +1448,7 @@ video.dccgg-media {
                 background var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-btn:hover,
     .dccgg-btn:focus-visible {
         filter: brightness(1.1);
@@ -1542,7 +1549,7 @@ video.dccgg-media {
     justify-content: center;
     transition: transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-fab:hover { transform: scale(1.08); }
 }
 
@@ -1847,14 +1854,43 @@ dialog.dccgg-wrapper::backdrop {
    Contrast is 2.59:1 for white on #F08080. That is the host's deliberate
    site-wide choice, so focus-visible below does not depend on the fill: it
    adds a ring separated from the button by the surface behind it. */
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
 .dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
 .dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
 .dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover {
-        background: var(--dccgg-btn-hover-bg, #f08080);
-        color: var(--dccgg-btn-hover-txt, #ffffff);
+        background: var(--dccgg-btn-bg-hover, var(--dccgg-btn-hover-bg, #f08080));
+        color: var(--dccgg-btn-txt-hover, var(--dccgg-btn-hover-txt, #ffffff));
         filter: none;
         opacity: 1;
+    }
+}
+/* v0.19.0: the rest of the hover tokens. Every one of these used to be an
+   Elementor control writing `…:hover { … }` straight into the per-post
+   stylesheet, where no media query of ours can reach it — so on iOS, where
+   the first tap applies :hover and it sticks until the next tap elsewhere,
+   the colour stayed on. The controls now write a custom property and the
+   hover is applied HERE, inside the guard, which is the only place we can
+   state the condition. Each falls back to today's value, so a control left
+   blank changes nothing. */
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-root.dccgg-root .dccgg-detail-header .dccgg-back:hover,
+    .dccgg-root.dccgg-root .dccgg-detail-header .dccgg-back:focus-visible,
+    .dccgg-stage.dccgg-stage .dccgg-detail-header .dccgg-back:hover,
+    .dccgg-stage.dccgg-stage .dccgg-detail-header .dccgg-back:focus-visible {
+        color: var(--dccgg-back-txt-hover, var(--dccgg-btn-hover-txt, #ffffff));
+        background: var(--dccgg-back-bg-hover, var(--dccgg-btn-hover-bg, #f08080));
+    }
+    .dccgg-root.dccgg-root .dccgg-ai-button:hover,
+    .dccgg-root.dccgg-root .dccgg-ai-button:focus-visible,
+    .dccgg-stage.dccgg-stage .dccgg-ai-button:hover,
+    .dccgg-stage.dccgg-stage .dccgg-ai-button:focus-visible {
+        color: var(--dccgg-ai-txt-hover, var(--dccgg-btn-hover-txt, #ffffff));
+        background: var(--dccgg-ai-bg-hover, var(--dccgg-btn-hover-bg, #f08080));
+    }
+    .dccgg-root .dccgg-tile:hover,
+    .dccgg-root .dccgg-tile:focus-visible {
+        box-shadow: var(--dccgg-tile-shadow-hover, var(--dccgg-tile-shadow, none));
+        border-color: var(--dccgg-accent-tile-border-hover, var(--dccgg-tile-border));
     }
 }
 /* Deliberately OUTSIDE the hover media query: a keyboard user on a touch
@@ -1929,11 +1965,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-fab,
     .dccgg-overlay,
     .dccgg-lightbox,
-    .dccgg-sheet {
-        animation: none !important;
-        transition-duration: 1ms !important;
-    }
-    .dccgg-flip-inner { transform: none !important; }
+        .dccgg-flip-inner { transform: none !important; }
     .dccgg-tile-wrap.is-in-view { animation: none !important; }
 }
 
@@ -1977,7 +2009,7 @@ dialog.dccgg-wrapper::backdrop {
     transition: background var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-search-mic:hover,
     .dccgg-search-mic:focus-visible {
         background: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
@@ -2012,7 +2044,7 @@ dialog.dccgg-wrapper::backdrop {
     font-size: 0.85em;
     transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-item-tts:hover,
     .dccgg-item-tts:focus-visible {
         background: color-mix(in srgb, var(--dccgg-primary) 10%, transparent);
@@ -2185,7 +2217,7 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-stage.dccgg-stage :is(.dccgg-item-check):is(.dccgg-item-check) { color: inherit; }
 .dccgg-root.dccgg-root :is(.dccgg-section-prev, .dccgg-section-next):is(.dccgg-section-prev, .dccgg-section-next),
 .dccgg-stage.dccgg-stage :is(.dccgg-section-prev, .dccgg-section-next):is(.dccgg-section-prev, .dccgg-section-next) { color: var(--dccgg-text); }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     /* Re-assert the plugin's own hover tints above the kit's coral. */
 .dccgg-root.dccgg-root :is(.dccgg-item-tts):is(.dccgg-item-tts):hover,
 .dccgg-stage.dccgg-stage :is(.dccgg-item-tts):is(.dccgg-item-tts):hover {
@@ -2436,7 +2468,7 @@ dialog.dccgg-wrapper::backdrop {
     font-size: 1.5em;
     cursor: pointer;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-lightbox-close:hover { background: rgba(255,255,255,0.25); }
 }
 
@@ -2475,7 +2507,7 @@ dialog.dccgg-wrapper::backdrop {
 }
 .dccgg-lightbox-prev { left: 16px; }
 .dccgg-lightbox-next { right: 16px; }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-lightbox-prev:hover,
     .dccgg-lightbox-next:hover { background: rgba(255,255,255,0.3); }
 }
@@ -2540,12 +2572,8 @@ dialog.dccgg-wrapper::backdrop {
 }
 
 /* ---- v0.3 fix: hide sheet backdrop on desktop ---- */
-.dccgg-sheet-backdrop {
-    display: none;
-}
 @media (max-width: 768px) and (pointer: coarse) {
-    .dccgg-sheet-backdrop { display: block; }
-}
+    }
 
 /* ---- Section prev/next nav in detail header ---- */
 .dccgg-section-nav {
@@ -2569,13 +2597,13 @@ dialog.dccgg-wrapper::backdrop {
                 color var(--dccgg-transition-duration) var(--dccgg-transition-easing),
                 transform var(--dccgg-transition-duration) var(--dccgg-transition-easing);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-section-prev:hover:not([disabled]),
     .dccgg-section-next:hover:not([disabled]),
     .dccgg-section-prev:focus-visible,
     .dccgg-section-next:focus-visible {
-        background: var(--dccgg-primary);
-        color: var(--dccgg-btn-txt);
+        background: var(--dccgg-nav-bg-hover, var(--dccgg-primary));
+        color: var(--dccgg-nav-icon-hover, var(--dccgg-btn-txt));
         outline: none;
         transform: scale(1.08);
     }
@@ -2703,39 +2731,39 @@ dialog.dccgg-wrapper::backdrop {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-icon-anim-pulse  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-pulse  600ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-icon-anim-bounce .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-bounce 700ms ease; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-icon-anim-rotate .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-rotate 900ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-icon-anim-wiggle .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-wiggle 500ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-icon-anim-shake  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-shake  500ms ease-in-out; }
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         /* Per-section override wins via data-attribute specificity. */
         .dccgg-tile-wrap[data-icon-anim="none"]   .dccgg-tile:hover .dccgg-tile-icon { animation: none; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-tile-wrap[data-icon-anim="pulse"]  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-pulse  600ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-tile-wrap[data-icon-anim="bounce"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-bounce 700ms ease; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-tile-wrap[data-icon-anim="rotate"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-rotate 900ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-tile-wrap[data-icon-anim="wiggle"] .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-wiggle 500ms ease-in-out; }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
         .dccgg-tile-wrap[data-icon-anim="shake"]  .dccgg-tile:hover .dccgg-tile-icon { animation: dccgg-icon-shake  500ms ease-in-out; }
 }
 }
@@ -2805,7 +2833,7 @@ dialog.dccgg-wrapper::backdrop {
     background: linear-gradient(transparent 50%, rgba(0,0,0,0.4));
     pointer-events: none;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-video-poster:hover,
     .dccgg-video-poster:focus-visible {
         transform: scale(1.01);
@@ -2837,7 +2865,7 @@ dialog.dccgg-wrapper::backdrop {
     padding-left: 0.1em;
     transition: background var(--dccgg-transition-duration);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-video-poster:hover .dccgg-video-play .fa-play {
         background: var(--dccgg-primary);
     }
@@ -2964,7 +2992,7 @@ dialog.dccgg-wrapper::backdrop {
     transition: background var(--dccgg-transition-duration), color var(--dccgg-transition-duration), transform var(--dccgg-transition-duration);
 }
 .dccgg-more > summary::-webkit-details-marker { display: none; }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-more > summary:hover,
     .dccgg-more > summary:focus-visible {
         background: var(--dccgg-primary);
@@ -3033,7 +3061,7 @@ dialog.dccgg-wrapper::backdrop {
     letter-spacing: normal;
     text-transform: none;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-more-item:hover,
     .dccgg-more-item:focus-visible {
         background: color-mix(in srgb, var(--dccgg-primary) 12%, transparent);
@@ -3198,7 +3226,7 @@ dialog.dccgg-wrapper::backdrop {
     border-radius: 6px;
     transition: background 0.15s ease, color 0.15s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-item-report:hover {
         background: color-mix(in srgb, #d54040 12%, transparent);
         color: #d54040;
@@ -3515,7 +3543,7 @@ dialog.dccgg-wrapper::backdrop {
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     transition: background 0.15s ease, transform 0.15s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-emergency-chip:hover,
     .dccgg-root.dccgg-root .dccgg-emergency-chip:focus-visible {
         background: color-mix(in srgb, var(--dccgg-color-emergency) 10%, var(--dccgg-detail-bg, #fff));
@@ -3528,7 +3556,7 @@ dialog.dccgg-wrapper::backdrop {
     color: #fff;
     border-color: var(--dccgg-color-emergency);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-emergency-chip--911:hover,
     .dccgg-root.dccgg-root .dccgg-emergency-chip--911:focus-visible {
         background: color-mix(in srgb, var(--dccgg-color-emergency) 88%, #000);
@@ -3637,7 +3665,7 @@ dialog.dccgg-wrapper::backdrop {
     cursor: pointer;
     transition: background 0.15s ease, transform 0.15s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-review-yes:hover,
     .dccgg-root.dccgg-root .dccgg-review-yes:focus-visible {
         background: color-mix(in srgb, var(--dccgg-primary) 12%, var(--dccgg-detail-bg, #fff));
@@ -3645,7 +3673,7 @@ dialog.dccgg-wrapper::backdrop {
         outline: none;
     }
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-review-no:hover,
     .dccgg-root.dccgg-root .dccgg-review-no:focus-visible {
         background: color-mix(in srgb, var(--dccgg-color-emergency, #d54040) 10%, var(--dccgg-detail-bg, #fff));
@@ -3697,7 +3725,7 @@ dialog.dccgg-wrapper::backdrop {
     text-decoration: none;
     transition: filter 0.15s ease, transform 0.15s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
     .dccgg-root.dccgg-root .dccgg-review-platform:hover,
     .dccgg-root.dccgg-root .dccgg-review-platform:focus-visible {
         filter: brightness(0.92);
@@ -3763,7 +3791,6 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-public-cta-wrap,
     .dccgg-root .dccgg-scrollrail,
     .dccgg-root .dccgg-shrink-sentinel,
-    .dccgg-root .dccgg-sheet-backdrop,
     .dccgg-root .dccgg-search-mic,
     .dccgg-root .dccgg-section-nav,
     .dccgg-root .dccgg-wizard-dots,
@@ -3775,10 +3802,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-ai-prompt,
     .dccgg-root .dccgg-parallax-bg,
     .dccgg-root .dccgg-parallax-overlay,
-    .dccgg-root .dccgg-section-share,
     .dccgg-root .dccgg-confetti-piece,
-    .dccgg-root .dccgg-info-popup,
-    .dccgg-root .dccgg-sheet,
     .dccgg-root .dccgg-report-dialog,
     .dccgg-report-dialog {
         display: none !important;
@@ -3803,7 +3827,12 @@ dialog.dccgg-wrapper::backdrop {
     /* The binder copy needs the real password, not dots. */
     /* The binder copy needs the real password. When it is already revealed the
        text is in the element, so only the still-masked case needs painting. */
-    .dccgg-root .dccgg-secret:not(.is-revealed) .dccgg-secret-value::before { content: attr(data-secret-value) !important; letter-spacing: normal !important; }
+    /* v0.19.0: printing no longer reveals a masked value. It used to print
+       attr(data-secret-value) so the cottage binder carried the password —
+       but that attribute is what put the password in the page source, and it
+       is gone. A value REVEALED on screen is real text in the DOM and prints
+       normally; an unrevealed one prints as dots. Tap Show, then print. */
+    .dccgg-root .dccgg-secret:not(.is-revealed) .dccgg-secret-value::before { letter-spacing: normal !important; }
     .dccgg-root .dccgg-wrapper {
         /* v0.9.7.23: display override — a closed <dialog> is display:none
            per UA stylesheet, but printing the guide must include the FAB
@@ -4102,13 +4131,19 @@ dialog.dccgg-wrapper::backdrop {
                 color      var(--dccgg-transition-duration, .18s) var(--dccgg-transition-easing, ease);
 }
 .dccgg-more-summary--text::-webkit-details-marker { display: none; }
-@media (hover: hover) {
-    .dccgg-more-summary--text:hover,
-    .dccgg-more[open] .dccgg-more-summary--text {
-        background: var(--dccgg-primary, #0f6dbf);
-        color: #fff;
-        border-color: var(--dccgg-primary, #0f6dbf);
+@media (hover: hover) and (pointer: fine) {
+    .dccgg-more-summary--text:hover {
+        background: var(--dccgg-more-bg-hover, var(--dccgg-primary, #0f6dbf));
+        color: var(--dccgg-more-txt-hover, #fff);
+        border-color: var(--dccgg-more-bg-hover, var(--dccgg-primary, #0f6dbf));
     }
+}
+/* The OPEN state is not a hover state — it must survive on touch, where the
+   menu is opened by tapping. Outside the guard on purpose. */
+.dccgg-more[open] .dccgg-more-summary--text {
+    background: var(--dccgg-primary, #0f6dbf);
+    color: #fff;
+    border-color: var(--dccgg-primary, #0f6dbf);
 }
 
 /* v0.9.7.12: extended Conditions side-card rows. Each new row uses a

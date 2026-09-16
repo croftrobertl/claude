@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.18.0
+Stable tag: 0.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,25 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.19.0 =
+
+**Fixed (security): Wi-Fi passwords are no longer in the page's source.** They
+were written into the HTML and merely hidden on screen, so anyone with the
+link — and any crawler or archive — could read them without tapping anything.
+The page now ships without them: Show and Copy fetch the value when tapped,
+and it is dropped again when the row re-masks. If the fetch fails the row
+stays masked rather than showing a blank.
+
+One consequence worth knowing: printing no longer reveals a hidden password,
+because the page no longer contains one. Tap Show first, then print.
+
+**Fixed: tapping a button on an iPhone could leave its hover colour stuck on.**
+Hover colours set in the widget panel were being applied without any way to
+say "only where there is a mouse". They now are.
+
+**Changed: an administrator is warned if the plugin is serving its unminified
+files**, which doubles what every guest downloads.
 
 = 0.18.0 =
 

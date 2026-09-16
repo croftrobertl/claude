@@ -113,6 +113,7 @@ async function newPage(browser, viewport, html, errors) {
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    await routeReveal(page);
     await page.setContent(html, { waitUntil: 'load' });
     return { ctx, page };
 }
@@ -125,6 +126,24 @@ const rect = (page, sel) => page.$eval(sel, (el) => {
 async function openDetail(page) {
     await page.click('.dccgg-tile[data-key="wifi"]');
     await page.waitForTimeout(450); // open transition is 250ms
+}
+
+// v0.19.0: a masked value is fetched, not shipped. Every fixture that reveals
+// one routes the endpoint so the round-trip is exercised rather than mocked
+// away — including the failure path, which must fail CLOSED.
+const SECRET_VALUE = 'DCC32586';
+async function routeReveal(page, { fail = false, calls = null } = {}) {
+    const handler = async (route) => {
+        const body = route.request().postData() || '';
+        if (body.indexOf('action=dccgg_reveal_secret') === -1) { return route.continue(); }
+        if (calls) { calls.push(body); }
+        if (fail) { return route.fulfill({ status: 404, contentType: 'application/json',
+            body: JSON.stringify({ success: false }) }); }
+        return route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ success: true, data: { value: SECRET_VALUE } }) });
+    };
+    await page.route('**/admin-ajax.php', handler);
+    await page.route('**/ajax', handler);
 }
 
 async function run() {
@@ -192,6 +211,87 @@ async function run() {
             const open = await page.evaluate(() => document.body.classList.contains('dccgg-detail-open'));
             check('tap outside closes popup', !open);
         }
+
+
+    // ---- Scenario S: the value is fetched, and fails CLOSED (v0.19.0) -----
+    {
+        console.log('\nS. A masked value is fetched on tap, and a failure shows nothing');
+        const errors = [];
+        const cfgS = JSON.stringify({ ajaxUrl: 'https://dccgg.test/wp-admin/admin-ajax.php',
+            nonce: 'n1', postId: 4645, widgetId: 'abc123', revealMode: 'stage', strings: {} });
+        const htmlS = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head>
+            <body><div class="dccgg-root" data-config='${cfgS.replace(/'/g, '&#39;')}'>
+            <article class="dccgg-item"><div class="dccgg-item-utils">
+            <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+            <span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
+            <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
+                    data-label-show="Show" data-label-hide="Hide">Show</button></span>
+            <button type="button" class="dccgg-btn dccgg-copy" data-secret-ref="id:a1b2c3">Copy</button>
+            </div></article></div><script>${JS}</script></body></html>`;
+
+        // The request itself: the right action, the nonce, and the reference —
+        // never the value, which the page does not have to send because it
+        // does not have it.
+        {
+            const calls = [];
+            const { ctx, page } = await newPage(browser, PHONE, htmlS, errors);
+            await routeReveal(page, { calls });
+            await page.click('.dccgg-secret-toggle');
+            await page.waitForTimeout(300);
+            check('Show fetches the value from the endpoint',
+                calls.length === 1 && calls[0].includes('action=dccgg_reveal_secret')
+                && calls[0].includes('nonce=n1') && calls[0].includes('ref=id%3Aa1b2c3')
+                && calls[0].includes('post_id=4645'),
+                calls[0] || '(no call)');
+            check('and the value then appears as real, selectable text',
+                await page.$eval('.dccgg-secret-value', (v) => v.textContent) === 'DCC32586');
+
+            // Re-masking drops the cached copy: the next reveal asks again,
+            // so a value is never sitting in the page between reveals.
+            await page.click('.dccgg-secret-toggle');
+            await page.waitForTimeout(200);
+            check('re-masking clears the value from the page',
+                await page.evaluate(() => !document.documentElement.outerHTML.includes('DCC32586')));
+            await page.click('.dccgg-secret-toggle');
+            await page.waitForTimeout(300);
+            check('and the next reveal fetches again rather than reusing a stored copy',
+                calls.length === 2, `${calls.length} calls`);
+            await ctx.close();
+        }
+
+        // The failure path. A masked row that cannot load its value must stay
+        // masked: an empty "revealed" state reads as "the password is blank".
+        {
+            // This block MAKES the endpoint fail, so the 404 it logs is the
+            // point of the test rather than a defect. Collected separately so
+            // it cannot mask a real error in the same run.
+            const expected = [];
+            const { ctx, page } = await newPage(browser, PHONE, htmlS, expected);
+            await routeReveal(page, { fail: true });
+            await page.click('.dccgg-secret-toggle');
+            await page.waitForTimeout(400);
+            const after = await page.evaluate(() => {
+                const wrap = document.querySelector('.dccgg-secret');
+                const btn = document.querySelector('.dccgg-secret-toggle');
+                return { revealed: wrap.classList.contains('is-revealed'),
+                         text: document.querySelector('.dccgg-secret-value').textContent,
+                         label: btn.textContent.trim(), expanded: btn.getAttribute('aria-expanded'),
+                         enabled: !btn.disabled,
+                         toast: !!document.querySelector('.dccgg-toast') };
+            });
+            check('a failed fetch leaves the row masked, not blank-revealed',
+                !after.revealed && after.text === '' && after.label === 'Show'
+                && after.expanded === 'false',
+                `revealed=${after.revealed} text="${after.text}" label=${after.label}`);
+            check('it says so, and the button is usable again',
+                after.toast && after.enabled);
+            check('the only thing logged was the failure we caused',
+                expected.every((e) => /404|Failed to load resource/.test(e)),
+                expected.filter((e) => !/404|Failed to load resource/.test(e))[0] || '');
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
 
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
@@ -578,7 +678,7 @@ async function run() {
         const item2 = item.replace('Boat Slips', 'Fish Cleaning').replace('data-tts-text="[^"]*"', 'x')
             .replace('Boat slips are available to guests.', 'The fish cleaning station is by the dock.');
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8">${stub}<style>${CSS}</style></head>
-            <body><div class="dccgg-root" data-config='{"revealMode":"stage","strings":{}}'>
+            <body><div class="dccgg-root" data-config='{"ajaxUrl":"https://dccgg.test/wp-admin/admin-ajax.php","nonce":"n1","postId":4645,"widgetId":"abc123","revealMode":"stage","strings":{}}'>
             <div class="dccgg-menu"><div class="dccgg-tile-wrap" data-section-key="boating">
             <button class="dccgg-tile" data-key="boating">Boating</button></div></div>
             <div class="dccgg-detail-items">${item}${item2}</div>
@@ -657,7 +757,7 @@ async function run() {
         const errors = [];
         const secret = `<span class="dccgg-secret">
             <span class="dccgg-secret-label">Password:</span>
-            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
             <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                     data-label-show="Show" data-label-hide="Hide">Show</button></span>`;
         const cfg = JSON.stringify({ revealMode: 'stage', strings: {}, enableSearch: true,
@@ -670,7 +770,7 @@ async function run() {
             <div class="dccgg-search-results" role="group" hidden></div></div>
             <div class="dccgg-detail-items"><article class="dccgg-item" data-tts-text="Join the network.">
             <div class="dccgg-item-utils">${secret}
-            <button class="dccgg-btn dccgg-copy" data-copy="DCC32586">Copy</button></div></article></div>
+            <button class="dccgg-btn dccgg-copy" data-secret-ref="id:a1b2c3">Copy</button></div></article></div>
             </div><script>${JS}</script></body></html>`;
         const { ctx, page } = await newPage(browser, PHONE, html, errors);
 
@@ -689,19 +789,35 @@ async function run() {
             `"${st.label}" aria-expanded=${st.expanded}`);
 
         await page.click('.dccgg-secret-toggle');
+        await page.waitForTimeout(260);   // the value is fetched, not in the DOM
         st = await shown();
         check('tapping Show reveals the value as real text',
             (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === 'DCC32586', st.css);
         check('toggle flips to Hide and is expanded', st.label === 'Hide' && st.expanded === 'true',
             `"${st.label}" aria-expanded=${st.expanded}`);
         await page.click('.dccgg-secret-toggle');
+        await page.waitForTimeout(260);   // the value is fetched, not in the DOM
         check('tapping again re-hides it',
             (await page.$eval('.dccgg-secret-value', (v) => v.textContent)) === ''
             && !(await page.evaluate(() => document.body.innerText.includes('DCC32586'))));
 
-        // Copy still works without revealing.
-        check('copy button carries the real value',
-            await page.$eval('.dccgg-copy', (b) => b.dataset.copy === 'DCC32586'));
+        // v0.19.0: Copy carries a REFERENCE, never the value, and still works
+        // without revealing anything on screen. Proven by the call it makes and
+        // by the confirmation it shows, which only runs after the copy resolves.
+        check('the copy button holds no value, only a reference',
+            await page.$eval('.dccgg-copy', (b) => !b.dataset.copy && !!b.dataset.secretRef),
+            await page.$eval('.dccgg-copy', (b) => b.dataset.secretRef || '(no ref)'));
+        const copyCalls = [];
+        await routeReveal(page, { calls: copyCalls });
+        // The row is masked at this point and stays that way: Copy must work
+        // from the masked state, which is the whole point of it.
+        await page.click('.dccgg-copy');
+        await page.waitForTimeout(320);
+        check('Copy fetches the value and confirms, without revealing it',
+            copyCalls.length === 1 && copyCalls[0].includes('ref=id%3Aa1b2c3')
+            && await page.$eval('.dccgg-copy', (b) => !!b.querySelector('.dccgg-sr-only'))
+            && await page.$eval('.dccgg-secret-value', (v) => v.textContent === ''),
+            `calls=${copyCalls.length}`);
 
         // (f) print: the binder copy needs the real password and no toggle.
         await page.emulateMedia({ media: 'print' });
@@ -710,7 +826,14 @@ async function run() {
             toggle: getComputedStyle(document.querySelector('.dccgg-secret-toggle')).display,
             search: getComputedStyle(document.querySelector('.dccgg-search')).display,
         }));
-        check('print shows the real password', printed.val.includes('DCC32586'), printed.val);
+        // v0.19.0: printing can no longer reveal a value the page does not have.
+        // It used to print attr(data-secret-value) for the cottage binder, and
+        // that attribute is exactly what leaked. A value revealed on screen is
+        // real text in the DOM and prints normally; an unrevealed one prints as
+        // dots. This is a deliberate loss, recorded rather than quietly dropped.
+        check('print no longer conjures the password out of an attribute',
+            !printed.val.includes('DCC32586') && /•/.test(printed.val),
+            `masked row prints: ${printed.val}`);
         check('print hides the reveal toggle', printed.toggle === 'none');
         check('print hides the search box', printed.search === 'none');
         await page.emulateMedia({ media: 'screen' });
@@ -750,12 +873,12 @@ async function run() {
               <span class="dccgg-wifi-ssid">topoftheworld</span>
               <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="topoftheworld">Copy</button></dd></div>
             <div class="dccgg-wifi-row"><dt>Password:</dt><dd>
-              <span class="dccgg-secret"><span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+              <span class="dccgg-secret"><span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
               <button class="dccgg-btn dccgg-secret-toggle" aria-expanded="false" data-label-show="Show" data-label-hide="Hide">Show</button></span>
-              <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="DCC32586">Copy</button></dd></div></dl>`;
+              <button class="dccgg-btn dccgg-copy dccgg-copy--inline" data-secret-ref="id:a1b2c3">Copy</button></dd></div></dl>`;
         const html3 = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1"><style>${CSS}</style></head>
-            <body><div class="dccgg-root" data-config='{"revealMode":"stage","strings":{}}'>
+            <body><div class="dccgg-root" data-config='{"ajaxUrl":"https://dccgg.test/wp-admin/admin-ajax.php","nonce":"n1","postId":4645,"widgetId":"abc123","revealMode":"stage","strings":{}}'>
             <article class="dccgg-item" data-tts-text="Join the cottage network.">${creds}</article>
             </div><script>${JS}</script></body></html>`;
         const { ctx: ctx3, page: page3 } = await newPage(browser, PHONE, html3, errors);
@@ -765,6 +888,7 @@ async function run() {
         check('structured pair: read-aloud text excludes the password',
             await page3.$eval('.dccgg-item', (a) => !a.dataset.ttsText.includes('DCC32586')));
         await page3.click('.dccgg-secret-toggle');
+        await page3.waitForTimeout(260);   // the value is fetched, not in the DOM
         check('structured pair: Show reveals it as selectable text',
             (await page3.$eval('.dccgg-secret-value', (v) => v.textContent)) === 'DCC32586');
         // v0.12.4 regressions, both from Rob's usability condition:
@@ -794,15 +918,19 @@ async function run() {
             selectable.selected === 'DCC32586' && selectable.occurrences === 1,
             `selection="${selectable.selected}" occurrences=${selectable.occurrences}`);
         await page3.click('.dccgg-secret-toggle');
+        await page3.waitForTimeout(260);   // the value is fetched, not in the DOM
         check('re-hiding takes it back out of the DOM',
             await page3.evaluate(() => document.querySelector('.dccgg-secret-value').textContent === ''
                 && !document.body.innerText.includes('DCC32586')));
         await page3.click('.dccgg-secret-toggle');
+        await page3.waitForTimeout(260);   // the value is fetched, not in the DOM
 
-        check('structured pair: both copy buttons carry real values',
+        check('structured pair: the SSID still rides in the markup, the password does not',
             await page3.evaluate(() => {
-                const b = [...document.querySelectorAll('.dccgg-copy')].map(x => x.dataset.copy);
-                return b.includes('topoftheworld') && b.includes('DCC32586');
+                const vals = [...document.querySelectorAll('.dccgg-copy')].map((x) => x.dataset.copy || '');
+                const refs = [...document.querySelectorAll('.dccgg-copy')].map((x) => x.dataset.secretRef || '');
+                return vals.includes('topoftheworld') && !vals.some((v) => v.includes('DCC32586'))
+                    && refs.some((r) => r.startsWith('id:'));
             }));
         await ctx3.close();
 
@@ -912,10 +1040,10 @@ async function run() {
                    text-transform:capitalize;letter-spacing:1.5px}`;
         const row = `<div class="dccgg-item-utils">
             <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
-            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
             <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                     data-label-show="Show" data-label-hide="Hide">Show</button></span>
-            <button type="button" class="dccgg-btn dccgg-copy" data-copy="DCC32586">Copy</button></div>`;
+            <button type="button" class="dccgg-btn dccgg-copy" data-secret-ref="id:a1b2c3">Copy</button></div>`;
         const detail = (key, title, body, prev, next) => `
             <div class="dccgg-detail" data-key="${key}" hidden><span class="dccgg-shrink-sentinel"></span>
             <div class="dccgg-detail-header"><div class="dccgg-detail-header-titlebar">
@@ -930,7 +1058,7 @@ async function run() {
             <h3 class="dccgg-item-title"><span class="dccgg-item-title-text">Wifi #1</span></h3>
             <div class="dccgg-item-content-wrap"><div class="dccgg-item-body">${body}</div></div>
             ${key === 'wifi' ? row : ''}</article></div></div></div>`;
-        const cfgN = JSON.stringify({ revealMode: 'stage', copyEffect: 'bubbles',
+        const cfgN = JSON.stringify({ ajaxUrl: 'https://dccgg.test/wp-admin/admin-ajax.php', nonce: 'n1', postId: 4645, widgetId: 'abc123', revealMode: 'stage', copyEffect: 'bubbles',
             enableSectionNav: true, strings: {} });
         const htmlN = `<!DOCTYPE html><html><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1032,9 +1160,13 @@ async function run() {
         check('and resets the label and aria-expanded there too',
             st.label === 'Show' && st.expanded === 'false', `${st.label}/${st.expanded}`);
         check('nothing is left in the text layer after that auto-hide', !(await leaked()));
-        check('the value survives in data attributes, so Copy still works',
-            await page.evaluate(() => document.querySelector('.dccgg-copy').dataset.copy === 'DCC32586'
-                && document.querySelector('.dccgg-secret-value').dataset.secretValue === 'DCC32586'));
+        check('nothing survives in a data attribute — the page holds no copy of it',
+            await page.evaluate(() => {
+                const html = document.documentElement.outerHTML;
+                return !html.includes('DCC32586')
+                    && !!document.querySelector('.dccgg-copy').dataset.secretRef
+                    && !document.querySelector('.dccgg-secret-value').dataset.secretValue;
+            }));
 
         // (e) no bold body text. Both an editor <strong> and a pasted inline
         // font-weight must come back to the paragraph weight; the guide and the
@@ -1081,10 +1213,10 @@ async function run() {
         // which v0.14.0 must NOT touch (the host is copying its styling).
         const utils = `<div class="dccgg-item-utils">
             <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
-            <span class="dccgg-secret-value" data-secret-value="DCC32586"></span>
+            <span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
             <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                     data-label-show="Show" data-label-hide="Hide">Show</button></span>
-            <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-copy="DCC32586">Copy</button>
+            <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-secret-ref="id:a1b2c3">Copy</button>
             <a class="dccgg-btn dccgg-map" href="#">View in Maps</a>
             <button type="button" class="dccgg-review-yes">Click to Review</button>
             <button type="button" class="dccgg-review-platform">Copy &amp; open Google</button></div>`;
@@ -2039,6 +2171,49 @@ async function run() {
             'lightbox-close still renders &times;, as before');
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
+    }
+
+
+    // ---- Scenario T: hover is a pointer capability, not a state (v0.19.0) --
+    {
+        console.log('\nT. Hover colours reach a mouse and not a finger');
+        const errors = [];
+        // A host who has set the hover colours in the panel. These now arrive
+        // as tokens on the root — exactly what Elementor will emit — instead of
+        // as :hover rules in the per-post stylesheet, where no guard reaches.
+        const TOKENS = `.dccgg-root{--dccgg-btn-bg-hover:#123456;--dccgg-btn-txt-hover:#fedcba;
+            --dccgg-nav-bg-hover:#222222;--dccgg-qa-bg-hover:#333333;}`;
+        const htmlT = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <style>${CSS}</style><style>${TOKENS}</style></head><body>
+            <div class="dccgg-root"><div class="dccgg-item-utils">
+            <button type="button" class="dccgg-btn dccgg-copy" data-copy="x">Copy</button>
+            </div></div></body></html>`;
+        const readHover = async (viewport, opts) => {
+            const ctx = await browser.newContext({ viewport, ...opts });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await page.setContent(htmlT, { waitUntil: 'load' });
+            const caps = await page.evaluate(() => ({
+                hover: matchMedia('(hover: hover)').matches,
+                fine: matchMedia('(pointer: fine)').matches,
+            }));
+            await page.hover('.dccgg-copy');
+            await page.waitForTimeout(220);
+            const bg = await page.$eval('.dccgg-copy', (b) => getComputedStyle(b).backgroundColor);
+            await ctx.close();
+            return { caps, bg };
+        };
+        const mouse = await readHover(DESKTOP, {});
+        const touch = await readHover(PHONE, { isMobile: true, hasTouch: true });
+        check('a fine pointer gets the configured hover colour',
+            mouse.caps.hover && mouse.caps.fine && mouse.bg === 'rgb(18, 52, 86)',
+            `hover=${mouse.caps.hover} fine=${mouse.caps.fine} bg=${mouse.bg}`);
+        check('a touch context gets NO hover colour, so nothing can stick to a tap',
+            !touch.caps.fine && touch.bg !== 'rgb(18, 52, 86)',
+            `hover=${touch.caps.hover} fine=${touch.caps.fine} bg=${touch.bg}`);
+        check('and the token is what carried it — no :hover rule was needed in per-post CSS',
+            CSS.includes('--dccgg-btn-bg-hover'));
+        check('no JS errors', errors.length === 0, errors[0]);
     }
 
     await browser.close();

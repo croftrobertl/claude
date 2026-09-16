@@ -43,6 +43,8 @@ final class Plugin
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\DCCGG\\Widget', 'register_assets']);
+        add_action('admin_notices', ['\\DCCGG\\Widget', 'maybe_notice_unminified']);
+        add_action('admin_init',    ['\\DCCGG\\Widget', 'register_assets']);   // so the check runs in admin too
         add_action('elementor/preview/enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_preview']);
         // Welcome Pack button lives in the editor panel, not the preview
         // iframe — the script must also load on the editor side so the
@@ -74,6 +76,8 @@ final class Plugin
         add_action('wp_ajax_nopriv_dccgg_usgs',         [$this, 'handle_usgs']);
         add_action('wp_ajax_dccgg_search_index',        [$this, 'handle_search_index']);
         add_action('wp_ajax_nopriv_dccgg_search_index', [$this, 'handle_search_index']);
+        add_action('wp_ajax_dccgg_reveal_secret',        [$this, 'handle_reveal_secret']);
+        add_action('wp_ajax_nopriv_dccgg_reveal_secret', [$this, 'handle_reveal_secret']);
         // v0.12.2: record searches that found nothing, so the host can see what
         // content guests expect and cannot find.
         add_action('wp_ajax_dccgg_search_miss',         [$this, 'handle_search_miss']);
@@ -276,6 +280,103 @@ final class Plugin
 
     /** Recursively collect every widget with widgetType=dccgg_guide in
      *  an Elementor element tree. */
+    /**
+     * v0.19.0: serve ONE masked value, for a guest who has tapped Show or Copy.
+     *
+     * Wi-Fi passwords used to ship inside the markup (data-secret-value and
+     * data-copy), which put them in the page source of an ungated page — read
+     * by anyone with the link, by crawlers and by archives, with no tap. They
+     * are now fetched one at a time from here.
+     *
+     * WHAT THIS DOES AND DOES NOT DO. It takes the values out of the HTML, so
+     * scraping the page no longer yields them and a value is only served in
+     * response to a deliberate, nonce-carrying request. It does NOT make them
+     * secret from someone who can load the guide: the guard below is parity
+     * with the page — the same visibility test — because /guest/ is noindex
+     * but ungated by the owner's choice. Anyone who can open the page can tap
+     * Show, and therefore can call this. Gating the page is the only thing
+     * that would change that.
+     */
+    public function handle_reveal_secret(): void
+    {
+        check_ajax_referer('dccgg_nonce', 'nonce');
+
+        $post_id   = isset($_POST['post_id'])   ? (int) $_POST['post_id'] : 0;
+        $widget_id = isset($_POST['widget_id']) ? sanitize_text_field(wp_unslash((string) $_POST['widget_id'])) : '';
+        $ref       = isset($_POST['ref'])       ? sanitize_text_field(wp_unslash((string) $_POST['ref']))       : '';
+        if ($post_id <= 0 || $widget_id === '' || $ref === '') {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+
+        // The same visibility test handle_search_index() makes, and for the
+        // same reason: find_widget_settings() reads _elementor_data for ANY
+        // post id with no check of its own, so without this a caller could
+        // name a private, draft or password-protected page and read its
+        // credentials. Every failure answers 404 — an attacker learns nothing
+        // about which of the three conditions failed, or whether the post
+        // exists.
+        $post = get_post($post_id);
+        if (!$post) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+        if ($post->post_status !== 'publish' && !current_user_can('read_post', $post_id)) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+        if (post_password_required($post)) {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+
+        $settings = $this->find_widget_settings($post_id, $widget_id);
+        $items    = isset($settings['guide_items']) && is_array($settings['guide_items'])
+            ? $settings['guide_items'] : [];
+        $item     = self::locate_secret_item($items, $ref);
+
+        // Only a MASKED value is servable. An item the host has not marked as
+        // masked is ordinary content that still ships in the markup, and this
+        // endpoint must not become a way to read arbitrary settings.
+        if (!$item || ($item['item_mask_value'] ?? '') !== 'yes') {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+        $value = (string) ($item['item_copy_value'] ?? '');
+        if ($value === '') {
+            wp_send_json_error(['message' => 'Not found.'], 404);
+        }
+
+        // no-store: a credential must not sit in a shared proxy or in the
+        // browser's disk cache after the tab closes.
+        nocache_headers();
+        wp_send_json_success(['value' => $value]);
+    }
+
+    /**
+     * Resolve the reference in data-secret-ref back to its repeater row.
+     * 'id:<row id>' is the normal form and survives reordering; 'ix:<section>:<n>'
+     * is the fallback for rows saved before Elementor set an _id, and counts
+     * within the section exactly as the renderer groups them.
+     */
+    private static function locate_secret_item(array $items, string $ref): ?array
+    {
+        if (strpos($ref, 'id:') === 0) {
+            $want = substr($ref, 3);
+            foreach ($items as $it) {
+                if (is_array($it) && (string) ($it['_id'] ?? '') === $want) { return $it; }
+            }
+            return null;
+        }
+        if (strpos($ref, 'ix:') === 0) {
+            $parts = explode(':', substr($ref, 3));
+            if (count($parts) !== 2) { return null; }
+            [$section, $idx] = $parts;
+            $n = 0;
+            foreach ($items as $it) {
+                if (!is_array($it) || (string) ($it['item_section'] ?? '') !== $section) { continue; }
+                if ($n === (int) $idx) { return $it; }
+                $n++;
+            }
+        }
+        return null;
+    }
+
     /**
      * The source post's generated Elementor CSS, reduced to the rules for one
      * element and re-scoped so they apply wherever that element is rendered.

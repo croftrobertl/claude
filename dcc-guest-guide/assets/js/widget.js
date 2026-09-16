@@ -345,7 +345,7 @@
             let shown = false;
             try { shown = sessionStorage.getItem(SHOWN_KEY) === '1'; } catch (_) {}
             if (tip && !shown) {
-                showPdfTip(tip);
+                showToast(tip);
                 try { sessionStorage.setItem(SHOWN_KEY, '1'); } catch (_) {}
                 // Let the toast paint before opening the print dialog.
                 setTimeout(() => window.print(), 600);
@@ -354,7 +354,9 @@
             }
         });
     }
-    function showPdfTip(text) {
+    // v0.19.0: renamed from showPdfTip — it was never PDF-specific, and the
+    // reveal path needs the same one-line toast when a fetch fails.
+    function showToast(text) {
         const t = document.createElement('div');
         t.className = 'dccgg-toast';
         t.textContent = text;
@@ -572,7 +574,7 @@
         }).then(json => {
             if (json && json.success) {
                 dialog.close();
-                showPdfTip(STR.thankYou || 'Thanks!');
+                showToast(STR.thankYou || 'Thanks!');
             } else {
                 send.disabled = false;
                 send.textContent = STR.send || 'Send report';
@@ -830,7 +832,7 @@
                         }
                         btn.addEventListener('click', () => {
                             copyText(ta.value).then(() => {
-                                showPdfTip(STR.copied || 'Copied!');
+                                showToast(STR.copied || 'Copied!');
                                 window.open(p.url, '_blank', 'noopener');
                                 markActed();
                             }).catch(() => {
@@ -2345,7 +2347,25 @@
             }).catch(() => {});
         };
         root.querySelectorAll('.dccgg-copy').forEach(btn => {
-            btn.addEventListener('click', (e) => handle(btn, btn.dataset.copy || '', e));
+            btn.addEventListener('click', (e) => {
+                // v0.19.0: a masked value carries a reference, not the value.
+                // Copy fetches it and puts it on the clipboard without ever
+                // revealing it on screen — the guest asked to paste it, not to
+                // display it.
+                if (btn.dataset.secretRef) {
+                    e.stopPropagation();
+                    btn.disabled = true;
+                    fetchSecret(root, config, btn)
+                        .then((value) => { forgetSecret(btn); handle(btn, value, null); })
+                        .catch(() => {
+                            showToast((config.strings && config.strings.secretError)
+                                || 'Could not load that just now. Please try again.');
+                        })
+                        .then(() => { btn.disabled = false; });
+                    return;
+                }
+                handle(btn, btn.dataset.copy || '', e);
+            });
         });
         root.querySelectorAll('.dccgg-qa-copy').forEach(btn => {
             btn.addEventListener('click', (e) => handle(btn, btn.dataset.copy || '', e));
@@ -3270,6 +3290,37 @@
     // The value itself is never in the text layer: CSS paints either dots or
     // attr(data-secret-value). This only flips a class, so nothing here has to
     // handle the secret.
+    // v0.19.0: a masked value is no longer in the page. It is fetched once, on
+    // the tap that needs it, and kept ONLY in this closure — never written to
+    // an attribute, and dropped again when the value is re-masked, so the DOM
+    // never regains a copy the guest did not ask for.
+    const SECRET_CACHE = new WeakMap();   // element -> value, cleared on re-mask
+    function fetchSecret(root, config, refEl) {
+        const ref = refEl && refEl.dataset ? refEl.dataset.secretRef : '';
+        if (!ref) return Promise.reject(new Error('no ref'));
+        const hit = SECRET_CACHE.get(refEl);
+        if (hit !== undefined) return Promise.resolve(hit);
+        if (!config || !config.ajaxUrl || !config.nonce) return Promise.reject(new Error('no endpoint'));
+        const body = new URLSearchParams();
+        body.set('action', 'dccgg_reveal_secret');
+        body.set('nonce', config.nonce);
+        body.set('post_id', String(config.postId || 0));
+        body.set('widget_id', String(config.widgetId || ''));
+        body.set('ref', ref);
+        return fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString(),
+        }).then((r) => r.json()).then((j) => {
+            const value = j && j.success && j.data ? String(j.data.value || '') : '';
+            if (!value) throw new Error('empty');
+            SECRET_CACHE.set(refEl, value);
+            return value;
+        });
+    }
+    function forgetSecret(refEl) { if (refEl) SECRET_CACHE.delete(refEl); }
+
     function wireSecrets(root, config) {
         // The stage (and every secret inside it) is portaled to <body> while the
         // modal is open, so anything that has to find these later must look in
@@ -3282,13 +3333,19 @@
             return out;
         };
 
-        const setRevealed = (wrap, revealed) => {
+        const setRevealed = (wrap, revealed, value) => {
             const btn   = wrap.querySelector('.dccgg-secret-toggle');
             const valEl = wrap.querySelector('.dccgg-secret-value');
             wrap.classList.toggle('is-revealed', revealed);
             // Real characters in the DOM only while revealed: selectable and
             // long-pressable then, and nowhere in the text layer otherwise.
-            if (valEl) { valEl.textContent = revealed ? (valEl.dataset.secretValue || '') : ''; }
+            // v0.19.0: the text comes from the fetch, not from an attribute —
+            // there is no attribute any more — and re-masking drops the cached
+            // copy as well as the text.
+            if (valEl) {
+                valEl.textContent = revealed ? (value || '') : '';
+                if (!revealed) { forgetSecret(valEl); }
+            }
             if (btn) {
                 btn.setAttribute('aria-expanded', revealed ? 'true' : 'false');
                 const label = revealed
@@ -3315,10 +3372,27 @@
                 e.stopPropagation();
                 const wrap = btn.closest('.dccgg-secret');
                 if (!wrap) return;
-                setRevealed(wrap, !wrap.classList.contains('is-revealed'));
                 // Same tap feedback as the Copy button beside it — they are
-                // presented as peers, so they should behave as peers.
+                // presented as peers, so they should behave as peers. Fired
+                // before the fetch so the tap feels immediate either way.
                 if (config && config.copyEffect) { spawnCopyEffect(btn, config.copyEffect); }
+                if (wrap.classList.contains('is-revealed')) {
+                    setRevealed(wrap, false);
+                    return;
+                }
+                const valEl = wrap.querySelector('.dccgg-secret-value');
+                btn.disabled = true;
+                fetchSecret(root, config, valEl)
+                    .then((value) => { setRevealed(wrap, true, value); })
+                    .catch(() => {
+                        // Fail closed and say nothing false: the row stays
+                        // masked rather than showing an empty "revealed" state
+                        // that reads as "the password is blank".
+                        setRevealed(wrap, false);
+                        showToast((config.strings && config.strings.secretError)
+                            || 'Could not load that just now. Please try again.');
+                    })
+                    .then(() => { btn.disabled = false; });
             });
         });
     }
