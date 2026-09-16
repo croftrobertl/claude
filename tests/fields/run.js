@@ -205,6 +205,10 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
     const border = await page.$eval('#banner',
         el => getComputedStyle(el).borderTopColor);
     check('item 2: and so is its border', border, 'rgb(188, 0, 62)');
+    const ground = await page.$eval('#banner', el => getComputedStyle(el).backgroundColor);
+    check('v0.21.0: the banner ground is white', ground, 'rgb(255, 255, 255)');
+    const bw = await page.$eval('#banner', el => getComputedStyle(el).borderTopWidth);
+    check('v0.21.0: the 2px red border still distinguishes it from the white fields', bw, '2px');
 
     /* --- v0.20.0: the two upload hints match the tax footnote. ----------
        Weight is the one that matters: it is INHERITED on the footnote (from

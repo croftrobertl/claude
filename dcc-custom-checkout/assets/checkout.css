@@ -825,19 +825,19 @@ select.dcc_checkout-invalid {
     margin-bottom: 0;
 }
 
-/* Item 2 (v0.15.0) — the banner is now in the asterisks' own ink.
+/* Item 2 (v0.15.0) — the banner is in the asterisks' own ink; text and border
+ * are both var(--dcc-error), set by the shared rule above, not repeated here.
  *
- * Text and border are both var(--dcc-error); the pale ground stays. #bc003e on
- * #fdecea measures 6.29:1, comfortably past WCAG AA for body text, so the
- * banner reads as one deliberate object in one colour rather than the three
- * different reds it used to be (#611a15 text, #c62828 border, #fdecea ground).
- * The colour itself is set by the shared rule above, not repeated here. */
+ * v0.21.0 — the ground is WHITE (owner decision, having seen the pink).
+ * #bc003e on #ffffff is 6.55:1, higher than the 6.29:1 it had on #fdecea. The
+ * fields are also white, with a gold border; the 2px red border is what keeps
+ * the banner visually distinct from them, so it must stay. */
 .dcc_checkout-error-banner {
     margin: 0 0 20px;
     padding: 14px 18px;
     border-radius: 12px;
     border: 2px solid var(--dcc-error);
-    background: #fdecea;
+    background: #ffffff;
     font-weight: 600;
 }
 

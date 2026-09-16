@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.0
+Stable tag: 0.21.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,13 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.21.0 =
+* The validation banner's ground is white (owner decision, having seen the
+  pink). Text and the 2px border stay in the error ink exactly as they were.
+  #bc003e on white is 6.55:1, up from 6.29:1 on the pink. The fields are white
+  too, with a gold border; the red border is what keeps the banner distinct
+  from them.
 
 = 0.20.0 =
 * A divider above "Extras Total", the shared divider class, keyed on

@@ -323,7 +323,9 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 - **ONE error ink.** `--dcc-required` is *defined as* `--dcc-error`, not a copy
   of its value, so the asterisks, the validation banner and MotoPress's own
   messages cannot drift apart (they had: #611a15 text, #c62828 border, #bc003e
-  asterisks). #bc003e on the banner's #fdecea ground is 6.29:1.
+  asterisks). The banner's ground is WHITE (owner decision, v0.21.0; it was
+  #fdecea at 6.29:1, white is 6.55:1). The fields are white with a gold border,
+  so the banner's 2px red border is what keeps it distinct — never drop it.
 - **Error timing is presentational and never hooks MotoPress's validator**
   (item 1, v0.15.0). The form carries `.dcc_checkout-preflight` from load until
   the first submit attempt (a `submit` event OR a click on a submit control —
