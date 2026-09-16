@@ -582,9 +582,15 @@ class Widget extends Widget_Base
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#f08080',
+            // Writes a TOKEN; it does not emit :hover itself. Elementor's
+            // per-post CSS cannot be wrapped in a media query, so a :hover rule
+            // emitted here lands ungated and sticks on iOS after a tap — which
+            // is exactly what the owner recorded on the next arrow. widget.css
+            // consumes this token inside the one (hover:hover)+(pointer:fine)
+            // guard, and applies it to :focus-visible OUTSIDE that guard,
+            // because keyboard users need focus on every device.
             'selectors' => [
-                self::SEL . '.mphbac-nav-btn:hover'         => 'background-color: {{VALUE}};',
-                self::SEL . '.mphbac-nav-btn:focus-visible' => 'background-color: {{VALUE}};',
+                self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-hover: {{VALUE}};',
             ],
         ]);
 
@@ -1049,9 +1055,12 @@ class Widget extends Widget_Base
         $this->add_control('button_text_color_hover', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
+            // Token, not :hover — see the note on nav_btn_hover_bg. Written on
+            // BSEL itself rather than on .mphbac-root: BSEL is deliberately
+            // global because the booking popup portals outside the widget, and
+            // a custom property inherited only from the root would not reach it.
             'selectors' => [
-                self::BSEL . ':hover'         => 'color: {{VALUE}};',
-                self::BSEL . ':focus-visible' => 'color: {{VALUE}};',
+                self::BSEL => '--mphbac-color-btn-hover-text: {{VALUE}};',
             ],
         ]);
         $this->add_control('button_bg_color_hover', [
@@ -1059,8 +1068,7 @@ class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'default'   => '#f08080',
             'selectors' => [
-                self::BSEL . ':hover'         => 'background-color: {{VALUE}};',
-                self::BSEL . ':focus-visible' => 'background-color: {{VALUE}};',
+                self::BSEL => '--mphbac-color-btn-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -1252,9 +1260,9 @@ class Widget extends Widget_Base
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
+            // Token, not :hover. VSEL is global for the same portal reason.
             'selectors' => [
-                self::VSEL . ':hover'         => 'color: {{VALUE}};',
-                self::VSEL . ':focus-visible' => 'color: {{VALUE}};',
+                self::VSEL => '--mphbac-color-view-hover-text: {{VALUE}};',
             ],
         ]);
         $this->add_control('view_bg_color_hover', [
@@ -1262,8 +1270,7 @@ class Widget extends Widget_Base
             'type'      => Controls_Manager::COLOR,
             'default'   => '#f08080',
             'selectors' => [
-                self::VSEL . ':hover'         => 'background-color: {{VALUE}};',
-                self::VSEL . ':focus-visible' => 'background-color: {{VALUE}};',
+                self::VSEL => '--mphbac-color-view-hover: {{VALUE}};',
             ],
         ]);
         $this->end_controls_tab();
@@ -1697,17 +1704,23 @@ class Widget extends Widget_Base
             <div class="mphbac-filters" role="search">
                 <label class="mphbac-filter mphbac-filter-checkin">
                     <span class="mphbac-filter-label"><?php echo esc_html($settings['str_checkin']); ?></span>
-                    <input type="date" class="mphbac-input mphbac-input-checkin"
-                           name="mphbac_checkin"
-                           min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
-                           autocomplete="off">
+                    <span class="mphbac-field">
+                        <input type="date" class="mphbac-input mphbac-input--empty mphbac-input-checkin"
+                        name="mphbac_checkin"
+                        min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
+                        autocomplete="off">
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                    </span>
                 </label>
                 <label class="mphbac-filter mphbac-filter-checkout">
                     <span class="mphbac-filter-label"><?php echo esc_html($settings['str_checkout']); ?></span>
-                    <input type="date" class="mphbac-input mphbac-input-checkout"
-                           name="mphbac_checkout"
-                           min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
-                           autocomplete="off">
+                    <span class="mphbac-field">
+                        <input type="date" class="mphbac-input mphbac-input--empty mphbac-input-checkout"
+                        name="mphbac_checkout"
+                        min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
+                        autocomplete="off">
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                    </span>
                 </label>
                 <div class="mphbac-filter-actions">
                     <button type="button" class="mphbac-btn mphbac-btn-apply"><?php echo esc_html(self::tc($settings['str_apply'])); ?></button>
@@ -1827,17 +1840,23 @@ class Widget extends Widget_Base
                     <div class="mphbac-sheet-body">
                         <label class="mphbac-sheet-field">
                             <span><?php echo esc_html($settings['str_checkin']); ?></span>
-                            <input type="date" class="mphbac-input mphbac-sheet-checkin"
-                                   name="mphbac_sheet_checkin"
-                                   min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
-                                   autocomplete="off">
+                            <span class="mphbac-field">
+                                <input type="date" class="mphbac-input mphbac-sheet-checkin"
+                                name="mphbac_sheet_checkin"
+                                min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
+                                autocomplete="off">
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                            </span>
                         </label>
                         <label class="mphbac-sheet-field">
                             <span><?php echo esc_html($settings['str_checkout']); ?></span>
-                            <input type="date" class="mphbac-input mphbac-sheet-checkout"
-                                   name="mphbac_sheet_checkout"
-                                   min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
-                                   autocomplete="off">
+                            <span class="mphbac-field">
+                                <input type="date" class="mphbac-input mphbac-sheet-checkout"
+                                name="mphbac_sheet_checkout"
+                                min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
+                                autocomplete="off">
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                            </span>
                         </label>
                         <?php // Estimated-price row (0.20.0). Filled by JS from the
                         // mphbac_price endpoint; stays hidden until a valid range

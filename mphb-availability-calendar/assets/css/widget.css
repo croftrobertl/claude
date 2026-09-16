@@ -159,7 +159,7 @@
     .mphbac-filter-label {
         grid-row: 1;
     }
-    .mphbac-filter .mphbac-input {
+    .mphbac-field {
         grid-row: 2;
         /* The min-width/width pair that used to live here was (0,2,0) and sat
            EARLIER in the file than the (0,2,0) base rule, so it lost the tie
@@ -359,9 +359,67 @@
    empty non-required date input is :valid, :in-range, and NOT
    :placeholder-shown). So widget.js sets .mphbac-input--empty, and this is
    the date-input equivalent of the standard's ::placeholder rule. */
-.mphbac-input.mphbac-input.mphbac-input.mphbac-input--empty::-webkit-datetime-edit {
-    color: var(--dcc-muted);
+/* Blink DOES still paint mm/dd/yyyy in an empty date field, so with the
+   0.31.0 hint span drawing "MM/DD/YY" on top the two would double up. The
+   native text is hidden rather than muted, and the muted colour moved to the
+   span — same result, one renderer. iOS paints nothing here under
+   appearance: none, so this costs nothing there.
+   :not(:focus) matters: once the field is focused the user may be typing a
+   partial date ("10/dd/yyyy"), which renders through this same pseudo tree.
+   Hiding it while focused would make their own keystrokes invisible. */
+.mphbac-input.mphbac-input.mphbac-input.mphbac-input--empty:not(:focus)::-webkit-datetime-edit {
+    color: transparent;
     opacity: 1;
+}
+
+/* ---- THE "MM/DD/YY" HINT (0.31.0, item 1) ----
+   A REGRESSION OF MINE, and the price of the 0.30.0 fix. `appearance: none`
+   is what actually cured the iOS overlap (evidence: in 0.29.0 the popup
+   fields already computed min-width: 0 and the controls still rendered at
+   ~215px and overlapped) — so the reset stays. But it also stops iOS
+   rendering the native empty-field text, and ::-webkit-datetime-edit is not
+   painted under it either, so the hint had to be drawn by hand.
+
+   Absolutely positioned, so it is OUT OF FLOW and cannot contribute to the
+   field's width — the 320px track-fit guard is unaffected by construction,
+   not by tuning. aria-hidden because the <label> already names the field.
+   .mphbac-field exists purely to be the positioning context: the filter's
+   <label> is `display: contents` at ≤600px and therefore has no box of its
+   own to position against. */
+.mphbac-field {
+    position: relative;
+    display: block;
+    min-width: 0;
+    width: 100%;
+}
+.mphbac-field-ph {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;   /* centred, like the value it stands in for */
+    pointer-events: none;      /* the tap must reach the input underneath */
+    /* The VALUE is centred over the text area, with the picker indicator
+       sitting outside it; this span covers the whole padded box, so without
+       an allowance for the indicator the hint centres further right than the
+       value it stands in for and collides with the icon. Reserving its width
+       lines the two up. Where no indicator is painted — iOS under
+       appearance: none, which is the case the owner actually sees — the hint
+       sits a few pixels left of centre, which is the cheaper error. */
+    padding-right: 1.15em;
+    color: var(--dcc-muted);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.3;
+}
+/* Shown only while the field is genuinely empty. widget.js owns the class via
+   markEmpty()/syncEmptyState(), including the programmatic writes that fire no
+   event; the two filter fields also carry it from the server, so the hint is
+   correct before any script runs. Hidden on focus so it cannot double up with
+   whatever the browser draws in an open, empty field. */
+.mphbac-input:not(.mphbac-input--empty) + .mphbac-field-ph,
+.mphbac-input:focus + .mphbac-field-ph {
+    display: none;
 }
 
 /* The standard's ::placeholder rule, kept verbatim and deliberately. It
@@ -518,8 +576,36 @@ input.mphbac-input {
     height: 20px;
 }
 
+/* The control used to emit this itself, along with its :hover twin. It now
+   writes --mphbac-color-nav-hover instead, and the two halves are split by
+   hand: focus-visible HERE, unguarded, because a keyboard user needs it on
+   every device; :hover only inside the pointer guard at the end of the file. */
 .mphbac-nav-btn:focus-visible {
     background-color: var(--mphbac-color-nav-hover);
+}
+/* NOTE, because this is a deliberate omission rather than a gap: the button
+   hover controls used to emit a :focus-visible BACKGROUND as well as a :hover
+   one. That is not re-created here. The DCC field standard is explicit that
+   focus must stay an outline and must never depend on the fill, precisely
+   because white on #f08080 is 2.59:1 — and .mphbac-btn already gets a 2px
+   outline below. Moving these rules out of Elementor's CSS is what made the
+   pre-existing focus fill visible to the harness at all. */
+
+/* NO BACKGROUND TRANSITION ON ANY BUTTON WE OWN (0.31.0, item 2b).
+   Bravada sets `button, input[type=button], input[type=submit],
+   input[type=reset] { transition: background .75s ease-out }` at (0,0,1),
+   and every one of these is a <button> — so a tapped nav arrow faded its
+   hover colour in over three quarters of a second. Measured on the live
+   page as `transition: background 0.75s ease-out` on .mphbac-nav-btn, which
+   sets no transition of its own.
+   `none` rather than a short duration is the owner's standing decision from
+   0.27.0: a colour fade reads as a flicker rather than as a state change.
+   Doubled class (0,2,0) as specified, so it also clears any other theme rule
+   in that neighbourhood rather than only beating the one we found. */
+.mphbac-nav-btn.mphbac-nav-btn,
+.mphbac-btn.mphbac-btn,
+.mphbac-row-toggle.mphbac-row-toggle {
+    transition: none;
 }
 
 /* THEME BUTTON TYPOGRAPHY.
@@ -1438,8 +1524,8 @@ button.mphbac-cell-label {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 .mphbac-info-view-link.mphbac-info-view-link:focus-visible {
-    background: #f08080;
-    color: #ffffff;
+    background-color: var(--mphbac-color-view-hover, #f08080);
+    color: var(--mphbac-color-view-hover-text, #ffffff);
 }
 /* (0,1,1), below VSEL, above the theme's link rules — see input.mphbac-input. */
 a.mphbac-info-view-link {
@@ -2222,9 +2308,13 @@ body.mphbac-info-open {
     /* Now reading the DCC field standard's tokens (0.28.0) rather than
        repeating the literals, so a future --dcc-site-* layer moves this
        with the checkout. The resolved values are unchanged. */
-    .mphbac-btn:hover {
-        background-color: var(--dcc-button-hover-bg);
-        color: var(--dcc-button-hover-fg);
+    /* These three now carry the values the Elementor controls used to emit
+       as their own ungated :hover rules. Everything that changes on hover
+       goes through this guard — that is the whole point of routing the
+       controls through tokens. */
+    .mphbac-btn.mphbac-btn:hover {
+        background-color: var(--mphbac-color-btn-hover, var(--dcc-button-hover-bg));
+        color: var(--mphbac-color-btn-hover-text, var(--dcc-button-hover-fg));
     }
     .mphbac-input.mphbac-input.mphbac-input.mphbac-input::-webkit-calendar-picker-indicator:hover {
         opacity: 1;
@@ -2240,8 +2330,8 @@ body.mphbac-info-open {
         opacity: 1;
     }
     .mphbac-info-view-link.mphbac-info-view-link:hover {
-        background: #f08080;
-        color: #ffffff;
+        background-color: var(--mphbac-color-view-hover, #f08080);
+        color: var(--mphbac-color-view-hover-text, #ffffff);
     }
     .mphbac-sheet-title-link:hover {
         text-decoration-thickness: 2px;

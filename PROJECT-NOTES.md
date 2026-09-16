@@ -1091,6 +1091,82 @@ back; block padding is untouched so the 44px tap target stands.
 **Do not close an iOS-only fault on a harness pass.** That is exactly what
 happened with items 6 and 11, twice, with both parties signing off.
 
+## The pointer guard never covered the controls (0.31.0, item 2a)
+
+`widget.css` keeps every `:hover` rule inside one
+`@media (hover: hover) and (pointer: fine)` block, and `polish-test.js`
+asserts it. **That guard was never the whole story.** Five Elementor controls
+emitted their own `:hover` rules — nav hover background, button hover text and
+background, view-link hover text and background — and those land in
+Elementor's per-post CSS, which cannot be wrapped in a media query and which
+no amount of auditing `widget.css` can see. On iOS a tap applies `:hover` and
+it sticks until the next tap elsewhere; the owner recorded it on the next
+arrow. 0.29.0 made it worse by giving those controls universal defaults, so
+every widget now emitted a sticky rule where some previously emitted none.
+
+**The fix is structural: controls write TOKENS, they never emit `:hover`.**
+Each of the five now writes a custom property (`--mphbac-color-nav-hover`,
+`--mphbac-color-btn-hover`, `--mphbac-color-btn-hover-text`,
+`--mphbac-color-view-hover`, `--mphbac-color-view-hover-text`) and
+`widget.css` consumes it — `:hover` inside the one guard, `:focus-visible`
+outside it, because keyboard users need focus on every device. The button and
+view tokens are written on BSEL/VSEL themselves, not on `.mphbac-root`,
+because those selectors are global for the portal reason and a property
+inherited only from the root would not reach the portaled popup.
+
+Two consequences worth knowing:
+- The hover controls used to emit a `:focus-visible` BACKGROUND as well. That
+  is deliberately NOT re-created for `.mphbac-btn`: the DCC standard says
+  focus must stay an outline and never depend on the fill, because white on
+  `#f08080` is 2.59:1. Moving these rules out of Elementor's CSS is what made
+  that pre-existing focus fill visible to the harness in the first place.
+- A touch context in Chromium really does report `(hover: none)` and
+  `(pointer: coarse)` under `isMobile`/`hasTouch`, so "hovering must not
+  change the colour on touch" is directly assertable. `hover-hint-test.js`
+  asserts it on both sides, with an instrument check on the media query.
+
+## Bravada fades every button over 0.75s (0.31.0, item 2b)
+
+`button, input[type=button], input[type=submit], input[type=reset] {
+transition: background .75s ease-out }` at (0,0,1). `.mphbac-nav-btn` and
+`.mphbac-btn` set no transition of their own, so after the sticky `:hover`
+landed the theme faded the colour in over three quarters of a second — the
+"delayed effect" in the owner's words. Now `transition: none` at (0,2,0), per
+the owner's standing 0.27.0 decision that a colour fade reads as a flicker
+rather than a state change. The test emits the theme rule and checks the
+computed value, with an instrument check that the fixture's theme rule really
+is 0.75s so the pass cannot be vacuous.
+
+## The MM/DD/YY hint (0.31.0, item 1) — the price of the 0.30.0 fix
+
+`appearance: none` is what actually cured the iOS overlap. Evidence, from the
+intermediary: in 0.29.0 the popup fields ALREADY computed `min-width: 0` and
+the controls still rendered at ~215px and overlapped. So `min-width: 0` alone
+did not cure iOS and the reset stays — but it also stops iOS painting the
+native empty-field text, and `::-webkit-datetime-edit` is not painted under it
+either, so the placeholder had to be drawn by hand.
+
+- `.mphbac-field-ph` is absolutely positioned, so it is OUT OF FLOW and
+  cannot widen the field — the 320px track-fit guard holds by construction.
+- `.mphbac-field` exists only to be a positioning context: the filter's
+  `<label>` is `display: contents` at ≤600px and has no box of its own.
+- The two FILTER inputs carry `mphbac-input--empty` from the SERVER, so the
+  hint is correct before any script runs. The popup's two do not, because JS
+  prefills them on open.
+- **Blink still paints its own `mm/dd/yyyy`**, so the native text is hidden
+  (`color: transparent`) rather than muted, or the two double up. It is
+  `:not(:focus)`-scoped: once focused the user may be typing a partial date
+  through that same pseudo tree, and hiding it would make their keystrokes
+  invisible.
+- The hint reserves the picker indicator's width, because the VALUE centres
+  over the text area while an `inset: 0` overlay centres over the whole padded
+  box — without the allowance the hint sits right of the value and collides
+  with the icon.
+
+Bare `:focus` is still banned for STYLING a focus state. The two rules here
+HIDE things while a field is being edited; `polish-test.js` names them
+explicitly and still fails on a third use.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
