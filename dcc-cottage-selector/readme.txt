@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.41.0
+Stable tag: 0.42.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,29 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.42.0 =
+* COPY: the capacity note now reads "Guests 1-2 are included in the nightly rate
+  and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged
+  a nightly fee." 138 bytes, pure ASCII, all three hyphens U+002D, one space
+  between the sentences. Hashed through Config::build() and matched against the
+  sha256 supplied with the wording, so it is identical to the sentence DCC Custom
+  Checkout carries.
+* The note's two sentences now render one per line, as presentation only. The
+  string is untouched: no newline in the literal, still a single Config value, so
+  the character-for-character match with the checkout plugin is unaffected. The
+  markup wraps each sentence in a block-level span and CSS does the rest.
+* This was worth doing rather than cosmetic: measured at 320, 375, 768 and 1280px
+  the sentence boundary fell MID-LINE at every width, so the two ran together as
+  one block of prose. It is now four lines instead of three, each sentence
+  starting its own.
+* The split is guarded to notes of EXACTLY two sentences. The pet note (one
+  sentence) is untouched, and a translation with no ". " — or one whose
+  abbreviation yields three or more parts — falls through to a single block,
+  which is the behaviour that existed before. A literal space between the spans
+  keeps textContent identical to the Config string, so screen readers and
+  copy-paste are unaffected; whitespace between block boxes is never painted.
+* An owner-set fee link, when one is configured, stays with the closing sentence.
 
 = 0.41.0 =
 * COPY: the capacity note now reads "Guests 1-2 are included in the nightly rate

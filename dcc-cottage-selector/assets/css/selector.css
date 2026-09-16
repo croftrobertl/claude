@@ -330,6 +330,10 @@
   margin: 12px auto 0; max-width: 46ch; text-align: var(--dccs-question-align, center);
   color: var(--dccs-muted); font-size: 0.88rem; line-height: 1.4; font-weight: 500;
 }
+/* One sentence per line when a note has exactly two — see noteSentences() in
+   selector.js. Block-level, so the whitespace between the spans collapses and
+   nothing is painted for it, while textContent keeps the original spacing. */
+.dccs-root.dccs-root .dccs-q-note-s { display: block; }
 .dccs-root.dccs-root .dccs-q-note-link { color: var(--dccs-accent); font-weight: 600; }
 
 /* ---- Dates step + availability (0.24.0) ---- */

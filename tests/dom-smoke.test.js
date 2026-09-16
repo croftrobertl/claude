@@ -1265,11 +1265,14 @@ function configWith(overrides) {
   const cfgNotes = JSON.parse(CONFIG).strings;
   ok('party step shows the capacity note',
     !!note && note.textContent.indexOf(cfgNotes.capacity_note) !== -1);
-  ok('the capacity note is the current wording, not the superseded one',
+  ok('the capacity note is the current wording, not a superseded one',
     /^Guests 1-2 are included in the nightly rate/.test(cfgNotes.capacity_note)
-    && !/For guests 3 and 4, a nightly fee will apply/.test(cfgNotes.capacity_note));
-  ok('capacity note still says what guests 3 and 4 sleep on',
-    /[Gg]uests 3 and 4[\s\S]*pull-out couch/.test(note.textContent));
+    // every wording this note has carried before, each ruled out explicitly
+    && !/For guests 3 and 4, a nightly fee will apply/.test(cfgNotes.capacity_note)
+    && !/^2 guests are included/.test(cfgNotes.capacity_note)
+    && !/an additional nightly fee/.test(cfgNotes.capacity_note));
+  ok('capacity note still says what guests 3-4 sleep on',
+    /[Gg]uests 3-4[\s\S]*pull-out couch/.test(note.textContent));
   ok('no fee link renders while the URL control is empty (default)', !note.querySelector('a'));
   ok('capacity note carries no fee amount', note.textContent.indexOf('$') === -1);
   answerNext(root, 'either');
@@ -2664,6 +2667,76 @@ defer(async function () {
   ok('and the highlighted-extra arrangement was actually exercised', extraCase > 0);
   // The invariant: on screen together => both annotated, on every rotation.
   ok('whenever both twins are on screen, both carry the note', bothNoted === bothShown);
+})();
+
+// ---- 84. 0.42.0: a two-sentence question note renders one sentence per line ----
+// Presentation only. The literal is never touched — no newline in the string, and
+// it stays a single Config value so it can match the checkout plugin's copy
+// character for character. Which line each sentence PAINTS on is measured in
+// Chromium; this pins the structure and, crucially, that the text is unchanged.
+(function () {
+  const cfg = JSON.parse(CONFIG);
+
+  const noteFor = (cfgStr, step) => {
+    const w = freshDom();
+    const root = mountSelector(w, cfgStr);
+    enter(root, 'quick');
+    for (let i = 0; i < step; i++) { answerNext(root, 'either'); }
+    return root.querySelector('.dccs-q-note');
+  };
+
+  // --- the capacity note: exactly two sentences, so it splits ---
+  const cap = noteFor(CONFIG, 0);
+  ok('the party step still renders a note', !!cap);
+  const parts = Array.prototype.slice.call(cap.querySelectorAll('.dccs-q-note-s'));
+  ok('the two-sentence note renders as two blocks', parts.length === 2);
+  ok('the first block is the first sentence, terminated',
+    parts.length === 2 && /\.$/.test(parts[0].textContent)
+    && parts[0].textContent === cfg.strings.capacity_note.split('. ')[0] + '.');
+  ok('the second block is the rest',
+    parts.length === 2 && parts[1].textContent === cfg.strings.capacity_note.split('. ')[1]);
+  // THE POINT OF THE GUARD: splitting must not alter what is read out or copied.
+  ok('the note still reads as the unmodified Config string',
+    cap.textContent === cfg.strings.capacity_note);
+  ok('and no newline was introduced anywhere', cap.textContent.indexOf('\n') === -1);
+  ok('the literal in Config carries no newline either',
+    cfg.strings.capacity_note.indexOf('\n') === -1);
+
+  // --- the pet note is ONE sentence: it must NOT be split ---
+  // (Positive control for the negative: the capacity assertions above prove the
+  // detector finds .dccs-q-note-s when it is there.)
+  const pet = noteFor(CONFIG, 5);
+  ok('the pet step renders a note too', !!pet && pet.textContent.length > 10);
+  ok('a one-sentence note is left as a single block',
+    !!pet && pet.querySelectorAll('.dccs-q-note-s').length === 0);
+  ok('and it still reads as its Config string', !!pet && pet.textContent === cfg.strings.pet_note);
+
+  // --- three sentences fall through to one block, rather than splitting oddly ---
+  const three = JSON.parse(CONFIG);
+  three.strings.capacity_note = 'One here. Two here. Three here.';
+  const c3 = noteFor(JSON.stringify(three), 0);
+  ok('a three-sentence note is not split', !!c3 && c3.querySelectorAll('.dccs-q-note-s').length === 0);
+  ok('and it renders whole', !!c3 && c3.textContent === 'One here. Two here. Three here.');
+
+  // --- the optional fee link stays with the closing sentence ---
+  const linked = JSON.parse(CONFIG);
+  linked.capacityFeeUrl = 'https://example.com/fees';
+  const cl = noteFor(JSON.stringify(linked), 0);
+  const clParts = Array.prototype.slice.call(cl.querySelectorAll('.dccs-q-note-s'));
+  ok('the linked note still splits in two', clParts.length === 2);
+  ok('the fee link renders at all', !!cl.querySelector('.dccs-q-note-link'));
+  ok('and it sits inside the SECOND sentence, where it was before',
+    clParts.length === 2 && !clParts[0].querySelector('a') && !!clParts[1].querySelector('a'));
+})();
+
+// ---- 85. 0.42.0: the per-sentence span is block-level, or nothing changes ----
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8');
+  const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const i = cssCode.indexOf('.dccs-q-note-s {');
+  ok('the per-sentence rule exists', i !== -1);
+  const body = i === -1 ? '' : cssCode.slice(cssCode.indexOf('{', i), cssCode.indexOf('}', i));
+  ok('and it is block-level, so each sentence starts a line', /display:\s*block/.test(body));
 })();
 
 (async function runDeferred() {

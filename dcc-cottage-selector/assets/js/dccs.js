@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.41.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.42.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -875,6 +875,24 @@
       the party-size step, the pet policy on the pet step. Each may carry an
       optional owner-set link (default empty -> no link). No fee amounts here —
       those live in exactly one place, elsewhere on the site. */
+  /** Presentation only: a note that is EXACTLY two sentences renders each on its
+      own line. The capacity sentence pair collided mid-line at every width
+      measured (320/375/768/1280), so the two ran together as one block of prose.
+      The STRING is never touched — no newline goes into the literal, and it stays
+      a single Config value so it can match the same sentence in the checkout
+      plugin character for character.
+
+      Guarded to exactly two parts. A translation with no ". " (Japanese, say) or
+      one whose abbreviation yields three or more parts falls through to a single
+      block, which is precisely the behaviour before this existed. A literal space
+      sits between the two spans so textContent still reads as the original
+      sentence for assistive tech and for copy-paste; whitespace between two
+      block-level boxes is collapsed and never painted. */
+  function noteSentences(text) {
+    var parts = text.split('. ');
+    return parts.length === 2 ? [parts[0] + '.', parts[1]] : null;
+  }
+
   function questionNote(config, group) {
     var S = config.strings;
     var text = '', url = '';
@@ -882,6 +900,14 @@
     if (group === 'pet') { text = S.pet_note || ''; url = config.petFeeUrl || ''; }
     if (!text) { return ''; }
     var link = url ? ' <a class="dccs-q-note-link" href="' + esc(safeUrl(url)) + '">' + esc(S.fee_link) + '</a>' : '';
+    var two = noteSentences(text);
+    if (two) {
+      // The optional fee link stays with the closing sentence, where it was.
+      return '<p class="dccs-q-note">' +
+        '<span class="dccs-q-note-s">' + esc(two[0]) + '</span> ' +
+        '<span class="dccs-q-note-s">' + esc(two[1]) + link + '</span>' +
+        '</p>';
+    }
     return '<p class="dccs-q-note">' + esc(text) + link + '</p>';
   }
 

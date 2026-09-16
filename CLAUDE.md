@@ -153,6 +153,16 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   were allowed. If the quiz is ever asked to disclose it, the only honest form
   without a number is "a nightly fee that decreases for longer stays" — and that
   is the owner's wording to approve, not ours to write.
+- **A two-sentence question note is split for DISPLAY, never in the string.**
+  `noteSentences()` in `selector.js` wraps each sentence in a block-level span so
+  they do not run together mid-line — measured at 320/375/768/1280, the capacity
+  note's sentence boundary fell mid-line at every width. The literal must stay a
+  single Config value with no newline in it: the same sentence lives in DCC Custom
+  Checkout and the two are kept identical character for character (hashed, not
+  eyeballed). The split is guarded to EXACTLY two parts, so a one-sentence note
+  and any translation that does not yield two fall through to a single block; and
+  a literal space between the spans keeps `textContent` identical to the Config
+  string for assistive tech and copy-paste.
 - **`capacity_note` and `pet_note` are load-bearing content, not placeholders.**
   From 0.39.0 the packaged strings are the ONLY copy of that wording on the site:
   the per-widget `str_` overrides that carried it are being removed from all three
