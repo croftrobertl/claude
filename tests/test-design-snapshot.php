@@ -219,8 +219,8 @@ namespace {
     // instances, so these two strings become the only copy of it on the site.
     // They are content, not a placeholder — changing either sends new words
     // straight to guests, so a change here should be a decision, not a tidy-up.
-    $CAPACITY = '2 guests are included in the nightly rate and will have a queen bed. '
-        . 'Guests 3 and 4 will have a pull-out couch and be charged a nightly fee.';
+    $CAPACITY = 'Guests 1-2 are included in the nightly rate and will have a queen bed. '
+        . 'Guests 3 and 4 will have a pull-out couch and be charged an additional nightly fee.';
     $PET = 'Pets are welcome in Cottage 34 only and must be pre-approved.';
 
     ok('capacity note falls back to the Config default (live wording)',

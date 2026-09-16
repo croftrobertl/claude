@@ -1266,7 +1266,7 @@ function configWith(overrides) {
   ok('party step shows the capacity note',
     !!note && note.textContent.indexOf(cfgNotes.capacity_note) !== -1);
   ok('the capacity note is the current wording, not the superseded one',
-    /^2 guests are included in the nightly rate/.test(cfgNotes.capacity_note)
+    /^Guests 1-2 are included in the nightly rate/.test(cfgNotes.capacity_note)
     && !/For guests 3 and 4, a nightly fee will apply/.test(cfgNotes.capacity_note));
   ok('capacity note still says what guests 3 and 4 sleep on',
     /[Gg]uests 3 and 4[\s\S]*pull-out couch/.test(note.textContent));

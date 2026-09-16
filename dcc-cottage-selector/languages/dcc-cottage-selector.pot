@@ -37,10 +37,6 @@ msgstr ""
 msgid "1-bedroom separation"
 msgstr ""
 
-#: includes/class-config.php:177
-msgid "2 guests are included in the nightly rate and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be charged a nightly fee."
-msgstr ""
-
 #: includes/class-config.php:94
 msgid "3-4"
 msgstr ""
@@ -541,6 +537,10 @@ msgstr ""
 
 #: includes/class-config.php:43
 msgid "Guests"
+msgstr ""
+
+#: includes/class-config.php:177
+msgid "Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be charged an additional nightly fee."
 msgstr ""
 
 #: includes/class-selector-widget.php:1284

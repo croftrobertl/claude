@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.40.0
+Stable tag: 0.41.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,18 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.41.0 =
+* COPY: the capacity note now reads "Guests 1-2 are included in the nightly rate
+  and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be
+  charged an additional nightly fee." One string; nothing else changed.
+* The stored per-widget overrides are gone as of 0.40.0, so this packaged default
+  is the only copy of that wording on the site and reaches guests directly.
+* The same sentence is used by DCC Custom Checkout and the two must match
+  character for character. It is pure ASCII, 154 bytes, with ordinary
+  hyphen-minus (U+002D) in both "1-2" and "pull-out" — no en dash, no spaces
+  around either hyphen. A test already fails on an en dash in any visible string,
+  and the wording is pinned in both suites.
 
 = 0.40.0 =
 * The capacity and pet note controls are now PLACEHOLDER-only, so the packaged
