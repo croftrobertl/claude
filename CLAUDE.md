@@ -338,7 +338,28 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   80-110ms should now click. If they do not, the hypothesis is wrong — and the
   next step is replacing the anchor with a real `<button>`, which is the one
   control in that log that never failed.
-- **The breakdown expander is deliberately not a hyperlink** (v0.16.0).
+- **The breakdown expander is a real `<button>`** (v0.17.0). `hardenTapTargets()`
+  replaces the `<a>` node, carrying every class over — MotoPress's handler is
+  delegated on `.mphb-price-breakdown-expand` (`mphb.js:1446`) — with
+  `type="button"` so it can never submit. **Do not re-add a keyboard handler:**
+  a native button activates on Enter and Space, and the one v0.16.0 needed for
+  a hrefless `<a>` would toggle twice. Evidence: the tax asterisk (a button) is
+  4 of 4 across four tap logs at 64-96ms; the expander failed 15 of 18 clean
+  taps as an `<a>` and as an `<a>` without href.
+- **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
+  spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
+  a full-width blue pill inside the price breakdown — measured at
+  `rgb(0, 107, 207)`, 30px radius, before it shipped. The class is what the
+  spec excludes; the tax asterisk carries it too, replacing an
+  exclusion-by-name repeated in three selectors. **Add the class, never another
+  `:not()`.** Asserted in `tests/fields/`.
+- **The restructure pipeline never runs while a finger is down** (v0.17.0).
+  `observeReRenders()` holds while a touch is live and for 400ms after it
+  lifts, on a 500ms debounce (was 150ms), with a 3s ceiling so it cannot be
+  starved. Evidence: every press in tap-log rounds 3 and 4 that carried the
+  pipeline's ~100-attribute burst mid-tap failed, 6 of 6. **Any new work
+  scheduled off that observer must respect the same gate** — `touchSettling()`.
+- **(v0.16.0, superseded but still in force) The expander is not a hyperlink.**
   `hardenTapTargets()` removes its `href` (kept in `data-dcc-href`) and gives
   back `role="button"`, `tabindex="0"` and Enter/Space activation. iOS arms its
   link recognisers on the HREF, not on the tag. MotoPress's handler is
@@ -355,6 +376,29 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   settle it. If that is the mechanism, the hover rule responsible is NOT one of
   this plugin's (all of ours are gated behind `hover: hover`) — look at the
   theme and at MotoPress's own CSS.
+  **Eliminated on the live page (measured 2026-09-17 — do not re-chase):**
+  Bravada's document `mousemove` is never bound here (`mousedir()` returns
+  unless `<body>` has `.bravada-landing-page`); this plugin's only `mouseenter`
+  is on the asterisk and gated by `pointerHasHover()`; the served 474KB bundle
+  AND the 17 inline `<style>` blocks (the Elementor kit is inline, not in the
+  bundle) contain exactly two ungated hover rules that can match the anchor
+  chain — `a:hover{color:#000}` and `a:hover,a:active{outline:0}` — with no
+  transition on it; no Elementor hover/motion settings are stored on the
+  container or the widget; no focus handlers in `checkout.js` or `mphb.js`; and
+  SpeedyCache's instant.page (document-level mouseover + touchstart, treating
+  `href="#"` as prefetchable) was switched off site-wide by the owner on
+  2026-09-16 and is gone from the served page.
+  **Unconfirmed hypothesis, labelled as such:** WebKit's iOS content
+  observation — a synthetic mousemove precedes the click, and if content
+  changes, a transition starts, or a short DOM timer is installed during it, no
+  click is dispatched (webkit.org/blog/5610). It fits the alternation and the
+  button's immunity, and v0.17.0's pipeline hold targets it — but it is NOT
+  confirmed on this site, and round 4's press 6 (failed, no mutation burst,
+  colour-only hover) is not explained by it or by anything else found.
+  **SpeedyCache serves a stale bundle after every install.** It handed out
+  0.15.0 after 0.16.0 shipped, and did the same a release earlier. Purging is
+  part of every install now — a log that disagrees with the source may simply
+  be the previous build.
 - **Every tap log must identify its own build.** Round 4 arrived with no
   version and could not be attributed without asking, which cost a round. The
   diagnostic now stamps `DCC_CHECKOUT_VERSION` in its header and records, per
