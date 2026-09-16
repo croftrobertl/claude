@@ -409,7 +409,21 @@
     padding-right: 1.15em;
     color: var(--dcc-muted);
     font-family: inherit;
-    font-size: inherit;
+    /* Match the VALUE, not the surroundings — empty and filled have to read as
+       one field. Two traps, both hit here:
+       WEIGHT. This site sets `html { font-weight: 700 }`, so a span that says
+       nothing inherits 700 all the way down and the hint shipped bold in
+       0.31.0 while the value rendered at 300. Every plugin on this site has
+       hit that default. 300 is what the Filter Fields typography control
+       currently sets on the input; it is pinned here rather than tracked,
+       because a sibling cannot read the input's computed weight. If that
+       control is ever changed, change this with it.
+       SIZE. `inherit` is NOT the same as the input's size: the input uses
+       max(16px, 1em) — the iOS zoom guard — and in the booking popup the
+       surrounding .mphbac-sheet-field is 0.95em, so plain inherit would give
+       the hint 15.2px against a 16px value. Same expression, same result. */
+    font-weight: 300;
+    font-size: max(16px, 1em);
     line-height: 1.3;
 }
 /* Shown only while the field is genuinely empty. widget.js owns the class via
@@ -491,11 +505,14 @@ input.mphbac-input {
     padding: 0.5em 0.9em;
     border: 0;
     border-radius: var(--mphbac-radius);
-    /* Kept in step with the button_bg_color control default (0.29.0).
+    /* Rest colours come through TOKENS as of 0.31.1, for the same reason the
+       hover ones do: the control used to emit background-color directly at
+       (0,6,0), which out-specified the hover rule here and killed it. The
+       literals are the fallbacks, and stay in step with the control defaults —
        Elementor's cached per-post CSS does not regenerate on a plugin update,
-       so on a page that has not been re-saved THIS is what paints. */
-    background: #0A50B2;
-    color: #ffffff;
+       so on a page that has not been re-saved THESE are what paint. */
+    background-color: var(--mphbac-color-btn-bg, #0A50B2);
+    color: var(--mphbac-color-btn-text, #ffffff);
     font: inherit;
     line-height: 1.3;
     cursor: pointer;
@@ -1507,10 +1524,11 @@ button.mphbac-cell-label {
     align-items: center;
     gap: 0.4em;
     align-self: flex-start;
-    /* Matches the view_bg_color control default, which 0.29.0 gave a value
-       for the first time — before that a fresh widget had no colour here. */
-    background: #0A50B2;
-    color: #ffffff;
+    /* Tokens, as for .mphbac-btn above. The fallbacks match the view_bg_color
+       and view_text_color control defaults, which 0.29.0 gave a value for the
+       first time — before that a fresh widget had no colour here. */
+    background-color: var(--mphbac-color-view-bg, #0A50B2);
+    color: var(--mphbac-color-view-text, #ffffff);
     border: 0;
     border-radius: 999px;
     padding: 0.5em 1.1em;

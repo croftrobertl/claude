@@ -1167,6 +1167,70 @@ Bare `:focus` is still banned for STYLING a focus state. The two rules here
 HIDE things while a field is being edited; `polish-test.js` names them
 explicitly and still fails on a third use.
 
+## Rest and hover must resolve in the same place (0.31.1, item 3)
+
+0.31.0 moved the HOVER half of the colour controls into `widget.css` and left
+the REST half in Elementor, where it is emitted at post+wrapper specificity —
+measured `(0,6,0)`. So the resting colour out-specified the `(0,2,0)` hover
+rule and **the nav arrows stopped changing on hover at all, on desktop as well
+as on touch.** Show/Reset and the View link survived only because their rest
+rule is `.mphbac-btn.mphbac-btn` `(0,2,0)` and their hover is `(0,3,0)`.
+
+The rule that falls out of this: **anything with a hover state has BOTH halves
+as tokens.** Raising the hover selector to out-specify `(0,6,0)` would have
+worked and left the trap armed for whoever touches it next.
+`hover-hint-test.js` reproduces the trap deliberately — a rest colour emitted
+as a paint property at `(0,6,0)` still beats the hover rule — and separately
+asserts that no rest control on a hoverable element emits a paint property.
+
+### Three fixture faults found while testing this, all of the same family
+
+The fixture disagreed with the page, and each time the test went GREEN.
+
+1. **Hand-written Elementor CSS goes stale.** The first reproduction still
+   emitted `background-color` after the controls had been changed to write
+   tokens, so the fix "failed". `emitted.js` now BUILDS the panel CSS from the
+   PHP `selectors` arrays, so a fixture cannot describe output the plugin does
+   not produce.
+2. **An invalid selector is dropped silently, and the element then reads the
+   stylesheet's own fallback token** — indistinguishable from success when the
+   fixture uses realistic colours. A leftover PHP concatenation dot produced
+   `.mphbac-root . .mphbac-nav-btn`. Two defences: build the selector by
+   evaluating the expression rather than regexing the dots away, and use
+   SENTINEL colours (`rgb(1,2,3)`) that can never be confused with a fallback.
+   The sentinels caught it immediately; realistic colours had hidden it.
+3. **The fixture did not carry `html { font-weight: 700 }`**, which this site
+   sets, so a span declaring no weight computed 400 in the harness and 700 on
+   the page. That is exactly how the 0.31.0 hint shipped bold.
+
+Also: `/<div class="x">[\s\S]*?<\/div>\s*<\/div>/` on the filter row runs
+**14 divs deep into the info popup** and returns unbalanced markup, which then
+nests whatever the fixture appends inside a `[hidden]` container — an element
+invisible for reasons nothing in the fixture explains. `extractBlock()`
+balances tags instead.
+
+## The hint's weight and size (0.31.1, items 1 and 2)
+
+Text is now exactly `mm/dd/yyyy`. Two things it must match — the VALUE, not
+the surroundings:
+- **Weight.** `html { font-weight: 700 }` sitewide, so a span that says
+  nothing is bold. Pinned to 300, which is what the Filter Fields typography
+  control sets on the input; a sibling cannot read the input's computed
+  weight, so if that control changes, change this with it.
+- **Size.** `inherit` is NOT the input's size: the input uses
+  `max(16px, 1em)` for the iOS zoom guard, and in the booking popup
+  `.mphbac-sheet-field` is `0.95em`, so plain inherit gives 15.2px against a
+  16px value. Same expression, same result.
+
+The hint also reserves the picker indicator's width: the value centres over
+the text area while an `inset: 0` overlay centres over the whole padded box.
+
+**NOT BUILT, pending the owner's decision:** touch feedback. With the pointer
+guard in place there is deliberately no hover colour on a tap. The
+touch-correct form is a PRESSED state — `:active` in the hover colour,
+ungated — which paints while the finger is down and clears on release without
+sticking. Do not ship it until he says yes.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

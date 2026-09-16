@@ -568,14 +568,21 @@ class Widget extends Widget_Base
             // stored widget settings so a ninth cottage, or a settings reset,
             // is born correct — see PROJECT-NOTES, "Defaults are the contract".
             'default'   => '#0A50B2',
-            'selectors' => [self::SEL . '.mphbac-nav-btn' => 'background-color: {{VALUE}};'],
+            // TOKEN, not background-color. 0.31.0 moved the HOVER half into
+            // widget.css but left this half here, where Elementor emits it at
+            // (0,6,0) — so the resting colour out-specified the (0,2,0) hover
+            // rule and the nav arrows stopped changing on hover at all, on
+            // desktop as well as touch. Rest and hover have to resolve at the
+            // SAME place: both are now tokens consumed by widget.css. Raising
+            // the hover selector instead would work and leave the trap armed.
+            'selectors' => [self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-bg: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_text', [
             'label'     => __('Button arrow color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
-            'selectors' => [self::SEL . '.mphbac-nav-btn' => 'color: {{VALUE}};'],
+            'selectors' => [self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-text: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_hover_bg', [
@@ -1034,7 +1041,7 @@ class Widget extends Widget_Base
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#ffffff',
-            'selectors' => [self::BSEL => 'color: {{VALUE}};'],
+            'selectors' => [self::BSEL => '--mphbac-color-btn-text: {{VALUE}};'],
         ]);
         $this->add_control('button_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
@@ -1045,7 +1052,7 @@ class Widget extends Widget_Base
             // that being a coin flip — a per-widget value cannot, it just adds
             // another competing rule.
             'default'   => '#0A50B2',
-            'selectors' => [self::BSEL => 'background-color: {{VALUE}};'],
+            'selectors' => [self::BSEL => '--mphbac-color-btn-bg: {{VALUE}};'],
         ]);
         $this->end_controls_tab();
 
@@ -1237,13 +1244,13 @@ class Widget extends Widget_Base
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
-            'selectors' => [self::VSEL => 'color: {{VALUE}};'],
+            'selectors' => [self::VSEL => '--mphbac-color-view-text: {{VALUE}};'],
         ]);
         $this->add_control('view_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0A50B2',
-            'selectors' => [self::VSEL => 'background-color: {{VALUE}};'],
+            'selectors' => [self::VSEL => '--mphbac-color-view-bg: {{VALUE}};'],
         ]);
         $this->add_control('view_icon_color', [
             'label'     => __('Icon color', 'mphb-availability-calendar'),
@@ -1709,7 +1716,7 @@ class Widget extends Widget_Base
                         name="mphbac_checkin"
                         min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                         autocomplete="off">
-                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
                     </span>
                 </label>
                 <label class="mphbac-filter mphbac-filter-checkout">
@@ -1719,7 +1726,7 @@ class Widget extends Widget_Base
                         name="mphbac_checkout"
                         min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                         autocomplete="off">
-                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                        <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
                     </span>
                 </label>
                 <div class="mphbac-filter-actions">
@@ -1845,7 +1852,7 @@ class Widget extends Widget_Base
                                 name="mphbac_sheet_checkin"
                                 min="<?php echo esc_attr($today->format('Y-m-d')); ?>"
                                 autocomplete="off">
-                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
                             </span>
                         </label>
                         <label class="mphbac-sheet-field">
@@ -1855,7 +1862,7 @@ class Widget extends Widget_Base
                                 name="mphbac_sheet_checkout"
                                 min="<?php echo esc_attr($today->modify('+' . $min_nights . ' days')->format('Y-m-d')); ?>"
                                 autocomplete="off">
-                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('MM/DD/YY', 'mphb-availability-calendar'); ?></span>
+                                <span class="mphbac-field-ph" aria-hidden="true"><?php echo esc_html__('mm/dd/yyyy', 'mphb-availability-calendar'); ?></span>
                             </span>
                         </label>
                         <?php // Estimated-price row (0.20.0). Filled by JS from the
