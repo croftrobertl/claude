@@ -437,6 +437,33 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   `matchFileFieldWidth()` did exactly that on a 150ms debounce, landing just as
   the page settled and the guest tapped. It now ignores height-only resizes and
   skips no-op writes. Any new resize handler must do the same.
+- **MOBILE MULTI-TAP: CLOSED (v0.18.0, confirmed on the owner's phone
+  2026-09-17).** Round-6 log, build stamped 0.18.0: 8 of 8 stationary presses
+  clicked on the first tap — the breakdown expander (which had failed 15 of 18
+  across rounds 1–4), three text inputs, empty space, and the asterisk four
+  times, at 42–61ms. The only three presses without a click travelled
+  100–180px and were correctly cancelled as scrolls. Mutations mid-tap fell
+  from ~107 to exactly the diagnostic's own log lines (4 per press; 5 on the
+  press that also logged a MISSED line; 3 on one cancelled before touchend) —
+  the plugin contributes zero.
+  **The two changes that fixed it, and they are both load-bearing:**
+  (1) v0.17.0 — the expander is a real `<button>` (bare-control class, no
+  keyboard handler); (2) v0.18.0 — every DOM write is idempotent, so a
+  pipeline re-run with nothing to do records ZERO mutations, and the observer
+  installs no timer while a finger is down. **Neither may be "simplified"
+  away; the zero-mutation assertion in `tests/breakdown` is the guard.**
+  Mechanism, now supported rather than hypothesised: iOS content observation —
+  the page was rewriting ~100 attributes on a 150ms timer after every
+  breakdown change, which landed inside the next tap and read to Safari as
+  hover-revealed content, so no click was synthesised. That also explains the
+  round-4 fail→success alternation (a successful toggle scheduled the burst
+  that killed the following tap) and the button's apparent immunity (its own
+  handler never re-rendered the breakdown). `ALREADY :HOVER` was logged on
+  every press in round 6, including all eight successes, so sticky hover is
+  ruled out as the cause.
+  The diagnostic (`?dcc_tap_debug=1`) stays — admin-only, flag-gated, zero
+  cost — as the instrument for any regression.
+  *History follows, kept for the record.*
 - **Mobile multi-tap: cause partly identified (v0.13.0).** Gating the hover rules (v0.11.0) fixed
   desktop and did not fix mobile, so sticky hover is not the whole cause. Two
   in-plugin candidates were tested in v0.12.0: a self-feeding MutationObserver
