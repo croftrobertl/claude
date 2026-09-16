@@ -161,6 +161,32 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
     atMost('desktop: no dead strip on the right', Math.abs(wide.right), 1);
     await desk.close();
 
+    /* --- Item 6: the tap-gesture rules are actually applied. ------------
+       This proves the declarations reach the element. It does NOT prove iOS
+       stops eating the tap — only the owner's phone can say that. --------- */
+    const tap = await page.$eval('#expander', el => {
+        const cs = getComputedStyle(el);
+        return {
+            touchAction: cs.touchAction,
+            callout: cs.webkitTouchCallout || '(unsupported in this engine)',
+            select: cs.userSelect || cs.webkitUserSelect,
+        };
+    });
+    check('item 6: the expander declares touch-action: manipulation',
+          tap.touchAction, 'manipulation');
+    check('item 6: text selection is off on the expander', tap.select, 'none');
+
+    /* --- Items 1+2: ONE ink. The whole point is that these cannot drift. -- */
+    const inks = await page.evaluate(() => {
+        const read = sel => getComputedStyle(document.querySelector(sel)).color;
+        return { banner: read('#banner'), req: read('#req') };
+    });
+    check('item 2: the banner is the asterisk red', inks.banner, 'rgb(188, 0, 62)');
+    check('item 10: the required marker is the same red', inks.req, inks.banner);
+    const border = await page.$eval('#banner',
+        el => getComputedStyle(el).borderTopColor);
+    check('item 2: and so is its border', border, 'rgb(188, 0, 62)');
+
     /* --- The label must not underline the guest's typed text (v0.12.0),
            re-asserted here because the kit rule is reproduced. ---------- */
     const labelDeco = await page.$eval('#mphb_first_name',

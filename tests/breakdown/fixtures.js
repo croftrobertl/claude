@@ -208,7 +208,34 @@ const totalWithoutBreakdown = `
 <p>Accepted file types: jpeg, jpg, png, pdf, webp, heic.</p>
 <p class="mphb-total-price">Total Price: $588.50</p>`;
 
+// Same booking as servicesWithDetails, but the SUMMARY row is a plain
+// "Subtotal" with no "(excluding taxes)" qualifier. Item 4 (v0.15.0): the
+// divider above Subtotal was targeted at a row found by that qualifier, so on
+// this shape there was no Subtotal row to target and no divider was drawn.
+const plainSubtotal = `
+<table>
+  <tr class="mphb-price-breakdown-booking">
+    <td><a href="#" class="mphb-price-breakdown-expand">-</a> #1 Cottage 36: Sunshine Suite</td><td>$588.50</td>
+  </tr>
+  <tr><td>
+    <table>
+      <tr><td>Nights</td><td>2</td></tr>
+      <tr><td>Dates</td><td>Amount</td></tr>
+      <tr><td>September 17, 2026</td><td>$175</td></tr>
+      <tr><td>September 18, 2026</td><td>$175</td></tr>
+      <tr><td>Accommodation Total</td><td>$350</td></tr>
+      <tr><td>Services</td><td></td></tr>
+      <tr><td>Service</td><td>Details</td><td>Amount</td></tr>
+      <tr><td>Extra Guest Fee (per guest beyond 2)</td><td>$50 x 2 nights x 2 guests</td><td>$200</td></tr>
+      <tr><td>Services Total</td><td></td><td>$200</td></tr>
+    </table>
+  </td></tr>
+  <tr><td>Subtotal</td><td>$550</td></tr>
+  <tr><td>Taxes</td><td>$38.50</td></tr>
+  <tr><td>Total</td><td>$588.50</td></tr>
+</table>`;
+
 module.exports = {
     withService, noService, twoAccommodations, renamedLabels, sharedSection,
-    servicesWithDetails, totalWithoutBreakdown
+    servicesWithDetails, totalWithoutBreakdown, plainSubtotal
 };

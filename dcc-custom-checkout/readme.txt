@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.14.0
+Stable tag: 0.15.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,65 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.15.0 =
+* FIXED, and it is the most serious thing in this release: hideNativeServices()
+  could hide the ENTIRE CHECKOUT. serviceRowWrapper() walks up from a service
+  checkbox looking for its row and its last fallback is input.parentNode, with
+  nothing above it -- so a checkbox sitting close to the form root resolved to
+  the <form>, which then got the hide class and took every field, the price
+  breakdown and the submit button with it. A guest would see a blank checkout
+  and nothing saying why. MotoPress nests these inside a services section
+  today, so this was latent rather than live. There is now a ceiling: nothing
+  containing the price breakdown, the customer details, another service's
+  checkbox, or the form itself can be a service row. Found by rendering the
+  test fixture and printing what was actually visible -- which was nothing.
+* Item 4 - the divider above "Subtotal", asked for twice. It WAS targeted at
+  that row in 0.14.0; what it could not do was find the row. The matcher keyed
+  on "Subtotal (excluding taxes)", and a breakdown whose summary line is a
+  plain "Subtotal" has no such row, so nothing was marked. The divider now
+  takes the last subtotal on the page, read from MotoPress's own text before
+  the relabel rewrites that cell. A fixture with a plain "Subtotal" proves it,
+  and fails against 0.14.0.
+* Item 2 - the validation banner now reads "Please complete all of the required
+  fields." and is the asterisks' own red. Text AND border are
+  var(--dcc-error); the pale ground stays. #bc003e on #fdecea measures 6.29:1,
+  past WCAG AA for body text. It used to be three different reds at once.
+* Items 1 + 2 share one presentation path so they cannot drift apart again:
+  --dcc-required is now DEFINED AS --dcc-error rather than repeating its value,
+  so there is one literal on the form and everything red points at it.
+* Item 1 - error messages now wait for a submit attempt. NOTHING HERE HOOKS
+  MOTOPRESS'S VALIDATION: the form carries .dcc_checkout-preflight from load
+  until the first submit attempt, and messages that appear after load are held
+  back by CSS. Anything already in the markup when the script ran is tagged and
+  left visible -- that could be a real server-rendered error, and hiding one
+  would leave a guest stuck with no idea what is wrong. An admin-only note on
+  the page says how many were present at load, which settles which case the
+  live page is.
+* Item 3 - two reasons the "Extras" rename may not have been reaching the
+  checkout, both closed. A string passed through _x() never fires the plain
+  `gettext_` filter, so `gettext_with_context_` and `ngettext_` are now
+  registered too. And the rename was gated on is_checkout_page(), which
+  deliberately returns false for AJAX and REST -- but MotoPress RE-RENDERS THE
+  PRICE BREAKDOWN OVER AJAX/REST whenever the guest changes the guest count or
+  the dates, so the first paint said "Extras" and every re-render after it said
+  "Services". The rename (not the script loading) now applies on MotoPress's
+  own front-end AJAX/REST requests, still never on a request coming from
+  wp-admin. The REST re-render path is REASONED, not observed -- it could not
+  be reproduced without a booking in session.
+* Item 6 - the multi-tap bug: the discriminator is the ELEMENT TYPE, not the
+  timing. In the owner's round-3 log the breakdown expander (an <a>) failed at
+  76ms and 77ms while the tax asterisk (a <button>) succeeded at 79ms. No
+  single threshold does that. iOS arms gesture recognisers on links that it
+  does not arm on buttons -- link dragging and the press-and-hold callout --
+  and a search of the 473KB served bundle found ZERO occurrences of
+  touch-action and zero of -webkit-touch-callout, so that anchor was running on
+  iOS defaults with both armed. Every control in the form now declares
+  touch-action: manipulation; the expander and the asterisk also switch off the
+  callout and text selection; and the expander is marked draggable="false",
+  which is an attribute and has no CSS equivalent. A genuine link keeps its
+  long-press menu. THIS IS A PREDICTION: after this, anchor presses of 80-110ms
+  should click. If they still do not, the hypothesis is wrong.
 
 = 0.14.0 =
 * Item 6 - field width. The fields now match the Availability Calendar's date

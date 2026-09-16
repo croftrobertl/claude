@@ -433,6 +433,93 @@ function summary(doc) {
             .classList.contains('dcc_checkout-section-hidden'), false);
 }
 
+/* ===================================================================== *
+ * v0.15.0 item 4 — the divider above Subtotal, on a breakdown whose summary
+ * row is a plain "Subtotal". This is the owner's second ask for the same
+ * divider, and it is the shape that explains why: the row was being found by
+ * its "(excluding taxes)" qualifier, which this booking does not have.
+ * ===================================================================== */
+{
+    const { doc } = await render(F.plainSubtotal, {
+        labelAliases: {
+            'services': ['services', 'extras'],
+            'service': ['service', 'item'],
+            'services total': ['services total', 'extras total']
+        },
+        i18n: { subtotal: 'Subtotal', taxNoteLead: 'Taxes applied:' }
+    });
+    const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
+        .map(r => label(r.cells[0]));
+    check('item 4: a plain "Subtotal" still gets its divider',
+        ruled.includes('Subtotal'), true);
+    check('item 4: and the Service header still has one above it',
+        ruled.includes('Service'), true);
+}
+
+/* ===================================================================== *
+ * v0.15.0 items 1 and 6.
+ * ===================================================================== */
+{
+    const { window, doc } = await render(F.plainSubtotal, {
+        isAdmin: false,
+        i18n: { subtotal: 'Subtotal' }
+    });
+
+    // Item 6: the breakdown expander must not be draggable — link-drag is the
+    // iOS recogniser most likely to be eating these taps. This asserts the
+    // attribute is applied; only the owner's phone can say whether iOS obeys.
+    const expander = doc.querySelector('a.mphb-price-breakdown-expand');
+    check('item 6: the breakdown expander is marked not-draggable',
+        expander.getAttribute('draggable'), 'false');
+
+    // Item 1: errors wait for a submit attempt, and anything already in the
+    // markup at load is left alone because it may be a real server-side error.
+    const form = doc.querySelector('form');
+    check('item 1: the form starts in preflight',
+        form.classList.contains('dcc_checkout-preflight'), true);
+
+    const late = doc.createElement('div');
+    late.className = 'mphb-error';
+    late.textContent = 'Please select the number of guests.';
+    form.appendChild(late);
+    check('item 1: a message that appears later is NOT tagged pre-existing',
+        late.hasAttribute('data-dcc-preexisting'), false);
+
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    check('item 1: a submit attempt ends preflight',
+        form.classList.contains('dcc_checkout-preflight'), false);
+}
+
+{
+    // A server-rendered error present at load must survive preflight — hiding
+    // one of those leaves a guest stuck with no idea what is wrong.
+    const { doc } = await render(
+        '<div class="mphb-errors">Your session expired.</div>' + F.plainSubtotal,
+        { i18n: { subtotal: 'Subtotal' } });
+    check('item 1: an error present at load is tagged and left visible',
+        doc.querySelector('.mphb-errors').getAttribute('data-dcc-preexisting'), '1');
+}
+
+/* ===================================================================== *
+ * v0.15.0 — the ceiling on the service-row walk.
+ *
+ * serviceRowWrapper() falls back to input.parentNode with nothing above it,
+ * so a checkbox close to the form root resolved to the <form> — and hiding
+ * that takes the ENTIRE CHECKOUT with it. Found by rendering the fixture and
+ * printing what was visible: nothing was.
+ * ===================================================================== */
+{
+    const { doc } = await render(F.servicesWithDetails, {
+        labelAliases: { 'services': ['services', 'extras'] },
+        i18n: { subtotal: 'Subtotal' }
+    });
+    const form = doc.querySelector('form');
+    check('the form itself is never hidden as a service row',
+        form.classList.contains('dcc_checkout-service-hidden'), false);
+    check('and the price breakdown is still on screen',
+        visibleRows(doc).some(r => r.indexOf('Total') === 0), true);
+}
+
 console.log(failures ? `\n${failures} failing` : '\nall passing');
 process.exit(failures ? 1 : 0);
 })();

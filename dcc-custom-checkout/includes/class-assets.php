@@ -21,6 +21,12 @@ final class Assets
         // override for the same msgid is bypassed — that override should be
         // deleted so the string has a single owner (this plugin).
         add_filter('gettext_motopress-hotel-booking', [$this, 'filter_accommodation_label'], 20, 3);
+        // ITEM 3 (v0.15.0) — two reasons the rename could miss, both cheap to
+        // close. A string passed through _x() does NOT fire `gettext_`; it
+        // fires `gettext_with_context_`. Same for _n() and `ngettext_`. The
+        // originals stay registered, so nothing that worked stops working.
+        add_filter('gettext_with_context_motopress-hotel-booking', [$this, 'filter_label_with_context'], 20, 4);
+        add_filter('ngettext_motopress-hotel-booking', [$this, 'filter_label_plural'], 20, 5);
     }
 
     /**
@@ -54,10 +60,17 @@ final class Assets
             // they follow from answers already given. Relabelled in the price
             // breakdown. A msgid MotoPress doesn't actually use simply never
             // matches, so a wrong guess here is a no-op, not a bug.
-            'Services'       => __('Extras', 'dcc-checkout'),
-            'Services:'      => __('Extras:', 'dcc-checkout'),
-            'Service'        => __('Item', 'dcc-checkout'),
-            'Services Total' => __('Extras Total', 'dcc-checkout'),
+            // MotoPress's literal is 'Services:' WITH a colon
+            // (template-functions.php:928) while the owner's screenshot shows
+            // no colon, so the row he is looking at may not be that msgid.
+            // Both spellings of each are mapped; a msgid MotoPress does not
+            // use simply never matches.
+            'Services'        => __('Extras', 'dcc-checkout'),
+            'Services:'       => __('Extras:', 'dcc-checkout'),
+            'Service'         => __('Item', 'dcc-checkout'),
+            'Service:'        => __('Item:', 'dcc-checkout'),
+            'Services Total'  => __('Extras Total', 'dcc-checkout'),
+            'Services Total:' => __('Extras Total:', 'dcc-checkout'),
         ]);
     }
 
@@ -84,14 +97,51 @@ final class Assets
 
     public function filter_accommodation_label($translation, $text, $domain = '')
     {
+        return self::apply_override($translation, $text);
+    }
+
+    /**
+     * Same map, for strings MotoPress passes through _x() — a context-qualified
+     * string never reaches the plain `gettext_` filter.
+     *
+     * @param mixed $translation
+     * @param mixed $text
+     * @param mixed $context
+     * @param mixed $domain
+     * @return mixed
+     */
+    public function filter_label_with_context($translation, $text, $context = '', $domain = '')
+    {
+        return self::apply_override($translation, $text);
+    }
+
+    /**
+     * Same map, for _n(). Only the form actually being returned is rewritten.
+     *
+     * @param mixed $translation
+     * @param mixed $single
+     * @param mixed $plural
+     * @param mixed $number
+     * @param mixed $domain
+     * @return mixed
+     */
+    public function filter_label_plural($translation, $single = '', $plural = '', $number = 0, $domain = '')
+    {
+        return self::apply_override($translation, (string) $translation);
+    }
+
+    /**
+     * @param mixed  $translation
+     * @param string $text
+     * @return mixed
+     */
+    private static function apply_override($translation, $text)
+    {
         $map = self::string_overrides();
         if (!isset($map[$text])) {
             return $translation;
         }
-        // is_page() is only reliable once the main query exists; the checkout
-        // template renders long after 'wp', so earlier fires pass through
-        // untouched (also keeps search results / admin / emails unaffected).
-        if (!did_action('wp') || !self::is_checkout_page()) {
+        if (!self::should_rename_strings()) {
             return $translation;
         }
         return $map[$text];
@@ -105,6 +155,64 @@ final class Assets
      * site). We trust the configured ID rather than sniffing markup so we never
      * load on the wrong page.
      */
+    /**
+     * Whether the Services -> Extras rename applies to THIS request.
+     *
+     * ITEM 3 (v0.15.0) — the most likely reason the owner still sees
+     * "Services". `is_checkout_page()` deliberately returns false for AJAX and
+     * REST, because it also gates script enqueueing and nothing should load
+     * there. But MotoPress RE-RENDERS THE PRICE BREAKDOWN OVER AJAX/REST every
+     * time the guest changes the guest count or the dates — and that re-render
+     * is a different request, on which the old gate was false. So the first
+     * paint said "Extras" and every re-render after it said "Services", which
+     * is exactly the state a screenshot of a configured booking would catch.
+     *
+     * The rename is a string substitution with no side effects, so widening it
+     * to MotoPress's own front-end AJAX/REST requests is safe in a way that
+     * widening the enqueue gate would not be. Requests coming from a wp-admin
+     * screen are still excluded: the owner manages the Services themselves in
+     * there and should see MotoPress's own word.
+     *
+     * DCC-VERIFY: the AJAX/REST re-render path is REASONED, not observed — it
+     * could not be reproduced here without a booking in session. If the owner
+     * still sees "Services" after this, that reasoning is wrong and the next
+     * thing to check is whether the row is that msgid at all.
+     */
+    public static function should_rename_strings(): bool
+    {
+        // is_page() is only reliable once the main query exists; the checkout
+        // template renders long after 'wp', so earlier fires pass through
+        // untouched (also keeps search results / emails unaffected).
+        if (did_action('wp') && self::is_checkout_page()) {
+            return true;
+        }
+
+        $referer = (string) wp_get_referer();
+        if ($referer !== '' && strpos($referer, admin_url()) === 0) {
+            return false; // an admin screen asked for this — leave it alone
+        }
+
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            $route = '';
+            if (isset($GLOBALS['wp']) && isset($GLOBALS['wp']->query_vars['rest_route'])) {
+                $route = (string) $GLOBALS['wp']->query_vars['rest_route'];
+            }
+            if ($route === '' && isset($_SERVER['REQUEST_URI'])) {
+                $route = (string) wp_unslash($_SERVER['REQUEST_URI']);
+            }
+            return strpos($route, 'mphb') !== false;
+        }
+
+        if (wp_doing_ajax()) {
+            $action = isset($_REQUEST['action'])
+                ? sanitize_key(wp_unslash($_REQUEST['action']))
+                : '';
+            return $action !== '' && strpos($action, 'mphb') === 0;
+        }
+
+        return false;
+    }
+
     public static function is_checkout_page(): bool
     {
         // Never in admin / feeds / REST.
@@ -251,7 +359,7 @@ final class Assets
                 'petNo'         => __('No', 'dcc-checkout'),
                 'petYes'        => __('Yes', 'dcc-checkout'),
                 'petFeeNote'    => __('A per-night pet fee will be added to your total.', 'dcc-checkout'),
-                'requiredMsg'   => __('Please complete the highlighted required fields.', 'dcc-checkout'),
+                'requiredMsg'   => __('Please complete all of the required fields.', 'dcc-checkout'),
                 'errGuest2'     => __('Please complete the details for every additional guest.', 'dcc-checkout'),
                 /*
                  * The canonical, owner-approved explanation of the pull-out

@@ -36,11 +36,13 @@
     --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
     --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
     --dcc-label: var(--dcc-site-label, #000000);
-    /* Item 10 (v0.14.0): was #c62828. Both asterisks -- the one marking a
-       required field and the one inside "Required fields are followed by *" --
-       are the same signal, so they are now the same ink as every other error
-       on the form. */
-    --dcc-required: var(--dcc-site-required, #bc003e);
+    /* ONE error ink for the whole form (v0.15.0). --dcc-required is now
+       DEFINED AS --dcc-error rather than repeating its value, so the asterisks,
+       the validation banner and MotoPress's own messages cannot drift apart
+       again: there is one literal, below, and everything else points at it. */
+    /* THE literal. Everything red on this form resolves to this one value. */
+    --dcc-error: var(--dcc-site-error, #bc003e);
+    --dcc-required: var(--dcc-error);
     --dcc-muted: var(--dcc-site-muted, #6b7280);
     --dcc-field-radius: var(--dcc-site-field-radius, 30px);
     /* Item 6 (v0.14.0). The owner asked for "the Availability Calendar's date
@@ -58,8 +60,6 @@
        phone wins. The calendar behaves the same way -- its fields are full
        width at phone sizes and only narrow once there is room. */
     --dcc-field-max: var(--dcc-site-field-max, 360px);
-    /* #bc003e -- the error/required ink (items 8 and 10). */
-    --dcc-error: var(--dcc-site-error, #bc003e);
     --dcc-field-border: var(--dcc-site-field-border, 2px);
 }
 
@@ -233,6 +233,58 @@
 
 .mphb_sc_checkout-form select::-ms-expand {
     display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 6 (v0.15.0) — the multi-tap bug: it is the ELEMENT TYPE, not the timing.
+ *
+ * From the owner's round-3 log, every press on the breakdown expander and on
+ * the tax asterisk, with its true pointerdown-to-pointerup duration:
+ *
+ *   a.mphb-price-breakdown-expand   93, 108, 109, 95, 94, 76, 91, 77ms -> NO CLICK
+ *                                   27ms -> click
+ *   button.dcc_checkout-tax-asterisk  79ms -> click
+ *                                     64ms -> click
+ *
+ * The anchor fails at 76ms and 77ms; the button succeeds at 79ms. No single
+ * timing threshold produces that. The same duration is fatal on one element
+ * and harmless on the other, which is what an element-specific gesture
+ * recogniser looks like — and iOS arms two of them on links that it does not
+ * arm on buttons: link dragging (an <a> is draggable by default) and the
+ * press-and-hold preview callout. Once a recogniser claims the gesture, no
+ * click is synthesised. The 27ms success is a tap that finished before either
+ * could engage.
+ *
+ * Nothing on this site was switching them off: a search of the 473KB served
+ * bundle found ZERO occurrences of touch-action and zero of
+ * -webkit-touch-callout, and the four user-select declarations are all on the
+ * theme's search form and the calendar's drag state. So that anchor was
+ * running on iOS defaults with both recognisers armed.
+ *
+ * touch-action: manipulation is the important one — it declares the element
+ * takes taps rather than gestures, and removes the double-tap-zoom wait with
+ * it. It is safe on every control, so every control gets it.
+ *
+ * THIS IS A PREDICTION, NOT A PROOF. A Chromium harness can assert the rules
+ * are applied; only the owner's phone can say whether iOS behaves. If anchor
+ * presses of 80-110ms still fail to click after this, the hypothesis is wrong.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form a,
+.mphb_sc_checkout-form button,
+.mphb_sc_checkout-form label,
+.mphb_sc_checkout-form select,
+.mphb_sc_checkout-form input {
+    touch-action: manipulation;
+}
+
+/* The callout and selection recognisers are switched off only on controls that
+ * are not really links — the breakdown expander is a toggle wearing an <a>.
+ * A genuine link keeps its long-press menu, which is a real affordance. */
+.mphb_sc_checkout-form a.mphb-price-breakdown-expand,
+.mphb_sc_checkout-form .dcc_checkout-tax-asterisk {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /* Keyboard focus must stay visible on the pill fields even if the theme
@@ -509,9 +561,36 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form input.button:focus-visible {
  * form is also the right colour.
  * ------------------------------------------------------------------------- */
 .mphb_sc_checkout-form .dcc_checkout-tip-asterisk,
+.mphb_sc_checkout-form .dcc_checkout-req,
+.mphb_sc_checkout-form .dcc_checkout-error-banner,
 .mphb_sc_checkout-form [class*="error" i],
 .mphb_sc_checkout-form [role="alert"] {
     color: var(--dcc-error) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Item 1 (v0.15.0) — WHEN an error may show, not what colour it is.
+ *
+ * The owner wants "Please select the number of guests." only after a submit
+ * attempt. That is MotoPress's own conditional message and this plugin has no
+ * reliable selector for that one string, so nothing here hooks MotoPress's
+ * validation. The intervention is purely presentational and entirely on this
+ * side: while the form carries .dcc_checkout-preflight -- from load until the
+ * first submit attempt -- an error element that was NOT present at load stays
+ * hidden.
+ *
+ * The :not([data-dcc-preexisting]) half is the safety catch. Anything already
+ * in the markup when this script ran could be a real server-rendered
+ * validation error from a failed submit, and hiding one of those would leave a
+ * guest stuck with no idea why the form will not go through. Only messages
+ * that appear AFTER load are held back, and only until the guest tries to
+ * submit.
+ * ------------------------------------------------------------------------- */
+.mphb_sc_checkout-form.dcc_checkout-preflight
+    [class*="error" i]:not([data-dcc-preexisting]):not(.dcc_checkout-error-banner),
+.mphb_sc_checkout-form.dcc_checkout-preflight
+    [role="alert"]:not([data-dcc-preexisting]):not(.dcc_checkout-error-banner) {
+    display: none !important;
 }
 
 .mphb_sc_checkout-form .dcc_checkout-tip-asterisk {
@@ -707,13 +786,19 @@ select.dcc_checkout-invalid {
     margin-bottom: 0;
 }
 
+/* Item 2 (v0.15.0) — the banner is now in the asterisks' own ink.
+ *
+ * Text and border are both var(--dcc-error); the pale ground stays. #bc003e on
+ * #fdecea measures 6.29:1, comfortably past WCAG AA for body text, so the
+ * banner reads as one deliberate object in one colour rather than the three
+ * different reds it used to be (#611a15 text, #c62828 border, #fdecea ground).
+ * The colour itself is set by the shared rule above, not repeated here. */
 .dcc_checkout-error-banner {
     margin: 0 0 20px;
     padding: 14px 18px;
     border-radius: 12px;
-    border: 2px solid #c62828;
+    border: 2px solid var(--dcc-error);
     background: #fdecea;
-    color: #611a15;
     font-weight: 600;
 }
 

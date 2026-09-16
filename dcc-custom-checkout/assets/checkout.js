@@ -122,6 +122,8 @@
         assertGuestChooserSurvived(root);
 
         setupSubmit(root, validators);
+        hardenTapTargets(root);   // item 6 — the breakdown expander is not draggable
+        armPreflight(root);       // item 1 — errors wait for a submit attempt
         observeReRenders(root);
     }
 
@@ -367,6 +369,21 @@
         var accTaxTot  = first(function (l) { return l === 'accommodation taxes total'; });
         var accTotal   = first(function (l) { return l === 'accommodation total'; });
         var innerSub   = first(function (l) { return l === 'subtotal'; });
+        // ITEM 4 (v0.15.0) — the divider above Subtotal, asked for twice.
+        //
+        // It WAS targeted at the Subtotal row explicitly in 0.14.0. What it
+        // could not do is find that row on the owner's booking: `subtotal`
+        // above matches only "Subtotal (excluding taxes)", and a breakdown
+        // whose summary line is a plain "Subtotal" has no such row, so there
+        // was nothing to mark. The qualifier is the right key for the RELABEL
+        // and the pre-tax figure — those genuinely depend on which subtotal it
+        // is — but the divider only needs the last subtotal on the page.
+        //
+        // Read from MotoPress's own text, here, BEFORE the relabel below
+        // rewrites that cell. A matcher that ran later would be reading a
+        // label this plugin wrote, which is the mistake that killed the tax
+        // footnote in 0.9.0.
+        var subtotalAny = last(function (l) { return l.indexOf('subtotal') === 0; });
 
         // Without a "(excluding taxes)" row, a plain "Subtotal" IS the summary
         // row — never hide the only subtotal on the page.
@@ -408,7 +425,7 @@
         dropRateRows(rows, table);
         markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
         dropServicesHeadingRow(rows);
-        markBreakdownRules(rows, subtotal);
+        markBreakdownRules(rows, subtotalAny);
         markFirstVisibleRows(rows);
     }
 
@@ -479,7 +496,7 @@
     // date — "September 17, 2026" does, "Accommodation Total" does not. That is
     // English-shaped; a label it cannot read ends the run early, so the second
     // divider is simply not drawn rather than drawn in the wrong place.
-    function markBreakdownRules(rows, subtotal) {
+    function markBreakdownRules(rows, subtotalRow) {
         rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-rule'); });
 
         // EVERY column header gets the divider, not just the first. That is
@@ -496,8 +513,8 @@
         heads.forEach(function (r) { r.classList.add('dcc_checkout-breakdown-rule'); });
 
         // Item 13: above Subtotal, which separates it from "Services Total".
-        if (subtotal && !isHiddenRow(subtotal)) {
-            subtotal.classList.add('dcc_checkout-breakdown-rule');
+        if (subtotalRow && !isHiddenRow(subtotalRow)) {
+            subtotalRow.classList.add('dcc_checkout-breakdown-rule');
         }
 
         if (!heads.length) {
@@ -2026,11 +2043,52 @@
             if (el === input || (el && el.nodeType === 1 && /^(INPUT|SELECT|TEXTAREA|OPTION)$/.test(el.tagName))) {
                 continue;
             }
+            if (tooBigToBeAServiceRow(el, input)) {
+                continue;
+            }
             if (el && el.nodeType === 1 && isServiceRowSized(el, input)) {
                 return el;
             }
         }
         return null;
+    }
+
+    /**
+     * A CEILING on the walk up from a service checkbox (v0.15.0).
+     *
+     * There was none. The last candidate above is input.parentNode, and if a
+     * checkbox ever sits close to the form root that resolves to the <form> —
+     * which then gets the hide class and TAKES THE ENTIRE CHECKOUT WITH IT.
+     * Found by rendering a fixture and printing what was actually visible:
+     * every row came back hidden because the form itself was.
+     *
+     * MotoPress nests these inside a services section today, so this is a
+     * latent fault rather than a live one. It is guarded anyway: the failure is
+     * a blank checkout — a guest cannot book and nothing on screen says why —
+     * and the guard costs one comparison.
+     */
+    function tooBigToBeAServiceRow(el, input) {
+        if (!el || el.nodeType !== 1) {
+            return true;
+        }
+        if (el.tagName === 'FORM' || el.tagName === 'BODY' || el.tagName === 'HTML') {
+            return true;
+        }
+        // Nothing that contains the price breakdown or the customer's own
+        // details is a single service's row.
+        if (el.querySelector(
+            'table.dcc_checkout-breakdown, tr.mphb-price-breakdown-booking,' +
+            '.mphb-customer-details, #mphb-customer-details')) {
+            return true;
+        }
+        // Nor is anything that contains a DIFFERENT service's checkbox.
+        var boxes = el.querySelectorAll('input.mphb_sc_checkout-service');
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i] !== input) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Guard for the above: a real service row contains its own input and
@@ -2199,6 +2257,7 @@
                 markFieldRows(root);
                 markTipAsterisk(root);
                 dropDuplicateTotal(root);
+                hardenTapTargets(root);
                 // MotoPress re-renders the services block when the guest count
                 // changes; re-hide it, then re-prove the chooser survived.
                 hideNativeServices(root);
@@ -2228,6 +2287,93 @@
             msg = I18N.errGuests;
         }
         showBanner(root, msg || I18N.requiredMsg || 'Please review your entries.');
+    }
+
+    /* ===================================================================== *
+     * Item 6 (v0.15.0) — the half of the tap fix that CSS cannot express.
+     *
+     * An <a> is draggable by default, and link-drag is the specific iOS
+     * recogniser most likely to be eating these taps. There is no CSS property
+     * for it; it is an attribute. Re-applied on every re-render because
+     * MotoPress rebuilds the breakdown, and a rebuilt anchor comes back
+     * draggable.
+     * ===================================================================== */
+    function hardenTapTargets(root) {
+        var links = root.querySelectorAll('a.mphb-price-breakdown-expand');
+        Array.prototype.forEach.call(links, function (a) {
+            a.setAttribute('draggable', 'false');
+        });
+    }
+
+    /* ===================================================================== *
+     * Item 1 (v0.15.0) — hold back error messages until a submit attempt.
+     *
+     * The owner wants "Please select the number of guests." only after he has
+     * tried to submit without choosing one. That message is MotoPress's, not
+     * this plugin's, and there is no reliable selector for that one string —
+     * so NOTHING HERE HOOKS MOTOPRESS'S VALIDATION. A fragile hook into
+     * somebody else's validator is worse than a message appearing early.
+     *
+     * Instead the form carries .dcc_checkout-preflight from load until the
+     * first submit attempt, and the stylesheet hides error elements that were
+     * not already in the markup when this ran. Every error present at load is
+     * tagged and left alone: one of those could be a real validation error
+     * rendered by the server after a failed submit, and hiding that would
+     * leave a guest stuck with no idea what is wrong.
+     *
+     * WHAT THIS CANNOT DO, stated plainly: if MotoPress renders that message
+     * into the page at load and merely toggles its visibility, it is
+     * pre-existing and this leaves it alone by design. The admin note below
+     * says which case the live page is, so that can be settled by looking
+     * rather than by guessing.
+     * ===================================================================== */
+    function armPreflight(root) {
+        var existing = root.querySelectorAll('[class*="error" i], [role="alert"]');
+        Array.prototype.forEach.call(existing, function (el) {
+            el.setAttribute('data-dcc-preexisting', '1');
+        });
+        root.classList.add('dcc_checkout-preflight');
+
+        adminNote(root, 'Error elements present at page load: ' + existing.length +
+            '. Those are left visible; anything that appears later is held back ' +
+            'until a submit attempt.');
+
+        // Any attempt to send the form ends preflight — including one that
+        // passes this plugin's own validators, because MotoPress validates
+        // after we do. Capture phase so it runs before anything can stop it.
+        function release() {
+            root.classList.remove('dcc_checkout-preflight');
+        }
+        root.addEventListener('submit', release, true);
+        // MotoPress submits over REST from a click, so a submit event is not
+        // guaranteed to fire at all.
+        root.addEventListener('click', function (e) {
+            var el = e.target && e.target.closest
+                ? e.target.closest('input[type="submit"], button')
+                : null;
+            if (el && el.type !== 'button') {
+                release();
+            }
+        }, true);
+    }
+
+    // Shared admin-only note. Never shown to a guest.
+    function adminNote(root, msg) {
+        try { window.console && console.info('DCC Custom Checkout: ' + msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            box.setAttribute('role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        var line = document.createElement('p');
+        line.textContent = (I18N.adminNoticePrefix ||
+            'Visible to administrators only:') + ' ' + msg;
+        box.appendChild(line);
     }
 
     function showBanner(root, msg) {

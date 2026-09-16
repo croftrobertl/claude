@@ -297,6 +297,47 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   sets an input width. The `pac-container` note matters to the tap diagnostic:
   if a log ever shows it "present/VISIBLE", that z-index is why it would be on
   top of everything.
+- **A service row can never be the form.** `serviceRowWrapper()` walks up from
+  a service checkbox and its last fallback is `input.parentNode`; until v0.15.0
+  nothing stopped that resolving to the `<form>`, which then got the hide class
+  and took the whole checkout with it — blank page, no explanation, no booking.
+  `tooBigToBeAServiceRow()` is the ceiling: nothing containing the price
+  breakdown, the customer details, another service's checkbox, or the form
+  itself. **Any future widening of that walk must keep the ceiling.**
+- **ONE error ink.** `--dcc-required` is *defined as* `--dcc-error`, not a copy
+  of its value, so the asterisks, the validation banner and MotoPress's own
+  messages cannot drift apart (they had: #611a15 text, #c62828 border, #bc003e
+  asterisks). #bc003e on the banner's #fdecea ground is 6.29:1.
+- **Error timing is presentational and never hooks MotoPress's validator**
+  (item 1, v0.15.0). The form carries `.dcc_checkout-preflight` from load until
+  the first submit attempt (a `submit` event OR a click on a submit control —
+  MotoPress submits over REST, so a submit event is not guaranteed), and CSS
+  hides error elements that were not in the markup at load. **Everything
+  present at load is tagged `data-dcc-preexisting` and left visible**, because
+  it may be a real server-rendered error and hiding that strands the guest. An
+  admin-only note reports the count. Never replace this with a hook into
+  MotoPress's validation.
+- **The Services→Extras rename fires on MotoPress's AJAX/REST too** (v0.15.0).
+  `is_checkout_page()` returns false for AJAX/REST by design — it also gates
+  enqueueing — but MotoPress re-renders the price breakdown over AJAX/REST
+  whenever the guest count or dates change, so the first paint said "Extras"
+  and every re-render said "Services". `should_rename_strings()` is the widened
+  gate, for the string substitution only, and still excludes requests refered
+  from wp-admin. `gettext_with_context_` and `ngettext_` are registered
+  alongside `gettext_` because `_x()` and `_n()` never fire the plain one.
+  DCC-VERIFY: the REST re-render path is reasoned, not observed.
+- **Tap targets declare `touch-action: manipulation`** (item 6, v0.15.0), and
+  the breakdown expander also carries `-webkit-touch-callout: none`,
+  `user-select: none` and `draggable="false"`. Evidence: in the owner's round-3
+  log `a.mphb-price-breakdown-expand` failed at 76ms and 77ms while
+  `button.dcc_checkout-tax-asterisk` succeeded at 79ms — no single timing
+  threshold produces that, but an element-specific gesture recogniser does, and
+  iOS arms link-drag and the press-and-hold callout on `<a>` and not on
+  `<button>`. The served bundle had zero occurrences of either property, so the
+  anchor ran on iOS defaults. **This is a prediction:** anchor presses of
+  80-110ms should now click. If they do not, the hypothesis is wrong — and the
+  next step is replacing the anchor with a real `<button>`, which is the one
+  control in that log that never failed.
 - **The published standard is the source of truth, and it drifted once.**
   Until v0.13.0 `checkout.css` styled only `select` and the plugin's own
   injected pet fields, while `Custom Checkout - Field Standard.css` — which is
