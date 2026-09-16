@@ -42,6 +42,59 @@
         }
     }
 
+    /* ===================================================================== *
+     * IDEMPOTENT WRITES (v0.18.0) — the page is never touched unless it changes.
+     *
+     * Measured on the test fixture: one re-run of the pipeline with NOTHING to
+     * do produced 42 DOM mutation records, 35 of them attribute writes whose
+     * old value equalled the new one — classList.add() of a class already
+     * present, textContent set to the text already there. Per the DOM spec a
+     * no-op classList.add still runs the attribute-change steps and still
+     * queues a MutationRecord, and browsers honour that. On the live page,
+     * with its bigger breakdown and every section, that is the ~100-mutation
+     * burst the owner's phone logged in the middle of taps that then produced
+     * no click.
+     *
+     * iOS Safari decides whether a tap is a click or a hover by watching the
+     * page for content changes around the tap. A page that rewrites a hundred
+     * attributes on a timer is exactly what it is looking for. So every write
+     * in this file goes through one of these, and a no-op write costs nothing
+     * and records nothing. This is asserted: tests/breakdown fails if a re-run
+     * with nothing to do records a single mutation.
+     * ===================================================================== */
+    function addClass(el, name) {
+        if (el && el.classList && !el.classList.contains(name)) {
+            el.classList.add(name);
+        }
+    }
+    function removeClass(el, name) {
+        if (el && el.classList && el.classList.contains(name)) {
+            el.classList.remove(name);
+        }
+    }
+    function setClass(el, name, on) {
+        if (on) { addClass(el, name); } else { removeClass(el, name); }
+    }
+    function setAttr(el, name, value) {
+        if (!el || !el.setAttribute) { return; }
+        value = String(value);
+        if (el.getAttribute(name) !== value) {
+            el.setAttribute(name, value);
+        }
+    }
+    function setText(node, text) {
+        if (!node) { return; }
+        text = String(text);
+        if (node.nodeType === 3) {
+            if (node.nodeValue !== text) { node.nodeValue = text; }
+            return;
+        }
+        // An element whose text already reads correctly and holds no child
+        // elements is left alone; anything else is rewritten as before.
+        if (node.textContent === text && !node.firstElementChild) { return; }
+        node.textContent = text;
+    }
+
     function esc(sel) {
         return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
     }
@@ -72,7 +125,7 @@
         section.className = 'mphb-checkout-section dcc_checkout-section ' + sectionClass;
         var h3 = document.createElement('h3');
         h3.className = 'mphb-customer-details-title dcc_checkout-section-title';
-        h3.textContent = titleText;
+        setText(h3, titleText);
         section.appendChild(h3);
         rows.forEach(function (r) { section.appendChild(r); }); // moves rows in
         return section;
@@ -152,7 +205,7 @@
         if (!table) {
             return;
         }
-        table.classList.add('dcc_checkout-breakdown');
+        addClass(table, 'dcc_checkout-breakdown');
         restructureBreakdown(table);
     }
 
@@ -211,7 +264,7 @@
         Array.prototype.forEach.call(controls, function (ctrl) {
             var row = ctrl.closest('p');
             if (row && root.contains(row)) {
-                row.classList.add('dcc_checkout-field-row');
+                addClass(row, 'dcc_checkout-field-row');
             }
         });
     }
@@ -293,9 +346,9 @@
             var at   = text.lastIndexOf('*');
             var span = document.createElement('span');
             span.className = 'dcc_checkout-tip-asterisk';
-            span.setAttribute('data-dcc-injected', '1');
-            span.setAttribute('aria-hidden', 'true');
-            span.textContent = '*';
+            setAttr(span, 'data-dcc-injected', '1');
+            setAttr(span, 'aria-hidden', 'true');
+            setText(span, '*');
             found.nodeValue = text.slice(0, at);
             var after = document.createTextNode(text.slice(at + 1));
             found.parentNode.insertBefore(span, found.nextSibling);
@@ -322,7 +375,7 @@
     }
 
     function hideRow(row) {
-        row.classList.add('dcc_checkout-section-hidden');
+        addClass(row, 'dcc_checkout-section-hidden');
     }
 
     function restructureBreakdown(table) {
@@ -346,8 +399,11 @@
             return;
         }
 
-        rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-total'); });
-        rows[rows.length - 1].classList.add('dcc_checkout-breakdown-total');
+        // Decide first, write only what differs: a remove-then-add on the same
+        // row is two mutation records for no change.
+        rows.forEach(function (r, i) {
+            setClass(r, 'dcc_checkout-breakdown-total', i === rows.length - 1);
+        });
 
         // LAST match wins for the summary rows at the foot of the table; FIRST
         // match for the in-block rows, which appear above them.
@@ -415,7 +471,7 @@
         // The qualifier is redundant once Taxes is the very next line.
         if (subtotal && I18N.subtotal) {
             var labelCell = subtotal.cells && subtotal.cells[0];
-            if (labelCell) { labelCell.textContent = I18N.subtotal; }
+            if (labelCell) { setText(labelCell, I18N.subtotal); }
         }
 
         relabelAccommodationRows(rows);
@@ -483,7 +539,7 @@
             if (amount === '' || looksLikeMoney(amount)) {
                 return; // Empty, or a real figure — not a column header.
             }
-            row.classList.add('dcc_checkout-breakdown-head');
+            addClass(row, 'dcc_checkout-breakdown-head');
         });
     }
 
@@ -497,7 +553,11 @@
     // English-shaped; a label it cannot read ends the run early, so the second
     // divider is simply not drawn rather than drawn in the wrong place.
     function markBreakdownRules(rows, subtotalRow) {
-        rows.forEach(function (r) { r.classList.remove('dcc_checkout-breakdown-rule'); });
+        // Every row that should carry the divider is decided FIRST, and only
+        // then is the class written where it differs. The old shape — strip it
+        // from every row, add it back to some — was two mutation records per
+        // divider for no visible change, on every re-run.
+        var want = [];
 
         // EVERY column header gets the divider, not just the first. That is
         // items 15/16 (the "Dates | Amount" header) and item 12 (the
@@ -510,29 +570,31 @@
         var heads = rows.filter(function (r) {
             return r.classList.contains('dcc_checkout-breakdown-head') && !isHiddenRow(r);
         });
-        heads.forEach(function (r) { r.classList.add('dcc_checkout-breakdown-rule'); });
+        heads.forEach(function (r) { want.push(r); });
 
         // Item 13: above Subtotal, which separates it from "Services Total".
         if (subtotalRow && !isHiddenRow(subtotalRow)) {
-            subtotalRow.classList.add('dcc_checkout-breakdown-rule');
-        }
-
-        if (!heads.length) {
-            return;
+            want.push(subtotalRow);
         }
 
         // And above whatever follows the last booked date, separating the date
-        // run from the figures. Marking the same row twice is harmless — it is
-        // one class, and one CSS rule governs all of them including the grand
-        // total's, so restyling any divider moves every divider.
-        var start = rows.indexOf(heads[0]) + 1;
-        var j = start;
-        while (j < rows.length && isDateLabel(rowLabel(rows[j]))) {
-            j++;
+        // run from the figures. One class, one CSS rule, governs all of them
+        // including the grand total's, so restyling any divider moves every
+        // divider.
+        if (heads.length) {
+            var start = rows.indexOf(heads[0]) + 1;
+            var j = start;
+            while (j < rows.length && isDateLabel(rowLabel(rows[j]))) {
+                j++;
+            }
+            if (j > start && j < rows.length && !isHiddenRow(rows[j])) {
+                want.push(rows[j]);
+            }
         }
-        if (j > start && j < rows.length && !isHiddenRow(rows[j])) {
-            rows[j].classList.add('dcc_checkout-breakdown-rule');
-        }
+
+        rows.forEach(function (r) {
+            setClass(r, 'dcc_checkout-breakdown-rule', want.indexOf(r) !== -1);
+        });
     }
 
     function isHiddenRow(row) {
@@ -572,8 +634,8 @@
                 hideRow(row);
                 // It was a header candidate itself; drop the marks with it so
                 // it cannot attract a divider.
-                row.classList.remove('dcc_checkout-breakdown-head');
-                row.classList.remove('dcc_checkout-breakdown-rule');
+                removeClass(row, 'dcc_checkout-breakdown-head');
+                removeClass(row, 'dcc_checkout-breakdown-rule');
             }
             return;
         }
@@ -637,9 +699,9 @@
             return;
         }
         var kept = cell.querySelectorAll('[data-dcc-injected]');
-        cell.textContent = text;
+        setText(cell, text);
         Array.prototype.forEach.call(kept, function (el) { cell.appendChild(el); });
-        cell.setAttribute('data-dcc-relabelled', '1');
+        setAttr(cell, 'data-dcc-relabelled', '1');
     }
 
     // Extra guests actually booked: the [adults] value on each CHECKED
@@ -684,8 +746,8 @@
     // row would otherwise leave a stray line where it used to be.
     function markFirstVisibleRows(rows) {
         var seen = [];
+        var want = [];
         rows.forEach(function (row) {
-            row.classList.remove('dcc_checkout-row-first');
             var table = row.closest('table');
             if (!table || seen.indexOf(table) !== -1) {
                 return;
@@ -694,7 +756,11 @@
                 return;
             }
             seen.push(table);
-            row.classList.add('dcc_checkout-row-first');
+            want.push(row);
+        });
+        // Decided first, written only where it differs (see markBreakdownRules).
+        rows.forEach(function (row) {
+            setClass(row, 'dcc_checkout-row-first', want.indexOf(row) !== -1);
         });
     }
 
@@ -716,7 +782,7 @@
         var node;
         while ((node = walker.nextNode())) {
             if (/^\s*#\d+\s*/.test(node.textContent)) {
-                node.textContent = node.textContent.replace(/^\s*#\d+\s*/, '');
+                setText(node, node.textContent.replace(/^\s*#\d+\s*/, ''));
                 return;
             }
         }
@@ -748,7 +814,7 @@
         // Only ever overwrite a cell that already holds an amount — never one
         // carrying the expander or the accommodation name.
         if (cell && looksLikeMoney(cell.textContent || '')) {
-            cell.textContent = preTax;
+            setText(cell, preTax);
         }
     }
 
@@ -813,18 +879,18 @@
         var toggle = document.createElement('button');
         toggle.type = 'button';          // never submit the checkout
         toggle.className = 'dcc_checkout-tax-asterisk';
-        toggle.textContent = '*';
+        setText(toggle, '*');
         // Excluded from rowLabel(), so this control can never change the text
         // the next pass matches on.
-        toggle.setAttribute('data-dcc-injected', '1');
+        setAttr(toggle, 'data-dcc-injected', '1');
         // The glyph is not a name; give assistive tech a real one.
-        toggle.setAttribute('aria-label', I18N.taxNoteLabel || 'Show which taxes apply');
-        toggle.setAttribute('aria-controls', id);
+        setAttr(toggle, 'aria-label', I18N.taxNoteLabel || 'Show which taxes apply');
+        setAttr(toggle, 'aria-controls', id);
 
         function apply() {
             var open = taxDetailPinned || hovered;
-            note.classList.toggle('dcc_checkout-section-hidden', !open);
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            setClass(note, 'dcc_checkout-section-hidden', !open);
+            setAttr(toggle, 'aria-expanded', open ? 'true' : 'false');
         }
 
         toggle.addEventListener('click', function () {
@@ -863,12 +929,12 @@
         if (label.getAttribute('data-dcc-label')) {
             return;
         }
-        label.setAttribute('data-dcc-label', '1');
+        setAttr(label, 'data-dcc-label', '1');
 
         var abbr = label.querySelector('abbr');
         if (abbr) {
             abbr.removeAttribute('title');            // item 14: drop the "?" tooltip
-            abbr.classList.add('dcc_checkout-req');   // item 14: solid *, no dotted line
+            addClass(abbr, 'dcc_checkout-req');   // item 14: solid *, no dotted line
         }
 
         // Labels that WRAP a form control (consent checkboxes, MotoPress's
@@ -878,7 +944,7 @@
         // underline. So: tag the label (CSS drops the underline there) and put
         // the label's OWN words in the usual span, which keeps it.
         if (label.querySelector('input, select, textarea')) {
-            label.classList.add('dcc_checkout-label-wraps-control');
+            addClass(label, 'dcc_checkout-label-wraps-control');
             wrapLabelText(label, abbr);
             return;
         }
@@ -915,7 +981,7 @@
         label.insertBefore(span, label.firstChild);
 
         if (!hadUnderline) {
-            label.classList.add('dcc_checkout-no-underline');
+            addClass(label, 'dcc_checkout-no-underline');
         }
 
         // Items 2/5: the span now carries the ONLY underline. The label's own
@@ -927,7 +993,7 @@
             /underline/.test(label.style.textDecorationLine || '')) {
             label.style.textDecoration = 'none';
         }
-        label.classList.add('dcc_checkout-label-fixed');
+        addClass(label, 'dcc_checkout-label-fixed');
     }
 
     // Put a wrapping label's text nodes into the underline span, leaving the
@@ -956,10 +1022,10 @@
             span.removeChild(span.lastChild);
         }
         if (span.firstChild && span.firstChild.nodeType === 3) {
-            span.firstChild.textContent = span.firstChild.textContent.replace(/^\s+/, '');
+            setText(span.firstChild, span.firstChild.textContent.replace(/^\s+/, ''));
         }
         if (span.lastChild && span.lastChild.nodeType === 3) {
-            span.lastChild.textContent = span.lastChild.textContent.replace(/\s+$/, '');
+            setText(span.lastChild, span.lastChild.textContent.replace(/\s+$/, ''));
         }
     }
 
@@ -992,20 +1058,20 @@
         var n;
         while ((n = walker.nextNode())) { nodes.push(n); }
         nodes.forEach(function (node) {
-            node.textContent = node.textContent
+            setText(node, node.textContent
                 .replace(/\s+/g, ' ')
-                .replace(/\s+([ap]m)\b/gi, '$1');
+                .replace(/\s+([ap]m)\b/gi, '$1'));
         });
         // Trim the element's outer edges (first/last text content).
         if (nodes.length) {
-            nodes[0].textContent = nodes[0].textContent.replace(/^\s+/, '');
-            nodes[nodes.length - 1].textContent =
-                nodes[nodes.length - 1].textContent.replace(/\s+$/, '');
+            setText(nodes[0], nodes[0].textContent.replace(/^\s+/, ''));
+            setText(nodes[nodes.length - 1],
+                nodes[nodes.length - 1].textContent.replace(/\s+$/, ''));
         }
         // A lone <strong> child gets its own edges trimmed too.
         var strong = el.querySelector('strong');
         if (strong && strong.firstChild && strong.firstChild.nodeType === 3) {
-            strong.firstChild.textContent = strong.firstChild.textContent.trim();
+            setText(strong.firstChild, strong.firstChild.textContent.trim());
         }
     }
 
@@ -1085,11 +1151,11 @@
         if (!box) {
             box = document.createElement('div');
             box.className = 'dcc_checkout-admin-notice';
-            box.setAttribute('role', 'status');
+            setAttr(box, 'role', 'status');
             root.insertBefore(box, root.firstChild);
         }
         var line = document.createElement('p');
-        line.textContent = (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg;
+        setText(line, (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg);
         box.appendChild(line);
     }
 
@@ -1172,7 +1238,7 @@
             var count = guestCount();
             built.forEach(function (b) {
                 var show = count >= b.min;
-                b.targets.forEach(function (t) { t.classList.toggle('dcc_checkout-section-hidden', !show); });
+                b.targets.forEach(function (t) { setClass(t, 'dcc_checkout-section-hidden', !show); });
                 b.inputs.forEach(function (inp) {
                     setRequired(inp, show, root);
                     if (!show) { clearInvalid(inp); }
@@ -1264,7 +1330,7 @@
             }
             // The section itself is revealed only with the dog fields, but the
             // question has to be askable before the answer is "Yes".
-            petSection.classList.remove('dcc_checkout-section-hidden');
+            removeClass(petSection, 'dcc_checkout-section-hidden');
         } else {
             var anchor = serviceRowWrapper(serviceInputs[ids[0]]);
             if (anchor && anchor.parentNode) {
@@ -1357,7 +1423,7 @@
         function show(yes) {
             // Always hide/show the dog rows themselves.
             rows.forEach(function (r) {
-                r.classList.toggle('dcc_checkout-section-hidden', !yes);
+                setClass(r, 'dcc_checkout-section-hidden', !yes);
             });
             if (section) {
                 // Hide the whole section only while it holds nothing but those
@@ -1365,7 +1431,7 @@
                 // moved in here, and the question has to stay visible so it can
                 // be answered — only the answers hide.
                 var hasToggle = !!section.querySelector('.dcc_checkout-pet');
-                section.classList.toggle('dcc_checkout-section-hidden', !yes && !hasToggle);
+                setClass(section, 'dcc_checkout-section-hidden', !yes && !hasToggle);
             }
             inputs.forEach(function (inp) {
                 setRequired(inp, yes, root);
@@ -1529,16 +1595,16 @@
             // "3 (+$50/night)" as mphb_room_details[N][adults]. Pin the value
             // first so the label is cosmetic, as the spec requires.
             if (!opt.hasAttribute('value')) {
-                opt.setAttribute('value', opt.value);
+                setAttr(opt, 'value', opt.value);
             }
             var base = opt.getAttribute('data-dcc-label');
             if (base === null) {
                 base = opt.textContent;
-                opt.setAttribute('data-dcc-label', base);
+                setAttr(opt, 'data-dcc-label', base);
             }
             var extra  = (parseInt(opt.value, 10) || 0) - included;
             var amount = extra > 0 ? steps[extra] : '';
-            opt.textContent = amount ? base + suffix.replace('%s', amount) : base;
+            setText(opt, amount ? base + suffix.replace('%s', amount) : base);
             if (amount) { any = true; }
         });
         return any;
@@ -1581,7 +1647,7 @@
     // assertGuestChooserSurvived() can find and undo every row we hid.
     function hideServiceRow(wrap) {
         if (wrap && wrap.nodeType === 1) {
-            wrap.classList.add('dcc_checkout-service-hidden');
+            addClass(wrap, 'dcc_checkout-service-hidden');
         }
     }
 
@@ -1598,7 +1664,7 @@
         var hidden = root.querySelectorAll('.dcc_checkout-service-hidden');
         if (hidden.length) {
             Array.prototype.forEach.call(hidden, function (el) {
-                el.classList.remove('dcc_checkout-service-hidden');
+                removeClass(el, 'dcc_checkout-service-hidden');
             });
             try {
                 window.console && console.warn('DCC Custom Checkout: restored hidden service rows — ' +
@@ -1660,7 +1726,7 @@
         if (!box) {
             box = document.createElement('div');
             box.className = 'dcc_checkout-admin-notice';
-            box.setAttribute('role', 'status');
+            setAttr(box, 'role', 'status');
             root.insertBefore(box, root.firstChild);
         }
         if (box.querySelector('.dcc_checkout-admin-notice__chooser')) {
@@ -1668,7 +1734,7 @@
         }
         var line = document.createElement('p');
         line.className = 'dcc_checkout-admin-notice__chooser';
-        line.textContent = (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg;
+        setText(line, (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg);
         box.appendChild(line);
     }
 
@@ -1896,7 +1962,7 @@
                     // gated on `disabled` and never on visibility.
                     opt.disabled = true;
                     opt.hidden = true;
-                    opt.classList.add('dcc_checkout-option-hidden');
+                    addClass(opt, 'dcc_checkout-option-hidden');
                     capped = true;
                 }
             });
@@ -1933,7 +1999,7 @@
                 row.appendChild(note);
             }
         }
-        note.textContent = text;
+        setText(note, text);
     }
 
     // Mirrors Config::guest_service_id_for_nights() — keep the two in step.
@@ -1958,7 +2024,7 @@
 
         var legend = document.createElement('legend');
         legend.className = 'dcc_checkout-pet__legend';
-        legend.textContent = I18N.petQuestion || 'Traveling with a dog?';
+        setText(legend, I18N.petQuestion || 'Traveling with a dog?');
         wrap.appendChild(legend);
 
         var toggle = document.createElement('div');
@@ -1972,7 +2038,7 @@
         if (I18N.petFeeNote) {
             var note = document.createElement('p');
             note.className = 'dcc_checkout-pet__note';
-            note.textContent = I18N.petFeeNote;
+            setText(note, I18N.petFeeNote);
             wrap.appendChild(note);
         }
 
@@ -1991,7 +2057,7 @@
         input.value = value;
         input.checked = !!checked;
         var span = document.createElement('span');
-        span.textContent = text;
+        setText(span, text);
         label.appendChild(input);
         label.appendChild(span);
         return { label: label, input: input };
@@ -2180,11 +2246,11 @@
     // Mark / clear the invalid state together with its assistive-tech signal, so
     // a screen-reader user can find WHICH field the alert banner refers to.
     function markInvalid(el) {
-        el.classList.add('dcc_checkout-invalid');
-        el.setAttribute('aria-invalid', 'true');
+        addClass(el, 'dcc_checkout-invalid');
+        setAttr(el, 'aria-invalid', 'true');
     }
     function clearInvalid(el) {
-        el.classList.remove('dcc_checkout-invalid');
+        removeClass(el, 'dcc_checkout-invalid');
         el.removeAttribute('aria-invalid');
     }
 
@@ -2192,7 +2258,7 @@
     function setRequired(input, on, root) {
         input.required = !!on;
         if (on) {
-            input.setAttribute('aria-required', 'true');
+            setAttr(input, 'aria-required', 'true');
         } else {
             input.removeAttribute('aria-required');
         }
@@ -2204,10 +2270,10 @@
         if (on && !marker) {
             marker = document.createElement('abbr');
             marker.className = 'dcc_checkout-req dcc_checkout-req--dyn';
-            marker.textContent = '*';
+            setText(marker, '*');
             // Decorative: aria-required on the input carries the semantics, so
             // don't make screen readers announce "asterisk".
-            marker.setAttribute('aria-hidden', 'true');
+            setAttr(marker, 'aria-hidden', 'true');
             label.appendChild(marker);
         } else if (!on && marker) {
             marker.parentNode.removeChild(marker);
@@ -2246,18 +2312,43 @@
         armTouchWatch();
         var timer = null;
         var pendingSince = 0;
+
+        // v0.18.0 — no timer is INSTALLED while a finger is down. WebKit's
+        // content observer tracks DOM timers installed during touch handling
+        // and watches what they do when they fire; 0.17.0 delayed the run but
+        // still installed the timer inside the touch. Now, while a finger is
+        // down, the observer only notes that work is pending, and the touch-up
+        // handler schedules it once the tap has had its 400ms to resolve.
+        function schedule(delay) {
+            if (timer) { clearTimeout(timer); }
+            timer = setTimeout(run, delay);
+        }
+        function run() {
+            timer = null;
+            // Hold off while a tap is still resolving — see the block comment
+            // above armTouchWatch(). The 3s ceiling means a finger resting on
+            // the screen can delay this but never starve it.
+            if (touchSettling() && (Date.now() - pendingSince) < 3000) {
+                if (fingerDown) { onTouchUp = function () { schedule(450); }; }
+                else { schedule(200); }
+                return;
+            }
+            pendingSince = 0;
+            runPipeline();
+        }
         var obs = new MutationObserver(function () {
             if (!pendingSince) { pendingSince = Date.now(); }
-            if (timer) { clearTimeout(timer); }
-            timer = setTimeout(function run() {
-                // Hold off while a tap is still resolving — see the block
-                // comment above armTouchWatch(). The 3s ceiling means a finger
-                // resting on the screen can delay this but never starve it.
-                if (touchSettling() && (Date.now() - pendingSince) < 3000) {
-                    timer = setTimeout(run, 200);
-                    return;
-                }
-                pendingSince = 0;
+            if (fingerDown) {
+                // Do not install a timer inside a touch. Pick it up on touch-up.
+                onTouchUp = function () { schedule(450); };
+                return;
+            }
+            // 500ms, up from 150ms. The old value put a ~100-attribute burst
+            // right inside the window a tap needs to resolve.
+            schedule(500);
+        });
+        function runPipeline() {
+            {
                 formatBreakdown(root);
                 // MotoPress re-renders (coupon apply, country change, …) bring
                 // back untouched labels/dates; all passes are idempotent (the
@@ -2273,10 +2364,8 @@
                 // changes; re-hide it, then re-prove the chooser survived.
                 hideNativeServices(root);
                 assertGuestChooserSurvived(root);
-            // 500ms, up from 150ms. The old value put a ~100-attribute burst
-            // right inside the window a tap needs to resolve.
-            }, 500);
-        });
+            }
+        }
         obs.observe(root, { childList: true, subtree: true });
     }
 
@@ -2337,10 +2426,10 @@
                     at.name === 'tabindex' || at.name === 'data-dcc-keys') {
                     return;
                 }
-                try { btn.setAttribute(at.name, at.value); } catch (err) {}
+                try { setAttr(btn, at.name, at.value); } catch (err) {}
             });
             if (a.hasAttribute('href')) {
-                btn.setAttribute('data-dcc-href', a.getAttribute('href'));
+                setAttr(btn, 'data-dcc-href', a.getAttribute('href'));
             }
             while (a.firstChild) { btn.appendChild(a.firstChild); }
             if (a.parentNode) { a.parentNode.replaceChild(btn, a); }
@@ -2353,10 +2442,10 @@
         var bare = root.querySelectorAll(
             '.mphb-price-breakdown-expand, .dcc_checkout-tax-asterisk');
         Array.prototype.forEach.call(bare, function (el) {
-            el.classList.add('dcc_checkout-bare-button');
-            el.setAttribute('draggable', 'false');
+            addClass(el, 'dcc_checkout-bare-button');
+            setAttr(el, 'draggable', 'false');
             if (el.tagName === 'BUTTON' && !el.getAttribute('type')) {
-                el.setAttribute('type', 'button');
+                setAttr(el, 'type', 'button');
             }
         });
     }
@@ -2382,6 +2471,7 @@
     var fingerDown = false;
     var fingerUpAt = 0;
     var touchWatchArmed = false;
+    var onTouchUp = null;   // work deferred by the observer until the finger lifts
 
     function armTouchWatch() {
         if (touchWatchArmed) {
@@ -2397,6 +2487,11 @@
             document.addEventListener(type, function () {
                 fingerDown = false;
                 fingerUpAt = Date.now();
+                if (onTouchUp) {
+                    var fn = onTouchUp;
+                    onTouchUp = null;
+                    fn();
+                }
             }, { capture: true, passive: true });
         });
     }
@@ -2432,9 +2527,9 @@
     function armPreflight(root) {
         var existing = root.querySelectorAll('[class*="error" i], [role="alert"]');
         Array.prototype.forEach.call(existing, function (el) {
-            el.setAttribute('data-dcc-preexisting', '1');
+            setAttr(el, 'data-dcc-preexisting', '1');
         });
-        root.classList.add('dcc_checkout-preflight');
+        addClass(root, 'dcc_checkout-preflight');
 
         adminNote(root, 'Error elements present at page load: ' + existing.length +
             '. Those are left visible; anything that appears later is held back ' +
@@ -2444,7 +2539,7 @@
         // passes this plugin's own validators, because MotoPress validates
         // after we do. Capture phase so it runs before anything can stop it.
         function release() {
-            root.classList.remove('dcc_checkout-preflight');
+            removeClass(root, 'dcc_checkout-preflight');
         }
         root.addEventListener('submit', release, true);
         // MotoPress submits over REST from a click, so a submit event is not
@@ -2469,7 +2564,7 @@
         if (!box) {
             box = document.createElement('div');
             box.className = 'dcc_checkout-admin-notice';
-            box.setAttribute('role', 'status');
+            setAttr(box, 'role', 'status');
             root.insertBefore(box, root.firstChild);
         }
         var line = document.createElement('p');
@@ -2481,13 +2576,13 @@
     function showBanner(root, msg) {
         var existing = root.querySelector('.dcc_checkout-error-banner');
         if (existing) {
-            existing.textContent = msg;
+            setText(existing, msg);
             return;
         }
         var banner = document.createElement('div');
         banner.className = 'dcc_checkout-error-banner';
-        banner.setAttribute('role', 'alert');
-        banner.textContent = msg;
+        setAttr(banner, 'role', 'alert');
+        setText(banner, msg);
         root.insertBefore(banner, root.firstChild);
         try { banner.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
     }

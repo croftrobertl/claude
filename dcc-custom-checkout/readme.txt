@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.17.0
+Stable tag: 0.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,31 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.18.0 =
+* THE MUTATION BURST IS GONE AT THE SOURCE. Every round of the owner's tap log,
+  on inputs and on the expander alike, showed the same thing mid-tap: a burst
+  of ~100 DOM mutations. That burst was this plugin's own restructure pipeline
+  re-running with nothing to do. Measured on the test fixture: one no-op re-run
+  produced 42 mutation records, 35 of them writes whose old value equalled the
+  new one -- classList.add() of a class already present, textContent set to the
+  text already there. Per the DOM spec a no-op classList.add still queues a
+  MutationRecord, and browsers honour that. iOS Safari decides whether a tap is
+  a click or a hover by watching the page for content changes around it; a
+  page rewriting a hundred attributes on a timer is exactly what it looks for.
+  Every write in checkout.js now goes through an idempotent helper (addClass,
+  removeClass, setClass, setAttr, setText) that does nothing when nothing
+  changes, and the three "strip the class from every row, then add it back to
+  some" patterns now decide first and write only the difference. A no-op
+  re-run now records ZERO mutations, and that is asserted -- tests/breakdown
+  fails on a single one. 0.17.0 delayed the burst past the tap; this removes it.
+* The observer no longer INSTALLS a timer while a finger is down. WebKit's
+  content observer tracks DOM timers installed during touch handling and
+  watches what they do when they fire; 0.17.0 delayed the run but still
+  installed the timer inside the touch. While a finger is down the observer
+  now only notes that work is pending, and the touch-up handler schedules it
+  450ms later. Asserted: work noted during a 1.5s touch is not run until the
+  finger lifts and the tap has had time to resolve.
 
 = 0.17.0 =
 * THE EXPANDER IS NOW A REAL <button>. Across four tap logs the tax asterisk --

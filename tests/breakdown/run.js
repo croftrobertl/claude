@@ -586,6 +586,78 @@ function summary(doc) {
         expander().classList.contains('dcc_checkout-bare-button'), true);
 }
 
+/* ===================================================================== *
+ * v0.18.0 — A RE-RUN WITH NOTHING TO DO MUST NOT TOUCH THE PAGE.
+ *
+ * Measured before this release: one no-op re-run produced 42 mutation records
+ * on this fixture, 35 of them writes whose old value equalled the new one. On
+ * the live page that is the ~100-mutation burst logged mid-tap on the owner's
+ * phone, in every round, on inputs and on the expander alike. iOS Safari
+ * decides whether a tap is a click or a hover by watching for content changes
+ * around it; a page rewriting a hundred attributes on a timer is what it looks
+ * for. This asserts the burst is gone at the source, not merely delayed.
+ * ===================================================================== */
+{
+    const { window, doc } = await render(F.servicesWithDetails, {
+        labelAliases: {
+            'services': ['services', 'extras'],
+            'service': ['service', 'item'],
+            'services total': ['services total', 'extras total']
+        },
+        guestServiceIdList: [18063],
+        guestServiceTitles: ['extra guest fee (per guest beyond 2)'],
+        guestFeeAmountText: '$50',
+        i18n: {
+            subtotal: 'Subtotal', taxNoteLead: 'Taxes applied:',
+            totalPriceLabel: 'Total Price', extraGuestService: 'Extra Guest(s) Fee',
+            extraGuestDetail: '%1$s/night x %2$d guest',
+            extraGuestDetails: '%1$s/night x %2$d guests'
+        }
+    });
+    await new Promise(r => setTimeout(r, 1200));          // let the first pass settle
+    const form = doc.querySelector('form');
+    const recs = [];
+    const mo = new window.MutationObserver(l => l.forEach(r => recs.push(r)));
+    mo.observe(form, { attributes: true, childList: true, characterData: true,
+                       subtree: true, attributeOldValue: true });
+    const probe = doc.createElement('span');
+    form.appendChild(probe);                              // provoke one re-run
+    await new Promise(r => setTimeout(r, 1500));
+    mo.disconnect();
+    const mine = recs.filter(r => !(r.type === 'childList' &&
+                                     Array.from(r.addedNodes).includes(probe)));
+    check('a no-op re-run of the pipeline records ZERO mutations', mine.length, 0);
+    if (mine.length) {
+        const by = {};
+        mine.forEach(r => { const k = r.type + ' ' + (r.attributeName || '') + ' on ' +
+            r.target.nodeName; by[k] = (by[k] || 0) + 1; });
+        console.log('      offenders:', JSON.stringify(by));
+    }
+}
+
+{
+    // And the observer must not INSTALL a timer while a finger is down — it
+    // notes the work and the touch-up handler schedules it. Observable as: a
+    // mutation during a touch is acted on ~450ms after the finger lifts, and
+    // not before, however long the finger stays down.
+    const { window, doc } = await render(F.plainSubtotal, { i18n: { subtotal: 'Subtotal' } });
+    await new Promise(r => setTimeout(r, 800));
+    const expander = () => doc.querySelector('.mphb-price-breakdown-expand');
+    expander().classList.remove('dcc_checkout-bare-button');
+    doc.dispatchEvent(new window.Event('touchstart', { bubbles: true }));
+    doc.querySelector('form').appendChild(doc.createElement('span'));
+    await new Promise(r => setTimeout(r, 1500));          // well past any 500ms debounce
+    check('work noted during a long touch is still not run',
+        expander().classList.contains('dcc_checkout-bare-button'), false);
+    doc.dispatchEvent(new window.Event('touchend', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 300));
+    check('and not in the first 300ms after the finger lifts',
+        expander().classList.contains('dcc_checkout-bare-button'), false);
+    await new Promise(r => setTimeout(r, 500));
+    check('but it runs once the tap has had time to resolve',
+        expander().classList.contains('dcc_checkout-bare-button'), true);
+}
+
 console.log(failures ? `\n${failures} failing` : '\nall passing');
 process.exit(failures ? 1 : 0);
 })();

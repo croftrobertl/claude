@@ -353,6 +353,21 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   spec excludes; the tax asterisk carries it too, replacing an
   exclusion-by-name repeated in three selectors. **Add the class, never another
   `:not()`.** Asserted in `tests/fields/`.
+- **EVERY DOM write in `checkout.js` is idempotent** (v0.18.0): `addClass`,
+  `removeClass`, `setClass`, `setAttr`, `setText`, and "decide the set first,
+  then write only the difference" for anything that used to strip a class from
+  every row and add it back. Never call `classList.add/remove/toggle`,
+  `setAttribute` or `textContent =` directly on an existing node — a no-op
+  `classList.add` still queues a MutationRecord per spec. Why it matters: the
+  pipeline's no-op re-run produced 42 records on the fixture (35 changed
+  nothing) and ~100 on the live page, mid-tap, in every tap-log round, on
+  inputs and on the expander alike; iOS decides click-vs-hover by watching for
+  content changes around a tap. **A no-op re-run now records ZERO mutations and
+  `tests/breakdown` fails on one.** That test is the guard; keep it.
+- **The observer never installs a timer during a touch** (v0.18.0). WebKit
+  tracks DOM timers installed while handling a touch and watches what they do.
+  While `fingerDown`, the MutationObserver callback only sets `onTouchUp`; the
+  touch-up handler schedules the run 450ms later. Asserted.
 - **The restructure pipeline never runs while a finger is down** (v0.17.0).
   `observeReRenders()` holds while a touch is live and for 400ms after it
   lifts, on a 500ms debounce (was 150ms), with a 3s ceiling so it cannot be
