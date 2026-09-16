@@ -437,7 +437,11 @@ final class Config
     {
         return (string) apply_filters(
             'dcc_checkout_couch_note',
-            __('Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3 and 4 will have a pull-out couch and be charged an additional nightly fee.', 'dcc-checkout')
+            // v0.19.0 literal. 138 chars, both hyphens U+002D, no double spaces.
+            // sha256 8a638fb2e266a645cbf93b300dec44113c0989a9531dbb5abb00bb55a420783f
+            // — pinned in tests/copy/run.php, and the same hash is pinned in the
+            // Cottage Selector. Change one, change both, change the pin.
+            __('Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged a nightly fee.', 'dcc-checkout')
         );
     }
 

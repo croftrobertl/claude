@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.18.0
+Stable tag: 0.19.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,22 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.19.0 =
+* Item 2 - a divider between the accommodation title row and the first detail
+  row beneath it ("Number of Guests" on this site). Found structurally as the
+  first visible, non-wrapper row after each title row, so it is MotoPress's own
+  row and needs no placement of ours; same shared divider class as every other
+  rule, so they all move together.
+* Item 3 - the extra-guest details cell is two lines: "$50/night" over
+  "x N guests", lowercase x. A newline in the text rendered by white-space:
+  pre-line, so the write stays a single idempotent setText.
+* Item 5 - the pull-out-couch sentence is the owner's new literal: "Guests 1-2
+  are included in the nightly rate and will have a queen bed. Guests 3-4 will
+  have a pull-out couch and be charged a nightly fee." ONE string, 138 bytes,
+  pinned by sha256 in tests/copy/run.php to the same hash the Cottage Selector
+  pins, so the two plugins cannot drift. The owner's line break between the
+  sentences is presentation, applied at render, so the literal hashes identical.
 
 = 0.18.0 =
 * THE MUTATION BURST IS GONE AT THE SOURCE. Every round of the owner's tap log,

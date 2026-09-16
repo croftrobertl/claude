@@ -289,6 +289,13 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   and so it assumes 2 included / 4 capacity / queen + pull-out couch, which
   holds for the six cottages that can show it. The caller's `max <= included`
   guard is what keeps it off Cottages 33 and 34.
+  **v0.19.0 literal, pinned:** sha256
+  `8a638fb2e266a645cbf93b300dec44113c0989a9531dbb5abb00bb55a420783f`, 138
+  bytes, asserted in `tests/copy/run.php` (`php tests/copy/run.php`). The
+  Cottage Selector pins the same hash. **Change one, change both, change both
+  pins.** The owner's line break between the two sentences is applied at
+  render (`\n` after the first full stop + `white-space: pre-line`), never in
+  the literal — the literal must hash identical.
 - **Site-level CSS that is not in this repo.** doracanalcourt.com carries
   ~1.3KB of Customizer "Additional CSS" on every page: it hides
   `.mphb-guest-name-wrapper`, forces `.mphb_sc_search-form` to `display: block`

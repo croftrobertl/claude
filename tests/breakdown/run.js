@@ -160,8 +160,8 @@ function summary(doc) {
     // class-mate, so one CSS rule still governs every line on the breakdown.
     const ruled = Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
         .map(r => label(r.cells[0]));
-    check('dividers: Dates header, after the dates, Service header, Subtotal',
-        ruled, ['Dates', 'Accommodation Total', 'Service', 'Subtotal']);
+    check('dividers: first detail row (item 2), Dates, after the dates, Service, Subtotal',
+        ruled, ['Number of Guests', 'Dates', 'Accommodation Total', 'Service', 'Subtotal']);
     check('dividers: the date rows themselves carry none',
         Array.from(doc.querySelectorAll('tr.dcc_checkout-breakdown-rule'))
              .some(r => /September/.test(label(r.cells[0]))), false);
@@ -358,8 +358,9 @@ function summary(doc) {
             taxNoteLabel: 'Show which taxes apply',
             totalPriceLabel: 'Total Price',
             extraGuestService: 'Extra Guest(s) Fee',
-            extraGuestDetail: '%1$s/night x %2$d guest',
-            extraGuestDetails: '%1$s/night x %2$d guests'
+            extraGuestRate: '%s/night',
+            extraGuestGuest: 'x %d guest',
+            extraGuestGuests: 'x %d guests'
         }
     };
 
@@ -379,8 +380,8 @@ function summary(doc) {
              r.cells[0].textContent.trim() === 'Extra Guest(s) Fee');
     check('item 14: the service is relabelled for display', !!feeRow, true);
     if (feeRow) {
-        check('item 14: details read as a nightly rate times guests',
-            feeRow.cells[1].textContent.trim(), '$50/night x 2 guests');
+        check('item 14 + item 3: details are two lines, lowercase x',
+            feeRow.cells[1].textContent.trim(), '$50/night\nx 2 guests');
         check('item 14: the AMOUNT is never touched',
             feeRow.cells[2].textContent.trim(), '$200');
     }
@@ -424,7 +425,7 @@ function summary(doc) {
              r.cells[0].textContent.trim() === 'Extra Guest(s) Fee');
     check('item 14: a second pass leaves the relabelled row alone',
         feeRow2 ? feeRow2.cells[1].textContent.trim() : null,
-        '$50/night x 2 guests');
+        '$50/night\nx 2 guests');
 
     // --- Item 7, the graceful half ----------------------------------------
     const bare = await render(F.totalWithoutBreakdown, CFG14);
@@ -454,6 +455,8 @@ function summary(doc) {
         ruled.includes('Subtotal'), true);
     check('item 4: and the Service header still has one above it',
         ruled.includes('Service'), true);
+    check('item 2: the first detail row under the title carries the divider',
+        ruled.includes('Nights'), true);
 }
 
 /* ===================================================================== *
@@ -610,8 +613,9 @@ function summary(doc) {
         i18n: {
             subtotal: 'Subtotal', taxNoteLead: 'Taxes applied:',
             totalPriceLabel: 'Total Price', extraGuestService: 'Extra Guest(s) Fee',
-            extraGuestDetail: '%1$s/night x %2$d guest',
-            extraGuestDetails: '%1$s/night x %2$d guests'
+            extraGuestRate: '%s/night',
+            extraGuestGuest: 'x %d guest',
+            extraGuestGuests: 'x %d guests'
         }
     });
     await new Promise(r => setTimeout(r, 1200));          // let the first pass settle

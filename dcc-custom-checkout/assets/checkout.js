@@ -592,6 +592,31 @@
             }
         }
 
+        // Item 2 (v0.19.0): between the accommodation title row and the first
+        // detail row beneath it — "Number of Guests" on this site. That row is
+        // MotoPress's own, the first in the nested detail table, so it is found
+        // structurally: the first visible, non-wrapper row after each title
+        // row in document order. The same shared class as every other
+        // divider, so they all move together.
+        rows.forEach(function (r, i) {
+            if (!r.classList.contains('mphb-price-breakdown-booking')) {
+                return;
+            }
+            for (var k = i + 1; k < rows.length; k++) {
+                var cand = rows[k];
+                if (cand.cells && cand.cells.length === 1 && cand.querySelector('table')) {
+                    continue;   // the wrapper row that holds the nested table
+                }
+                if (cand.classList.contains('mphb-price-breakdown-booking')) {
+                    break;      // next accommodation, no detail rows found
+                }
+                if (!isHiddenRow(cand)) {
+                    want.push(cand);
+                    break;
+                }
+            }
+        });
+
         rows.forEach(function (r) {
             setClass(r, 'dcc_checkout-breakdown-rule', want.indexOf(r) !== -1);
         });
@@ -684,11 +709,17 @@
             if (!(n > 0) || !rate) {
                 return;
             }
-            var tpl = (n === 1 ? I18N.extraGuestDetail : I18N.extraGuestDetails) || '';
-            if (!tpl) {
-                return;
-            }
-            setCellText(cells[1], tpl.replace('%1$s', rate).replace('%2$d', String(n)));
+            // Item 3 (v0.19.0): two lines —
+            //     $50/night
+            //     x N guests
+            // A newline in the text, rendered by white-space: pre-line on the
+            // cell, so the write stays a plain setText and stays idempotent.
+            // Lowercase x: the capital in the owner's example was the line
+            // start capitalising itself, not a request.
+            var rateLine  = I18N.extraGuestRate || '%s/night';
+            var guestLine = (n === 1 ? I18N.extraGuestGuest : I18N.extraGuestGuests) || 'x %d guests';
+            setCellText(cells[1],
+                rateLine.replace('%s', rate) + '\n' + guestLine.replace('%d', String(n)));
         });
     }
 
@@ -1628,7 +1659,13 @@
         // Cottage Selector — so there is nothing to substitute. The guards
         // above still decide WHETHER it appears: `max <= included` is what
         // keeps it off Cottages 33 and 34, which have no couch.
-        setGuestNote(sel, 'dcc_checkout-fee-note', I18N.couchNote);
+        // Item 5 (v0.19.0): the owner wants the two sentences on two lines.
+        // That is PRESENTATION — the literal stays one string, byte-identical
+        // to the Cottage Selector's and pinned by hash in tests/copy. The break
+        // is put in here, at render, after the first sentence's full stop, and
+        // shown by white-space: pre-line on the note.
+        setGuestNote(sel, 'dcc_checkout-fee-note',
+            String(I18N.couchNote).replace(/\.\s+(?=[A-Z])/, '.\n'));
     }
 
     // Highest selectable guest count on this room's dropdown (ignores options

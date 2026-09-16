@@ -396,8 +396,11 @@ final class Assets
                 // upload field. Localised so a translated site can still match it.
                 'totalPriceLabel'   => __('Total Price', 'dcc-checkout'),
                 'extraGuestService' => __('Extra Guest(s) Fee', 'dcc-checkout'),
-                'extraGuestDetail'  => __('%1$s/night x %2$d guest', 'dcc-checkout'),
-                'extraGuestDetails' => __('%1$s/night x %2$d guests', 'dcc-checkout'),
+                // Two lines, joined by the JS with a newline (item 3, v0.19.0).
+                // Lowercase x by owner decision.
+                'extraGuestRate'    => __('%s/night', 'dcc-checkout'),
+                'extraGuestGuest'   => __('x %d guest', 'dcc-checkout'),
+                'extraGuestGuests'  => __('x %d guests', 'dcc-checkout'),
                 /* translators: %s: formatted cumulative fee (e.g. $100). Appended to a guest-count option, e.g. "4 (+$100/night)". */
                 'optionFeeSuffix' => __(' (+%s/night)', 'dcc-checkout'),
                 /* translators: %s: maximum guest count. */

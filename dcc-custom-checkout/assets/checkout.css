@@ -322,6 +322,14 @@
     text-align: inherit;
 }
 
+/* Items 3 and 5 (v0.19.0): a newline in the text renders as a line break.
+ * The text itself is what the JS writes with setText, so the write stays
+ * idempotent; only the presentation changes. */
+.mphb_sc_checkout-form table.dcc_checkout-breakdown td[data-dcc-relabelled],
+.mphb_sc_checkout-form .dcc_checkout-fee-note {
+    white-space: pre-line;
+}
+
 /* Keyboard focus must stay visible on the pill fields even if the theme
    suppresses the UA outline. :focus-visible so mouse users don't get a ring. */
 .mphb_sc_checkout-form input:focus-visible,
