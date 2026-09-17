@@ -234,7 +234,15 @@ final class Staff_Data
      */
     private static function section_booking(int $id, $b, array $source): array
     {
+        // Meta fallback, the same last resort date_of() uses. Without it the
+        // total is entity-only, so anything reading this without a live MPHB
+        // entity sees no price at all — and mphb_total_price is exactly where
+        // the figure lives.
         $total = self::scalar($b, ['getTotalPrice', 'getTotal'], null);
+        if ($total === null || $total === '') {
+            $meta_total = get_post_meta($id, 'mphb_total_price', true);
+            $total = is_numeric($meta_total) ? $meta_total : $total;
+        }
         $pay   = self::payment_info($id, $b);
         $paid  = $pay['paid'];
         $due   = ($total !== null && is_numeric($total) && $paid !== null) ? (float) $total - $paid : null;
@@ -256,6 +264,15 @@ final class Staff_Data
             }
             $a = self::int_or_null(self::scalar($r['entity'], ['getAdults'], null));
             $c = self::int_or_null(self::scalar($r['entity'], ['getChildren'], null));
+            // Same meta last resort. MPHB stores occupancy on the
+            // reserved-room post, and without this the count is entity-only.
+            $rr = (int) ($r['post_id'] ?? 0);
+            if ($a === null && $rr > 0) {
+                $a = self::int_or_null(get_post_meta($rr, '_mphb_adults', true));
+            }
+            if ($c === null && $rr > 0) {
+                $c = self::int_or_null(get_post_meta($rr, '_mphb_children', true));
+            }
             if ($a !== null) { $adults += $a; $counted = true; }
             if ($c !== null) { $children += $c; $counted = true; }
         }
@@ -265,10 +282,20 @@ final class Staff_Data
         self::push($out, __('Check-in', 'mphb-availability-calendar'), self::date_of($b, ['getCheckInDate'], $id, self::META_CHECKIN));
         self::push($out, __('Check-out', 'mphb-availability-calendar'), self::date_of($b, ['getCheckOutDate'], $id, self::META_CHECKOUT));
 
-        // OTA HONESTY. An imported booking's occupancy is MPHB's max-capacity
-        // default, not the guest's actual party — say so in words rather than
-        // print a number staff would greet the door with.
-        if ($source['imported']) {
+        // OTA HONESTY, refined. An imported booking's occupancy is usually
+        // MPHB's max-capacity default rather than the guest's actual party —
+        // but "usually" is not "always", and blanking every imported count
+        // also throws away a real number once somebody enters one.
+        //
+        // The default is identifiable: it equals the room type's
+        // mphb_adults_capacity AND the booking came from an iCal import. That
+        // COMBINATION is what makes it a default; either half alone does not.
+        // Anything else on an imported booking is a figure somebody actually
+        // entered, so it is shown.
+        $override = self::guest_override($id);
+        if ($override !== '') {
+            self::push($out, __('Number of Guests', 'mphb-availability-calendar'), $override);
+        } elseif ($source['imported'] && self::is_capacity_default($rooms, $adults, $children)) {
             self::push(
                 $out,
                 __('Number of Guests', 'mphb-availability-calendar'),
@@ -290,16 +317,35 @@ final class Staff_Data
             self::push($out, __('Number of Guests', 'mphb-availability-calendar'), $guests > 0 ? $label : '0');
         }
 
-        self::push($out, __('Total', 'mphb-availability-calendar'), self::money($total), ['money' => true]);
-        // "No payment recorded" is meaningful (pay on arrival / an OTA), so it
-        // is a value, not a blank — see payment_info().
-        self::push(
-            $out,
-            __('Paid', 'mphb-availability-calendar'),
-            $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid),
-            ['money' => $paid !== null]
-        );
-        self::push($out, __('Balance Due', 'mphb-availability-calendar'), self::money($due), ['money' => true]);
+        // MONEY IS SHOWN ONLY WHEN MONEY IS OWED.
+        //
+        // "No payment recorded" is NOT the same as "owes nothing": a website
+        // booking with a price and no payment owes the full total, so the
+        // amount outstanding is computed against 0, not against null.
+        //
+        // A booking with no price at all — every OTA import is
+        // mphb_total_price = 0 — has nothing outstanding to state, because the
+        // guest paid the OTA and this install never saw the figure. Printing
+        // "Total $0.00 / Balance Due $0.00" there is not a fact about the
+        // booking; it is a fact about a field nobody filled in.
+        //
+        // THIS REVERSES A DELIBERATE EARLIER DECISION recorded on is_blank():
+        // "a Balance Due of zero means nothing owed, which staff need to see."
+        // The owner's rule now is to show only what the booking actually
+        // contains, and to hide the money block on a paid-off or imported
+        // booking — so a zero balance is no longer printed either.
+        $total_f = is_numeric($total) ? (float) $total : null;
+        $owed    = ($total_f !== null && $total_f > 0) ? $total_f - (float) ($paid ?? 0) : null;
+        if ($owed !== null && $owed > 0.005) {
+            self::push($out, __('Total', 'mphb-availability-calendar'), self::money($total), ['money' => true]);
+            self::push(
+                $out,
+                __('Paid', 'mphb-availability-calendar'),
+                $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid),
+                ['money' => $paid !== null]
+            );
+            self::push($out, __('Balance Due', 'mphb-availability-calendar'), self::money($due ?? $owed), ['money' => true]);
+        }
         return $out;
     }
 
@@ -363,11 +409,174 @@ final class Staff_Data
         self::push($out, __('Guest3 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest3lastname', 'guest3lname', 'guest3last']));
         self::push($out, __('Guest4 First Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest4firstname', 'guest4fname', 'guest4first']));
         self::push($out, __('Guest4 Last Name', 'mphb-availability-calendar'), self::custom_get($custom, ['guest4lastname', 'guest4lname', 'guest4last']));
-        self::push($out, __('Dog Type', 'mphb-availability-calendar'), self::custom_get($custom, ['dogtype', 'typeofdog', 'dogbreed']));
-        self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
-        self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));
+        // THE PET BLOCK IS GATED AS A WHOLE, and NOT on the emptiness of
+        // dog_size or dog_hair.
+        //
+        // Those two were `select` controls with no blank option, so the first
+        // value was always stored: every booking taken before 2026-09-17
+        // carries "10-20 lbs" / "short-haired" whether or not a dog was ever
+        // mentioned. dog_type is a text field, which is why it alone came
+        // through empty. A blank first option has since been added, so an
+        // empty select is meaningful for NEW bookings — and still meaningless
+        // for the whole existing history. Gating on their emptiness therefore
+        // gives the wrong answer on every historical booking, which is most
+        // of them.
+        //
+        // Two things do survive both eras: a pet fee attached to the reserved
+        // room (somebody chose and paid for it), and a non-empty dog_type
+        // (somebody typed it). Either one shows the block; neither hides it.
+        $dog_type = self::custom_get($custom, ['dogtype', 'typeofdog', 'dogbreed']);
+        if (!self::is_blank($dog_type) || self::has_pet_service(self::reserved_entities($id, $b))) {
+            self::push($out, __('Dog Type', 'mphb-availability-calendar'), $dog_type);
+            self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
+            self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));
+        }
 
         return $out;
+    }
+
+    /**
+     * A guest count somebody actually entered, if one exists.
+     *
+     * The owner is getting a WP-Admin field for the real party size on
+     * imported bookings. Its meta key is not known here, so this matches on a
+     * NORMALIZED key the way custom_get() does — and deliberately scans ALL
+     * booking meta, not just the mphb_ prefix, because a field added by hand
+     * or by another plugin will not carry that prefix.
+     *
+     * If the field ends up named something outside this list, add it here;
+     * the candidates are the spellings that will be picked up automatically.
+     */
+    private static function guest_override(int $booking_id): string
+    {
+        $candidates = [
+            'numberofguests', 'numguests', 'guestcount', 'guests', 'totalguests',
+            'actualguests', 'partysize', 'realguestcount', 'guestsactual',
+        ];
+        $map = [];
+        foreach ((array) get_post_meta($booking_id) as $key => $vals) {
+            $n = preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/^_?mphb_?/i', '', (string) $key)));
+            if ($n === '' || isset($map[$n])) {
+                continue;
+            }
+            $v = is_array($vals) ? reset($vals) : $vals;
+            $map[$n] = is_scalar($v) ? (string) $v : '';
+        }
+        foreach ($candidates as $c) {
+            if (isset($map[$c])) {
+                $v = trim($map[$c]);
+                // A count is a positive integer. Anything else is not an
+                // answer — including the "0" MPHB leaves in unset numerics.
+                if ($v !== '' && ctype_digit($v) && (int) $v > 0) {
+                    return self::plain($v);
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Is this occupancy MPHB's capacity default rather than a real count?
+     *
+     * True only when the adults figure equals the room type's configured
+     * adult capacity and no children are recorded. The caller additionally
+     * requires the booking to be an iCal import — the two together are what
+     * identify the default. On a 4-capacity cottage a genuine party of 4 is
+     * indistinguishable from the default, which is why the WP-Admin override
+     * above exists and is checked FIRST.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     */
+    private static function is_capacity_default(array $rooms, int $adults, int $children): bool
+    {
+        if ($children > 0) {
+            return false;
+        }
+        $capacity = 0;
+        foreach ($rooms as $r) {
+            $type_id = (int) ($r['room_type_id'] ?? 0);
+            if ($type_id <= 0) {
+                continue;
+            }
+            $cap = (int) get_post_meta($type_id, 'mphb_adults_capacity', true);
+            if ($cap > 0) {
+                $capacity += $cap;
+            }
+        }
+        // No capacity configured tells us nothing, so fall back to the old
+        // behaviour of not trusting an imported count.
+        return $capacity === 0 || $adults === $capacity;
+    }
+
+    /**
+     * Does this booking carry a pet fee?
+     *
+     * The pet questions were `select` controls with no blank option, so the
+     * first value was always stored — every booking taken before 2026-09-17
+     * carries "10-20 lbs" / "short-haired" whether or not a dog was ever
+     * mentioned. A blank first option has since been added, so emptiness is
+     * trustworthy for NEW bookings and worthless for old ones.
+     *
+     * The fee is the fact that survives both eras: a pet service attached to
+     * the reserved room is something somebody chose and paid for.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     */
+    private static function has_pet_service(array $rooms): bool
+    {
+        $ids = [];
+        foreach ($rooms as $r) {
+            // The entity's own services first, when MPHB exposes them.
+            $svc = self::first_of($r['entity'] ?? null, ['getServices', 'getReservedServices']);
+            if (is_array($svc)) {
+                foreach ($svc as $one) {
+                    $title = is_scalar($one) ? '' : (string) self::scalar($one, ['getTitle', 'getName'], '');
+                    if ($title !== '' && preg_match('/\b(pet|dog)/i', $title)) {
+                        return true;
+                    }
+                    $sid = is_scalar($one) ? (int) $one : (int) self::scalar($one, ['getId'], 0);
+                    if ($sid > 0) {
+                        $ids[$sid] = true;
+                    }
+                }
+            }
+            $post_id = (int) ($r['post_id'] ?? 0);
+            if ($post_id > 0) {
+                $meta = (array) maybe_unserialize(get_post_meta($post_id, '_mphb_services', true));
+                // MPHB stores this either as a LIST of ids, or as a MAP of
+                // id => quantity. In the map the id is the KEY; reading the
+                // value there yields the quantity, which then matches no
+                // service at all (or, worse, the wrong one).
+                $is_list = $meta === [] || array_keys($meta) === range(0, count($meta) - 1);
+                foreach ($meta as $k => $v) {
+                    if (is_array($v)) {
+                        $sid = (int) ($v['id'] ?? ($is_list ? 0 : $k));
+                    } else {
+                        $sid = (int) ($is_list ? $v : $k);
+                    }
+                    if ($sid > 0) {
+                        $ids[$sid] = true;
+                    }
+                }
+            }
+        }
+        if (!$ids) {
+            return false;
+        }
+        // ONE query for every service on the booking — not one per service.
+        $posts = get_posts([
+            'post_type'      => 'mphb_room_service',
+            'post__in'       => array_map('intval', array_keys($ids)),
+            'posts_per_page' => count($ids),
+            'no_found_rows'  => true,
+            'post_status'    => 'any',
+        ]);
+        foreach ($posts as $post) {
+            if (preg_match('/\b(pet|dog)/i', (string) $post->post_title)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -766,6 +975,18 @@ final class Staff_Data
 
     private static function looks_like_attachment(string $key, $val): bool
     {
+        // THE VALUE DECIDES, NOT THE KEY. Matching the key alone meant an
+        // empty `mphb_upload_id` — which every booking carries, and which
+        // every OTA import leaves blank — produced a "Photo ID" row with a
+        // View button for a file that does not exist. An empty value, a bare
+        // "0" or an unset attachment is not a photo; there is nothing to
+        // redeem through the proxy and nothing to show.
+        if (is_array($val)) {
+            $val = reset($val);
+        }
+        if (!is_scalar($val) || self::is_blank(trim((string) $val))) {
+            return false;
+        }
         if (preg_match('/(photo|id_?card|identification|licen[cs]e|passport|upload|attachment|file)/i', $key)) {
             return true;
         }
@@ -816,6 +1037,10 @@ final class Staff_Data
                     'entity'       => is_object($e) ? $e : null,
                     'room_id'      => $room_id,
                     'room_type_id' => (int) self::scalar($e, ['getRoomTypeId'], 0),
+                    // Carried so the pet-fee test can read _mphb_services off
+                    // the reserved-room post when the entity does not expose
+                    // its services.
+                    'post_id'      => (int) self::scalar($e, ['getId'], 0),
                 ];
             }
             return $out;
@@ -834,6 +1059,7 @@ final class Staff_Data
                 'entity'       => null,
                 'room_id'      => $room_id,
                 'room_type_id' => $room_id ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0,
+                'post_id'      => (int) $rid,
             ];
         }
         return $out;

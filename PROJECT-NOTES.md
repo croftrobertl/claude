@@ -1231,6 +1231,75 @@ touch-correct form is a PRESSED state — `:active` in the hover colour,
 ungated — which paints while the finger is down and clears on release without
 sticking. Do not ship it until he says yes.
 
+## THE HARNESSES LIVE IN THE REPOSITORY NOW (2026-09-17)
+
+All 31 harnesses — 16 PHP, 15 browser — were written into the session
+scratchpad, which is ephemeral. A container recycle deleted every one of them
+at once, after they had been used to verify fourteen releases. Nothing was in
+version control; `git log --diff-filter=A` over the whole history returns no
+test file.
+
+`tests/` is now part of the repository, OUTSIDE `mphb-availability-calendar/`
+so the release zip stays clean. `tests/run.sh` runs the lot.
+**Anything load-bearing gets committed. No exceptions.**
+
+Two things the rebuild is worth for on their own:
+- `bootstrap.php` returns post meta the way WordPress actually does — every
+  value in an array, even a single one. A stub that returns bare scalars is
+  kinder than production, which is the failure this project has already
+  recorded twice (a missing `MPHB()` stub hid two N+1s).
+- `staff-gate-test.php` redirects `error_log()` to a real file via `ini_set`
+  rather than stubbing it, because it is a PHP builtin and cannot be
+  redeclared — so the fail-closed path is asserted against the real log line.
+
+A second trap on the same day: the recycled container's clone was **four
+releases stale** and its remote-tracking ref predated the pushes, so
+`git log origin/...` showed 0.28.0 as the tip. The commits were safe; `git
+fetch` proved it. **Fetch before believing a clone's idea of the branch** —
+committing on that stale tree would have silently reverted 0.29.0 through
+0.31.1.
+
+## "Only show what the booking contains" (0.32.0)
+
+The owner's rule for the /staff/ panel, verbatim: "ONLY SHOW INFORMATION
+THAT'S ACTUALLY RECEIVED OR ENTERED INTO THE BOOKING." Reference case is
+booking #18433, a Booking.com import.
+
+- **Photo ID.** `looks_like_attachment()` matched on the KEY alone, so an
+  empty `mphb_upload_id` — which every booking carries and every OTA import
+  leaves blank — produced a View button for a file that does not exist. The
+  value decides now.
+- **Money.** Total, Paid and Balance Due appear only when something is
+  outstanding. "No payment recorded" is NOT "owes nothing": a priced booking
+  with no payment owes the full total, so the amount is computed against 0,
+  not against null. A booking with no price at all has nothing to state.
+  **THIS REVERSES A DELIBERATE EARLIER DECISION** recorded on `is_blank()` —
+  "a Balance Due of zero means nothing owed, which staff need to see."
+- **Guest count.** An imported count is the capacity default only when it
+  EQUALS the room type's `mphb_adults_capacity` AND the booking is an iCal
+  import; either half alone does not identify it. A real count on an imported
+  booking is now shown instead of being blanked. A WP-Admin override is
+  checked first, matched on a normalized key across ALL booking meta (not
+  just the `mphb_` prefix) — see `guest_override()` for the spellings that
+  will be picked up.
+- **The pet block is gated as a whole, and NOT on `dog_size`/`dog_hair`
+  emptiness.** Those were `select` controls with no blank option, so the first
+  value was always stored: every booking before 2026-09-17 carries
+  "10-20 lbs" / "short-haired" whether or not a dog was mentioned. A blank
+  option has since been added, which makes emptiness meaningful for NEW
+  bookings and still meaningless for the entire existing history. The two
+  facts that survive both eras are a pet FEE on the reserved room and a typed
+  `dog_type`.
+
+Three entity-only reads got the meta last resort the file's own design already
+describes (`date_of()` does the same): `mphb_total_price`, `_mphb_adults` and
+`_mphb_children`. Without them the figures are invisible wherever a live MPHB
+entity is not in play.
+
+`_mphb_services` is stored either as a LIST of ids or as a MAP of
+id => quantity. In the map the id is the KEY; reading the value there yields
+the quantity, which matches no service — or the wrong one.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
