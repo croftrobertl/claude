@@ -28,12 +28,13 @@ if (!defined('ABSPATH')) {
  * screen it did not render a nonce for, never on autosave, and never for a user
  * who cannot edit the booking.
  *
- * DCC-VERIFY: the reserved-room relationships are the ones this repo's
- * availability calendar already relies on in live SQL — `mphb_reserved_room`
- * posts are children of the `mphb_booking` post (post_parent) and carry
- * `_mphb_room_id`; physical rooms carry `mphb_room_type_id`. The meta key
- * `_mphb_adults` is MotoPress's own and was supplied with booking #18433 as
- * evidence; it has not been read back from a live database here.
+ * CONFIRMED on live, 2026-09-17 — no DCC-VERIFY outstanding. The reserved-room
+ * relationships are the ones this repo's availability calendar already relies
+ * on in live SQL: `mphb_reserved_room` posts are children of the
+ * `mphb_booking` post (post_parent) and carry `_mphb_room_id`; physical rooms
+ * carry `mphb_room_type_id`. `_mphb_adults` was read off the live database and
+ * is present on all 417 reserved rooms (261 twos, 145 ones, seven fours, four
+ * threes).
  */
 final class Admin_Guests
 {

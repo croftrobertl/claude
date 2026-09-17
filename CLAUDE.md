@@ -387,6 +387,26 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   helper hard-refuses any control named `[services]` or classed
   `mphb_sc_checkout-service`. **Never route a service control through it**, and
   keep the test that asserts the service checkbox stays enabled and submits.
+- **`mphb_cf_options` IS PHP-SERIALISED ON THIS SITE, NOT JSON.** Checkout
+  Fields store their option lists that way, so `json_decode()` returns null and
+  a careless write silently changes nothing — no error, no effect. **Always
+  `maybe_unserialize()` first and write back in the shape you found.** It cost
+  a round to discover; nothing in this repo reads those options today, and
+  anything that starts to must obey this.
+- **The dog-field contamination is CLEANED AND FIXED AT SOURCE** (2026-09-17,
+  by the owner's team, not by this plugin). Checkout fields 17727 (`dog_size`)
+  and 17728 (`dog_hair`) now carry a blank first option, so "no answer" is
+  representable at all — that is what stops it recurring. The phantom values
+  were cleared from #17457, #17459, #18098, #18159 and #18433, backed up in the
+  option `dcc_bak_dogmeta_20260917`. **#17730 and #17795 were deliberately
+  KEPT** — both `dog_type = "Poodle"`, and #17795 carries non-default size and
+  hair: real pet bookings, not contamination.
+  **The pet gate still tests the pet fee or `dog_type`, never emptiness** — and
+  that is now the principled test rather than a historical workaround: a guest
+  with a real dog who accepts the first option is indistinguishable from a
+  default by value alone, however clean the data is. The blank option and
+  v0.22.0's `disabled` both reduce how often that arises; neither makes
+  emptiness a sound test.
 - **The admin guest-count control writes `_mphb_adults` on the reserved room**
   (v0.22.0, `Admin_Guests`). MotoPress fills that meta with the ROOM TYPE'S
   CAPACITY when an import supplies no count (#18433: 4 for a 2-guest
