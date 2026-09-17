@@ -1300,6 +1300,55 @@ entity is not in play.
 id => quantity. In the map the id is the KEY; reading the value there yields
 the quantity, which matches no service — or the wrong one.
 
+## The guest-count contract with dcc-custom-checkout (0.33.0)
+
+`_mphb_adults` alone cannot answer the question. Four guests in a
+four-capacity cottage is byte-identical to MotoPress's default, so no rule
+over the VALUE can separate them. Provenance can.
+
+**The contract, split across two plugins:**
+- `dcc-custom-checkout` writes `_mphb_adults_confirmed = 1` on the RESERVED
+  ROOM alongside `_mphb_adults` when a human sets the count, and deletes both
+  for "Not provided".
+- This plugin checks the marker FIRST. Present => show `_mphb_adults` as a
+  real count, whatever its value and whatever the booking's source. Absent =>
+  the existing rule applies (`_mphb_adults` == `mphb_adults_capacity` AND an
+  iCal import reads as unknown).
+
+**A matcher that never fires is worse than none.** 0.32.0 searched BOOKING
+meta for seven plausible key names (`number_of_guests`, `guest_count`,
+`party_size`, …). Verified on the live database: not one of those keys exists
+on any booking, and the writer puts its value on the reserved room instead. It
+could never have fired, and it read as coverage. Deleted.
+
+## Mutation checking (0.33.0) — `php tests/mutate.php`
+
+Each entry breaks ONE guarded behaviour in the source and expects a named
+suite to go red; a SURVIVING mutation means the assertion protecting it does
+not test it. This exists because a sibling plugin had a button-colour
+assertion passing for weeks against a fixture holding an element the live page
+no longer rendered.
+
+Two habits it enforces:
+- **Where a suite asserts on markup a third party renders, carry BOTH shapes
+  in the fixture.** Fixtures drift from live silently.
+- **Do not count an assertion as coverage until you have seen it fail.**
+
+The runner restores every mutated file through `register_shutdown_function`
+and a signal handler, so an interrupted run cannot leave the source modified.
+A mutation whose target string has moved reports STALE rather than passing
+quietly — the mutation itself is a thing that rots.
+
+## The pet gate stays as built, and the reason has changed (0.33.0)
+
+The five defaulted bookings (#17457, #17459, #18098, #18159, #18433) have been
+cleared, and `dog_size`/`dog_hair` now carry a blank first option, so history
+is no longer the argument. The gate stays because it is the CORRECT test:
+`dog_size` is a select, so a guest with a real dog who accepts the first
+option is indistinguishable by value from a default. A blank option makes "no
+answer" possible; it does not make "accepted the first option"
+distinguishable. Two genuine pet bookings remain live: #17730 and #17795.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

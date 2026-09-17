@@ -51,6 +51,8 @@ function value_of(array $detail, string $section, string $label): ?string {
 function booking(int $id, array $meta = [], array $opts = []): array {
     $GLOBALS['t_posts'] = [];
     $GLOBALS['t_meta']  = [];
+    $GLOBALS['wpdb']->payment_rows = [];
+    foreach ($opts['payments'] ?? [] as $amt) { t_payment($id, (float) $amt); }
     // the cottage, with MotoPress's configured capacity
     t_post(22, 'mphb_room_type', 'publish', 'Cottage 22', ['mphb_adults_capacity' => 4]);
     t_post(220, 'mphb_room', 'publish', 'Cottage 22 room', ['mphb_room_type_id' => 22]);
@@ -76,7 +78,13 @@ function booking(int $id, array $meta = [], array $opts = []): array {
     t_post($rr, 'mphb_reserved_room', 'publish', 'RR', array_merge([
         '_mphb_room_id' => 220,
         '_mphb_adults'  => $opts['adults'] ?? 4,
-    ], isset($opts['services']) ? ['_mphb_services' => $opts['services']] : []));
+    ],
+        isset($opts['children']) ? ['_mphb_children' => $opts['children']] : [],
+        // dcc-custom-checkout 0.22.0 writes this alongside _mphb_adults when a
+        // human sets the count, and DELETES it for "Not provided".
+        !empty($opts['confirmed']) ? ['_mphb_adults_confirmed' => 1] : [],
+        isset($opts['services']) ? ['_mphb_services' => $opts['services']] : []
+    ));
     $GLOBALS['t_posts'][$rr]->post_parent = $id;
     foreach ($opts['service_posts'] ?? [] as $sid => $title) {
         t_post($sid, 'mphb_room_service', 'publish', $title);
@@ -114,26 +122,75 @@ check('1: the Photo ID row returns when a file is actually attached',
 $d = booking(18435, ['mphb_upload_id' => '0']);
 check('1: ...but "0" is not an attachment', !in_array('Photo ID', labels($d, 'customer'), true));
 
-echo "\n-- 2: money appears only when money is owed --\n";
+echo "\n-- 2: Total and Paid only when owed; Balance Due whenever a price exists --\n";
 $d = booking(18436, ['mphb_total_price' => 1200]);
-check('2: a priced booking with no payment recorded owes the full total, so all three rows show',
+check('2: a priced booking with no payment owes the full total, so all three rows show',
     in_array('Total', labels($d, 'booking'), true)
     && in_array('Paid', labels($d, 'booking'), true)
     && in_array('Balance Due', labels($d, 'booking'), true), labels($d, 'booking'));
 check('2: ..."No payment recorded" is not mistaken for "owes nothing"',
     value_of($d, 'booking', 'Paid') === 'No payment recorded', value_of($d, 'booking', 'Paid'));
 
-echo "\n-- 4: a real count on an imported booking is NOT hidden --\n";
+// PAID IN FULL vs NO PRICE EVER RECORDED — two different things, and the
+// owner wants them to read differently. mphb_total_price separates them.
+$d = booking(18444, ['mphb_total_price' => 1200], ['payments' => [1200]]);
+check('2: paid off => Total and Paid hide, but BALANCE DUE STILL RENDERS',
+    !in_array('Total', labels($d, 'booking'), true)
+    && !in_array('Paid', labels($d, 'booking'), true)
+    && in_array('Balance Due', labels($d, 'booking'), true), labels($d, 'booking'));
+check('2: ...and it reads exactly $0.00, not -$0.00',
+    value_of($d, 'booking', 'Balance Due') === '$0.00', value_of($d, 'booking', 'Balance Due'));
+$d = booking(18445, ['mphb_total_price' => 1200], ['payments' => [700, 500]]);
+check('2: several payments summing to the total also count as paid off',
+    value_of($d, 'booking', 'Balance Due') === '$0.00'
+    && !in_array('Total', labels($d, 'booking'), true), labels($d, 'booking'));
+$d = booking(18446, ['mphb_total_price' => 1200], ['payments' => [400]]);
+check('2: part-paid still owes, so all three show with the real balance',
+    value_of($d, 'booking', 'Total') === '$1,200.00'
+    && value_of($d, 'booking', 'Paid') === '$400.00'
+    && value_of($d, 'booking', 'Balance Due') === '$800.00',
+    [value_of($d, 'booking', 'Total'), value_of($d, 'booking', 'Paid'), value_of($d, 'booking', 'Balance Due')]);
+$d = booking(18447, ['mphb_total_price' => 0], ['payments' => []]);
+check('2: NO price ever recorded => no money rows at all, not a $0.00 balance',
+    !array_filter(labels($d, 'booking'), static fn($l) => in_array($l, ['Total', 'Paid', 'Balance Due'], true)),
+    labels($d, 'booking'));
+$d = booking(18448, ['mphb_total_price' => 1200], ['payments' => [1500]]);
+check('2: an OVERPAYMENT shows a negative balance rather than being flattened to zero',
+    str_contains((string) value_of($d, 'booking', 'Balance Due'), '300'),
+    value_of($d, 'booking', 'Balance Due'));
+
+echo "\n-- 4: the guest count, and the provenance marker that settles it --\n";
 $d = booking(18437, [], ['adults' => 2]);
 check('4: two adults in a four-capacity cottage is a figure somebody entered, so it shows',
     value_of($d, 'booking', 'Number of Guests') === '2', value_of($d, 'booking', 'Number of Guests'));
-$d = booking(18438, ['mphb_number_of_guests' => '3']);
-check('4: a WP-Admin override wins even when _mphb_adults still equals capacity',
-    value_of($d, 'booking', 'Number of Guests') === '3', value_of($d, 'booking', 'Number of Guests'));
-$d = booking(18439, ['mphb_number_of_guests' => '0']);
-check('4: ...but a zero override is not an answer',
+
+// THE CASE THE MARKER EXISTS FOR. Four guests in a four-capacity cottage is
+// indistinguishable from MotoPress's default BY VALUE. Only provenance
+// separates them, so dcc-custom-checkout writes _mphb_adults_confirmed = 1 on
+// the same reserved room when a human sets the count.
+$d = booking(18449, [], ['adults' => 4, 'confirmed' => true]);
+check('4: a CONFIRMED count of 4 shows as 4, even on an import, even at capacity',
+    value_of($d, 'booking', 'Number of Guests') === '4', value_of($d, 'booking', 'Number of Guests'));
+$d = booking(18450, [], ['adults' => 4, 'confirmed' => false]);
+check('4: the same 4 WITHOUT the marker still reads as not provided',
     str_contains((string) value_of($d, 'booking', 'Number of Guests'), 'not provided'),
     value_of($d, 'booking', 'Number of Guests'));
+$d = booking(18451, [], ['adults' => 3, 'children' => 2, 'confirmed' => true]);
+check('4: a confirmed count with children reads as a total plus the breakdown',
+    value_of($d, 'booking', 'Number of Guests') === '5 (3 adults, 2 children)',
+    value_of($d, 'booking', 'Number of Guests'));
+$d = booking(18452, ['mphb_ical_prodid' => ''], ['adults' => 4, 'confirmed' => true]);
+check('4: the marker works on a direct booking too — provenance, not source',
+    value_of($d, 'booking', 'Number of Guests') === '4', value_of($d, 'booking', 'Number of Guests'));
+
+// The seven-name search is gone. Verified on the live database: none of those
+// keys exists on any booking, so it could never fire — and a matcher that
+// never fires reads as coverage.
+$src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-data.php');
+check('4: the speculative booking-meta key search is gone',
+    !str_contains($src, 'guest_override') && !str_contains($src, 'partysize'));
+check('4: the contract with dcc-custom-checkout is read from the reserved room',
+    str_contains($src, "_mphb_adults_confirmed"));
 
 echo "\n-- 5: the pet block, across both eras of the form --\n";
 $d = booking(18440, ['mphb_dog_type' => 'Beagle']);

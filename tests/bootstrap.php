@@ -106,3 +106,54 @@ if (!function_exists('post_password_required')) {
 if (!function_exists('get_the_title')) {
     function get_the_title($id = 0) { $p = get_post($id); return $p ? $p->post_title : ''; }
 }
+
+/**
+ * A $wpdb stand-in. Only what the plugin's queries need, and deliberately
+ * NOT more forgiving: prepare() substitutes placeholders the way wpdb does
+ * (so a mismatched argument count shows up here), last_error is honoured, and
+ * get_results() answers from a fixture keyed by the booking id found in the
+ * prepared SQL rather than returning rows for any query at all.
+ */
+class T_WPDB
+{
+    public $posts = 'wp_posts';
+    public $postmeta = 'wp_postmeta';
+    public $prefix = 'wp_';
+    public $last_error = '';
+    /** @var array<int,array<int,object>> booking_id => rows */
+    public $payment_rows = [];
+
+    public function prepare($sql, $args = null, ...$rest)
+    {
+        $args = is_array($args) ? $args : array_merge($args === null ? [] : [$args], $rest);
+        $n = preg_match_all('/%[sdf]/', $sql);
+        if ($n !== count($args)) {
+            throw new \RuntimeException("wpdb::prepare placeholder/arg mismatch: $n vs " . count($args));
+        }
+        $i = 0;
+        return preg_replace_callback('/%[sdf]/', static function ($m) use (&$i, $args) {
+            $v = $args[$i++];
+            return $m[0] === '%s' ? "'" . addslashes((string) $v) . "'" : (string) (0 + $v);
+        }, $sql);
+    }
+
+    public function get_results($sql, $out = null)
+    {
+        t_count('wpdb_get_results');
+        if (!preg_match("/bk\\.meta_value = '(\\d+)'/", (string) $sql, $m)) {
+            return [];
+        }
+        return $this->payment_rows[(int) $m[1]] ?? [];
+    }
+
+    public function get_col($sql) { t_count('wpdb_get_col'); return []; }
+    public function get_var($sql) { t_count('wpdb_get_var'); return null; }
+}
+$GLOBALS['wpdb'] = new T_WPDB();
+
+function t_payment(int $booking_id, float $amount, string $status = 'mphb-p-completed', string $gateway = 'stripe'): void {
+    $GLOBALS['wpdb']->payment_rows[$booking_id][] = (object) [
+        'ID' => 5000 + count($GLOBALS['wpdb']->payment_rows[$booking_id] ?? []),
+        'post_status' => $status, 'amount' => (string) $amount, 'gateway' => $gateway,
+    ];
+}

@@ -292,9 +292,17 @@ final class Staff_Data
         // COMBINATION is what makes it a default; either half alone does not.
         // Anything else on an imported booking is a figure somebody actually
         // entered, so it is shown.
-        $override = self::guest_override($id);
-        if ($override !== '') {
-            self::push($out, __('Number of Guests', 'mphb-availability-calendar'), $override);
+        // PROVENANCE FIRST. A count a human confirmed is shown whatever its
+        // value and whatever the booking's source — that is the whole reason
+        // the marker exists, and it is what finally settles a genuine party of
+        // four in a four-capacity cottage.
+        $confirmed = self::confirmed_occupancy($rooms);
+        if ($confirmed !== null) {
+            self::push(
+                $out,
+                __('Number of Guests', 'mphb-availability-calendar'),
+                self::guest_label($confirmed['adults'], $confirmed['children'])
+            );
         } elseif ($source['imported'] && self::is_capacity_default($rooms, $adults, $children)) {
             self::push(
                 $out,
@@ -303,18 +311,8 @@ final class Staff_Data
                 ['muted' => true]
             );
         } elseif ($counted) {
-            $guests = $adults + $children;
-            $label  = (string) $guests;
-            if ($children > 0) {
-                $label .= ' (' . sprintf(
-                    /* translators: 1: adult count, 2: child count, already pluralized */
-                    __('%1$s, %2$s', 'mphb-availability-calendar'),
-                    sprintf(self::plural($adults, 'adult', 'adults'), $adults),
-                    sprintf(self::plural($children, 'child', 'children'), $children)
-                ) . ')';
-            }
             // A zero count is "empty" per the display rule, so push() drops it.
-            self::push($out, __('Number of Guests', 'mphb-availability-calendar'), $guests > 0 ? $label : '0');
+            self::push($out, __('Number of Guests', 'mphb-availability-calendar'), self::guest_label($adults, $children));
         }
 
         // MONEY IS SHOWN ONLY WHEN MONEY IS OWED.
@@ -329,22 +327,42 @@ final class Staff_Data
         // "Total $0.00 / Balance Due $0.00" there is not a fact about the
         // booking; it is a fact about a field nobody filled in.
         //
-        // THIS REVERSES A DELIBERATE EARLIER DECISION recorded on is_blank():
-        // "a Balance Due of zero means nothing owed, which staff need to see."
-        // The owner's rule now is to show only what the booking actually
-        // contains, and to hide the money block on a paid-off or imported
-        // booking — so a zero balance is no longer printed either.
-        $total_f = is_numeric($total) ? (float) $total : null;
-        $owed    = ($total_f !== null && $total_f > 0) ? $total_f - (float) ($paid ?? 0) : null;
-        if ($owed !== null && $owed > 0.005) {
-            self::push($out, __('Total', 'mphb-availability-calendar'), self::money($total), ['money' => true]);
-            self::push(
-                $out,
-                __('Paid', 'mphb-availability-calendar'),
-                $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid),
-                ['money' => $paid !== null]
-            );
-            self::push($out, __('Balance Due', 'mphb-availability-calendar'), self::money($due ?? $owed), ['money' => true]);
+        // THE ZERO STILL SHOWS. The earlier decision recorded on is_blank() —
+        // "a Balance Due of zero means nothing owed, which staff need to see"
+        // — stands, confirmed by the owner. So Total and Paid hide once
+        // nothing is outstanding, and Balance Due keeps rendering as the
+        // paid-off confirmation.
+        //
+        // TWO DIFFERENT THINGS, and the data does separate them:
+        //   mphb_total_price > 0  — a real price. Paid off => "Balance Due
+        //                           $0.00", which is a fact about the booking.
+        //   0 or absent           — no price was ever recorded. Every OTA
+        //                           import is this. There is nothing to
+        //                           confirm, so no money rows at all; a
+        //                           "$0.00" here would be a fact about an
+        //                           empty field, not about the booking.
+        $total_f   = is_numeric($total) ? (float) $total : null;
+        $has_price = ($total_f !== null && $total_f > 0);
+        if ($has_price) {
+            $owed = $total_f - (float) ($paid ?? 0);
+            // Float arithmetic on money: collapse a rounding-sized residue so
+            // a paid-off booking reads exactly $0.00 rather than -$0.00.
+            if (abs($owed) < 0.005) {
+                $owed = 0.0;
+            }
+            if ($owed > 0) {
+                self::push($out, __('Total', 'mphb-availability-calendar'), self::money($total), ['money' => true]);
+                self::push(
+                    $out,
+                    __('Paid', 'mphb-availability-calendar'),
+                    $paid === null ? __('No payment recorded', 'mphb-availability-calendar') : self::money($paid),
+                    ['money' => $paid !== null]
+                );
+            }
+            // An OVERPAYMENT (owed < 0) renders as a negative balance rather
+            // than being flattened to zero — staff need to see that a refund
+            // is outstanding. Not specified; flagged rather than hidden.
+            self::push($out, __('Balance Due', 'mphb-availability-calendar'), self::money($owed), ['money' => true]);
         }
         return $out;
     }
@@ -436,43 +454,68 @@ final class Staff_Data
     }
 
     /**
-     * A guest count somebody actually entered, if one exists.
+     * Did a human set this booking's guest count?
      *
-     * The owner is getting a WP-Admin field for the real party size on
-     * imported bookings. Its meta key is not known here, so this matches on a
-     * NORMALIZED key the way custom_get() does — and deliberately scans ALL
-     * booking meta, not just the mphb_ prefix, because a field added by hand
-     * or by another plugin will not carry that prefix.
+     * dcc-custom-checkout 0.22.0's admin dropdown writes `_mphb_adults` on the
+     * RESERVED ROOM and, alongside it, `_mphb_adults_confirmed = 1`. The
+     * marker is the point: it records PROVENANCE, which is the one fact the
+     * number itself cannot carry. "4" in a four-capacity cottage is
+     * indistinguishable from MotoPress's default — unless something says a
+     * person typed it. Choosing "Not provided" deletes both.
      *
-     * If the field ends up named something outside this list, add it here;
-     * the candidates are the spellings that will be picked up automatically.
+     * Returns the confirmed occupancy, or null when no room carries the marker.
+     *
+     * This replaces a normalised search of BOOKING meta for seven plausible
+     * key names (number_of_guests, guest_count, party_size, …). Verified on
+     * the live database: not one of those keys exists on any booking, so it
+     * could never have fired. A matcher that never fires is worse than none —
+     * it reads as coverage.
+     *
+     * @param array<int,array<string,mixed>> $rooms
+     * @return array{adults:int,children:int}|null
      */
-    private static function guest_override(int $booking_id): string
+    private static function confirmed_occupancy(array $rooms): ?array
     {
-        $candidates = [
-            'numberofguests', 'numguests', 'guestcount', 'guests', 'totalguests',
-            'actualguests', 'partysize', 'realguestcount', 'guestsactual',
-        ];
-        $map = [];
-        foreach ((array) get_post_meta($booking_id) as $key => $vals) {
-            $n = preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/^_?mphb_?/i', '', (string) $key)));
-            if ($n === '' || isset($map[$n])) {
+        $found = false;
+        $adults = 0;
+        $children = 0;
+        foreach ($rooms as $r) {
+            $rr = (int) ($r['post_id'] ?? 0);
+            if ($rr <= 0) {
                 continue;
             }
-            $v = is_array($vals) ? reset($vals) : $vals;
-            $map[$n] = is_scalar($v) ? (string) $v : '';
-        }
-        foreach ($candidates as $c) {
-            if (isset($map[$c])) {
-                $v = trim($map[$c]);
-                // A count is a positive integer. Anything else is not an
-                // answer — including the "0" MPHB leaves in unset numerics.
-                if ($v !== '' && ctype_digit($v) && (int) $v > 0) {
-                    return self::plain($v);
-                }
+            $flag = get_post_meta($rr, '_mphb_adults_confirmed', true);
+            $flag = is_array($flag) ? reset($flag) : $flag;
+            // The writer stores 1 and DELETES for "not provided", so absence
+            // is the negative case. A literal "0" is treated as absent too,
+            // in case a future writer clears it in place rather than deleting.
+            if (!is_scalar($flag) || in_array(trim((string) $flag), ['', '0'], true)) {
+                continue;
             }
+            $found = true;
+            $adults   += (int) get_post_meta($rr, '_mphb_adults', true);
+            $children += (int) get_post_meta($rr, '_mphb_children', true);
         }
-        return '';
+        return $found ? ['adults' => $adults, 'children' => $children] : null;
+    }
+
+    /** "4" or "5 (3 adults, 2 children)". */
+    private static function guest_label(int $adults, int $children): string
+    {
+        $total = $adults + $children;
+        if ($total <= 0) {
+            return '';
+        }
+        $label = (string) $total;
+        if ($children > 0) {
+            $label .= ' (' . sprintf(
+                /* translators: 1: adult count, 2: child count, already pluralized */
+                __('%1$s, %2$s', 'mphb-availability-calendar'),
+                sprintf(self::plural($adults, 'adult', 'adults'), $adults),
+                sprintf(self::plural($children, 'child', 'children'), $children)
+            ) . ')';
+        }
+        return $label;
     }
 
     /**
