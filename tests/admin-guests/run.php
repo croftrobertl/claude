@@ -136,5 +136,54 @@ $g->save(18433);
 check('a reserved room belonging to a DIFFERENT booking is never touched',
     $GLOBALS['meta'][77]['_mphb_adults'], 3);
 
+/* ===================================================================== *
+ * v0.23.0 — PROVENANCE. The marker is the contract with the Availability
+ * Calendar: present means _mphb_adults is a real count, whatever its value.
+ * ===================================================================== */
+
+// --- The #18433 case, and the reason the marker exists at all. ------------
+// MotoPress defaulted this to 4 on a 4-capacity cottage. The owner selects 4
+// because the party really is four. The NUMBER DOES NOT CHANGE — and an
+// earlier version returned early on exactly that, so no marker was written
+// and /staff/ went on saying "count not provided" for a count just confirmed
+// by hand.
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '4']];
+$g->save(18433);
+check('confirming an unchanged default still writes the marker',
+    $GLOBALS['meta'][99]['_mphb_adults_confirmed'], 1);
+check('and leaves the count itself alone', $GLOBALS['meta'][99]['_mphb_adults'], 4);
+
+// --- A changed count is confirmed too. -----------------------------------
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '2']];
+$g->save(18433);
+check('a corrected count is marked confirmed', $GLOBALS['meta'][99]['_mphb_adults_confirmed'], 1);
+check('with the corrected value', $GLOBALS['meta'][99]['_mphb_adults'], 2);
+
+// --- "Not provided" clears BOTH. -----------------------------------------
+seed();
+$GLOBALS['meta'][99]['_mphb_adults_confirmed'] = 1;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '']];
+$g->save(18433);
+check('"Not provided" deletes the count', array_key_exists('_mphb_adults', $GLOBALS['meta'][99]), false);
+check('"Not provided" deletes the marker too — it must not outlive the number',
+    array_key_exists('_mphb_adults_confirmed', $GLOBALS['meta'][99]), false);
+
+// --- An out-of-range value confirms nothing. -----------------------------
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '9']];
+$g->save(18433);
+check('a refused count does not get a marker',
+    array_key_exists('_mphb_adults_confirmed', $GLOBALS['meta'][99]), false);
+
+// --- A save that writes nothing writes no log line either. ---------------
+seed();
+unset($GLOBALS['meta'][99]['_mphb_adults']);
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '']];
+$g->save(18433);
+check('saving "Not provided" when it was already nothing changes nothing',
+    array_key_exists('_mphb_adults', $GLOBALS['meta'][99]), false);
+
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

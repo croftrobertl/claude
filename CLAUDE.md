@@ -395,11 +395,25 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   /staff/ loses the difference between "nobody told us" and a real count.
   Capacity that cannot be read widens the range rather than capping it, and the
   screen says so. Tested at `tests/admin-guests/` (`php tests/admin-guests/run.php`):
-  nonce, capability, range, delete-not-zero, and cross-booking isolation.
-  DCC-VERIFY: the reserved-room chain (booking → `post_parent` →
-  `_mphb_room_id` → room's `mphb_room_type_id`) is the one the availability
-  calendar's live SQL relies on; the `_mphb_adults` key came from the owner
-  with #18433 and has not been read back from the live database here.
+  nonce, capability, range, delete-not-zero, cross-booking isolation, and the
+  marker contract below.
+  **CONFIRMED on live (2026-09-17):** `_mphb_adults` is present on all 417
+  reserved rooms (261 twos, 145 ones, seven fours, four threes), and the chain
+  booking → `post_parent` → `_mphb_room_id` → room's `mphb_room_type_id` is the
+  one the calendar's SQL already uses. No DCC-VERIFY outstanding.
+- **`_mphb_adults_confirmed = 1` IS THE CONTRACT WITH THE AVAILABILITY
+  CALENDAR** (v0.23.0), on the same reserved room, written whenever the owner
+  submits a count and deleted with the count on "Not provided". Present means
+  `_mphb_adults` is a real count whatever its value; absent means the
+  Calendar's own capacity-plus-iCal heuristic applies. **It is written even when
+  the submitted count equals the stored one** — v0.22.0 returned early there,
+  which would have broken the only case the control exists for (confirming
+  MotoPress's defaulted 4 as a genuine 4 changes no digit, so nothing was
+  written and /staff/ kept saying "not provided"). **Never reinstate an
+  unchanged-value early return in front of the marker**, and never let the
+  marker outlive the number. The seven speculative booking-meta key names the
+  Calendar used to search for do not exist on any booking — that search is gone
+  rather than kept as apparent coverage.
 - **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
   MotoPress's. It names how many fields it is hiding and hides itself when it
   is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2

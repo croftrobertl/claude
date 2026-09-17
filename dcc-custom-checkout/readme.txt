@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.0
+Stable tag: 0.23.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,37 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.23.0 =
+* INTEGRATION with the Availability Calendar: the guest-count control now
+  writes a provenance marker, `_mphb_adults_confirmed = 1`, on the same
+  reserved room as `_mphb_adults`, and deletes it with the count on "Not
+  provided". `_mphb_adults` alone cannot carry the fact that matters --
+  MotoPress fills it with the room type's CAPACITY when an import supplies no
+  count, so a 4 on a 4-capacity cottage may be a real party of four or a
+  default nobody chose. The marker says a human stood behind the number, and
+  the Calendar checks it first.
+* THE MARKER IS WRITTEN EVEN WHEN THE COUNT DOES NOT CHANGE, and that is the
+  substance of this release rather than a detail. v0.22.0 returned early on an
+  unchanged value, which would have broken the single case the control exists
+  for: the owner opens #18433, sees MotoPress's defaulted 4, selects 4 because
+  the party really is four -- the digit does not move, so nothing was written,
+  so no marker appeared, and /staff/ would have gone on reporting "count not
+  provided" for a count just confirmed by hand. Submitting the form IS the
+  human act being recorded; whether the number changed is beside the point.
+  Asserted; against 0.22.0 that assertion reads NULL.
+* The booking screen now says which state each number is in -- "Confirmed" or
+  "Not confirmed: this may be the importer's default. Re-select it to confirm."
+  Fixing the ambiguity for the staff panel and leaving it on the screen where
+  the decision is made would have been half a fix.
+* The booking log distinguishes the two cases: a changed count logs "set to N",
+  an unchanged one logs "confirmed as N (was an unconfirmed default)". A save
+  that writes nothing now logs nothing, where v0.22.0 wrote a "cleared" line on
+  every save of a booking that never had a count.
+* DCC-VERIFY on `_mphb_adults` is CONFIRMED and the marker removed from the
+  note: read off the live database -- present on all 417 reserved rooms (261
+  twos, 145 ones, seven fours, four threes), and none of the seven booking-meta
+  guest-count key names the Calendar had been searching exist anywhere.
 
 = 0.22.0 =
 * Item 1 - the price-breakdown expander is blue again. It went black in
