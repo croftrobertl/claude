@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.0
+Stable tag: 0.22.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,55 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.22.0 =
+* Item 1 - the price-breakdown expander is blue again. It went black in
+  v0.17.0, when the <a> became a <button>: a button does not get the theme's
+  link colour, and the bare-control reset's `color: inherit` took the table's
+  black. Two further rules broke silently at the same time -- the hover and
+  focus rules were written as `a.mphb-price-breakdown-expand` and stopped
+  matching altogether. All three now key on the class alone, as everything
+  else in this plugin does, and the resting colour is var(--dcc-blue)
+  (#006bcf), the token this form already uses for its focus ring and select
+  caret. Asserted in tests/fields; against 0.21.0 that assertion reads
+  rgb(0,0,0).
+  WHY IT WENT UNNOTICED FOR FIVE RELEASES: tests/button DID assert the toggle's
+  resting colour the whole time -- against a fixture that was still an <a>,
+  because only the live page's element changed. That fixture now carries BOTH
+  forms, the <a> MotoPress renders and the <button> this plugin leaves, and
+  asserts the colour on each.
+* Item 2 - the dog fields are now DISABLED when the pet question is off, not
+  merely hidden, so a booking with no dog carries no dog_* keys at all. A
+  hidden control still submits: before this, a no-dog booking was posting
+  "10-20 lbs" and "short-haired" because those were the selects' first
+  options. The blank first option being added in MotoPress fixes the VALUE;
+  only `disabled` removes the KEY. Asserted by reading a real FormData: zero
+  dog_* keys, and against 0.21.0 the same assertion returns all three.
+  GUARDED: setDisabled() REFUSES to disable anything that carries money -- any
+  control named [services] or classed mphb_sc_checkout-service. A
+  hidden-but-checked service still submits and MotoPress still prices it, so
+  disabling one would silently stop charging the $50 extra-guest fee or the pet
+  fee with the page looking entirely normal. The test asserts the service
+  checkbox stays enabled and still submits.
+* Item 3 - a guest-count control on the WP-Admin booking screen. One dropdown
+  per reserved room: "Not provided", then 1..the room type's adults capacity.
+  Saving writes _mphb_adults on that reserved room; "Not provided" DELETES the
+  meta rather than storing a zero, so "nobody told us" and "two guests" stay
+  different facts -- which is the point, since MotoPress fills that meta with
+  the cottage's CAPACITY when an import supplies no count (booking #18433
+  shows 4 for a 2-guest Booking.com reservation). If the capacity cannot be
+  read the list is not capped and the screen says so, rather than capping the
+  owner below the truth. Changes are noted in MotoPress's own booking log,
+  where the guest-ID deletions already go. The save path is tested directly
+  against a fake post store: nonce, capability, range, the delete-not-zero
+  rule, and that a reserved room belonging to a different booking is never
+  touched.
+* The "Show all booking fields" checkbox names how many fields it is hiding,
+  and hides itself when it is hiding none. It was reported as appearing beside
+  a screen that already showed everything -- which is exactly what happens on
+  an existing booking, where any field holding a value stays visible whatever
+  the accommodation. The checkbox was not broken, but it promised something it
+  had nothing to deliver.
 
 = 0.21.0 =
 * The validation banner's ground is white (owner decision, having seen the

@@ -65,7 +65,7 @@
         }
 
         var showAll = readShowAll();
-        addEscapeHatch(managed[0], function (on) {
+        var hatch = addEscapeHatch(managed[0], function (on) {
             showAll = on;
             writeShowAll(on);
             evaluate();
@@ -379,11 +379,25 @@
                 managed.forEach(function (f) { f.row.classList.remove(HIDDEN_CLASS); });
                 return;
             }
+            var hiddenNow = 0;
             managed.forEach(function (f) {
                 var show = showAll || f.sticky || capable(f.need, ids);
                 f.row.classList.toggle(HIDDEN_CLASS, !show);
+                if (!show) { hiddenNow += 1; }
             });
             syncExtraGuestFee(ids);
+
+            // v0.22.0 — the checkbox says what it is doing, or gets out of the
+            // way. It was reported as appearing on a screen where every field
+            // was already shown, which is exactly what happens on an EXISTING
+            // booking: rule 2 keeps any field that holds a value visible
+            // whatever the accommodation, so on a filled-in booking there is
+            // often nothing left for this to reveal. A control that promises
+            // to show more, next to a screen already showing everything, reads
+            // as broken. So: it names the count while it is hiding something,
+            // and hides itself when it is hiding nothing AND is not the thing
+            // currently doing the showing.
+            if (hatch) { hatch.update(hiddenNow, showAll); }
         }
 
         /**
@@ -418,8 +432,8 @@
      * admin working through several bookings sets it once.
      */
     function addEscapeHatch(firstField, onChange) {
-        if (!firstField || !firstField.row || !firstField.row.parentNode) { return; }
-        if (document.querySelector('.dcc_admin-showall')) { return; }
+        if (!firstField || !firstField.row || !firstField.row.parentNode) { return null; }
+        if (document.querySelector('.dcc_admin-showall')) { return null; }
 
         var wrap = document.createElement('div');
         wrap.className = 'dcc_admin-showall';
@@ -444,6 +458,20 @@
 
         box.addEventListener('change', function () { onChange(box.checked); });
         firstField.row.parentNode.insertBefore(wrap, firstField.row);
+
+        var base = label.textContent;
+        return {
+            update: function (hiddenCount, showAll) {
+                // Present while it has something to reveal, or while it is the
+                // reason everything is visible. Otherwise it is noise.
+                var useful = hiddenCount > 0 || showAll;
+                wrap.hidden = !useful;
+                label.textContent = hiddenCount > 0
+                    ? base + ' (' + hiddenCount + ')'
+                    : base;
+                if (box.checked !== !!showAll) { box.checked = !!showAll; }
+            }
+        };
     }
 
     function readShowAll() {

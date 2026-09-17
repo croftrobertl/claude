@@ -395,6 +395,31 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button 
     transition: background-color 0.15s, opacity 0.15s;
 }
 
+/* ---------------------------------------------------------------------------
+ * ITEM 1 (v0.22.0) — THE EXPANDER MUST LOOK TAPPABLE.
+ *
+ * "+ Cottage 32: Flamingo Bungalow" went black and stopped reading as a
+ * control. Cause: v0.17.0 replaced the <a> with a <button>, and a <button>
+ * does not get the theme's link colour — the bare-control reset above sets
+ * `color: inherit`, so it took the table's black. The reset's own comment
+ * claimed it "looks exactly like the <a> it replaced"; on colour that was
+ * simply untrue, and nothing asserted it.
+ *
+ * var(--dcc-blue) is #006bcf — the token this form already uses for the focus
+ * ring and the select caret, so the control now matches the rest of the
+ * checkout's interactive ink rather than the theme's link blue it used to
+ * inherit by accident.
+ *
+ * The class is DOUBLED to reach (0,4,1): the bare-control reset is (0,3,1) and
+ * would otherwise tie and win on source order. Asserted in tests/fields.
+ * ------------------------------------------------------------------------- */
+form.mphb_sc_checkout-form.mphb_sc_checkout-form
+    .mphb-price-breakdown-accommodation.mphb-price-breakdown-accommodation,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form
+    .mphb-price-breakdown-expand.mphb-price-breakdown-expand {
+    color: var(--dcc-blue);
+}
+
 @media (hover: hover) and (pointer: fine) {
 
 form.mphb_sc_checkout-form.mphb_sc_checkout-form button:not(.dcc_checkout-tax-asterisk):not(.dcc_checkout-bare-button):hover,
@@ -413,14 +438,20 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-apply-coupon-code-button:
     color: var(--dcc-button-hover-fg);
 }
 
-/* MotoPress's price-breakdown expand/collapse link.
+/* MotoPress's price-breakdown expand/collapse control.
    It has no hover colour of its own, so on hover it fell back to the black it
    inherits from the table — measured: rgb(15,109,191) at rest, rgb(0,0,0) on
    hover. On iOS the first tap applies :hover and it STICKS, so the link turned
    black and did not open. Giving it a real hover colour, inside this media
-   query, means a touch device never enters that state at all. */
-form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-accommodation:hover,
-form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:hover {
+   query, means a touch device never enters that state at all.
+
+   NO `a` QUALIFIER (v0.22.0). These were written when the control was an
+   anchor; v0.17.0 made it a <button> and every one of these rules silently
+   stopped matching. Matched on the class alone, they hold whichever element
+   MotoPress renders — which is the whole reason the class is what this
+   plugin keys on everywhere else. */
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-price-breakdown-accommodation:hover,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-price-breakdown-expand:hover {
     color: var(--dcc-button-hover-bg);
 }
 
@@ -433,9 +464,9 @@ form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:h
 /* Focus is NOT inside the hover query: a keyboard user needs it, and on iOS a
    tapped link keeps focus — without this it would fall back to the same black.
    Deliberately the resting blue, not the hover coral: focus is not hover. */
-form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-accommodation:focus-visible,
-form.mphb_sc_checkout-form.mphb_sc_checkout-form a.mphb-price-breakdown-expand:focus-visible {
-    color: #0f6dbf;
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-price-breakdown-accommodation:focus-visible,
+form.mphb_sc_checkout-form.mphb_sc_checkout-form .mphb-price-breakdown-expand:focus-visible {
+    color: var(--dcc-blue);
     outline: 3px solid var(--dcc-gold);
     outline-offset: 2px;
 }

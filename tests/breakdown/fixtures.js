@@ -235,7 +235,36 @@ const plainSubtotal = `
   <tr><td>Total</td><td>$588.50</td></tr>
 </table>`;
 
+// Item 2 (v0.22.0): the dog Checkout Fields as MotoPress renders them —
+// <select>s, globally enabled, present on every cottage's checkout — next to a
+// pet SERVICE checkbox that must never be disabled, because a hidden-but-
+// checked service still submits and MotoPress still prices it.
+const dogFields = `
+<section class="mphb-customer-details">
+  <p class="mphb-text-control">
+    <label for="mphb_dog_type">Dog type</label>
+    <input type="text" id="mphb_dog_type" name="mphb_dog_type" value="">
+  </p>
+  <p class="mphb-text-control">
+    <label for="mphb_dog_size">Dog size</label>
+    <select id="mphb_dog_size" name="mphb_dog_size">
+      <option value="10-20 lbs">10-20 lbs</option>
+      <option value="20-40 lbs">20-40 lbs</option>
+    </select>
+  </p>
+  <p class="mphb-text-control">
+    <label for="mphb_dog_hair">Dog hair</label>
+    <select id="mphb_dog_hair" name="mphb_dog_hair">
+      <option value="short-haired">short-haired</option>
+      <option value="long-haired">long-haired</option>
+    </select>
+  </p>
+  <input type="checkbox" class="mphb_sc_checkout-service"
+         name="mphb_room_details[0][services][0][id]" value="17001" checked>
+  <input type="text" name="mphb_first_name" value="Rob">
+</section>`;
+
 module.exports = {
     withService, noService, twoAccommodations, renamedLabels, sharedSection,
-    servicesWithDetails, totalWithoutBreakdown, plainSubtotal
+    servicesWithDetails, totalWithoutBreakdown, plainSubtotal, dogFields
 };

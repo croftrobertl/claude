@@ -664,6 +664,39 @@ function summary(doc) {
         expander().classList.contains('dcc_checkout-bare-button'), true);
 }
 
+/* ===================================================================== *
+ * v0.22.0 item 2 — a booking with no dog submits NO dog_* keys.
+ *
+ * Hiding is not enough: a hidden control still submits. These were <select>s
+ * whose first option was a real value, so a no-dog booking posted "10-20 lbs"
+ * and "short-haired". A blank first option (added in MotoPress) fixes the
+ * VALUE; only `disabled` removes the KEY.
+ * ===================================================================== */
+{
+    const { window, doc } = await render(F.dogFields, {
+        dogFieldNames: ['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair'],
+        i18n: { subtotal: 'Subtotal' }
+    });
+    const form = doc.querySelector('form');
+    const keys = Array.from(new window.FormData(form).keys());
+
+    check('item 2: no dog_* key is submitted at all — not even an empty one',
+        keys.filter(k => /dog_/.test(k)), []);
+    check('item 2: the rest of the form still submits',
+        keys.includes('mphb_first_name'), true);
+    check('item 2: every dog field is disabled, not just hidden',
+        ['mphb_dog_type', 'mphb_dog_size', 'mphb_dog_hair']
+            .map(n => doc.querySelector(`[name="${n}"]`).disabled),
+        [true, true, true]);
+
+    // THE GUARD. A hidden-but-checked service still submits and MotoPress
+    // still prices it; disabling one would silently stop charging the fee.
+    const svc = doc.querySelector('input.mphb_sc_checkout-service');
+    check('item 2: the SERVICE checkbox is never disabled', svc.disabled, false);
+    check('item 2: and it still submits, so the fee is still charged',
+        keys.includes('mphb_room_details[0][services][0][id]'), true);
+}
+
 console.log(failures ? `\n${failures} failing` : '\nall passing');
 process.exit(failures ? 1 : 0);
 })();

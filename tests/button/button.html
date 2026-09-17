@@ -64,10 +64,24 @@
 
   <h2>Price-breakdown toggle (MotoPress markup)</h2>
   <form class="mphb_sc_checkout-form" id="breakdown">
+    <!-- BOTH forms of the toggle, deliberately (v0.22.0).
+
+         MotoPress renders an <a>; hardenTapTargets() replaces it with a
+         <button> (v0.17.0). This fixture carried only the <a>, so its
+         resting-colour assertion kept passing against an element the live page
+         had not had for five releases -- while the real control sat black,
+         because a <button> does not inherit the theme's link colour. Both are
+         here now, and both are asserted, so the fixture cannot drift from the
+         live element again. -->
     <table><tr><td>
       <a href="#" id="expand"
          class="mphb-price-breakdown-accommodation mphb-price-breakdown-expand">
         Cottage 36: Sunshine Suite</a>
+    </td><td>$350</td></tr>
+    <tr><td>
+      <button type="button" id="expandBtn" draggable="false"
+              class="mphb-price-breakdown-accommodation mphb-price-breakdown-expand dcc_checkout-bare-button">
+        Cottage 36: Sunshine Suite</button>
     </td><td>$350</td></tr></table>
   </form>
 

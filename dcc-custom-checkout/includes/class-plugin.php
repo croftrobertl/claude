@@ -52,6 +52,11 @@ final class Plugin
         // accommodations that can use them. Show/hide only — the deliberate
         // wp-admin exemptions in the backstops above are untouched.
         (new Admin_Fields())->register();
+
+        // The guest-count control on the booking screen (v0.22.0): MotoPress
+        // fills _mphb_adults with the room type's CAPACITY when an import
+        // supplies no count, and nothing in the admin could correct it.
+        (new Admin_Guests())->register();
         // Guest ID images: one-click deletion, deletion with the booking, and
         // keeping the protected store unreadable.
         (new Id_Files())->register();

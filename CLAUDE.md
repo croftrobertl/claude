@@ -364,6 +364,47 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   a hrefless `<a>` would toggle twice. Evidence: the tax asterisk (a button) is
   4 of 4 across four tap logs at 64-96ms; the expander failed 15 of 18 clean
   taps as an `<a>` and as an `<a>` without href.
+- **A `<button>` does not inherit link colour** (v0.22.0). When v0.17.0 swapped
+  the expander's `<a>` for a `<button>`, the bare-control reset's
+  `color: inherit` took the table's black and the control stopped reading as
+  tappable — for five releases, because nothing asserted the colour. It is now
+  `var(--dcc-blue)` (#006bcf) on a DOUBLED class, (0,4,1), because the reset is
+  (0,3,1) and would tie and win on source order. **Its hover and focus rules
+  were `a.mphb-price-breakdown-expand` and silently stopped matching at the
+  same moment** — key on the class alone, never the element, for anything this
+  plugin may re-tag. Asserted in `tests/fields/`.
+  **`tests/button/` asserted that colour throughout and never caught it**, because
+  its fixture was still the `<a>` MotoPress renders. It now carries BOTH forms —
+  the `<a>` and the swapped `<button>` — and asserts both. **When this plugin
+  replaces an element, every fixture holding the old one is stale**; that is the
+  v0.9.0 lesson in a new shape.
+- **`setDisabled()` refuses to disable anything that carries money** (v0.22.0).
+  The dog Checkout Fields are disabled when the pet question is off, because a
+  hidden control still submits — they were posting "10-20 lbs" and
+  "short-haired" on no-dog bookings. But the SERVICES rule above still stands
+  absolutely: a hidden-but-checked service input must keep submitting or the
+  fee stops being charged, silently, with the page looking normal. So the
+  helper hard-refuses any control named `[services]` or classed
+  `mphb_sc_checkout-service`. **Never route a service control through it**, and
+  keep the test that asserts the service checkbox stays enabled and submits.
+- **The admin guest-count control writes `_mphb_adults` on the reserved room**
+  (v0.22.0, `Admin_Guests`). MotoPress fills that meta with the ROOM TYPE'S
+  CAPACITY when an import supplies no count (#18433: 4 for a 2-guest
+  Booking.com reservation), so a number there is not necessarily anyone's
+  answer. **"Not provided" DELETES the meta — it must never store 0**, or
+  /staff/ loses the difference between "nobody told us" and a real count.
+  Capacity that cannot be read widens the range rather than capping it, and the
+  screen says so. Tested at `tests/admin-guests/` (`php tests/admin-guests/run.php`):
+  nonce, capability, range, delete-not-zero, and cross-booking isolation.
+  DCC-VERIFY: the reserved-room chain (booking → `post_parent` →
+  `_mphb_room_id` → room's `mphb_room_type_id`) is the one the availability
+  calendar's live SQL relies on; the `_mphb_adults` key came from the owner
+  with #18433 and has not been read back from the live database here.
+- **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
+  MotoPress's. It names how many fields it is hiding and hides itself when it
+  is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
+  working as designed: on an EXISTING booking every field holding a value stays
+  visible whatever the accommodation, so there is often nothing left to reveal.
 - **Bare controls carry `.dcc_checkout-bare-button`** (v0.17.0). The site button
   spec matches a plain `button` at (0,3,1), so the swapped expander rendered as
   a full-width blue pill inside the price breakdown — measured at

@@ -176,6 +176,15 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
           tap.touchAction, 'manipulation');
     check('item 6: text selection is off on the expander', tap.select, 'none');
 
+    /* --- v0.22.0 item 1: the expander must LOOK tappable. ----------------
+       v0.17.0 turned it into a <button>, which does not get the theme's link
+       colour, and the bare-control reset's `color: inherit` took the table's
+       black. Nothing asserted the colour, so it went unnoticed for five
+       releases. --------------------------------------------------------- */
+    const ink = await page.$eval('#expander', el => getComputedStyle(el).color);
+    check('v0.22.0: the expander is the checkout\'s interactive blue',
+          ink, 'rgb(0, 107, 207)');
+
     /* --- v0.17.0: the swapped button must NOT become a site button. ------
        The spec matches a bare `button` at (0,3,1). Caught before shipping:
        without the bare-control class this renders as a full-width blue pill

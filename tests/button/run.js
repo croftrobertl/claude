@@ -113,7 +113,14 @@ const read = (page, sel, props) => page.$eval(sel, (el, props) => {
     /* --- The breakdown toggle: never black, on any device. -------------- */
     await page.setViewportSize({ width: 1280, height: 900 });
     const linkRest = await read(page, '#expand', ['color']);
-    check('toggle: blue at rest', linkRest.color, 'rgb(15, 109, 191)');
+    // v0.22.0: the checkout's OWN interactive blue (--dcc-blue, #006bcf), not
+    // the theme's link blue (#0f6dbf) the <a> used to inherit. The swapped
+    // <button> inherits no link colour at all, so this is now declared rather
+    // than borrowed — and asserted on both element forms.
+    check('toggle: blue at rest', linkRest.color, 'rgb(0, 107, 207)');
+    const btnRest = await read(page, '#expandBtn', ['color']);
+    check('toggle: the SWAPPED BUTTON is the same blue, not inherited black',
+        btnRest.color, 'rgb(0, 107, 207)');
     await page.hover('#expand');
     await page.waitForTimeout(200);
     const linkHover = await read(page, '#expand', ['color']);
@@ -157,7 +164,7 @@ const read = (page, sel, props) => page.$eval(sel, (el, props) => {
     await tpage.waitForTimeout(200);
     const tappedLink = await read(tpage, '#expand', ['color']);
     check('touch: tapping the toggle leaves it blue — no stuck hover, no black',
-        tappedLink.color, 'rgb(15, 109, 191)');
+        tappedLink.color, 'rgb(0, 107, 207)');
 
     await tpage.tap('#submit-desktop');
     await tpage.waitForTimeout(200);

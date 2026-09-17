@@ -1477,6 +1477,16 @@
             inputs.forEach(function (inp) {
                 setRequired(inp, yes, root);
                 if (!yes) { clearInvalid(inp); }
+                // ITEM 2 (v0.22.0) — DISABLED, not merely hidden.
+                //
+                // A hidden control still submits. These are <select>s whose
+                // first option was a real value, so a booking with no dog was
+                // posting "10-20 lbs" and "short-haired" anyway; a blank first
+                // option (being added in MotoPress) fixes the VALUE but the KEY
+                // would still be posted. Disabled, the browser omits the field
+                // entirely, so a no-dog booking carries no dog_* keys at all —
+                // asserted in tests/breakdown.
+                setDisabled(inp, !yes);
             });
         }
 
@@ -2302,6 +2312,39 @@
     }
 
     // Toggle a field's required state + its visible "*" marker together.
+    /**
+     * Disable a control so it submits nothing — with a hard refusal to touch
+     * anything that carries money.
+     *
+     * THE RULE THIS PROTECTS (CLAUDE.md, v0.7.0): the services section is
+     * hidden by DISPLAY on purpose, because a hidden-but-checked service input
+     * still submits and MotoPress still prices it. Disabling one of those would
+     * silently stop charging the $50 extra-guest fee or the pet fee, and the
+     * page would look completely normal. Only ever called on the dog Checkout
+     * Fields today; the guard is here so that if CFG.dogFieldNames is ever
+     * mis-set to a service control, this refuses rather than costing the owner
+     * money on every booking.
+     */
+    function setDisabled(el, off) {
+        if (!el) {
+            return;
+        }
+        if (off && isMoneyControl(el)) {
+            return;
+        }
+        // Idempotent (v0.18.0): setting .disabled re-writes the content
+        // attribute even when the value is unchanged, which queues a mutation.
+        if (el.disabled !== !!off) {
+            el.disabled = !!off;
+        }
+    }
+
+    function isMoneyControl(el) {
+        var name = String(el.name || '');
+        return /\[services\]/.test(name) ||
+            (el.classList && el.classList.contains('mphb_sc_checkout-service'));
+    }
+
     function setRequired(input, on, root) {
         input.required = !!on;
         if (on) {

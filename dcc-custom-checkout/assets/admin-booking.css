@@ -30,3 +30,17 @@
 .dcc_admin-room-context {
     display: none !important;
 }
+
+/* ---------------------------------------------------------------------------
+ * Guest count metabox (v0.22.0).
+ * Core admin styles do the rest; these two rules only stop the explanatory
+ * text running into the control it explains.
+ * ------------------------------------------------------------------------- */
+.dcc_admin-guests .description {
+    display: block;
+    margin: 4px 0 0;
+}
+
+.dcc_admin-guests select {
+    max-width: 100%;
+}
