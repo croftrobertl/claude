@@ -2041,7 +2041,12 @@ body.mphbac-info-open {
 .mphbac-sheet-field {
     display: flex;
     flex-direction: column;
-    flex: 1 1 8.5em; /* == .mphbac-input min-width; see block comment */
+    /* 8.5em is a flex BASIS, not a floor — flex can still shrink below it,
+       and at <=600px `.mphbac-sheet .mphbac-sheet-field { flex: 1 1 0 }`
+       replaces it outright. It used to be described as "== .mphbac-input
+       min-width"; that min-width was removed in 0.30.0, so the number is now
+       just a reasonable starting width and nothing tracks it. */
+    flex: 1 1 8.5em;
     min-width: 0;
     gap: 0.3em;
     font-size: 0.95em;

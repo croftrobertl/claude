@@ -10,7 +10,11 @@
  * Run: php tests/mutate.php        (restores every file, even on Ctrl-C)
  */
 $root  = dirname(__DIR__);
-$plugin = $root . '/mphb-availability-calendar/includes/';
+$base = $root . '/mphb-availability-calendar/';
+/** includes/ is implied for a bare class file; assets/ paths are given in full. */
+$resolve = static function (string $file) use ($base): string {
+    return str_contains($file, '/') ? $base . $file : $base . 'includes/' . $file;
+};
 
 $mutations = [
     // --- rule 1: the photo ID -------------------------------------------
@@ -72,6 +76,85 @@ $mutations = [
      "public const VISIBLE_STATUSES = ['confirmed', 'pending', 'pending-payment', 'pending-user'];",
      "public const VISIBLE_STATUSES = ['confirmed', 'pending', 'pending-payment', 'pending-user', 'cancelled'];",
      'staff-gate-test.php'],
+    // --- 0.31.x: the hover tokens and the (0,6,0) trap ------------------
+    ['hover: a control emits :hover again instead of a token', 'class-widget.php',
+     "self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-hover: {{VALUE}};',",
+     "self::SEL . '.mphbac-nav-btn:hover' => 'background-color: {{VALUE}};',",
+     'hover-hint-test.js'],
+    ['hover: a REST control emits a paint property again', 'class-widget.php',
+     "'selectors' => [self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-bg: {{VALUE}};'],",
+     "'selectors' => [self::SEL . '.mphbac-nav-btn' => 'background-color: {{VALUE}};'],",
+     'hover-hint-test.js'],
+    ['hover: the pointer guard is opened up', 'assets/css/widget.css',
+     '@media (hover: hover) and (pointer: fine) {',
+     '@media all {',
+     'hover-hint-test.js'],
+    ['hint: the bold default is inherited again', 'assets/css/widget.css',
+     "    font-weight: 300;\n    font-size: max(16px, 1em);",
+     "    font-size: max(16px, 1em);",
+     'hover-hint-test.js'],
+    ['hint: it stops hiding when a value is set', 'assets/css/widget.css',
+     ".mphbac-input:not(.mphbac-input--empty) + .mphbac-field-ph,",
+     ".mphbac-input.never-matches + .mphbac-field-ph,",
+     'hover-hint-test.js'],
+    ['theme fade: the button transition guard is removed', 'assets/css/widget.css',
+     ".mphbac-nav-btn.mphbac-nav-btn,\n.mphbac-btn.mphbac-btn,\n.mphbac-row-toggle.mphbac-row-toggle {\n    transition: none;\n}",
+     ".mphbac-nav-btn.never-matches {\n    transition: none;\n}",
+     'hover-hint-test.js'],
+
+    // --- 0.28.0-0.30.0: the field standard ------------------------------
+    ['field: the native appearance reset is removed', 'assets/css/widget.css',
+     "    -webkit-appearance: none;\n    appearance: none;",
+     "    -webkit-appearance: auto;\n    appearance: auto;",
+     'field-standard-test.js'],
+    ['field: the 8.5em floor comes back', 'assets/css/widget.css',
+     "    min-width: 0;\n}",
+     "    min-width: 8.5em;\n}",
+     'field-standard-test.js'],
+    ['field: the iOS 16px floor is dropped for a plain inherit', 'assets/css/widget.css',
+     'font-size: max(16px, 1em);',
+     'font-size: inherit;',
+     'field-standard-test.js'],
+    ['field: the pill drops back to (0,2,0), below Bravada\'s kit', 'assets/css/widget.css',
+     '.mphbac-input.mphbac-input.mphbac-input.mphbac-input {',
+     '.mphbac-input.mphbac-input {',
+     'field-standard-test.js'],
+    ['field: the focus ring loses its ancestor-free selector', 'assets/css/widget.css',
+     '.mphbac-input.mphbac-input.mphbac-input:focus-visible {',
+     '.mphbac-root .mphbac-input:focus-visible {',
+     'field-standard-test.js'],
+
+    // --- 0.27.0-0.31.0: phones and the month grid ------------------------
+    ['mobile: the filter row goes back to stacking', 'assets/css/widget.css',
+     "    .mphbac-filter {\n        display: contents;\n    }",
+     "    .mphbac-filter {\n        display: flex;\n        flex-direction: column;\n    }",
+     'mobile-test.js'],
+    ['mobile: the months grid returns to auto-fit', 'assets/css/widget.css',
+     'grid-template-columns: repeat(2, minmax(0, 1fr));',
+     'grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));',
+     'mobile-test.js'],
+    ['mobile: the popup field floor comes back at <=600px', 'assets/css/widget.css',
+     "    .mphbac-sheet .mphbac-sheet-field {\n        flex: 1 1 0;",
+     "    .mphbac-sheet .mphbac-sheet-field {\n        flex: 1 1 8.5em;",
+     'mobile-test.js'],
+    ['mobile: the first-image fix is regressed', 'assets/js/widget.js',
+     'slideToLoop(0, 0, false)',
+     'slideToLoop(1, 0, false)',
+     'mobile-test.js'],
+
+    // --- 0.25.0-0.26.0: the typography pin ------------------------------
+    // The 0.25.0 bug was a `font:` shorthand at the CONTROL'S OWN tier
+    // (0,2,0), not at (0,1,1) — the file's own note says a shorthand below the
+    // control "loses harmlessly". Mutating the harmless tier produced a
+    // survivor that was really a badly chosen mutation.
+    ['typography: the font shorthand returns at the control\'s own tier', 'assets/css/widget.css',
+     ".mphbac-input.mphbac-input {\n    box-sizing: border-box;",
+     ".mphbac-input.mphbac-input {\n    font: inherit;\n    box-sizing: border-box;",
+     'typography-test.js'],
+    ['typography: font-weight is pinned again, stealing it from the panel', 'assets/css/widget.css',
+     "input.mphbac-input {\n    font-family: inherit;",
+     "input.mphbac-input {\n    font-weight: 700;\n    font-family: inherit;",
+     'typography-test.js'],
 ];
 
 $originals = [];
@@ -88,7 +171,7 @@ $survived = [];
 $broken    = [];
 echo "MUTATION CHECK — each line breaks one guarded behaviour and must go RED.\n\n";
 foreach ($mutations as [$name, $file, $from, $to, $suite]) {
-    $path = $plugin . $file;
+    $path = $resolve($file);
     $body = file_get_contents($path);
     if (!str_contains($body, $from)) {
         $broken[] = $name;
@@ -99,7 +182,9 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     file_put_contents($path, str_replace($from, $to, $body, ));
     $out = [];
     $code = 0;
-    exec('php ' . escapeshellarg(__DIR__ . '/' . $suite) . ' 2>&1', $out, $code);
+    $runner = str_ends_with($suite, '.js') ? 'node' : 'php';
+    $path_to = __DIR__ . '/' . ($runner === 'node' ? 'browser/' : '') . $suite;
+    exec($runner . ' ' . escapeshellarg($path_to) . ' 2>&1', $out, $code);
     file_put_contents($path, $body);
     unset($originals[$path]);
     $went_red = $code !== 0;

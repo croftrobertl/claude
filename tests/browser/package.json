@@ -1,0 +1,7 @@
+{
+  "name": "mphbac-browser-tests",
+  "private": true,
+  "description": "Browser harnesses for mphb-availability-calendar. Chromium is provided by the environment at /opt/pw-browsers; do NOT run `playwright install`.",
+  "scripts": { "test": "node run.js" },
+  "dependencies": { "playwright-core": "^1.0.0" }
+}
