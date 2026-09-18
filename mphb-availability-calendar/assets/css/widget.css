@@ -1,6 +1,21 @@
 /* MPHB Availability Calendar — frontend styles */
 
-.mphbac-root {
+/* THE TOKENS ARE DECLARED WHERE THE PORTAL CAN STILL SEE THEM (0.37.0).
+   .mphbac-sheet and .mphbac-info-sheet are moved to <body> when they open, so
+   a custom property inherited only from .mphbac-root STOPS RESOLVING at
+   exactly the moment those elements become visible — and an unresolved var()
+   is invalid at computed-value time, which means the whole declaration is
+   dropped, not that it falls back.
+   Measured before this change: six tokens were consumed by rules that only
+   match inside the popup, and not one of them resolved there. The booking
+   popup's title had no colour, its header no divider, its error text rendered
+   black instead of the alert red, and the close button's background
+   DISAPPEARED on hover and on focus rather than turning red.
+   Layout properties stay on .mphbac-root below — the sheet must not inherit
+   its width, position or background. */
+.mphbac-root,
+.mphbac-sheet,
+.mphbac-info-sheet {
     --mphbac-color-available: #7BDCB5;
     --mphbac-color-booked: #FB6962;
     --mphbac-color-past: #bdc3c7;
@@ -50,7 +65,9 @@
     --mphbac-radius: 4px;
     --mphbac-gap: 2px;
     --mphbac-info-prerender-width: 720px;
+}
 
+.mphbac-root {
     position: relative;
     box-sizing: border-box;
     width: 100%;
@@ -59,6 +76,7 @@
     font-size: var(--mphbac-font-size);
     line-height: 1.3;
 }
+
 
 /* DCC FIELD STANDARD tokens (0.28.0). Declared on the portaled popups as
    well as on the root: .mphbac-sheet and .mphbac-info-sheet are moved to

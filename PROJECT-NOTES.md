@@ -1619,6 +1619,44 @@ view switcher: dropping its explicit 14px changes nothing, because the 14px
 was never applying. The declarations are left in place as a record of intent
 rather than removed, so the finding stays visible.
 
+## Tokens declared on .mphbac-root alone die at the portal (0.37.0)
+
+**Found while rebuilding the lost suites; live, and visible.** `.mphbac-sheet`
+and `.mphbac-info-sheet` are moved to `<body>` when they open, so a custom
+property inherited only from `.mphbac-root` stops resolving at exactly the
+moment those elements become visible. An unresolved `var()` is invalid at
+computed-value time, which DROPS THE WHOLE DECLARATION — it does not fall back.
+
+Measured on the portaled sheet before the fix: six tokens were consumed by
+rules that only match inside a popup, and **not one resolved there**:
+
+| rule | intended | actually rendered |
+|---|---|---|
+| `.mphbac-sheet-title` | `--mphbac-color-header` | no colour |
+| `.mphbac-sheet-header` | `--mphbac-color-frame` | no divider |
+| `.mphbac-sheet-error` | alert red, `--mphbac-radius` | **black**, square |
+| `.mphbac-sheet-close:hover` | alert red fill | **background vanished** |
+| `.mphbac-sheet-close:focus-visible` | alert red fill | **background vanished** |
+
+The close button losing its background *on hover* is the one a person would
+notice: hovering it made the control disappear rather than highlight.
+
+The fix is structural — every token is declared on
+`.mphbac-root, .mphbac-sheet, .mphbac-info-sheet`, the same list the DCC
+tokens have used since 0.28.0, while the LAYOUT properties stay on
+`.mphbac-root` alone so the sheet does not inherit its width, position or
+background.
+
+**The sweep is the durable part.** `public-ui-test.js` compares every
+`--mphbac-*`/`--dcc-*` token's resolution on the root against the portaled
+sheet, and fails on any that resolves on one and not the other *and* is
+consumed by a popup rule without a fallback. Noticing three instances by hand
+would have left the other three.
+
+This predates 0.29.0 — the same rules previously read `--mphbac-color-nav-bg`,
+also root-only — so it is not a regression from the token work, and it was
+never caught because nothing asserted a resolved COLOUR inside the portal.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

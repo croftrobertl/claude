@@ -250,6 +250,16 @@ $mutations = [
      '    transition: none;',
      'staff-test.js'],
 
+    // --- the portal token fault (0.37.0) ----------------------------------
+    ['portal: the tokens go back to being root-only and die inside the popup', 'assets/css/widget.css',
+     ".mphbac-root,\n.mphbac-sheet,\n.mphbac-info-sheet {\n    --mphbac-color-available",
+     ".mphbac-root {\n    --mphbac-color-available",
+     'sheet-validate-test.js'],
+    ['portal: ...and the sweep across every token notices too', 'assets/css/widget.css',
+     ".mphbac-root,\n.mphbac-sheet,\n.mphbac-info-sheet {\n    --mphbac-color-available",
+     ".mphbac-root {\n    --mphbac-color-available",
+     'public-ui-test.js'],
+
     // --- the grid ---------------------------------------------------------
     ['cells: the day number loses its own token and inherits the cell colour', 'assets/css/widget.css',
      "    color: var(--mphbac-color-day-num, #1F2937);",
