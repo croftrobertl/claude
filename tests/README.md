@@ -44,11 +44,16 @@ built from that directory, stays clean.
    Elementor's inline CSS, Bravada's kit resets inputs at (0,3,1), and the site
    sets `html { font-weight: 700 }`. A fixture missing any of those is a
    different site in the one respect that matters.
-6. **A guard must sit AT the value it enforces, not below it.** The tap-target
+6. **Use the right instrument for the question.** Contrast ratio measures
+   LUMINANCE, so it is right for text on a fill and wrong for "are these two
+   fills distinguishable" — available `#7BDCB5` against past `#bdc3c7` scores
+   1.08 while differing obviously in hue. Separation between fills needs a
+   distance that includes hue.
+7. **A guard must sit AT the value it enforces, not below it.** The tap-target
    assertion floored at 40 while the standard was 44 — which is exactly why
    shipping the fix would not have broken it. A guard set below its own
    standard stays green through the next regression too.
-7. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
+8. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
    hid a live bug here for several releases.
 
 ## Rebuilt so far
@@ -61,10 +66,11 @@ built from that directory, stays clean.
 | `browser/field-standard-test.js` | 0.28.0–0.30.0 — the DCC pill, the native-control reset, the iOS 16px floor, the focus ring, the empty-state mapping | 5 |
 | `browser/mobile-test.js` | 0.27.0–0.31.0 at 320/360/393 — the popup row, the filter row, the 2×2 month grid, the item-14 guards | 4 |
 | `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier; the control selectors stay ancestor-free | 3 |
+| `browser/cells-test.js` | the grid — day-number contrast on every state, the three fills staying distinct, the cottage column's scale stacking and its dividers variant, the cell tooltip | 6 |
 | `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
 | `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, 44px tap targets, row baselines, reduced motion, print | 7 |
 
-**43 mutations, 0 survivors.** `php mutate.php` after any change.
+**49 mutations, 0 survivors.** `php mutate.php` after any change.
 
 ### A finding this rebuild retracted
 
@@ -87,8 +93,7 @@ Lost with the container and not yet replaced. Listed so the gap is visible
 rather than assumed covered. **This list shrinks only when a suite is rebuilt
 AND has a mutation that goes red.**
 
-- **Browser** — `cells`, `public-ui`, `estimate-ui`, `sheet-validate`,
-  `staff-ui`
+- **Browser** — `public-ui`, `estimate-ui`, `sheet-validate`, `staff-ui`
 - **Pure JS** — `estimate`, `fresh`, `hint`, `month-grid`, `parity`
 - **PHP** — `abbrev`, `cache`, `device-number`, `price`, `single-widget`,
   `staff-detail`, `staff-elementor`, `staff-honesty`, `staff-monthview`,
