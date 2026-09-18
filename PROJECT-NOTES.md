@@ -1469,6 +1469,61 @@ others:
   three multi-line targets could never match and reported STALE. Use double
   quotes for anything spanning lines.
 
+## /staff/ buttons match the public widget (0.35.0)
+
+**The control had to change, not just the stylesheet.** `nav_btn_hover_bg`
+emitted `:hover` and `:focus-visible` itself, landing in `_elementor_css` at
+**(0,7,0)** against staff.css's (0,2,0). Three consequences a CSS-only change
+would have missed: the stylesheet loses outright; the `(hover: hover)` guard
+cannot reach per-post CSS, so the iOS sticky-hover bug survives the fix meant
+to remove it; and one control emitting both selectors makes hover and focus a
+single value, so splitting them is a control change.
+
+**And `nav_btn_bg` had to change too — this was not in the brief.** Emitted as
+a paint property at (0,7,0) it out-specifies BOTH the `:hover` and the
+`:focus-visible` rules at (0,2,0), so with only the hover half converted the
+nav kept its resting blue through both. Measured exactly that before fixing
+it. Identical to the public widget's 0.31.1 trap: **rest and hover must
+resolve in the same place.**
+
+All three nav controls now write tokens. Every hover rule in staff.css — five
+of them, including the booking bar and the room row, which are surfaces and
+keep their own treatment — is inside one pointer guard, with
+`:focus-visible` deliberately outside it: gating the merged rule would have
+traded a hover bug for a keyboard-focus bug on every touch device.
+
+`.mphbac-staff-close` went from a fixed `height: 44px` to `width: 46px;
+min-height: 46px`. **The fixed box was not load-bearing for the circle** — the
+equal width and height are, and both are still set. The content is a single
+24px glyph with zero padding, so it cannot exceed 46px; if an upstream font
+change ever made it taller, min-height grows the circle into an ellipse where
+a fixed height would CLIP the glyph.
+
+Transitions measured before removal: nav 0.2s (its own), view 0.75s, close
+0.75s (both inheriting Bravada's `button { transition: background .75s }`),
+photo link 0s — it is an `<a>`, which the theme's button rule does not reach.
+All four are `transition: none` now. The bar and the row still carry the
+theme's 0.75s; reported, not changed.
+
+## `font: inherit` is killing every staff button's size and weight (0.35.0)
+
+**Reported, not fixed — it changes three controls at once.**
+`.mphbac-staff button { font: inherit }` sits at **(0,1,1)**, above every
+per-control font declaration at (0,1,0), and the shorthand resets every
+longhand it does not name. Measured:
+
+| declared in staff.css | actually renders |
+|---|---|
+| `.mphbac-staff-nav` 16px | **15px / 700** |
+| `.mphbac-staff-today` 13px / 600 | **15px / 700** |
+| `.mphbac-staff-view` 14px / 600 | **15px / 700** |
+
+This is the same `font:` shorthand fault the public widget fixed in 0.25.0,
+still live on /staff/. It also answers the font-size question asked of the
+view switcher: dropping its explicit 14px changes nothing, because the 14px
+was never applying. The declarations are left in place as a record of intent
+rather than removed, so the finding stays visible.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

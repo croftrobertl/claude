@@ -7,7 +7,14 @@
  * assertion protecting it does not actually test it — which is exactly the
  * failure the Custom Checkout button-colour assertion had for weeks.
  *
- * Run: php tests/mutate.php        (restores every file, even on Ctrl-C)
+ * Run: php tests/mutate.php            every mutation (slow: each browser
+ *                                       suite launches Chromium, ~2-3 min)
+ *      php tests/mutate.php staff       only mutations whose name matches
+ *      php tests/mutate.php "tap|hover" a regex, for iterating on one area
+ *
+ * Restores every file, even on Ctrl-C. A FILTERED run is for iteration only —
+ * "0 survived" from a filtered run is not the same claim as a full one, so
+ * the summary says which it was.
  */
 $root  = dirname(__DIR__);
 $base = $root . '/mphb-availability-calendar/';
@@ -168,6 +175,44 @@ $mutations = [
      "self::section_customer(\$booking_id, \$booking, self::reserved_entities(\$booking_id, \$booking))",
      'staff-panel-test.php'],
 
+    // --- /staff/ : the same shapes as the public side, on the staff selectors
+    ['staff: a control emits :hover again, outside the guard\'s reach at (0,7,0)', 'class-staff-elementor.php',
+     "self::SEL . '.mphbac-staff-nav' => '--staff-nav-hover: {{VALUE}};',",
+     "self::SEL . '.mphbac-staff-nav:hover' => 'background-color: {{VALUE}};',",
+     'staff-test.js'],
+    ['staff: the rest colour goes back to a paint property and out-specifies the hover', 'class-staff-elementor.php',
+     "self::SEL . '.mphbac-staff-nav' => '--staff-nav-bg: {{VALUE}};'",
+     "self::SEL . '.mphbac-staff-nav' => 'background-color: {{VALUE}};'",
+     'staff-test.js'],
+    ['staff: the hover default reverts to the amber', 'class-staff-elementor.php',
+     "'default'   => '#f08080',",
+     "'default'   => '#FFA000',",
+     'staff-test.js'],
+    ['staff: :focus-visible is re-merged into the GATED hover rule', 'assets/css/staff.css',
+     ".mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }",
+     "",
+     'staff-test.js'],
+    ['staff: a hover rule escapes the pointer guard', 'assets/css/staff.css',
+     "    .mphbac-staff-bar:hover { filter: brightness(1.08); }",
+     "}\n.mphbac-staff-bar:hover { filter: brightness(1.08); }\n@media all {",
+     'staff-test.js'],
+    ['staff: the view switcher drops back under the tap-target floor', 'assets/css/staff.css',
+     "    min-height: 46px;\n    padding: 0 14px;",
+     "    min-height: 40px;\n    padding: 0 14px;",
+     'staff-test.js'],
+    ['staff: the close button goes back to a fixed height', 'assets/css/staff.css',
+     "    width: 46px;\n    min-height: 46px;",
+     "    width: 46px;\n    height: 44px;",
+     'staff-test.js'],
+    ['staff: the theme 0.75s fade comes back on the view switcher', 'assets/css/staff.css',
+     "    padding: 0 14px;\n    transition: none;",
+     "    padding: 0 14px;",
+     'staff-test.js'],
+    ['staff: the selected tab starts recolouring on hover too', 'assets/css/staff.css',
+     '    .mphbac-staff-view:not([aria-pressed="true"]):hover {',
+     '    .mphbac-staff-view:hover {',
+     'staff-test.js'],
+
     // --- the grid ---------------------------------------------------------
     ['cells: the day number loses its own token and inherits the cell colour', 'assets/css/widget.css',
      "    color: var(--mphbac-color-day-num, #1F2937);",
@@ -257,9 +302,23 @@ foreach ([SIGINT, SIGTERM] as $sig) {
     if (function_exists('pcntl_signal')) { pcntl_signal($sig, static function () use ($restore) { $restore(); exit(2); }); }
 }
 
+$filter = $argv[1] ?? '';
+if ($filter !== '') {
+    $mutations = array_values(array_filter(
+        $mutations,
+        static fn(array $m): bool => (bool) preg_match('/' . str_replace('/', '\/', $filter) . '/i', $m[0])
+    ));
+    if (!$mutations) {
+        echo "no mutation matches /$filter/\n";
+        exit(1);
+    }
+}
+
 $survived = [];
 $broken    = [];
-echo "MUTATION CHECK — each line breaks one guarded behaviour and must go RED.\n\n";
+echo "MUTATION CHECK — each line breaks one guarded behaviour and must go RED.\n"
+   . ($filter !== '' ? "FILTERED to /$filter/ — this is an iteration run, not a full one.\n" : '')
+   . "\n";
 foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     $path = $resolve($file);
     $body = file_get_contents($path);
@@ -288,7 +347,8 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     if (!$went_red) { $survived[] = $name; }
 }
 
-echo "\n" . count($mutations) . " mutations, " . count($survived) . " survived, " . count($broken) . " stale\n";
+echo "\n" . count($mutations) . ($filter !== '' ? " matching" : '') . " mutations, "
+   . count($survived) . " survived, " . count($broken) . " stale\n";
 if ($survived) {
     echo "\nSURVIVING MUTATIONS — these behaviours are NOT actually guarded:\n";
     foreach ($survived as $s) { echo "  - $s\n"; }

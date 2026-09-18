@@ -91,23 +91,46 @@ final class Staff_Elementor extends Widget_Base
             'label'     => __('Button background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#0A50B2',
-            'selectors' => [self::SEL . '.mphbac-staff-nav' => 'background-color: {{VALUE}};'],
+            // TOKEN, not background-color — and this half matters as much as the
+            // hover half. Emitted as a paint property it lands at (0,7,0) and
+            // OUT-SPECIFIES both the :hover and the :focus-visible rules in
+            // staff.css at (0,2,0), so the nav would keep its resting colour
+            // through both. Measured: exactly that, before this change.
+            // Rest and hover have to resolve in the same place. Identical to
+            // the public widget's 0.31.1 fix.
+            'selectors' => [self::SEL . '.mphbac-staff-nav' => '--staff-nav-bg: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_text', [
             'label'     => __('Button arrow color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
             'default'   => '#FFFFFF',
-            'selectors' => [self::SEL . '.mphbac-staff-nav' => 'color: {{VALUE}};'],
+            'selectors' => [self::SEL . '.mphbac-staff-nav' => '--staff-nav-text: {{VALUE}};'],
         ]);
 
         $this->add_control('nav_btn_hover_bg', [
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFA000',
+            'default'   => '#f08080',
+            // Writes a TOKEN; it does not emit :hover or :focus-visible itself.
+            // Three reasons, all of which a staff.css-only change would miss:
+            //
+            //  a. This rule lands in _elementor_css at (0,7,0) — measured on
+            //     page 18102 — while staff.css is (0,2,0), so anything the
+            //     stylesheet says about the nav's hover colour LOSES.
+            //  b. Per-post CSS is not inside this plugin's stylesheet, so the
+            //     (hover: hover) guard cannot reach it and the iOS sticky-hover
+            //     bug survives a fix meant to remove it.
+            //  c. One control emitting BOTH :hover and :focus-visible makes them
+            //     a single value. Splitting them — hover gated, focus not — is
+            //     therefore a control change, not a CSS change.
+            //
+            // Same restructuring the public widget's controls had in 0.31.0.
+            // NOTE FOR DEPLOY: Elementor's cached per-post CSS does NOT refresh
+            // on a plugin update. Until 18102's _elementor_css is regenerated
+            // the old #FFA000 :hover rule keeps painting.
             'selectors' => [
-                self::SEL . '.mphbac-staff-nav:hover'         => 'background-color: {{VALUE}};',
-                self::SEL . '.mphbac-staff-nav:focus-visible' => 'background-color: {{VALUE}};',
+                self::SEL . '.mphbac-staff-nav' => '--staff-nav-hover: {{VALUE}};',
             ],
         ]);
 

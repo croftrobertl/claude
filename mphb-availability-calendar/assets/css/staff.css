@@ -30,7 +30,21 @@
        overrides these per instance; the shortcode has only these. */
     --staff-nav-bg:     #0A50B2;
     --staff-nav-text:   #FFFFFF;
-    --staff-nav-hover:  #FFA000;
+    /* The DCC hover pair, as .mphbac-btn:hover consumes it in widget.css.
+       Defined here too because /staff/ does not necessarily load widget.css,
+       and a property inherited from .mphbac-root would not reach .mphbac-staff
+       in any case. Reading --dcc-site-* first means a future shared layer
+       moves the staff panel with the checkout, without editing this file. */
+    --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
+    --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
+    /* Salmon, matching the public widget (0.35.0). The Elementor control
+       writes this same token, so the panel and the control agree instead of
+       fighting: see nav_btn_hover_bg in class-staff-elementor.php.
+       CONTRAST IS A KNOWN, ACCEPTED CHOICE — #FFFFFF on #F08080 is 2.59:1,
+       below WCAG AA. Do not "fix" it: focus is deliberately an OUTLINE
+       (--staff-focus) and never a fill, so keyboard users never depend on it.
+       Same reasoning as widget.css. */
+    --staff-nav-hover:  var(--dcc-button-hover-bg, #f08080);
     --staff-nav-radius: 30px;
     --staff-frame:      #e0e0e0;
     --staff-namecol:    #F8F9FA;
@@ -142,7 +156,14 @@
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    /* NO TRANSITION, matching the public widget's 0.27.0 decision: a colour
+       fade makes hover read as a flicker rather than as a state change. This
+       one used to set its own 0.2s; the three below had none of their own and
+       were inheriting Bravada's `button { transition: background .75s }`
+       (element specificity), a three-quarter-second fade. Measured before:
+       nav 0.2s, view 0.75s, close 0.75s, photo link 0s (it is an <a>, which
+       the theme's button rule does not reach). */
+    transition: none;
 }
 
 /* Identical to .mphbac-nav-btn svg in widget.css — same mark, same size. */
@@ -151,7 +172,12 @@
     width: 20px;
     height: 20px;
 }
-.mphbac-staff-nav:hover,
+/* SPLIT DELIBERATELY. These were one rule serving both selectors, and gating
+   it whole would have removed the focus BACKGROUND on every touch device —
+   trading a hover bug for a keyboard-focus bug. :focus-visible stays here,
+   ungated, because a keyboard user needs it on every device; :hover lives in
+   the pointer guard at the end of this file. The control was split the same
+   way. Same pattern as widget.css's nav. */
 .mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }
 /* The Today button carries a word rather than an arrow. */
 .mphbac-staff-today {
@@ -181,8 +207,13 @@
 }
 .mphbac-staff-view {
     min-width: 64px;
-    min-height: 40px;
+    /* 46px, not 44: the floor is not the target — at exactly 44.0 there is
+       nothing between the control and the line it has to clear. This was the
+       only staff control under the floor. min-height rather than height so a
+       label that wraps grows the button instead of being clipped. */
+    min-height: 46px;
     padding: 0 14px;
+    transition: none;
     border: 0;
     background: transparent;
     color: var(--staff-text);
@@ -377,7 +408,6 @@
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
-.mphbac-staff-bar:hover { filter: brightness(1.08); }
 .mphbac-staff-bar:focus-visible { outline-offset: 0; }
 .mphbac-staff-seg { flex: 0 0 auto; }
 .mphbac-staff-seg.is-in   { width: calc(var(--staff-day-w) / 2 - 1px); background: var(--staff-in); }
@@ -494,7 +524,6 @@
     text-align: left;
     cursor: pointer;
 }
-.mphbac-staff-item:hover { background: var(--staff-namecol); }
 .mphbac-staff-item-cottage {
     display: flex;
     flex-direction: column;
@@ -617,8 +646,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    /* 46 x 46. min-height rather than the fixed `height: 44px` this used to
+       carry: the content is a single 24px glyph with zero padding, so it
+       cannot exceed 46px and the box stays square in practice. If an upstream
+       font change ever made it taller, min-height grows the circle into an
+       ellipse where a fixed height would CLIP the glyph — the wrong failure.
+       The fixed box was not load-bearing for the circle; the equal width and
+       height are, and both are still set. */
+    width: 46px;
+    min-height: 46px;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -628,8 +664,8 @@
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
+    transition: none;
 }
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover { background: #e0e0e0; }
 /* Only the body scrolls. */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body {
     flex: 1 1 auto;
@@ -717,8 +753,8 @@
     color: #ffffff;
     font-weight: 600;
     text-decoration: none;
+    transition: none;
 }
-.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:hover { background: #0a4f8c; }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo-note {
     display: block;
     margin-top: 6px;
@@ -742,7 +778,54 @@ body.mphbac-staff-open { overflow: hidden; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    /* .mphbac-staff-nav is no longer listed: it sets transition: none
+       unconditionally now, so there is nothing here to undo. */
     .mphbac-staff-overlay.mphbac-staff-overlay,
-    .mphbac-staff-sheet.mphbac-staff-sheet,
-    .mphbac-staff-nav { transition: none; }
+    .mphbac-staff-sheet.mphbac-staff-sheet { transition: none; }
+}
+
+/* ======================================================================
+   EVERY HOVER RULE IN THIS FILE LIVES HERE, AND NOWHERE ELSE.
+
+   iOS Safari applies :hover on tap and KEEPS it until the next tap
+   somewhere else, so a tapped control stays highlighted long after the
+   interaction ended. That is the sticky highlight fixed publicly in
+   0.27.0, and it was still live on the surface the owner uses from his
+   phone. Five rules were ungated: the nav, the booking bar, the room row,
+   the sheet close and the photo link.
+
+   The :focus-visible halves stay OUTSIDE this block — keyboard users need
+   them on every device. Add new hover rules inside the guard, never
+   beside their focus-visible twin.
+
+   THE BAR AND THE ROW ARE HERE BUT NOT RESTYLED. They are surfaces, not
+   buttons, so they keep their own treatment; the guard is about the iOS
+   bug, which does not care about that distinction.
+   ====================================================================== */
+@media (hover: hover) and (pointer: fine) {
+    .mphbac-staff-nav:hover { background: var(--staff-nav-hover); }
+
+    /* The view switcher had NO hover state at all. Hovering an UNSELECTED
+       tab offers to switch to it, so it takes the shared hover pair. A
+       SELECTED tab is deliberately left alone: hovering the view you are
+       already in offers nothing, and recolouring it would destroy the only
+       signal of which view is active. Stated rather than left to
+       specificity. */
+    .mphbac-staff-view:not([aria-pressed="true"]):hover {
+        background: var(--dcc-button-hover-bg, #f08080);
+        color: var(--dcc-button-hover-fg, #ffffff);
+    }
+
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {
+        background: var(--dcc-button-hover-bg, #f08080);
+        color: var(--dcc-button-hover-fg, #ffffff);
+    }
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-photo a:hover {
+        background: var(--dcc-button-hover-bg, #f08080);
+        color: var(--dcc-button-hover-fg, #ffffff);
+    }
+
+    /* Surfaces, unchanged — moved here only for the guard. */
+    .mphbac-staff-bar:hover { filter: brightness(1.08); }
+    .mphbac-staff-item:hover { background: var(--staff-namecol); }
 }

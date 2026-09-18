@@ -2,6 +2,10 @@
 
 Run everything: `tests/run.sh`
 Check the tests can actually fail: `php tests/mutate.php`
+(that is ~2-3 minutes — each browser mutation launches Chromium. While
+iterating, `php tests/mutate.php staff` filters by name. A filtered run's
+"0 survived" is not the same claim as a full run's, and the output says which
+it was.)
 
 ## Why these are in the repository
 
@@ -40,20 +44,26 @@ built from that directory, stays clean.
    `mutate.php` breaks each guarded behaviour and requires the suite to go red.
 4. **Where a suite asserts on markup a third party renders, carry BOTH shapes
    in the fixture.** Fixtures drift from live silently.
-5. **Reproduce the real cascade.** The plugin stylesheet loads AFTER
+5. **Reproduce Elementor's per-post cascade, not just the stylesheet.** Both
+   widgets have had a fault that lives ONLY there: a control emitting a paint
+   property at (0,6,0)/(0,7,0) out-specifies the stylesheet's hover rule, and
+   a control emitting `:hover` is somewhere the `(hover: hover)` guard cannot
+   reach. `harness.js` and `staff-harness.js` build that CSS from the control
+   source, with the real post and element ids.
+6. **Reproduce the real cascade.** The plugin stylesheet loads AFTER
    Elementor's inline CSS, Bravada's kit resets inputs at (0,3,1), and the site
    sets `html { font-weight: 700 }`. A fixture missing any of those is a
    different site in the one respect that matters.
-6. **Use the right instrument for the question.** Contrast ratio measures
+7. **Use the right instrument for the question.** Contrast ratio measures
    LUMINANCE, so it is right for text on a fill and wrong for "are these two
    fills distinguishable" — available `#7BDCB5` against past `#bdc3c7` scores
    1.08 while differing obviously in hue. Separation between fills needs a
    distance that includes hue.
-7. **A guard must sit AT the value it enforces, not below it.** The tap-target
+8. **A guard must sit AT the value it enforces, not below it.** The tap-target
    assertion floored at 40 while the standard was 44 — which is exactly why
    shipping the fix would not have broken it. A guard set below its own
    standard stays green through the next regression too.
-8. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
+9. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
    hid a live bug here for several releases.
 
 ## Rebuilt so far
@@ -65,12 +75,13 @@ built from that directory, stays clean.
 | `browser/hover-hint-test.js` | 0.31.0/0.31.1 — hover tokens, the (0,6,0) cascade trap, the theme's 0.75s fade, the mm/dd/yyyy hint | 6 |
 | `browser/field-standard-test.js` | 0.28.0–0.30.0 — the DCC pill, the native-control reset, the iOS 16px floor, the focus ring, the empty-state mapping | 5 |
 | `browser/mobile-test.js` | 0.27.0–0.31.0 at 320/360/393 — the popup row, the filter row, the 2×2 month grid, the item-14 guards | 4 |
+| `browser/staff-test.js` | /staff/ — the four button-like controls on the shared salmon, all five hover rules gated, the :hover / :focus-visible split, tap targets, transitions, and the CONTROLS writing tokens instead of paint properties | 9 |
 | `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier; the control selectors stay ancestor-free | 3 |
 | `browser/cells-test.js` | the grid — day-number contrast on every state, the three fills staying distinct, the cottage column's scale stacking and its dividers variant, the cell tooltip | 6 |
 | `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
 | `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, 44px tap targets, row baselines, reduced motion, print | 7 |
 
-**49 mutations, 0 survivors.** `php mutate.php` after any change.
+**58 mutations, 0 survivors.** `php mutate.php` after any change.
 
 ### A finding this rebuild retracted
 
@@ -93,7 +104,7 @@ Lost with the container and not yet replaced. Listed so the gap is visible
 rather than assumed covered. **This list shrinks only when a suite is rebuilt
 AND has a mutation that goes red.**
 
-- **Browser** — `public-ui`, `estimate-ui`, `sheet-validate`, `staff-ui`
+- **Browser** — `public-ui`, `estimate-ui`, `sheet-validate`
 - **Pure JS** — `estimate`, `fresh`, `hint`, `month-grid`, `parity`
 - **PHP** — `abbrev`, `cache`, `device-number`, `price`, `single-widget`,
   `staff-detail`, `staff-elementor`, `staff-honesty`, `staff-monthview`,
