@@ -671,6 +671,14 @@ function summary(doc) {
  * whose first option was a real value, so a no-dog booking posted "10-20 lbs"
  * and "short-haired". A blank first option (added in MotoPress) fixes the
  * VALUE; only `disabled` removes the KEY.
+ *
+ * WHY FormData IS THE RIGHT INSTRUMENT HERE, even though MotoPress submits
+ * over REST rather than natively (confirmed 2026-09-18, do not re-open):
+ * parseFormToJSON() in MotoPress's assets/js/public/mphb.js is
+ *     return this.element.serializeJSON();
+ * and serializeJSON is built on jQuery's serializeArray, which applies the
+ * HTML "successful controls" rule -- the same rule FormData applies. A key
+ * absent from FormData is absent from what MotoPress posts.
  * ===================================================================== */
 {
     const { window, doc } = await render(F.dogFields, {

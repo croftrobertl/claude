@@ -387,6 +387,18 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   helper hard-refuses any control named `[services]` or classed
   `mphb_sc_checkout-service`. **Never route a service control through it**, and
   keep the test that asserts the service checkbox stays enabled and submits.
+  **The submit path is confirmed, not assumed** (2026-09-18): MotoPress does
+  not walk inputs — `parseFormToJSON()` in `assets/js/public/mphb.js` is
+  `return this.element.serializeJSON();`, and `serializeJSON` is built on
+  jQuery's `serializeArray`, which applies the HTML "successful controls" rule
+  — the same rule `FormData` applies. So the `FormData` assertion in
+  `tests/breakdown` measures the real mechanism even though MotoPress submits
+  over REST. Separately, `_buildFormData()` skips empty custom fields outright
+  (`} else if (value !== '') { formData.append("customer_fields[...]", value); }`),
+  so an unanswered dog question would send nothing even without `disabled`.
+  **That second fact is a belt, not the braces** — it is MotoPress's internal
+  and can change in any update, whereas `disabled` is the spec. Do not drop
+  `setDisabled()` on the strength of it.
 - **`mphb_cf_options` IS PHP-SERIALISED ON THIS SITE, NOT JSON.** Checkout
   Fields store their option lists that way, so `json_decode()` returns null and
   a careless write silently changes nothing — no error, no effect. **Always
@@ -606,6 +618,32 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   fired hardest on the taps that WORKED. And `<body>` is an ancestor of
   everything, so Elementor's attribute write counted as churn on every touched
   path. Read any round-2 log with both in mind.
+- **A TEST WRITTEN FROM THE SAME BELIEF AS THE CODE CANNOT DISAGREE WITH IT.**
+  Named as its own rule (owner, 2026-09-18) because it is the failure the seven
+  suites here are structurally blind to: they were all green through every
+  defect listed below. The shape is always the same — a guarantee stated in
+  prose, code that does not provide it, and a test that asserts the INTENT
+  rather than constructing the CONDITION the prose names.
+  **The check: for every "never", "always", "cannot", "at most" or ceiling in
+  a comment or in this file, find the test that creates that case. If the only
+  test is the happy path, the claim is unverified prose, however many
+  assertions surround it.** "Cannot be starved" is only tested by constructing
+  starvation; "bounded" is only tested by an absurd input.
+  Worked examples from this repo, each of which shipped green:
+  - The 3s ceiling (v0.23.1) is the sharpest. The reason it could never fire —
+    `run()` only enters from a timer, and the `fingerDown` branch deliberately
+    installs none — is visible in four lines and went unread for six versions,
+    because the test asserted that deferred work runs after a touch-up, which
+    is the case the ceiling does not cover. Measured once written the right
+    way round: five seconds and counting, unrun.
+  - The option range (v0.23.1): asserted at capacity 4, never at a corrupt
+    9999 from the database.
+  - The expander's colour (v0.22.0): asserted throughout, against a fixture
+    still holding the `<a>` the code had stopped producing.
+  - The field standard (v0.13.0): the export was diffed against nothing, and
+    drifted from its source for several releases.
+  A fixture copied from the code's own assumptions is the same error one level
+  down — hence the v0.9.0 rule that fixtures come from real markup.
 - Field geometry (tap targets) is asserted in real Chromium at 390x844 with
   touch emulation, and the width cap at 1280, at `tests/fields/`
   (`npm install && npm test`). Run it after touching any field rule.
