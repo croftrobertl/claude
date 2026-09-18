@@ -74,45 +74,48 @@ built from that directory, stays clean.
 
 ## Rebuilt so far
 
-| suite | covers | mutations |
-|---|---|---|
-| `staff-panel-test.php` | 0.32.0/0.33.0 — photo ID, money rows, the guest-count contract, the pet gate | 17 |
-| `staff-gate-test.php` | the standing security constraint — `is_authorized()`, the fail-closed password-removed path, the status whitelist, no PII in page HTML | 3 |
-| `browser/hover-hint-test.js` | 0.31.0/0.31.1 — hover tokens, the (0,6,0) cascade trap, the theme's 0.75s fade, the mm/dd/yyyy hint | 6 |
-| `browser/field-standard-test.js` | 0.28.0–0.30.0 — the DCC pill, the native-control reset, the iOS 16px floor, the focus ring, the empty-state mapping | 5 |
-| `browser/mobile-test.js` | 0.27.0–0.31.0 at 320/360/393 — the popup row, the filter row, the 2×2 month grid, the item-14 guards | 4 |
-| `browser/staff-test.js` | /staff/ — the four button-like controls on the shared salmon, all five hover rules gated, the :hover / :focus-visible split, tap targets, transitions, and the CONTROLS writing tokens instead of paint properties | 9 |
-| `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier; the control selectors stay ancestor-free | 3 |
-| `browser/cells-test.js` | the grid — day-number contrast on every state, the three fills staying distinct, the cottage column's scale stacking and its dividers variant, the cell tooltip | 6 |
-| `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
-| `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, 44px tap targets, row baselines, reduced motion, print | 7 |
+All 22 suites are back, each with at least one mutation that goes red.
 
-**65 mutations, 0 survivors.** `php mutate.php` after any change.
-
-### A finding this rebuild retracted
-
-The 0.33.1 notes recorded a "known gap": that `field_typography`, being a
-group control, was emitted `{{WRAPPER}}`-prefixed and so could not reach the
-booking popup's portaled date fields. **That was wrong, and it was the
-fixture's fault.** Elementor substitutes `{{WRAPPER}}` where a selector
-contains it and does not prefix one on; `FSEL` is a bare doubled class
-declared beside `BSEL`, which was measured global on the live page. Emitted
-the way Elementor really emits it, the panel reaches every field — measured
-300/300 bare against 300/400 wrapper-prefixed.
-
-The invariant is now guarded rather than documented: all three control
-selectors must stay ancestor-free, and a mutation that gives `FSEL` an
-ancestor goes red.
+| suite | covers |
+|---|---|
+| `abbrev-test.php` | the cottage short name, incl. the 0.23.5 "Blue Heron" regression |
+| `cache-test.php` | key/get_or_set/flush_all, the age-0 hit, the legacy payload, a cached `false` |
+| `device-number-test.php` | the responsive clamp, and every call site's bounds |
+| `price-test.php` | the estimate endpoint's validator, and the one place HTML is injected |
+| `single-widget-test.php` | Widget_Single inherits rather than forks; months 4/2/2 |
+| `staff-detail-test.php` | the photo proxy's only door, and where containment actually lives |
+| `staff-elementor-test.php` | staff controls write tokens, never `:hover` or a paint property |
+| `staff-gate-test.php` | `is_authorized()`, the fail-closed path, the status whitelist, no PII in HTML |
+| `staff-honesty-test.php` | an imported default is never presented as a fact |
+| `staff-monthview-test.php` | one query, one prime, whatever the month holds |
+| `staff-notes-test.php` | the 0.23.1 fatal, every note shape, placeholder notes |
+| `staff-nplus1-test.php` | the query budget for both staff paths |
+| `staff-ota-test.php` | PRODID mapping, the reserved-room marker, the ids parameter |
+| `staff-panel-test.php` | photo ID, money rows, the guest-count contract, the pet gate |
+| `staff-payment-test.php` | what counts as paid, and money as plain text |
+| `staff-sections-test.php` | the textContent contract, against hostile input |
+| `js/month-grid-test.js` | month arithmetic, in four timezones |
+| `js/fresh-test.js` | the two ages compounding, and failing closed |
+| `js/parity-test.js` | `rangeState`/`blockedNight`, incl. checkout-is-not-a-night |
+| `js/estimate-test.js` | the template composer: text stays text, only `{html:…}` is injected |
+| `js/hint-test.js` | the availability hint, incl. the 0.20.1 past-window bug |
+| `browser/cells-test.js` | day-number contrast, the three fills, the cottage column |
+| `browser/estimate-ui-test.js` | the estimate block through the portal |
+| `browser/field-standard-test.js` | the DCC pill, the native-control reset, the iOS floor |
+| `browser/hover-hint-test.js` | hover tokens, the (0,6,0) trap, the mm/dd/yyyy hint |
+| `browser/mobile-test.js` | 320/360/393, the 2x2 month grid, the item-14 guards |
+| `browser/nav-test.js` | SVG chevrons, the centred cluster, the Today button |
+| `browser/polish-test.js` | the pointer guard, bare `:focus`, `!important`, tap targets |
+| `browser/public-ui-test.js` | the cottage column, and the PORTAL TOKEN SWEEP |
+| `browser/sheet-validate-test.js` | the error row, Book Now actually disabled |
+| `browser/staff-test.js` | /staff/ buttons, the per-post cascade, the `:hover`/`:focus` split |
+| `browser/typography-test.js` | all ten typography controls own what they emit |
 
 ## Still to rebuild
 
-Lost with the container and not yet replaced. Listed so the gap is visible
-rather than assumed covered. **This list shrinks only when a suite is rebuilt
-AND has a mutation that goes red.**
+Nothing. The list is empty because every suite above has a mutation that goes
+red — a suite that passes but cannot fail does not count as rebuilt.
 
-- **Browser** — `public-ui`, `estimate-ui`, `sheet-validate`
-- **Pure JS** — `estimate`, `fresh`, `hint`, `month-grid`, `parity`
-- **PHP** — `abbrev`, `cache`, `device-number`, `price`, `single-widget`,
-  `staff-detail`, `staff-elementor`, `staff-honesty`, `staff-monthview`,
-  `staff-notes`, `staff-nplus1`, `staff-ota`, `staff-payment`,
-  `staff-sections`
+If a suite is ever removed or cannot be written honestly, put it back on this
+list with the reason. A visible gap is worth more than a suite reporting
+coverage it does not have.

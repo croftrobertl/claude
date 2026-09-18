@@ -70,8 +70,18 @@ check('an empty string renders nothing', with_notes('') === []);
 check('a list of bare strings renders', count(with_notes(['one', 'two'])) === 2);
 check('rows with a different text key still render',
     count(with_notes([['text' => 'via text key', 'date' => '2026-09-01']])) === 1);
-check('a row whose text is blank is dropped, not rendered empty',
+check('a row whose text is whitespace is dropped, not rendered empty',
     with_notes([['note' => '   ', 'date' => '2026-09-01']]) === []);
+/* TWO SEPARATE GUARDS, and only the second catches this. Whitespace is
+ * trimmed to '' by plain() and dropped at the parse step; an em dash is
+ * non-empty, so it reaches the is_blank() check. MPHB checkout fields collect
+ * exactly these placeholders when a guest skips them, so a note reading "—"
+ * must not render as a row that says nothing. */
+foreach (['—', '-', 'N/A', 'none', '0'] as $placeholder) {
+    check("a note of \"$placeholder\" is a placeholder, not a note",
+        with_notes([['note' => $placeholder, 'date' => '2026-09-01']]) === [],
+        $placeholder);
+}
 /* An OBJECT note is read through GETTERS, not public properties — the same
  * "read MPHB through its own getters" rule the whole file follows. A
  * property-only stdClass is not a shape MPHB produces, and the file's own

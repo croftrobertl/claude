@@ -1657,6 +1657,43 @@ This predates 0.29.0 — the same rules previously read `--mphbac-color-nav-bg`,
 also root-only — so it is not a regression from the token work, and it was
 never caught because nothing asserted a resolved COLOUR inside the portal.
 
+## The rebuild, finished (2026-09-18)
+
+All 22 lost suites are back — 32 files, 104 mutations, 0 survivors, 0 stale.
+The container recycle that deleted them is recorded above; everything now
+lives in `tests/` in the repository.
+
+**Five mutations survived their first run, and every one was a fault in the
+MUTATION, not a gap in the suite.** That is the ratio worth remembering: the
+runner's job is as much to check the mutations as the assertions.
+- A mutation on the payment ENTITY path, which no test exercises without MPHB
+  — dead code cannot prove anything.
+- `money()` and `str_or_dash()` BOTH call `plain()`, so removing either leaves
+  the other stripping. Sound defence in depth, useless mutation; `plain()` is
+  the shared floor and is what gets mutated now.
+- `entry_rows()` drops `''` at the parse step, so only a value that is
+  non-empty AND blank — an em dash — reaches the `is_blank()` guard. The test
+  gained the placeholder cases MPHB checkout fields actually collect.
+- Slicing `post__in` does not change the NUMBER of queries, which is what the
+  assertion counts.
+- `.mphbac-label-abbrev` appears eight times and the first is not a hiding
+  rule; the assertion can only be broken by ADDING one, so the mutation adds
+  one.
+
+**Three harness faults of the same family as the stylesheet ones:**
+- `extract.js` scanned COMMENTS as code, so prose in a comment ("own row
+  (see …)") was reported as a missing dependency. Comments and string literals
+  are stripped before scanning now.
+- It also treated NESTED function declarations as free identifiers, demanding
+  that `dayHasAvail` be passed into the function that defines it.
+- `minidom.js` was LESS faithful than a browser in the way that mattered: it
+  echoed text nodes unescaped and left entities encoded, so "inserted as text"
+  and "injected as markup" looked identical and a correct price line read as
+  wrong. It escapes on serialisation and decodes parsed entities now.
+
+**The Elementor stub throws on any API it does not model.** It surfaced a
+missing `SELECT2` immediately rather than silently registering nothing.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
