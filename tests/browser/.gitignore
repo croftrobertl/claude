@@ -1,2 +1,5 @@
 node_modules/
 *.png
+
+# one-off measurement scripts, not suites
+probe-*.js
