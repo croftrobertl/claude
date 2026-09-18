@@ -207,5 +207,24 @@ check('5: a non-pet service does NOT show it',
 check('5: and the defaults alone never show it — the trap this rule exists for',
     !in_array('Dog Size', labels(booking(18443), 'customer'), true));
 
+echo "\n-- efficiency: one booking, one reserved-room query --\n";
+{
+    // Both sections need the reserved rooms — booking for occupancy, customer
+    // for the pet fee — and each resolution issues a get_posts() on the
+    // fallback path. Resolving them per section is a duplicate query on every
+    // popup open, which is the same family as the N+1s this project has
+    // already been bitten by twice.
+    $GLOBALS['t_posts'] = []; $GLOBALS['t_meta'] = []; $GLOBALS['wpdb']->payment_rows = [];
+    t_post(22, 'mphb_room_type', 'publish', 'Cottage 22', ['mphb_adults_capacity' => 4]);
+    t_post(220, 'mphb_room', 'publish', 'Room', ['mphb_room_type_id' => 22]);
+    t_post(19000, 'mphb_booking', 'confirmed', 'B', ['mphb_total_price' => 0, 'mphb_dog_type' => 'Poodle']);
+    t_post(19001, 'mphb_reserved_room', 'publish', 'RR', ['_mphb_room_id' => 220, '_mphb_adults' => 4]);
+    $GLOBALS['t_posts'][19001]->post_parent = 19000;
+    t_reset();
+    Staff_Data::booking_detail(19000);
+    $rr = count(array_filter($GLOBALS['t_queries'], static fn($t) => $t === 'mphb_reserved_room'));
+    check('the reserved rooms are resolved ONCE, not once per section', $rr === 1, ['queries' => $GLOBALS['t_queries']]);
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);

@@ -51,7 +51,7 @@ $mutations = [
 
     // --- rule 5: the pet gate -------------------------------------------
     ['staff panel: the pet block is ungated', 'class-staff-data.php',
-     'if (!self::is_blank($dog_type) || self::has_pet_service(self::reserved_entities($id, $b))) {',
+     'if (!self::is_blank($dog_type) || self::has_pet_service($rooms)) {',
      'if (true) {',
      'staff-panel-test.php'],
     ['staff panel: a non-pet service counts as a pet fee', 'class-staff-data.php',
@@ -112,12 +112,12 @@ $mutations = [
      "    min-width: 8.5em;\n}",
      'field-standard-test.js'],
     ['field: the iOS 16px floor is dropped for a plain inherit', 'assets/css/widget.css',
-     'font-size: max(16px, 1em);',
-     'font-size: inherit;',
+     "font-size: max(16px, 1em);\n}",
+     "font-size: inherit;\n}",
      'field-standard-test.js'],
     ['field: the pill drops back to (0,2,0), below Bravada\'s kit', 'assets/css/widget.css',
-     '.mphbac-input.mphbac-input.mphbac-input.mphbac-input {',
-     '.mphbac-input.mphbac-input {',
+     ".mphbac-input.mphbac-input.mphbac-input.mphbac-input {\n    background-color: #ffffff;",
+     ".mphbac-input.mphbac-input {\n    background-color: #ffffff;",
      'field-standard-test.js'],
     ['field: the focus ring loses its ancestor-free selector', 'assets/css/widget.css',
      '.mphbac-input.mphbac-input.mphbac-input:focus-visible {',
@@ -151,10 +151,62 @@ $mutations = [
      ".mphbac-input.mphbac-input {\n    box-sizing: border-box;",
      ".mphbac-input.mphbac-input {\n    font: inherit;\n    box-sizing: border-box;",
      'typography-test.js'],
+    // If any of these three control selectors gains an ancestor, the portaled
+    // popup silently drops out of the control's reach. That is the fault the
+    // 2026-09-17 "known gap" claimed to have found; it was a fixture artefact,
+    // but the failure mode is real and is now guarded.
+    ['typography: the field control gains an ancestor and orphans the portaled popup', 'class-widget.php',
+     "private const FSEL = '.mphbac-input.mphbac-input';",
+     "private const FSEL = '{{WRAPPER}} .mphbac-root .mphbac-input.mphbac-input';",
+     'typography-test.js'],
     ['typography: font-weight is pinned again, stealing it from the panel', 'assets/css/widget.css',
      "input.mphbac-input {\n    font-family: inherit;",
      "input.mphbac-input {\n    font-weight: 700;\n    font-family: inherit;",
      'typography-test.js'],
+    ['staff panel: the reserved rooms are resolved once per section again', 'class-staff-data.php',
+     "self::section_customer(\$booking_id, \$booking, \$rooms)",
+     "self::section_customer(\$booking_id, \$booking, self::reserved_entities(\$booking_id, \$booking))",
+     'staff-panel-test.php'],
+
+    // --- the nav row ----------------------------------------------------
+    ['nav: the chevrons lose currentColor, so the colour control stops driving them', 'includes/class-widget.php',
+     'stroke="currentColor" stroke-width="2.25"',
+     'stroke="#000000" stroke-width="2.25"',
+     'nav-test.js'],
+    ['nav: the row goes back to space-between', 'assets/css/widget.css',
+     "    justify-content: center;\n    gap: 10px;\n    margin-bottom: 12px;",
+     "    justify-content: space-between;\n    gap: 10px;\n    margin-bottom: 12px;",
+     'nav-test.js'],
+    ['nav: [hidden] stops hiding the Today button', 'assets/css/widget.css',
+     ".mphbac-root.mphbac-root .mphbac-nav-btn[hidden],\n.mphbac-root.mphbac-root .mphbac-btn[hidden] {",
+     ".mphbac-root.mphbac-root .mphbac-nav-btn.never-matches,\n.mphbac-root.mphbac-root .mphbac-btn.never-matches {",
+     'nav-test.js'],
+    ['nav: the 44px hit area is dropped from the arrows', 'assets/css/widget.css',
+     "    min-width: 44px;\n    min-height: 44px;\n    padding: 0 4px;",
+     "    min-width: 20px;\n    min-height: 20px;\n    padding: 0 4px;",
+     'nav-test.js'],
+    ['nav: the svg stops being hidden from the accessibility tree', 'includes/class-widget.php',
+     '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"',
+     '<svg viewBox="0 0 24 24" focusable="true"><path d="M15 5l-7 7 7 7"',
+     'nav-test.js'],
+
+    // --- the stylesheet-wide disciplines ---------------------------------
+    ['polish: a hover rule escapes the pointer guard', 'assets/css/widget.css',
+     '.mphbac-row-toggle--info:hover .mphbac-label-abbrev,',
+     '}\n.mphbac-row-toggle--info:hover .mphbac-label-abbrev,',
+     'polish-test.js'],
+    ['polish: an !important lands on a property the field control emits', 'assets/css/widget.css',
+     '    line-height: 1.3 !important;',
+     '    line-height: 1.3 !important;\n    font-size: 18px !important;',
+     'polish-test.js'],
+    ['polish: reduced motion stops switching the field transition off', 'assets/css/widget.css',
+     '    .mphbac-input.mphbac-input { transition: none; }',
+     '    .mphbac-input.never-matches { transition: none; }',
+     'polish-test.js'],
+    ['polish: the action buttons shrink below the recorded 41px', 'assets/css/widget.css',
+     "    padding: 0.5em 0.9em;\n    border: 0;",
+     "    padding: 0.1em 0.9em;\n    border: 0;",
+     'polish-test.js'],
 ];
 
 $originals = [];
@@ -179,7 +231,12 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
         continue;
     }
     $originals[$path] = $body;
-    file_put_contents($path, str_replace($from, $to, $body, ));
+    // Replace the FIRST occurrence only. Replacing every match can mutate
+    // more than the behaviour under test, so a red result would not prove the
+    // suite guards the thing this entry names.
+    $hits = substr_count($body, $from);
+    $pos = strpos($body, $from);
+    file_put_contents($path, substr_replace($body, $to, $pos, strlen($from)));
     $out = [];
     $code = 0;
     $runner = str_ends_with($suite, '.js') ? 'node' : 'php';
@@ -188,7 +245,8 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     file_put_contents($path, $body);
     unset($originals[$path]);
     $went_red = $code !== 0;
-    printf("%-8s %s\n", $went_red ? 'red ok' : 'SURVIVED', $name);
+    printf("%-8s %s%s\n", $went_red ? 'red ok' : 'SURVIVED', $name,
+        $hits > 1 ? "  (first of $hits occurrences)" : '');
     if (!$went_red) { $survived[] = $name; }
 }
 

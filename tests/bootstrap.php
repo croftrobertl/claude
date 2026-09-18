@@ -17,12 +17,13 @@
 $GLOBALS['t_meta']  = [];   // post_id => [key => value]
 $GLOBALS['t_posts'] = [];   // post_id => WP_Post-ish
 $GLOBALS['t_calls'] = [];   // function name => count
+$GLOBALS['t_queries'] = []; // post types queried, in order
 
 if (!defined('ABSPATH')) { define('ABSPATH', __DIR__); }
 if (!defined('HOUR_IN_SECONDS')) { define('HOUR_IN_SECONDS', 3600); }
 
 function t_count(string $fn): void { $GLOBALS['t_calls'][$fn] = ($GLOBALS['t_calls'][$fn] ?? 0) + 1; }
-function t_reset(): void { $GLOBALS['t_calls'] = []; }
+function t_reset(): void { $GLOBALS['t_calls'] = []; $GLOBALS['t_queries'] = []; }
 
 function t_post(int $id, string $type, string $status = 'publish', string $title = '', array $meta = []): void {
     $GLOBALS['t_posts'][$id] = (object) [
@@ -50,6 +51,10 @@ function get_post_meta($id, $key = '', $single = false) {
 
 function get_posts(array $args = []) {
     t_count('get_posts');
+    // Record WHICH post type was queried, so a suite can assert that reading
+    // one booking resolves its reserved rooms once rather than once per
+    // section. A bare call count cannot tell those apart.
+    $GLOBALS['t_queries'][] = $args['post_type'] ?? 'post';
     $type   = $args['post_type'] ?? 'post';
     $parent = $args['post_parent'] ?? null;
     $incl   = $args['post__in'] ?? null;
@@ -64,7 +69,16 @@ function get_posts(array $args = []) {
     return $out;
 }
 
-function maybe_unserialize($v) { return is_string($v) && @unserialize($v) !== false ? unserialize($v) : $v; }
+function maybe_unserialize($v) {
+    // `@unserialize($v) !== false` gets SERIALIZED FALSE wrong — 'b:0;'
+    // unserializes to false and would be handed back as the raw string. A
+    // stub that is wrong in a different way from production is worse than one
+    // that is merely simple.
+    if (!is_string($v)) { return $v; }
+    if ($v === 'b:0;') { return false; }
+    $out = @unserialize($v);
+    return $out === false ? $v : $out;
+}
 function apply_filters($tag, $value, ...$rest) { return $value; }
 function __($t, $d = '') { return $t; }
 function _n($s, $p, $n, $d = '') { return $n === 1 ? $s : $p; }

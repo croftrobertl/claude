@@ -122,43 +122,44 @@ const BODY = `
       { root: [n.pad, n.border], portaled: [n.portPad, n.portBorder] });
     await bare.close();
 
-    // GROUP controls are emitted as `{{WRAPPER}} <selector>` — Elementor adds
-    // the wrapper prefix itself. Using SEL here would be a different,
-    // friendlier selector than the one the page actually carries.
-    const p300 = await open(`${H.POST}${H.WRAPPER} ${FSEL}{font-weight:300;}`
-      + `${H.POST}${H.WRAPPER} ${VSEL}{font-weight:300;}`);
+    /* HOW ELEMENTOR ACTUALLY EMITS THIS, and it is not what this fixture
+     * assumed on 2026-09-17.
+     *
+     * Elementor substitutes {{WRAPPER}} where a selector contains it and
+     * leaves the selector alone otherwise — it does NOT prefix one on. FSEL
+     * is a bare doubled class declared beside BSEL, whose comment records
+     * that exact shape as "global doubled class survives the portal", and
+     * which was measured global on the live page (three blocks emitting
+     * `.mphbac-btn.mphbac-btn`). A group control's `selector` becomes the
+     * rule key verbatim through {{SELECTOR}}, so field_typography is emitted
+     * globally too.
+     *
+     * Emitting it {{WRAPPER}}-prefixed here — which this file did — produced
+     * a rule the portaled popup cannot match, and the resulting "the control
+     * cannot reach the popup fields" finding was an artefact of the fixture,
+     * not a fault in the plugin. Measured both ways: bare gives 300/300,
+     * wrapper-prefixed gives 300/400. The same failure this project keeps
+     * meeting — the fixture describing something the page does not do.
+     */
+    const p300 = await open(`${H.POST}${FSEL}{font-weight:300;}${H.POST}${VSEL}{font-weight:300;}`);
     const w = await p300.evaluate(() => [
-      getComputedStyle(document.querySelector('.mphbac-input')).fontWeight,
+      getComputedStyle(document.querySelector('.mphbac-input-checkin')).fontWeight,
       getComputedStyle(document.querySelector('.mphbac-info-view-link')).fontWeight,
       getComputedStyle(document.querySelector('.mphbac-sheet-checkin')).fontWeight,
     ]);
     check('a panel weight of 300 reaches the in-root field and the View button',
       w[0] === '300' && w[1] === '300', w);
-
-    /* KNOWN GAP, pinned on its CAUSE rather than on the symptom.
-     *
-     * field_typography is a GROUP control, and Elementor emits group-control
-     * selectors prefixed with `{{WRAPPER}}` — the widget element's own class.
-     * The booking popup is portaled to <body> on open, so it sits OUTSIDE
-     * that element and the rule cannot match its two date fields. Measured
-     * here: the panel sets 300 and the portaled field computes 400.
-     *
-     * The structural rules solved this by class-doubling with no ancestor,
-     * and BSEL/VSEL are deliberately global for the same reason — but a group
-     * control's selector always carries the wrapper prefix, so the same
-     * escape is not available to it. Closing the gap means either emitting a
-     * second, ancestor-free rule or accepting that every calendar's field
-     * typography applies to every field on the page. That is a decision for
-     * the owner, not a silent change.
-     *
-     * The assertion is on the SOURCE shape, so the day this is addressed it
-     * fails and sends the reader to this note rather than quietly passing.
-     */
-    const gi = php.indexOf("'name'     => 'field_typography'");
-    const gblock = php.slice(gi, gi + 300);
-    check('KNOWN GAP: field typography is wrapper-scoped, so it cannot reach the portaled popup fields',
-      /'selector' => self::FSEL,/.test(gblock) && w[2] !== '300',
-      { portaledWeight: w[2], note: 'see the block comment — awaiting an owner decision' });
+    // THE GUARD, where a note describing a limitation used to sit. The popup
+    // is portaled to <body>, so any ancestor in these selectors silently
+    // drops it out of reach — which is why FSEL, BSEL and VSEL are all bare
+    // doubled classes rather than SEL-prefixed.
+    check('...and the PORTALED popup field too — the control is ancestor-free by design',
+      w[2] === '300', { portaled: w[2], want: '300' });
+    for (const [name, sel] of [['field', 'FSEL'], ['button', 'BSEL'], ['View button', 'VSEL']]) {
+      const decl = php.match(new RegExp('private const ' + sel + " = '([^']+)'"))[1];
+      check(`${name} control selector carries no ancestor, so the portal cannot orphan it`,
+        !/\{\{WRAPPER\}\}|mphbac-root/.test(decl), { [sel]: decl });
+    }
     await p300.close();
   }
 

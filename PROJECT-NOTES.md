@@ -1349,6 +1349,61 @@ option is indistinguishable by value from a default. A blank option makes "no
 answer" possible; it does not make "accepted the first option"
 distinguishable. Two genuine pet bookings remain live: #17730 and #17795.
 
+## A test must read the code, not the documentation about the code (0.33.2)
+
+Three failures this fortnight reduce to that one sentence, and the next one
+will look like none of them:
+
+1. A source-text assertion ran against the RAW stylesheet, whose comments
+   quote the declarations they describe ("the global `min-width: 8.5em`
+   guard") — so it matched prose and reported a deleted rule as present.
+   `harness.cssCode()` strips comments.
+2. A fixture emitted Elementor's CSS the way the code APPEARED to ask for it
+   ({{WRAPPER}}-prefixed) rather than the way Elementor does (verbatim, no
+   prefix added), and the mismatch was reported as a plugin bug — the
+   "field typography cannot reach the portaled popup" gap. **Retracted.**
+   Measured both ways: bare gives 300/300, wrapper-prefixed gives 300/400.
+   Elementor substitutes `{{WRAPPER}}` where present and adds none where it
+   is absent, which is exactly why `FSEL`/`BSEL`/`VSEL` are bare doubled
+   classes — the shape `BSEL`'s own comment describes as surviving the portal,
+   and which was measured global on the live page.
+3. `getComputedStyle()` returns a LIVE declaration, not a snapshot. Holding
+   the object and reading it after changing the element reports the element's
+   CURRENT state — which said a disabled nav button was fully opaque, because
+   it had already been re-enabled.
+
+## Mutations must be precise, or their red proves nothing (0.33.2)
+
+`mutate.php` replaced EVERY occurrence of its target. Switching it to the
+first occurrence only turned three green mutations red-for-the-wrong-reason
+into survivors:
+- the iOS 16px floor target also matched the hint's own `font-size`;
+- the (0,4,0) pill target also matched the ≤600px padding override, which
+  sits EARLIER in the file;
+- `[hidden]` matched 19 places, the first of them unrelated.
+Each now names a unique anchor, and the runner prints "first of N occurrences"
+so an over-broad target is visible rather than silently flattering the suite.
+
+## One booking, one reserved-room query (0.33.2)
+
+`booking_detail()` resolved the reserved rooms THREE times: once in
+`section_booking`, once in `section_customer` for the pet fee, and once inside
+`source_for()` — which has always accepted pre-resolved ids precisely so it
+need not look them up, and which `month_view()` has always passed. Now
+resolved once and passed down. Guarded by counting the post types queried,
+not the calls: a bare call count cannot tell a second reserved-room lookup
+from a room-type lookup.
+
+## A measured gap, reported not fixed (0.33.2)
+
+`.mphbac-btn` — Show, Reset, Book Now, Cancel — has `padding: 0.5em 0.9em`
+and no `min-height`, so it lays out at **41.4px** on a phone. Everything
+around it meets 44px: `.mphbac-nav-btn` sets `min-height: 44px` explicitly and
+the DCC field standard gives the date fields the same. These are the primary
+actions and they are the one control under the target. `polish-test.js` floors
+the assertion at 40 so shipping the fix does not break it while a further
+shrink still does.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

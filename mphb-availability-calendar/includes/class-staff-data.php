@@ -212,15 +212,29 @@ final class Staff_Data
         }
 
         $booking = self::booking_entity($booking_id);
-        $source  = self::source_for($booking_id);
+        $rooms   = self::reserved_entities($booking_id, $booking);
+        // source_for() already takes pre-resolved reserved-room ids precisely
+        // so it need not look them up again — month_view() has always passed
+        // them. This path did not, so a single popup open resolved the same
+        // rooms twice. Pass null when the entity path gave us no post ids, so
+        // it falls back to its own lookup rather than searching nothing.
+        $reserved_ids = array_values(array_filter(array_map(
+            static fn(array $r): int => (int) ($r['post_id'] ?? 0),
+            $rooms
+        )));
+        $source  = self::source_for($booking_id, $reserved_ids ?: null);
 
         return [
             'id'       => $booking_id,
             'imported' => $source['imported'],
             'source'   => $source,
+            // Read ONCE and passed down. Both sections need the reserved rooms —
+            // booking for occupancy, customer for the pet fee — and each call
+            // issues a get_posts() on the fallback path, so resolving it twice
+            // is a duplicate query on every popup open.
             'sections' => [
-                'booking'  => self::section_booking($booking_id, $booking, $source),
-                'customer' => self::section_customer($booking_id, $booking),
+                'booking'  => self::section_booking($booking_id, $booking, $source, $rooms),
+                'customer' => self::section_customer($booking_id, $booking, $rooms),
                 'notes'    => self::section_notes($booking_id, $booking),
             ],
         ];
@@ -232,7 +246,7 @@ final class Staff_Data
      *
      * @return array<int,array<string,mixed>>
      */
-    private static function section_booking(int $id, $b, array $source): array
+    private static function section_booking(int $id, $b, array $source, array $rooms): array
     {
         // Meta fallback, the same last resort date_of() uses. Without it the
         // total is entity-only, so anything reading this without a live MPHB
@@ -245,9 +259,7 @@ final class Staff_Data
         }
         $pay   = self::payment_info($id, $b);
         $paid  = $pay['paid'];
-        $due   = ($total !== null && is_numeric($total) && $paid !== null) ? (float) $total - $paid : null;
 
-        $rooms = self::reserved_entities($id, $b);
         $types = [];
         foreach (Data_Provider::list_room_types() as $t) {
             $types[(int) $t['id']] = $t['title'];
@@ -374,7 +386,7 @@ final class Staff_Data
      *
      * @return array<int,array<string,mixed>>
      */
-    private static function section_customer(int $id, $b): array
+    private static function section_customer(int $id, $b, array $rooms): array
     {
         $c = self::first_of($b, ['getCustomer']);
         $custom = self::custom_fields($id, is_object($c) ? $c : null);
@@ -444,7 +456,7 @@ final class Staff_Data
         // room (somebody chose and paid for it), and a non-empty dog_type
         // (somebody typed it). Either one shows the block; neither hides it.
         $dog_type = self::custom_get($custom, ['dogtype', 'typeofdog', 'dogbreed']);
-        if (!self::is_blank($dog_type) || self::has_pet_service(self::reserved_entities($id, $b))) {
+        if (!self::is_blank($dog_type) || self::has_pet_service($rooms)) {
             self::push($out, __('Dog Type', 'mphb-availability-calendar'), $dog_type);
             self::push($out, __('Dog Size', 'mphb-availability-calendar'), self::custom_get($custom, ['dogsize', 'sizeofdog']));
             self::push($out, __('Dog Hair', 'mphb-availability-calendar'), self::custom_get($custom, ['doghair', 'hairtype', 'doghairtype']));

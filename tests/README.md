@@ -15,19 +15,36 @@ built from that directory, stays clean.
 
 ## Rules these harnesses are held to
 
-1. **A stub must not be more forgiving than production.** `bootstrap.php`
+1. **A test must read the code, not the documentation about the code.** Both
+   of the worst failures here reduce to that one sentence, and the next
+   instance will look like neither of them:
+   - A source-text assertion ran against the raw stylesheet, whose comments
+     *quote the declarations they describe* ("the global `min-width: 8.5em`
+     guard") — so it matched prose and reported a deleted rule as present.
+     `harness.cssCode()` strips comments for exactly this.
+   - A fixture emitted Elementor's CSS the way the code *appeared* to ask for
+     it rather than the way Elementor actually does, and the mismatch was
+     reported as a plugin bug ("field typography cannot reach the portaled
+     popup"). It could not — in the fixture. Derive the emission from the
+     source and check the derivation against something measured live.
+2. **A stub must not be more forgiving than production.** `bootstrap.php`
    returns post meta the way WordPress does — every value wrapped in an array,
    even a single one — and `T_WPDB::prepare()` throws on a placeholder/argument
    mismatch. This project has twice had a bug hidden by a kind stub.
-2. **Do not count an assertion as coverage until you have seen it fail.**
+3. **Do not count an assertion as coverage until you have seen it fail** —
+   and make the mutation PRECISE. `mutate.php` replaces the first occurrence
+   only, and says so when a target appears more than once. Replacing every
+   match made three mutations go red for the wrong reason: they were breaking
+   more than the behaviour under test, so the red proved nothing about the
+   assertion they were paired with.
    `mutate.php` breaks each guarded behaviour and requires the suite to go red.
-3. **Where a suite asserts on markup a third party renders, carry BOTH shapes
+4. **Where a suite asserts on markup a third party renders, carry BOTH shapes
    in the fixture.** Fixtures drift from live silently.
-4. **Reproduce the real cascade.** The plugin stylesheet loads AFTER
+5. **Reproduce the real cascade.** The plugin stylesheet loads AFTER
    Elementor's inline CSS, Bravada's kit resets inputs at (0,3,1), and the site
    sets `html { font-weight: 700 }`. A fixture missing any of those is a
    different site in the one respect that matters.
-5. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
+6. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
    hid a live bug here for several releases.
 
 ## Rebuilt so far
@@ -39,20 +56,26 @@ built from that directory, stays clean.
 | `browser/hover-hint-test.js` | 0.31.0/0.31.1 — hover tokens, the (0,6,0) cascade trap, the theme's 0.75s fade, the mm/dd/yyyy hint | 6 |
 | `browser/field-standard-test.js` | 0.28.0–0.30.0 — the DCC pill, the native-control reset, the iOS 16px floor, the focus ring, the empty-state mapping | 5 |
 | `browser/mobile-test.js` | 0.27.0–0.31.0 at 320/360/393 — the popup row, the filter row, the 2×2 month grid, the item-14 guards | 4 |
-| `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier | 2 |
+| `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier; the control selectors stay ancestor-free | 3 |
+| `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
+| `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, reduced motion, print | 4 |
 
-**29 mutations, 0 survivors.** `php mutate.php` after any change.
+**40 mutations, 0 survivors.** `php mutate.php` after any change.
 
-### A known gap this rebuild surfaced
+### A finding this rebuild retracted
 
-`field_typography` is a GROUP control, so Elementor emits it prefixed with
-`{{WRAPPER}}`. The booking popup is portaled to `<body>`, outside that
-element, so **the Filter Fields typography control cannot reach the popup's
-two date fields** — measured: panel 300, portaled field 400. `BSEL`/`VSEL` are
-global for exactly this reason, but a group control's selector always carries
-the wrapper prefix. Closing it means emitting a second ancestor-free rule or
-accepting page-wide field typography. Recorded and pinned on its cause in
-`typography-test.js`, awaiting an owner decision — not changed silently.
+The 0.33.1 notes recorded a "known gap": that `field_typography`, being a
+group control, was emitted `{{WRAPPER}}`-prefixed and so could not reach the
+booking popup's portaled date fields. **That was wrong, and it was the
+fixture's fault.** Elementor substitutes `{{WRAPPER}}` where a selector
+contains it and does not prefix one on; `FSEL` is a bare doubled class
+declared beside `BSEL`, which was measured global on the live page. Emitted
+the way Elementor really emits it, the panel reaches every field — measured
+300/300 bare against 300/400 wrapper-prefixed.
+
+The invariant is now guarded rather than documented: all three control
+selectors must stay ancestor-free, and a mutation that gives `FSEL` an
+ancestor goes red.
 
 ## Still to rebuild
 
@@ -60,8 +83,8 @@ Lost with the container and not yet replaced. Listed so the gap is visible
 rather than assumed covered. **This list shrinks only when a suite is rebuilt
 AND has a mutation that goes red.**
 
-- **Browser** — `nav`, `polish`, `cells`, `public-ui`, `estimate-ui`,
-  `sheet-validate`, `staff-ui`
+- **Browser** — `cells`, `public-ui`, `estimate-ui`, `sheet-validate`,
+  `staff-ui`
 - **Pure JS** — `estimate`, `fresh`, `hint`, `month-grid`, `parity`
 - **PHP** — `abbrev`, `cache`, `device-number`, `price`, `single-widget`,
   `staff-detail`, `staff-elementor`, `staff-honesty`, `staff-monthview`,
