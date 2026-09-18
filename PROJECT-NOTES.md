@@ -1404,6 +1404,48 @@ actions and they are the one control under the target. `polish-test.js` floors
 the assertion at 40 so shipping the fix does not break it while a further
 shrink still does.
 
+## The tap target, and a guard set below its own standard (0.34.0)
+
+`.mphbac-btn` — Show, Reset, Book Now, Cancel — now carries
+`min-height: 46px` and is `inline-flex` centred. Measured before: **41.4px in
+the filter row and 36.8px in the booking popup**, which sits in a smaller font
+context and was therefore worse than first reported. These were the only
+controls under the 44px floor that `.mphbac-nav-btn` and the DCC field
+standard both meet explicitly.
+
+- **`min-height`, not `height`.** Book Now and Cancel wrap at narrow widths
+  with the guest-count text in play; measured, a wrapping label grows the
+  button to 57.6px unclipped. A fixed height would clip it.
+- **`inline-flex`, not `inline-block`.** With inline-block the label sits at
+  the top of the taller padded box and the row reads as misaligned with
+  nothing reporting an error.
+- **46, not 44.** The floor is not the target: at exactly 44.0 there is
+  nothing between the control and the line it has to clear.
+
+**A guard set below the standard it enforces sits green through the next
+regression too.** This assertion floored at 40, which is precisely why
+shipping the fix would not have broken it. It is at 44 now, with a separate
+check that the buttons carry headroom above it.
+
+Three assertion shapes this needed, each of which the previous one could not
+see:
+1. `w >= 44 && h >= 44` on every tappable control.
+2. Both buttons in a row share a baseline — growing one control's box is the
+   classic way to knock a row out of alignment silently.
+3. **The label is centred within its OWN box.** A row-relative baseline check
+   cannot see a label that is no longer centred: if every button shifts by the
+   same amount they stay aligned with each other while all of them are wrong.
+   The inline-block mutation SURVIVED until this was added.
+
+Two harness faults found on the way, both in the same family as the week's
+others:
+- `dephp()` substituted the literal `'x'` for any string it had no fixture
+  value for, turning "Book Now" into a 36.8px-wide one-character control that
+  looked like a layout bug. It now throws and names the missing key.
+- A mutation target written in PHP SINGLE quotes takes `\n` literally, so
+  three multi-line targets could never match and reported STALE. Use double
+  quotes for anything spanning lines.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

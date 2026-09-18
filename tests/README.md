@@ -44,7 +44,11 @@ built from that directory, stays clean.
    Elementor's inline CSS, Bravada's kit resets inputs at (0,3,1), and the site
    sets `html { font-weight: 700 }`. A fixture missing any of those is a
    different site in the one respect that matters.
-6. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
+6. **A guard must sit AT the value it enforces, not below it.** The tap-target
+   assertion floored at 40 while the standard was 44 — which is exactly why
+   shipping the fix would not have broken it. A guard set below its own
+   standard stays green through the next regression too.
+7. **Assert computed style, never the attribute.** Reading `hidden`/`disabled`
    hid a live bug here for several releases.
 
 ## Rebuilt so far
@@ -58,9 +62,9 @@ built from that directory, stays clean.
 | `browser/mobile-test.js` | 0.27.0–0.31.0 at 320/360/393 — the popup row, the filter row, the 2×2 month grid, the item-14 guards | 4 |
 | `browser/typography-test.js` | 0.25.0/0.26.0 — all ten typography controls own what they emit; no `font:` shorthand at a control's own tier; the control selectors stay ancestor-free | 3 |
 | `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
-| `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, reduced motion, print | 4 |
+| `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, 44px tap targets, row baselines, reduced motion, print | 7 |
 
-**40 mutations, 0 survivors.** `php mutate.php` after any change.
+**43 mutations, 0 survivors.** `php mutate.php` after any change.
 
 ### A finding this rebuild retracted
 

@@ -94,17 +94,30 @@ function extractBlock(src, openTag) {
   throw new Error('unbalanced block: ' + openTag);
 }
 
+/**
+ * Real labels for every string the extracted markup echoes. A missing key
+ * falls through to the literal 'x', which silently turns a button into a
+ * one-character control — a 36.8px-wide "Book Now" that looks like a layout
+ * bug and is only the fixture.
+ */
 const STRINGS = {
   str_checkin: 'Check-in', str_checkout: 'Check-out', str_apply: 'Show', str_reset: 'Reset',
-  str_book_close: 'Close', str_cancel: 'Cancel', str_confirm: 'Book Now', str_price_note: 'note',
+  str_book_close: 'Close', str_book_cancel: 'Cancel', str_book_confirm: 'Book Now',
+  str_cancel: 'Cancel', str_confirm: 'Book Now', str_price_note: 'note',
+  str_prev_month: 'Previous', str_next_month: 'Next',
+  str_today: 'today', str_today_hint: 'Back to today',
 };
 
 function dephp(html, extra = {}) {
   const S = { ...STRINGS, ...extra };
+  const MISSING = k => {
+    throw new Error('harness: no fixture string for ' + k
+      + ' — add it to STRINGS, or the markup renders a one-character control');
+  };
   return html
-    .replace(/<\?php\s*echo esc_html\(self::tc\(\$settings\['(\w+)'\]\)\); \?>/g, (_, k) => S[k] || 'x')
-    .replace(/<\?php\s*echo esc_html\(\$settings\['(\w+)'\]\); \?>/g, (_, k) => S[k] || 'x')
-    .replace(/<\?php\s*echo esc_attr\(\$settings\['(\w+)'\]\); \?>/g, (_, k) => S[k] || 'x')
+    .replace(/<\?php\s*echo esc_html\(self::tc\(\$settings\['(\w+)'\]\)\); \?>/g, (_, k) => S[k] || MISSING(k))
+    .replace(/<\?php\s*echo esc_html\(\$settings\['(\w+)'\]\); \?>/g, (_, k) => S[k] || MISSING(k))
+    .replace(/<\?php\s*echo esc_attr\(\$settings\['(\w+)'\]\); \?>/g, (_, k) => S[k] || MISSING(k))
     .replace(/<\?php\s*echo esc_html__\('([^']+)'[\s\S]*?\); \?>/g, (_, t) => t)
     .replace(/<\?php\s*echo esc_attr\(\$today[\s\S]*?\); \?>/g, '2026-10-01')
     .replace(/<\?php[\s\S]*?\?>/g, '');

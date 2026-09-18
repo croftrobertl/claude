@@ -501,7 +501,27 @@ input.mphbac-input {
    padding, typography) comes from the Elementor "Buttons" style controls,
    which render at higher specificity and override these defaults. */
 .mphbac-btn {
-    display: inline-block;
+    /* inline-FLEX, not inline-block, so the label stays vertically centred
+       once min-height makes the box taller than the text needs. With
+       inline-block the text would sit at the top of the padded box and the
+       row would read as misaligned without anything reporting an error. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* TAP TARGET (0.34.0). These are the primary actions — Show, Reset, Book
+       Now, Cancel — and they were the only controls on the page under the
+       44px floor that .mphbac-nav-btn and the DCC field standard both meet
+       explicitly. Measured before the fix: 41.4px in the filter row and
+       36.8px in the booking popup, which sits in a smaller font context.
+
+       min-height, NOT height: Book Now and Cancel can wrap at narrow widths
+       with the guest-count text in play, and a fixed height would clip them.
+       The padding stays, so a button whose label wraps still grows.
+
+       46px rather than 44: the floor is not the target. At exactly 44.0 a
+       sub-pixel rounding or an upstream font change leaves nothing between
+       the control and the line it has to clear. */
+    min-height: 46px;
     padding: 0.5em 0.9em;
     border: 0;
     border-radius: var(--mphbac-radius);

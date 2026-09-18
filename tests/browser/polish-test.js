@@ -81,11 +81,16 @@ const GUARD = '@media (hover: hover) and (pointer: fine)';
     const ctx = await browser.newContext({ viewport: { width: 393, height: 800 }, isMobile: true, hasTouch: true });
     const p = await ctx.newPage();
     p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
-    await p.setContent(H.page({ body: `
-      <button class="mphbac-btn mphbac-btn-apply">Show</button>
-      <button class="mphbac-nav-btn mphbac-nav-next">&gt;</button>
-      <button class="mphbac-sheet-close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <a class="mphbac-info-view-link" href="#">View</a>` }));
+    // The REAL markup, extracted from the PHP: loose hand-built buttons have
+    // no .mphbac-filter-actions / .mphbac-sheet-actions row around them, so
+    // the row-alignment selectors below would quietly match nothing and the
+    // checks would pass on empty arrays.
+    await p.setContent(H.page({
+      body: H.filtersHtml() + `
+        <div class="mphbac-nav"><button class="mphbac-nav-btn mphbac-nav-next" aria-label="Next">&gt;</button></div>
+        <a class="mphbac-info-view-link" href="#">View</a>`,
+      sheet: H.sheetHtml(),
+    }));
     for (const sel of ['.mphbac-btn-apply', '.mphbac-nav-next', '.mphbac-sheet-close', '.mphbac-info-view-link']) {
       const before = await p.evaluate(s => getComputedStyle(document.querySelector(s)).backgroundColor, sel);
       await p.hover(sel); await p.waitForTimeout(250);
@@ -93,26 +98,80 @@ const GUARD = '@media (hover: hover) and (pointer: fine)';
       check(`ON TOUCH ${sel} keeps its resting fill — iOS would make a change stick`,
         after === before, { before, after });
     }
-    const taps = await p.evaluate(() => ['.mphbac-btn-apply', '.mphbac-nav-next', '.mphbac-sheet-close']
-      .map(s => { const r = document.querySelector(s).getBoundingClientRect();
-        return { s, w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; }));
-    const nav = taps.filter(t => t.s !== '.mphbac-btn-apply');
-    check('the nav arrow and the close button clear 44x44',
-      nav.every(t => t.w >= 44 && t.h >= 44), nav);
-    /* MEASURED GAP, reported not fixed. .mphbac-btn — Show, Reset, Book Now,
-     * Cancel — has `padding: 0.5em 0.9em` and no min-height, so it lays out
-     * at 41.4px on a phone. Everything around it meets 44px: the nav buttons
-     * set min-height: 44px explicitly, and the DCC field standard gives the
-     * date fields the same. These are the primary actions and they are the
-     * one control under the target.
-     * The floor here is 40, not 44, so shipping the fix does not break this
-     * assertion while a further shrink still does. */
-    const btn = taps.find(t => t.s === '.mphbac-btn-apply');
-    check('the action buttons have not shrunk further (see the note: 41.4px, under the 44px target)',
-      btn.h >= 40, btn);
-    check('...and the 44px target really is met elsewhere, so the gap is specific to .mphbac-btn',
-      /\.mphbac-nav-btn\s*\{[^}]*min-height:\s*44px/.test(code)
-      && /min-height:\s*44px/.test(code), true);
+    const taps = await p.evaluate(() => {
+      // A zero-width inline-block inside the control sits ON the text
+      // baseline, so its bottom edge gives the baseline offset. Growing one
+      // control's box is the classic way to knock a row out of alignment
+      // with nothing reporting an error.
+      const baseline = el => {
+        const s = document.createElement('span');
+        s.textContent = 'x';
+        s.style.cssText = 'display:inline-block;width:0;overflow:hidden;font:inherit';
+        el.appendChild(s);
+        const bl = s.getBoundingClientRect().bottom;
+        s.remove();
+        return +bl.toFixed(2);
+      };
+      // How far the text's own line box sits from the centre of the control.
+      // A row-relative baseline check cannot see a label that is no longer
+      // vertically centred: if every button in the row shifts by the same
+      // amount they stay aligned with each other while all of them are wrong.
+      const offCentre = el => {
+        const s = document.createElement('span');
+        s.textContent = 'x';
+        s.style.cssText = 'display:inline-block;width:0;overflow:hidden;font:inherit';
+        el.appendChild(s);
+        const sr = s.getBoundingClientRect(), er = el.getBoundingClientRect();
+        s.remove();
+        return +((sr.top + sr.bottom) / 2 - (er.top + er.bottom) / 2).toFixed(2);
+      };
+      const read = sel => [...document.querySelectorAll(sel)].map(el => {
+        const r = el.getBoundingClientRect();
+        return { sel, w: +r.width.toFixed(1), h: +r.height.toFixed(1),
+                 baseline: baseline(el), offCentre: offCentre(el) };
+      });
+      return {
+        actions: [...read('.mphbac-filter-actions .mphbac-btn'), ...read('.mphbac-sheet-actions .mphbac-btn')],
+        filterRow: read('.mphbac-filter-actions .mphbac-btn'),
+        sheetRow: read('.mphbac-sheet-actions .mphbac-btn'),
+        nav: read('.mphbac-nav-btn'),
+        field: read('.mphbac-input-checkin'),
+      };
+    });
+    /* 44px IS THE FLOOR, NOT THE TARGET. This assertion used to sit at 40,
+     * which is why shipping the fix would not have broken it — a guard set
+     * below the standard it exists to enforce sits green through the next
+     * regression too. It is at 44 now, and the buttons are at 46 so a
+     * sub-pixel rounding or an upstream font change has somewhere to go.
+     * Measured before 0.34.0: 41.4px in the filter row, 36.8px in the
+     * booking popup, which sits in a smaller font context. */
+    const all = [...taps.actions, ...taps.nav, ...taps.field];
+    check('every tappable control clears the 44px floor',
+      all.length >= 5 && all.every(t => t.w >= 44 && t.h >= 44),
+      all.filter(t => t.w < 44 || t.h < 44));
+    check('...and the action buttons carry headroom above it rather than sitting on 44.0',
+      taps.actions.every(t => t.h > 44), taps.actions.map(t => t.h));
+    for (const [name, row] of [['filter', taps.filterRow], ['popup', taps.sheetRow]]) {
+      // row.length === 2 is load-bearing: a selector that matches nothing
+      // would otherwise satisfy `every()` and pass on an empty array.
+      check(`the ${name} action buttons still share a baseline after growing`,
+        row.length === 2 && Math.abs(row[0].baseline - row[1].baseline) < 0.5,
+        { found: row.length, baselines: row.map(r => r.baseline) });
+    }
+    check('the label stays vertically centred in the taller box',
+      taps.actions.every(t => Math.abs(t.offCentre) <= 1.5),
+      taps.actions.map(t => t.offCentre));
+    // min-height, not height: a label that wraps must grow, not clip.
+    const wrap = await p.evaluate(() => {
+      const b = [...document.querySelectorAll('.mphbac-sheet-actions .mphbac-btn')].pop();
+      // Long enough to wrap at ANY width this suite runs at — a label that
+      // happens to fit makes the check pass without exercising the wrap.
+      b.textContent = 'Book Now for four guests across seven nights in Cottage 22';
+      const r = b.getBoundingClientRect();
+      return { h: +r.height.toFixed(1), clipped: b.scrollHeight > b.clientHeight + 1 };
+    });
+    check('a wrapping label grows the button instead of being clipped — min-height, not height',
+      wrap.h > 46 && !wrap.clipped, wrap);
     await ctx.close();
   }
 
