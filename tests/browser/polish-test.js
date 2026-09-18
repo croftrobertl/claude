@@ -158,6 +158,28 @@ const GUARD = '@media (hover: hover) and (pointer: fine)';
         row.length === 2 && Math.abs(row[0].baseline - row[1].baseline) < 0.5,
         { found: row.length, baselines: row.map(r => r.baseline) });
     }
+    /* WHY THE POPUP PAIR WERE THE WORSE CASE, pinned rather than remembered.
+     * The booking popup runs at font-size 16px against the filter row's 18px,
+     * and .mphbac-btn's padding is em-based, so one rule produced two
+     * different failures: 41.39px = 23.4 line-height + 9 + 9 padding, and
+     * 36.8px = 20.8 + 8 + 8. min-height is absolute, which is why 46px fixes
+     * both at once where more padding would not have.
+     *
+     * (36.8 was reported twice in 0.34.0 doing two jobs — the popup button's
+     * HEIGHT, and the WIDTH of a one-character control the old fixture
+     * produced. Both were real and the equality is a coincidence: the width
+     * was 0.9em x 2 padding + one glyph at 16px. Measured again with correct
+     * labels to settle it.) */
+    const ctx16 = await p.evaluate(() => {
+      const f = getComputedStyle(document.querySelector('.mphbac-filter-actions .mphbac-btn'));
+      const s = getComputedStyle(document.querySelector('.mphbac-sheet-actions .mphbac-btn'));
+      return { filter: f.fontSize, popup: s.fontSize };
+    });
+    check('the popup really does run in a smaller font context than the filter row',
+      parseFloat(ctx16.popup) < parseFloat(ctx16.filter), ctx16);
+    check('...and both clear the floor anyway, because min-height is absolute, not em-based',
+      taps.actions.every(t => t.h >= 44), taps.actions.map(t => t.h));
+
     check('the label stays vertically centred in the taller box',
       taps.actions.every(t => Math.abs(t.offCentre) <= 1.5),
       taps.actions.map(t => t.offCentre));

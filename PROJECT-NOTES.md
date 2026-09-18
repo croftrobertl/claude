@@ -1404,6 +1404,29 @@ actions and they are the one control under the target. `polish-test.js` floors
 the assertion at 40 so shipping the fix does not break it while a further
 shrink still does.
 
+## 36.8 twice: reconciled (0.34.1)
+
+The 0.34.0 report used **36.8px in two roles** — the measured HEIGHT of the
+popup's action buttons, and the WIDTH of the one-character control the old
+fixture produced. Re-measured against the 0.33.2 stylesheet with correct
+labels, **both were real and their equality is a coincidence**:
+
+| | font-size | line-height | padding | height |
+|---|---|---|---|---|
+| filter row | 18px | 23.4 | 9 + 9 | **41.39** |
+| booking popup | 16px | 20.8 | 8 + 8 | **36.80** |
+
+The width was a separate sum: `0.9em x 2` padding at 16px = 28.8, plus one
+glyph ≈ 8, = 36.8. Nothing was wrong; quoting one figure in two roles without
+saying so was. **A number cited in two roles has not been measured in
+either** — that is how the retracted typography gap survived long enough to
+get endorsed.
+
+The font-context difference is now asserted rather than remembered, along with
+the point it carries: `.mphbac-btn`'s padding is em-based, so one rule
+produced two different failures, and `min-height` is absolute, which is why
+46px fixes both at once where more padding would not have.
+
 ## The tap target, and a guard set below its own standard (0.34.0)
 
 `.mphbac-btn` — Show, Reset, Book Now, Cancel — now carries
