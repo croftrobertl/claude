@@ -132,6 +132,7 @@ class T_WPDB
 {
     public $posts = 'wp_posts';
     public $postmeta = 'wp_postmeta';
+    public $options = 'wp_options';
     public $prefix = 'wp_';
     public $last_error = '';
     /** @var array<int,array<int,object>> booking_id => rows */
@@ -160,6 +161,10 @@ class T_WPDB
         return $this->payment_rows[(int) $m[1]] ?? [];
     }
 
+    public function esc_like($t) { return addcslashes((string) $t, '_%\\'); }
+    public function query($sql) { t_count('wpdb_query'); $this->queries[] = $sql; return 0; }
+    /** @var string[] every statement passed to query(), for assertions */
+    public array $queries = [];
     public function get_col($sql) { t_count('wpdb_get_col'); return []; }
     public function get_var($sql) { t_count('wpdb_get_var'); return null; }
 }
@@ -171,3 +176,15 @@ function t_payment(int $booking_id, float $amount, string $status = 'mphb-p-comp
         'post_status' => $status, 'amount' => (string) $amount, 'gateway' => $gateway,
     ];
 }
+
+/* Translation and escaping helpers the widget classes call while registering
+   controls. Escapers behave like WordPress's, not like identity functions:
+   a stub that returned its input unchanged would hide an unescaped value. */
+if (!function_exists('esc_html__')) { function esc_html__($t, $d = '') { return htmlspecialchars((string) $t, ENT_QUOTES); } }
+if (!function_exists('esc_attr__')) { function esc_attr__($t, $d = '') { return htmlspecialchars((string) $t, ENT_QUOTES); } }
+if (!function_exists('esc_attr')) { function esc_attr($t) { return htmlspecialchars((string) $t, ENT_QUOTES); } }
+if (!function_exists('esc_url')) { function esc_url($u) { return filter_var((string) $u, FILTER_SANITIZE_URL); } }
+if (!function_exists('_x')) { function _x($t, $c, $d = '') { return $t; } }
+if (!function_exists('esc_html_e')) { function esc_html_e($t, $d = '') { echo htmlspecialchars((string) $t, ENT_QUOTES); } }
+if (!function_exists('wp_kses_post')) { function wp_kses_post($t) { return (string) $t; } }
+if (!function_exists('get_bloginfo')) { function get_bloginfo($k = '') { return 'Test Site'; } }
