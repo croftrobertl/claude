@@ -992,6 +992,23 @@ final class Staff_Data
      * Absolute path of the attachment a booking's custom field points at, or
      * null. Derived from the booking — never from client input — so the proxy
      * can only ever reach files this booking actually references.
+     *
+     * THIS FUNCTION DOES NOT CONTAIN ITS OWN OUTPUT. Its internal guard is
+     * `$rel !== $val` after an ltrim, and a LEADING SLASH defeats that:
+     * "/../../etc/passwd" composes a path that resolves outside the uploads
+     * directory. EVERY CALLER MUST realpath() the result and refuse anything
+     * that does not sit under realpath(basedir) — including the trailing
+     * DIRECTORY_SEPARATOR on the base, without which a sibling directory such
+     * as "uploads-evil" passes the prefix test.
+     *
+     * Reference implementation: Staff::handle_photo(), class-staff.php:205,
+     * which also re-checks authorization, requires is_readable(), and serves
+     * only an allowlisted MIME inline while forcing everything else to
+     * download.
+     *
+     * There is exactly ONE caller today, and staff-detail-test.php asserts
+     * that — a second one makes this missing containment live, and the
+     * containment assertion lives with the consumer, where it belongs.
      */
     public static function attachment_path_for(int $booking_id, string $field): ?string
     {

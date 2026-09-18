@@ -121,6 +121,33 @@ echo "\n-- an empty field produces no Photo ID row at all --\n";
         !in_array('Photo ID', $labels, true), $labels);
 }
 
+echo "\n-- exactly ONE caller, because containment lives with the caller --\n";
+{
+    /* The helper does not contain its own output; Staff::handle_photo() does,
+     * and the assertions above test it there — correctly, since that is the
+     * layer providing the guarantee. The consequence is that a SECOND caller
+     * would make the missing containment live with nothing failing. So the
+     * count itself is the guard: a new call site fails here and is sent to
+     * the docblock on the helper. */
+    $dir = dirname(__DIR__) . '/mphb-availability-calendar/includes/';
+    $callers = [];
+    foreach (glob($dir . '*.php') as $file) {
+        foreach (file($file) as $n => $line) {
+            if (str_contains($line, 'attachment_path_for(') && !str_contains($line, 'function attachment_path_for')) {
+                $callers[] = basename($file) . ':' . ($n + 1);
+            }
+        }
+    }
+    check('there is exactly one caller, and it is the photo proxy',
+        count($callers) === 1 && str_starts_with($callers[0], 'class-staff.php:'), $callers);
+    $data = file_get_contents($dir . 'class-staff-data.php');
+    check('the helper SAYS it does not contain its own output, where a second caller would read it',
+        str_contains($data, 'DOES NOT CONTAIN ITS OWN OUTPUT')
+        && str_contains($data, 'realpath(basedir)'));
+    check('...and names the reference implementation',
+        str_contains($data, 'class-staff.php:205'));
+}
+
 echo "\n-- the client never receives a URL --\n";
 {
     $src = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-staff-data.php');
