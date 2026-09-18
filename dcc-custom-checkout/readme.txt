@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.1
+Stable tag: 0.23.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,12 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.23.2 =
+* Aligned the `_mphb_adults_confirmed` test with the Availability Calendar's:
+  a stored "0" is not a confirmation. Both plugins now read the marker the same
+  way, and a stray "0" is repaired on the next save rather than surviving it.
+  No marker on this site holds any value but 1, so nothing changes in practice.
 
 = 0.23.1 =
 * AUDIT FIX: deferred restructure work could strand indefinitely. The gate

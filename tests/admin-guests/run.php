@@ -201,5 +201,34 @@ $_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '20']
 $g->save(18433);
 check('but the sane ceiling is still accepted', $GLOBALS['meta'][99]['_mphb_adults'], 20);
 
+/* CROSS-PLUGIN CONTRACT 2026-09-18 — the Availability Calendar reads
+ * _mphb_adults_confirmed as "non-empty and not 0". This half tested only
+ * !== '', so a stored "0" read as CONFIRMED here and as UNCONFIRMED there.
+ * No divergence exists on live (the one marker in the database is '1'), and
+ * nothing would have failed if it did -- which is the reason to pin it.
+ *
+ * Note what the loose test did BESIDES disagreeing: $had_mark came out true
+ * for "0", so the save wrote no marker and the bad value survived every
+ * subsequent save. The strict test repairs it instead. */
+seed();
+$GLOBALS['meta'][99]['_mphb_adults_confirmed'] = '0';
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '3']];
+$g->save(18433);
+check('a stored "0" marker does not count as confirmed — it is repaired to 1',
+    $GLOBALS['meta'][99]['_mphb_adults_confirmed'], 1);
+check('and the count still lands', $GLOBALS['meta'][99]['_mphb_adults'], 3);
+
+seed();
+$GLOBALS['meta'][99]['_mphb_adults_confirmed'] = '0';
+$rooms = (function () { return $this->reserved_rooms(18433); })->call($g);
+check('the screen reads a "0" marker as NOT confirmed, as the Calendar does',
+    $rooms[0]['confirmed'], false);
+
+seed();
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '2']];
+$g->save(18433);
+$rooms = (function () { return $this->reserved_rooms(18433); })->call($g);
+check('a real marker still reads as confirmed', $rooms[0]['confirmed'], true);
+
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

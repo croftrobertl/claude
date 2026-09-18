@@ -192,7 +192,7 @@ final class Admin_Guests
             $raw = trim((string) $submitted[$id]);
 
             $had_count = (string) get_post_meta($id, self::META_KEY, true);
-            $had_mark  = (string) get_post_meta($id, self::CONFIRMED_KEY, true) !== '';
+            $had_mark  = self::is_confirmed(get_post_meta($id, self::CONFIRMED_KEY, true));
 
             if ($raw === '') {
                 // "Not provided" stores NOTHING — of either key. A zero would
@@ -282,10 +282,34 @@ final class Admin_Guests
                     self::MAX_OPTIONS
                 ),
                 'capacity_known' => $capacity !== null,
-                'confirmed'      => (string) get_post_meta($rr->ID, self::CONFIRMED_KEY, true) !== '',
+                'confirmed'      => self::is_confirmed(get_post_meta($rr->ID, self::CONFIRMED_KEY, true)),
             ];
         }
         return $out;
+    }
+
+    /**
+     * Does this stored marker value mean "a human confirmed the count"?
+     *
+     * THE AVAILABILITY CALENDAR READS THE SAME KEY WITH THE SAME TEST. Keep
+     * the two identical: this is a cross-plugin contract, and nothing fails
+     * anywhere if they drift -- the Calendar would simply fall back to its
+     * capacity heuristic on a booking this screen believes is confirmed, and
+     * no screen would show the disagreement.
+     *
+     * "0" IS NOT CONFIRMED. This plugin only ever writes 1 or deletes the key,
+     * so the value cannot occur today; the test is strict because of the
+     * direction it fails in. Read loosely, a stray 0 means "a human confirmed
+     * that nobody is staying", which is a claim about a real booking that no
+     * human made. Read strictly it means "unmarked", and the next save repairs
+     * it -- $had_mark comes out false, so the marker is rewritten as 1.
+     *
+     * @param mixed $raw Whatever get_post_meta() returned.
+     */
+    private static function is_confirmed($raw): bool
+    {
+        $value = (string) $raw;
+        return $value !== '' && $value !== '0';
     }
 
     /**

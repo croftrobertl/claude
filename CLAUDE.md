@@ -449,6 +449,20 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   marker outlive the number. The seven speculative booking-meta key names the
   Calendar used to search for do not exist on any booking — that search is gone
   rather than kept as apparent coverage.
+  **BOTH PLUGINS TEST THE MARKER AS "non-empty AND not `0`"** (aligned v0.23.2).
+  They had drifted: the Calendar used the strict test, this half tested only
+  `!== ''`, so a stored `"0"` would have read as CONFIRMED here and UNCONFIRMED
+  there. No divergence existed on live — the one marker in the database is `'1'`
+  — and **nothing anywhere would have failed if it had**, which is the reason it
+  is pinned rather than left. `Admin_Guests::is_confirmed()` is the single test,
+  used by both the save path and the screen; the Calendar keeps its own copy and
+  each names the other. The strict reading is the right one because of the
+  direction it fails in: `"0"` read loosely asserts that a human confirmed
+  nobody is staying, a claim about a real booking that no human made. It also
+  self-heals — with the strict test `$had_mark` is false for `"0"`, so the next
+  save rewrites the marker as `1`, where the loose test left the bad value in
+  place through every subsequent save. Asserted in `tests/admin-guests/`, and
+  the assertions were checked to FAIL against the loose test before shipping.
 - **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
   MotoPress's. It names how many fields it is hiding and hides itself when it
   is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
