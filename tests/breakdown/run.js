@@ -697,6 +697,36 @@ function summary(doc) {
         keys.includes('mphb_room_details[0][services][0][id]'), true);
 }
 
+/* ===================================================================== *
+ * AUDIT 2026-09-18 — deferred work must not strand when a touch-up is lost.
+ *
+ * The comment above armTouchWatch() used to claim a 3s ceiling made starvation
+ * impossible. It did not: the ceiling is only read inside run(), and run()
+ * only fires from a timer, which is exactly what is not installed while a
+ * finger is down. Measured before the fix: five seconds and counting with no
+ * touch-up. The real guarantee is recovery on the next touch-up anywhere, and
+ * that is what this pins.
+ * ===================================================================== */
+{
+    const { window, doc } = await render(F.plainSubtotal, { i18n: { subtotal: 'Subtotal' } });
+    await new Promise(r => setTimeout(r, 900));
+    const expander = () => doc.querySelector('.mphb-price-breakdown-expand');
+    expander().classList.remove('dcc_checkout-bare-button');
+
+    // Finger down, a re-render, and the touch-up event never arrives.
+    doc.dispatchEvent(new window.Event('touchstart', { bubbles: true }));
+    doc.querySelector('form').appendChild(doc.createElement('span'));
+    await new Promise(r => setTimeout(r, 1500));
+    check('no timer is installed during a touch, so the work waits',
+        expander().classList.contains('dcc_checkout-bare-button'), false);
+
+    // Any later touch-up on the page resumes it.
+    doc.dispatchEvent(new window.Event('touchend', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 900));
+    check('an unrelated later touch-up recovers the stranded work',
+        expander().classList.contains('dcc_checkout-bare-button'), true);
+}
+
 console.log(failures ? `\n${failures} failing` : '\nall passing');
 process.exit(failures ? 1 : 0);
 })();

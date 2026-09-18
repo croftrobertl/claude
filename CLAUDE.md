@@ -414,7 +414,10 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   answer. **"Not provided" DELETES the meta — it must never store 0**, or
   /staff/ loses the difference between "nobody told us" and a real count.
   Capacity that cannot be read widens the range rather than capping it, and the
-  screen says so. Tested at `tests/admin-guests/` (`php tests/admin-guests/run.php`):
+  screen says so — but `MAX_OPTIONS` (20) bounds it absolutely, because `max`
+  drives both the `<option>` loop and the accepted range and comes from the
+  database: a corrupted `mphb_adults_capacity` of 9999 would otherwise render
+  9999 options and wedge the booking screen. Tested at `tests/admin-guests/` (`php tests/admin-guests/run.php`):
   nonce, capability, range, delete-not-zero, cross-booking isolation, and the
   marker contract below.
   **CONFIRMED on live (2026-09-17):** `_mphb_adults` is present on all 417
@@ -463,10 +466,22 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   touch-up handler schedules the run 450ms later. Asserted.
 - **The restructure pipeline never runs while a finger is down** (v0.17.0).
   `observeReRenders()` holds while a touch is live and for 400ms after it
-  lifts, on a 500ms debounce (was 150ms), with a 3s ceiling so it cannot be
-  starved. Evidence: every press in tap-log rounds 3 and 4 that carried the
-  pipeline's ~100-attribute burst mid-tap failed, 6 of 6. **Any new work
-  scheduled off that observer must respect the same gate** — `touchSettling()`.
+  lifts, on a 500ms debounce (was 150ms). Evidence: every press in tap-log
+  rounds 3 and 4 that carried the pipeline's ~100-attribute burst mid-tap
+  failed, 6 of 6. **Any new work scheduled off that observer must respect the
+  same gate** — `touchSettling()`.
+  **The guarantee is recovery on the next touch-up, NOT a wall-clock ceiling**
+  (corrected by audit, 2026-09-18). This entry used to claim a 3s ceiling made
+  starvation impossible; it did not. The ceiling is only read inside `run()`,
+  and `run()` only fires from a timer — exactly what is not installed while a
+  finger is down. Measured: with a touch-up that never arrived, deferred work
+  sat unrun for five seconds and counting. Every pending form now registers a
+  checker in `touchUpChecks`, asked on each touch-up by name rather than
+  through one shared slot the last deferral happened to own. That is
+  sufficient — the pipeline always runs once directly at init, so a stranded
+  deferral only leaves the most recent MotoPress re-render in MotoPress's own
+  shape. **Do not "restore" a ceiling by installing a timer during a touch**;
+  that is the thing v0.18.0 removed.
 - **(v0.16.0, superseded but still in force) The expander is not a hyperlink.**
   `hardenTapTargets()` removes its `href` (kept in `data-dcc-href`) and gives
   back `role="button"`, `tabindex="0"` and Enter/Space activation. iOS arms its

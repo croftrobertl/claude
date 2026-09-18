@@ -2413,14 +2413,20 @@
             if (timer) { clearTimeout(timer); }
             timer = setTimeout(run, delay);
         }
+        // Asked on EVERY touch-up: is there work with no timer behind it?
+        touchUpChecks.push(function () {
+            if (pendingSince && !timer) { schedule(450); }
+        });
+
         function run() {
             timer = null;
             // Hold off while a tap is still resolving — see the block comment
             // above armTouchWatch(). The 3s ceiling means a finger resting on
             // the screen can delay this but never starve it.
             if (touchSettling() && (Date.now() - pendingSince) < 3000) {
-                if (fingerDown) { onTouchUp = function () { schedule(450); }; }
-                else { schedule(200); }
+                // Still down: leave no timer behind, and let the touch-up
+                // check above pick the work back up.
+                if (!fingerDown) { schedule(200); }
                 return;
             }
             pendingSince = 0;
@@ -2429,8 +2435,8 @@
         var obs = new MutationObserver(function () {
             if (!pendingSince) { pendingSince = Date.now(); }
             if (fingerDown) {
-                // Do not install a timer inside a touch. Pick it up on touch-up.
-                onTouchUp = function () { schedule(450); };
+                // Do not install a timer inside a touch; pendingSince is set,
+                // and the touch-up check above is what resumes it.
                 return;
             }
             // 500ms, up from 150ms. The old value put a ~100-attribute burst
@@ -2550,10 +2556,23 @@
      * press that carried one of those bursts mid-tap failed — 6 of 6.
      *
      * So the pipeline is held: never while a finger is down, and not until
-     * 400ms after it lifts, on a 500ms debounce. There is a 3s ceiling so a
-     * guest resting a finger on the screen cannot postpone it indefinitely —
-     * this code decides what the guest is told they owe, and it must not be
-     * possible to starve it.
+     * 400ms after it lifts, on a 500ms debounce.
+     *
+     * WHAT THE GUARANTEE ACTUALLY IS — corrected 2026-09-18, because the
+     * comment here used to claim a "3s ceiling so it cannot be starved" and
+     * that was not true. The ceiling is only consulted inside run(), and run()
+     * only fires from a timer — which is precisely what is NOT installed while
+     * a finger is down. Measured: with a touch-up event that never arrives,
+     * deferred work sat unrun for five seconds and counting.
+     *
+     * The real guarantee is recovery on the next touch-up ANYWHERE on the
+     * page, which every pending form is now asked about by name rather than
+     * through a single shared slot that the last deferral happened to own.
+     * That is enough: the pipeline always runs once directly at init, so a
+     * stranded deferral means only that the most recent MotoPress re-render is
+     * still showing MotoPress's own shape — and any further interaction clears
+     * it. A wall-clock ceiling would mean installing a timer during a touch,
+     * which is the whole thing v0.18.0 removed.
      *
      * Deliberately NOT passive:false and NOT preventDefault — these listeners
      * only observe, exactly like the tap diagnostic.
@@ -2561,7 +2580,12 @@
     var fingerDown = false;
     var fingerUpAt = 0;
     var touchWatchArmed = false;
-    var onTouchUp = null;   // work deferred by the observer until the finger lifts
+    // Every form with work deferred by the observer registers a checker here;
+    // each touch-up asks all of them. A single shared slot would be silently
+    // overwritten by whichever form deferred last, stranding the other for
+    // good — unreachable today, since init() takes ONE form, but the failure
+    // is invisible and the list costs nothing.
+    var touchUpChecks = [];
 
     function armTouchWatch() {
         if (touchWatchArmed) {
@@ -2577,11 +2601,7 @@
             document.addEventListener(type, function () {
                 fingerDown = false;
                 fingerUpAt = Date.now();
-                if (onTouchUp) {
-                    var fn = onTouchUp;
-                    onTouchUp = null;
-                    fn();
-                }
+                touchUpChecks.forEach(function (check) { check(); });
             }, { capture: true, passive: true });
         });
     }

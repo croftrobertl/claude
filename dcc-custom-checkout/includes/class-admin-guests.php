@@ -66,6 +66,17 @@ final class Admin_Guests
     /** Used only when the room type's capacity cannot be read at all. */
     private const FALLBACK_MAX = 8;
 
+    /**
+     * Hard ceiling on the rendered list, whatever the capacity meta says.
+     *
+     * `max` drives BOTH the <option> loop and the accepted range, and it comes
+     * from the database. A corrupted or absurd `mphb_adults_capacity` — 9999,
+     * say — would render nine thousand options and hang the booking screen.
+     * No cottage on this site sleeps more than four, so 20 is far above any
+     * real answer while making the page impossible to wedge from meta.
+     */
+    private const MAX_OPTIONS = 20;
+
     public function register(): void
     {
         add_action('add_meta_boxes', [$this, 'add_box']);
@@ -266,7 +277,10 @@ final class Admin_Guests
                 'id'             => (int) $rr->ID,
                 'label'          => (string) $label,
                 'adults'         => (int) $stored,
-                'max'            => $capacity !== null ? $capacity : self::FALLBACK_MAX,
+                'max'            => min(
+                    $capacity !== null ? $capacity : self::FALLBACK_MAX,
+                    self::MAX_OPTIONS
+                ),
                 'capacity_known' => $capacity !== null,
                 'confirmed'      => (string) get_post_meta($rr->ID, self::CONFIRMED_KEY, true) !== '',
             ];

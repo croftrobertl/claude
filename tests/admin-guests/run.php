@@ -185,5 +185,21 @@ $g->save(18433);
 check('saving "Not provided" when it was already nothing changes nothing',
     array_key_exists('_mphb_adults', $GLOBALS['meta'][99]), false);
 
+/* AUDIT 2026-09-18 — `max` drives both the <option> loop and the accepted
+ * range, and it comes from the database. A corrupted mphb_adults_capacity
+ * would otherwise render that many options and wedge the booking screen. */
+seed();
+$GLOBALS['meta'][1065]['mphb_adults_capacity'] = 9999;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '500']];
+$g->save(18433);
+check('an absurd capacity cannot widen the accepted range',
+    $GLOBALS['meta'][99]['_mphb_adults'], 4);
+
+seed();
+$GLOBALS['meta'][1065]['mphb_adults_capacity'] = 9999;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '20']];
+$g->save(18433);
+check('but the sane ceiling is still accepted', $GLOBALS['meta'][99]['_mphb_adults'], 20);
+
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

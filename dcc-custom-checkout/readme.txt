@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.0
+Stable tag: 0.23.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,25 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.23.1 =
+* AUDIT FIX: deferred restructure work could strand indefinitely. The gate
+  installs no timer while a finger is down, and the "3s ceiling" that was meant
+  to backstop it is only read inside the timer callback -- so with a touch-up
+  event that never arrives (a dropped pointerup, a system gesture, a drag out
+  of the window) the work simply waited. Measured at five seconds and counting.
+  It now recovers on the next touch-up anywhere on the page, and each pending
+  form is asked by name rather than through one shared slot that whichever form
+  deferred last happened to own. No timer is installed during a touch, which is
+  the v0.18.0 invariant that closed the tap bug and is not being traded away.
+  The comment and CLAUDE.md claimed a guarantee the code did not provide; both
+  now state the real one.
+* AUDIT FIX: the guest-count dropdown's range comes from the database and was
+  unbounded. A corrupted mphb_adults_capacity of 9999 would have rendered 9999
+  <option> elements and wedged the booking screen -- and widened the accepted
+  range to match, since one value drives both. Bounded at 20, far above any
+  cottage on this site.
+* Both are pinned by regression tests.
 
 = 0.23.0 =
 * INTEGRATION with the Availability Calendar: the guest-count control now
