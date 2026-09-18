@@ -150,6 +150,54 @@ const BUTTONLIKE = [
     await ctx.close();
   }
 
+  console.log('\n-- the declared type actually renders (0.36.0) --');
+  {
+    // ASSERTED ON COMPUTED STYLE, NOT ON THE DECLARATION. The whole fault was
+    // a declaration that reads correctly in the file and never applies:
+    // `.mphbac-staff button { font: inherit }` at (0,1,1) outranked every
+    // per-control rule at (0,1,0), and the shorthand resets every longhand it
+    // does not name. A test reading the stylesheet would have reproduced the
+    // bug it exists to catch.
+    const { ctx, p } = await open(false);
+    const m = await p.evaluate(() => {
+      const read = s => { const c = getComputedStyle(document.querySelector(s));
+        return { size: c.fontSize, weight: c.fontWeight }; };
+      return { nav: read('.mphbac-staff-prev'), today: read('.mphbac-staff-today'),
+               view: read('.mphbac-staff-view'), close: read('.mphbac-staff-close'),
+               bar: read('.mphbac-staff-bar'), item: read('.mphbac-staff-item') };
+    });
+    check('the nav renders its declared 16px (was 15px/700)', m.nav.size === '16px', m.nav);
+    check('Today renders its declared 13px / 600', m.today.size === '13px' && m.today.weight === '600', m.today);
+    check('the view switcher renders its declared 14px / 600', m.view.size === '14px' && m.view.weight === '600', m.view);
+    // Route B — replacing the shorthand with family+size longhands — would
+    // ALSO have dropped these three from 700 to 400, a restyle nobody asked
+    // for. They must not move.
+    check('the bar, the row and the close button are NOT reweighted as a side effect',
+      m.bar.weight === '700' && m.item.weight === '700' && m.close.weight === '700',
+      { bar: m.bar, item: m.item, close: m.close });
+    check('the shorthand is still there doing its job — deleting it drops buttons to the UA font',
+      /\.mphbac-staff button \{[^}]*font:\s*inherit/.test(code));
+    await ctx.close();
+  }
+
+  console.log('\n-- the fade is gone from the bar and the row, the sheet still animates --');
+  {
+    const { ctx, p } = await open(false);
+    const t = await p.evaluate(() => {
+      const d = s => getComputedStyle(document.querySelector(s)).transitionDuration;
+      return { bar: d('.mphbac-staff-bar'), item: d('.mphbac-staff-item'),
+               sheet: d('.mphbac-staff-sheet'), overlay: d('.mphbac-staff-sheet-body') };
+    });
+    check('no transition survives on the booking bar or the room row', t.bar === '0s' && t.item === '0s', t);
+    check('THE SHEET STILL ANIMATES — a blanket transition: none would have killed it',
+      t.sheet !== '0s' && t.sheet !== '', t);
+    // Only the ROW visibly faded: the theme transitions `background`, and the
+    // bar's hover is filter: brightness(), which that never animated.
+    check('(recorded) the theme rule really is background-only, so the bar never visibly faded',
+      /transition:\s*background\s/.test(S.THEME));
+    await ctx.close();
+  }
+
   await browser.close();
   done();
 })().catch(e => { console.error(e); process.exit(2); });

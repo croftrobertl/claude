@@ -1505,9 +1505,67 @@ photo link 0s — it is an `<a>`, which the theme's button rule does not reach.
 All four are `transition: none` now. The bar and the row still carry the
 theme's 0.75s; reported, not changed.
 
-## `font: inherit` is killing every staff button's size and weight (0.35.0)
+## The staff `font:` shorthand, fixed (0.36.0)
 
-**Reported, not fixed — it changes three controls at once.**
+**The declared values now render.** Before / after, measured:
+
+| control | declared | was | now |
+|---|---|---|---|
+| `.mphbac-staff-nav` | 16px | 15px / 700 | **16px / 700** |
+| `.mphbac-staff-today` | 13px / 600 | 15px / 700 | **13px / 600** |
+| `.mphbac-staff-view` | 14px / 600 | 15px / 700 | **14px / 600** |
+
+**The shorthand STAYS.** Without it a `<button>` falls back to the UA's own
+font — family and ~13.3px — which is why it was written. What changed is that
+the three controls now win over it from dedicated **(0,2,0)** rules. This
+widget exposes no typography control, so nothing sits above them.
+
+**Two routes were measured, and the difference is the reason for the choice.**
+Replacing the shorthand with `font-family: inherit; font-size: inherit` also
+drops the booking bar and the room row from **700 to 400** — a restyle nobody
+asked for. Keeping the shorthand and raising the three controls changes
+exactly those three. The suite asserts the bar, row and close button are NOT
+reweighted, so the rejected route cannot arrive later by accident.
+
+**Dedicated rules, not doubled blocks.** Doubling each control's whole rule
+raises every unrelated property with it — and `.mphbac-staff-today` carries
+`.mphbac-staff-nav` too, so a doubled nav rule would out-specify Today's
+`width: auto` and clip its label. **Order is load-bearing** for the same
+reason: both are (0,2,0), so Today's rule must come after the nav's.
+
+**The 16px claim was verified, not trusted.** `.mphbac-nav-btn` computes
+**16px** on the public side, so the size really does match — but its weight is
+**400** there against 700 here, because the staff control declares none.
+`.mphbac-nav-today` computes 13px / 600, matching Today exactly.
+
+## The last two fades, and what was actually fading (0.36.0)
+
+`.mphbac-staff-bar` and `.mphbac-staff-item` are `<button>`s with no
+transition of their own, so Bravada's `button { transition: background .75s }`
+still reached them. Killed in the doubled-class block, which names exactly the
+five staff buttons — **not** as a blanket rule, because staff.css has two
+transitions that must survive: the overlay's opacity and the sheet's
+transform+opacity, which drive the dialog's motion. A mutation that blankets
+them goes red.
+
+A SURVIVING MUTATION found a redundancy rather than a gap: with the block
+carrying `transition: none` for all five buttons, the per-control copies on
+the nav and the view switcher changed nothing when removed. The declarations
+were dead weight and the mutation was testing duplication rather than
+behaviour; both are gone. The photo link keeps its own, because it is an
+`<a>` and not in that block.
+
+**Only the ROW visibly faded.** The theme transitions `background`, and the
+bar's hover is `filter: brightness(1.08)`, which that never animated.
+Measured: the row ran white → `#FDFEFE` at 120ms of a 750ms ramp; the bar's
+brightness change was already instant. Removing the bar's transition is
+correctness, not a visible fix — worth saying precisely rather than claiming
+both were fading.
+
+## `font: inherit` was killing every staff button's size and weight (0.35.0, fixed in 0.36.0)
+
+**Found in 0.35.0, reported rather than fixed because it changes three
+controls at once; fixed in 0.36.0 once the owner asked.**
 `.mphbac-staff button { font: inherit }` sits at **(0,1,1)**, above every
 per-control font declaration at (0,1,0), and the shorthand resets every
 longhand it does not name. Measured:

@@ -204,13 +204,45 @@ $mutations = [
      "    width: 46px;\n    min-height: 46px;",
      "    width: 46px;\n    height: 44px;",
      'staff-test.js'],
-    ['staff: the theme 0.75s fade comes back on the view switcher', 'assets/css/staff.css',
-     "    padding: 0 14px;\n    transition: none;",
-     "    padding: 0 14px;",
-     'staff-test.js'],
+
     ['staff: the selected tab starts recolouring on hover too', 'assets/css/staff.css',
      '    .mphbac-staff-view:not([aria-pressed="true"]):hover {',
      '    .mphbac-staff-view:hover {',
+     'staff-test.js'],
+
+    // --- /staff/ : the font: shorthand, one mutation per control ----------
+    // Each drops ONE control's rule back to (0,1,0), where the shorthand at
+    // (0,1,1) swallows it again. Three separate mutations because three
+    // separate assertions have to be shown to fail.
+    ['staff font: the nav rule falls back under the shorthand', 'assets/css/staff.css',
+     '.mphbac-staff-nav.mphbac-staff-nav { font-size: 16px; }',
+     '.mphbac-staff-nav { font-size: 16px; }',
+     'staff-test.js'],
+    ['staff font: the Today rule falls back under the shorthand', 'assets/css/staff.css',
+     '.mphbac-staff-today.mphbac-staff-today { font-size: 13px; font-weight: 600; }',
+     '.mphbac-staff-today { font-size: 13px; font-weight: 600; }',
+     'staff-test.js'],
+    ['staff font: the view rule falls back under the shorthand', 'assets/css/staff.css',
+     '.mphbac-staff-view.mphbac-staff-view { font-size: 14px; font-weight: 600; }',
+     '.mphbac-staff-view { font-size: 14px; font-weight: 600; }',
+     'staff-test.js'],
+    ['staff font: the shorthand is deleted, dropping buttons to the UA font', 'assets/css/staff.css',
+     ".mphbac-staff button {\n    font: inherit;",
+     ".mphbac-staff button {",
+     'staff-test.js'],
+    ['staff font: the shorthand is re-expanded to longhands including weight', 'assets/css/staff.css',
+     ".mphbac-staff button {\n    font: inherit;",
+     ".mphbac-staff button {\n    font-family: inherit;\n    font-size: inherit;\n    font-weight: inherit;",
+     'staff-test.js'],
+
+    // --- /staff/ : the last two fades --------------------------------------
+    ['staff fade: every staff button fades again (the block-level guard)', 'assets/css/staff.css',
+     "Say which, rather than claiming both. */\n    transition: none;",
+     "Say which, rather than claiming both. */",
+     'staff-test.js'],
+    ['staff fade: a BLANKET transition: none kills the sheet animation', 'assets/css/staff.css',
+     '    transition: transform 0.2s ease, opacity 0.2s ease;',
+     '    transition: none;',
      'staff-test.js'],
 
     // --- the grid ---------------------------------------------------------
@@ -314,6 +346,12 @@ if ($filter !== '') {
     }
 }
 
+// Every file this run touches, with the bytes it had BEFORE. Used at the end
+// to prove the source was put back: a mutation left applied would be
+// committed as a real change, and while the run is in flight `git status`
+// shows a mutated file that is about to be restored.
+$touched = [];
+
 $survived = [];
 $broken    = [];
 echo "MUTATION CHECK — each line breaks one guarded behaviour and must go RED.\n"
@@ -328,6 +366,7 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
         continue;
     }
     $originals[$path] = $body;
+    $touched[$path] = $body;
     // Replace the FIRST occurrence only. Replacing every match can mutate
     // more than the behaviour under test, so a red result would not prove the
     // suite guards the thing this entry names.
@@ -347,10 +386,22 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     if (!$went_red) { $survived[] = $name; }
 }
 
+// PROVE THE SOURCE IS BACK. Not decoration: this script rewrites the plugin's
+// own files, and a mutation left applied looks exactly like a deliberate edit.
+$dirty = [];
+foreach ($touched as $path => $before) {
+    if (file_get_contents($path) !== $before) {
+        $dirty[] = $path;
+    }
+}
+echo "\n" . (count($dirty) === 0
+    ? 'source restored: ' . count($touched) . ' file(s) verified byte-identical'
+    : 'SOURCE NOT RESTORED — ' . implode(', ', $dirty)) . "\n";
+
 echo "\n" . count($mutations) . ($filter !== '' ? " matching" : '') . " mutations, "
    . count($survived) . " survived, " . count($broken) . " stale\n";
 if ($survived) {
     echo "\nSURVIVING MUTATIONS — these behaviours are NOT actually guarded:\n";
     foreach ($survived as $s) { echo "  - $s\n"; }
 }
-exit(($survived || $broken) ? 1 : 0);
+exit(($survived || $broken || $dirty) ? 1 : 0);
