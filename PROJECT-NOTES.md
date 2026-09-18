@@ -1533,6 +1533,43 @@ raises every unrelated property with it — and `.mphbac-staff-today` carries
 `width: auto` and clip its label. **Order is load-bearing** for the same
 reason: both are (0,2,0), so Today's rule must come after the nav's.
 
+**The nav's font-size governs NOTHING VISIBLE (0.36.1), and no weight is
+declared.** The prev/next buttons contain only an `<svg>` — no text node at
+all — sized in px by CSS, stroked at a fixed `stroke-width`, coloured through
+`currentColor`, which takes `color` and not `font-weight`. Measured: at 4px,
+16px and 40px the button stays 44x44, the svg stays 20x20, and the rendering
+is **pixel-identical**. The rule is kept for symmetry with the two below it.
+
+Adding `font-weight: 400` to close the gap with the public widget would be a
+rule that changes nothing on screen — the same dead weight this release
+deleted elsewhere (the redundant per-control `transition: none`). The only nav
+button carrying a word is Today, matched exactly at 13px / 600.
+
+**The test guards the PREMISE, not the value.** Asserting the 16px alone would
+let a word appear in those buttons unnoticed — and that is precisely when the
+missing weight would start to matter. `staff-test.js` asserts the arrows carry
+no text node; a mutation that puts a word in one goes red.
+
+That mutation SURVIVED at first, and found a fixture fault rather than a code
+one: `staff-harness.js` had the toolbar hand-written, so a change to the PHP
+could not reach it. It is extracted from `class-staff-widget.php` now, like
+the public harness. Fixtures drift from live — including fixtures written the
+same week.
+
+## Carry this to the other repos: prove the restoration
+
+`mutate.php` rewrites the plugin's own source in place. That is a foot-gun on
+any repository: a run interrupted at the wrong moment, or a `git status` taken
+mid-run, leaves or shows a mutated file that looks exactly like a deliberate
+edit. It happened here — `widget.css` showed modified while a run was in
+flight.
+
+The runner now records the bytes of every file it touches and, at the end,
+verifies each is byte-identical, printing either `source restored: N file(s)
+verified byte-identical` or a loud failure, and exiting non-zero either way.
+**Any harness that edits source in place needs this**, independently of what
+it is testing.
+
 **The 16px claim was verified, not trusted.** `.mphbac-nav-btn` computes
 **16px** on the public side, so the size really does match — but its weight is
 **400** there against 700 here, because the staff control declares none.

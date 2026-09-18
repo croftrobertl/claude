@@ -76,7 +76,7 @@ built from that directory, stays clean.
 
 | suite | covers | mutations |
 |---|---|---|
-| `staff-panel-test.php` | 0.32.0/0.33.0 — photo ID, money rows, the guest-count contract, the pet gate | 15 |
+| `staff-panel-test.php` | 0.32.0/0.33.0 — photo ID, money rows, the guest-count contract, the pet gate | 17 |
 | `staff-gate-test.php` | the standing security constraint — `is_authorized()`, the fail-closed password-removed path, the status whitelist, no PII in page HTML | 3 |
 | `browser/hover-hint-test.js` | 0.31.0/0.31.1 — hover tokens, the (0,6,0) cascade trap, the theme's 0.75s fade, the mm/dd/yyyy hint | 6 |
 | `browser/field-standard-test.js` | 0.28.0–0.30.0 — the DCC pill, the native-control reset, the iOS 16px floor, the focus ring, the empty-state mapping | 5 |
@@ -87,7 +87,7 @@ built from that directory, stays clean.
 | `browser/nav-test.js` | the nav row — SVG chevrons on the colour control, the centred cluster, 44px hit areas, the Today button by COMPUTED STYLE | 5 |
 | `browser/polish-test.js` | stylesheet-wide — the pointer guard, bare `:focus`, `!important` never overriding a control, touch states, 44px tap targets, row baselines, reduced motion, print | 7 |
 
-**64 mutations, 0 survivors.** `php mutate.php` after any change.
+**65 mutations, 0 survivors.** `php mutate.php` after any change.
 
 ### A finding this rebuild retracted
 

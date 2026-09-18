@@ -167,6 +167,24 @@ const BUTTONLIKE = [
                bar: read('.mphbac-staff-bar'), item: read('.mphbac-staff-item') };
     });
     check('the nav renders its declared 16px (was 15px/700)', m.nav.size === '16px', m.nav);
+    /* THE PREMISE, NOT THE VALUE. The nav's font-size governs nothing
+     * rendered: prev/next contain only an <svg>, sized in px, stroked at a
+     * fixed width, coloured through currentColor — which takes `color`, not
+     * font-weight. Measured: pixel-identical at 4px, 16px and 40px. So the
+     * rule is symmetry with the two below, and no font-weight is declared
+     * because there is nothing for it to change.
+     * Asserting the 16px alone would let a word appear in those buttons
+     * without anything noticing — and that is the moment the missing weight
+     * would start to matter. This fails then, and points at the comment. */
+    const svgOnly = await p.evaluate(() => ['.mphbac-staff-prev', '.mphbac-staff-next'].map(s => {
+      const e = document.querySelector(s);
+      return e ? { s, textNodes: [...e.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim()).length,
+                   svgs: e.querySelectorAll('svg').length } : { s, missing: true };
+    }));
+    check('the nav arrows carry NO text node, so their font rules govern nothing visible',
+      svgOnly.every(x => !x.missing && x.textNodes === 0 && x.svgs === 1), svgOnly);
+    check('...and Today, the one nav button with a word in it, is matched exactly',
+      m.today.size === '13px' && m.today.weight === '600', m.today);
     check('Today renders its declared 13px / 600', m.today.size === '13px' && m.today.weight === '600', m.today);
     check('the view switcher renders its declared 14px / 600', m.view.size === '14px' && m.view.weight === '600', m.view);
     // Route B — replacing the shorthand with family+size longhands — would

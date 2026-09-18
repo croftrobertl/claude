@@ -165,10 +165,7 @@
     background: var(--staff-nav-bg);
     color: var(--staff-nav-text);
     /* font-size moved to the (0,2,0) block above — at (0,1,0) here it was
-       dead. VERIFIED rather than trusted: .mphbac-nav-btn computes 16px on
-       the public side, so the size really does match. Its WEIGHT is 400
-       there and 700 here, because this control declares none; matching that
-       too would need a declaration nobody has made. */
+       dead. See the note there for why it governs nothing visible. */
     line-height: 1;
     cursor: pointer;
     /* No transition — see the doubled-class block near the top, which carries
@@ -223,6 +220,22 @@
 
    ORDER IS LOAD-BEARING: Today is also a nav, and both rules are (0,2,0), so
    the later one must be Today's. */
+/* GOVERNS NOTHING VISIBLE, and is kept for symmetry with the two rules
+   below rather than for any effect. The prev/next buttons contain ONLY an
+   <svg> — no text node at all — sized in px by CSS, stroked at a fixed
+   stroke-width, and coloured through currentColor, which takes `color` and
+   not font-weight. Measured: at 4px, 16px and 40px the button stays 44x44,
+   the svg stays 20x20, and the rendering is PIXEL-IDENTICAL.
+   The only nav button carrying a word is .mphbac-staff-today, which has its
+   own rule below. An earlier comment here claimed this "governs only the
+   Today label's inherited size"; that stopped being true the moment Today
+   got its own rule, and is why this note is explicit.
+   NO font-weight IS DECLARED, deliberately. The public .mphbac-nav-btn
+   computes 400 against 700 here, but there is nothing on screen for it to
+   change — and a rule added to fix an invisible discrepancy is exactly the
+   dead weight this release removed elsewhere.
+   staff-test.js guards the PREMISE, not the value: if a word ever appears in
+   these buttons the assertion fails and sends the reader here. */
 .mphbac-staff-nav.mphbac-staff-nav { font-size: 16px; }
 .mphbac-staff-today.mphbac-staff-today { font-size: 13px; font-weight: 600; }
 .mphbac-staff-view.mphbac-staff-view { font-size: 14px; font-weight: 600; }

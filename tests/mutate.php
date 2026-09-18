@@ -235,6 +235,11 @@ $mutations = [
      ".mphbac-staff button {\n    font-family: inherit;\n    font-size: inherit;\n    font-weight: inherit;",
      'staff-test.js'],
 
+    ['staff font: a word appears in a nav arrow, where the font rules suddenly matter', 'includes/class-staff-widget.php',
+     '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"',
+     'Prev<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"',
+     'staff-test.js'],
+
     // --- /staff/ : the last two fades --------------------------------------
     ['staff fade: every staff button fades again (the block-level guard)', 'assets/css/staff.css',
      "Say which, rather than claiming both. */\n    transition: none;",

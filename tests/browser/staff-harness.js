@@ -95,18 +95,42 @@ ${sheet}
 </body></html>`;
 }
 
-const TOOLS = `
-  <div class="mphbac-staff-topbar">
-    <button type="button" class="mphbac-staff-nav mphbac-staff-prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.25"/></svg></button>
-    <button type="button" class="mphbac-staff-nav mphbac-staff-today">today</button>
-    <button type="button" class="mphbac-staff-nav mphbac-staff-next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.25"/></svg></button>
-  </div>
-  <div class="mphbac-staff-tools">
-    <div class="mphbac-staff-views" role="group" aria-label="View">
-      <button type="button" class="mphbac-staff-view" data-view="agenda" aria-pressed="false">List</button>
-      <button type="button" class="mphbac-staff-view" data-view="chart" aria-pressed="true">Chart</button>
-    </div>
-  </div>
+/**
+ * The toolbar, EXTRACTED FROM THE PHP rather than hand-written.
+ *
+ * It used to be a constant in this file, and that is a fixture describing
+ * something the page might not do: a mutation that put a word inside a nav
+ * arrow — the exact condition under which the nav's font rules would start
+ * to matter — could not reach it, and SURVIVED. The same drift lesson the
+ * public harness already carries.
+ */
+function extractBlock(src, openTag) {
+  const start = src.indexOf(openTag);
+  if (start < 0) throw new Error('block not found: ' + openTag);
+  const re = /<(\/?)div\b[^>]*>/g;
+  re.lastIndex = start;
+  let depth = 0, m;
+  while ((m = re.exec(src))) {
+    depth += m[1] ? -1 : 1;
+    if (depth === 0) return src.slice(start, m.index + m[0].length);
+  }
+  throw new Error('unbalanced block: ' + openTag);
+}
+
+function dephp(html) {
+  return html
+    .replace(/<\?php\s*echo esc_html__\('([^']+)'[\s\S]*?\); \?>/g, (_, t) => t)
+    .replace(/<\?php\s*echo esc_attr__\('([^']+)'[\s\S]*?\); \?>/g, (_, t) => t)
+    .replace(/<\?php[\s\S]*?\?>/g, '');
+}
+
+const TOOLS = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-topbar">'))
+  // The markup ships BOTH view tabs unpressed; widget.js sets one at runtime.
+  // The selected state is a runtime state, so the fixture applies it the way
+  // the page does rather than the markup pretending to.
+  + dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-tools">'))
+      .replace('data-view="chart" aria-pressed="false"', 'data-view="chart" aria-pressed="true"')
+  + `
   <button type="button" class="mphbac-staff-item"><span class="mphbac-staff-item-cottage">Cottage 22</span></button>
   <div style="position:relative;width:400px;height:40px">
     <button type="button" class="mphbac-staff-bar" style="width:200px;height:28px"><span class="mphbac-staff-seg is-stay"></span></button>
@@ -125,5 +149,5 @@ const SHEET = `
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 
-module.exports = { ROOT, css, cssCode, php, widgetPhp, constOf, emit, emitDefaults,
+module.exports = { ROOT, css, cssCode, php, widgetPhp, extractBlock, dephp, constOf, emit, emitDefaults,
   page, TOOLS, SHEET, THEME, CHROMIUM, POST, WRAPPER };
