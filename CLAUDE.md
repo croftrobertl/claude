@@ -463,6 +463,67 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   save rewrites the marker as `1`, where the loose test left the bad value in
   place through every subsequent save. Asserted in `tests/admin-guests/`, and
   the assertions were checked to FAIL against the loose test before shipping.
+- **`dcc_guest34_enabled` IS A CROSS-PLUGIN SWITCH AND NEITHER PLUGIN OWNS IT**
+  (v0.24.0). One toggle for the whole Guest 3 / Guest 4 concept, rendered at
+  **DCC → Custom Checkout → "Guests 3 and 4"** because that is where the owner
+  will look for it, but **stored as a STANDALONE WP option, deliberately not a
+  key inside `dcc_checkout_settings`** — the DCC Cottage Selector reads it for
+  its matching quiz and **must keep working when this plugin is deactivated**.
+  THE CONTRACT, and both sides implement it independently:
+  - **ABSENT MEANS ON.** A site that has never seen the setting behaves exactly
+    as it did before the setting existed.
+  - `'1'` or `1` → ON. **Anything else → OFF.** This plugin WRITES `'1'` for on
+    and `''` for off. Read leniently, write strictly; a present-but-unrecognised
+    value reads as OFF because that is the direction that does not charge a guest
+    for an offering whose switch state cannot be read.
+  - `Config::guest34_enabled()` is the whole implementation and is deliberately
+    four lines, so the Selector's copy can match it character for character.
+    **Change one, change both.**
+  - **No `default` is registered** with `register_setting()`. Registering one
+    would make `get_option()` return it on a site that never saved the setting,
+    and "absent" is a meaningful third state.
+  - The checkbox is paired with a **hidden field of the same name**. An unchecked
+    box posts nothing and the Settings API only saves keys it finds in the POST,
+    so without it switching OFF would appear to work and change nothing.
+- **THE FEE IS MOTOPRESS'S, SO SUPPRESSING IT IS ACTIVE WORK AND MUST FAIL
+  CLOSED** (v0.24.0). Service 18063 is linked in **MotoPress's own
+  `mphb_services` meta on room types 1065/1067/1069/1071**, and MotoPress renders
+  and prices it without asking this plugin. So "don't attach the fee when the
+  switch is off" is not something achieved by not doing something — there was
+  nothing being done. The switch reaches `Config::guest_fee_enabled()`, which
+  makes `guest_fee_active()` false, and `Extra_Guest_Service::find_violation()`'s
+  existing inactive branch then **refuses both** an attached extra-guest service
+  and any room over `included_guests()`. That covers the 302 path and the REST
+  path, because `Rest_Guard` calls the same `find_violation()`. **The UI half
+  alone would be a cosmetic lie.** Asserted by posting the fee with the switch
+  off, in `tests/guest34/`.
+  **DO NOT TOUCH `mphb_services`.** That meta is the owner's MotoPress
+  configuration across his room types; rewriting it from here would be a silent
+  bulk edit of live config and would strand him if he ever deactivated the plugin
+  — the fee would stay gone with nothing to explain it. Suppress at render and at
+  submit; leave his configuration exactly as he set it.
+- **THE SWITCH GOVERNS COLLECTION, NOT HISTORY — AND THAT SPLIT IS TWO PAIRS OF
+  METHODS** (v0.24.0, owner decision: existing bookings keep their data).
+  - `collected_guest_field_groups()` honours the switch → the checkout JS
+    sections and the server required-fields backstop.
+  - `guest_field_groups()` ignores it → **Admin_Fields / `admin-booking.js`**, so
+    a booking that already carries Guest 3 details still shows them, and
+    **Settings**, so the owner can still edit the section titles while it is off.
+  - `offered_guest_fee_steps()` honours the switch → every label on the checkout.
+  - `guest_fee_steps()` ignores it → **Admin_Fields**, so wp-admin can still
+    price a fee an existing booking really carries.
+  **Getting either pair the wrong way round strips data off past bookings.** The
+  first version of this change gated `guest_fee_steps()` itself and would have
+  removed the price label from historical bookings in wp-admin; caught by
+  checking who called it, not by the suite. Both directions are asserted now.
+  Scope limits, all deliberate: **Guest 2 is not affected** (the cottages sleep
+  two as standard; the filter is `min <= 2`), the staff-side guest-count selector
+  is not affected, and **nothing about MotoPress capacity changes** — a guest can
+  still pick 4 in MPHB's own control; the switch governs what this plugin
+  collects and what fee it permits. **The Availability Calendar needs nothing**:
+  `Staff_Data::push()` already returns early when the value is blank, so the
+  Guest3/Guest4 rows only render when the booking has the data. There is no
+  cross-plugin contract to build for decision 1 and none was built.
 - **The "Show all booking fields" checkbox is OURS** (`admin-booking.js`), not
   MotoPress's. It names how many fields it is hiding and hides itself when it
   is hiding none (v0.22.0). If it looks inert on a real booking that is rule 2
@@ -717,25 +778,32 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   exact failure this file's rule names, committed by the sweep that was looking
   for it, and caught only because the mutation runner killed nothing. The suite
   now SEEDS distinct ids (901/902/903) so a wrong bucket is visible in the value.
-  **The defaults are a test-harness trap, NOT the live configuration** — that
-  distinction was got wrong once (corrected from live, 2026-09-19) and the wrong
-  version read as a claim about the running site. Measured in
-  `dcc_checkout_settings` on live:
+  **The defaults are a test-harness trap, NOT the live configuration.** My sweep
+  report claimed the extra-guest service IDs "sit at their shipped 0" — **that
+  was never true of live**, at any point; all three buckets have pointed at 18063
+  throughout. Corrected from live 2026-09-19. Measured in
+  `dcc_checkout_settings`:
   - `guest_service_daily` / `weekly` / `monthly` are **all 18063**, and 18063 is
     "Extra Guest Fee (per guest beyond 2)", published, `mphb_price = 50`. **The
     fee attaches and does charge $50.** The stored settings override the shipped
     defaults, so the defaults never come into it.
   - `guest_accommodations` = `[1071,1069,1067,1065,1740,1742]` — the six
     capacity-4 cottages, as expected.
-  - What IS zero is **`guest_fee_amount` (0.0)** — this plugin's OWN setting,
-    which drives `guest_fee_steps()` and `guestFeeAmountText`. **That is the
-    gap, and it is the owner's to fix, not a code change.**
-  Why it is a gap and not a defect: `guest_fee_steps()` returns `[]` when the
-  amount is unknown, so the guest is told **nothing** rather than "$0.00" —
-  the right direction to fail. But `$expected` is 0, so
-  `Extra_Guest_Service`'s backstop *fails open*
-  (`$can_expect = $nights > 0 && $expected > 0`) and **a fee that stopped
-  attaching would go unnoticed**. That consequence is real and unchanged.
+  - `guest_fee_amount` was **0.0 and is now 50** — changed on live 2026-09-19
+    with the owner's approval, backup option
+    `dcc_bak_checkout_settings_20260919`. **So `guest_fee_steps()` returns steps
+    for the first time, `guestFeeAmountText` is "$50", and the two-line
+    "$50/night / x N guests" detail built to the v0.19.0 spec renders for the
+    first time.** It had never rendered before, which is worth knowing when
+    reading any earlier screenshot.
+  While the amount was 0 this was a gap and not a defect, because
+  `guest_fee_steps()` returns `[]` when the amount is unknown — the guest was
+  told **nothing** rather than "$0.00", which is the right direction to fail.
+  The `$expected`-is-0 consequence no longer arises for the amount, but the
+  shape is worth keeping in mind: `Extra_Guest_Service`'s backstop *fails open*
+  when `$expected` is 0 (`$can_expect = $nights > 0 && $expected > 0`), so a
+  configuration that stopped resolving a service would go unnoticed rather than
+  blocking a booking.
 - **"NEVER REDIRECT DURING AN AJAX SUBMISSION" IS TESTED NOW, IN ALL FOUR FILES
   THAT CLAIM IT** (`tests/backstops/`, added 2026-09-19). The sentence appears
   in `class-pet-service.php:54`, `class-guest-fields.php:35`,
@@ -819,6 +887,12 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   mirror and FAILS rather than skipping if node is absent).
 - The server-side backstops' stand-down rules are at `tests/backstops/`
   (`php tests/backstops/run.php`).
+- The Guest 3/4 switch is at `tests/guest34/` (`php tests/guest34/run.php`). It
+  **posts the fee with the switch off and requires a refusal** — the never-claim
+  needs the case constructed, and a test that only checked the field was absent
+  from the rendered form would be the happy path. Mutations run in **both
+  directions**: "off does nothing" and "on does nothing" are different bugs and
+  one assertion catches neither.
 - Field geometry (tap targets) is asserted in real Chromium at 390x844 with
   touch emulation, and the width cap at 1280, at `tests/fields/`
   (`npm install && npm test`). Run it after touching any field rule.

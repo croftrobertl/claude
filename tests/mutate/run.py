@@ -62,6 +62,7 @@ SUITES = {
     'id-files':     ('php',  'tests/id-files/run.php'),
     'pricing':      ('php',  'tests/pricing/run.php'),
     'backstops':    ('php',  'tests/backstops/run.php'),
+    'guest34':      ('php',  'tests/guest34/run.php'),
 }
 
 PASS, FAIL, NO_RUN, NO_SUITE = 'PASS', 'FAIL', 'NO RUN', 'NO SUITE'

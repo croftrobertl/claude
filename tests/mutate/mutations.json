@@ -561,5 +561,137 @@
   "find": "            'service_daily'     => 17712,",
   "replace": "            'service_daily'     => 17711,",
   "count": 1
+ },
+ {
+  "id": "g34-off-does-nothing",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "switching the toggle OFF actually does something",
+  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        $on  = true;",
+  "count": 1
+ },
+ {
+  "id": "g34-on-does-nothing",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "leaving the toggle ON actually does something",
+  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        $on  = false;",
+  "count": 1
+ },
+ {
+  "id": "g34-absent-means-off",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "ABSENT MEANS ON -- a site that never saw the setting is unchanged",
+  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        $on  = ($raw === '1') || ($raw === 1);",
+  "count": 1
+ },
+ {
+  "id": "g34-unknown-value-means-on",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "a present-but-unrecognised value reads as OFF, the direction that does not charge",
+  "find": "        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);",
+  "replace": "        $on  = ($raw === null) || !empty($raw);",
+  "count": 1
+ },
+ {
+  "id": "g34-fee-gate-removed",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "the toggle turns the FEE off, not just the fields",
+  "find": "        if (!self::guest34_enabled()) {\n            return false;\n        }\n        $enabled = !empty(self::settings()['guest_fee_enabled']);",
+  "replace": "        $enabled = !empty(self::settings()['guest_fee_enabled']);",
+  "count": 1
+ },
+ {
+  "id": "g34-filter-can-reenable",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "the switch wins over the filter -- the filter must not get the last word",
+  "find": "        if (!self::guest34_enabled()) {\n            return false;\n        }\n        $enabled = !empty(self::settings()['guest_fee_enabled']);\n        return (bool) apply_filters('dcc_checkout_guest_fee_enabled', $enabled);",
+  "replace": "        $enabled = !empty(self::settings()['guest_fee_enabled']);\n        return (bool) apply_filters('dcc_checkout_guest_fee_enabled', $enabled && self::guest34_enabled());",
+  "count": 1
+ },
+ {
+  "id": "g34-groups-not-filtered",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "the toggle stops COLLECTING guest 3/4 fields",
+  "find": "        $groups = self::guest_field_groups();\n        if (self::guest34_enabled()) {\n            return $groups;\n        }",
+  "replace": "        $groups = self::guest_field_groups();\n        if (true) {\n            return $groups;\n        }",
+  "count": 1
+ },
+ {
+  "id": "g34-guest2-caught-too",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "GUEST 2 IS NOT AFFECTED -- the cottages sleep two as standard",
+  "find": "            return (int) $g['min'] <= 2;",
+  "replace": "            return (int) $g['min'] <= 1;",
+  "count": 1
+ },
+ {
+  "id": "g34-full-groups-filtered",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "the FULL group list ignores the switch, so existing bookings keep their data",
+  "find": "    public static function guest_field_groups(): array\n    {\n        $s = self::settings();",
+  "replace": "    public static function guest_field_groups(): array\n    {\n        if (!self::guest34_enabled()) { return []; }\n        $s = self::settings();",
+  "count": 1
+ },
+ {
+  "id": "g34-ladder-not-gated",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "no label offers a price for an offering that is off",
+  "find": "    public static function offered_guest_fee_steps(int $max_extra = 8): array\n    {\n        if (!self::guest34_enabled()) {\n            return [];\n        }",
+  "replace": "    public static function offered_guest_fee_steps(int $max_extra = 8): array\n    {\n        if (false) {\n            return [];\n        }",
+  "count": 1
+ },
+ {
+  "id": "g34-full-ladder-gated",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "the FULL ladder ignores the switch, so wp-admin can still price a past booking's fee",
+  "find": "    public static function guest_fee_steps(int $max_extra = 8): array\n    {\n        $amount = self::guest_fee_amount();",
+  "replace": "    public static function guest_fee_steps(int $max_extra = 8): array\n    {\n        if (!self::guest34_enabled()) { return []; }\n        $amount = self::guest_fee_amount();",
+  "count": 1
+ },
+ {
+  "id": "g34-sanitize-cannot-store-off",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "guest34"
+  ],
+  "claim": "an unticked box actually stores OFF",
+  "find": "        return ((string) $input === '1') ? '1' : '';",
+  "replace": "        return '1';",
+  "count": 1
  }
 ]

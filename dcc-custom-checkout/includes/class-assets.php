@@ -306,6 +306,11 @@ final class Assets
             'guest2FieldNames' => Config::guest2_field_name_list(),
             // Every conditional per-guest detail group (2: name+phone; 3/4:
             // name only), from the single Config definition.
+            //
+            // COLLECTED list, not the full one: with the Guest 3/4 switch off,
+            // groups 3 and 4 are absent and the JS builds no section for them.
+            // Admin_Fields deliberately uses the FULL list, so a booking that
+            // already carries Guest 3 details still shows them.
             'guestGroups'      => array_values(array_map(static function (array $g): array {
                 return [
                     'min'          => $g['min'],
@@ -314,7 +319,7 @@ final class Assets
                     'title'        => $g['title'],
                     'sectionClass' => $g['section_class'],
                 ];
-            }, Config::guest_field_groups())),
+            }, Config::collected_guest_field_groups())),
             // Native dog Checkout Field names the toggle shows/hides + requires.
             'dogFieldNames'    => Config::dog_field_name_list(),
             'sectionTitles'    => [
@@ -333,7 +338,11 @@ final class Assets
             // MotoPress bills from, so a label can never contradict the total.
             // Empty when the amount can't be read — the JS then adds no suffix
             // rather than a wrong one, and no note.
-            'guestFeeSteps'       => Config::guest_fee_steps(),
+            // OFFERED ladder: empty when the Guest 3/4 switch is off, so no
+            // label on the checkout offers a price for something not for sale.
+            // Admin_Fields deliberately uses the FULL ladder -- an existing
+            // booking that carries the fee must still price it in the admin.
+            'guestFeeSteps'       => Config::offered_guest_fee_steps(),
             'couchBedsText'       => Config::couch_beds_text(),
             'guestsSelector'   => Config::guests_selector(),
             // Which price-breakdown rows count as tax detail. Matched against

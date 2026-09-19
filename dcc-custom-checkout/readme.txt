@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.2
+Stable tag: 0.24.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,24 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.24.0 =
+* NEW: one switch for the whole Guest 3 / Guest 4 offering, at DCC -> Custom
+  Checkout -> "Guests 3 and 4". On by default; installing this version changes
+  nothing. Switch it off and no Guest #3 or #4 section is collected and no
+  extra-guest fee can be charged.
+* It is stored as a STANDALONE option, `dcc_guest34_enabled` ('1' on, '' off,
+  ABSENT MEANS ON), because the DCC Cottage Selector reads the same switch for
+  its matching quiz and must keep working if this plugin is deactivated.
+* The fee is REFUSED server-side when the switch is off, not merely hidden.
+  MotoPress links service 18063 in its own room-type configuration and prices it
+  without asking this plugin, so a stale page, a cached form or a crafted request
+  could otherwise attach a fee the owner had switched off.
+* Bookings you have already taken keep their data. The switch stops COLLECTING
+  guest 3/4 details; it does not hide details already received, which still
+  appear on the booking screen and on the staff page. Guest #2, the staff-side
+  guest-count selector and MotoPress's own capacity are all unaffected, and your
+  `mphb_services` configuration is not touched.
 
 = 0.23.2 =
 * Aligned the `_mphb_adults_confirmed` test with the Availability Calendar's:

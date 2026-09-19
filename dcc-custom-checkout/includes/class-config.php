@@ -18,6 +18,25 @@ final class Config
     /** Option key the Settings page writes to. */
     public const OPTION = 'dcc_checkout_settings';
 
+    /**
+     * CROSS-PLUGIN SWITCH for the whole Guest 3 / Guest 4 concept.
+     *
+     * A STANDALONE option, deliberately NOT a key inside self::OPTION, because
+     * the DCC Cottage Selector reads it too and must keep working when this
+     * plugin is deactivated. Neither plugin owns it; both read it the same way,
+     * and the rule below is the contract:
+     *
+     *     ABSENT       -> ON.  A site that has never seen this setting behaves
+     *                    exactly as it did before the setting existed.
+     *     '1' or 1     -> ON.
+     *     anything else-> OFF. (This plugin WRITES '1' for on and '' for off.)
+     *
+     * Read leniently, write strictly. A present-but-unrecognised value reads as
+     * OFF on purpose: it is the direction that does not charge a guest for an
+     * offering whose switch state cannot be read.
+     */
+    public const GUEST34_OPTION = 'dcc_guest34_enabled';
+
     /** In-request cache of the merged settings array. */
     private static ?array $cache = null;
 
@@ -220,12 +239,45 @@ final class Config
      * --------------------------------------------------------------------- */
 
     /**
+     * THE GUEST 3 / GUEST 4 SWITCH. See self::GUEST34_OPTION for the contract.
+     *
+     * One switch for the whole concept: the Guest #3 and Guest #4 sections stop
+     * being collected AND the extra-guest fee stops being permitted. It governs
+     * what this plugin COLLECTS and what fee it PERMITS -- not MotoPress's
+     * capacity, not Guest #2, and not information already received (an existing
+     * booking's Guest 3 details still show in the admin and on /staff/).
+     *
+     * This function is small on purpose: the Cottage Selector keeps its own copy
+     * and the two must agree character for character. Change one, change both.
+     */
+    public static function guest34_enabled(): bool
+    {
+        $raw = get_option(self::GUEST34_OPTION, null);
+        $on  = ($raw === null) || ($raw === '1') || ($raw === 1);
+        return (bool) apply_filters('dcc_guest34_enabled', $on);
+    }
+
+    /**
      * Master on/off for the "Pull-out Couch Guests" offering (admin setting).
      * When off, the offering stands down entirely and bookings are capped at
      * included_guests() on the guest accommodations.
+     *
+     * THE GUEST 3/4 SWITCH WINS OVER THE FILTER. A snippet must not be able to
+     * re-enable a fee the owner switched off -- that would charge a guest for
+     * something the site no longer offers.
+     *
+     * The early return is for READABILITY, not for the guarantee: `$enabled &&
+     * guest34_enabled()` after the filter would hold just as well, and a
+     * mutation proving otherwise was my own error, not a finding. What actually
+     * breaks the guarantee is applying the filter LAST, to the already-gated
+     * value -- `apply_filters($hook, $enabled && guest34_enabled())` -- which
+     * hands a snippet the final word. That is the mutation in the set.
      */
     public static function guest_fee_enabled(): bool
     {
+        if (!self::guest34_enabled()) {
+            return false;
+        }
         $enabled = !empty(self::settings()['guest_fee_enabled']);
         return (bool) apply_filters('dcc_checkout_guest_fee_enabled', $enabled);
     }
@@ -347,6 +399,29 @@ final class Config
      *
      * @return array<int,string>
      */
+    /**
+     * The fee ladder this plugin currently OFFERS, honouring the Guest 3/4
+     * switch. Empty when the switch is off: an offering that is not for sale has
+     * no prices, and every label on the checkout reads this.
+     *
+     * The distinction matters the same way it does for the guest field groups.
+     * guest_fee_steps() below is the FULL ladder and is what Admin_Fields uses,
+     * because the admin booking screen must still price a fee an EXISTING booking
+     * actually carries -- switching the offering off stops selling it, it does
+     * not rewrite history. Getting this the wrong way round would have stripped
+     * the price label off past bookings; caught before shipping, but only by
+     * checking who called the gated version.
+     *
+     * @return array<int,string>
+     */
+    public static function offered_guest_fee_steps(int $max_extra = 8): array
+    {
+        if (!self::guest34_enabled()) {
+            return [];
+        }
+        return self::guest_fee_steps($max_extra);
+    }
+
     public static function guest_fee_steps(int $max_extra = 8): array
     {
         $amount = self::guest_fee_amount();
@@ -715,8 +790,43 @@ final class Config
      * reveals it. Drives the JS sections, the server backstop, and the settings
      * page from ONE definition so the three can't drift.
      *
+     * THIS IS THE FULL LIST AND IT IGNORES THE GUEST 3/4 SWITCH. Two callers
+     * need it that way and must not be moved to the filtered list below:
+     *
+     *   - Admin_Fields / admin-booking.js, because switching the offering off
+     *     stops COLLECTING guest 3/4 details and must never hide details already
+     *     received. An existing booking shows what was actually received.
+     *   - Settings, so the owner can still read and edit the section titles
+     *     while the offering is off.
+     *
+     * Everything on the COLLECTION side -- the checkout JS sections and the
+     * server-side required-fields backstop -- uses
+     * self::collected_guest_field_groups() instead.
+     *
      * @return array<int, array{min:int, names:string[], prefix:string, title:string, section_class:string}>
      */
+    /**
+     * The groups this plugin actually COLLECTS, honouring the Guest 3/4 switch.
+     *
+     * Used by the checkout JS (which builds the sections) and by the server
+     * backstop (which decides what is required). With the switch off, groups 3
+     * and 4 are absent, so no section is built and nothing demands their fields.
+     *
+     * @return array<int, array{min:int, names:string[], prefix:string, title:string, section_class:string}>
+     */
+    public static function collected_guest_field_groups(): array
+    {
+        $groups = self::guest_field_groups();
+        if (self::guest34_enabled()) {
+            return $groups;
+        }
+        // Guest #2 is NOT part of the switch: the cottages sleep two as
+        // standard and only 3-4 are the optional half.
+        return array_filter($groups, static function (array $g): bool {
+            return (int) $g['min'] <= 2;
+        });
+    }
+
     public static function guest_field_groups(): array
     {
         $s = self::settings();

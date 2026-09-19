@@ -65,7 +65,11 @@ final class Guest_Fields
         // are NATIVE Checkout Fields inside `customer_fields`; we enforce only
         // fields actually present — if the owner hasn't enabled them, they
         // won't submit and we must not reject on their absence.
-        foreach (Config::guest_field_groups() as $group) {
+        // COLLECTED list: with the Guest 3/4 switch off, groups 3 and 4 are
+        // absent, so nothing demands their fields. (The fee side of the same
+        // switch is enforced by Extra_Guest_Service, which refuses the service
+        // outright -- hiding it in the UI alone would be a cosmetic lie.)
+        foreach (Config::collected_guest_field_groups() as $group) {
             if ($adults < $group['min']) {
                 continue;
             }

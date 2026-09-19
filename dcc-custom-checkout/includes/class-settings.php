@@ -99,6 +99,36 @@ final class Settings
             'sanitize_callback' => [$this, 'sanitize'],
             'default'           => Config::defaults(),
         ]);
+
+        // THE GUEST 3/4 SWITCH IS A STANDALONE OPTION, not a key in the blob
+        // above, because the DCC Cottage Selector reads it too and must keep
+        // working when this plugin is deactivated. It is rendered on this page
+        // because that is where the owner will look for it; it is STORED on its
+        // own. See Config::GUEST34_OPTION for the contract both plugins honour.
+        //
+        // NO 'default' IS REGISTERED HERE ON PURPOSE. Registering one would make
+        // get_option() return it for a site that has never saved the setting,
+        // and "absent" is a meaningful third state that must read as ON.
+        register_setting(self::GROUP, Config::GUEST34_OPTION, [
+            'type'              => 'string',
+            'sanitize_callback' => [$this, 'sanitize_guest34'],
+        ]);
+    }
+
+    /**
+     * Normalize the Guest 3/4 switch to the stored shape: '1' on, '' off.
+     *
+     * Write strictly, read leniently (Config::guest34_enabled() does the
+     * reading). The checkbox is paired with a hidden field of the same name in
+     * the form, so an unchecked box posts '' and actually saves -- without it
+     * the Settings API would simply not see the key and switching OFF would
+     * silently do nothing.
+     *
+     * @param mixed $input
+     */
+    public function sanitize_guest34($input): string
+    {
+        return ((string) $input === '1') ? '1' : '';
     }
 
     /**
@@ -280,6 +310,38 @@ final class Settings
                     $this->field_name_row(__('Dog size — rendered input name', 'dcc-checkout'), 'dog_field_size', (string) $s['dog_field_size'], __('Select: 10–20 / 20–30 / 30–40 lbs. Create it as dog_size.', 'dcc-checkout'));
                     $this->field_name_row(__('Dog hair — rendered input name', 'dcc-checkout'), 'dog_field_hair', (string) $s['dog_field_hair'], __('Select: Short / Medium / Long. Create it as dog_hair.', 'dcc-checkout'));
                     ?>
+                </table>
+
+                <h2><?php echo esc_html__('Guests 3 and 4', 'dcc-checkout'); ?></h2>
+                <p class="description" style="max-width:640px">
+                    <?php echo esc_html__('One switch for the whole offering. Turn it off and nothing asks for a third or fourth guest and no extra-guest fee can be charged — on the checkout or in the Cottage Selector quiz. Guest #2 is unaffected: the cottages sleep two as standard.', 'dcc-checkout'); ?>
+                </p>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php echo esc_html__('Offer guests 3 and 4', 'dcc-checkout'); ?></th>
+                        <td>
+                            <?php
+                            /* The hidden field is load-bearing: an unchecked
+                               checkbox posts nothing, and the Settings API only
+                               saves keys it finds in the POST -- so without it,
+                               switching this OFF would appear to work and change
+                               nothing. */
+                            ?>
+                            <input type="hidden" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="" />
+                            <label>
+                                <input type="checkbox" name="<?php echo esc_attr(Config::GUEST34_OPTION); ?>" value="1" <?php checked(true, Config::guest34_enabled()); ?> />
+                                <?php echo esc_html__('Accept bookings for 3–4 guests and charge the extra-guest fee', 'dcc-checkout'); ?>
+                            </label>
+                            <p class="description" style="max-width:640px">
+                                <?php echo esc_html__('On by default. Switching it off stops COLLECTING guest 3 and 4 details — bookings you have already taken keep theirs, and they still appear here and on the staff page. It does not change capacity in MotoPress, and it does not touch your service configuration.', 'dcc-checkout'); ?>
+                            </p>
+                            <?php if (!Config::guest34_enabled()) : ?>
+                                <p class="description" style="max-width:640px"><strong>
+                                    <?php echo esc_html__('Currently OFF. The extra-guest fee is refused even if a stale or cached page tries to submit it.', 'dcc-checkout'); ?>
+                                </strong></p>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 </table>
 
                 <h2><?php echo esc_html__('Section titles', 'dcc-checkout'); ?></h2>
