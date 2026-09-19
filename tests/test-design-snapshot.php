@@ -290,11 +290,33 @@ namespace {
     ok('an empty stored value => OFF', \DCCS\Config::guest34_enabled() === false);
     ok('and that reaches the config payload', \DCCS\Config::build([], [])['guest34'] === false);
 
-    foreach ([['1', true], ['0', false], [1, true], [0, false], ['yes', true], [true, true], [false, false]] as $case) {
+    // THE CONTRACT (see CLAUDE.md): dcc_guest34_enabled is 1 (enabled) or 0
+    // (disabled), written as an INTEGER by DCC Custom Checkout's settings
+    // sanitiser; absent means ENABLED. get_option hands an integer back as the
+    // string '0' / '1' after a DB round-trip, so both shapes are in contract.
+    // This half of the contract is all this repo can execute — the WRITER is the
+    // other half and lives in Custom Checkout, so a change there that started
+    // storing 'no' would not fail here. Same division as _mphb_adults_confirmed
+    // with the Calendar: each side asserts its own half, the contract is written
+    // down once, and the seam is named so nobody assumes it is covered.
+    foreach ([[0, false], ['0', false], [1, true], ['1', true]] as $case) {
         list($stored, $expect) = $case;
         $GLOBALS['__opts'][$optKey] = $stored;
-        ok('stored ' . var_export($stored, true) . ' => ' . ($expect ? 'ON' : 'OFF'),
+        ok('CONTRACT: stored ' . var_export($stored, true) . ' => ' . ($expect ? 'ON' : 'OFF'),
             \DCCS\Config::guest34_enabled() === $expect);
+    }
+
+    // OUTSIDE the contract. These are not values the writer may store; the
+    // assertions record what the reader does with them so that a future change to
+    // either side is visible rather than silent. Note the hazard they document:
+    // 'no' and 'false' are TRUTHY in PHP and would read as ENABLED — which is why
+    // the contract pins integers instead of leaving "truthy" to interpretation.
+    foreach ([['', false], ['no', true], ['false', true], ['off', true]] as $case) {
+        list($stored, $reads) = $case;
+        $GLOBALS['__opts'][$optKey] = $stored;
+        ok('out of contract: ' . var_export($stored, true) . ' currently reads as '
+            . ($reads ? 'ON' : 'OFF') . ' (contract violation by the writer if it ever appears)',
+            \DCCS\Config::guest34_enabled() === $reads);
     }
 
     // The switch is site-wide and read afresh every render, so it must NOT be

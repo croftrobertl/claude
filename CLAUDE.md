@@ -292,8 +292,26 @@ Deliberate decisions. Don't "fix" them without checking with the user.
 - **The 3-4 guest offer is governed by the site-wide option `dcc_guest34_enabled`,
   read directly.** DCC Custom Checkout renders the checkbox; this plugin only reads
   the option, so it must never depend on that plugin being installed or active.
-  **ABSENT or TRUTHY means ON** — today's behaviour — so a site that has never
-  written it, or has no WP at all (the test harness), is unaffected.
+
+  **THE CONTRACT:** `dcc_guest34_enabled` is **1 (enabled) or 0 (disabled), written
+  as an integer**. **Absent means ENABLED.** Any other value is a contract
+  violation by the writer. (`get_option` returns an integer as the string `'0'` /
+  `'1'` after a DB round-trip, so both shapes are in contract.) Custom Checkout's
+  sanitiser writes it the way it writes its two siblings —
+  `$out['guest_fee_enabled'] = empty($input[...]) ? 0 : 1;` — so an unticked box
+  stores `0`.
+
+  The reader is `(bool)`, which is correct FOR THIS CONTRACT but not for a looser
+  one: `'no'`, `'false'` and `'off'` are truthy in PHP and would read as ENABLED,
+  the worst possible failure for a switch whose job is to withdraw an offer. That
+  the hazard cannot arise today is a property of the writer's style, not of the
+  reader — which is exactly why the shape is pinned here rather than left as
+  "truthy". **We can only execute our half.** A PHP test asserts the reader against
+  the contract values and records what it does with out-of-contract ones; nothing
+  in this repo can catch the day the checkbox handler starts storing `'no'`. That
+  is the writer's half, the same division settled with the Calendar over
+  `_mphb_adults_confirmed`: write the contract down once, assert your own side, and
+  name the seam so nobody assumes it is covered.
   When OFF the party question leaves the wizard ENTIRELY and the "Room for 3-4
   guests" priority leaves Weigh priorities (owner's decision, 0.43.0): a question
   whose only real answers are "2" and "No preference" asks nothing, and a priority
@@ -498,6 +516,25 @@ shape: a green result that could not have been red.
    wrong block and failed four assertions outright. Select the block that contains
    the rule under test, and assert that a decoy exists so the selection is real.
 
+### Assert at the boundary a gate crosses, not at what comes out the far end
+
+**When a gate has more than one exit, assert at the boundary it crosses.** The
+output of a filter cannot tell you whether the filter ran: two different inputs
+can produce the same output, and then a green assertion is measuring a
+coincidence. 0.43.0 is the textbook case. `criteriaFromState()` emits the party
+answer on TWO paths — a hard filter and a ranking weight, three lines apart —
+and the first implementation gated only the filter. The rendered cottage list was
+**byte-identical** with the switch on and off, because the cottages that survived
+happened to coincide, so every assertion on the cards passed while the match
+reason still fired. Intercepting `DCCS.score.run` and asserting on the *criteria
+object* found it immediately.
+
+The general form: identify the boundary the decision crosses — a function call, a
+request, a serialized payload — and assert on what crosses it. Assert on the far
+end only when you have first proved the two cases differ there. The next instance
+will not look like this one; what transfers is "do not test a gate by its
+downstream effects".
+
 ### Never undo a mutation with `git checkout`
 
 Mutation-testing a new assertion means breaking the code on purpose and checking
@@ -537,3 +574,19 @@ token once; the doubling belongs in the CSS selector, not the HTML.
 - Active branch: `claude/dora-canal-cottage-selector-qy12qf`. All Cottage Selector
   history lives here — **not** on `main`, which predates the plugin. Develop and push
   here; don't open a PR unless asked.
+- **Check the checkout is this project before doing anything.** The repo
+  `croftrobertl/claude` holds SEVERAL DCC plugins, one branch each, and a session
+  can come up with a workspace carried over from a different one. On 2026-09-19
+  this session started with the MPHB Availability Calendar's working tree, no
+  `dcc-cottage-selector/` directory, no CLAUDE.md, and a local branch bearing THIS
+  session's name created at the Calendar's HEAD with the remote-tracking ref
+  written to match — so `git log origin/<our branch>` showed the Calendar's
+  commits. **The remote was correct throughout**; `git ls-remote` (a live query,
+  no local cache) is what proved it, and it is the check to run: `git log` and
+  `git log origin/...` both read local refs and will repeat the lie.
+  `ls-remote` disagreeing with `git log origin/...` means the CLONE is wrong.
+- **Never force-push this branch.** A wrong-checkout session that commits and
+  pushes gets a non-fast-forward REJECTION — that rejection is the safety net, not
+  an obstacle. Forcing past it, or "fixing" it with a force-with-lease, is what
+  would actually destroy another session's releases. Re-point the local branch at
+  `origin/<branch>` and re-apply the work instead.
