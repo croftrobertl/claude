@@ -25,6 +25,11 @@ run() {  # run <runner> <label> <path>
 
 for f in *-test.php; do run php "$f" "$f"; done
 
+# tests/js/ runs in plain node — no browser, no dependencies. It was MISSING
+# from this runner, so five suites passed only when run by hand and the
+# aggregate reported green without them.
+for f in js/*-test.js; do run node "$f" "$f"; done
+
 if [ -d browser/node_modules ]; then
     for f in browser/*-test.js; do run node "$(basename "$f")" "$f"; done
 else
@@ -34,5 +39,8 @@ else
 fi
 
 echo
+# A count, so a suite silently dropping out of the runner is visible.
+found=$(ls *-test.php js/*-test.js browser/*-test.js 2>/dev/null | wc -l)
+echo "suites on disk: $found"
 echo "then: php mutate.php   # every assertion must be able to fail"
 exit $rc

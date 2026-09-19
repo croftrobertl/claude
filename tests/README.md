@@ -7,6 +7,12 @@ iterating, `php tests/mutate.php staff` filters by name. A filtered run's
 "0 survived" is not the same claim as a full run's, and the output says which
 it was.)
 
+**A non-zero exit is not the same as "the assertion caught it."** `mutate.php`
+distinguishes three outcomes: `red ok` (the suite ran and failed), `SURVIVED`
+(it ran and passed), and `NO SUITE` / `NO RUN` (it could not run, so the
+mutation proves nothing). Nine mutations once reported red because their suite
+file could not be found.
+
 **Do not commit while a mutation run is in flight.** It rewrites the plugin's
 own files and restores each one immediately, so a `git status` taken mid-run
 shows a mutated file that is about to be put back — and a commit at that
@@ -74,7 +80,10 @@ built from that directory, stays clean.
 
 ## Rebuilt so far
 
-All 22 suites are back, each with at least one mutation that goes red.
+All 22 lost suites are back — **32 suite files**, each with at least one
+mutation that goes red. `tests/run.sh` prints the count of suite files it
+found; if that number and the number of results disagree, a suite has dropped
+out of the runner.
 
 | suite | covers |
 |---|---|

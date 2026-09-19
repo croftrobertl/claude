@@ -1694,6 +1694,42 @@ runner's job is as much to check the mutations as the assertions.
 **The Elementor stub throws on any API it does not model.** It surfaced a
 missing `SELECT2` immediately rather than silently registering nothing.
 
+## The suite and mutation counts, reconciled (2026-09-19)
+
+Both figures were quoted unqualified and neither was established. Measured:
+
+**SUITES: 32 files exist; the runner executed 27.** `tests/run.sh` ran
+`*-test.php` and `browser/*-test.js` and **never ran `tests/js/`** — the five
+pure-JS suites. They passed when run by hand, which is how "32 suites green"
+came to be said; the aggregate that would have demonstrated it excluded them.
+`run.sh` now runs all three directories and prints the count of suite files on
+disk, so a suite dropping out of the runner is visible rather than silent.
+
+**MUTATIONS: 106, not 107.** 104 at the previous full run, plus TWO new
+entries — not three. The docblock work is covered by three mutations, but one
+of them (`the uploads containment check is removed`) already existed. Counting
+"mutations that cover this" as "mutations added" is the arithmetic that went
+wrong.
+
+## A mutation whose suite cannot run reports RED (2026-09-19)
+
+Worse than the count, and found by chasing it. `mutate.php` resolved every
+`.js` suite by gluing `browser/` onto the path, so the five suites under
+`tests/js/` resolved to `tests/browser/js/…` — **files that do not exist**.
+`node` exited non-zero, and a non-zero exit was read as "the assertion caught
+it". **NINE mutations reported `red ok` because their suite could not run.**
+
+The structural fault was that one signal — a non-zero exit — carried two
+meanings: "an assertion failed" and "the suite did not run". A crash, a syntax
+error or a missing dependency all look like success under that reading. Now:
+- the suite is resolved BY LOOKING FOR IT, before the source is touched, and a
+  path that resolves to nothing reports **NO SUITE**;
+- a run that prints no `PASS`/`FAIL` line at all reports **NO RUN**;
+- neither counts as red, and both fail the overall exit code.
+
+Re-run with the fix: all nine are genuinely red. The verdict did not change —
+but it had not been earned, and there was no way to tell from the output.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

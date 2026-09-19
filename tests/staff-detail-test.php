@@ -146,6 +146,13 @@ echo "\n-- exactly ONE caller, because containment lives with the caller --\n";
         && str_contains($data, 'realpath(basedir)'));
     check('...and names the reference implementation',
         str_contains($data, 'class-staff.php:205'));
+    // The count above is repo-local by construction: glob() over this
+    // plugin's includes/. A theme or mu-plugin caller is invisible to it, and
+    // is exactly the caller least likely to have read the docblock. Saying so
+    // in the docblock is what stops a green suite being read as proof that
+    // no external caller exists.
+    check('the docblock states that the one-caller guard is REPO-LOCAL',
+        str_contains($data, 'REPO-LOCAL') && str_contains($data, 'external callers'));
 }
 
 echo "\n-- the client never receives a URL --\n";

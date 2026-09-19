@@ -545,6 +545,22 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
         printf("%-8s %s\n", 'STALE', $name . '  (the code it mutates has moved — fix the mutation)');
         continue;
     }
+    $runner = str_ends_with($suite, '.js') ? 'node' : 'php';
+    // Resolve the suite BY LOOKING FOR IT, and do it BEFORE touching the
+    // source: the previous version glued 'browser/' onto every .js path, so a
+    // suite under tests/js/ resolved to tests/browser/js/… — a file that does
+    // not exist. node exited non-zero and a non-zero exit was read as "the
+    // assertion caught it", so NINE mutations reported red because their
+    // suite could not run.
+    $candidates = [__DIR__ . '/' . $suite, __DIR__ . '/browser/' . $suite];
+    $path_to = null;
+    foreach ($candidates as $c) { if (is_file($c)) { $path_to = $c; break; } }
+    if ($path_to === null) {
+        $broken[] = $name;
+        printf("%-8s %s\n", 'NO SUITE', $name . '  (' . $suite . ' not found — the mutation cannot prove anything)');
+        continue;
+    }
+
     $originals[$path] = $body;
     $touched[$path] = $body;
     // Replace the FIRST occurrence only. Replacing every match can mutate
@@ -555,11 +571,21 @@ foreach ($mutations as [$name, $file, $from, $to, $suite]) {
     file_put_contents($path, substr_replace($body, $to, $pos, strlen($from)));
     $out = [];
     $code = 0;
-    $runner = str_ends_with($suite, '.js') ? 'node' : 'php';
-    $path_to = __DIR__ . '/' . ($runner === 'node' ? 'browser/' : '') . $suite;
     exec($runner . ' ' . escapeshellarg($path_to) . ' 2>&1', $out, $code);
     file_put_contents($path, $body);
     unset($originals[$path]);
+    // RED MUST MEAN "AN ASSERTION CAUGHT IT", not merely "the process exited
+    // non-zero" — a crash, a syntax error or a missing dependency exits
+    // non-zero too, and reading that as success is how a mutation comes to
+    // prove nothing. A suite that really ran prints PASS/FAIL lines; one that
+    // printed none did not get far enough to judge anything.
+    $text = implode("\n", $out);
+    $ran  = preg_match('/^(PASS|FAIL)\s/m', $text) === 1;
+    if (!$ran) {
+        $broken[] = $name;
+        printf("%-8s %s\n", 'NO RUN', $name . '  (the suite produced no PASS/FAIL output — it crashed rather than failed)');
+        continue;
+    }
     $went_red = $code !== 0;
     printf("%-8s %s%s\n", $went_red ? 'red ok' : 'SURVIVED', $name,
         $hits > 1 ? "  (first of $hits occurrences)" : '');

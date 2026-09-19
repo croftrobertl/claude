@@ -1009,6 +1009,13 @@ final class Staff_Data
      * There is exactly ONE caller today, and staff-detail-test.php asserts
      * that — a second one makes this missing containment live, and the
      * containment assertion lives with the consumer, where it belongs.
+     *
+     * THAT COUNT IS REPO-LOCAL. It can only see call sites inside this
+     * plugin. A theme, an mu-plugin or another DCC plugin calling this
+     * function would not register — and that caller is the LEAST likely to
+     * have read this docblock, because it found the function from outside. A
+     * green suite is therefore not evidence that this function has no
+     * external callers; it is evidence that this repository adds none.
      */
     public static function attachment_path_for(int $booking_id, string $field): ?string
     {
