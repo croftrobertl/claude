@@ -574,19 +574,36 @@ token once; the doubling belongs in the CSS selector, not the HTML.
 - Active branch: `claude/dora-canal-cottage-selector-qy12qf`. All Cottage Selector
   history lives here — **not** on `main`, which predates the plugin. Develop and push
   here; don't open a PR unless asked.
-- **Check the checkout is this project before doing anything.** The repo
-  `croftrobertl/claude` holds SEVERAL DCC plugins, one branch each, and a session
-  can come up with a workspace carried over from a different one. On 2026-09-19
-  this session started with the MPHB Availability Calendar's working tree, no
-  `dcc-cottage-selector/` directory, no CLAUDE.md, and a local branch bearing THIS
-  session's name created at the Calendar's HEAD with the remote-tracking ref
-  written to match — so `git log origin/<our branch>` showed the Calendar's
-  commits. **The remote was correct throughout**; `git ls-remote` (a live query,
-  no local cache) is what proved it, and it is the check to run: `git log` and
-  `git log origin/...` both read local refs and will repeat the lie.
-  `ls-remote` disagreeing with `git log origin/...` means the CLONE is wrong.
-- **Never force-push this branch.** A wrong-checkout session that commits and
-  pushes gets a non-fast-forward REJECTION — that rejection is the safety net, not
-  an obstacle. Forcing past it, or "fixing" it with a force-with-lease, is what
-  would actually destroy another session's releases. Re-point the local branch at
-  `origin/<branch>` and re-apply the work instead.
+- **VERIFY THE CHECKOUT AGAINST THE REMOTE BEFORE YOUR FIRST COMMIT.** Standing
+  rule, every session, before any work lands:
+
+  ```bash
+  git ls-remote origin claude/dora-canal-cottage-selector-qy12qf   # live query
+  git merge-base --is-ancestor <that sha> HEAD                     # local descends from it?
+  ```
+
+  A remote-tracking ref (`origin/...`) is a LOCAL CACHE and can be written without
+  ever contacting the remote — one was, on 2026-09-19, and it showed a different
+  plugin's history. `git log` and `git log origin/...` both read local refs and
+  will repeat the lie; `ls-remote` is the only one of the three that asks the
+  server. Confirm your local branch **descends from** what `ls-remote` returns
+  (identical, or the remote sha is an ancestor of HEAD). If it does not, the CLONE
+  is wrong — stop and report before committing.
+
+  Context for why this is worth a standing rule: the repo `croftrobertl/claude`
+  holds SEVERAL DCC plugins, one branch each, and a session can come up with a
+  workspace carried over from a different one. That day this session started with
+  the MPHB Availability Calendar's working tree, no `dcc-cottage-selector/`
+  directory, no CLAUDE.md, and a local branch bearing THIS session's name created
+  at the Calendar's HEAD with the tracking ref written to match. The remote was
+  correct throughout.
+
+- **NEVER FORCE-PUSH THIS BRANCH. If a push is rejected as non-fast-forward, STOP
+  AND REPORT IT — do not "fix" it.** The rejection is the safety net, not an
+  obstacle, and the obvious repairs are worse than the problem:
+  **`--force-with-lease` is NOT a safeguard here.** Its lease is checked against
+  the same bogus local tracking ref that caused the trouble, so the lease MATCHES,
+  the push SUCCEEDS, and the remote's real history — another plugin's releases —
+  is destroyed. `--force` does the same thing without the false reassurance.
+  Re-pointing the branch and re-applying the work is also not yours to decide:
+  report the divergence and let the owner say what happens to it.
