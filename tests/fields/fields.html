@@ -122,6 +122,34 @@
   </div>
   <abbr class="dcc_checkout-req" id="req" title="Required">*</abbr>
 
+  <!-- SWEEP 2026-09-19. MotoPress's OWN required marker. It matters because it
+       is the only element whose colour actually comes through --dcc-required:
+       .dcc_checkout-req above is matched by BOTH the --dcc-required rule and
+       the later, broader --dcc-error rule, and the later one wins. So without
+       this element, changing --dcc-required to a different value moves nothing
+       the suite measures, and "one ink cannot drift" is untested. -->
+  <abbr class="required" id="req-mphb" title="Required">*</abbr>
+
+  <!-- SWEEP 2026-09-19. The wrapper class markFieldRows() actually applies at
+       runtime. Every other wrapper in this fixture carries only MotoPress's
+       p.mphb-text-control, which is the NO-JS FALLBACK -- so the selector the
+       live page relies on was never exercised. This one carries the JS class
+       and NOT the fallback, so the cap has to hold through it alone. -->
+  <div class="dcc_checkout-field-row" id="jsrow">
+    <input type="text" id="jsrow-input" value="x">
+  </div>
+
+  <!-- SWEEP 2026-09-19. The three hide classes. tests/breakdown runs in jsdom,
+       which has no layout, so its visible() helper treats these class names as
+       a proxy for display:none. Nothing checked that the proxy was true. These
+       pin it in a real browser: if a class is renamed on either side, the
+       jsdom suite would go on reporting things hidden that a guest can see. -->
+  <div class="dcc_checkout-section-hidden" id="hide-section">section</div>
+  <div class="dcc_checkout-service-hidden" id="hide-service">service</div>
+  <select id="hide-option-select">
+    <option class="dcc_checkout-option-hidden" id="hide-option">4</option>
+  </select>
+
   <!-- v0.20.0: MotoPress's file-upload hints, exactly as mphb-checkout-fields
        1.2.3 renders them (FileUploadField.php:66-97), misspelt class and all,
        next to the tax footnote they must match. -->

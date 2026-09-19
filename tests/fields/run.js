@@ -211,6 +211,17 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
     });
     check('item 2: the banner is the asterisk red', inks.banner, 'rgb(188, 0, 62)');
     check('item 10: the required marker is the same red', inks.req, inks.banner);
+
+    /* SWEEP 2026-09-19 -- the assertion above passes even when --dcc-required
+       is changed to a different colour, because .dcc_checkout-req is matched
+       by both the --dcc-required rule (0,2,0) and the later, broader
+       --dcc-error rule (0,2,0), and the later one wins on source order. So
+       the token indirection the CLAUDE.md entry describes was not under test.
+       MotoPress's own abbr.required is NOT in that broader rule, so it is the
+       one element --dcc-required really paints. Measured, not assumed. */
+    const reqMphb = await page.$eval('#req-mphb', el => getComputedStyle(el).color);
+    check('ONE ink reaches MotoPress\'s own required marker too',
+          reqMphb, 'rgb(188, 0, 62)');
     const border = await page.$eval('#banner',
         el => getComputedStyle(el).borderTopColor);
     check('item 2: and so is its border', border, 'rgb(188, 0, 62)');
@@ -234,12 +245,48 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
     check('v0.20.0: "Accepted file types" matches the footnote', hint.h2, hint.fn);
     check('v0.20.0: and that includes the inherited 700 weight',
           hint.fn.split(' | ')[3], '700');
+    /* SWEEP 2026-09-19 -- the two assertions above are RELATIVE: they compare
+       the hints to the footnote and would pass on any shared value, including
+       the values all three inherit if the rule were deleted outright. Measured:
+       replacing the whole declaration block with 99px/9/#ff00ff/right left this
+       suite green. The footnote's own computed values are pinned here so the
+       comparison has something to stand on. */
+    const fnParts = hint.fn.split(' | ');
+    check('v0.20.0: the footnote itself is 14px', fnParts[0], '14px');
+    check('v0.20.0: ... with a 1.4 line-height', fnParts[1], '19.6px');
+    check('v0.20.0: ... in the muted grey', fnParts[2], 'rgb(75, 85, 99)');
+    check('v0.20.0: ... left-aligned', fnParts[4], 'left');
     const gap = await page.evaluate(() => {
         const a = document.querySelector('#hint1').getBoundingClientRect();
         const b = document.querySelector('#hint2').getBoundingClientRect();
         return Math.round(b.top - a.bottom);
     });
     atMost('v0.20.0: no blank line between the two hints', gap, 1);
+
+    /* SWEEP 2026-09-19 -- THE JSDOM PROXY, PINNED IN A REAL BROWSER.
+       tests/breakdown has no layout, so its visible() helper reads these three
+       class names as a stand-in for display:none. That stand-in was never
+       checked against the stylesheet: rename a class on either side and the
+       jsdom suite would keep reporting elements hidden that a guest can see. */
+    const hidden = await page.evaluate(() => ({
+        section: getComputedStyle(document.querySelector('#hide-section')).display,
+        service: getComputedStyle(document.querySelector('#hide-service')).display,
+        option:  getComputedStyle(document.querySelector('#hide-option')).display,
+    }));
+    check('the hide class jsdom trusts really is display:none (section)',
+          hidden.section, 'none');
+    check('... and the service one', hidden.service, 'none');
+    check('... and the option one',  hidden.option,  'none');
+
+    /* SWEEP 2026-09-19 -- the wrapper cap through the class the JS APPLIES.
+       Every other wrapper here carries only p.mphb-text-control, MotoPress's
+       class, which the CSS lists as the no-JS fallback. So the selector the
+       live page actually depends on had no test: a rename in markFieldRows()
+       or in the stylesheet would be masked by the fallback until MotoPress
+       changed its own class, and then nothing would hold the cap. */
+    const jsrow = await page.$eval('#jsrow',
+        el => Math.round(el.getBoundingClientRect().width));
+    check('the JS-applied wrapper class is capped on its own', String(jsrow), '360');
 
     /* --- The label must not underline the guest's typed text (v0.12.0),
            re-asserted here because the kit rule is reproduced. ---------- */

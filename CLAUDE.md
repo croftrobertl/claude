@@ -658,6 +658,114 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
     drifted from its source for several releases.
   A fixture copied from the code's own assumptions is the same error one level
   down — hence the v0.9.0 rule that fixtures come from real markup.
+- **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE** (added by the
+  2026-09-19 sweep). `python3 tests/mutate/run.py [suite|id]` applies one
+  textual mutation to a source file, runs the suites that claim to cover it, and
+  reports KILLED / SURVIVED / **STALE**. 50 mutations, all killed, 0 stale.
+  **STALE IS NOT A PASS** and is printed as loudly as SURVIVED: it means the
+  find-string did not match, or matched a different number of times than
+  declared, so the mutation never landed and proves nothing. Half the first
+  run's apparent "gaps" were bad mutations, not gaps — a mutation aimed at a
+  fallback branch the fixture never reaches (`setAttr(el,'type','button')` at
+  checkout.js:2544 rather than the real `btn.type` at 2518), and two defeated by
+  a second guard downstream (the FORM name-check is backed by the
+  contains-breakdown check; `rowLabel()`'s injected-node skip is backed by the
+  asterisk retirement pass). **Check the mutation before believing the verdict.**
+  Two STALE results were themselves findings: "pattern found 2x" is how the
+  four-copies-of-the-bucket-logic discovery below was made.
+- **THE BUCKET LOGIC SHIPS IN FOUR COPIES, TWO LANGUAGES** (found 2026-09-19).
+  `Config::service_id_for_nights()` ↔ `serviceForNights()` for the pet fee, and
+  `Config::guest_service_id_for_nights()` ↔ `guestServiceForNights()` for the
+  $50 extra-guest fee. Each pair carries its own "Mirrors … — keep the two in
+  step" comment and **nothing enforced it.** `tests/pricing/` now does:
+  `mirror.js` EXTRACTS both functions from the shipped `checkout.js` and runs
+  them against a table PHP produced, so a copy is never made (a copy would be a
+  fifth implementation to keep in step). A renamed function FAILS the extraction
+  rather than skipping it — asserted. Thresholds are localized
+  (`class-assets.php:303`), so the JS fallback `{2,7,30}` can only bite if
+  localization fails, and it matches PHP's own fallback; checked, sound.
+- **THE EXTRA-GUEST SERVICE IDS DEFAULT TO 0**, and that made the first draft of
+  `tests/pricing/` eight green tautologies (0 == 0 at every night count) — the
+  exact failure this file's rule names, committed by the sweep that was looking
+  for it, and caught only because the mutation runner killed nothing. The suite
+  now SEEDS distinct ids (901/902/903) so a wrong bucket is visible in the
+  value, and separately asserts the live-shaped config (one service, 18063, on
+  all three buckets) **in which a bucket bug is invisible by construction.**
+  Consequence worth knowing: with the ids at their shipped 0, the fee attaches
+  nothing and `Extra_Guest_Service`'s backstop *fails open*
+  (`$can_expect = $nights > 0 && $expected > 0`), so a 3–4 guest booking is
+  neither charged nor blocked. Not a live defect — the option is saved — but the
+  default is not the "right shipped default" the owner's standing rule asks for.
+- **"NEVER REDIRECT DURING AN AJAX SUBMISSION" IS TESTED NOW, IN ALL FOUR FILES
+  THAT CLAIM IT** (`tests/backstops/`, added 2026-09-19). The sentence appears
+  in `class-pet-service.php:54`, `class-guest-fields.php:35`,
+  `class-extra-guest-service.php:43` and `class-checkout-request.php:307`; a 302
+  mid-AJAX loses the guest's booking with no message, and **nothing tested any
+  of them.** They are separate code paths, not shared, so one test would have
+  left three sentences unbacked. `wp_safe_redirect` is shimmed to throw, which
+  makes the attempt observable and survives `exit`, so the assertions really
+  distinguish "redirected" from "stood down". The REST stand-down
+  (`defer_to_rest()`) had no test at all and now covers all three URL forms —
+  plus the inverse, that an ordinary checkout URL is NOT mistaken for the REST
+  route, because over-matching would silently disable every backstop.
+  **Every stand-down suite needs its guard-on-the-guards**: the assertion that
+  the payload really is a violation. Without it, "no redirect" passes because
+  nothing was ever going to redirect — and `php-violation-detector-dead` in the
+  mutation set is what keeps that honest.
+- **`--dcc-required` IS DEAD FOR `.dcc_checkout-req`** (found 2026-09-19; no
+  behaviour change, so deliberately not "fixed"). Two `!important` rules at the
+  same (0,2,0) specificity both match it — `checkout.css:609` via
+  `var(--dcc-required)` and `:639` via `var(--dcc-error)` — and the later one
+  wins on source order. Measured: setting `--dcc-required` to `#c62828` leaves
+  the marker at `rgb(188,0,62)`. The outcome is right today because both tokens
+  resolve to the same literal, but **the token indirection does nothing for
+  this element**, and a future editor changing `:609` would move MotoPress's own
+  `.required` markers and not the plugin's. `tests/fields/` now measures an
+  `abbr.required` too, which is the only element `--dcc-required` really paints,
+  so the "one ink cannot drift" claim is under test at last.
+- **A FIXTURE THAT CARRIES ONLY THE FALLBACK SELECTOR TESTS THE FALLBACK.**
+  Every field wrapper in `tests/fields/fields.html` carried MotoPress's
+  `p.mphb-text-control` — the no-JS fallback — and none carried
+  `.dcc_checkout-field-row`, the class `markFieldRows()` actually applies on the
+  live page. So the selector the live site depends on had no test, and a rename
+  on either side would be masked by the fallback until MotoPress changed its own
+  class, at which point nothing would hold the cap. The fixture now carries a
+  wrapper with the JS class and NOT the fallback.
+- **THE JSDOM `visible()` PROXY IS NOW PINNED IN A REAL BROWSER.**
+  `tests/breakdown/` has no layout, so it reads hide-class NAMES as a stand-in
+  for `display:none`. Nothing checked the stand-in was true: rename a class on
+  either side and the jsdom suite would go on reporting things hidden that a
+  guest can see. `tests/fields/` now asserts all three compute to `display:none`.
+  The helper was also missing `dcc_checkout-option-hidden` — the third class the
+  code emits — so a hidden `<option>` would have been reported VISIBLE.
+- **`setDisabled()`'s money guard is tested directly now**, because the outcome
+  assertion could not fail: `setDisabled()` has exactly ONE caller
+  (`checkout.js:1489`, the dog fields) and it never passes a service control, so
+  "the SERVICE checkbox is never disabled" held with the guard deleted. Measured:
+  `return false` in `isMoneyControl()` left the suite green. Both functions are
+  extracted from the shipped file and driven directly — including that a money
+  control can still be RE-ENABLED, since a guard that trapped one in `disabled`
+  would stop the fee submitting, which is the thing it exists to prevent.
+- **Known gaps, named rather than papered over** (2026-09-19). Each is a
+  behavioural guarantee in a comment with no test that constructs its condition:
+  `checkout.js` — "at most ONE bucket checked per room" (:1510, money; latent
+  while the live config points all three buckets at service 18063, so a
+  double-charge cannot currently arise); "we only DISABLE existing options —
+  never inject any" (:1518, :2002); "a re-render can never stack suffixes"
+  (:1637); "idempotent per (select, kind) so re-asserts never stack duplicates"
+  (:2042); "a height-only resize can never change the answer" (:1867, and that
+  one is mobile-behaviour-adjacent, so it matters more than it looks).
+  Whole files with no suite at all: `admin-booking.js` (484 lines),
+  `class-settings.php` (698), `class-assets.php` (418), `class-admin-fields.php`
+  (302), `tap-debug.js` (450). The fail-open family — `class-config.php:493-495`
+  ("callers MUST treat null as unknown and fail open"),
+  `class-admin-fields.php:30-31`, `admin-booking.js:302/357` — is untested
+  everywhere it is claimed.
+- Pet-fee and extra-guest bucket selection, in PHP and in the JS mirror, are at
+  `tests/pricing/` (`php tests/pricing/run.php`; it shells to node for the
+  mirror and FAILS rather than skipping if node is absent).
+- The server-side backstops' stand-down rules are at `tests/backstops/`
+  (`php tests/backstops/run.php`).
 - Field geometry (tap targets) is asserted in real Chromium at 390x844 with
   touch emulation, and the width cap at 1280, at `tests/fields/`
   (`npm install && npm test`). Run it after touching any field rule.

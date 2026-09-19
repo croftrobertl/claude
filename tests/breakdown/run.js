@@ -65,7 +65,11 @@ function visible(el) {
     if (!el) { return false; }
     for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
         if (n.classList.contains('dcc_checkout-service-hidden') ||
-            n.classList.contains('dcc_checkout-section-hidden')) {
+            n.classList.contains('dcc_checkout-section-hidden') ||
+            // SWEEP 2026-09-19: the third hide class the code emits. It was
+            // missing here, so a hidden <option> would have been reported
+            // VISIBLE. All three are pinned to display:none in tests/fields.
+            n.classList.contains('dcc_checkout-option-hidden')) {
             return false;
         }
     }
@@ -733,6 +737,71 @@ function summary(doc) {
     await new Promise(r => setTimeout(r, 900));
     check('an unrelated later touch-up recovers the stranded work',
         expander().classList.contains('dcc_checkout-bare-button'), true);
+}
+
+/* ===================================================================== *
+ * SWEEP 2026-09-19 — setDisabled()'s MONEY GUARD, TESTED DIRECTLY.
+ *
+ * "item 2: the SERVICE checkbox is never disabled" above asserts an outcome,
+ * and it cannot fail: setDisabled() has exactly ONE caller (the dog fields at
+ * checkout.js:1489) and it never passes a service control, so the checkbox
+ * would stay enabled even if the guard were deleted. Measured: replacing
+ * isMoneyControl()'s body with `return false` left this suite green.
+ *
+ * The outcome assertion is still worth keeping as a regression net on the
+ * caller. But the guard is what CLAUDE.md promises, and a promise about a
+ * future caller needs a test that plays that caller. So both functions are
+ * extracted from the shipped file — never copied, a copy would be a second
+ * implementation to keep in step — and driven directly.
+ * ===================================================================== */
+{
+    const grab = (name) => {
+        const re = new RegExp('function ' + name + '\\([\\s\\S]*?\\n    \\}');
+        const hit = SCRIPT.match(re);
+        if (!hit) {
+            check(`guard: ${name}() is still in checkout.js — a rename must fail, not skip`,
+                  false, true);
+            return null;
+        }
+        return hit[0];
+    };
+    const setDisabledSrc   = grab('setDisabled');
+    const isMoneySrc       = grab('isMoneyControl');
+    if (setDisabledSrc && isMoneySrc) {
+        const setDisabled = new Function(
+            setDisabledSrc + '\n' + isMoneySrc + '\n; return setDisabled;')();
+
+        const fake = (name, cls) => ({
+            name: name,
+            disabled: false,
+            classList: { contains: (c) => (cls || '').split(' ').indexOf(c) !== -1 },
+        });
+
+        const byName = fake('mphb_room_details[0][services][18063][id]', '');
+        setDisabled(byName, true);
+        check('guard: a control named [services] REFUSES to be disabled',
+              byName.disabled, false);
+
+        const byClass = fake('anything', 'mphb_sc_checkout-service');
+        setDisabled(byClass, true);
+        check('guard: a control classed mphb_sc_checkout-service refuses too',
+              byClass.disabled, false);
+
+        const dog = fake('mphb_dog_size', '');
+        setDisabled(dog, true);
+        check('guard: an ordinary control still disables', dog.disabled, true);
+
+        /* Re-enabling must ALWAYS be allowed, including for money controls:
+           the guard exists to stop a fee being switched off, not to trap a
+           control in a disabled state where it would stop submitting. */
+        const stuck = fake('mphb_room_details[0][services][18063][id]', '');
+        stuck.disabled = true;
+        setDisabled(stuck, false);
+        check('guard: a money control can still be RE-ENABLED', stuck.disabled, false);
+
+        setDisabled(null, true); // must not throw
+        check('guard: a missing element is a no-op, not a crash', true, true);
+    }
 }
 
 console.log(failures ? `\n${failures} failing` : '\nall passing');
