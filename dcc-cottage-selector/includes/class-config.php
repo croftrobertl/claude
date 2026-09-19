@@ -201,6 +201,28 @@ final class Config
      * @param array<string,mixed>  $extra            Additional top-level config (startMode, enabledModes, highlight, selectorUrl, modal).
      * @return array<string,mixed>
      */
+    /**
+     * The site-wide 3-4 guest switch. The DCC Custom Checkout plugin renders the
+     * checkbox; this plugin only READS the option, directly, so it does not depend
+     * on that plugin being installed or active.
+     *
+     * ABSENT or TRUTHY means ON — today's behaviour. Only a stored falsy value
+     * turns it off, so a site that has never written the option, or has no WP at
+     * all (the test harness, WP-CLI before load), is unaffected.
+     *
+     * Deliberately NOT part of the design snapshot: it is a site-wide setting read
+     * afresh on every render, not a per-widget one that could be frozen into a
+     * published design.
+     */
+    public static function guest34_enabled(): bool
+    {
+        if (!function_exists('get_option')) {
+            return true;
+        }
+        $v = get_option('dcc_guest34_enabled', null);
+        return $v === null ? true : (bool) $v;
+    }
+
     public static function build(array $string_overrides = [], array $extra = []): array
     {
         $strings = self::strings();
@@ -220,6 +242,8 @@ final class Config
             'cottages'     => Data::all(),
             'diffFields'   => Data::DIFF_FIELDS,
             'strings'      => $strings,
+            // Site-wide 3-4 guest switch; false drops the party question entirely.
+            'guest34'      => self::guest34_enabled(),
             'startMode'    => 'quick',
             'enabledModes' => ['quick', 'weights', 'compare'],
             'highlight'    => '',

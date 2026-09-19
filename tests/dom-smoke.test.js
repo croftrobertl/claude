@@ -2739,6 +2739,199 @@ defer(async function () {
   ok('and it is block-level, so each sentence starts a line', /display:\s*block/.test(body));
 })();
 
+// ---- 86. 0.43.0: the site-wide 3-4 guest switch (option dcc_guest34_enabled) ----
+// ABSENT or truthy = ON = unchanged. OFF drops the party question ENTIRELY, and the
+// priority row with it: a question whose only real answers are "2" and "No
+// preference" asks nothing, and a priority that separates no two cottages is not a
+// priority. Both directions are asserted — "off does nothing" and "on does nothing"
+// are different bugs and the question count alone catches neither.
+(function () {
+  // The review screen is off by default, so these configs turn it on: it is the
+  // cleanest readout of what the wizard thinks its question list IS.
+  const withReview = (mutate) => {
+    const c = JSON.parse(CONFIG);
+    c.showReview = true;
+    mutate(c);
+    return JSON.stringify(c);
+  };
+  const ON_ABSENT = withReview(c => { delete c.guest34; });   // key not present at all
+  const ON_TRUE = withReview(c => { c.guest34 = true; });
+  const OFF = withReview(c => { c.guest34 = false; });
+
+  ok('the ON-by-absence config really omits the key, so that path is exercised',
+    !('guest34' in JSON.parse(ON_ABSENT)));
+  ok('and Config::build normally DOES emit it, so absence is a real fallback',
+    'guest34' in JSON.parse(CONFIG));
+
+  // -- the wizard's own idea of its question list, read off the review screen --
+  const groupsFor = (cfgStr, mode) => {
+    const w = freshDom();
+    const root = mountSelector(w, cfgStr);
+    enter(root, mode);
+    stepThrough(root, mode === 'weights' ? '2' : 'either');
+    return Array.prototype.slice.call(root.querySelectorAll('.dccs-review-list li'))
+      .map(li => li.querySelector('.dccs-review-q').textContent.trim());
+  };
+
+  const quickOnA = groupsFor(ON_ABSENT, 'quick');
+  const quickOnT = groupsFor(ON_TRUE, 'quick');
+  const quickOff = groupsFor(OFF, 'quick');
+  const wOnA = groupsFor(ON_ABSENT, 'weights');
+  const wOff = groupsFor(OFF, 'weights');
+  const S = JSON.parse(CONFIG).strings;
+
+  // POSITIVE FIRST: the review really lists questions, or every count below is noise.
+  ok('the review lists the quick questions at all', quickOnA.length > 0);
+  ok('and the priorities too', wOnA.length > 0);
+
+  ok('ON by absence: 8 quick questions', quickOnA.length === 8);
+  ok('ON explicitly: the same 8', quickOnT.length === 8 && String(quickOnT) === String(quickOnA));
+  ok('OFF: seven', quickOff.length === 7);
+  ok('ON: 10 priorities', wOnA.length === 10);
+  ok('OFF: nine', wOff.length === 9);
+
+  // Identity, not just arithmetic — a count passes if the WRONG question is dropped.
+  ok('ON: the party question is the one present', quickOnA.indexOf(S.party_short) !== -1);
+  ok('OFF: the party question is the one that left', quickOff.indexOf(S.party_short) === -1);
+  ok('OFF: and nothing else left with it',
+    String(quickOff) === String(quickOnA.filter(x => x !== S.party_short)));
+  ok('ON: the party priority is present', wOnA.indexOf(S.w_party) !== -1);
+  ok('OFF: the party priority left, and only it',
+    wOff.indexOf(S.w_party) === -1 && String(wOff) === String(wOnA.filter(x => x !== S.w_party)));
+  ok('OFF: the pull-out question stays — it is a real difference between cottages',
+    quickOff.indexOf(S.diff_pulloutCouch) !== -1);
+  ok('OFF: the pull-out priority stays too', wOff.indexOf(S.w_pullout) !== -1);
+
+  // -- the capacity note goes with the question it explains --
+  const firstNote = (cfgStr) => {
+    const w = freshDom(); const r = mountSelector(w, cfgStr); enter(r, 'quick');
+    return r.querySelector('.dccs-q-note');
+  };
+  const noteOn = firstNote(ON_ABSENT), noteOff = firstNote(OFF);
+  ok('ON: the first step carries the capacity note',
+    !!noteOn && noteOn.textContent.indexOf(S.capacity_note) !== -1);
+  ok('OFF: the first step carries no note at all', !noteOff);
+})();
+
+// ---- 87. 0.43.0: with the switch off, party cannot reach the engine by ANY route ----
+// A shared ?party=34 / ?w_party=3 link, or state left from before the flip, must not
+// re-introduce the filter. Asserting on the CRITERIA rather than the result list:
+// the cottages shown can coincide between the two states and hide the difference.
+(function () {
+  const critsFor = (cfgStr, url) => {
+    const w = freshDom(url);
+    const seen = [];
+    const real = w.DCCS.score.run;
+    w.DCCS.score.run = function (cots, crit) {
+      seen.push({ hard: (crit && crit.hard) || [], wParty: Number(crit && crit.wParty) || 0 });
+      return real.apply(this, arguments);
+    };
+    mountSelector(w, cfgStr);
+    return seen;
+  };
+  const LINK = 'https://example.com/?party=34&mode=quick';
+  const on = critsFor(configWith({ guest34: true }), LINK);
+  const off = critsFor(configWith({ guest34: false }), LINK);
+
+  // POSITIVE FIRST: the interceptor sees the engine run, and sees party when it is on.
+  ok('the criteria interceptor observed the engine running', on.length > 0 && off.length > 0);
+  ok('ON: the stale link still filters to 3-4 guests',
+    on.some(c => c.hard.indexOf('party34') !== -1));
+  ok('ON: and still ranks on it', on.some(c => c.wParty > 0));
+
+  ok('OFF: no run carries the party hard filter',
+    off.every(c => c.hard.indexOf('party34') === -1));
+  // The weight is a SEPARATE path from the filter and was missed at first: gating
+  // only the hard push left the party match reason firing with the switch off.
+  ok('OFF: no run carries a party ranking weight', off.every(c => c.wParty === 0));
+  ok('OFF: the other hard filters are untouched by the gate',
+    critsFor(configWith({ guest34: false }), 'https://example.com/?pet=true&mode=quick')
+      .some(c => c.hard.indexOf('pet') !== -1));
+})();
+
+// ---- 88. 0.43.0: the match reasons follow, with no switch of their own in labels ----
+// labels.js derives partyOn from crit.wParty and crit.hard. With neither able to
+// carry party, the party reason cannot fire AND the pull-out reason stops being
+// suppressed by it — the 0.23.0 "read the couch once, not twice" rule has nothing
+// left to suppress. This asserts the consequence rather than the implementation.
+(function () {
+  const whys = (cfgStr, url) => {
+    const w = freshDom(url);
+    const root = mountSelector(w, cfgStr);
+    return Array.prototype.slice.call(root.querySelectorAll('.dccs-why')).map(e => e.textContent);
+  };
+  const S = JSON.parse(CONFIG).strings;
+  const LINK = 'https://example.com/?party=34&pullout=yes&mode=quick';
+  const on = whys(configWith({ guest34: true }), LINK);
+  const off = whys(configWith({ guest34: false }), LINK);
+
+  ok('reasons render in both states, so the comparisons below mean something',
+    on.length > 0 && off.length > 0);
+  ok('ON: the capacity reason shows', on.some(t => t.indexOf(S.why_party) !== -1));
+  ok('ON: and the pull-out reason is suppressed, as 0.23.0 decided',
+    !on.some(t => t.indexOf(S.why_pullout) !== -1));
+  ok('OFF: the capacity reason cannot fire', !off.some(t => t.indexOf(S.why_party) !== -1));
+  ok('OFF: and the pull-out reason is no longer suppressed',
+    off.some(t => t.indexOf(S.why_pullout) !== -1));
+
+  // The 0.23.0 rule itself is unchanged in labels.js — still true when asked directly.
+  const w = freshDom();
+  mountSelector(w, CONFIG);
+  const c = JSON.parse(CONFIG).cottages.find(x => Number(x.guests) >= 3 && x.pulloutCouch);
+  ok('a 3-4 guest cottage with a pull-out exists to test with', !!c);
+  ok('asked for both, labels still reads the couch once',
+    String(w.DCCS.labels.whyFits(c, { hard: ['party34'], wPullout: 3 })).indexOf('pullout') === -1);
+  ok('asked for the couch alone, the couch reason returns',
+    String(w.DCCS.labels.whyFits(c, { hard: [], wPullout: 3 })).indexOf('pullout') !== -1);
+})();
+
+// ---- 89. 0.43.0: a party answer carried in from before the flip breaks nothing ----
+// Quiz answers are never persisted, so the only thing that can carry a party answer
+// across the flip is a shared link. Such a link lands on results; "Edit answers"
+// then opens the review of a quiz that is already in progress — the exact case
+// where a stored answer no longer has a question to belong to.
+(function () {
+  const OFF = (() => { const c = JSON.parse(CONFIG); c.guest34 = false; return JSON.stringify(c); })();
+  const ON = (() => { const c = JSON.parse(CONFIG); c.guest34 = true; return JSON.stringify(c); })();
+  const S = JSON.parse(CONFIG).strings;
+  const LINK = 'https://example.com/?party=34&mode=quick';
+
+  const reviewRows = (cfgStr) => {
+    const w = freshDom(LINK);
+    const root = mountSelector(w, cfgStr);
+    const back = root.querySelector('.dccs-edit-answers');
+    if (!back) { return { rows: null, root: root }; }
+    back.click();
+    return {
+      rows: Array.prototype.slice.call(root.querySelectorAll('.dccs-review-list li'))
+        .map(li => li.querySelector('.dccs-review-q').textContent.trim()),
+      root: root
+    };
+  };
+
+  // POSITIVE FIRST: the route exists and the detector can see review rows.
+  const on = reviewRows(ON);
+  ok('the shared link lands on results with a way back into the quiz', on.rows !== null);
+  ok('ON: the review of the in-progress quiz lists its questions', !!on.rows && on.rows.length === 8);
+  ok('ON: including the party row the link answered', !!on.rows && on.rows.indexOf(S.party_short) !== -1);
+
+  let threw = null, off = null;
+  try { off = reviewRows(OFF); } catch (e) { threw = e && e.message; }
+  ok('OFF: re-opening a quiz carrying a stale party answer does not throw', threw === null);
+  ok('OFF: the review still renders', !!off && off.rows !== null);
+  ok('OFF: with seven rows', !!off && off.rows.length === 7);
+  ok('OFF: and no party row among them', !!off && off.rows.indexOf(S.party_short) === -1);
+
+  // ...and the quiz still completes from there, scoring without the dropped answer.
+  let threw2 = null;
+  try {
+    stepThrough(off.root, 'either');
+    seeMatches(off.root);
+  } catch (e) { threw2 = e && e.message; }
+  ok('OFF: finishing that quiz does not throw either', threw2 === null);
+  ok('OFF: and it still produces results', off.root.querySelectorAll('.dccs-card').length > 0);
+})();
+
 (async function runDeferred() {
   for (const fn of deferred) {
     try { await fn(); }

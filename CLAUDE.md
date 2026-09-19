@@ -289,6 +289,36 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `stroke-dashoffset`, or declares a keyframe any more (checked, not assumed). The
   narrow rule is the one in force — a future animation does not inherit permission
   the cast earned. Never animate a layout property.
+- **The 3-4 guest offer is governed by the site-wide option `dcc_guest34_enabled`,
+  read directly.** DCC Custom Checkout renders the checkbox; this plugin only reads
+  the option, so it must never depend on that plugin being installed or active.
+  **ABSENT or TRUTHY means ON** — today's behaviour — so a site that has never
+  written it, or has no WP at all (the test harness), is unaffected.
+  When OFF the party question leaves the wizard ENTIRELY and the "Room for 3-4
+  guests" priority leaves Weigh priorities (owner's decision, 0.43.0): a question
+  whose only real answers are "2" and "No preference" asks nothing, and a priority
+  that separates no two cottages is not a priority. The capacity note goes with the
+  question it explains.
+  **The gate lives in exactly two places** — `wizardTrack()` for what is asked, and
+  `criteriaFromState()` for what reaches the engine — and the second is what makes
+  the rest fall out: `labels.js` derives `partyOn` from `crit.wParty` and
+  `crit.hard`, so with neither able to carry party the party reason cannot fire AND
+  the pull-out reason stops being suppressed by it. **labels.js has no switch of
+  its own and must not grow one.** Cottage capacity DATA is untouched: a cottage
+  that sleeps four still sleeps four and the compare table still says so. The
+  toggle withdraws an offer, it does not restate the cottages.
+  Two traps, both met in 0.43.0: (1) `criteriaFromState()` emits party on TWO
+  paths, a hard filter and a ranking weight three lines apart — gating only the
+  filter left the match reason firing, and the result list looked identical either
+  way because the surviving cottages coincided. Assert on the CRITERIA reaching
+  `score.run`, not on the cards. (2) A shared `?party=34` / `?w_party=3` link still
+  sets the answer, so the gate has to neutralise stored state, not just hide the
+  question.
+- **The wizard's question count is not fixed — never reason from the length of
+  `WIZARD_QUESTIONS`.** Nine entries live in the array; the dates step renders only
+  when a widget enables availability, and the party step only while the 3-4 guest
+  switch is on. Eight render by default, seven with the switch off.
+  `wizardTrack()` is the single place that knows.
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.42.0
+Stable tag: 0.43.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,30 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.43.0 =
+* NEW: the matching quiz honours the site-wide 3-4 guest switch, the WP option
+  dcc_guest34_enabled. ABSENT OR TRUTHY MEANS ON, so nothing changes until the
+  owner turns it off. The option is read directly — this plugin does not require
+  DCC Custom Checkout, which renders the checkbox, to be installed or active.
+* When the switch is off the party-size question leaves the wizard entirely
+  (eight questions become seven) and the "Room for 3-4 guests" priority leaves
+  Weigh priorities (ten become nine). A question whose only real answers are "2"
+  and "No preference" asks nothing, and a priority that cannot separate any two
+  cottages is not a priority. The capacity note goes with the question it
+  explains, since it describes a fee that no longer applies.
+* The match reasons follow without a switch of their own: the party reason stops
+  firing, and the pull-out reason stops being suppressed by it — the 0.23.0 rule
+  that a guest asking for 3-4 guests AND a pull-out reads the couch once has
+  nothing left to suppress when nobody can ask for 3-4.
+* A party answer carried in from before the flip — the only route is a shared
+  ?party=34 or ?w_party=3 link, since quiz answers are never persisted — is
+  ignored rather than breaking anything. Re-opening such a quiz shows the review
+  with seven rows and no party row, and it still completes and still scores.
+* UNCHANGED: cottage capacity data. A cottage that sleeps four still sleeps four
+  and the compare table still says so. The switch withdraws an OPTION the owner
+  offers; it does not restate the cottages. The pull-out couch question stays —
+  it is a real difference between cottages and stands on its own.
 
 = 0.42.0 =
 * COPY: the capacity note now reads "Guests 1-2 are included in the nightly rate

@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.42.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.43.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -703,25 +703,48 @@
   /* ---------- criteria translation ---------- */
 
   // Weigh-priorities: a "High" (3) answer maps its priority to a hard-required feature.
+  /** The site-wide 3-4 guest switch (WP option dcc_guest34_enabled, surfaced by
+      Config::build). ABSENT or truthy means ON, so a config that predates the
+      switch — or one built without WP — behaves exactly as it did before; only an
+      explicit false turns it off. When OFF the party-size question leaves the
+      wizard entirely and the "Room for 3-4 guests" priority leaves Weigh
+      priorities, because a question whose only real answers are "2" and "No
+      preference" asks nothing, and a priority that cannot separate any two
+      cottages is not a priority. */
+  function guest34On(config) {
+    return !config || config.guest34 !== false;
+  }
+
   var WEIGHT_HARD = {
     party: 'party34', workspace: 'desk', moreroom: 'moreroom', fewerstairs: 'ground', pet: 'pet',
     studio: 'studio', onebed: 'onebed', dining: 'dining4', pullout: 'pullout', screenedporch: 'porch'
   };
 
   function criteriaFromState(state) {
+    // With the switch off, party must not reach the engine by ANY route — not a
+    // stale answer, not a shared ?party=34 / ?w_party=3 link, not state left over
+    // from before the flip. Neutralising it here, where both wizards turn into
+    // criteria, is what makes that true once rather than in each caller. It is
+    // also what stops the match reasons firing: labels.js derives partyOn from
+    // crit.wParty and crit.hard, so with neither able to carry party the party
+    // reason cannot show AND the pull-out reason stops being suppressed by it
+    // (the 0.23.0 "read the couch once, not twice" rule has nothing to suppress
+    // when nobody can ask for 3-4). labels.js needs no switch of its own.
+    var on34 = guest34On(state.config);
     if (state.mode === 'weights') {
       var w = state.weights;
       // High priorities become must-haves (they narrow the count + results);
       // Medium/Low stay soft ranking weights.
       var whard = [];
       Object.keys(WEIGHT_HARD).forEach(function (g) {
+        if (g === 'party' && !on34) { return; }
         if (Number(w[g]) === 3) { whard.push(WEIGHT_HARD[g]); }
       });
       return {
         hard: whard, rotation: state.rotation,
         wDesk: w.workspace, wSpace: w.moreroom, wFewerStairs: w.fewerstairs, wPet: w.pet,
         wStudio: w.studio, wOneBed: w.onebed, wDining: w.dining, wPullout: w.pullout,
-        wScreenedPorch: w.screenedporch, wParty: w.party
+        wScreenedPorch: w.screenedporch, wParty: on34 ? w.party : 0
       };
     }
     // Quick finder: every SPECIFIC want narrows the count + results. Each positive /
@@ -729,7 +752,7 @@
     // ('') impose no constraint. The wX weights still rank the survivors.
     var q = state.quick;
     var hard = [];
-    if (String(q.party) === '34') { hard.push('party34'); }
+    if (on34 && String(q.party) === '34') { hard.push('party34'); }
     if (q.desk === 'yes') { hard.push('desk'); }
     if (q.pullout === 'yes') { hard.push('pullout'); }
     if (q.layout === 'studio') { hard.push('studio'); }
@@ -748,7 +771,11 @@
       wStudio: q.layout === 'studio' ? 2 : 0,
       wOneBed: q.layout === 'onebed' ? 2 : 0,
       wSpace: 0, wDining: 0, wPet: 0, wFewerStairs: 0, wScreenedPorch: 0,
-      wParty: String(q.party) === '34' ? 2 : 0
+      // on34 gates the RANKING weight as well as the hard filter above: a stale
+      // ?party=34 link sets both, and leaving this one live kept the party match
+      // reason firing with the switch off (caught by intercepting the criteria
+      // reaching the engine — the result list alone looked unchanged).
+      wParty: (on34 && String(q.party) === '34') ? 2 : 0
     };
   }
 
@@ -766,9 +793,13 @@
       '" data-group="' + esc(group) + '" data-value="' + esc(value) + '">' + inner + '</button>';
   }
 
-  // The wizard's 8 questions (party size + the meaningful differences), in
-  // natural order. Each option is [stringKey, value]; the last is always
-  // "No preference".
+  // The wizard's questions (party size + the meaningful differences), in natural
+  // order. Each option is [stringKey, value]; the last is always "No preference".
+  // THE RENDERED COUNT IS NOT FIXED — two entries are conditional, so don't
+  // reason from the length of this array. Nine entries live here: the dates step
+  // renders only when a widget enables availability, and the party step only
+  // while the site-wide 3-4 guest switch is on. Eight render by default; seven
+  // with that switch off. wizardTrack() is the only thing that knows.
   var YND = [['opt_yes', 'yes'], ['opt_no', 'no'], ['opt_either', 'either']];
   var WIZARD_QUESTIONS = [
     // kind:'dates' renders two date inputs instead of chips (see renderDatesStep).
@@ -811,7 +842,9 @@
   function wizardTrack(state, S) {
     if (state.mode === 'weights') {
       return {
-        questions: WEIGHT_QUESTIONS,
+        questions: WEIGHT_QUESTIONS.filter(function (q) {
+          return q.group !== 'party' || guest34On(state.config);
+        }),
         get: function (q) { return state.weights[q.group]; },
         set: function (q, v) { state.weights[q.group] = Number(v); },
         isAnswered: function (q) { return Number(state.weights[q.group]) > 0; },
@@ -821,9 +854,15 @@
       };
     }
     return {
-      // The dates step only exists when the widget turns availability on.
+      // Two steps are conditional. The dates step only exists when the widget
+      // turns availability on; the party step only while the site-wide 3-4 guest
+      // switch is on. Dropping the party step here takes its capacity note and
+      // its review row with it, and a party answer stored before the switch
+      // flipped simply stops being rendered rather than breaking anything.
       questions: WIZARD_QUESTIONS.filter(function (q) {
-        return q.kind !== 'dates' || availOn(state.config);
+        if (q.kind === 'dates') { return availOn(state.config); }
+        if (q.group === 'party') { return guest34On(state.config); }
+        return true;
       }),
       get: function (q) { return q.kind === 'dates' ? state.dates : state.quick[q.group]; },
       set: function (q, v) { state.quick[q.group] = coerce(v); },

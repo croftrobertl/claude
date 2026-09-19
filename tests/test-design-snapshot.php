@@ -272,6 +272,45 @@ namespace {
     ok('no packaged string still carries the superseded pet wording',
         strpos($allStrings, 'only, by pre-approval') === false);
 
+    // ---- The site-wide 3-4 guest switch (option dcc_guest34_enabled) -----------
+    // This plugin only READS the option; DCC Custom Checkout renders the checkbox.
+    // ABSENT or TRUTHY means ON, so a site without that plugin — or before the
+    // option is ever written — is unaffected.
+    $optKey = 'dcc_guest34_enabled';
+    $saved = $GLOBALS['__opts'][$optKey] ?? null;
+    unset($GLOBALS['__opts'][$optKey]);
+
+    ok('absent option => ON (the site is unchanged until the owner flips it)',
+        \DCCS\Config::guest34_enabled() === true);
+    ok('and the config payload says so', \DCCS\Config::build([], [])['guest34'] === true);
+
+    // POSITIVE CONTROL: the reader can return false at all, so the trues above are
+    // not passing because the method is hard-wired.
+    $GLOBALS['__opts'][$optKey] = '';
+    ok('an empty stored value => OFF', \DCCS\Config::guest34_enabled() === false);
+    ok('and that reaches the config payload', \DCCS\Config::build([], [])['guest34'] === false);
+
+    foreach ([['1', true], ['0', false], [1, true], [0, false], ['yes', true], [true, true], [false, false]] as $case) {
+        list($stored, $expect) = $case;
+        $GLOBALS['__opts'][$optKey] = $stored;
+        ok('stored ' . var_export($stored, true) . ' => ' . ($expect ? 'ON' : 'OFF'),
+            \DCCS\Config::guest34_enabled() === $expect);
+    }
+
+    // The switch is site-wide and read afresh every render, so it must NOT be
+    // frozen into a published design snapshot the way per-widget settings are.
+    $GLOBALS['__opts'][$optKey] = '';
+    $snap = Selector_Widget::design_snapshot(['str_heading' => 'x']);
+    ok('the switch is not part of the design snapshot',
+        !array_key_exists('guest34', $snap) && !array_key_exists('guest34', $snap['string_overrides'] ?? []));
+    ok('a config rebuilt from a snapshot still reads the LIVE option',
+        Selector_Widget::config_from_snapshot($snap)['guest34'] === false);
+    $GLOBALS['__opts'][$optKey] = '1';
+    ok('and follows it back on again',
+        Selector_Widget::config_from_snapshot($snap)['guest34'] === true);
+
+    if ($saved === null) { unset($GLOBALS['__opts'][$optKey]); } else { $GLOBALS['__opts'][$optKey] = $saved; }
+
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
     // final; declaring them in a subclass is a fatal error at class-declaration time,
