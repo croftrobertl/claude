@@ -8,18 +8,68 @@ Added by the 2026-09-19 audit sweep. It exists to answer one question the suites
 cannot answer about themselves: **if this claim stopped being true, would
 anything go red?**
 
+## AN EXIT CODE IS NOT A TEST RESULT
+
+This is the rule the rest of the file serves, and it generalises past mutation
+testing: **any runner that infers "the assertion failed" from "the process
+failed" reports a broken harness as proof that it works.** A crash, a syntax
+error, a missing dependency and a real assertion failure all exit non-zero. Read
+what the suite *printed*, not how it *exited*.
+
+The first version of this runner decided a suite had noticed a mutation with
+`p.returncode == 0`. Three separate measurements of the damage:
+
+1. With `tests/footnote/node_modules` moved aside, `css-footnote-width-pair` was
+   reported **KILLED** by a suite that executed zero assertions.
+2. `js-form-ceiling-ALL` left `checkout.js` with unbalanced braces. Every suite
+   crashed on parse, and it was reported **KILLED for five days** — so the claim
+   it existed to isolate, *"a service row can never be the form"* (the defect
+   that once blanked the whole checkout), had no evidence behind it at all. The
+   re-targeted `js-form-ceiling-none` does kill honestly.
+3. The same fault was seen here four days earlier — two Chromium suites crashing
+   on `require('playwright')` — and **only its trigger was fixed** (a pinned
+   lockfile). The mechanism that turned a crash into a pass was left in place.
+
+It is the same family as the repo's own rule about claims nothing constructs the
+condition for: a signal that cannot distinguish success from absence of measurement.
+
 ## Verdicts
 
 | | |
 |---|---|
-| `KILLED`   | a suite went red. The claim is tested. |
-| `SURVIVED` | every suite stayed green. The claim is prose. |
+| `KILLED`   | a suite printed a `FAIL` line. The only thing that kills. |
+| `SURVIVED` | every suite ran and stayed green. The claim is prose. |
 | `STALE`    | the mutation did not land. **Not a pass.** |
+| `HARNESS`  | a suite did not run — `NO RUN` or `NO SUITE`. **Not red.** |
+| `INVALID`  | the mutated file does not parse. The mutation is wrong. |
 
-`STALE` is printed as loudly as `SURVIVED` on purpose. It means the find-string
-matched a different number of times than `count` declares, so nothing was
-changed and nothing was proved. Counting a stale mutation as killed is how a
-mutation run flatters itself.
+Per-suite outcomes:
+
+- `PASS` — exit 0, at least one `PASS` line, no `FAIL` line.
+- `FAIL` — at least one `FAIL` line.
+- `NO RUN` — no verdict printed at all, or a non-zero exit with no `FAIL` line
+  (a crash, possibly part-way through a run that had already printed passes).
+- `NO SUITE` — the script is not on disk, or the mutation names a suite this
+  runner does not know.
+
+`STALE`, `HARNESS` and `INVALID` all fail the exit code and none of them count as
+red. `STALE` is printed as loudly as `SURVIVED` on purpose: the find-string
+matched a different number of times than `count` declares, so nothing changed and
+nothing was proved.
+
+## The baseline preflight
+
+Every suite runs once, unmutated, before any source file is touched. **If one is
+not green the run stops**, because after that every mutation would look killed —
+which is how a broken harness produces a perfect score. The preflight also prints
+the suite files on disk beside the suites this runner executes, so a suite that
+exists but was never wired up is visible instead of silently absent.
+
+    python3 tests/mutate/run.py --preflight     # baseline only
+
+A mutated `.js` file is checked with `node --check` and a `.php` file with
+`php -l` before any suite runs, which is what now catches case 2 above
+automatically.
 
 ## Read the mutation before you believe the verdict
 

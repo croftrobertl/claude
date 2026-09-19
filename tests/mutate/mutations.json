@@ -200,14 +200,14 @@
   "count": 1
  },
  {
-  "id": "js-form-ceiling-ALL",
+  "id": "js-form-ceiling-none",
   "file": "dcc-custom-checkout/assets/checkout.js",
   "suites": [
    "breakdown"
   ],
-  "claim": "v0.15.0 a service row can never be the form (all ceilings removed)",
-  "find": "        if (el.tagName === 'FORM' || el.tagName === 'BODY' || el.tagName === 'HTML') {\n            return true;\n        }",
-  "replace": "        if (el.tagName === 'BODY' || el.tagName === 'HTML') {\n            return true;\n        }\n        if (false) {",
+  "claim": "v0.15.0 a service row can never be the form (EVERY ceiling removed)",
+  "find": "    function tooBigToBeAServiceRow(el, input) {\n        if (!el || el.nodeType !== 1) {\n            return true;\n        }",
+  "replace": "    function tooBigToBeAServiceRow(el, input) {\n        if (!el || el.nodeType !== 1) {\n            return true;\n        }\n        return false;",
   "count": 1
  },
  {
@@ -549,6 +549,17 @@
   "claim": "an ordinary checkout URL is NOT the REST route -- over-matching disables every backstop",
   "find": "        return $fragment !== '' && strpos($route, $fragment) !== false;",
   "replace": "        return true;",
+  "count": 1
+ },
+ {
+  "id": "php-pet-ids-drift",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "pricing"
+  ],
+  "claim": "the pet buckets are the three distinct services measured on live",
+  "find": "            'service_daily'     => 17712,",
+  "replace": "            'service_daily'     => 17711,",
   "count": 1
  }
 ]

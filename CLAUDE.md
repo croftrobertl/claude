@@ -658,10 +658,38 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
     drifted from its source for several releases.
   A fixture copied from the code's own assumptions is the same error one level
   down — hence the v0.9.0 rule that fixtures come from real markup.
-- **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE** (added by the
-  2026-09-19 sweep). `python3 tests/mutate/run.py [suite|id]` applies one
-  textual mutation to a source file, runs the suites that claim to cover it, and
-  reports KILLED / SURVIVED / **STALE**. 50 mutations, all killed, 0 stale.
+- **AN EXIT CODE IS NOT A TEST RESULT** (rule named by the owner, 2026-09-19;
+  full write-up in `tests/mutate/README.md`). **Any runner that infers "the
+  assertion failed" from "the process failed" reports a broken harness as proof
+  that it works** — a crash, a syntax error, a missing dependency and a real
+  failure all exit non-zero. Same family as the rule above: a signal that cannot
+  tell success from absence of measurement.
+  This runner had exactly that fault (`p.returncode == 0`) and it cost real
+  coverage. Measured: with `tests/footnote/node_modules` moved aside a mutation
+  was reported KILLED by a suite that ran zero assertions; and
+  `js-form-ceiling-ALL` left `checkout.js` with **unbalanced braces**, so every
+  suite crashed on parse and it was reported KILLED **for five days** — meaning
+  *"a service row can never be the form"*, the defect that once blanked the whole
+  checkout, had no evidence behind it. **The same fault had been seen here four
+  days earlier** (two Chromium suites crashing on `require('playwright')`) and
+  only its trigger was fixed, not the mechanism.
+  **On the fixed runner the count did NOT hold: 49 killed, 1 HARNESS.** It holds
+  at 50/50 only after re-targeting that one mutation
+  (`js-form-ceiling-none`, which kills honestly). Say it that way round.
+- **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
+  `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
+  alone. It applies one textual mutation, runs the suites that claim to cover it,
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 50
+  mutations, 50 killed, 0 of everything else, exit 0.
+  A suite's outcome is read from what it PRINTED: `FAIL` lines kill, no
+  PASS-or-FAIL line is `NO RUN`, a missing script is `NO SUITE`, and both of
+  those become **HARNESS** — not red, and they fail the exit code. A mutated file
+  is syntax-checked (`node --check` / `php -l`) before any suite runs; a file
+  that does not parse is **INVALID**, which is what now catches the brace bug
+  automatically. A **baseline preflight** runs every suite unmutated first and
+  stops the run if one is not green, because after that every mutation looks
+  killed — and it prints the suite files on disk beside the suites executed, so a
+  suite that exists but was never wired up is visible.
   **STALE IS NOT A PASS** and is printed as loudly as SURVIVED: it means the
   find-string did not match, or matched a different number of times than
   declared, so the mutation never landed and proves nothing. Half the first
@@ -688,14 +716,26 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   `tests/pricing/` eight green tautologies (0 == 0 at every night count) — the
   exact failure this file's rule names, committed by the sweep that was looking
   for it, and caught only because the mutation runner killed nothing. The suite
-  now SEEDS distinct ids (901/902/903) so a wrong bucket is visible in the
-  value, and separately asserts the live-shaped config (one service, 18063, on
-  all three buckets) **in which a bucket bug is invisible by construction.**
-  Consequence worth knowing: with the ids at their shipped 0, the fee attaches
-  nothing and `Extra_Guest_Service`'s backstop *fails open*
-  (`$can_expect = $nights > 0 && $expected > 0`), so a 3–4 guest booking is
-  neither charged nor blocked. Not a live defect — the option is saved — but the
-  default is not the "right shipped default" the owner's standing rule asks for.
+  now SEEDS distinct ids (901/902/903) so a wrong bucket is visible in the value.
+  **The defaults are a test-harness trap, NOT the live configuration** — that
+  distinction was got wrong once (corrected from live, 2026-09-19) and the wrong
+  version read as a claim about the running site. Measured in
+  `dcc_checkout_settings` on live:
+  - `guest_service_daily` / `weekly` / `monthly` are **all 18063**, and 18063 is
+    "Extra Guest Fee (per guest beyond 2)", published, `mphb_price = 50`. **The
+    fee attaches and does charge $50.** The stored settings override the shipped
+    defaults, so the defaults never come into it.
+  - `guest_accommodations` = `[1071,1069,1067,1065,1740,1742]` — the six
+    capacity-4 cottages, as expected.
+  - What IS zero is **`guest_fee_amount` (0.0)** — this plugin's OWN setting,
+    which drives `guest_fee_steps()` and `guestFeeAmountText`. **That is the
+    gap, and it is the owner's to fix, not a code change.**
+  Why it is a gap and not a defect: `guest_fee_steps()` returns `[]` when the
+  amount is unknown, so the guest is told **nothing** rather than "$0.00" —
+  the right direction to fail. But `$expected` is 0, so
+  `Extra_Guest_Service`'s backstop *fails open*
+  (`$can_expect = $nights > 0 && $expected > 0`) and **a fee that stopped
+  attaching would go unnoticed**. That consequence is real and unchanged.
 - **"NEVER REDIRECT DURING AN AJAX SUBMISSION" IS TESTED NOW, IN ALL FOUR FILES
   THAT CLAIM IT** (`tests/backstops/`, added 2026-09-19). The sentence appears
   in `class-pet-service.php:54`, `class-guest-fields.php:35`,
@@ -746,11 +786,24 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   extracted from the shipped file and driven directly — including that a money
   control can still be RE-ENABLED, since a guard that trapped one in `disabled`
   would stop the fee submitting, which is the thing it exists to prevent.
+- **THE TWO FEES ARE NOT THE SAME SHAPE, AND THAT IS WHY BUCKET EXCLUSIVITY IS
+  LATENT** (measured from live, 2026-09-19). The PET fee uses **three DISTINCT
+  services** — `service_daily` 17712 / `weekly` 17711 / `monthly` 14926 —
+  because the rate genuinely varies by length of stay (the owner confirmed it
+  does on Cottage 34). The EXTRA-GUEST fee points all three buckets at the
+  single service 18063. So a pet bucket bug is observable in the ID and an
+  extra-guest one is invisible by construction.
+  **Do NOT "fix" the extra-guest buckets to match the pet pattern.** A flat $50
+  regardless of stay length may be exactly what the owner wants; he is being
+  asked, and until he answers the single-service config is to be treated as
+  deliberate. `tests/pricing/` is correspondingly stronger for the pet fee than
+  for the extra-guest fee, and the seeded 901/902/903 ids exist so the
+  extra-guest boundaries are testable at all.
 - **Known gaps, named rather than papered over** (2026-09-19). Each is a
   behavioural guarantee in a comment with no test that constructs its condition:
   `checkout.js` — "at most ONE bucket checked per room" (:1510, money; latent
-  while the live config points all three buckets at service 18063, so a
-  double-charge cannot currently arise); "we only DISABLE existing options —
+  because all three extra-guest buckets are the same service, per the entry
+  above, so a double-charge cannot currently arise); "we only DISABLE existing options —
   never inject any" (:1518, :2002); "a re-render can never stack suffixes"
   (:1637); "idempotent per (select, kind) so re-asserts never stack duplicates"
   (:2042); "a height-only resize can never change the answer" (:1867, and that

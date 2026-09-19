@@ -47,9 +47,18 @@ function check($name, $actual, $expected) {
 $ids = Config::pet_service_ids();
 $t   = Config::bucket_thresholds();
 
-/* --- The shipped defaults are the live configuration. ------------------- */
+/* --- The shipped defaults match the live configuration FOR THE PET FEE.
+   Confirmed from dcc_checkout_settings on live, 2026-09-19. Pinned because
+   it is what makes the pet assertions below meaningful: three DISTINCT
+   services, so a wrong bucket is visible in the returned id. The rate
+   genuinely varies by stay length (the owner confirmed it does on Cottage
+   34), which is why this fee has three and the extra-guest fee has one. */
 check('default thresholds are 2 / 7 / 30',
     [$t['min_daily'], $t['min_weekly'], $t['min_monthly']], [2, 7, 30]);
+check('the pet buckets are three DISTINCT services, as on live',
+    [$ids['daily'], $ids['weekly'], $ids['monthly']], [17712, 17711, 14926]);
+check('... so a pet bucket bug is observable in the value',
+    count(array_unique(array_values($ids))), 3);
 
 /* --- 0 nights means "stay length unknown" and must charge NOTHING. ------
    Returning a real service ID here would attach a pet fee to a booking
@@ -122,10 +131,14 @@ check('extra guest: 7 nights is weekly',  Config::guest_service_id_for_nights(7)
 check('extra guest: 29 nights is weekly', Config::guest_service_id_for_nights(29), 902);
 check('extra guest: 30 nights is monthly',Config::guest_service_id_for_nights(30), 903);
 
-/* The LIVE configuration attaches one service (18063) to all three buckets,
-   which means a boundary bug on the real site is invisible in the ID. Worth
-   knowing rather than assuming: if a future config gives the buckets
-   different services, the assertions above are what will catch it. */
+/* THE LIVE CONFIGURATION attaches one service (18063) to all three
+   extra-guest buckets -- measured, 2026-09-19 -- so a boundary bug on the
+   real site is invisible in the ID. That may well be deliberate: a flat $50
+   regardless of stay length. Do NOT change the config to match the pet
+   pattern on the strength of this test.
+   Note also what is NOT zero on live: the service ids are all 18063 and the
+   fee does charge $50. The zero on live is `guest_fee_amount`, which is this
+   plugin's own setting and drives the LABEL, not the charge. */
 $GLOBALS['opt']['dcc_checkout_settings'] = [
     'guest_service_daily'   => 18063,
     'guest_service_weekly'  => 18063,
