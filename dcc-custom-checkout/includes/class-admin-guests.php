@@ -1,0 +1,375 @@
+<?php
+namespace DCC_Checkout;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Admin booking screen: state the real guest count.
+ *
+ * WHY THIS EXISTS
+ * When an iCal import supplies no guest count, MotoPress fills `_mphb_adults`
+ * with the ROOM TYPE'S CAPACITY rather than leaving it empty — booking #18433
+ * shows 4 guests for a Booking.com reservation that was for 2. Nothing in the
+ * admin lets anyone correct it, so /staff/ reads a number that was never
+ * anybody's answer, and cannot tell a real 4 from a defaulted 4.
+ *
+ * WHAT THIS DOES
+ * One <select> per reserved room on the booking edit screen: "Not provided",
+ * then 1 .. the room type's adults capacity. Saving writes `_mphb_adults` on
+ * that reserved room; "Not provided" DELETES the meta rather than storing a
+ * zero, so "nobody told us" and "two guests" stay different facts — which is
+ * the whole point of the control.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO
+ * It never guesses. If the capacity cannot be read it offers a wider range and
+ * says so, rather than capping the owner below the truth. It never writes on a
+ * screen it did not render a nonce for, never on autosave, and never for a user
+ * who cannot edit the booking.
+ *
+ * CONFIRMED on live, 2026-09-17 — no DCC-VERIFY outstanding. The reserved-room
+ * relationships are the ones this repo's availability calendar already relies
+ * on in live SQL: `mphb_reserved_room` posts are children of the
+ * `mphb_booking` post (post_parent) and carry `_mphb_room_id`; physical rooms
+ * carry `mphb_room_type_id`. `_mphb_adults` was read off the live database and
+ * is present on all 417 reserved rooms (261 twos, 145 ones, seven fours, four
+ * threes).
+ */
+final class Admin_Guests
+{
+    private const BOOKING_POST_TYPE = 'mphb_booking';
+    private const RESERVED_POST_TYPE = 'mphb_reserved_room';
+    private const META_KEY = '_mphb_adults';
+
+    /**
+     * PROVENANCE, on the same reserved room: "a human set this".
+     *
+     * `_mphb_adults` alone cannot carry the one fact that matters here.
+     * MotoPress fills it with the room type's CAPACITY when an import supplies
+     * no count, so a 4 on a 4-capacity cottage is ambiguous — it could be a
+     * real party of four or a default nobody chose. Confirmed live: the meta is
+     * on all 417 reserved rooms (261 twos, 145 ones, seven fours, four threes),
+     * and none of the guest-count key names the Availability Calendar was
+     * searching booking meta for exist anywhere.
+     *
+     * So this marker is the contract between the two plugins. The Calendar
+     * checks it FIRST: present means `_mphb_adults` is a real count whatever
+     * its value; absent means its own capacity-plus-iCal heuristic applies.
+     * It is written whenever the owner submits a count — INCLUDING a count
+     * equal to what is already stored, which is precisely the case the feature
+     * exists for — and deleted with the count on "Not provided".
+     */
+    private const CONFIRMED_KEY = '_mphb_adults_confirmed';
+    private const NONCE = 'dcc_admin_guests';
+
+    /** Used only when the room type's capacity cannot be read at all. */
+    private const FALLBACK_MAX = 8;
+
+    /**
+     * Hard ceiling on the rendered list, whatever the capacity meta says.
+     *
+     * `max` drives BOTH the <option> loop and the accepted range, and it comes
+     * from the database. A corrupted or absurd `mphb_adults_capacity` — 9999,
+     * say — would render nine thousand options and hang the booking screen.
+     * No cottage on this site sleeps more than four, so 20 is far above any
+     * real answer while making the page impossible to wedge from meta.
+     */
+    private const MAX_OPTIONS = 20;
+
+    public function register(): void
+    {
+        add_action('add_meta_boxes', [$this, 'add_box']);
+        add_action('save_post_' . self::BOOKING_POST_TYPE, [$this, 'save'], 10, 2);
+    }
+
+    public function add_box(): void
+    {
+        add_meta_box(
+            'dcc-checkout-guests',
+            __('Guest count', 'dcc-checkout'),
+            [$this, 'render'],
+            self::BOOKING_POST_TYPE,
+            'side',
+            'default'
+        );
+    }
+
+    /**
+     * @param mixed $post WP_Post for the booking being edited.
+     */
+    public function render($post): void
+    {
+        if (!$post instanceof \WP_Post) {
+            return;
+        }
+        $rooms = $this->reserved_rooms((int) $post->ID);
+
+        echo '<div class="dcc_admin-guests">';
+
+        if (!$rooms) {
+            echo '<p class="description">'
+                . esc_html__('No accommodation is attached to this booking yet. Save it once and the guest count can be set here.', 'dcc-checkout')
+                . '</p></div>';
+            return;
+        }
+
+        wp_nonce_field(self::NONCE, self::NONCE . '_nonce');
+
+        echo '<p class="description">'
+            . esc_html__('MotoPress fills this with the cottage\'s capacity when an import supplies no count, so a number here is not necessarily what the guest said. Set the real number — or re-select the number already shown to confirm it is right — and the staff panel will treat it as a real count. Choose "Not provided" if nobody told us.', 'dcc-checkout')
+            . '</p>';
+
+        foreach ($rooms as $room) {
+            $field = 'dcc_adults_' . $room['id'];
+            echo '<p>';
+            echo '<label for="' . esc_attr($field) . '"><strong>'
+                . esc_html($room['label']) . '</strong></label><br>';
+            echo '<select id="' . esc_attr($field) . '" name="dcc_adults[' . esc_attr((string) $room['id']) . ']" style="width:100%">';
+            echo '<option value="">' . esc_html__('Not provided', 'dcc-checkout') . '</option>';
+            for ($n = 1; $n <= $room['max']; $n++) {
+                printf(
+                    '<option value="%1$d"%2$s>%1$d</option>',
+                    $n,
+                    selected($room['adults'], $n, false)
+                );
+            }
+            echo '</select>';
+            // Say which of the two states this number is in. Without this the
+            // owner cannot tell a count he has already confirmed from one the
+            // importer defaulted, which is the same ambiguity the marker
+            // exists to remove — it would be odd to fix it for /staff/ and
+            // leave it on the screen where the decision is made.
+            if ($room['adults'] > 0) {
+                echo '<span class="description">';
+                echo $room['confirmed']
+                    ? esc_html__('Confirmed — the staff panel shows this as a real count.', 'dcc-checkout')
+                    : esc_html__('Not confirmed: this may be the importer\'s default. Re-select it to confirm.', 'dcc-checkout');
+                echo '</span>';
+            }
+            if (!$room['capacity_known']) {
+                echo '<span class="description">'
+                    . esc_html__('This cottage\'s capacity could not be read, so the list is not capped to it.', 'dcc-checkout')
+                    . '</span>';
+            }
+            echo '</p>';
+        }
+
+        echo '</div>';
+    }
+
+    /**
+     * @param mixed $post_id
+     * @param mixed $post
+     */
+    public function save($post_id, $post = null): void
+    {
+        $post_id = (int) $post_id;
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        // Absent nonce means this save came from somewhere that never rendered
+        // the control — a bulk edit, another plugin, a REST write. Leave the
+        // stored value exactly as it is.
+        if (empty($_POST[self::NONCE . '_nonce'])
+            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[self::NONCE . '_nonce'])), self::NONCE)) {
+            return;
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+        if (!isset($_POST['dcc_adults']) || !is_array($_POST['dcc_adults'])) {
+            return;
+        }
+
+        $submitted = wp_unslash($_POST['dcc_adults']);
+        $allowed = $this->reserved_rooms($post_id);
+        foreach ($allowed as $room) {
+            $id = $room['id'];
+            if (!array_key_exists($id, $submitted)) {
+                continue;
+            }
+            $raw = trim((string) $submitted[$id]);
+
+            $had_count = (string) get_post_meta($id, self::META_KEY, true);
+            $had_mark  = self::is_confirmed(get_post_meta($id, self::CONFIRMED_KEY, true));
+
+            if ($raw === '') {
+                // "Not provided" stores NOTHING — of either key. A zero would
+                // read as a real answer of nobody, and the marker would claim a
+                // human stood behind a number that is no longer there.
+                if ($had_count === '' && !$had_mark) {
+                    continue; // Already nothing. No write, no log line.
+                }
+                delete_post_meta($id, self::META_KEY);
+                delete_post_meta($id, self::CONFIRMED_KEY);
+                $this->log($post_id, $room['label'], null);
+                continue;
+            }
+
+            $value = (int) $raw;
+            if ($value < 1 || $value > $room['max']) {
+                continue; // Out of range: ignore rather than store a wrong count.
+            }
+
+            // THE MARKER IS WRITTEN EVEN WHEN THE COUNT IS UNCHANGED.
+            //
+            // An earlier version returned here on an unchanged value, which
+            // would have broken the one case this whole control exists for:
+            // the owner opens #18433, sees MotoPress's defaulted 4, and selects
+            // 4 because the party really is four. The number does not change,
+            // so nothing was written, so no marker appeared, so /staff/ went on
+            // saying "count not provided" for a count that had just been
+            // confirmed by hand. Submitting the form IS the human act being
+            // recorded; whether the digit moved is beside the point.
+            $changed = false;
+            if ($had_count !== (string) $value) {
+                update_post_meta($id, self::META_KEY, $value);
+                $changed = true;
+            }
+            if (!$had_mark) {
+                update_post_meta($id, self::CONFIRMED_KEY, 1);
+                $changed = true;
+            }
+            if ($changed) {
+                $this->log($post_id, $room['label'], $value, $had_count === (string) $value);
+            }
+        }
+    }
+
+    /**
+     * Every reserved room on this booking, with its capacity and stored count.
+     *
+     * @return array<int, array{id:int,label:string,adults:int,max:int,capacity_known:bool}>
+     */
+    private function reserved_rooms(int $booking_id): array
+    {
+        if ($booking_id <= 0) {
+            return [];
+        }
+        $posts = get_posts([
+            'post_type'        => self::RESERVED_POST_TYPE,
+            'post_parent'      => $booking_id,
+            'post_status'      => 'any',
+            'numberposts'      => 50,
+            'orderby'          => 'ID',
+            'order'            => 'ASC',
+            'suppress_filters' => false,
+        ]);
+
+        $out = [];
+        foreach ((array) $posts as $rr) {
+            $room_id = (int) get_post_meta($rr->ID, '_mphb_room_id', true);
+            $type_id = $room_id > 0 ? (int) get_post_meta($room_id, 'mphb_room_type_id', true) : 0;
+            $capacity = $type_id > 0 ? $this->capacity($type_id) : null;
+            $stored = get_post_meta($rr->ID, self::META_KEY, true);
+
+            $label = $type_id > 0 ? get_the_title($type_id) : '';
+            if ($label === '') {
+                $label = $room_id > 0 ? get_the_title($room_id) : '';
+            }
+            if ($label === '') {
+                /* translators: %d: reserved room post ID. */
+                $label = sprintf(__('Accommodation #%d', 'dcc-checkout'), $rr->ID);
+            }
+
+            $out[] = [
+                'id'             => (int) $rr->ID,
+                'label'          => (string) $label,
+                'adults'         => (int) $stored,
+                'max'            => min(
+                    $capacity !== null ? $capacity : self::FALLBACK_MAX,
+                    self::MAX_OPTIONS
+                ),
+                'capacity_known' => $capacity !== null,
+                'confirmed'      => self::is_confirmed(get_post_meta($rr->ID, self::CONFIRMED_KEY, true)),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Does this stored marker value mean "a human confirmed the count"?
+     *
+     * THE AVAILABILITY CALENDAR READS THE SAME KEY WITH THE SAME TEST. Keep
+     * the two identical: this is a cross-plugin contract, and nothing fails
+     * anywhere if they drift -- the Calendar would simply fall back to its
+     * capacity heuristic on a booking this screen believes is confirmed, and
+     * no screen would show the disagreement.
+     *
+     * "0" IS NOT CONFIRMED. This plugin only ever writes 1 or deletes the key,
+     * so the value cannot occur today; the test is strict because of the
+     * direction it fails in. Read loosely, a stray 0 means "a human confirmed
+     * that nobody is staying", which is a claim about a real booking that no
+     * human made. Read strictly it means "unmarked", and the next save repairs
+     * it -- $had_mark comes out false, so the marker is rewritten as 1.
+     *
+     * @param mixed $raw Whatever get_post_meta() returned.
+     */
+    private static function is_confirmed($raw): bool
+    {
+        $value = (string) $raw;
+        return $value !== '' && $value !== '0';
+    }
+
+    /**
+     * A room type's adults capacity, or null when it cannot be read.
+     *
+     * Null is a real answer here and must not be collapsed into a number: the
+     * caller widens the range and tells the admin why, rather than silently
+     * capping the owner below the truth.
+     */
+    private function capacity(int $room_type_id): ?int
+    {
+        if (function_exists('MPHB')) {
+            try {
+                $type = MPHB()->getRoomTypeRepository()->findById($room_type_id);
+                if ($type && method_exists($type, 'getAdultsCapacity')) {
+                    $n = (int) $type->getAdultsCapacity();
+                    if ($n > 0) {
+                        return $n;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall through to meta.
+            }
+        }
+        $meta = (int) get_post_meta($room_type_id, 'mphb_adults_capacity', true);
+        return $meta > 0 ? $meta : null;
+    }
+
+    /**
+     * Note the change in MotoPress's own booking log, the same place the guest
+     * ID deletions go, so /staff/ and the admin share one history.
+     */
+    private function log(int $booking_id, string $label, ?int $value, bool $confirm_only = false): void
+    {
+        if (!function_exists('MPHB')) {
+            return;
+        }
+        $who = wp_get_current_user();
+        $author = ($who && $who->exists()) ? $who->display_name : '';
+        if ($value === null) {
+            /* translators: %s: accommodation name. */
+            $message = sprintf(__('Guest count for %s cleared (not provided).', 'dcc-checkout'), $label);
+        } elseif ($confirm_only) {
+            // The number did not move; what changed is that it is now known to
+            // be somebody's answer rather than an import's default. Saying so
+            // is the whole value of the log line here.
+            /* translators: 1: accommodation name, 2: guest count. */
+            $message = sprintf(__('Guest count for %1$s confirmed as %2$d (was an unconfirmed default).', 'dcc-checkout'), $label, $value);
+        } else {
+            /* translators: 1: accommodation name, 2: guest count. */
+            $message = sprintf(__('Guest count for %1$s set to %2$d.', 'dcc-checkout'), $label, $value);
+        }
+
+        try {
+            $booking = MPHB()->getBookingRepository()->findById($booking_id);
+            if ($booking && method_exists($booking, 'addLog')) {
+                $booking->addLog($message, $author !== '' ? $author : null);
+            }
+        } catch (\Throwable $e) {
+            // A MotoPress update that moves addLog() must never break a save.
+        }
+    }
+}

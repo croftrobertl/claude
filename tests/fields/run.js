@@ -1,0 +1,300 @@
+/**
+ * Measures the checkout's FIELD GEOMETRY at phone width, in Chromium.
+ *
+ *   cd tests/fields && npm install && npm test
+ *
+ * WHY THIS EXISTS
+ * The owner needs 3-4 taps to operate anything on /submit-booking/ on his
+ * phone. His tap log showed nearly every press targeting the <p> wrapper or
+ * the <section> rather than an input: the presses that reached an input were
+ * at x 261-277 on a 390px screen, and the presses that hit nothing were at
+ * x 339-374. Tapping a <p> does nothing at all, so the tap is simply lost.
+ *
+ * The cause was that this plugin never styled MotoPress's own text inputs —
+ * only `select` and its own injected pet fields — while the standard it
+ * publishes as "Custom Checkout - Field Standard.css" had declared the full
+ * pill all along. The export and its source had diverged.
+ *
+ * These assertions are written in the owner's own coordinates, so they fail
+ * against the release he was using and pass against the fix.
+ */
+const fs   = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+
+function chromiumPath() {
+    if (process.env.DCC_CHROMIUM) { return process.env.DCC_CHROMIUM; }
+    const root = '/opt/pw-browsers';
+    if (fs.existsSync(root)) {
+        for (const dir of fs.readdirSync(root)) {
+            for (const rel of ['chrome-linux/chrome', 'chrome-linux/headless_shell']) {
+                const bin = path.join(root, dir, rel);
+                if (fs.existsSync(bin)) { return bin; }
+            }
+        }
+    }
+    return undefined;
+}
+
+let failures = 0;
+function check(name, actual, expected) {
+    const ok = actual === expected;
+    if (!ok) { failures++; }
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+    if (!ok) { console.log(`      expected: ${expected}\n      actual:   ${actual}`); }
+}
+function atLeast(name, actual, min) {
+    const ok = actual >= min;
+    if (!ok) { failures++; }
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+    if (!ok) { console.log(`      wanted >= ${min}, got ${actual}`); }
+}
+function atMost(name, actual, max) {
+    const ok = actual <= max;
+    if (!ok) { failures++; }
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`);
+    if (!ok) { console.log(`      wanted <= ${max}px, got ${actual}px`); }
+}
+
+// The controls the owner actually taps, by the ids in his log.
+const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_phone',
+                '#mphb_address1', '#mphb_apartment_units', '#mphb_country', '#mphb_note'];
+
+(async () => {
+    const browser = await chromium.launch({ executablePath: chromiumPath() });
+    // The owner's phone: 390x844, coarse pointer, touch enabled.
+    const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true, isMobile: true, deviceScaleFactor: 3,
+    });
+    const page = await context.newPage();
+    await page.goto('file://' + path.join(__dirname, 'fields.html'));
+
+    for (const sel of FIELDS) {
+        const m = await page.$eval(sel, (el) => {
+            const cs = getComputedStyle(el);
+            const r  = el.getBoundingClientRect();
+            const p  = el.closest('p');
+            const pc = getComputedStyle(p);
+            const pr = p.getBoundingClientRect();
+            // The wrapper's CONTENT box — the strip the guest reads as "the
+            // field's row". Anything inside it that is not the control is dead.
+            const left  = pr.left  + parseFloat(pc.paddingLeft);
+            const right = pr.right - parseFloat(pc.paddingRight);
+            return {
+                fontSize:  parseFloat(cs.fontSize),
+                boxSizing: cs.boxSizing,
+                height:    Math.round(r.height),
+                deadLeft:  Math.round(r.left - left),
+                deadRight: Math.round(right - r.right),
+            };
+        });
+
+        // 44px is the smallest comfortable target; the plugin already holds
+        // its own injected fields and the asterisk to it.
+        atLeast(`${sel} is at least 44px tall`, m.height, 44);
+
+        // Under 16px, iOS Safari zooms the whole page when the field takes
+        // focus — a page-wide movement, right under the finger. Not cosmetic.
+        atLeast(`${sel} font-size is 16px or more (iOS does not zoom)`, m.fontSize, 16);
+        // 18px matches the Availability Calendar's filter row (item 6). The
+        // assertion above is the one that matters functionally; this one keeps
+        // the two plugins looking like one site.
+        check(`${sel} font-size matches the calendar's 18px`, m.fontSize, 18);
+
+        check(`${sel} is border-box`, m.boxSizing, 'border-box');
+
+        // The dead strip. 1px of rounding is tolerable; 50px is what the owner
+        // was tapping into.
+        atMost(`${sel} has no dead strip on the left`, Math.abs(m.deadLeft), 1);
+        atMost(`${sel} has no dead strip on the right`, Math.abs(m.deadRight), 1);
+    }
+
+    /* --- The symptom itself, in the owner's coordinates. ----------------
+       x 339-374 is where his presses landed on a <p> and nothing happened.
+       Ask the browser what is actually at those points now. ------------- */
+    // 373, not the 374 in his log: this fixture's section padding puts the
+    // content edge at exactly x=374, and elementFromPoint on the boundary
+    // pixel belongs to the parent by definition. The dead-strip assertions
+    // above are the precise statement; these three are the symptom itself.
+    for (const x of [339, 361, 373]) {
+        const hit = await page.evaluate((x) => {
+            const input = document.querySelector('#mphb_apartment_units');
+            const r = input.getBoundingClientRect();
+            const el = document.elementFromPoint(x, Math.round(r.top + r.height / 2));
+            return el ? (el.id || el.tagName.toLowerCase()) : 'none';
+        }, x);
+        check(`x=${x} on the Apartment row hits the input, not its <p>`,
+              hit, 'mphb_apartment_units');
+    }
+
+    /* --- Item 6: the cap, and the half of it that is easy to forget. -----
+       At phone width the cap must be INERT — that is the whole reason it is
+       360px and not 320px. At desktop width it must bind, and the WRAPPER must
+       come with it: cap the field alone and the dead strip 0.13.0 removed
+       comes straight back. ------------------------------------------------ */
+    const phone = await page.$eval('#mphb_first_name', el => ({
+        field: Math.round(el.getBoundingClientRect().width),
+        row:   Math.round(el.closest('p').getBoundingClientRect().width),
+    }));
+    check('phone: the 360px cap does not bite at 390px wide',
+          String(phone.field === phone.row), 'true');
+    atLeast('phone: the field is still the full row', phone.field, 340);
+
+    const desk = await context.newPage();
+    await desk.setViewportSize({ width: 1280, height: 900 });
+    await desk.goto('file://' + path.join(__dirname, 'fields.html'));
+    const wide = await desk.$eval('#mphb_first_name', (el) => {
+        const r = el.getBoundingClientRect();
+        const p = el.closest('p').getBoundingClientRect();
+        return {
+            field: Math.round(r.width),
+            row:   Math.round(p.width),
+            left:  Math.round(r.left - p.left),
+            right: Math.round(p.right - r.right),
+        };
+    });
+    check('desktop: the field is capped at 360px', String(wide.field), '360');
+    check('desktop: THE WRAPPER IS CAPPED TOO — no dead strip beside the field',
+          String(wide.row), '360');
+    atMost('desktop: no dead strip on the left', Math.abs(wide.left), 1);
+    atMost('desktop: no dead strip on the right', Math.abs(wide.right), 1);
+    await desk.close();
+
+    /* --- Item 6: the tap-gesture rules are actually applied. ------------
+       This proves the declarations reach the element. It does NOT prove iOS
+       stops eating the tap — only the owner's phone can say that. --------- */
+    const tap = await page.$eval('#expander', el => {
+        const cs = getComputedStyle(el);
+        return {
+            touchAction: cs.touchAction,
+            callout: cs.webkitTouchCallout || '(unsupported in this engine)',
+            select: cs.userSelect || cs.webkitUserSelect,
+        };
+    });
+    check('item 6: the expander declares touch-action: manipulation',
+          tap.touchAction, 'manipulation');
+    check('item 6: text selection is off on the expander', tap.select, 'none');
+
+    /* --- v0.22.0 item 1: the expander must LOOK tappable. ----------------
+       v0.17.0 turned it into a <button>, which does not get the theme's link
+       colour, and the bare-control reset's `color: inherit` took the table's
+       black. Nothing asserted the colour, so it went unnoticed for five
+       releases. --------------------------------------------------------- */
+    const ink = await page.$eval('#expander', el => getComputedStyle(el).color);
+    check('v0.22.0: the expander is the checkout\'s interactive blue',
+          ink, 'rgb(0, 107, 207)');
+
+    /* --- v0.17.0: the swapped button must NOT become a site button. ------
+       The spec matches a bare `button` at (0,3,1). Caught before shipping:
+       without the bare-control class this renders as a full-width blue pill
+       in the middle of the price breakdown. --------------------------- */
+    const bare = await page.$eval('#expander', el => {
+        const cs = getComputedStyle(el);
+        return {
+            bg: cs.backgroundColor,
+            radius: cs.borderTopLeftRadius,
+            border: cs.borderTopWidth,
+            size: cs.fontSize,
+            transform: cs.textTransform,
+        };
+    });
+    check('v0.17.0: the expander has no button fill', bare.bg, 'rgba(0, 0, 0, 0)');
+    check('v0.17.0: no pill radius', bare.radius, '0px');
+    check('v0.17.0: no border', bare.border, '0px');
+    check('v0.17.0: it does not take the spec\'s 20px', bare.size !== '20px', true);
+
+    /* --- Items 1+2: ONE ink. The whole point is that these cannot drift. -- */
+    const inks = await page.evaluate(() => {
+        const read = sel => getComputedStyle(document.querySelector(sel)).color;
+        return { banner: read('#banner'), req: read('#req') };
+    });
+    check('item 2: the banner is the asterisk red', inks.banner, 'rgb(188, 0, 62)');
+    check('item 10: the required marker is the same red', inks.req, inks.banner);
+
+    /* SWEEP 2026-09-19 -- the assertion above passes even when --dcc-required
+       is changed to a different colour, because .dcc_checkout-req is matched
+       by both the --dcc-required rule (0,2,0) and the later, broader
+       --dcc-error rule (0,2,0), and the later one wins on source order. So
+       the token indirection the CLAUDE.md entry describes was not under test.
+       MotoPress's own abbr.required is NOT in that broader rule, so it is the
+       one element --dcc-required really paints. Measured, not assumed. */
+    const reqMphb = await page.$eval('#req-mphb', el => getComputedStyle(el).color);
+    check('ONE ink reaches MotoPress\'s own required marker too',
+          reqMphb, 'rgb(188, 0, 62)');
+    const border = await page.$eval('#banner',
+        el => getComputedStyle(el).borderTopColor);
+    check('item 2: and so is its border', border, 'rgb(188, 0, 62)');
+    const ground = await page.$eval('#banner', el => getComputedStyle(el).backgroundColor);
+    check('v0.21.0: the banner ground is white', ground, 'rgb(255, 255, 255)');
+    const bw = await page.$eval('#banner', el => getComputedStyle(el).borderTopWidth);
+    check('v0.21.0: the 2px red border still distinguishes it from the white fields', bw, '2px');
+
+    /* --- v0.20.0: the two upload hints match the tax footnote. ----------
+       Weight is the one that matters: it is INHERITED on the footnote (from
+       html{font-weight:700} on this site), so the spans must reach the same
+       computed value without a declaration of their own. ------------- */
+    const hint = await page.evaluate(() => {
+        const read = sel => {
+            const cs = getComputedStyle(document.querySelector(sel));
+            return [cs.fontSize, cs.lineHeight, cs.color, cs.fontWeight, cs.textAlign].join(' | ');
+        };
+        return { fn: read('#footnote'), h1: read('#hint1'), h2: read('#hint2') };
+    });
+    check('v0.20.0: "Maximum upload file size" matches the footnote', hint.h1, hint.fn);
+    check('v0.20.0: "Accepted file types" matches the footnote', hint.h2, hint.fn);
+    check('v0.20.0: and that includes the inherited 700 weight',
+          hint.fn.split(' | ')[3], '700');
+    /* SWEEP 2026-09-19 -- the two assertions above are RELATIVE: they compare
+       the hints to the footnote and would pass on any shared value, including
+       the values all three inherit if the rule were deleted outright. Measured:
+       replacing the whole declaration block with 99px/9/#ff00ff/right left this
+       suite green. The footnote's own computed values are pinned here so the
+       comparison has something to stand on. */
+    const fnParts = hint.fn.split(' | ');
+    check('v0.20.0: the footnote itself is 14px', fnParts[0], '14px');
+    check('v0.20.0: ... with a 1.4 line-height', fnParts[1], '19.6px');
+    check('v0.20.0: ... in the muted grey', fnParts[2], 'rgb(75, 85, 99)');
+    check('v0.20.0: ... left-aligned', fnParts[4], 'left');
+    const gap = await page.evaluate(() => {
+        const a = document.querySelector('#hint1').getBoundingClientRect();
+        const b = document.querySelector('#hint2').getBoundingClientRect();
+        return Math.round(b.top - a.bottom);
+    });
+    atMost('v0.20.0: no blank line between the two hints', gap, 1);
+
+    /* SWEEP 2026-09-19 -- THE JSDOM PROXY, PINNED IN A REAL BROWSER.
+       tests/breakdown has no layout, so its visible() helper reads these three
+       class names as a stand-in for display:none. That stand-in was never
+       checked against the stylesheet: rename a class on either side and the
+       jsdom suite would keep reporting elements hidden that a guest can see. */
+    const hidden = await page.evaluate(() => ({
+        section: getComputedStyle(document.querySelector('#hide-section')).display,
+        service: getComputedStyle(document.querySelector('#hide-service')).display,
+        option:  getComputedStyle(document.querySelector('#hide-option')).display,
+    }));
+    check('the hide class jsdom trusts really is display:none (section)',
+          hidden.section, 'none');
+    check('... and the service one', hidden.service, 'none');
+    check('... and the option one',  hidden.option,  'none');
+
+    /* SWEEP 2026-09-19 -- the wrapper cap through the class the JS APPLIES.
+       Every other wrapper here carries only p.mphb-text-control, MotoPress's
+       class, which the CSS lists as the no-JS fallback. So the selector the
+       live page actually depends on had no test: a rename in markFieldRows()
+       or in the stylesheet would be masked by the fallback until MotoPress
+       changed its own class, and then nothing would hold the cap. */
+    const jsrow = await page.$eval('#jsrow',
+        el => Math.round(el.getBoundingClientRect().width));
+    check('the JS-applied wrapper class is capped on its own', String(jsrow), '360');
+
+    /* --- The label must not underline the guest's typed text (v0.12.0),
+           re-asserted here because the kit rule is reproduced. ---------- */
+    const labelDeco = await page.$eval('#mphb_first_name',
+        el => getComputedStyle(el).textDecorationLine);
+    check('typed value is not underlined', labelDeco, 'none');
+
+    await browser.close();
+    console.log(failures ? `\n${failures} failing` : '\nall passing');
+    process.exit(failures ? 1 : 0);
+})();

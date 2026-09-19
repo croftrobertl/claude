@@ -1,0 +1,2699 @@
+/**
+ * DCC Custom Checkout — checkout page behaviour (vanilla JS, no deps).
+ *
+ * Part A (item 13) — keep "Cottage N:" on line 1, wrap the name below.
+ * Part B (items 11/12/14) — tidy the required markers on every label.
+ * Part C (item 3) — show/require the second-guest fields only at 2 guests.
+ * Part D (item 2) — the "traveling with a dog?" flow that drives the native
+ *                   MotoPress pet Service (native pricing, no math here).
+ * Extra-guest fee — per-room, drives the native per-adult Service for guests
+ *                   beyond the second (v0.3.0).
+ *
+ * All configuration arrives via the localized `DCC_CHECKOUT` object.
+ */
+(function () {
+    'use strict';
+
+    var CFG  = window.DCC_CHECKOUT || {};
+    var I18N = CFG.i18n || {};
+
+    // The tax disclosure's open state, held OUTSIDE foldTaxDetail.
+    // formatBreakdown() rebuilds the breakdown table from MotoPress's seed row
+    // on every re-render, destroying the note and its button and recreating
+    // them — so a state variable inside that function was reset to closed each
+    // time. That is the "text flashes then vanishes" the owner reported: the
+    // note appeared, a re-render landed, and it came back closed.
+    var taxDetailPinned = false;
+
+    // Match a breakdown row's label to a configured tax. Mirrors
+    // Config::tax_key() — keep the two in step.
+    function taxKey(label) {
+        return String(label || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    // Does this device actually have a hover state? Anything that answers no —
+    // or cannot answer — gets tap only.
+    function pointerHasHover() {
+        try {
+            return !!(window.matchMedia &&
+                window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /* ===================================================================== *
+     * IDEMPOTENT WRITES (v0.18.0) — the page is never touched unless it changes.
+     *
+     * Measured on the test fixture: one re-run of the pipeline with NOTHING to
+     * do produced 42 DOM mutation records, 35 of them attribute writes whose
+     * old value equalled the new one — classList.add() of a class already
+     * present, textContent set to the text already there. Per the DOM spec a
+     * no-op classList.add still runs the attribute-change steps and still
+     * queues a MutationRecord, and browsers honour that. On the live page,
+     * with its bigger breakdown and every section, that is the ~100-mutation
+     * burst the owner's phone logged in the middle of taps that then produced
+     * no click.
+     *
+     * iOS Safari decides whether a tap is a click or a hover by watching the
+     * page for content changes around the tap. A page that rewrites a hundred
+     * attributes on a timer is exactly what it is looking for. So every write
+     * in this file goes through one of these, and a no-op write costs nothing
+     * and records nothing. This is asserted: tests/breakdown fails if a re-run
+     * with nothing to do records a single mutation.
+     * ===================================================================== */
+    function addClass(el, name) {
+        if (el && el.classList && !el.classList.contains(name)) {
+            el.classList.add(name);
+        }
+    }
+    function removeClass(el, name) {
+        if (el && el.classList && el.classList.contains(name)) {
+            el.classList.remove(name);
+        }
+    }
+    function setClass(el, name, on) {
+        if (on) { addClass(el, name); } else { removeClass(el, name); }
+    }
+    function setAttr(el, name, value) {
+        if (!el || !el.setAttribute) { return; }
+        value = String(value);
+        if (el.getAttribute(name) !== value) {
+            el.setAttribute(name, value);
+        }
+    }
+    function setText(node, text) {
+        if (!node) { return; }
+        text = String(text);
+        if (node.nodeType === 3) {
+            if (node.nodeValue !== text) { node.nodeValue = text; }
+            return;
+        }
+        // An element whose text already reads correctly and holds no child
+        // elements is left alone; anything else is rewritten as before.
+        if (node.textContent === text && !node.firstElementChild) { return; }
+        node.textContent = text;
+    }
+
+    function esc(sel) {
+        return (window.CSS && CSS.escape) ? CSS.escape(sel) : String(sel);
+    }
+
+    function ready(fn) {
+        if (document.readyState !== 'loading') {
+            fn();
+        } else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+
+    function insertAfter(node, ref) {
+        if (ref && ref.parentNode) {
+            ref.parentNode.insertBefore(node, ref.nextSibling);
+        }
+    }
+
+    // Build a titled section mirroring MotoPress's customer-details section and
+    // MOVE the given field rows into it. Reuses `mphb-customer-details-title` on
+    // the <h3> so the existing 25px/underlined header styling applies. Returns
+    // the section, or null when there are no rows (don't render an empty header).
+    function buildFieldSection(sectionClass, titleText, rows) {
+        if (!rows.length) {
+            return null;
+        }
+        var section = document.createElement('section');
+        section.className = 'mphb-checkout-section dcc_checkout-section ' + sectionClass;
+        var h3 = document.createElement('h3');
+        h3.className = 'mphb-customer-details-title dcc_checkout-section-title';
+        setText(h3, titleText);
+        section.appendChild(h3);
+        rows.forEach(function (r) { section.appendChild(r); }); // moves rows in
+        return section;
+    }
+
+    ready(init);
+
+    function init() {
+        // The real MotoPress checkout container is the form itself,
+        // `.mphb_sc_checkout-form` (there is NO bare `.mphb-checkout` in this
+        // build). Fall back to the wrapper / legacy class defensively.
+        var root = document.querySelector('.mphb_sc_checkout-form') ||
+                   document.querySelector('.mphb_sc_checkout-wrapper') ||
+                   document.querySelector('.mphb-checkout');
+        if (!root) {
+            return;
+        }
+
+        showServerError(root);
+        cleanRequiredMarkers(root);       // Part B
+        formatBreakdown(root);            // Price Breakdown reshaping
+        normalizeReservationDates(root);  // 2026-08-30 polish, item 4
+
+        var validators = [];
+        var guest = setupGuestConditional(root); // Part C
+        if (guest) { validators.push(guest); }
+        // The dog Checkout Fields are enabled globally in MotoPress, so they
+        // render on EVERY cottage's checkout. Hide them (not required) on every
+        // checkout by default; only the pet-cottage toggle reveals them.
+        var dog = setupDogFields(root);
+        var pet = setupPetFlow(root, dog);       // Part D
+        if (pet) { validators.push(pet); }
+        setupExtraGuestFlow(root);               // v0.3.0 — fully automatic,
+                                                 // nothing user-fillable, so no
+                                                 // submit validator to register
+
+        // The pet toggle and the guest dropdown now cover every service this
+        // site sells, so the native services section is redundant.
+        hideNativeServices(root);
+        matchFileFieldWidth(root);
+        markFieldRows(root);      // item 6  — cap the wrapper with the field
+        markTipAsterisk(root);    // item 10 — colour the tip's asterisk
+        dropDuplicateTotal(root); // item 7  — the second Total Price
+
+        // Last line of defence: nothing above may cost the guest their
+        // "Number of Guests" dropdown.
+        assertGuestChooserSurvived(root);
+
+        setupSubmit(root, validators);
+        hardenTapTargets(root);   // item 6 — the breakdown expander is not draggable
+        armPreflight(root);       // item 1 — errors wait for a submit attempt
+        observeReRenders(root);
+    }
+
+    /* ===================================================================== *
+     * Price Breakdown
+     *
+     * Reshaped into standard invoice arithmetic: line items, one Subtotal, one
+     * Taxes line, one Total, with nothing printed twice. MotoPress renders the
+     * same figure in up to three places at once (Accommodation Total ==
+     * Subtotal, Accommodation Taxes Total == Taxes, the in-block Subtotal ==
+     * Total), which reads as though the guest is being charged repeatedly.
+     *
+     * NO ARITHMETIC HAPPENS HERE. Every figure displayed is one MotoPress
+     * already rendered, moved or copied verbatim. A row is only ever removed
+     * when its amount string is IDENTICAL to the row that supersedes it, so a
+     * genuine second figure (a second cottage, an untaxed service) is never
+     * suppressed. Rows are located by their rendered label, so this is
+     * English-only by nature: anything not recognised is left exactly as
+     * MotoPress rendered it. See tests/breakdown/ for the fixtures, including
+     * one with renamed labels that proves the failure is graceful.
+     * ===================================================================== */
+
+    function formatBreakdown(root) {
+        var seed  = root.querySelector('tr.mphb-price-breakdown-booking');
+        var table = seed && seed.closest('table');
+        if (!table) {
+            return;
+        }
+        addClass(table, 'dcc_checkout-breakdown');
+        restructureBreakdown(table);
+    }
+
+    // A row's label (first cell) and amount (last cell), normalized for
+    // comparison. Amounts are compared as rendered strings — never parsed,
+    // never summed.
+    function rowLabel(row) {
+        var cell = row.cells && row.cells[0];
+        if (!cell) {
+            return '';
+        }
+        // Read MotoPress's text ONLY. The asterisk this plugin appends to the
+        // Taxes cell is text content too, so on a second pass "Taxes" read as
+        // "Taxes*", the row stopped matching, foldTaxDetail bailed — and the
+        // cleanup at the top of the pass had already removed the footnote,
+        // leaving a live button pointing at an id that no longer existed.
+        // Every re-render of the breakdown hit this.
+        var text = '';
+        Array.prototype.forEach.call(cell.childNodes, function (node) {
+            if (node.nodeType === 1 && node.hasAttribute('data-dcc-injected')) {
+                return;
+            }
+            text += node.textContent || '';
+        });
+        return text.replace(/\s+/g, ' ').trim();
+    }
+
+    function normLabel(row) {
+        return rowLabel(row).toLowerCase().replace(/[:\s]+$/, '');
+    }
+
+    function rowAmount(row) {
+        var cells = row.cells;
+        if (!cells || !cells.length) { return ''; }
+        return String(cells[cells.length - 1].textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    /* ===================================================================== *
+     * Item 6 — each field's wrapper is capped with the field.
+     *
+     * The CSS caps .dcc_checkout-field-row at --dcc-field-max and centres it;
+     * this decides what a row IS. Both halves are needed: cap the field alone
+     * and the wrapper still stretches the full column, so a tap in the part of
+     * it the field no longer covers does nothing — the dead strip that 0.13.0
+     * measured out of the owner's tap log, straight back.
+     *
+     * A <p> only, which is what MotoPress wraps each control in (confirmed in
+     * that log: p.mphb-customer-last-name.mphb-text-control). Climbing to any
+     * block ancestor would eventually tag a section and cap the whole form.
+     * ===================================================================== */
+    function markFieldRows(root) {
+        var controls = root.querySelectorAll(
+            'input[type="text"], input[type="email"], input[type="tel"],' +
+            'input[type="number"], input[type="url"], input[type="date"],' +
+            'input[type="file"], select, textarea');
+        Array.prototype.forEach.call(controls, function (ctrl) {
+            var row = ctrl.closest('p');
+            if (row && root.contains(row)) {
+                addClass(row, 'dcc_checkout-field-row');
+            }
+        });
+    }
+
+    /* ===================================================================== *
+     * Item 7 — the second "Total Price:" below the upload field.
+     *
+     * The price breakdown above already ends in a Total, so this one is the
+     * same figure a third time. Hidden only when the breakdown really is
+     * present: without it this would be the ONLY total on the page, and hiding
+     * the only total a guest is shown before they pay is the one mistake here
+     * that actually costs money.
+     *
+     * Everything inside the breakdown table is skipped, so its own Total can
+     * never be the thing that gets hidden.
+     * ===================================================================== */
+    function dropDuplicateTotal(root) {
+        var table = root.querySelector('table.dcc_checkout-breakdown');
+        if (!table) {
+            return;
+        }
+        var needle = String(I18N.totalPriceLabel || 'Total Price').toLowerCase();
+        var hit = null;
+        var all = root.querySelectorAll('p, div, td, th, span, h2, h3, h4');
+        Array.prototype.forEach.call(all, function (el) {
+            if (table.contains(el) || el.contains(table)) {
+                return;
+            }
+            var text = String(el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (text.indexOf(needle) !== 0) {
+                return;
+            }
+            // Deepest match wins: an ancestor that happens to contain this
+            // text would take half the page with it.
+            if (!hit || hit.contains(el)) {
+                hit = el;
+            }
+        });
+        if (!hit) {
+            return;
+        }
+        var row = hit.closest('tr');
+        hideRow(row || hit);
+    }
+
+    /* ===================================================================== *
+     * Item 10 — the "*" inside "Required fields are followed by *".
+     *
+     * It was black while the "*" marking each required field was red; they are
+     * the same signal. MotoPress gives that asterisk no element of its own, so
+     * this wraps that ONE character — nothing else in the sentence — in a span
+     * the CSS colours.
+     *
+     * Idempotent, and it has to be: this runs again on every MotoPress
+     * re-render. The span carries data-dcc-injected so rowLabel() and the
+     * matchers skip it, and an already-wrapped tip is left untouched rather
+     * than wrapped twice. That is the rule this plugin learned the hard way —
+     * never re-read text this plugin has written into the page.
+     * ===================================================================== */
+    function markTipAsterisk(root) {
+        var tips = root.querySelectorAll('[class*="required-fields-tip" i]');
+        if (!tips.length) {
+            return;
+        }
+        Array.prototype.forEach.call(tips, function (tip) {
+            if (tip.querySelector('.dcc_checkout-tip-asterisk')) {
+                return; // already done
+            }
+            // The last text node that actually ends in an asterisk.
+            var walker = document.createTreeWalker(tip, NodeFilter.SHOW_TEXT, null);
+            var node = null, found = null;
+            while ((node = walker.nextNode())) {
+                if (/\*\s*$/.test(node.nodeValue || '')) { found = node; }
+            }
+            if (!found) {
+                return;
+            }
+            var text = found.nodeValue;
+            var at   = text.lastIndexOf('*');
+            var span = document.createElement('span');
+            span.className = 'dcc_checkout-tip-asterisk';
+            setAttr(span, 'data-dcc-injected', '1');
+            setAttr(span, 'aria-hidden', 'true');
+            setText(span, '*');
+            found.nodeValue = text.slice(0, at);
+            var after = document.createTextNode(text.slice(at + 1));
+            found.parentNode.insertBefore(span, found.nextSibling);
+            found.parentNode.insertBefore(after, span.nextSibling);
+        });
+    }
+
+    // Every spelling a MotoPress breakdown label can have on this page: its own
+    // word AND this site's override of it, supplied by the PHP that owns the
+    // gettext filter so the two cannot drift. Matching only one spelling is how
+    // the services section survived three releases: the code looked right and
+    // matched nothing.
+    function labelIs(row, key) {
+        var names = (CFG.labelAliases || {})[key] || [key];
+        var label = normLabel(row);
+        for (var i = 0; i < names.length; i++) {
+            if (label === names[i]) { return true; }
+        }
+        return false;
+    }
+
+    function looksLikeMoney(text) {
+        return /\d/.test(text);
+    }
+
+    function hideRow(row) {
+        addClass(row, 'dcc_checkout-section-hidden');
+    }
+
+    function restructureBreakdown(table) {
+        // Drop anything a previous pass added: MotoPress rebuilds this table
+        // whenever the guest count changes, and clones must never stack.
+        // Clear BOTH halves of the footnote control, symmetrically. Removing
+        // the note while leaving the button is what produced a dead asterisk.
+        if (table.parentNode) {
+            Array.prototype.forEach.call(
+                table.parentNode.querySelectorAll('.dcc_checkout-tax-footnote'),
+                function (n) { if (n.parentNode) { n.parentNode.removeChild(n); } }
+            );
+        }
+        Array.prototype.forEach.call(
+            table.querySelectorAll('.dcc_checkout-tax-asterisk'),
+            function (b) { if (b.parentNode) { b.parentNode.removeChild(b); } }
+        );
+
+        var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+        if (!rows.length) {
+            return;
+        }
+
+        // Decide first, write only what differs: a remove-then-add on the same
+        // row is two mutation records for no change.
+        rows.forEach(function (r, i) {
+            setClass(r, 'dcc_checkout-breakdown-total', i === rows.length - 1);
+        });
+
+        // LAST match wins for the summary rows at the foot of the table; FIRST
+        // match for the in-block rows, which appear above them.
+        function last(test) {
+            var found = null;
+            rows.forEach(function (r) { if (test(normLabel(r))) { found = r; } });
+            return found;
+        }
+        function first(test) {
+            for (var i = 0; i < rows.length; i++) {
+                if (test(normLabel(rows[i]))) { return rows[i]; }
+            }
+            return null;
+        }
+
+        var totalRow   = last(function (l) { return l === 'total'; });
+        var taxesRow   = last(function (l) { return l === 'taxes' || l === 'tax'; });
+        var subtotal   = last(function (l) { return l.indexOf('subtotal (excluding') === 0; });
+        var accTaxTot  = first(function (l) { return l === 'accommodation taxes total'; });
+        var accTotal   = first(function (l) { return l === 'accommodation total'; });
+        var innerSub   = first(function (l) { return l === 'subtotal'; });
+        // ITEM 4 (v0.15.0) — the divider above Subtotal, asked for twice.
+        //
+        // It WAS targeted at the Subtotal row explicitly in 0.14.0. What it
+        // could not do is find that row on the owner's booking: `subtotal`
+        // above matches only "Subtotal (excluding taxes)", and a breakdown
+        // whose summary line is a plain "Subtotal" has no such row, so there
+        // was nothing to mark. The qualifier is the right key for the RELABEL
+        // and the pre-tax figure — those genuinely depend on which subtotal it
+        // is — but the divider only needs the last subtotal on the page.
+        //
+        // Read from MotoPress's own text, here, BEFORE the relabel below
+        // rewrites that cell. A matcher that ran later would be reading a
+        // label this plugin wrote, which is the mistake that killed the tax
+        // footnote in 0.9.0.
+        var subtotalAny = last(function (l) { return l.indexOf('subtotal') === 0; });
+        // v0.20.0 — the divider above "Extras Total". Found here, BEFORE any
+        // relabel, from MotoPress's own text in either of its spellings
+        // (Services Total / Extras Total, via the alias list), the same way
+        // the Subtotal divider was fixed in 0.15.0.
+        var servicesTotalRow = null;
+        rows.forEach(function (r) { if (labelIs(r, 'services total')) { servicesTotalRow = r; } });
+
+        // Without a "(excluding taxes)" row, a plain "Subtotal" IS the summary
+        // row — never hide the only subtotal on the page.
+        if (!subtotal) {
+            innerSub = null;
+        }
+
+        // --- Duplicates, each removed only when the figures truly match. ----
+        // The in-block tax total is also the gate for the fold below: when it
+        // does NOT equal the summary Taxes line there is more than one
+        // accommodation, and showing one cottage's components under a combined
+        // total would misrepresent the bill. Leave it all alone in that case.
+        var taxesDuplicated = !!(accTaxTot && taxesRow &&
+            rowAmount(accTaxTot) === rowAmount(taxesRow));
+        if (taxesDuplicated) {
+            hideRow(accTaxTot);
+        }
+        if (innerSub && totalRow && rowAmount(innerSub) === rowAmount(totalRow)) {
+            hideRow(innerSub);
+        }
+        // "Accommodation Total" duplicates Subtotal only for a single, untaxed
+        // accommodation with no extras; with a second cottage or a service it
+        // is a real per-cottage figure and stays.
+        if (accTotal && subtotal && rowAmount(accTotal) === rowAmount(subtotal)) {
+            hideRow(accTotal);
+        }
+
+        // --- "Subtotal (excluding taxes)" -> "Subtotal". --------------------
+        // The qualifier is redundant once Taxes is the very next line.
+        if (subtotal && I18N.subtotal) {
+            var labelCell = subtotal.cells && subtotal.cells[0];
+            if (labelCell) { setText(labelCell, I18N.subtotal); }
+        }
+
+        relabelAccommodationRows(rows);
+        relabelExtraGuestRow(rows);
+        setLineItemPreTax(rows, subtotal);
+        foldTaxDetail(rows, taxesRow, taxesDuplicated ? accTaxTot : null);
+        dropRateRows(rows, table);
+        markColumnHeaders(rows, [subtotal, taxesRow, totalRow]);
+        dropServicesHeadingRow(rows);
+        markBreakdownRules(rows, subtotalAny, servicesTotalRow);
+        markFirstVisibleRows(rows);
+    }
+
+    // "Rate: Cottage 22: The Boathouse" restates the accommodation title
+    // directly above it. Removed unconditionally (owner decision): every rate
+    // on this site is named after its cottage. A rate named anything else —
+    // "Winter Special", say — would therefore not appear on the breakdown
+    // either; see CLAUDE.md.
+    //
+    // It is NOT a row. MotoPress renders it as
+    //   <div class="mphb-price-breakdown-rate">
+    // nested in a <td> that also holds the rest of the expanded detail. Three
+    // releases matched row labels starting with "Rate" and never touched it —
+    // and worse, when that div happened to be the first thing in the cell the
+    // row's label BEGAN with "Rate:", so the match hid the entire detail block
+    // instead. Target the element by its class: exact, and it survives
+    // translation, which the text match never could.
+    function dropRateRows(rows, root) {
+        var scope = root || (rows[0] && rows[0].closest('table')) || null;
+        if (!scope) {
+            return;
+        }
+        Array.prototype.forEach.call(
+            scope.querySelectorAll('.mphb-price-breakdown-rate'),
+            function (el) {
+                var row = el.closest('tr');
+                if (el.parentNode) {
+                    el.parentNode.removeChild(el);
+                }
+                // Take the row too, but only if the rate was all it held.
+                if (row && !String(row.textContent || '').trim()) {
+                    hideRow(row);
+                }
+            }
+        );
+    }
+
+    // Make the column-header rows ("Dates | Amount") read as headers rather
+    // than as more data. Bolder and darker at the same size and alignment —
+    // the most restrained of the options offered, chosen deliberately.
+    //
+    // A header row is one whose amount cell holds a word rather than a figure.
+    // The summary rows are passed in and excluded: they carry their own weight
+    // already, and "Subtotal"/"Taxes"/"Total" are not categories.
+    function markColumnHeaders(rows, exclude) {
+        rows.forEach(function (row) {
+            if (exclude.indexOf(row) !== -1) {
+                return;
+            }
+            var cells = row.cells;
+            if (!cells || cells.length < 2) {
+                return;
+            }
+            var amount = rowAmount(row);
+            if (amount === '' || looksLikeMoney(amount)) {
+                return; // Empty, or a real figure — not a column header.
+            }
+            addClass(row, 'dcc_checkout-breakdown-head');
+        });
+    }
+
+    // The two extra dividers: above the "Dates" header (separating it from
+    // Nights), and above whatever follows the last booked date (separating the
+    // dates from the subtotal). Both use the SAME class as the grand total's
+    // divider, so one CSS rule governs all three.
+    //
+    // The run of date rows is found by asking whether each label parses as a
+    // date — "September 17, 2026" does, "Accommodation Total" does not. That is
+    // English-shaped; a label it cannot read ends the run early, so the second
+    // divider is simply not drawn rather than drawn in the wrong place.
+    function markBreakdownRules(rows, subtotalRow, servicesTotalRow) {
+        // Every row that should carry the divider is decided FIRST, and only
+        // then is the class written where it differs. The old shape — strip it
+        // from every row, add it back to some — was two mutation records per
+        // divider for no visible change, on every re-run.
+        var want = [];
+
+        // EVERY column header gets the divider, not just the first. That is
+        // items 15/16 (the "Dates | Amount" header) and item 12 (the
+        // "Service | Details | Amount" header, which needs separating from
+        // "Accommodation Total" above it) in one rule rather than two — a
+        // second header added by MotoPress later is handled without new code.
+        // Hidden rows are skipped throughout: a divider on a row nobody can see
+        // is invisible at best, and when two adjacent rows are both marked and
+        // one is hidden the guest gets a doubled line.
+        var heads = rows.filter(function (r) {
+            return r.classList.contains('dcc_checkout-breakdown-head') && !isHiddenRow(r);
+        });
+        heads.forEach(function (r) { want.push(r); });
+
+        // Item 13: above Subtotal, which separates it from "Services Total".
+        if (subtotalRow && !isHiddenRow(subtotalRow)) {
+            want.push(subtotalRow);
+        }
+        // v0.20.0: above "Extras Total", separating it from the extras above it.
+        if (servicesTotalRow && !isHiddenRow(servicesTotalRow)) {
+            want.push(servicesTotalRow);
+        }
+
+        // And above whatever follows the last booked date, separating the date
+        // run from the figures. One class, one CSS rule, governs all of them
+        // including the grand total's, so restyling any divider moves every
+        // divider.
+        if (heads.length) {
+            var start = rows.indexOf(heads[0]) + 1;
+            var j = start;
+            while (j < rows.length && isDateLabel(rowLabel(rows[j]))) {
+                j++;
+            }
+            if (j > start && j < rows.length && !isHiddenRow(rows[j])) {
+                want.push(rows[j]);
+            }
+        }
+
+        // Item 2 (v0.19.0): between the accommodation title row and the first
+        // detail row beneath it — "Number of Guests" on this site. That row is
+        // MotoPress's own, the first in the nested detail table, so it is found
+        // structurally: the first visible, non-wrapper row after each title
+        // row in document order. The same shared class as every other
+        // divider, so they all move together.
+        rows.forEach(function (r, i) {
+            if (!r.classList.contains('mphb-price-breakdown-booking')) {
+                return;
+            }
+            for (var k = i + 1; k < rows.length; k++) {
+                var cand = rows[k];
+                if (cand.cells && cand.cells.length === 1 && cand.querySelector('table')) {
+                    continue;   // the wrapper row that holds the nested table
+                }
+                if (cand.classList.contains('mphb-price-breakdown-booking')) {
+                    break;      // next accommodation, no detail rows found
+                }
+                if (!isHiddenRow(cand)) {
+                    want.push(cand);
+                    break;
+                }
+            }
+        });
+
+        rows.forEach(function (r) {
+            setClass(r, 'dcc_checkout-breakdown-rule', want.indexOf(r) !== -1);
+        });
+    }
+
+    function isHiddenRow(row) {
+        for (var n = row; n && n.nodeType === 1; n = n.parentElement) {
+            if (n.classList.contains('dcc_checkout-section-hidden') ||
+                n.classList.contains('dcc_checkout-service-hidden')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ITEM 11 — the bare "Services" row that sits directly above the
+    // "Service | Details | Amount" header and says the same thing.
+    //
+    // Removed ONLY when all three hold: the label is "Services" in one of its
+    // spellings, it carries no figure, and the next visible row really is a
+    // column header. If MotoPress ever renders a "Services" row that has an
+    // amount, or that is not followed by a header, it is left alone — an
+    // unrecognised row keeps MotoPress's output rather than being guessed at.
+    function dropServicesHeadingRow(rows) {
+        for (var i = 0; i < rows.length - 1; i++) {
+            var row = rows[i];
+            if (!labelIs(row, 'services')) {
+                continue;
+            }
+            if (looksLikeMoney(rowAmount(row))) {
+                continue;
+            }
+            var next = null;
+            for (var k = i + 1; k < rows.length && !next; k++) {
+                if (!rows[k].classList.contains('dcc_checkout-section-hidden')) {
+                    next = rows[k];
+                }
+            }
+            if (next && next.classList.contains('dcc_checkout-breakdown-head')) {
+                hideRow(row);
+                // It was a header candidate itself; drop the marks with it so
+                // it cannot attract a divider.
+                removeClass(row, 'dcc_checkout-breakdown-head');
+                removeClass(row, 'dcc_checkout-breakdown-rule');
+            }
+            return;
+        }
+    }
+
+    // ITEM 14 — the extra-guest fee row, relabelled FOR DISPLAY.
+    //
+    //   Service:  "Extra Guest(s) Fee"      (was the MotoPress service's title)
+    //   Details:  "$50/night x N guests"    (was "$50 x 2 nights x 2 guests")
+    //
+    // The MotoPress service itself is NOT renamed — its title still appears on
+    // admin screens and in guest emails. The row is found by that title, read
+    // from MotoPress by service ID rather than typed into this plugin, so
+    // renaming the service in the admin moves the match with it.
+    //
+    // N is read from the [adults] select on the checked guest-service
+    // checkbox, which this plugin sets itself — a number it wrote, not a label
+    // it wrote, so re-reading it is safe on a second pass. If N cannot be
+    // determined the Details cell is LEFT ALONE: a wrong count on an invoice
+    // line is worse than MotoPress's own wording.
+    function relabelExtraGuestRow(rows) {
+        var titles = (CFG.guestServiceTitles || []).map(function (t) {
+            return String(t || '').toLowerCase().trim();
+        }).filter(Boolean);
+        if (!titles.length || !I18N.extraGuestService) {
+            return;
+        }
+        rows.forEach(function (row) {
+            var label = normLabel(row);
+            if (titles.indexOf(label) === -1) {
+                return;
+            }
+            var cells = row.cells;
+            if (!cells || !cells.length) {
+                return;
+            }
+            setCellText(cells[0], I18N.extraGuestService);
+
+            // Details is the middle cell of Service | Details | Amount. With
+            // only two cells there is no details column to rewrite.
+            if (cells.length < 3) {
+                return;
+            }
+            var n    = extraGuestCount(row.closest('form') || document);
+            var rate = CFG.guestFeeAmountText || '';
+            if (!(n > 0) || !rate) {
+                return;
+            }
+            // Item 3 (v0.19.0): two lines —
+            //     $50/night
+            //     x N guests
+            // A newline in the text, rendered by white-space: pre-line on the
+            // cell, so the write stays a plain setText and stays idempotent.
+            // Lowercase x: the capital in the owner's example was the line
+            // start capitalising itself, not a request.
+            var rateLine  = I18N.extraGuestRate || '%s/night';
+            var guestLine = (n === 1 ? I18N.extraGuestGuest : I18N.extraGuestGuests) || 'x %d guests';
+            setCellText(cells[1],
+                rateLine.replace('%s', rate) + '\n' + guestLine.replace('%d', String(n)));
+        });
+    }
+
+    // Replace a cell's text without disturbing anything this plugin injected
+    // into it (the tax asterisk lives in a cell like these).
+    function setCellText(cell, text) {
+        if (!cell) {
+            return;
+        }
+        var kept = cell.querySelectorAll('[data-dcc-injected]');
+        setText(cell, text);
+        Array.prototype.forEach.call(kept, function (el) { cell.appendChild(el); });
+        setAttr(cell, 'data-dcc-relabelled', '1');
+    }
+
+    // Extra guests actually booked: the [adults] value on each CHECKED
+    // extra-guest service checkbox. This plugin sets both, so the figure is its
+    // own arithmetic read back, never MotoPress's prose parsed.
+    function extraGuestCount(scope) {
+        var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) {
+            return id > 0;
+        });
+        if (!ids.length) {
+            return 0;
+        }
+        var total = 0;
+        var boxes = scope.querySelectorAll('input[type="checkbox"][name*="[services]"]');
+        Array.prototype.forEach.call(boxes, function (box) {
+            if (!box.checked || ids.indexOf(parseInt(box.value, 10)) === -1) {
+                return;
+            }
+            var m = /^(.*)\[id\]$/.exec(String(box.name || ''));
+            if (!m) {
+                return;
+            }
+            var adults = scope.querySelector(
+                'select[name="' + esc(m[1] + '[adults]') + '"]');
+            total += adults ? (parseInt(adults.value, 10) || 0) : 0;
+        });
+        return total;
+    }
+
+    function isDateLabel(label) {
+        var text = String(label || '').trim();
+        // Require a digit AND a letter: "September 17, 2026" passes, "$175"
+        // and "Nights" do not.
+        if (!/\d/.test(text) || !/[A-Za-z]/.test(text)) {
+            return false;
+        }
+        return !isNaN(Date.parse(text));
+    }
+
+    // Every table's first VISIBLE row, so the top of a block never carries a
+    // rule. CSS :first-child still matches a row we hid — dropping the "Rate:"
+    // row would otherwise leave a stray line where it used to be.
+    function markFirstVisibleRows(rows) {
+        var seen = [];
+        var want = [];
+        rows.forEach(function (row) {
+            var table = row.closest('table');
+            if (!table || seen.indexOf(table) !== -1) {
+                return;
+            }
+            if (row.classList.contains('dcc_checkout-section-hidden')) {
+                return;
+            }
+            seen.push(table);
+            want.push(row);
+        });
+        // Decided first, written only where it differs (see markBreakdownRules).
+        rows.forEach(function (row) {
+            setClass(row, 'dcc_checkout-row-first', want.indexOf(row) !== -1);
+        });
+    }
+
+    // "#1 Cottage 36: Sunshine Suite" -> "Cottage 36: Sunshine Suite".
+    // The index is noise with one accommodation and meaningful with several,
+    // so it is only stripped when there is exactly one.
+    function relabelAccommodationRows(rows) {
+        var booking = rows.filter(function (r) {
+            return r.classList.contains('mphb-price-breakdown-booking');
+        });
+        if (booking.length !== 1) {
+            return;
+        }
+        var cell = booking[0].cells && booking[0].cells[0];
+        if (!cell) {
+            return;
+        }
+        var walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, null);
+        var node;
+        while ((node = walker.nextNode())) {
+            if (/^\s*#\d+\s*/.test(node.textContent)) {
+                setText(node, node.textContent.replace(/^\s*#\d+\s*/, ''));
+                return;
+            }
+        }
+    }
+
+    // Show the line item PRE-TAX so the items sum to Subtotal, tax is added
+    // once, and Total closes it.
+    //
+    // The pre-tax figure is COPIED from MotoPress's own subtotal row, never
+    // derived by subtracting tax. That equivalence only holds for a single
+    // accommodation, so with two or more the row is left exactly as MotoPress
+    // rendered it rather than guessing at a split.
+    function setLineItemPreTax(rows, subtotal) {
+        if (!subtotal) {
+            return;
+        }
+        var booking = rows.filter(function (r) {
+            return r.classList.contains('mphb-price-breakdown-booking');
+        });
+        if (booking.length !== 1) {
+            return;
+        }
+        var preTax = rowAmount(subtotal);
+        if (!looksLikeMoney(preTax)) {
+            return;
+        }
+        var cells = booking[0].cells;
+        var cell  = cells && cells.length ? cells[cells.length - 1] : null;
+        // Only ever overwrite a cell that already holds an amount — never one
+        // carrying the expander or the accommodation name.
+        if (cell && looksLikeMoney(cell.textContent || '')) {
+            setText(cell, preTax);
+        }
+    }
+
+    // Name the taxes in a footnote, behind an asterisk beside "Taxes".
+    //
+    // v0.7.0 — replaces the "Show detail" control and the cloned tax rows.
+    // Deliberately NOT a tooltip: a floating layer gets clipped by scroll
+    // containers on iOS and needs positioning maths. This is one quiet line in
+    // normal flow beneath the breakdown — nothing to clip, nothing to position.
+    //
+    // Names only, no figures: the components already add up to the Taxes line
+    // above, and repeating the amounts is what made the breakdown noisy.
+    function foldTaxDetail(rows, taxesRow, accTaxTot) {
+        if (!accTaxTot || !taxesRow) {
+            return;
+        }
+        var idx = rows.indexOf(accTaxTot);
+        var group = [];
+        for (var i = idx - 1; i >= 0; i--) {
+            var label = normLabel(rows[i]);
+            if (!label || label.indexOf('tax') === -1) {
+                break;
+            }
+            group.unshift(rows[i]);
+        }
+        // Only the rows carrying a figure are actual taxes; the rest of the run
+        // is the "Accommodation Taxes | Amount" column header.
+        var named = group
+            .filter(function (r) { return looksLikeMoney(rowAmount(r)); })
+            .map(function (r) { return rowLabel(r); })
+            .filter(Boolean);
+        group.forEach(hideRow);
+        if (!named.length) {
+            return;
+        }
+
+        var table = taxesRow.closest('table');
+        if (!table || !table.parentNode) {
+            return;
+        }
+
+        // Names come from the breakdown — those are the taxes actually charged
+        // on THIS booking. Rates come from the mphb_accommodation_taxes option,
+        // which is what MotoPress prices from, so changing a rate in MotoPress
+        // changes what the guest reads here. A name with no matching entry is
+        // shown WITHOUT a rate rather than with a guessed one.
+        var rates = CFG.taxRates || {};
+        var lines = named.map(function (label) {
+            var rate = rates[taxKey(label)];
+            return rate ? label + ' ' + rate : label;
+        });
+
+        var id = 'dcc-tax-footnote';
+        var note = document.createElement('p');
+        note.className = 'dcc_checkout-tax-footnote dcc_checkout-section-hidden';
+        note.id = id;
+        note.textContent = '* ' + (I18N.taxNoteLead || 'Taxes applied:') + ' ' +
+            lines.join(', ') + '.';
+        insertAfter(note, table);
+
+        var hovered = false;
+        var toggle = document.createElement('button');
+        toggle.type = 'button';          // never submit the checkout
+        toggle.className = 'dcc_checkout-tax-asterisk';
+        setText(toggle, '*');
+        // Excluded from rowLabel(), so this control can never change the text
+        // the next pass matches on.
+        setAttr(toggle, 'data-dcc-injected', '1');
+        // The glyph is not a name; give assistive tech a real one.
+        setAttr(toggle, 'aria-label', I18N.taxNoteLabel || 'Show which taxes apply');
+        setAttr(toggle, 'aria-controls', id);
+
+        function apply() {
+            var open = taxDetailPinned || hovered;
+            setClass(note, 'dcc_checkout-section-hidden', !open);
+            setAttr(toggle, 'aria-expanded', open ? 'true' : 'false');
+        }
+
+        toggle.addEventListener('click', function () {
+            taxDetailPinned = !taxDetailPinned;
+            apply();
+        });
+
+        // Hover opens it on a mouse; a tap pins it on anything. Hover listeners
+        // are added ONLY where hover exists: on iOS the first tap applies
+        // :hover and it sticks until you tap elsewhere, so a hover-driven
+        // control there needs two taps and then will not close.
+        if (pointerHasHover()) {
+            toggle.addEventListener('mouseenter', function () { hovered = true; apply(); });
+            toggle.addEventListener('mouseleave', function () { hovered = false; apply(); });
+        }
+
+        // Restore whatever the guest had open before this rebuild.
+        apply();
+
+        var cell = taxesRow.cells && taxesRow.cells[0];
+        if (cell) {
+            cell.appendChild(toggle);
+        }
+    }
+
+    /* ===================================================================== *
+     * Part B — required markers (items 11, 12, 14)
+     * ===================================================================== */
+
+    function cleanRequiredMarkers(root) {
+        var labels = root.querySelectorAll('label');
+        Array.prototype.forEach.call(labels, cleanLabel);
+    }
+
+    function cleanLabel(label) {
+        if (label.getAttribute('data-dcc-label')) {
+            return;
+        }
+        setAttr(label, 'data-dcc-label', '1');
+
+        var abbr = label.querySelector('abbr');
+        if (abbr) {
+            abbr.removeAttribute('title');            // item 14: drop the "?" tooltip
+            addClass(abbr, 'dcc_checkout-req');   // item 14: solid *, no dotted line
+        }
+
+        // Labels that WRAP a form control (consent checkboxes, MotoPress's
+        // service rows). The control must not be moved — reordering children
+        // would detach it — but the label's text-decoration is inherited by the
+        // field's own text, and an input cannot switch off an ancestor's
+        // underline. So: tag the label (CSS drops the underline there) and put
+        // the label's OWN words in the usual span, which keeps it.
+        if (label.querySelector('input, select, textarea')) {
+            addClass(label, 'dcc_checkout-label-wraps-control');
+            wrapLabelText(label, abbr);
+            return;
+        }
+
+        var hadUnderline =
+            /underline/.test(label.getAttribute('style') || '') ||
+            /underline/.test((getComputedStyle(label).textDecorationLine || ''));
+
+        // Move every child except the marker into a span that will carry the
+        // underline (item 12: underline the words only, not the space or the *).
+        var span = document.createElement('span');
+        span.className = 'dcc_checkout-label-text';
+
+        Array.prototype.slice.call(label.childNodes).forEach(function (node) {
+            if (node !== abbr) {
+                span.appendChild(node);
+            }
+        });
+
+        // Trim surrounding whitespace so the marker hugs the last letter (item 11).
+        trimEdgeWhitespace(span);
+
+        if (!span.textContent.trim()) {
+            label.appendChild(span);
+            return;
+        }
+
+        // Rebuild: [visible-text span][marker]. Drop leftover whitespace nodes.
+        Array.prototype.slice.call(label.childNodes).forEach(function (n) {
+            if (n !== abbr) {
+                label.removeChild(n);
+            }
+        });
+        label.insertBefore(span, label.firstChild);
+
+        if (!hadUnderline) {
+            addClass(label, 'dcc_checkout-no-underline');
+        }
+
+        // Items 2/5: the span now carries the ONLY underline. The label's own
+        // decoration (inline style and/or theme rule, at a different offset)
+        // would draw a second line through everything including the marker —
+        // clear the inline one here and let the scoped
+        // label.dcc_checkout-label-fixed CSS rule kill stylesheet-sourced ones.
+        if (/underline/.test(label.style.textDecoration || '') ||
+            /underline/.test(label.style.textDecorationLine || '')) {
+            label.style.textDecoration = 'none';
+        }
+        addClass(label, 'dcc_checkout-label-fixed');
+    }
+
+    // Put a wrapping label's text nodes into the underline span, leaving the
+    // form control exactly where it is. Each run is wrapped in place, so
+    // nothing moves and nothing is detached.
+    function wrapLabelText(label, abbr) {
+        Array.prototype.slice.call(label.childNodes).forEach(function (node) {
+            if (node === abbr) { return; }
+            if (node.nodeType === 1 &&
+                /^(INPUT|SELECT|TEXTAREA)$/.test(node.tagName)) { return; }
+            if (node.nodeType === 1 &&
+                node.classList.contains('dcc_checkout-label-text')) { return; }
+            if (node.nodeType === 3 && !node.textContent.trim()) { return; }
+            var span = document.createElement('span');
+            span.className = 'dcc_checkout-label-text';
+            label.insertBefore(span, node);
+            span.appendChild(node);
+        });
+    }
+
+    function trimEdgeWhitespace(span) {
+        while (span.firstChild && span.firstChild.nodeType === 3 && !span.firstChild.textContent.trim()) {
+            span.removeChild(span.firstChild);
+        }
+        while (span.lastChild && span.lastChild.nodeType === 3 && !span.lastChild.textContent.trim()) {
+            span.removeChild(span.lastChild);
+        }
+        if (span.firstChild && span.firstChild.nodeType === 3) {
+            setText(span.firstChild, span.firstChild.textContent.replace(/^\s+/, ''));
+        }
+        if (span.lastChild && span.lastChild.nodeType === 3) {
+            setText(span.lastChild, span.lastChild.textContent.replace(/\s+$/, ''));
+        }
+    }
+
+    /* ===================================================================== *
+     * Item 4 (2026-08-30 polish) — reservation-details date/time text
+     * ===================================================================== */
+
+    // The check-in/check-out template leaves whitespace inside the <time>
+    // elements (newlines around <strong> collapse to a space before the comma)
+    // and the site time format renders "2:00 pm". Normalize the TEXT NODES of
+    // those two <p> blocks only: trim <time>/<strong> edges and collapse
+    // " am"/" pm" -> "am"/"pm". The <time datetime> attributes are never
+    // touched (machine-readable values stay intact). Idempotent, so it is safe
+    // to re-run from the MutationObserver after MotoPress re-renders.
+    function normalizeReservationDates(root) {
+        var blocks = root.querySelectorAll('.mphb-check-in-date, .mphb-check-out-date');
+        Array.prototype.forEach.call(blocks, function (p) {
+            var times = p.querySelectorAll('time');
+            Array.prototype.forEach.call(times, function (timeEl) {
+                normalizeTextIn(timeEl);
+            });
+        });
+    }
+
+    // Collapse internal whitespace runs, strip the space before am/pm, and trim
+    // the element's leading/trailing text — text nodes only, attributes intact.
+    function normalizeTextIn(el) {
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+        var nodes = [];
+        var n;
+        while ((n = walker.nextNode())) { nodes.push(n); }
+        nodes.forEach(function (node) {
+            setText(node, node.textContent
+                .replace(/\s+/g, ' ')
+                .replace(/\s+([ap]m)\b/gi, '$1'));
+        });
+        // Trim the element's outer edges (first/last text content).
+        if (nodes.length) {
+            setText(nodes[0], nodes[0].textContent.replace(/^\s+/, ''));
+            setText(nodes[nodes.length - 1],
+                nodes[nodes.length - 1].textContent.replace(/\s+$/, ''));
+        }
+        // A lone <strong> child gets its own edges trimmed too.
+        var strong = el.querySelector('strong');
+        if (strong && strong.firstChild && strong.firstChild.nodeType === 3) {
+            setText(strong.firstChild, strong.firstChild.textContent.trim());
+        }
+    }
+
+    /* ===================================================================== *
+     * Part C — second guest conditional on guest count
+     * ===================================================================== */
+
+    // The ROOM guest dropdowns only. A per-adult service renders its own
+    // "for N guest(s)" select named …[services][j][adults], which ALSO matches
+    // the guests selector pattern — and MotoPress presets it to full capacity,
+    // so counting it would force guest-2 on at 1 guest. Exclude the services
+    // branch here so both the guest-2 flow and the extra-guest flow see only
+    // real room-adults selects.
+    // The room guest-count dropdowns ("Number of Guests"), by decreasing
+    // precision. If the configured name pattern misses — MotoPress renders the
+    // chooser from renderGuestsChooser on the mphb_sc_checkout_room_details
+    // hook, and the input name is not guaranteed to be room_details[i][adults]
+    // — fall back to the chooser's own container class, then to any select
+    // whose name mentions adults. A miss here disables the WHOLE guest flow
+    // (no gating, no labels, no fee), so it is worth more than one attempt.
+    function roomAdultsSelects(root) {
+        var notService = function (s) {
+            return String(s.name || '').indexOf('[services]') === -1;
+        };
+        var tries = [
+            CFG.guestsSelector || 'select[name^="mphb_room_details"][name*="[adults]"]',
+            // Verified against MotoPress's checkout-view.php: these two
+            // classes sit ON the <select>, wrapped in <p class="mphb-adults-
+            // chooser">. Written as descendant selectors they matched nothing.
+            'select.mphb_sc_checkout-guests-chooser',
+            'select.mphb_checkout-guests-chooser',
+            '.mphb-adults-chooser select',
+            'select[name*="[adults]"]',
+            'select[name*="adults"]'
+        ];
+        for (var i = 0; i < tries.length; i++) {
+            var found;
+            try {
+                found = Array.prototype.slice.call(root.querySelectorAll(tries[i]));
+            } catch (e) {
+                continue; // A bad configured selector must not kill the flow.
+            }
+            found = found.filter(notService);
+            if (found.length) {
+                return found;
+            }
+        }
+        return [];
+    }
+
+    // MotoPress renders a Checkout Field's input as 'mphb_' . $field->name
+    // (mphb-checkout-fields CheckoutView), so the field SLUG must be
+    // guest3_first_name, NOT mphb_guest3_first_name. A slug typed with the
+    // prefix already on it renders as mphb_mphb_guest3_first_name, no input
+    // ever matches, and the section silently never appears. Detect exactly
+    // that and say so — in the console always, on the page for admins.
+    function reportMisnamedFields(root, names) {
+        var wrong = [];
+        (names || []).forEach(function (name) {
+            if (root.querySelector('[name="mphb_' + esc(name) + '"]')) {
+                wrong.push(name);
+            }
+        });
+        if (!wrong.length) {
+            return;
+        }
+        var slugs = wrong.map(function (n) { return n.replace(/^mphb_/, ''); });
+        var msg = 'DCC Custom Checkout: Checkout Field slug is double-prefixed. ' +
+            'Rename ' + slugs.map(function (s2) { return 'mphb_' + s2; }).join(', ') +
+            ' to ' + slugs.join(', ') +
+            ' (MotoPress adds the mphb_ prefix when it renders the input).';
+        try { window.console && console.warn(msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            setAttr(box, 'role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        var line = document.createElement('p');
+        setText(line, (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg);
+        box.appendChild(line);
+    }
+
+    // One conditional details section per guest group (2: name + phone;
+    // 3 and 4: name only). Groups come from CFG.guestGroups (a single Config
+    // definition shared with the server backstop); the legacy guest2FieldNames
+    // shape is honoured as a fallback so an older localized config still works.
+    function setupGuestConditional(root) {
+        // No bail-out when the chooser can't be found. Returning early here
+        // left every guest-2/3/4 field on screen from the start — MotoPress
+        // enables them globally — which is exactly what the owner reported:
+        // "I do see the Guest2 fields even though I didn't even select a number
+        // of guests yet." With no readable count the count is 0, so every
+        // conditional group stays hidden, which is both correct and the safe
+        // direction: these fields are optional in MotoPress, so hiding them
+        // cannot block a booking.
+        var selects = roomAdultsSelects(root);
+
+        var groups = Array.isArray(CFG.guestGroups) && CFG.guestGroups.length
+            ? CFG.guestGroups
+            : [{ min: 2, names: CFG.guest2FieldNames || [], prefix: 'mphb_guest2_',
+                 title: (CFG.sectionTitles || {}).guest2 || 'Guest #2 Information',
+                 sectionClass: 'dcc_checkout-guest2-section' }];
+
+        function guestCount() {
+            var n = 0;
+            selects.forEach(function (s) { n = Math.max(n, parseInt(s.value, 10) || 0); });
+            return n;
+        }
+
+        // Fields are NATIVE Checkout Fields targeted by NAME (verified live):
+        // input[name="mphb_guest2_first_name"] etc., each inside a
+        // <p class="mphb-customer-* mphb-text-control">.
+        var customerDetails = root.querySelector('.mphb-customer-details');
+        var lastAnchor = customerDetails;
+        var built = [];
+
+        groups.forEach(function (g) {
+            var names = g.names || [];
+            var inputs = [];
+            var rows = [];
+            var candidates = Array.prototype.slice.call(
+                root.querySelectorAll('input[name^="' + esc(g.prefix || 'mphb_guest2_') + '"]')
+            );
+            candidates.forEach(function (el) {
+                if (names.length && names.indexOf(el.name) === -1) {
+                    return;
+                }
+                inputs.push(el);
+                var row = el.closest('.mphb-text-control') ||
+                    el.closest('[class*="mphb-customer-"], p, li, tr, div');
+                if (row && rows.indexOf(row) === -1) {
+                    rows.push(row);
+                }
+            });
+            if (!inputs.length) {
+                // Owner hasn't created this group's fields — no section. If the
+                // fields DO exist but are double-prefixed, say why.
+                reportMisnamedFields(root, names);
+                return;
+            }
+
+            // Sections stack after "Your Information" in guest order; each one
+            // anchors after the previous so the pet section can follow the last.
+            var section = lastAnchor
+                ? buildFieldSection('dcc_checkout-guest-section ' + (g.sectionClass || ''), g.title || '', rows)
+                : null;
+            if (section) {
+                insertAfter(section, lastAnchor);
+                lastAnchor = section;
+            }
+            built.push({ min: Number(g.min) || 2, inputs: inputs, targets: section ? [section] : rows });
+        });
+
+        if (!built.length) {
+            return null;
+        }
+
+        function evaluate() {
+            var count = guestCount();
+            built.forEach(function (b) {
+                var show = count >= b.min;
+                b.targets.forEach(function (t) { setClass(t, 'dcc_checkout-section-hidden', !show); });
+                b.inputs.forEach(function (inp) {
+                    setRequired(inp, show, root);
+                    if (!show) { clearInvalid(inp); }
+                });
+            });
+        }
+
+        selects.forEach(function (s) { s.addEventListener('change', evaluate); });
+        evaluate();
+
+        // Validator: every visible group's fields must be filled.
+        return function () {
+            var count = guestCount();
+            var bad = [];
+            built.forEach(function (b) {
+                if (count < b.min) { return; }
+                b.inputs.forEach(function (inp) {
+                    clearInvalid(inp);
+                    if (!String(inp.value || '').trim()) {
+                        bad.push(inp);
+                    }
+                });
+            });
+            return bad;
+        };
+    }
+
+    /* ===================================================================== *
+     * Part D — Cottage 34 pet flow
+     * ===================================================================== */
+
+    // `dog` is the handle from setupDogFields (fields already hidden by default);
+    // this flow only REVEALS them via the toggle on a pet cottage.
+    function setupPetFlow(root, dog) {
+        // Master switch (admin setting). When off, the toggle never renders, no
+        // service is applied, and the dog fields stay hidden everywhere.
+        if (!CFG.petFeeEnabled) {
+            return null;
+        }
+
+        var ids = (CFG.serviceIdList || []).map(Number);
+        if (!ids.length) {
+            return null;
+        }
+
+        // Honor the configured accommodations list when the room-type id is
+        // discoverable in the form; otherwise fall back to native-service
+        // presence below (services only exist on pet accommodations anyway).
+        var petAcc = (CFG.petAccommodations || []).map(Number);
+        if (petAcc.length) {
+            var rts = getRoomTypeIds(root);
+            if (rts.length && !rts.some(function (id) { return petAcc.indexOf(id) !== -1; })) {
+                return null; // not a configured pet accommodation
+            }
+        }
+
+        // Locate the native service checkboxes for our three pet services.
+        var serviceInputs = {};
+        var found = false;
+        ids.forEach(function (id) {
+            var el = findServiceInput(root, id);
+            if (el) { serviceInputs[id] = el; found = true; }
+        });
+        if (!found) {
+            return null; // not the Cottage 34 checkout — nothing to do
+        }
+
+        // Hide the native pet-service selector rows.
+        ids.forEach(function (id) {
+            var input = serviceInputs[id];
+            if (!input) { return; }
+            var wrap = serviceRowWrapper(input);
+            if (wrap) { hideServiceRow(wrap); }
+        });
+
+        var block = buildPetBlock();
+
+        // The toggle belongs with the dog questions, not in "Choose Additional
+        // Services" — that whole section is removed now (hideNativeServices),
+        // and a control left inside it would go with it. Put it at the top of
+        // the Pet Information section, above Dog type / Size / Hair.
+        var petSection = dog && dog.section;
+        if (petSection) {
+            var heading = petSection.querySelector('h3');
+            if (heading && heading.nextSibling) {
+                petSection.insertBefore(block.el, heading.nextSibling);
+            } else {
+                petSection.appendChild(block.el);
+            }
+            // The section itself is revealed only with the dog fields, but the
+            // question has to be askable before the answer is "Yes".
+            removeClass(petSection, 'dcc_checkout-section-hidden');
+        } else {
+            var anchor = serviceRowWrapper(serviceInputs[ids[0]]);
+            if (anchor && anchor.parentNode) {
+                anchor.parentNode.insertBefore(block.el, anchor);
+            } else {
+                root.appendChild(block.el);
+            }
+        }
+
+        function bucketId() {
+            return serviceForNights(getNights(root));
+        }
+
+        function applyService(petYes) {
+            var target = bucketId();
+            ids.forEach(function (id) {
+                var input = serviceInputs[id];
+                if (!input) { return; }
+                var want = petYes && id === target;
+                if (!!input.checked !== want) {
+                    input.checked = want;
+                    fireChange(input); // let MotoPress recompute the total natively
+                }
+            });
+        }
+
+        function onToggle() {
+            var yes = block.isYes();
+            if (dog) { dog.show(yes); } // reveal/hide the Pet Information section
+            applyService(yes);
+        }
+
+        block.radios.forEach(function (r) { r.addEventListener('change', onToggle); });
+        onToggle(); // default No → hide dog fields + uncheck all services
+
+        // Re-assert once after MotoPress's own checkout JS has initialized, in
+        // case it reset the service checkboxes during its first render.
+        setTimeout(function () { if (block.isYes()) { applyService(true); } }, 800);
+
+        // Validator: when "Yes", the present native dog fields are required.
+        return function () {
+            if (!block.isYes() || !dog) {
+                return [];
+            }
+            var bad = [];
+            dog.inputs.forEach(function (inp) {
+                clearInvalid(inp);
+                if (!String(inp.value || '').trim()) {
+                    bad.push(inp);
+                }
+            });
+            return bad;
+        };
+    }
+
+    // Collect the native dog Checkout Fields (created by the owner; names set in
+    // settings), move them into the "Pet Information" section, and HIDE them —
+    // not required — by default. Runs on EVERY checkout: MotoPress renders these
+    // globally-enabled fields on every cottage, so without this they'd show on
+    // non-pet cottages. Only the pet-cottage toggle (setupPetFlow) reveals them.
+    // Returns { inputs, show(yes) } or null when the fields don't exist.
+    function setupDogFields(root) {
+        var dogNames = CFG.dogFieldNames || [];
+        var inputs = [];
+        var rows = [];
+        dogNames.forEach(function (name) {
+            var el = root.querySelector('[name="' + esc(name) + '"]');
+            if (!el) { return; }
+            inputs.push(el);
+            var row = el.closest('.mphb-text-control') ||
+                el.closest('[class*="mphb-customer-"], p, li, tr, div');
+            if (row && rows.indexOf(row) === -1) { rows.push(row); }
+        });
+        if (!inputs.length) {
+            reportMisnamedFields(root, dogNames);
+            return null;
+        }
+
+        // Move the dog rows into a "Pet Information" section, placed after the
+        // Guest #2 section (or after "Your Information").
+        var guestSections = root.querySelectorAll('.dcc_checkout-guest-section');
+        var anchor = (guestSections.length ? guestSections[guestSections.length - 1] : null) ||
+            root.querySelector('.mphb-customer-details');
+        var section = anchor
+            ? buildFieldSection('dcc_checkout-pet-section', (CFG.sectionTitles || {}).pet || 'Pet Information', rows)
+            : null;
+        if (section) {
+            insertAfter(section, anchor);
+        }
+        function show(yes) {
+            // Always hide/show the dog rows themselves.
+            rows.forEach(function (r) {
+                setClass(r, 'dcc_checkout-section-hidden', !yes);
+            });
+            if (section) {
+                // Hide the whole section only while it holds nothing but those
+                // rows. On a pet cottage the "Traveling with a dog?" toggle is
+                // moved in here, and the question has to stay visible so it can
+                // be answered — only the answers hide.
+                var hasToggle = !!section.querySelector('.dcc_checkout-pet');
+                setClass(section, 'dcc_checkout-section-hidden', !yes && !hasToggle);
+            }
+            inputs.forEach(function (inp) {
+                setRequired(inp, yes, root);
+                if (!yes) { clearInvalid(inp); }
+                // ITEM 2 (v0.22.0) — DISABLED, not merely hidden.
+                //
+                // A hidden control still submits. These are <select>s whose
+                // first option was a real value, so a booking with no dog was
+                // posting "10-20 lbs" and "short-haired" anyway; a blank first
+                // option (being added in MotoPress) fixes the VALUE but the KEY
+                // would still be posted. Disabled, the browser omits the field
+                // entirely, so a no-dog booking carries no dog_* keys at all —
+                // asserted in tests/breakdown.
+                setDisabled(inp, !yes);
+            });
+        }
+
+        show(false); // hidden + not required by default, on every cottage
+
+        return { inputs: inputs, show: show, section: section };
+    }
+
+    /* ===================================================================== *
+     * Extra-guest fee — guests beyond the second (v0.3.0)
+     * ===================================================================== */
+
+    // Drives the native "Extra Guest Fee" service (per night · per adult) from
+    // each room's guest dropdown, PER ROOM — a checkout can hold two cottages
+    // with different guest counts. MotoPress renders the service as a checkbox
+    // (…[services][j][id]) plus a "for N guest(s)" select (…[services][j][adults]);
+    // price = fee × nights × that adults value, computed natively (no math here).
+    // We hide the service row, check the bucket service when extra > 0, set its
+    // [adults] select to `extra` (adults − includedGuests) — NEVER a [quantity],
+    // per_night services have none — and uncheck every other bucket. Invariant:
+    // at most ONE bucket checked per room. Dormant unless all service IDs are set.
+    function setupExtraGuestFlow(root) {
+        var includedCap = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
+        if (!CFG.guestFeeEnabled) {
+            // "Pull-out Couch Guests" is off (or unconfigured): the offering is
+            // not for sale, so cap the guest dropdowns at the included count.
+            // The server enforces this too; doing it here spares the guest a
+            // rejection at submit when MotoPress capacity still offers 3–4.
+            // We only DISABLE existing options — never inject any.
+            capAdultsSelects(root, includedCap);
+            return;
+        }
+        var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) { return id > 0; });
+        if (!ids.length) {
+            return;
+        }
+        var included = Number(CFG.includedGuests) > 0 ? Number(CFG.includedGuests) : 2;
+        var guestAcc = (CFG.guestAccommodations || []).map(Number);
+
+        roomAdultsSelects(root).forEach(function (sel) {
+            var m = /^(.*)\[adults\]$/.exec(String(sel.name || ''));
+            if (!m) {
+                return;
+            }
+            var prefix = m[1]; // e.g. mphb_room_details[0]
+
+            // Belt-and-braces accommodation gate when the room type is
+            // discoverable (service assignment already limits rendering to the
+            // configured cottages).
+            var rtEl = root.querySelector('input[name="' + esc(prefix + '[room_type_id]') + '"]');
+            if (rtEl && guestAcc.length && guestAcc.indexOf(parseInt(rtEl.value, 10)) === -1) {
+                return;
+            }
+
+            // This room's extra-guest service checkbox(es) + their [adults]
+            // selects, and hide the native rows.
+            var services = [];
+            var boxes = root.querySelectorAll('input[name^="' + esc(prefix + '[services]') + '"]');
+            Array.prototype.forEach.call(boxes, function (box) {
+                if (!/\[id\]$/.test(box.name) || ids.indexOf(parseInt(box.value, 10)) === -1) {
+                    return;
+                }
+                var adultsSel = root.querySelector(
+                    'select[name="' + esc(box.name.replace(/\[id\]$/, '[adults]')) + '"]'
+                );
+                services.push({ id: parseInt(box.value, 10), box: box, adultsSel: adultsSel });
+                var wrap = serviceRowWrapper(box);
+                if (wrap) { hideServiceRow(wrap); }
+            });
+            if (!services.length) {
+                return;
+            }
+
+            // Dates are fixed on the checkout step — resolve the bucket once.
+            var target = guestServiceForNights(getNights(root));
+
+            // The guest dropdown is now the ONLY extra-guest control: its row
+            // in "Choose Additional Services" is hidden above, so the count
+            // charged is always max(0, guests - included) and the two can never
+            // disagree. Label each option with what it adds, and explain the
+            // couch underneath.
+            //
+            // Promise a fee ONLY under exactly the condition apply() can
+            // actually charge one: the bucket resolved, its row is on the page,
+            // and we hold its multiplier. Otherwise apply() attaches nothing,
+            // and a "(+$50/night)" label would state a charge that never lands.
+            var canCharge = target > 0 && services.some(function (svc) {
+                return svc.id === target && !!svc.adultsSel;
+            });
+            if (canCharge) {
+                decorateGuestOptions(sel, included);
+                setCouchNote(sel, included);
+            }
+
+            function apply() {
+                var extra = (parseInt(sel.value, 10) || 0) - included;
+                services.forEach(function (svc) {
+                    // Never attach without control of the multiplier: MotoPress
+                    // presets that select to FULL capacity, so ticking the box
+                    // with no select in hand would bill 4 extra guests instead
+                    // of `extra` — a silent overcharge. Failing closed here
+                    // instead lets the server backstop reject with a clear
+                    // message, which is the safer wrong answer.
+                    var want = extra > 0 && svc.id === target && !!svc.adultsSel;
+                    if (want && String(svc.adultsSel.value) !== String(extra)) {
+                        svc.adultsSel.value = String(extra);
+                        fireChange(svc.adultsSel);
+                    }
+                    if (!!svc.box.checked !== want) {
+                        svc.box.checked = want;
+                        fireChange(svc.box); // MotoPress recomputes the total natively
+                    }
+                });
+            }
+
+            function reassert() {
+                apply();
+                // The guest dropdown is exactly the control MotoPress's own
+                // checkout JS rebuilds, so re-apply the labels and note too —
+                // both are idempotent (the original label is stashed per
+                // option, the note is keyed per select).
+                if (canCharge) {
+                    decorateGuestOptions(sel, included);
+                    setCouchNote(sel, included);
+                }
+            }
+
+            sel.addEventListener('change', apply);
+            apply();
+            // Re-assert once after MotoPress's own checkout JS initializes, in
+            // case it reset the service inputs during its first render.
+            setTimeout(reassert, 800);
+        });
+    }
+
+    // Label the guest-count options with the CUMULATIVE amount each choice
+    // adds: "1", "2", "3 (+$50/night)", "4 (+$100/night)". Cumulative on
+    // purpose — the owner's ask was that a guest reads the single extra amount
+    // for the number they pick, instead of a per-head rate they have to
+    // multiply and can be surprised by. Options at or below the included count
+    // stay bare.
+    //
+    // The amounts are pre-formatted server-side from the SAME MotoPress Service
+    // that does the billing (CFG.guestFeeSteps), so a label cannot state a
+    // number the total won't match; when that amount can't be read the map is
+    // empty and no suffix is added at all. Only the visible label changes —
+    // option VALUES stay plain integers. Idempotent: the original label is
+    // stashed, so a MotoPress re-render can never stack suffixes.
+    function decorateGuestOptions(sel, included) {
+        var steps  = CFG.guestFeeSteps || {};
+        var suffix = I18N.optionFeeSuffix || ' (+%s/night)';
+        var any    = false;
+        Array.prototype.forEach.call(sel.options, function (opt) {
+            // MotoPress renders the counts as <option>1</option> — no value
+            // attribute — and an option without one takes its VALUE FROM ITS
+            // TEXT. Rewriting the label would therefore have submitted
+            // "3 (+$50/night)" as mphb_room_details[N][adults]. Pin the value
+            // first so the label is cosmetic, as the spec requires.
+            if (!opt.hasAttribute('value')) {
+                setAttr(opt, 'value', opt.value);
+            }
+            var base = opt.getAttribute('data-dcc-label');
+            if (base === null) {
+                base = opt.textContent;
+                setAttr(opt, 'data-dcc-label', base);
+            }
+            var extra  = (parseInt(opt.value, 10) || 0) - included;
+            var amount = extra > 0 ? steps[extra] : '';
+            setText(opt, amount ? base + suffix.replace('%s', amount) : base);
+            if (amount) { any = true; }
+        });
+        return any;
+    }
+
+    // The canonical, owner-approved explanation of the pull-out couch, under
+    // the guest dropdown. Numbers are substituted rather than frozen into the
+    // sentence: the maximum comes from this cottage's own dropdown and the fee
+    // from the configured Service, so it can't state something false. Rendered
+    // only where the couch is actually offered — a cottage that tops out at the
+    // included count gets no note, because the sentence wouldn't be true there.
+    function setCouchNote(sel, included) {
+        var single = (CFG.guestFeeSteps || {})[1] || '';
+        var beds   = CFG.couchBedsText || '';
+        var max    = maxOptionValue(sel);
+        if (!single || !beds || !I18N.couchNote || max <= included) {
+            return;
+        }
+        // ITEM 9 (v0.14.0): the sentence is now a fixed literal, owned by
+        // Config::couch_note_text() and shared character-for-character with the
+        // Cottage Selector — so there is nothing to substitute. The guards
+        // above still decide WHETHER it appears: `max <= included` is what
+        // keeps it off Cottages 33 and 34, which have no couch.
+        // Item 5 (v0.19.0): the owner wants the two sentences on two lines.
+        // That is PRESENTATION — the literal stays one string, byte-identical
+        // to the Cottage Selector's and pinned by hash in tests/copy. The break
+        // is put in here, at render, after the first sentence's full stop, and
+        // shown by white-space: pre-line on the note.
+        setGuestNote(sel, 'dcc_checkout-fee-note',
+            String(I18N.couchNote).replace(/\.\s+(?=[A-Z])/, '.\n'));
+    }
+
+    // Highest selectable guest count on this room's dropdown (ignores options
+    // capAdultsSelects has disabled, so the note matches what's on offer).
+    function maxOptionValue(sel) {
+        var max = 0;
+        Array.prototype.forEach.call(sel.options, function (opt) {
+            if (opt.disabled) { return; }
+            var v = parseInt(opt.value, 10) || 0;
+            if (v > max) { max = v; }
+        });
+        return max;
+    }
+
+    // Hide a native service row. A class rather than an inline style so
+    // assertGuestChooserSurvived() can find and undo every row we hid.
+    function hideServiceRow(wrap) {
+        if (wrap && wrap.nodeType === 1) {
+            addClass(wrap, 'dcc_checkout-service-hidden');
+        }
+    }
+
+    // Nothing this plugin hides is worth losing the "Number of Guests"
+    // dropdown over: without it a guest cannot choose 3 or 4, and the whole
+    // conditional-fields flow stands down. So after every pass, prove the
+    // chooser is still there AND still visible; if it is not, undo every row we
+    // hid and re-check. Undoing shows a redundant service row at worst —
+    // hiding the chooser costs bookings.
+    function assertGuestChooserSurvived(root) {
+        if (guestChooserVisible(root)) {
+            return;
+        }
+        var hidden = root.querySelectorAll('.dcc_checkout-service-hidden');
+        if (hidden.length) {
+            Array.prototype.forEach.call(hidden, function (el) {
+                removeClass(el, 'dcc_checkout-service-hidden');
+            });
+            try {
+                window.console && console.warn('DCC Custom Checkout: restored hidden service rows — ' +
+                    'hiding one of them was also hiding the guest-count dropdown.');
+            } catch (_) {}
+            if (guestChooserVisible(root)) {
+                return;
+            }
+        }
+        // Still wrong after undoing our own hiding. Report WHICH of the two
+        // cases it is — absent from the markup, or present but hidden by
+        // something else — because the remedies are completely different.
+        reportChooserProblem(root);
+    }
+
+    function guestChooserVisible(root) {
+        var selects = roomAdultsSelects(root);
+        if (!selects.length) {
+            return false;
+        }
+        // Judged on computed styles, not on measured boxes. offsetParent and
+        // getClientRects are layout-dependent and report "invisible" for an
+        // element that simply has not been laid out yet — which would make this
+        // safety net un-hide everything during early paint. hidingAncestor()
+        // answers the question actually being asked: is anything up the tree
+        // set to display:none / visibility:hidden?
+        return selects.every(function (sel) {
+            return hidingAncestor(sel) === null;
+        });
+    }
+
+    function reportChooserProblem(root) {
+        var selects = roomAdultsSelects(root);
+        var msg;
+        if (!selects.length) {
+            msg = 'DCC Custom Checkout: no "Number of Guests" dropdown found on this checkout. ' +
+                'Extra-guest pricing and the conditional guest fields are all driven by it, so they ' +
+                'are inactive. Checked: ' + (CFG.guestsSelector || '(default)') +
+                ', select.mphb_sc_checkout-guests-chooser, .mphb-adults-chooser select, ' +
+                'select[name*="[adults]"].';
+        } else {
+            // Present but not visible: name the element actually hiding it, so
+            // the culprit can be found in one look instead of by bisecting CSS.
+            var culprit = null;
+            for (var i = 0; i < selects.length && !culprit; i++) {
+                culprit = hidingAncestor(selects[i]);
+            }
+            msg = 'DCC Custom Checkout: the "Number of Guests" dropdown is present (' +
+                selects.length + ' found) but not visible' +
+                (culprit ? ', hidden by <' + describeEl(culprit) + '>' : '') +
+                '. This plugin has already un-hidden everything it hid, so the cause is elsewhere ' +
+                '(theme or another plugin).';
+        }
+        try { window.console && console.warn(msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            setAttr(box, 'role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        if (box.querySelector('.dcc_checkout-admin-notice__chooser')) {
+            return;
+        }
+        var line = document.createElement('p');
+        line.className = 'dcc_checkout-admin-notice__chooser';
+        setText(line, (I18N.adminNoticePrefix || 'Visible to administrators only:') + ' ' + msg);
+        box.appendChild(line);
+    }
+
+    // First ancestor (self included) that computed styles say is not rendering.
+    function hidingAncestor(el) {
+        for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+            var cs;
+            try { cs = getComputedStyle(n); } catch (e) { return null; }
+            if (!cs) { return null; }
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    function describeEl(el) {
+        var cls = String(el.className || '').trim();
+        return el.tagName.toLowerCase() + (cls ? '.' + cls.split(/\s+/).join('.') : '');
+    }
+
+    // Pin the "Choose File" field to the Country select's width.
+    //
+    // The owner's rule is "same width as Country", not a figure — and Country's
+    // width comes from the theme/MotoPress, which differs by viewport. So the
+    // width is MEASURED from the select at runtime rather than hard-coded:
+    // correct at desktop and at 375px alike, and it follows the theme if that
+    // ever changes. Re-measured on resize, and again after a re-render.
+    //
+    // If the select cannot be found or measured (layout not yet resolved), the
+    // field is left alone: max-width:100% in the CSS still keeps it in its
+    // column, it just is not pinned.
+    function matchFileFieldWidth(root) {
+        var files = root.querySelectorAll('input[type="file"]');
+        if (!files.length) {
+            return;
+        }
+        var ref = referenceSelect(root);
+        if (!ref) {
+            return;
+        }
+
+        var lastWritten = '';
+        function apply() {
+            var width = ref.getBoundingClientRect
+                ? ref.getBoundingClientRect().width
+                : 0;
+            if (!(width > 0)) {
+                return;
+            }
+            var value = width + 'px';
+            // Writing the same width again is not free: it is a style mutation
+            // on a laid-out page, and this runs on a debounce that lands right
+            // after a scroll settles -- exactly when the guest is about to tap.
+            if (value === lastWritten) {
+                return;
+            }
+            lastWritten = value;
+            Array.prototype.forEach.call(files, function (file) {
+                // setProperty with 'important' so the field's own !important
+                // rules cannot out-rank the measured width.
+                file.style.setProperty('width', width + 'px', 'important');
+            });
+        }
+
+        apply();
+        var timer = null;
+        // WIDTH ONLY (v0.13.0). On iOS Safari 'resize' fires when the URL bar
+        // collapses or expands, which happens on ordinary scrolling -- so this
+        // handler was re-measuring and re-writing layout a few times per scroll
+        // on the owner's phone, on a 150ms debounce that lands just as the page
+        // settles and he taps. The field's width follows the Country select's
+        // WIDTH, so a height-only resize can never change the answer.
+        var lastWidth = window.innerWidth;
+        window.addEventListener('resize', function () {
+            if (window.innerWidth === lastWidth) {
+                return;
+            }
+            lastWidth = window.innerWidth;
+            if (timer) { clearTimeout(timer); }
+            timer = setTimeout(apply, 150);
+        });
+        // Fonts and late layout can change the select's width after first paint.
+        setTimeout(apply, 400);
+        return apply;
+    }
+
+    // The Country select the owner named, with fallbacks that never pick a
+    // guest-count chooser (whose width is deliberately different).
+    function referenceSelect(root) {
+        var tries = ['select[name*="country" i]', 'select[name*="country"]',
+                     '.mphb-customer-details select', 'select'];
+        for (var i = 0; i < tries.length; i++) {
+            var found;
+            try {
+                found = Array.prototype.slice.call(root.querySelectorAll(tries[i]));
+            } catch (e) {
+                continue;
+            }
+            found = found.filter(function (sel) {
+                return String(sel.name || '').indexOf('[adults]') === -1
+                    && String(sel.name || '').indexOf('[services]') === -1;
+            });
+            if (found.length) {
+                return found[0];
+            }
+        }
+        return null;
+    }
+
+    // Remove "Choose Additional Services" outright.
+    //
+    // Every service this site sells is driven by a control the guest already
+    // used: the pet fee by "Traveling with a dog?", the extra-guest fee by
+    // "Number of Guests". The native section is a second control for a
+    // decision already made.
+    //
+    // v0.7.0 — this hides the services SUBTREE, not the ancestor section.
+    // The previous version looked for the enclosing .mphb-checkout-section and
+    // skipped it if it contained a guest-count dropdown. On this site MotoPress
+    // renders the services and the chooser inside the SAME section, so that
+    // guard fired every time and nothing was ever hidden. Hiding the rows, the
+    // heading, and only those wrappers left holding nothing else keeps the
+    // chooser out of the blast radius structurally, instead of relying on a
+    // guard that has to be right.
+    //
+    // Hiding stays display-based, so a ticked service input still submits and
+    // MotoPress still prices it — the $50 extra-guest fee is unaffected.
+    function hideNativeServices(root) {
+        var rows = [];
+        function addRow(el) {
+            if (el && el.nodeType === 1 && rows.indexOf(el) === -1) {
+                rows.push(el);
+            }
+        }
+        Array.prototype.forEach.call(
+            root.querySelectorAll('.mphb_sc_checkout-service'),
+            function (el) {
+                // The class sits on the checkbox on this site; resolve it to
+                // the row that actually carries the visible text.
+                addRow(/^(INPUT|SELECT)$/.test(el.tagName) ? serviceRowWrapper(el) : el);
+            }
+        );
+        Array.prototype.forEach.call(
+            root.querySelectorAll('input[name*="[services]"]'),
+            function (input) { addRow(serviceRowWrapper(input)); }
+        );
+        if (!rows.length) {
+            return;
+        }
+
+        rows.forEach(hideServiceRow);
+        hideServicesHeading(rows[0], root);
+        rows.forEach(function (row) { hideEmptiedAncestors(row, root); });
+    }
+
+    // The "Choose Additional Services" heading. Found by position, not by its
+    // wording: the last heading before the first service row — unless a guest
+    // chooser sits between the two, which would mean that heading belongs to
+    // the chooser's block ("Accommodation Details") and must be left alone.
+    function hideServicesHeading(firstRow, root) {
+        var scope = firstRow.closest('.mphb-checkout-section') || root;
+        var chooser = roomAdultsSelects(scope)[0] || null;
+        var heading = null;
+        Array.prototype.forEach.call(
+            scope.querySelectorAll('h1, h2, h3, h4, h5, h6'),
+            function (h) {
+                if (h.contains(firstRow) || !precedes(h, firstRow)) {
+                    return;
+                }
+                heading = h; // keep the last one before the rows
+            }
+        );
+        if (!heading) {
+            return;
+        }
+        if (chooser && precedes(heading, chooser) && precedes(chooser, firstRow)) {
+            return; // Belongs to the block holding the chooser.
+        }
+        hideServiceRow(heading);
+    }
+
+    // Walk up hiding wrappers that now hold nothing visible, so no empty
+    // bordered box or padded gap is left where the services were. Stops dead at
+    // anything holding the guest chooser or our own pet control, so it can
+    // never climb into the rest of the form.
+    function hideEmptiedAncestors(el, root) {
+        var node = el.parentNode;
+        while (node && node.nodeType === 1 && node !== root && node !== document.body) {
+            if (roomAdultsSelects(node).length) { return; }
+            if (node.querySelector('.dcc_checkout-pet')) { return; }
+            var kids = node.children;
+            for (var i = 0; i < kids.length; i++) {
+                if (!kids[i].classList.contains('dcc_checkout-service-hidden')) {
+                    return; // Still holds something a guest should see.
+                }
+            }
+            hideServiceRow(node);
+            node = node.parentNode;
+        }
+    }
+
+    // Does `a` come before `b` in document order?
+    function precedes(a, b) {
+        return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+
+    // Disable (never remove, never inject) guest-count options above `cap`, and
+    // pull an already-selected over-cap value back down. Used when the pull-out
+    // couch offering is switched off while MotoPress capacity still allows 3–4.
+    function capAdultsSelects(root, cap) {
+        roomAdultsSelects(root).forEach(function (sel) {
+            var changed = false;
+            var capped = false;
+            Array.prototype.forEach.call(sel.options, function (opt) {
+                var v = parseInt(opt.value, 10);
+                if (v > cap) {
+                    // `disabled` is the load-bearing part — it is what actually
+                    // stops the option being chosen, and it is honoured
+                    // everywhere. The hiding is cosmetic and best-effort:
+                    // the bare `hidden` attribute is only a UA-stylesheet rule
+                    // (display:none), which ANY author rule outranks, so carry
+                    // our own !important class as well. Safari/iOS honour
+                    // neither on <option>, which is exactly why selection is
+                    // gated on `disabled` and never on visibility.
+                    opt.disabled = true;
+                    opt.hidden = true;
+                    addClass(opt, 'dcc_checkout-option-hidden');
+                    capped = true;
+                }
+            });
+            if ((parseInt(sel.value, 10) || 0) > cap) {
+                sel.value = String(cap);
+                changed = true;
+            }
+            if (changed) {
+                fireChange(sel); // let MotoPress recompute for the corrected count
+            }
+            // Only explain when we actually took a choice away — a cottage that
+            // already caps at `cap` needs no note.
+            if (capped && I18N.capNote) {
+                setGuestNote(sel, 'dcc_checkout-cap-note', I18N.capNote.replace('%s', String(cap)));
+            }
+        });
+    }
+
+    // Insert (or update) a short note directly under a room's guest dropdown.
+    // Idempotent per (select, kind) so re-asserts never stack duplicates.
+    function setGuestNote(sel, kind, text) {
+        var row = sel.closest('.mphb-adults-chooser, p, li, div') || sel.parentNode;
+        // The chooser's wrapper is <p class="mphb-adults-chooser">, and a <p>
+        // cannot contain a <p>. Append inside anything else; place the note as
+        // the wrapper's next sibling when it is itself a paragraph.
+        var host = row.tagName === 'P' ? (row.parentNode || row) : row;
+        var note = host.querySelector('.' + kind);
+        if (!note) {
+            note = document.createElement('p');
+            note.className = 'dcc_checkout-guest-note ' + kind;
+            if (row.tagName === 'P' && row.parentNode) {
+                insertAfter(note, row);
+            } else {
+                row.appendChild(note);
+            }
+        }
+        setText(note, text);
+    }
+
+    // Mirrors Config::guest_service_id_for_nights() — keep the two in step.
+    // The daily bucket has no lower bound (flat fee, applies from night one);
+    // min_daily governs the pet fee only. 0 means "stay length unknown".
+    function guestServiceForNights(nights) {
+        if (!(nights > 0)) { return 0; }
+        var t   = CFG.thresholds || { min_daily: 2, min_weekly: 7, min_monthly: 30 };
+        var svc = CFG.guestServiceIds || {};
+        if (nights >= t.min_monthly) { return Number(svc.monthly); }
+        if (nights >= t.min_weekly)  { return Number(svc.weekly); }
+        return Number(svc.daily);
+    }
+
+    // Toggle-only block ("Traveling with a dog?"). The info fields themselves are
+    // native MotoPress Checkout Fields, driven separately (see setupPetFlow).
+    function buildPetBlock() {
+        // A real <fieldset>/<legend> so assistive tech reads the question as
+        // the group label for the Yes/No radios (a span + div did not).
+        var wrap = document.createElement('fieldset');
+        wrap.className = 'dcc_checkout-pet';
+
+        var legend = document.createElement('legend');
+        legend.className = 'dcc_checkout-pet__legend';
+        setText(legend, I18N.petQuestion || 'Traveling with a dog?');
+        wrap.appendChild(legend);
+
+        var toggle = document.createElement('div');
+        toggle.className = 'dcc_checkout-pet__toggle';
+        var no  = makeRadio('dcc_checkout_dog', 'no',  I18N.petNo  || 'No',  true);
+        var yes = makeRadio('dcc_checkout_dog', 'yes', I18N.petYes || 'Yes', false);
+        toggle.appendChild(no.label);
+        toggle.appendChild(yes.label);
+        wrap.appendChild(toggle);
+
+        if (I18N.petFeeNote) {
+            var note = document.createElement('p');
+            note.className = 'dcc_checkout-pet__note';
+            setText(note, I18N.petFeeNote);
+            wrap.appendChild(note);
+        }
+
+        return {
+            el: wrap,
+            radios: [no.input, yes.input],
+            isYes: function () { return yes.input.checked; }
+        };
+    }
+
+    function makeRadio(name, value, text, checked) {
+        var label = document.createElement('label');
+        var input = document.createElement('input');
+        input.type = 'radio';
+        input.name = name;
+        input.value = value;
+        input.checked = !!checked;
+        var span = document.createElement('span');
+        setText(span, text);
+        label.appendChild(input);
+        label.appendChild(span);
+        return { label: label, input: input };
+    }
+
+    /* ---- native MotoPress service helpers ------------------------------- */
+
+    function findServiceInput(root, id) {
+        var list = root.querySelectorAll('input[name*="[services]"]');
+        for (var i = 0; i < list.length; i++) {
+            if (parseInt(list[i].value, 10) === id) {
+                return list[i];
+            }
+        }
+        // Fallback: any input carrying this value.
+        return root.querySelector('input[value="' + esc(String(id)) + '"]');
+    }
+
+    // Verified live (staging): each service row is `.mphb_sc_checkout-service`
+    // inside `.mphb_sc_checkout-services-list`; hide the service item, not the
+    // bare input. The remaining fallbacks stay for resilience across versions.
+    // The smallest element that wraps ONE service row.
+    //
+    // The loose tail of this chain (li / p / label / parentNode) can land on a
+    // shared ancestor, and this wrapper gets display:none — so a bad match
+    // takes the guest chooser or the whole room block down with it. Every
+    // candidate is therefore checked for containment first: anything holding a
+    // guest-count select, or more than one service input, is not a row and is
+    // rejected. Returning null (hide nothing) is always safer than hiding too
+    // much.
+    function serviceRowWrapper(input) {
+        var candidates = [
+            input.closest('.mphb_sc_checkout-service'),
+            input.closest('.mphb_sc_checkout-services-list__item'),
+            input.closest('.mphb-service'),
+            input.closest('li'),
+            input.closest('.mphb-checkout-field'),
+            input.closest('p'),
+            input.closest('label'),
+            input.parentNode
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            var el = candidates[i];
+            // closest() matches the element itself, and MotoPress puts
+            // .mphb_sc_checkout-service ON THE CHECKBOX — so the first
+            // candidate used to be the input, and hiding it left the label
+            // text, the price, the quantity select and "guest(s)" on screen.
+            // A form control is never a row.
+            if (el === input || (el && el.nodeType === 1 && /^(INPUT|SELECT|TEXTAREA|OPTION)$/.test(el.tagName))) {
+                continue;
+            }
+            if (tooBigToBeAServiceRow(el, input)) {
+                continue;
+            }
+            if (el && el.nodeType === 1 && isServiceRowSized(el, input)) {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A CEILING on the walk up from a service checkbox (v0.15.0).
+     *
+     * There was none. The last candidate above is input.parentNode, and if a
+     * checkbox ever sits close to the form root that resolves to the <form> —
+     * which then gets the hide class and TAKES THE ENTIRE CHECKOUT WITH IT.
+     * Found by rendering a fixture and printing what was actually visible:
+     * every row came back hidden because the form itself was.
+     *
+     * MotoPress nests these inside a services section today, so this is a
+     * latent fault rather than a live one. It is guarded anyway: the failure is
+     * a blank checkout — a guest cannot book and nothing on screen says why —
+     * and the guard costs one comparison.
+     */
+    function tooBigToBeAServiceRow(el, input) {
+        if (!el || el.nodeType !== 1) {
+            return true;
+        }
+        if (el.tagName === 'FORM' || el.tagName === 'BODY' || el.tagName === 'HTML') {
+            return true;
+        }
+        // Nothing that contains the price breakdown or the customer's own
+        // details is a single service's row.
+        if (el.querySelector(
+            'table.dcc_checkout-breakdown, tr.mphb-price-breakdown-booking,' +
+            '.mphb-customer-details, #mphb-customer-details')) {
+            return true;
+        }
+        // Nor is anything that contains a DIFFERENT service's checkbox.
+        var boxes = el.querySelectorAll('input.mphb_sc_checkout-service');
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i] !== input) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Guard for the above: a real service row contains its own input and
+    // nothing that belongs to another part of the form.
+    function isServiceRowSized(el, input) {
+        if (!el.contains(input)) {
+            return false;
+        }
+        // A guest-count dropdown inside means this is a room container, not a
+        // service row. (A per-adult service has its own [services]…[adults]
+        // select, which roomAdultsSelects deliberately excludes.)
+        if (roomAdultsSelects(el).length) {
+            return false;
+        }
+        // More than one service checkbox means this is the services LIST.
+        var ids = el.querySelectorAll('input[name*="[services]"][name$="[id]"]');
+        return ids.length <= 1;
+    }
+
+    function fireChange(el) {
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Mirrors Config::service_id_for_nights() — keep the two in step. Since
+    // 0.3.5 the daily bucket has no lower bound (pet fee applies from night
+    // one); 0 means "stay length unknown".
+    function serviceForNights(nights) {
+        if (!(nights > 0)) { return 0; }
+        var t   = CFG.thresholds || { min_daily: 2, min_weekly: 7, min_monthly: 30 };
+        var svc = CFG.serviceIds || {};
+        if (nights >= t.min_monthly) { return Number(svc.monthly); }
+        if (nights >= t.min_weekly)  { return Number(svc.weekly); }
+        return Number(svc.daily);
+    }
+
+    function getNights(root) {
+        var inEl  = root.querySelector('input[name*="check_in_date"]')  ||
+                    document.querySelector('input[name*="check_in_date"]');
+        var outEl = root.querySelector('input[name*="check_out_date"]') ||
+                    document.querySelector('input[name*="check_out_date"]');
+        var ci = inEl  ? parseYmd(inEl.value)  : null;
+        var co = outEl ? parseYmd(outEl.value) : null;
+        if (ci === null || co === null) {
+            return 0;
+        }
+        return Math.max(0, Math.round((co - ci) / 86400000));
+    }
+
+    function parseYmd(str) {
+        var m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(str || ''));
+        if (!m) { return null; }
+        return Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    }
+
+    // Accommodation (room type) IDs referenced by hidden inputs in the form.
+    function getRoomTypeIds(root) {
+        var out = [];
+        var els = root.querySelectorAll('input[name*="room_type_id"]');
+        Array.prototype.forEach.call(els, function (el) {
+            var v = parseInt(el.value, 10);
+            if (v) { out.push(v); }
+        });
+        return out;
+    }
+
+    /* ===================================================================== *
+     * Shared helpers
+     * ===================================================================== */
+
+    function findLabelFor(input, root) {
+        if (input.id) {
+            var byFor = root.querySelector('label[for="' + esc(input.id) + '"]');
+            if (byFor) { return byFor; }
+        }
+        var wrap = input.closest('.dcc_checkout-pet__field, .mphb-text-control, [class*="mphb-customer-"], .mphb-checkout-field, .mphb-field, p, li, div');
+        if (wrap) {
+            var inWrap = wrap.querySelector('label');
+            if (inWrap) { return inWrap; }
+        }
+        var prev = input.previousElementSibling;
+        while (prev) {
+            if (prev.tagName === 'LABEL') { return prev; }
+            prev = prev.previousElementSibling;
+        }
+        return null;
+    }
+
+    // Mark / clear the invalid state together with its assistive-tech signal, so
+    // a screen-reader user can find WHICH field the alert banner refers to.
+    function markInvalid(el) {
+        addClass(el, 'dcc_checkout-invalid');
+        setAttr(el, 'aria-invalid', 'true');
+    }
+    function clearInvalid(el) {
+        removeClass(el, 'dcc_checkout-invalid');
+        el.removeAttribute('aria-invalid');
+    }
+
+    // Toggle a field's required state + its visible "*" marker together.
+    /**
+     * Disable a control so it submits nothing — with a hard refusal to touch
+     * anything that carries money.
+     *
+     * THE RULE THIS PROTECTS (CLAUDE.md, v0.7.0): the services section is
+     * hidden by DISPLAY on purpose, because a hidden-but-checked service input
+     * still submits and MotoPress still prices it. Disabling one of those would
+     * silently stop charging the $50 extra-guest fee or the pet fee, and the
+     * page would look completely normal. Only ever called on the dog Checkout
+     * Fields today; the guard is here so that if CFG.dogFieldNames is ever
+     * mis-set to a service control, this refuses rather than costing the owner
+     * money on every booking.
+     */
+    function setDisabled(el, off) {
+        if (!el) {
+            return;
+        }
+        if (off && isMoneyControl(el)) {
+            return;
+        }
+        // Idempotent (v0.18.0): setting .disabled re-writes the content
+        // attribute even when the value is unchanged, which queues a mutation.
+        if (el.disabled !== !!off) {
+            el.disabled = !!off;
+        }
+    }
+
+    function isMoneyControl(el) {
+        var name = String(el.name || '');
+        return /\[services\]/.test(name) ||
+            (el.classList && el.classList.contains('mphb_sc_checkout-service'));
+    }
+
+    function setRequired(input, on, root) {
+        input.required = !!on;
+        if (on) {
+            setAttr(input, 'aria-required', 'true');
+        } else {
+            input.removeAttribute('aria-required');
+        }
+
+        var label = findLabelFor(input, root);
+        if (!label) { return; }
+
+        var marker = label.querySelector('.dcc_checkout-req--dyn');
+        if (on && !marker) {
+            marker = document.createElement('abbr');
+            marker.className = 'dcc_checkout-req dcc_checkout-req--dyn';
+            setText(marker, '*');
+            // Decorative: aria-required on the input carries the semantics, so
+            // don't make screen readers announce "asterisk".
+            setAttr(marker, 'aria-hidden', 'true');
+            label.appendChild(marker);
+        } else if (!on && marker) {
+            marker.parentNode.removeChild(marker);
+        }
+    }
+
+    function setupSubmit(root, validators) {
+        // `root` is normally the <form> itself (.mphb_sc_checkout-form).
+        var form = (root.tagName === 'FORM') ? root :
+            (root.closest('form') ||
+             document.querySelector('form.mphb_sc_checkout-form') ||
+             root.querySelector('form'));
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', function (e) {
+            var invalid = [];
+            validators.forEach(function (v) {
+                invalid = invalid.concat(v() || []);
+            });
+            if (invalid.length) {
+                e.preventDefault();
+                e.stopPropagation();
+                invalid.forEach(markInvalid);
+                showBanner(root, I18N.requiredMsg || 'Please complete the required fields.');
+                try { invalid[0].focus(); } catch (_) {}
+            }
+        }, true); // capture: run before MotoPress's own submit handler
+    }
+
+    function observeReRenders(root) {
+        if (!('MutationObserver' in window)) {
+            return;
+        }
+        armTouchWatch();
+        var timer = null;
+        var pendingSince = 0;
+
+        // v0.18.0 — no timer is INSTALLED while a finger is down. WebKit's
+        // content observer tracks DOM timers installed during touch handling
+        // and watches what they do when they fire; 0.17.0 delayed the run but
+        // still installed the timer inside the touch. Now, while a finger is
+        // down, the observer only notes that work is pending, and the touch-up
+        // handler schedules it once the tap has had its 400ms to resolve.
+        function schedule(delay) {
+            if (timer) { clearTimeout(timer); }
+            timer = setTimeout(run, delay);
+        }
+        // Asked on EVERY touch-up: is there work with no timer behind it?
+        touchUpChecks.push(function () {
+            if (pendingSince && !timer) { schedule(450); }
+        });
+
+        function run() {
+            timer = null;
+            // Hold off while a tap is still resolving — see the block comment
+            // above armTouchWatch(). The 3s ceiling means a finger resting on
+            // the screen can delay this but never starve it.
+            if (touchSettling() && (Date.now() - pendingSince) < 3000) {
+                // Still down: leave no timer behind, and let the touch-up
+                // check above pick the work back up.
+                if (!fingerDown) { schedule(200); }
+                return;
+            }
+            pendingSince = 0;
+            runPipeline();
+        }
+        var obs = new MutationObserver(function () {
+            if (!pendingSince) { pendingSince = Date.now(); }
+            if (fingerDown) {
+                // Do not install a timer inside a touch; pendingSince is set,
+                // and the touch-up check above is what resumes it.
+                return;
+            }
+            // 500ms, up from 150ms. The old value put a ~100-attribute burst
+            // right inside the window a tap needs to resolve.
+            schedule(500);
+        });
+        function runPipeline() {
+            {
+                formatBreakdown(root);
+                // MotoPress re-renders (coupon apply, country change, …) bring
+                // back untouched labels/dates; all passes are idempotent (the
+                // data-dcc-* guards, and text normalization that is a no-op on
+                // already-clean text), so re-running is cheap and loop-safe.
+                cleanRequiredMarkers(root);
+                normalizeReservationDates(root);
+                markFieldRows(root);
+                markTipAsterisk(root);
+                dropDuplicateTotal(root);
+                hardenTapTargets(root);
+                // MotoPress re-renders the services block when the guest count
+                // changes; re-hide it, then re-prove the chooser survived.
+                hideNativeServices(root);
+                assertGuestChooserSurvived(root);
+            }
+        }
+        obs.observe(root, { childList: true, subtree: true });
+    }
+
+    /* ===================================================================== *
+     * Error banner (after a server-side rejection redirect)
+     * ===================================================================== */
+
+    function showServerError(root) {
+        var params;
+        try { params = new URLSearchParams(location.search); } catch (e) { return; }
+        var code = params.get('dcc_checkout_error');
+        if (!code) {
+            return;
+        }
+        var msg;
+        if (code === 'guest2') {
+            msg = I18N.errGuest2;
+        } else if (code === 'pet') {
+            msg = I18N.errPet;
+        } else if (code === 'guests') {
+            msg = I18N.errGuests;
+        }
+        showBanner(root, msg || I18N.requiredMsg || 'Please review your entries.');
+    }
+
+    /* ===================================================================== *
+     * Item 6 (v0.15.0) — the half of the tap fix that CSS cannot express.
+     *
+     * An <a> is draggable by default, and link-drag is the specific iOS
+     * recogniser most likely to be eating these taps. There is no CSS property
+     * for it; it is an attribute. Re-applied on every re-render because
+     * MotoPress rebuilds the breakdown, and a rebuilt anchor comes back
+     * draggable.
+     * ===================================================================== */
+    function hardenTapTargets(root) {
+        // v0.17.0 — THE EXPANDER BECOMES A REAL <button>.
+        //
+        // Across four tap logs the tax asterisk, a <button>, is 4 of 4 at every
+        // duration from 64ms to 96ms. The expander — first an <a>, then in
+        // 0.16.0 an <a> with its href removed — has failed 15 of 18 clean
+        // stationary taps. Removing the href was not enough; nothing in any log
+        // has ever failed on a button.
+        //
+        // Every class is carried over, so MotoPress's delegated handler
+        // ('.mphb-price-breakdown-expand' click, mphb.js:1446) still matches it
+        // exactly as before. type="button" so it can never submit the checkout.
+        // The keyboard handler 0.16.0 added is NOT carried over and must not be:
+        // a native button already activates on Enter and Space, and a second
+        // handler would toggle twice and land back where it started.
+        var links = root.querySelectorAll('a.mphb-price-breakdown-expand');
+        Array.prototype.forEach.call(links, function (a) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            Array.prototype.forEach.call(a.attributes, function (at) {
+                // href is what iOS arms its link recognisers on; role and
+                // tabindex are native on a button and would be noise.
+                if (at.name === 'href' || at.name === 'role' ||
+                    at.name === 'tabindex' || at.name === 'data-dcc-keys') {
+                    return;
+                }
+                try { setAttr(btn, at.name, at.value); } catch (err) {}
+            });
+            if (a.hasAttribute('href')) {
+                setAttr(btn, 'data-dcc-href', a.getAttribute('href'));
+            }
+            while (a.firstChild) { btn.appendChild(a.firstChild); }
+            if (a.parentNode) { a.parentNode.replaceChild(btn, a); }
+        });
+
+        // Whatever it started as, make sure it is a bare control and not a
+        // gesture target. .dcc_checkout-bare-button keeps it out of the site
+        // button spec, which matches a plain `button` and would otherwise turn
+        // this into a full-width blue pill inside the price breakdown.
+        var bare = root.querySelectorAll(
+            '.mphb-price-breakdown-expand, .dcc_checkout-tax-asterisk');
+        Array.prototype.forEach.call(bare, function (el) {
+            addClass(el, 'dcc_checkout-bare-button');
+            setAttr(el, 'draggable', 'false');
+            if (el.tagName === 'BUTTON' && !el.getAttribute('type')) {
+                setAttr(el, 'type', 'button');
+            }
+        });
+    }
+
+    /* ===================================================================== *
+     * v0.17.0 — THE PLUGIN STOPS REWRITING THE PAGE WHILE A FINGER IS DOWN.
+     *
+     * observeReRenders() ran the whole restructure pipeline 150ms after any
+     * childList change under the form. That pipeline writes on the order of a
+     * hundred attributes and toggles visibility classes (hideNativeServices,
+     * dropDuplicateTotal). In rounds 3 and 4 of the owner's tap log, EVERY
+     * press that carried one of those bursts mid-tap failed — 6 of 6.
+     *
+     * So the pipeline is held: never while a finger is down, and not until
+     * 400ms after it lifts, on a 500ms debounce.
+     *
+     * WHAT THE GUARANTEE ACTUALLY IS — corrected 2026-09-18, because the
+     * comment here used to claim a "3s ceiling so it cannot be starved" and
+     * that was not true. The ceiling is only consulted inside run(), and run()
+     * only fires from a timer — which is precisely what is NOT installed while
+     * a finger is down. Measured: with a touch-up event that never arrives,
+     * deferred work sat unrun for five seconds and counting.
+     *
+     * The real guarantee is recovery on the next touch-up ANYWHERE on the
+     * page, which every pending form is now asked about by name rather than
+     * through a single shared slot that the last deferral happened to own.
+     * That is enough: the pipeline always runs once directly at init, so a
+     * stranded deferral means only that the most recent MotoPress re-render is
+     * still showing MotoPress's own shape — and any further interaction clears
+     * it. A wall-clock ceiling would mean installing a timer during a touch,
+     * which is the whole thing v0.18.0 removed.
+     *
+     * Deliberately NOT passive:false and NOT preventDefault — these listeners
+     * only observe, exactly like the tap diagnostic.
+     * ===================================================================== */
+    var fingerDown = false;
+    var fingerUpAt = 0;
+    var touchWatchArmed = false;
+    // Every form with work deferred by the observer registers a checker here;
+    // each touch-up asks all of them. A single shared slot would be silently
+    // overwritten by whichever form deferred last, stranding the other for
+    // good — unreachable today, since init() takes ONE form, but the failure
+    // is invisible and the list costs nothing.
+    var touchUpChecks = [];
+
+    function armTouchWatch() {
+        if (touchWatchArmed) {
+            return;
+        }
+        touchWatchArmed = true;
+        ['touchstart', 'pointerdown'].forEach(function (type) {
+            document.addEventListener(type, function () {
+                fingerDown = true;
+            }, { capture: true, passive: true });
+        });
+        ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach(function (type) {
+            document.addEventListener(type, function () {
+                fingerDown = false;
+                fingerUpAt = Date.now();
+                touchUpChecks.forEach(function (check) { check(); });
+            }, { capture: true, passive: true });
+        });
+    }
+
+    // True while a tap could still be resolving into a click.
+    function touchSettling() {
+        return fingerDown || (Date.now() - fingerUpAt) < 400;
+    }
+
+
+    /* ===================================================================== *
+     * Item 1 (v0.15.0) — hold back error messages until a submit attempt.
+     *
+     * The owner wants "Please select the number of guests." only after he has
+     * tried to submit without choosing one. That message is MotoPress's, not
+     * this plugin's, and there is no reliable selector for that one string —
+     * so NOTHING HERE HOOKS MOTOPRESS'S VALIDATION. A fragile hook into
+     * somebody else's validator is worse than a message appearing early.
+     *
+     * Instead the form carries .dcc_checkout-preflight from load until the
+     * first submit attempt, and the stylesheet hides error elements that were
+     * not already in the markup when this ran. Every error present at load is
+     * tagged and left alone: one of those could be a real validation error
+     * rendered by the server after a failed submit, and hiding that would
+     * leave a guest stuck with no idea what is wrong.
+     *
+     * WHAT THIS CANNOT DO, stated plainly: if MotoPress renders that message
+     * into the page at load and merely toggles its visibility, it is
+     * pre-existing and this leaves it alone by design. The admin note below
+     * says which case the live page is, so that can be settled by looking
+     * rather than by guessing.
+     * ===================================================================== */
+    function armPreflight(root) {
+        var existing = root.querySelectorAll('[class*="error" i], [role="alert"]');
+        Array.prototype.forEach.call(existing, function (el) {
+            setAttr(el, 'data-dcc-preexisting', '1');
+        });
+        addClass(root, 'dcc_checkout-preflight');
+
+        adminNote(root, 'Error elements present at page load: ' + existing.length +
+            '. Those are left visible; anything that appears later is held back ' +
+            'until a submit attempt.');
+
+        // Any attempt to send the form ends preflight — including one that
+        // passes this plugin's own validators, because MotoPress validates
+        // after we do. Capture phase so it runs before anything can stop it.
+        function release() {
+            removeClass(root, 'dcc_checkout-preflight');
+        }
+        root.addEventListener('submit', release, true);
+        // MotoPress submits over REST from a click, so a submit event is not
+        // guaranteed to fire at all.
+        root.addEventListener('click', function (e) {
+            var el = e.target && e.target.closest
+                ? e.target.closest('input[type="submit"], button')
+                : null;
+            if (el && el.type !== 'button') {
+                release();
+            }
+        }, true);
+    }
+
+    // Shared admin-only note. Never shown to a guest.
+    function adminNote(root, msg) {
+        try { window.console && console.info('DCC Custom Checkout: ' + msg); } catch (_) {}
+        if (!CFG.isAdmin) {
+            return;
+        }
+        var box = root.querySelector('.dcc_checkout-admin-notice');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcc_checkout-admin-notice';
+            setAttr(box, 'role', 'status');
+            root.insertBefore(box, root.firstChild);
+        }
+        var line = document.createElement('p');
+        line.textContent = (I18N.adminNoticePrefix ||
+            'Visible to administrators only:') + ' ' + msg;
+        box.appendChild(line);
+    }
+
+    function showBanner(root, msg) {
+        var existing = root.querySelector('.dcc_checkout-error-banner');
+        if (existing) {
+            setText(existing, msg);
+            return;
+        }
+        var banner = document.createElement('div');
+        banner.className = 'dcc_checkout-error-banner';
+        setAttr(banner, 'role', 'alert');
+        setText(banner, msg);
+        root.insertBefore(banner, root.firstChild);
+        try { banner.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+    }
+})();
