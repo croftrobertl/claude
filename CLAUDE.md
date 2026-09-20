@@ -124,7 +124,30 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 ## Git workflow
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
+  **(DCC Custom Checkout work is on `claude/dcc-checkout-customizations-zx1jrx`.)**
 - The repo has only the plugin folder at root — no other deliverables.
+
+### VERIFY AGAINST THE REMOTE, NOT AGAINST LOCAL REFS (standing rule, 2026-09-19)
+
+**Before the first commit of a session, query the remote live** and confirm the
+local branch descends from what it returns:
+
+```bash
+git ls-remote origin <branch>                       # a LIVE query
+git merge-base --is-ancestor <remote-sha> HEAD      # must succeed
+```
+
+**`origin/...` is a local cache, not the remote.** A remote-tracking ref can be
+written without the remote ever being contacted — one was, on 2026-09-19, and it
+held **a different plugin's history**. Anything that trusts `origin/...`,
+`git status`'s ahead/behind count, or a `git fetch` that may not have run is
+reading that cache and can be confidently wrong.
+
+**NEVER force-push this branch.** If a push is rejected as non-fast-forward,
+**STOP and report it** — do not diagnose it into a fix. And
+**`--force-with-lease` is not a safeguard here**: the lease is checked against
+the same bogus local ref that caused the problem, so it *succeeds* and destroys
+the remote's real history. A rejected push is information, not an obstacle.
 
 ## DCC Custom Checkout — release artifacts
 
@@ -502,6 +525,18 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   bulk edit of live config and would strand him if he ever deactivated the plugin
   — the fee would stay gone with nothing to explain it. Suppress at render and at
   submit; leave his configuration exactly as he set it.
+  **THE CHECKOUT IS THE ONLY GUEST-FACING SURFACE THE SERVICE APPEARS ON**
+  (measured 2026-09-19, not inferred). I had flagged that MotoPress's own
+  accommodation pages might still show the service outside the checkout.
+  `/accommodation/cottage-22/` and `/accommodation/cottage-32/` were fetched —
+  both 400KB+ — and neither contains any `mphb` service markup, any reference to
+  service 18063, or the string "Extra Guest Fee". **The accommodation templates on
+  this site do not render a services list at all**, so the guest path is fully
+  covered by the checkout gate.
+  **Scope of that check, stated honestly:** guest-facing PAGES were verified.
+  **Confirmation emails and the MPHB admin were NOT** — a booking cannot be
+  submitted to test them. So if the switch is ever off and a stale confirmation
+  email still mentions the fee, look at the email templater, not at this gate.
 - **THE SWITCH GOVERNS COLLECTION, NOT HISTORY — AND THAT SPLIT IS TWO PAIRS OF
   METHODS** (v0.24.0, owner decision: existing bookings keep their data).
   - `collected_guest_field_groups()` honours the switch → the checkout JS

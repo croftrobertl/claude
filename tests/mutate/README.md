@@ -26,12 +26,57 @@ The first version of this runner decided a suite had noticed a mutation with
    it existed to isolate, *"a service row can never be the form"* (the defect
    that once blanked the whole checkout), had no evidence behind it at all. The
    re-targeted `js-form-ceiling-none` does kill honestly.
+
+   **This is the argument for the preflight, and the lesson is not "check your
+   braces."** Of every claim in this repo, that one had the most apparent
+   evidence — a mutation written specifically to isolate it after a narrower
+   version survived — and it had none. **A kill count is a claim about your
+   runner before it is a claim about your code.** Read it in that order: the
+   preflight and the syntax gate exist so the first claim is checked before the
+   second one is believed.
 3. The same fault was seen here four days earlier — two Chromium suites crashing
    on `require('playwright')` — and **only its trigger was fixed** (a pinned
    lockfile). The mechanism that turned a crash into a pass was left in place.
 
 It is the same family as the repo's own rule about claims nothing constructs the
 condition for: a signal that cannot distinguish success from absence of measurement.
+
+## What mutation testing cannot do
+
+**Mutations test the guarantees you wrote.** They cannot test one you never
+thought to write, and that is where the near-misses live.
+
+The case, from v0.24.0: gating `guest_fee_steps()` on the new Guest 3/4 switch
+would have stripped the price label off historical bookings in wp-admin, because
+`Admin_Fields` reads it to price a fee an EXISTING booking really carries. **No
+mutation would have caught it** — "the admin still shows the price for a past
+booking" was not a guarantee anywhere, so there was nothing to mutate. It was
+found by asking who called the function.
+
+So when you add a gate, run the question that catches this class. It is cheap:
+
+> **WHO READS THIS, AND DO THEY ALL WANT IT GATED?**
+
+If the readers split — some want the gated value, some want the raw one — the gate
+belongs in a second method, not in the shared one. In this repo that split is two
+pairs (`collected_guest_field_groups()` / `guest_field_groups()`, and
+`offered_guest_fee_steps()` / `guest_fee_steps()`), and both pairs exist because
+the answer came back "no".
+
+## Keep survivors; do not explain them away
+
+A `SURVIVED` that turns out to be a wrong CLAIM rather than a missing test is the
+runner working, not a false positive.
+
+v0.24.0: the docblock said the early return before `apply_filters` was what
+stopped a snippet re-enabling a switched-off fee. The mutation moved the gate
+after the filter and **survived** — because `$enabled && guest34_enabled()` holds
+the guarantee just as well. The guard was sound; the sentence about why was not.
+The docblock was corrected and the mutation re-aimed at the ordering that does
+break it: **applying the filter last, so a snippet gets the final word.**
+
+Explaining that survivor away as "equivalent, no finding" would have left a false
+statement in the source and an untested guarantee beside it.
 
 ## Verdicts
 
