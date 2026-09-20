@@ -227,3 +227,31 @@ Run `node tests/popup.test.js` before building any Guest Guide zip.
 
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
+
+### Verify the checkout against the REMOTE before the first commit of a session
+
+```bash
+git ls-remote origin <branch>          # a live query — this is the authority
+git merge-base --is-ancestor <sha-it-returned> HEAD   # local must descend from it
+```
+
+`origin/<branch>` is a LOCAL CACHE. It can be written without ever contacting
+the remote, and on 2026-09-19 one was: it showed a different plugin's history.
+So check `git ls-remote`, which goes to the server, and confirm the local
+branch descends from what it returns. `git log`, `git status` and anything
+reading `origin/...` all agree with each other while being wrong together.
+
+### Never force-push this branch
+
+A push rejected as non-fast-forward is a STOP, not a problem to work around:
+report it and wait. Do not reach for `--force`, and do not reach for
+`--force-with-lease` either — the lease is checked against the same local ref
+that caused the trouble, so it passes and overwrites the remote's real
+history. There is no safe force on this branch.
+
+### Report the commit SHA that git actually printed
+
+`git push … | tail -1` shows only the "set up to track" line, not the
+`old..new` line. Read the SHA back from `git rev-parse HEAD` (or let the push
+output through) before quoting one. A SHA is something the owner verifies
+against; an approximate one is worse than none.
