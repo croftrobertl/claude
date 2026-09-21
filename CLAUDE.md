@@ -136,6 +136,87 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
   the `tools/` dev scripts, the tracked `dcc-seasons.zip` build artifact, and the
   site context docs.
 
+## Verify the checkout against the REMOTE, every session
+
+**Before the first commit of EVERY session**, run a live query — not a look at
+a local ref:
+
+```bash
+git ls-remote origin refs/heads/claude/dcc-seasons-plugin-2tqkxt
+git rev-parse HEAD
+```
+
+and confirm HEAD descends from what `ls-remote` returns. A container that was
+clean yesterday proves nothing about the one you are in now: four of eight
+checkouts came back wrong on 2026-09-19/20.
+
+**Why `git status` cannot catch this.** `refs/remotes/origin/*` is a local
+cache. Containers are being provisioned carrying *another* plugin's workspace —
+`f25db77`, the tip of `claude/review-shared-chat-bExtl` (Availability
+Calendar), turns up as local HEAD in unrelated plugins — and a branch named for
+the incoming session is created at that HEAD with
+`refs/remotes/origin/<branch>` written **without ever contacting the server**.
+`git status` then compares HEAD against a cache that agrees with it and reports
+a clean, up-to-date branch. Nothing is wrong on the server: this is one repo
+with a branch per plugin, every plugin's history intact on its own branch, and
+no collision between them.
+
+### Recovery, if the live `ls-remote` disagrees with local HEAD
+
+First establish that nothing local is worth keeping — **verify it, do not
+assume it**:
+
+```bash
+git status --porcelain                                       # must be empty
+git rev-list --count --branches --not <sha-from-ls-remote>   # local-only commits
+```
+
+Use `--branches` (i.e. `refs/heads/*`), **not `--all`**. `--all` includes
+`refs/remotes/*`, so it counts commits that are on the server by definition and
+reports a large number that means nothing. In every case seen so far the local
+commits belong to another plugin and are already safe on that plugin's own
+remote branch, so discarding them locally loses nothing — but confirm each one
+is reachable from some branch in the live `ls-remote` output before you do.
+
+Then, and only then:
+
+```bash
+git fetch origin <branch>
+git merge --ff-only origin/<branch>    # when merely behind (nothing local-only)
+git reset --hard origin/<branch>       # when local has junk commits to drop
+```
+
+Both are local-only and touch nothing on the server. `--ff-only` cannot discard
+anything — if it could, it refuses — so a "destructive" warning on it is a
+false positive worth stating plainly when asking for approval.
+
+### Never force-push these branches
+
+The conclusion stands. **The mechanism is the opposite of what it looks like**,
+and the reasoning first given for this rule had it backwards — tested in a
+throwaway repo on 2026-09-20 with the tracking ref poisoned exactly as these
+containers poison it:
+
+| state | command | result |
+|---|---|---|
+| poisoned tracking ref | `git push` | rejected (non-fast-forward) — remote unchanged |
+| poisoned tracking ref | `git push --force-with-lease` | **rejected (stale info)** — remote unchanged |
+| **after `git fetch`** | `git push --force-with-lease` | **forced update — history replaced** |
+
+So the lease *does* protect you while the cache is stale. What removes the
+protection is the fetch — the very thing the repair above requires. **The
+dangerous sequence is "fetch, then force", and it is the sequence a careful
+person reaches for.**
+
+After a repair you are in exactly that state. The next push must be an ordinary
+fast-forward push. **If it is rejected, STOP AND REPORT IT.** Do not force, do
+not `--force-with-lease`, do not "reconcile" — a rejection after a repair means
+something is still wrong, and the repair is not yours to improvise.
+
+A rule carrying a wrong mechanism is the thing this section exists to prevent.
+Reproducing a claim because the person who gave it to you is the one who gave
+it to you is not verification: test it, or say plainly that you have not.
+
 ## Delivering DCC Seasons files
 
 Two naming rules, and they differ — the plugin zip is the exception:
