@@ -1730,6 +1730,61 @@ error or a missing dependency all look like success under that reading. Now:
 Re-run with the fix: all nine are genuinely red. The verdict did not change —
 but it had not been earned, and there was no way to tell from the output.
 
+## Git: verify against the REMOTE, and never force-push these branches
+
+**Check live at the start of every session, before the first commit:**
+
+    git ls-remote origin claude/<branch>        # a live query
+    git rev-parse HEAD                          # must descend from it
+
+`refs/remotes/origin/...` is a LOCAL CACHE and can be written without ever
+contacting the server. Containers are provisioned carrying another plugin's
+workspace, a branch is created at that HEAD, and the tracking ref is written
+to match — so `git status` reports clean because it compares HEAD against a
+cache that agrees with it. Four of eight checkouts came back wrong this way.
+This is one repository with a branch per plugin; every plugin's history is
+intact on its own remote branch, and there is no collision on the server.
+
+**NEVER force-push these branches.** If a push is rejected as
+non-fast-forward, STOP and report it. Do not force, do not
+`--force-with-lease`, do not "reconcile" it.
+
+**The mechanism, tested here 2026-09-21 — not the one first circulated.**
+Server at 8863efd; local branch AND cached tracking ref both at 2b752fa, a
+foreign history:
+
+| attempt | result | server after |
+|---|---|---|
+| plain push | `! [rejected] (non-fast-forward)` | 8863efd |
+| `--force-with-lease`, cache stale | `! [rejected] (stale info)` | 8863efd — **protected** |
+| `git fetch`, then `--force-with-lease` | `+ 8863efd...2b752fa (forced update)` | 2b752fa — **destroyed** |
+
+So the lease DOES protect you while the cache is stale. **What removes the
+protection is the fetch** — the very step you take to repair the
+disagreement. The dangerous sequence is "fetch, then force", and it is the one
+a careful person reaches for. The conclusion is unchanged; the reason first
+given for it (that the lease matches the bogus ref and sails through) is
+wrong, and a rule carrying a wrong mechanism is the thing this exercise exists
+to prevent.
+
+**A reproduction that shows `Everything up-to-date` has not set up the
+scenario.** Poisoning the tracking ref alone is harmless — the local branch
+still points at the real tip, so there is nothing to push. The dangerous state
+needs the poisoned cache AND a local branch carrying foreign history. My first
+run made exactly this mistake and would have "confirmed" the protective half
+without pushing anything.
+
+**Recovery, only after verifying nothing local is worth keeping** — working
+tree clean, and every local commit reachable from some branch in
+`git ls-remote origin`:
+
+    git fetch origin <branch>
+    git reset --hard origin/<branch>      # or merge --ff-only if merely behind
+
+That is local-only and touches nothing on the server. **After that fetch you
+are in the dangerous state above**: the next push must be an ordinary
+fast-forward, and a rejection means the repair is not yours to improvise.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
