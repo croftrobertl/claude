@@ -228,26 +228,72 @@ Run `node tests/popup.test.js` before building any Guest Guide zip.
 - Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
 - The repo has only the plugin folder at root — no other deliverables.
 
-### Verify the checkout against the REMOTE before the first commit of a session
+### Verify the checkout against the REMOTE at the START OF EVERY SESSION
 
 ```bash
 git ls-remote origin <branch>          # a live query — this is the authority
 git merge-base --is-ancestor <sha-it-returned> HEAD   # local must descend from it
 ```
 
+Every session, not once. Four of eight checkouts came back wrong on
+2026-09-19, and a container that was clean yesterday says nothing about the
+one running now.
+
 `origin/<branch>` is a LOCAL CACHE. It can be written without ever contacting
-the remote, and on 2026-09-19 one was: it showed a different plugin's history.
-So check `git ls-remote`, which goes to the server, and confirm the local
-branch descends from what it returns. `git log`, `git status` and anything
-reading `origin/...` all agree with each other while being wrong together.
+the remote, and that is what happens here: containers are provisioned carrying
+another plugin's workspace (the Availability Calendar tip, f25db77, turns up as
+local HEAD in unrelated plugins), a branch named for the incoming session is
+created at that HEAD, and `refs/remotes/origin/<branch>` is written without the
+server being asked. `git status` then looks clean because it compares HEAD
+against a cache that agrees with it. `git log`, `git status` and anything else
+reading `origin/...` are all wrong together, and only `git ls-remote` is not.
 
-### Never force-push this branch
+There is NO collision on the remote. One repository, a branch per plugin, every
+plugin's history intact on its own branch.
 
-A push rejected as non-fast-forward is a STOP, not a problem to work around:
-report it and wait. Do not reach for `--force`, and do not reach for
-`--force-with-lease` either — the lease is checked against the same local ref
-that caused the trouble, so it passes and overwrites the remote's real
-history. There is no safe force on this branch.
+### If the live check disagrees: repair locally, never on the server
+
+First prove nothing local is worth keeping — confirm it, do not assume it:
+the working tree is clean, and every local commit is reachable from some branch
+in `git ls-remote origin` (in every case so far they belong to another plugin
+and are already safe on that plugin's branch). Then:
+
+```bash
+git fetch origin <branch>
+git reset --hard origin/<branch>     # or merge --ff-only if merely behind
+```
+
+That is local-only and it is the whole repair. The next push must be an
+ordinary fast-forward. If it is rejected, STOP AND REPORT — a rejection after a
+repair means something is still wrong, and that is not yours to improvise.
+
+### Never force-push this branch — and know why, because the obvious reason is wrong
+
+A rejected push is a STOP, not a problem to work around. Report it and wait.
+
+The reason is NOT "the lease matches the bogus local ref and succeeds". That
+was the original theory and it is false. Tested here in a throwaway repo,
+poisoning the tracking ref exactly as these containers do:
+
+```
+poisoned cache, plain push          -> ! [rejected] (non-fast-forward)   remote unchanged
+poisoned cache, --force-with-lease  -> ! [rejected] (stale info)         remote unchanged
+git fetch, THEN --force-with-lease  -> + e156608...6143c42 (forced)      HISTORY REPLACED
+```
+
+So the lease DOES protect you while the cache is stale. What removes the
+protection is the fetch — the very thing a careful person does to repair the
+disagreement. **The dangerous sequence is "fetch, then force."** After the
+repair above you are in exactly that state, which is why the next push must be
+a plain one.
+
+After the forced update the real commits still existed in the bare repo with NO
+ref pointing at them: recoverable only until gc, and only by someone who
+already knows the SHA.
+
+A rule with the wrong mechanism is the thing this exercise exists to prevent,
+so: the conclusion (never force these branches) stands; the mechanism above is
+the tested one.
 
 ### Report the commit SHA that git actually printed
 
