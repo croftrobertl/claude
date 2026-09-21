@@ -123,8 +123,13 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 ## Git workflow
 
-- Active branch: `claude/review-shared-chat-bExtl`. Develop and push there. Don't open a PR unless the user asks.
-  **(DCC Custom Checkout work is on `claude/dcc-checkout-customizations-zx1jrx`.)**
+- Active branch: **`claude/dcc-checkout-customizations-zx1jrx`**. Develop and push
+  there. Don't open a PR unless the user asks.
+  (This line read `claude/review-shared-chat-bExtl` until 2026-09-20 — that is the
+  **Availability Calendar's** branch, not this plugin's. It was corrected outright
+  rather than annotated: a stale branch name inside the section about not pushing
+  into the wrong history is the trap itself, and a parenthetical leaves the wrong
+  name readable.)
 - The repo has only the plugin folder at root — no other deliverables.
 
 ### VERIFY AGAINST THE REMOTE, NOT AGAINST LOCAL REFS (standing rule, 2026-09-19)
@@ -143,11 +148,70 @@ held **a different plugin's history**. Anything that trusts `origin/...`,
 `git status`'s ahead/behind count, or a `git fetch` that may not have run is
 reading that cache and can be confidently wrong.
 
-**NEVER force-push this branch.** If a push is rejected as non-fast-forward,
-**STOP and report it** — do not diagnose it into a fix. And
-**`--force-with-lease` is not a safeguard here**: the lease is checked against
-the same bogus local ref that caused the problem, so it *succeeds* and destroys
-the remote's real history. A rejected push is information, not an obstacle.
+**NEVER force-push these branches.** If a push is rejected as non-fast-forward,
+**STOP and report it** — do not diagnose it into a fix. A rejected push is
+information, not an obstacle.
+
+**The reason first recorded here was WRONG, and the truth is more dangerous.**
+This file used to say `--force-with-lease` would match the bogus tracking ref,
+succeed, and destroy the remote. It does not. Measured in a throwaway repo with
+the tracking ref poisoned exactly as these containers do it (2026-09-20, owner's
+result reproduced independently here rather than taken on trust):
+
+| state | command | result | remote |
+|---|---|---|---|
+| poisoned cache | `git push` | `! [rejected] (non-fast-forward)` | unchanged |
+| poisoned cache | `git push --force-with-lease` | `! [rejected] (stale info)` | **unchanged** |
+| **after `git fetch`** | `git push --force-with-lease` | `+ 00e90d8...313473d (forced update)` | **HISTORY REPLACED** |
+
+So **the lease does protect you while the cache is stale.** What removes the
+protection is the FETCH — the very thing you do to repair the disagreement.
+**THE DANGEROUS SEQUENCE IS "FETCH, THEN FORCE", and it is the sequence a
+careful person reaches for.** The conclusion is unchanged; the mechanism was
+not, and **a rule with a wrong mechanism is the thing this whole exercise exists
+to prevent.**
+
+**AGREEING WITH WHOEVER GAVE YOU THE RULE IS NOT VERIFICATION.** This entry
+carried the wrong mechanism because it was written down as received, without
+being tested. A sibling session that worked out the lease would be rejected in
+its own case, and said so plainly against what it had been told, was right to.
+
+### WHAT IS ACTUALLY WRONG (don't re-diagnose it from scratch)
+
+One repository, **a branch per plugin, and every plugin's history is intact on
+its own remote branch. There is NO collision on the remote.** Containers are
+being provisioned carrying the **Availability Calendar's** workspace —
+`f25db77` shows up as local HEAD in unrelated plugins — and a branch named for
+the incoming session is created at that HEAD, with
+`refs/remotes/origin/<branch>` written **without contacting the server**. That
+is exactly why `git status` looks clean: it compares HEAD against a cache that
+agrees with it. **Four of eight checkouts came back wrong**, so re-run the live
+check at the START OF EVERY SESSION — a container that was clean yesterday
+proves nothing about the one you are in now.
+
+### RECOVERY, if the live `ls-remote` disagrees with local HEAD
+
+**First establish that nothing local is worth keeping, and verify it yourself.**
+In every case seen so far the local commits belong to ANOTHER plugin and are
+already safe on that plugin's own remote branch (`f25db77` is the tip of
+`claude/review-shared-chat-bExtl`), so discarding them locally loses nothing.
+Confirm the working tree is clean and that **every local commit is reachable
+from some branch in `git ls-remote origin`** — do not take that from anyone.
+
+Then, and only then:
+
+```bash
+git fetch origin <your-branch>
+git reset --hard origin/<your-branch>    # or `git merge --ff-only` if merely behind
+```
+
+That touches nothing on the server; it is local-only and it is the whole repair.
+
+**AFTER THAT FETCH YOU ARE IN THE DANGEROUS STATE IN THE TABLE ABOVE.** Your
+next push must be an ordinary fast-forward. **If it is rejected, STOP AND REPORT
+IT** — do not force, do not `--force-with-lease`, do not "reconcile" it. A
+rejection after a repair means something is still wrong, and the repair is not
+yours to improvise.
 
 ## DCC Custom Checkout — release artifacts
 
