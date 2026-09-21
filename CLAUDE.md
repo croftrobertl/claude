@@ -598,12 +598,63 @@ token once; the doubling belongs in the CSS selector, not the HTML.
   at the Calendar's HEAD with the tracking ref written to match. The remote was
   correct throughout.
 
-- **NEVER FORCE-PUSH THIS BRANCH. If a push is rejected as non-fast-forward, STOP
-  AND REPORT IT — do not "fix" it.** The rejection is the safety net, not an
-  obstacle, and the obvious repairs are worse than the problem:
-  **`--force-with-lease` is NOT a safeguard here.** Its lease is checked against
-  the same bogus local tracking ref that caused the trouble, so the lease MATCHES,
-  the push SUCCEEDS, and the remote's real history — another plugin's releases —
-  is destroyed. `--force` does the same thing without the false reassurance.
-  Re-pointing the branch and re-applying the work is also not yours to decide:
-  report the divergence and let the owner say what happens to it.
+- **NEVER FORCE-PUSH THIS BRANCH.** The conclusion is unchanged; the MECHANISM
+  recorded here on 2026-09-19 was WRONG, and a rule with a wrong mechanism is the
+  thing this whole exercise exists to prevent. The corrected version below was
+  reproduced in a throwaway repo, not reasoned about:
+
+  | with the tracking ref poisoned | result | remote |
+  |---|---|---|
+  | `git push` | `! [rejected] (non-fast-forward)` | unchanged |
+  | `git push --force-with-lease` | `! [rejected] (stale info)` | **unchanged** |
+  | `git fetch`, then `--force-with-lease` | `+ ad7db29...226086a (forced update)` | **replaced** |
+
+  So the lease DOES protect you while the cache is stale — it refuses precisely
+  BECAUSE the cache disagrees with the server. **What removes the protection is the
+  fetch.** `git fetch` makes the tracking ref honest, the lease then matches, and
+  the force succeeds. **The dangerous sequence is "fetch, then force"** — and it is
+  the sequence a careful person assembles, because fetching first feels like
+  diligence. Note that git's own rejection hint recommends `git pull`, which
+  performs that fetch: the tool points at step one of the dangerous path.
+
+  **If a push is rejected, STOP AND REPORT IT.** Do not force, do not
+  force-with-lease, do not "reconcile". A rejection after a repair means something
+  is still wrong, and the repair is not yours to improvise.
+
+- **Recovery, when the live check disagrees with local HEAD.** Verified end to end
+  in a sandbox: the repair is local-only and the remote is untouched by it.
+
+  First establish that nothing local is worth keeping — **verify it, do not take it
+  on trust**: confirm the working tree is clean, and that every local commit is
+  reachable from some branch tip in `git ls-remote origin`. In every case seen so
+  far the local commits belong to ANOTHER plugin and are already safe on that
+  plugin's own remote branch (`f25db77` is the tip of
+  `claude/review-shared-chat-bExtl`), so discarding them locally loses nothing —
+  but that is a fact to check, not to assume.
+
+  Then, and only then:
+
+  ```bash
+  git fetch origin <your-branch>
+  git reset --hard origin/<your-branch>   # or `git merge --ff-only` if merely behind
+  ```
+
+  **After that fetch you are in the dangerous state above.** Your next push must be
+  an ordinary fast-forward push; if it is rejected, stop and report.
+
+- **What is actually happening** (diagnosed once, so nobody re-derives it): this is
+  ONE repository with a branch per plugin, and every plugin's history is intact on
+  its own remote branch. There is NO collision on the remote. Containers are
+  provisioned carrying another plugin's workspace — the Availability Calendar's
+  `f25db77` has appeared as local HEAD in several unrelated plugins — and a branch
+  named for the incoming session is created at that HEAD with
+  `refs/remotes/origin/<branch>` written without contacting the server. That is why
+  `git status` looks clean: it compares HEAD against a cache that agrees with it.
+  Four of eight checkouts came back wrong, so **a container that was clean
+  yesterday proves nothing about the one you are in now.**
+
+- **Agreeing with whoever handed you the rule is not verification.** The wrong
+  mechanism above survived because it was plausible and came from a trusted source,
+  and at least one session restated it as confirmed without testing it. If a claim
+  is cheap to test — and a throwaway `git init --bare` is very cheap — test it, and
+  say plainly when the result contradicts what you were told.
