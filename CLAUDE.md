@@ -128,3 +128,64 @@ Site brand palette (for reference): Primary `#0f6dbf` · Secondary `#f08080`. Th
 
 - Develop and push on the session's designated `claude/...` branch. Don't open a PR unless the user asks.
 - The repo has only the plugin folders (and these docs) at root — no other deliverables.
+
+### Verify the checkout against the remote — every session, before the first commit
+
+Containers here are sometimes provisioned carrying **another plugin's workspace**. A branch named
+for the incoming session gets created at that foreign HEAD, and `refs/remotes/origin/<branch>` is
+written **without contacting the server**. `git status` then reports a clean, in-sync branch,
+because it compares HEAD against a cache that agrees with it. Four of eight checkouts came back
+wrong on 2026-09-19; `f25db77` (tip of `claude/review-shared-chat-bExtl`, the Availability
+Calendar's work) showed up as local HEAD in several unrelated plugins.
+
+There is **no collision on the remote**. Every plugin's history is intact on its own branch. The
+damage would be entirely self-inflicted, by a session pushing a foreign HEAD over a good branch.
+
+So, at the **start of every session** — a container that was clean yesterday proves nothing about
+today's:
+
+```bash
+git ls-remote origin <your-branch>        # a LIVE query; origin/... is only a local cache
+```
+
+Confirm your local branch descends from (or equals) what that returns. Never treat
+`refs/remotes/origin/...` as evidence.
+
+### Recovery, only if the live query disagreed
+
+First prove nothing local is worth keeping — **verify this yourself, don't assume it**: the working
+tree must be clean, and every local commit must be reachable from some branch in
+`git ls-remote origin` (in every case seen so far the local commits belong to another plugin and
+are already safe on that plugin's own branch). Then:
+
+```bash
+git fetch origin <your-branch>
+git reset --hard origin/<your-branch>     # or `git merge --ff-only` if merely behind
+```
+
+Both are local-only and touch nothing on the server. That is the whole repair.
+
+### Never force-push these branches
+
+The conclusion is firm; the mechanism below is the tested one. An earlier version of this note
+claimed the lease would match the poisoned cache and succeed — **that was wrong**, and a rule with
+a wrong mechanism is the failure this section exists to prevent.
+
+Reproduced locally (git 2.43.0, bare repo as remote, tracking ref poisoned exactly as the
+containers do — script kept out of the repo, in the session scratchpad):
+
+| state | command | result | remote |
+|---|---|---|---|
+| stale cache | `git push` | rejected, `fetch first` | unchanged |
+| stale cache | `git push --force-with-lease` | rejected, `stale info` | unchanged |
+| **after `git fetch`** | `git push --force-with-lease` | **`+ ac89eb9...c552c95 (forced update)`** | **history replaced** |
+| after `git fetch` | `git push` | rejected, `non-fast-forward` | unchanged |
+
+The lease protects you **only while the cache is stale**. Fetching is what removes the protection,
+and fetching is exactly what a careful person does first. **The dangerous sequence is "fetch, then
+force."** `--force-with-lease` is not a safeguard here.
+
+Therefore: pushes to these branches are ordinary fast-forward pushes, always. A rejection after a
+repair means something is still wrong, and that is not yours to improvise:
+
+**STOP AND REPORT IT. Do not force, do not `--force-with-lease`, do not "reconcile".**
