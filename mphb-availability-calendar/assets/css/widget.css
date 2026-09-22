@@ -1485,6 +1485,29 @@ button.mphbac-cell-label {
     background: rgba(15, 109, 191, 0.55);
     /* height + translateY set inline by widget.js */
 }
+/* THE FLOATING VARIANT IS NOW ONLY A POSITION (0.39.0). Everything it used
+   to say about paint and size is gone, because it joins the shared close
+   treatment below — all three popup X's are one control.
+
+   THE FROSTED PILL IS DELETED RATHER THAN LEFT DEAD. It had not rendered
+   since the shared rule was introduced: translucent fill, backdrop blur,
+   white mark, 2.1em box and drop shadow all lost to .mphbac-sheet-close at
+   equal specificity and later source order, which the 0.24.0 note traced and
+   0.38.0 measured. Keeping declarations that cannot win is how the next
+   reader loses an afternoon.
+
+   ITS PURPOSE SURVIVES THE DELETION, WHICH IS WHY IT CAN GO. The frosting
+   existed because "an earlier solid #888 disappeared into gray photos" — a
+   mid-grey fill under a near-white mark. The shared treatment is the
+   opposite pairing: an opaque ground under a DARK #0A50B2 mark, 6.41:1
+   against its own ground whatever is behind it. The shadow went with it for
+   the same reason: the mark, not the disc's edge, is what has to be seen,
+   and a shadow on this one and not the other two is exactly the difference
+   the owner asked to remove.
+
+   The negative bottom margin stays em-based and therefore unchanged at
+   -28px: it was never the box's height (the box painted 44px), so making it
+   -46px would move the info popup's header, which is not what was asked. */
 .mphbac-info-close--floating {
     position: sticky;
     top: 0;
@@ -1494,21 +1517,6 @@ button.mphbac-cell-label {
        old z-index: 2). 10 sits the X above all known popup content while
        staying well below site-level overlays. */
     z-index: 10;
-    width: 2.1em;
-    height: 2.1em;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* Frosted pill — translucent fill + backdrop blur so the X reads
-       cleanly against any color/image/text that scrolls underneath.
-       Earlier solid #888 disappeared into gray photos. */
-    background: rgba(60, 60, 60, 0.45);
-    backdrop-filter: blur(10px) saturate(140%);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
-    color: rgba(255, 255, 255, 0.96);
-    border-radius: 50%;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
     /* Reserve no extra vertical space — visually overlap the header below. */
     margin-bottom: -2.1em;
     margin-right: -0.25em;
@@ -1525,18 +1533,11 @@ button.mphbac-cell-label {
     outline: none;
 }
 
-.mphbac-info-close--floating:focus-visible {
-    outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
-    outline-offset: 2px;
-}
-/* Older browsers without backdrop-filter: bump opacity so the pill stays
-   readable instead of falling back to the translucent rgba which would be
-   nearly invisible against a light background. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .mphbac-info-close--floating {
-        background: rgba(40, 40, 40, 0.92);
-    }
-}
+/* The floating X's own gold ring is gone with its own everything else: it
+   carries .mphbac-sheet-close too, so the shared focus rule below already
+   gives it the identical ring. The @supports block that bumped the frosted
+   pill's opacity for browsers without backdrop-filter went with the pill —
+   there is no translucency left to rescue. */
 .mphbac-sheet-header--info {
     /* Stack the title and the "View Cottage Page" button vertically —
        the base .mphbac-sheet-header is a space-between row, which would
@@ -1987,75 +1988,60 @@ body.mphbac-info-open {
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 18 15 12 9 6'/></svg>") !important;
     }
 }
+/* ALL THREE POPUP CLOSE BUTTONS ARE ONE CONTROL (0.39.0).
+   The booking popup's X, the info popup's floating X and — via the same
+   tokens and the same SVG in staff.css — the staff dialog's X. 0.38.0
+   scoped this block with :not(.mphbac-info-close--floating) to leave the
+   floating one where it was; the owner has since chosen to bring it in, so
+   the exclusion is gone and there is one rule for all of them. What remains
+   specific to the floating variant is its POSITION only, above. */
 .mphbac-sheet-close {
     /* Visible ground: the bare "x" had no fill and read as page furniture.
-       Circular 44x44 so it is also a real touch target (it was ~28x26).
        Kept in the header's top-RIGHT slot, where it already sat. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
+    /* 46, the family's tap floor — .mphbac-btn's min-height, the staff view
+       switcher's and the staff close's. This was 44 before 0.38.0, and the
+       floating X painted 44 too. */
+    width: 46px;
+    height: 46px;
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: #ECEFF3;
     line-height: 1;
     cursor: pointer;
-    /* #4A5260 on #ECEFF3 = 7.9:1. */
-    color: #4A5260;
-    transition: background-color 0.15s ease, color 0.15s ease;
-}
-/* The mark, on the same spec as .mphbac-nav-btn svg — same 20x20 box, same
-   2.25 stroke, same round caps — so the close and the chevrons read as one
-   set. currentColor carries the hover/focus colour change below. */
-.mphbac-sheet-close svg {
-    display: block;
-    width: 20px;
-    height: 20px;
-}
-/* THE BOOKING POPUP'S CLOSE JOINS THE CONTROL FAMILY (0.38.0).
-   Everything new is scoped with :not(.mphbac-info-close--floating) rather
-   than edited into the rule above, because the INFO popup's floating X
-   carries .mphbac-sheet-close as well and must not move. MEASURED, not
-   assumed: that button paints 44px / #ECEFF3 / #4A5260 today — the rule
-   above out-orders its own frosted-pill block at (0,1,0), which the 0.24.0
-   note traces. Leaving that rule untouched leaves the info popup untouched.
-   Whether the frosted pill should be restored is a separate decision. */
-.mphbac-sheet-close:not(.mphbac-info-close--floating) {
-    /* 46, the family's tap floor — .mphbac-btn's min-height, the staff view
-       switcher's and the staff close's. This button was 44. */
-    width: 46px;
-    height: 46px;
     /* REST AND HOVER RESOLVE THROUGH THE SAME LAYER, so a future --dcc-site-*
-       palette moves both. A solid brand-blue fill reads too heavy on a 46px
-       icon button, so the ground is a 10% tint of the very token the fill
-       would have used and the mark is that token itself: #0A50B2 on #E7EEF7
-       is 6.4:1 — it was #4A5260 on #ECEFF3 at 7.9:1, so still far above AA
-       either way. The literal is declared FIRST as the pre-color-mix()
-       fallback: those browsers get today's palette rather than a dropped
-       declaration and an X with no ground at all, which is the exact bug the
-       fill was introduced to fix. */
+       palette moves all three. A solid brand-blue fill reads too heavy on a
+       46px icon button, so the ground is a 10% tint of the very token the
+       fill would have used and the mark is that token itself: #0A50B2 on
+       #E7EEF7 is 6.41:1 — it was #4A5260 on #ECEFF3 at 7.9:1, so still far
+       above AA either way. The literal is declared FIRST as the
+       pre-color-mix() fallback: those browsers get today's palette rather
+       than a dropped declaration and an X with no ground at all, which is
+       the exact bug the fill was introduced to fix. */
     background: #E7EEF7;
     background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
     color: var(--dcc-button-bg, #0A50B2);
-    /* Bravada fades every button background over .75s; this button answered
-       with its own .15s, and the staff twin answered with none. None is the
-       family's answer — .mphbac-btn, .mphbac-nav-btn and .mphbac-row-toggle
-       all carry transition: none — so the two X's now agree. */
+    /* Bravada fades every button background over .75s; this button used to
+       answer with its own .15s and the staff twin answered with none. None
+       is the family's answer — .mphbac-btn, .mphbac-nav-btn and
+       .mphbac-row-toggle all carry transition: none. */
     transition: none;
 }
 /* THE MARK, sized to read as a control rather than as punctuation. The
    stroke is set from CSS, not from the markup: a CSS property outranks the
-   presentation attribute, so both panels can share one SVG snippet and this
-   file stays the single place the weight is decided. MEASURED: painted ink
-   was 12x12 inside the 44px box (27%). */
-.mphbac-sheet-close:not(.mphbac-info-close--floating) svg {
+   presentation attribute, so all three panels share one SVG snippet and this
+   file stays the single place the weight is decided. MEASURED: the painted
+   ink was 12x12 inside the old 44px box (27%) and is 18x18 inside the 46px
+   box (39%). */
+.mphbac-sheet-close svg {
+    display: block;
     width: 30px;
     height: 30px;
 }
-.mphbac-sheet-close:not(.mphbac-info-close--floating) svg path {
+.mphbac-sheet-close svg path {
     stroke-width: 2.75;
 }
 /* FOCUS IS AN OUTLINE AND NEVER A FILL.
@@ -2437,15 +2423,11 @@ body.mphbac-info-open {
     .mphbac-sheet-title-link:hover {
         text-decoration-thickness: 2px;
     }
-    /* The INFO popup's floating X keeps the alert red it has always hovered;
-       only the booking popup's X was asked to join the family. */
-    .mphbac-info-close--floating:hover {
-        background: var(--mphbac-color-alert);
-        color: #ffffff;
-    }
-    /* The same pair the staff X consumes, in the same guard, so the two
-       cannot drift. Gated because iOS keeps :hover stuck after a tap. */
-    .mphbac-sheet-close:not(.mphbac-info-close--floating):hover {
+    /* The same pair the staff X consumes, in the same guard, so none of the
+       three can drift. The floating X's alert-red hover went with the rest
+       of its separate treatment in 0.39.0. Gated because iOS keeps :hover
+       stuck after a tap. */
+    .mphbac-sheet-close:hover {
         background: var(--dcc-button-hover-bg, #f08080);
         color: var(--dcc-button-hover-fg, #ffffff);
     }
