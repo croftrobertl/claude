@@ -80,6 +80,19 @@ const BODY = H.filtersHtml() + `
       check(`${label}: the panel's REST colour reaches it`, r.rest === rest, { got: r.rest, want: rest });
       check(`${label}: and the panel's HOVER colour wins over it`, r.bg === hov, { got: r.bg, want: hov });
     }
+    /* The popup X takes no panel colour — it has no control — so it is
+       checked against the shared --dcc- pair the staff X also consumes,
+       rather than against a sentinel. */
+    await p.evaluate(() => { document.querySelector('.mphbac-sheet').style.cssText +=
+      ';transform:none;opacity:1;left:0;top:0;right:auto;bottom:auto;'; });
+    await p.waitForTimeout(400);
+    await p.mouse.move(0, 0); await p.waitForTimeout(120);
+    await p.hover('.mphbac-sheet-close', { force: true }); await p.waitForTimeout(250);
+    const x = await p.evaluate(() => { const e = document.querySelector('.mphbac-sheet-close'),
+      c = getComputedStyle(e); return { over: e.matches(':hover'), bg: c.backgroundColor, fg: c.color }; });
+    check('popup X: the pointer really is over it (instrument check)', x.over === true);
+    check('popup X: hovers to the shared salmon, white on it',
+      x.bg === 'rgb(240, 128, 128)' && x.fg === 'rgb(255, 255, 255)', x);
     await ctx.close();
   }
 
@@ -109,11 +122,28 @@ const BODY = H.filtersHtml() + `
     const { ctx, p } = await open({ touch: true, w: 393 });
     check('the touch context really reports hover:none (instrument check)',
       await p.evaluate(() => matchMedia('(hover: none)').matches));
-    for (const sel of ['.mphbac-nav-next', '.mphbac-btn-apply']) {
+    /* The booking popup's X joined this sweep in 0.38.0. It was the one
+       control whose hover rule no assertion here could reach: the "no :hover
+       before the guard" check above only sees rules that escape UPWARDS, and
+       a rule that escapes by closing the guard early lands below it, where
+       that check is blind. A mutation doing exactly that SURVIVED until this
+       selector was added. The popup ships translated off-screen, so it is
+       parked first — otherwise the hover silently never lands and the
+       assertion passes because nothing moved. */
+    for (const sel of ['.mphbac-nav-next', '.mphbac-btn-apply', '.mphbac-sheet-close']) {
+      // The popup is parked only when its own turn comes: parked first, it
+      // covers the widget and every earlier hover lands on the sheet instead.
+      if (sel === '.mphbac-sheet-close') {
+        await p.evaluate(() => { document.querySelector('.mphbac-sheet').style.cssText +=
+          ';transform:none;opacity:1;left:0;top:0;right:auto;bottom:auto;'; });
+        await p.waitForTimeout(400);
+      }
       const rest = await p.evaluate(s => getComputedStyle(document.querySelector(s)).backgroundColor, sel);
-      await p.hover(sel); await p.waitForTimeout(300);
-      const after = await p.evaluate(s => getComputedStyle(document.querySelector(s)).backgroundColor, sel);
-      check(`ON TOUCH ${sel} does not change on hover — no iOS linger`, after === rest, { rest, after });
+      await p.hover(sel, { force: true }); await p.waitForTimeout(300);
+      const r = await p.evaluate(s => { const e = document.querySelector(s);
+        return { over: e.matches(':hover'), bg: getComputedStyle(e).backgroundColor }; }, sel);
+      check(`(instrument check) the pointer really reached ${sel}`, r.over === true);
+      check(`ON TOUCH ${sel} does not change on hover — no iOS linger`, r.bg === rest, { rest, after: r.bg });
     }
     const f = await p.evaluate(() => {
       const el = document.querySelector('.mphbac-nav-next'); el.focus();

@@ -136,16 +136,18 @@ const TOOLS = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-topbar">
     <button type="button" class="mphbac-staff-bar" style="width:200px;height:28px"><span class="mphbac-staff-seg is-stay"></span></button>
   </div>`;
 
-const SHEET = `
-  <div class="mphbac-staff-sheet" role="dialog">
-    <div class="mphbac-staff-sheet-head">
-      <h2 class="mphbac-staff-sheet-title">Booking</h2>
-      <button type="button" class="mphbac-staff-close" aria-label="Close">&times;</button>
-    </div>
-    <div class="mphbac-staff-sheet-body">
-      <div class="mphbac-staff-photo"><a href="#">View</a></div>
-    </div>
-  </div>`;
+/**
+ * THE DIALOG, EXTRACTED FROM THE PHP for the same reason TOOLS is. It was a
+ * hand-written constant carrying `&times;`, and 0.38.0 replaced that glyph
+ * with an SVG in the markup: a fixture holding its own copy would have gone
+ * on measuring the old character and reported the new one as shipped. Only
+ * the BODY is synthesised, because the real body is empty in the markup and
+ * filled by staff.js at runtime.
+ */
+const SHEET = dephp(extractBlock(widgetPhp(), '<div class="mphbac-staff-sheet" role="dialog"'))
+  .replace(/\shidden(?=>|\s)/g, '')
+  .replace('<div class="mphbac-staff-sheet-body"></div>',
+    '<div class="mphbac-staff-sheet-body"><div class="mphbac-staff-photo"><a href="#">View</a></div></div>');
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 

@@ -150,6 +150,221 @@ const BUTTONLIKE = [
     await ctx.close();
   }
 
+  console.log('\n-- THE TWO POPUP CLOSE BUTTONS ARE ONE CONTROL (0.38.0) --');
+  {
+    /* THE PUBLIC X AND THE STAFF X ARE MEASURED SIDE BY SIDE, WITH ONE
+       INSTRUMENT, because "they must not drift" is a claim about both panels
+       and neither harness alone can make it. The glyph is compared by PAINTED
+       PIXELS rather than by declarations: one was an SVG and the other the
+       &times; CHARACTER, whose ink depends on whichever font loads, so any
+       assertion about width or font-size would have compared two things that
+       are not the same kind of thing. The screenshot is reloaded into a
+       canvas to read it — there is no PNG decoder in this tree. */
+    const ink = async (p, sheetSel, closeSel) => {
+      await p.evaluate(s => { document.querySelector(s).style.cssText +=
+        ';transform:none;opacity:1;left:20px;top:20px;right:auto;bottom:auto;'; }, sheetSel);
+      // The sheets animate their transform; measuring inside the ramp reads a
+      // blank clip and calls it "no glyph".
+      await p.waitForTimeout(500);
+      const el = await p.$(closeSel);
+      const shot = await el.screenshot({ scale: 'css' });
+      const url = 'data:image/png;base64,' + shot.toString('base64');
+      return await p.evaluate(async u => {
+        const img = new Image();
+        await new Promise(r => { img.onload = r; img.src = u; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data;
+        const tally = new Map();
+        for (let i = 0; i < d.length; i += 4) {
+          const k = d[i] + ',' + d[i+1] + ',' + d[i+2];
+          tally.set(k, (tally.get(k) || 0) + 1);
+        }
+        let ground = null, best = -1;
+        for (const [k, n] of tally) if (n > best) { best = n; ground = k; }
+        const [gr, gg, gb] = ground.split(',').map(Number);
+        let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0;
+        for (let yy = 0; yy < c.height; yy++) for (let xx = 0; xx < c.width; xx++) {
+          const i = (yy * c.width + xx) * 4;
+          if (d[i+3] < 8) continue;
+          if (Math.abs(d[i]-gr) + Math.abs(d[i+1]-gg) + Math.abs(d[i+2]-gb) > 120) {
+            n++; if (xx<x0)x0=xx; if (xx>x1)x1=xx; if (yy<y0)y0=yy; if (yy>y1)y1=yy;
+          }
+        }
+        return { box: [c.width, c.height], ground, inkW: x1-x0+1, inkH: y1-y0+1, inkPx: n };
+      }, url);
+    };
+
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const pub = await ctx.newPage();
+    await pub.setContent(H.page({ sheet: H.sheetHtml() }));
+    const stf = await ctx.newPage();
+    await stf.setContent(S.page({ body: S.TOOLS, sheet: S.SHEET }));
+
+    const a = await ink(pub, '.mphbac-sheet', '.mphbac-sheet-close');
+    const b2 = await ink(stf, '.mphbac-staff-sheet', '.mphbac-staff-close');
+
+    check('both X\'s sit in the same 46px box', String(a.box) === '46,46' && String(b2.box) === '46,46',
+      { public: a.box, staff: b2.box });
+    check('both X\'s paint the same ground', a.ground === b2.ground, { public: a.ground, staff: b2.ground });
+    check('both X\'s paint the same glyph, to the pixel',
+      a.inkW === b2.inkW && a.inkH === b2.inkH && a.inkPx === b2.inkPx,
+      { public: [a.inkW, a.inkH, a.inkPx], staff: [b2.inkW, b2.inkH, b2.inkPx] });
+    check('the glyph FILLS the box rather than reading as punctuation — it was 27% and 22%',
+      a.inkW / a.box[0] >= 0.35 && b2.inkW / b2.box[0] >= 0.35,
+      { public: +(a.inkW / a.box[0]).toFixed(2), staff: +(b2.inkW / b2.box[0]).toFixed(2) });
+
+    /* THE SENTINEL. The owner's requirement is not "these two are blue today",
+       it is "a future --dcc-site-* palette moves them both". Declaring the
+       site layer on :root and re-reading is the only assertion that can tell
+       those apart — and :root is deliberately where a portaled popup can
+       still see it, which is the whole reason the token layer exists. */
+    const paint = (p, sel) => p.evaluate(s => { const c = getComputedStyle(document.querySelector(s));
+      return { bg: c.backgroundColor, fg: c.color }; }, sel);
+    const repaint = async (p, sel) => {
+      await p.evaluate(() => {
+        document.documentElement.style.setProperty('--dcc-site-button-bg', 'rgb(1, 2, 3)');
+        document.documentElement.style.setProperty('--dcc-site-button-hover-bg', 'rgb(4, 5, 6)');
+        document.documentElement.style.setProperty('--dcc-site-button-hover-fg', 'rgb(7, 8, 9)');
+      });
+      await p.waitForTimeout(60);
+      const rest = await paint(p, sel);
+      await p.hover(sel, { force: true }); await p.waitForTimeout(200);
+      const hov = await paint(p, sel);
+      await p.mouse.move(0, 0);
+      return { rest, hov };
+    };
+    const pubT = await repaint(pub, '.mphbac-sheet-close');
+    const stfT = await repaint(stf, '.mphbac-staff-close');
+    for (const [label, r] of [['public', pubT], ['staff', stfT]]) {
+      check(label + ': the REST mark follows --dcc-site-button-bg', r.rest.fg === 'rgb(1, 2, 3)', r.rest);
+      check(label + ': the REST ground is mixed from that same token, not a literal',
+        /color\(srgb/.test(r.rest.bg) && r.rest.bg !== 'rgb(231, 238, 247)', r.rest.bg);
+      check(label + ': the HOVER pair follows --dcc-site-button-hover-*',
+        r.hov.bg === 'rgb(4, 5, 6)' && r.hov.fg === 'rgb(7, 8, 9)', r.hov);
+    }
+    await ctx.close();
+  }
+
+  console.log('\n-- the close buttons\' focus is an OUTLINE, never a fill --');
+  {
+    /* SPLIT FROM THE HOVER CHECK ON PURPOSE. White on #f08080 is 2.59:1, a
+       knowingly accepted ratio, so focus must not be readable only as a fill.
+       FOCUSED WITH A REAL Tab: a programmatic .focus() matches :focus-visible
+       while the painted background has not been recomputed, so it reports a
+       fill as absent whether or not one is declared. That instrument would
+       have passed this test before the fill was removed. */
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    for (const [label, mk, sheetSel, closeSel] of [
+      ['public', () => H.page({ sheet: H.sheetHtml() }), '.mphbac-sheet', '.mphbac-sheet-close'],
+      ['staff', () => S.page({ body: S.TOOLS, sheet: S.SHEET }), '.mphbac-staff-sheet', '.mphbac-staff-close'],
+    ]) {
+      const p = await ctx.newPage();
+      await p.setContent(mk());
+      await p.evaluate(s => { document.querySelector(s).style.cssText +=
+        ';transform:none;opacity:1;left:20px;top:20px;right:auto;bottom:auto;'; }, sheetSel);
+      await p.waitForTimeout(400);
+      const rest = await p.evaluate(s => { const c = getComputedStyle(document.querySelector(s));
+        return { bg: c.backgroundColor, fg: c.color }; }, closeSel);
+      let landed = false;
+      for (let i = 0; i < 60 && !landed; i++) {
+        await p.keyboard.press('Tab');
+        landed = await p.evaluate(s => document.activeElement === document.querySelector(s), closeSel);
+      }
+      check(label + ': (instrument check) a real Tab reached the close button', landed);
+      const f = await p.evaluate(s => { const e = document.querySelector(s), c = getComputedStyle(e);
+        return { fv: e.matches(':focus-visible'), bg: c.backgroundColor, fg: c.color,
+                 w: c.outlineWidth, style: c.outlineStyle, off: c.outlineOffset }; }, closeSel);
+      check(label + ': (instrument check) the browser really is in focus-visible mode', f.fv);
+      check(label + ': focus paints NO fill — the ground and the mark do not move',
+        f.bg === rest.bg && f.fg === rest.fg, { rest, focus: { bg: f.bg, fg: f.fg } });
+      check(label + ': focus IS a 2px outline, held clear of the round edge',
+        f.w === '2px' && f.style === 'solid' && f.off === '2px', f);
+      await p.close();
+    }
+    await ctx.close();
+  }
+
+  console.log('\n-- what a runtime check cannot see: the source, on both sides --');
+  {
+    const pubCode = H.cssCode(), pubPhp = H.php(), stfPhp = S.widgetPhp();
+    /* THE PRE-color-mix() FALLBACK CANNOT BE OBSERVED IN THIS BROWSER, which
+       understands color-mix and therefore always takes the second
+       declaration. A browser that does not drops it at parse time and keeps
+       whatever came before — so the literal must come FIRST, and the only
+       place to check that is the source. Get it backwards and those browsers
+       get no ground at all: an X floating on white, which is the exact bug
+       the fill was added to fix. */
+    for (const [label, css] of [['widget.css', pubCode], ['staff.css', code]]) {
+      const m = css.match(/background:\s*#E7EEF7;\s*background:\s*color-mix\(/);
+      check(label + ': the literal ground is declared BEFORE the color-mix() that replaces it', !!m);
+      check(label + ': ...and no color-mix() is left without one in front of it',
+        (css.match(/color-mix\(/g) || []).length === (css.match(/#E7EEF7;\s*background:\s*color-mix\(/g) || []).length,
+        (css.match(/.{60}color-mix\(/g) || []));
+    }
+    /* ONE SNIPPET, TWO PANELS. The staff X carried &times; until 0.38.0; a
+       character and an SVG cannot be kept identical by a stylesheet. */
+    const MARK = '<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25"';
+    check('the staff close renders the same SVG mark as the public one, not a character',
+      stfPhp.includes(MARK) && !/mphbac-staff-close[\s\S]{0,200}&times;/.test(stfPhp));
+    check('the public booking close still renders it too', pubPhp.includes(MARK));
+    /* THE STROKE IS DECIDED IN CSS, not in the two copies of the markup —
+       otherwise "the same weight on both" depends on two files agreeing. */
+    check('both stylesheets set the stroke themselves, outranking the attribute',
+      /svg path\s*\{\s*stroke-width:\s*2\.75/.test(pubCode) && /svg path\s*\{\s*stroke-width:\s*2\.75/.test(code));
+  }
+
+  console.log('\n-- the INFO popup\'s floating X was NOT part of this and must not have moved --');
+  {
+    /* It carries .mphbac-sheet-close too, which is why every 0.38.0 rule is
+       scoped with :not(.mphbac-info-close--floating). MEASURED against the
+       values it actually paints today — 44px / #ECEFF3 / #4A5260 — which are
+       NOT the frosted pill its own block declares: the base rule out-orders
+       that block at equal specificity, exactly as the 0.24.0 note traces. */
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const p = await ctx.newPage();
+    await p.setContent(H.page({ sheet: `<div class="mphbac-info-sheet"><div class="mphbac-info-body">`
+      + `<button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating"`
+      + ` aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">`
+      + `<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25"`
+      + ` stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>` }));
+    const r = await p.evaluate(() => {
+      const e = document.querySelector('.mphbac-info-close--floating');
+      const c = getComputedStyle(e), b = e.getBoundingClientRect();
+      const g = e.querySelector('svg').getBoundingClientRect();
+      return { box: [b.width, b.height], bg: c.backgroundColor, fg: c.color, svg: [g.width, g.height] };
+    });
+    check('the info popup\'s X keeps its 44px box, its ground and its mark',
+      String(r.box) === '44,44' && r.bg === 'rgb(236, 239, 243)'
+      && r.fg === 'rgb(74, 82, 96)' && String(r.svg) === '20,20', r);
+    await ctx.close();
+  }
+
+  console.log('\n-- the portal cannot strand either X (0.37.0 for the public sheet, 0.38.0 for the staff one) --');
+  {
+    /* staff.js moves .mphbac-staff-sheet to <body>. Every token the dialog
+       consumes must therefore be declared ON the dialog, not only on
+       .mphbac-staff — and a literal fallback is not the same thing, because
+       a fallback cannot follow a palette. Asserted by reading the tokens
+       from a dialog that really has been moved. */
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const p = await ctx.newPage();
+    await p.setContent(S.page({ body: S.TOOLS, sheet: S.SHEET }));
+    const r = await p.evaluate(() => {
+      const sheet = document.querySelector('.mphbac-staff-sheet');
+      document.body.appendChild(sheet);           // exactly what staff.js does
+      const c = getComputedStyle(document.querySelector('.mphbac-staff-close'));
+      const tok = n => c.getPropertyValue(n).trim();
+      return { outside: !sheet.closest('.mphbac-staff'),
+               bg: tok('--dcc-button-bg'), hb: tok('--dcc-button-hover-bg'),
+               hf: tok('--dcc-button-hover-fg'), focus: tok('--staff-focus') };
+    });
+    check('(instrument check) the dialog really is outside .mphbac-staff', r.outside);
+    check('every token the dialog consumes still resolves after the move',
+      r.bg && r.hb && r.hf && r.focus, r);
+  }
+
   console.log('\n-- the declared type actually renders (0.36.0) --');
   {
     // ASSERTED ON COMPUTED STYLE, NOT ON THE DECLARATION. The whole fault was

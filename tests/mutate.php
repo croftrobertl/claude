@@ -96,6 +96,13 @@ $mutations = [
      '@media (hover: hover) and (pointer: fine) {',
      '@media all {',
      'hover-hint-test.js'],
+    // widget.css carried only the whole-guard mutation above; the staff file
+    // has had a single-rule escape since 0.36.0. This is that one, on the
+    // second of the two close selectors.
+    ['hover: the booking popup close\'s hover escapes the pointer guard', 'assets/css/widget.css',
+     "    .mphbac-sheet-close:not(.mphbac-info-close--floating):hover {",
+     "}\n.mphbac-sheet-close:not(.mphbac-info-close--floating):hover {",
+     'hover-hint-test.js'],
     ['hint: the bold default is inherited again', 'assets/css/widget.css',
      "    font-weight: 300;\n    font-size: max(16px, 1em);",
      "    font-size: max(16px, 1em);",
@@ -192,9 +199,14 @@ $mutations = [
      ".mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }",
      "",
      'staff-test.js'],
-    ['staff: a hover rule escapes the pointer guard', 'assets/css/staff.css',
-     "    .mphbac-staff-bar:hover { filter: brightness(1.08); }",
-     "}\n.mphbac-staff-bar:hover { filter: brightness(1.08); }\n@media all {",
+    // RETARGETED IN 0.38.0 ONTO THE CLOSE SELECTOR rather than duplicated for
+    // it. The assertion this exercises — "no :hover rule sits before the
+    // guard" — is about the whole stylesheet, not about one rule, so moving
+    // the target from the bar to the close loses no coverage and puts the
+    // mutation on the selector this release is about.
+    ['staff: the close button\'s hover escapes the pointer guard', 'assets/css/staff.css',
+     "    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {",
+     "}\n.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close:hover {",
      'staff-test.js'],
     ['staff: the view switcher drops back under the tap-target floor', 'assets/css/staff.css',
      "    min-height: 46px;\n    padding: 0 14px;",
@@ -203,6 +215,46 @@ $mutations = [
     ['staff: the close button goes back to a fixed height', 'assets/css/staff.css',
      "    width: 46px;\n    min-height: 46px;",
      "    width: 46px;\n    height: 44px;",
+     'staff-test.js'],
+
+    // --- 0.38.0: the two popup close buttons, treated as one control -----
+    // The tap-target mutation above covers the staff X; this is the public
+    // one, which had no box assertion of its own before this release.
+    ['close: the public popup X drops back under the 46px tap floor', 'assets/css/widget.css',
+     "    width: 46px;\n    height: 46px;",
+     "    width: 44px;\n    height: 44px;",
+     'staff-test.js'],
+    ['close: focus goes back to being a FILL instead of an outline', 'assets/css/widget.css',
+     ".mphbac-sheet-close.mphbac-sheet-close:focus-visible {\n    outline:",
+     ".mphbac-sheet-close.mphbac-sheet-close:focus-visible {\n    background: var(--mphbac-color-alert);\n    color: #ffffff;\n    outline:",
+     'staff-test.js'],
+    ['close: the public rest colour goes back to a literal, so a palette cannot move it', 'assets/css/widget.css',
+     "    color: var(--dcc-button-bg, #0A50B2);",
+     "    color: #4A5260;",
+     'staff-test.js'],
+    ['close: the staff rest colour goes back to a literal', 'assets/css/staff.css',
+     "    color: var(--dcc-button-bg, #0A50B2);",
+     "    color: #111111;",
+     'staff-test.js'],
+    ['close: the pre-color-mix() literal fallback is dropped', 'assets/css/widget.css',
+     "    background: #E7EEF7;\n    background: color-mix(",
+     "    background: color-mix(",
+     'staff-test.js'],
+    ['close: the glyph shrinks back to punctuation', 'assets/css/widget.css',
+     ".mphbac-sheet-close:not(.mphbac-info-close--floating) svg {\n    width: 30px;\n    height: 30px;",
+     ".mphbac-sheet-close:not(.mphbac-info-close--floating) svg {\n    width: 20px;\n    height: 20px;",
+     'staff-test.js'],
+    ['close: the staff X reverts to the &times; character', 'class-staff-widget.php',
+     "aria-label=\"<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>",
+     "aria-label=\"<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>\">&times;</button>",
+     'staff-test.js'],
+    ['close: the staff tokens stop reaching the portaled dialog', 'assets/css/staff.css',
+     ".mphbac-staff,\n.mphbac-staff-sheet,\n.mphbac-staff-overlay {",
+     ".mphbac-staff {",
+     'staff-test.js'],
+    ['close: the INFO popup\'s floating X is dragged along with the booking one', 'assets/css/widget.css',
+     ".mphbac-sheet-close:not(.mphbac-info-close--floating) {",
+     ".mphbac-sheet-close {",
      'staff-test.js'],
 
     ['staff: the selected tab starts recolouring on hover too', 'assets/css/staff.css',

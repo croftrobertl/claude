@@ -1785,6 +1785,84 @@ That is local-only and touches nothing on the server. **After that fetch you
 are in the dangerous state above**: the next push must be an ordinary
 fast-forward, and a rejection means the repair is not yours to improvise.
 
+## The two popup close buttons, treated as one control (0.38.0)
+
+The booking popup's `.mphbac-sheet-close` and the staff dialog's
+`.mphbac-staff-close` had drifted into two different buttons: 44px vs 46px,
+`#ECEFF3`/`#4A5260` vs `#eeeeee`/`#111111`, an SVG vs the `&times;`
+character, a red hover vs the salmon one, a 0.15s fade vs none, and a focus
+FILL on one and an outline on the other. They are now one control, and the
+things that let them drift are gone rather than merely corrected.
+
+**A shared paint layer, not shared literals.** Rest is
+`--dcc-button-bg`, hover is `--dcc-button-hover-bg` / `--dcc-button-hover-fg`.
+Both are declared in BOTH stylesheets, each reading a `--dcc-site-*` first, so
+one site-level palette moves both panels. Routing rest through
+`--mphbac-color-nav-bg` would have worked on the public side and been
+unreachable from staff.css, which is exactly how the two got here.
+
+**A shared glyph, not two glyphs that agree.** A character and an SVG cannot
+be held identical by a stylesheet: the character's ink depends on whichever
+font loads. The staff markup now carries the same inline SVG, and the stroke
+weight is set from CSS (a CSS property outranks a presentation attribute), so
+the weight is decided in one place rather than in two copies of the markup.
+
+**Measure the PAINTED ink, not the box.** "Is the glyph big enough" was
+answered by screenshotting each button and taking the bounding box of every
+pixel that differs from the button's own ground. It was 12x12 in a 44px box
+(27%) on the public side and 10x9 in a 46px box (22%) on the staff side; both
+are now 18x18 in a 46px box (39%), to the same 156 inked pixels. No
+declaration-level assertion could have compared those two buttons at all.
+
+**The instrument, twice over.**
+  - A programmatic `.focus()` matches `:focus-visible` while the painted
+    background has NOT been recomputed. The first probe of the public button
+    reported "no focus fill" when a red fill was in fact declared and
+    painting. Only a real `Tab` shows it. A focus test built on `.focus()`
+    would have passed before the fill was removed and after — a guard that
+    cannot fail.
+  - Both sheets animate their `transform`. Screenshotting 100ms after parking
+    one on-screen captures the middle of the ramp: a blank clip, read as "no
+    glyph". Wait out the transition, or measure nothing.
+
+**`color-mix()` needs the literal FIRST.** The ground is a 10% tint of the
+rest token. A browser without `color-mix()` drops that declaration at parse
+time and keeps whatever preceded it, so the literal is declared first and the
+mix second. Get the order wrong and those browsers get no ground at all —
+the exact "the bare x reads as page furniture" bug the fill was added to fix.
+No Chromium test can see this; it is a source assertion.
+
+**A mutation that escapes DOWNWARDS.** `hover: the booking popup close's hover
+escapes the pointer guard` SURVIVED its first run. widget.css's gate assertion
+is "no `:hover` appears BEFORE the guard" — a rule that escapes by closing the
+guard early lands BELOW it, where that check is blind. What caught it on the
+staff side was the touch sweep, which hovers each control in a `hover: none`
+context and asserts nothing moves; `.mphbac-sheet-close` was simply not in the
+public suite's list. The fix was to add the selector, not to add an assertion.
+**A directional check is not a gate.**
+
+**The info popup's floating X is NOT this button.** Its markup carries
+`.mphbac-sheet-close` as well, and — measured, not assumed — it paints 44px /
+`#ECEFF3` / `#4A5260` today because the shared rule out-orders its own
+frosted-pill block at equal specificity, which the 0.24.0 note already traced.
+Every 0.38.0 rule is therefore scoped `:not(.mphbac-info-close--floating)`, and
+a mutation removing that scope goes red. Whether the frosted pill should be
+restored is a separate decision, still open.
+
+**The staff dialog portals too.** `staff.js` moves `.mphbac-staff-sheet` to
+`<body>`, so the `--staff-*` and `--dcc-*` tokens declared on `.mphbac-staff`
+stopped resolving there. Nothing was visibly broken — every sheet-scoped
+`var()` in that file already carried a literal fallback — but a fallback is not
+a token, and a `--dcc-site-*` layer would have moved the public X and left the
+staff one behind. Same fix as 0.37.0: declare the tokens on the elements that
+travel. **A literal fallback hides a portal fault instead of surviving it.**
+
+**A hand-written fixture drifts.** `staff-harness.js` held its own copy of the
+dialog markup, carrying `&times;`. Changing the real markup to an SVG would
+have left the fixture measuring a glyph the page no longer renders — the same
+lesson that file's own `TOOLS` comment already records. It is extracted from
+the PHP now.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
