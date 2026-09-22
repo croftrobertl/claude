@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.38.0
+Stable tag: 0.39.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,6 +64,12 @@ Then clear the SpeedyCache cache once. The calendar will render normally on ever
 
 == Changelog ==
 
+= 0.39.0 =
+* **All three popup close buttons are now identical** — the booking popup's, the info popup's floating one over the photos, and the staff detail sheet's. 0.38.0 brought two of them together and deliberately left the floating one alone; it now joins them: same 46px circle, same pale-blue ground, same brand-blue ✕, same salmon hover, same focus outline.
+* The floating one's old "frosted pill" styling is deleted rather than left in place. It had not been rendering for some time — the shared rule was overriding it — and the reason it existed is covered by the new treatment: it was frosted because a mid-grey disc disappeared into grey photos, and the ✕ is now dark on an opaque ground, which reads against any photo.
+* **Fixed: a long booking title ran underneath the staff sheet's close button.** The header reserved 52px on a phone and 56px on desktop, and the button needs 58px. Pre-existing since the button was enlarged in 0.36.0, and only visible on titles long enough to fill the line.
+* The changelog below now covers 0.28.0 to 0.37.0, which had been missing.
+
 = 0.38.0 =
 * **Both popup close buttons — the booking popup's and the staff detail sheet's — now look and behave like one control.** Same 46px circle, same ground, same mark, same salmon hover, same focus ring treatment. They are measured side by side in the tests, pixel for pixel, so they cannot drift apart again.
 * **The X is bigger and bolder.** The mark has gone from roughly a quarter of the button to about two fifths. The staff button's box is unchanged; the booking popup's grew by 2px, from 44 to 46, which is what brings the two to the same size and to the same tap-target standard the other buttons already use.
@@ -72,7 +78,65 @@ Then clear the SpeedyCache cache once. The calendar will render normally on ever
 * **No fade on either button.** The theme's three-quarter-second background fade is neutralised on both.
 * The info popup's floating X over the photos is deliberately unchanged.
 
-**Note.** Releases 0.28.0 to 0.37.0 are not listed below; their notes were delivered separately. Say the word and they can be written up here.
+= 0.37.0 =
+* **The booking and info popups were losing their colours the moment they opened.** Both popups are moved to the end of the page when they open, which put them outside the element their colour settings were attached to. Six settings stopped resolving: the popup title had no colour, the header had no divider line, the error message was black and square instead of red and rounded, and the close button's background vanished on hover and on focus. The settings are now attached where the popups can still see them.
+
+= 0.36.1 =
+* **No change on screen, deliberately, and the reason is now recorded.** The previous/next arrows were the last place where the staff panel's font settings differed from the public widget's. Checked at three sizes: those buttons contain no text at all, only an arrow drawn by the browser, so the setting has nothing to act on and the rendering is pixel-identical either way. Adding a rule to close the gap on paper would have meant nothing.
+
+= 0.36.0 =
+* **The staff panel's buttons now render the sizes they were set to.** Previous/next went from 15px to 16px, Today from 15px bold to 13px semibold, and the chart/list switcher from 15px bold to 14px semibold — all three had been silently overridden.
+* **The last two hover fades are gone** — the booking bars and the cottage rows. The theme fades every button's background over three-quarters of a second; those two were the only controls still inheriting it. The popup's own open and close animation is untouched.
+
+= 0.35.0 =
+* **The /staff/ panel's buttons now match the public widget** — same blue, same salmon hover, same shapes.
+* Two of the three navigation colour settings had to be rebuilt, not just restyled: they were writing rules that outranked everything the stylesheet could say, so the arrows kept their resting blue through both hover and keyboard focus. One of the two was not in the brief and was found by measuring.
+
+= 0.34.2 =
+* **No change to the plugin.** Test rebuild only (the day-cell suite): day-number contrast in every state, the three availability fills staying distinguishable, the cottage column's scaling, and the cell tooltip staying hidden until hover.
+
+= 0.34.1 =
+* **No change to the plugin.** A correction to the 0.34.0 note, which quoted one measurement (36.8px) in two different roles. Re-measured: both figures were real and their being equal was a coincidence — 41.4px in the filter row and 36.8px in the booking popup.
+
+= 0.34.0 =
+* **Show, Reset, Book Now and Cancel are now a proper tap target.** They were 41.4px in the filter row and 36.8px in the booking popup, both under the 44px standard; they are now 46px, and a button whose label wraps grows instead of clipping it.
+
+= 0.33.2 =
+* **A retraction.** The "known gap" reported in 0.33.1 — that the font settings could not reach the booking popup's date fields — was wrong, and it was a fault in the test, not in the plugin. Measured properly, the panel reaches every field. Nothing needed fixing.
+* **The staff panel no longer runs the same database query three times** for one booking.
+* Test rebuild: the navigation row and the polish suite.
+
+= 0.33.1 =
+* **No change to the plugin.** Test rebuild only — the first four browser suites, plus the shared page fixture they run against, which reproduces the theme and Elementor exactly as the live page loads them. Three faults in the tests themselves were found and fixed on the way.
+
+= 0.33.0 =
+* **The staff panel now shows a real guest count.** Four guests in a four-person cottage looks identical to the booking system's own default, so the number alone could never answer the question; the checkout plugin now marks a count a human actually set, and the panel reads that marker.
+* A search across seven booking fields, added in 0.32.0, is deleted: checked against the live database, none of those fields exists on any booking, so it could never have fired.
+
+= 0.32.0 =
+* **The staff panel shows only what the booking actually contains.** A booking with no photo ID no longer offers a View button for a file that does not exist; money rows appear only when something is outstanding; and an imported booking no longer shows fields it never carried.
+
+= 0.31.1 =
+* **Hover stopped working on the navigation arrows entirely, on desktop as well as on phones — fixed.** This was a regression introduced by 0.31.0: half of each colour setting had been moved and half left behind, and the half left behind outranked the other. Both halves now live in the same place.
+* **The mm/dd/yyyy hint reads at the right weight and size.** It had been rendering bold, because this site sets everything bold and the hint declared nothing of its own.
+
+= 0.31.0 =
+* **A tap on a phone can no longer leave a button stuck in its hover colour.** Five colour settings were writing their own hover rules, which cannot be limited to devices with a real mouse; they now write values the stylesheet consumes, so the limit applies. 0.29.0 had made this worse by giving every widget those settings by default.
+* **The slow fade on the navigation arrows is gone.**
+* **The mm/dd/yyyy hint is back in the date fields.**
+
+= 0.30.0 =
+* **On iPhone, the date fields were rendering about 25px off the right-hand edge of the screen** — the field's track was the correct width and the control inside it refused to shrink. The native control is now reset so it fits its track. This one is invisible in desktop browsers, which shrink the same control silently.
+* **The filter row no longer overflows at 320px**, from a minimum-width floor that forced two columns wider than the space available.
+
+= 0.29.0 =
+* **A freshly added calendar now looks like the ones on the site** — blue navigation and buttons, salmon hover, and four/two/one months across depending on screen size. None of the eight cottage pages stores these values, so for them the default is not a fallback, it is the behaviour.
+* The chart/list switcher had no colour at all until someone set one by hand; it has one now.
+* **Note:** Elementor's cached page CSS does not regenerate when a plugin updates, so a page keeps its old values until it is re-saved or the cache is flushed.
+
+= 0.28.0 =
+* **The date fields now take the DCC field standard** — the same rounded gold-bordered pill used at checkout.
+* Adopting it exposed two live faults. The field styling had never actually been landing: the theme's own input styling outranked it, so the fields were rendering as the theme's grey box with a dotted border. And the booking popup's fields were computing 15.2px, which makes iPhone Safari zoom in when you tap one; there is now a 16px floor.
 
 = 0.27.0 =
 * **Booking popup on a phone: the two date fields now sit side by side** — both labels on one row, both fields on the row beneath — and neither is cut off by the right edge. Both problems had the same cause. Checked at 320px, 360px and 393px.
