@@ -689,7 +689,19 @@
     align-items: center;
     justify-content: center;
     gap: 0.5em;
-    padding: 12px 56px;
+    /* THE SIDE PADDING MUST CLEAR THE CLOSE BUTTON, and it did not (fixed in
+       0.39.0, pre-existing since the button was raised to 46px in 0.36.0).
+       The X is absolutely positioned at right: 12px and is 46px wide, so it
+       occupies the first 58px from the right edge; this padding was 56 here
+       and 52 on phones, so a long booking title's box ran 2px and 6px under
+       it. The title is centred and wraps with overflow-wrap: anywhere, so a
+       short title never showed it — which is exactly why a value that merely
+       looks right is the trap.
+       WRITTEN AS THE ARITHMETIC RATHER THAN THE ANSWER, so that moving the
+       button's offset or size cannot silently re-open the gap: the button's
+       right offset, plus its width, plus breathing room. The padding stays
+       symmetric because the header centres its title. */
+    padding: 12px calc(12px + 46px + 8px);
     border-bottom: 1px solid #e0e0e0;
 }
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-title {
@@ -863,7 +875,9 @@ body.mphbac-staff-open { overflow: hidden; }
     .mphbac-staff-tools { gap: 8px 12px; }
     .mphbac-staff-legend { font-size: 0.8em; }
     .mphbac-staff-sheet.mphbac-staff-sheet { width: calc(100vw - 16px); max-height: min(90vh, 90dvh); }
-    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px 52px; }
+    /* Same arithmetic as the base rule — only the vertical padding tightens
+       on a phone. It was 52px, which put the title 6px under the X. */
+    .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-head { padding: 10px calc(12px + 46px + 8px); }
     .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body { padding: 12px 14px 18px; }
     .mphbac-staff-sheet.mphbac-staff-sheet dl { grid-template-columns: minmax(6em, 32%) minmax(0, 1fr); }
 }
