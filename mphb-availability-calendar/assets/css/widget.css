@@ -94,6 +94,13 @@
     --dcc-muted:           var(--dcc-site-muted, #6b7280);
     --dcc-field-radius:    var(--dcc-site-field-radius, 30px);
     --dcc-field-border:    var(--dcc-site-field-border, 2px);
+    /* The control family's REST ground, as --dcc-button-hover-bg is its hover
+       ground. Added in 0.38.0 for the two popup close buttons, which have no
+       Elementor control of their own on either panel: routing their rest
+       through this layer rather than through --mphbac-color-nav-bg is what
+       lets the public and the staff X stay identical, since staff.css
+       declares the same token and cannot see --mphbac-*. */
+    --dcc-button-bg:       var(--dcc-site-button-bg, #0A50B2);
     --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
     --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
 }
@@ -1516,12 +1523,6 @@ button.mphbac-cell-label {
 .mphbac-info-sheet.is-pointer-open .mphbac-info-close--floating:focus-visible,
 .mphbac-sheet.is-pointer-open .mphbac-sheet-close:focus-visible {
     outline: none;
-    background: rgba(60, 60, 60, 0.45);
-    color: rgba(255, 255, 255, 0.96);
-}
-.mphbac-sheet.is-pointer-open .mphbac-sheet-close:focus-visible {
-    background: #ECEFF3;
-    color: #4A5260;
 }
 
 .mphbac-info-close--floating:focus-visible {
@@ -2014,20 +2015,59 @@ body.mphbac-info-open {
     width: 20px;
     height: 20px;
 }
-/* TRACED (0.24.0): this is what painted the INFO popup's close coral.
-   That button's markup is
-   class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating",
-   so it matches .mphbac-sheet-close too — and at (0,2,0) this rule beat its
-   own frosted-pill background at (0,1,0). It was never a hover state: the
-   popup focuses its close button on open, so the fill appeared immediately.
-   The floating variant is excluded here and gets its own focus treatment
-   below, next to its outline. */
-.mphbac-sheet-close:not(.mphbac-info-close--floating):focus-visible {
-    background: var(--mphbac-color-alert);
-    color: #ffffff;
+/* THE BOOKING POPUP'S CLOSE JOINS THE CONTROL FAMILY (0.38.0).
+   Everything new is scoped with :not(.mphbac-info-close--floating) rather
+   than edited into the rule above, because the INFO popup's floating X
+   carries .mphbac-sheet-close as well and must not move. MEASURED, not
+   assumed: that button paints 44px / #ECEFF3 / #4A5260 today — the rule
+   above out-orders its own frosted-pill block at (0,1,0), which the 0.24.0
+   note traces. Leaving that rule untouched leaves the info popup untouched.
+   Whether the frosted pill should be restored is a separate decision. */
+.mphbac-sheet-close:not(.mphbac-info-close--floating) {
+    /* 46, the family's tap floor — .mphbac-btn's min-height, the staff view
+       switcher's and the staff close's. This button was 44. */
+    width: 46px;
+    height: 46px;
+    /* REST AND HOVER RESOLVE THROUGH THE SAME LAYER, so a future --dcc-site-*
+       palette moves both. A solid brand-blue fill reads too heavy on a 46px
+       icon button, so the ground is a 10% tint of the very token the fill
+       would have used and the mark is that token itself: #0A50B2 on #E7EEF7
+       is 6.4:1 — it was #4A5260 on #ECEFF3 at 7.9:1, so still far above AA
+       either way. The literal is declared FIRST as the pre-color-mix()
+       fallback: those browsers get today's palette rather than a dropped
+       declaration and an X with no ground at all, which is the exact bug the
+       fill was introduced to fix. */
+    background: #E7EEF7;
+    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
+    color: var(--dcc-button-bg, #0A50B2);
+    /* Bravada fades every button background over .75s; this button answered
+       with its own .15s, and the staff twin answered with none. None is the
+       family's answer — .mphbac-btn, .mphbac-nav-btn and .mphbac-row-toggle
+       all carry transition: none — so the two X's now agree. */
+    transition: none;
 }
-/* The ring has to read against the new ground AND against the red hover
-   fill, so it gets an offset rather than sitting on the edge. */
+/* THE MARK, sized to read as a control rather than as punctuation. The
+   stroke is set from CSS, not from the markup: a CSS property outranks the
+   presentation attribute, so both panels can share one SVG snippet and this
+   file stays the single place the weight is decided. MEASURED: painted ink
+   was 12x12 inside the 44px box (27%). */
+.mphbac-sheet-close:not(.mphbac-info-close--floating) svg {
+    width: 30px;
+    height: 30px;
+}
+.mphbac-sheet-close:not(.mphbac-info-close--floating) svg path {
+    stroke-width: 2.75;
+}
+/* FOCUS IS AN OUTLINE AND NEVER A FILL.
+   This is where a fill used to live — background: var(--mphbac-color-alert)
+   — and it is what 0.24.0 traced when the INFO popup's X came up coral: the
+   popup focuses its close on open, so the "focus" fill appeared instantly
+   and read as a rest colour. It is gone. The ring is the whole signal, it is
+   the same ring .mphbac-btn and .mphbac-row-toggle take, and it sits OUTSIDE
+   the pointer guard so it reaches touch devices too. That last part is
+   load-bearing: the hover fill is #f08080 and white on #f08080 is 2.59:1, a
+   knowingly accepted ratio, so a keyboard user must never be asked to read
+   focus off a fill. The offset keeps the ring clear of the round edge. */
 .mphbac-sheet-close.mphbac-sheet-close:focus-visible {
     outline: 2px solid var(--mphbac-color-today-outline, #f4da62);
     outline-offset: 2px;
@@ -2397,9 +2437,17 @@ body.mphbac-info-open {
     .mphbac-sheet-title-link:hover {
         text-decoration-thickness: 2px;
     }
-    .mphbac-sheet-close:hover {
+    /* The INFO popup's floating X keeps the alert red it has always hovered;
+       only the booking popup's X was asked to join the family. */
+    .mphbac-info-close--floating:hover {
         background: var(--mphbac-color-alert);
         color: #ffffff;
+    }
+    /* The same pair the staff X consumes, in the same guard, so the two
+       cannot drift. Gated because iOS keeps :hover stuck after a tap. */
+    .mphbac-sheet-close:not(.mphbac-info-close--floating):hover {
+        background: var(--dcc-button-hover-bg, #f08080);
+        color: var(--dcc-button-hover-fg, #ffffff);
     }
     .ui-datepicker td a:hover {
         background: #0A50B2;

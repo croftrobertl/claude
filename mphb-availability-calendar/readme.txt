@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.27.0
+Stable tag: 0.38.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,16 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.38.0 =
+* **Both popup close buttons — the booking popup's and the staff detail sheet's — now look and behave like one control.** Same 46px circle, same ground, same mark, same salmon hover, same focus ring treatment. They are measured side by side in the tests, pixel for pixel, so they cannot drift apart again.
+* **The X is bigger and bolder.** The mark has gone from roughly a quarter of the button to about two fifths. The staff button's box is unchanged; the booking popup's grew by 2px, from 44 to 46, which is what brings the two to the same size and to the same tap-target standard the other buttons already use.
+* **The X now reads as a control rather than as page furniture** — a pale blue ground with a brand-blue mark, both drawn from the same colour settings the rest of the buttons use, so a future palette change moves them too.
+* **Keyboard focus is an outline, never a fill.** The booking popup's X used to turn solid red when focused, which it did the moment the popup opened.
+* **No fade on either button.** The theme's three-quarter-second background fade is neutralised on both.
+* The info popup's floating X over the photos is deliberately unchanged.
+
+**Note.** Releases 0.28.0 to 0.37.0 are not listed below; their notes were delivered separately. Say the word and they can be written up here.
 
 = 0.27.0 =
 * **Booking popup on a phone: the two date fields now sit side by side** — both labels on one row, both fields on the row beneath — and neither is cut off by the right edge. Both problems had the same cause. Checked at 320px, 360px and 393px.

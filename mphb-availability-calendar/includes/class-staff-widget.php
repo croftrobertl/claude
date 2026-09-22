@@ -157,8 +157,12 @@ final class Staff_Widget
                  aria-labelledby="<?php echo esc_attr($title_id); ?>" hidden>
                 <div class="mphbac-staff-sheet-head">
                     <div class="mphbac-staff-sheet-title" id="<?php echo esc_attr($title_id); ?>"></div>
+                    <?php // The same mark the public booking popup uses, character for
+                    // character: a shared snippet is the only version of "these two
+                    // cannot drift" that a stylesheet cannot undo. stroke-width is
+                    // restated in CSS, which outranks this presentation attribute. ?>
                     <button type="button" class="mphbac-staff-close"
-                            aria-label="<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>">&times;</button>
+                            aria-label="<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                 </div>
                 <div class="mphbac-staff-sheet-body"></div>
             </div>

@@ -17,7 +17,21 @@
                              sticky cottage column + sticky date header
                              (desktop default)                                */
 
-.mphbac-staff {
+/* THE TOKENS ARE DECLARED WHERE THE PORTAL CAN STILL SEE THEM (0.38.0).
+   staff.js moves .mphbac-staff-sheet and .mphbac-staff-overlay to <body>
+   when the dialog opens, so a custom property inherited only from
+   .mphbac-staff stops resolving there — and an unresolved var() is invalid
+   at computed-value time, which DROPS the whole declaration rather than
+   falling back to the previous one. Nothing was visibly broken: every
+   sheet-scoped var() in this file already carried a literal fallback, which
+   is what has been painting the dialog. But a fallback is not the token —
+   a future --dcc-site-* layer on :root would have moved the public X and
+   left this one behind, which is the drift this release exists to prevent.
+   Same fix, and the same reasoning, as widget.css 0.37.0.
+   The layout declarations stay on .mphbac-staff alone, below. */
+.mphbac-staff,
+.mphbac-staff-sheet,
+.mphbac-staff-overlay {
     /* state colours — used by legend swatches, bar segments AND list groups */
     --staff-in:   #0a6c2f;      /* check-in   — white text 7.1:1 */
     --staff-out:  #9a3412;      /* check-out  — white text 7.6:1 */
@@ -35,6 +49,7 @@
        and a property inherited from .mphbac-root would not reach .mphbac-staff
        in any case. Reading --dcc-site-* first means a future shared layer
        moves the staff panel with the checkout, without editing this file. */
+    --dcc-button-bg:       var(--dcc-site-button-bg, #0A50B2);
     --dcc-button-hover-bg: var(--dcc-site-button-hover-bg, #f08080);
     --dcc-button-hover-fg: var(--dcc-site-button-hover-fg, #ffffff);
     /* Salmon, matching the public widget (0.35.0). The Elementor control
@@ -64,7 +79,9 @@
     --staff-row-h:   46px;
     --staff-head-h:  48px;
     --staff-label-w: 96px;
+}
 
+.mphbac-staff {
     box-sizing: border-box;
     width: 100%;
     color: var(--staff-text);
@@ -696,9 +713,9 @@
     align-items: center;
     justify-content: center;
     /* 46 x 46. min-height rather than the fixed `height: 44px` this used to
-       carry: the content is a single 24px glyph with zero padding, so it
+       carry: the content is a single 30px SVG with zero padding, so it
        cannot exceed 46px and the box stays square in practice. If an upstream
-       font change ever made it taller, min-height grows the circle into an
+       change ever made it taller, min-height grows the circle into an
        ellipse where a fixed height would CLIP the glyph — the wrong failure.
        The fixed box was not load-bearing for the circle; the equal width and
        height are, and both are still set. */
@@ -707,13 +724,38 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: #eeeeee;
-    color: #111111;
+    /* REST AND HOVER RESOLVE THROUGH THE SAME LAYER as the public popup's X,
+       token for token — rest --dcc-button-bg, hover --dcc-button-hover-bg /
+       --dcc-button-hover-fg — which is the whole point of declaring the
+       --dcc-* pair in this file too. The ground is a 10% tint of the token
+       and the mark is the token: a solid brand-blue fill reads too heavy on
+       a 46px icon button. #0A50B2 on #E7EEF7 is 6.4:1; it was #111111 on
+       #eeeeee at 17.4:1, so the drop is real and still far above AA. The
+       literal comes FIRST as the pre-color-mix() fallback — otherwise those
+       browsers get a dropped declaration and an X with no ground. */
+    background: #E7EEF7;
+    background: color-mix(in srgb, var(--dcc-button-bg, #0A50B2) 10%, #ffffff);
+    color: var(--dcc-button-bg, #0A50B2);
+    /* font-size: 24px is gone with the &times; it sized. The glyph is now the
+       same SVG the public popup uses, so the mark no longer depends on which
+       font happens to load — which is what "the two cannot drift" requires.
+       `font: inherit` stays: it is what keeps Bravada's button typography off
+       the aria-label and off any future text content. */
     font: inherit;
-    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     transition: none;
+}
+/* The mark, on the same spec as the public popup's: same 30px box, same 2.75
+   stroke set from CSS rather than from the markup, same round caps. MEASURED:
+   the painted ink of the old &times; was 10x9 inside the 46px box (22%). */
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close svg {
+    display: block;
+    width: 30px;
+    height: 30px;
+}
+.mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-close svg path {
+    stroke-width: 2.75;
 }
 /* Only the body scrolls. */
 .mphbac-staff-sheet.mphbac-staff-sheet .mphbac-staff-sheet-body {
