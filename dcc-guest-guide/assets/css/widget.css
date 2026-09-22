@@ -1408,7 +1408,9 @@ body.dccgg-detail-open {
 iframe.dccgg-media,
 video.dccgg-media {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    /* v0.20.0: per-video shape. The fallback is the old hard-wired value, so a
+       video with no ratio set renders exactly as it did. */
+    aspect-ratio: var(--dccgg-video-ratio, 16 / 9);
     height: auto;
 }
 
@@ -2814,7 +2816,9 @@ dialog.dccgg-wrapper::backdrop {
     position: relative;
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    /* Must stay in step with iframe.dccgg-media above — the poster is replaced
+       by that iframe on click, and a mismatch shows up as the box jumping. */
+    aspect-ratio: var(--dccgg-video-ratio, 16 / 9);
     border: 0;
     padding: 0;
     margin-top: 12px;
@@ -3925,7 +3929,7 @@ dialog.dccgg-wrapper::backdrop {
     .dccgg-root .dccgg-video-poster {
         display: block !important;
         width: 70%;
-        aspect-ratio: 16 / 9;
+        aspect-ratio: var(--dccgg-video-ratio, 16 / 9);
         background-size: cover;
         background-position: center;
         position: relative;

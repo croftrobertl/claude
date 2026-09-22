@@ -606,5 +606,52 @@ check('and an administrator is told when it has fallen back',
     strpos($widget, 'maybe_notice_unminified') !== false
     && strpos($widget, "current_user_can('manage_options')") !== false);
 
+
+echo "\nT. Per-video aspect ratio (v0.20.0)\n";
+// The container was hard-wired to 16:9, so a portrait video was cropped. The
+// ratio is now per item, because the host mixes landscape and portrait and a
+// global 9:16 would break the landscape ones the other way.
+check('an unset ratio is 16 / 9, so existing videos do not move',
+    \DCCGG\Widget::video_ratio([]) === '16 / 9');
+check('each preset is returned verbatim',
+    \DCCGG\Widget::video_ratio(['item_video_ratio' => '9 / 16']) === '9 / 16'
+    && \DCCGG\Widget::video_ratio(['item_video_ratio' => '1 / 1']) === '1 / 1'
+    && \DCCGG\Widget::video_ratio(['item_video_ratio' => '4 / 3']) === '4 / 3');
+check('a custom ratio is accepted and normalised',
+    \DCCGG\Widget::video_ratio(['item_video_ratio' => 'custom', 'item_video_ratio_custom' => '1080/1920']) === '1080 / 1920');
+// The value lands in a style attribute, so anything unvetted is a CSS
+// injection. A wrong-shaped video is cosmetic; this is not.
+foreach ([
+    'red; background:url(//evil/x)',
+    '16 / 9; } body { display:none',
+    'expression(alert(1))',
+    '',
+    '16 / ',
+    '../../etc',
+] as $bad) {
+    check('rejected, falls back to 16 / 9: "' . $bad . '"',
+        \DCCGG\Widget::video_ratio(['item_video_ratio' => 'custom', 'item_video_ratio_custom' => $bad]) === '16 / 9');
+}
+check('an unknown preset value also falls back',
+    \DCCGG\Widget::video_ratio(['item_video_ratio' => '9/16']) === '16 / 9');   // no spaces: not a preset
+
+// Rendered markup: the poster and the iframe it becomes must agree, and the
+// self-hosted and no-thumbnail paths carry it too.
+$portrait = ['item_section' => 'clubhouse', 'item_title' => 'Tour Video',
+    'item_content' => '<p>Have a look around.</p>', 'media_type' => 'video',
+    'item_video' => 'https://www.youtube.com/shorts/aBcDeFgHiJk',
+    'item_video_ratio' => '9 / 16'];
+$out = $render($portrait, $strs);
+check('the poster carries the ratio as a property AND a data attribute',
+    strpos($out, '--dccgg-video-ratio:9 / 16') !== false
+    && strpos($out, 'data-ratio="9 / 16"') !== false, $out);
+$landscape = $portrait; $landscape['item_video_ratio'] = '16 / 9';
+check('a landscape video still says 16 / 9',
+    strpos($render($landscape, $strs), '--dccgg-video-ratio:16 / 9') !== false);
+$selfhosted = ['item_section' => 'clubhouse', 'item_title' => 'Clip', 'item_content' => '<p>x</p>',
+    'media_type' => 'video', 'item_video' => 'https://example.com/clip.mp4', 'item_video_ratio' => '1 / 1'];
+check('a self-hosted <video> carries it too',
+    strpos($render($selfhosted, $strs), '--dccgg-video-ratio:1 / 1') !== false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

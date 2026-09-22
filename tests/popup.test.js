@@ -2216,6 +2216,74 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario U: a video keeps its own shape (v0.20.0) ---------------
+    {
+        console.log('\nU. Portrait and landscape videos each keep their shape');
+        const errors = [];
+        // Exactly what render_item() emits for two video items, one portrait
+        // and one landscape, including the data-ratio the JS reads.
+        const poster = (key, ratio) => `<button type="button" class="dccgg-video-poster"
+            data-embed="https://www.youtube.com/embed/${key}" data-ratio="${ratio}"
+            aria-label="Play video" style="background-image:url('x.jpg');--dccgg-video-ratio:${ratio};">
+            <span class="dccgg-video-play" aria-hidden="true">▶</span></button>`;
+        const htmlU = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style></head><body>
+            <div class="dccgg-root"><div class="dccgg-detail-items" style="width:360px">
+            <article class="dccgg-item" id="tall">${poster('short', '9 / 16')}</article>
+            <article class="dccgg-item" id="wide">${poster('normal', '16 / 9')}</article>
+            <article class="dccgg-item" id="plain"><button type="button" class="dccgg-video-poster"
+                data-embed="https://www.youtube.com/embed/legacy" aria-label="Play video"
+                style="background-image:url('x.jpg');">▶</button></article>
+            </div></div><script>${JS}</script></body></html>`;
+        const { ctx, page } = await newPage(browser, PHONE, htmlU, errors);
+        const box = (sel) => page.$eval(sel, (el) => {
+            const r = el.getBoundingClientRect();
+            return { w: Math.round(r.width), h: Math.round(r.height),
+                     ratio: getComputedStyle(el).aspectRatio, tag: el.tagName };
+        });
+        const tall0 = await box('#tall .dccgg-video-poster');
+        const wide0 = await box('#wide .dccgg-video-poster');
+        const plain0 = await box('#plain .dccgg-video-poster');
+        check('a portrait poster is taller than it is wide',
+            tall0.h > tall0.w && Math.abs(tall0.h / tall0.w - 16 / 9) < 0.05,
+            `${tall0.w}x${tall0.h} (${tall0.ratio})`);
+        check('a landscape poster is unchanged',
+            wide0.w > wide0.h && Math.abs(wide0.w / wide0.h - 16 / 9) < 0.05,
+            `${wide0.w}x${wide0.h} (${wide0.ratio})`);
+        check('a video with no ratio set keeps the old 16:9 exactly',
+            Math.abs(plain0.w / plain0.h - 16 / 9) < 0.05,
+            `${plain0.w}x${plain0.h} (${plain0.ratio})`);
+
+        // The click swaps the poster for an iframe. If the two disagree the box
+        // jumps the moment the guest presses play — which is the same class of
+        // bug as the original crop, just triggered later.
+        await page.click('#tall .dccgg-video-poster');
+        await page.click('#wide .dccgg-video-poster');
+        await page.waitForTimeout(150);
+        const tall1 = await box('#tall iframe.dccgg-media');
+        const wide1 = await box('#wide iframe.dccgg-media');
+        check('the portrait poster became an iframe of the SAME box',
+            tall1.tag === 'IFRAME' && tall1.w === tall0.w && Math.abs(tall1.h - tall0.h) <= 1,
+            `poster ${tall0.w}x${tall0.h} -> iframe ${tall1.w}x${tall1.h}`);
+        check('and the landscape one likewise',
+            wide1.tag === 'IFRAME' && wide1.w === wide0.w && Math.abs(wide1.h - wide0.h) <= 1,
+            `poster ${wide0.w}x${wide0.h} -> iframe ${wide1.w}x${wide1.h}`);
+        check('the two videos really do render at different shapes',
+            tall1.h > wide1.h * 2, `portrait ${tall1.h}px vs landscape ${wide1.h}px`);
+
+        // Legacy path: no data-ratio at all must still produce a 16:9 iframe.
+        await page.click('#plain .dccgg-video-poster');
+        await page.waitForTimeout(120);
+        const plain1 = await box('#plain iframe.dccgg-media');
+        check('a legacy video with no ratio still plays at 16:9',
+            Math.abs(plain1.w / plain1.h - 16 / 9) < 0.05,
+            `${plain1.w}x${plain1.h}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

@@ -239,6 +239,30 @@ final class Widget extends Widget_Base
      *
      * @return array{embed:string,self_hosted:bool}|null
      */
+    /**
+     * The CSS aspect-ratio for one video item, validated.
+     *
+     * The value reaches a style attribute, so nothing unvetted goes through:
+     * the preset list is fixed, and a custom value must be two plain numbers
+     * with a slash between them. Anything else is 16 / 9 — a wrong-shaped
+     * video is a cosmetic problem, a CSS injection is not.
+     */
+    public static function video_ratio(array $item): string
+    {
+        $choice = (string) ($item['item_video_ratio'] ?? '16 / 9');
+        $presets = ['16 / 9', '9 / 16', '4 / 5', '1 / 1', '4 / 3'];
+        if (in_array($choice, $presets, true)) {
+            return $choice;
+        }
+        if ($choice === 'custom') {
+            $raw = trim((string) ($item['item_video_ratio_custom'] ?? ''));
+            if (preg_match('~^\\d{1,5}(?:\\.\\d{1,3})?\\s*/\\s*\\d{1,5}(?:\\.\\d{1,3})?$~', $raw)) {
+                return preg_replace('~\\s*/\\s*~', ' / ', $raw);
+            }
+        }
+        return '16 / 9';
+    }
+
     public static function normalize_video_url(string $url): ?array
     {
         $url = trim($url);
@@ -1188,6 +1212,35 @@ final class Widget extends Widget_Base
             'description' => __('Accepts YouTube (watch / embed / shorts / youtu.be), Vimeo, or self-hosted mp4/webm/mov.', 'dcc-guest-guide'),
             'condition'   => ['media_type' => 'video'],
         ]);
+        // v0.20.0: the shape of the video, per video. The container was hard-wired
+        // to 16:9, so a portrait video (a YouTube Short, a vertical phone
+        // recording) was forced into a landscape box and its bottom was cut off.
+        // A global 9:16 would only have broken every landscape video the other
+        // way, so the ratio belongs to the item. Default 16:9 — existing videos
+        // do not move.
+        $repeater->add_control('item_video_ratio', [
+            'label'       => __('Video shape', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => '16 / 9',
+            'options'     => [
+                '16 / 9' => __('Landscape 16:9 (most videos)', 'dcc-guest-guide'),
+                '9 / 16' => __('Portrait 9:16 (phone video, YouTube Short)', 'dcc-guest-guide'),
+                '4 / 5'  => __('Portrait 4:5', 'dcc-guest-guide'),
+                '1 / 1'  => __('Square 1:1', 'dcc-guest-guide'),
+                '4 / 3'  => __('Classic 4:3', 'dcc-guest-guide'),
+                'custom' => __('Custom…', 'dcc-guest-guide'),
+            ],
+            'description' => __('Match the video itself. A portrait video left at 16:9 is cropped — you see the top of the frame and the rest is empty.', 'dcc-guest-guide'),
+            'condition'   => ['media_type' => 'video'],
+        ]);
+        $repeater->add_control('item_video_ratio_custom', [
+            'label'       => __('Custom shape', 'dcc-guest-guide'),
+            'type'        => Controls_Manager::TEXT,
+            'placeholder' => '1080 / 1920',
+            'description' => __('Width / height, e.g. <code>1080 / 1920</code>. Anything else falls back to 16:9.', 'dcc-guest-guide'),
+            'condition'   => ['media_type' => 'video', 'item_video_ratio' => 'custom'],
+        ]);
+
         $repeater->add_control('item_checkable', [
             'label'        => __('Make this item a checkbox', 'dcc-guest-guide'),
             'type'         => Controls_Manager::SWITCHER,
@@ -4001,19 +4054,24 @@ final class Widget extends Widget_Base
                 </div>
             <?php elseif ($media_type === 'video' && !empty($item['item_video'])) :
                 $v = self::normalize_video_url((string) $item['item_video']);
+                // The ratio rides as a custom property on whichever element is
+                // rendered. The poster is REPLACED by an iframe on click, so the
+                // JS copies this across — otherwise the box would resize the
+                // moment the guest pressed play.
+                $ratio_style = 'style="--dccgg-video-ratio:' . esc_attr(self::video_ratio($item)) . ';"';
                 if ($v !== null) :
                     if ($v['self_hosted']) : ?>
-                        <video class="dccgg-media" controls preload="metadata">
+                        <video class="dccgg-media" controls preload="metadata" <?php echo $ratio_style; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
                             <source src="<?php echo esc_url($v['embed']); ?>">
                         </video>
                     <?php else :
                         $poster = $video_thumbs ? self::resolve_video_poster((string) $item['item_video']) : '';
                         if ($poster !== '') : ?>
-                            <button type="button" class="dccgg-video-poster" data-embed="<?php echo esc_attr($v['embed']); ?>" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Play video: %s', 'dcc-guest-guide'), $title)); ?>" style="background-image:url('<?php echo esc_url($poster); ?>');">
+                            <button type="button" class="dccgg-video-poster" data-embed="<?php echo esc_attr($v['embed']); ?>" data-ratio="<?php echo esc_attr(self::video_ratio($item)); ?>" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: item title */ __('Play video: %s', 'dcc-guest-guide'), $title)); ?>" style="background-image:url('<?php echo esc_url($poster); ?>');--dccgg-video-ratio:<?php echo esc_attr(self::video_ratio($item)); ?>;">
                                 <span class="dccgg-video-play" aria-hidden="true"><i class="fas fa-play"></i></span>
                             </button>
                         <?php else : ?>
-                            <iframe class="dccgg-media" src="<?php echo esc_url($v['embed']); ?>" loading="lazy" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                            <iframe class="dccgg-media" src="<?php echo esc_url($v['embed']); ?>" loading="lazy" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" <?php echo $ratio_style; // phpcs:ignore WordPress.Security.EscapeOutput ?>></iframe>
                         <?php endif;
                     endif;
                 endif;

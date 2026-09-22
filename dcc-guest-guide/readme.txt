@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.19.0
+Stable tag: 0.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,18 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.20.0 =
+
+**Added: each video can be told its own shape.** The video box was fixed at
+widescreen, so a portrait video — a phone recording, a YouTube Short — was
+squeezed into a landscape frame and its bottom was cut off. Each video item
+now has a "Video shape" setting: landscape 16:9 (the default, so nothing
+already working changes), portrait 9:16 or 4:5, square, classic 4:3, or a
+custom size you type in.
+
+Set it to match the video. The thumbnail and the player it opens into use the
+same shape, so the box no longer changes size when a guest presses play.
 
 = 0.19.0 =
 

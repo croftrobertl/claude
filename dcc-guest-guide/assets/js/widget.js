@@ -1642,6 +1642,12 @@
                 if (!embed) return;
                 const iframe = document.createElement('iframe');
                 iframe.className = 'dccgg-media';
+                // v0.20.0: the poster carries the item's shape; the iframe that
+                // replaces it has to carry the same one, or the box resizes the
+                // instant the guest presses play.
+                const ratio = btn.dataset.ratio
+                    || btn.style.getPropertyValue('--dccgg-video-ratio').trim();
+                if (ratio) { iframe.style.setProperty('--dccgg-video-ratio', ratio); }
                 iframe.src = embed + (embed.indexOf('?') > -1 ? '&' : '?') + 'autoplay=1';
                 iframe.loading = 'lazy';
                 iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
