@@ -158,6 +158,28 @@ Since v0.10.0 the guide renders in two modes from ONE definition.
   mode overridden. There is no second copy of the guide — do not "fix" this by
   duplicating sections into options or a CPT.
 
+### A `template` item's content is NOT this plugin's
+
+Each item has `content_source` (class-widget.php:1117), a SELECT of exactly two
+values: `wysiwyg` (the default, `item_content`) and `template` (`item_template`).
+A template item renders through `render_template()` — whatever Elementor
+produces for the linked template, echoed verbatim.
+
+For such an item the plugin owns the CHROME only: the title, the checkbox, the
+read-aloud button, the per-item report button and the utils row. It owns
+nothing inside the template. Sizing, aspect ratio, embeds and third-party
+widgets in there are Elementor questions, not plugin questions, and no control
+in `class-widget.php` reaches them.
+
+Worth knowing because the symptom does not say so. A "the video is broken"
+report was chased through `normalize_video_url()` and the `.dccgg-media` ratio
+rules in v0.20.0 before the item (`_id 094bd49`, "Tour Video") turned out to be
+`content_source: "template"` — its item_content was unrelated text, and the
+video was a Facebook widget inside the linked template. The per-video ratio
+control built for it is correct and worth keeping for real dccgg videos, but it
+could never have touched that one. So when an item misbehaves in a way the
+plugin's own controls cannot explain, check `content_source` FIRST.
+
 `Plugin::handle_search_index()` is anonymous (`wp_ajax_nopriv`) and returns a
 guide's full index, so it verifies post visibility before answering — without
 that check it is a way to read a private or password-protected guide. Keep that
