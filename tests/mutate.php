@@ -99,9 +99,9 @@ $mutations = [
     // widget.css carried only the whole-guard mutation above; the staff file
     // has had a single-rule escape since 0.36.0. This is that one, on the
     // second of the two close selectors.
-    ['hover: the booking popup close\'s hover escapes the pointer guard', 'assets/css/widget.css',
-     "    .mphbac-sheet-close:not(.mphbac-info-close--floating):hover {",
-     "}\n.mphbac-sheet-close:not(.mphbac-info-close--floating):hover {",
+    ['hover: the popup closes\' hover escapes the pointer guard', 'assets/css/widget.css',
+     "    .mphbac-sheet-close:hover {",
+     "}\n.mphbac-sheet-close:hover {",
      'hover-hint-test.js'],
     ['hint: the bold default is inherited again', 'assets/css/widget.css',
      "    font-weight: 300;\n    font-size: max(16px, 1em);",
@@ -241,8 +241,8 @@ $mutations = [
      "    background: color-mix(",
      'staff-test.js'],
     ['close: the glyph shrinks back to punctuation', 'assets/css/widget.css',
-     ".mphbac-sheet-close:not(.mphbac-info-close--floating) svg {\n    width: 30px;\n    height: 30px;",
-     ".mphbac-sheet-close:not(.mphbac-info-close--floating) svg {\n    width: 20px;\n    height: 20px;",
+     ".mphbac-sheet-close svg {\n    display: block;\n    width: 30px;\n    height: 30px;",
+     ".mphbac-sheet-close svg {\n    display: block;\n    width: 20px;\n    height: 20px;",
      'staff-test.js'],
     ['close: the staff X reverts to the &times; character', 'class-staff-widget.php',
      "aria-label=\"<?php echo esc_attr__('Close', 'mphb-availability-calendar'); ?>\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M6 6l12 12M18 6L6 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>",
@@ -252,9 +252,34 @@ $mutations = [
      ".mphbac-staff,\n.mphbac-staff-sheet,\n.mphbac-staff-overlay {",
      ".mphbac-staff {",
      'staff-test.js'],
-    ['close: the INFO popup\'s floating X is dragged along with the booking one', 'assets/css/widget.css',
-     ".mphbac-sheet-close:not(.mphbac-info-close--floating) {",
-     ".mphbac-sheet-close {",
+    // INVERTED IN 0.39.0. In 0.38.0 this checked that the floating X was NOT
+    // dragged into the shared treatment; the owner has since asked for all
+    // three to be identical, so the fault is now the exclusion coming back.
+    ['close: the floating X is scoped out of the shared treatment again', 'assets/css/widget.css',
+     ".mphbac-sheet-close {\n    /* Visible ground",
+     ".mphbac-sheet-close:not(.mphbac-info-close--floating) {\n    /* Visible ground",
+     'staff-test.js'],
+    ['close: the floating X keeps a frosted pill that out-paints the shared rule', 'assets/css/widget.css',
+     ".mphbac-info-close--floating {\n    position: sticky;",
+     ".mphbac-info-close--floating {\n    background: rgba(60, 60, 60, 0.45);\n    backdrop-filter: blur(10px) saturate(140%);\n    color: rgba(255, 255, 255, 0.96);\n    position: sticky;",
+     'staff-test.js'],
+    // ANCHORED ON THE SELECTOR, not on the declarations: `position: sticky;
+    // top: 0; align-self: flex-end;` also opens .mphbac-info-scrollbar
+    // earlier in the file, and a first-occurrence replacement hit that
+    // instead — the mutation SURVIVED because it never touched this button.
+    ['close: the floating X stops being a floating close at all', 'assets/css/widget.css',
+     ".mphbac-info-close--floating {\n    position: sticky;",
+     ".mphbac-info-close--floating {\n    position: static;",
+     'staff-test.js'],
+
+    // --- 0.39.0: the staff header must clear its own close button --------
+    ['overlap: the staff header\'s side padding stops clearing the close button', 'assets/css/staff.css',
+     "    padding: 12px calc(12px + 46px + 8px);",
+     "    padding: 12px 56px;",
+     'staff-test.js'],
+    ['overlap: the phone header\'s padding goes back under the button', 'assets/css/staff.css',
+     ".mphbac-staff-sheet-head { padding: 10px calc(12px + 46px + 8px); }",
+     ".mphbac-staff-sheet-head { padding: 10px 52px; }",
      'staff-test.js'],
 
     ['staff: the selected tab starts recolouring on hover too', 'assets/css/staff.css',

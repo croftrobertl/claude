@@ -103,6 +103,7 @@ function extractBlock(src, openTag) {
 const STRINGS = {
   str_checkin: 'Check-in', str_checkout: 'Check-out', str_apply: 'Show', str_reset: 'Reset',
   str_book_close: 'Close', str_book_cancel: 'Cancel', str_book_confirm: 'Book Now',
+  str_info_close: 'Close',
   str_cancel: 'Cancel', str_confirm: 'Book Now', str_price_note: 'note',
   str_prev_month: 'Previous', str_next_month: 'Next',
   str_today: 'today', str_today_hint: 'Back to today',

@@ -21,6 +21,15 @@ const { check, done } = H.reporter();
 const php = S.php(), code = S.cssCode();
 
 const GUARD = '@media (hover: hover) and (pointer: fine)';
+/* The info popup, EXTRACTED FROM THE PHP so the floating X's real markup —
+   classes and all — is what gets measured. A hand-written copy is how the
+   staff fixture went on measuring a glyph the page no longer rendered. */
+const INFO_SHEET = (() => {
+  const btn = H.php().match(/<button[^>]*mphbac-info-close--floating[\s\S]*?<\/button>/);
+  if (!btn) throw new Error('staff-test: the floating close button is not in class-widget.php');
+  return '<div class="mphbac-info-sheet"><div class="mphbac-info-body">'
+    + H.dephp(btn[0]) + '<p style="height:600px">photos</p></div></div>';
+})();
 const SALMON = 'rgb(240, 128, 128)';
 const BUTTONLIKE = [
   ['nav', '.mphbac-staff-prev'],
@@ -167,6 +176,14 @@ const BUTTONLIKE = [
       // blank clip and calls it "no glyph".
       await p.waitForTimeout(500);
       const el = await p.$(closeSel);
+      /* THE BOX COMES FROM LAYOUT, NOT FROM THE SCREENSHOT. The floating X
+         sits at a fractional x (its -0.25em right margin), so its 46px box
+         spans 47 screenshot columns — a rounding artefact that reads as a
+         1px difference between two buttons that are the same size. The
+         clip is the right instrument for INK and for the ground; it is the
+         wrong one for the box. */
+      const rect = await p.evaluate(s2 => { const r = document.querySelector(s2).getBoundingClientRect();
+        return [+r.width.toFixed(2), +r.height.toFixed(2)]; }, closeSel);
       const shot = await el.screenshot({ scale: 'css' });
       const url = 'data:image/png;base64,' + shot.toString('base64');
       return await p.evaluate(async u => {
@@ -192,28 +209,44 @@ const BUTTONLIKE = [
             n++; if (xx<x0)x0=xx; if (xx>x1)x1=xx; if (yy<y0)y0=yy; if (yy>y1)y1=yy;
           }
         }
-        return { box: [c.width, c.height], ground, inkW: x1-x0+1, inkH: y1-y0+1, inkPx: n };
-      }, url);
+        return { clip: [c.width, c.height], ground, inkW: x1-x0+1, inkH: y1-y0+1, inkPx: n };
+      }, url).then(r => ({ ...r, box: rect }));
     };
 
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const pub = await ctx.newPage();
     await pub.setContent(H.page({ sheet: H.sheetHtml() }));
+    const inf = await ctx.newPage();
+    await inf.setContent(H.page({ sheet: INFO_SHEET }));
     const stf = await ctx.newPage();
     await stf.setContent(S.page({ body: S.TOOLS, sheet: S.SHEET }));
 
-    const a = await ink(pub, '.mphbac-sheet', '.mphbac-sheet-close');
-    const b2 = await ink(stf, '.mphbac-staff-sheet', '.mphbac-staff-close');
-
-    check('both X\'s sit in the same 46px box', String(a.box) === '46,46' && String(b2.box) === '46,46',
-      { public: a.box, staff: b2.box });
-    check('both X\'s paint the same ground', a.ground === b2.ground, { public: a.ground, staff: b2.ground });
-    check('both X\'s paint the same glyph, to the pixel',
-      a.inkW === b2.inkW && a.inkH === b2.inkH && a.inkPx === b2.inkPx,
-      { public: [a.inkW, a.inkH, a.inkPx], staff: [b2.inkW, b2.inkH, b2.inkPx] });
+    // THREE, not two, since 0.39.0: the info popup's floating X joined.
+    const m = {
+      public: await ink(pub, '.mphbac-sheet', '.mphbac-sheet-close'),
+      floating: await ink(inf, '.mphbac-info-sheet', '.mphbac-info-close--floating'),
+      staff: await ink(stf, '.mphbac-staff-sheet', '.mphbac-staff-close'),
+    };
+    const all = Object.values(m), a = m.public;
+    const same = k => all.every(x => String(x[k]) === String(a[k]));
+    check('all three X\'s sit in the same 46px box',
+      all.every(x => String(x.box) === '46,46'),
+      Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.box])));
+    check('all three X\'s paint the same ground', same('ground'),
+      Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.ground])));
+    check('all three X\'s paint the same glyph, to the pixel',
+      same('inkW') && same('inkH') && same('inkPx'),
+      Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [v.inkW, v.inkH, v.inkPx]])));
     check('the glyph FILLS the box rather than reading as punctuation — it was 27% and 22%',
-      a.inkW / a.box[0] >= 0.35 && b2.inkW / b2.box[0] >= 0.35,
-      { public: +(a.inkW / a.box[0]).toFixed(2), staff: +(b2.inkW / b2.box[0]).toFixed(2) });
+      all.every(x => x.inkW / x.box[0] >= 0.35),
+      Object.fromEntries(Object.entries(m).map(([k, v]) => [k, +(v.inkW / v.box[0]).toFixed(2)])));
+    /* THE FROSTED PILL IS GONE, NOT JUST OUTRANKED. It never rendered, so a
+       runtime check cannot tell "deleted" from "still there and losing"; the
+       stylesheet is what has to say it. */
+    check('the frosted-pill declarations are deleted from the stylesheet, not left dead',
+      !/backdrop-filter/.test(H.cssCode()) && !/rgba\(60, 60, 60, 0\.45\)/.test(H.cssCode()));
+    check('and no rule scopes the floating X out of the shared treatment any more',
+      !/:not\(\.mphbac-info-close--floating\)/.test(H.cssCode()));
 
     /* THE SENTINEL. The owner's requirement is not "these two are blue today",
        it is "a future --dcc-site-* palette moves them both". Declaring the
@@ -236,8 +269,9 @@ const BUTTONLIKE = [
       return { rest, hov };
     };
     const pubT = await repaint(pub, '.mphbac-sheet-close');
+    const infT = await repaint(inf, '.mphbac-info-close--floating');
     const stfT = await repaint(stf, '.mphbac-staff-close');
-    for (const [label, r] of [['public', pubT], ['staff', stfT]]) {
+    for (const [label, r] of [['public', pubT], ['floating', infT], ['staff', stfT]]) {
       check(label + ': the REST mark follows --dcc-site-button-bg', r.rest.fg === 'rgb(1, 2, 3)', r.rest);
       check(label + ': the REST ground is mixed from that same token, not a literal',
         /color\(srgb/.test(r.rest.bg) && r.rest.bg !== 'rgb(231, 238, 247)', r.rest.bg);
@@ -258,6 +292,7 @@ const BUTTONLIKE = [
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     for (const [label, mk, sheetSel, closeSel] of [
       ['public', () => H.page({ sheet: H.sheetHtml() }), '.mphbac-sheet', '.mphbac-sheet-close'],
+      ['floating', () => H.page({ sheet: INFO_SHEET }), '.mphbac-info-sheet', '.mphbac-info-close--floating'],
       ['staff', () => S.page({ body: S.TOOLS, sheet: S.SHEET }), '.mphbac-staff-sheet', '.mphbac-staff-close'],
     ]) {
       const p = await ctx.newPage();
@@ -315,29 +350,84 @@ const BUTTONLIKE = [
       /svg path\s*\{\s*stroke-width:\s*2\.75/.test(pubCode) && /svg path\s*\{\s*stroke-width:\s*2\.75/.test(code));
   }
 
-  console.log('\n-- the INFO popup\'s floating X was NOT part of this and must not have moved --');
+  console.log('\n-- a long booking title must stop before the close button (0.39.0) --');
   {
-    /* It carries .mphbac-sheet-close too, which is why every 0.38.0 rule is
-       scoped with :not(.mphbac-info-close--floating). MEASURED against the
-       values it actually paints today — 44px / #ECEFF3 / #4A5260 — which are
-       NOT the frosted pill its own block declares: the base rule out-orders
-       that block at equal specificity, exactly as the 0.24.0 note traces. */
+    /* PRE-EXISTING, since the close button was raised to 46px in 0.36.0. The
+       X is absolutely positioned at right: 12px and is 46px wide, so it owns
+       the first 58px from the right edge; the header reserved 56px on
+       desktop and 52px on a phone, so a title long enough to fill its line
+       ran 2px and 6px underneath it.
+
+       THE TITLE HAS TO BE LONG ENOUGH TO REACH THE EDGE. A short one is
+       centred with slack on both sides and clears the button at any padding,
+       so it would pass against the broken value — which is exactly the trap.
+       This one wraps to several lines at every width tested.
+
+       THE BOX IS WHAT IS ASSERTED, not the painted ink: the ink of a wrapped
+       line stops wherever the last word happens to end, so an ink-only check
+       passes or fails on the sentence rather than on the padding. */
+    const LONG = 'Rose Cottage — Mr &amp; Mrs Fotherington-Smythe-Wallington, '
+               + '14 nights, 2 dogs, late arrival';
+    for (const w of [320, 360, 393, 1280]) {
+      const ctx = await browser.newContext(w < 600
+        ? { viewport: { width: w, height: 820 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 }
+        : { viewport: { width: w, height: 900 } });
+      const p = await ctx.newPage();
+      await p.setContent(S.page({ body: S.TOOLS,
+        sheet: S.SHEET.replace('class="mphbac-staff-sheet-title" id=""></div>',
+                               'class="mphbac-staff-sheet-title" id="">' + LONG + '</div>') }));
+      await p.evaluate(() => { document.querySelector('.mphbac-staff-sheet')
+        .style.cssText += ';transform:translate(-50%,-50%);opacity:1;'; });
+      await p.waitForTimeout(400);
+      const r = await p.evaluate(() => {
+        const t = document.querySelector('.mphbac-staff-sheet-title');
+        const tr = t.getBoundingClientRect();
+        const c = document.querySelector('.mphbac-staff-close').getBoundingClientRect();
+        const range = document.createRange(); range.selectNodeContents(t);
+        const lines = [...range.getClientRects()];
+        return { lines: lines.length, gap: +(c.left - tr.right).toFixed(1),
+                 inkGap: +(c.left - Math.max(...lines.map(l => l.right))).toFixed(1) };
+      });
+      check(`${w}px: (instrument check) the title is long enough to wrap and reach the edge`,
+        r.lines >= 2, r);
+      check(`${w}px: the title's box stops before the X, with room to spare`,
+        r.gap >= 6, r);
+      await ctx.close();
+    }
+    /* AND THE VALUE IS WRITTEN AS THE ARITHMETIC, so moving the button
+       cannot silently re-open the gap without moving the padding with it. */
+    check('the padding states the button\'s offset + width + breathing room, not a bare number',
+      (code.match(/padding: \d+px calc\(12px \+ 46px \+ 8px\)/g) || []).length === 2,
+      (code.match(/\.mphbac-staff-sheet-head \{[^}]*padding:[^;]*/g) || []));
+  }
+
+  console.log('\n-- the info popup portals too, so its tokens must survive the move --');
+  {
+    /* CONFIRMED RATHER THAN ASSUMED, which is what the owner asked for.
+       .mphbac-info-sheet is moved to <body> when the popup opens, exactly
+       like .mphbac-sheet, so the --dcc-* layer has to be declared on it. */
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const p = await ctx.newPage();
-    await p.setContent(H.page({ sheet: `<div class="mphbac-info-sheet"><div class="mphbac-info-body">`
-      + `<button type="button" class="mphbac-sheet-close mphbac-info-close mphbac-info-close--floating"`
-      + ` aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">`
-      + `<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.25"`
-      + ` stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>` }));
+    await p.setContent(H.page({ sheet: INFO_SHEET }));
     const r = await p.evaluate(() => {
-      const e = document.querySelector('.mphbac-info-close--floating');
-      const c = getComputedStyle(e), b = e.getBoundingClientRect();
-      const g = e.querySelector('svg').getBoundingClientRect();
-      return { box: [b.width, b.height], bg: c.backgroundColor, fg: c.color, svg: [g.width, g.height] };
+      const sheet = document.querySelector('.mphbac-info-sheet');
+      document.body.appendChild(sheet);          // what widget.js does on open
+      const c = getComputedStyle(document.querySelector('.mphbac-info-close--floating'));
+      const tok = n => c.getPropertyValue(n).trim();
+      return { outside: !sheet.closest('.mphbac-root'),
+               bg: tok('--dcc-button-bg'), hb: tok('--dcc-button-hover-bg'),
+               hf: tok('--dcc-button-hover-fg'), ring: tok('--mphbac-color-today-outline') };
     });
-    check('the info popup\'s X keeps its 44px box, its ground and its mark',
-      String(r.box) === '44,44' && r.bg === 'rgb(236, 239, 243)'
-      && r.fg === 'rgb(74, 82, 96)' && String(r.svg) === '20,20', r);
+    check('(instrument check) the info sheet really is outside .mphbac-root', r.outside);
+    check('every token the floating X consumes still resolves after the move',
+      r.bg && r.hb && r.hf && r.ring, r);
+    /* The position is all that is left of its own rule, and it is still its
+       own: sticky over the photos, above the carousel's stacking contexts. */
+    const pos = await p.evaluate(() => { const c = getComputedStyle(
+      document.querySelector('.mphbac-info-close--floating'));
+      return { position: c.position, z: c.zIndex, mb: c.marginBottom }; });
+    check('...and it keeps the position that makes it a FLOATING close',
+      pos.position === 'sticky' && pos.z === '10' && pos.mb === '-28px', pos);
     await ctx.close();
   }
 

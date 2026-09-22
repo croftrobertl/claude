@@ -25,6 +25,17 @@ const BODY = H.filtersHtml() + `
   <button class="mphbac-nav-btn mphbac-nav-next" aria-label="Next">&gt;</button>
   <a class="mphbac-info-view-link" href="#">View Cottage Page</a>`;
 
+/* The info popup's floating X, EXTRACTED FROM THE PHP rather than written
+   out here — its three classes are the whole reason it is in this sweep, and
+   a hand-copied class list drifts. It joins the page as a second portaled
+   sheet so both popup closes can be hovered in one context. */
+const INFO_SHEET = (() => {
+  const btn = H.php().match(/<button[^>]*mphbac-info-close--floating[\s\S]*?<\/button>/);
+  if (!btn) throw new Error('hover-hint: the floating close button is not in class-widget.php');
+  return '<div class="mphbac-info-sheet"><div class="mphbac-info-body">'
+    + H.dephp(btn[0]) + '</div></div>';
+})();
+
 (async () => {
   const browser = await chromium.launch(H.CHROMIUM);
   const open = async ({ touch = false, w = 1280, panel = PANEL, sheetCss = null } = {}) => {
@@ -33,7 +44,7 @@ const BODY = H.filtersHtml() + `
       : { viewport: { width: w, height: 900 } });
     const p = await ctx.newPage();
     p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
-    await p.setContent(H.page({ panel, body: BODY, sheet: H.sheetHtml(), sheetCss }));
+    await p.setContent(H.page({ panel, body: BODY, sheet: H.sheetHtml() + INFO_SHEET, sheetCss }));
     return { ctx, p };
   };
 
@@ -93,6 +104,16 @@ const BODY = H.filtersHtml() + `
     check('popup X: the pointer really is over it (instrument check)', x.over === true);
     check('popup X: hovers to the shared salmon, white on it',
       x.bg === 'rgb(240, 128, 128)' && x.fg === 'rgb(255, 255, 255)', x);
+    await p.evaluate(() => { document.querySelector('.mphbac-info-sheet').style.cssText +=
+      ';transform:none;opacity:1;left:0;top:0;right:auto;bottom:auto;'; });
+    await p.waitForTimeout(400);
+    await p.mouse.move(0, 0); await p.waitForTimeout(120);
+    await p.hover('.mphbac-info-close--floating', { force: true }); await p.waitForTimeout(250);
+    const fx = await p.evaluate(() => { const e = document.querySelector('.mphbac-info-close--floating'),
+      c = getComputedStyle(e); return { over: e.matches(':hover'), bg: c.backgroundColor, fg: c.color }; });
+    check('floating X: the pointer really is over it (instrument check)', fx.over === true);
+    check('floating X: hovers to the same salmon — its alert red is gone (0.39.0)',
+      fx.bg === 'rgb(240, 128, 128)' && fx.fg === 'rgb(255, 255, 255)', fx);
     await ctx.close();
   }
 
@@ -130,12 +151,21 @@ const BODY = H.filtersHtml() + `
        selector was added. The popup ships translated off-screen, so it is
        parked first — otherwise the hover silently never lands and the
        assertion passes because nothing moved. */
-    for (const sel of ['.mphbac-nav-next', '.mphbac-btn-apply', '.mphbac-sheet-close']) {
-      // The popup is parked only when its own turn comes: parked first, it
+    /* BOTH popup closes are in this sweep. The gate assertion above is
+       "no :hover appears BEFORE the guard", and a rule that escapes by
+       closing the guard early lands BELOW it, where that check is blind — a
+       mutation doing exactly that SURVIVED until .mphbac-sheet-close was
+       added in 0.38.0. The floating X was a separate rule then; it shares
+       the same one now, and it is swept for the same reason. */
+    const PARK = { '.mphbac-sheet-close': '.mphbac-sheet',
+                   '.mphbac-info-close--floating': '.mphbac-info-sheet' };
+    for (const sel of ['.mphbac-nav-next', '.mphbac-btn-apply',
+                       '.mphbac-sheet-close', '.mphbac-info-close--floating']) {
+      // A popup is parked only when its own turn comes: parked first, it
       // covers the widget and every earlier hover lands on the sheet instead.
-      if (sel === '.mphbac-sheet-close') {
-        await p.evaluate(() => { document.querySelector('.mphbac-sheet').style.cssText +=
-          ';transform:none;opacity:1;left:0;top:0;right:auto;bottom:auto;'; });
+      if (PARK[sel]) {
+        await p.evaluate(s2 => { document.querySelector(s2).style.cssText +=
+          ';transform:none;opacity:1;left:0;top:0;right:auto;bottom:auto;'; }, PARK[sel]);
         await p.waitForTimeout(400);
       }
       const rest = await p.evaluate(s => getComputedStyle(document.querySelector(s)).backgroundColor, sel);

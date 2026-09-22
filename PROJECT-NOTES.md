@@ -1863,6 +1863,66 @@ have left the fixture measuring a glyph the page no longer renders — the same
 lesson that file's own `TOOLS` comment already records. It is extracted from
 the PHP now.
 
+## All three popup closes, and a dead block deleted (0.39.0)
+
+0.38.0 brought the booking and staff X's together and deliberately left the
+info popup's floating one alone. The owner then chose "match the new
+treatment" over "restore the frosted pill", so every
+`:not(.mphbac-info-close--floating)` scope is gone and there is one rule for
+all three.
+
+**The frosted pill was deleted, not left dead.** It had not rendered since the
+shared rule was introduced — translucent fill, backdrop blur, white mark,
+2.1em box and drop shadow all lost to `.mphbac-sheet-close` at equal
+specificity and later source order. **Its purpose is what made the deletion
+safe, not its disuse:** it was frosted because "an earlier solid #888
+disappeared into gray photos", a mid-grey fill under a near-white mark. The
+shared treatment is the opposite pairing — an opaque ground under a DARK
+`#0A50B2` mark, 6.41:1 against its own ground whatever is behind it. The
+shadow went for the same reason: the mark, not the disc's edge, is what has
+to be seen. Check the reason before deleting the code, not just the paint.
+
+**A runtime check cannot tell "deleted" from "still there and losing."** Both
+render identically. Only a source assertion can say which, so the suite reads
+the stylesheet for `backdrop-filter` and for the `:not()` scope.
+
+**The screenshot is the wrong instrument for the box.** The floating X sits at
+a fractional x (its `-0.25em` right margin), so its 46px box spans 47
+screenshot columns and read as 1px wider than the other two. Box from layout,
+ink and ground from the clip.
+
+## The staff header never cleared its own close button (0.39.0)
+
+Pre-existing since 0.36.0 raised that button to 46px. It is absolutely
+positioned at `right: 12px` and 46px wide, so it owns the first **58px** from
+the right edge; the header reserved 56px on desktop and 52px on a phone. A
+long booking title's box therefore ran 2px and 6px underneath it.
+
+**A short title passes against the broken value.** The title is centred, so
+with slack on both sides it clears the button at any padding. The assertion
+uses a title long enough to wrap to 2-6 lines at 320/360/393/1280 — without
+that, the test measures the sentence rather than the padding. The instrument
+check asserting `lines >= 2` is there so the guard cannot quietly become
+vacuous if the fixture string is ever shortened.
+
+**Assert the BOX, not the ink.** A wrapped line's ink stops wherever the last
+word ends, so an ink-only check passes or fails on the wording.
+
+**The value is written as the arithmetic** — `calc(12px + 46px + 8px)`, the
+button's offset plus its width plus breathing room — so moving the button
+cannot silently re-open the gap, and a mutation replacing it with the old bare
+number goes red.
+
+## A mutation anchored on declarations, not on a selector (0.39.0)
+
+`close: the floating X stops being a floating close at all` SURVIVED. Its
+target was `position: sticky; top: 0; align-self: flex-end;`, which also opens
+`.mphbac-info-scrollbar` earlier in widget.css — and `mutate.php` replaces the
+FIRST occurrence, so it mutated the scrollbar and never touched the button.
+Third time this family of fault has appeared. **Anchor a mutation on the
+selector that makes it unique**, not on a run of declarations that could open
+any rule.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.
