@@ -295,6 +295,31 @@ A rule with the wrong mechanism is the thing this exercise exists to prevent,
 so: the conclusion (never force these branches) stands; the mechanism above is
 the tested one.
 
+### Measure assets at the URL the page enqueues, over the wire
+
+A local `gzip -9` of a file on disk is not what a guest downloads, and a file
+picked by NAME is not necessarily the file the page requests. Both have
+produced a wrong headline on this plugin:
+
+- 2026-09-19: "the live site serves 95.1 KB gzipped where the shipped .min
+  pair is 42.1 KB, a 56% saving". Neither number was fetched. Both were
+  `gzip -9` of files on disk, and the "served" one was an inference from raw
+  byte counts that happened to match the unminified files. Measured properly
+  on live, `widget.min.js` IS what both pages enqueue, SpeedyCache folds the
+  CSS into a combined minified bundle, and there was no saving at all.
+- The same family of error once produced a wrong "-56%" on this plugin by
+  measuring `widget.js` rather than the enqueued `widget.min.js`.
+
+So: read the URL out of the page's own markup or its network log, fetch THAT,
+and report the transferred size. Server compression is not `gzip -9` — on the
+same file it measured 36.1 KB over the wire against 26.5 KB locally, so a
+local figure understates transfer and flatters any saving computed from it.
+
+This container cannot reach doracanalcourt.com (the egress proxy 403s it). So
+a wire measurement is not something this session can produce: ASK for it, or
+hand over a snippet that produces it, and never present a local computation as
+a served figure.
+
 ### Report the commit SHA that git actually printed
 
 `git push … | tail -1` shows only the "set up to track" line, not the
