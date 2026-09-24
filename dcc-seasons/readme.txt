@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.0.0
+Stable tag: 4.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,62 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.1.0 =
+* FIXED, HIGHEST PRIORITY — the "All pages except cottage pages" scope
+  silently included the entire booking and payment flow: Checkout, Payment
+  Request, Submit Booking, Cottage Cart and all five booking confirmation
+  pages, plus the internal staff board. Only the checkout page itself had
+  ever been excluded. The booking flow is now excluded in EVERY scope tier,
+  "All pages and posts" included, and it is a visible setting rather than a
+  filter. MotoPress's own context predicates are asked first, with page IDs
+  and slugs as fallbacks, because IDs change and a stale ID fails silently
+  in the worst direction — effects return to the payment form and nothing
+  reports it.
+* The Guest Guide is excluded by default, with its own toggle so it can be
+  turned back on without code, and a free-text list of extra paths never to
+  decorate (defaults to "staff").
+* FIXED — the ambient canvas claimed z-index 99990 in "In front of
+  everything" mode, which outranked the site's severe-weather banner: the
+  decorations drew over live NWS tornado, hurricane and flood warnings. It
+  now mounts at 9000, above ordinary content and Elementor sections and
+  deliberately below lightboxes, the banner and any consent UI. The band is
+  documented in the code, settable, and clamped so it can never be raised
+  above the alert layer.
+* FIXED — four vignettes were named by themes but did not exist. MLK Day
+  and Patriot Day therefore never played a vignette at all, and Mardi Gras
+  and Spring on the Canal silently lost a third to a half of theirs. Worse,
+  the retry clock only moves on a SUCCESSFUL vignette, so a name with
+  nothing behind it was retried on every frame for the life of the page.
+  All four scenes are now implemented — doves crossing for MLK, a single
+  slow flag for Patriot Day, a kayaker on the canal, and a Mardi Gras stilt
+  walker — and the build now fails on a vignette name with no scene behind
+  it, exactly as it already did for sprites.
+* FIXED — the stored options row now gains a release's new default keys on
+  upgrade instead of waiting for someone to open the settings page and
+  save. Nothing was broken by this (defaults are merged on every read) but
+  the database did not describe the site's actual behaviour. It only adds:
+  a value the owner set is never touched.
+* Sprites — hands, bunnycarry, stilts, lure, peel and conch redrawn. The
+  contact sheet now renders every sprite on BOTH a light and a dark ground,
+  because the effects run over a hero photograph, white body copy and the
+  navy footer, and labels which themes each sprite belongs to so a theme's
+  set can be judged as a set.
+* "(recommended)" is off the footer placement label. That recommendation
+  produced the reported bug — footer placement confines the effects to a
+  small box — and the trade is now explained in help text beside the
+  Layering control it interacts with.
+* Measured at the live settings (content placement, front layering, density
+  16): engine work is 0.50ms per frame at 1280x900 and 0.35ms at 390x844,
+  the canvas pauses on a hidden tab, and there is no horizontal overflow or
+  text interception at phone width.
+* Build: engine.min.js is 106,593 raw / 36,558 gzipped (4.0.0: 105,079 /
+  36,124).
+* NOT CHANGED, because the premise did not hold: subtle_map shipping as an
+  empty array is not a half-delivered feature. It is the OVERRIDES store —
+  the effective map merges the plugin's own defaults underneath it, and the
+  client receives the merged result. All 27 themes resolve, including the
+  five bespoke exceptions, even on a row missing the key entirely.
 
 = 4.0.0 =
 BREAKING: the layer model changed and several themes' sprite sets changed.

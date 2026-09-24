@@ -105,6 +105,28 @@ function collectHeroes(js, php) {
   return { kinds, missing: named.filter(h => !kinds.has(h)) };
 }
 
+/* A theme naming a VIGNETTE that does not exist fails exactly like a theme
+ * naming a sprite that does not exist: startVig() looks the name up, finds
+ * nothing, and returns. Nothing is drawn and nothing is said. Four names
+ * were in this state until 4.1.0 — doveflight, flagfly, kayaker and stilts
+ * — so MLK and Patriot Day never played a vignette at all, and because
+ * vigNext is only pushed forward by endVig() they retried every frame for
+ * the life of the page. Same class of bug, same mechanical check. */
+function collectVignettes(js) {
+  const a = js.indexOf('var SCENES = {');
+  const b = js.indexOf('var VIGS = {');
+  if (a < 0 || b < 0) return { defined: new Set(), named: new Set(), missing: [] };
+  const defined = new Set([...js.slice(a, b).matchAll(/\n\t{3}([a-z0-9_]+): \{/g)].map(m => m[1]));
+  const vigsBlock = js.slice(b, js.indexOf('};', b));
+  // theme keys are the `name: [` entries; the quoted strings are scene names
+  const themeKeys = new Set([...vigsBlock.matchAll(/\n\t{3}([a-z0-9_]+): \[/g)].map(m => m[1]));
+  const named = new Set([...vigsBlock.matchAll(/'([a-z0-9_]+)'/g)].map(m => m[1]));
+  // scenes pushed in conditionally (e.g. sleighmoon on a Christmas evening)
+  for (const m of js.matchAll(/vigList\.push\('([a-z0-9_]+)'\)/g)) named.add(m[1]);
+  for (const k of themeKeys) named.delete(k);
+  return { defined, named, missing: [...named].filter(n => !defined.has(n)) };
+}
+
 function main() {
   const file = process.argv[2] || 'dcc-seasons/assets/js/engine.js';
   const src = fs.readFileSync(file, 'utf8');
@@ -149,15 +171,17 @@ function main() {
   for (const text of [src, php]) {
     for (const m of text.matchAll(/'([A-Za-z0-9_]+)'/g)) { if (keys.has(m[1])) used.add(m[1]); }
   }
+  const vig = collectVignettes(src);
   const dangling = [...refs].filter(([k]) => !keys.has(k) && !prefixes.has(k));
   const dead = [...keys].filter(k => !used.has(k));
   for (const [k, where] of dangling) console.log(`DANGLING  '${k}' named by ${where} — no such sprite`);
   for (const h of heroes.missing) console.log(`DANGLING  hero '${h}' — the engine implements no such kind`);
+  for (const v of vig.missing) console.log(`DANGLING  vignette '${v}' — VIGS names it but SCENES has no such scene`);
   if (dead.length) console.log(`unreferenced sprite(s): ${dead.join(' ')}`);
 
-  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${dangling.length + heroes.missing.length} dangling`);
+  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${vig.defined.size} vignettes · ${dangling.length + heroes.missing.length + vig.missing.length} dangling`);
   if (badSprites) { console.log('BUILD FAILURE: malformed path data would render with parts missing.'); process.exit(1); }
-  if (dangling.length || heroes.missing.length) { console.log('BUILD FAILURE: a theme or scene names a sprite that does not exist; it would draw nothing.'); process.exit(1); }
+  if (dangling.length || heroes.missing.length || vig.missing.length) { console.log('BUILD FAILURE: a theme or scene names something that does not exist; it would draw nothing and say nothing.'); process.exit(1); }
   console.log('all paths valid');
 }
 if (require.main === module) main();

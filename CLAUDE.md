@@ -244,7 +244,7 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 105,079 raw / 36,124 gzipped (4.0.0; 3.18.0
+- **The engine's size baseline is 106,593 raw / 36,558 gzipped (4.1.0; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -564,6 +564,40 @@ bump so the tracked zip never lags the source.
   for cached configs — keep the two in step, as `ambient.js` does for
   `BASE_THEME`. `Settings::subtle_map()` stores OVERRIDES ONLY so an untouched
   theme keeps tracking the plugin.
+- **Decoration must never outrank what a visitor NEEDS to see.** 'front'
+  placement mounts at `FRONT_Z` (default 9000, a setting, clamped to 9998),
+  which is above ordinary content and Elementor sections and BELOW
+  lightboxes (9999), the site's severe-weather banner `.dcc-wx-banner`
+  (10000) and any consent UI. It was 99990 until 4.1.0, so sprites drew over
+  live NWS tornado warnings. The Matrix egg stays at 2.147e9 — it is a modal
+  the visitor just invoked and can dismiss. Anything that must sit above the
+  canvas only has to clear FRONT_Z.
+- **Scope is not the same question as exclusion, and the booking flow is the
+  reason.** Scope says which KINDS of page may be decorated; exclusions say
+  which pages never are, in EVERY tier including 'all'. `no_cottages` means
+  "front page + every `page` post type", which silently covered Checkout,
+  Payment Request, Submit Booking, Cottage Cart, all five booking
+  confirmation pages and the internal staff board. `is_booking_flow()` asks
+  MotoPress's own predicates FIRST (`mphb_is_checkout_page` and friends),
+  then MotoPress's reported page IDs, then slugs, then this site's literal
+  IDs — because an ID changes when a page is rebuilt or restored and a stale
+  ID fails silently in the worst direction. `tools/test-scope.php` drives the
+  real `should_load()` and proves the slug and ID fallbacks independently.
+- **A vignette named with no scene behind it is silent, and it spins.**
+  `VIGS` maps theme → scene NAMES and `startVig()` looks them up in `SCENES`;
+  a miss returns without starting anything, and `vigNext` is only pushed
+  forward by `endVig()`, so the engine retried on EVERY FRAME for the life of
+  the page. Four names were in this state until 4.1.0 (doveflight, flagfly,
+  kayaker, stilts), so MLK and Patriot Day never played a vignette at all.
+  `validate-paths.js` now fails the build on a dangling scene name, the same
+  way it does for sprites, and the retry clock moves whether or not a scene
+  started.
+- **Judge a sprite on BOTH grounds.** The effects run over a hero
+  photograph, white body copy AND the navy footer, so
+  `tools/sprite-sheet.js` renders every sprite on a light and a dark panel
+  and labels which themes name it. A pale sprite judged only on cream looks
+  fine right up until it vanishes into the footer — checked, and swan, dove,
+  bobber, snowflake and ghost all survive because they carry outlines.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

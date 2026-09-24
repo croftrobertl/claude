@@ -73,12 +73,12 @@
 		skiff: '52 22|<path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="%d"/><path d="M4.6 14.2 L44 14.2 L44 16 Q26 19 8 16 Z" fill="%v"/><path d="M2 10 L44 11 L44 16 Q26 19 8 16 Z" fill="none" stroke="%x" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.6 11.4 L43.6 12.2" stroke="%m" stroke-width="1.1" fill="none"/><path d="M44 11 L48 11 L48 15 L46.6 15 L46.6 19 L45 19 L45 15 L44 15 Z" fill="%b"/><path d="M38 11 L38.6 5.6 M44 11 L44 5.6" stroke="%h" stroke-width="1.4" fill="none"/><path d="M36 3.4 L48 3.4 L48 5.4 L36 5.4 Z" fill="%t" stroke="%h" stroke-width="0.8"/><path d="M22 11 L27 11 L26 6 L23 6 Z" fill="%t" stroke="%x" stroke-width="0.8"/>',
 		bobber: '24 30|<line x1="12" y1="0" x2="12" y2="4" stroke="%h" stroke-width="2"/><circle cx="12" cy="16" r="11" fill="%d"/><path d="M1 16a11 11 0 0 1 22 0Z" fill="%e"/><circle cx="12" cy="16" r="11" fill="none" stroke="%b" stroke-width="1"/><circle cx="12" cy="4" r="2" fill="%b"/>',
 		tacklebox: '32 26|<rect x="2" y="9" width="28" height="15" rx="2" fill="%c"/><rect x="2" y="9" width="28" height="5" fill="#237032"/><path d="M12 9V6a4 4 0 0 1 8 0v3h-3V6a1 1 0 0 0-2 0v3Z" fill="%h"/><rect x="14" y="11" width="5" height="4" rx="1" fill="%a"/>',
-		lure: '30 20|<path d="M21 9 L27.6 5.4 L26 9 L27.6 12.6 Z" fill="%e"/><path d="M7 9 A7 4.4 0 0 1 21 9 Z" fill="%e"/><path d="M7 9 A7 4.4 0 0 0 21 9 Z" fill="%d"/><ellipse cx="14" cy="9" rx="7" ry="4.4" fill="none" stroke="%h" stroke-width="0.9"/><path d="M7 8.6 L1.6 12.4 L5.6 13.4 Z" fill="%t"/><path d="M3.4 6.6 L6.4 8" stroke="%h" stroke-width="1"/><circle cx="10" cy="7.4" r="1.3" fill="%b"/><path d="M11 13 L11 15 M11 15 L9.6 16.8 M11 15 L12.4 16.8 M17.6 12.6 L17.6 14.6 M17.6 14.6 L16.2 16.4 M17.6 14.6 L19 16.4" stroke="%h" stroke-width="0.9" fill="none" stroke-linecap="round"/>',
+		lure: '30 20|<path d="M5 9.6 L1 5.6 Q0.2 4 2 4.2 L6.6 7.4 Z" fill="%o"/><ellipse cx="13" cy="10" rx="8.4" ry="4.8" fill="%e"/><path d="M4.8 9.6 Q13 5.4 21.2 9.6 Q13 8.6 4.8 9.6 Z" fill="%d"/><path d="M21.4 10 L28.6 6.2 L27.2 10 L28.6 13.8 Z" fill="%e"/><circle cx="7.6" cy="8.4" r="1.6" fill="%d"/><circle cx="7.6" cy="8.4" r="0.85" fill="#111"/><path d="M11 14.6 V17 Q11 18.8 12.8 18.8" stroke="%h" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M18.6 14.4 V16.8 Q18.6 18.6 20.4 18.6" stroke="%h" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
 		bass: '48 26|<path d="M6 13q12-10 28-8l10-4-3 8 3 8-10-4q-16 2-28-8Z" fill="#37633F"/><path d="M8 13q11-7 26-6-13 12-26 6Z" fill="#5C8A54"/><path d="M20 3q6-3 10 0l-4 4Z" fill="#37633F"/><path d="M22 22q5 3 9 1l-4-5Z" fill="#37633F"/><circle cx="12" cy="11" r="2" fill="#111"/><path d="M6 13q3 3 7 3" fill="none" stroke="#2F4F35" stroke-width="1"/>',
 		lilypad: '36 22|<path d="M31.9 7 A16 8 0 1 0 33 13.7 L18 11 Z" fill="%c"/><path d="M18 11 L4 8 M18 11 L5 14 M18 11 L11 18 M18 11 L20 18 M18 11 L19 3 M18 11 L28 4" stroke="#237032" stroke-width="0.9" fill="none"/><circle cx="10" cy="7" r="3" fill="%s"/><circle cx="10" cy="7" r="1.1" fill="#FDE68A"/>',
 		sabalpalm: '34 38|<path d="M14 38 L15 20 L19 20 L20 38 Z" fill="%p"/><path d="M14.6 25 L19.4 25 M14.4 30 L19.6 30 M14.2 35 L19.8 35" stroke="%i" stroke-width="1.1" fill="none"/><g fill="%c"><path id="fr" d="M17 19 L12.4 7.6 L14.6 10.4 L15.6 4.6 L17 8.6 L18.4 4.6 L19.4 10.4 L21.6 7.6 Z"/><use href="#fr" transform="rotate(30 17 19)"/><use href="#fr" transform="rotate(-30 17 19)"/><use href="#fr" transform="rotate(60 17 19)"/><use href="#fr" transform="rotate(-60 17 19)"/><use href="#fr" transform="rotate(88 17 19)"/><use href="#fr" transform="rotate(-88 17 19)"/><use href="#fr" transform="rotate(112 17 19)"/><use href="#fr" transform="rotate(-112 17 19)"/></g><g fill="%j"><path id="fs" d="M17 19 L14 10.6 L15.6 12.6 L17 8.6 L18.4 12.6 L20 10.6 Z"/><use href="#fs" transform="rotate(45 17 19)"/><use href="#fs" transform="rotate(-45 17 19)"/><use href="#fs" transform="rotate(74 17 19)"/><use href="#fs" transform="rotate(-74 17 19)"/></g><circle cx="17" cy="19" r="2.4" fill="%i"/>',
 		hibiscus: '30 30|<g fill="%e"><path id="pt" d="M15 16 C8.6 13.6 7 6 15 3 C23 6 21.4 13.6 15 16 Z"/><use href="#pt" transform="rotate(72 15 16)"/><use href="#pt" transform="rotate(144 15 16)"/><use href="#pt" transform="rotate(216 15 16)"/><use href="#pt" transform="rotate(288 15 16)"/></g><circle cx="15" cy="16" r="3.6" fill="%n"/><path d="M8.6 23 Q3 26.6 6 29 Q11 27.6 11.6 23.6 Z" fill="%j"/><path d="M15 16 L26.4 5.2" stroke="%k" stroke-width="1.8" fill="none"/><g fill="%a"><circle cx="21.6" cy="9.6" r="1"/><circle cx="23.6" cy="8" r="1.1"/><circle cx="25.4" cy="6.2" r="1.1"/></g><circle cx="26.6" cy="4.6" r="1.7" fill="%k"/><g fill="%u"><circle cx="25.6" cy="3.2" r="0.8"/><circle cx="27.6" cy="2.8" r="0.8"/><circle cx="28.4" cy="4.8" r="0.8"/></g>',
-		conch: '30 26|<path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q21.6 24.6 12.6 23 Z" fill="%s"/><path d="M12.4 6.4 Q26.6 8.6 26.6 17.4 Q24.6 18.6 24 17 Q25 11 11.8 9.4 Z" fill="%o" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><path d="M14.6 9.6 Q23 12.6 22.6 19" fill="none" stroke="%u" stroke-width="1.2"/><path d="M3 15.6 Q2 8.6 6.6 4.6 L9.6 0.8 L11.8 5.4 Q15 8.4 15.8 13 Q17.4 19.6 12.4 23.4 L14 25.6 L10 24.2 Q4.6 22.6 3 15.6 Z" fill="%q" stroke="%t" stroke-width="0.7" stroke-linejoin="round"/><g fill="none" stroke="%t" stroke-width="0.9"><path d="M5.4 8 Q8.6 5.4 11 7.4"/><path d="M4 12.4 Q9 9 13.6 12"/><path d="M5.6 17.4 Q9.6 19.6 13.4 18.6"/></g><g fill="%f"><circle cx="5.6" cy="10" r="1.7"/><circle cx="9.4" cy="5.6" r="1.6"/><circle cx="13.4" cy="9" r="1.5"/><circle cx="14.8" cy="14.4" r="1.4"/></g>',
+		conch: '30 26|<path d="M13 4 Q23 6 26 14 Q27.6 20 21 23.6 Q13 25.6 8 20.6 Q4.6 15 7 9.6 Q9 5.6 13 4 Z" fill="%q"/><path d="M16.6 10 Q23 12 24.6 16.6 Q25.4 20.6 20.6 22.4 Q15.6 23 13.6 19 Q13 14 16.6 10 Z" fill="#F4A6B8"/><path d="M18 12 Q22.4 14 23.4 17 Q23.8 19.6 20.4 20.8 Q17 21 15.8 18.4 Q15.6 14.6 18 12 Z" fill="#FBD3DC"/><path d="M13 4 L9.6 0.6 Q8 0 7.6 1.6 L7.6 7 Z" fill="%o"/><path d="M12 4.6 L9.4 2 L8.6 3 L8.8 6.6 Z" fill="#D9C3A0"/><circle cx="12" cy="6.6" r="1.7" fill="#D9C3A0"/><circle cx="16.6" cy="6.2" r="1.8" fill="#D9C3A0"/><circle cx="21" cy="8" r="1.6" fill="#D9C3A0"/><circle cx="24.4" cy="11.4" r="1.3" fill="#D9C3A0"/>',
 		petal: '18 22|<path d="M9 1 Q15.4 6.4 15 13 Q14.6 18.6 10.6 20.4 Q9.6 19.6 9 18.6 Q8.4 19.6 7.4 20.4 Q3.4 18.6 3 13 Q2.6 6.4 9 1 Z" fill="%s"/><path d="M9 4 L9 17" stroke="%u" stroke-width="1" fill="none"/><path d="M9 9.4 Q12.2 12 12.6 15.6 M9 9.4 Q5.8 12 5.4 15.6" stroke="%u" stroke-width="0.8" fill="none"/>',
 		dragonfly: '40 26|<g fill="#9CCBEF" opacity="0.85"><ellipse cx="14" cy="7" rx="8" ry="2.6" transform="rotate(-14 14 7)"/><ellipse cx="14" cy="19" rx="8" ry="2.6" transform="rotate(14 14 19)"/><ellipse cx="20.4" cy="8.6" rx="6.6" ry="2.2" transform="rotate(-8 20 8.6)"/><ellipse cx="20.4" cy="17.4" rx="6.6" ry="2.2" transform="rotate(8 20 17)"/></g><path d="M11 13 38 13" stroke="#1864AB" stroke-width="2.6" stroke-linecap="round"/><g stroke="#74C0FC" stroke-width="1"><path d="M23 12v2.8M27 12v2.4M31 12v2M35 12v2"/></g><ellipse cx="11" cy="13" rx="4.2" ry="3.4" fill="#1864AB"/><circle cx="6.4" cy="13" r="3.6" fill="#1864AB"/><circle cx="5.2" cy="11.6" r="1.4" fill="#74C0FC"/>',
 		/* — birds & wildlife — */
@@ -95,7 +95,7 @@
 		turkey: '40 36|<path d="M20 20 8 4q-3 8 4 14Zm0 0 4-18q6 4 3 14Zm0 0 12-14q4 8-5 15Z" fill="#A05A2C"/><ellipse cx="20" cy="25" rx="10" ry="9" fill="%i"/><circle cx="12" cy="18" r="5" fill="%i"/><circle cx="11" cy="17" r="1" fill="#111"/><path d="M8 18l-4 1 4 2Z" fill="%a"/><path d="M9 20q-2 3 0 5" stroke="%e" stroke-width="2" fill="none"/><line x1="17" y1="33" x2="17" y2="36" stroke="%f" stroke-width="2"/><line x1="23" y1="33" x2="23" y2="36" stroke="%f" stroke-width="2"/>',
 		chick: '20 20|<circle cx="10" cy="12" r="7" fill="%k"/><circle cx="7" cy="6" r="4" fill="#FFE066"/><circle cx="6" cy="5" r=".9" fill="#111"/><path d="M3 6 .4 7l2 1Z" fill="%w"/><path d="M14 12q4-1 4 2-3 2-5 0Z" fill="#FAB005"/><line x1="8" y1="19" x2="8" y2="20" stroke="%w" stroke-width="1"/><line x1="12" y1="19" x2="12" y2="20" stroke="%w" stroke-width="1"/>',
 		bunny: '32 30|<g fill="%q" stroke="#7A8290" stroke-width="1.8" stroke-linejoin="round"><path d="M9.6 13C7 7.4 8.4 2.6 11 3 13 3.4 14 8.4 12 14Z"/><path d="M14 13C13 6.8 16 3 18 4.4 20 5.8 19 10 17 13Z"/><path d="M23 26C27 26 29 22 28 18 27 14 23 11 18 11 14 11 11 12 9.4 14 7.2 13 5.2 14 4.6 16 4 19 5.4 20 7.6 21 7.4 23 9.6 26 13 26Z"/></g><circle cx="7.6" cy="17.4" r="1.4" fill="%g"/><path d="M5 19Q3.2 20 5 21" fill="none" stroke="#7A8290" stroke-width="1"/><path d="M28 20Q31 19 31 22 30 25 27 24" fill="%q" stroke="#7A8290" stroke-width="1.6"/>',
-		bunnycarry: '32 32|<g fill="%q" stroke="#7A8290" stroke-width="1.8" stroke-linejoin="round"><path d="M11 12C8 6.4 9.4 1.6 12 2 14 2.4 15 7.4 13 13Z"/><path d="M15 12C14 5.8 17 2 19 3.4 21 4.8 20 9.2 18 12Z"/><path d="M24 27C28 27 30 24 29 20 28 15 24 12 19 12 15 12 12 13 10 15 8.2 15 6.2 16 5.6 18 5 20 6.4 22 8.6 22 8.4 25 11 27 14 27Z"/></g><circle cx="8.6" cy="18.8" r="1.4" fill="%g"/><ellipse cx="12.6" cy="23.4" rx="5" ry="6.2" fill="#BFDBFE" stroke="%l" stroke-width="1.6"/><path d="M7.8 22 17 22M8 25 17 25" stroke="%l" stroke-width="1.4"/><path d="M7.4 21Q6 23 8.6 26" fill="none" stroke="#7A8290" stroke-width="1.8"/><path d="M18 20Q19 23 17 26" fill="none" stroke="#7A8290" stroke-width="1.8"/>',
+		bunnycarry: '32 32|<ellipse cx="11" cy="7" rx="2.6" ry="6" fill="%q" stroke="%t" stroke-width="1.6"/><ellipse cx="17" cy="6.4" rx="2.6" ry="6" fill="%q" stroke="%t" stroke-width="1.6"/><ellipse cx="18" cy="20" rx="11" ry="8" fill="%q" stroke="%t" stroke-width="1.6"/><circle cx="28.4" cy="18.4" r="2.8" fill="%q" stroke="%t" stroke-width="1.4"/><circle cx="10.4" cy="15.6" r="6" fill="%q" stroke="%t" stroke-width="1.6"/><circle cx="7.8" cy="14.6" r="1.1" fill="#212529"/><ellipse cx="15.4" cy="27" rx="4.2" ry="4.8" fill="%l"/><path d="M11.4 26 h8 M11.6 28.6 h7.6" stroke="%q" stroke-width="1.3"/><path d="M11.4 21.6 Q12.8 25.6 15.8 26.4" stroke="%t" stroke-width="2" fill="none" stroke-linecap="round"/>',
 		/* — fall leaves: maple, oak, cypress, sweetgum — */
 		leafm: '26 30|<path d="M13 2 L16 8 L21 5 L19 11 L25 10 L20 15 L24 18 L17 19 L15 22 L11 22 L9 19 L2 18 L6 15 L1 10 L7 11 L5 5 L10 8 Z" fill="%r"/><path d="M13 29 L13 20" stroke="#8B4513" stroke-width="1.6" fill="none"/><path d="M13 21 L13 6 M13 12 L19 8 M13 12 L7 8 M13 17 L20 15 M13 17 L6 15" stroke="#C44D0B" stroke-width="1" fill="none"/>',
 		leafo: '22 30|<path d="M11 1 Q14 3 13.6 5.4 Q17 5 17.6 7.6 Q20 9 18.6 11.4 Q21 13 19 15.4 Q21 17.6 18.6 19.4 Q19.6 22.4 16.6 23 Q15.6 26 12.6 25.6 L11.6 29 L10.4 29 L9.4 25.6 Q6.4 26 5.4 23 Q2.4 22.4 3.4 19.4 Q1 17.6 3 15.4 Q1 13 3.4 11.4 Q2 9 4.4 7.6 Q5 5 8.4 5.4 Q8 3 11 1 Z" fill="#A0622D"/><path d="M11 4 L11 27" stroke="#6F4E37" stroke-width="1.2" fill="none"/><path d="M11 9 L6 7 M11 9 L16 7 M11 14 L5 12 M11 14 L17 12 M11 19 L6 18 M11 19 L16 18" stroke="#6F4E37" stroke-width="0.9" fill="none"/>',
@@ -132,7 +132,7 @@
 		beads: '40 26|<path d="M2 2q18 30 36 0" fill="none" stroke="#5F3DC4" stroke-width="1"/><circle cx="5" cy="6" r="3" fill="%l"/><circle cx="12" cy="13" r="3" fill="%j"/><circle cx="20" cy="17" r="4" fill="%a"/><circle cx="28" cy="13" r="3" fill="%l"/><circle cx="35" cy="6" r="3" fill="%j"/><g fill="#FFF" opacity=".7"><circle cx="11" cy="12" r=".9"/><circle cx="19" cy="15" r="1"/><circle cx="27" cy="12" r=".9"/></g>',
 		doubloon: '26 26|<circle cx="13" cy="13" r="12" fill="%a"/><circle cx="13" cy="13" r="12" fill="none" stroke="%f" stroke-width="2"/><circle cx="13" cy="13" r="8" fill="none" stroke="%f" stroke-width="1"/><path d="M13 7c-2 3-2 3 0 5 2-2 2-2 0-5Zm0 12c2-3 2-3 0-5-2 2-2 2 0 5Zm-6-6c3 2 3 2 5 0-2-2-2-2-5 0Zm12 0c-3-2-3-2-5 0 2 2 2 2 5 0Z" fill="%f"/>',
 		mask: '36 26|<path d="M4 2Q1 -1 2 4q1 4 5 5Zm28 0q3-3 2 2-1 4-5 5Z" fill="%j"/><path d="M2 10q16-8 32 0 0 10-9 10-4 0-7-3-3 3-7 3-9 0-9-10Z" fill="%l"/><ellipse cx="11" cy="13" rx="4" ry="3" fill="#FFF"/><ellipse cx="25" cy="13" rx="4" ry="3" fill="#FFF"/><path d="M2 10q16-6 32 0" stroke="%a" stroke-width="1" fill="none"/>',
-		stilts: '32 78|<path d="M11 46 L11 76" stroke="%i" stroke-width="3"/><path d="M21 46 L21 76" stroke="%i" stroke-width="3"/><path d="M7 47 L15 47 L15 50 L7 50 Z" fill="%f"/><path d="M17 47 L25 47 L25 50 L17 50 Z" fill="%f"/><path d="M16 3 L23 9 L20 11 L24 14 L16 17 L8 14 L12 11 L9 9 Z" fill="%l"/><circle cx="23.4" cy="8.6" r="1.8" fill="%a"/><circle cx="8.6" cy="8.6" r="1.8" fill="%a"/><circle cx="16" cy="21" r="4.2" fill="#F8D8B8"/><path d="M9 26 L23 26 L21 42 L11 42 Z" fill="%j"/><path d="M9 26 L1 34 L4 37 L11 30 Z" fill="%l"/><path d="M23 26 L31 34 L28 37 L21 30 Z" fill="%l"/><path d="M12 42 L15 42 L15 50 L12 50 Z" fill="%a"/><path d="M17 42 L20 42 L20 50 L17 50 Z" fill="%a"/>',
+		stilts: '32 78|<rect x="9" y="30" width="3.2" height="46" rx="1.2" fill="%p"/><rect x="19.8" y="30" width="3.2" height="46" rx="1.2" fill="%p"/><rect x="6.6" y="44" width="8" height="2.6" rx="1" fill="#6F4E37"/><rect x="17.4" y="44" width="8" height="2.6" rx="1" fill="#6F4E37"/><path d="M12.6 30 L10.8 45" stroke="%j" stroke-width="3.4" stroke-linecap="round"/><path d="M19.4 30 L21.2 45" stroke="%j" stroke-width="3.4" stroke-linecap="round"/><path d="M9.6 14 Q16 11.6 22.4 14 L24 30 Q16 32.6 8 30 Z" fill="%l"/><path d="M9.6 19.4 Q16 22.4 24 19.4" stroke="%a" stroke-width="2.4" fill="none"/><path d="M9.8 16 L3.6 23.6" stroke="%l" stroke-width="3.2" stroke-linecap="round"/><path d="M22.2 16 L28.4 23.6" stroke="%l" stroke-width="3.2" stroke-linecap="round"/><circle cx="16" cy="9" r="4.4" fill="#F0C8A0"/><path d="M11 6.2 Q16 -0.6 21 6.2 Z" fill="%a"/><circle cx="11" cy="5.6" r="1.6" fill="%j"/><circle cx="21" cy="5.6" r="1.6" fill="%j"/><circle cx="16" cy="1" r="1.6" fill="%e"/>',
 		bottle: '18 44|<path d="M7 2h4v8q5 4 5 12v18q0 3-3 3H5q-3 0-3-3V22q0-8 5-12Z" fill="#1E5B2B"/><path d="M7 2h4v6H7Z" fill="%f"/><rect x="4" y="24" width="10" height="10" rx="1" fill="%d"/>',
 		/* — valentines — */
 		balloon: '26 32|<path d="M13 2C6 2 2 7 2 12c0 7 7 12 11 15 4-3 11-8 11-15C24 7 20 2 13 2Z" fill="#FA5252"/><path d="M7 8q1-3 4-4" stroke="#FFC9C9" stroke-width="2" fill="none"/><path d="M12 27h3l-1 3Z" fill="%n"/>',
@@ -151,13 +151,13 @@
 		rainbow: '96 62|<g fill="none" stroke-width="4"><path d="M5 60a40 40 0 0 1 80 0" stroke="%e"/><path d="M9 60a36 36 0 0 1 72 0" stroke="#FF922B"/><path d="M13 60a32 32 0 0 1 64 0" stroke="%k"/><path d="M17 60a28 28 0 0 1 56 0" stroke="%j"/><path d="M21 60a24 24 0 0 1 48 0" stroke="#5C7CFA"/></g><path d="M68 48h20l-3 10a7 7 0 0 1-7 4h-1a7 7 0 0 1-7-4Z" fill="%g"/><circle cx="73" cy="47" r="3" fill="%a"/><circle cx="79" cy="46" r="3" fill="%k"/><circle cx="85" cy="47" r="3" fill="%a"/><ellipse cx="64" cy="56" rx="7" ry="2" fill="#1E5B2B"/><path d="M60 50h8l-1 6h-6Z" fill="%c"/>',
 		jester: '34 28|<path d="M5 22 2 4l10 10L17 2l5 12L32 4l-3 18Z" fill="%l"/><path d="M17 2l5 12 5-6-2 14H12l-2-14 5 6Z" fill="%j" opacity=".85"/><rect x="4" y="21" width="26" height="5" rx="3" fill="%a"/><circle cx="3" cy="4" r="2" fill="%a"/><circle cx="17" cy="3" r="2" fill="%a"/><circle cx="32" cy="4" r="2" fill="%a"/>',
 		disguise: '34 26|<circle cx="9" cy="8" r="7" fill="none" stroke="%b" stroke-width="2"/><circle cx="25" cy="8" r="7" fill="none" stroke="%b" stroke-width="2"/><path d="M16 8h2" stroke="%b" stroke-width="2"/><path d="M0 6h3m28 0h3" stroke="%b" stroke-width="2"/><path d="M17 10q-5 4-4 9 2 4 6 2" fill="#F8C8A8" stroke="#D9A06B"/>',
-		peel: '36 16|<path d="M7 8.4 L34 3 Q36 3.6 34.4 5.4 L8 10 Z" fill="%k"/><path d="M7 9 L35.4 9 Q36 10.4 34 11.2 L7.6 11.4 Z" fill="%a"/><path d="M7 9.6 L33 14.4 Q34 15.8 31.8 15.8 L7 11.8 Z" fill="%k"/><path d="M2.4 5.6 Q9 5 9.6 9.4 Q9 14 2.4 13.4 Q0.4 9.4 2.4 5.6 Z" fill="#8A6D1F"/>',
+		peel: '36 16|<path d="M17 8 Q9 8 3 12.4 Q2 14 4.4 14 Q11 12 17.6 10.6 Z" fill="%k"/><path d="M17 8 Q25 8 31.6 12 Q33 13.6 30.6 13.8 Q24 11.8 17.4 10.6 Z" fill="%a"/><path d="M17 8.6 Q16 12 13.6 15.2 Q15.6 16.4 17.6 15.2 Q19.6 12 19 8.8 Z" fill="%k"/><ellipse cx="17.4" cy="8.2" rx="3.4" ry="2.4" fill="#E8C33A"/><path d="M16.4 5.4 Q17.6 3 18.8 5.6 Q17.6 6.4 16.4 5.4 Z" fill="#8A6D1F"/>',
 		/* — 420 / earth — */
 		cannabis: '32 34|<g fill="%c" transform="translate(16 30)"><path id="cl" d="M0 0 1.5-5 .8-6 2.6-10 1.8-11 3-15 2-17 2.2-20 1-21 0-26-1-21-2.2-20-2-17-3-15-1.8-11-2.6-10-.8-6-1.5-5Z"/><use href="#cl" transform="rotate(27) scale(.9)"/><use href="#cl" transform="rotate(-27) scale(.9)"/><use href="#cl" transform="rotate(54) scale(.74)"/><use href="#cl" transform="rotate(-54) scale(.74)"/><use href="#cl" transform="rotate(79) scale(.54)"/><use href="#cl" transform="rotate(-79) scale(.54)"/></g><path d="M16 29v5" stroke="%c" stroke-width="2"/>',
 		peace: '30 30|<circle cx="15" cy="15" r="13" fill="none" stroke="%l" stroke-width="3"/><circle cx="15" cy="15" r="13" fill="none" stroke="%j" stroke-width="3" stroke-dasharray="14 27"/><path d="M15 2v26M15 15 6 24m9-9 9 9" stroke="%u" stroke-width="3"/>',
 		sprout: '22 26|<path d="M11 26V10" stroke="%c" stroke-width="2"/><path d="M11 12Q3 12 1 4q9-1 10 8Z" fill="#37B24D"/><path d="M11 9Q19 9 21 2q-9-1-10 7Z" fill="%j"/>',
 		globe: '30 30|<circle cx="15" cy="15" r="13" fill="#339AF0"/><path d="M8 6q6 2 5 8t3 7q-8 1-10-6-1-6 2-9Zm12 1q4 3 4 8 0 6-5 9-2-5 0-9t1-8Z" fill="#37B24D"/>',
-		hands: '44 32|<circle cx="22" cy="12" r="9.5" fill="#339AF0"/><path d="M15 7 Q20 9 19 13 Q18 17 21 18 Q15 19 13.6 14 Q12.8 10 15 7 Z" fill="%j"/><path d="M27 6 Q31 9 29 12 Q27 15 30 17 Q25 17 24.6 12 Q24.4 8 27 6 Z" fill="%j"/><path d="M2 31 Q1 21 9 18 Q14 16 19 20 L21 24 L14 31 Z" fill="#D9A06B"/><path d="M42 31 Q43 21 35 18 Q30 16 25 20 L23 24 L30 31 Z" fill="#D9A06B"/><path d="M8 20 L12 25 M12 18.6 L16 23.6 M36 20 L32 25 M32 18.6 L28 23.6" stroke="#B87F4E" stroke-width="0.9" fill="none"/>',
+		hands: '44 32|<circle cx="22" cy="12" r="8.6" fill="#2E86DE"/><path d="M15.6 7.4 Q21 4.6 24.6 9 Q22.6 15 17 15.4 Q13.6 11.6 15.6 7.4 Z" fill="%j"/><path d="M26 8.4 Q30 11 28.4 16 Q24.6 17.4 24 12.4 Z" fill="%j"/><path d="M1.6 31 Q0.6 23.6 6 20.6 Q10 19 13.6 21.4 L20 25 Q21.6 26.4 20 27.6 L13 26.6 Q9 26.6 8.6 31 Z" fill="#D9A06B"/><path d="M6.4 22.6 L12.6 25.4 M8 25.4 L13.6 27.2 M4.6 25 L9 27.6" stroke="#B87F4E" stroke-width="0.9" fill="none" stroke-linecap="round"/><path d="M42.4 31 Q43.4 23.6 38 20.6 Q34 19 30.4 21.4 L24 25 Q22.4 26.4 24 27.6 L31 26.6 Q35 26.6 35.4 31 Z" fill="#D9A06B"/><path d="M37.6 22.6 L31.4 25.4 M36 25.4 L30.4 27.2 M39.4 25 L35 27.6" stroke="#B87F4E" stroke-width="0.9" fill="none" stroke-linecap="round"/>',
 		/* — labor day picnic — */
 		sparkler: '22 34|<path d="M11 33 L11 15" stroke="%h" stroke-width="2.2" stroke-linecap="round"/><path d="M11 13 L11 2 M11 13 L20 5 M11 13 L21 13 M11 13 L20 21 M11 13 L2 5 M11 13 L1 13 M11 13 L2 21" stroke="%a" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M11 13 L15 3 M11 13 L7 3 M11 13 L19 9 M11 13 L3 9 M11 13 L18 18 M11 13 L4 18" stroke="%d" stroke-width="1.1" stroke-linecap="round" fill="none"/><circle cx="11" cy="13" r="2.6" fill="%d"/><circle cx="11" cy="13" r="1.4" fill="%a"/>',
 		poppy: '26 30|<path d="M13 22 L13 29" stroke="%c" stroke-width="1.6"/><g fill="%e"><ellipse cx="8" cy="10" rx="6.4" ry="5.6" transform="rotate(-30 8 10)"/><ellipse cx="18" cy="10" rx="6.4" ry="5.6" transform="rotate(30 18 10)"/><ellipse cx="8" cy="17" rx="6.4" ry="5.6" transform="rotate(30 8 17)"/><ellipse cx="18" cy="17" rx="6.4" ry="5.6" transform="rotate(-30 18 17)"/></g><path d="M13 13 L7 8 M13 13 L19 8 M13 13 L7 19 M13 13 L19 19" stroke="#C92A2A" stroke-width="1.2" fill="none"/><circle cx="13" cy="13.4" r="3.4" fill="%g"/><circle cx="13" cy="13.4" r="1.4" fill="#495057"/>',
@@ -3408,6 +3408,78 @@
 				return done && st.t2 > 3;
 			} },
 			/* Valentine's: two swans meet, necks forming a heart */
+			/* --- The four scenes that were NAMED but never existed. -------
+			 * VIGS listed doveflight, flagfly, kayaker and stilts; SCENES
+			 * had none of them. startVig() looks the name up, finds nothing
+			 * and returns, so MLK and Patriot Day never played a vignette at
+			 * all and Mardi Gras and Spring on the Canal silently lost a
+			 * third to a half of theirs. The sprites were all sitting there
+			 * already. validate-paths.js now fails the build on a scene name
+			 * with no scene behind it, the same way it does for sprites. */
+
+			/* MLK: doves cross in a slow line and release a peace glyph. */
+			doveflight: { actors: 3, run: function (st, dt) {
+				if (!st.on) {
+					st.on = 1; st.t2 = 0; st.dir = sgn();
+					st.y0 = vh * rnd(0.22, 0.38);
+				}
+				st.t2 += dt;
+				var i, x, y;
+				for (i = 0; i < 3; i++) {
+					x = st.dir > 0
+						? -70 + (st.t2 * 78) - i * 62
+						: vw + 70 - (st.t2 * 78) + i * 62;
+					y = st.y0 + sin(st.t2 * 1.6 + i) * 9 + i * 13;
+					dspr('dove', x, y, 30, st.dir > 0);
+				}
+				if (st.t2 > 2.6 && st.t2 < 5.4) {
+					dtxt('\u262E', vw / 2, vh * 0.3 - (st.t2 - 2.6) * 10, 20, '#F1F3F5',
+						VA * clamp(1.4 - abs(st.t2 - 4) , 0, 1));
+				}
+				return st.t2 > 6.4;
+			} },
+
+			/* Patriot Day: one flag crosses slowly, alone. Sober by design —
+			 * this is the theme the brief calls minimal. */
+			flagfly: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.t2 = 0; st.dir = sgn(); st.y0 = vh * rnd(0.2, 0.34); }
+				st.t2 += dt;
+				var x = st.dir > 0 ? -60 + st.t2 * 58 : vw + 60 - st.t2 * 58;
+				dspr('flagcloth', x, st.y0 + sin(st.t2 * 1.1) * 5, 34, st.dir > 0);
+				return st.t2 * 58 > vw + 130;
+			} },
+
+			/* Spring on the Canal: a kayak crosses the waterline, paddling. */
+			kayaker: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.t2 = 0; st.dir = sgn(); st.wake = 0; }
+				st.t2 += dt;
+				var x = st.dir > 0 ? -70 + st.t2 * 64 : vw + 70 - st.t2 * 64;
+				var y = waterY - 10 + sin(st.t2 * 2.4) * 1.6;
+				dspr('kayak', x, y, 46, st.dir > 0);
+				st.wake += dt;
+				if (st.wake > 0.5) {
+					st.wake = 0;
+					addRipple(x - st.dir * 22, waterY);
+				}
+				return st.t2 * 64 > vw + 150;
+			} },
+
+			/* Mardi Gras: a stilt walker crosses, and this is the one scene
+			 * that makes the 'stilts' sprite real — it was the only sprite
+			 * in the registry nothing drew. */
+			stilts: { actors: 2, run: function (st, dt) {
+				if (!st.on) { st.on = 1; st.t2 = 0; st.dir = sgn(); }
+				st.t2 += dt;
+				var x = st.dir > 0 ? -50 + st.t2 * 42 : vw + 50 - st.t2 * 42;
+				/* The gait: a slow rock, and a small rise on each stride. */
+				var y = waterY - 46 + abs(sin(st.t2 * 2.1)) * -5;
+				dspr('stilts', x, y, 58, st.dir > 0, sin(st.t2 * 2.1) * 0.06);
+				if (rand() < dt * 1.6) {
+					dspr('doubloon', x + rnd(-18, 18), y + rnd(20, 52), 12);
+				}
+				return st.t2 * 42 > vw + 120;
+			} },
+
 			swans: { actors: 2, run: function (st, dt) {
 				if (!st.on) { st.on = 1; st.t2 = 0; st.cxm = vw / 2; }
 				st.t2 += dt;
@@ -3625,7 +3697,18 @@
 			}
 			if (!vigList.length || hero) { return; }
 			if (!vigNext) { vigNext = t + ((DEBUG && CFG.vigFirst) || 20000 + rnd(0, 8000)); return; } /* let the page settle */
-			if (t >= vigNext) { startVig(pick(vigList)); }
+			if (t >= vigNext) {
+				/* startVig() returns without starting anything if the name
+				 * has no scene, and vigNext is only pushed forward by
+				 * endVig(). A name with nothing behind it therefore retried
+				 * on EVERY FRAME for the life of the page — which is what
+				 * MLK and Patriot Day did, since their only listed vignette
+				 * did not exist. Push the clock on regardless of whether
+				 * anything started. */
+				var picked = pick(vigList);
+				startVig(picked);
+				if (!vig) { vigNext = t + 4000; }
+			}
 		}
 
 		/* --- Boot + main loop with the degrade ladder. --- */
