@@ -337,6 +337,34 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   when a widget enables availability, and the party step only while the 3-4 guest
   switch is on. Eight render by default, seven with the switch off.
   `wizardTrack()` is the single place that knows.
+- **Site-wide choices live in `Settings`, per-placement choices in the widget —
+  and the widget INHERITS unless it was deliberately set.** `Settings::defaults()`
+  is the canonical map and every value in it reproduces 0.43.0 exactly (proved by
+  rebuilding that release's config from git and diffing: no shared key changed).
+  `Config::build()` reads it; `config_from_snapshot()` passes a key to
+  `Config::build()` ONLY when the snapshot actually carries it, so an unset widget
+  control leaves the site default standing. Before 0.44.0 it passed a literal
+  fallback for every key, which meant every widget masked a default that did not
+  yet exist — the exact "stored values mask defaults" trap. **Never reintroduce a
+  literal fallback there**; the fallback belongs in `Settings::defaults()`.
+- **The settings option is a FLAT map, merged over the defaults on every read.**
+  `array_merge(defaults(), stored)` IS the upgrade path: a key added by a later
+  release is absent from an existing row and picks up its default on the next read,
+  with no migration hook to forget. A NESTED option cannot be merged this way —
+  sub-keys added later are lost — and that is how a new version's defaults fail to
+  reach a stored row and the feature looks switched off (DCC Seasons 4.0.0 shipped
+  exactly that). Keys the plugin no longer defines are pruned on read so a stale
+  row does not mislead whoever reads the option next.
+- **The shared `dcc` admin menu is a COPIED idiom, not ours to redesign.** Slug
+  `dcc`, `manage_options`, `dashicons-palmtree`, position 58 — identical in every
+  DCC plugin, because a divergent slug silently produces a second "DCC" menu.
+  Register the parent at `admin_menu` priority 5 **only if
+  `$admin_page_hooks['dcc']` is unset**, and drop WordPress's mirrored first item
+  at 999. Submenu order is hook priority; read from the siblings' source on
+  2026-09-24: 10 and 60 reserved for site mu-plugins, 20 Contact Form, 40 Seasons,
+  **45 this plugin**, 50 Custom Checkout, 63 Wildlife. Never renumber or remove
+  another plugin's entry. A PHP test pins our slug, priority and capability so a
+  collision shows up here rather than as a page that quietly moved.
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no

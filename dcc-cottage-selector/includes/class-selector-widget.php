@@ -1602,19 +1602,23 @@ class Selector_Widget extends Widget_Base
      */
     public static function config_from_snapshot(array $snap, array $extra = []): array
     {
-        return Config::build($snap['string_overrides'] ?? [], array_merge([
-            'startMode'    => $snap['startMode'] ?? 'quick',
-            'enabledModes' => $snap['enabledModes'] ?? ['quick', 'weights', 'compare'],
-            'showHeading'  => $snap['showHeading'] ?? true,
-            'showReview'   => $snap['showReview'] ?? false,
-            'showCompareTip' => $snap['showCompareTip'] ?? false,
-            'capacityFeeUrl' => $snap['capacityFeeUrl'] ?? '',
-            'availability'   => $snap['availability'] ?? ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
-            'petFeeUrl'      => $snap['petFeeUrl'] ?? '',
-            'icons'        => $snap['icons'] ?? [],
-            'iconSides'    => $snap['iconSides'] ?? [],
-            'cssVars'      => $snap['cssVars'] ?? [],
-        ], $extra));
+        // A key ABSENT from the snapshot means "inherit the site default", so it is
+        // simply not passed to Config::build() and the Settings-derived default
+        // stands. A key PRESENT means the widget deliberately set it, and it wins.
+        // Passing a literal fallback here is what made every widget mask the site
+        // default before 0.44.0.
+        $over = [];
+        foreach (['startMode', 'enabledModes', 'showHeading', 'showReview', 'showCompareTip',
+                  'capacityFeeUrl', 'petFeeUrl', 'availability'] as $k) {
+            if (array_key_exists($k, $snap)) {
+                $over[$k] = $snap[$k];
+            }
+        }
+        $over['icons']     = $snap['icons'] ?? [];
+        $over['iconSides'] = $snap['iconSides'] ?? [];
+        $over['cssVars']   = $snap['cssVars'] ?? [];
+
+        return Config::build($snap['string_overrides'] ?? [], array_merge($over, $extra));
     }
 
     /**

@@ -83,6 +83,8 @@ namespace Elementor {
 
 namespace {
     require DCCS_DIR . 'includes/class-data.php';
+    require DCCS_DIR . 'includes/class-settings.php';
+    require DCCS_DIR . 'includes/class-menu.php';
     require DCCS_DIR . 'includes/class-config.php';
     require DCCS_DIR . 'includes/class-selector-widget.php';
 
@@ -332,6 +334,97 @@ namespace {
         Selector_Widget::config_from_snapshot($snap)['guest34'] === true);
 
     if ($saved === null) { unset($GLOBALS['__opts'][$optKey]); } else { $GLOBALS['__opts'][$optKey] = $saved; }
+
+    // ---- 0.44.0: the settings page ---------------------------------------------
+    $sKey = \DCCS\Settings::OPTION;
+    $sSaved = $GLOBALS['__opts'][$sKey] ?? null;
+    unset($GLOBALS['__opts'][$sKey]);
+
+    // (1) DEFAULTS REPRODUCE PRE-0.44.0 BEHAVIOUR EXACTLY. These literals are the
+    // ones that used to be hard-coded in Config::build() and in the JS; if a
+    // default here drifts, a fresh install stops matching the shipped release.
+    $d = \DCCS\Settings::defaults();
+    $wasHardCoded = [
+        'results_count' => 3, 'badges_max' => 3, 'reasons_max' => 3,
+        'start_mode' => 'quick', 'enabled_modes' => ['quick', 'weights', 'compare'],
+        'show_heading' => true, 'show_review' => false, 'show_compare_tip' => false,
+        'capacity_fee_url' => '', 'pet_fee_url' => '',
+        'avail_enable' => false, 'avail_max_nights' => 95,
+        'avail_action' => 'mphbac_query', 'avail_calendar_url' => '',
+    ];
+    foreach ($wasHardCoded as $k => $v) {
+        ok('default ' . $k . ' reproduces the pre-0.44.0 value', ($d[$k] ?? null) === $v);
+    }
+    ok('and defaults() covers every key the page writes, with no extras',
+        array_keys($d) === array_keys($wasHardCoded));
+
+    // The config a widget-less caller builds must carry those same values.
+    $fresh = \DCCS\Config::build([], []);
+    ok('a fresh install still opens on the quick finder', $fresh['startMode'] === 'quick');
+    ok('a fresh install still lists three cottages', $fresh['resultsCount'] === 3);
+    ok('a fresh install still has availability OFF', $fresh['availability']['enabled'] === false);
+    ok('a fresh install still caps the stay at 95 nights', $fresh['availability']['maxNights'] === 95);
+
+    // (2) THE UPGRADE MERGE. A row stored by an EARLIER release has none of the
+    // keys a later one adds; reading must fill them from defaults rather than
+    // leaving the new feature looking switched off (the DCC Seasons 4.0.0 trap).
+    $GLOBALS['__opts'][$sKey] = ['start_mode' => 'compare', 'show_review' => true];
+    $merged = \DCCS\Settings::get();
+    ok('a stored value still wins after the merge', $merged['start_mode'] === 'compare');
+    ok('a second stored value too', $merged['show_review'] === true);
+    ok('a key the stored row never had picks up its default', $merged['results_count'] === 3);
+    ok('including one added after that row was written', $merged['avail_max_nights'] === 95);
+    ok('every default key is present after merging a partial row',
+        array_diff(array_keys($d), array_keys($merged)) === []);
+    // A key the plugin no longer knows about must not ride along.
+    $GLOBALS['__opts'][$sKey] = ['results_count' => 5, 'dccs_retired_key' => 'x'];
+    $pruned = \DCCS\Settings::get();
+    ok('a retired key is dropped on read', !array_key_exists('dccs_retired_key', $pruned));
+    ok('while the live key beside it survives', $pruned['results_count'] === 5);
+
+    // (3) SANITISATION. Out-of-range and wrong-shape input falls back to the
+    // DEFAULT rather than being clamped to an edge, so a malformed POST cannot
+    // quietly reconfigure the site.
+    $bad = \DCCS\Settings::sanitize([
+        'results_count' => '99', 'badges_max' => '-2', 'reasons_max' => 'three',
+        'start_mode' => 'nonsense', 'enabled_modes' => ['quick', 'evil'],
+        'capacity_fee_url' => 'javascript:alert(1)',
+        'pet_fee_url' => 'https://example.com/fees',
+        'avail_max_nights' => '0', 'avail_action' => 'drop tables; --',
+        'avail_calendar_url' => 'data:text/html,<script>',
+    ]);
+    ok('an out-of-range count falls back to the default', $bad['results_count'] === 3);
+    ok('a negative count does too', $bad['badges_max'] === 3);
+    ok('a non-numeric count does too', $bad['reasons_max'] === 3);
+    ok('an unknown mode is dropped', $bad['enabled_modes'] === ['quick']);
+    ok('an opening mode outside the enabled set is corrected', $bad['start_mode'] === 'quick');
+    ok('a javascript: URL is rejected outright', $bad['capacity_fee_url'] === '');
+    ok('a data: URL is rejected outright', $bad['avail_calendar_url'] === '');
+    ok('a legitimate https URL survives', $bad['pet_fee_url'] === 'https://example.com/fees');
+    ok('zero nights falls back to 95', $bad['avail_max_nights'] === 95);
+    ok('an action slug with spaces/punctuation is rejected', $bad['avail_action'] === 'mphbac_query');
+    // POSITIVE CONTROL: sanitize does accept good input, so the rejections above
+    // are not passing because everything is rejected wholesale.
+    $good = \DCCS\Settings::sanitize([
+        'results_count' => '5', 'enabled_modes' => ['compare', 'quick'],
+        'start_mode' => 'compare', 'show_heading' => '1',
+        'avail_max_nights' => '30', 'avail_action' => 'mphbac_query',
+    ]);
+    ok('a valid count is accepted', $good['results_count'] === 5);
+    ok('a valid mode set is accepted, in canonical order', $good['enabled_modes'] === ['quick', 'compare']);
+    ok('a valid opening mode is accepted', $good['start_mode'] === 'compare');
+    ok('a valid night cap is accepted', $good['avail_max_nights'] === 30);
+    ok('never saves an empty mode set', \DCCS\Settings::sanitize(['enabled_modes' => []])['enabled_modes'] === $d['enabled_modes']);
+
+    // (4) The shared DCC menu contract. A divergent slug silently makes a SECOND
+    // "DCC" top-level menu; a colliding priority reorders someone else's page.
+    ok('the parent slug is the shared one', \DCCS\Menu::PARENT === 'dcc');
+    ok('the submenu priority is the one recorded in the report', \DCCS\Menu::PRIORITY === 45);
+    ok('and it does not collide with a sibling read from source on 2026-09-24',
+        !in_array(\DCCS\Menu::PRIORITY, [10, 20, 40, 50, 60, 63], true));
+    ok('saving is gated on manage_options', \DCCS\Menu::CAP === 'manage_options');
+
+    if ($sSaved === null) { unset($GLOBALS['__opts'][$sKey]); } else { $GLOBALS['__opts'][$sKey] = $sSaved; }
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

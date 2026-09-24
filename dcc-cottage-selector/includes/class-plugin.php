@@ -32,6 +32,14 @@ final class Plugin
         add_action('init', [$this, 'load_textdomain']);
         add_shortcode('dcc_selector_entry', ['\\DCCS\\Mini_Entry_Widget', 'shortcode']);
 
+        // The settings screen is registered BEFORE the Elementor check below:
+        // the shortcode works without Elementor, so the defaults that drive it
+        // must be reachable without Elementor too.
+        if (is_admin()) {
+            Menu::init();
+            Settings_Page::init();
+        }
+
         if (!$this->elementor_present()) {
             add_action('admin_notices', [$this, 'render_missing_deps_notice']);
             // The shortcode still works without Elementor, so don't bail entirely;

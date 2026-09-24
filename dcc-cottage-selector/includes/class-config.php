@@ -238,24 +238,41 @@ final class Config
         // otherwise omit the keys entirely, and selector.js reads a missing key as
         // "on" (`config.showReview !== false`). That silently gave the shortcode
         // pop-up the review step the widget skips. $extra still overrides both.
+        // Site-wide defaults come from the settings page (Settings::get() falls
+        // back to Settings::defaults(), which reproduces the literals that used to
+        // sit here). $extra — a widget's own deliberate overrides — still wins.
+        $st = Settings::get();
+
         $config = array_merge([
             'cottages'     => Data::all(),
             'diffFields'   => Data::DIFF_FIELDS,
             'strings'      => $strings,
             // Site-wide 3-4 guest switch; false drops the party question entirely.
             'guest34'      => self::guest34_enabled(),
-            'startMode'    => 'quick',
-            'enabledModes' => ['quick', 'weights', 'compare'],
+            'startMode'    => $st['start_mode'],
+            'enabledModes' => $st['enabled_modes'],
             'highlight'    => '',
-            'showHeading'  => true,
-            'showReview'   => false,
-            'showCompareTip' => false,
-            'capacityFeeUrl' => '',
-            'petFeeUrl'      => '',
-            // Availability lookup. Disabled unless a widget turns it on: the check
+            'showHeading'  => (bool) $st['show_heading'],
+            'showReview'   => (bool) $st['show_review'],
+            'showCompareTip' => (bool) $st['show_compare_tip'],
+            'capacityFeeUrl' => $st['capacity_fee_url'],
+            'petFeeUrl'      => $st['pet_fee_url'],
+            // How many matches the results screen lists, how many badges a card
+            // carries, and how many "why this fits" reasons it may show. These were
+            // hard-coded 3s in the JS until 0.44.0.
+            'resultsCount' => (int) $st['results_count'],
+            'badgesMax'    => (int) $st['badges_max'],
+            'reasonsMax'   => (int) $st['reasons_max'],
+            // Availability lookup. Disabled unless it is turned on: the check
             // is the ONLY runtime request this plugin makes, and it depends on the
             // MPHB Availability Calendar plugin being active to answer it.
-            'availability'   => ['enabled' => false, 'ajaxUrl' => '', 'action' => 'mphbac_query', 'calendarUrl' => '', 'maxNights' => 95],
+            'availability'   => [
+                'enabled'     => (bool) $st['avail_enable'],
+                'ajaxUrl'     => '',
+                'action'      => $st['avail_action'],
+                'calendarUrl' => $st['avail_calendar_url'],
+                'maxNights'   => (int) $st['avail_max_nights'],
+            ],
         ], $extra);
 
         // 0.26.0 merged Heading_Marks::all() in here so the drawn cottage/heron

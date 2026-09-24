@@ -31,7 +31,7 @@
    * Ordered reason keys for the "Why this fits your trip" snippet. Reasons the
    * guest asked for come first, then other notable features, capped at three.
    */
-  function whyFits(c, crit) {
+  function whyFits(c, crit, limit) {
     var ranked = [];
     function add(key, wanted, present) {
       if (present) { ranked.push({ key: key, wanted: !!wanted }); }
@@ -57,10 +57,12 @@
     add('party', (crit.wParty > 0) || hard.indexOf('party34') !== -1, Number(c.guests) >= 3);
     add('porch', (crit.wScreenedPorch > 0) || hard.indexOf('porch') !== -1, c.screenedPorch);
 
-    // Wanted reasons first (stable), then the rest; keep up to three.
+    // Wanted reasons first (stable), then the rest. The cap is a site setting as
+    // of 0.44.0; omitting it keeps the 3 this returned for every release before.
+    var cap = (limit && isFinite(limit) && limit > 0) ? Math.floor(limit) : 3;
     var wanted = ranked.filter(function (r) { return r.wanted; });
     var rest = ranked.filter(function (r) { return !r.wanted; });
-    return wanted.concat(rest).slice(0, 3).map(function (r) { return r.key; });
+    return wanted.concat(rest).slice(0, cap).map(function (r) { return r.key; });
   }
 
   DCCS.labels = {

@@ -247,7 +247,7 @@
     if (p.get('dates') === 'skip') { state.dates = { from: '', to: '', mode: 'skip' }; }
     if (p.has('in') && p.has('out')) {
       var din = String(p.get('in')), dout = String(p.get('out'));
-      if (DCCS.availability && DCCS.availability.validRange(din, dout, 95)) {
+      if (DCCS.availability && DCCS.availability.validRange(din, dout, cfgNum(config, 'availMaxNights', (config.availability && config.availability.maxNights) || 95))) {
         state.dates = { from: din, to: dout, mode: 'set' };
       }
     }
@@ -285,6 +285,15 @@
       cottages is not a priority. */
   function guest34On(config) {
     return !config || config.guest34 !== false;
+  }
+
+  /** A positive integer from the config, or the pre-0.44.0 hard-coded fallback.
+      THE FALLBACK IS LOAD-BEARING: a full-page cache can serve HTML whose
+      data-config was written before these keys existed, and that page must behave
+      exactly as it did rather than render zero cottages. */
+  function cfgNum(config, key, fallback) {
+    var n = config && Number(config[key]);
+    return (n && isFinite(n) && n > 0) ? Math.floor(n) : fallback;
   }
 
   var WEIGHT_HARD = {
@@ -759,7 +768,7 @@
         var r2 = DCCS.score.run(config.cottages, c2);
         if (!r2.empty) { fallback = r2; break; }
       }
-      var fb = fallback ? DCCS.score.dedupe(fallback.results.slice(0, 3), config.diffFields) : [];
+      var fb = fallback ? DCCS.score.dedupe(fallback.results.slice(0, cfgNum(config, 'resultsCount', 3)), config.diffFields) : [];
       html += '<div class="dccs-empty"><h3 class="dccs-step-q" tabindex="-1">' + esc(S.empty_heading) + '</h3>' +
         '<p>' + esc(fb.length === 1 ? S.empty_sub_one : S.empty_sub) + '</p></div>';
       fb.forEach(function (c) { html += buildCard(c, config, st, crit, '', missTags(c, crit, S), fb.length >= 2); });
@@ -778,13 +787,14 @@
       // silent dead end this feature exists to prevent.
       var byId = st.avail.byId;
       var isBooked = function (c) { return byId[c.id] === 'booked'; };
-      var free = ranked.filter(function (c) { return !isBooked(c); }).slice(0, 3);
-      var missed = ranked.slice(0, 3).filter(function (c) {
+      var nTop = cfgNum(config, 'resultsCount', 3);
+      var free = ranked.filter(function (c) { return !isBooked(c); }).slice(0, nTop);
+      var missed = ranked.slice(0, nTop).filter(function (c) {
         return isBooked(c) && free.indexOf(c) === -1;
       });
       top = free.concat(missed);
     } else {
-      top = ranked.slice(0, 3);
+      top = ranked.slice(0, cfgNum(config, 'resultsCount', 3));
     }
     html += '<div class="dccs-results-head"><h3 class="dccs-results-h" tabindex="-1">' + esc(S.results_heading) + '</h3></div>';
     html += availNote(config, st, top);
@@ -898,12 +908,13 @@
 
     var badges = DCCS.labels.badges(c).map(function (b) { return S['badge_' + b]; }).filter(Boolean);
     if (badges.length) {
-      html += '<div class="dccs-badges">' + badges.slice(0, 3).map(function (b) {
+      html += '<div class="dccs-badges">' + badges.slice(0, cfgNum(config, 'badgesMax', 3)).map(function (b) {
         return '<span class="dccs-badge">' + esc(b) + '</span>';
       }).join('') + '</div>';
     }
 
-    var reasons = DCCS.labels.whyFits(c, crit).map(function (k) { return S['why_' + k]; }).filter(Boolean);
+    var reasons = DCCS.labels.whyFits(c, crit, cfgNum(config, 'reasonsMax', 3))
+      .map(function (k) { return S['why_' + k]; }).filter(Boolean);
     if (reasons.length) {
       // No heading since 0.36.0: the paragraph carries itself.
       html += '<p class="dccs-why">' + esc(S.why_lead) + ' ' +

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.43.0
+Stable tag: 0.44.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,35 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.44.0 =
+* NEW: a settings screen at DCC > Cottage Selector. Until now the plugin had no
+  admin page of any kind and every tweak cost a full release.
+* Site-wide DEFAULTS, not per-widget overrides: results count, badges and match
+  reasons per card, opening mode, which modes are offered, heading / review step /
+  "pick 2" tip, the two optional fee-note links, and the availability lookup
+  (still OFF by default) with its night cap, AJAX action and calendar URL.
+* DEFAULTS REPRODUCE 0.43.0 EXACTLY. Verified by rebuilding the 0.43.0 config
+  from git and diffing: not one shared key changed value, and the only additions
+  are resultsCount / badgesMax / reasonsMax, all 3 — the numbers that were
+  hard-coded in the JS.
+* The stored option is a FLAT map merged over the defaults on every read, so a key
+  added by a later release reaches an already-stored row automatically. A nested
+  option cannot be merged that way, which is how a new version's defaults fail to
+  arrive and the feature looks switched off.
+* A widget now INHERITS anything its own control has not deliberately set: a key
+  absent from a widget's design snapshot is simply not passed, so the site default
+  stands. Previously every widget passed a literal for every key and therefore
+  masked the settings page before it existed.
+* FIXED: the deep-link date validator used a hard-coded 95-night cap while the
+  dates step used the configured one, so ?in=/?out= and the form disagreed once
+  the cap was changed. Both now read the same setting.
+* Front-end cost: bundle +922 bytes raw / +309 gzipped, inline config +46 bytes
+  per widget. The admin classes are PHP only and never reach a browser.
+* Menu: registers the shared `dcc` parent only if no sibling plugin has, at
+  admin_menu priority 5, and removes WordPress's mirrored first item at 999 —
+  the same idiom the other DCC plugins use, not a new variant. This plugin's
+  submenu registers at priority 45.
 
 = 0.43.0 =
 * NEW: the matching quiz honours the site-wide 3-4 guest switch, the WP option
