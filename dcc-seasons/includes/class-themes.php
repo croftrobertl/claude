@@ -74,9 +74,8 @@ class Themes {
                 'ambient' => [
                     'water'     => true,
                     'particles' => [
-                        ['s' => 'flagcloth', 'b' => 'fall', 'w' => 2],
                         ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
-                        ['s' => 'burger', 'b' => 'fall'],
+                        ['s' => 'burger', 'b' => 'fall', 'w' => 2],
                         ['s' => 'grill', 'b' => 'grow', 'fx' => 'smoke', 'sz' => [26, 32]],
                         ['s' => 'cooler', 'b' => 'tumble', 'sz' => [20, 26]],
                         ['s' => 'umbrella', 'b' => 'grow'],
@@ -94,12 +93,14 @@ class Themes {
             'patriot_day' => [
                 'ambient' => [
                     'hero'      => 'eagle',
-                    'accent'    => ['svg' => 'ribbon'],
                     'particles' => [
-                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 2],
-                        ['s' => 'sparkle', 'b' => 'twinkle'],
+                        /* Minimal and sober by instruction: the flag,
+                         * carried slowly, and nothing else but a few quiet
+                         * stars. The twinkling star and the sparkle that
+                         * used to be here are celebration, which is the
+                         * wrong register for 11 September. */
+                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 3, 'sz' => [26, 34]],
+                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 1],
                     ],
                 ],
                 'egg' => [
@@ -411,7 +412,7 @@ class Themes {
                     'particles' => [
                         ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
                         ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 3],
-                        ['s' => 'sparkler', 'b' => 'fall', 'glow' => 1, 'w' => 2, 'sz' => [22, 30]],
+                        ['s' => 'sparkler', 'b' => 'fall', 'glow' => 1, 'w' => 3, 'sz' => [22, 30]],
                         ['c' => 'confetti', 'cl' => ['#FF5252', '#F1F3F5', '#5C7CFA'], 'b' => 'tumble', 'w' => 2],
                     ],
                     'sparkCl'   => ['#FF5252', '#F1F3F5', '#5C7CFA', '#FFD43B'],
@@ -429,10 +430,16 @@ class Themes {
                 'ambient' => [
                     'hero'      => 'eagle',
                     'particles' => [
-                        ['s' => 'poppy', 'b' => 'sway', 'st' => 1, 'w' => 3, 'sz' => [20, 28]],
-                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'fall', 'w' => 2],
-                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L'],
+                        /* Poppies and doves, and deliberately nothing
+                         * else. The flag and the falling stars were shared
+                         * with the celebratory themes and were most of why
+                         * the patriotic rotation felt like one theme. */
+                        ['s' => 'poppy', 'b' => 'sway', 'st' => 1, 'w' => 4, 'sz' => [20, 28]],
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'w' => 2],
+                        /* A pale star, not the red/white/blue one every
+                         * patriotic theme shared. Same count as before,
+                         * nothing shared with the celebratory themes. */
+                        ['c' => 'star', 'cl' => ['#F1F3F5', '#DEE2E6'], 'b' => 'twinkle', 'w' => 1],
                     ],
                 ],
                 'egg' => [
@@ -492,11 +499,23 @@ class Themes {
                 'ambient' => [
                     'hero'      => 'eagle',
                     'particles' => [
-                        ['s' => 'flagcloth', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
+                        /* Sombre, but not Memorial Day. Medals and the
+                         * remembrance ribbon lead; the dove is left as
+                         * Memorial's marker so the two read apart at a
+                         * glance. Poppy is the one sprite they share.
+                         *
+                         * 'ribbon' had been drawn but never displayed: the
+                         * theme carried it as 'accent' => ['svg' => ...],
+                         * a key the engine has never read (its ACCENTS map
+                         * is hardcoded by theme). Using it as a particle is
+                         * what makes it real. */
+                        ['s' => 'medal', 'b' => 'dangle', 'w' => 3, 'sz' => [20, 26]],
+                        ['s' => 'ribbon', 'b' => 'flutter', 'w' => 3, 'sz' => [18, 26]],
                         ['s' => 'poppy', 'b' => 'sway', 'st' => 1, 'w' => 2, 'sz' => [20, 28]],
-                        ['s' => 'medal', 'b' => 'dangle', 'sz' => [20, 26]],
-                        ['c' => 'star', 'cl' => ['#B22234', '#F1F3F5', '#3C3B6E'], 'b' => 'twinkle', 'w' => 2],
-                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L'],
+                        /* The dove stays in the brief's list for Veterans,
+                         * but at a weight that keeps it Memorial's motif:
+                         * the two share their contents, not their feel. */
+                        ['s' => 'dove', 'b' => 'fly', 'face' => 'L', 'w' => 1],
                     ],
                 ],
                 'egg' => [
