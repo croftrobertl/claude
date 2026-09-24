@@ -319,7 +319,13 @@
 		var reserve = water ? 3 : 0;
 		var maxParts = mx2(1, mn(maxTotal - reserve, A.max || 99));
 		var heroEvery = CFG.heroEvery || [120, 180];
-		var DEBUG = DBG && !!CFG.debug;
+		/* CFG.diag, not CFG.debug: the plugin has only ever emitted 'diag'
+		 * (Plugin::config), so this read a key that was never sent and DEBUG
+		 * was permanently false on every real page. The diagnostics PANEL
+		 * still worked because it tests CFG.diag directly, which is why the
+		 * mismatch stayed hidden — but _state, the forceNow/forceHour test
+		 * hooks and the slow-frame report were all unreachable. */
+		var DEBUG = DBG && !!CFG.diag;
 
 		/* Visual richness + advanced toggles. Classic = v2 behavior;
 		 * Minimal = sprites only. Solemn themes never get the playful set. */
@@ -1239,6 +1245,14 @@
 				if (hero) { scaleXY(hero, sx, sy); }
 				if (vig && vig.st) { scaleXY(vig.st, sx, sy); }
 			}
+			/* The subtle layer follows the same rule as the sprites: a
+			 * resize RESCALES it, it does not restart it. Re-seeding here
+			 * would make the calm layer twitch on every iOS URL-bar
+			 * collapse, which is the exact complaint 3.13.0 fixed for the
+			 * sprites. A real restart (or a first run) re-seeds, because the
+			 * counts themselves scale with width. */
+			if (restart || !subParts.length) { initSubtle(); }
+			else { for (k = 0; k < subParts.length; k++) { scaleXY(subParts[k], sx, sy); } }
 			snowCols = FX.snow ? new Float32Array(MT.ceil(vw / 8) + 1) : null;
 			/* A real resize changes both the box and what is under it. The
 			 * map is rebuilt on the throttle, never inline: this path runs on
@@ -1341,6 +1355,311 @@
 			snowCols[i] = mn(6, snowCols[i] + 0.7);
 			if (i > 0) { snowCols[i - 1] = mn(6, snowCols[i - 1] + 0.3); }
 			if (i < snowCols.length - 1) { snowCols[i + 1] = mn(6, snowCols[i + 1] + 0.3); }
+		}
+		/* ================= LAYER 1 — THE SUBTLE LAYER =====================
+		 * The calm baseline: one quiet seasonal effect, always running,
+		 * always UNDER the sprites. It is drawn on the same canvas rather
+		 * than a second one, immediately after the background fills and
+		 * before anything else, which is what "below the sprite layer"
+		 * means in painting-order terms.
+		 *
+		 * A second canvas was the obvious alternative and is the wrong
+		 * trade here: every layering bug this plugin has had lived in the
+		 * mount (containing blocks under transform, z-index resolving in
+		 * the wrong stacking context, replaced-element sizing), and a
+		 * second mount doubles that surface to buy an ordering this
+		 * already gives for free.
+		 *
+		 * SUBTLE IS THE POINT. Low counts, slow speeds, low alpha. If one
+		 * of these reads as a second sprite show it is wrong, however
+		 * pretty it is. Counts scale with viewport width so a phone does
+		 * not get a desktop's worth of particles.
+		 * ----------------------------------------------------------------- */
+		var SUBTLE = {
+			/* Fall — leaves drifting down, tumbling as they go. */
+			leaves: {
+				n: 11, a: 0.28, cl: ['#C1440E', '#E07A2F', '#B8860B', '#8B5A2B', '#A2562B'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-60, -10);
+					p.r = rnd(4.5, 8.5); p.vy = rnd(13, 26); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.2); p.rot = rnd(0, TAU); p.rv = rnd(-0.7, 0.7);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 16 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					cx.translate(p.x, p.y); cx.rotate(p.rot);
+					cx.fillStyle = p.c;
+					cx.beginPath();
+					cx.ellipse(0, 0, p.r, p.r * 0.52, 0, 0, TAU);
+					cx.fill();
+					cx.strokeStyle = 'rgba(0,0,0,.25)'; cx.lineWidth = 0.7;
+					cx.beginPath(); cx.moveTo(-p.r, 0); cx.lineTo(p.r, 0); cx.stroke();
+				}
+			},
+			/* Winter — snow. Slower and sparser than the Christmas snow FX,
+			 * which is a different, heavier effect and stays as it is. */
+			snow: {
+				n: 15, a: 0.31, cl: ['#FFFFFF', '#EAF3FB'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -8);
+					p.r = rnd(1.3, 3.1); p.vy = rnd(11, 22); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.3, 0.8); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 9 * dt;
+				},
+				draw: function (p) {
+					cx.fillStyle = p.c;
+					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
+				}
+			},
+			/* Spring — blossom petals, lighter and slower than leaves. */
+			blossom: {
+				n: 12, a: 0.27, cl: ['#F8C8DC', '#FADCE6', '#F6B8CE', '#FFFFFF'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-50, -8);
+					p.r = rnd(3.2, 6.2); p.vy = rnd(10, 19); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.6, 1.4); p.rot = rnd(0, TAU); p.rv = rnd(-0.5, 0.5);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 20 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					cx.translate(p.x, p.y); cx.rotate(p.rot);
+					cx.fillStyle = p.c;
+					cx.beginPath();
+					cx.ellipse(0, 0, p.r, p.r * 0.42, 0, 0, TAU);
+					cx.fill();
+				}
+			},
+			/* Summer — a few dragonflies over a faint heat shimmer on the
+			 * water. The shimmer is the band, the dragonflies are the
+			 * particles; both are deliberately near the bottom. */
+			dragonheat: {
+				n: 5, a: 0.30, shimmer: true, cl: ['#4DABF7', '#38D9A9', '#74C0FC'],
+				seed: function (p, first) {
+					p.x = first ? rnd(0, vw) : (rand() < 0.5 ? -30 : vw + 30);
+					p.y = rnd(vh * 0.45, vh * 0.88);
+					p.r = rnd(5, 9); p.dir = p.x < vw / 2 ? 1 : -1;
+					p.v = rnd(16, 34); p.ph = rnd(0, TAU); p.sp = rnd(1.6, 3.0);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.ph += p.sp * dt;
+					p.x += p.dir * p.v * dt;
+					p.y += sin(p.ph) * 10 * dt;
+				},
+				draw: function (p) {
+					cx.translate(p.x, p.y);
+					cx.strokeStyle = p.c; cx.lineWidth = 1.1;
+					cx.beginPath(); cx.moveTo(-p.r, 0); cx.lineTo(p.r * 0.6, 0); cx.stroke();
+					var w = p.r * 0.85, fl = sin(p.ph * 4) * 0.35 + 0.65;
+					cx.globalAlpha *= 0.85;
+					cx.beginPath();
+					cx.ellipse(0, -w * 0.35 * fl, w, w * 0.3 * fl, -0.3, 0, TAU);
+					cx.ellipse(0, w * 0.35 * fl, w, w * 0.3 * fl, 0.3, 0, TAU);
+					cx.stroke();
+				}
+			},
+			/* Valentine's — hearts, rising rather than falling. */
+			hearts: {
+				n: 9, a: 0.26, cl: ['#FF6B81', '#FF8FA3', '#E8375A'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : vh + rnd(8, 50);
+					p.r = rnd(4, 7.5); p.vy = -rnd(12, 24); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.5, 1.1); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 14 * dt;
+				},
+				draw: function (p) {
+					var r = p.r;
+					cx.translate(p.x, p.y); cx.fillStyle = p.c;
+					cx.beginPath();
+					cx.moveTo(0, r * 0.75);
+					cx.bezierCurveTo(-r * 1.3, -r * 0.2, -r * 0.5, -r, 0, -r * 0.35);
+					cx.bezierCurveTo(r * 0.5, -r, r * 1.3, -r * 0.2, 0, r * 0.75);
+					cx.fill();
+				}
+			},
+			/* New Year's — confetti, tumbling down. */
+			confetti: {
+				n: 14, a: 0.30, cl: ['#FFD43B', '#FF6B6B', '#4DABF7', '#51CF66', '#F1F3F5'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-50, -8);
+					p.r = rnd(2.6, 5); p.vy = rnd(22, 42); p.ph = rnd(0, TAU);
+					p.sp = rnd(1.4, 3.2); p.rot = rnd(0, TAU); p.rv = rnd(-2.4, 2.4);
+					p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt;
+					p.x += sin(p.ph) * 22 * dt; p.rot += p.rv * dt;
+				},
+				draw: function (p) {
+					cx.translate(p.x, p.y); cx.rotate(p.rot);
+					cx.fillStyle = p.c;
+					/* The vertical squash is the tumble: a flat rectangle
+					 * edge-on reads as a spinning chip without a 3D turn. */
+					cx.fillRect(-p.r, -p.r * 0.45 * abs(cos(p.ph)), p.r * 2, p.r * 0.9 * abs(cos(p.ph)) + 0.6);
+				}
+			},
+			/* Halloween — embers rising and winking out. */
+			embers: {
+				n: 12, a: 0.30, cl: ['#FF7A00', '#FF9E3D', '#E8590C', '#FFC078'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : vh + rnd(6, 40);
+					p.r = rnd(1.2, 2.8); p.vy = -rnd(16, 34); p.ph = rnd(0, TAU);
+					p.sp = rnd(1.8, 3.6); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 11 * dt;
+				},
+				draw: function (p) {
+					cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 2) * 0.5 + 0.5);
+					cx.fillStyle = p.c;
+					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
+				}
+			},
+			/* July 4 — drifting sparks, red/white/blue, falling away. */
+			sparks: {
+				n: 12, a: 0.28, cl: ['#FF5252', '#F1F3F5', '#5C7CFA'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-40, -6);
+					p.r = rnd(1.1, 2.4); p.vy = rnd(18, 36); p.ph = rnd(0, TAU);
+					p.sp = rnd(2.2, 4.4); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 13 * dt;
+				},
+				draw: function (p) {
+					cx.globalAlpha *= 0.5 + 0.5 * (sin(p.ph) * 0.5 + 0.5);
+					cx.strokeStyle = p.c; cx.lineWidth = p.r;
+					cx.beginPath();
+					cx.moveTo(p.x, p.y - p.r * 2); cx.lineTo(p.x, p.y + p.r * 2);
+					cx.stroke();
+				}
+			},
+			/* Christmas — slow warm bokeh, the softest of the set. */
+			bokeh: {
+				n: 8, a: 0.22, cl: ['#FFD8A8', '#FFE8CC', '#FFC9C9', '#D8F5A2'],
+				seed: function (p, first) {
+					p.x = rnd(0, vw); p.y = first ? rnd(0, vh) : rnd(-70, -20);
+					p.r = rnd(9, 20); p.vy = rnd(5, 12); p.ph = rnd(0, TAU);
+					p.sp = rnd(0.25, 0.6); p.c = pick(this.cl);
+				},
+				step: function (p, dt) {
+					p.y += p.vy * dt; p.ph += p.sp * dt; p.x += sin(p.ph) * 7 * dt;
+				},
+				draw: function (p) {
+					var g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+					g.addColorStop(0, p.c);
+					g.addColorStop(0.55, p.c);
+					g.addColorStop(1, 'rgba(255,255,255,0)');
+					cx.globalAlpha *= 0.55 + 0.45 * (sin(p.ph * 1.7) * 0.5 + 0.5);
+					cx.fillStyle = g;
+					cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
+				}
+			}
+		};
+
+		/* Theme -> effect. PHP owns this map so the owner can re-point any
+		 * theme from the settings page without a plugin release; this is
+		 * only the fallback for a config that predates the setting. */
+		var SUBTLE_FALLBACK = {
+			labor_day: 'dragonheat', patriot_day: 'leaves', fall_fishing: 'leaves',
+			halloween: 'embers', thanksgiving: 'leaves', christmas: 'bokeh',
+			new_years: 'confetti', snowbird: 'snow', mlk: 'snow',
+			mardi_gras: 'snow', valentines: 'hearts', presidents: 'snow',
+			strawberry: 'blossom', st_patricks: 'blossom', easter: 'blossom',
+			april_fools: 'blossom', spring_canal: 'blossom', four_twenty: 'blossom',
+			july4: 'sparks', memorial_day: 'dragonheat', mothers_day: 'blossom',
+			fathers_day: 'dragonheat', veterans_day: 'leaves',
+			summer_canal: 'dragonheat', earth_day: 'blossom',
+			florida_keys: 'dragonheat', classic: ''
+		};
+
+		var SUBC = CFG.subtle || {};
+		var subIntensity = clamp(SUBC.intensity == null ? 0.6 : +SUBC.intensity, 0, 1);
+		var subKey = '';
+		if (SUBC.on !== false && themeKey) {
+			var map = SUBC.map || {};
+			subKey = map[themeKey] != null ? String(map[themeKey]) : (SUBTLE_FALLBACK[themeKey] || '');
+		}
+		var subEff = subKey && SUBTLE[subKey] ? SUBTLE[subKey] : null;
+		var subParts = [], subShim = 0;
+
+		function subSeed(p, first) {
+			subEff.seed(p, first);
+			p.al = rnd(0.65, 1);
+		}
+		function initSubtle() {
+			subParts.length = 0;
+			if (!subEff) { return; }
+			/* Scale with width so a phone is not given a desktop's field,
+			 * and with the owner's intensity. Never fewer than 3, or the
+			 * effect reads as a glitch rather than a season. */
+			var scale = clamp(vw / 1280, 0.45, 1);
+			var n = MT.round(subEff.n * scale * (0.45 + subIntensity * 0.85));
+			n = clamp(n, 3, subEff.n);
+			for (var i = 0; i < n; i++) {
+				var p = {};
+				subSeed(p, true);
+				subParts.push(p);
+			}
+		}
+		function stepSubtle(dt) {
+			if (!subEff) { return; }
+			subShim += dt;
+			for (var i = 0; i < subParts.length; i++) {
+				var p = subParts[i];
+				subEff.step(p, dt);
+				/* Respawn on exit. The margin is generous because bokeh is
+				 * large and popping in at the edge is the one thing that
+				 * makes a slow effect look cheap. */
+				if (p.y > vh + 90 || p.y < -90 || p.x < -90 || p.x > vw + 90) {
+					subSeed(p, false);
+				}
+			}
+		}
+		/* The summer heat shimmer: a few translucent bands over the water,
+		 * sliding at different rates. Cheap — four fillRects — and it has
+		 * to stay that way, because it draws on every frame of the calmest
+		 * layer on the page. */
+		function drawShimmer() {
+			var base = waterY || vh * 0.92, i, y, w2;
+			cx.save();
+			cx.globalAlpha = 0.05 * subIntensity;
+			cx.fillStyle = '#FFFFFF';
+			for (i = 0; i < 4; i++) {
+				y = base - i * 9 + sin(subShim * (0.5 + i * 0.17)) * 3;
+				w2 = vw * (0.5 + 0.2 * sin(subShim * 0.3 + i));
+				cx.fillRect((vw - w2) / 2 + sin(subShim * 0.21 + i) * 40, y, w2, 2.4);
+			}
+			cx.restore();
+		}
+		function drawSubtle() {
+			if (!subEff) { return; }
+			if (subEff.shimmer) { drawShimmer(); }
+			/* Intensity spans roughly half to full effect strength rather
+			 * than scaling linearly from zero: at the 0.6 default the layer
+			 * has to be SEEN to be judged, and a straight multiply put the
+			 * leaves at 12% alpha over a white article, which is not subtle
+			 * so much as absent. The sprite-opacity slider still moves it,
+			 * but with a floor — Layer 1 is the baseline face of the site
+			 * and should not vanish because the sprites were turned down. */
+			var a = subEff.a * (0.55 + subIntensity * 0.75) * clamp(alphaBase / 0.35, 0.6, 1.4);
+			for (var i = 0; i < subParts.length; i++) {
+				var p = subParts[i];
+				cx.save();
+				cx.globalAlpha = clamp(a * p.al, 0, 1);
+				subEff.draw(p);
+				cx.restore();
+			}
 		}
 		function drawSnow() {
 			if (!snowCols) { return; }
@@ -3350,6 +3669,10 @@
 			cx.clearRect(0, 0, vw, vh);
 			var clipped = footMode && clipText();
 			drawBgFills();
+			/* Layer 1 before everything else on the canvas: the subtle layer
+			 * is the calm baseline and every sprite belongs on top of it. */
+			stepSubtle(dt);
+			drawSubtle();
 			drawSnow();
 			if (burstMode) {
 				if (!nextBurst) { nextBurst = t + 1500; }
@@ -3438,6 +3761,19 @@
 				get sep() { return sepRun; },
 				get share() { return viewShare(); },
 				get placement() { return footMode ? 'footer' : 'content'; },
+				get subtle() {
+					/* Positions included so a suite can ask "did it move?"
+					 * deterministically. Reading that from canvas pixels is
+					 * a sampling question, and with a nine-particle field
+					 * two strided reads coincide often enough to fail a
+					 * correct build. */
+					var pos = [], i;
+					for (i = 0; i < subParts.length; i++) {
+						pos.push({ x: MT.round(subParts[i].x * 10) / 10, y: MT.round(subParts[i].y * 10) / 10 });
+					}
+					return { key: subKey, on: !!subEff, n: subParts.length,
+						intensity: subIntensity, shimmer: !!(subEff && subEff.shimmer), pos: pos };
+				},
 				get hostPath() { return host ? pathOf(host) : ''; },
 				get textBoxes() { return textBoxes.slice(0); },
 				get textMs() { return textMs; },

@@ -609,6 +609,61 @@ class Themes {
      *
      * @return array<string, string>
      */
+    /**
+     * Layer 1 — the subtle layer: which quiet effect each theme runs.
+     *
+     * Four seasonal effects carry the year, with five bespoke exceptions
+     * for the days where a guest would notice anything else. Deliberately
+     * NOT 27 bespoke effects: the subtle layer is the calm baseline, and a
+     * different flourish every fortnight is the opposite of calm.
+     *
+     * The engine mirrors this map as SUBTLE_FALLBACK for a cached config
+     * that predates the setting; keep the two in step, the same way
+     * ambient.js mirrors BASE_THEME.
+     *
+     * '' means no subtle layer at all — 'classic' is the "None" option, so
+     * choosing it means choosing nothing.
+     *
+     * @return array<string, string> theme key => effect key.
+     */
+    public static function subtle_defaults(): array {
+        return [
+            // Fall
+            'patriot_day'  => 'leaves',
+            'fall_fishing' => 'leaves',
+            'thanksgiving' => 'leaves',
+            'veterans_day' => 'leaves',
+            // Winter
+            'snowbird'     => 'snow',
+            'mlk'          => 'snow',
+            'mardi_gras'   => 'snow',
+            'presidents'   => 'snow',
+            // Spring
+            'strawberry'   => 'blossom',
+            'st_patricks'  => 'blossom',
+            'easter'       => 'blossom',
+            'april_fools'  => 'blossom',
+            'spring_canal' => 'blossom',
+            'four_twenty'  => 'blossom',
+            'mothers_day'  => 'blossom',
+            'earth_day'    => 'blossom',
+            // Summer — dragonflies over a faint heat shimmer on the water
+            'labor_day'    => 'dragonheat',
+            'memorial_day' => 'dragonheat',
+            'fathers_day'  => 'dragonheat',
+            'summer_canal' => 'dragonheat',
+            'florida_keys' => 'dragonheat',
+            // The five exceptions
+            'valentines'   => 'hearts',
+            'new_years'    => 'confetti',
+            'halloween'    => 'embers',
+            'july4'        => 'sparks',
+            'christmas'    => 'bokeh',
+            // The "None" option means none of this either.
+            'classic'      => '',
+        ];
+    }
+
     public static function labels(): array {
         return [
             'labor_day'    => __('Labor Day', 'dcc-seasons'),

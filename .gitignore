@@ -1,2 +1,2 @@
-mphb-availability-calendar.zip
-.DS_Store
+build/
+node_modules/

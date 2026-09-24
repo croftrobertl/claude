@@ -72,6 +72,40 @@ class Settings {
         ];
     }
 
+    /**
+     * The subtle-layer effects the engine implements, for the settings
+     * dropdowns and for validating a saved map. Keys must match the SUBTLE
+     * registry in assets/js/engine.js.
+     */
+    public static function subtle_effects(): array {
+        return [
+            'leaves'     => __('Leaves drifting down (fall)', 'dcc-seasons'),
+            'snow'       => __('Snow (winter)', 'dcc-seasons'),
+            'blossom'    => __('Blossom petals (spring)', 'dcc-seasons'),
+            'dragonheat' => __('Dragonflies over a heat shimmer (summer)', 'dcc-seasons'),
+            'hearts'     => __('Hearts', 'dcc-seasons'),
+            'confetti'   => __('Confetti', 'dcc-seasons'),
+            'embers'     => __('Embers', 'dcc-seasons'),
+            'sparks'     => __('Sparks', 'dcc-seasons'),
+            'bokeh'      => __('Warm bokeh lights', 'dcc-seasons'),
+        ];
+    }
+
+    /**
+     * The effective theme => effect map: the plugin's own choices, with the
+     * owner's overrides on top. A theme the owner has never touched keeps
+     * tracking the plugin, so a theme added in a later release arrives with
+     * a sensible effect instead of none.
+     */
+    public static function subtle_map(array $opt): array {
+        $map = Themes::subtle_defaults();
+        $over = isset($opt['subtle_map']) && is_array($opt['subtle_map']) ? $opt['subtle_map'] : [];
+        foreach ($over as $theme => $eff) {
+            $map[(string) $theme] = (string) $eff;
+        }
+        return $map;
+    }
+
     public static function scopes(): array {
         return [
             'home'         => __('Homepage only', 'dcc-seasons'),
@@ -305,6 +339,15 @@ class Settings {
             'density'         => 10,
             'opacity'         => 0.35,
             'richness'        => 'full',
+            /* Layer 1, the calm baseline. On by default: it IS the new
+             * default face of the site, and an install that upgrades
+             * without touching settings should see it. */
+            'subtle'          => 1,
+            'subtle_intensity' => 0.6,
+            /* theme key => effect key. Empty means "use the built-in
+             * mapping", so an owner who never opens this setting tracks the
+             * plugin's own choices as themes are added. */
+            'subtle_map'      => [],
             'fx_reflections'  => 1,
             'fx_vignettes'    => 1,
             'fx_pointer'      => 1,
@@ -419,6 +462,29 @@ class Settings {
 
         $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
         $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
+
+        $out['subtle'] = empty($in['subtle']) ? 0 : 1;
+        $si = (float) ($in['subtle_intensity'] ?? $d['subtle_intensity']);
+        $out['subtle_intensity'] = min(1.0, max(0.0, round($si, 2)));
+        /* Only keys we know, on both sides: a stale theme key or a retired
+         * effect name would otherwise sit in the option for ever and be
+         * shipped to every visitor. '' is kept — it means "no subtle layer
+         * on this theme", which is a real choice. */
+        $out['subtle_map'] = [];
+        $effects = self::subtle_effects();
+        $themes  = Themes::labels();
+        if (!empty($in['subtle_map']) && is_array($in['subtle_map'])) {
+            foreach ($in['subtle_map'] as $theme => $eff) {
+                $theme = sanitize_key((string) $theme);
+                $eff   = sanitize_key((string) $eff);
+                if (!isset($themes[$theme])) {
+                    continue;
+                }
+                if ($eff === '' || isset($effects[$eff])) {
+                    $out['subtle_map'][$theme] = $eff;
+                }
+            }
+        }
         foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {
             $out[$fx] = empty($in[$fx]) ? 0 : 1;
         }

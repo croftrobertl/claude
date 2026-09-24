@@ -37,6 +37,10 @@ if (!function_exists('add_query_arg')) {
     function add_query_arg($k, $v, $url) { return $url; }
 }
 
+if (!function_exists('sanitize_key')) {
+    function sanitize_key($k) { return strtolower(preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $k)); }
+}
+
 require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
 require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
 
@@ -60,6 +64,20 @@ foreach (Schedule::anchors() as $key => $a) {
     $anchors[$key] = $out;
 }
 
+$themes = Themes::themes();
+/* --noparticles empties every theme's particle list. This is the ONLY
+ * honest way for a suite to isolate the subtle layer: --density=0 does the
+ * opposite of what it looks like, because the engine reads
+ * `CFG.density || 10` and 0 is falsy, so zero density becomes TEN sprites.
+ * richness=minimal drops heroes and vignettes but not the sprites. */
+if (!empty($args['noparticles'])) {
+    foreach ($themes as $k => $t) {
+        if (isset($t['ambient']['particles'])) {
+            $themes[$k]['ambient']['particles'] = [];
+        }
+    }
+}
+
 $config = [
     'enabled'      => true,
     'ambient'      => true,
@@ -69,13 +87,26 @@ $config = [
     'tapCount'     => 5,
     'tapWindow'    => 3000,
     'density'      => (int) ($args['density'] ?? 16),
-    'opacity'      => 1.0,
+    'opacity'      => isset($args['opacity']) ? (float) $args['opacity'] : 1.0,
     'layer'        => 1,
     'placement'    => (string) ($args['placement'] ?? 'footer'),
     'footerSel'    => 'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer',
     'backdropHost' => '',
+    /* Layer 1. --subtle=<effect> pins one effect for a contact sheet;
+     * --subtle=off turns the layer off entirely. */
+    'subtle'       => [
+        'on'        => (($args['subtle'] ?? '') !== 'off'),
+        'intensity' => isset($args['intensity']) ? (float) $args['intensity'] : 0.6,
+        'map'       => (isset($args['subtle']) && $args['subtle'] !== 'off' && $args['subtle'] !== true)
+            ? array_fill_keys(array_keys(Themes::subtle_defaults()), (string) $args['subtle'])
+            : Themes::subtle_defaults(),
+    ],
+    /* --richness=minimal is how a suite isolates ONE layer: it drops the
+     * heroes and the vignettes as well as the extras, so density=0 then
+     * really does leave the canvas to the subtle layer. Without it the
+     * year-round heron still crosses the screen and gets measured. */
     'visual'       => [
-        'richness'    => 'full',
+        'richness'    => (string) ($args['richness'] ?? 'full'),
         'reflections' => true,
         'vignettes'   => true,
         'pointer'     => true,
@@ -84,7 +115,7 @@ $config = [
     ],
     'schedule'     => Schedule::defaults(),
     'anchors'      => $anchors,
-    'themes'       => Themes::themes(),
+    'themes'       => $themes,
     'matrixSrc'    => 'matrix.js',
     'engineSrc'    => 'engine.js',
     'heroEvery'    => [120, 180],

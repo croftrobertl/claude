@@ -576,6 +576,15 @@ final class Plugin {
              * @param string $selector
              */
             'backdropHost' => (string) apply_filters('dcc_seasons_backdrop_host', ''),
+            /* Layer 1 — the subtle layer. The map is sent COMPLETE (the
+             * plugin's own choices with the owner's overrides applied), so
+             * the engine's mirrored fallback is only ever reached by a
+             * cached page whose config predates this key. */
+            'subtle'      => [
+                'on'        => !empty($opt['subtle']),
+                'intensity' => (float) $opt['subtle_intensity'],
+                'map'       => Settings::subtle_map($opt),
+            ],
             'visual'      => [
                 'richness'    => (string) $opt['richness'],
                 'reflections' => !empty($opt['fx_reflections']),
