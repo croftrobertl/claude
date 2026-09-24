@@ -1,0 +1,98 @@
+<?php
+/**
+ * DCC Seasons — emit the CLIENT CONFIG as JSON, outside WordPress.
+ *
+ * The browser suites need the same `window.DCC_SEASONS` object the plugin
+ * prints on a real page. Rebuilding that object by hand in every fixture is
+ * how fixtures drift away from the plugin; this reads the actual Themes and
+ * Schedule classes instead, so a theme or row added in PHP shows up in the
+ * tests without anyone remembering to copy it.
+ *
+ * Usage:
+ *   php tools/gen-config.php [--placement=footer|content] [--theme=<key>]
+ *                            [--density=N] [--diag]
+ *
+ * --theme pins a theme regardless of today's date (the suites must not
+ * change behaviour on 25 December). It is expressed the way the plugin
+ * expresses it — as the admin preview flag — so the loader takes the same
+ * path a real preview does.
+ *
+ * @package DCC_Seasons
+ */
+
+define('ABSPATH', 1);
+define('DCC_SEASONS_VERSION', 'test');
+define('DCC_SEASONS_URL', './');
+
+if (!function_exists('__')) {
+    function __($s, $d = null) { return $s; }
+}
+if (!function_exists('esc_html__')) {
+    function esc_html__($s, $d = null) { return $s; }
+}
+if (!function_exists('apply_filters')) {
+    function apply_filters($tag, $value) { return $value; }
+}
+if (!function_exists('add_query_arg')) {
+    function add_query_arg($k, $v, $url) { return $url; }
+}
+
+require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
+require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
+
+use DCC_Seasons\Schedule;
+use DCC_Seasons\Themes;
+
+$args = [];
+foreach (array_slice($argv, 1) as $a) {
+    if (preg_match('/^--([a-z]+)(?:=(.*))?$/', $a, $m)) {
+        $args[$m[1]] = $m[2] ?? true;
+    }
+}
+
+/** Anchors in the shape the client expects (mirrors Plugin::client_anchors). */
+$anchors = [];
+foreach (Schedule::anchors() as $key => $a) {
+    $out = ['type' => $a['type']];
+    foreach (['m', 'd', 'wd', 'n', 'off'] as $k) {
+        if (isset($a[$k])) { $out[$k] = $a[$k]; }
+    }
+    $anchors[$key] = $out;
+}
+
+$config = [
+    'enabled'      => true,
+    'ambient'      => true,
+    'egg'          => true,
+    'tapSelector'  => '#site-title',
+    'tapFallback'  => '#masthead',
+    'tapCount'     => 5,
+    'tapWindow'    => 3000,
+    'density'      => (int) ($args['density'] ?? 16),
+    'opacity'      => 1.0,
+    'layer'        => 1,
+    'placement'    => (string) ($args['placement'] ?? 'footer'),
+    'footerSel'    => 'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer',
+    'backdropHost' => '',
+    'visual'       => [
+        'richness'    => 'full',
+        'reflections' => true,
+        'vignettes'   => true,
+        'pointer'     => true,
+        'evening'     => false,
+        'snow'        => true,
+    ],
+    'schedule'     => Schedule::defaults(),
+    'anchors'      => $anchors,
+    'themes'       => Themes::themes(),
+    'matrixSrc'    => 'matrix.js',
+    'engineSrc'    => 'engine.js',
+    'heroEvery'    => [120, 180],
+    'preview'      => isset($args['theme']) ? (string) $args['theme'] : null,
+    'previewLabel' => isset($args['theme']) ? (string) $args['theme'] : '',
+    'version'      => 'test',
+    'diag'         => !empty($args['diag']),
+    'i18n'         => ['close' => 'Close'],
+];
+
+echo json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

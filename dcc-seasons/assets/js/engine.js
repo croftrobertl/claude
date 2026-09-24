@@ -804,10 +804,20 @@
 		 * fully opaque colour can move this way — an image or a gradient
 		 * cannot be faked, so those are left alone and reported. */
 		var bgFills = [];
+		/* An Elementor page stacks MANY opaque sections inside the host, and
+		 * each one that scrolls into the canvas box hides the backdrop until
+		 * its background moves onto the canvas. Three slots was sized for a
+		 * theme page with one or two painted blocks; measured on the
+		 * Elementor fixture, four sections cover 62% of the canvas and three
+		 * slots cannot clear them. Each slot costs one getBoundingClientRect
+		 * and one fillRect per frame, and drawBgFills skips the ones that
+		 * are off screen, so the ceiling is what is VISIBLE, not what is
+		 * registered. */
+		var BGFILL_MAX = 10;
 		/* Asked twice: once by the descend decision, which needs to know what
 		 * STAYING would be worth, and once by the transfer itself. */
 		function canTransfer(el) {
-			if (!el || el === cv || bgFills.length >= 3) { return false; }
+			if (!el || el === cv || bgFills.length >= BGFILL_MAX) { return false; }
 			var cs2 = W.getComputedStyle(el);
 			if (cs2.backgroundImage !== 'none' || alphaOf(cs2) < 0.95) { return false; }
 			for (var i = 0; i < bgFills.length; i++) { if (bgFills[i].el === el) { return false; } }
@@ -830,6 +840,11 @@
 			for (i = 0; i < bgFills.length; i++) {
 				r2 = bgFills[i].el.getBoundingClientRect();
 				if (r2.width < 1 || r2.height < 1) { continue; }
+				/* Off-screen fills cost a fillRect for nothing, and with a
+				 * long Elementor page most registered fills are off screen
+				 * at any moment. Skipping them is what lets the slot count
+				 * grow without the per-frame cost growing with it. */
+				if (r2.bottom < cr.top - 2 || r2.top > cr.bottom + 2) { continue; }
 				cx.fillStyle = bgFills[i].color;
 				cx.fillRect(r2.left - cr.left, r2.top - cr.top, r2.width, r2.height);
 			}
@@ -1523,7 +1538,57 @@
 		}
 		/* A sticky canvas rides the viewport, so scrolling changes what is
 		 * under it. Settle first: a scroll is a stream of events. */
-		W.addEventListener('scroll', function () { queueMap(220); }, { passive: true });
+		W.addEventListener('scroll', function () { queueMap(220); queueCover(260); }, { passive: true });
+
+		/* --- Coverage is not a load-time fact. --------------------------
+		 * fixCoverage() ran at mount and again at the settled pass, and both
+		 * of those happen at whatever scroll offset the page loads at —
+		 * normally 0. At scroll 0 the only thing inside the canvas box is
+		 * the host's own background, so reach measures 100%, the corrective
+		 * loop concludes there is nothing to fix, and it is never asked
+		 * again. Everything that actually covers the backdrop on this site
+		 * is BELOW THE FOLD at that moment.
+		 *
+		 * Measured on the Elementor fixture at 1280x900, reach by scroll
+		 * offset: 0 -> 100%, 400 -> 88%, 900 -> 63%, 1400 -> 38%. So by the
+		 * time the visitor is reading, nearly two thirds of the backdrop is
+		 * painted over, and the engine still believes its own load-time
+		 * verdict of 100%.
+		 *
+		 * Note what the covering elements are NOT: their stacking contexts
+		 * are irrelevant. A DESCENDANT of the host paints above a
+		 * z-index:-1 child of that host whether or not it makes a context —
+		 * negative-z children paint in step 3 of the painting order and
+		 * in-flow descendants in step 4 and later. Transform, filter and
+		 * opacity on those sections change nothing about this.
+		 *
+		 * So this pass only ever moves a covering background onto the
+		 * canvas. It never re-hosts: a descend mid-scroll would move the
+		 * backdrop under the reader and re-open every decision the settled
+		 * pass made. */
+		var covTimer = 0, covAt = 0, covRuns = 0;
+		var COVER_MIN = 500;   /* ms between re-checks, at most */
+		function refreshCover() {
+			covTimer = 0;
+			covAt = nowMs();
+			if (!CFG.layer || !host || !D.body.contains(cv)) { return; }
+			if (bgFills.length >= BGFILL_MAX) { return; }
+			/* Up to three coverers per settle: the common case is one new
+			 * section scrolling in, and an unbounded loop here would walk
+			 * the whole page in one frame. */
+			for (var pass = 0; pass < 3; pass++) {
+				var cov = coverage();
+				if (!cov.measurable || cov.reach >= 0.75 || !cov.cover) { break; }
+				if (!transferBg(cov.cover)) { break; }
+				covRuns++;
+			}
+		}
+		function queueCover(ms) {
+			if (!CFG.layer) { return; }
+			clearTimeout(covTimer);
+			var wait = mx2(ms || 260, COVER_MIN - (nowMs() - covAt));
+			covTimer = setTimeout(refreshCover, mx2(0, wait));
+		}
 
 		/* One open cell whose centre lies in the wanted box, found by a
 		 * bounded scan from a random start — no allocation, and it degrades
