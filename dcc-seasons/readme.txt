@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 3.18.1
+Stable tag: 4.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,7 +13,7 @@ easter egg, built cache-safe and performance-first for doracanalcourt.com.
 
 == Description ==
 
-Two layers, both vanilla JS + 2D canvas (no libraries, no WebGL, no image
+Three layers, all vanilla JS + 2D canvas (no libraries, no WebGL, no image
 assets — every ambient particle is a bespoke inline-SVG sprite or a canvas
 primitive drawn in code; emoji survive only as tofu fallbacks and as the
 Matrix rain's deliberate glyph aesthetic):
@@ -165,6 +165,60 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.0.0 =
+BREAKING: the layer model changed and several themes' sprite sets changed.
+
+* NEW — Layer 1, the subtle layer. A quiet seasonal effect that always runs
+  underneath the sprites: leaves in fall, snow in winter, blossom in spring,
+  and dragonflies over a faint heat shimmer in summer, with five bespoke
+  days — hearts at Valentine's, confetti at New Year's, embers at Halloween,
+  sparks on Independence Day and warm bokeh at Christmas. It is drawn on the
+  existing canvas rather than a second one, so it inherits the placement and
+  layering decisions the backdrop already makes. Deliberately faint:
+  measured with the sprites suppressed it lights 0.02-0.69% of the canvas at
+  a mean alpha of 8-36 out of 255. On/off, intensity and the per-theme
+  effect are all settings.
+* FIXED — the ambient backdrop was being hidden by page content. Coverage
+  was only ever measured at mount and at the settled pass, both of which run
+  at the scroll offset the page loads at. At scroll 0 the only thing inside
+  the canvas box is the host's own background, so reach measured 100% and
+  the corrective loop concluded there was nothing to fix — while everything
+  that actually covers the backdrop was below the fold. Measured on an
+  Elementor page, reach fell to 38% by the time the visitor had scrolled to
+  read. Coverage is now re-checked when scrolling settles. After: 88% at
+  every offset measured.
+  Note for anyone chasing this again: the covering sections' stacking
+  contexts are NOT the cause. A descendant of the host paints above a
+  z-index:-1 child whether or not it establishes a context. Transform,
+  filter and opacity on those sections change nothing.
+* FIXED — florida_keys, named as the year-round base theme, displayed on
+  zero days. The season rows tiled the year and the narrowest containing
+  range wins, so the widest possible row lost every day. Spring on the Canal
+  now ends 30 April and Summer on the Canal 31 July, which gives the base
+  May and August: 49-59 days a year measured across 2024-2035, with no day
+  left uncovered and not one day taken from a holiday window.
+* FIXED — the engine's DEBUG flag read a config key the plugin has never
+  emitted, so it was permanently false on every real page. The ?dcc_debug=1
+  panel still worked, which is why this went unnoticed, but the programmatic
+  state accessors and the date-mocking test hooks did not exist.
+* Sprites — the three heron flight frames and both pelicans were redrawn
+  against reference; they had no readable neck, legs or pouch. The oak leaf
+  was redrawn (it read as a peanut) and so was the banana peel.
+* Sprites — the patriotic themes have distinct identities. flagcloth
+  appeared in five themes and all five also shared one red/white/blue star.
+  Independence Day keeps flags and sparklers as the celebratory one; Patriot
+  Day is the flag and a few quiet stars; Memorial Day is poppies and doves
+  with a pale star; Veterans Day leads with medals and the remembrance
+  ribbon. flagcloth is now in two themes.
+* The 'ribbon' sprite renders for the first time. It had been wired to a
+  theme-level 'accent' key the engine has never read.
+* Build: engine.min.js is 105,079 bytes raw / 36,124 gzipped, up from
+  97,900 / 34,373 at 3.18.0 — the cost of Layer 1.
+* NOT done, deliberately: 'classic' is not retired. It is the intentional
+  "None" option in the schedule table, the egg's fallback palette, and is
+  excluded from the unscheduled-themes warning by name. Retiring it would
+  break all three.
 
 = 3.18.1 =
 * From a script audit: "ambient.min.js and engine.min.js load on the homepage

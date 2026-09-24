@@ -116,8 +116,11 @@ $config = [
     'schedule'     => Schedule::defaults(),
     'anchors'      => $anchors,
     'themes'       => $themes,
-    'matrixSrc'    => 'matrix.js',
-    'engineSrc'    => 'engine.js',
+    /* --min points the loader at the MINIFIED build. A suite that only
+     * ever exercises the readable source cannot catch a stale or broken
+     * .min.js, and that is what actually ships. */
+    'matrixSrc'    => !empty($args['min']) ? 'matrix.min.js' : 'matrix.js',
+    'engineSrc'    => !empty($args['min']) ? 'engine.min.js' : 'engine.js',
     'heroEvery'    => [120, 180],
     'preview'      => isset($args['theme']) ? (string) $args['theme'] : null,
     'previewLabel' => isset($args['theme']) ? (string) $args['theme'] : '',

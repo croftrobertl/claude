@@ -244,7 +244,9 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 97,933 raw / 34,373 gzipped (3.18.0;
+- **The engine's size baseline is 105,079 raw / 36,124 gzipped (4.0.0;
+  3.18.0 was 97,933 / 34,373). Layer 1 cost ~7.2KB raw. Cite the 4.0.0 number,
+  not the 66KB/23KB
   3.16.0 was 95,220 / 33,372, verified live). Cite that, not the 66KB/23KB
   ceiling.** That ceiling was
   real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -511,6 +513,59 @@ bump so the tracked zip never lags the source.
   (since 3.18.1) under footer placement on a page with no footer. Re-measure
   with `scratchpad/audit-load.js` before accepting any claim about what this
   plugin costs a page.
+- **Coverage is NOT a load-time fact, and the stacking contexts are a red
+  herring.** `fixCoverage()` runs at mount, at the 1200ms settled pass and on
+  re-mount — all at the scroll offset the page loads at. At scroll 0 the only
+  thing inside the canvas box is the host's own background, so reach reads
+  100%, the corrective loop concludes there is nothing to fix, and it is never
+  asked again; everything that actually covers the backdrop on this site is
+  BELOW THE FOLD at that moment. Measured on the Elementor fixture before the
+  4.0.0 fix, reach by scroll offset: 0→100%, 400→88%, 900→63%, 1400→38%.
+  `queueCover()` now re-checks on scroll-settle (rate limited to 500ms) and
+  only ever moves a covering background onto the canvas — never re-hosts, as a
+  descend mid-scroll moves the backdrop under the reader. When you chase this
+  again: a DESCENDANT of the host paints above a `z-index:-1` child of that
+  host whether or not it makes a stacking context (negative-z is step 3 of the
+  painting order, in-flow descendants step 4). The fixture makes contexts four
+  ways — z-index, transform, opacity, filter — and all four behave identically.
+  The descendant relationship is the whole mechanism.
+- **`classic` is the "None" option, not a theme to tidy away.** It has no
+  schedule row BY DESIGN, its label is "None (heron + classic green egg only)",
+  `ambient.js` falls back to its egg config, and `unscheduled_themes()`
+  excludes it by name. Retiring it breaks the None selection in the schedule
+  table, the egg fallback and any saved row set to None. It has been proposed
+  for retirement once; the answer is no.
+- **20 sprites are named by no theme particle list, and 19 of them are in
+  use.** They reach the screen through engine code instead: vignettes
+  (`SCENES` + `VIGS`), hero `kind`s, the hardcoded `ACCENTS` map, and the
+  `fx: 'letter'` pair. `validate-paths.js` counts a quoted mention as a
+  reference for exactly this reason. Before deleting any sprite, grep
+  `dspr('`, `sprite('`, `ACCENTS`, `VIGS` and the hero kinds — "not in a theme"
+  is not "unused". A theme-level `'accent' => ['svg' => ...]` key, by contrast,
+  IS dead: the engine's ACCENTS map is hardcoded by theme key and has never
+  read it.
+- **The browser suites live in `tools/`, and they must stay there.** Every
+  suite this file used to cite lived in a session scratchpad and none survived;
+  a later brief then asked to "keep the existing schedule cross-check green"
+  when no such test existed. `tools/harness.js` serves the REAL asset files,
+  `tools/gen-config.php` emits the client config from the actual Themes and
+  Schedule classes, and `tools/fixture.js` holds the Bravada and Elementor page
+  shapes. Run: `test-layering.js`, `test-subtle.js`, `test-schedule.js`,
+  `test-min.js`, `php tools/test-settings.php`, `node tools/validate-paths.js`.
+  Three measurement traps they document, each of which produced a wrong number
+  first: `--diag` puts the diagnostics panel on the page and it is counted as a
+  blocker; counting the HOST's own background as a blocker understates reach;
+  and `--density=0` yields TEN sprites, not none, because the engine reads
+  `CFG.density || 10` and 0 is falsy (use `--noparticles`).
+- **Layer 1 (the subtle layer) is drawn on the EXISTING canvas**, right after
+  `drawBgFills()` and before everything else, which is what "below the sprites"
+  means in painting-order terms. Do not give it a second canvas: every layering
+  bug this plugin has had lived in the mount, and a second mount doubles that
+  surface to buy an ordering this already gives for free. Its theme→effect map
+  is `Themes::subtle_defaults()`, mirrored in the engine as `SUBTLE_FALLBACK`
+  for cached configs — keep the two in step, as `ambient.js` does for
+  `BASE_THEME`. `Settings::subtle_map()` stores OVERRIDES ONLY so an untouched
+  theme keeps tracking the plugin.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with
