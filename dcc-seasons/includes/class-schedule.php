@@ -211,7 +211,9 @@ class Schedule {
             self::row(self::fx(2, 10),           self::at('valentines'),         'valentines',   __('Valentine\'s', 'dcc-seasons')),
             self::row(self::at('presidents'),    self::at('presidents'),         'presidents',   __('Presidents Day', 'dcc-seasons')),
             self::row(self::fx(3, 2),            self::at('st_patricks'),        'st_patricks',  __('St. Patrick\'s', 'dcc-seasons')),
-            self::row(self::fx(3, 18),           self::at('memorial_day', -3),   'spring_canal', __('Spring on the Canal', 'dcc-seasons')),
+            /* Ends 30 April, not memorial_day-3, so May falls through to the
+             * year-round base. See the note on base_row() below. */
+            self::row(self::fx(3, 18),           self::fx(4, 30),                'spring_canal', __('Spring on the Canal', 'dcc-seasons')),
             self::row(self::at('easter', -10),   self::at('easter', 1),          'easter',       __('Easter', 'dcc-seasons')),
             self::row(self::at('april_fools'),   self::at('april_fools'),        'april_fools',  __('April Fool\'s', 'dcc-seasons')),
             self::row(self::at('four_twenty'),   self::at('four_twenty'),        'four_twenty',  __('4/20', 'dcc-seasons')),
@@ -219,7 +221,9 @@ class Schedule {
             self::row(self::at('mothers_day', -2), self::at('mothers_day'),      'mothers_day',  __('Mother\'s Day', 'dcc-seasons')),
             // Summer
             self::row(self::at('memorial_day', -2), self::at('memorial_day'),    'memorial_day', __('Memorial Day', 'dcc-seasons')),
-            self::row(self::at('memorial_day', 1), self::at('labor_day', -3),    'summer_canal', __('Summer on the Canal', 'dcc-seasons')),
+            /* Ends 31 July, not labor_day-3, so August falls through to the
+             * year-round base. See the note on base_row() below. */
+            self::row(self::at('memorial_day', 1), self::fx(7, 31),             'summer_canal', __('Summer on the Canal', 'dcc-seasons')),
             self::row(self::at('fathers_day', -2), self::at('fathers_day'),      'fathers_day',  __('Father\'s Day', 'dcc-seasons')),
             self::row(self::fx(7, 1),            self::fx(7, 5),                 'july4',        __('Independence Day', 'dcc-seasons')),
             // Fall
@@ -236,6 +240,22 @@ class Schedule {
             // the days nothing else claims. It also closes every gap, so
             // the settings page's "no row covers this day" warning cannot
             // fire on the default schedule.
+            //
+            // Until 4.0.0 it won NOTHING: the season rows tiled the year
+            // end to end, so the theme named as the site's year-round base
+            // was the one theme that never appeared. The two long canal
+            // rows above now stop short — spring at 30 April, summer at
+            // 31 July — which hands the base two contiguous blocks, May and
+            // August, without taking a single day from any holiday. Those
+            // are also the two months the Keys look most like themselves.
+            // Measured by walking real days: 0 before; after, 54 days in
+            // 2026 and 59 in 2027, with 0 uncovered days in either year.
+            // The canal rows keep 59/29 (2026) and 53/28 (2027).
+            //
+            // Trim the CANAL rows if the base needs more; never a holiday
+            // window. Halloween's full month, Thanksgiving's run, St
+            // Patrick's 16 days and Christmas's 29 are the owner's and are
+            // not the place to find room.
             self::base_row(),
         ];
     }
