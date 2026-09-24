@@ -611,6 +611,67 @@ class Settings {
                     </tr>
                     <tr>
                         <th scope="row">
+                            <?php esc_html_e('Subtle layer', 'dcc-seasons'); ?>
+                        </th>
+                        <td>
+                            <label>
+                                <input type="checkbox" value="1"
+                                       name="<?php echo esc_attr(self::OPTION); ?>[subtle]"
+                                       <?php checked(!empty($opt['subtle'])); ?> />
+                                <?php esc_html_e('Run the quiet seasonal layer underneath the sprites', 'dcc-seasons'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('The calm baseline: leaves, snow, blossom or dragonflies by season, with a few bespoke days. It sits below the sprites and never over text.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-subtle-intensity"><?php esc_html_e('Subtle intensity', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <input type="range" min="0" max="1" step="0.05" id="dcc-seasons-subtle-intensity"
+                                   name="<?php echo esc_attr(self::OPTION); ?>[subtle_intensity]"
+                                   value="<?php echo esc_attr((string) $opt['subtle_intensity']); ?>"
+                                   data-dcc-output="dcc-seasons-subtle-intensity-out" />
+                            <output id="dcc-seasons-subtle-intensity-out"><?php echo esc_html((string) $opt['subtle_intensity']); ?></output>
+                            <p class="description"><?php esc_html_e('How many particles and how visible (default 0.6). This layer is meant to be noticed only once you look for it.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <?php esc_html_e('Subtle effect per theme', 'dcc-seasons'); ?>
+                        </th>
+                        <td>
+                            <details>
+                                <summary><?php esc_html_e('Show the theme mapping', 'dcc-seasons'); ?></summary>
+                                <table class="dcc-seasons-subtle-map">
+                                    <tbody>
+                                    <?php
+                                    $sub_map = self::subtle_map($opt);
+                                    $sub_fx  = self::subtle_effects();
+                                    foreach (Themes::labels() as $tkey => $tlabel) :
+                                        $cur = $sub_map[$tkey] ?? '';
+                                        ?>
+                                        <tr>
+                                            <td><label for="dcc-seasons-subtle-<?php echo esc_attr($tkey); ?>"><?php echo esc_html($tlabel); ?></label></td>
+                                            <td>
+                                                <select id="dcc-seasons-subtle-<?php echo esc_attr($tkey); ?>"
+                                                        name="<?php echo esc_attr(self::OPTION); ?>[subtle_map][<?php echo esc_attr($tkey); ?>]">
+                                                    <option value=""<?php selected($cur, ''); ?>><?php esc_html_e('None', 'dcc-seasons'); ?></option>
+                                                    <?php foreach ($sub_fx as $fkey => $flabel) : ?>
+                                                        <option value="<?php echo esc_attr($fkey); ?>"<?php selected($cur, $fkey); ?>><?php echo esc_html($flabel); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </details>
+                            <p class="description"><?php esc_html_e('Four seasonal effects carry the year; Valentine\'s, New Year\'s, Halloween, Independence Day and Christmas have their own. Change any of them here.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
                             <label for="dcc-seasons-density"><?php esc_html_e('Ambient density', 'dcc-seasons'); ?></label>
                         </th>
                         <td>
