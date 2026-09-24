@@ -380,7 +380,7 @@
 
 		/* --- Where the canvas is MOUNTED decides whether "behind" works. ---
 		 *
-		 * "In front of everything": body, z-index 99990. Untouched.
+		 * "In front of everything": body, at FRONT_Z (see the band below).
 		 *
 		 * "Behind": mounting on the body cannot express it. The theme's
 		 * content column (Bravada/cryout: main.main) is position:relative
@@ -432,6 +432,31 @@
 		 *     element that is. main#main.main (z-index 9) is the real one.
 		 * ------------------------------------------------------------------ */
 		var BODY_Z = 5; /* z-index used when the canvas falls back to <body> */
+		/* --- The z-index band, and why "front" is not 99990 any more. -------
+		 *
+		 * Decoration must never outrank anything the visitor NEEDS to see. At
+		 * 99990 the ambient canvas drew over the site's severe-weather banner
+		 * (.dcc-wx-banner, z-index 10000) — sprites over live NWS tornado,
+		 * hurricane and flood warnings. That is the clearest possible case of
+		 * a decorative layer claiming a z-index it has no business claiming.
+		 *
+		 * The band this plugin targets, lowest first:
+		 *
+		 *        -1   'behind' mode, inside the host element
+		 *         5   'behind' mode when it falls back to <body> (BODY_Z)
+		 *      9000   'front' mode — THIS CANVAS. Above ordinary content and
+		 *             above Elementor sections, below everything that matters.
+		 *      9999   Elementor lightbox / slideshow
+		 *     10000   .dcc-wx-banner severe-weather alerts
+		 *    99999+   consent and cookie UI, Elfsight popups, mobile nav
+		 *  2.147e9    the Matrix egg — a modal the visitor just invoked by
+		 *             tapping five times, and dismissible. Unchanged.
+		 *
+		 * Anything that needs to sit above the canvas only has to clear 9000.
+		 * Tunable from the settings page, and via the dcc_seasons_front_z
+		 * filter, because this band is a property of the SITE, not of the
+		 * plugin: a theme that raises its own menu changes the answer. */
+		var FRONT_Z = (CFG.frontZ | 0) || 9000;
 
 		function alphaOf(cs) {
 			if (cs.backgroundImage && cs.backgroundImage !== 'none') { return 1; }
@@ -1048,7 +1073,7 @@
 			 * that paints an opaque content column this cannot express
 			 * "behind" and the canvas may be covered — say so rather than
 			 * fail silently, and never render nothing. */
-			mountOnBody(CFG.layer ? 5 : 99990);
+			mountOnBody(CFG.layer ? BODY_Z : FRONT_Z);
 			/* Only worth saying when there WAS an opaque column and none of
 			 * the candidates could hold the canvas. A theme with no opaque
 			 * content column has nothing to hide the body-level canvas, so
@@ -1180,7 +1205,7 @@
 		/* Corner accents are page-corner decoration by definition, so they
 		 * have no place in a footer-only scene. */
 		for (var ai = 0; !footMode && ai < accents.length; ai++) {
-			accents[ai].style.zIndex = host ? '-1' : (CFG.layer ? '5' : '99990');
+			accents[ai].style.zIndex = host ? '-1' : String(CFG.layer ? BODY_Z : FRONT_Z);
 			/* position:fixed inside a transformed host resolves against that
 			 * host, not the viewport: the accent lands in the column's corner
 			 * and, being taller than a short column, lengthens the page.
@@ -3646,7 +3671,7 @@
 				/* The host went with it, or will not take the canvas back. */
 				host = null;
 				stickyWatch(null);
-				mountOnBody(CFG.layer ? 5 : 99990);
+				mountOnBody(CFG.layer ? BODY_Z : FRONT_Z);
 			}
 			if (hostMode === 'sticky' && host) { stickyFit(); stickyBalance(); }
 			applySize(true); /* a re-mount IS a discontinuity */

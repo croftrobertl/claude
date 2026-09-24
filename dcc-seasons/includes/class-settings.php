@@ -65,10 +65,19 @@ class Settings {
      *
      * @return array<string, string> key => label.
      */
+    /**
+     * Placement options.
+     *
+     * NEITHER carries "(recommended)" any more. 'footer' held it until
+     * 4.1.0, and that recommendation is what produced the bug the owner
+     * reported: footer placement confines the effects to a small box, and
+     * with 'behind' layering an opaque section covers what is left. The
+     * honest description of the trade is in the help text, not in a label.
+     */
     public static function placements(): array {
         return [
-            'footer'  => __('Site footer only (recommended)', 'dcc-seasons'),
             'content' => __('Across the page content', 'dcc-seasons'),
+            'footer'  => __('Site footer only', 'dcc-seasons'),
         ];
     }
 
@@ -348,6 +357,29 @@ class Settings {
              * mapping", so an owner who never opens this setting tracks the
              * plugin's own choices as themes are added. */
             'subtle_map'      => [],
+            /* --- Places decoration must not go. ---------------------------
+             * These are not a scope TIER. Scope answers "which kinds of page
+             * may be decorated"; these answer "which pages are never
+             * decorated whatever the scope says", including scope 'all'.
+             *
+             * The booking flow is the highest-stakes moment in the funnel
+             * and animated sprites over a payment form cost trust. Before
+             * 4.1.0 only the checkout page itself was excluded, so
+             * no_cottages silently decorated Payment Request, Cottage Cart
+             * and all six booking confirmation pages. */
+            'exclude_booking' => 1,
+            /* The Guest Guide is a utility guests consult mid-stay for wifi
+             * codes and checkout times, not a showcase. Off by default, but
+             * its own toggle so it can be turned back on without code. */
+            'guide_effects'   => 0,
+            /* Extra paths never decorated, one per line, matched against the
+             * request path and the page slug. /staff/ is internal. */
+            'exclude_paths'   => "staff",
+            /* The z-index 'front' placement mounts at. The default sits
+             * above ordinary content and Elementor sections but below
+             * lightboxes (9999), the severe-weather banner (10000) and any
+             * consent UI. See the band documented in engine.js. */
+            'front_z'         => 9000,
             'fx_reflections'  => 1,
             'fx_vignettes'    => 1,
             'fx_pointer'      => 1,
@@ -463,6 +495,29 @@ class Settings {
         $richness        = sanitize_key((string) ($in['richness'] ?? $d['richness']));
         $out['richness'] = in_array($richness, ['full', 'classic', 'minimal'], true) ? $richness : 'full';
 
+        $out['exclude_booking'] = empty($in['exclude_booking']) ? 0 : 1;
+        $out['guide_effects']   = empty($in['guide_effects']) ? 0 : 1;
+
+        /* One path per line. Kept as a newline string rather than an array
+         * because that is what the textarea round-trips; normalised here so
+         * the matcher never has to think about slashes or case. */
+        $paths = (string) ($in['exclude_paths'] ?? $d['exclude_paths']);
+        $clean = [];
+        foreach (preg_split('/[\r\n,]+/', $paths) as $line) {
+            $line = strtolower(trim((string) $line));
+            $line = trim($line, "/ \t");
+            $line = preg_replace('~[^a-z0-9/_-]~', '', $line);
+            if ($line !== '' && !in_array($line, $clean, true)) {
+                $clean[] = $line;
+            }
+        }
+        $out['exclude_paths'] = implode("\n", $clean);
+
+        /* Clamped well below the alert band. A value that outranks a severe
+         * weather warning is not a preference this plugin will honour. */
+        $fz = (int) ($in['front_z'] ?? $d['front_z']);
+        $out['front_z'] = max(1, min(9998, $fz));
+
         $out['subtle'] = empty($in['subtle']) ? 0 : 1;
         $si = (float) ($in['subtle_intensity'] ?? $d['subtle_intensity']);
         $out['subtle_intensity'] = min(1.0, max(0.0, round($si, 2)));
@@ -573,6 +628,7 @@ class Settings {
                             </select>
                             <p class="description"><?php esc_html_e('WHERE on a page the decorations may appear — a different question from "Where effects appear" above, which decides which PAGES load the plugin at all. "Site footer only" keeps them off the body copy entirely: the canvas is mounted inside the footer, sized to it, and nothing is drawn over footer text either. "Across the page content" is the older behaviour, where the canvas spans the content column.', 'dcc-seasons'); ?></p>
                             <p class="description"><?php esc_html_e('If the theme has no footer element the decorations render nowhere rather than falling back into the content; the footer element can be named with the dcc_seasons_footer_host filter.', 'dcc-seasons'); ?></p>
+                            <p class="description"><strong><?php esc_html_e('Choosing between them:', 'dcc-seasons'); ?></strong> <?php esc_html_e('"Site footer only" confines everything to one small box at the bottom of the page, which is quiet but easy to miss entirely. "Across the page content" spans the whole column — and note it interacts with Layering below: with "Behind interactive widgets", an opaque section can cover the effects, which is the usual cause of "I set it up and I cannot see anything". "In front of everything" avoids that.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -607,6 +663,49 @@ class Settings {
                                    name="<?php echo esc_attr(self::OPTION); ?>[tap_count]"
                                    value="<?php echo esc_attr((string) $opt['tap_count']); ?>" />
                             <p class="description"><?php esc_html_e('Taps within a rolling 3-second window needed to launch the egg (default 5).', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <?php esc_html_e('Never decorate', 'dcc-seasons'); ?>
+                        </th>
+                        <td>
+                            <label>
+                                <input type="checkbox" value="1"
+                                       name="<?php echo esc_attr(self::OPTION); ?>[exclude_booking]"
+                                       <?php checked(!empty($opt['exclude_booking'])); ?> />
+                                <?php esc_html_e('Booking, payment and confirmation pages', 'dcc-seasons'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Applies whatever the scope is set to, including "All pages and posts". Covers the cart, checkout, payment request and every booking confirmation page — MotoPress is asked which pages these are, so they stay excluded if their IDs change. Animated decoration over a payment form costs trust at the highest-stakes moment in the booking funnel.', 'dcc-seasons'); ?></p>
+                            <br />
+                            <label>
+                                <input type="checkbox" value="1"
+                                       name="<?php echo esc_attr(self::OPTION); ?>[guide_effects]"
+                                       <?php checked(!empty($opt['guide_effects'])); ?> />
+                                <?php esc_html_e('Allow effects on the Guest Guide', 'dcc-seasons'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Off by default. The Guest Guide is a reference guests consult during a stay — wifi codes, checkout times — so drifting sprites over it are friction rather than atmosphere. Tick this to decorate it anyway.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-exclude-paths"><?php esc_html_e('Other excluded pages', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <textarea id="dcc-seasons-exclude-paths" rows="3" cols="30"
+                                      name="<?php echo esc_attr(self::OPTION); ?>[exclude_paths]"><?php echo esc_textarea((string) $opt['exclude_paths']); ?></textarea>
+                            <p class="description"><?php esc_html_e('One page slug or path per line, never decorated. Matched against both the URL and the page slug, and anything beneath a path is covered too. Defaults to "staff" — an internal board is not a surface to decorate.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-front-z"><?php esc_html_e('Front layering depth', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" min="1" max="9998" step="1" id="dcc-seasons-front-z"
+                                   name="<?php echo esc_attr(self::OPTION); ?>[front_z]"
+                                   value="<?php echo esc_attr((string) $opt['front_z']); ?>" />
+                            <p class="description"><?php esc_html_e('The z-index used by "In front of everything" (default 9000). It sits above page content and Elementor sections, and deliberately BELOW lightboxes (9999), the severe weather banner (10000) and any consent popup. Raise it only if something ordinary is covering the effects; anything that must stay on top only has to clear this number.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>

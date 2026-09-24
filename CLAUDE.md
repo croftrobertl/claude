@@ -244,12 +244,10 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 105,079 raw / 36,124 gzipped (4.0.0;
-  3.18.0 was 97,933 / 34,373). Layer 1 cost ~7.2KB raw. Cite the 4.0.0 number,
-  not the 66KB/23KB
-  3.16.0 was 95,220 / 33,372, verified live). Cite that, not the 66KB/23KB
-  ceiling.** That ceiling was
-  real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
+- **The engine's size baseline is 105,079 raw / 36,124 gzipped (4.0.0; 3.18.0
+  was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
+  cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
+  ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
   backdrop machinery landed: 3.6.0 70,945 / 24,580 · 3.7.0 79,866 / 27,382 ·
   3.8.0 87,865 / 29,863 · 3.10.0 90,137 / 30,849 · 3.13.0 92,296 / 31,724 ·
   3.14.0 92,990 / 32,123 · 3.15.0 93,845 / 32,920 · 3.16.0 95,220 / 33,372. Nine releases shipped over

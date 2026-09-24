@@ -102,6 +102,43 @@ final class Plugin {
                 update_option(Settings::OPTION, $stored);
             }
         }
+
+        /*
+         * Persist any DEFAULT KEYS the stored row is missing.
+         *
+         * options() merges defaults on every read, so a missing key has
+         * never broken anything — but the row only gained the keys a
+         * release added once someone opened the settings page and saved. On
+         * the live site the 4.0.0 row was still missing placement, subtle,
+         * subtle_intensity and subtle_map days after the upgrade.
+         *
+         * That gap is a trap rather than a bug: it means the DB does not
+         * describe the site's actual behaviour, so anything reading the
+         * option directly — a migration, an export, a future getter that
+         * forgets to merge — sees a feature as absent when it is running.
+         * Writing the keys once per upgrade makes the row tell the truth.
+         *
+         * Only ADDS. An existing value is never touched, so this can never
+         * overwrite a choice the owner made, and a key they deliberately
+         * set to a falsy value stays falsy.
+         */
+        if (is_array($stored)) {
+            $added = [];
+            foreach (Settings::defaults() as $key => $value) {
+                if (!array_key_exists($key, $stored)) {
+                    $stored[$key] = $value;
+                    $added[] = $key;
+                }
+            }
+            if ($added) {
+                update_option(Settings::OPTION, $stored);
+                if (function_exists('error_log')) {
+                    error_log('DCC Seasons: added missing default option keys on upgrade to '
+                        . DCC_SEASONS_VERSION . ': ' . implode(', ', $added));
+                }
+            }
+        }
+
         Cache_Purge::purge_and_report();
     }
 
@@ -481,27 +518,181 @@ final class Plugin {
      * Pages that must never get effects: the MotoPress checkout and the
      * Elementor editor/preview. Both filterable.
      */
-    private function is_excluded(): bool {
-        $excluded = false;
+    /**
+     * MotoPress's own context predicates, asked before any ID or slug.
+     *
+     * IDs change — a page gets rebuilt, duplicated, or restored from a
+     * backup with a new ID — and a stale ID fails SILENTLY in the worst
+     * possible direction: effects come back on the payment form and nothing
+     * reports it. A context predicate stays true whatever the ID is.
+     *
+     * @return bool True if MotoPress says this IS a booking-flow page.
+     */
+    private function mphb_says_booking_flow(): bool {
+        $predicates = [
+            'mphb_is_checkout_page',
+            'mphb_is_booking_confirmation_page',
+            'mphb_is_payment_page',
+            'mphb_is_booking_cancellation_page',
+            'mphb_is_booking_received_page',
+        ];
+        foreach ($predicates as $fn) {
+            if (!function_exists($fn)) {
+                continue;
+            }
+            try {
+                if ($fn()) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                // A predicate that throws tells us nothing; keep asking.
+            }
+        }
+        return false;
+    }
 
-        // MotoPress checkout page (never distract the booking flow).
+    /**
+     * Is this any page in the booking, payment or confirmation flow?
+     *
+     * Four layers, widest-surviving first: MotoPress's own predicates, the
+     * page IDs MotoPress itself reports, the documented slugs, and finally
+     * the live page IDs as a last resort. Any one of them is enough.
+     */
+    private function is_booking_flow(): bool {
+        if ($this->mphb_says_booking_flow()) {
+            return true;
+        }
+
+        // IDs MotoPress reports for itself.
         $page_ids = [];
         if (function_exists('MPHB')) {
             try {
-                $page_ids[] = (int) MPHB()->settings()->pages()->getCheckoutPageId();
+                $pages = MPHB()->settings()->pages();
+                foreach (['getCheckoutPageId', 'getPaymentPageId', 'getBookingConfirmationPageId',
+                          'getReservationReceivedPageId', 'getBookingCancellationPageId'] as $getter) {
+                    if (method_exists($pages, $getter)) {
+                        $page_ids[] = (int) $pages->$getter();
+                    }
+                }
             } catch (\Throwable $e) {
-                // MotoPress internals changed — fall through to the filter.
+                // MotoPress internals changed — the slugs and IDs below stand.
             }
         }
 
         /**
-         * Filter the page IDs excluded from all DCC Seasons effects.
+         * Filter the page IDs treated as the booking flow.
          *
-         * @param int[] $page_ids Defaults to the MotoPress checkout page.
+         * The literals are THIS SITE's pages, verified 2026-09-24. They are
+         * a fallback for when MotoPress reports nothing, not the primary
+         * mechanism — see mphb_says_booking_flow().
+         *
+         * @param int[] $page_ids
          */
-        $page_ids = apply_filters('dcc_seasons_excluded_page_ids', $page_ids);
+        $page_ids = apply_filters('dcc_seasons_booking_page_ids', array_filter(array_merge($page_ids, [
+            2393, // Checkout
+            2442, // Payment Request
+            1399, // Submit Booking
+            2580, // Cottage Cart
+            624,  // Confirm Your Booking
+            625,  // Booking Confirmed
+            626,  // Booking Cancelled
+            627,  // Booking Submitted
+            623,  // Cancel Booking
+        ])));
 
-        if (($page_ids && is_page($page_ids)) || is_page('submit-booking')) {
+        if ($page_ids && is_page($page_ids)) {
+            return true;
+        }
+
+        /**
+         * Filter the page slugs treated as the booking flow. Slugs survive
+         * an ID change; IDs survive a slug change. Both are cheap.
+         *
+         * @param string[] $slugs
+         */
+        $slugs = apply_filters('dcc_seasons_booking_page_slugs', [
+            'checkout', 'submit-booking', 'payment-request', 'cottage-cart',
+            'confirm-your-booking', 'booking-confirmed', 'booking-cancelled',
+            'booking-submitted', 'cancel-booking',
+        ]);
+
+        return $slugs && is_page($slugs);
+    }
+
+    /** The Guest Guide: a utility guests read, not a surface to decorate. */
+    private function is_guest_guide(): bool {
+        /** @param int[] $ids */
+        $ids = apply_filters('dcc_seasons_guide_page_ids', [4645]);
+        if ($ids && is_page($ids)) {
+            return true;
+        }
+        /** @param string[] $slugs */
+        $slugs = apply_filters('dcc_seasons_guide_page_slugs', ['guest', 'guest-guide']);
+        return $slugs && is_page($slugs);
+    }
+
+    /**
+     * Does the request match one of the owner's extra excluded paths?
+     *
+     * Matched against BOTH the request path and the queried page slug: a
+     * page can be reached at a path that is not its slug, and a slug can be
+     * reached at a path that is not the page.
+     */
+    private function matches_excluded_path(string $stored): bool {
+        $lines = array_filter(array_map('trim', preg_split('/[\r\n]+/', $stored)));
+        if (!$lines) {
+            return false;
+        }
+        $req = strtolower((string) wp_parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH)); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+        $req = trim($req, '/');
+        $slug = '';
+        $qo = get_queried_object();
+        if ($qo instanceof \WP_Post) {
+            $slug = strtolower((string) $qo->post_name);
+        }
+        foreach ($lines as $line) {
+            $line = strtolower(trim((string) $line, '/'));
+            if ($line === '') {
+                continue;
+            }
+            if ($slug !== '' && $slug === $line) {
+                return true;
+            }
+            // Path match: the segment itself, or anything beneath it.
+            if ($req === $line || strpos($req . '/', $line . '/') === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function is_excluded(): bool {
+        $excluded = false;
+        $opt = Settings::options();
+
+        /* The booking flow is excluded in EVERY scope tier, 'all' included.
+         * This is deliberately not a scope tier: scope says which KINDS of
+         * page may be decorated, this says which pages never are. */
+        if (!empty($opt['exclude_booking']) && $this->is_booking_flow()) {
+            $excluded = true;
+        }
+
+        if (empty($opt['guide_effects']) && $this->is_guest_guide()) {
+            $excluded = true;
+        }
+
+        if ($this->matches_excluded_path((string) ($opt['exclude_paths'] ?? ''))) {
+            $excluded = true;
+        }
+
+        /**
+         * Back-compat: the pre-4.1.0 filter name. Anything hooked to it
+         * still works, and it still means "never decorate these pages".
+         *
+         * @param int[] $page_ids
+         */
+        $legacy = apply_filters('dcc_seasons_excluded_page_ids', []);
+        if ($legacy && is_page($legacy)) {
             $excluded = true;
         }
 
@@ -547,6 +738,15 @@ final class Plugin {
             'density'     => (int) $opt['density'],
             'opacity'     => (float) $opt['opacity'],
             'layer'       => $opt['layering'] === 'behind' ? 1 : 0,
+            /**
+             * z-index for 'front' placement. Decoration must never outrank
+             * anything the visitor needs: at 99990 this canvas drew over the
+             * site's severe-weather banner. See the band documented in
+             * engine.js.
+             *
+             * @param int $z
+             */
+            'frontZ'      => (int) apply_filters('dcc_seasons_front_z', (int) $opt['front_z']),
             /* WHERE on the page the decorations may be. 'footer' mounts the
              * canvas inside the site footer and draws nothing anywhere else;
              * 'content' is the older whole-column backdrop. */

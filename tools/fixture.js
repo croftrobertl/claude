@@ -26,7 +26,10 @@
 
 const SHARED_CSS = `
   * { box-sizing: border-box; }
-  body { margin: 0; font: 16px/1.6 system-ui, sans-serif; background: #d8e6f2; }
+  /* Room for the fixed weather banner, the way a real site makes room for
+   * it. Without this the banner sits over the header and swallows the taps
+   * that open the egg — a fixture artefact that reads as a plugin bug. */
+  body { margin: 0; padding-top: 44px; font: 16px/1.6 system-ui, sans-serif; background: #d8e6f2; }
   #masthead { background: #0f6dbf; color: #fff; padding: 18px; }
   #site-title { font-size: 22px; margin: 0; }
   .hero { height: 380px; background: #35617f; }
@@ -40,6 +43,17 @@ const SHARED_CSS = `
   p { margin: 0 0 18px; }
   footer#colophon { background: #123; color: #cfe; padding: 40px 24px; min-height: 320px; }
   footer#colophon a { color: #9cf; }
+  /* The site's severe-weather banner, from dcc-weather.php. Decoration must
+   * never outrank a live NWS tornado, hurricane or flood warning, so the
+   * fixture carries it at its real z-index and the suite asserts on it. */
+  .dcc-wx-banner { position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 10000;
+                   background: #B00020; color: #fff; padding: 10px 16px; font-weight: 700;
+                   box-sizing: border-box; }
+  /* Two more things a full-viewport canvas must not cover. */
+  .elementor-lightbox { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85);
+                        display: none; }
+  .mobile-nav { position: fixed; inset: 0 0 0 40%; z-index: 99999; background: #fff;
+                display: none; }
 `;
 
 const ELEMENTOR_CSS = `
@@ -102,7 +116,10 @@ function page(opts) {
 <title>DCC Seasons fixture — ${kind}</title>
 <style>${SHARED_CSS}${kind === 'elementor' ? ELEMENTOR_CSS : ''}</style>
 </head><body>
+  <div class="dcc-wx-banner" role="alert">Tornado Warning for Lake County until 6:15 PM EDT</div>
   <header id="masthead"><h1 id="site-title">Dora Canal Court</h1></header>
+  <div class="elementor-lightbox"></div>
+  <div class="mobile-nav"></div>
   <div class="hero"></div>
   <div id="content" class="cryout">
     <main id="main" class="main">

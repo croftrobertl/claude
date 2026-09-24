@@ -88,7 +88,11 @@ $config = [
     'tapWindow'    => 3000,
     'density'      => (int) ($args['density'] ?? 16),
     'opacity'      => isset($args['opacity']) ? (float) $args['opacity'] : 1.0,
-    'layer'        => 1,
+    /* 1 = 'behind' (mount inside the host at z-index -1), 0 = 'front'
+     * (fixed, full viewport, on <body> at frontZ). The live site runs
+     * front, so a suite that only ever tests behind tests the wrong thing. */
+    'layer'        => (($args['layering'] ?? 'behind') === 'front') ? 0 : 1,
+    'frontZ'       => isset($args['frontz']) ? (int) $args['frontz'] : 9000,
     'placement'    => (string) ($args['placement'] ?? 'footer'),
     'footerSel'    => 'footer#colophon, #colophon, footer.site-footer, .site-footer, footer[role="contentinfo"], #footer, footer',
     'backdropHost' => '',
