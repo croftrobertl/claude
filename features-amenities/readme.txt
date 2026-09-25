@@ -4,7 +4,7 @@ Tags: elementor, amenities, features, list, accordion
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.10.2
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,13 @@ The default list ships with the six Dora Canal Court sections (Location Highligh
 3. Activate. The widget appears in Elementor under "Dora Canal Court" → "DCC Features and Amenities".
 
 == Changelog ==
+
+= 1.11.0 =
+* New settings page at DCC → Features & Amenities, holding site-wide defaults for the widget. Common options first (content, behaviour, appearance) with the rarely-touched ones in a collapsed Advanced section. Every default reproduces 1.10.2 behaviour exactly, so installing this version changes nothing until you change something.
+* Every Elementor control now takes its default from that settings page. A widget you have never customised follows the site defaults, so changing a value once updates every such widget. Any control you have already set on a specific widget keeps winning, and clearing it returns that widget to the site default.
+* Accessibility: the "Read More" button's colour moves from #0E9AAF to #0B7C8C. The brand teal measures 3.35:1 on white, which passes WCAG AA for icons and focus rings but fails the 4.5:1 required for readable text. Icons, focus rings and the search highlight keep the original brand teal. Both colours are settable.
+* Fixed: the "Read More" / "Read Less" button label was hardcoded English in JavaScript and replaced the translated label as soon as it was clicked. Both strings now go through the plugin's text domain and are translatable in Loco Translate.
+* Added a test suite covering the settings layer: defaults reproduce previous behaviour, upgrades merge newly added keys into an already-saved row, and invalid input is rejected. Run with `php tests/run.php`.
 
 = 1.10.2 =
 * Hardening: the editor preview counted description words by parsing the description as HTML, which could execute a script tag pasted into a description field while editing. Word counting now strips tags with a plain text operation instead. Editor-only; the live page was never affected.

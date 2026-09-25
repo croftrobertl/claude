@@ -153,12 +153,15 @@ class FeaturesAmenitiesHandler extends elementorModules.frontend.handlers.Base {
 		// working after search highlighting rewrites card innerHTML. The
 		// inline max-height lets descriptions taller than the CSS fallback
 		// cap expand fully while still animating.
+		const foldI18n  = (window.falI18n) || {};
+		const labelMore = foldI18n.readMore || 'Read More';
+		const labelLess = foldI18n.readLess || 'Read Less';
 		this.elements.$container.on('click', sel.readMore, (e) => {
 			const btn      = e.currentTarget;
 			const wrap     = btn.previousElementSibling;
 			const expanded = wrap.classList.toggle('is-expanded');
 			wrap.style.maxHeight = expanded ? wrap.scrollHeight + 'px' : '';
-			btn.innerText = expanded ? 'Read Less' : 'Read More';
+			btn.innerText = expanded ? labelLess : labelMore;
 		});
 
 		// Search

@@ -20,6 +20,10 @@ class Plugin {
 		add_action( 'elementor/widgets/register', [ $this, 'register_widget' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
 		add_action( 'elementor/editor/after_enqueue_scripts', [ $this, 'enqueue_editor_assets' ] );
+
+		if ( is_admin() ) {
+			( new Settings() )->boot();
+		}
 	}
 
 	public function load_textdomain(): void {
@@ -61,6 +65,8 @@ class Plugin {
 				'noMatches' => __( 'No matches', 'features-amenities' ),
 				'oneMatch'  => __( '1 match', 'features-amenities' ),
 				'nMatches'  => __( '%d matches', 'features-amenities' ),
+				'readMore'  => __( 'Read More', 'features-amenities' ),
+				'readLess'  => __( 'Read Less', 'features-amenities' ),
 			]
 		);
 	}

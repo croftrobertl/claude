@@ -222,7 +222,7 @@ class Widget extends Widget_Base {
 			[
 				'label'     => esc_html__( 'Default Amenity Icon', 'features-amenities' ),
 				'type'      => Controls_Manager::ICONS,
-				'default'   => [ 'value' => 'fas fa-anchor', 'library' => 'fa-solid' ],
+				'default'   => [ 'value' => Settings::get( 'default_amenity_icon' ), 'library' => 'fa-solid' ],
 				'separator' => 'before',
 			]
 		);
@@ -244,7 +244,7 @@ class Widget extends Widget_Base {
 				'label'        => esc_html__( 'Enable Search Bar', 'features-amenities' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
-				'default'      => 'no',
+				'default'      => Settings::get( 'enable_search' ) ? 'yes' : 'no',
 			]
 		);
 		$this->add_control(
@@ -252,7 +252,7 @@ class Widget extends Widget_Base {
 			[
 				'label'     => esc_html__( 'Placeholder', 'features-amenities' ),
 				'type'      => Controls_Manager::TEXT,
-				'default'   => esc_html__( 'Search amenities...', 'features-amenities' ),
+				'default'   => Settings::get( 'search_placeholder' ),
 				'condition' => [ 'enable_search' => 'yes' ],
 			]
 		);
@@ -273,7 +273,7 @@ class Widget extends Widget_Base {
 			[
 				'label'        => esc_html__( 'Density Mode', 'features-amenities' ),
 				'type'         => Controls_Manager::SELECT,
-				'default'      => 'cozy',
+				'default'      => Settings::get( 'density' ),
 				'options'      => [
 					'compact' => esc_html__( 'Compact', 'features-amenities' ),
 					'cozy'    => esc_html__( 'Cozy (Default)', 'features-amenities' ),
@@ -287,7 +287,7 @@ class Widget extends Widget_Base {
 			[
 				'label'        => esc_html__( 'Menu Layout', 'features-amenities' ),
 				'type'         => Controls_Manager::SELECT,
-				'default'      => 'list',
+				'default'      => Settings::get( 'menu_layout' ),
 				'options'      => [
 					'grid' => esc_html__( 'Grid View', 'features-amenities' ),
 					'list' => esc_html__( 'List View', 'features-amenities' ),
@@ -301,7 +301,7 @@ class Widget extends Widget_Base {
 				'label'        => esc_html__( 'Enable Desktop Accordion', 'features-amenities' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
-				'default'      => 'no',
+				'default'      => Settings::get( 'desktop_accordion' ) ? 'yes' : 'no',
 			]
 		);
 		$this->add_control(
@@ -310,7 +310,7 @@ class Widget extends Widget_Base {
 				'label'        => esc_html__( 'Close Others When Opening', 'features-amenities' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'return_value' => 'yes',
-				'default'      => 'no',
+				'default'      => Settings::get( 'exclusive_accordion' ) ? 'yes' : 'no',
 				'description'  => esc_html__( 'When a section is opened, automatically close any other open accordion sections. Applies wherever the accordion is active (mobile, and desktop if enabled above).', 'features-amenities' ),
 			]
 		);
@@ -319,7 +319,7 @@ class Widget extends Widget_Base {
 			[
 				'label'       => esc_html__( 'Auto-fold Description (Words)', 'features-amenities' ),
 				'type'        => Controls_Manager::NUMBER,
-				'default'     => 0,
+				'default'     => (int) Settings::get( 'auto_fold_words' ),
 				'description' => esc_html__( '0 to disable. Adds Read More if description exceeds this word count.', 'features-amenities' ),
 			]
 		);
@@ -343,16 +343,28 @@ class Widget extends Widget_Base {
 				'type'         => Controls_Manager::SWITCHER,
 				'prefix_class' => 'fal-inherit-',
 				'return_value' => 'yes',
-				'default'      => 'yes',
+				'default'      => Settings::get( 'inherit_theme' ) ? 'yes' : '',
 				'separator'    => 'after',
 			]
 		);
 		$this->add_control(
 			'primary_color',
 			[
-				'label'     => esc_html__( 'Primary Brand Color', 'features-amenities' ),
-				'type'      => Controls_Manager::COLOR,
-				'selectors' => [ self::SEL => '--fal-primary: {{VALUE}};' ],
+				'label'       => esc_html__( 'Primary Brand Color', 'features-amenities' ),
+				'type'        => Controls_Manager::COLOR,
+				'default'     => Settings::get( 'primary_color' ),
+				'description' => esc_html__( 'Non-text uses: section icons, the focus ring and the search highlight tint.', 'features-amenities' ),
+				'selectors'   => [ self::SEL => '--fal-primary: {{VALUE}};' ],
+			]
+		);
+		$this->add_control(
+			'primary_text_color',
+			[
+				'label'       => esc_html__( 'Accent Text Color', 'features-amenities' ),
+				'type'        => Controls_Manager::COLOR,
+				'default'     => Settings::get( 'primary_text_color' ),
+				'description' => esc_html__( 'Used where the accent becomes readable text, such as the Read More button. Kept darker than the brand color so it meets WCAG AA on white.', 'features-amenities' ),
+				'selectors'   => [ self::SEL => '--fal-primary-text: {{VALUE}};' ],
 			]
 		);
 		$this->add_control(
@@ -361,7 +373,7 @@ class Widget extends Widget_Base {
 				'label'        => esc_html__( 'Enable Glassmorphism', 'features-amenities' ),
 				'type'         => Controls_Manager::SWITCHER,
 				'prefix_class' => 'fal-glass-',
-				'default'      => 'yes',
+				'default'      => Settings::get( 'glassmorphism' ) ? 'yes' : '',
 				'return_value' => 'yes',
 			]
 		);
@@ -383,7 +395,7 @@ class Widget extends Widget_Base {
 			[
 				'label'     => esc_html__( 'Text Alignment', 'features-amenities' ),
 				'type'      => Controls_Manager::CHOOSE,
-				'default'   => 'center',
+				'default'   => Settings::get( 'header_text_align' ),
 				'options'   => [
 					'left'    => [ 'title' => esc_html__( 'Left', 'features-amenities' ),    'icon' => 'eicon-text-align-left' ],
 					'center'  => [ 'title' => esc_html__( 'Center', 'features-amenities' ),  'icon' => 'eicon-text-align-center' ],
@@ -398,7 +410,7 @@ class Widget extends Widget_Base {
 			[
 				'label'        => esc_html__( 'Hover Effect', 'features-amenities' ),
 				'type'         => Controls_Manager::SELECT,
-				'default'      => 'lift',
+				'default'      => Settings::get( 'header_hover' ),
 				'options'      => [
 					'lift' => esc_html__( 'Lift up (default)', 'features-amenities' ),
 					'none' => esc_html__( 'None', 'features-amenities' ),
@@ -479,7 +491,7 @@ class Widget extends Widget_Base {
 				'type'        => Controls_Manager::SLIDER,
 				'size_units'  => [ 'px', 'em' ],
 				'range'       => [ 'px' => [ 'min' => 0, 'max' => 60 ], 'em' => [ 'min' => 0, 'max' => 4, 'step' => 0.1 ] ],
-				'default'     => [ 'unit' => 'px', 'size' => 5 ],
+				'default'     => [ 'unit' => 'px', 'size' => (int) Settings::get( 'header_icon_edge_gap' ) ],
 				'description' => esc_html__( 'Extra space between the section icon and the left edge of the header, added on top of the header padding. Defaults to 5px.', 'features-amenities' ),
 				'selectors'   => [ self::SEL . '.fal-section-icon' => 'margin-left: {{SIZE}}{{UNIT}};' ],
 			]
@@ -491,7 +503,7 @@ class Widget extends Widget_Base {
 				'type'        => Controls_Manager::SLIDER,
 				'size_units'  => [ 'px', 'em' ],
 				'range'       => [ 'px' => [ 'min' => 0, 'max' => 60 ], 'em' => [ 'min' => 0, 'max' => 4, 'step' => 0.1 ] ],
-				'default'     => [ 'unit' => 'px', 'size' => 5 ],
+				'default'     => [ 'unit' => 'px', 'size' => (int) Settings::get( 'header_arrow_edge_gap' ) ],
 				'description' => esc_html__( 'Extra space between the accordion arrow (▼) and the right edge of the header, added on top of the header padding. Defaults to 5px. Only visible where the accordion arrow shows.', 'features-amenities' ),
 				'selectors'   => [ self::SEL . '.fal-section-header::after' => 'margin-right: {{SIZE}}{{UNIT}};' ],
 			]
@@ -560,7 +572,7 @@ class Widget extends Widget_Base {
 			[
 				'label'     => esc_html__( 'Text Alignment', 'features-amenities' ),
 				'type'      => Controls_Manager::CHOOSE,
-				'default'   => 'center',
+				'default'   => Settings::get( 'amenity_text_align' ),
 				'options'   => [
 					'left'    => [ 'title' => esc_html__( 'Left', 'features-amenities' ),    'icon' => 'eicon-text-align-left' ],
 					'center'  => [ 'title' => esc_html__( 'Center', 'features-amenities' ),  'icon' => 'eicon-text-align-center' ],
@@ -575,7 +587,7 @@ class Widget extends Widget_Base {
 			[
 				'label'        => esc_html__( 'Hover Effect', 'features-amenities' ),
 				'type'         => Controls_Manager::SELECT,
-				'default'      => 'scale',
+				'default'      => Settings::get( 'amenity_hover' ),
 				'options'      => [
 					'scale' => esc_html__( 'Scale up (default)', 'features-amenities' ),
 					'none'  => esc_html__( 'None', 'features-amenities' ),
@@ -739,6 +751,7 @@ class Widget extends Widget_Base {
 				'type'        => Controls_Manager::SLIDER,
 				'size_units'  => [ 'px' ],
 				'range'       => [ 'px' => [ 'min' => 100, 'max' => 600 ] ],
+				'default'     => [ 'unit' => 'px', 'size' => (int) Settings::get( 'amenity_grid_min_col' ) ],
 				'description' => esc_html__( 'Only applies when Menu Layout is set to Grid View.', 'features-amenities' ),
 				'selectors'   => [ '{{WRAPPER}}.fal-layout-grid .fal-amenities' => 'grid-template-columns: repeat(auto-fill, minmax({{SIZE}}{{UNIT}}, 1fr));' ],
 			]
