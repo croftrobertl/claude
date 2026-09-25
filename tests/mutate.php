@@ -630,6 +630,14 @@ $mutations = [
      "    public static function handle_save(): void\n    {\n        if (!current_user_can(self::capability())) {",
      "    public static function handle_save(): void\n    {\n        if (false) {",
      'admin-test.php'],
+    // THREE 0.40.0 MENU MUTATIONS DELETED IN 0.41.0, not retargeted. They
+    // aimed at code that no longer exists: this plugin stopped registering
+    // the dcc parent and stopped removing the duplicate, because a site-side
+    // mu-plugin owns both now. What replaced them is stronger — "menu: the
+    // plugin starts creating the dcc parent again" breaks the new contract by
+    // ADDING the call back, which is the direction the fault would actually
+    // come from. The priority one was a duplicate of "menu: the submenu moves
+    // back onto a priority a sibling plugin holds".
     ["admin: the capability check is dropped from the RENDER path", 'class-admin.php',
      "        if (!current_user_can(self::capability())) {\n            wp_die(esc_html__('You are not allowed to view these settings.'",
      "        if (false) {\n            wp_die(esc_html__('You are not allowed to view these settings.'",
@@ -637,18 +645,6 @@ $mutations = [
     ["admin: the nonce is no longer verified before writing", 'class-admin.php',
      "        check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
      "        // check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
-     'admin-test.php'],
-    ["admin: the shared dcc parent is registered unconditionally", 'class-admin.php',
-     "        if (isset(\$admin_page_hooks[self::PARENT_SLUG])) {\n            return;\n        }\n        add_menu_page(",
-     "        if (false) {\n            return;\n        }\n        add_menu_page(",
-     'admin-test.php'],
-    ["admin: the duplicate-parent cleanup is removed", 'class-admin.php',
-     "        remove_submenu_page(self::PARENT_SLUG, self::PARENT_SLUG);",
-     "        return;",
-     'admin-test.php'],
-    ["admin: the submenu takes a priority another DCC plugin already uses", 'class-admin.php',
-     "add_action('admin_menu', [self::class, 'register_page'], 40);",
-     "add_action('admin_menu', [self::class, 'register_page'], 30);",
      'admin-test.php'],
     ["admin: the upgrade merge is moved onto a front-end hook", 'class-admin.php',
      "        add_action('admin_init', ['\\\\MPHBAC\\\\Settings', 'maybe_upgrade']);",
@@ -695,6 +691,62 @@ $mutations = [
      "            'default'        => Settings::get('months_shown'),",
      "            'default'        => 4,",
      'defaults-test.php'],
+
+    // --- 0.41.0: the menu move, the 44px tap target, the free-cottage offer
+    ["menu: the plugin starts creating the dcc parent again", 'class-admin.php',
+     "        add_action('admin_menu', [self::class, 'register_page'], 55);",
+     "        add_action('admin_menu', [self::class, 'register_page'], 55);\n        add_action('admin_menu', static function () { add_menu_page('DCC', 'DCC', 'manage_options', 'dcc', '__return_null'); }, 5);",
+     'admin-test.php'],
+    ["menu: the submenu moves back onto a priority a sibling plugin holds", 'class-admin.php',
+     "add_action('admin_menu', [self::class, 'register_page'], 55);",
+     "add_action('admin_menu', [self::class, 'register_page'], 40);",
+     'admin-test.php'],
+    ["tap: the day cell drops back under the 44px touch target", 'assets/css/widget.css',
+     "    --mphbac-cell-min: 44px;",
+     "    --mphbac-cell-min: 38px;",
+     'defaults-test.php'],
+    ["tap: the schema and the stylesheet disagree about the day cell again", 'class-settings.php',
+     "__('Day cell height (px)', 'mphb-availability-calendar'), 44, 24, 120,",
+     "__('Day cell height (px)', 'mphb-availability-calendar'), 38, 24, 120,",
+     'defaults-test.php'],
+    ["tap: a var() fallback drifts from the token it falls back from", 'assets/css/widget.css',
+     "    grid-template-columns: var(--mphbac-label-width, 96px) 1fr;",
+     "    grid-template-columns: var(--mphbac-label-width, 180px) 1fr;",
+     'defaults-test.php'],
+    ["alt: the free-cottage suggestion stops being bounded to the loaded window", 'assets/js/widget.js',
+     "                    if (map[key] !== 'available') { free = false; break; }",
+     "                    if (map[key] === 'booked') { free = false; break; }",
+     'js/parity-test.js'],
+    ["alt: it suggests the cottage the visitor is already looking at", 'assets/js/widget.js',
+     "                if (String(room.id) === String(context.roomTypeId)) continue;",
+     "                if (false) continue;",
+     'js/parity-test.js'],
+    ["alt: it walks DAYS instead of nights, so a checkout-day booking hides a free cottage", 'assets/js/widget.js',
+     "                while (cursor < end && nights++ < 400) {",
+     "                while (cursor <= end && nights++ < 400) {",
+     'js/parity-test.js'],
+    // NO MUTATION FOR THE SINGLE-COTTAGE CASE, deliberately, and this note
+    // is the record of why rather than an omission. Three were tried and
+    // all three SURVIVED: removing the explicit `rooms.length < 2` early
+    // return, and twice more against the line that reads state.rooms. The
+    // reason is the same each time — on a single-cottage placement the one
+    // room IS the room the visitor is looking at, so the loop's own skip
+    // produces the outcome and there is nothing else to break. That skip
+    // IS mutated, by "it suggests the cottage the visitor is already
+    // looking at" above. The early return has been deleted from the source
+    // as decoration. A mutation that cannot fail is noise.
+    ["alt: the suggestion switches the visitor's selection instead of offering", 'assets/js/widget.js',
+     "                var alt = (config.strings && config.strings.altCottage) ? freeAlternative(ci, co) : '';",
+     "                var alt = (config.strings && config.strings.altCottage) ? freeAlternative(ci, co) : '';\n                if (alt && checkinEl) { checkinEl.value = ''; }",
+     'js/parity-test.js'],
+    ["alt: blanking the panel string no longer switches the suggestion off", 'assets/js/widget.js',
+     "                var alt = (config.strings && config.strings.altCottage) ? freeAlternative(ci, co) : '';",
+     "                var alt = freeAlternative(ci, co);",
+     'js/parity-test.js'],
+    ["alt: the cottage name stops honouring the editor's per-cottage label", 'assets/js/widget.js',
+     "        return (customLabels && (customLabels[room.id] || customLabels[String(room.id)]))\n            || room.title",
+     "        return room.title",
+     'js/parity-test.js'],
 ];
 
 $originals = [];

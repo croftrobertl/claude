@@ -156,6 +156,56 @@ echo "\n-- the engine defaults ARE the shipped constants --\n";
         $d['staff_capability'] === 'edit_mphb_bookings', $d['staff_capability']);
 }
 
+echo "\n-- the sizing tokens agree with the schema, in every place they are written --\n";
+{
+    /* THE DAY CELL IS A TOUCH TARGET, and 0.41.0 raised it from 38 to 44 —
+       an INTENDED behaviour change, the one place the "defaults reproduce
+       current behaviour" rule was deliberately set aside. It is asserted
+       here because the number is written in three places that nothing warns
+       about: the schema, the token block, and the skeleton's var() fallback.
+       Those last two disagreed before this release (38 and 42), which meant
+       the loading skeleton was a different height from the grid replacing
+       it — exactly the shift that block exists to prevent. */
+    $SIZES = ['cell_min_height' => 'mphbac-cell-min',
+              'header_min_height' => 'mphbac-header-min',
+              'namecol_width' => 'mphbac-label-width',
+              'cell_radius' => 'mphbac-radius',
+              'cell_gap' => 'mphbac-gap',
+              'font_size' => 'mphbac-font-size'];
+    $bad = [];
+    foreach ($SIZES as $key => $token) {
+        $resolved = css_resolves($widget_css, $token);
+        if ($resolved === null) { $bad[$key] = 'token not declared'; continue; }
+        if (trim($resolved) !== $d[$key] . 'px') {
+            $bad[$key] = ['schema' => $d[$key] . 'px', 'stylesheet' => $resolved];
+        }
+    }
+    check('every sizing token resolves to its schema default', $bad === [], $bad);
+
+    // A second var() use with a DIFFERENT fallback is the drift that was
+    // there; css_resolves reports it as AMBIGUOUS rather than picking one.
+    $amb = [];
+    foreach ($SIZES as $key => $token) {
+        // ONE needle, with the optional space in the pattern — two needles
+        // both matched the same declaration and reported it twice.
+        $needle = 'var(--' . $token . ',';
+        $off = 0;
+        while (($pos = strpos($widget_css, $needle, $off)) !== false) {
+            $off = $pos + 1;
+            $tail = substr($widget_css, $pos + strlen($needle), 20);
+            if (preg_match('/^\s*([0-9.]+px)/', $tail, $m) && $m[1] !== $d[$key] . 'px') {
+                $amb[$key][] = $m[1];
+            }
+        }
+    }
+    check('no var() fallback disagrees with the token it falls back from', $amb === [], $amb);
+
+    check('the day cell is at or above the 44px touch target', $d['cell_min_height'] >= 44,
+        $d['cell_min_height']);
+    check('the header row is deliberately NOT raised — it is a label, not a control',
+        $d['header_min_height'] === 38, $d['header_min_height']);
+}
+
 echo "\n-- the sixteen token colours carry NO Elementor default --\n";
 {
     // A default here is emitted into Elementor's per-post CSS at (0,6,0),

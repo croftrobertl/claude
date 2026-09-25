@@ -15,20 +15,37 @@
 const E = require('./extract.js');
 const { check, done } = E.reporter();
 
-function sheet({ avail = {}, ci = '', co = '', minNights = 2, strings = {} } = {}) {
-  const state = { availability: { 22: avail } };
+function sheet({ avail = {}, ci = '', co = '', minNights = 2, strings = {},
+                others = null, rooms = null, customLabels = {} } = {}) {
+  const availability = { 22: avail };
+  if (others) { Object.assign(availability, others); }
+  const state = {
+    availability,
+    // The sheet reads state.rooms to name a suggestion. Default to the one
+    // cottage under test, so the existing cases keep their old scope exactly.
+    rooms: rooms || [{ id: 22, title: 'Blue Heron', abbrev: 'BH', number: '22' }],
+  };
   const context = { roomTypeId: 22 };
-  const config = { strings: Object.assign({
+  const config = { customLabels, strings: Object.assign({
     bookInvalid: 'Invalid date range.',
     bookMinNights: 'Must be a minimum of {nights} nights. Please select new dates.',
     bookUnavail: 'Unavailable.',
+    altCottage: '{cottage} is free for these dates.',
   }, strings) };
   const nightsBetween = (a, b) =>
     Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
-  return E.build(['blockedNight', 'rangeState'], {
-    state, context, config, minNights, nightsBetween,
-    checkinEl: { value: ci }, checkoutEl: { value: co },
+  // THE ELEMENTS THEMSELVES are handed back, not a copy of their values. The
+  // first version of the "offers, never switches" case watched a snapshot
+  // object built here, which nothing under test could ever write to — so a
+  // mutation that DID clear the check-in field changed nothing the assertion
+  // could see, and SURVIVED.
+  const checkinEl = { value: ci };
+  const checkoutEl = { value: co };
+  const built = E.build(['roomLabel', 'blockedNight', 'freeAlternative', 'rangeState'], {
+    state, context, config, minNights, nightsBetween, checkinEl, checkoutEl,
   });
+  built.els = { checkinEl, checkoutEl };
+  return built;
 }
 
 const OPEN = { '2026-09-20': 'available', '2026-09-21': 'available', '2026-09-22': 'available',
@@ -99,5 +116,102 @@ console.log('\n-- a clean range passes --');
 check('an open, long-enough range is ok and complete',
   (r => r.ok === true && r.complete === true && r.msg === '')
     (sheet({ avail: OPEN, ci: '2026-09-20', co: '2026-09-24' }).rangeState()));
+
+
+console.log('\n-- WHICH COTTAGE *IS* FREE (0.41.0) --');
+{
+  /* The client already holds every cottage's availability for the loaded
+     window, so a dead end can name a cottage that IS free for exactly those
+     nights at no cost. These cases fix what "exactly" and "free" mean. */
+  const BOOKED = { '2026-09-20': 'booked', '2026-09-21': 'booked', '2026-09-22': 'booked',
+                   '2026-09-23': 'booked', '2026-09-24': 'booked' };
+  const ROOMS = [
+    { id: 22, title: 'Blue Heron', abbrev: 'BH', number: '22' },
+    { id: 23, title: 'Kingfisher', abbrev: 'KF', number: '4' },
+  ];
+  const three = (over) => sheet(Object.assign({
+    avail: BOOKED, ci: '2026-09-20', co: '2026-09-23', rooms: ROOMS,
+  }, over));
+
+  check('a dead end names a cottage that is free for those very nights',
+    (r => r.ok === false && r.msg === 'Unavailable. Kingfisher is free for these dates.')
+      (three({ others: { 23: OPEN } }).rangeState()),
+    three({ others: { 23: OPEN } }).rangeState().msg);
+
+  check('IT OFFERS, IT DOES NOT SWITCH — the real date fields are untouched',
+    (s => { s.rangeState();
+            return s.els.checkinEl.value === '2026-09-20'
+                && s.els.checkoutEl.value === '2026-09-23'; })(three({ others: { 23: OPEN } })),
+    (s => { s.rangeState(); return [s.els.checkinEl.value, s.els.checkoutEl.value]; })
+      (three({ others: { 23: OPEN } })));
+
+  check('a cottage booked on ONE of the nights is not offered',
+    (r => r.msg === 'Unavailable.')
+      (three({ others: { 23: Object.assign({}, OPEN, { '2026-09-21': 'booked' }) } }).rangeState()));
+
+  /* BOUNDED TO THE LOADED WINDOW. A date the window does not cover is
+     UNDEFINED, not 'available'. Claiming a cottage is free on a night nobody
+     has looked at would be worse than saying nothing. */
+  check('a cottage whose map STOPS SHORT of the range is not offered',
+    (r => r.msg === 'Unavailable.')
+      (three({ others: { 23: { '2026-09-20': 'available', '2026-09-21': 'available' } } }).rangeState()),
+    three({ others: { 23: { '2026-09-20': 'available', '2026-09-21': 'available' } } }).rangeState().msg);
+
+  /* NIGHTS, NOT DAYS — the same rule blockedNight() follows. The checkout day
+     is not a night stayed, so a cottage that is booked from the checkout day
+     onward is still free for this stay. */
+  check('a cottage booked FROM the checkout day is still offered',
+    (r => r.msg === 'Unavailable. Kingfisher is free for these dates.')
+      (three({ others: { 23: Object.assign({}, OPEN, { '2026-09-23': 'booked' }) } }).rangeState()));
+
+  /* ASSERTED ON freeAlternative DIRECTLY, not through rangeState(). Going
+     through rangeState() cannot reach this: to get there the SELECTED
+     cottage must be blocked, and if it is blocked it can never be its own
+     suggestion anyway. The first version of this case made the selected
+     cottage free to set the scene, which unblocked the range and tested
+     nothing. Called directly, the cottage under test IS free and must still
+     be skipped. */
+  check('the cottage the visitor is already looking at is never suggested to them',
+    sheet({ avail: OPEN, ci: '2026-09-20', co: '2026-09-23',
+            rooms: ROOMS, others: { 23: BOOKED } })
+      .freeAlternative('2026-09-20', '2026-09-23') === '',
+    sheet({ avail: OPEN, ci: '2026-09-20', co: '2026-09-23',
+            rooms: ROOMS, others: { 23: BOOKED } }).freeAlternative('2026-09-20', '2026-09-23'));
+  check('(instrument check) that same cottage WOULD be named if it were another one',
+    sheet({ avail: BOOKED, ci: '2026-09-20', co: '2026-09-23',
+            rooms: ROOMS, others: { 23: OPEN } })
+      .freeAlternative('2026-09-20', '2026-09-23') === 'Kingfisher');
+
+  check('a single-cottage placement makes no suggestion at all',
+    (r => r.msg === 'Unavailable.')
+      (sheet({ avail: BOOKED, ci: '2026-09-20', co: '2026-09-23' }).rangeState()));
+
+  check('blanking the string in the panel switches the suggestion off',
+    (r => r.msg === 'Unavailable.')
+      (three({ others: { 23: OPEN }, strings: { altCottage: '' } }).rangeState()));
+
+  // The name has to be the one the rest of the page uses for that cottage.
+  check('an editor\'s per-cottage label wins over the MotoPress title',
+    (r => r.msg.includes('The Boathouse'))
+      (three({ others: { 23: OPEN }, customLabels: { 23: 'The Boathouse' } }).rangeState()),
+    three({ others: { 23: OPEN }, customLabels: { 23: 'The Boathouse' } }).rangeState().msg);
+  check('...including when the label map is keyed by a STRING id, as Elementor stores it',
+    (r => r.msg.includes('The Boathouse'))
+      (three({ others: { 23: OPEN }, customLabels: { '23': 'The Boathouse' } }).rangeState()));
+  check('with no title and no label it falls back to the abbreviation and number',
+    (r => r.msg === 'Unavailable. KF #4 is free for these dates.')
+      (three({ others: { 23: OPEN },
+               rooms: [ROOMS[0], { id: 23, title: '', abbrev: 'KF', number: '4' }] }).rangeState()),
+    three({ others: { 23: OPEN },
+            rooms: [ROOMS[0], { id: 23, title: '', abbrev: 'KF', number: '4' }] }).rangeState().msg);
+
+  check('an availability map keyed by STRING id is found too',
+    (r => r.msg.includes('Kingfisher'))
+      (three({ others: { '23': OPEN } }).rangeState()));
+
+  // A suggestion must never turn a dead end into a bookable one.
+  check('the range is still NOT ok — a suggestion does not unblock the button',
+    (r => r.ok === false && r.complete === true)(three({ others: { 23: OPEN } }).rangeState()));
+}
 
 done();

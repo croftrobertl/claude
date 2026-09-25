@@ -15,7 +15,10 @@ const { check, done } = E.reporter();
 const ROOMS = [{ id: 22, title: 'Cottage 22: The Boathouse', abbrev: 'Boathouse', number: '22' },
                { id: 31, title: 'Cottage 31: Hibiscus Hut', abbrev: 'Hibiscus', number: '31' }];
 const STR = { allBooked: 'All booked through {through}.', nextOpening: 'Next opening {date} at {cottage}.' };
-const H = E.build(['buildAvailabilityHint'], { document });
+// roomLabel came out of buildAvailabilityHint in 0.41.0 so the free-cottage
+// suggestion could use the same naming rule; extract.js's dependency guard is
+// what said so, by name, rather than letting this run against an undefined.
+const H = E.build(['roomLabel', 'buildAvailabilityHint'], { document });
 
 /** avail: { roomId: { day: status } } */
 const hint = (avail, days, opts = {}) => H.buildAvailabilityHint(

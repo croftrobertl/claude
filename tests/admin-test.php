@@ -87,42 +87,39 @@ function render_page(): string {
     return (string) ob_get_clean();
 }
 
-echo "-- the shared dcc parent --\n";
+echo "-- this plugin does not own the dcc parent --\n";
 {
+    /* dcc-menu.php, a site-side mu-plugin, registers the parent at 5 and
+       removes the mirrored duplicate at 999. That is the fix to the CAUSE:
+       add_menu_page() always creates a submenu duplicating its own parent, so
+       every plugin that registered the parent also had to carry a removal,
+       and four of them did. With one owner there is nothing to deduplicate.
+       What this plugin must do is add a submenu and NOTHING else. */
     $GLOBALS['admin_page_hooks'] = [];
     $GLOBALS['t_menus'] = [];
-    Admin::register_parent();
-    check('registers the parent when nobody else has', count($GLOBALS['t_menus']) === 1,
-        $GLOBALS['t_menus'][0]['slug'] ?? null);
-    check('...under the shared slug, not a private one',
-        ($GLOBALS['t_menus'][0]['slug'] ?? '') === 'dcc');
-
-    // A second DCC plugin running at the same priority must not add a second.
-    $GLOBALS['t_menus'] = [];
-    Admin::register_parent();
-    check('does NOT register it again once another plugin has', $GLOBALS['t_menus'] === []);
-
-    $GLOBALS['admin_page_hooks'] = ['dcc' => 'DCC'];  // someone else got there first
-    $GLOBALS['t_menus'] = [];
-    Admin::register_parent();
-    check('stands down entirely when another plugin owns the parent', $GLOBALS['t_menus'] === []);
-}
-
-echo "\n-- the duplicate parent entry --\n";
-{
-    $GLOBALS['admin_page_hooks'] = ['dcc' => 'DCC'];
     $GLOBALS['t_removed'] = [];
-    Admin::remove_duplicate_parent();
-    check('removes the submenu that duplicates the parent',
-        $GLOBALS['t_removed'] === [['dcc', 'dcc']], $GLOBALS['t_removed']);
-    Admin::remove_duplicate_parent();
-    check('is idempotent — four plugins all doing it is harmless',
-        count($GLOBALS['t_removed']) === 2);
-
-    $GLOBALS['admin_page_hooks'] = [];
-    $GLOBALS['t_removed'] = [];
-    Admin::remove_duplicate_parent();
-    check('and does nothing at all if no parent exists', $GLOBALS['t_removed'] === []);
+    $GLOBALS['t_actions'] = [];
+    Admin::register();
+    foreach ($GLOBALS['t_actions']['admin_menu'] ?? [] as [$cb, $p]) { $cb(); }
+    check('it never calls add_menu_page — the parent is not its to create',
+        $GLOBALS['t_menus'] === [], $GLOBALS['t_menus']);
+    check('...and never removes a submenu it did not add',
+        $GLOBALS['t_removed'] === [], $GLOBALS['t_removed']);
+    check('the methods that used to do both are gone from the class, not merely unhooked',
+        !method_exists(Admin::class, 'register_parent')
+        && !method_exists(Admin::class, 'remove_duplicate_parent'));
+    // SCAN THE CODE, NOT THE COMMENTS. The docblock explains add_menu_page()
+    // and remove_submenu_page() at length — that is the point of it — so a
+    // raw substring search matches the prose describing what this file no
+    // longer does. The project has recorded this exact fault before.
+    $src  = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-admin.php');
+    $code = preg_replace(['#/\*.*?\*/#s', '#//[^\n]*#'], '', $src);
+    check('(instrument check) the comments really do mention them, so this is not vacuous',
+        str_contains($src, 'add_menu_page(') && str_contains($src, 'remove_submenu_page('));
+    check('and no CALL to either survives in the code',
+        !str_contains($code, 'add_menu_page(') && !str_contains($code, 'remove_submenu_page('),
+        array_values(array_filter(explode("\n", $code),
+            static fn($l) => str_contains($l, 'add_menu_page(') || str_contains($l, 'remove_submenu_page('))));
 }
 
 echo "\n-- the hook priorities are the ones the contract names --\n";
@@ -132,9 +129,18 @@ echo "\n-- the hook priorities are the ones the contract names --\n";
     $prios = [];
     foreach ($GLOBALS['t_actions']['admin_menu'] ?? [] as [$cb, $p]) { $prios[] = $p; }
     sort($prios);
-    check('parent at 5, this page at 40, cleanup at 999', $prios === [5, 40, 999], $prios);
-    check('40 avoids every priority recorded as in use (20, 30, 50, 63)',
-        !array_intersect($prios, [20, 30, 50, 63]), $prios);
+    check('exactly one admin_menu hook, and it is the submenu', $prios === [55], $prios);
+    /* THE LIVE REGISTER, as verified by the intermediary on 2026-09-25.
+       0.40.0 took 40 and collided with dcc-seasons, which was already there —
+       neither session could see the other's source, which is why the number
+       is stated in every report and pinned here. */
+    $TAKEN = [5 => 'dcc-menu (parent)', 20 => 'contact-form', 30 => 'guest-guide',
+              35 => 'features-amenities', 40 => 'seasons', 45 => 'cottage-selector',
+              50 => 'custom-checkout', 63 => 'wildlife',
+              10 => 'reserved (mu-plugin)', 60 => 'reserved (mu-plugin)'];
+    check('55 collides with nothing on the live register',
+        !array_intersect($prios, array_keys($TAKEN)),
+        array_intersect_key($TAKEN, array_flip($prios)));
     check('the persisted upgrade merge runs on admin_init, never on a front-end view',
         isset($GLOBALS['t_actions']['admin_init']));
     check('the save has its own entry point rather than riding on the render',
