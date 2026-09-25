@@ -355,16 +355,23 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   reach a stored row and the feature looks switched off (DCC Seasons 4.0.0 shipped
   exactly that). Keys the plugin no longer defines are pruned on read so a stale
   row does not mislead whoever reads the option next.
-- **The shared `dcc` admin menu is a COPIED idiom, not ours to redesign.** Slug
-  `dcc`, `manage_options`, `dashicons-palmtree`, position 58 — identical in every
-  DCC plugin, because a divergent slug silently produces a second "DCC" menu.
-  Register the parent at `admin_menu` priority 5 **only if
-  `$admin_page_hooks['dcc']` is unset**, and drop WordPress's mirrored first item
-  at 999. Submenu order is hook priority; read from the siblings' source on
-  2026-09-24: 10 and 60 reserved for site mu-plugins, 20 Contact Form, 40 Seasons,
-  **45 this plugin**, 50 Custom Checkout, 63 Wildlife. Never renumber or remove
-  another plugin's entry. A PHP test pins our slug, priority and capability so a
-  collision shows up here rather than as a page that quietly moved.
+- **THE `dcc` PARENT MENU IS NOT OURS.** Since 2026-09-25 a site-side mu-plugin,
+  `dcc-menu.php`, owns it: it registers the parent and removes WordPress's
+  mirrored first submenu item. This plugin does NEITHER. 0.44.0 registered the
+  parent itself (guarded) and cleaned up at 999, which was correct while four
+  plugins each had to be able to create it and is wrong now — two owners IS the
+  duplicate-parent problem, not the fix for it. A PHP test tokenises
+  `class-menu.php` and fails if `add_menu_page` or `remove_submenu_page` reappear
+  as CODE (tokenised, not grepped: the class comment explains the removal and
+  names both functions, so a text search would match the explanation and pass
+  forever). We keep only `add_submenu_page('dcc', …)` at priority 45, plus an
+  `add_options_page` fallback that fires ONLY if the parent is missing — that is
+  not a second registration, it just stops the settings page becoming unreachable
+  if the mu-plugin ever goes away.
+  Submenu order is hook priority. Live register, 2026-09-25: 20 Contact Form,
+  30 Guest Guide, 35 Features & Amenities, 40 Seasons, **45 this plugin**,
+  50 Custom Checkout, 55 Availability Calendar, 63 Wildlife. Never renumber or
+  remove another plugin's entry.
 - **The dates step is governed by the `avail_enable` control, not by code.** It is a
   switcher defaulting to off and deliberately absent from the preset, so a widget
   that never stored it shows no check-in/check-out question at all. There is no
@@ -574,6 +581,32 @@ the second time it silently discarded a whole test suite's worth of new
 assertions. The first symptom is a mutation that fails assertions it does not
 touch — if that appears, stop and check `git status` before believing any of it.
 Better still: commit the work as a checkpoint before starting the mutation round.
+
+## The shipped stylesheet
+
+`assets/css/selector.min.css` is what the front end loads; `selector.css` is the
+authoritative commented source and is what `SCRIPT_DEBUG` serves.
+`tools/build-css.php` generates the min file by **removing comments and nothing
+else** — no selector rewriting, no whitespace collapsing inside rules, no colour
+or unit shortening, because every one of those is a chance to change what the
+browser computes and the entire saving is in the comments (45% of the raw file).
+It is NOT a regex: a `/*` inside a string or `url()` is not a comment, and 0.31.0
+shipped a broken stylesheet because CSS was edited by regex. `npm test` runs
+`--check` so a stale min file cannot ship.
+
+Why it is worth a build step at all: **this host's gzip has a crippled deflate
+window (~1 KB)**, and comments compress far worse in a small window than in the
+usual 32 KB one. Measured at the host's window the file goes 19.3 KB → 7.2 KB, a
+12.4 KB saving on every page carrying the widget; at a normal 32 KB window the
+same change looks like only 9.6 KB. **Measure in the window the host actually
+uses, or you will under-value removing repetitive text.**
+
+Equivalence is proved two ways, not assumed: a PHP test asserts the shipped file
+is the comment-stripped source and nothing else (sharing the build's own stripper
+so there is one copy of that logic), that every `--dccs-*` token defined and
+consumed survives, and that no externally-supplied token is consumed without a
+fallback; and a Chromium harness compared 508 elements × 34 computed properties at
+320/375/768/1280 with the compare modal open and closed — zero differences.
 
 ## Stylesheet structure
 

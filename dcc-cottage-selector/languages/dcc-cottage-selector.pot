@@ -439,8 +439,8 @@ msgstr ""
 msgid "Cottage %1$s: %2$s"
 msgstr ""
 
-#: includes/class-menu.php:87
-#: includes/class-menu.php:88
+#: includes/class-menu.php:70
+#: includes/class-menu.php:71
 msgid "Cottage Selector"
 msgstr ""
 
@@ -448,12 +448,8 @@ msgstr ""
 msgid "Cottages to show"
 msgstr ""
 
-#: includes/class-menu.php:67
-msgid "DCC"
-msgstr ""
-
-#: includes/class-menu.php:94
-#: includes/class-menu.php:95
+#: includes/class-menu.php:77
+#: includes/class-menu.php:78
 #: includes/class-selector-widget.php:40
 #: includes/class-settings-page.php:71
 msgid "DCC Cottage Selector"
@@ -519,7 +515,6 @@ msgstr ""
 msgid "Dora Canal Cottage Selector works best with Elementor active; the [dcc_selector_entry] shortcode still works without it."
 msgstr ""
 
-#: includes/class-menu.php:66
 #: includes/class-plugin.php:106
 msgid "Dora Canal Court"
 msgstr ""

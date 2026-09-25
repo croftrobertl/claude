@@ -420,11 +420,83 @@ namespace {
     // "DCC" top-level menu; a colliding priority reorders someone else's page.
     ok('the parent slug is the shared one', \DCCS\Menu::PARENT === 'dcc');
     ok('the submenu priority is the one recorded in the report', \DCCS\Menu::PRIORITY === 45);
-    ok('and it does not collide with a sibling read from source on 2026-09-24',
-        !in_array(\DCCS\Menu::PRIORITY, [10, 20, 40, 50, 60, 63], true));
+    // Live register, 2026-09-25: 20 contact-form, 30 guest-guide, 35 features,
+    // 40 seasons, 45 us, 50 checkout, 55 calendar, 63 wildlife.
+    ok('and it does not collide with a sibling on the live register',
+        !in_array(\DCCS\Menu::PRIORITY, [20, 30, 35, 40, 50, 55, 63], true));
     ok('saving is gated on manage_options', \DCCS\Menu::CAP === 'manage_options');
 
+    // 0.45.0: the dcc-menu.php mu-plugin OWNS the parent. Two owners is the
+    // duplicate-parent problem, not the fix, so this plugin must no longer create
+    // it or clean up after it. Tokenised rather than grepped: the class comment
+    // explains the removal and names both functions, and a text search would match
+    // the explanation and pass forever.
+    $menuSrc = (string) file_get_contents(DCCS_DIR . 'includes/class-menu.php');
+    $calls = [];
+    foreach (token_get_all($menuSrc) as $t) {
+        if (is_array($t) && $t[0] === T_STRING) { $calls[] = $t[1]; }
+    }
+    ok('the tokeniser sees real calls in the menu class, so the checks below mean something',
+        in_array('add_submenu_page', $calls, true));
+    ok('the plugin no longer registers the shared parent itself',
+        !in_array('add_menu_page', $calls, true));
+    ok('nor removes the mirrored first item the mu-plugin now handles',
+        !in_array('remove_submenu_page', $calls, true));
+    ok('and the words still appear in prose, proving the tokeniser ignored the comment',
+        strpos($menuSrc, 'add_menu_page') !== false || strpos($menuSrc, '999') !== false);
+
     if ($sSaved === null) { unset($GLOBALS['__opts'][$sKey]); } else { $GLOBALS['__opts'][$sKey] = $sSaved; }
+
+    // ---- 0.45.0: the comment-stripped stylesheet is EQUIVALENT ------------------
+    // --check guards staleness; this guards that the stripper removed comments and
+    // nothing else. Computed styles were compared in Chromium too (508 elements x
+    // 34 properties x four widths x modal open/closed, zero differences) — this is
+    // the cheap structural half that runs on every commit.
+    $cssFull = (string) file_get_contents(DCCS_DIR . 'assets/css/selector.css');
+    $cssMin  = (string) file_get_contents(DCCS_DIR . 'assets/css/selector.min.css');
+
+    ok('both stylesheets ship', $cssFull !== '' && $cssMin !== '');
+    ok('the minified one really is smaller', strlen($cssMin) < strlen($cssFull));
+    // Structure, against the COMMENT-STRIPPED source — counting the raw source is
+    // wrong, because comments contain braces and semicolons of their own (the
+    // first version of this check failed for exactly that reason). The stripper is
+    // required from the build script so there is one copy of it, not two.
+    require_once dirname(DCCS_DIR) . '/tools/build-css.php';
+    $stripped = dccs_strip_comments($cssFull);
+    $norm = static fn(string $t): string => trim((string) preg_replace('/\s+/', ' ', $t));
+    ok('the shipped file is the source with its comments removed, and nothing else',
+        $norm($stripped) === $norm($cssMin));
+    ok('same number of rule blocks', substr_count($stripped, '{') === substr_count($cssMin, '{'));
+    ok('same number of declarations', substr_count($stripped, ';') === substr_count($cssMin, ';'));
+    ok('braces still balanced in the shipped file',
+        substr_count($cssMin, '{') === substr_count($cssMin, '}'));
+    // Tokens: every custom property defined and consumed must survive.
+    $tok = static function (string $css, string $re): array {
+        preg_match_all($re, $css, $m);
+        $v = array_values(array_unique($m[1]));
+        sort($v);
+        return $v;
+    };
+    $defFull = $tok($cssFull, '/(--dccs-[\w-]+)\s*:/');
+    $defMin  = $tok($cssMin,  '/(--dccs-[\w-]+)\s*:/');
+    $useFull = $tok($cssFull, '/var\(\s*(--dccs-[\w-]+)/');
+    $useMin  = $tok($cssMin,  '/var\(\s*(--dccs-[\w-]+)/');
+    ok('the sheet defines custom properties at all, so the comparison means something',
+        count($defFull) > 10);
+    ok('every custom property DEFINED survives minification', $defFull === $defMin);
+    ok('every custom property CONSUMED survives minification', $useFull === $useMin);
+    // A token the sheet never defines comes from Elementor's per-widget CSS, so it
+    // MUST be consumed with a fallback or it computes to nothing.
+    preg_match_all('/var\(\s*(--dccs-[\w-]+)\s*([,)])/', $cssMin, $vm, PREG_SET_ORDER);
+    $bare = [];
+    foreach ($vm as $m) {
+        if ($m[2] === ')' && !in_array($m[1], $defMin, true)) { $bare[] = $m[1]; }
+    }
+    ok('no externally-supplied token is consumed without a fallback',
+        $bare === [], implode(', ', array_unique($bare)));
+    // And the comments really are gone — that is the whole point of the build.
+    ok('the shipped stylesheet carries no comments', strpos($cssMin, '/*') === false);
+    ok('while the source still does', strpos($cssFull, '/*') !== false);
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

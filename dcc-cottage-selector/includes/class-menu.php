@@ -6,38 +6,38 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * The shared "DCC" top-level admin menu.
+ * This plugin's page under the shared "DCC" admin menu.
  *
- * THIS IS A COPY OF AN EXISTING IDIOM, NOT A NEW ONE. Every Dora Canal Court
- * plugin with a settings screen hangs it off ONE top-level menu, and the
- * canonical values below (slug `dcc`, capability, icon, position 58) are
- * identical in every DCC plugin — a divergent slug silently produces a SECOND
- * "DCC" menu. Do not "improve" them here; if they need to change they change in
- * every plugin at once.
+ * THE PARENT IS NOT OURS. As of 2026-09-25 a site-side mu-plugin, dcc-menu.php,
+ * OWNS the `dcc` parent: it registers it and removes WordPress's mirrored first
+ * submenu item. 0.44.0 registered the parent itself (guarded) and cleaned up at
+ * 999, which was right when four plugins each had to be able to create it and is
+ * wrong now — two owners is the duplicate-parent problem, not the fix for it.
+ * Both were removed in 0.45.0. Do not add them back.
  *
- * Registration is idempotent and order-independent: any sibling may be
- * deactivated at any time, so each plugin creates the parent only if it is not
- * there yet, and removes the auto-generated duplicate first item (guarded —
- * harmless if a sibling already did it).
+ * SUBMENU ORDER IS admin_menu HOOK PRIORITY. Live register, 2026-09-25:
  *
- * SUBMENU ORDER IS BY admin_menu HOOK PRIORITY. Read from the sibling plugins'
- * source on 2026-09-24, not from notes:
+ *     20  Contact Form
+ *     30  Guest Guide
+ *     35  Features & Amenities
+ *     40  Seasons
+ *     45  COTTAGE SELECTOR  <- this plugin
+ *     50  Custom Checkout
+ *     55  Availability Calendar
+ *     63  Wildlife
  *
- *     10  reserved, site-side mu-plugin   (per DCC Seasons' note)
- *     20  DCC Contact Form
- *     40  DCC Seasons
- *     45  DCC COTTAGE SELECTOR  <- this plugin
- *     50  DCC Custom Checkout
- *     60  reserved, site-side mu-plugin   (per DCC Seasons' note)
- *     63  DCC Wildlife
- *
- * 45 was free at the time of writing and puts this page between Seasons and
- * Checkout. If a collision ever appears, change PRIORITY here — never renumber
- * or remove another plugin's entry.
+ * Never renumber or remove another plugin's entry.
  */
+
+namespace DCCS;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 final class Menu
 {
-    /** Canonical parent menu slug — shared by every DCC plugin. */
+    /** Canonical parent menu slug — owned by the dcc-menu.php mu-plugin. */
     public const PARENT = 'dcc';
 
     /** This plugin's settings page slug. */
@@ -51,34 +51,17 @@ final class Menu
 
     public static function init(): void
     {
-        add_action('admin_menu', [self::class, 'register_parent'], 5);
         add_action('admin_menu', [self::class, 'register_page'], self::PRIORITY);
-        add_action('admin_menu', [self::class, 'remove_duplicate'], 999);
-    }
-
-    /** Create the shared parent only if no sibling plugin already did. */
-    public static function register_parent(): void
-    {
-        global $admin_page_hooks;
-
-        if (!isset($admin_page_hooks[self::PARENT])) {
-            add_menu_page(
-                __('Dora Canal Court', 'dcc-cottage-selector'),
-                __('DCC', 'dcc-cottage-selector'),
-                self::CAP,
-                self::PARENT,
-                '',                    // No page of its own; the first submenu lands.
-                'dashicons-palmtree',
-                58
-            );
-        }
     }
 
     public static function register_page(): void
     {
-        // If every parent-registering sibling is deactivated the parent will not
-        // exist; fall back to Settings rather than losing the page entirely. This
-        // mirrors what DCC Wildlife does.
+        // If the mu-plugin is ever absent the parent will not exist, and
+        // add_submenu_page() on a missing parent returns false — the settings page
+        // would simply be unreachable, with nothing on screen to say why. The
+        // fallback costs one branch and keeps the page findable under Settings.
+        // It is NOT a second parent registration: it only fires when there is no
+        // parent to attach to.
         $parent_exists = isset($GLOBALS['admin_page_hooks'][self::PARENT]);
 
         $hook = $parent_exists
@@ -99,11 +82,5 @@ final class Menu
             );
 
         Settings_Page::$hook = is_string($hook) ? $hook : '';
-    }
-
-    /** WordPress mirrors the parent label as a first submenu item; drop it. */
-    public static function remove_duplicate(): void
-    {
-        remove_submenu_page(self::PARENT, self::PARENT);
     }
 }

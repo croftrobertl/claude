@@ -282,7 +282,13 @@ final class Plugin
      */
     public function register_assets(): void
     {
-        wp_register_style('dccs-selector', DCCS_URL . 'assets/css/selector.css', [], DCCS_VERSION);
+        // Ship the comment-stripped build (45% of the raw file is comments, and
+        // they cost ~9.6 KB gzipped on every page the widget appears on). The
+        // commented source stays authoritative in the repo and is what SCRIPT_DEBUG
+        // serves; tools/build-css.php regenerates the min file and npm test fails
+        // if it has gone stale.
+        $css = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'selector.css' : 'selector.min.css';
+        wp_register_style('dccs-selector', DCCS_URL . 'assets/css/' . $css, [], DCCS_VERSION);
 
         // ONE request, not five (0.33.0). assets/js/dccs.js is generated from
         // score/labels/availability/cast/selector by tools/build-bundle.php; the

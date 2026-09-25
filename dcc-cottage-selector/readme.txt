@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.44.0
+Stable tag: 0.45.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,29 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.45.0 =
+* The front end now loads assets/css/selector.min.css — the same stylesheet with
+  its comments removed and nothing else. Measured at this host's crippled ~1 KB
+  gzip window, which is what it actually serves: 19.3 KB -> 7.2 KB, a 12.4 KB
+  saving on every page carrying the widget. (At a normal 32 KB window the same
+  change measures 13.9 KB -> 4.5 KB.)
+* The commented source stays authoritative and is what SCRIPT_DEBUG serves.
+  tools/build-css.php regenerates the min file and npm test fails if it is stale.
+  The stripper tracks string context rather than using a regex, because a /* in a
+  string or url() is not a comment.
+* Equivalence proved, not assumed: computed styles compared in Chromium across
+  508 elements and 34 properties at 320/375/768/1280 with the compare modal open
+  and closed — zero differences. Plus a PHP test asserting the shipped file is the
+  comment-stripped source and nothing else, that every --dccs-* token defined and
+  consumed survives, and that no Elementor-supplied token is consumed without a
+  fallback.
+* MENU: a site-side mu-plugin now owns the shared `dcc` parent, so this plugin no
+  longer registers it and no longer removes the mirrored first item. Two owners is
+  the duplicate-parent problem rather than the fix. It keeps only its submenu at
+  priority 45, plus a fallback that puts the page under Settings if the parent is
+  ever missing, so the settings screen cannot become unreachable.
+* No change to behaviour, markup, strings or the JS bundle.
 
 = 0.44.0 =
 * NEW: a settings screen at DCC > Cottage Selector. Until now the plugin had no
