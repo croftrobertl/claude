@@ -865,6 +865,11 @@ class Widget extends Widget_Base
             'str_price_note'       => [__('Booking popup: estimate disclaimer', 'mphb-availability-calendar'), __('for 2 guests, before any taxes/fees — final price shown at checkout', 'mphb-availability-calendar')],
             'str_all_booked'     => [__('Hint: all booked through date', 'mphb-availability-calendar'), __('All cottages booked through {through}.', 'mphb-availability-calendar')],
             'str_next_opening'   => [__('Hint: next opening', 'mphb-availability-calendar'), __('Next opening: {date} ({cottage}).', 'mphb-availability-calendar')],
+            // 0.41.0. Appended to the "unavailable" message when ANOTHER
+            // cottage is free for exactly the dates the visitor chose. It
+            // OFFERS; it never changes their selection for them. Blank it to
+            // switch the suggestion off without touching any code.
+            'str_alt_cottage'    => [__('Booking popup: another cottage is free ({cottage} replaced)', 'mphb-availability-calendar'), __('{cottage} is free for these dates.', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1691,6 +1696,7 @@ class Widget extends Widget_Base
                 'priceEstimating' => (string) ($settings['str_price_estimating'] ?? ''),
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
+                'altCottage'    => (string) ($settings['str_alt_cottage'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
                 'loading'       => (string) ($settings['str_loading'] ?? ''),
                 'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),

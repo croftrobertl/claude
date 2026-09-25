@@ -1954,6 +1954,19 @@
     // available date and the cottage opening then. Quietly returns null
     // when the window's first day has any availability, which is the
     // overwhelmingly common case.
+    /**
+     * What to CALL a cottage: the editor's per-cottage label if it set one,
+     * then the MotoPress title, then the abbreviation and number. Extracted
+     * in 0.41.0 rather than copied: the free-cottage suggestion needs the
+     * same name the "next opening" hint uses, and two copies of a naming
+     * rule drift into two different names for the same cottage on one page.
+     */
+    function roomLabel(room, customLabels) {
+        return (customLabels && (customLabels[room.id] || customLabels[String(room.id)]))
+            || room.title
+            || ((room.abbrev || '') + (room.number ? ' #' + room.number : '')).trim();
+    }
+
     function buildAvailabilityHint(config, rooms, availability, days, strings, customLabels, bookedThrough) {
         // Explicit opt-out, checked FIRST. The single-cottage widget sets
         // availabilityHint:false because "All cottages booked through …" is
@@ -2023,9 +2036,7 @@
                 }
             }
             if (openRoom) {
-                var label = (customLabels && (customLabels[openRoom.id] || customLabels[String(openRoom.id)]))
-                    || openRoom.title
-                    || ((openRoom.abbrev || '') + (openRoom.number ? ' #' + openRoom.number : '')).trim();
+                var label = roomLabel(openRoom, customLabels);
                 hintEl.textContent += ' ' + strings.nextOpening
                     .replace('{date}', openDay)
                     .replace('{cottage}', label);
@@ -2235,6 +2246,67 @@
             return null;
         }
 
+        /**
+         * WHICH COTTAGE *IS* FREE (0.41.0).
+         *
+         * When the chosen dates are blocked for the cottage the visitor
+         * tapped, another one may be free for exactly those nights — and the
+         * client ALREADY HOLDS the answer. state.availability is keyed by
+         * room type for every cottage in the loaded window, and blockedNight()
+         * above consults only the one cottage. So this costs no request, no
+         * query and no server work: it is a loop over data already in memory.
+         *
+         * BOUNDED TO THE LOADED WINDOW, and that is what the `!== 'available'`
+         * test buys. A date the window does not cover is UNDEFINED in the map,
+         * not 'available', so a candidate is rejected the moment the range
+         * runs past what has been loaded. Claiming a cottage is free on a date
+         * nobody has looked at would be worse than saying nothing.
+         *
+         * IT OFFERS; IT NEVER SWITCHES. The return value is a name that gets
+         * appended to the message. Nothing here touches the date fields, the
+         * selected cottage or the grid — the visitor stays in control of their
+         * own selection, and the message lands in the role="alert" region so
+         * it is announced rather than only seen.
+         *
+         * NO PRICE. Prices come from a separate per-cottage endpoint; quoting
+         * one here would mean a request per candidate, which is the opposite
+         * of the reason this is cheap.
+         *
+         * SINGLE-COTTAGE PLACEMENTS FALL OUT OF THE LOOP rather than being
+         * turned away at the door. Their payload holds one room type, and
+         * that one is the cottage the visitor is looking at, so the skip
+         * below consumes it and nothing is returned. An explicit
+         * `if (rooms.length < 2) return ''` used to sit here and read well —
+         * but it guarded nothing the loop did not already handle, and a
+         * mutation removing it changed no observable behaviour and SURVIVED.
+         * A branch no test can reach is not a safeguard, it is decoration.
+         */
+        function freeAlternative(ci, co) {
+            var rooms = (state && state.rooms) || [];
+            var avail = (state && state.availability) || {};
+            for (var i = 0; i < rooms.length; i++) {
+                var room = rooms[i];
+                if (String(room.id) === String(context.roomTypeId)) continue;
+                var map = avail[room.id] || avail[String(room.id)];
+                if (!map) continue;
+                var cursor = new Date(ci + 'T00:00:00');
+                var end = new Date(co + 'T00:00:00');
+                var nights = 0;
+                var free = true;
+                while (cursor < end && nights++ < 400) {
+                    var key = cursor.getFullYear() + '-' +
+                              String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                              String(cursor.getDate()).padStart(2, '0');
+                    if (map[key] !== 'available') { free = false; break; }
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                if (free && nights > 0) {
+                    return roomLabel(room, (config && config.customLabels) || {});
+                }
+            }
+            return '';
+        }
+
         function rangeState() {
             var ci = checkinEl ? checkinEl.value : '';
             var co = checkoutEl ? checkoutEl.value : '';
@@ -2257,8 +2329,15 @@
             // whole point of 0.23.8 item 1. A visitor should not finalise a
             // range and be told at the last step that it was never bookable.
             if (blockedNight(ci, co)) {
-                return { ok: false, complete: true,
-                    msg: (config.strings && config.strings.bookUnavail) || 'Unavailable.' };
+                var msg = (config.strings && config.strings.bookUnavail) || 'Unavailable.';
+                // A dead end becomes an offer when the data already on the
+                // client can name a cottage that is free for these very
+                // nights. Blanking the string in the panel turns it off.
+                var alt = (config.strings && config.strings.altCottage) ? freeAlternative(ci, co) : '';
+                if (alt) {
+                    msg += ' ' + config.strings.altCottage.replace('{cottage}', alt);
+                }
+                return { ok: false, complete: true, msg: msg };
             }
             return { ok: true, complete: true, msg: '' };
         }
