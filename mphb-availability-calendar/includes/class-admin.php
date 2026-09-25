@@ -8,21 +8,30 @@ if (!defined('ABSPATH')) {
 /**
  * DCC → Availability Calendar. The plugin's only admin screen.
  *
- * THE SHARED `dcc` PARENT IS A CONTRACT BETWEEN PLUGINS, not this plugin's
- * property. Several DCC plugins register it, all at admin_menu priority 5,
- * and each one must:
- *   1. register the parent ONLY IF IT IS ABSENT — never unconditionally;
- *   2. add its own submenu at a priority nobody else is using;
- *   3. remove the duplicate parent entry at priority 999.
- * Step 3 is needed because add_menu_page() always creates a submenu item that
- * duplicates the parent. Once it is gone, WordPress points the top-level "DCC"
- * link at the first real submenu, which is the behaviour wanted. Every plugin
- * runs the same removal and the repeats are harmless no-ops.
+ * THIS PLUGIN DOES NOT OWN THE `dcc` PARENT AND NO LONGER REGISTERS IT.
+ * A site-side mu-plugin, dcc-menu.php, owns it: it adds the parent at
+ * admin_menu priority 5 and calls remove_submenu_page() on the mirrored
+ * duplicate at 999. That is
+ * the clean fix to the duplicate-parent CAUSE — add_menu_page() always
+ * creates a submenu item duplicating its own parent, so every plugin that
+ * registered the parent also had to carry a removal, and four of them did.
+ * With one owner there is nothing to deduplicate and nothing to negotiate.
  *
- * SUBMENU PRIORITY 40. Recorded as in use elsewhere: 20, 30, 50, 63. 40 sits
- * in the gap and is stated in the release report so the next plugin can avoid
- * it. Submenu ORDER follows priority, so this screen lands between whatever
- * registers at 30 and whatever registers at 50.
+ * So this file adds a SUBMENU and nothing else. It does not check whether the
+ * parent exists, does not create it, and does not remove anything. If the
+ * mu-plugin is ever absent the submenu simply does not appear — WordPress
+ * drops a submenu whose parent is missing — which is a visible, harmless
+ * failure rather than a menu that fights its siblings.
+ *
+ * SUBMENU PRIORITY 55. The live register, verified by the intermediary:
+ *      5  dcc-menu (parent)     20 contact-form      30 guest-guide
+ *     35  features-amenities    40 seasons           45 cottage-selector
+ *     50  custom-checkout       63 wildlife
+ *     10 and 60 reserved for site-side mu-plugins.
+ * 0.40.0 took 40 and COLLIDED with dcc-seasons, which was already there;
+ * neither session could see the other's source, which is why every session
+ * states its number. 55 is free. Submenu order follows priority, so this
+ * screen sits between custom-checkout and wildlife.
  *
  * SECURITY. Rendering and saving both check the capability; the form carries a
  * nonce that is verified before anything is written; everything submitted goes
@@ -44,9 +53,7 @@ final class Admin
 
     public static function register(): void
     {
-        add_action('admin_menu', [self::class, 'register_parent'], 5);
-        add_action('admin_menu', [self::class, 'register_page'], 40);
-        add_action('admin_menu', [self::class, 'remove_duplicate_parent'], 999);
+        add_action('admin_menu', [self::class, 'register_page'], 55);
         // THE SAVE IS ITS OWN ENTRY POINT, not a branch inside render().
         // Two reasons, and the second is the one that matters:
         //   a. post-redirect-get, so refreshing the page after a save does not
@@ -64,31 +71,6 @@ final class Admin
         add_action('admin_init', ['\\MPHBAC\\Settings', 'maybe_upgrade']);
     }
 
-    /**
-     * Register the shared parent ONLY if no other DCC plugin already has.
-     * add_menu_page() records itself in $admin_page_hooks keyed by slug, so
-     * that global is the authoritative "is it already there" test and it is
-     * populated by whichever plugin ran first at this same priority.
-     */
-    public static function register_parent(): void
-    {
-        global $admin_page_hooks;
-        if (isset($admin_page_hooks[self::PARENT_SLUG])) {
-            return;
-        }
-        add_menu_page(
-            __('Dora Canal Court', 'mphb-availability-calendar'),
-            __('DCC', 'mphb-availability-calendar'),
-            self::capability(),
-            self::PARENT_SLUG,
-            // No page of its own. The duplicate submenu is removed at 999 and
-            // WordPress then links the top-level item at the first real child.
-            '__return_null',
-            'dashicons-calendar-alt',
-            58
-        );
-    }
-
     public static function register_page(): void
     {
         add_submenu_page(
@@ -99,16 +81,6 @@ final class Admin
             self::PAGE_SLUG,
             [self::class, 'render']
         );
-    }
-
-    /** See the class docblock. Idempotent, and a no-op if someone beat us. */
-    public static function remove_duplicate_parent(): void
-    {
-        global $admin_page_hooks;
-        if (!isset($admin_page_hooks[self::PARENT_SLUG])) {
-            return;
-        }
-        remove_submenu_page(self::PARENT_SLUG, self::PARENT_SLUG);
     }
 
     /**
