@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.40.0
+Stable tag: 0.41.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.41.0 =
+* **When a guest's dates are taken, the calendar now tells them which cottage IS free for those exact nights** — on the multi-cottage calendar. It only ever offers: it never changes the dates or the cottage they picked, and the suggestion is read out by screen readers along with the rest of the message. No prices are quoted. It costs nothing to run: the calendar already knows every cottage's availability for the dates on screen.
+* **Day cells are now 44px tall, up from 38.** Tapping a day is how a guest starts a booking, so the day cell is a touch target and 44px is the standard. **This is an intended change, not a regression.** The cells cannot also be 44px WIDE on a phone — seven columns at 44px plus the cottage column needs a 440px screen — and that is accepted rather than worked around.
+* The loading skeleton could draw its cottage column 84px wider, and its rows 4px taller, than the calendar that replaced it. Both are fixed, so nothing shifts as the calendar finishes loading.
+* Housekeeping: the settings screen has moved to a free slot in the DCC menu (it shared one with Seasons), and it no longer creates the DCC menu itself — a small site-side plugin now owns that.
 
 = 0.40.0 =
 * **New settings screen: DCC → Availability Calendar.** Every colour, size, count and switch the calendars use is now in one place, with the common things first and the rest behind an “Advanced settings” panel. Nothing changes on the site until you change something there — the screen opens showing exactly what the plugin already does, and each field says what it ships as.
