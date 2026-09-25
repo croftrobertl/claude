@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.39.0
+Stable tag: 0.40.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,13 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.40.0 =
+* **New settings screen: DCC → Availability Calendar.** Every colour, size, count and switch the calendars use is now in one place, with the common things first and the rest behind an “Advanced settings” panel. Nothing changes on the site until you change something there — the screen opens showing exactly what the plugin already does, and each field says what it ships as.
+* **Elementor controls now follow the settings screen.** A calendar you have never styled by hand takes its colours from the settings; one you have styled keeps its own values and can be put back to following the settings by clearing the field. This applies to all three widgets, including the staff board.
+* **Nothing is added to a guest page unless you have actually changed a colour.** With everything at its shipped value the plugin adds zero bytes; changing two colours adds about ninety.
+* The staff board’s page and its “who may see it while logged in” setting are now on that screen too. Neither can open the board on its own — the page password is still required, and the board still refuses to serve anything if that password is ever removed.
+* **After installing this one, flush Elementor’s cached CSS once** (Elementor → Tools → Regenerate CSS & Data). Until you do, existing pages keep the colours baked into their cached stylesheet and the settings screen will look as though it is doing nothing.
 
 = 0.39.0 =
 * **All three popup close buttons are now identical** — the booking popup's, the info popup's floating one over the photos, and the staff detail sheet's. 0.38.0 brought two of them together and deliberately left the floating one alone; it now joins them: same 46px circle, same pale-blue ground, same brand-blue ✕, same salmon hover, same focus outline.

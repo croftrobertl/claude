@@ -25,6 +25,13 @@ $delete_for_current_site = static function () use ($wpdb): void {
         )
     );
     delete_option('mphbac_cache_gen');
+    // The settings row and its schema version (0.40.0). UNINSTALL, not
+    // deactivate: deactivating leaves them alone, so switching the plugin off
+    // and on again keeps everything the admin chose. Deleting the plugin is
+    // the explicit "remove it and its data" action, and leaving an orphaned
+    // option behind is the thing this file exists to prevent.
+    delete_option('mphbac_settings');
+    delete_option('mphbac_settings_version');
 };
 
 if (function_exists('is_multisite') && is_multisite()) {
