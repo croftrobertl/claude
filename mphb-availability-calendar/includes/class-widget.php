@@ -136,6 +136,18 @@ class Widget extends Widget_Base
             MPHBAC_VERSION,
             true
         );
+
+        // THE SETTINGS PALETTE, AND ONLY WHEN IT DIFFERS FROM THE SHIPPED ONE.
+        // Settings::tokens_css() returns '' unless a colour has actually been
+        // changed on the settings screen, and wp_add_inline_style() with an
+        // empty string is a no-op — so a site that has never opened that
+        // screen adds nothing at all to any page. This is deliberate: page
+        // weight is a budget here, and Elementor's CSS print method was moved
+        // to "External File" to keep blobs out of the HTML.
+        $tokens = Settings::tokens_css();
+        if ($tokens !== '') {
+            wp_add_inline_style('mphbac-widget', $tokens);
+        }
     }
 
     /**
@@ -341,7 +353,7 @@ class Widget extends Widget_Base
         $this->add_control('legend_text_color', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#111111',
+            'default'   => Settings::get('legend_text_color'),
             'selectors' => [self::SEL . '.mphbac-legend' => 'color: {{VALUE}};'],
         ]);
 
@@ -424,16 +436,16 @@ class Widget extends Widget_Base
         $this->add_control('calheader_bg', [
             'label'     => __('Weekday background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#0A50B2',
             'selectors' => [
                 self::SEL => '--mphbac-color-header: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('calheader_text', [
             'label'     => __('Weekday text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFFFFF',
+            'default'   => Settings::get('calheader_text'),
             'selectors' => [
                 self::SEL . '.mphbac-cell-day'                 => 'color: {{VALUE}};',
                 self::SEL . '.mphbac-row-header .mphbac-cell-label' => 'color: {{VALUE}};',
@@ -506,21 +518,21 @@ class Widget extends Widget_Base
         $this->add_control('namecol_bg', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#F8F9FA',
             'selectors' => [self::SEL => '--mphbac-color-namecol: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('namecol_alt_bg', [
             'label'       => __('Alternating row color', 'mphb-availability-calendar'),
             'type'        => Controls_Manager::COLOR,
-            'default'     => '#F1F3F5',
             'selectors'   => [self::SEL => '--mphbac-color-namecol-alt: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('namecol_text', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#111111',
+            'default'   => Settings::get('namecol_text'),
             'selectors' => [self::SEL . '.mphbac-row-toggle' => 'color: {{VALUE}};'],
         ]);
 
@@ -540,7 +552,7 @@ class Widget extends Widget_Base
             // calendars use, and comfortably clear of the longest name
             // ("Blue Heron"). The stylesheet still floors the phone track at
             // 88px so an OLDER saved value cannot clip.
-            'default'       => ['size' => 96, 'unit' => 'px'],
+            'default'       => ['size' => Settings::get('namecol_width'), 'unit' => 'px'],
             'tablet_default'=> ['size' => 96, 'unit' => 'px'],
             'mobile_default'=> ['size' => 96, 'unit' => 'px'],
             'range'         => [
@@ -564,10 +576,14 @@ class Widget extends Widget_Base
         $this->add_control('nav_btn_bg', [
             'label'     => __('Button background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            // The site's blue. Shipped as the DEFAULT rather than left to
-            // stored widget settings so a ninth cottage, or a settings reset,
-            // is born correct — see PROJECT-NOTES, "Defaults are the contract".
-            'default'   => '#0A50B2',
+            // NO DEFAULT SINCE 0.40.0. The site's blue used to be shipped here
+            // so a ninth cottage was born correct; that contract has moved to
+            // DCC → Availability Calendar, which is the point — a default
+            // baked into the control is emitted into Elementor's per-post CSS
+            // at (0,6,0), where it MASKS the settings screen no matter what
+            // the stylesheet says. Left empty, Elementor emits nothing and the
+            // settings token governs; set, it deliberately overrides for this
+            // one placement and can be cleared back to empty.
             // TOKEN, not background-color. 0.31.0 moved the HOVER half into
             // widget.css but left this half here, where Elementor emits it at
             // (0,6,0) — so the resting colour out-specified the (0,2,0) hover
@@ -576,19 +592,19 @@ class Widget extends Widget_Base
             // SAME place: both are now tokens consumed by widget.css. Raising
             // the hover selector instead would work and leave the trap armed.
             'selectors' => [self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-bg: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_text', [
             'label'     => __('Button arrow color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFFFFF',
             'selectors' => [self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-text: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_hover_bg', [
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#f08080',
             // Writes a TOKEN; it does not emit :hover itself. Elementor's
             // per-post CSS cannot be wrapped in a media query, so a :hover rule
             // emitted here lands ungated and sticks on iOS after a tap — which
@@ -599,6 +615,7 @@ class Widget extends Widget_Base
             'selectors' => [
                 self::SEL . '.mphbac-nav-btn' => '--mphbac-color-nav-hover: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_radius', [
@@ -634,7 +651,7 @@ class Widget extends Widget_Base
             'label_on'     => __('Show', 'mphb-availability-calendar'),
             'label_off'    => __('Hide', 'mphb-availability-calendar'),
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('heading_show') ? 'yes' : '',
         ]);
 
         $this->add_control('heading_text', [
@@ -670,7 +687,7 @@ class Widget extends Widget_Base
             'min'            => 1,
             'max'            => 62,
             'step'           => 1,
-            'default'        => 31,
+            'default'        => Settings::get('visible_days'),
             'tablet_default' => 14,
             'mobile_default' => 7,
             'description'    => __('How many days the calendar shows. Set a value per device with the desktop/tablet/mobile switcher.', 'mphb-availability-calendar'),
@@ -679,7 +696,7 @@ class Widget extends Widget_Base
         $this->add_responsive_control('dow_format', [
             'label'          => __('Day-of-week format', 'mphb-availability-calendar'),
             'type'           => Controls_Manager::SELECT,
-            'default'        => 'long',
+            'default'        => Settings::get('dow_format'),
             'tablet_default' => 'long',
             'mobile_default' => 'short',
             'options'        => [
@@ -698,7 +715,7 @@ class Widget extends Widget_Base
         $this->add_control('label_style', [
             'label'   => __('Row label style', 'mphb-availability-calendar'),
             'type'    => Controls_Manager::SELECT,
-            'default' => 'abbrev_number',
+            'default' => Settings::get('label_style'),
             'options' => [
                 'abbrev_number' => __('Two-line: short name + number', 'mphb-availability-calendar'),
                 'number_only'   => __('Number only (full name in tooltip)', 'mphb-availability-calendar'),
@@ -708,7 +725,7 @@ class Widget extends Widget_Base
         $this->add_control('namecol_style', [
             'label'       => __('Cottage column style', 'mphb-availability-calendar'),
             'type'        => Controls_Manager::SELECT,
-            'default'     => 'scales',
+            'default'     => Settings::get('namecol_style'),
             'options'     => [
                 'scales'   => __('Overlapping scales', 'mphb-availability-calendar'),
                 'dividers' => __('Plain dividing lines', 'mphb-availability-calendar'),
@@ -720,14 +737,14 @@ class Widget extends Widget_Base
             'label'        => __('Show color legend', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('show_legend') ? 'yes' : '',
         ]);
 
         $this->add_control('show_nav', [
             'label'        => __('Show navigation arrows', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('show_nav') ? 'yes' : '',
             'description'  => __('The prev/next arrows page the calendar by month. On touch devices visitors can also swipe.', 'mphb-availability-calendar'),
         ]);
 
@@ -735,7 +752,7 @@ class Widget extends Widget_Base
             'label'        => __('Show past days', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('show_past') ? 'yes' : '',
             'description'  => __('Past days are shown greyed out using the "Past" color.', 'mphb-availability-calendar'),
         ]);
 
@@ -745,7 +762,7 @@ class Widget extends Widget_Base
             'size_units' => ['px'],
             'range'      => ['px' => ['min' => 10, 'max' => 22, 'step' => 1]],
             // 0.23.9: the /cottages/ value, so a fresh widget needs no styling.
-            'default'    => ['unit' => 'px', 'size' => 18],
+            'default'    => ['unit' => 'px', 'size' => Settings::get('font_size')],
             'selectors'  => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-font-size: {{SIZE}}{{UNIT}};',
             ],
@@ -755,7 +772,7 @@ class Widget extends Widget_Base
             'label'        => __('Enable Book Now popup', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('enable_popup') ? 'yes' : '',
             'description'  => __('When on, tapping an available day or the "Book this cottage" button opens a sheet that submits a booking to MotoPress checkout.', 'mphb-availability-calendar'),
         ]);
 
@@ -765,7 +782,7 @@ class Widget extends Widget_Base
             'min'         => 1,
             'max'         => 60,
             'step'        => 1,
-            'default'     => 2,
+            'default'     => Settings::get('min_nights'),
             'description' => __('The booking popup defaults the check-out date this many nights after the chosen check-in, and rejects shorter stays. Match this to your MotoPress minimum-stay rule.', 'mphb-availability-calendar'),
             'condition'   => ['enable_popup' => 'yes'],
         ]);
@@ -774,7 +791,7 @@ class Widget extends Widget_Base
             'label'        => __('Full viewport width', 'mphb-availability-calendar'),
             'type'         => Controls_Manager::SWITCHER,
             'return_value' => 'yes',
-            'default'      => 'yes',
+            'default'      => Settings::get('info_popup_full_width') ? 'yes' : '',
             'description'  => __('When on, the cottage-info popup fills the entire viewport (recommended when the source is the MotoPress accommodation page, so its gallery/rates/attributes render at their natural width). When off, the popup is a centered modal capped by the Max width setting below.', 'mphb-availability-calendar'),
         ]);
 
@@ -784,7 +801,7 @@ class Widget extends Widget_Base
             'min'            => 320,
             'max'            => 1600,
             'step'           => 10,
-            'default'        => 1200,
+            'default'        => Settings::get('info_popup_max_width'),
             'tablet_default' => 800,
             'mobile_default' => 480,
             'description'    => __('Maximum width of the cottage-info popup when "Full viewport width" is off. Set independent values per device using the icons next to the label. The popup is always capped at 96vw to avoid horizontal scroll.', 'mphb-availability-calendar'),
@@ -795,7 +812,7 @@ class Widget extends Widget_Base
             'label'          => __('Info popup side margin', 'mphb-availability-calendar'),
             'type'           => Controls_Manager::SLIDER,
             'size_units'     => ['px'],
-            'default'        => ['size' => 32, 'unit' => 'px'],
+            'default'        => ['size' => Settings::get('info_popup_side_margin'), 'unit' => 'px'],
             'tablet_default' => ['size' => 20, 'unit' => 'px'],
             'mobile_default' => ['size' => 12, 'unit' => 'px'],
             'range'          => [
@@ -879,31 +896,31 @@ class Widget extends Widget_Base
         $this->add_control('color_available', [
             'label'     => __('Available color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#7BDCB5',
             'condition' => ['inherit_theme!' => 'yes'],
             'selectors' => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-color-available: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('color_booked', [
             'label'     => __('Booked color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FB6962',
             'condition' => ['inherit_theme!' => 'yes'],
             'selectors' => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-color-booked: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('color_past', [
             'label'     => __('Past color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#bdc3c7',
             'condition' => ['inherit_theme!' => 'yes'],
             'selectors' => [
                 '{{WRAPPER}} .mphbac-root' => '--mphbac-color-past: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->end_controls_section();
@@ -1040,8 +1057,8 @@ class Widget extends Widget_Base
         $this->add_control('button_text_color', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#ffffff',
             'selectors' => [self::BSEL => '--mphbac-color-btn-text: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->add_control('button_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
@@ -1051,8 +1068,8 @@ class Widget extends Widget_Base
             // last one in source order wins. Identical defaults are what stop
             // that being a coin flip — a per-widget value cannot, it just adds
             // another competing rule.
-            'default'   => '#0A50B2',
             'selectors' => [self::BSEL => '--mphbac-color-btn-bg: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->end_controls_tab();
 
@@ -1073,10 +1090,10 @@ class Widget extends Widget_Base
         $this->add_control('button_bg_color_hover', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#f08080',
             'selectors' => [
                 self::BSEL => '--mphbac-color-btn-hover: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->end_controls_tab();
 
@@ -1096,7 +1113,7 @@ class Widget extends Widget_Base
             'label'      => __('Cell corner radius', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
-            'default'    => ['size' => 4, 'unit' => 'px'],
+            'default'    => ['size' => Settings::get('cell_radius'), 'unit' => 'px'],
             'range'      => ['px' => ['min' => 0, 'max' => 16, 'step' => 1]],
             'selectors'  => [
                 self::SEL . '.mphbac-cell-status' => 'border-radius: {{SIZE}}{{UNIT}};',
@@ -1113,7 +1130,7 @@ class Widget extends Widget_Base
             'label'      => __('Cottage row height', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
-            'default'    => ['size' => 38, 'unit' => 'px'],
+            'default'    => ['size' => Settings::get('cell_min_height'), 'unit' => 'px'],
             'range'      => ['px' => ['min' => 16, 'max' => 60, 'step' => 2]],
             'selectors'  => [
                 self::SEL => '--mphbac-cell-min: {{SIZE}}{{UNIT}};',
@@ -1125,7 +1142,7 @@ class Widget extends Widget_Base
             'description'=> __('Height of the top day-of-week / date row.', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
-            'default'    => ['size' => 38, 'unit' => 'px'],
+            'default'    => ['size' => Settings::get('header_min_height'), 'unit' => 'px'],
             'range'      => ['px' => ['min' => 16, 'max' => 60, 'step' => 2]],
             'selectors'  => [
                 self::SEL => '--mphbac-header-min: {{SIZE}}{{UNIT}};',
@@ -1136,7 +1153,7 @@ class Widget extends Widget_Base
             'label'      => __('Gap between cells', 'mphb-availability-calendar'),
             'type'       => Controls_Manager::SLIDER,
             'size_units' => ['px'],
-            'default'    => ['size' => 2, 'unit' => 'px'],
+            'default'    => ['size' => Settings::get('cell_gap'), 'unit' => 'px'],
             'range'      => ['px' => ['min' => 0, 'max' => 10, 'step' => 1]],
             'selectors'  => [
                 self::SEL => '--mphbac-gap: {{SIZE}}{{UNIT}};',
@@ -1243,14 +1260,14 @@ class Widget extends Widget_Base
         $this->add_control('view_text_color', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFFFFF',
             'selectors' => [self::VSEL => '--mphbac-color-view-text: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->add_control('view_bg_color', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#0A50B2',
             'selectors' => [self::VSEL => '--mphbac-color-view-bg: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->add_control('view_icon_color', [
             'label'     => __('Icon color', 'mphb-availability-calendar'),
@@ -1266,19 +1283,19 @@ class Widget extends Widget_Base
         $this->add_control('view_text_color_hover', [
             'label'     => __('Text color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFFFFF',
             // Token, not :hover. VSEL is global for the same portal reason.
             'selectors' => [
                 self::VSEL => '--mphbac-color-view-hover-text: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->add_control('view_bg_color_hover', [
             'label'     => __('Background color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#f08080',
             'selectors' => [
                 self::VSEL => '--mphbac-color-view-hover: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
         $this->end_controls_tab();
 
@@ -1452,7 +1469,7 @@ class Widget extends Widget_Base
             $rooms_by_id[(int) $r['id']] = $r['title'];
         }
 
-        $popup_enabled = ($settings['enable_popup'] ?? 'yes') === 'yes';
+        $popup_enabled = ($settings['enable_popup'] ?? (Settings::get('enable_popup') ? 'yes' : '')) === 'yes';
         $month_mode    = $this->month_mode($settings);
 
         // Months shown per device (month mode). device_number() handles
@@ -1463,10 +1480,14 @@ class Widget extends Widget_Base
         // exactly. They are not belt-and-braces: none of the eight cottage
         // templates store a months value, so for those widgets one of these
         // two paths IS the shipped behaviour.
-        $months_desktop = self::device_number($settings['months_shown']        ?? null, 4, 1, 4);
-        $months_tablet  = self::device_number($settings['months_shown_tablet'] ?? null, 2, 1, 4);
-        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, 2, 1, 4);
-        $min_nights    = max(1, (int) ($settings['min_nights'] ?? 2));
+        // The 4/2/2 that used to be written here three times now lives in
+        // the settings schema, which is also where the single-cottage
+        // widget's control defaults read it from — so the two paths a widget
+        // storing nothing can take cannot drift apart any more.
+        $months_desktop = self::device_number($settings['months_shown']        ?? null, (int) Settings::get('months_shown'), 1, 4);
+        $months_tablet  = self::device_number($settings['months_shown_tablet'] ?? null, (int) Settings::get('months_shown_tablet'), 1, 4);
+        $months_mobile  = self::device_number($settings['months_shown_mobile'] ?? null, (int) Settings::get('months_shown_mobile'), 1, 4);
+        $min_nights    = max(1, (int) ($settings['min_nights'] ?? Settings::get('min_nights')));
 
         $property_label = (string) ($settings['str_property'] ?? '');
 
@@ -1535,7 +1556,7 @@ class Widget extends Widget_Base
             }
         }
         $info_has_any = !empty($info_html);
-        $info_full_width = ($settings['info_popup_full_width'] ?? 'yes') === 'yes';
+        $info_full_width = ($settings['info_popup_full_width'] ?? (Settings::get('info_popup_full_width') ? 'yes' : '')) === 'yes';
 
         $status_labels = [
             Data_Provider::ST_AVAIL  => (string) ($settings['str_legend_avail'] ?? ''),
@@ -1566,7 +1587,7 @@ class Widget extends Widget_Base
                 $base_from  = $today->modify('first day of this month');
                 $init_to    = $base_from->modify('+' . ($max_months - 1) . ' months')->modify('last day of this month');
             } else {
-                $base_from = ($settings['show_past'] ?? 'yes') === 'yes' ? $today->modify('-1 day') : $today;
+                $base_from = ($settings['show_past'] ?? (Settings::get('show_past') ? 'yes' : '')) === 'yes' ? $today->modify('-1 day') : $today;
                 $max_days  = max($days_desktop, $days_tablet, $days_mobile);
                 $init_to   = $base_from->modify('+' . ($max_days - 1) . ' days');
             }
@@ -1687,7 +1708,7 @@ class Widget extends Widget_Base
             $root_classes[] = 'mphbac-popup-enabled';
         }
         $root_classes[] = 'mphbac-label-' . ($settings['label_style'] === 'number_only' ? 'number' : 'abbrev');
-        $root_classes[] = ($settings['namecol_style'] ?? 'scales') === 'dividers'
+        $root_classes[] = ($settings['namecol_style'] ?? Settings::get('namecol_style')) === 'dividers'
             ? 'mphbac-namecol-dividers'
             : 'mphbac-namecol-scales';
         if ($this->single_mode()) {

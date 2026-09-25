@@ -90,7 +90,6 @@ final class Staff_Elementor extends Widget_Base
         $this->add_control('nav_btn_bg', [
             'label'     => __('Button background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#0A50B2',
             // TOKEN, not background-color — and this half matters as much as the
             // hover half. Emitted as a paint property it lands at (0,7,0) and
             // OUT-SPECIFIES both the :hover and the :focus-visible rules in
@@ -99,19 +98,19 @@ final class Staff_Elementor extends Widget_Base
             // Rest and hover have to resolve in the same place. Identical to
             // the public widget's 0.31.1 fix.
             'selectors' => [self::SEL . '.mphbac-staff-nav' => '--staff-nav-bg: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_text', [
             'label'     => __('Button arrow color', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#FFFFFF',
             'selectors' => [self::SEL . '.mphbac-staff-nav' => '--staff-nav-text: {{VALUE}};'],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_hover_bg', [
             'label'     => __('Button hover background', 'mphb-availability-calendar'),
             'type'      => Controls_Manager::COLOR,
-            'default'   => '#f08080',
             // Writes a TOKEN; it does not emit :hover or :focus-visible itself.
             // Three reasons, all of which a staff.css-only change would miss:
             //
@@ -132,6 +131,7 @@ final class Staff_Elementor extends Widget_Base
             'selectors' => [
                 self::SEL . '.mphbac-staff-nav' => '--staff-nav-hover: {{VALUE}};',
             ],
+            'description' => __('Leave empty to follow DCC → Availability Calendar.', 'mphb-availability-calendar'),
         ]);
 
         $this->add_control('nav_btn_radius', [

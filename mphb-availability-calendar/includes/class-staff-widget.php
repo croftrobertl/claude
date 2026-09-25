@@ -32,6 +32,15 @@ final class Staff_Widget
     {
         wp_register_style('mphbac-staff', MPHBAC_URL . 'assets/css/staff.css', [], MPHBAC_VERSION);
         wp_register_script('mphbac-staff', MPHBAC_URL . 'assets/js/staff.js', [], MPHBAC_VERSION, true);
+
+        // Same zero-cost rule as the public widget: nothing is emitted unless
+        // a colour has actually been changed. The staff board is behind a
+        // password and is never page-cached, but the rule is the same one so
+        // the two cannot drift.
+        $tokens = Settings::tokens_css();
+        if ($tokens !== '') {
+            wp_add_inline_style('mphbac-staff', $tokens);
+        }
     }
 
     /**

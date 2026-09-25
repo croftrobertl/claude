@@ -25,6 +25,15 @@ final class Plugin
 
         add_action('init', [$this, 'load_textdomain']);
 
+        // THE SETTINGS SCREEN IS REGISTERED BEFORE THE DEPENDENCY GATE.
+        // Everything else here needs Elementor and MotoPress; the settings do
+        // not, and an admin whose Elementor licence lapsed should still be
+        // able to see — and keep — their stored values rather than find the
+        // page gone and assume the settings went with it.
+        if (is_admin()) {
+            Admin::register();
+        }
+
         if (!$this->dependencies_present()) {
             add_action('admin_notices', [$this, 'render_missing_deps_notice']);
             return;
@@ -45,8 +54,13 @@ final class Plugin
         // the Elementor editor preview — the gray loading skeleton is never
         // replaced. Tagging our assets with the opt-out attributes optimizers
         // honor keeps them as their own reliably-executed files.
-        add_filter('script_loader_tag', ['\\MPHBAC\\Widget', 'keep_script_unoptimized'], 10, 2);
-        add_filter('style_loader_tag', ['\\MPHBAC\\Widget', 'keep_style_unoptimized'], 10, 2);
+        // Settable since 0.40.0, still ON by default. Turning it off is only
+        // correct on a site with no combine/defer optimiser left to opt out
+        // of; the settings screen says so next to the switch.
+        if (Settings::get('keep_assets_unoptimized')) {
+            add_filter('script_loader_tag', ['\\MPHBAC\\Widget', 'keep_script_unoptimized'], 10, 2);
+            add_filter('style_loader_tag', ['\\MPHBAC\\Widget', 'keep_style_unoptimized'], 10, 2);
+        }
 
         add_action('wp_ajax_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);
         add_action('wp_ajax_nopriv_' . MPHBAC_AJAX_ACTION, ['\\MPHBAC\\Ajax', 'handle']);

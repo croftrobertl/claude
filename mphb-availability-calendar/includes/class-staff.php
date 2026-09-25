@@ -47,14 +47,28 @@ final class Staff
     /** Booking statuses staff should see. Cancelled/abandoned are excluded. */
     public const VISIBLE_STATUSES = ['confirmed', 'pending', 'pending-payment', 'pending-user'];
 
+    /**
+     * The page and the capability now come from the settings screen, with the
+     * filters kept AHEAD of nothing and BEHIND nothing: the setting supplies
+     * the default and a filter still overrides it, so an existing
+     * mphbac_staff_page_id filter in a theme or mu-plugin keeps working
+     * exactly as before. The constant above remains the shipped value.
+     *
+     * NEITHER OF THESE IS THE SECURITY BOUNDARY on its own. is_authorized()
+     * below still requires the page to exist, be published, and still HAVE a
+     * password before it will trust a password cookie; pointing this setting
+     * at the wrong page cannot open the gate, it closes it.
+     */
     public static function page_id(): int
     {
-        return (int) apply_filters('mphbac_staff_page_id', self::DEFAULT_PAGE_ID);
+        $from_settings = (int) Settings::get('staff_page_id');
+        return (int) apply_filters('mphbac_staff_page_id', $from_settings > 0 ? $from_settings : self::DEFAULT_PAGE_ID);
     }
 
     public static function capability(): string
     {
-        return (string) apply_filters('mphbac_staff_capability', 'edit_mphb_bookings');
+        $from_settings = (string) Settings::get('staff_capability');
+        return (string) apply_filters('mphbac_staff_capability', $from_settings !== '' ? $from_settings : 'edit_mphb_bookings');
     }
 
     /**

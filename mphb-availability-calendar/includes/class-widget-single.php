@@ -151,12 +151,13 @@ class Widget_Single extends Widget
             'max'            => 4,
             'step'           => 1,
             // Four across the desktop grid (two columns x two rows, see the
-            // .mphbac-months rule) and two on a phone. Kept in lockstep with
-            // the fallbacks in Widget::render_config() — a widget that stores
-            // nothing takes one path or the other depending on the caller.
-            'default'        => 4,
-            'tablet_default' => 2,
-            'mobile_default' => 2,
+            // .mphbac-months rule) and two on a phone. BOTH paths a widget
+            // storing nothing can take — this control default and the
+            // fallback in Widget::render_config() — now read the same
+            // settings keys, so they cannot drift apart.
+            'default'        => Settings::get('months_shown'),
+            'tablet_default' => Settings::get('months_shown_tablet'),
+            'mobile_default' => Settings::get('months_shown_mobile'),
             'description'    => __('How many calendar months appear side by side. Months wrap to a second row instead of shrinking when the widget\'s column is too narrow.', 'mphb-availability-calendar'),
             'condition'      => ['layout' => 'month'],
         ]);

@@ -15,6 +15,30 @@ final class Ajax
     public const CLAMP_PAST_DAYS   = 400;
     public const CLAMP_FUTURE_DAYS = 730;
 
+    /**
+     * The three request clamps, as the site is actually running them. The
+     * constants above stay the SHIPPED values: the settings schema reads them
+     * as its defaults and defaults-test.php fails if they drift apart.
+     *
+     * THESE ARE LIMITS, NOT FEATURES. Raising them costs query time on a
+     * public, nonce-free endpoint, which is why they are in the advanced
+     * section with their ranges bounded in the schema rather than free text.
+     */
+    private static function max_range_days(): int
+    {
+        return (int) Settings::get('max_range_days');
+    }
+
+    private static function clamp_past_days(): int
+    {
+        return (int) Settings::get('clamp_past_days');
+    }
+
+    private static function clamp_future_days(): int
+    {
+        return (int) Settings::get('clamp_future_days');
+    }
+
     public static function handle(): void
     {
         // Wall-clock at the moment OUR code first runs. Compared against
@@ -74,8 +98,8 @@ final class Ajax
         // shared hosting. One year back / two years forward comfortably covers
         // every legitimate use (past-day display and long-lead bookings).
         $today    = Data_Provider::today();
-        $min_from = $today->modify('-' . self::CLAMP_PAST_DAYS . ' days');
-        $max_to   = $today->modify('+' . self::CLAMP_FUTURE_DAYS . ' days');
+        $min_from = $today->modify('-' . self::clamp_past_days() . ' days');
+        $max_to   = $today->modify('+' . self::clamp_future_days() . ' days');
         if ($to < $min_from || $from > $max_to) {
             wp_send_json_error(['message' => __('Invalid date range.', 'mphb-availability-calendar')], 400);
         }
@@ -87,8 +111,8 @@ final class Ajax
         }
 
         $diff_days = (int) $from->diff($to)->format('%a');
-        if ($diff_days > self::MAX_RANGE_DAYS) {
-            $to = $from->modify('+' . self::MAX_RANGE_DAYS . ' days');
+        if ($diff_days > self::max_range_days()) {
+            $to = $from->modify('+' . self::max_range_days() . ' days');
         }
 
         // Resolve the room list once and reuse — the response payload needs
@@ -280,11 +304,11 @@ final class Ajax
         if ($ci < $today) {
             return null; // can't book the past; the sheet's min attribute agrees
         }
-        if ($co > $today->modify('+' . self::CLAMP_FUTURE_DAYS . ' days')) {
+        if ($co > $today->modify('+' . self::clamp_future_days() . ' days')) {
             return null;
         }
         $nights = (int) $ci->diff($co)->format('%a');
-        if ($nights < 1 || $nights > self::MAX_RANGE_DAYS) {
+        if ($nights < 1 || $nights > self::max_range_days()) {
             return null;
         }
         return [$ci, $co, $nights];

@@ -17,6 +17,16 @@ final class Cache
      */
     private const GEN_OPTION = 'mphbac_cache_gen';
 
+    /**
+     * How long a computed availability answer stays good for. The constant
+     * above remains the SHIPPED value — the settings schema reads it as its
+     * own default, and defaults-test.php fails if the two disagree.
+     */
+    public static function ttl(): int
+    {
+        return (int) Settings::get('cache_ttl');
+    }
+
     private static function generation(): int
     {
         return (int) get_option(self::GEN_OPTION, 1);
@@ -42,8 +52,20 @@ final class Cache
      *                           (0 on a miss/fresh compute).
      * @return T
      */
-    public static function get_or_set(string $key, callable $producer, int $ttl = self::DEFAULT_TTL, ?int &$age = null, ?bool &$hit = null)
+    public static function get_or_set(string $key, callable $producer, ?int $ttl = null, ?int &$age = null, ?bool &$hit = null)
     {
+        $ttl ??= self::ttl();
+        // A TTL OF 0 MEANS "DO NOT CACHE", which is what the settings screen
+        // promises. It cannot be passed through to set_transient(), where 0
+        // means the OPPOSITE — store forever. Handled here rather than
+        // clamped away in the sanitiser, because "0 disables caching" is the
+        // useful thing to be able to ask for while diagnosing stale data.
+        if ($ttl <= 0) {
+            $value = $producer();
+            $age   = 0;
+            $hit   = false;
+            return $value;
+        }
         $cached = get_transient($key);
         if (is_array($cached) && array_key_exists('__v', $cached) && array_key_exists('__t', $cached)) {
             $age = max(0, time() - (int) $cached['__t']);

@@ -262,8 +262,12 @@ final class Data_Provider
      * the hint can only point to the last visible day, which understates the
      * real through-date when the booked stretch extends beyond the window.
      */
-    public static function find_first_availability(array $room_type_ids, DateTimeImmutable $start, int $max_days = self::FORWARD_SCAN_MAX_DAYS): ?DateTimeImmutable
+    public static function find_first_availability(array $room_type_ids, DateTimeImmutable $start, ?int $max_days = null): ?DateTimeImmutable
     {
+        // null, not the constant, as the default: the constant is the SHIPPED
+        // value and the setting is what the site is actually running. A
+        // caller that passes a number still wins, which is what the tests do.
+        $max_days ??= (int) Settings::get('forward_scan_days');
         $room_type_ids = array_values(array_unique(array_map('intval', $room_type_ids)));
         if (empty($room_type_ids) || $max_days <= 0) {
             return null;
