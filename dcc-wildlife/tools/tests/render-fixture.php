@@ -16,8 +16,24 @@ require __DIR__ . '/lib.php';
 dcc_boot_plugin();
 
 $which = $argv[1] ?? 'month';
+$flags  = array_slice( $argv, 2 );
 
 dccwl_test_reset();
+
+// The water module ships OFF: switching it on makes network calls, so that
+// stays a deliberate act by the owner. A suite that needs the map has to say
+// so explicitly, which is what --enable is for.
+if ( in_array( '--enable', $flags, true ) ) {
+	$GLOBALS['dccwl_test']['options'][ \DCC_WL\Water_Data::OPTION ] = array_merge(
+		\DCC_WL\Water_Data::defaults(),
+		[
+			'live_enabled'    => 1,
+			'map_enabled'     => 1,
+			'fishing_enabled' => 1,
+			'map_ramps'       => 1,
+		]
+	);
+}
 ob_start();
 switch ( $which ) {
 	case 'canal':

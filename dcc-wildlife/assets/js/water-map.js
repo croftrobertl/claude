@@ -353,10 +353,56 @@
 		groups.ramps.addTo(map);
 		groups.property.addTo(map);
 
-		if (bounds.length) {
-			map.fitBounds(bounds, { padding: [30, 30] });
-		} else {
-			map.setView([28.8045, -81.7450], 11);
+		/* ---- fitting the view, AFTER there is a viewport to fit it to -----
+		 * The sheet calls its build() callback while the host is still
+		 * hidden, so at this point the canvas is 0x0. Fitting bounds to a
+		 * zero-sized viewport does not fail — it succeeds nonsensically:
+		 * Leaflet clamps to maxZoom (18) at an arbitrary centre, and every
+		 * marker ends up off screen. That shipped, and "fitBounds was
+		 * called" was true the whole time, which is why the test for this
+		 * asserts the resulting zoom and bounds instead.
+		 *
+		 * So the fit waits for real layout. It runs once, on the first
+		 * non-zero size, and then stops watching: a later resize wants
+		 * invalidateSize(), which the bar and the fullscreen control already
+		 * do, but it must NOT yank the view out from under someone who has
+		 * panned somewhere. */
+		var fitted = false;
+
+		function fitView() {
+			if (fitted) { return true; }
+			var r = canvas.getBoundingClientRect();
+			if (!r.width || !r.height) { return false; }
+
+			map.invalidateSize();
+			if (bounds.length) {
+				map.fitBounds(bounds, { padding: [30, 30] });
+			} else {
+				map.setView([28.8045, -81.7450], 11);
+			}
+			fitted = true;
+			return true;
+		}
+
+		function fitWhenLaid() {
+			if (fitView()) { return; }
+
+			if (window.ResizeObserver) {
+				var ro = new window.ResizeObserver(function () {
+					if (fitView()) { ro.disconnect(); }
+				});
+				ro.observe(canvas);
+				// Belt and braces: an observer that never fires (a canvas
+				// that stays hidden) must not leave the map unfitted for
+				// ever, and it must not keep observing after we give up.
+				window.setTimeout(function () { fitView(); ro.disconnect(); }, 1200);
+				return;
+			}
+
+			// No ResizeObserver: retry on a short ladder, then stop.
+			[0, 60, 160, 320, 640, 1200].forEach(function (ms) {
+				window.setTimeout(fitView, ms);
+			});
 		}
 
 		var legend = buildLegend(i18n);
@@ -372,7 +418,9 @@
 
 		shell.appendChild(buildBar(map, groups, recolour, shell, i18n, base));
 		shell.appendChild(legend.node);
-		setTimeout(function () { map.invalidateSize(); }, 60);
+
+		// Everything is in the DOM; now wait for it to have a size and fit.
+		fitWhenLaid();
 	}
 
 	/* ---- base layers -------------------------------------------------

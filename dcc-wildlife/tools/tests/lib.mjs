@@ -168,8 +168,8 @@ export async function buildPage(browser, opts = {}) {
  * Never a checked-in snapshot: a UI suite must not be able to pass against
  * markup the plugin stopped producing.
  */
-export function rendered(which = 'month') {
-  const out = execFileSync(process.env.PHP_BIN || 'php', [join(HERE, 'render-fixture.php'), which], {
+export function rendered(which = 'month', ...flags) {
+  const out = execFileSync(process.env.PHP_BIN || 'php', [join(HERE, 'render-fixture.php'), which, ...flags], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
