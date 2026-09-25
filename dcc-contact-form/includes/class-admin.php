@@ -16,9 +16,9 @@ final class Admin
     private const CAP = 'manage_options';
 
     /**
-     * Shared top-level "DCC" menu. These values are contractually identical in
-     * every DCC plugin — a divergent slug silently creates a SECOND "DCC" menu.
-     * Do not change them here in isolation.
+     * Shared top-level "DCC" menu, created by the dcc-menu.php mu-plugin. This
+     * plugin only ATTACHES to it; a divergent slug here would silently create a
+     * second "DCC" menu, so do not change it in isolation.
      */
     private const PARENT_SLUG = 'dcc';
 
@@ -45,49 +45,17 @@ final class Admin
 
     public static function init(): void
     {
-        // 5: the shared parent must exist before any plugin registers into it.
-        add_action('admin_menu', [self::class, 'register_parent_menu'], 5);
-        // 20: this plugin's assigned slot in the DCC menu order. Priorities 10
-        // and 60 are reserved for site-side mu-plugins.
+        // 20: this plugin's assigned slot in the DCC menu order.
+        //
+        // The shared `dcc` parent is NOT registered here. The site-side
+        // dcc-menu.php mu-plugin owns it — it creates the parent at priority 5
+        // and removes WordPress's mirrored duplicate at 999. Registering it
+        // here as well is what produced competing parent registrations across
+        // plugins; this plugin now only attaches to it.
         add_action('admin_menu', [self::class, 'register_menus'], 20);
-        // 999: drop WordPress's auto-generated duplicate of the parent label.
-        add_action('admin_menu', [self::class, 'remove_parent_duplicate'], 999);
 
         add_action('admin_init', [self::class, 'register_settings']);
         add_action('admin_init', [self::class, 'maybe_handle_actions']);
-    }
-
-    /**
-     * Register the shared "DCC" parent, but only if no other DCC plugin has
-     * already done so. Idempotent and order-independent: any of the plugins
-     * sharing this menu may be deactivated at any time, so each one is able to
-     * create the parent on its own.
-     */
-    public static function register_parent_menu(): void
-    {
-        global $admin_page_hooks;
-
-        if (!isset($admin_page_hooks[self::PARENT_SLUG])) {
-            add_menu_page(
-                __('Dora Canal Court', 'dcc-contact-form'),
-                __('DCC', 'dcc-contact-form'),
-                self::CAP,
-                self::PARENT_SLUG,
-                '', // No page of its own; the first submenu becomes the landing page.
-                'dashicons-palmtree',
-                58
-            );
-        }
-    }
-
-    /**
-     * WordPress mirrors the parent as its own first submenu item. Remove that
-     * duplicate; guarded so it is harmless when another DCC plugin got there
-     * first (or when the parent does not exist).
-     */
-    public static function remove_parent_duplicate(): void
-    {
-        remove_submenu_page(self::PARENT_SLUG, self::PARENT_SLUG);
     }
 
     /**
@@ -148,62 +116,186 @@ final class Admin
         ]);
     }
 
+    /** Text/email/number input bound to one schema key. */
+    private static function field_text(string $key, array $s, string $type = 'text', string $desc = ''): void
+    {
+        $id = 'dcc-' . str_replace('_', '-', $key);
+        printf(
+            '<input type="%s" id="%s" name="%s[%s]" value="%s" class="regular-text" autocomplete="off">',
+            esc_attr($type),
+            esc_attr($id),
+            esc_attr(Settings::OPTION),
+            esc_attr($key),
+            esc_attr((string) ($s[$key] ?? ''))
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+    }
+
+    /**
+     * Checkbox bound to one schema key. The paired hidden field is deliberate:
+     * it makes "unchecked" arrive as an explicit 0 rather than as nothing at
+     * all, which is belt-and-braces alongside Settings::sanitize() treating an
+     * absent boolean as false.
+     */
+    private static function field_bool(string $key, array $s, string $label, string $desc = ''): void
+    {
+        $id = 'dcc-' . str_replace('_', '-', $key);
+        printf('<input type="hidden" name="%s[%s]" value="0">', esc_attr(Settings::OPTION), esc_attr($key));
+        printf(
+            '<label for="%s"><input type="checkbox" id="%s" name="%s[%s]" value="1"%s> %s</label>',
+            esc_attr($id),
+            esc_attr($id),
+            esc_attr(Settings::OPTION),
+            esc_attr($key),
+            checked(!empty($s[$key]), true, false),
+            esc_html($label)
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+    }
+
+    private static function field_textarea(string $key, array $s, int $rows = 4, string $desc = ''): void
+    {
+        $id = 'dcc-' . str_replace('_', '-', $key);
+        printf(
+            '<textarea id="%s" name="%s[%s]" rows="%d" class="large-text">%s</textarea>',
+            esc_attr($id),
+            esc_attr(Settings::OPTION),
+            esc_attr($key),
+            (int) $rows,
+            esc_textarea((string) ($s[$key] ?? ''))
+        );
+        if ($desc !== '') {
+            echo '<p class="description">' . esc_html($desc) . '</p>';
+        }
+    }
+
+    private static function row(string $label, string $for, callable $field): void
+    {
+        echo '<tr><th scope="row"><label for="' . esc_attr($for) . '">' . esc_html($label) . '</label></th><td>';
+        $field();
+        echo '</td></tr>';
+    }
+
     public static function render_settings(): void
     {
         if (!current_user_can(self::CAP)) {
-            return;
+            wp_die(esc_html__('You do not have permission to access this page.', 'dcc-contact-form'));
         }
+
         $s = Settings::all();
+        $o = Settings::OPTION;
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('DCC Contact Form — Settings', 'dcc-contact-form'); ?></h1>
             <?php
-            // WordPress only prints the "Settings saved." notice automatically on
-            // options-*.php screens. This page lives under admin.php, so without
-            // this call saving gives no confirmation at all.
+            // WordPress only auto-prints "Settings saved." on options-*.php
+            // screens; this page lives under admin.php, so without this call
+            // saving gives no confirmation at all.
             settings_errors();
             ?>
-            <p><?php esc_html_e('These settings apply site-wide to every DCC Contact Form. The reCAPTCHA secret key is stored here (not in the Elementor panel) because it is sensitive.', 'dcc-contact-form'); ?></p>
+            <p><?php esc_html_e('These are the defaults every contact form inherits. An Elementor widget can override any of them for one placement; a control left alone here is what that widget falls back to.', 'dcc-contact-form'); ?></p>
+
             <form method="post" action="options.php">
                 <?php settings_fields('dcc_contact_settings_group'); ?>
+
+                <h2><?php esc_html_e('Messages and replies', 'dcc-contact-form'); ?></h2>
                 <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><label for="dcc-site-key"><?php esc_html_e('reCAPTCHA v3 Site Key', 'dcc-contact-form'); ?></label></th>
-                        <td><input name="<?php echo esc_attr(Settings::OPTION); ?>[recaptcha_site_key]" id="dcc-site-key" type="text" class="regular-text" value="<?php echo esc_attr($s['recaptcha_site_key']); ?>" autocomplete="off"></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="dcc-secret-key"><?php esc_html_e('reCAPTCHA v3 Secret Key', 'dcc-contact-form'); ?></label></th>
-                        <td>
-                            <input name="<?php echo esc_attr(Settings::OPTION); ?>[recaptcha_secret_key]" id="dcc-secret-key" type="text" class="regular-text" value="<?php echo esc_attr($s['recaptcha_secret_key']); ?>" autocomplete="off">
-                            <p class="description"><?php esc_html_e('Leave both keys blank to disable reCAPTCHA. The form still works — honeypot, time-trap and keyword filtering stay active.', 'dcc-contact-form'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="dcc-threshold"><?php esc_html_e('reCAPTCHA Score Threshold', 'dcc-contact-form'); ?></label></th>
-                        <td>
-                            <input name="<?php echo esc_attr(Settings::OPTION); ?>[recaptcha_threshold]" id="dcc-threshold" type="number" step="0.1" min="0" max="1" value="<?php echo esc_attr((string) $s['recaptcha_threshold']); ?>" class="small-text">
-                            <p class="description"><?php esc_html_e('0.0 – 1.0. Submissions scoring below this are rejected. Default 0.4.', 'dcc-contact-form'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="dcc-min-time"><?php esc_html_e('Minimum Submit Time (seconds)', 'dcc-contact-form'); ?></label></th>
-                        <td>
-                            <input name="<?php echo esc_attr(Settings::OPTION); ?>[min_submit_time]" id="dcc-min-time" type="number" step="1" min="0" value="<?php echo esc_attr((string) $s['min_submit_time']); ?>" class="small-text">
-                            <p class="description"><?php esc_html_e('Reject submissions completed faster than this. Default 2.', 'dcc-contact-form'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="dcc-keywords"><?php esc_html_e('Prohibited Words', 'dcc-contact-form'); ?></label></th>
-                        <td>
-                            <textarea name="<?php echo esc_attr(Settings::OPTION); ?>[keyword_filter]" id="dcc-keywords" rows="6" class="large-text" placeholder="<?php esc_attr_e('One word or phrase per line', 'dcc-contact-form'); ?>"><?php echo esc_textarea($s['keyword_filter']); ?></textarea>
-                            <p class="description">
-                                <?php esc_html_e('One prohibited word or phrase per line (or comma-separated). Matching is case-insensitive and empty by default.', 'dcc-contact-form'); ?>
-                                <br>
-                                <?php esc_html_e('A single word matches only as a whole word, so "ass" will not block a message containing "class" — add plurals and variants ("casino", "casinos") as separate entries. A multi-word phrase matches anywhere in the message.', 'dcc-contact-form'); ?>
-                            </p>
-                        </td>
-                    </tr>
+                    <?php
+                    self::row(__('Send enquiries to', 'dcc-contact-form'), 'dcc-notify-to', function () use ($s) {
+                        self::field_text('notify_to', $s, 'email', __('Where submitted forms are emailed.', 'dcc-contact-form'));
+                    });
+                    self::row(__('Email subject', 'dcc-contact-form'), 'dcc-notify-subject', function () use ($s) {
+                        self::field_text('notify_subject', $s, 'text', __('Use {Field Label} to insert a value, e.g. {Name}.', 'dcc-contact-form'));
+                    });
+                    self::row(__('Confirmation message', 'dcc-contact-form'), 'dcc-confirmation-message', function () use ($s) {
+                        self::field_textarea('confirmation_message', $s, 3, __('Shown in place of the form after a successful submission.', 'dcc-contact-form'));
+                    });
+                    self::row(__('Button text', 'dcc-contact-form'), 'dcc-submit-text', function () use ($s) {
+                        self::field_text('submit_text', $s);
+                    });
+                    self::row(__('Button text while sending', 'dcc-contact-form'), 'dcc-submit-processing', function () use ($s) {
+                        self::field_text('submit_processing', $s);
+                    });
+                    self::row(__('Copy to sender', 'dcc-contact-form'), 'dcc-copy-to-sender', function () use ($s) {
+                        self::field_bool('copy_to_sender', $s, __('Offer visitors a "send me a copy" checkbox', 'dcc-contact-form'), __('Off by default. The copy goes only to the address typed into the form, and only after every spam layer passes.', 'dcc-contact-form'));
+                        echo '<p style="margin-top:8px;">';
+                        self::field_text('copy_label', $s, 'text', __('The checkbox label visitors see.', 'dcc-contact-form'));
+                        echo '</p>';
+                    });
+                    ?>
                 </table>
+
+                <details style="margin:24px 0 8px;">
+                    <summary style="cursor:pointer;font-size:1.1em;font-weight:600;padding:6px 0;">
+                        <?php esc_html_e('Advanced — deliverability and spam', 'dcc-contact-form'); ?>
+                    </summary>
+
+                    <h2><?php esc_html_e('Deliverability', 'dcc-contact-form'); ?></h2>
+                    <p class="description" style="max-width:46em;">
+                        <?php esc_html_e('The site publishes a strict DMARC policy, so only a sender on the site\'s own domain is delivered. An off-domain From address is forced back to the site domain. The visitor\'s address always goes in Reply-To, never in From.', 'dcc-contact-form'); ?>
+                    </p>
+                    <table class="form-table" role="presentation">
+                        <?php
+                        self::row(__('From address', 'dcc-contact-form'), 'dcc-from-email', function () use ($s) {
+                            self::field_text('from_email', $s, 'email', __('Must be on the site domain.', 'dcc-contact-form'));
+                        });
+                        self::row(__('From name', 'dcc-contact-form'), 'dcc-from-name', function () use ($s) {
+                            self::field_text('from_name', $s, 'text', __('Leave blank to use the site title.', 'dcc-contact-form'));
+                        });
+                        self::row(__('Reply-To', 'dcc-contact-form'), 'dcc-reply-to', function () use ($s) {
+                            self::field_text('reply_to', $s, 'text', __('{email} inserts the address the visitor entered.', 'dcc-contact-form'));
+                        });
+                        ?>
+                    </table>
+
+                    <h2><?php esc_html_e('Spam protection', 'dcc-contact-form'); ?></h2>
+                    <table class="form-table" role="presentation">
+                        <?php
+                        self::row(__('Layers', 'dcc-contact-form'), 'dcc-spam-honeypot', function () use ($s) {
+                            self::field_bool('spam_honeypot', $s, __('Honeypot (hidden decoy field)', 'dcc-contact-form'));
+                            echo '<br>';
+                            self::field_bool('spam_time_trap', $s, __('Time trap (reject very fast submissions)', 'dcc-contact-form'));
+                            echo '<br>';
+                            self::field_bool('spam_keyword_filter', $s, __('Prohibited-words filter', 'dcc-contact-form'));
+                            echo '<br>';
+                            self::field_bool('spam_recaptcha', $s, __('Google reCAPTCHA v3', 'dcc-contact-form'));
+                        });
+                        self::row(__('reCAPTCHA site key', 'dcc-contact-form'), 'dcc-recaptcha-site-key', function () use ($s) {
+                            self::field_text('recaptcha_site_key', $s);
+                        });
+                        self::row(__('reCAPTCHA secret key', 'dcc-contact-form'), 'dcc-recaptcha-secret-key', function () use ($s) {
+                            self::field_text('recaptcha_secret_key', $s, 'text', __('Leave both keys blank to disable reCAPTCHA; the other three layers stay active.', 'dcc-contact-form'));
+                        });
+                        self::row(__('Score threshold', 'dcc-contact-form'), 'dcc-recaptcha-threshold', function () use ($s, $o) {
+                            printf(
+                                '<input type="number" step="0.1" min="0" max="1" id="dcc-recaptcha-threshold" name="%s[recaptcha_threshold]" value="%s" class="small-text">',
+                                esc_attr($o),
+                                esc_attr((string) $s['recaptcha_threshold'])
+                            );
+                            echo '<p class="description">' . esc_html__('0.0 – 1.0. Submissions scoring below this are rejected. Default 0.4.', 'dcc-contact-form') . '</p>';
+                        });
+                        self::row(__('Minimum submit time', 'dcc-contact-form'), 'dcc-min-submit-time', function () use ($s, $o) {
+                            printf(
+                                '<input type="number" step="1" min="0" id="dcc-min-submit-time" name="%s[min_submit_time]" value="%s" class="small-text"> %s',
+                                esc_attr($o),
+                                esc_attr((string) $s['min_submit_time']),
+                                esc_html__('seconds', 'dcc-contact-form')
+                            );
+                        });
+                        self::row(__('Prohibited words', 'dcc-contact-form'), 'dcc-keyword-filter', function () use ($s) {
+                            self::field_textarea('keyword_filter', $s, 6);
+                            echo '<p class="description">'
+                                . esc_html__('One word or phrase per line. A single word matches only as a whole word, so "ass" will not block "class" — add plurals and variants as separate entries. A multi-word phrase matches anywhere.', 'dcc-contact-form')
+                                . '</p>';
+                        });
+                        ?>
+                    </table>
+                </details>
+
                 <?php submit_button(); ?>
             </form>
         </div>

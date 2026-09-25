@@ -34,6 +34,45 @@ final class Widget extends Widget_Base
         . ' {{WRAPPER}} .dcc-contact-form .dcc-submit:focus-visible,'
         . ' {{WRAPPER}} .dcc-contact-form button[type="submit"].dcc-submit:focus-visible';
 
+    /**
+     * Per-placement override, else the site-wide default.
+     *
+     * Elementor controls in this widget ship with an EMPTY default on purpose:
+     * an empty control stores nothing, so the placement keeps inheriting from
+     * DCC -> Contact Form. Once Rob settles on a value we bake it into the
+     * plugin defaults and clear the override, and the widget follows without
+     * being re-edited. A non-empty default would store itself into every page's
+     * Elementor data and permanently mask the setting.
+     */
+    private static function inherit_text(array $settings, string $control, string $setting_key): string
+    {
+        $v = isset($settings[$control]) ? trim((string) $settings[$control]) : '';
+        return $v !== '' ? $v : (string) Settings::get($setting_key);
+    }
+
+    /** Tri-state override: '' inherits, 'yes'/'no' force. */
+    private static function inherit_flag(array $settings, string $control, string $setting_key): bool
+    {
+        $v = isset($settings[$control]) ? (string) $settings[$control] : '';
+        if ($v === 'yes') {
+            return true;
+        }
+        if ($v === 'no') {
+            return false;
+        }
+        return Settings::flag($setting_key);
+    }
+
+    /** Options for every inheritable on/off control. */
+    private static function tristate(): array
+    {
+        return [
+            ''    => __('Inherit from settings', 'dcc-contact-form'),
+            'yes' => __('On', 'dcc-contact-form'),
+            'no'  => __('Off', 'dcc-contact-form'),
+        ];
+    }
+
     public function get_name(): string
     {
         return 'dcc_contact_form';
@@ -282,37 +321,42 @@ final class Widget extends Widget_Base
         ]);
 
         $this->add_control('submit_text', [
-            'label'   => __('Button Text', 'dcc-contact-form'),
-            'type'    => Controls_Manager::TEXT,
-            'default' => __('Send Message', 'dcc-contact-form'),
+            'label'       => __('Button Text', 'dcc-contact-form'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'placeholder' => (string) Settings::get('submit_text'),
+            'description' => __('Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
         ]);
 
         $this->add_control('submit_processing', [
-            'label'   => __('Processing Text', 'dcc-contact-form'),
-            'type'    => Controls_Manager::TEXT,
-            'default' => __('Sending...', 'dcc-contact-form'),
+            'label'       => __('Processing Text', 'dcc-contact-form'),
+            'type'        => Controls_Manager::TEXT,
+            'default'     => '',
+            'placeholder' => (string) Settings::get('submit_processing'),
         ]);
 
         $this->add_control('confirmation', [
-            'label'   => __('Confirmation Message', 'dcc-contact-form'),
-            'type'    => Controls_Manager::TEXTAREA,
-            'default' => __('Thank you. We will contact you shortly.', 'dcc-contact-form'),
+            'label'       => __('Confirmation Message', 'dcc-contact-form'),
+            'type'        => Controls_Manager::TEXTAREA,
+            'default'     => '',
+            'placeholder' => (string) Settings::get('confirmation_message'),
         ]);
 
         $this->add_control('copy_to_sender', [
-            'label'        => __('"Send me a copy" checkbox', 'dcc-contact-form'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => '',
-            'return_value' => 'yes',
-            'description'  => __('Shows an opt-in checkbox. When ticked, a copy of the message is emailed to the address the visitor entered.', 'dcc-contact-form'),
+            'label'       => __('"Send me a copy" checkbox', 'dcc-contact-form'),
+            'type'        => Controls_Manager::SELECT,
+            'default'     => '',
+            'options'     => self::tristate(),
+            'description' => __('Opt-in checkbox; the copy goes to the address the visitor entered.', 'dcc-contact-form'),
         ]);
 
         $this->add_control('copy_label', [
             'label'       => __('Checkbox Label', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => __('Send me a copy of this message', 'dcc-contact-form'),
+            'default'     => '',
+            'placeholder' => (string) Settings::get('copy_label'),
             'label_block' => true,
-            'condition'   => ['copy_to_sender' => 'yes'],
+            'condition'   => ['copy_to_sender!' => 'no'],
         ]);
 
         $this->end_controls_section();
@@ -325,41 +369,48 @@ final class Widget extends Widget_Base
             'tab'   => Controls_Manager::TAB_CONTENT,
         ]);
 
-        $this->add_control('email_to', [
+                $this->add_control('email_to', [
             'label'       => __('Send To', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => 'contact@doracanalcourt.com',
+            'default'     => '',
+            'placeholder' => (string) Settings::get('notify_to'),
+            'description' => __('Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
             'label_block' => true,
         ]);
 
-        $this->add_control('email_subject', [
+                $this->add_control('email_subject', [
             'label'       => __('Subject', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => __('Contact Request: {Name}', 'dcc-contact-form'),
-            'description' => __('Use {Field Label} to insert a value, e.g. {Name}.', 'dcc-contact-form'),
+            'default'     => '',
+            'placeholder' => (string) Settings::get('notify_subject'),
+            'description' => __('Use {Field Label} to insert a value, e.g. {Name}. Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
             'label_block' => true,
         ]);
 
-        $this->add_control('email_from', [
+                $this->add_control('email_from', [
             'label'       => __('From Address', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => 'contact@doracanalcourt.com',
-            'description' => __('Use a site-domain address for best deliverability (SPF/DMARC).', 'dcc-contact-form'),
+            'default'     => '',
+            'placeholder' => (string) Settings::get('from_email'),
+            'description' => __('Must be on the site domain for delivery. Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
             'label_block' => true,
         ]);
 
-        $this->add_control('email_from_name', [
+                $this->add_control('email_from_name', [
             'label'       => __('From Name', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => get_bloginfo('name'),
+            'default'     => '',
+            'placeholder' => (string) Settings::get('from_name'),
+            'description' => __('Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
             'label_block' => true,
         ]);
 
-        $this->add_control('email_reply_to', [
+                $this->add_control('email_reply_to', [
             'label'       => __('Reply-To', 'dcc-contact-form'),
             'type'        => Controls_Manager::TEXT,
-            'default'     => '{email}',
-            'description' => __('Defaults to the submitter\'s email so replies reach them. {email} = the Email field value.', 'dcc-contact-form'),
+            'default'     => '',
+            'placeholder' => (string) Settings::get('reply_to'),
+            'description' => __('{email} = the Email field value. Leave blank to inherit from DCC → Contact Form.', 'dcc-contact-form'),
             'label_block' => true,
         ]);
 
@@ -379,32 +430,32 @@ final class Widget extends Widget_Base
             'content_classes' => 'elementor-descriptor',
         ]);
 
-        $this->add_control('spam_honeypot', [
-            'label'        => __('Honeypot', 'dcc-contact-form'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
+                $this->add_control('spam_honeypot', [
+            'label'   => __('Honeypot', 'dcc-contact-form'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => self::tristate(),
         ]);
 
-        $this->add_control('spam_time_trap', [
-            'label'        => __('Time Trap', 'dcc-contact-form'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
+                $this->add_control('spam_time_trap', [
+            'label'   => __('Time Trap', 'dcc-contact-form'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => self::tristate(),
         ]);
 
-        $this->add_control('spam_keyword_filter', [
-            'label'        => __('Keyword Filter', 'dcc-contact-form'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
+                $this->add_control('spam_keyword_filter', [
+            'label'   => __('Keyword Filter', 'dcc-contact-form'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => self::tristate(),
         ]);
 
-        $this->add_control('spam_recaptcha', [
-            'label'        => __('reCAPTCHA v3', 'dcc-contact-form'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
+                $this->add_control('spam_recaptcha', [
+            'label'   => __('reCAPTCHA v3', 'dcc-contact-form'),
+            'type'    => Controls_Manager::SELECT,
+            'default' => '',
+            'options' => self::tristate(),
         ]);
 
         $this->end_controls_section();
@@ -653,7 +704,8 @@ final class Widget extends Widget_Base
             return;
         }
 
-        $recaptcha_on = (($settings['spam_recaptcha'] ?? 'yes') === 'yes') && Settings::recaptcha_configured();
+        $recaptcha_on = self::inherit_flag($settings, 'spam_recaptcha', 'spam_recaptcha')
+            && Settings::recaptcha_configured();
 
         // Persist the trusted config server-side, keyed by this element id.
         $config = [
@@ -666,18 +718,18 @@ final class Widget extends Widget_Base
                     'options'  => $f['options'],
                 ];
             }, $fields),
-            'recipient'    => (string) ($settings['email_to'] ?? ''),
-            'subject'      => (string) ($settings['email_subject'] ?? ''),
-            'from_email'   => (string) ($settings['email_from'] ?? ''),
-            'from_name'    => (string) ($settings['email_from_name'] ?? ''),
-            'reply_to'     => (string) ($settings['email_reply_to'] ?? ''),
-            'confirmation' => (string) ($settings['confirmation'] ?? ''),
-            'copy_enabled' => (($settings['copy_to_sender'] ?? '') === 'yes'),
+            'recipient'    => self::inherit_text($settings, 'email_to', 'notify_to'),
+            'subject'      => self::inherit_text($settings, 'email_subject', 'notify_subject'),
+            'from_email'   => self::inherit_text($settings, 'email_from', 'from_email'),
+            'from_name'    => self::inherit_text($settings, 'email_from_name', 'from_name'),
+            'reply_to'     => self::inherit_text($settings, 'email_reply_to', 'reply_to'),
+            'confirmation' => self::inherit_text($settings, 'confirmation', 'confirmation_message'),
+            'copy_enabled' => self::inherit_flag($settings, 'copy_to_sender', 'copy_to_sender'),
             'spam'         => [
-                'honeypot'       => (($settings['spam_honeypot'] ?? 'yes') === 'yes'),
-                'time_trap'      => (($settings['spam_time_trap'] ?? 'yes') === 'yes'),
-                'keyword_filter' => (($settings['spam_keyword_filter'] ?? 'yes') === 'yes'),
-                'recaptcha'      => (($settings['spam_recaptcha'] ?? 'yes') === 'yes'),
+                'honeypot'       => self::inherit_flag($settings, 'spam_honeypot', 'spam_honeypot'),
+                'time_trap'      => self::inherit_flag($settings, 'spam_time_trap', 'spam_time_trap'),
+                'keyword_filter' => self::inherit_flag($settings, 'spam_keyword_filter', 'spam_keyword_filter'),
+                'recaptcha'      => self::inherit_flag($settings, 'spam_recaptcha', 'spam_recaptcha'),
             ],
         ];
 
@@ -694,8 +746,8 @@ final class Widget extends Widget_Base
             : Form_Config::save($this->get_id(), $config);
 
         $uid      = 'dcc-' . $form_id;
-        $submit   = $settings['submit_text'] ?? __('Send Message', 'dcc-contact-form');
-        $working  = $settings['submit_processing'] ?? __('Sending...', 'dcc-contact-form');
+        $submit   = self::inherit_text($settings, 'submit_text', 'submit_text');
+        $working  = self::inherit_text($settings, 'submit_processing', 'submit_processing');
         $nonce    = wp_create_nonce(Form_Handler::NONCE_ACTION);
 
         ?>
@@ -731,10 +783,7 @@ final class Widget extends Widget_Base
                 </div>
 
                 <?php if (!empty($config['copy_enabled'])) :
-                    $copy_label = (string) ($settings['copy_label'] ?? '');
-                    if ($copy_label === '') {
-                        $copy_label = __('Send me a copy of this message', 'dcc-contact-form');
-                    } ?>
+                    $copy_label = self::inherit_text($settings, 'copy_label', 'copy_label'); ?>
                     <div class="dcc-copy">
                         <label class="dcc-copy-label" for="<?php echo esc_attr($uid); ?>-copy">
                             <input type="checkbox" class="dcc-checkbox" id="<?php echo esc_attr($uid); ?>-copy" name="dcc_copy" value="1">

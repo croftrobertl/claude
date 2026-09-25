@@ -4,7 +4,7 @@ Tags: elementor, contact form, recaptcha, email, spam
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,7 @@ Highlights:
 == Installation ==
 
 1. In WP-Admin, go to **Plugins → Add New → Upload Plugin** and upload the
-   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.5.0.zip`).
+   plugin zip (`Contact Form <version>.zip`, e.g. `Contact Form 1.6.0.zip`).
 2. Click **Install Now**, then **Activate**. Activation creates the submissions
    table automatically.
 3. Edit a page with **Elementor**, search the widget panel for
@@ -112,6 +112,17 @@ to a third party. The copy is sent From the site's aligned address with Reply-To
 pointing back at the site, and carries `Auto-Submitted: auto-generated` so it
 does not trip vacation responders.
 
+== Settings ==
+
+**DCC → Contact Form** holds the defaults every form inherits. Common controls
+first (recipient, subject, confirmation message, button text, "send me a copy");
+deliverability and the four spam layers sit in a collapsed **Advanced** section.
+
+An Elementor widget can override any of these for one placement. Controls in the
+widget ship blank and show the inherited value as placeholder text, so a control
+left alone stores nothing and keeps following this screen. Once a value is
+settled here, clearing the widget override makes that placement follow again.
+
 == Admin: submissions ==
 
 **DCC → Form Submissions** lists every submission (newest first) with a
@@ -126,6 +137,31 @@ plugin does **not** delete your data (submissions, settings and per-form
 configuration are preserved).
 
 == Changelog ==
+
+= 1.6.0 =
+* Settings: the screen now carries every inheritable default — recipient,
+  subject, confirmation message, button text, "send me a copy" and its label,
+  From/From-name/Reply-To, and all four spam layers — organised common-first
+  with deliverability and spam in a collapsed Advanced section.
+* Elementor: the widget's content controls now ship BLANK and inherit from the
+  settings screen, showing the inherited value as placeholder text. A control
+  left alone stores nothing, so it keeps following the setting; the on/off
+  controls became three-way (Inherit / On / Off) so an override is clearable.
+  Existing placements carry stored values and are unaffected.
+* Fix: saving the settings screen no longer resets values the form did not post.
+  Sanitisation is now schema-driven and handles absence per key BY TYPE — a
+  boolean reads absence as OFF (an unchecked checkbox posts nothing, so falling
+  back to the default would switch a disabled spam layer back on at every save),
+  while every other type preserves what is stored. This was latent in 1.5.0 and
+  would have bitten the first checkbox added.
+* Admin menu: this plugin no longer registers the shared `dcc` parent or removes
+  the mirrored duplicate — the site-side dcc-menu.php mu-plugin owns both. The
+  plugin only attaches its two submenus, still at priority 20.
+* Tests: 47 checks covering defaults reproducing 1.5.0 exactly, new keys merging
+  into an already-stored row on upgrade, absent-key handling on save, input
+  rejection and the typed accessors. Not shipped in the zip.
+* No change to the submit button, the form markup, the spam layers themselves,
+  the mail headers or the stored submissions.
 
 = 1.5.0 =
 * Verified (not changed): the honeypot field and the time-trap token are both
