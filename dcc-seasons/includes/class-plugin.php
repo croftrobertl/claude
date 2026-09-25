@@ -666,6 +666,32 @@ final class Plugin {
         return false;
     }
 
+    /**
+     * Does the request match one of the owner's excluded page IDs?
+     *
+     * Asked of the QUERIED OBJECT rather than through is_page(), so it also
+     * covers a page reached by something other than the usual page query —
+     * and so an ID for a post type this plugin does not otherwise know about
+     * still excludes.
+     */
+    private function matches_excluded_id(string $stored): bool {
+        if ($stored === '') {
+            return false;
+        }
+        $ids = array_filter(array_map('intval', preg_split('/[^0-9]+/', $stored)));
+        if (!$ids) {
+            return false;
+        }
+        $qo = get_queried_object();
+        $current = ($qo instanceof \WP_Post) ? (int) $qo->ID : 0;
+        if ($current && in_array($current, $ids, true)) {
+            return true;
+        }
+        /* is_page() as a second opinion: on some query shapes the queried
+         * object is not the page even though WordPress considers it one. */
+        return is_page($ids);
+    }
+
     private function is_excluded(): bool {
         $excluded = false;
         $opt = Settings::options();
@@ -682,6 +708,10 @@ final class Plugin {
         }
 
         if ($this->matches_excluded_path((string) ($opt['exclude_paths'] ?? ''))) {
+            $excluded = true;
+        }
+
+        if ($this->matches_excluded_id((string) ($opt['exclude_ids'] ?? ''))) {
             $excluded = true;
         }
 

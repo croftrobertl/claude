@@ -614,6 +614,28 @@ bump so the tracked zip never lags the source.
   and labels which themes name it. A pale sprite judged only on cream looks
   fine right up until it vanishes into the footer — checked, and swan, dove,
   bobber, snowflake and ghost all survive because they carry outlines.
+- **The plugin does NOT own the `dcc` admin parent menu.** Since 4.1.2 the
+  site-side mu-plugin `dcc-menu.php` registers it at priority 5 and removes
+  WordPress's mirrored duplicate at 999. `class-menu.php` is constants only;
+  `Menu::init()` is a deliberate no-op so a sibling that still calls it does
+  not fatal. Never re-add `add_menu_page()` or `remove_submenu_page()` here —
+  `tools/test-scope.php` scans for both with comments STRIPPED (a grep over
+  raw source passes on a file that still calls them and fails on one that
+  only explains why it does not). This plugin registers its submenu at
+  `Menu::PRIORITY` = 40. Live register, mirrored from dcc-menu.php's header:
+  20 contact-form · 30 guest-guide · 35 features-amenities · 40 seasons ·
+  45 cottage-selector · 50 custom-checkout · 55 availability-calendar ·
+  63 wildlife.
+- **The inline config cannot be shrunk by much, and the themes table cannot
+  move cheaply.** Measured at 4.1.2: the whole payload is 14,039 raw / 2,997
+  gzipped; moving the ambient half into the engine saves 1,494 gz, and
+  moving the egg half into matrix.js as well reaches 2,286 gz total. That is
+  the entire win, against a second hand-maintained copy of the theme
+  definitions in the file where a desync draws nothing and says nothing.
+  And it cannot be trimmed to "today's theme": the schedule resolves from
+  the VISITOR'S clock so cached HTML stays date-agnostic, so the server does
+  not know which theme is live. If this is ever worth doing, generate the
+  chunk from the PHP at build time — do not hand-copy it.
 - **No weather coupling.** Weather-driven rain/fog has been proposed and
   explicitly declined by the owner. Do not offer it again.
 - **`?dcc_debug=1` as an administrator** prints an on-page diagnostics panel with

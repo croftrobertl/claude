@@ -375,6 +375,22 @@ class Settings {
             /* Extra paths never decorated, one per line, matched against the
              * request path and the page slug. /staff/ is internal. */
             'exclude_paths'   => "staff",
+            /* Extra page IDs never decorated. Separate from exclude_paths
+             * because an ID survives a slug rename and a path survives an ID
+             * change, and the two failure modes are different — see
+             * is_booking_flow(), which uses both for the same reason.
+             *
+             * 18119 is /explore/, the Wildlife hub. It went live in the site
+             * navigation on 2026-09-25 and a mobile audit found the fishing
+             * line drawn through the species deck with bobbers parked on
+             * tile names. Taps pass through, but it reads as a glitch on a
+             * field guide, so the owner excluded it.
+             *
+             * This is a PAGE ID, deliberately not a dependency on the
+             * Wildlife plugin: this plugin should not know that plugin
+             * exists, and the page would still want excluding if the hub
+             * were rebuilt by hand. */
+            'exclude_ids'     => '18119',
             /* The z-index 'front' placement mounts at. The default sits
              * above ordinary content and Elementor sections but below
              * lightboxes (9999), the severe-weather banner (10000) and any
@@ -512,6 +528,18 @@ class Settings {
             }
         }
         $out['exclude_paths'] = implode("\n", $clean);
+
+        /* Page IDs, comma or newline separated. Stored normalised so the
+         * matcher never has to parse anything at request time. */
+        $ids = (string) ($in['exclude_ids'] ?? $d['exclude_ids']);
+        $keep = [];
+        foreach (preg_split('/[^0-9]+/', $ids) as $n) {
+            $n = (int) $n;
+            if ($n > 0 && !in_array($n, $keep, true)) {
+                $keep[] = $n;
+            }
+        }
+        $out['exclude_ids'] = implode(', ', $keep);
 
         /* Clamped well below the alert band. A value that outranks a severe
          * weather warning is not a preference this plugin will honour. */
@@ -685,6 +713,17 @@ class Settings {
                                 <?php esc_html_e('Allow effects on the Guest Guide', 'dcc-seasons'); ?>
                             </label>
                             <p class="description"><?php esc_html_e('Off by default. The Guest Guide is a reference guests consult during a stay — wifi codes, checkout times — so drifting sprites over it are friction rather than atmosphere. Tick this to decorate it anyway.', 'dcc-seasons'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="dcc-seasons-exclude-ids"><?php esc_html_e('Excluded page IDs', 'dcc-seasons'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" class="regular-text" id="dcc-seasons-exclude-ids"
+                                   name="<?php echo esc_attr(self::OPTION); ?>[exclude_ids]"
+                                   value="<?php echo esc_attr((string) $opt['exclude_ids']); ?>" />
+                            <p class="description"><?php esc_html_e('Page IDs never decorated, comma separated. An ID survives a page being renamed, which a slug does not — use this for pages that must stay clean whatever they are called. Ships with 18119 (the Wildlife hub at /explore/), where drifting sprites read as a glitch over a field guide.', 'dcc-seasons'); ?></p>
                         </td>
                     </tr>
                     <tr>

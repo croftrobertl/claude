@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.1.1
+Stable tag: 4.1.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,36 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.1.2 =
+* NEW — "Excluded page IDs", a free-text field beside the booking and Guest
+  Guide toggles. Ships with 18119 pre-filled: /explore/, the Wildlife hub,
+  where a live mobile audit found the fishing line drawn through the species
+  deck with bobbers parked on tile names. Taps passed through, but it read
+  as a glitch on a field guide. An ID is used rather than a slug because an
+  ID survives the page being renamed; the field takes more IDs without a
+  release. Deliberately NOT coupled to the Wildlife plugin — this plugin
+  should not know that plugin exists, and the page would still want
+  excluding if the hub were rebuilt by hand.
+* The plugin no longer creates the shared "DCC" admin parent menu, and no
+  longer removes WordPress's mirrored duplicate. The site-side mu-plugin
+  dcc-menu.php owns both outright. Every DCC plugin used to create the
+  parent "only if it isn't there yet", which meant its label, icon and
+  position came from whichever plugin loaded first. One owner, one
+  definition. This plugin still registers its own submenu at priority 40,
+  and Menu::init() is kept as a no-op so a sibling still calling it does not
+  fatal. The live priority register moves to dcc-menu.php's header; the copy
+  here is a mirror.
+* NOT DONE, with numbers: moving the themes table out of the inline config.
+  Measured, the whole config payload is 14,039 bytes raw / 2,997 gzipped.
+  Moving the ambient half into the engine saves 1,494 bytes gzipped; moving
+  the egg half into the Matrix bundle as well takes the total to 2,286. That
+  is the entire available win, and the cost is a second hand-maintained copy
+  of the theme definitions in a file where a desync draws nothing and
+  reports nothing — a failure this plugin has already had three times over
+  smaller mirrors. The table also cannot simply be trimmed to today's theme:
+  the schedule is resolved from the VISITOR'S clock precisely so cached HTML
+  stays date-agnostic, so the server does not know which theme is live.
 
 = 4.1.1 =
 * The contact sheet's "not referenced" label was WRONG for four sprites,

@@ -83,6 +83,7 @@ function get_queried_object() {
 require __DIR__ . '/../dcc-seasons/includes/class-schedule.php';
 require __DIR__ . '/../dcc-seasons/includes/class-themes.php';
 require __DIR__ . '/../dcc-seasons/includes/class-settings.php';
+require __DIR__ . '/../dcc-seasons/includes/class-menu.php';
 require __DIR__ . '/../dcc-seasons/includes/class-cache-purge.php';
 require __DIR__ . '/../dcc-seasons/includes/class-plugin.php';
 
@@ -159,6 +160,20 @@ ok(!loads(['page' => true, 'id' => 18102, 'slug' => 'staff', 'path' => '/staff/'
 ok(!loads(['page' => true, 'id' => 18103, 'slug' => 'rota', 'path' => '/staff/rota/'], $LIVE),
     'anything BENEATH /staff/ is not decorated either');
 
+echo "\n=== excluded page IDs (the Wildlife hub, and the field itself) ===\n";
+ok(!loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'], $LIVE),
+    '/explore/ (page 18119) is not decorated');
+ok(!loads(['page' => true, 'id' => 18119, 'slug' => 'renamed-hub', 'path' => '/renamed-hub/'], $LIVE),
+    'it stays excluded after a slug rename — an ID does not move');
+ok(loads(['page' => true, 'id' => 18120, 'slug' => 'explorer', 'path' => '/explorer/'], $LIVE),
+    'a DIFFERENT page with a similar slug is still decorated');
+ok(!loads(['page' => true, 'id' => 4242, 'slug' => 'anything', 'path' => '/anything/'],
+        $LIVE + ['exclude_ids' => '4242, 9999']),
+    'the field takes more IDs without a release');
+ok(loads(['page' => true, 'id' => 18119, 'slug' => 'explore', 'path' => '/explore/'],
+        $LIVE + ['exclude_ids' => '']),
+    'clearing the field re-enables the page');
+
 echo "\n=== cottage pages still follow the scope tier ===\n";
 ok(!loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], $LIVE), 'cottage page absent under no_cottages');
 ok(loads(['cottage' => true, 'path' => '/accommodation/cottage-34/'], ['scope' => 'all']), 'cottage page present under all');
@@ -167,6 +182,41 @@ echo "\n=== the booking exclusion is a SETTING, not a hardcode ===\n";
 ok(loads(['page' => true, 'id' => 2393, 'slug' => 'checkout', 'path' => '/checkout/'],
         $LIVE + ['exclude_booking' => 0]),
     'unticking "Never decorate booking pages" really does re-enable them');
+
+/* ---- The admin parent menu is owned by dcc-menu.php, not by us. ----
+ * Scanned as CODE, with comments and docblocks stripped first: a grep that
+ * counts a mention inside a comment would pass on a file that still calls
+ * the function, and fail on a file that only explains why it does not. */
+echo "\n=== the plugin does not register the shared parent menu ===\n";
+$offenders = [];
+foreach (glob(__DIR__ . '/../dcc-seasons/**/*.php') + glob(__DIR__ . '/../dcc-seasons/*.php') as $file) {
+    $src = file_get_contents($file);
+    $code = '';
+    foreach (token_get_all($src) as $tok) {
+        if (is_array($tok)) {
+            if (in_array($tok[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+            $code .= $tok[1];
+        } else {
+            $code .= $tok;
+        }
+    }
+    foreach (['add_menu_page', 'remove_submenu_page'] as $fn) {
+        if (preg_match('/\b' . $fn . '\s*\(/', $code)) {
+            $offenders[] = basename($file) . ':' . $fn;
+        }
+    }
+}
+ok($offenders === [], 'no add_menu_page() or remove_submenu_page() call remains in code',
+    implode(', ', $offenders));
+
+/* And the submenu registration that MUST remain. */
+$settings = file_get_contents(__DIR__ . '/../dcc-seasons/includes/class-settings.php');
+ok(strpos($settings, 'add_submenu_page(') !== false, 'the submenu is still registered');
+ok(\DCC_Seasons\Menu::PRIORITY === 40, 'Menu::PRIORITY is still 40',
+    (string) \DCC_Seasons\Menu::PRIORITY);
+ok(\DCC_Seasons\Menu::PARENT === 'dcc', "Menu::PARENT is still 'dcc'");
 
 echo "\n$pass passed · $fail failed\n";
 if ($fail) {
