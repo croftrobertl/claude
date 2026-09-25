@@ -138,11 +138,97 @@
     // re-issue the same image fetches.
     var warmedInfoIds = Object.create(null);
 
+    /**
+     * FETCH ONE COTTAGE'S INFO PANEL, ONCE (0.42.0).
+     *
+     * With the lazy setting on, the page ships an EMPTY .mphbac-info-content
+     * node carrying data-info-src instead of the whole panel. Everything else
+     * — finding it, moving it into the popup, moving it back on close — is
+     * unchanged, because it is still the same node in the same place.
+     *
+     * THE FETCHED MARKUP STAYS. The node keeps it and data-info-src is
+     * removed, so a second open is exactly as instant as it was when the
+     * panel shipped in the page. Nothing is re-fetched, and the Elementor
+     * handlers initialised below stay bound to the same DOM.
+     *
+     * WHY THE HANDLERS HAVE TO BE RE-RUN, and why v0.6.0 failed without it:
+     * Elementor binds its frontend widgets (Swiper carousels, accordions,
+     * tabs) once, at page load, to the elements that were in the document
+     * then. Markup inserted afterwards has no handlers at all — it renders,
+     * and nothing moves. runReadyTrigger() is Elementor's own entry point for
+     * exactly this, and it is called per element rather than re-initialising
+     * the page, so nothing already working is touched. The template's CSS
+     * travels inside the fragment (see Widget::template_css) because an
+     * enqueue during an AJAX request reaches nothing.
+     *
+     * Returns a promise so the open path can wait on an in-flight fetch that
+     * the hover prefetch already started, rather than starting a second one.
+     */
+    var infoFetches = Object.create(null);
+
+    function initElementorIn(node) {
+        try {
+            var ef = window.elementorFrontend;
+            if (!ef || !ef.elementsHandler || !ef.elementsHandler.runReadyTrigger) return;
+            var els = node.querySelectorAll('.elementor-element');
+            for (var i = 0; i < els.length; i++) {
+                ef.elementsHandler.runReadyTrigger(els[i]);
+            }
+        } catch (e) { /* a template with no JS widgets must still open */ }
+    }
+
+    function fetchInfoPanel(config, content) {
+        var src = content && content.getAttribute('data-info-src');
+        if (!src) return Promise.resolve(content);       // already inline, or already fetched
+        if (infoFetches[src]) return infoFetches[src];
+        var body = new URLSearchParams();
+        body.append('action', (config && config.infoAction) || 'mphbac_info');
+        body.append('src', src);
+        infoFetches[src] = fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body
+        }).then(function (r) { return r.json(); }).then(function (json) {
+            if (!json || !json.success || !json.data || !json.data.html) {
+                throw new Error('mphbac: empty info panel');
+            }
+            content.innerHTML = json.data.html;
+            content.removeAttribute('data-info-src');
+            initElementorIn(content);
+            return content;
+        }).catch(function (e) {
+            // Let a later open try again rather than leaving the cottage
+            // permanently un-openable because one request failed.
+            delete infoFetches[src];
+            throw e;
+        });
+        return infoFetches[src];
+    }
+
     function warmInfoPopup(root, typeId) {
         if (!typeId || warmedInfoIds[typeId]) return;
         var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
         if (!content) return;
         warmedInfoIds[typeId] = true;
+        // A lazy panel warms by being FETCHED — its images are not in the
+        // page to preload yet. The hover/touch prefetch that used to warm the
+        // photos now usually lands the whole panel before the tap does, so
+        // the common case still opens with no wait at all.
+        if (content.getAttribute('data-info-src')) {
+            var cfg = root.__mphbacConfig;
+            if (cfg) {
+                fetchInfoPanel(cfg, content)
+                    .then(function (node) { warmInfoImages(node); })
+                    .catch(function () { warmedInfoIds[typeId] = false; });
+                return;
+            }
+        }
+        warmInfoImages(content);
+    }
+
+    function warmInfoImages(content) {
+        if (!content) return;
         // Force fetch of every image referenced by the (hidden) popup content
         // into the browser HTTP cache. By the time the visitor taps to open
         // the popup, the cottage's photos are already on disk.
@@ -979,6 +1065,12 @@
         var overlay = root.querySelector('.mphbac-info-overlay');
         if (!sheet || !overlay) return; // no cottage info popups configured
 
+        // warmInfoPopup() lives at module scope (it is called from the
+        // hover/touch listeners before any popup is open) and needs the
+        // endpoint to fetch a lazy panel from. Stashed rather than threaded
+        // through four call sites.
+        root.__mphbacConfig = config;
+
         var titleEl = sheet.querySelector('.mphbac-sheet-title');
         var bodyEl = sheet.querySelector('.mphbac-info-body');
         var closeBtn = sheet.querySelector('.mphbac-info-close');
@@ -1049,7 +1141,26 @@
             if (!typeId) return;
             var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
             if (!content) return; // this cottage has no info popup
+            if (!content.getAttribute('data-info-src')) {
+                openInfo(typeId, content, btn);
+                return;
+            }
+            // A LAZY PANEL THAT HAS NOT LANDED YET. Usually it has — the
+            // hover/touch prefetch starts the same fetch, and fetchInfoPanel
+            // hands back the in-flight promise rather than starting a second
+            // one — so this branch is the cold tap, not the common case. The
+            // popup opens immediately either way so the visitor gets the
+            // response they asked for; the body fills when the panel arrives.
             openInfo(typeId, content, btn);
+            bodyEl.classList.add('is-loading');
+            fetchInfoPanel(config, content)
+                .then(function () { bodyEl.classList.remove('is-loading'); })
+                .catch(function () {
+                    bodyEl.classList.remove('is-loading');
+                    // Say so rather than leaving an empty popup. The cottage
+                    // page is still reachable from the title link above.
+                    content.textContent = (config.strings && config.strings.infoFailed) || '';
+                });
         });
 
         // Predictive prefetch: warm the cottage's popup images on hover (with a

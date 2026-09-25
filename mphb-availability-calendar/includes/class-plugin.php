@@ -69,6 +69,11 @@ final class Plugin
         // hardened input validation inside the handler.
         add_action('wp_ajax_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
         add_action('wp_ajax_nopriv_' . MPHBAC_PRICE_ACTION, ['\\MPHBAC\\Ajax', 'handle_price']);
+        // Cottage info panel, fetched on first open when the lazy setting is
+        // on. Registered unconditionally: a page cached while the setting was
+        // on must still be able to fetch its panels after it is switched off.
+        add_action('wp_ajax_' . MPHBAC_INFO_ACTION, ['\\MPHBAC\\Ajax', 'handle_info']);
+        add_action('wp_ajax_nopriv_' . MPHBAC_INFO_ACTION, ['\\MPHBAC\\Ajax', 'handle_info']);
 
         // Staff booking calendar (/staff/). Every endpoint below re-verifies
         // authorization server-side on each request — see Staff::is_authorized().

@@ -3,7 +3,7 @@
  * Plugin Name:       DCC Availability Calendar
  * Plugin URI:        https://doracanalcourt.com/
  * Description:       Elementor widget that displays a mobile-friendly multi-property availability calendar for MotoPress Hotel Booking accommodations. Reads MotoPress's already-synced bookings directly from the database (no extra HTTP fetches), caches via WordPress transients, and auto-excludes its AJAX endpoint from SpeedyCache Pro.
- * Version:           0.41.0
+ * Version:           0.42.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Dora Canal Court
@@ -17,12 +17,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MPHBAC_VERSION', '0.41.0');
+define('MPHBAC_VERSION', '0.42.0');
 define('MPHBAC_FILE', __FILE__);
 define('MPHBAC_DIR', plugin_dir_path(__FILE__));
 define('MPHBAC_URL', plugin_dir_url(__FILE__));
 define('MPHBAC_AJAX_ACTION', 'mphbac_query');
 define('MPHBAC_PRICE_ACTION', 'mphbac_price');
+define('MPHBAC_INFO_ACTION', 'mphbac_info');
 
 // Lazy autoloader for MPHBAC\ classes. We must not require class-widget.php
 // eagerly — its 'extends \Elementor\Widget_Base' parent reference is resolved at

@@ -226,6 +226,8 @@ final class Settings
             'max_range_days'    => $int('engine', __('Largest range one request may ask for (days)', 'mphb-availability-calendar'), 95, 31, 400),
             'clamp_past_days'   => $int('engine', __('How far back a request may ask (days)', 'mphb-availability-calendar'), 400, 0, 3650),
             'clamp_future_days' => $int('engine', __('How far ahead a request may ask (days)', 'mphb-availability-calendar'), 730, 31, 3650),
+            'lazy_cottage_panels' => $bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), false,
+                __('The multi-cottage calendar renders every cottage\u2019s info panel into the page whether or not anyone opens one \u2014 measured at 413 KB of the home page. With this on they are fetched on first open (usually already fetched, from the hover prefetch) and kept, so re-opening is instant. Verify on staging before switching it on live.', 'mphb-availability-calendar')),
             'keep_assets_unoptimized' => $bool('engine', __('Keep the calendar’s script and stylesheet out of combine/defer optimisers', 'mphb-availability-calendar'), true,
                 __('The calendar draws itself in the browser. Folded into a combined bundle it can fail to run at all, leaving a grey skeleton. Turn this off only if you have removed the optimiser.', 'mphb-availability-calendar')),
         ];

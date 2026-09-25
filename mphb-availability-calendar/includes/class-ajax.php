@@ -228,6 +228,35 @@ final class Ajax
      * Responses carry no-store headers; nothing here is ever cached (pricing
      * is computed per request via MPHB's live rate tables).
      */
+    /**
+     * ONE cottage's info panel, fetched on first open (0.42.0).
+     *
+     * Same trust model as the two endpoints beside it: read-only, public,
+     * nonce-free, and hardened at the input instead. The only thing a caller
+     * can ask for is a PUBLISHED Elementor library template or a PUBLISHED
+     * MotoPress accommodation, both of which are first-party content the
+     * owner authored to be displayed on this very page. Widget::
+     * render_info_fragment() is where that is enforced, and it is enforced by
+     * post type and status rather than by the reference looking plausible.
+     *
+     * No guest or booking data passes through here.
+     */
+    public static function handle_info(): void
+    {
+        $src = isset($_REQUEST['src']) ? sanitize_text_field((string) wp_unslash($_REQUEST['src'])) : '';
+        // Shape first, so a malformed reference never reaches a lookup.
+        if (!preg_match('/^(?:tpl|acc):[1-9][0-9]{0,9}$/', $src)) {
+            wp_send_json_error(['message' => __('Invalid panel.', 'mphb-availability-calendar')], 400);
+        }
+        $html = Widget::render_info_fragment($src);
+        if ($html === '') {
+            // Not a template, not published, or nothing rendered. One shape
+            // for every miss — no probing difference between them.
+            wp_send_json_error(['message' => __('Panel not found.', 'mphb-availability-calendar')], 404);
+        }
+        wp_send_json_success(['html' => $html]);
+    }
+
     public static function handle_price(): void
     {
         if (!headers_sent()) {
