@@ -586,18 +586,26 @@
 		drop.appendChild(panel);
 		bar.appendChild(drop);
 
-		// Fullscreen.
-		var fs = el('button', 'dccwl-drop-btn', i18n.fullscreen || 'Fullscreen');
-		fs.type = 'button';
-		fs.addEventListener('click', function () {
-			if (document.fullscreenElement) {
-				document.exitFullscreen();
-			} else if (shell.requestFullscreen) {
-				shell.requestFullscreen();
-			}
-			setTimeout(function () { map.invalidateSize(); }, 200);
-		});
-		bar.appendChild(fs);
+		/* Fullscreen, but ONLY where it can actually happen.
+		 *
+		 * iPhone Safari implements requestFullscreen for <video> and nothing
+		 * else, so on the owner's own phone this button rendered, took up a
+		 * 44px slot in a bar that is already tight at 320px, and did nothing
+		 * whatsoever when tapped. A control that cannot work should not be
+		 * offered: feature-detect on the element we would actually ask. */
+		if (typeof shell.requestFullscreen === 'function' && document.fullscreenEnabled !== false) {
+			var fs = el('button', 'dccwl-drop-btn', i18n.fullscreen || 'Fullscreen');
+			fs.type = 'button';
+			fs.addEventListener('click', function () {
+				if (document.fullscreenElement) {
+					document.exitFullscreen();
+				} else {
+					shell.requestFullscreen();
+				}
+				setTimeout(function () { map.invalidateSize(); }, 200);
+			});
+			bar.appendChild(fs);
+		}
 
 		return bar;
 	}

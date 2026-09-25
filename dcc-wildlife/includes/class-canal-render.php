@@ -256,6 +256,28 @@ final class Canal_Render {
 				[
 					'i18n' => [
 						'now'        => __( 'now', 'dcc-wildlife' ),
+
+						/*
+						 * How old a reading is, in the shortest words that
+						 * still read as English.
+						 *
+						 * These lived ONLY in the water module's config, and
+						 * canal.js fell back to hardcoded 'today' / 'd' / 'mo'
+						 * / 'y' when it was absent. On a hub page with the
+						 * water section switched off — or auto-hidden because
+						 * nothing was gated through — that fallback is what
+						 * shipped, so the strings bypassed LocoTranslate
+						 * entirely and could not be translated at all. The hub
+						 * carries them itself now.
+						 */
+						/* translators: shown instead of an age when a reading is from today. */
+						'ageToday'   => __( 'today', 'dcc-wildlife' ),
+						/* translators: days, appended to a number with no space, e.g. "12d". Keep it very short. */
+						'ageDays'    => __( 'd', 'dcc-wildlife' ),
+						/* translators: months, appended to a number with no space, e.g. "6mo". Keep it very short. */
+						'ageMonths'  => __( 'mo', 'dcc-wildlife' ),
+						/* translators: years, appended to a number with no space, e.g. "3y". Keep it very short. */
+						'ageYears'   => __( 'y', 'dcc-wildlife' ),
 						/* translators: %s: a month name. */
 						'monthAria'  => __( 'Wildlife in %s', 'dcc-wildlife' ),
 						/* translators: %d: number of species at peak. */

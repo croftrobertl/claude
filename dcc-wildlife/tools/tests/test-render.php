@@ -24,11 +24,25 @@ function dcc_render( string $which ): array {
 	ob_start();
 	$html = 'canal' === $which ? Canal_Render::shortcode( [] ) : Render::shortcode( [] );
 	$echoed = (string) ob_get_clean();
+	// EVERY inline script, unfiltered. An earlier version of this helper only
+	// kept blocks matching a substring, and quietly dropped the hub's config
+	// when that substring happened not to appear in it.
 	$config = '';
 	foreach ( $GLOBALS['dccwl_test']['inline'] as [ $handle, $data ] ) {
-		if ( str_contains( (string) $data, 'DCC_WL_CFG' ) || str_contains( (string) $data, 'dccwl' ) ) {
-			$config .= (string) $data;
-		}
+		$config .= (string) $data . "\n";
+	}
+	return [ 'html' => $echoed . $html, 'config' => $config ];
+}
+
+/** Render again WITHOUT resetting, to observe the once-per-page guards. */
+function dcc_render_again( string $which ): array {
+	$before = count( $GLOBALS['dccwl_test']['inline'] );
+	ob_start();
+	$html   = 'canal' === $which ? Canal_Render::shortcode( [] ) : Render::shortcode( [] );
+	$echoed = (string) ob_get_clean();
+	$config = '';
+	foreach ( array_slice( $GLOBALS['dccwl_test']['inline'], $before ) as [ $handle, $data ] ) {
+		$config .= (string) $data;
 	}
 	return [ 'html' => $echoed . $html, 'config' => $config ];
 }
@@ -95,6 +109,61 @@ if ( is_array( $json ) ) {
 	);
 	check_same( [], $blank, 'no i18n string is blank', implode( ', ', $blank ) );
 }
+
+dcc_section( 'no dead keys in the config' );
+
+// photoBase advertised .../assets/photos/, which 1.30.0 stopped shipping. It
+// was a 404 in every page's config, and a dead path invites someone to use it.
+check_lacks( $m['config'], 'photoBase', 'the dead photoBase path is gone from the month config' );
+check_lacks( $c['config'], 'photoBase', 'and from the hub config' );
+
+// The config is emitted ONCE PER PAGE, guarded by a static. That is what keeps
+// two widgets on one page from shipping 54KB of identical JSON twice — and it
+// is why this suite reuses the first render of each widget rather than
+// rendering again. A second render legitimately emits nothing, and a test that
+// re-rendered would silently assert against an empty string.
+$again = dcc_render_again( 'canal' );
+check_same( '', $again['config'], 'a second render on the same page emits no second config' );
+check( strlen( $again['html'] ) > 1000, 'though it still renders its markup' );
+
+dcc_section( 'the hub carries its own age words' );
+
+// These used to live ONLY in the water module's config. On a hub page with the
+// water section off or auto-hidden, canal.js fell back to hardcoded English
+// that LocoTranslate never sees.
+$hub = null;
+// Greedy to the LAST closing brace: the hub's config is the final assignment
+// in the block, and a non-greedy match stops at the first nested object.
+if ( preg_match( '/DCC_WL_CANAL\s*=\s*(\{.*\})\s*;/s', $c['config'], $mm ) ) {
+	$hub = json_decode( $mm[1], true );
+}
+check( is_array( $hub ), 'the hub config parses' );
+foreach ( [ 'ageToday', 'ageDays', 'ageMonths', 'ageYears' ] as $k ) {
+	check(
+		isset( $hub['i18n'][ $k ] ) && '' !== trim( (string) $hub['i18n'][ $k ] ),
+		"the hub config carries i18n.$k, so it no longer depends on the water module"
+	);
+}
+
+// And the script must not be reading them from the water config as its only
+// source any more.
+$canal_js = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/canal.js' );
+check_lacks( $canal_js, "w.ageToday || 'today'", 'canal.js no longer falls straight through to an English literal' );
+check_contains( $canal_js, "word('ageToday'", 'it resolves the word through its own table first' );
+
+dcc_section( 'every photo-source link says what it is a source for' );
+
+// 28 links all reading "source" gave a screen-reader user 28 identical
+// destinations with nothing to tell them apart.
+preg_match_all( '/<a\s[^>]*>source<\/a>/', $m['html'], $links );
+$count = count( $links[0] );
+check( $count > 20, 'the credits list has its per-photo source links', "found $count" );
+$unlabelled = array_values( array_filter( $links[0], static fn( string $a ): bool => ! str_contains( $a, 'aria-label=' ) ) );
+check_same( [], $unlabelled, 'every one of them carries an aria-label', implode( ' | ', array_slice( $unlabelled, 0, 2 ) ) );
+
+preg_match_all( '/<a\s[^>]*aria-label="([^"]*)"[^>]*>source<\/a>/', $m['html'], $labels );
+$unique = array_unique( $labels[1] );
+check_same( count( $labels[1] ), count( $unique ), 'and every label is distinct, naming its own species' );
 
 dcc_section( 'assets are enqueued only when something renders' );
 

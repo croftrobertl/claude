@@ -53,7 +53,10 @@ foreach ( $widgets as $class => $slug ) {
 }
 
 // Pinned so that adding or removing a control is a deliberate, visible change.
-check( count( $counts['dccwl_month'] ) >= 5, 'the month widget exposes at least five controls' );
+// Four since 1.31.0: the "Show season countdown" switcher was removed because
+// the countdown itself is retired and the switch did nothing either way.
+check_same( 4, count( $counts['dccwl_month'] ), 'the month widget exposes four controls' );
+check( ! isset( $counts['dccwl_month']['show_countdown'] ), 'the dead countdown switcher is gone' );
 check( isset( $counts['dccwl_month']['widget_title'] ), 'the month widget has a title control' );
 check( isset( $counts['dccwl_canal']['widget_title'] ), 'the hub has a title control' );
 check( isset( $counts['dccwl_water']['water_title'] ), 'the water widget has a title control' );
@@ -81,7 +84,6 @@ check_same(
 	[
 		'dccwl_month.compact',
 		'dccwl_month.show_browser',
-		'dccwl_month.show_countdown',
 		'dccwl_month.show_guide',
 	],
 	$switchers,

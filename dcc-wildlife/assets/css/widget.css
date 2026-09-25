@@ -403,7 +403,31 @@
  * on a phone they share the row at a smaller size rather than overflow. */
 @media (max-width: 480px) {
 	.dccwl-tabs { display: flex; width: 100%; }
-	.dccwl-root .dccwl-tab.dccwl-tab { font-size: var(--dccwl-fs-xs); padding: 10px 6px; font-weight: var(--dccwl-fw-body); }
+	.dccwl-root .dccwl-tab.dccwl-tab {
+		font-size: var(--dccwl-fs-xs);
+		padding: 10px 6px;
+		font-weight: var(--dccwl-fw-body);
+		/* The base rule sets nowrap, which on a narrow phone does not shrink
+		 * the label — it spills it silently, with no ellipsis to show for it.
+		 * Measured here, "Peak Now" has 14% headroom inside its share of a
+		 * 320px row; Raleway runs about 21% wider than the face this sandbox
+		 * falls back to, which is exactly why live reports the row overflowing
+		 * below about 335px while it looks fine locally. Same lesson as the
+		 * 1.28.0 footnote row.
+		 *
+		 * So below 480px the label may wrap. A two-line "Peak Now" on a 320px
+		 * phone is a far smaller price than a row that spills off the screen,
+		 * and it cannot overflow however wide the real font turns out to be. */
+		white-space: normal;
+		hyphens: none;
+		line-height: 1.2;
+	}
+}
+
+/* Tighter still where every pixel counts, to put off wrapping as long as
+ * possible before it is needed. */
+@media (max-width: 360px) {
+	.dccwl-root .dccwl-tab.dccwl-tab { padding: 10px 4px; }
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab:hover {

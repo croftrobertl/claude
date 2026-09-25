@@ -468,6 +468,71 @@ final class Water_Data {
 	}
 
 	/**
+	 * Write the merged option back, so the stored row DESCRIBES behaviour.
+	 *
+	 * all() already merges defaults at READ time, so a key added in a new
+	 * version is never silently off. The narrower problem this fixes: until the
+	 * owner saves the form, the stored row does not mention the new key at all,
+	 * so the admin screen and the database disagree with what the site is
+	 * actually doing. Persisting on upgrade makes them agree.
+	 *
+	 * The nested merge is per ROW, never per LIST. Every array-typed setting
+	 * here is a list of rows the owner edits — chain waters, almanac lines,
+	 * links, reports — and unioning a stored list with the seeded one would
+	 * resurrect rows they had deliberately deleted. So the stored list always
+	 * wins wholesale, and each row it contains merely gains any KEYS the row
+	 * shape has grown since, empty. That is the difference between "this row
+	 * has a new field you have not filled in" and "your deleted lake is back".
+	 *
+	 * A site with nothing stored is left alone: all() already answers with
+	 * defaults, and writing a row would only add a database entry that says
+	 * the same thing.
+	 */
+	public static function persist_merged(): void {
+		$stored = get_option( self::OPTION, null );
+		if ( ! is_array( $stored ) ) {
+			return;
+		}
+
+		$defaults = self::defaults();
+		$merged   = wp_parse_args( $stored, $defaults );
+
+		foreach ( $defaults as $key => $seeded ) {
+			if ( ! is_array( $seeded ) || [] === $seeded ) {
+				continue;
+			}
+			if ( ! isset( $merged[ $key ] ) || ! is_array( $merged[ $key ] ) ) {
+				continue;
+			}
+			$shape = self::row_shape( $seeded );
+			if ( [] === $shape ) {
+				continue;
+			}
+			foreach ( $merged[ $key ] as $i => $row ) {
+				if ( is_array( $row ) ) {
+					$merged[ $key ][ $i ] = wp_parse_args( $row, $shape );
+				}
+			}
+		}
+
+		update_option( self::OPTION, $merged );
+	}
+
+	/**
+	 * The keys a row of this setting is expected to have, all empty.
+	 *
+	 * @param array<int|string,mixed> $rows
+	 * @return array<string,string>
+	 */
+	private static function row_shape( array $rows ): array {
+		$first = reset( $rows );
+		if ( ! is_array( $first ) ) {
+			return [];
+		}
+		return array_fill_keys( array_keys( $first ), '' );
+	}
+
+	/**
 	 * @return array<string,mixed>
 	 */
 	public static function all(): array {

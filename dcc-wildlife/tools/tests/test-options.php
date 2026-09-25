@@ -133,4 +133,59 @@ $before = $GLOBALS['dccwl_test']['options'];
 $plugin->maybe_upgrade();
 check_same( $before, $GLOBALS['dccwl_test']['options'], 'a site already on this version is untouched' );
 
+dcc_section( 'the upgrade step persists a merged row' );
+
+// A site carrying a row from an older version: the row lacks keys added since,
+// and its chain rows lack fields the row shape has grown.
+dccwl_test_reset();
+$GLOBALS['dccwl_test']['options']['dcc_wl_version'] = '1.29.0';
+$GLOBALS['dccwl_test']['options'][ Water_Data::OPTION ] = [
+	'live_enabled' => 1,
+	'chain_waters' => [ [ 'id' => '99', 'name' => 'Owner Lake' ] ],
+];
+$plugin->maybe_upgrade();
+
+$after = get_option( Water_Data::OPTION );
+check( is_array( $after ), 'the option is still an array afterwards' );
+check_same( count( $d ), count( $after ), 'the stored row now names every key, so it describes behaviour' );
+check_same( 1, $after['live_enabled'], 'a value the owner set is untouched' );
+check_same( $d['atlas_base'], $after['atlas_base'], 'a key they never saw now reads its default from the row itself' );
+
+// The owner's list wins WHOLESALE. Ten lakes are seeded; they kept one.
+check_same( 1, count( $after['chain_waters'] ), 'their one chain row is not joined by the ten seeded ones' );
+check_same( '99', $after['chain_waters'][0]['id'], 'their row is the one that survived' );
+check_same( 'Owner Lake', $after['chain_waters'][0]['name'], 'with its name intact' );
+// ...but the row gains the fields the shape has since grown, empty.
+check( array_key_exists( 'lat', $after['chain_waters'][0] ), 'the row gains the lat key it was missing' );
+check_same( '', $after['chain_waters'][0]['lat'], 'empty, for them to fill in — not guessed' );
+
+dcc_section( 'the orphan option from the removed sightings log' );
+
+dccwl_test_reset();
+$GLOBALS['dccwl_test']['options']['dcc_wl_version']  = '1.30.0';
+$GLOBALS['dccwl_test']['options']['dcc_wl_settings'] = [ 'left' => 'behind' ];
+$plugin->maybe_upgrade();
+check_same( false, get_option( 'dcc_wl_settings' ), 'dcc_wl_settings is removed on upgrade' );
+
+// A fresh install has none, and must not acquire one.
+dccwl_test_reset();
+$plugin->maybe_upgrade();
+check_same( false, get_option( 'dcc_wl_settings' ), 'a fresh install does not gain it' );
+check_same( false, get_option( Water_Data::OPTION ), 'nor a settings row it does not need' );
+
+dcc_section( 'a downgrade runs no migration' );
+
+dccwl_test_reset();
+$GLOBALS['dccwl_test']['options']['dcc_wl_version']  = '99.0.0';
+$GLOBALS['dccwl_test']['options']['dcc_wl_settings'] = [ 'still' => 'here' ];
+$GLOBALS['dccwl_test']['options'][ Water_Data::OPTION ] = [ 'live_enabled' => 1 ];
+$plugin->maybe_upgrade();
+check_same(
+	[ 'live_enabled' => 1 ],
+	get_option( Water_Data::OPTION ),
+	'moving backwards leaves the stored row exactly as it was'
+);
+check( is_array( get_option( 'dcc_wl_settings' ) ), 'and runs no removal step' );
+check_same( DCC_WL_VERSION, get_option( 'dcc_wl_version' ), 'but it does record where we now are, so it settles' );
+
 dcc_done();

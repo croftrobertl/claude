@@ -495,7 +495,10 @@ final class Render {
 				<p class="dccwl-photo-credits-note"><?php esc_html_e( 'Every photograph here has been cropped and resized for this guide.', 'dcc-wildlife' ); ?></p>
 				<ul class="dccwl-photo-credits-list">
 					<?php foreach ( $rows as [ $name, $c ] ) : ?>
-						<li><b><?php echo esc_html( $name ); ?></b> — <?php echo esc_html( $c[0] ); ?><?php if ( '' !== $c[1] ) : ?>, <?php echo esc_html( $c[1] ); ?><?php endif; ?><?php if ( '' !== $c[2] ) : ?> (<a href="<?php echo esc_url( $c[2] ); ?>" rel="noopener"><?php esc_html_e( 'source', 'dcc-wildlife' ); ?></a>)<?php endif; ?></li>
+						<li><b><?php echo esc_html( $name ); ?></b> — <?php echo esc_html( $c[0] ); ?><?php if ( '' !== $c[1] ) : ?>, <?php echo esc_html( $c[1] ); ?><?php endif; ?><?php if ( '' !== $c[2] ) : ?> (<a href="<?php echo esc_url( $c[2] ); ?>" rel="noopener" aria-label="<?php
+						/* translators: %s: a species name. The accessible name of a photo-credit source link. */
+						echo esc_attr( sprintf( __( 'Source for the %s photograph', 'dcc-wildlife' ), $name ) );
+					?>"><?php esc_html_e( 'source', 'dcc-wildlife' ); ?></a>)<?php endif; ?></li>
 					<?php endforeach; ?>
 				</ul>
 			</div>
@@ -765,10 +768,13 @@ final class Render {
 			 * replacing ".jpg" with "-600.jpg"; WordPress dedupes filenames on
 			 * upload, so one pre-existing fern.jpg would have made ours
 			 * fern-1.jpg and that species would have silently lost its srcset.
-			 * photoBase remains only so an older cached script does not break
-			 * outright; nothing current composes with it.
+			 * photoBase was kept for a while so an older cached script could
+			 * not break outright. It is now actively WRONG: since 1.30.0 the
+			 * zip does not ship assets/photos at all, so the URL it advertised
+			 * is a 404 on a fresh install. Nothing has composed with it since
+			 * 1.29.0, and shipping a dead path in every page's config invites
+			 * someone to use it. Removed.
 			 */
-			'photoBase'  => esc_url_raw( DCC_WL_URL . 'assets/photos/' ),
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
 			// Toggle state is baked into the cached page, matching the

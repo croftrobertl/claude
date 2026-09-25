@@ -81,19 +81,18 @@ class Widget extends \Elementor\Widget_Base {
 			]
 		);
 
-		// 1.8.1: the preferred, zero-config countdown placement — appended
-		// under this widget wherever it already sits. The default mirrors the
-		// sitewide toggle at the moment the control is registered; the
-		// sitewide toggle still overrides when off.
-		$this->add_control(
-			'show_countdown',
-			[
-				'label'       => __( 'Show season countdown', 'dcc-wildlife' ),
-				'type'        => \Elementor\Controls_Manager::SWITCHER,
-				'default'     => Water_Admin::countdown_enabled() ? 'yes' : '',
-				'description' => __( 'Appends the "…season starts in N days" line below the widget. The sitewide toggle in DCC → Wildlife must also be on.', 'dcc-wildlife' ),
-			]
-		);
+		/*
+		 * There WAS a "Show season countdown" switcher here, added in 1.8.1.
+		 * The countdown was retired, and Render::countdown_possible() has been
+		 * hard-false since — so the switch rendered, invited a decision, and
+		 * then did absolutely nothing whichever way it was set. A control that
+		 * lies is worse than a missing one, so it is gone.
+		 *
+		 * Any `show_countdown` value already stored against a placed widget is
+		 * simply ignored, which is what an unknown Elementor setting always
+		 * is. Nothing needs migrating. If the countdown is ever revived, the
+		 * control comes back WITH the feature, not before it.
+		 */
 
 		$this->end_controls_section();
 	}

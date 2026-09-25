@@ -131,5 +131,71 @@ for (const m of moving) note(`still travels: ${m}`);
 checkSame(0, moving.length, 'nothing in the widget travels under reduced motion');
 
 await page.close();
+
+/* ------------------------------------------------------- the tab row's font */
+section('the tab labels cannot spill, whatever face the theme serves');
+
+// The trap this guards: the base rule is white-space:nowrap, which does not
+// shrink a label that will not fit — it spills it, with no ellipsis to show for
+// it. And this sandbox has no Raleway, so text measures NARROWER here than on
+// the site. "Peak Now" had 14% headroom inside its share of a 320px row
+// locally while live reported the row overflowing below about 335px.
+//
+// So rather than assert it merely fits at the widths we can measure, the font
+// is inflated to stand in for a wider face, and the row must still hold.
+// Raleway measured about 21% wider than this sandbox's fallback face on the
+// 1.28.0 footnote row, so 125% is the case that must hold. 150% is carried as a
+// margin probe: it records where the design finally runs out of room, without
+// pretending a 50%-wider face is a requirement.
+const TAB_CASES = [
+  [390, 1, true], [360, 1, true], [335, 1, true], [320, 1, true],
+  [320, 1.25, true], [300, 1.25, true],
+  [320, 1.5, false],
+];
+
+for (const [w, inflate, required] of TAB_CASES) {
+  ({ page } = await widgetPage(browser, 'month', { width: w, height: 800 }));
+
+  if (inflate !== 1) {
+    await page.addStyleTag({
+      content: `.dccwl-root .dccwl-tab.dccwl-tab { font-size: ${(0.78 * inflate).toFixed(3)}rem !important; }`,
+    });
+    await page.waitForTimeout(60);
+  }
+
+  const m = await page.evaluate(() => {
+    let spill = -1e6;
+    let which = '';
+    let minH = 1e6;
+    for (const el of document.querySelectorAll('.dccwl-tab')) {
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      // For wrapped text this is the width of the WIDEST LINE, which is
+      // exactly what has to fit.
+      const textW = r.getBoundingClientRect().width;
+      const cs = getComputedStyle(el);
+      const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const s = textW - inner;
+      if (s > spill) { spill = s; which = (el.textContent || '').trim(); }
+      minH = Math.min(minH, Math.round(el.getBoundingClientRect().height));
+    }
+    return { spill: +spill.toFixed(1), which, minH };
+  });
+
+  const label = inflate === 1 ? `${w}px` : `${w}px at ${Math.round(inflate * 100)}% label font`;
+  note(`${label}: tightest "${m.which}" spills ${m.spill}px, shortest tab ${m.minH}px tall`);
+
+  if (required) {
+    checkAtMost(0, m.spill, `${label}: no tab label spills out of its box`);
+    checkAtLeast(44, m.minH, `${label}: tabs keep their 44px height`);
+    checkSame(0, await horizontalOverflow(page), `${label}: no sideways page scroll`);
+  } else {
+    note(`${label}: margin probe only — not a requirement`);
+    checkSame(0, await horizontalOverflow(page), `${label}: even here the page does not scroll sideways`);
+  }
+
+  await page.close();
+}
+
 await browser.close();
 done();

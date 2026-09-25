@@ -366,11 +366,21 @@
 			if (isNaN(then.getTime())) { return ''; }
 			var days = Math.floor((Date.now() - then.getTime()) / 86400000);
 			if (days < 0) { return ''; }
-			var w = (window.DCC_WL_WATER && window.DCC_WL_WATER.i18n) || {};
-			if (days === 0) { return w.ageToday || 'today'; }
-			if (days < 45) { return days + (w.ageDays || 'd'); }
-			if (days < 730) { return Math.round(days / 30) + (w.ageMonths || 'mo'); }
-			return Math.round(days / 365) + (w.ageYears || 'y');
+			/* The hub's OWN table first. These words used to come only from
+			 * the water module's config, so on a page where the water section
+			 * is off or auto-hidden the code fell through to English literals
+			 * that LocoTranslate never sees. The water table is still read as
+			 * a second source so a translation already entered there keeps
+			 * working. */
+			var w = I18N;
+			var wtr = (window.DCC_WL_WATER && window.DCC_WL_WATER.i18n) || {};
+			function word(key, fallback) {
+				return w[key] || wtr[key] || fallback;
+			}
+			if (days === 0) { return word('ageToday', 'today'); }
+			if (days < 45) { return days + word('ageDays', 'd'); }
+			if (days < 730) { return Math.round(days / 30) + word('ageMonths', 'mo'); }
+			return Math.round(days / 365) + word('ageYears', 'y');
 		}
 
 		// water.js announces what its existing fetch returned; this file

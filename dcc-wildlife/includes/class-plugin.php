@@ -98,11 +98,39 @@ final class Plugin {
 		wp_clear_scheduled_hook( self::WARM_HOOK );
 	}
 
+	/**
+	 * Run once per version change, on init at priority 5.
+	 *
+	 * The guard compares with version_compare rather than string equality now.
+	 * Equality also fired on a DOWNGRADE, re-running every step against an
+	 * older codebase, which is the one direction a migration has no business
+	 * running in.
+	 */
 	public function maybe_upgrade(): void {
-		if ( DCC_WL_VERSION === get_option( self::VERSION_OPTION ) ) {
+		$from = (string) get_option( self::VERSION_OPTION, '' );
+		if ( DCC_WL_VERSION === $from ) {
 			return;
 		}
+
+		// Moving BACKWARDS: record where we are and run nothing. A step written
+		// for a later version cannot be assumed safe against earlier code.
+		if ( '' !== $from && version_compare( $from, DCC_WL_VERSION, '>' ) ) {
+			update_option( self::VERSION_OPTION, DCC_WL_VERSION, false );
+			return;
+		}
+
 		Water_Data::upgrade();
+
+		// 1.31.0: `dcc_wl_settings` belonged to the guest sightings log, which
+		// was removed in 1.2.0. Nothing has written it in eleven releases, but
+		// it is autoloaded on every request of every site that ever ran 1.1.0.
+		if ( '' === $from || version_compare( $from, '1.31.0', '<' ) ) {
+			delete_option( 'dcc_wl_settings' );
+		}
+
+		// Make the stored row describe what the site actually does.
+		Water_Data::persist_merged();
+
 		update_option( self::VERSION_OPTION, DCC_WL_VERSION, false );
 	}
 

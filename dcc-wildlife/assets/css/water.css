@@ -230,17 +230,32 @@
  * neither — Leaflet pans inside its own canvas.
  * ================================================================== */
 
+/* The map sheet used to be `overflow: hidden` around a canvas with a hard
+ * 240px floor, above a control bar and a legend that both WRAP. On a short
+ * phone the wrapped rows pushed the legend out of the bottom of a container
+ * that could not scroll: measured 141px past the edge at 320x568 on live, so
+ * the colour key was simply unreadable there.
+ *
+ * Two changes, and both are needed. The canvas floor now yields on a short
+ * viewport instead of shoving the controls out, and the body can scroll as a
+ * guarantee that nothing is ever unreachable however the rows wrap. */
 .dccwl-sheet-body-map {
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	padding: 0;
 }
 
 .dccwl-sheet-body-map .dccwl-map-canvas {
 	flex: 1 1 auto;
-	min-height: 240px;
+	min-height: min(240px, 40vh);
 	width: 100%;
+}
+
+/* dvh tracks the address bar on a phone, where vh does not. */
+@supports (height: 40dvh) {
+	.dccwl-sheet-body-map .dccwl-map-canvas { min-height: min(240px, 40dvh); }
 }
 
 .dccwl-sheet-body-map .dccwl-map-noimagery { background: var(--dccwl-page-bg); }
@@ -648,4 +663,40 @@
 		grid-auto-columns: calc((100% - var(--dccwl-gap)) / 2);
 		grid-template-rows: repeat(2, auto);
 	}
+}
+
+/* ======================================================================
+ * Leaflet's own controls (1.31.0)
+ *
+ * Vendored Leaflet sizes .leaflet-bar a at 26px, which lands at a 30px touch
+ * target — under the 44px floor every control this plugin draws itself
+ * respects. The zoom buttons are the most-tapped thing on the map, so they get
+ * brought up to the same floor rather than left as the one exception.
+ * ================================================================== */
+
+/* Specificity note, learned by measuring: Leaflet's own `.leaflet-touch
+ * .leaflet-bar a` is (0,2,1) and sets 30px, and leaflet.css is injected into
+ * <head> AFTER this stylesheet at runtime — so an equal-specificity override
+ * loses on source order. The canvas class is doubled to reach (0,3,1) and win
+ * outright, the same trick the Bravada button rules use. */
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-bar a,
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-bar a:hover,
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-bar a:focus {
+	height: 44px;
+	line-height: 44px;
+	width: 44px;
+}
+
+/* Leaflet draws the +/- as text, so the glyph has to grow with the box. */
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-control-zoom-in,
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-control-zoom-out {
+	font-size: 22px;
+}
+
+/* A visible focus ring: these are keyboard-reachable and had none of their own
+ * that survives this plugin's palette. */
+.dccwl-map-canvas.dccwl-map-canvas .leaflet-bar a:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: 2px solid var(--dccwl-primary);
+	outline-offset: -2px;
 }

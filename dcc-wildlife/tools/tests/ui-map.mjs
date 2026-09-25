@@ -16,7 +16,7 @@
  */
 
 import {
-  launch, buildPage, rendered, asset, boxOf,
+  launch, buildPage, rendered, asset,
   check, checkAtLeast, checkAtMost, checkSame, section, note, done,
 } from './lib.mjs';
 
@@ -216,6 +216,176 @@ note(`320px: canvas ${small.w}x${small.h} zoom ${small.zoom}`);
 check(!small.error, 'a map is created at 320px too', small.error || '');
 checkAtMost(13, small.zoom ?? 99, 'the zoom is sane at 320px as well');
 checkAtLeast(150, small.w ?? 0, 'the canvas has real width at 320px');
+
+await page.close();
+
+/* ------------------------------------------------------------------------ */
+section('nothing in the map sheet is unreachable on a short phone');
+
+// The failure this guards against: the sheet body is a flex column with
+// overflow:hidden, the canvas carries a fixed 240px floor, and the control bar
+// and legend both wrap. On a 320x568 phone that pushed the legend clean out of
+// the bottom of a container that could not scroll, so the colour key simply
+// could not be read. Measured live as 141px of legend past the edge.
+for (const [w, h] of [[320, 568], [390, 844], [390, 500]]) {
+  ({ page, opened } = await openMap(w, h));
+
+  const fit = await page.evaluate(() => {
+    const body = document.querySelector('.dccwl-sheet-body-map');
+    if (!body) return { error: 'no map sheet body' };
+    const br = body.getBoundingClientRect();
+    const cs = getComputedStyle(body);
+    const canvas = body.querySelector('.dccwl-map-canvas');
+    const legend = body.querySelector('.dccwl-map-legend');
+    const bar = body.querySelector('.dccwl-map-bar');
+    const past = (el) => (el ? Math.round(el.getBoundingClientRect().bottom - br.bottom) : null);
+    return {
+      overflowY: cs.overflowY,
+      clipped: Math.round(body.scrollHeight - body.clientHeight),
+      canvasH: canvas ? Math.round(canvas.getBoundingClientRect().height) : 0,
+      legendPast: past(legend),
+      barPast: past(bar),
+      hasLegend: !!legend,
+      hasBar: !!bar,
+    };
+  });
+
+  note(`${w}x${h}: canvas ${fit.canvasH}px, content past the body ${fit.clipped}px, legend bottom ${fit.legendPast}px past, overflow-y ${fit.overflowY}`);
+
+  check(!fit.error, `${w}x${h}: the map sheet body exists`, fit.error || '');
+  check(fit.hasBar && fit.hasLegend, `${w}x${h}: the control bar and the legend are both rendered`);
+
+  // Either everything fits, or the body can be scrolled to reach it. What is
+  // not acceptable is content past the edge of a container that cannot scroll.
+  const reachable = fit.clipped <= 1 || ['auto', 'scroll'].includes(fit.overflowY);
+  check(reachable, `${w}x${h}: nothing is cut off inside a container that cannot scroll`,
+    `${fit.clipped}px of content past a body with overflow-y:${fit.overflowY}`);
+
+  // A map squeezed to nothing is not a fix.
+  checkAtLeast(120, fit.canvasH, `${w}x${h}: the map canvas stays usable`);
+
+  await page.close();
+}
+
+/* ------------------------------------------------------------------------ */
+section('the map still drags, now that the sheet body can scroll');
+
+// Making the body scrollable is what guarantees the legend is reachable, but
+// it introduces a risk: a finger dragged across the map could scroll the sheet
+// instead of panning. Leaflet cancels those gestures itself; this proves it.
+({ page, opened } = await openMap(390, 500));
+
+// Driven with REAL browser input, not synthetic events: a dispatched
+// PointerEvent does not satisfy Leaflet's drag handler, and a test that
+// "passes" because nothing moved at all would be worthless here.
+const start = await page.evaluate(() => {
+  const m = (window.__maps || [])[0];
+  const body = document.querySelector('.dccwl-sheet-body-map');
+  if (!m || !body) return { error: 'no map or body' };
+  const c = m.getContainer().getBoundingClientRect();
+  return {
+    lat: m.getCenter().lat,
+    scroll: body.scrollTop,
+    x: Math.round(c.x + c.width / 2),
+    y: Math.round(c.y + c.height / 2),
+  };
+});
+
+let drag = { error: start.error };
+if (!start.error) {
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 6; i += 1) {
+    await page.mouse.move(start.x, start.y - i * 12);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  drag = await page.evaluate((before) => {
+    const m = (window.__maps || [])[0];
+    const body = document.querySelector('.dccwl-sheet-body-map');
+    return {
+      before,
+      after: { lat: m.getCenter().lat, scroll: body.scrollTop },
+    };
+  }, { lat: start.lat, scroll: start.scroll });
+}
+
+check(!drag.error, 'the map and its sheet body are both present', drag.error || '');
+if (!drag.error) {
+  const moved = Math.abs(drag.after.lat - drag.before.lat) > 1e-6;
+  note(`drag: centre ${drag.before.lat.toFixed(4)} -> ${drag.after.lat.toFixed(4)}, body scrollTop ${drag.before.scroll} -> ${drag.after.scroll}`);
+  check(moved, 'a vertical drag on the canvas pans the map');
+  checkSame(drag.before.scroll, drag.after.scroll, 'and does not scroll the sheet body instead');
+}
+
+await page.close();
+
+/* ------------------------------------------------------------------------ */
+section("Leaflet's own controls meet the same 44px floor as ours");
+
+({ page, opened } = await openMap(390, 844));
+
+const zoom = await page.evaluate(() => {
+  const els = Array.from(document.querySelectorAll('.dccwl-map-canvas .leaflet-bar a'));
+  return els.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { cls: el.className.toString().slice(0, 30), w: Math.round(r.width), h: Math.round(r.height) };
+  });
+});
+for (const z of zoom) note(`${z.cls}: ${z.w}x${z.h}`);
+checkAtLeast(1, zoom.length, 'the zoom control is rendered');
+checkAtLeast(44, Math.min(...zoom.map((z) => z.w)), 'every Leaflet control is at least 44px wide');
+checkAtLeast(44, Math.min(...zoom.map((z) => z.h)), 'and at least 44px tall');
+
+await page.close();
+
+/* ------------------------------------------------------------------------ */
+section('the fullscreen button is only offered where it can work');
+
+({ page, opened } = await openMap(390, 844));
+const withFs = await page.evaluate(() =>
+  Array.from(document.querySelectorAll('.dccwl-map-bar button')).map((b) => (b.textContent || '').trim())
+);
+note(`bar buttons with fullscreen available: ${JSON.stringify(withFs)}`);
+check(withFs.some((t) => /fullscreen/i.test(t)), 'it IS offered in a browser that supports it');
+await page.close();
+
+// iPhone Safari implements requestFullscreen for <video> only, so on the
+// owner's own phone the button rendered and did nothing at all.
+const fixture = rendered('water', '--enable');
+page = await buildPage(browser, {
+  width: 390,
+  height: 844,
+  css: ['assets/css/app.css', 'assets/css/water.css', 'assets/vendor/leaflet/leaflet.css'],
+  head: '<link rel="stylesheet" data-dccwl-leaflet="1" href="data:text/css,">',
+  body: fixture.html + `<script>${fixture.config}</script>`,
+});
+// Remove the capability BEFORE the map module is loaded, the way a phone that
+// never had it would look.
+await page.evaluate(() => {
+  delete Element.prototype.requestFullscreen;
+  delete Element.prototype.webkitRequestFullscreen;
+});
+await page.route('**/*.png', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64') }));
+await page.addScriptTag({ content: asset('assets/vendor/leaflet/leaflet.js') });
+await page.addScriptTag({ content: asset('assets/js/water-map.js') });
+await page.evaluate((data) => {
+  window.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
+}, MAP_DATA);
+for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js']) {
+  await page.addScriptTag({ content: asset(f) });
+}
+await page.waitForTimeout(150);
+await (await page.$('[data-dccwl-map-open]')).click();
+await page.waitForTimeout(700);
+
+const withoutFs = await page.evaluate(() =>
+  Array.from(document.querySelectorAll('.dccwl-map-bar button')).map((b) => (b.textContent || '').trim())
+);
+note(`bar buttons without fullscreen support: ${JSON.stringify(withoutFs)}`);
+checkSame(false, withoutFs.some((t) => /fullscreen/i.test(t)), 'it is NOT offered where requestFullscreen is missing');
+checkAtLeast(1, withoutFs.length, 'the rest of the control bar is still there');
 
 await page.close();
 await browser.close();
