@@ -453,6 +453,33 @@
 	grid-auto-columns: calc((100% - var(--dccwl-gap)) / 2);
 	grid-template-rows: repeat(3, auto);
 }
+
+/* ---- the ragged deck (1.31.0) ---------------------------------------
+ * Deck rows are `auto`, so a row is as tall as the tallest tile ANYWHERE in
+ * it — across every page, not just the one on screen. One three-line species
+ * name ("Florida Banded Watersnake") therefore set the height of a row for all
+ * 38 species, and the shorter cards in that row stood 21px short of their
+ * slot: measured, cards of visibly different heights sitting side by side with
+ * dead space under them.
+ *
+ * Two rules fix it and both are needed. The card fills its slot, which is what
+ * the spotlight strip has always done, so nothing can sit short. And the name
+ * is clamped to two lines, which caps how tall any row can be pushed in the
+ * first place — a third line is the difference between a tidy deck and 79px of
+ * dead space. The full name stays in the DOM and in the accessible name; only
+ * its display is clamped. */
+.dccwl-app .dccwl-tiles.dccwl-deck > li > .dccwl-tile { height: 100%; }
+
+.dccwl-app .dccwl-tiles.dccwl-deck .dccwl-tile-name {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+	/* Reserve both lines so a one-line name does not make its card shorter
+	 * than its neighbour's. 1.25 is the line-height this element declares. */
+	min-height: 2.5em;
+}
 @media (min-width: 700px) {
 	.dccwl-app .dccwl-tiles.dccwl-deck {
 		grid-auto-columns: calc((100% - (var(--dccwl-gap) * 3)) / 4);
@@ -1199,3 +1226,199 @@
  * part of the link, so it only shows once the panel is open. */
 .dccwl-footnotes .dccwl-fullguide-meta { display: none; }
 .dccwl-footnotes > .dccwl-fullguide[open] .dccwl-fullguide-meta { display: block; text-align: center; }
+
+/* ======================================================================
+ * Sub-navigation inside a long section (1.31.0)
+ *
+ * The hierarchy rule from 1.18.0 governs everything here: TILES ARE THE ONLY
+ * CARDS. These are controls, so they sit on the tinted ground and never take
+ * the white-card treatment, however card-like a chip may look elsewhere.
+ * ================================================================== */
+
+.dccwl-subnav {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dccwl-gap);
+	margin: 0 0 var(--dccwl-gap);
+}
+
+/* Seven chips do not fit across a phone, and shrinking them to fit would put
+ * them under the 44px floor. So the row scrolls, with the same edge mask the
+ * spotlight strip uses to say so. */
+.dccwl-subchips {
+	-ms-overflow-style: none;
+	background: var(--dccwl-primary-soft);
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-pill);
+	display: flex;
+	gap: 2px;
+	overflow-x: auto;
+	padding: 3px;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+	mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+.dccwl-subchips::-webkit-scrollbar { display: none; }
+
+/* Scrolled to the end there is nothing left to cue. */
+.dccwl-subchips.dccwl-at-end {
+	-webkit-mask-image: none;
+	mask-image: none;
+}
+
+.dccwl-root .dccwl-subchip.dccwl-subchip {
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text-muted);
+	cursor: pointer;
+	flex: none;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	min-height: 44px;
+	padding: 10px 14px;
+	scroll-snap-align: start;
+	white-space: nowrap;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
+		color var(--dccwl-t-fast) var(--dccwl-ease-color);
+}
+
+.dccwl-root .dccwl-subchip.dccwl-subchip[aria-pressed="true"] {
+	background: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
+}
+
+.dccwl-root .dccwl-subchip.dccwl-subchip:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: 2px solid var(--dccwl-primary);
+	outline-offset: 1px;
+}
+
+/* --- the jump select and the view toggle --- */
+
+.dccwl-subtools {
+	display: flex;
+	gap: var(--dccwl-gap);
+	align-items: stretch;
+}
+
+.dccwl-jump { flex: 1 1 auto; min-width: 0; }
+
+.dccwl-root .dccwl-jump-select.dccwl-jump-select {
+	background: #ffffff;
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-sm);
+	color: var(--dccwl-text);
+	font: inherit;
+	/*
+	 * 1rem, NOT 0.875rem, and deliberately not a px value.
+	 *
+	 * iOS Safari zooms the whole page when a form control under 16px takes
+	 * focus — the same trap the search input carries a 16px floor for. A rem
+	 * keeps the plugin's "sizes stay relative" rule intact AND clears the
+	 * threshold: the deployment theme serves a 20px root, so this computes to
+	 * 20px there and to exactly 16px on a default root. A visitor who has
+	 * chosen smaller text gets what they asked for, which is the whole reason
+	 * these sizes are relative.
+	 */
+	font-size: 1rem;
+	min-height: 44px;
+	padding: 10px 12px;
+	width: 100%;
+}
+
+.dccwl-root .dccwl-jump-select.dccwl-jump-select:focus-visible {
+	border-color: var(--dccwl-primary);
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle {
+	background: var(--dccwl-primary-soft);
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-sm);
+	color: var(--dccwl-text);
+	cursor: pointer;
+	flex: none;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: var(--dccwl-fw-label);
+	min-height: 44px;
+	min-width: 44px;
+	padding: 10px 14px;
+	white-space: nowrap;
+}
+
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"] {
+	background: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
+}
+
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: 2px solid var(--dccwl-primary);
+	outline-offset: 1px;
+}
+
+/* --- compact rows -----------------------------------------------------
+ * The same <li>s and the same buttons, relaid as a vertical list. No second
+ * markup path: whatever is reachable in the deck is reachable here, which is
+ * the same reason the deck itself adds no tiles. */
+.dccwl-app .dccwl-tiles.dccwl-compact-list.dccwl-compact-list {
+	display: block;
+	overflow: visible;
+	scroll-snap-type: none;
+}
+
+.dccwl-app .dccwl-tiles.dccwl-compact-list > li { margin: 0 0 2px; }
+
+.dccwl-app .dccwl-compact-list .dccwl-tile.dccwl-tile {
+	align-items: center;
+	display: flex;
+	flex-direction: row;
+	gap: var(--dccwl-gap-lg);
+	height: auto;
+	min-height: 56px;
+	text-align: start;
+}
+
+/* The 320px file again, at 56px — no new image, no second request. */
+.dccwl-app .dccwl-compact-list .dccwl-tile-media {
+	aspect-ratio: 1 / 1;
+	flex: none;
+	height: 56px;
+	width: 56px;
+}
+
+.dccwl-app .dccwl-compact-list .dccwl-tile-name {
+	display: block;
+	-webkit-line-clamp: none;
+	line-clamp: none;
+	min-height: 0;
+	overflow: visible;
+}
+
+/* --- the jump's landing flash ----------------------------------------
+ * A jump that lands with no visible change is indistinguishable from a control
+ * that did nothing. Under reduced motion the ring is drawn and held instead of
+ * fading, so the feedback survives without anything animating. */
+.dccwl-flash .dccwl-tile {
+	animation: dccwl-flash var(--dccwl-t) var(--dccwl-ease-color) 2;
+}
+
+@keyframes dccwl-flash {
+	0%, 100% { box-shadow: var(--dccwl-shadow-tile); }
+	50% { box-shadow: 0 0 0 3px var(--dccwl-primary); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-flash .dccwl-tile {
+		animation: none;
+		box-shadow: 0 0 0 3px var(--dccwl-primary);
+	}
+}

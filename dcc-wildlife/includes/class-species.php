@@ -78,6 +78,87 @@ final class Species {
 	 *
 	 * @return array<string,string>
 	 */
+	/**
+	 * Browse sub-groups WITHIN the Animals section, in the order they are shown.
+	 *
+	 * Thirty-eight animals is between six and seven swipes of a deck with only
+	 * a counter for orientation. These chips are what let a guest go straight
+	 * to the part of the section they mean. They are NAVIGATION, not a filter:
+	 * nothing is hidden by choosing one, so every species stays reachable
+	 * however the guest arrived.
+	 *
+	 * Two labels deviate from the ones first proposed, because a label is a
+	 * claim like any other:
+	 *  - "Reptiles", not "Reptiles & amphibians". The registry holds five
+	 *    reptiles and NO amphibians, and a chip should not promise a frog that
+	 *    is not there. If one is ever added, widen the label then.
+	 *  - "Waterfowl & swimmers", not "Waterfowl". Only three of the ten are
+	 *    ducks; the rest are coots, gallinules, a grebe, the anhinga, the
+	 *    cormorant and the white pelican, and calling them waterfowl would
+	 *    teach a guest something untrue.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function browse_groups(): array {
+		return [
+			'reptiles'   => __( 'Reptiles', 'dcc-wildlife' ),
+			'mammals'    => __( 'Mammals', 'dcc-wildlife' ),
+			'fishsnails' => __( 'Fish & snails', 'dcc-wildlife' ),
+			'waders'     => __( 'Wading birds', 'dcc-wildlife' ),
+			'waterfowl'  => __( 'Waterfowl & swimmers', 'dcc-wildlife' ),
+			'raptors'    => __( 'Raptors & others', 'dcc-wildlife' ),
+		];
+	}
+
+	/**
+	 * The dataset rows of one browse sub-group, in dataset order.
+	 *
+	 * @param array<int,array<string,mixed>> $dataset
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function browse_members( array $dataset, string $slug ): array {
+		return array_values(
+			array_filter(
+				$dataset,
+				static fn( array $sp ): bool => $slug === (string) ( $sp['browse'] ?? '' )
+			)
+		);
+	}
+
+	/**
+	 * Order a section's members so each browse sub-group is CONTIGUOUS.
+	 *
+	 * Necessary because registry order is field-guide order and the sub-groups
+	 * interleave in it: the critters run alligator, manatee, otter, turtle,
+	 * three watersnakes, bass, apple snail — reptile, two mammals, four more
+	 * reptiles. A chip that claims to jump to "Reptiles" has to land on a run
+	 * of reptiles, and a position line reading "Reptiles · 1/1" has to be true.
+	 *
+	 * The sort is STABLE, so the order WITHIN a sub-group is untouched and the
+	 * confusable birds still sit together — which is the whole reason registry
+	 * order is what it is. Nothing else reorders: the prose guide, the JSON-LD
+	 * and the dataset all read the registry directly, so this affects the deck
+	 * and only the deck.
+	 *
+	 * @param array<int,array<string,mixed>> $members
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function browse_order( array $members ): array {
+		$rank = array_flip( array_keys( self::browse_groups() ) );
+		$keyed = [];
+		foreach ( array_values( $members ) as $i => $sp ) {
+			$b = (string) ( $sp['browse'] ?? '' );
+			// A member with no sub-group keeps its place at the end rather than
+			// being dropped or floated to the front.
+			$keyed[] = [ $rank[ $b ] ?? PHP_INT_MAX, $i, $sp ];
+		}
+		usort(
+			$keyed,
+			static fn( array $a, array $b ): int => $a[0] <=> $b[0] ?: $a[1] <=> $b[1]
+		);
+		return array_map( static fn( array $row ): array => $row[2], $keyed );
+	}
+
 	public static function sections(): array {
 		return [
 			'animals' => __( 'Animals', 'dcc-wildlife' ),
@@ -301,6 +382,7 @@ final class Species {
 				'name'  => __( 'Alligator', 'dcc-wildlife' ),
 				'sci'   => 'Alligator mississippiensis',
 				'group' => 'critters',
+				'browse' => 'reptiles',
 				'odds'  => 'certain',
 				'flags' => [ 'danger' ],
 				'safe'  => __( 'Never feed one — a fed gator loses its fear of people and has to be destroyed. Keep pets and small children back from the water’s edge, and give any gator on the bank a wide berth.', 'dcc-wildlife' ),
@@ -314,6 +396,7 @@ final class Species {
 				'name'  => __( 'Manatee', 'dcc-wildlife' ),
 				'sci'   => 'Trichechus manatus latirostris',
 				'group' => 'critters',
+				'browse' => 'mammals',
 				'odds'  => 'rare',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Protected under federal law: never touch, feed, chase or crowd one, and keep the boat at idle when one is near.', 'dcc-wildlife' ),
@@ -326,6 +409,7 @@ final class Species {
 				'name'  => __( 'River Otter', 'dcc-wildlife' ),
 				'sci'   => 'Lontra canadensis',
 				'group' => 'critters',
+				'browse' => 'mammals',
 				'odds'  => 'occasional',
 				'fact'  => __( 'Playful and semi-aquatic, it can hold its breath up to eight minutes when it needs to. Look for the well-worn “latrine” spots where a family checks in along the bank.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -337,6 +421,7 @@ final class Species {
 				'name'  => __( 'Turtles', 'dcc-wildlife' ),
 				'sci'   => 'Pseudemys spp. & Apalone ferox',
 				'group' => 'critters',
+				'browse' => 'reptiles',
 				'odds'  => 'certain',
 				'fact'  => __( 'Peninsula and red-bellied cooters and yellow-bellied sliders line the logs to bask. The flat, leathery Florida softshell is the odd one out — it snorkels at the surface with its body buried in the mud.', 'dcc-wildlife' ),
 				'best'  => __( 'sunny afternoons', 'dcc-wildlife' ),
@@ -350,6 +435,7 @@ final class Species {
 				'name'  => __( 'Florida Banded Watersnake', 'dcc-wildlife' ),
 				'sci'   => 'Nerodia fasciata pictiventris',
 				'group' => 'critters',
+				'browse' => 'reptiles',
 				'odds'  => 'certain',
 				'fact'  => __( 'The snake you will actually see: nearly every snake over the water here is this harmless one. Dark crossbands on a reddish-brown to grey body, and a dark line from the eye to the corner of the jaw. Cornered, it flattens and hisses and may bite, but it has no venom. Tell it from the cottonmouth by its round pupil, a narrow head barely wider than the neck, and no facial pit between eye and nostril.', 'dcc-wildlife' ),
 				'best'  => __( 'warm afternoons', 'dcc-wildlife' ),
@@ -362,6 +448,7 @@ final class Species {
 				'name'  => __( 'Brown Watersnake', 'dcc-wildlife' ),
 				'sci'   => 'Nerodia taxispilota',
 				'group' => 'critters',
+				'browse' => 'reptiles',
 				'odds'  => 'certain',
 				'fact'  => __( 'A big, heavy brown watersnake with square dark blotches down the back and a head noticeably wider than the neck — which is why it is so often mistaken for a cottonmouth, and killed for it. It loves to bask on branches overhanging the water and drops in with a splash when a boat passes. Harmless, and a great fish-eater.', 'dcc-wildlife' ),
 				'best'  => __( 'sunny middays', 'dcc-wildlife' ),
@@ -374,6 +461,7 @@ final class Species {
 				'name'  => __( 'Florida Green Watersnake', 'dcc-wildlife' ),
 				'sci'   => 'Nerodia floridana',
 				'group' => 'critters',
+				'browse' => 'reptiles',
 				'odds'  => 'likely',
 				'fact'  => __( 'The largest of the watersnakes — olive-green, plain or faintly speckled, without the bands of its cousin — and the one that prefers quiet, weedy shallows and marsh edges over open bank. Shy, quick to disappear into the vegetation, and harmless.', 'dcc-wildlife' ),
 				'best'  => __( 'warm mornings', 'dcc-wildlife' ),
@@ -386,6 +474,7 @@ final class Species {
 				'name'  => __( 'Largemouth Bass', 'dcc-wildlife' ),
 				'sci'   => 'Micropterus salmoides',
 				'group' => 'critters',
+				'browse' => 'fishsnails',
 				'odds'  => 'likely',
 				'fact'  => __( 'The Harris Chain is a nationally known trophy-bass water — Lake Dora has given up largemouth over twelve pounds. Bluegill and black crappie school in the clear shallows around them.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -396,6 +485,7 @@ final class Species {
 				'name'  => __( 'Apple Snail', 'dcc-wildlife' ),
 				'sci'   => 'Pomacea paludosa',
 				'group' => 'critters',
+				'browse' => 'fishsnails',
 				'odds'  => 'likely',
 				'fact'  => __( 'The humble native apple snail is the hinge the whole canal turns on — it’s the main food of the limpkin and the endangered snail kite. Look for its little clusters of pale, pearly eggs on stems just above the waterline.', 'dcc-wildlife' ),
 				'best'  => __( 'warm months', 'dcc-wildlife' ),
@@ -413,6 +503,7 @@ final class Species {
 				'name'  => __( 'Bald Eagle', 'dcc-wildlife' ),
 				'sci'   => 'Haliaeetus leucocephalus',
 				'group' => 'birds',
+				'browse' => 'raptors',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Protected under federal law: keep well back from a nest tree and never disturb a roosting or nesting bird.', 'dcc-wildlife' ),
@@ -428,6 +519,7 @@ final class Species {
 				'name'  => __( 'Osprey', 'dcc-wildlife' ),
 				'sci'   => 'Pandion haliaetus',
 				'group' => 'birds',
+				'browse' => 'raptors',
 				'odds'  => 'certain',
 				'fact'  => __( 'The only raptor that plunges feet-first — sometimes fully underwater — to catch fish. A reversible outer toe lets it grip a slippery catch and line it up head-first in flight to cut the drag.', 'dcc-wildlife' ),
 				'best'  => __( 'mid-morning', 'dcc-wildlife' ),
@@ -442,6 +534,7 @@ final class Species {
 				'name' => __( 'Great Egret', 'dcc-wildlife' ),
 				'sci' => __( 'Ardea alba', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'certain',
 				'fact' => __( 'The tall white wader everyone photographs, and the bird on the National Audubon Society’s own emblem — a nod to the plume hunts that nearly finished it. It hunts by slow, deliberate stalking, and grows long lacy plumes down its back to breed.', 'dcc-wildlife' ),
 				'best' => __( 'mornings and late afternoon', 'dcc-wildlife' ),
@@ -455,6 +548,7 @@ final class Species {
 				'name'  => __( 'Snowy Egret', 'dcc-wildlife' ),
 				'sci'   => 'Egretta thula',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'certain',
 				'fact'  => __( 'It shuffles its golden-yellow feet to spook prey from the mud. Its lacy plumes were nearly hunted out for ladies’ hats a century ago — the fight to stop that helped launch the Audubon movement.', 'dcc-wildlife' ),
 				'best'  => __( 'early mornings', 'dcc-wildlife' ),
@@ -467,6 +561,7 @@ final class Species {
 				'name' => __( 'Cattle Egret', 'dcc-wildlife' ),
 				'sci' => __( 'Bubulcus ibis', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'certain',
 				'fact' => __( 'The white egret that is never at the water. It crossed the Atlantic from Africa under its own power, reached Florida in the 1950s, and spread across the continent following livestock and mowers for the insects they stir up. Breeding birds wash buff on the crown and back.', 'dcc-wildlife' ),
 				'best' => __( 'mid-morning, behind the mowers', 'dcc-wildlife' ),
@@ -479,6 +574,7 @@ final class Species {
 				'name'  => __( 'Little Blue Heron', 'dcc-wildlife' ),
 				'sci'   => 'Egretta caerulea',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'certain',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
@@ -493,6 +589,7 @@ final class Species {
 				'name'  => __( 'Wood Stork', 'dcc-wildlife' ),
 				'sci'   => 'Mycteria americana',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'Federally threatened: give feeding birds their space and let them work the shallows.', 'dcc-wildlife' ),
@@ -509,6 +606,7 @@ final class Species {
 				'name'  => __( 'White Ibis', 'dcc-wildlife' ),
 				'sci'   => 'Eudocimus albus',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'certain',
 				'fact'  => __( 'Flocks probe the mud by feel, snapping that curved red bill shut on crayfish they never see. All white, with jet-black wingtips that only flash when they take to the air.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
@@ -522,6 +620,7 @@ final class Species {
 				'name' => __( 'Glossy Ibis', 'dcc-wildlife' ),
 				'sci' => __( 'Plegadis falcinellus', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'likely',
 				'fact' => __( 'A shadow at a distance and, when the sun catches it, a bird of bronze, copper and green. It works the flooded margins in small flocks with the same down-curved probing bill as the white ibis. Another self-made wanderer — it reached the Americas from the Old World on its own.', 'dcc-wildlife' ),
 				'best' => __( 'mornings, in good light', 'dcc-wildlife' ),
@@ -535,6 +634,7 @@ final class Species {
 				'name'  => __( 'Great Blue Heron', 'dcc-wildlife' ),
 				'sci'   => 'Ardea herodias',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'certain',
 				'fact'  => __( 'A special hinge in the sixth neck bone lets the great blue coil and fire its bill forward like a loosed spring. With rod-rich eyes, it can hunt by day or night.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -548,6 +648,7 @@ final class Species {
 				'name'  => __( 'Tricolored Heron', 'dcc-wildlife' ),
 				'sci'   => 'Egretta tricolor',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'likely',
 				'flags' => [ 'protected' ],
 				'safe'  => __( 'State-designated Threatened in Florida: watch from a distance and never disturb a nesting colony.', 'dcc-wildlife' ),
@@ -563,6 +664,7 @@ final class Species {
 				'name' => __( 'Florida Sandhill Crane', 'dcc-wildlife' ),
 				'sci' => __( 'Antigone canadensis pratensis', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'certain',
 				'flags' => [ 'protected' ],
 				'safe' => __( 'Never feed them — it is against Florida law, and a fed crane learns to walk up to strangers and into roads. Give a pair with a colt plenty of room; they will defend it.', 'dcc-wildlife' ),
@@ -579,6 +681,7 @@ final class Species {
 				'name' => __( 'Black-crowned Night Heron', 'dcc-wildlife' ),
 				'sci' => __( 'Nycticorax nycticorax', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'likely',
 				'fact' => __( 'Stocky, short-necked and silent by day, roosting hunched in a shady tree; at dusk it drops to the water to hunt. Its scientific name means “night raven”, which is exactly what it sounds like going over in the dark.', 'dcc-wildlife' ),
 				'best' => __( 'dusk and after dark', 'dcc-wildlife' ),
@@ -592,6 +695,7 @@ final class Species {
 				'name' => __( 'Yellow-crowned Night Heron', 'dcc-wildlife' ),
 				'sci' => __( 'Nyctanassa violacea', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'likely',
 				'fact' => __( 'A crayfish and crab specialist with a bill heavy enough to crack them open. Grey overall, with a boldly striped black-and-white face under the pale crown that names it. Rather more willing to hunt in daylight than its cousin.', 'dcc-wildlife' ),
 				'best' => __( 'dusk, and often through the day', 'dcc-wildlife' ),
@@ -605,6 +709,7 @@ final class Species {
 				'name'  => __( 'Green Heron', 'dcc-wildlife' ),
 				'sci'   => 'Butorides virescens',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'likely',
 				'fact'  => __( 'One of the very few tool-using birds on Earth: it drops a twig, feather, or insect onto the water as bait, then snatches the curious fish that rises to it.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn & dusk', 'dcc-wildlife' ),
@@ -618,6 +723,7 @@ final class Species {
 				'name' => __( 'Least Bittern', 'dcc-wildlife' ),
 				'sci' => __( 'Ixobrychus exilis', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds' => 'occasional',
 				'fact' => __( 'One of the smallest herons on Earth — lighter than a robin — and built for the reeds: it straddles two cattail stems and climbs through them rather than wading. Far more often present than seen. Alarmed, it points its bill straight up and simply becomes another vertical stem.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk in the growing season', 'dcc-wildlife' ),
@@ -632,6 +738,7 @@ final class Species {
 				'name'  => __( 'Anhinga', 'dcc-wildlife' ),
 				'sci'   => 'Anhinga anhinga',
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds'  => 'certain',
 				'fact'  => __( 'The “snakebird” swims with only its sinuous neck above the surface. Its feathers aren’t waterproof — a feature, not a flaw, since it sinks to hunt — so it must perch with wings spread wide to dry.', 'dcc-wildlife' ),
 				'best'  => __( 'sunny middays', 'dcc-wildlife' ),
@@ -645,6 +752,7 @@ final class Species {
 				'name' => __( 'Double-crested Cormorant', 'dcc-wildlife' ),
 				'sci' => __( 'Nannopterum auritum', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'The anhinga’s double, and the reason half the “anhingas” people point at are not. It swims low with its back awash, chases fish underwater with its feet for the better part of a minute, and perches to dry the same way — but the bill is hooked at the tip where the anhinga’s is a dagger.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -658,6 +766,7 @@ final class Species {
 				'name' => __( 'Common Gallinule', 'dcc-wildlife' ),
 				'sci' => __( 'Gallinula galeata', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'The chicken of the marsh: a red shield up the forehead, a candy-corn bill, and feet big enough to stride over the lily pads without sinking. It swims with a constant forward jerk of the head and scolds anything that comes near.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -671,6 +780,7 @@ final class Species {
 				'name' => __( 'Purple Gallinule', 'dcc-wildlife' ),
 				'sci' => __( 'Porphyrio martinica', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'likely',
 				'fact' => __( 'Absurd in the best way: purple-blue in front, bronze-green behind, a pale blue shield on the forehead, a candy-red bill and enormous yellow feet that carry it over the lily pads. It climbs up into the pickerelweed to pick seeds and looks, honestly, painted.', 'dcc-wildlife' ),
 				'best' => __( 'mornings', 'dcc-wildlife' ),
@@ -683,6 +793,7 @@ final class Species {
 				'name' => __( 'American Coot', 'dcc-wildlife' ),
 				'sci' => __( 'Fulica americana', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'Not a duck at all: a rail that took to open water, with lobed toes instead of webbed feet. It bobs its head as it swims and has to patter across the surface to get airborne. Winter brings big rafts of them onto the lakes.', 'dcc-wildlife' ),
 				'best' => __( 'winter, all day', 'dcc-wildlife' ),
@@ -695,6 +806,7 @@ final class Species {
 				'name' => __( 'Pied-billed Grebe', 'dcc-wildlife' ),
 				'sci' => __( 'Podilymbus podiceps', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'likely',
 				'fact' => __( 'Small, brown and built like a cork. It rarely flies where you can watch it; instead it squeezes the air from its feathers and sinks straight down, surfacing somewhere you are not looking. A black band rings the pale bill in the breeding season.', 'dcc-wildlife' ),
 				'best' => __( 'calm mornings', 'dcc-wildlife' ),
@@ -708,6 +820,7 @@ final class Species {
 				'name' => __( 'Wood Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Aix sponsa', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'The drake has a fair claim to being the most ornate duck in North America — iridescent green and purple head, white-striped face, chestnut breast, red eye. They nest in tree cavities over the swamp, and the ducklings jump down to the water the morning after they hatch, from as high as fifty feet, unhurt.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk', 'dcc-wildlife' ),
@@ -721,6 +834,7 @@ final class Species {
 				'name' => __( 'Florida Mottled Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Anas fulvigula fulvigula', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'Florida’s own resident dabbling duck — it does not migrate, and the peninsula population is found nowhere else on Earth. Both sexes look like a dark female mallard. The real threat to it is not hunting but romance: hybridising with released domestic mallards is steadily diluting the wild bird.', 'dcc-wildlife' ),
 				'best' => __( 'dawn and dusk', 'dcc-wildlife' ),
@@ -733,6 +847,7 @@ final class Species {
 				'name' => __( 'Black-bellied Whistling Duck', 'dcc-wildlife' ),
 				'sci' => __( 'Dendrocygna autumnalis', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'certain',
 				'fact' => __( 'A long-legged, goose-shaped duck that perches in trees, nests in cavities, and announces itself with a clear whistle overhead. Bright pink bill, grey face, chestnut body, and a broad white wing stripe that flashes in flight. It has spread across Florida within living memory.', 'dcc-wildlife' ),
 				'best' => __( 'dusk, and overhead at any hour', 'dcc-wildlife' ),
@@ -747,6 +862,7 @@ final class Species {
 				'name' => __( 'American White Pelican', 'dcc-wildlife' ),
 				'sci' => __( 'Pelecanus erythrorhynchos', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'waterfowl',
 				'odds' => 'likely',
 				'fact' => __( 'One of the largest birds in North America, with a nine-foot wingspan, and here only for the winter. Unlike the brown pelican of the coast it never dives from the air — flocks swim in a line and herd fish into the shallows, then dip together. In spring they leave for prairie lakes a thousand miles north.', 'dcc-wildlife' ),
 				'best' => __( 'winter, mid-morning', 'dcc-wildlife' ),
@@ -758,6 +874,7 @@ final class Species {
 				'name'  => __( 'Belted Kingfisher', 'dcc-wildlife' ),
 				'sci'   => 'Megaceryle alcyon',
 				'group' => 'birds',
+				'browse' => 'raptors',
 				'odds'  => 'likely',
 				'fact'  => __( 'It hovers on beating wings, then dives headfirst after small fish. The female is the brighter of the pair — an extra rusty band across the belly — which is unusual among our birds. Mostly a winter visitor here.', 'dcc-wildlife' ),
 				'best'  => __( 'all day', 'dcc-wildlife' ),
@@ -769,6 +886,7 @@ final class Species {
 				'name'  => __( 'Limpkin', 'dcc-wildlife' ),
 				'sci'   => 'Aramus guarauna',
 				'group' => 'birds',
+				'browse' => 'waders',
 				'odds'  => 'likely',
 				'fact'  => __( 'An apple-snail specialist, and superbly built for it: the closed bill has a gap near the tip that works like tweezers, and the tip curves slightly to the right to follow the shell’s own spiral. Look for its piles of empty shells along the bank. Florida’s limpkins have boomed since the 2000s.', 'dcc-wildlife' ),
 				'best'  => __( 'dawn, dusk & after dark', 'dcc-wildlife' ),
@@ -780,6 +898,7 @@ final class Species {
 				'name' => __( 'Fish Crow', 'dcc-wildlife' ),
 				'sci' => __( 'Corvus ossifragus', 'dcc-wildlife' ),
 				'group' => 'birds',
+				'browse' => 'raptors',
 				'odds' => 'certain',
 				'fact' => __( 'Identical to an American crow until it opens its mouth. The nasal two-note call is the whole identification — birders describe it as a crow that has been asked a question and is denying everything. It patrols the water’s edge for anything edible, other birds’ eggs included.', 'dcc-wildlife' ),
 				'best' => __( 'all day', 'dcc-wildlife' ),
@@ -1501,6 +1620,10 @@ final class Species {
 				// to, and the field mark that settles it. Both optional.
 				'idgroup'   => (string) ( $sp['idgroup'] ?? '' ),
 				'mark'      => (string) ( $sp['mark'] ?? '' ),
+				// Which chip inside the Animals section jumps to this species.
+				// Empty for plants and for the safety list, which are their own
+				// destinations and short enough not to need sub-navigation.
+				'browse'    => (string) ( $sp['browse'] ?? '' ),
 				// The filenames stay in the payload: they say a species HAS a
 				// photograph, and the importer finds files by them. They are no
 				// longer used to build a URL — see `src` below.

@@ -183,4 +183,76 @@ check_same( [ 'alligator' ], $twice, 'exactly one species sits in two sections, 
 check_same( 38, count( Species::section_members( $ds, 'animals', false ) ), 'excluding flagged members leaves animals untouched' );
 check_same( 8, count( Species::section_members( $ds, 'safety', false ) ), 'excluding flagged members drops the alligator from safety, leaving 8' );
 
+dcc_section( 'browse sub-groups for the Animals section' );
+
+$browse = Species::browse_groups();
+check_same(
+	[ 'reptiles', 'mammals', 'fishsnails', 'waders', 'waterfowl', 'raptors' ],
+	array_keys( $browse ),
+	'six sub-groups, in the order the chips show them'
+);
+
+// A label is a claim. The registry holds five reptiles and NO amphibians, and
+// only three of the ten swimmers are ducks — so neither label may overstate.
+check_same( 'Reptiles', $browse['reptiles'], 'the reptiles label does not promise amphibians there are none of' );
+check_contains( $browse['waterfowl'], 'swimmers', 'the waterfowl label admits that most of them are not ducks' );
+
+$animals = Species::section_members( $ds, 'animals' );
+$sizes   = [];
+foreach ( array_keys( $browse ) as $slug ) {
+	$sizes[ $slug ] = count( Species::browse_members( $animals, $slug ) );
+}
+check_same(
+	[ 'reptiles' => 5, 'mammals' => 2, 'fishsnails' => 2, 'waders' => 15, 'waterfowl' => 10, 'raptors' => 4 ],
+	$sizes,
+	'every animal falls in exactly one sub-group and the sizes add up'
+);
+check_same( 38, array_sum( $sizes ), 'the six sub-groups account for all 38 animals' );
+
+// Nothing outside the Animals section may carry one: Plants and the safety list
+// are short and are their own destinations.
+$stray = [];
+foreach ( $reg as $id => $sp ) {
+	$b = (string) ( $sp['browse'] ?? '' );
+	$in_animals = in_array( (string) $sp['group'], [ 'critters', 'birds' ], true );
+	if ( '' !== $b && ! $in_animals ) { $stray[] = $id; }
+	if ( '' === $b && $in_animals ) { $stray[] = "$id (missing)"; }
+	if ( '' !== $b && ! isset( $browse[ $b ] ) ) { $stray[] = "$id -> unknown $b"; }
+}
+check_same( [], $stray, 'no species carries a sub-group it should not, or lacks one it should', implode( ', ', $stray ) );
+
+dcc_section( 'the deck order makes each sub-group contiguous' );
+
+// A chip that claims to jump to "Reptiles" has to land on a RUN of reptiles,
+// and "Reptiles · 1/1" has to be true. Registry order interleaves them, so the
+// deck is ordered separately — and stably, or the confusable birds drift apart.
+$ordered = Species::browse_order( $animals );
+check_same( count( $animals ), count( $ordered ), 'ordering loses nobody' );
+
+$runs = [];
+foreach ( $ordered as $sp ) {
+	$b = (string) $sp['browse'];
+	if ( ! $runs || end( $runs )[0] !== $b ) {
+		$runs[] = [ $b, 1 ];
+	} else {
+		$runs[ count( $runs ) - 1 ][1] += 1;
+	}
+}
+$run_slugs = array_column( $runs, 0 );
+check_same( count( $run_slugs ), count( array_unique( $run_slugs ) ), 'each sub-group appears as ONE contiguous run', implode( ' ', $run_slugs ) );
+check_same( array_keys( $browse ), $run_slugs, 'and the runs come in the same order as the chips' );
+
+// Stability: within a run, registry order survives. The confusable white waders
+// sitting together is the whole reason registry order is what it is.
+$reg_pos = array_flip( array_keys( $reg ) );
+$unstable = [];
+foreach ( array_keys( $browse ) as $slug ) {
+	$ids  = array_column( Species::browse_members( $ordered, $slug ), 'id' );
+	$pos  = array_map( static fn( string $id ): int => $reg_pos[ $id ], $ids );
+	$sorted = $pos;
+	sort( $sorted );
+	if ( $pos !== $sorted ) { $unstable[] = $slug; }
+}
+check_same( [], $unstable, 'order within every sub-group is still registry order', implode( ', ', $unstable ) );
+
 dcc_done();

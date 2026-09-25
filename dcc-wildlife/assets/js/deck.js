@@ -74,10 +74,44 @@
 		return true;
 	}
 
+	/* Per-list state, so setContext() and jumpTo() can be called later without
+	 * the caller having to hand back the i18n table it passed to attach(). */
+	var known = new WeakMap();
+
+	/**
+	 * Replace what the position line says, without touching how it is measured.
+	 *
+	 * The sub-group chips need "Wading birds · 2/3" where the deck would say
+	 * "7–12 of 38". Both are true; the chip's version is the one that answers
+	 * the question the guest just asked. Pass null to hand the line back.
+	 */
+	function setContext(list, fn) {
+		if (!list) { return; }
+		var st = known.get(list);
+		if (!st) { return; }
+		st.context = (typeof fn === 'function') ? fn : null;
+		refresh(list, st.i18n);
+	}
+
+	/** Scroll a tile to the start of the view. Returns false if it is not here. */
+	function jumpTo(list, li) {
+		if (!list || !li || li.parentNode !== list) { return false; }
+		var lb = list.getBoundingClientRect();
+		var tb = li.getBoundingClientRect();
+		var left = list.scrollLeft + (tb.left - lb.left);
+		if (list.scrollTo) {
+			list.scrollTo({ left: left, behavior: reduced ? 'auto' : 'smooth' });
+		} else {
+			list.scrollLeft = left;
+		}
+		return true;
+	}
+
 	function attach(list, i18n) {
 		if (!list || list.getAttribute('data-dccwl-deck-init')) { return; }
 		list.setAttribute('data-dccwl-deck-init', '1');
 		i18n = i18n || {};
+		known.set(list, { i18n: i18n, context: null });
 		list.classList.add('dccwl-deck');
 
 		var nav = el('div', 'dccwl-deck-nav');
@@ -165,10 +199,27 @@
 			var r = li.getBoundingClientRect();
 			return { i: i + 1, l: r.left, r: r.right };
 		}).filter(function (t) { return t.r > box.left + 1 && t.l < box.right - 1; });
-		nav.querySelector('.dccwl-deck-status').textContent = shown.length
+		var line = shown.length
 			? fmt(i18n.deckPos || '%1$s–%2$s of %3$s', shown[0].i, shown[shown.length - 1].i, tiles)
 			: '';
+
+		// A context may rewrite the line. It is handed the 1-based indices of
+		// the tiles actually on screen and the total, and returning anything
+		// falsy leaves the measured line alone.
+		var st = known.get(list);
+		if (st && st.context && shown.length) {
+			var alt = st.context(shown.map(function (t) { return t.i; }), tiles);
+			if (alt) { line = alt; }
+		}
+
+		nav.querySelector('.dccwl-deck-status').textContent = line;
 	}
 
-	window.DCCWL_Deck = { attach: attach, refresh: refresh, refreshSoon: refreshSoon };
+	window.DCCWL_Deck = {
+		attach: attach,
+		refresh: refresh,
+		refreshSoon: refreshSoon,
+		setContext: setContext,
+		jumpTo: jumpTo
+	};
 }());

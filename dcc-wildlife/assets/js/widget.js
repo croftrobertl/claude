@@ -868,6 +868,13 @@
 				var group = g.getAttribute('data-dccwl-group');
 				var groupOn = searching || peaking || null === guide.group || group === guide.group;
 				g.hidden = !groupOn || ((searching || peaking) && !perGrid[group]);
+
+				/* A section's sub-navigation lives or dies with its grid. It is
+				 * also withdrawn while SEARCHING or on Peak Now: those draw from
+				 * every section at once, so "jump to Wading birds" would be
+				 * offering to navigate a list that is not on screen. */
+				var sub = section.querySelector('[data-dccwl-subnav="' + group + '"]');
+				if (sub) { sub.hidden = g.hidden || searching || peaking; }
 			});
 
 			var eligible = kept.length;
@@ -918,12 +925,173 @@
 		// Kept as the old name so every existing caller still reads clearly.
 		function annotateGuide() { refreshGuide(); }
 
+		/* ---------- sub-navigation inside a long section (1.31.0) ----------
+		 *
+		 * Thirty-eight animals is six or seven swipes of the deck with only a
+		 * counter for orientation. Three ways through, none of which replaces
+		 * the deck and none of which can hide a species:
+		 *
+		 *  - CHIPS jump to a sub-group and double as a position indicator: the
+		 *    pressed chip follows the deck as it scrolls, so the row always
+		 *    says where you are as well as where you can go.
+		 *  - A NATIVE <select> goes straight to one species by name.
+		 *  - A COMPACT toggle swaps photo cards for short rows.
+		 *
+		 * Nothing here FILTERS. That is deliberate: the 1.28.0 lesson was that
+		 * a filter nobody could see made seven winter species unreachable, and
+		 * a sub-group that hid the other five sixths of the section would be
+		 * the same mistake in a smaller box.
+		 */
+		function initBrowseNav(section) {
+			section.querySelectorAll('[data-dccwl-subnav]').forEach(function (nav) {
+				var slug = nav.getAttribute('data-dccwl-subnav');
+				var grid = section.querySelector('.dccwl-guide-grid[data-dccwl-group="' + slug + '"]');
+				if (!grid) { return; }
+
+				var chipWrap = nav.querySelector('[data-dccwl-subchips]');
+				var tools = nav.querySelector('[data-dccwl-subtools]');
+				var chips = [].slice.call(nav.querySelectorAll('.dccwl-subchip'));
+				var sel = nav.querySelector('[data-dccwl-jump]');
+				var toggle = nav.querySelector('[data-dccwl-view]');
+				var active = '';   // '' is the All chip
+
+				/*
+				 * A NOTE ON WHAT IS DELIBERATELY NOT HERE.
+				 *
+				 * The chips were briefly also a position indicator: a scroll
+				 * handler moved the pressed chip to whichever group was at the
+				 * left edge. It read well and was wrong, consistently, by one
+				 * group — because a jump aligns the COLUMN holding the target
+				 * tile, and the tile at the left edge of that column usually
+				 * belongs to the PREVIOUS group. Pressing "Mammals" landed
+				 * correctly and then relabelled itself "Reptiles".
+				 *
+				 * Two defensible definitions of "where am I" that disagree is
+				 * not a bug to tune; it is a sign the second one should not
+				 * exist. So a chip records the guest's CHOICE and nothing else.
+				 * If the deck is later swiped clear of that group the position
+				 * line says so by falling back to the deck's own count, which
+				 * contextFor() already handles by returning null.
+				 */
+
+				// Revealed only now: without this script the grid is a plain
+				// wrapping list with no deck to jump around in.
+				if (chipWrap) { chipWrap.hidden = false; }
+				if (tools) { tools.hidden = false; }
+
+				function visible() {
+					return [].filter.call(grid.children, function (li) { return !li.hidden; });
+				}
+
+				function membersOf(sub) {
+					return visible().filter(function (li) {
+						return li.getAttribute('data-dccwl-browse') === sub;
+					});
+				}
+
+				function press(sub) {
+					active = sub;
+					chips.forEach(function (c) {
+						c.setAttribute('aria-pressed', c.getAttribute('data-dccwl-browse') === sub ? 'true' : 'false');
+					});
+				}
+
+				/* The position line for a sub-group: "Wading birds · 2/3".
+				 * Returns null when the deck has scrolled clear of the group,
+				 * which hands the line back to the deck's own "7–12 of 38" —
+				 * saying "Wading birds" while showing ducks would be a lie. */
+				function contextFor(sub, label) {
+					return function (shownIdx, total) {
+						var all = visible();
+						var subs = membersOf(sub);
+						if (!subs.length || !shownIdx.length) { return null; }
+						var from = all.indexOf(subs[0]) + 1;
+						var to = all.indexOf(subs[subs.length - 1]) + 1;
+						var inside = shownIdx.filter(function (i) { return i >= from && i <= to; });
+						if (!inside.length) { return null; }
+						var perPage = Math.max(1, shownIdx.length);
+						var pages = Math.max(1, Math.ceil(subs.length / perPage));
+						var page = Math.min(pages, Math.floor((inside[0] - from) / perPage) + 1);
+						return fmt(CFG.i18n.subPos || '%1$s · %2$d/%3$d', label, page, pages);
+					};
+				}
+
+				function applyContext() {
+					if (!window.DCCWL_Deck) { return; }
+					if ('' === active) {
+						window.DCCWL_Deck.setContext(grid, null);
+						return;
+					}
+					var chip = chips.filter(function (c) { return c.getAttribute('data-dccwl-browse') === active; })[0];
+					window.DCCWL_Deck.setContext(grid, contextFor(active, chip ? chip.textContent.trim() : active));
+				}
+
+				function jump(sub) {
+					press(sub);
+					var target = '' === sub ? visible()[0] : membersOf(sub)[0];
+					if (target && window.DCCWL_Deck) { window.DCCWL_Deck.jumpTo(grid, target); }
+					applyContext();
+				}
+
+				chips.forEach(function (c) {
+					c.addEventListener('click', function () { jump(c.getAttribute('data-dccwl-browse')); });
+				});
+
+				/* While a sub-group is pressed the chip row follows the deck, so
+				 * it reports position as well as offering it. The All chip is
+				 * left alone — someone who asked for the whole section's count
+				 * has not asked to be tracked. */
+				if (sel) {
+					sel.addEventListener('change', function () {
+						var id = sel.value;
+						if (!id) { return; }
+						var li = grid.querySelector('[data-dccwl-species="' + id + '"]');
+						li = li ? li.closest('li') : null;
+						if (!li) { return; }
+						var sub = li.getAttribute('data-dccwl-browse') || '';
+						press(sub);
+						if (window.DCCWL_Deck) { window.DCCWL_Deck.jumpTo(grid, li); }
+						applyContext();
+						// A jump with no visible change is indistinguishable from
+						// a control that did nothing, so the tile says so.
+						li.classList.remove('dccwl-flash');
+						void li.offsetWidth;
+						li.classList.add('dccwl-flash');
+						// Reset, so choosing the same name twice works.
+						sel.value = '';
+					});
+				}
+
+				if (toggle) {
+					toggle.addEventListener('click', function () {
+						var compact = 'compact' !== toggle.getAttribute('data-dccwl-view');
+						toggle.setAttribute('data-dccwl-view', compact ? 'compact' : 'deck');
+						toggle.setAttribute('aria-pressed', compact ? 'true' : 'false');
+						toggle.textContent = compact
+							? (CFG.i18n.viewPhotos || 'Photos')
+							: (CFG.i18n.viewCompact || 'Compact');
+						grid.classList.toggle('dccwl-compact-list', compact);
+						// The deck's controls are meaningless in a vertical list,
+						// and its position line would describe a deck that is no
+						// longer there.
+						var deckNav = grid.nextElementSibling;
+						if (deckNav && deckNav.classList.contains('dccwl-deck-nav')) {
+							deckNav.hidden = compact;
+						}
+						if (chipWrap) { chipWrap.hidden = compact; }
+						if (window.DCCWL_Deck && !compact) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
+					});
+				}
+			});
+		}
+
 		function initGuide() {
 			var section = root.querySelector('.dccwl-guide');
 			if (!section) {
 				return;
 			}
 			section.querySelectorAll('.dccwl-tile').forEach(wireTile);
+			initBrowseNav(section);
 			// One deck per group grid (1.23.0). Attaching per grid rather than
 			// once for the section means the visible group is the one being
 			// paged, and changing tab changes decks with it.

@@ -34,9 +34,20 @@ export function check(ok, what, detail = '') {
   return false;
 }
 
+/**
+ * Equality that also works for arrays and plain objects.
+ *
+ * Object.is alone produced the least helpful failure possible — "expected
+ * ["All"], got ["All"]" — because two equal arrays are different objects. Any
+ * non-primitive is compared structurally instead.
+ */
 export function checkSame(expected, actual, what) {
+  const structural = (v) => v !== null && typeof v === 'object';
+  const same = structural(expected) || structural(actual)
+    ? JSON.stringify(expected) === JSON.stringify(actual)
+    : Object.is(expected, actual);
   return check(
-    Object.is(expected, actual),
+    same,
     what,
     `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`
   );

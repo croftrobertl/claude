@@ -383,10 +383,15 @@ final class Render {
 			if ( ! $group_species ) {
 				continue;
 			}
+			// Sub-group runs must be contiguous for the chips to jump to them
+			// and for their position line to be true. Stable, so order within a
+			// run is registry order still.
+			$group_species = Species::browse_order( $group_species );
+			self::render_browse_nav( $slug, $group_species, $first );
 			?>
 			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php foreach ( $group_species as $sp ) : ?>
-					<li>
+					<li<?php echo '' !== (string) ( $sp['browse'] ?? '' ) ? ' data-dccwl-browse="' . esc_attr( (string) $sp['browse'] ) . '"' : ''; ?>>
 						<button type="button" class="dccwl-tile" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
 							<?php echo self::tile_media( $sp ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside. ?>
 							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
@@ -397,6 +402,80 @@ final class Render {
 			<?php
 			$first = false;
 		}
+	}
+
+	/**
+	 * Sub-navigation for a section big enough to need it.
+	 *
+	 * Thirty-eight animals is six or seven swipes of the deck with nothing but
+	 * a counter to say where you are. Three ways through, because they suit
+	 * different people and none of them replaces the deck:
+	 *
+	 *  - CHIPS jump to a part of the section ("Wading birds") and relabel the
+	 *    position line. They do not FILTER: nothing is hidden by choosing one,
+	 *    so a guest can never lose a species by pressing a chip.
+	 *  - A NATIVE <select> lists every species by name, grouped. Native because
+	 *    iOS renders it as a full-height wheel at a 44px control for free, and
+	 *    because a custom listbox here would be a worse version of it.
+	 *  - A COMPACT toggle swaps the photo deck for short rows, which is how
+	 *    someone scanning for one name would rather read 38 of anything.
+	 *
+	 * Emitted only where the members actually carry sub-groups, so Plants and
+	 * the safety list get nothing — they are short and already their own
+	 * destinations. Everything ships `hidden` and JS unhides it: without JS the
+	 * grid is a plain wrapping list with no deck to jump around, and a control
+	 * that cannot work should not be offered. Same rule as the month link.
+	 *
+	 * @param array<int,array<string,mixed>> $members
+	 */
+	private static function render_browse_nav( string $section, array $members, bool $visible ): void {
+		$present = [];
+		foreach ( $members as $sp ) {
+			$b = (string) ( $sp['browse'] ?? '' );
+			if ( '' !== $b ) {
+				$present[ $b ] = true;
+			}
+		}
+		if ( count( $present ) < 2 ) {
+			return;
+		}
+
+		$groups = array_filter(
+			Species::browse_groups(),
+			static fn( string $slug ): bool => isset( $present[ $slug ] ),
+			ARRAY_FILTER_USE_KEY
+		);
+		?>
+		<div class="dccwl-subnav" data-dccwl-subnav="<?php echo esc_attr( $section ); ?>"<?php echo $visible ? '' : ' hidden'; ?>>
+			<div class="dccwl-subchips" role="group" aria-label="<?php esc_attr_e( 'Jump to a part of this section', 'dcc-wildlife' ); ?>" data-dccwl-subchips hidden>
+				<button type="button" class="dccwl-subchip" data-dccwl-browse="" aria-pressed="true"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></button>
+				<?php foreach ( $groups as $slug => $glabel ) : ?>
+					<button type="button" class="dccwl-subchip" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>" aria-pressed="false"><?php echo esc_html( $glabel ); ?></button>
+				<?php endforeach; ?>
+			</div>
+
+			<div class="dccwl-subtools" data-dccwl-subtools hidden>
+				<label class="dccwl-jump">
+					<span class="dccwl-sr"><?php esc_html_e( 'Jump to a species', 'dcc-wildlife' ); ?></span>
+					<select class="dccwl-jump-select" data-dccwl-jump>
+						<option value=""><?php esc_html_e( 'Jump to a species…', 'dcc-wildlife' ); ?></option>
+						<?php foreach ( $groups as $slug => $glabel ) : ?>
+							<optgroup label="<?php echo esc_attr( $glabel ); ?>">
+								<?php foreach ( $members as $sp ) : ?>
+									<?php if ( $slug !== (string) ( $sp['browse'] ?? '' ) ) : continue; endif; ?>
+									<option value="<?php echo esc_attr( (string) $sp['id'] ); ?>"><?php echo esc_html( (string) $sp['name'] ); ?></option>
+								<?php endforeach; ?>
+							</optgroup>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<button type="button" class="dccwl-viewtoggle" data-dccwl-view="deck" aria-pressed="false">
+					<?php esc_html_e( 'Compact', 'dcc-wildlife' ); ?>
+				</button>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**
@@ -827,6 +906,12 @@ final class Render {
 				'deckNext'    => __( 'Next species', 'dcc-wildlife' ),
 				/* translators: 1: first item shown, 2: last item shown, 3: total. */
 				'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
+				/* translators: 1: a sub-group name like "Wading birds", 2: the page within it, 3: how many pages it has. */
+				'subPos'      => __( '%1$s · %2$d/%3$d', 'dcc-wildlife' ),
+				/* translators: button that switches the species list to short rows. */
+				'viewCompact' => __( 'Compact', 'dcc-wildlife' ),
+				/* translators: button that switches the species list back to photo cards. */
+				'viewPhotos'  => __( 'Photos', 'dcc-wildlife' ),
 				/* translators: %s: what the visitor typed. */
 				'searchNone'  => __( 'Nothing matches “%s”.', 'dcc-wildlife' ),
 				/* translators: %d: number of matching species. */
