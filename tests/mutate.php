@@ -191,10 +191,13 @@ $mutations = [
      "self::SEL . '.mphbac-staff-nav' => '--staff-nav-bg: {{VALUE}};'",
      "self::SEL . '.mphbac-staff-nav' => 'background-color: {{VALUE}};'",
      'staff-test.js'],
-    ['staff: the hover default reverts to the amber', 'class-staff-elementor.php',
-     "'default'   => '#f08080',",
-     "'default'   => '#FFA000',",
-     'staff-test.js'],
+    // RETARGETED IN 0.40.0. The salmon is no longer a control default — one
+    // there is emitted at (0,7,0) and masks the settings screen — so the
+    // value it protects now lives in the schema and the mutation follows it.
+    ['staff: the hover default reverts to the amber', 'class-settings.php',
+     "'staff_nav_hover'  => \$color('staff', __('Board arrow hover', 'mphb-availability-calendar'), '#f08080'",
+     "'staff_nav_hover'  => \$color('staff', __('Board arrow hover', 'mphb-availability-calendar'), '#FFA000'",
+     'staff-elementor-test.php'],
     ['staff: :focus-visible is re-merged into the GATED hover rule', 'assets/css/staff.css',
      ".mphbac-staff-nav:focus-visible { background: var(--staff-nav-hover); }",
      "",
@@ -360,9 +363,12 @@ $mutations = [
      "'condition'      => ['layout' => 'month'],",
      "'condition'      => [],",
      'single-widget-test.php'],
+    // RETARGETED IN 0.40.0. Neither side carries the number any more, so the
+    // drift this guarded is now only reachable by pointing one of them at a
+    // DIFFERENT settings key.
     ['single-widget: the control default drifts from the render clamp', 'class-widget-single.php',
-     "'default'        => 4,\n            'tablet_default' => 2,",
-     "'default'        => 3,\n            'tablet_default' => 2,",
+     "'default'        => Settings::get('months_shown'),",
+     "'default'        => Settings::get('months_shown_tablet'),",
      'single-widget-test.php'],
     ['price: the accommodation whitelist is dropped', 'class-ajax.php',
      'if ($type_id <= 0 || !in_array($type_id, $valid_ids, true)) {',
@@ -579,6 +585,116 @@ $mutations = [
      "row would read as misaligned without anything reporting an error. */\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;",
      "row would read as misaligned without anything reporting an error. */\n    display: inline-block;",
      'polish-test.js'],
+
+    // --- 0.40.0: the settings registry, the admin screen, inheritance ---
+    // DOUBLE-quoted targets, deliberately: a single-quoted PHP string turns
+    // \n into a literal backslash-n, which left three mutations permanently
+    // STALE in 0.33.x. Every $ below is escaped for the same reason.
+    ["settings: the upgrade merge stops persisting new keys", 'class-settings.php',
+     "        if (\$merged !== \$stored) {\n            update_option(self::OPTION, \$merged, false);\n        }",
+     "        if (false) {\n            update_option(self::OPTION, \$merged, false);\n        }",
+     'settings-test.php'],
+    ["settings: all() stops merging over the defaults, so a new key reads empty", 'class-settings.php',
+     "            \$out[\$key] = array_key_exists(\$key, \$stored)\n                ? self::coerce(\$field, \$stored[\$key])\n                : \$field['default'];\n        }\n        return self::\$resolved = \$out;",
+     "            if (array_key_exists(\$key, \$stored)) { \$out[\$key] = self::coerce(\$field, \$stored[\$key]); }\n        }\n        return self::\$resolved = \$out;",
+     'settings-test.php'],
+    ["settings: the sanitiser stops dropping keys the schema does not declare", 'class-settings.php',
+     "    public static function sanitize(array \$raw): array\n    {\n        \$out = [];",
+     "    public static function sanitize(array \$raw): array\n    {\n        \$out = \$raw;",
+     'settings-test.php'],
+    ["settings: a colour is trusted instead of validated", 'class-settings.php',
+     "                return preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\$/', \$v)\n                    ? \$v : \$field['default'];",
+     "                return \$v !== '' ? \$v : \$field['default'];",
+     'settings-test.php'],
+    ["settings: an absent checkbox means \"keep the default\" again, so a switch cannot be turned off", 'class-settings.php',
+     "                \$out[\$key] = self::coerce(\$field, \$raw[\$key] ?? false);",
+     "                \$out[\$key] = self::coerce(\$field, \$raw[\$key] ?? \$field['default']);",
+     'settings-test.php'],
+    ["settings: an out-of-range number is stored rather than clamped", 'class-settings.php',
+     "                return max((int) \$field['min'], min((int) \$field['max'], \$n));",
+     "                return \$n;",
+     'settings-test.php'],
+    ["settings: the token block is emitted even when nothing has been changed (page weight)", 'class-settings.php',
+     "            if (\$value === \$field['default']) {\n                continue;\n            }",
+     "            if (false) {\n                continue;\n            }",
+     'settings-test.php'],
+    ["settings: the token block goes back to the root alone, stranding the portaled popups", 'class-settings.php',
+     "            \$css .= '.mphbac-root,.mphbac-sheet,.mphbac-info-sheet{'",
+     "            \$css .= '.mphbac-root{'",
+     'settings-test.php'],
+    ["settings: an unknown key answers an empty string instead of null", 'class-settings.php',
+     "            return null;\n        }\n        return \$all[\$key];",
+     "            return '';\n        }\n        return \$all[\$key];",
+     'settings-test.php'],
+    ["admin: the capability check is dropped from the SAVE path", 'class-admin.php',
+     "    public static function handle_save(): void\n    {\n        if (!current_user_can(self::capability())) {",
+     "    public static function handle_save(): void\n    {\n        if (false) {",
+     'admin-test.php'],
+    ["admin: the capability check is dropped from the RENDER path", 'class-admin.php',
+     "        if (!current_user_can(self::capability())) {\n            wp_die(esc_html__('You are not allowed to view these settings.'",
+     "        if (false) {\n            wp_die(esc_html__('You are not allowed to view these settings.'",
+     'admin-test.php'],
+    ["admin: the nonce is no longer verified before writing", 'class-admin.php',
+     "        check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
+     "        // check_admin_referer(self::SAVE_ACTION, 'mphbac_nonce');",
+     'admin-test.php'],
+    ["admin: the shared dcc parent is registered unconditionally", 'class-admin.php',
+     "        if (isset(\$admin_page_hooks[self::PARENT_SLUG])) {\n            return;\n        }\n        add_menu_page(",
+     "        if (false) {\n            return;\n        }\n        add_menu_page(",
+     'admin-test.php'],
+    ["admin: the duplicate-parent cleanup is removed", 'class-admin.php',
+     "        remove_submenu_page(self::PARENT_SLUG, self::PARENT_SLUG);",
+     "        return;",
+     'admin-test.php'],
+    ["admin: the submenu takes a priority another DCC plugin already uses", 'class-admin.php',
+     "add_action('admin_menu', [self::class, 'register_page'], 40);",
+     "add_action('admin_menu', [self::class, 'register_page'], 30);",
+     'admin-test.php'],
+    ["admin: the upgrade merge is moved onto a front-end hook", 'class-admin.php',
+     "        add_action('admin_init', ['\\\\MPHBAC\\\\Settings', 'maybe_upgrade']);",
+     "        add_action('wp_head', ['\\\\MPHBAC\\\\Settings', 'maybe_upgrade']);",
+     'admin-test.php'],
+    ["admin: a field loses its <label for>", 'class-admin.php',
+     "        echo '<tr><th scope=\"row\"><label for=\"' . esc_attr(\$id) . '\">' . esc_html(\$field['label']) . '</label></th><td>';",
+     "        echo '<tr><th scope=\"row\"><span>' . esc_html(\$field['label']) . '</span></th><td>';",
+     'admin-test.php'],
+    // REPLACES a 0.40.0 mutation that SURVIVED: removing esc_attr() from the
+    // colour field changed nothing observable, because Settings::all()
+    // re-validates every stored colour on READ, so a hostile value can never
+    // reach that printf in the first place. The escaping stays as belt and
+    // braces; the guard that is actually load-bearing is the coercion, which
+    // 'settings: a colour is trusted instead of validated' already covers.
+    // This targets the one value on the screen that does NOT pass through
+    // the schema: the post-redirect notice, which comes from the URL.
+    ["admin: the redirect notice is taken from the URL instead of a fixed list", 'class-admin.php',
+     "        return in_array(\$n, ['saved', 'reset'], true) ? \$n : '';",
+     "        return \$n;",
+     'admin-test.php'],
+    ["inherit: a colour control grows an Elementor default back, masking the setting", 'class-widget.php',
+     "        \$this->add_control('nav_btn_bg', [\n            'label'     => __('Button background', 'mphb-availability-calendar'),\n            'type'      => Controls_Manager::COLOR,",
+     "        \$this->add_control('nav_btn_bg', [\n            'label'     => __('Button background', 'mphb-availability-calendar'),\n            'type'      => Controls_Manager::COLOR,\n            'default'   => '#0A50B2',",
+     'defaults-test.php'],
+    ["inherit: a behaviour control repeats its value instead of reading the setting", 'class-widget.php',
+     "'default'     => Settings::get('min_nights'),",
+     "'default'     => 2,",
+     'defaults-test.php'],
+    ["inherit: a schema default drifts away from what the stylesheet resolves", 'class-settings.php',
+     "'#FB6962', 'mphbac-color-booked'),",
+     "'#FF0000', 'mphbac-color-booked'),",
+     'defaults-test.php'],
+    // The schema holds a LITERAL 900 rather than Cache::DEFAULT_TTL — Settings
+    // is a leaf and names no other class in the plugin, because a cycle here
+    // fatalled three harnesses including the staff security gate. The
+    // duplication is what defaults-test.php exists to police, so this is the
+    // mutation that proves it does.
+    ["inherit: an engine default drifts away from the shipped constant", 'class-settings.php',
+     "900, 0, 86400,",
+     "60, 0, 86400,",
+     'defaults-test.php'],
+    ["inherit: the single widget goes back to its own copy of 4 / 2 / 2", 'class-widget-single.php',
+     "            'default'        => Settings::get('months_shown'),",
+     "            'default'        => 4,",
+     'defaults-test.php'],
 ];
 
 $originals = [];

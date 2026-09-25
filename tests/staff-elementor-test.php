@@ -15,6 +15,13 @@ function get_transient($k) { return false; }
 function set_transient($k, $v, $t) { return true; }
 function delete_transient($k) { return true; }
 $GLOBALS['t_authorized_calls'] = 0;
+// Settings is required by the classes below since 0.40.0 (Cache::ttl(),
+// Staff::page_id(), the Ajax clamps, the widgets' control defaults). In
+// production the plugin's autoloader supplies it on demand; these harnesses
+// require their classes explicitly, so it has to be named here. Left out, the
+// suite FATALS rather than failing — which mutate.php reports as NO RUN, and
+// which is how this was caught before it shipped.
+require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
@@ -64,8 +71,17 @@ foreach ([
     $block = $i === false ? '' : substr($src, $i, strpos($src, ']);', $i) - $i);
     check("$id writes $token", str_contains($block, $token . ': {{VALUE}}'));
 }
-check('the hover default is the shared salmon', ($w->t_controls['nav_btn_hover_bg']['default'] ?? null) === '#f08080',
+// THE SALMON MOVED IN 0.40.0, it did not disappear. A default on this control
+// is emitted into Elementor's per-post CSS at (0,7,0), where it out-specifies
+// both staff.css and the settings screen — the very mask the settings page
+// exists to lift. So the control must carry NO default, and the salmon is
+// asserted at its new home instead.
+check('the hover control carries no default, so Elementor cannot mask the setting',
+    !array_key_exists('default', $w->t_controls['nav_btn_hover_bg'] ?? []),
     $w->t_controls['nav_btn_hover_bg']['default'] ?? null);
+check('...and the shared salmon is what the settings ship',
+    MPHBAC\Settings::defaults()['staff_nav_hover'] === '#f08080',
+    MPHBAC\Settings::defaults()['staff_nav_hover']);
 check('the deploy note about Elementor\'s cached CSS is recorded next to it',
     str_contains($src, 'does NOT refresh'));
 

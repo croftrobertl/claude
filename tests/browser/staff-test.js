@@ -67,8 +67,22 @@ const BUTTONLIKE = [
   check('nav_btn_bg writes --staff-nav-bg, so the rest colour cannot out-specify the hover',
     /--staff-nav-bg: \{\{VALUE\}\}/.test(php));
   check('nav_btn_text writes --staff-nav-text', /--staff-nav-text: \{\{VALUE\}\}/.test(php));
-  check('the hover default is the salmon, matching the public widget',
-    /'default'\s*=>\s*'#f08080'/i.test(php));
+  /* THE SALMON MOVED IN 0.40.0, it did not disappear. A default on this
+     control is emitted into Elementor's per-post CSS at (0,7,0), where it
+     out-specifies anything staff.css or the settings screen can say — which
+     is exactly the mask the settings page exists to remove. So the claim
+     "the hover default is the salmon" is now made about the SCHEMA, and the
+     control is asserted to carry no default at all. */
+  const settingsPhp = require('fs').readFileSync(
+    require('path').resolve(__dirname, '../../mphb-availability-calendar/includes/class-settings.php'), 'utf8');
+  check('the staff nav colour controls carry NO default, so Elementor cannot mask the setting',
+    !/add_control\('nav_btn_(?:bg|text|hover_bg)',\s*\[[^\]]*?'default'/s.test(php),
+    (php.match(/add_control\('nav_btn_\w+',[\s\S]{0,400}?'default'[^\n]*/g) || []).slice(0, 2));
+  check('...and the salmon is shipped by the settings schema instead',
+    /'staff_nav_hover'\s*=>\s*\$color\('staff',[\s\S]{0,160}?'#f08080'/.test(settingsPhp));
+  check('...as is the blue and the white, so a fresh install is still born correct',
+    /'staff_nav_bg'\s*=>\s*\$color\('staff',[\s\S]{0,160}?'#0A50B2'/.test(settingsPhp)
+    && /'staff_nav_text'\s*=>\s*\$color\('staff',[\s\S]{0,160}?'#FFFFFF'/.test(settingsPhp));
   {
     const hoverable = ['nav_btn_bg', 'nav_btn_text', 'nav_btn_hover_bg'];
     const offenders = hoverable.filter(c => {

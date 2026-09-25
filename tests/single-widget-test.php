@@ -14,6 +14,13 @@ $ROOT = dirname(__DIR__) . '/mphb-availability-calendar';
 function get_transient($k) { return false; }
 function set_transient($k, $v, $t) { return true; }
 function delete_transient($k) { return true; }
+// Settings is required by the classes below since 0.40.0 (Cache::ttl(),
+// Staff::page_id(), the Ajax clamps, the widgets' control defaults). In
+// production the plugin's autoloader supplies it on demand; these harnesses
+// require their classes explicitly, so it has to be named here. Left out, the
+// suite FATALS rather than failing — which mutate.php reports as NO RUN, and
+// which is how this was caught before it shipped.
+require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
@@ -68,10 +75,20 @@ echo "\n-- months_shown, the control this widget exists to expose --\n";
     // The control's own bounds and the render-side clamp must agree, or a
     // value the panel accepts is silently altered on the way out.
     $w = file_get_contents(dirname(__DIR__) . '/mphb-availability-calendar/includes/class-widget.php');
-    preg_match('/months_shown\'\]\s*\?\?\s*null,\s*(\d+),\s*(\d+),\s*(\d+)/', $w, $c);
-    check('the render clamp matches the control: same default, same 1-4 bounds',
-        (int) $c[1] === (int) $m['default'] && (int) $c[2] === (int) $m['min'] && (int) $c[3] === (int) $m['max'],
-        $c[0] ?? null);
+    // SINCE 0.40.0 NEITHER SIDE CARRIES THE NUMBER. Both read the same
+    // settings key, which is a stronger guarantee than "two literals that
+    // happen to match" — the pair cannot drift because there is only one
+    // value. What is asserted is that they read the SAME key and keep the
+    // same 1-4 bounds.
+    preg_match('/months_shown\'\]\s*\?\?\s*null,\s*\(int\) Settings::get\(\'(\w+)\'\),\s*(\d+),\s*(\d+)/', $w, $c);
+    check('the render clamp reads a setting rather than repeating a number', !empty($c), $c[0] ?? null);
+    check('...the same key the control\'s default reads',
+        ($c[1] ?? '') === 'months_shown', $c[1] ?? null);
+    check('...and the same 1-4 bounds the control declares',
+        (int) ($c[2] ?? 0) === (int) $m['min'] && (int) ($c[3] ?? 0) === (int) $m['max'],
+        [$c[2] ?? null, $c[3] ?? null]);
+    check('and the value they both resolve to is still 4',
+        (int) $m['default'] === 4, $m['default']);
 }
 
 echo "\n-- the per-cottage content controls --\n";

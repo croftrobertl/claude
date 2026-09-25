@@ -15,6 +15,13 @@ $GLOBALS['t_transients'] = [];
 function get_transient($k) { t_count('get_transient'); return $GLOBALS['t_transients'][$k] ?? false; }
 function set_transient($k, $v, $t) { t_count('set_transient'); $GLOBALS['t_transients'][$k] = $v; return true; }
 function delete_transient($k) { unset($GLOBALS['t_transients'][$k]); return true; }
+// Settings is required by the classes below since 0.40.0 (Cache::ttl(),
+// Staff::page_id(), the Ajax clamps, the widgets' control defaults). In
+// production the plugin's autoloader supplies it on demand; these harnesses
+// require their classes explicitly, so it has to be named here. Left out, the
+// suite FATALS rather than failing — which mutate.php reports as NO RUN, and
+// which is how this was caught before it shipped.
+require $ROOT . '/includes/class-settings.php';
 require $ROOT . '/includes/class-cache.php';
 
 use MPHBAC\Cache;
