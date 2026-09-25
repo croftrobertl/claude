@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.41.0
+Stable tag: 0.42.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.42.0 =
+* **The calendar stylesheet is now about a fifth of its former weight on the wire.** It is loaded in the page head on the home page, /cottages/ and every cottage page, so it had to finish downloading before anything could be drawn. Its explanatory comments — roughly two thirds of the file, and nothing a browser reads — are now stripped when the plugin is built. The full, commented version stays in the source for whoever works on it next. Measured: 109 KB down to 37 KB, or 35.6 KB down to 6.8 KB once compressed.
+* **New setting: “Load cottage info panels only when opened.”** The multi-cottage calendar builds every cottage’s info panel into the page whether or not anyone opens one — about 413 KB of the home page. With this on, a panel is fetched the first time someone opens it (usually already fetched, because hovering or touching a cottage starts it early) and then kept, so opening it again is instant. **It ships switched OFF.** Turn it on, check the panels on a staging site first, then switch it on live — and it switches straight back off if anything looks wrong.
+* A note in the stylesheet described a font problem that was fixed in the site’s theme settings a fortnight ago. The defence is kept — the setting can be re-added from the theme UI at any time — but the note now says so, rather than sending someone looking for a problem that is no longer there.
 
 = 0.41.0 =
 * **When a guest's dates are taken, the calendar now tells them which cottage IS free for those exact nights** — on the multi-cottage calendar. It only ever offers: it never changes the dates or the cottage they picked, and the suggestion is read out by screen readers along with the rest of the message. No prices are quoted. It costs nothing to run: the calendar already knows every cottage's availability for the dates on screen.
