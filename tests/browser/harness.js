@@ -27,6 +27,14 @@ const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const css = () => read('assets/css/widget.css');
 /**
+ * THE FILE THE BROWSER IS ACTUALLY SENT (0.42.0). widget.css is the source
+ * and keeps every comment; widget.min.css is what register_assets() enqueues,
+ * built by tools/build-css.php. A fixture that only ever loads the source is
+ * testing a file no visitor receives — so the portal proof runs against this
+ * one, and a suite asserts the two behave identically.
+ */
+const minCss = () => read('assets/css/widget.min.css');
+/**
  * The stylesheet with comments removed. USE THIS for any assertion about what
  * the stylesheet declares: this file's comments quote the very declarations
  * they describe ("the global min-width: 8.5em guard"), so a source-text check
@@ -187,5 +195,5 @@ function reporter() {
 
 const CHROMIUM = { executablePath: '/opt/pw-browsers/chromium' };
 
-module.exports = { ROOT, css, cssCode, js, php, constOf, emit, extractBlock, dephp,
+module.exports = { ROOT, css, minCss, cssCode, js, php, constOf, emit, extractBlock, dephp,
   filtersHtml, sheetHtml, THEME, page, SENTINEL, reporter, CHROMIUM, WRAPPER, POST };

@@ -121,6 +121,81 @@ const GRID = `
     await p.close();
   }
 
+  console.log('\n-- THE BUILT STYLESHEET IS THE ONE VISITORS GET, so prove IT resolves --');
+  {
+    /* 0.42.0 sends widget.min.css, not widget.css: the same rules with the
+       comment blocks removed by tools/build-css.php. The <link> keeps
+       data-no-minify because a RUNTIME minifier would still be dangerous
+       here — the file relies on a `background:` declared twice so the literal
+       survives a browser without color-mix(), on nested var() fallbacks, and
+       on duplicate-looking declarations that are deliberate cascade steps.
+       This is the proof the brief asked for, and it is deliberately not
+       "the rule is still in the file": it opens BOTH stylesheets in real
+       pages, portals the popups to <body> exactly as widget.js does, and
+       compares the RESOLVED computed values on both sides. A rule that
+       survived textually but stopped resolving would pass a text check and
+       fail this one. */
+    const read = async (sheetCss) => {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const pg = await ctx.newPage();
+      await pg.setContent(H.page({ body: GRID, sheet: H.sheetHtml(), sheetCss }));
+      const names = [...new Set(H.cssCode().match(/--(?:mphbac|dcc)-[\w-]+/g) || [])];
+      const out = await pg.evaluate(ns => {
+        // Move the popups exactly where widget.js moves them on open.
+        for (const sel of ['.mphbac-sheet', '.mphbac-info-sheet']) {
+          const el = document.querySelector(sel);
+          if (el) document.body.appendChild(el);
+        }
+        const inSheet = getComputedStyle(document.querySelector('.mphbac-sheet'));
+        const tokens = {};
+        for (const n of ns) tokens[n] = inSheet.getPropertyValue(n).trim();
+        // Paint, not just tokens: what a visitor actually sees inside the popup.
+        const painted = {};
+        for (const [k, sel] of [['title', '.mphbac-sheet-title'], ['close', '.mphbac-sheet-close'],
+                                ['confirm', '.mphbac-sheet-confirm'], ['error', '.mphbac-sheet-error']]) {
+          const el = document.querySelector(sel);
+          if (!el) continue;
+          const c = getComputedStyle(el);
+          painted[k] = [c.color, c.backgroundColor, c.borderRadius, c.minHeight, c.width];
+        }
+        return { tokens, painted };
+      }, names);
+      await ctx.close();
+      return out;
+    };
+
+    const src = await read(null);                 // the commented source
+    const min = await read(H.minCss());           // the file visitors are sent
+
+    const tokenDiff = Object.keys(src.tokens)
+      .filter(n => src.tokens[n] !== min.tokens[n])
+      .map(n => [n, src.tokens[n], min.tokens[n]]);
+    check('(instrument check) there were tokens to compare, resolved inside the portal',
+      Object.values(src.tokens).filter(Boolean).length > 20,
+      Object.values(src.tokens).filter(Boolean).length);
+    check('every token resolves to the SAME value inside the portal from the built file',
+      tokenDiff.length === 0, tokenDiff.slice(0, 5));
+
+    const paintDiff = Object.keys(src.painted)
+      .filter(k => String(src.painted[k]) !== String(min.painted[k]))
+      .map(k => [k, src.painted[k], min.painted[k]]);
+    check('(instrument check) the popup really painted something to compare',
+      Object.keys(src.painted).length >= 3, Object.keys(src.painted));
+    check('and what the visitor SEES inside the popup is identical either way',
+      paintDiff.length === 0, paintDiff);
+
+    // The build must not have quietly dropped rules, and must have dropped
+    // the comments it exists to drop.
+    check('the built file carries no comment but its own banner',
+      (H.minCss().match(/\/\*/g) || []).length === 1, (H.minCss().match(/\/\*/g) || []).length);
+    check('...and the same number of rules as the source',
+      (H.minCss().match(/\{/g) || []).length === (H.cssCode().match(/\{/g) || []).length,
+      [(H.minCss().match(/\{/g) || []).length, (H.cssCode().match(/\{/g) || []).length]);
+    check('...and it is materially smaller, which is the point',
+      H.minCss().length < H.css().length * 0.45,
+      [H.css().length, H.minCss().length]);
+  }
+
   console.log('\n-- the layout properties did NOT follow the tokens onto the sheet --');
   {
     const p = await open();
