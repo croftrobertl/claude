@@ -114,11 +114,42 @@ class Widget extends Widget_Base
         return ['mphbac-widget'];
     }
 
+    /**
+     * Which stylesheet to send. THE COMMENTS ARE THE POINT OF THE SOURCE AND
+     * THE COST OF THE PAGE, so the two are separated: the repository keeps
+     * widget.css with every word of reasoning in it, and the browser is sent
+     * widget.min.css, which is the same file with the comment blocks removed
+     * by tools/build-css.php and nothing else changed.
+     *
+     * MEASURED on this file: 109,487 bytes raw becomes 37,257; gzip -9 at
+     * 35,636 becomes 6,779. It is loaded in <head> on the home page,
+     * /cottages/ and every cottage page, so that is render-blocking weight on
+     * the three pages that matter most, spent on prose no browser reads.
+     *
+     * THE data-no-minify ATTRIBUTE STAYS, and this does not undermine it.
+     * That attribute keeps SpeedyCache's RUNTIME minifier off this file, for
+     * the reason the source's own header gives: the stylesheet relies on
+     * constructs a minifier is known to mangle — a `background:` declared
+     * twice so the literal survives a browser without color-mix(), nested
+     * var() fallbacks, and duplicate-looking declarations that are
+     * deliberate cascade fallbacks. Removing comment blocks at build time
+     * touches none of those; the build step refuses to write a file that is
+     * anything other than its input minus comments, and cross-checks itself
+     * against a second, independent stripper before it does.
+     *
+     * SCRIPT_DEBUG serves the commented source, so a browser devtools session
+     * shows the reasoning next to the rule it is about.
+     */
+    public static function stylesheet_file(): string
+    {
+        return (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'widget.css' : 'widget.min.css';
+    }
+
     public static function register_assets(): void
     {
         wp_register_style(
             'mphbac-widget',
-            MPHBAC_URL . 'assets/css/widget.css',
+            MPHBAC_URL . 'assets/css/' . self::stylesheet_file(),
             [],
             MPHBAC_VERSION
         );
@@ -870,6 +901,8 @@ class Widget extends Widget_Base
             // OFFERS; it never changes their selection for them. Blank it to
             // switch the suggestion off without touching any code.
             'str_alt_cottage'    => [__('Booking popup: another cottage is free ({cottage} replaced)', 'mphb-availability-calendar'), __('{cottage} is free for these dates.', 'mphb-availability-calendar')],
+            // Only ever seen if a lazily-fetched info panel fails to arrive.
+            'str_info_failed'    => [__('Cottage popup: panel failed to load', 'mphb-availability-calendar'), __('Sorry — this cottage\u2019s details could not be loaded. Please try again, or use the link above.', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1512,7 +1545,14 @@ class Widget extends Widget_Base
         // via AJAX but Elementor never enqueues template CSS on the parent
         // page in that mode, so multi-column widgets like a pricing-table
         // switcher lost their styles on subsequent opens.)
+        // TEXT PANELS ARE NEVER LAZY. The weight this setting exists to move
+        // is the Elementor templates — measured at 413 KB raw / 47 KB gzipped
+        // across eight panels on the home page. A custom-text panel is a few
+        // hundred bytes, and fetching one would cost a round-trip to save
+        // nothing.
+        $lazy_panels = (bool) Settings::get('lazy_cottage_panels');
         $info_html = [];
+        $info_src = [];
         $info_titles = [];
         $info_title_urls = [];
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
@@ -1541,17 +1581,32 @@ class Widget extends Widget_Base
             if ($source === 'template') {
                 $tpl_id = (int) ($row['ci_template'] ?? 0);
                 if ($tpl_id > 0) {
-                    $html = self::render_template($tpl_id);
-                    if ($html !== '') {
-                        $info_html[$cid] = $html;
+                    if ($lazy_panels) {
+                        // Placeholder only. The panel is fetched on first open
+                        // — or on the hover/touch prefetch, which usually gets
+                        // there first — and then KEPT in the DOM, so a re-open
+                        // is as instant as it was when the panel shipped in
+                        // the page.
+                        $info_src[$cid]  = 'tpl:' . $tpl_id;
+                        $info_html[$cid] = '';
+                    } else {
+                        $html = self::render_template($tpl_id);
+                        if ($html !== '') {
+                            $info_html[$cid] = $html;
+                        }
                     }
                 }
             } elseif ($source === 'mphb_accommodation') {
                 // The cottage IS the mphb_room_type post, so $cid is also the
                 // accommodation post ID — no extra select control needed.
-                $html = self::render_motopress_accommodation($cid);
-                if ($html !== '') {
-                    $info_html[$cid] = $html;
+                if ($lazy_panels) {
+                    $info_src[$cid]  = 'acc:' . $cid;
+                    $info_html[$cid] = '';
+                } else {
+                    $html = self::render_motopress_accommodation($cid);
+                    if ($html !== '') {
+                        $info_html[$cid] = $html;
+                    }
                 }
             } else {
                 $text = (string) ($row['ci_text'] ?? '');
@@ -1648,6 +1703,7 @@ class Widget extends Widget_Base
             'ajaxUrl'        => admin_url('admin-ajax.php'),
             'action'         => MPHBAC_AJAX_ACTION,
             'priceAction'    => MPHBAC_PRICE_ACTION,
+            'infoAction'     => MPHBAC_INFO_ACTION,
             'roomTypeIds'    => array_map(static fn($r) => (int) $r['id'], $rooms),
             'roomTitles'     => $rooms_by_id,
             'daysDesktop'    => $days_desktop,
@@ -1697,6 +1753,7 @@ class Widget extends Widget_Base
                 'property'      => $property_label,
                 'allBooked'     => (string) ($settings['str_all_booked'] ?? ''),
                 'altCottage'    => (string) ($settings['str_alt_cottage'] ?? ''),
+                'infoFailed'    => (string) ($settings['str_info_failed'] ?? ''),
                 'nextOpening'   => (string) ($settings['str_next_opening'] ?? ''),
                 'loading'       => (string) ($settings['str_loading'] ?? ''),
                 'checkoutMoved' => (string) ($settings['str_checkout_moved'] ?? ''),
@@ -1809,7 +1866,17 @@ class Widget extends Widget_Base
             <?php foreach ($info_html as $cid => $html) : ?>
                 <?php // $html is already safe: custom text is wp_kses_post()'d when built,
                       // template output is first-party Elementor render. ?>
-                <div class="mphbac-info-content" data-room-type-id="<?php echo esc_attr((string) $cid); ?>" hidden><?php
+                <div class="mphbac-info-content" data-room-type-id="<?php echo esc_attr((string) $cid); ?>"<?php
+                    // An empty node with data-info-src is a panel that has not
+                    // been fetched yet. Every existing path still finds it by
+                    // the same selector, still MOVES it into the popup, and
+                    // still moves it back on close — so lazy loading changes
+                    // what is inside the node, and nothing about how the node
+                    // is handled.
+                    if (isset($info_src[$cid])) {
+                        echo ' data-info-src="' . esc_attr($info_src[$cid]) . '"';
+                    }
+                ?> hidden><?php
                     echo $html; // phpcs:ignore WordPress.Security.EscapeOutput
                 ?></div>
             <?php endforeach; ?>
@@ -2014,6 +2081,77 @@ class Widget extends Widget_Base
      * the template's per-widget CSS for the page — AJAX-only rendering leaves
      * those stylesheets unloaded and breaks any widget with its own styles.
      */
+    /**
+     * THE TEMPLATE'S OWN CSS, as a string rather than as an enqueue.
+     *
+     * THIS IS THE v0.6.0 TRAP, and the site has since made it WORSE. That
+     * release lazy-loaded these panels over AJAX and lost their styles,
+     * because get_builder_content_for_display($id, true) does not INLINE the
+     * template's stylesheet — it ENQUEUES it, and an enqueue during an
+     * admin-ajax request reaches nothing: wp_head fired long ago on the page
+     * the visitor is looking at. Elementor's CSS print method on this site
+     * was changed to "External File" on 2026-09-24, which means that enqueue
+     * now resolves to a <link> that is never printed rather than to inline
+     * CSS that might have been — so the with-css form alone would fail here
+     * exactly as it failed then.
+     *
+     * Asking the CSS file object for its CONTENT sidesteps the print method
+     * entirely: whatever Elementor would have linked or inlined, we get as a
+     * string and put in the fragment. The fragment is then self-contained and
+     * stays styled however the site is configured.
+     */
+    private static function template_css(int $template_id): string
+    {
+        if ($template_id <= 0 || !class_exists('\\Elementor\\Core\\Files\\CSS\\Post')) {
+            return '';
+        }
+        try {
+            $css = \Elementor\Core\Files\CSS\Post::create($template_id);
+            if (!method_exists($css, 'get_content')) {
+                return '';
+            }
+            $out = (string) $css->get_content();
+            return trim($out) === '' ? '' : $out;
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: template_css failed for ' . $template_id . ': ' . $e->getMessage());
+            return '';
+        }
+    }
+
+    /**
+     * One cottage's info panel, built to stand on its own in a fragment.
+     * `$src` is the opaque reference the placeholder carries: "tpl:<id>" for
+     * an Elementor library template, "acc:<id>" for a MotoPress accommodation.
+     */
+    public static function render_info_fragment(string $src): string
+    {
+        if (preg_match('/^tpl:(\d+)$/', $src, $m)) {
+            $id = (int) $m[1];
+            // ONLY A PUBLISHED LIBRARY TEMPLATE. The reference comes from the
+            // page, so it comes from the visitor, so it is not trusted: this
+            // endpoint must not be a way to render an arbitrary post — a
+            // draft, a private page, another plugin's post type — through
+            // Elementor. Published elementor_library posts are first-party
+            // content the owner authored to be displayed.
+            $post = get_post($id);
+            if (!$post || $post->post_type !== 'elementor_library' || $post->post_status !== 'publish') {
+                return '';
+            }
+            $html = self::render_template($id);
+            if ($html === '') {
+                return '';
+            }
+            $css = self::template_css($id);
+            return ($css !== '' ? '<style>' . $css . '</style>' : '') . $html;
+        }
+        if (preg_match('/^acc:(\d+)$/', $src, $m)) {
+            // render_motopress_accommodation() does its own post-type and
+            // status check; this is the same gate, stated twice on purpose.
+            return self::render_motopress_accommodation((int) $m[1]);
+        }
+        return '';
+    }
+
     private static function render_template(int $template_id): string
     {
         if ($template_id <= 0) {

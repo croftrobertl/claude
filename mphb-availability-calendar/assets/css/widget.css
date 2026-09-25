@@ -682,12 +682,21 @@ input.mphbac-input {
 }
 
 /* THEME BUTTON TYPOGRAPHY.
-   On this site a global button-typography rule (Elementor kit, (0,1,1))
-   sets a different face on every <button>, and <button> does not inherit
-   font-family from its ancestor. A single class — including the existing
-   `font: inherit` on .mphbac-btn — therefore LOSES: measured, the nav and
-   Today buttons computed Pavanam while the range label beside them computed
-   the theme's Raleway.
+   HISTORICAL, AND THE DEFENCE IS KEPT ON PURPOSE. The Elementor kit used to
+   carry a global button-typography rule at (0,1,1) setting a different face
+   on every <button>, and <button> does not inherit font-family from its
+   ancestor, so a single class — including the existing `font: inherit` on
+   .mphbac-btn — LOST: measured at the time, the nav and Today buttons
+   computed Pavanam while the range label beside them computed the theme's
+   Raleway. That kit rule was removed on 2026-09-10 and re-verified gone on
+   2026-09-25, so nothing on the site is currently overriding these.
+
+   This rule stays anyway. It costs one declaration, it is correct whether or
+   not the kit rule exists, and the kit is edited through a UI that can
+   reintroduce it in one click without anyone touching this repository. What
+   has been updated is the WORDING: do not go looking for a live Pavanam to
+   reproduce, and do not rebuild anything around it — there is nothing there
+   to find. The specificity reasoning below is what still matters.
 
    SPECIFICITY IS DELIBERATELY (0,1,1) — `button.x`, not `.x.x` (0.26.0).
    The kit rule is `.elementor-kit-N button`, also (0,1,1), and this
@@ -1519,6 +1528,15 @@ button.mphbac-cell-label {
    The negative bottom margin stays em-based and therefore unchanged at
    -28px: it was never the box's height (the box painted 44px), so making it
    -46px would move the info popup's header, which is not what was asked. */
+/* A lazily-fetched panel has not arrived yet (0.42.0). Deliberately just a
+   reserved height and a dimmed state: a spinner would need a keyframe
+   animation, and anything that animates has to answer to
+   prefers-reduced-motion. There is nothing here to reduce. */
+.mphbac-info-body.is-loading {
+    min-height: 40vh;
+    opacity: 0.55;
+}
+
 .mphbac-info-close--floating {
     position: sticky;
     top: 0;
