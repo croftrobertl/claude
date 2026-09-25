@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.45.0
+Stable tag: 0.46.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,26 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.46.0 =
+* The front end now loads assets/js/dccs.min.js — the same bundle with comments
+  and whitespace removed. NOT compressed and NOT mangled: identifiers survive, so
+  a stack trace from a guest's browser still names real functions and devtools
+  stays readable. Measured at this host's crippled ~1 KB gzip window, which is
+  what it actually serves: 41.2 KB -> 19.5 KB, a 22.2 KB saving on every page
+  carrying the widget. (At a normal 32 KB window: 31.2 KB -> 14.8 KB.)
+* Raw bytes 100,832 -> 51,737. The readable bundle stays in the plugin and is
+  what SCRIPT_DEBUG serves, the same arrangement as the stylesheet.
+* The build is now a two-step pipeline with a check on each arrow, because a
+  stale artefact at either step means the repo and the site disagree while every
+  other test passes: sources -> build-bundle.php -> dccs.js -> build-min.js ->
+  dccs.min.js. npm test runs both --check modes and fails on either being stale.
+* NEW COVERAGE, closing a real gap: until now NOTHING in either suite executed a
+  built artefact — every assertion booted the four sources, so a broken bundle
+  would have shipped green. The suite now renders five scenarios twice, once from
+  the sources and once from dccs.min.js alone, and compares the markup.
+* terser is pinned as a dev dependency. It is not shipped in the zip.
+* No change to behaviour, markup, strings or the stylesheet.
 
 = 0.45.0 =
 * The front end now loads assets/css/selector.min.css — the same stylesheet with

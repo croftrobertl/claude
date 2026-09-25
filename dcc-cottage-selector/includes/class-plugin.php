@@ -290,12 +290,17 @@ final class Plugin
         $css = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'selector.css' : 'selector.min.css';
         wp_register_style('dccs-selector', DCCS_URL . 'assets/css/' . $css, [], DCCS_VERSION);
 
-        // ONE request, not five (0.33.0). assets/js/dccs.js is generated from
-        // score/labels/availability/cast/selector by tools/build-bundle.php; the
-        // sources stay split and remain the source of truth. The old per-file
-        // handles are gone rather than aliased: an alias would let a stray
-        // wp_enqueue_script('dccs-score') load a second copy of the same code.
-        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/dccs.js', [], DCCS_VERSION, true);
+        // ONE request, not five (0.33.0). The sources stay split and remain the
+        // source of truth; tools/build-bundle.php concatenates them into dccs.js
+        // and tools/build-min.js strips comments and whitespace from that into
+        // dccs.min.js, which is what ships. Comments and whitespace only — no
+        // compress, no mangle — so a stack trace from a guest's browser still
+        // names real functions. SCRIPT_DEBUG serves the readable bundle, the same
+        // arrangement as the stylesheet. The old per-file handles are gone rather
+        // than aliased: an alias would let a stray wp_enqueue_script('dccs-score')
+        // load a second copy of the same code.
+        $js = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? 'dccs.js' : 'dccs.min.js';
+        wp_register_script('dccs-selector', DCCS_URL . 'assets/js/' . $js, [], DCCS_VERSION, true);
     }
 
     public function enqueue_for_preview(): void

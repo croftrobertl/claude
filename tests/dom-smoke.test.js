@@ -34,13 +34,15 @@ function injectScript(window, file) {
   window.document.body.appendChild(s);
 }
 
-function freshDom(url) {
+function freshDomFrom(files, url) {
   const dom = new JSDOM('<!DOCTYPE html><body></body>', {
     url: url || 'https://example.com/', pretendToBeVisual: true, runScripts: 'dangerously'
   });
-  ['score.js', 'labels.js', 'availability.js', 'selector.js'].forEach(function (f) { injectScript(dom.window, f); });
+  files.forEach(function (f) { injectScript(dom.window, f); });
   return dom.window;
 }
+const SOURCE_FILES = ['score.js', 'labels.js', 'availability.js', 'selector.js'];
+function freshDom(url) { return freshDomFrom(SOURCE_FILES, url); }
 
 function mountSelector(window, configStr) {
   const div = window.document.createElement('div');
@@ -2930,6 +2932,85 @@ defer(async function () {
   } catch (e) { threw2 = e && e.message; }
   ok('OFF: finishing that quiz does not throw either', threw2 === null);
   ok('OFF: and it still produces results', off.root.querySelectorAll('.dccs-card').length > 0);
+})();
+
+// ---- 90. 0.46.0: the build PIPELINE, end to end ----
+// sources -> build-bundle.php -> dccs.js -> build-min.js -> dccs.min.js -> browser.
+// Block 74 already proves the first arrow (dccs.js contains each source verbatim,
+// in dependency order) and that check is still valid, because dccs.js is still a
+// plain concatenation — only the SHIPPED file is minified. This block proves the
+// second arrow, and closes a real gap: until now nothing in either suite ever
+// EXECUTED a built artefact. All 600-odd assertions boot the four sources, so a
+// broken bundle would have shipped green.
+(function () {
+  const jsDir = path.join(ROOT, 'dcc-cottage-selector', 'assets', 'js');
+  const bundle = fs.readFileSync(path.join(jsDir, 'dccs.js'), 'utf8');
+  const minPath = path.join(jsDir, 'dccs.min.js');
+
+  ok('the shipped file exists', fs.existsSync(minPath));
+  const min = fs.readFileSync(minPath, 'utf8');
+
+  ok('it says it is generated and must not be hand-edited', /DO NOT EDIT/.test(min));
+  ok('it names the step that made it, not just "generated"', /build-min\.js/.test(min));
+  ok('it is smaller than the bundle it came from', min.length < bundle.length);
+  // If these were equal the build would be a no-op and every check below would
+  // still pass — so prove the transform actually happened.
+  ok('and it is not simply a copy of the bundle', min !== bundle);
+
+  // Comments stripped: exactly one survives, the banner this build prepends.
+  const comments = min.match(/\/\*[\s\S]*?\*\//g) || [];
+  ok('every comment is gone except the banner', comments.length === 1);
+  ok('and the bundle really did have many, so that is a change not a coincidence',
+    (bundle.match(/\/\*[\s\S]*?\*\//g) || []).length > 20);
+
+  // NOT mangled — the owner's call, so that devtools stays readable. Identifiers
+  // the widget is debugged by must survive verbatim.
+  ['whyFits', 'duplicateGroup', 'criteriaFromState', 'wizardTrack', 'guest34On']
+    .forEach(id => ok('the identifier ' + id + ' survives (not mangled)', min.indexOf(id) !== -1));
+})();
+
+// ---- 91. 0.46.0: the SHIPPED file renders what the sources render ----
+// The real equivalence check. Same scenario, rendered twice — once from the four
+// sources, once from dccs.min.js alone — and the resulting markup compared. This
+// cannot pass on arbitrary output: a positive control below renders a DIFFERENT
+// scenario and asserts the comparator reports it.
+(function () {
+  const SHIPPED = ['dccs.min.js'];
+  // ?seed= pins the tie-break rotation so both renders agree regardless of the
+  // clock (see the daily-rotation trap).
+  const scenarios = [
+    ['landing screen',        'https://example.com/?seed=3',                        null],
+    ['quick finder results',  'https://example.com/?seed=3&mode=quick&pet=true',    null],
+    ['deep-linked highlight', 'https://example.com/?seed=3&highlight=35&mode=quick', null],
+    ['compare mode',          'https://example.com/?seed=3&mode=compare',           null],
+    ['review enabled',        'https://example.com/?seed=3&mode=quick',             { showReview: true }],
+  ];
+
+  const renderWith = (files, url, over) => {
+    const w = freshDomFrom(files, url);
+    const cfg = over
+      ? (() => { const c = JSON.parse(CONFIG); Object.assign(c, over); return JSON.stringify(c); })()
+      : CONFIG;
+    const root = mountSelector(w, cfg);
+    return root.innerHTML;
+  };
+
+  let matched = 0;
+  scenarios.forEach(([name, url, over]) => {
+    const fromSources = renderWith(SOURCE_FILES, url, over);
+    const fromShipped = renderWith(SHIPPED, url, over);
+    ok('the sources render something for "' + name + '"', fromSources.length > 200);
+    const same = fromSources === fromShipped;
+    if (same) { matched++; }
+    ok('the shipped bundle renders "' + name + '" identically', same);
+  });
+  ok('every scenario was compared', matched === scenarios.length);
+
+  // POSITIVE CONTROL: the comparator must be able to report a difference, or the
+  // five assertions above would pass however the build behaved.
+  const a = renderWith(SOURCE_FILES, 'https://example.com/?seed=3', null);
+  const b = renderWith(SOURCE_FILES, 'https://example.com/?seed=3&mode=compare', null);
+  ok('the comparator reports a difference when the render really differs', a !== b);
 })();
 
 (async function runDeferred() {
