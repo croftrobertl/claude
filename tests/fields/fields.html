@@ -30,6 +30,17 @@
   html, body { margin: 0; padding: 0; }
   /* As on the live site: the footnote's weight is INHERITED from this. */
   html { font-weight: 700; }
+  /* The site's body font, so "inherit" has something real to inherit. */
+  body { font-family: "Raleway", sans-serif; }
+
+  /* SWEEP 2026-09-24 — BRAVADA'S BUTTON FONT TRAP, reproduced.
+     The theme sets Pavanam on <button> at (0,0,1) while the site font is
+     Raleway. tests/button/ already asserts the SUBMIT button beats this. The
+     BARE controls (the breakdown expander and the tax asterisk) rely on
+     `font: inherit` in the bare-control reset instead, and nothing reproduced
+     the trap for them — so if that reset ever lost, both would quietly render
+     in the wrong face inside the price breakdown. */
+  button { font-family: Pavanam, sans-serif; }
 
   /* --- Elementor kit input reset, as measured: (0,1,1) ------------------ */
   .elementor-kit-331 input[type="text"],

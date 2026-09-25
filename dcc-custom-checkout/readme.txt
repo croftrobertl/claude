@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.24.0
+Stable tag: 0.25.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,23 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.25.0 =
+* NEW: an "Advanced" section on the settings page, collapsed by default, exposing
+  four values that were fixed in the code until now: guests included in the
+  nightly rate, the length of the extra-guest fee ladder, and the two bounds on
+  the booking screen's guest-count control.
+* EVERY DEFAULT IS THE VALUE THE PLUGIN ALREADY USED (2 / 8 / 8 / 20), so
+  installing this and saving without touching anything cannot change what a guest
+  is charged or shown. Asserted by value in tests/settings/.
+* The booking screen's guest ceiling is configurable but CLAMPED: a setting can
+  only make the range smaller, never widen it past the plugin's own hard bound of
+  20. That range drives an <option> loop partly fed from the database.
+* Bad input on any of the four falls back to its DEFAULT — never to 0, never to
+  the posted value.
+* The existing sections were deliberately NOT reordered.
+* No change to the checkout's behaviour, markup, scripts or styles. Nothing in
+  the mobile tap-handling path was touched.
 
 = 0.24.0 =
 * NEW: one switch for the whole Guest 3 / Guest 4 offering, at DCC -> Custom

@@ -263,6 +263,19 @@ const FIELDS = ['#mphb_first_name', '#mphb_last_name', '#mphb_email', '#mphb_pho
     });
     atMost('v0.20.0: no blank line between the two hints', gap, 1);
 
+    /* SWEEP 2026-09-24 -- BRAVADA'S BUTTON FONT, on the BARE controls.
+       The fixture now sets Pavanam on <button>, as the theme does. The bare
+       controls have no font-family of their own; they rely on `font: inherit`
+       in the bare-control reset. Measured rather than assumed, because the
+       failure is silent: the wrong face inside the price breakdown. */
+    const faces = await page.evaluate(() => {
+        const f = sel => getComputedStyle(document.querySelector(sel)).fontFamily;
+        return { expander: f('#expander'), body: f('body') };
+    });
+    check('the bare expander does NOT take the theme\'s button face',
+          /Pavanam/.test(faces.expander), false);
+    check('...it inherits the site face instead', faces.expander, faces.body);
+
     /* SWEEP 2026-09-19 -- THE JSDOM PROXY, PINNED IN A REAL BROWSER.
        tests/breakdown has no layout, so its visible() helper reads these three
        class names as a stand-in for display:none. That stand-in was never

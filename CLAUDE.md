@@ -1001,5 +1001,52 @@ yours to improvise.
   (`npm install && npm test` there). Run them after touching
   `restructureBreakdown()` or anything else that moves a figure on the
   checkout — that code decides what a guest is told they owe.
+- **THE DOCUMENTED "UPGRADE DEFAULTS DON'T MERGE" TRAP DOES NOT APPLY TO THIS
+  PLUGIN** (established 2026-09-24, not assumed). The trap — a new version's
+  defaults not reaching an already-stored option row, so new features look
+  switched off — is real elsewhere (Seasons 4.0.0 hit it). Here
+  `Config::settings()` is `array_merge(self::defaults(), $saved)` **at READ
+  time, on every call**, so a row stored by any older version picks new keys up
+  immediately. `tests/settings/` constructs a pre-0.25.0 row containing none of
+  the new keys and asserts they read as defaults; a mutation reversing the merge
+  direction, and another removing it, both go red. **Direction matters**: saved
+  values must win over defaults, including a stored `0`, or every read would
+  silently undo the owner's settings.
+- **THE ADVANCED SETTINGS ARE CLAMPED, AND ONE CEILING IS NOT CONFIGURABLE**
+  (v0.25.0). Four literals became settings — `included_guests` (2),
+  `guest_fee_steps_max` (8), `admin_guest_fallback` (8), `admin_guest_max` (20)
+  — each defaulting to the value the code already used, asserted BY VALUE
+  because a silent behaviour change on a checkout is a lost booking.
+  `Admin_Guests` clamps `admin_guest_max` with its own `MAX_OPTIONS` constant
+  (`min(setting, 20)`), so **a setting can only ever shrink that range**: it
+  drives an `<option>` loop partly fed from `mphb_adults_capacity`. Bad input on
+  any of the four falls back to its DEFAULT, never to 0 and never to the posted
+  value. A mutation removing the clamp SURVIVED at first — the guarantee was
+  only exercised at the default setting, where it makes no difference — so the
+  suite now seeds the setting ABOVE the ceiling, which is the only way the clamp
+  is observable.
+- **TWO KNOBS WERE DELIBERATELY NOT EXPOSED**, against a general "expose
+  everything tunable" instruction (v0.25.0, stated in the report rather than
+  silently omitted):
+  - **The tap-handling timings** in `checkout.js` (500ms debounce, 400ms touch
+    settle, 450ms schedule). These ARE the v0.18.0 three-tap fix. Exposing them
+    would mean editing that path and handing an admin screen the ability to
+    reintroduce a bug that took six diagnostic rounds to close.
+  - **User-facing strings** beyond the section titles already exposed. They are
+    translatable and LocoTranslate is hand-tuned here; turning a translated
+    string into a setting takes it out of the translation layer.
+- **`Config::offered_guest_fee_steps()` MUST NOT HARDCODE THE LADDER LENGTH.**
+  It is the CHECKOUT path. Its `$max_extra` default is `null`, meaning "use the
+  setting"; leaving it at `8` made `guest_fee_steps_max` inert exactly where it
+  matters while looking wired up. Mutation `cfg-offered-ignores-setting` pins it.
+- **Bravada's button-font trap is verified for the BARE controls too**
+  (2026-09-24). The theme sets Pavanam on `<button>` at (0,0,1) while the site
+  face is Raleway. `tests/button/` already reproduced that and asserted the
+  submit button beats it — but the breakdown expander and the tax asterisk carry
+  no font of their own and rely on `font: inherit` in the bare-control reset, and
+  no fixture reproduced the trap for them. `tests/fields/` now sets Pavanam on
+  `button` and asserts both bare controls compute the inherited face; a mutation
+  weakening the reset to `font-size: inherit` goes red. The
+  `html{font-weight:700}` trap was already covered by the upload-hint assertions.
 - Bump the version in all three places whenever behaviour changes:
   the `Version:` header, `DCC_CHECKOUT_VERSION`, and readme `Stable tag`.

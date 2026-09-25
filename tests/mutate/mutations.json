@@ -381,9 +381,9 @@
   "suites": [
    "admin-guests"
   ],
-  "claim": "v0.23.1 MAX_OPTIONS bounds a capacity that comes from the database",
-  "find": "                'max'            => min(\n                    $capacity !== null ? $capacity : self::FALLBACK_MAX,\n                    self::MAX_OPTIONS\n                ),",
-  "replace": "                'max'            => $capacity !== null ? $capacity : self::FALLBACK_MAX,",
+  "claim": "MAX_OPTIONS bounds a capacity that comes from the database (re-anchored v0.25.0)",
+  "find": "                'max'            => min(\n                    $capacity !== null ? $capacity : Config::admin_guest_fallback(),",
+  "replace": "                'max'            => max(\n                    $capacity !== null ? $capacity : Config::admin_guest_fallback(),",
   "count": 1
  },
  {
@@ -668,8 +668,8 @@
    "guest34"
   ],
   "claim": "no label offers a price for an offering that is off",
-  "find": "    public static function offered_guest_fee_steps(int $max_extra = 8): array\n    {\n        if (!self::guest34_enabled()) {\n            return [];\n        }",
-  "replace": "    public static function offered_guest_fee_steps(int $max_extra = 8): array\n    {\n        if (false) {\n            return [];\n        }",
+  "find": "        if (!self::guest34_enabled()) {\n            return [];\n        }\n        return self::guest_fee_steps($max_extra);",
+  "replace": "        if (false) {\n            return [];\n        }\n        return self::guest_fee_steps($max_extra);",
   "count": 1
  },
  {
@@ -679,8 +679,8 @@
    "guest34"
   ],
   "claim": "the FULL ladder ignores the switch, so wp-admin can still price a past booking's fee",
-  "find": "    public static function guest_fee_steps(int $max_extra = 8): array\n    {\n        $amount = self::guest_fee_amount();",
-  "replace": "    public static function guest_fee_steps(int $max_extra = 8): array\n    {\n        if (!self::guest34_enabled()) { return []; }\n        $amount = self::guest_fee_amount();",
+  "find": "        // Default comes from the setting now (v0.25.0). An explicit argument\n        // still wins, so existing callers behave exactly as before.\n        if ($max_extra === null) {",
+  "replace": "        if (!self::guest34_enabled()) { return []; }\n        if ($max_extra === null) {",
   "count": 1
  },
  {
@@ -692,6 +692,106 @@
   "claim": "an unticked box actually stores OFF",
   "find": "        return ((string) $input === '1') ? '1' : '';",
   "replace": "        return '1';",
+  "count": 1
+ },
+ {
+  "id": "cfg-merge-direction-reversed",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "saved values win over defaults -- reversing the merge silently undoes the owner's settings",
+  "find": "            self::$cache = array_merge(self::defaults(), $saved);",
+  "replace": "            self::$cache = array_merge($saved, self::defaults());",
+  "count": 1
+ },
+ {
+  "id": "cfg-no-default-merge",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "THE UPGRADE TRAP: new keys must read as defaults on an old stored row",
+  "find": "            self::$cache = array_merge(self::defaults(), $saved);",
+  "replace": "            self::$cache = $saved ?: self::defaults();",
+  "count": 1
+ },
+ {
+  "id": "cfg-included-default-moved",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "included_guests still defaults to 2 -- changing it changes what guests are charged",
+  "find": "            'included_guests'       => 2,",
+  "replace": "            'included_guests'       => 3,",
+  "count": 1
+ },
+ {
+  "id": "cfg-ladder-default-moved",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "the fee ladder still defaults to 8 rungs",
+  "find": "            'guest_fee_steps_max'   => 8,",
+  "replace": "            'guest_fee_steps_max'   => 6,",
+  "count": 1
+ },
+ {
+  "id": "cfg-offered-ignores-setting",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "the OFFERED ladder honours the setting -- hardcoding 8 makes it inert on the checkout",
+  "find": "    public static function offered_guest_fee_steps(?int $max_extra = null): array",
+  "replace": "    public static function offered_guest_fee_steps(?int $max_extra = 8): array",
+  "count": 1
+ },
+ {
+  "id": "set-sanitize-falls-to-zero",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "bad input falls back to the DEFAULT, never to 0",
+  "find": "                $out[$key] = (int) $defaults[$key];\n                continue;",
+  "replace": "                $out[$key] = 0;\n                continue;",
+  "count": 1
+ },
+ {
+  "id": "set-sanitize-no-range-check",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "an out-of-range value is refused, not stored",
+  "find": "            $out[$key] = ($val >= $lo && $val <= $hi) ? $val : (int) $defaults[$key];",
+  "replace": "            $out[$key] = $val;",
+  "count": 1
+ },
+ {
+  "id": "ag-ceiling-raisable",
+  "file": "dcc-custom-checkout/includes/class-admin-guests.php",
+  "suites": [
+   "admin-guests",
+   "settings"
+  ],
+  "claim": "a setting can only SHRINK the admin range, never widen it past MAX_OPTIONS",
+  "find": "                    min(Config::admin_guest_max(), self::MAX_OPTIONS)",
+  "replace": "                    Config::admin_guest_max()",
+  "count": 1
+ },
+ {
+  "id": "css-bare-button-font",
+  "file": "dcc-custom-checkout/assets/checkout.css",
+  "suites": [
+   "fields"
+  ],
+  "claim": "the bare controls resist Bravada's Pavanam-on-button (font: inherit)",
+  "find": "    padding: 0;\n    margin: 0;\n    font: inherit;\n    color: inherit;",
+  "replace": "    padding: 0;\n    margin: 0;\n    font-size: inherit;\n    color: inherit;",
   "count": 1
  }
 ]

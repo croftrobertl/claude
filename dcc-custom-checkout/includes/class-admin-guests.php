@@ -63,17 +63,26 @@ final class Admin_Guests
     private const CONFIRMED_KEY = '_mphb_adults_confirmed';
     private const NONCE = 'dcc_admin_guests';
 
-    /** Used only when the room type's capacity cannot be read at all. */
-    private const FALLBACK_MAX = 8;
+    /*
+     * The "capacity cannot be read" fallback moved to the setting
+     * `admin_guest_fallback` in v0.25.0 (default 8, the value this class used).
+     * The private constant it replaced was DELETED rather than left in place:
+     * two copies of the same number, one of them unread, is how a default and
+     * its documentation drift apart without anything failing.
+     */
 
     /**
-     * Hard ceiling on the rendered list, whatever the capacity meta says.
+     * HARD ceiling on the rendered list, whatever the capacity meta OR the
+     * setting says. This is deliberately not configurable.
      *
-     * `max` drives BOTH the <option> loop and the accepted range, and it comes
-     * from the database. A corrupted or absurd `mphb_adults_capacity` — 9999,
-     * say — would render nine thousand options and hang the booking screen.
-     * No cottage on this site sleeps more than four, so 20 is far above any
-     * real answer while making the page impossible to wedge from meta.
+     * `max` drives BOTH the <option> loop and the accepted range, and one of
+     * its inputs comes from the database. A corrupted or absurd
+     * `mphb_adults_capacity` — 9999, say — would render nine thousand options
+     * and hang the booking screen. No cottage on this site sleeps more than
+     * four, so 20 is far above any real answer while making the page impossible
+     * to wedge. The `admin_guest_max` setting is clamped BY this constant
+     * (`min(setting, MAX_OPTIONS)`), so a setting can only ever shrink the
+     * range — never widen it past this bound.
      */
     private const MAX_OPTIONS = 20;
 
@@ -278,8 +287,13 @@ final class Admin_Guests
                 'label'          => (string) $label,
                 'adults'         => (int) $stored,
                 'max'            => min(
-                    $capacity !== null ? $capacity : self::FALLBACK_MAX,
-                    self::MAX_OPTIONS
+                    $capacity !== null ? $capacity : Config::admin_guest_fallback(),
+                    // BOTH bounds apply, and the constant is the OUTER one on
+                    // purpose (v0.25.0). The setting may only make this range
+                    // SMALLER: `max` drives the <option> loop and the accepted
+                    // range, and one of its inputs is database-sourced, so a
+                    // hostile or corrupted setting must not be able to widen it.
+                    min(Config::admin_guest_max(), self::MAX_OPTIONS)
                 ),
                 'capacity_known' => $capacity !== null,
                 'confirmed'      => self::is_confirmed(get_post_meta($rr->ID, self::CONFIRMED_KEY, true)),

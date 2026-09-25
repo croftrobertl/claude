@@ -80,6 +80,19 @@ final class Config
             'guest_service_weekly'  => 0,
             'guest_service_monthly' => 0,
             'included_guests'       => 2,
+            /* v0.25.0 -- knobs that were hardcoded until now. EVERY ONE OF
+               THESE IS THE LITERAL THE CODE ALREADY USED, so a site that
+               upgrades behaves identically. Verified in tests/settings/. */
+            // Length of the fee ladder guest_fee_steps() builds (was the
+            // $max_extra = 8 default parameter).
+            'guest_fee_steps_max'   => 8,
+            // Admin booking screen, guest-count control: the range offered when
+            // a room type's capacity cannot be read (was Admin_Guests::FALLBACK_MAX).
+            'admin_guest_fallback'  => 8,
+            // ...and the absolute bound on that control. Admin_Guests CLAMPS
+            // this with its own constant: the setting can only ever make the
+            // range SMALLER. See the note on that constant for why.
+            'admin_guest_max'       => 20,
             // Per-night, per-extra-guest amount, used ONLY to label the guest
             // dropdown and write the note. 0 = read it off the configured
             // Service so the label can never disagree with what is charged.
@@ -414,16 +427,26 @@ final class Config
      *
      * @return array<int,string>
      */
-    public static function offered_guest_fee_steps(int $max_extra = 8): array
+    public static function offered_guest_fee_steps(?int $max_extra = null): array
     {
+        // null (the default) means "use the setting". Hardcoding 8 here would
+        // have made guest_fee_steps_max inert on the CHECKOUT -- the one path
+        // that matters -- while looking wired up. Caught before shipping only
+        // by following the call chain; asserted in tests/settings/.
+
         if (!self::guest34_enabled()) {
             return [];
         }
         return self::guest_fee_steps($max_extra);
     }
 
-    public static function guest_fee_steps(int $max_extra = 8): array
+    public static function guest_fee_steps(?int $max_extra = null): array
     {
+        // Default comes from the setting now (v0.25.0). An explicit argument
+        // still wins, so existing callers behave exactly as before.
+        if ($max_extra === null) {
+            $max_extra = self::guest_fee_steps_max();
+        }
         $amount = self::guest_fee_amount();
         if ($amount <= 0 || $max_extra < 1) {
             return [];
@@ -674,6 +697,49 @@ final class Config
      * Guests included in the nightly rate; each guest beyond this count incurs
      * the fee. Default 2.
      */
+    /**
+     * Length of the fee ladder. Default 8 -- the value that was the
+     * $max_extra default parameter before v0.25.0.
+     */
+    public static function guest_fee_steps_max(): int
+    {
+        $n = (int) apply_filters(
+            'dcc_checkout_guest_fee_steps_max',
+            (int) self::settings()['guest_fee_steps_max']
+        );
+        return max(1, min(50, $n));
+    }
+
+    /**
+     * Admin guest-count control: range offered when capacity cannot be read.
+     * Default 8. Bounded here as well as in the sanitiser, because a filter can
+     * reach this without going through the settings page.
+     */
+    public static function admin_guest_fallback(): int
+    {
+        $n = (int) apply_filters(
+            'dcc_checkout_admin_guest_fallback',
+            (int) self::settings()['admin_guest_fallback']
+        );
+        return max(1, min(self::admin_guest_max(), $n));
+    }
+
+    /**
+     * Admin guest-count control: the absolute bound on the offered range.
+     * Default 20. Admin_Guests clamps this again with its own constant -- a
+     * setting may only shrink the range, never widen it past that ceiling,
+     * because `max` drives both the <option> loop and the accepted range and
+     * one of its inputs comes from the database.
+     */
+    public static function admin_guest_max(): int
+    {
+        $n = (int) apply_filters(
+            'dcc_checkout_admin_guest_max',
+            (int) self::settings()['admin_guest_max']
+        );
+        return max(1, min(50, $n));
+    }
+
     public static function included_guests(): int
     {
         $n = (int) apply_filters('dcc_checkout_included_guests', (int) self::settings()['included_guests']);

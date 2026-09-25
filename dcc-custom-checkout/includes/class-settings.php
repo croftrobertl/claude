@@ -170,6 +170,26 @@ final class Settings
 
         $out['guest_fee_enabled'] = empty($input['guest_fee_enabled']) ? 0 : 1;
 
+        /* v0.25.0 advanced knobs. Each falls back to its DEFAULT (not to 0 and
+           not to whatever was posted) when the input is missing or out of
+           range, so a malformed POST cannot quietly change checkout behaviour.
+           included_guests accepts 0 deliberately -- "nobody included" is a
+           coherent, if unusual, configuration; the others have a floor of 1
+           because a zero-length ladder or a zero-option dropdown is not. */
+        foreach ([
+            'included_guests'     => [0, 20],
+            'guest_fee_steps_max' => [1, 50],
+            'admin_guest_fallback' => [1, 50],
+            'admin_guest_max'     => [1, 50],
+        ] as $key => [$lo, $hi]) {
+            if (!isset($input[$key]) || !is_numeric($input[$key])) {
+                $out[$key] = (int) $defaults[$key];
+                continue;
+            }
+            $val = (int) $input[$key];
+            $out[$key] = ($val >= $lo && $val <= $hi) ? $val : (int) $defaults[$key];
+        }
+
         $gacc = $input['guest_accommodations'] ?? [];
         if (!is_array($gacc)) {
             $gacc = [];
@@ -357,6 +377,8 @@ final class Settings
                     ?>
                 </table>
 
+                <?php $this->render_advanced_section($s); ?>
+
                 <?php $this->render_guest_field_reference(); ?>
 
                 <?php $this->render_id_storage_status(); ?>
@@ -450,6 +472,60 @@ final class Settings
         return '<p class="description" style="color:#b32d2e">'
             . esc_html__('⚠ No published MotoPress Service has this ID — the feature will stay dormant.', 'dcc-checkout')
             . '</p>';
+    }
+
+    /**
+     * Advanced knobs, COLLAPSED (v0.25.0).
+     *
+     * These were hardcoded literals until now. Every default here is the value
+     * the code already used, so opening this section and saving without
+     * touching anything cannot change behaviour -- asserted in tests/settings/.
+     *
+     * The existing sections above were deliberately NOT reordered. "Common
+     * first" already holds, and rearranging an admin screen the owner knows by
+     * sight is a usability regression dressed as tidying. A reordering proposal
+     * belongs in the report, not in a silent commit.
+     */
+    private function render_advanced_section(array $s): void
+    {
+        ?>
+        <details class="dcc_checkout-advanced" style="margin-top:2em;max-width:760px">
+            <summary style="cursor:pointer;font-size:1.1em;font-weight:600;padding:8px 0">
+                <?php echo esc_html__('Advanced', 'dcc-checkout'); ?>
+            </summary>
+            <p class="description" style="max-width:640px">
+                <?php echo esc_html__('Values that were fixed in the code until now. The defaults shown are exactly what the plugin used before these controls existed, so leaving them alone changes nothing. Change them only with a reason.', 'dcc-checkout'); ?>
+            </p>
+            <table class="form-table" role="presentation">
+                <?php
+                $this->number_row(
+                    __('Guests included in the nightly rate', 'dcc-checkout'),
+                    'included_guests',
+                    (int) $s['included_guests'],
+                    __('Default 2. This is the threshold the extra-guest fee counts from, the cap applied when the Guests 3 and 4 offering is off, and what the pull-out-couch note assumes. Changing it changes what guests are charged — check the Cottage Selector copy as well.', 'dcc-checkout')
+                );
+                $this->number_row(
+                    __('Extra-guest fee ladder length', 'dcc-checkout'),
+                    'guest_fee_steps_max',
+                    (int) $s['guest_fee_steps_max'],
+                    __('Default 8. How many "N extra guests" price labels are prepared. No cottage here sleeps more than four, so 8 is already generous; it only affects labels, never the charge.', 'dcc-checkout')
+                );
+                $this->number_row(
+                    __('Booking screen: guest range when capacity is unreadable', 'dcc-checkout'),
+                    'admin_guest_fallback',
+                    (int) $s['admin_guest_fallback'],
+                    __('Default 8. Used only when a room type\'s capacity cannot be read at all, so the owner is offered a wider range rather than capped below the truth.', 'dcc-checkout')
+                );
+                $this->number_row(
+                    __('Booking screen: absolute guest-count ceiling', 'dcc-checkout'),
+                    'admin_guest_max',
+                    (int) $s['admin_guest_max'],
+                    __('Default 20. A safety bound on the guest-count dropdown, which is driven partly by database values. This setting can only make the range SMALLER — the plugin keeps its own hard ceiling of 20 so a bad value here cannot hang the booking screen.', 'dcc-checkout')
+                );
+                ?>
+            </table>
+        </details>
+        <?php
     }
 
     private function number_row(string $label, string $key, int $value, string $desc, string $extra_html = ''): void

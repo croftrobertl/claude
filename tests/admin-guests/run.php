@@ -20,7 +20,9 @@ $GLOBALS['meta'] = [];      // post_id => [key => value]
 $GLOBALS['posts'] = [];     // post_id => ['type'=>, 'parent'=>, 'title'=>]
 $GLOBALS['logs'] = [];      // booking_id => [messages]
 $GLOBALS['caps'] = true;
+$GLOBALS['opt'] = [];       // v0.25.0: Config reads its settings row from here.
 
+function get_option($k, $d = false) { return array_key_exists($k, $GLOBALS['opt']) ? $GLOBALS['opt'][$k] : $d; }
 function get_post_meta($id, $key, $single = false) { return $GLOBALS['meta'][$id][$key] ?? ''; }
 function update_post_meta($id, $key, $value) { $GLOBALS['meta'][$id][$key] = $value; return true; }
 function delete_post_meta($id, $key) { unset($GLOBALS['meta'][$id][$key]); return true; }
@@ -49,6 +51,11 @@ function get_posts($args) {
     return $out;
 }
 
+/* v0.25.0: the guest-count range now comes from Config (the setting
+   admin_guest_fallback, clamped by Admin_Guests::MAX_OPTIONS), so Config is
+   loaded here too. get_option() is already shimmed above, which is all Config
+   needs to return its defaults. */
+require __DIR__ . '/../../dcc-custom-checkout/includes/class-config.php';
 require __DIR__ . '/../../dcc-custom-checkout/includes/class-admin-guests.php';
 
 use DCC_Checkout\Admin_Guests;
@@ -229,6 +236,45 @@ $_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '2']]
 $g->save(18433);
 $rooms = (function () { return $this->reserved_rooms(18433); })->call($g);
 check('a real marker still reads as confirmed', $rooms[0]['confirmed'], true);
+
+/* v0.25.0 — THE SETTING MAY ONLY SHRINK THE RANGE, NEVER WIDEN IT.
+ *
+ * `admin_guest_max` is configurable, but Admin_Guests clamps it with its own
+ * MAX_OPTIONS constant because `max` drives the <option> loop and one of its
+ * inputs is database-sourced. Found by a mutation: removing the clamp changed
+ * nothing at the DEFAULT setting, so the guarantee was only tested in the one
+ * case where it makes no difference. These seed the setting ABOVE the ceiling,
+ * which is the only way the clamp is observable. */
+seed();
+$GLOBALS['opt']['dcc_checkout_settings'] = ['admin_guest_max' => 50];
+\DCC_Checkout\Config::flush_cache();
+$GLOBALS['meta'][1065]['mphb_adults_capacity'] = 9999;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '30']];
+$g->save(18433);
+/* seed() stores 4, so a REFUSED submission leaves that 4 in place. Asserting
+   the stored value is unchanged is the suite's existing idiom for "refused". */
+check('a setting of 50 cannot widen the range past the hard ceiling of 20',
+    $GLOBALS['meta'][99]['_mphb_adults'], 4);
+
+seed();
+$GLOBALS['opt']['dcc_checkout_settings'] = ['admin_guest_max' => 50];
+\DCC_Checkout\Config::flush_cache();
+$GLOBALS['meta'][1065]['mphb_adults_capacity'] = 9999;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '20']];
+$g->save(18433);
+check('...and 20 is still accepted at that setting', $GLOBALS['meta'][99]['_mphb_adults'], 20);
+
+/* And the setting really does SHRINK it, or it is decoration. */
+seed();
+$GLOBALS['opt']['dcc_checkout_settings'] = ['admin_guest_max' => 3];
+\DCC_Checkout\Config::flush_cache();
+$GLOBALS['meta'][1065]['mphb_adults_capacity'] = 9999;
+$_POST = ['dcc_admin_guests_nonce' => 'good-nonce', 'dcc_adults' => [99 => '4']];
+$g->save(18433);
+check('a setting of 3 does shrink the accepted range',
+    $GLOBALS['meta'][99]['_mphb_adults'], 4);
+$GLOBALS['opt'] = [];
+\DCC_Checkout\Config::flush_cache();
 
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);
