@@ -43,6 +43,7 @@ final class Plugin
         add_action('elementor/elements/categories_registered', [$this, 'register_category']);
         add_action('elementor/widgets/register', [$this, 'register_widget']);
         add_action('wp_enqueue_scripts', ['\\DCCGG\\Widget', 'register_assets']);
+        add_action('wp_enqueue_scripts', [$this, 'maybe_enqueue_guest_css'], 11);
         add_action('admin_notices', ['\\DCCGG\\Widget', 'maybe_notice_unminified']);
         add_action('admin_init',    ['\\DCCGG\\Widget', 'register_assets']);   // so the check runs in admin too
         add_action('elementor/preview/enqueue_scripts', ['\\DCCGG\\Widget', 'enqueue_for_preview']);
@@ -67,6 +68,11 @@ final class Plugin
         // 45 cottage-selector, 50 custom-checkout, 55 availability-calendar,
         // 63 wildlife).
         add_action('admin_menu', [$this, 'register_settings_page'], 30);
+        // v0.22.0: if the shared parent is missing the submenu has nowhere to
+        // hang and the page becomes unreachable, so a late check puts it under
+        // Settings instead. Not a second registration: it fires only when the
+        // `dcc` parent is absent.
+        add_action('admin_menu', [$this, 'register_settings_fallback'], 990);
         add_action('admin_init', [$this, 'redirect_legacy_settings_url']);
         add_action('admin_init', [$this, 'register_settings_fields']);
         add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
@@ -1053,6 +1059,50 @@ final class Plugin
         );
     }
 
+
+    /**
+     * Does the page being requested render a FULL guide? One meta read of the
+     * queried post's Elementor data. dccgg_guide_public is a different
+     * widgetType and never matches, so /explore/ never pulls the bundle.
+     */
+    public function maybe_enqueue_guest_css(): void
+    {
+        if (is_admin() || !is_singular()) { return; }
+        $post_id = (int) get_queried_object_id();
+        if ($post_id <= 0) { return; }
+        $raw = get_post_meta($post_id, '_elementor_data', true);
+        if (!is_string($raw) || $raw === '' || strpos($raw, 'dccgg_guide') === false) { return; }
+        $tree = json_decode($raw, true);
+        if (!is_array($tree)) { return; }
+        $hits = [];
+        $this->collect_dccgg_widgets($tree, $hits);
+        foreach ($hits as $w) {
+            $settings = (array) ($w['settings'] ?? []);
+            if ((string) ($settings['guide_mode'] ?? 'full') !== 'public') {
+                Widget::register_assets();
+                Widget::enqueue_guest_css();
+                return;
+            }
+        }
+    }
+
+    /**
+     * Settings under Settings → DCC Guest Guide, but ONLY when the shared
+     * `dcc` parent does not exist. Priority 990 so every plugin that might
+     * provide the parent has already run.
+     */
+    public function register_settings_fallback(): void
+    {
+        global $admin_page_hooks;
+        if (isset($admin_page_hooks['dcc'])) { return; }
+        $this->settings_hook = add_options_page(
+            __('DCC Guest Guide', 'dcc-guest-guide'),
+            __('DCC Guest Guide', 'dcc-guest-guide'),
+            'manage_options',
+            'dccgg-settings',
+            [$this, 'render_settings_page']
+        );
+    }
 
     public function register_settings_fields(): void
     {

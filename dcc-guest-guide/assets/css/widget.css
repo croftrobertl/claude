@@ -1807,9 +1807,11 @@ dialog.dccgg-wrapper::backdrop {
    210px is reproduced as the clear space around the label (~28px a side —
    the reference carries ~35px around "Send Message"). padding: 0 verbatim
    would push short labels like "Copy" into the 30px radius. */
-.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
-.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
-.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset),
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset),
+.dccgg-root.dccgg-root :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+.dccgg-stage.dccgg-stage :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1857,9 +1859,11 @@ dialog.dccgg-wrapper::backdrop {
    site-wide choice, so focus-visible below does not depend on the fill: it
    adds a ring separated from the button by the surface behind it. */
 @media (hover: hover) and (pointer: fine) {
-.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
-.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
-.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover {
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset):hover,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset):hover,
+.dccgg-root.dccgg-root :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover,
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):hover {
         background: var(--dccgg-btn-bg-hover, var(--dccgg-btn-hover-bg, #f08080));
         color: var(--dccgg-btn-txt-hover, var(--dccgg-btn-hover-txt, #ffffff));
         filter: none;
@@ -1898,9 +1902,11 @@ dialog.dccgg-wrapper::backdrop {
 /* Deliberately OUTSIDE the hover media query: a keyboard user on a touch
    device still needs to see focus. The ring is dark and offset, so it reads
    on the resting blue and on the coral alike. */
-.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
-.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
-.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible {
+.dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset):focus-visible,
+.dccgg-root.dccgg-root :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
+.dccgg-stage.dccgg-stage :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible,
+.dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):focus-visible {
     background: var(--dccgg-btn-hover-bg, #f08080);
     color: var(--dccgg-btn-hover-txt, #ffffff);
     filter: none;
@@ -1909,9 +1915,11 @@ dialog.dccgg-wrapper::backdrop {
 }
 
 @media (max-width: 420px) {
-    .dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
-    .dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
-    .dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn, .dccgg-btn-send, .dccgg-btn-cancel, .dccgg-checklist-reset, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
+    .dccgg-root.dccgg-root :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset),
+    .dccgg-stage.dccgg-stage :is(.dccgg-btn, .dccgg-checklist-reset):is(.dccgg-btn, .dccgg-checklist-reset),
+    .dccgg-root.dccgg-root :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+    .dccgg-stage.dccgg-stage :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform),
+    .dccgg-report-dialog.dccgg-report-dialog :is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform):is(.dccgg-btn-send, .dccgg-btn-cancel, .dccgg-review-yes, .dccgg-review-no, .dccgg-review-platform) {
         padding: 0 18px;
     }
 }

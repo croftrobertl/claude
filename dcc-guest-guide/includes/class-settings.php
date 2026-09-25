@@ -94,6 +94,12 @@ final class Settings
             'performance' => [
                 'label'  => __('Performance', 'dcc-guest-guide'),
                 'fields' => [
+                    'split_guest_css' => [
+                        'type'    => 'bool',
+                        'default' => true,
+                        'label'   => __('Send guest-only styling only to the full guide', 'dcc-guest-guide'),
+                        'help'    => __('The public guide has no Request Support form, review prompt, ⋯ menu, emergency strip or AI search, so it does not need their styling. Off sends one stylesheet to both, as before.', 'dcc-guest-guide'),
+                    ],
                     'inline_search_index' => [
                         'type'    => 'bool',
                         'default' => true,

@@ -30,6 +30,22 @@ final class Widget extends Widget_Base
     public function get_script_depends(): array { return ['dccgg-widget']; }
     public function get_style_depends(): array { return ['dccgg-widget']; }
 
+    /**
+     * Ask for the guest-only stylesheet. The FULL guide only.
+     *
+     * Everything in that bundle is a dialog, popover or panel that appears
+     * after an interaction, so a late enqueue cannot flash. The page-level
+     * check in Plugin::maybe_enqueue_guest_css() gets it into the head for the
+     * ordinary case; this covers shortcode placements that check cannot see.
+     */
+    public static function enqueue_guest_css(): void
+    {
+        if (!Settings::get('split_guest_css')) { return; }   // one bundle for both
+        if (wp_style_is('dccgg-widget-guest', 'registered')) {
+            wp_enqueue_style('dccgg-widget-guest');
+        }
+    }
+
     public static function register_assets(): void
     {
         // Depend on Elementor's Font Awesome bundles so the hardcoded
@@ -45,6 +61,18 @@ final class Widget extends Widget_Base
         // v0.9.7.14: prefer the pre-minified bundles when present (built via
         // build-min.sh at release time). Unminified sources stay in the zip
         // so the editor preview / source maps / Loco scan continue to work.
+        // v0.22.0: the guest-only bundle — registered, never enqueued here. Only
+        // the full guide asks for it; the public guide renders none of what it
+        // styles. If the .min bundles are absent we serve the whole unminified
+        // widget.css, which still contains everything, so the fallback is safe.
+        if (file_exists(DCCGG_DIR . 'assets/css/widget-guest.min.css')) {
+            wp_register_style(
+                'dccgg-widget-guest',
+                DCCGG_URL . 'assets/css/widget-guest.min.css',
+                ['dccgg-widget'],
+                DCCGG_VERSION
+            );
+        }
         $css_min  = file_exists(DCCGG_DIR . 'assets/css/widget.min.css');
         $js_min   = file_exists(DCCGG_DIR . 'assets/js/widget.min.js');
         $css_path = $css_min ? 'assets/css/widget.min.css' : 'assets/css/widget.css';
@@ -3036,6 +3064,8 @@ final class Widget extends Widget_Base
         // so it is absent from the HTML rather than hidden by CSS.
         if (self::is_public_mode($s)) {
             self::apply_public_mode($s);
+        } else {
+            self::enqueue_guest_css();
         }
 
         $sections  = (array) ($s['guide_sections'] ?? []);

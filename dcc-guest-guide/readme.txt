@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.21.0
+Stable tag: 0.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,18 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.22.0 =
+
+**Changed: the public guide no longer downloads styling it cannot use.** The
+Request Support form, review prompt, ⋯ menu, emergency strip and AI search
+only exist on the full guest guide, so their styling is now a separate file
+that only that page loads. The public guide's stylesheet is about a quarter
+smaller. Both pages look exactly as they did.
+
+**Added: a fallback so the settings page can never go missing.** If the shared
+DCC admin menu is ever unavailable, the settings appear under Settings →
+DCC Guest Guide instead.
 
 = 0.21.0 =
 

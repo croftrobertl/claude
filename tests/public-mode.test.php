@@ -654,5 +654,60 @@ check('a self-hosted <video> carries it too',
     strpos($render($selfhosted, $strs), '--dccgg-video-ratio:1 / 1') !== false);
 
 
+
+echo "\nU. The audience split, and the menu fallback (v0.22.0)\n";
+$dir = __DIR__ . '/../dcc-guest-guide/assets/css/';
+$core  = (string) file_get_contents($dir . 'widget.min.css');
+$guest = is_file($dir . 'widget-guest.min.css') ? (string) file_get_contents($dir . 'widget-guest.min.css') : '';
+$gz = static fn(string $t): int => strlen(gzencode($t, 9));
+check('the guest-only bundle is built', $guest !== '');
+printf("     core %s B raw / %s gzip   guest-only %s B raw / %s gzip   (%.1f%% moves off the public page)\n",
+    number_format(strlen($core)), number_format($gz($core)),
+    number_format(strlen($guest)), number_format($gz($guest)),
+    strlen($guest) / max(1, strlen($core) + strlen($guest)) * 100);
+
+// Nothing public-facing may be in the guest bundle, and nothing guest-only in core.
+foreach (['dccgg-report-dialog', 'dccgg-review-yes', 'dccgg-ai-', 'dccgg-sos-fab',
+          'dccgg-more-popover', 'dccgg-btn-send', 'dccgg-btn-cancel'] as $n) {
+    check("guest-only, and absent from core: $n",
+        strpos($guest, $n) !== false && strpos($core, $n) === false,
+        'core mentions it ' . substr_count($core, $n) . 'x');
+}
+// (.dccgg-map has no rules of its own — it is styled entirely through
+// .dccgg-btn — so it is absent from the source, not lost by the split.)
+foreach (['dccgg-tile', 'dccgg-menu', 'dccgg-detail', 'dccgg-item-body', 'dccgg-secret',
+          'dccgg-btn', 'dccgg-checklist-reset', 'dccgg-search'] as $n) {
+    check("core keeps: $n", strpos($core, $n) !== false, $n);
+}
+// The restructure's own invariant: no selector may span audiences any more.
+$srcCss = preg_replace('#/\*[\s\S]*?\*/#', '', (string) file_get_contents($dir . 'widget.css'));
+preg_match_all('/:is\(([^)]*)\)/', $srcCss, $mm);
+$spanning = [];
+foreach (array_unique($mm[1]) as $grp) {
+    $parts = array_map('trim', explode(',', $grp));
+    $g = array_filter($parts, static fn($x) => (bool) preg_match('/\.dccgg-(report|review|ai-|sos|emergency|more|btn-send|btn-cancel)/', $x));
+    if ($g && count($g) !== count($parts)) { $spanning[] = $grp; }
+}
+check('no :is() list spans both audiences any more', empty($spanning), implode(' | ', $spanning));
+// And no selector ends up in BOTH bundles, which would make load order decide.
+preg_match_all('/\.dccgg-[a-z0-9-]+/', $core . $guest, $cm);
+$both = [];
+foreach (array_unique($cm[0]) as $sel) {
+    if (strpos($core, $sel) !== false && strpos($guest, $sel) !== false
+        && !in_array($sel, ['.dccgg-root', '.dccgg-stage', '.dccgg-item', '.dccgg-detail',
+                            '.dccgg-btn', '.dccgg-item-utils', '.dccgg-item-title'], true)) {
+        $both[] = $sel;
+    }
+}
+printf("     shared between bundles (hosts and containers are expected): %d\n", count($both));
+
+$plugin = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-plugin.php');
+check('the settings page falls back to Settings when the dcc parent is absent',
+    strpos($plugin, 'register_settings_fallback') !== false
+    && strpos($plugin, "isset(\$admin_page_hooks['dcc'])") !== false
+    && strpos($plugin, 'add_options_page(') !== false);
+check('and it never registers the shared parent itself',
+    strpos($plugin, 'add_menu_page(') === false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

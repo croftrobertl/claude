@@ -1193,8 +1193,8 @@ async function run() {
         check('and body copy computes 400 underneath it',
             ground.para === '400', `paragraph=${ground.para}`);
         check('the body-copy weight is declared, not inherited',
-            /\.dccgg-item-body[^{]*\{[^}]*font-weight: 400 !important/.test(CSS.replace(/\s+/g, ' '))
-            && !/\.dccgg-item-body[^{]*\{[^}]*font-weight: inherit/.test(CSS.replace(/\s+/g, ' ')));
+            /\.dccgg-item-body[^{]*\{[^}]*font-weight: ?400 ?!important/.test(CSS.replace(/\s+/g, ' '))
+            && !/\.dccgg-item-body[^{]*\{[^}]*font-weight: ?inherit/.test(CSS.replace(/\s+/g, ' ')));
         check('the rule is not scoped to one version',
             true
             || /\.dccgg-root \.dccgg-item-body,/.test(CSS));
@@ -2408,6 +2408,101 @@ async function run() {
             neighbours.every((n) => n.hit), JSON.stringify(neighbours.filter((n) => !n.hit)));
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
+    }
+
+
+    // ---- Scenario W: the audience split is safe to ship (v0.22.0) ---------
+    // The first attempt at this split shipped nothing because two tests caught
+    // it: the public guide lost the whole button spec, and the checklist Reset
+    // reverted to 94x50 once its size override landed on the far side of the
+    // bundle boundary. Those two are the acceptance for the restructure.
+    {
+        console.log('\nW. The split bundles are equivalent, and core stands alone');
+        const errors = [];
+        const CORE  = fs.readFileSync(path.join(__dirname, '../dcc-guest-guide/assets/css/widget.min.css'), 'utf8');
+        const GUESTCSS = fs.readFileSync(path.join(__dirname, '../dcc-guest-guide/assets/css/widget-guest.min.css'), 'utf8');
+        const KIT = `html{font-weight:700}
+            body{font-family:Raleway,-apple-system,sans-serif;font-size:16px;color:#333;margin:0}
+            .site .content .entry button{text-transform:uppercase;background:#444;color:#fff;border-radius:3px}
+            .elementor-kit-5 button{font-family:Raleway,sans-serif;font-size:18px;font-weight:900;
+              letter-spacing:1.5px;text-transform:capitalize}
+            #reference{font-family:Raleway,-apple-system,sans-serif;font-size:20px;font-weight:500;
+              line-height:50px;letter-spacing:.5px;text-transform:none;color:#fff;background:#006BCF;
+              border:none;border-radius:30px;padding:0;box-shadow:none}`;
+        // Only what a PUBLIC guide renders: no report dialog, no review
+        // prompt, no ⋯ menu, no emergency strip, no AI panel.
+        const publicMarkup = `<button id="reference">Send Message</button>
+            <div class="dccgg-root"><div class="dccgg-stage"><div class="dccgg-detail-items">
+            <article class="dccgg-item"><h3 class="dccgg-item-title">
+              <span class="dccgg-item-title-text">Boat lift</span></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Body copy.</p></div></div>
+            <div class="dccgg-item-utils">
+              <button type="button" class="dccgg-btn dccgg-back">Back</button>
+              <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+              <span class="dccgg-secret-value" data-secret-ref="id:a1"></span>
+              <button type="button" class="dccgg-btn dccgg-secret-toggle">Show</button></span>
+              <button type="button" class="dccgg-btn dccgg-copy" data-secret-ref="id:a1">Copy</button>
+              <a class="dccgg-btn dccgg-map" href="#">View in Maps</a>
+              <button type="button" class="dccgg-checklist-reset">Reset</button>
+            </div></article></div></div></div>`;
+        const page3 = (css, body) => `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${css}</style><style>${KIT}</style></head>
+            <body class="site elementor-kit-5"><div class="content"><div class="entry">
+            ${body}</div></div></body></html>`;
+        const readAll = (page) => page.evaluate(() => {
+            const out = {};
+            const pick = { back: '.dccgg-back', show: '.dccgg-secret-toggle', copy: '.dccgg-copy',
+                           map: '.dccgg-map', reset: '.dccgg-checklist-reset', para: '.dccgg-item-body p' };
+            for (const [k, sel] of Object.entries(pick)) {
+                const el = document.querySelector(sel);
+                if (!el) continue;
+                const c = getComputedStyle(el), r = el.getBoundingClientRect();
+                out[k] = { w: Math.round(r.width), h: Math.round(r.height), size: c.fontSize,
+                           weight: c.fontWeight, ls: c.letterSpacing, tt: c.textTransform,
+                           bg: c.backgroundColor, color: c.color, radius: c.borderTopLeftRadius };
+            }
+            const ref = getComputedStyle(document.querySelector('#reference'));
+            out._ref = { size: ref.fontSize, weight: ref.fontWeight, ls: ref.letterSpacing,
+                         tt: ref.textTransform, bg: ref.backgroundColor, radius: ref.borderTopLeftRadius };
+            return out;
+        });
+
+        // (1) CORE ALONE must fully style everything the public guide renders.
+        {
+            const { ctx, page } = await newPage(browser, PHONE, page3(CORE, publicMarkup), errors);
+            const m = await readAll(page);
+            const spec = ['size', 'weight', 'ls', 'tt', 'bg', 'radius'];
+            const off = ['back', 'show', 'copy', 'map'].filter((k) =>
+                spec.some((f) => m[k][f] !== m._ref[f] && !(k !== 'back' && ['size'].includes(f))));
+            check('core alone gives the public guide the full button spec',
+                m.back.bg === 'rgb(0, 107, 207)' && m.back.tt === 'none' && m.back.weight === '500'
+                && m.back.radius === '30px' && m.copy.bg === 'rgb(0, 107, 207)'
+                && m.show.bg === 'rgb(0, 107, 207)' && m.map.bg === 'rgb(0, 107, 207)',
+                `back=${m.back.bg}/${m.back.tt}/${m.back.weight} copy=${m.copy.bg} show=${m.show.bg} map=${m.map.bg}`);
+            check('not the theme\'s grey uppercase',
+                m.back.bg !== 'rgb(68, 68, 68)' && m.show.tt !== 'uppercase');
+            check('core alone also keeps body copy unbolded', m.para.weight === '400', m.para.weight);
+            await ctx.close();
+        }
+
+        // (2) CORE + GUEST must equal the single sheet, value for value.
+        {
+            const whole = fs.readFileSync(path.join(__dirname, '../dcc-guest-guide/assets/css/widget.css'), 'utf8');
+            const a = await newPage(browser, PHONE, page3(whole, publicMarkup), errors);
+            const before = await readAll(a.page); await a.ctx.close();
+            const b = await newPage(browser, PHONE, page3(CORE + '\n' + GUESTCSS, publicMarkup), errors);
+            const after = await readAll(b.page); await b.ctx.close();
+            const diffs = Object.keys(before).filter((k) =>
+                JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+            check('the two bundles render identically to the single sheet',
+                diffs.length === 0,
+                diffs.map((k) => `${k}: ${JSON.stringify(before[k])} vs ${JSON.stringify(after[k])}`).join(' | '));
+            check('and the checklist Reset is 71x40, not 94x50',
+                after.reset.h === 40 && after.reset.w === 71,
+                `${after.reset.w}x${after.reset.h}`);
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
     }
 
     await browser.close();
