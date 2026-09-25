@@ -37,6 +37,8 @@ $GLOBALS['dccwl_test'] = [
 	'attach_url' => [],   // id => url
 	'http'       => [],   // url-substring => [ 'code' => int, 'body' => string ]
 	'menu'       => [],   // add_submenu_page / add_options_page calls
+	'ttl'        => [],   // transient key => ttl seconds
+	'cron'       => [],
 	'die'        => null,
 	'caps'       => true, // current_user_can return
 	'nonce_ok'   => true,
@@ -46,6 +48,8 @@ function dccwl_test_reset(): void {
 	foreach ( [ 'options', 'transients', 'actions', 'filters', 'shortcodes', 'settings', 'routes', 'enqueued', 'registered', 'inline', 'posts', 'attach_url', 'http', 'menu' ] as $k ) {
 		$GLOBALS['dccwl_test'][ $k ] = [];
 	}
+	$GLOBALS['dccwl_test']['ttl']      = [];
+	$GLOBALS['dccwl_test']['cron']     = [];
 	$GLOBALS['dccwl_test']['die']      = null;
 	$GLOBALS['dccwl_test']['caps']     = true;
 	$GLOBALS['dccwl_test']['nonce_ok'] = true;
@@ -92,7 +96,13 @@ function add_option( $k, $v = '', $dep = '', $autoload = 'yes' ) {
 }
 function delete_option( $k ) { unset( $GLOBALS['dccwl_test']['options'][ $k ] ); return true; }
 function get_transient( $k ) { return $GLOBALS['dccwl_test']['transients'][ $k ] ?? false; }
-function set_transient( $k, $v, $ttl = 0 ) { $GLOBALS['dccwl_test']['transients'][ $k ] = $v; return true; }
+function set_transient( $k, $v, $ttl = 0 ) {
+	$GLOBALS['dccwl_test']['transients'][ $k ] = $v;
+	// Recorded so a test can assert HOW LONG something was cached for, which
+	// is the difference between caching an outage for 5 minutes and for 3 hours.
+	$GLOBALS['dccwl_test']['ttl'][ $k ] = (int) $ttl;
+	return true;
+}
 function delete_transient( $k ) { unset( $GLOBALS['dccwl_test']['transients'][ $k ] ); return true; }
 
 /* ---- hooks ---------------------------------------------------------- */
@@ -113,6 +123,9 @@ function shortcode_atts( $pairs, $atts, $shortcode = '' ) {
 	return $out;
 }
 function did_action( $h ) { return 0; }
+
+function register_activation_hook( $file, $cb ) { $GLOBALS['dccwl_test']['activation'][] = $cb; return true; }
+function register_deactivation_hook( $file, $cb ) { $GLOBALS['dccwl_test']['deactivation'][] = $cb; return true; }
 
 /* ---- cron ----------------------------------------------------------- */
 function wp_next_scheduled( $h, $args = [] ) { return $GLOBALS['dccwl_test']['cron'][ $h ] ?? false; }
@@ -189,6 +202,9 @@ function plugin_dir_path( $f ) { return rtrim( dirname( (string) $f ), '/' ) . '
 function plugin_dir_url( $f ) { return 'https://example.test/wp-content/plugins/dcc-wildlife/'; }
 function trailingslashit( $s ) { return rtrim( (string) $s, '/\\' ) . '/'; }
 function untrailingslashit( $s ) { return rtrim( (string) $s, '/\\' ); }
+function home_url( $path = '', $scheme = null ) { return 'https://example.test/' . ltrim( (string) $path, '/' ); }
+function site_url( $path = '', $scheme = null ) { return home_url( $path ); }
+function get_bloginfo( $show = '' ) { return 'admin@example.test'; }
 function rest_url( $p = '' ) { return 'https://example.test/wp-json/' . ltrim( (string) $p, '/' ); }
 function register_rest_route( $ns, $route, $args = [], $override = false ) {
 	$GLOBALS['dccwl_test']['routes'][] = [ 'ns' => $ns, 'route' => $route, 'args' => $args ];

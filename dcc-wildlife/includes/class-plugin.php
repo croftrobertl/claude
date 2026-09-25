@@ -29,6 +29,14 @@ final class Plugin {
 		add_action( 'init', [ $this, 'maybe_upgrade' ], 5 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
 
+		// Keep the chain map's payload warm on a schedule, so the cost of
+		// assembling it lands on cron rather than on the first guest to tap
+		// the button. Scheduled lazily: no activation hook has ever existed
+		// for this plugin, and adding one would miss every site already
+		// running it.
+		add_action( self::WARM_HOOK, [ Water_Live::class, 'warm_map' ] );
+		add_action( 'init', [ $this, 'maybe_schedule_warm' ], 20 );
+
 		Water_Rest::register_hooks();
 		if ( is_admin() ) {
 			Water_Admin::register_hooks();
@@ -64,6 +72,32 @@ final class Plugin {
 	 * setting a site already stored, so any such change MUST ship with a
 	 * migration step in Water_Data::upgrade().
 	 */
+	/** The cron hook that warms the map payload. Mirrors Water_Live::WARM_HOOK. */
+	public const WARM_HOOK = 'dcc_wl_warm_map';
+
+	/**
+	 * Schedule the warmer once, and only while the map is actually enabled.
+	 * Switching the map off removes the event rather than leaving a job that
+	 * wakes up hourly to do nothing.
+	 */
+	public function maybe_schedule_warm(): void {
+		$wanted = Water_Data::map_possible();
+		$booked = wp_next_scheduled( self::WARM_HOOK );
+
+		if ( $wanted && ! $booked ) {
+			wp_schedule_event( time() + 300, 'hourly', self::WARM_HOOK );
+			return;
+		}
+		if ( ! $wanted && $booked ) {
+			wp_clear_scheduled_hook( self::WARM_HOOK );
+		}
+	}
+
+	/** Called from the deactivation hook: never leave a scheduled job behind. */
+	public static function on_deactivate(): void {
+		wp_clear_scheduled_hook( self::WARM_HOOK );
+	}
+
 	public function maybe_upgrade(): void {
 		if ( DCC_WL_VERSION === get_option( self::VERSION_OPTION ) ) {
 			return;

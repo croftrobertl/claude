@@ -62,4 +62,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	);
 }
 
+register_deactivation_hook( __FILE__, [ Plugin::class, 'on_deactivate' ] );
+
 Plugin::instance();

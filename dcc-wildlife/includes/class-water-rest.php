@@ -100,7 +100,9 @@ final class Water_Rest {
 		if ( ! Water_Data::map_possible() ) {
 			return new \WP_REST_Response( [ 'enabled' => false ] );
 		}
-		$payload            = Water_Live::map_data();
+		// The CACHED accessor, not the generator: a cold assembly is fourteen
+		// sequential Atlas calls and a guest measured 14.6s waiting for it.
+		$payload            = Water_Live::map_payload();
 		$payload['enabled'] = true;
 
 		$response = new \WP_REST_Response( $payload );

@@ -22,6 +22,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 // Transients: always. Underscores are escaped — in LIKE they are wildcards.
+// A scheduled job outlives the plugin's files: clear it before anything else.
+wp_clear_scheduled_hook( 'dcc_wl_warm_map' );
+
 $wpdb->query(
 	"DELETE FROM {$wpdb->options}
 	 WHERE option_name LIKE '\_transient\_dcc\_wl\_%'

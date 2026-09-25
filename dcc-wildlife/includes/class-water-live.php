@@ -44,6 +44,28 @@ final class Water_Live {
 	private const DV_KEY    = 'dcc_wl_water_dv_';
 
 	/**
+	 * The assembled map payload, cached whole.
+	 *
+	 * map_data() walks the chain asking the Water Atlas for two reports per
+	 * water. Cold, that is fourteen sequential HTTP calls, and a guest opening
+	 * the map measured 14.6 SECONDS in the browser against 0.6s warm. The
+	 * per-report transients underneath (TTL_ATLAS, 6h) were never the problem;
+	 * the assembly on top of them had no cache of its own, so every expiry was
+	 * paid by whichever guest arrived first.
+	 *
+	 * Three hours sits deliberately INSIDE TTL_ATLAS, so the ordinary
+	 * regeneration reads warm per-report transients and costs nothing. The
+	 * cron warmer below is what keeps a guest off the expensive path when the
+	 * six-hour layer does expire.
+	 */
+	private const MAP_KEY  = 'dcc_wl_water_map';
+	private const MAP_LOCK = 'dcc_wl_water_map_lock';
+	private const TTL_MAP  = 10800; // 3 h — half of TTL_ATLAS on purpose.
+
+	/** Cron hook that keeps the map payload warm. */
+	public const WARM_HOOK = 'dcc_wl_warm_map';
+
+	/**
 	 * Staleness guards. USGS leaves dead series published — 02238000's flow
 	 * has been offline for maintenance since 2026-03-03 — and a value whose
 	 * timestamp is five months old must never render as a current condition.
@@ -343,6 +365,82 @@ final class Water_Live {
 	 *
 	 * @return array<string,mixed>
 	 */
+	/**
+	 * The map payload a request should actually use.
+	 *
+	 * map_data() stays the generator and is left exactly as it was — nothing
+	 * here touches a parser. This is the cache in front of it.
+	 *
+	 * A lock stops a thundering herd: when the payload is cold and several
+	 * guests open the map at once, one generates and the others get whatever
+	 * is cached, or an explicit `stale: true` marker if nothing is. Returning
+	 * a half-built map would be worse than saying "not yet".
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function map_payload(): array {
+		$cached = get_transient( self::MAP_KEY );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		if ( get_transient( self::MAP_LOCK ) ) {
+			// Someone else is building it. Say so rather than build it twice.
+			return [ 'waters' => [], 'stations' => [], 'ramps' => [], 'property' => null, 'stale' => true ];
+		}
+
+		set_transient( self::MAP_LOCK, 1, 60 );
+		try {
+			$payload = self::map_data();
+		} finally {
+			delete_transient( self::MAP_LOCK );
+		}
+
+		set_transient( self::MAP_KEY, $payload, self::map_ttl( $payload ) );
+
+		return $payload;
+	}
+
+	/**
+	 * Cron: rebuild the map payload before a guest has to.
+	 *
+	 * Deliberately unconditional about the cache — the point is to pay the
+	 * cost on a schedule rather than on a page view, so it regenerates even
+	 * when the current copy is still valid.
+	 */
+	public static function warm_map(): void {
+		if ( ! Water_Data::map_possible() ) {
+			return;
+		}
+		delete_transient( self::MAP_LOCK );
+		$payload = self::map_data();
+		set_transient( self::MAP_KEY, $payload, self::map_ttl( $payload ) );
+	}
+
+	/**
+	 * How long a given map payload deserves to live.
+	 *
+	 * The waters list is built from the owner's stored chain rows, so it is
+	 * never empty even when every source is down — which makes "no waters" the
+	 * wrong test for failure. The honest signal is a payload carrying no
+	 * READINGS and no ramps: pins with nothing to say. That gets the short
+	 * failure TTL, so an upstream outage is retried in five minutes rather
+	 * than leaving a blank map up for three hours.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	private static function map_ttl( array $payload ): int {
+		if ( ! empty( $payload['ramps'] ) ) {
+			return self::TTL_MAP;
+		}
+		foreach ( (array) ( $payload['waters'] ?? [] ) as $w ) {
+			if ( ! empty( $w['clarity'] ) || ! empty( $w['level'] ) || ! empty( $w['depthMap'] ) ) {
+				return self::TTL_MAP;
+			}
+		}
+		return Water_Data::TTL_FAIL;
+	}
+
 	public static function map_data(): array {
 		$chain = Water_Data::chain_waters();
 
@@ -1829,5 +1927,7 @@ final class Water_Live {
 		delete_transient( self::CACHE_KEY );
 		delete_transient( self::FAIL_KEY );
 		delete_transient( self::LOCK_KEY );
+		delete_transient( self::MAP_KEY );
+		delete_transient( self::MAP_LOCK );
 	}
 }
