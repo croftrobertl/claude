@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.30.0
+Stable tag: 1.31.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,36 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.31.0 =
+* **The chain map opens on the Harris Chain again.** It had been opening zoomed
+  all the way in on empty water, with every marker off screen and zooming-in
+  disabled.
+* **Opening the map is fast.** The first guest each cycle was waiting about
+  fifteen seconds while the map's data was assembled. It is now kept ready in
+  the background, hourly, so nobody waits for it.
+* **The map fits a small phone.** On a short screen the colour key used to sit
+  below the bottom edge of a panel that could not be scrolled, so it could not
+  be read at all.
+* **Finding a species in a long list.** The Animals section is 38 species. It
+  now has chips that jump straight to a part of it — Reptiles, Mammals, Fish &
+  snails, Wading birds, Waterfowl & swimmers, Raptors & others — a "Jump to a
+  species" list of all 38 by name, and a Compact button that swaps the photo
+  cards for short rows. Nothing is ever hidden by using them.
+* Cards in the species list are all the same height now, instead of some
+  standing short with a gap beneath them.
+* The category tabs no longer run off the edge of a narrow phone.
+* Zoom buttons on the map are finger-sized.
+* The "Fullscreen" button on the map no longer appears on iPhone, where it
+  could never work.
+* Each photo credit's "source" link now says which photograph it belongs to,
+  for anyone using a screen reader.
+* Two short words on the water card ("today", "3mo") could not be translated
+  on a page without the water section. They can be now.
+* Removed a "Show season countdown" switch that did nothing — the countdown
+  itself was retired in 1.27.0.
+* Tidied up after the sightings log that was removed back in 1.2.0: an unused
+  setting it left behind is deleted on upgrade.
 
 = 1.30.0 =
 * The species photographs are no longer inside the plugin. It drops from about 12MB to about 1MB, so updating it from a phone stops being a chore.

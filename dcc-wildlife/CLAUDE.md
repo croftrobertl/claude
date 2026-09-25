@@ -1355,3 +1355,137 @@ rounded boxes at the same weight. The rule now:
 - Batches 3–7 are listed in the Phase 2 brief; each ships alone, Rob reviews
   on /explore/ from the phone before the next. The three cut species
   (roseate spoonbill, snail kite, crested caracara) are never re-added.
+
+## 1.31.0 — the harness is in the repo now, and what else this round settled
+
+**THE TEST HARNESS LIVES IN `tools/tests/`. IT IS NOT OPTIONAL SCAFFOLDING.**
+For several releases this file cited `test-species.php` and friends as though
+they were checked in. They were not: every session rebuilt them in its
+scratchpad, and when a container was reprovisioned the whole suite went with it,
+so "68/68" was never reproducible by anyone but the session holding it. Run it:
+
+```bash
+bash tools/tests/run-all.sh            # everything; exit code IS the result
+bash tools/tests/run-all.sh species    # only suites matching "species"
+cd tools/tests && npm install          # once per container, for the ui-* suites
+```
+
+`tools/` is already excluded from the zip, so none of it ships. Read
+`tools/tests/README.md` before trusting a green run — it names the two traps
+that have produced false results here.
+
+- **NEVER grep the output for `FAIL`.** A suite that crashes exits 255 and
+  prints no FAIL line. The runner reads exit codes and nothing else, and that
+  is why.
+- **A suite that asserts nothing FAILS** (exit 2). So does an unclassified file
+  in `tools/tests/`, which is how a suite that was never wired up gets noticed.
+- **The browser suites SKIP with exit 77** when playwright-core or Chromium is
+  missing. They must never pass by default: a green tick from a suite that never
+  opened a browser is worse than no suite at all.
+- **Measure, then assert.** Three assertions written from assumption were wrong
+  and the harness is why we know: `best` on a registry row is PROSE (the twelve
+  month scores are `months` on a DATASET row); `flags`, `safe`, `mark`, `sound`
+  and `idgroup` are OPTIONAL (36 rows have no `flags`, so anything dereferencing
+  one needs a guard); and the alligator is deliberately in TWO sections, so the
+  sections hold 52 memberships over 51 species and `include_flagged = false`
+  drops it from SAFETY, not from animals.
+- **This sandbox has no Raleway, so text measures NARROWER here than on the
+  site** — the standing trap, unchanged. Anything asserting that a row FITS must
+  leave headroom or inflate the font to stand in for the real face. The tab-row
+  suite does the latter: 125% covers Raleway's roughly 21% and is required; 150%
+  is carried as a margin probe and is explicitly not a requirement.
+
+**THE MAP MUST BE FITTED AFTER LAYOUT, NEVER INSIDE `build()`.** `sheet.js`
+calls its build callback while the host is still `hidden` — deliberately, so the
+transform transition runs — and a hidden element has no layout. Fitting bounds
+to a 0x0 canvas does not fail, it succeeds nonsensically: Leaflet clamps to
+maxZoom at an arbitrary centre and every marker lands off screen, which is
+exactly what shipped. `fitView()` refuses a zero-sized canvas and
+`fitWhenLaid()` waits for the first non-zero size via ResizeObserver, fits ONCE,
+then stops observing — a later resize must not yank the view away from someone
+who has panned. Test the RESULTING zoom and bounds; "fitBounds was called" was
+true throughout the bug.
+
+**THE MAP PAYLOAD IS CACHED WHOLE, AND WARMED ON CRON.** `map_data()` is fourteen
+sequential Atlas calls on a ten-water chain and a guest measured 14.6s waiting
+for it. `Water_Live::map_payload()` is the cached accessor the route uses;
+`map_data()` stays the generator and is untouched. Three hours, deliberately
+INSIDE `TTL_ATLAS` (6h) so an ordinary rebuild reads warm per-report transients.
+A build lock stops a stampede: one builds, the others get `stale: true` rather
+than a half-drawn map. `map_ttl()` gives an OUTAGE the five-minute failure TTL —
+the waters list comes from the owner's stored rows so it is never empty, which
+makes "no waters" the wrong test; "no readings and no ramps" is the right one.
+The cron event exists only while the map is enabled, and deactivation and
+uninstall both clear it.
+
+**BROWSE SUB-GROUPS ARE NAVIGATION, NEVER A FILTER.** The 38 animals carry a
+`browse` field and the Animals section shows chips for it. Choosing one JUMPS the
+deck and relabels the position line; it hides nothing. That is the 1.28.0 lesson
+applied: an invisible filter made seven winter species unreachable, and a
+sub-group hiding five sixths of the section would be the same mistake smaller.
+
+- **`browse` is NOT `idgroup`.** `idgroup` is a look-alike confusion set for
+  identification and 22 species have none. Different question, different field.
+- **`Species::browse_order()` orders the DECK ONLY**, so each sub-group is one
+  contiguous run and "Reptiles · 1/1" is true. It is STABLE, so order within a
+  run is registry order and the confusable birds stay together. The prose guide,
+  the JSON-LD and the dataset all read the registry directly and are unaffected.
+- **Labels do not overstate.** "Reptiles" — the registry has no amphibians.
+  "Waterfowl & swimmers" — only three of the ten are ducks. Widen a label when
+  the data widens, not before.
+- **A chip records a CHOICE, not a position.** A scroll handler that moved the
+  pressed chip to the group at the deck's left edge was wrong by exactly one
+  group every time, because a jump aligns the COLUMN holding the target and that
+  column's first tile usually belongs to the previous group. Do not add it back.
+  When the deck is swiped clear of the chosen group, `contextFor()` returns null
+  and the line falls back to the deck's own count.
+- **The last sub-group cannot reach the left edge** — there is not enough scroll
+  behind it. That is not a failure, and the suite allows it when the deck is at
+  maximum scroll.
+
+**A `<select>` NEEDS AT LEAST 16px OR iOS ZOOMS THE PAGE.** The jump select uses
+`font-size: 1rem`, not a px value: it keeps the "sizes stay relative" rule, and
+the 20px deployment root makes it 20px there and exactly 16px on a default root.
+The search input's literal 16px remains the one px font-size in the plugin.
+
+**LEAFLET'S OWN CONTROLS NEED A DOUBLED CLASS TO OVERRIDE.**
+`.leaflet-touch .leaflet-bar a` is (0,2,1) and sets 30px, and `leaflet.css` is
+injected into `<head>` at runtime AFTER `water.css` — so an equal-specificity
+override loses on source order. `.dccwl-map-canvas.dccwl-map-canvas` reaches
+(0,3,1) and wins, the same trick the Bravada button rules use.
+
+**THE MAP SHEET SCROLLS.** It was `overflow: hidden` around a canvas with a hard
+240px floor above a bar and legend that both WRAP, which pushed the legend 141px
+past the bottom edge on a 320x568 phone with no way to reach it. The canvas floor
+is now `min(240px, 40dvh)` and the body scrolls. Dragging the map still pans it
+rather than scrolling the sheet — tested with real browser input, because
+dispatched PointerEvents do not satisfy Leaflet's drag handler and a test that
+"passed" on nothing moving would be worthless.
+
+**DECK ROWS ARE `auto`, SO ONE LONG NAME INFLATES A ROW EVERYWHERE.** A row is as
+tall as the tallest tile anywhere in it, across every page. The card now fills
+its slot (as the spotlight strip always has) and the name is clamped to two
+lines, which caps the row height at source. The full name stays in the DOM and
+in the accessible name.
+
+**A CONTROL THAT CANNOT WORK IS NOT OFFERED.** The map's Fullscreen button is
+feature-detected on the element it would actually ask, because iPhone Safari
+implements `requestFullscreen` for `<video>` only — it rendered and did nothing.
+The same rule retired the month widget's "Show season countdown" switcher, which
+had been inert since the countdown was retired in 1.27.0.
+
+**`maybe_upgrade()` USES version_compare, AND PERSISTS THE MERGED ROW.** String
+equality also fired on a DOWNGRADE, re-running every step against older code.
+And `Water_Data::persist_merged()` writes the merged option back so the stored
+row DESCRIBES behaviour instead of waiting for a manual save. That merge is per
+ROW, never per LIST: every array setting here is a list the owner edits, and
+unioning it with the seeded one would resurrect rows they deleted. A stored list
+wins wholesale; each row merely gains any keys the shape has grown, empty.
+
+**Page weight is measured in gzip -9 bytes, not raw.** 1.31.0 costs a species
+page about 6.2KB gzipped over 1.30.0: +1167 on the cached page (HTML and inline
+config) and +5180 in assets, which are cached across pages after the first.
+water-map.js grew 948 bytes gz and is still fully deferred to the map opening.
+NOTE: the wire bytes the site actually serves are NOT measurable from this
+container — no live egress — so re-measure against doracanalcourt.com before
+treating any of it as what a phone pays.
