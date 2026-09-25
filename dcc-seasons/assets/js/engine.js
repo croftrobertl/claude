@@ -78,7 +78,6 @@
 		lilypad: '36 22|<path d="M31.9 7 A16 8 0 1 0 33 13.7 L18 11 Z" fill="%c"/><path d="M18 11 L4 8 M18 11 L5 14 M18 11 L11 18 M18 11 L20 18 M18 11 L19 3 M18 11 L28 4" stroke="#237032" stroke-width="0.9" fill="none"/><circle cx="10" cy="7" r="3" fill="%s"/><circle cx="10" cy="7" r="1.1" fill="#FDE68A"/>',
 		sabalpalm: '34 38|<path d="M14 38 L15 20 L19 20 L20 38 Z" fill="%p"/><path d="M14.6 25 L19.4 25 M14.4 30 L19.6 30 M14.2 35 L19.8 35" stroke="%i" stroke-width="1.1" fill="none"/><g fill="%c"><path id="fr" d="M17 19 L12.4 7.6 L14.6 10.4 L15.6 4.6 L17 8.6 L18.4 4.6 L19.4 10.4 L21.6 7.6 Z"/><use href="#fr" transform="rotate(30 17 19)"/><use href="#fr" transform="rotate(-30 17 19)"/><use href="#fr" transform="rotate(60 17 19)"/><use href="#fr" transform="rotate(-60 17 19)"/><use href="#fr" transform="rotate(88 17 19)"/><use href="#fr" transform="rotate(-88 17 19)"/><use href="#fr" transform="rotate(112 17 19)"/><use href="#fr" transform="rotate(-112 17 19)"/></g><g fill="%j"><path id="fs" d="M17 19 L14 10.6 L15.6 12.6 L17 8.6 L18.4 12.6 L20 10.6 Z"/><use href="#fs" transform="rotate(45 17 19)"/><use href="#fs" transform="rotate(-45 17 19)"/><use href="#fs" transform="rotate(74 17 19)"/><use href="#fs" transform="rotate(-74 17 19)"/></g><circle cx="17" cy="19" r="2.4" fill="%i"/>',
 		hibiscus: '30 30|<g fill="%e"><path id="pt" d="M15 16 C8.6 13.6 7 6 15 3 C23 6 21.4 13.6 15 16 Z"/><use href="#pt" transform="rotate(72 15 16)"/><use href="#pt" transform="rotate(144 15 16)"/><use href="#pt" transform="rotate(216 15 16)"/><use href="#pt" transform="rotate(288 15 16)"/></g><circle cx="15" cy="16" r="3.6" fill="%n"/><path d="M8.6 23 Q3 26.6 6 29 Q11 27.6 11.6 23.6 Z" fill="%j"/><path d="M15 16 L26.4 5.2" stroke="%k" stroke-width="1.8" fill="none"/><g fill="%a"><circle cx="21.6" cy="9.6" r="1"/><circle cx="23.6" cy="8" r="1.1"/><circle cx="25.4" cy="6.2" r="1.1"/></g><circle cx="26.6" cy="4.6" r="1.7" fill="%k"/><g fill="%u"><circle cx="25.6" cy="3.2" r="0.8"/><circle cx="27.6" cy="2.8" r="0.8"/><circle cx="28.4" cy="4.8" r="0.8"/></g>',
-		conch: '30 26|<path d="M13 4 Q23 6 26 14 Q27.6 20 21 23.6 Q13 25.6 8 20.6 Q4.6 15 7 9.6 Q9 5.6 13 4 Z" fill="%q"/><path d="M16.6 10 Q23 12 24.6 16.6 Q25.4 20.6 20.6 22.4 Q15.6 23 13.6 19 Q13 14 16.6 10 Z" fill="#F4A6B8"/><path d="M18 12 Q22.4 14 23.4 17 Q23.8 19.6 20.4 20.8 Q17 21 15.8 18.4 Q15.6 14.6 18 12 Z" fill="#FBD3DC"/><path d="M13 4 L9.6 0.6 Q8 0 7.6 1.6 L7.6 7 Z" fill="%o"/><path d="M12 4.6 L9.4 2 L8.6 3 L8.8 6.6 Z" fill="#D9C3A0"/><circle cx="12" cy="6.6" r="1.7" fill="#D9C3A0"/><circle cx="16.6" cy="6.2" r="1.8" fill="#D9C3A0"/><circle cx="21" cy="8" r="1.6" fill="#D9C3A0"/><circle cx="24.4" cy="11.4" r="1.3" fill="#D9C3A0"/>',
 		petal: '18 22|<path d="M9 1 Q15.4 6.4 15 13 Q14.6 18.6 10.6 20.4 Q9.6 19.6 9 18.6 Q8.4 19.6 7.4 20.4 Q3.4 18.6 3 13 Q2.6 6.4 9 1 Z" fill="%s"/><path d="M9 4 L9 17" stroke="%u" stroke-width="1" fill="none"/><path d="M9 9.4 Q12.2 12 12.6 15.6 M9 9.4 Q5.8 12 5.4 15.6" stroke="%u" stroke-width="0.8" fill="none"/>',
 		dragonfly: '40 26|<g fill="#9CCBEF" opacity="0.85"><ellipse cx="14" cy="7" rx="8" ry="2.6" transform="rotate(-14 14 7)"/><ellipse cx="14" cy="19" rx="8" ry="2.6" transform="rotate(14 14 19)"/><ellipse cx="20.4" cy="8.6" rx="6.6" ry="2.2" transform="rotate(-8 20 8.6)"/><ellipse cx="20.4" cy="17.4" rx="6.6" ry="2.2" transform="rotate(8 20 17)"/></g><path d="M11 13 38 13" stroke="#1864AB" stroke-width="2.6" stroke-linecap="round"/><g stroke="#74C0FC" stroke-width="1"><path d="M23 12v2.8M27 12v2.4M31 12v2M35 12v2"/></g><ellipse cx="11" cy="13" rx="4.2" ry="3.4" fill="#1864AB"/><circle cx="6.4" cy="13" r="3.6" fill="#1864AB"/><circle cx="5.2" cy="11.6" r="1.4" fill="#74C0FC"/>',
 		/* — birds & wildlife — */
@@ -2882,7 +2881,7 @@
 
 		/* --- Heroes: rare crossers. The heron (3-frame wingbeat, occasional
 		 * full landing sequence) is always in the rotation. --- */
-		var hero = null, heroNext = 0;
+		var hero = null, heroNext = 0, heroFrame = '';
 		var heroPool = ['heron'];
 		if (A.hero) { heroPool.push(A.hero); }
 		var HERON_FRAMES = ['heron0', 'heron1', 'heron2', 'heron1'];
@@ -3058,6 +3057,11 @@
 			if (h.kind === 'heron') {
 				var stand = h.land && h.st === 2;
 				var frame = stand ? 'heronstand' : HERON_FRAMES[((t / 260) | 0) % 4];
+				/* Recorded so a suite can prove the wingbeat actually cycles.
+				 * The frames are named in an ARRAY and indexed here, never as
+				 * sprite('heron0') literals, which is why a tool that only
+				 * greps for literal calls reports them unreferenced. */
+				heroFrame = frame;
 				var him = sprite(frame);
 				if (him.ready) {
 					if (h.dir > 0) { cx.scale(-1, 1); }
@@ -3859,6 +3863,7 @@
 				get cap() { return maxTotal; },
 				get vig() { return vig && vig.name; },
 				get hero() { return hero && hero.kind; },
+				get heroFrame() { return heroFrame; },
 				get evening() { return evening; },
 				get snowMax() { var m = 0; if (snowCols) { for (var k = 0; k < snowCols.length; k++) { m = mx2(m, snowCols[k]); } } return m; },
 				get frameAvg() { return frameAvg; },

@@ -244,7 +244,7 @@ bump so the tracked zip never lags the source.
   -o assets/js/<name>.min.js` for ambient/engine/matrix. Before 3.6.0 the engine's
   flags were unrecorded, which made one release's binary unreproducible and its
   size incomparable to the next.
-- **The engine's size baseline is 106,593 raw / 36,558 gzipped (4.1.0; 4.0.0 was 105,079 / 36,124; 3.18.0
+- **The engine's size baseline is 105,948 raw / 36,385 gzipped (4.1.1; 4.1.0 was 106,593 / 36,558; 4.0.0 was 105,079 / 36,124; 3.18.0
   was 97,933 / 34,373, 3.16.0 was 95,220 / 33,372, both verified live). Layer 1
   cost ~7.2KB raw. Cite the 4.0.0 number, not the 66KB/23KB ceiling.** That
   ceiling was real at 3.3.1 (65,736 / 23,191) and has been stale since 3.6.0, when the
@@ -592,6 +592,22 @@ bump so the tracked zip never lags the source.
   `validate-paths.js` now fails the build on a dangling scene name, the same
   way it does for sprites, and the retry clock moves whether or not a scene
   started.
+- **"Not referenced" is a HEURISTIC, and it has been wrong.** A sprite does
+  not have to be named at its call site: `heron0/1/2` live in an ARRAY
+  (`HERON_FRAMES`) indexed at draw time, and `letter1` is picked by a
+  TERNARY on the particle's height. A labeller matching only literal
+  `sprite('x')` calls reported all four as unused in 4.1.0 and sent a whole
+  round chasing a heron flyover that works perfectly. Both `sprite-sheet.js`
+  and `validate-paths.js` therefore count ANY quoted occurrence of a known
+  key outside the SVGS block. The two directions are not equally decidable,
+  so they are treated differently on purpose: a DANGLING reference (theme
+  names a sprite that does not exist) fails the build, because that is
+  exact; an UNREFERENCED sprite only warns, because it is a guess, and a
+  false "unused" costs a working feature while a missed one costs a few
+  hundred bytes. `--strict` turns the warning into a failure for a
+  deliberate cull. Before deleting any sprite, prove it does not draw —
+  `tools/test-orphans.js` shows how: force the thing that draws it and read
+  the canvas, never just re-check the table.
 - **Judge a sprite on BOTH grounds.** The effects run over a hero
   photograph, white body copy AND the navy footer, so
   `tools/sprite-sheet.js` renders every sprite on a light and a dark panel

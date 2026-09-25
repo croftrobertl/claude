@@ -177,11 +177,42 @@ function main() {
   for (const [k, where] of dangling) console.log(`DANGLING  '${k}' named by ${where} — no such sprite`);
   for (const h of heroes.missing) console.log(`DANGLING  hero '${h}' — the engine implements no such kind`);
   for (const v of vig.missing) console.log(`DANGLING  vignette '${v}' — VIGS names it but SCENES has no such scene`);
-  if (dead.length) console.log(`unreferenced sprite(s): ${dead.join(' ')}`);
+  /* THE UNREFERENCED DIRECTION WARNS; IT DOES NOT FAIL THE BUILD.
+   *
+   * The two directions are not equally decidable, and treating them as if
+   * they were would be a mistake:
+   *
+   *   dangling   a theme names a sprite -> does that sprite exist? Exactly
+   *              decidable. The key is in the registry or it is not. This
+   *              fails the build, and should.
+   *
+   *   unreferenced  a sprite exists -> can anything reach it? NOT decidable
+   *              by grep. Sprites arrive on screen through arrays indexed
+   *              at draw time (HERON_FRAMES), ternaries on particle state
+   *              (letter0/letter1), computed prefixes, the accents map and
+   *              hero kinds. A stricter matcher reported heron0, heron1,
+   *              heron2 and letter1 as unused in 4.1.0 — all four were
+   *              being drawn, and three of them are the year-round heron
+   *              flyover, which is the most on-brand thing this plugin has.
+   *              That false positive nearly deleted a working animation.
+   *
+   * So this is a WARNING with a name attached, not a gate. A false "unused"
+   * costs a working feature; a missed one costs a few hundred bytes until
+   * someone looks. Pass --strict to make it fail, for a deliberate cull. */
+  if (dead.length) {
+    console.log(`\nUNREFERENCED (warning, not a build failure): ${dead.join(' ')}`);
+    console.log('  Nothing was found that can reach these. Before deleting any of them,');
+    console.log("  grep for the key in engine.js — arrays, ternaries and the accents map");
+    console.log('  all reach sprites without naming them at the call site.');
+  }
 
-  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${vig.defined.size} vignettes · ${dangling.length + heroes.missing.length + vig.missing.length} dangling`);
+  console.log(`\n${checked} path elements checked · ${badSprites} sprite(s) malformed · ${keys.size} sprites · ${refs.size} references · ${vig.defined.size} vignettes · ${dangling.length + heroes.missing.length + vig.missing.length} dangling · ${dead.length} unreferenced`);
   if (badSprites) { console.log('BUILD FAILURE: malformed path data would render with parts missing.'); process.exit(1); }
   if (dangling.length || heroes.missing.length || vig.missing.length) { console.log('BUILD FAILURE: a theme or scene names something that does not exist; it would draw nothing and say nothing.'); process.exit(1); }
+  if (dead.length && process.argv.includes('--strict')) {
+    console.log('BUILD FAILURE (--strict): sprites nothing can reach.');
+    process.exit(1);
+  }
   console.log('all paths valid');
 }
 if (require.main === module) main();

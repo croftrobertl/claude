@@ -583,7 +583,15 @@ class Themes {
                         ['s' => 'sabalpalm', 'b' => 'grow', 'w' => 2, 'sz' => [26, 34]],
                         ['s' => 'hibiscus', 'b' => 'fall', 'w' => 2, 'sz' => [18, 24]],
                         ['s' => 'skiff', 'b' => 'cruise', 'face' => 'L', 'sz' => [30, 38]],
-                        ['s' => 'conch', 'b' => 'tumble', 'sz' => [16, 22]],
+                        /* Cut in 4.1.1 at the owner's call — it never resolved
+                         * into a readable shell at scene scale, two redraws in.
+                         * The flamingo replaces it rather than leaving the
+                         * year-round base a sprite thinner: it is the most
+                         * on-brand Florida bird after the heron. snowbird flies
+                         * it in formation ('vee'); here it crosses alone, and
+                         * the two themes are months apart so the shared art
+                         * cannot read as repetition. */
+                        ['s' => 'flamingo', 'b' => 'fly', 'face' => 'L', 'w' => 2, 'sz' => [26, 34]],
                         ['s' => 'sun', 'b' => 'pulse', 'sz' => [26, 32]],
                         ['s' => 'sunshades', 'b' => 'tumble', 'sz' => [22, 28]],
                         ['s' => 'dragonfly', 'b' => 'dart'],

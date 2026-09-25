@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.1.0
+Stable tag: 4.1.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,38 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.1.1 =
+* The contact sheet's "not referenced" label was WRONG for four sprites,
+  and the sprites were fine. heron0, heron1, heron2 and letter1 are all
+  drawn: the heron frames live in an array that is indexed at draw time,
+  and letter1 is chosen by a ternary on the particle's height, so a tool
+  matching only literal sprite('name') calls could not see either. The
+  labeller now counts any quoted occurrence of a known key anywhere in the
+  engine, which is the same rule the path validator already used. 105 of
+  105 sprites now show an attribution; none say "not referenced".
+  Proved rather than asserted: a forced heron flyover cycles heron0, heron1
+  and heron2, with heron1 appearing about twice as often as the other two —
+  which is what the [0,1,2,1] wingbeat requires — and puts ink on the
+  canvas. This is the year-round heron, the most on-brand thing the plugin
+  draws, and it has been working all along.
+* The path validator now reports UNREFERENCED sprites as well as dangling
+  references. It warns rather than failing, deliberately: "does this sprite
+  exist" is exactly decidable, but "can anything reach this sprite" is a
+  heuristic over quoted occurrences, and a stricter version of it produced
+  four false positives this round that nearly deleted a working animation.
+  Pass --strict to turn it into a build failure for a deliberate cull.
+* 'conch' is removed at the owner's call — two redraws in, it never
+  resolved into a readable shell at scene scale. Florida Keys is not left a
+  sprite thinner: a flamingo takes its place, the most on-brand Florida bird
+  after the heron. Snowbird flies it in formation; here it crosses alone,
+  and the two themes are months apart, so the shared art cannot read as
+  repetition.
+* christmas keeps the warm bokeh subtle effect rather than snow. It does
+  not snow in Central Florida; the dropdown is there if that judgement ever
+  changes.
+* Build: engine.min.js is 105,948 raw / 36,385 gzipped (4.1.0: 106,593 /
+  36,558). Sprite count 106 -> 105.
 
 = 4.1.0 =
 * FIXED, HIGHEST PRIORITY — the "All pages except cottage pages" scope

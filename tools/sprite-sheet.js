@@ -62,7 +62,7 @@ function readEngine() {
  * reaches the screen through a theme particle list, an engine vignette, a
  * hero kind or the hardcoded accents map, and a sheet that only knew about
  * the first of those would label 19 sprites "unused" that are not. */
-function themeIndex() {
+function themeIndex(keys) {
   const php = fs.readFileSync(path.join(ROOT, 'dcc-seasons', 'includes', 'class-themes.php'), 'utf8');
   const js = fs.readFileSync(ENGINE, 'utf8');
   const fn = php.slice(php.indexOf('function themes()'), php.indexOf('function labels()'));
@@ -88,8 +88,26 @@ function themeIndex() {
   for (const m of acc.matchAll(/([a-z0-9_]+): \['([A-Za-z0-9_]+)'/g)) add(m[2], m[1] + ' (accent)');
   for (const m of js.matchAll(/\bdspr\('([A-Za-z0-9_]+)'/g)) add(m[1], 'vignette');
   for (const m of js.matchAll(/\bsprite\('([A-Za-z0-9_]+)'/g)) add(m[1], 'engine');
-  for (const m of js.matchAll(/'([A-Za-z0-9_]+)' \+ /g)) {
-    for (const k of Object.keys(JSON)) { /* noop, keeps lint quiet */ break; }
+
+  /* THE CATCH-ALL, and it is not optional. A sprite does not have to be
+   * named as a literal at its call site:
+   *
+   *   heron0/1/2  live in an ARRAY (HERON_FRAMES) that is indexed at draw
+   *               time — sprite() never sees the name;
+   *   letter1     is chosen by a TERNARY on the particle's height.
+   *
+   * Matching only literal sprite('x') calls reported all four as "not
+   * referenced", which sent a whole round chasing a heron flyover that
+   * works perfectly — and nearly got three frames of it deleted. So any
+   * quoted occurrence of a known key ANYWHERE in the engine outside the
+   * SVGS registry counts. This is the same loose rule validate-paths.js
+   * uses for its dead-sprite direction, and for the same reason: a false
+   * "unused" is far more expensive than a missed one. */
+  const block = (js.match(/var SVGS = \{[\s\S]*?\n\t\};/) || [''])[0];
+  const outside = block ? js.replace(block, '') : js;
+  const known = new Set(keys);
+  for (const m of outside.matchAll(/'([A-Za-z0-9_]+)'/g)) {
+    if (known.has(m[1])) { add(m[1], 'engine'); }
   }
   return idx;
 }
@@ -139,7 +157,7 @@ function svgDoc(raw, PAL) {
     return { name: n, w, h, svg, svgSmall, kind: typeof SVGS[n] === 'function' ? 'procedural' : 'markup' };
   });
 
-  const IDX = themeIndex();
+  const IDX = themeIndex(names);
   cells.forEach(c => {
     const w = IDX.get(c.name);
     c.where = w ? [...w].join(', ') : '';
@@ -156,6 +174,13 @@ function svgDoc(raw, PAL) {
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
     });
   }
+
+  /* Report the attribution summary as a NUMBER, so "zero unreferenced" is
+   * something the tool states rather than something a human has to spot by
+   * scanning six PNGs. */
+  const unattributed = cells.filter(c => !c.where).map(c => c.name);
+  console.log(`  attribution: ${cells.length - unattributed.length}/${cells.length} sprites reachable · ` +
+    `${unattributed.length} not referenced${unattributed.length ? ': ' + unattributed.join(' ') : ''}`);
 
   const pages = Math.ceil(cells.length / PER_PAGE);
   for (let p = 0; p < pages; p++) {

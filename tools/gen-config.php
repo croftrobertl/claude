@@ -125,7 +125,11 @@ $config = [
      * .min.js, and that is what actually ships. */
     'matrixSrc'    => !empty($args['min']) ? 'matrix.min.js' : 'matrix.js',
     'engineSrc'    => !empty($args['min']) ? 'engine.min.js' : 'engine.js',
-    'heroEvery'    => [120, 180],
+    /* Heroes normally cross every 2-3 minutes. --heroevery=<seconds>
+     * shortens that so a suite can observe one without waiting. */
+    'heroEvery'    => isset($args['heroevery'])
+        ? [(int) $args['heroevery'], (int) $args['heroevery'] + 1]
+        : [120, 180],
     'preview'      => isset($args['theme']) ? (string) $args['theme'] : null,
     'previewLabel' => isset($args['theme']) ? (string) $args['theme'] : '',
     'version'      => 'test',
