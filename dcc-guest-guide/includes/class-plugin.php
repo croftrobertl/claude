@@ -59,9 +59,14 @@ final class Plugin
         // plugin may create it, and any may be deactivated); 30 is this
         // plugin's assigned slot in the agreed cross-plugin ordering; 999
         // drops the duplicate first item WordPress auto-generates.
-        add_action('admin_menu', [$this, 'register_dcc_parent_menu'], 5);
+        // v0.21.0: the shared `dcc` parent is owned by the site-side mu-plugin
+        // dcc-menu.php. This plugin no longer registers it and no longer runs a
+        // duplicate cleanup — it only hangs its own submenu off it, at the
+        // priority reserved for this plugin in the live register
+        // (20 contact-form, 30 guest-guide, 35 features-amenities, 40 seasons,
+        // 45 cottage-selector, 50 custom-checkout, 55 availability-calendar,
+        // 63 wildlife).
         add_action('admin_menu', [$this, 'register_settings_page'], 30);
-        add_action('admin_menu', [$this, 'remove_dcc_parent_duplicate'], 999);
         add_action('admin_init', [$this, 'redirect_legacy_settings_url']);
         add_action('admin_init', [$this, 'register_settings_fields']);
         add_action('wp_ajax_dccgg_ai_query',        [$this, 'handle_ai_query']);
@@ -1008,38 +1013,7 @@ final class Plugin
         return array_keys($out);
     }
 
-    /**
-     * Shared top-level "DCC" menu. Several DCC plugins register this same
-     * parent, so it is created only when absent — registration is therefore
-     * idempotent and order-independent, and the menu survives any single
-     * plugin being deactivated. The slug, titles, capability, icon and
-     * position are a fixed cross-plugin contract: diverging on any of them
-     * silently produces a SECOND "DCC" menu.
-     */
-    public function register_dcc_parent_menu(): void
-    {
-        global $admin_page_hooks;
-        if (!isset($admin_page_hooks['dcc'])) {
-            add_menu_page(
-                __('Dora Canal Court', 'dcc-guest-guide'),
-                __('DCC', 'dcc-guest-guide'),
-                'manage_options',
-                'dcc',
-                '',                    // no page of its own; the first submenu becomes the landing page
-                'dashicons-palmtree',
-                58
-            );
-        }
-    }
 
-    /**
-     * WordPress auto-generates a submenu mirroring the parent label. Remove
-     * it — guarded, so it is harmless if another DCC plugin got there first.
-     */
-    public function remove_dcc_parent_duplicate(): void
-    {
-        remove_submenu_page('dcc', 'dcc');
-    }
 
     /**
      * Old bookmarks pointed at Settings → DCC Guest Guide. That URL no longer
@@ -1079,12 +1053,21 @@ final class Plugin
         );
     }
 
+
     public function register_settings_fields(): void
     {
         register_setting('dccgg_settings_group', 'dccgg_gemini_key', [
             'type'              => 'string',
             'sanitize_callback' => 'sanitize_text_field',
             'default'           => '',
+        ]);
+        // v0.21.0: one row for everything new. The two Gemini options keep their
+        // own names deliberately — they work, they are read elsewhere, and one
+        // is a credential; migrating them would buy nothing and could lose a key.
+        register_setting('dccgg_settings_group', Settings::OPTION, [
+            'type'              => 'array',
+            'sanitize_callback' => ['\DCCGG\Settings', 'sanitize'],
+            'default'           => Settings::defaults(),
         ]);
         register_setting('dccgg_settings_group', 'dccgg_gemini_model', [
             'type'              => 'string',
@@ -1156,9 +1139,9 @@ final class Plugin
         <div class="wrap">
             <h1><?php echo esc_html__('DCC Guest Guide', 'dcc-guest-guide'); ?></h1>
             <p><?php echo esc_html__('Server-side settings shared by all DCC Guest Guide widgets on this site. Per-widget settings live in Elementor.', 'dcc-guest-guide'); ?></p>
-            <?php $this->render_search_misses_panel(); ?>
             <form method="post" action="options.php">
                 <?php settings_fields('dccgg_settings_group'); ?>
+                <?php $this->render_settings_tabs(); ?>
                 <h2><?php echo esc_html__('AI Fallback Search', 'dcc-guest-guide'); ?></h2>
                 <p class="description">
                     <?php echo esc_html__('Optional. When a guest\'s search returns no fuzzy matches, the widget can offer an "Ask anything" button that routes the question to Google Gemini with the guide content as context.', 'dcc-guest-guide'); ?><br>
@@ -1187,8 +1170,63 @@ final class Plugin
                 </table>
                 <?php submit_button(); ?>
             </form>
+            <?php $this->render_search_misses_panel(); ?>
         </div>
         <?php
+    }
+
+    /**
+     * The settings themselves, grouped. Common first, Advanced last and
+     * collapsed; every panel is part of the SAME form, because a checkbox that
+     * is off posts nothing and a per-tab submit would silently clear the tabs
+     * the user was not looking at.
+     */
+    private function render_settings_tabs(): void
+    {
+        $values = Settings::all();
+        $first  = true;
+        foreach (Settings::schema() as $tab_key => $tab) {
+            $advanced = ($tab_key === 'advanced');
+            ?>
+            <details class="dccgg-settings-tab" <?php echo (!$advanced && $first) ? 'open' : ($advanced ? '' : 'open'); ?>>
+                <summary style="cursor:pointer;font-size:1.1em;font-weight:600;margin:18px 0 6px">
+                    <?php echo esc_html($tab['label']); ?>
+                </summary>
+                <table class="form-table" role="presentation">
+                    <?php foreach ($tab['fields'] as $key => $f) :
+                        $id    = 'dccgg_' . $key;
+                        $name  = esc_attr(Settings::OPTION) . '[' . esc_attr($key) . ']';
+                        $value = $values[$key] ?? $f['default']; ?>
+                        <tr>
+                            <th scope="row"><label for="<?php echo esc_attr($id); ?>"><?php echo esc_html($f['label']); ?></label></th>
+                            <td>
+                                <?php if ($f['type'] === 'bool') : ?>
+                                    <input type="checkbox" id="<?php echo esc_attr($id); ?>" name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput ?>" value="1" <?php checked((bool) $value); ?>>
+                                <?php elseif ($f['type'] === 'int') : ?>
+                                    <input type="number" id="<?php echo esc_attr($id); ?>" name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput ?>"
+                                           value="<?php echo esc_attr((string) $value); ?>" min="<?php echo (int) $f['min']; ?>" max="<?php echo (int) $f['max']; ?>" class="small-text">
+                                <?php elseif ($f['type'] === 'select') : ?>
+                                    <select id="<?php echo esc_attr($id); ?>" name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput ?>">
+                                        <?php foreach ($f['options'] as $ov => $ol) : ?>
+                                            <option value="<?php echo esc_attr($ov); ?>" <?php selected((string) $value, (string) $ov); ?>><?php echo esc_html($ol); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php else : ?>
+                                    <input type="<?php echo $f['type'] === 'url' ? 'url' : 'text'; ?>" id="<?php echo esc_attr($id); ?>"
+                                           name="<?php echo $name; // phpcs:ignore WordPress.Security.EscapeOutput ?>"
+                                           value="<?php echo esc_attr((string) $value); ?>" class="regular-text">
+                                <?php endif; ?>
+                                <?php if (!empty($f['help'])) : ?>
+                                    <p class="description"><?php echo esc_html($f['help']); ?></p>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+            </details>
+            <?php
+            $first = false;
+        }
     }
 
     /**

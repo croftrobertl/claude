@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.20.0
+Stable tag: 0.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,29 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.21.0 =
+
+**Fixed: the guide's text was bold everywhere.** The theme sets a heavy weight
+for the whole site, and the guide was inheriting it instead of setting its
+own, so every paragraph a guest read came out bold. This is the fix that was
+attempted in 0.13.0 — it did not work, because the check that was supposed to
+catch it was run against an ordinary page rather than this site.
+
+**Changed: small buttons are easier to hit.** The checkbox, read-aloud,
+report, Show/Hide, Copy and Reset controls now accept a tap over a larger
+area than they occupy. Nothing looks any different — no button changed size.
+
+**Added: a settings page with real settings.** Guest experience, Public guide
+and Advanced sections covering things that previously needed a new release:
+how long the copy tick shows, whether revealed passwords re-hide themselves,
+how many failed searches to keep, the support-request limit, and how a masked
+password reaches a guest. Everything defaults to exactly what the plugin did
+before, and settings added in future updates take effect immediately rather
+than waiting for you to press Save.
+
+**Note for the site:** this version no longer creates the shared "DCC" admin
+menu itself — it now expects the site's own menu plugin to provide it.
 
 = 0.20.0 =
 

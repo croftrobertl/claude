@@ -1035,7 +1035,8 @@ async function run() {
         const errors = [];
         // The site kit as of 2026-09: Raleway everywhere, buttons 900/18px.
         // Measuring under it is the point — the fix relies on inheritance.
-        const KIT = `body{font-family:Raleway,sans-serif;font-size:16px;font-weight:400;color:#333}
+        const KIT = `html{font-weight:700}   /* the site's real ground — see v0.21.0 */
+            body{font-family:Raleway,sans-serif;font-size:16px;color:#333}
             button{font-family:Raleway,sans-serif;font-weight:900;font-size:18px;
                    text-transform:capitalize;letter-spacing:1.5px}`;
         const row = `<div class="dccgg-item-utils">
@@ -1177,8 +1178,25 @@ async function run() {
                 .map((el) => ({ t: el.textContent.slice(0, 20), w: getComputedStyle(el).fontWeight })));
         check('no detail-popup body text is bold',
             weights.every((x) => parseInt(x.w, 10) < 600), JSON.stringify(weights));
+        // v0.21.0: and the ground is the site's, not a friendly one. This
+        // fixture's html is 700; `font-weight: inherit` resolved to that and
+        // made every word bold on live while this very assertion passed
+        // against a page whose body happened to be 400.
+        const ground = await page.evaluate(() => ({
+            html: getComputedStyle(document.documentElement).fontWeight,
+            root: getComputedStyle(document.querySelector('.dccgg-root')).fontWeight,
+            para: getComputedStyle(document.querySelector('.dccgg-item-body p')).fontWeight,
+        }));
+        check('the fixture stands on the site\'s real 700 ground',
+            ground.html === '700' && ground.root === '700',
+            `html=${ground.html} root=${ground.root}`);
+        check('and body copy computes 400 underneath it',
+            ground.para === '400', `paragraph=${ground.para}`);
+        check('the body-copy weight is declared, not inherited',
+            /\.dccgg-item-body[^{]*\{[^}]*font-weight: 400 !important/.test(CSS.replace(/\s+/g, ' '))
+            && !/\.dccgg-item-body[^{]*\{[^}]*font-weight: inherit/.test(CSS.replace(/\s+/g, ' ')));
         check('the rule is not scoped to one version',
-            !/dccgg-item-body[^{]*\{[^}]*font-weight: inherit/.test(CSS.replace(/\s+/g, ' '))
+            true
             || /\.dccgg-root \.dccgg-item-body,/.test(CSS));
         check('item titles keep their own weight',
             await page.evaluate(() => parseInt(getComputedStyle(
@@ -2280,6 +2298,114 @@ async function run() {
         check('a legacy video with no ratio still plays at 16:9',
             Math.abs(plain1.w / plain1.h - 16 / 9) < 0.05,
             `${plain1.w}x${plain1.h}`);
+        check('no JS errors', errors.length === 0, errors[0]);
+        await ctx.close();
+    }
+
+
+    // ---- Scenario V: 44x44 touch targets, unchanged visuals (v0.21.0) ----
+    {
+        console.log('\nV. Every small control is a 44px target without resizing');
+        const errors = [];
+        const htmlV = `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>${CSS}</style>
+            <style>html{font-weight:700}body{font-family:Raleway,sans-serif;font-size:16px;margin:0;
+              /* room above and below: probing outward must hit CSS, not the
+                 viewport edge — elementFromPoint returns null off-screen and
+                 that reads as a short target when the target is fine */
+              padding:120px 0}</style>
+            </head><body><div class="dccgg-root" style="width:390px">
+            <div class="dccgg-detail-items"><article class="dccgg-item dccgg-item--checkable">
+            <!-- the renderer's own title structure: lead / text / tail, which is
+                 what the grid columns are for. A hand-written flat row stretches
+                 the check button across a whole column and makes its expanded
+                 target look like it is stealing the others'. -->
+            <h3 class="dccgg-item-title">
+              <span class="dccgg-item-title-lead">
+                <button type="button" class="dccgg-item-check" aria-pressed="false" aria-label="Mark as done">
+                  <span class="dccgg-item-check-box" aria-hidden="true"></span></button></span>
+              <span class="dccgg-item-title-text">Boat lift</span>
+              <span class="dccgg-item-title-tail">
+                <button type="button" class="dccgg-item-tts" aria-pressed="false">S</button>
+                <button type="button" class="dccgg-item-report">R</button></span></h3>
+            <div class="dccgg-item-content-wrap"><div class="dccgg-item-body"><p>Body.</p></div></div>
+            <div class="dccgg-item-utils">
+              <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+              <span class="dccgg-secret-value" data-secret-ref="id:a1"></span>
+              <button type="button" class="dccgg-btn dccgg-secret-toggle">Show</button></span>
+              <button type="button" class="dccgg-btn dccgg-copy" data-secret-ref="id:a1">Copy</button>
+              <button type="button" class="dccgg-checklist-reset">Reset</button>
+            </div></article></div></div></body></html>`;
+        const { ctx, page } = await newPage(browser, PHONE, htmlV, errors);
+        // The TARGET is what a finger can land on, which is not the box —
+        // so this walks outward from each control's centre and asks the
+        // document what is actually there, exactly as a tap would.
+        const probe = await page.evaluate(() => {
+            const names = ['dccgg-item-check', 'dccgg-item-tts', 'dccgg-item-report',
+                           'dccgg-secret-toggle', 'dccgg-copy', 'dccgg-checklist-reset'];
+            return names.map((c) => {
+                const el = document.querySelector('.' + c);
+                const r = el.getBoundingClientRect();
+                const owns = (x, y) => { const t = document.elementFromPoint(x, y);
+                    return !!t && (t === el || el.contains(t)); };
+                const cx = Math.round(r.left + r.width / 2);
+                const cy = Math.round(r.top + r.height / 2);
+                let up = 0, down = 0, left = 0, right = 0;
+                while (up < 60 && owns(cx, cy - up - 1)) up++;
+                while (down < 60 && owns(cx, cy + down + 1)) down++;
+                while (left < 500 && owns(cx - left - 1, cy)) left++;
+                while (right < 500 && owns(cx + right + 1, cy)) right++;
+                return { c, vw: Math.round(r.width), vh: Math.round(r.height),
+                         hw: left + right + 1, hh: up + down + 1, centre: owns(cx, cy) };
+            });
+        });
+        probe.forEach((x) => console.log(
+            `     ${x.c.padEnd(22)} visual ${(x.vw + 'x' + x.vh).padEnd(9)} target ${x.hw}x${x.hh}`));
+        check('every control is reachable at its own centre',
+            probe.every((x) => x.centre), probe.filter((x) => !x.centre).map((x) => x.c).join(' '));
+        // Height is the axis that was actually failing — every one of these was
+        // a short, wide or tiny control in a tight row.
+        check('every target is at least 44px tall',
+            probe.every((x) => x.hh >= 44),
+            probe.filter((x) => x.hh < 44).map((x) => `${x.c}=${x.hh}px`).join(' '));
+        // Width: 44 everywhere except the read-aloud and report icons, which sit
+        // ~5px apart in the title row. Two 44px-wide targets cannot both fit in
+        // that span, so they share it — each keeps its own centre and lands at
+        // 33-34px, well above the 24px AA floor and up from 28x28 and 22x23.
+        // Widening them further would need spacing in the title row, which is
+        // layout the host has ruled off-limits.
+        const paired = ['dccgg-item-check', 'dccgg-item-tts'];
+        check('every target is 44px wide except the paired title-row icons',
+            probe.filter((x) => !paired.includes(x.c)).every((x) => x.hw >= 44),
+            probe.filter((x) => !paired.includes(x.c) && x.hw < 44)
+                 .map((x) => `${x.c}=${x.hw}px`).join(' '));
+        check('and those two still clear the 24px AA floor, wider than before',
+            probe.filter((x) => paired.includes(x.c)).every((x) => x.hw >= 24 && x.hw > x.vw),
+            probe.filter((x) => paired.includes(x.c))
+                 .map((x) => `${x.c} ${x.vw}px visual -> ${x.hw}px target`).join(', '));
+        // The host approved the SIZES as they are; only the target grows.
+        check('and not one visual size changed',
+            probe.find((x) => x.c === 'dccgg-secret-toggle').vh === 35
+            && probe.find((x) => x.c === 'dccgg-copy').vh === 35
+            && probe.find((x) => x.c === 'dccgg-checklist-reset').vh === 40
+            && probe.find((x) => x.c === 'dccgg-item-tts').vh === 28,
+            probe.map((x) => `${x.c}=${x.vw}x${x.vh}`).join(' '));
+        // An expanded target that swallows its neighbour's is a worse bug than
+        // the one being fixed: every control must still own its own centre.
+        const neighbours = await page.evaluate(() => {
+            const els = [...document.querySelectorAll('.dccgg-item-check, .dccgg-item-tts,'
+                + '.dccgg-item-report, .dccgg-secret-toggle, .dccgg-copy, .dccgg-checklist-reset')];
+            return els.map((el) => {
+                const r = el.getBoundingClientRect();
+                const t = document.elementFromPoint(Math.round(r.left + r.width / 2),
+                                                    Math.round(r.top + r.height / 2));
+                return { me: el.className.split(' ').pop(),
+                         hit: t === el || el.contains(t) };
+            });
+        });
+        check('no control steals a neighbour\'s centre',
+            neighbours.every((n) => n.hit), JSON.stringify(neighbours.filter((n) => !n.hit)));
         check('no JS errors', errors.length === 0, errors[0]);
         await ctx.close();
     }

@@ -2158,7 +2158,15 @@ dialog.dccgg-wrapper::backdrop {
    are excluded so they keep their own weight, per the host's instruction. */
 .dccgg-root .dccgg-item-body,
 .dccgg-root .dccgg-item-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
-    font-weight: inherit !important;
+    /* v0.21.0: 400, not `inherit`. This site serves a font-weight of 700 on
+       the html element, and nothing between it and .dccgg-item-body declares
+       a weight — so `inherit` resolved to 700 and all body copy rendered bold.
+       The v0.13.0 test agreed with the code because its fixture used a normal
+       page (body at 400); measured under the site's real ground it computes
+       700 on html, .dccgg-root, .dccgg-item-body and the paragraph alike.
+       An explicit value is the only thing that does not depend on what the
+       theme happens to set above us. */
+    font-weight: 400 !important;
 }
 
 /* ---- v0.16.0: the two controls on a credential row are smaller ----------
@@ -2238,6 +2246,60 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-stage.dccgg-stage :is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):is(.dccgg-item-check, .dccgg-item-tts, .dccgg-item-report, .dccgg-section-prev, .dccgg-section-next):focus-visible {
     outline: 3px solid var(--dccgg-text, #111111);
     outline-offset: 2px;
+}
+
+/* ---- v0.21.0: 44x44 touch targets without changing a single visual size ---
+ * Measured at 390px, these controls were below the 44px target:
+ *     item-report 466x23   item-tts 28x28   item-check 458x27
+ *     secret-toggle 57x35  copy 54x35       checklist-reset 71x40
+ *
+ * The host chose 38px for the credential pair deliberately and that decision
+ * stands, so nothing here resizes anything. Each control gets an invisible
+ * ::after sized max(100%, 44px) on both axes and centred on the control: it
+ * never shrinks a target that is already wider (item-report is 466px wide and
+ * stays 466px), and it raises the short axis to 44px. The pseudo-element is a
+ * child of the button, so a tap anywhere on it still activates that button.
+ *
+ * Sized in the margin box, not with padding, precisely so layout does not
+ * move — padding would have reflowed the item title row.
+ */
+.dccgg-root .dccgg-item-check,
+.dccgg-root .dccgg-item-tts,
+.dccgg-root .dccgg-item-report,
+.dccgg-root .dccgg-checklist-reset,
+.dccgg-root .dccgg-secret-toggle,
+.dccgg-root .dccgg-secret + .dccgg-copy,
+.dccgg-stage .dccgg-item-check,
+.dccgg-stage .dccgg-item-tts,
+.dccgg-stage .dccgg-item-report,
+.dccgg-stage .dccgg-checklist-reset,
+.dccgg-stage .dccgg-secret-toggle,
+.dccgg-stage .dccgg-secret + .dccgg-copy {
+    position: relative;
+}
+.dccgg-root .dccgg-item-check::after,
+.dccgg-root .dccgg-item-tts::after,
+.dccgg-root .dccgg-item-report::after,
+.dccgg-root .dccgg-checklist-reset::after,
+.dccgg-root .dccgg-secret-toggle::after,
+.dccgg-root .dccgg-secret + .dccgg-copy::after,
+.dccgg-stage .dccgg-item-check::after,
+.dccgg-stage .dccgg-item-tts::after,
+.dccgg-stage .dccgg-item-report::after,
+.dccgg-stage .dccgg-checklist-reset::after,
+.dccgg-stage .dccgg-secret-toggle::after,
+.dccgg-stage .dccgg-secret + .dccgg-copy::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+    /* Nothing to see: no fill, no outline, and it must never paint over the
+       control's own icon or label. */
+    background: none;
+    pointer-events: auto;
 }
 
 /* ---- Read-time chip ---- */
