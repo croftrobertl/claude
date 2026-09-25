@@ -59,7 +59,18 @@
     --mphbac-color-bg: #fdfdfd;
     --mphbac-font-size: 18px;
     --mphbac-days: 7;
-    --mphbac-cell-min: 38px;
+    /* 44, NOT 38, SINCE 0.41.0 — AN INTENDED CHANGE, NOT A DRIFT. The day
+       cell is the booking control: tapping one opens the booking popup. At
+       38px tall it was under the 44px target at every phone width measured
+       (month grid 38.9x38 at 320, 44.6x38 at 360, 49.3x38 at 393). Height is
+       free here — nothing constrains the calendar vertically — so it is the
+       one axis that can be fixed. WIDTH cannot: seven columns at 44 plus the
+       96px cottage column plus the 18px Elementor inset needs 440px, wider
+       than any phone, so the strip layout stays under 44 across and that is
+       accepted rather than contorted around.
+       The HEADER row stays at 38: it is a label, not a control, and nothing
+       in it is tappable. */
+    --mphbac-cell-min: 44px;
     --mphbac-header-min: 38px;
     --mphbac-label-width: 96px;
     --mphbac-radius: 4px;
@@ -2249,9 +2260,18 @@ body.mphbac-info-open {
 }
 .mphbac-root .mphbac-skeleton-row {
     display: grid;
-    grid-template-columns: var(--mphbac-label-width, 180px) 1fr;
+    /* 96, tracking the token. It said 180 — so if the token ever failed to
+       resolve the skeleton drew an 84px-wider cottage column than the grid
+       replacing it, which is the horizontal twin of the 42-vs-38 height this
+       same block had. Both are fixed in 0.41.0 and defaults-test.php now
+       fails if any var() fallback disagrees with its token. */
+    grid-template-columns: var(--mphbac-label-width, 96px) 1fr;
     gap: var(--mphbac-gap, 2px);
-    min-height: var(--mphbac-cell-min, 42px);
+    /* The fallback tracks the token above. It said 42 while the token said
+       38, so a browser that somehow lost the token drew a skeleton a
+       different height from the grid that replaces it — the one thing this
+       block exists to prevent. */
+    min-height: var(--mphbac-cell-min, 44px);
     background: var(--mphbac-color-namecol, #F8F9FA);
     border-radius: var(--mphbac-cell-radius, 0);
 }

@@ -209,7 +209,8 @@ final class Settings
 
             // ---- layout (advanced) ---------------------------------------
             'namecol_width'          => $int('layout', __('Cottage column width (px)', 'mphb-availability-calendar'), 96, 40, 300),
-            'cell_min_height'        => $int('layout', __('Day cell height (px)', 'mphb-availability-calendar'), 38, 24, 120),
+            'cell_min_height'        => $int('layout', __('Day cell height (px)', 'mphb-availability-calendar'), 44, 24, 120,
+                __('Tapping a day opens the booking popup, so this is a touch target. 44 is the floor to stay on or above.', 'mphb-availability-calendar')),
             'header_min_height'      => $int('layout', __('Date header height (px)', 'mphb-availability-calendar'), 38, 24, 120),
             'cell_radius'            => $int('layout', __('Day cell corner radius (px)', 'mphb-availability-calendar'), 4, 0, 24),
             'cell_gap'               => $int('layout', __('Gap between cells (px)', 'mphb-availability-calendar'), 2, 0, 12),
