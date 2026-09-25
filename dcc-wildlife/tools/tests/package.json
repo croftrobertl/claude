@@ -1,0 +1,8 @@
+{
+  "name": "dcc-wildlife-tests",
+  "private": true,
+  "description": "Browser harness deps. Run `npm install` here before the ui-*.mjs suites; they skip loudly without it.",
+  "devDependencies": {
+    "playwright-core": "^1.56.0"
+  }
+}
