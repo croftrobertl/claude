@@ -1054,6 +1054,23 @@ yours to improvise.
   "no longer consulted", so exposing it would mislead. The "22 of 23" in the
   v0.25.0 report came from a single-line regex that could not see multi-line
   `*_row(__(...), 'key'` calls; it was wrong in both numbers.
+- **A SETTING MUST REACH ITS CONSUMER — STANDING RULE ACROSS ALL DCC PLUGINS**
+  (named by the owner's courier 2026-09-26, after three other plugins were
+  found the same week with settings nothing reads). A knob that is registered,
+  rendered, sanitised and stored, but never read on the path that matters, is
+  worse than no knob: it looks wired up. Two instances caught in this plugin
+  before shipping, both by following the call chain rather than the diff:
+  `offered_guest_fee_steps()` hardcoding `8` (the CHECKOUT path) while
+  `guest_fee_steps()` honoured the setting, and the `admin_guest_max` clamp
+  that only made a difference at a value the default never reached. **The
+  check, for every new setting:** name each reader, confirm the value on the
+  guest-facing path is the one the setting produced, and add a mutation that
+  makes the setting inert — it must go red. Mutations
+  `cfg-offered-ignores-setting` and `ag-ceiling-raisable` are the two pins.
+  **v0.25.1 is installed and accepted on live (2026-09-26)**: the floor of 1
+  in both the sanitiser and `Config::included_guests()`, and the couch-note
+  gate. Keep `min_daily` unexposed. First-tap behaviour on the owner's iPhone
+  remains his to verify, not this repo's.
 - **TWO KNOBS WERE DELIBERATELY NOT EXPOSED**, against a general "expose
   everything tunable" instruction (v0.25.0, stated in the report rather than
   silently omitted):
