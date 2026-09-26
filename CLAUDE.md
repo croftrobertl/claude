@@ -1025,6 +1025,35 @@ yours to improvise.
   only exercised at the default setting, where it makes no difference — so the
   suite now seeds the setting ABOVE the ceiling, which is the only way the clamp
   is observable.
+- **`included_guests` FLOORS AT 1; ZERO IS A BOOKING OUTAGE, NOT A
+  CONFIGURATION** (v0.25.1, found by self-audit of v0.25.0 before it was
+  installed). v0.25.0 exposed the value and its sanitiser accepted 0 as
+  "coherent" — with a test asserting exactly that. It is not: at 0,
+  `Extra_Guest_Service`'s inactive branch refuses every room with
+  `adults > included` (every booking, while the Guest 3/4 switch is off), and
+  the non-guest-accommodation cap refuses every booking on Cottages 33/34
+  regardless; `checkout.js` meanwhile treats 0 as "unset" and uses 2, so PHP
+  and JS would disagree about who is charged. The floor is in BOTH the
+  sanitiser and `Config::included_guests()` (`max(1, …)`), because a filter
+  bypasses the sanitiser. `tests/guest34/` constructs the outage — drives the
+  accessor to 0 through its filter and asserts a one-guest booking still passes
+  on both paths. **The wrong test was the tell**: it encoded the belief rather
+  than the condition, and the rule at the top of this list would have caught it
+  if it had been run against the new code before shipping. Run it against your
+  own additions, not only the existing ones.
+  **The couch note is gated on `included_guests === 2`**
+  (`Config::offered_couch_note()`, which `Assets` reads). `couch_note_text()`
+  is a hash-pinned literal that says "Guests 1-2 are included" and cannot
+  follow the setting; now that the setting is on the admin page, any other value
+  would put a falsehood in front of a paying guest. Empty means the JS renders
+  nothing (it already tests `!I18N.couchNote`). The hash pin stays on the
+  literal; the gate is a separate method precisely so it can be tested.
+  **Render check, done properly**: 26 default keys, 23 rendered by a `*_row(`
+  call, 2 (`pet_accommodations`, `guest_accommodations`) rendered as dynamically
+  named checkbox sets, 1 (`min_daily`) **deliberately dormant** since 0.3.5 —
+  "no longer consulted", so exposing it would mislead. The "22 of 23" in the
+  v0.25.0 report came from a single-line regex that could not see multi-line
+  `*_row(__(...), 'key'` calls; it was wrong in both numbers.
 - **TWO KNOBS WERE DELIBERATELY NOT EXPOSED**, against a general "expose
   everything tunable" instruction (v0.25.0, stated in the report rather than
   silently omitted):

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.0
+Stable tag: 0.25.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,19 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.25.1 =
+* FIX (found by self-audit before 0.25.0 was installed anywhere): the new
+  "Guests included in the nightly rate" setting accepted 0. At 0 the server
+  refuses every booking while the Guests 3 and 4 switch is off, and refuses every
+  booking on Cottages 33 and 34 regardless. The floor is now 1, in the setting
+  and in the code that reads it, so the value cannot be reached from the admin
+  page or from a filter. Installing 0.25.0 could not have triggered this on its
+  own; it would have needed the owner to type 0 into that field.
+* The pull-out-couch note is now withheld when "Guests included" is anything but
+  2. It is a fixed sentence that says "Guests 1-2 are included" and cannot follow
+  the setting, so any other value would have shown guests a false statement.
+  At the default it is byte-for-byte what it was.
 
 = 0.25.0 =
 * NEW: an "Advanced" section on the settings page, collapsed by default, exposing

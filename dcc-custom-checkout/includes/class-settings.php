@@ -173,11 +173,12 @@ final class Settings
         /* v0.25.0 advanced knobs. Each falls back to its DEFAULT (not to 0 and
            not to whatever was posted) when the input is missing or out of
            range, so a malformed POST cannot quietly change checkout behaviour.
-           included_guests accepts 0 deliberately -- "nobody included" is a
-           coherent, if unusual, configuration; the others have a floor of 1
-           because a zero-length ladder or a zero-option dropdown is not. */
+           ALL FOUR HAVE A FLOOR OF 1. v0.25.0 accepted 0 for included_guests
+           as "coherent"; it is not -- at 0 the server refuses every booking
+           while the Guest 3/4 switch is off, and refuses every booking on
+           Cottages 33/34 regardless. See Config::included_guests(). */
         foreach ([
-            'included_guests'     => [0, 20],
+            'included_guests'     => [1, 20],
             'guest_fee_steps_max' => [1, 50],
             'admin_guest_fallback' => [1, 50],
             'admin_guest_max'     => [1, 50],

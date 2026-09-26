@@ -120,11 +120,15 @@ check('the ladder is still 8 rungs on that old row — nothing looks switched of
 /* A stored 0 is an explicit choice and must NOT be overwritten by the default:
    the merge direction matters, and getting it backwards would silently undo
    the owner's settings on every read. */
+/* Probe with 1 (default is 2): distinct from the default, and NOT subject to
+   the floor of 1. The first version stored 0 here, which the v0.25.1 floor
+   correctly lifts to 1 -- the merge-direction claim was never in doubt, the
+   probe value was. */
 fresh();
-$GLOBALS['opt']['dcc_checkout_settings'] = ['included_guests' => 0];
+$GLOBALS['opt']['dcc_checkout_settings'] = ['included_guests' => 1];
 Config::flush_cache();
-check('a stored 0 beats the default — saved values win over defaults',
-    Config::included_guests(), 0);
+check('a stored value beats the default — saved values win over defaults',
+    Config::included_guests(), 1);
 
 /* ===================================================================== *
  * 3. SANITISATION. Bad input falls back to the DEFAULT, never to 0 and
@@ -164,9 +168,34 @@ foreach ([
 /* A value inside range must survive, or the clamp is just a reset. */
 $in = $base; $in['guest_fee_steps_max'] = 12;
 check('sanitise: an in-range value is kept', $settings->sanitize($in)['guest_fee_steps_max'], 12);
+/* v0.25.1 — THIS ASSERTION USED TO SAY THE OPPOSITE. The first version
+   accepted 0 as "a coherent configuration". It is a booking outage: the
+   server refuses `adults > included` while the Guest 3/4 switch is off, and
+   on Cottages 33/34 always. The test encoded the belief; the self-audit
+   caught it before the zip was installed. tests/guest34 now constructs the
+   outage directly. */
 $in = $base; $in['included_guests'] = 0;
-check('sanitise: 0 included guests IS accepted — a coherent configuration',
-    $settings->sanitize($in)['included_guests'], 0);
+check('sanitise: 0 included guests is REFUSED and falls back to 2',
+    $settings->sanitize($in)['included_guests'], 2);
+
+/* The accessor has the same floor, because a filter bypasses the sanitiser
+   and checkout.js treats 0 as "unset" and uses 2 -- PHP and JS must agree. */
+fresh();
+$GLOBALS['filters']['dcc_checkout_included_guests'] = 0;
+check('a filter returning 0 is floored to 1, keeping PHP in step with the JS',
+    Config::included_guests(), 1);
+$GLOBALS['filters']['dcc_checkout_included_guests'] = -5;
+check('...and a negative value likewise', Config::included_guests(), 1);
+fresh();
+
+/* The couch note follows the setting the only safe way: by disappearing. */
+fresh();
+check('at the default, the offered couch note IS the pinned literal',
+    Config::offered_couch_note(), Config::couch_note_text());
+$GLOBALS['opt']['dcc_checkout_settings'] = ['included_guests' => 3];
+Config::flush_cache();
+check('at any other included count the note is withheld rather than shown false',
+    Config::offered_couch_note(), '');
 
 /* ===================================================================== *
  * 4. THE CEILING CANNOT BE RAISED BY A SETTING OR A FILTER.

@@ -234,6 +234,31 @@ check('... and the 302 stands down, because Rest_Guard answers in JSON',
     ran_redirect($eg), false);
 
 /* ===================================================================== *
+ * v0.25.1 — included_guests = 0 MUST NOT BE REACHABLE, because it is an
+ * outage. Constructed here: the accessor is driven to 0 through its filter
+ * (the sanitiser is the other guard and is tested in tests/settings), and a
+ * one-guest booking must still go through on both paths that read it.
+ * ===================================================================== */
+seed_live_config();
+$GLOBALS['filters']['dcc_checkout_included_guests'] = 0;
+check('outage guard: the accessor floors a 0 to 1', Config::included_guests(), 1);
+
+/* Path 1: fee ON, a non-guest accommodation (Cottage 33 = 1604) is capped at
+   `included`. At 0 a single guest would be refused. */
+switch_on();
+seed_post_with_fee();
+$_POST['mphb_room_details'][0] = ['room_type_id' => 1604, 'adults' => 1, 'services' => []];
+check('outage guard: one guest on Cottage 33 is NOT refused', $eg->find_violation(), null);
+
+/* Path 2: switch OFF, every room is capped at `included`. At 0 every booking
+   with any adults would be refused. */
+switch_off();
+seed_post_with_fee();
+$_POST['mphb_room_details'][0] = ['room_type_id' => 1065, 'adults' => 1, 'services' => []];
+check('outage guard: one guest with the switch off is NOT refused', $eg->find_violation(), null);
+$GLOBALS['filters'] = [];
+
+/* ===================================================================== *
  * THE FIELDS HALF — and the line decision 1 draws.
  * ===================================================================== */
 seed_live_config();

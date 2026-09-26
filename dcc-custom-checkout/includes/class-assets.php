@@ -396,7 +396,14 @@ final class Assets
                 // Cottage 34 (1607) have capacity 2 and no extra-guest service,
                 // so the note never renders there. Override with the
                 // dcc_checkout_couch_note filter if a cottage ever differs.
-                'couchNote'     => Config::couch_note_text(),
+                // GATED ON included_guests === 2 (v0.25.1). The note is a
+                // hash-pinned LITERAL that says "Guests 1-2 are included";
+                // it cannot follow the setting. Now that included_guests is on
+                // the settings page, any other value would make this sentence
+                // a falsehood shown to paying guests. Empty means the JS shows
+                // nothing (it already tests !I18N.couchNote). Default path is
+                // byte-identical.
+                'couchNote'     => Config::offered_couch_note(),
                 // Item 14 — the extra-guest row, relabelled for DISPLAY in the
                 // price breakdown. The MotoPress service itself (18063) keeps
                 // its own title, which is what admin screens and guest emails

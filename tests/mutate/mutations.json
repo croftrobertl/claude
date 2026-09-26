@@ -793,5 +793,39 @@
   "find": "    padding: 0;\n    margin: 0;\n    font: inherit;\n    color: inherit;",
   "replace": "    padding: 0;\n    margin: 0;\n    font-size: inherit;\n    color: inherit;",
   "count": 1
+ },
+ {
+  "id": "cfg-included-floor-zero",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings",
+   "guest34"
+  ],
+  "claim": "included_guests floors at 1 -- 0 is a booking outage",
+  "find": "        // installed. Asserted by constructing the outage in tests/guest34/.\n        return max(1, $n);",
+  "replace": "        // installed. Asserted by constructing the outage in tests/guest34/.\n        return max(0, $n);",
+  "count": 1
+ },
+ {
+  "id": "set-included-accepts-zero",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "the sanitiser refuses 0 included guests",
+  "find": "            'included_guests'     => [1, 20],",
+  "replace": "            'included_guests'     => [0, 20],",
+  "count": 1
+ },
+ {
+  "id": "cfg-couch-gate-removed",
+  "file": "dcc-custom-checkout/includes/class-config.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "the couch note is withheld when included_guests is not 2",
+  "find": "        return self::included_guests() === 2 ? self::couch_note_text() : '';",
+  "replace": "        return self::couch_note_text();",
+  "count": 1
  }
 ]

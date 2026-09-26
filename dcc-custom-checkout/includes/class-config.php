@@ -740,10 +740,36 @@ final class Config
         return max(1, min(50, $n));
     }
 
+    /**
+     * The couch note AS OFFERED TO A GUEST: the pinned literal, or '' when it
+     * would be false (v0.25.1).
+     *
+     * couch_note_text() is a hash-pinned LITERAL that says "Guests 1-2 are
+     * included". It cannot follow included_guests, and now that the setting is
+     * on the admin page any value but 2 would put a falsehood in front of a
+     * paying guest. Empty means checkout.js renders nothing (it already tests
+     * !I18N.couchNote). The default path returns the literal byte-for-byte.
+     * The hash pin stays on couch_note_text(); this is a gate, not a copy.
+     */
+    public static function offered_couch_note(): string
+    {
+        return self::included_guests() === 2 ? self::couch_note_text() : '';
+    }
+
     public static function included_guests(): int
     {
         $n = (int) apply_filters('dcc_checkout_included_guests', (int) self::settings()['included_guests']);
-        return max(0, $n);
+        // FLOOR IS 1, NOT 0 (v0.25.1). Zero is not a coherent configuration; it
+        // is a booking outage on two paths. Extra_Guest_Service's inactive
+        // branch refuses any room with `adults > included`, so at 0 EVERY
+        // booking is refused while the Guest 3/4 switch is off -- and the
+        // non-guest-accommodation cap (Cottages 33/34) refuses every booking
+        // there even with the fee on. checkout.js also treats 0 as "unset"
+        // and silently uses 2, so PHP and JS would disagree about who is
+        // being charged. v0.25.0 exposed this value on the settings page and
+        // its first sanitiser ACCEPTED 0; caught by self-audit before it was
+        // installed. Asserted by constructing the outage in tests/guest34/.
+        return max(1, $n);
     }
 
     /**
