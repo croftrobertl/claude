@@ -139,6 +139,25 @@ async function one(effect) {
     } finally { await ses.close(); }
   }
 
+  /* Intensity 0 must mean off too. The alpha curve has a deliberate floor
+   * and the count is floored at 3, so before 4.1.3 a slider dragged to zero
+   * still drew three particles at over half strength. */
+  console.log('\n  --- intensity 0 ---');
+  {
+    const cfg = config(['--subtle=leaves', '--intensity=0', '--theme=florida_keys', '--placement=content',
+      '--noparticles', '--richness=minimal', '--diag']);
+    const ses = await open(fixture({ kind: 'bravada', config: cfg }));
+    try {
+      await settle(ses.page);
+      const st = await ses.page.evaluate(() => {
+        const s = window.DCCSeasonsEngine && window.DCCSeasonsEngine._state;
+        return s ? s.subtle : null;
+      });
+      console.log('    state:', JSON.stringify(st));
+      ok(!!st && !st.on && st.n === 0, 'intensity 0 renders nothing', JSON.stringify(st));
+    } finally { await ses.close(); }
+  }
+
   for (const e of EFFECTS) { await one(e); }
 
   console.log(`\n${pass} passed · ${fail} failed`);

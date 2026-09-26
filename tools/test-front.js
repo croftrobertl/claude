@@ -220,12 +220,22 @@ async function hiddenTab() {
       const raf = requestAnimationFrame(function loop() { stop(); requestAnimationFrame(loop); });
       setTimeout(() => {
         const st = window.DCCSeasonsEngine && window.DCCSeasonsEngine._state;
-        Object.defineProperty(document, 'visibilityState', d || { configurable: true, get: () => 'visible' });
-        resolve({ paused: st ? !st.running : null, parts: st ? st.parts.length : null });
+        const whileHidden = st ? st.running : 'no-state';
+        /* Restore visibility and dispatch again: the flag must come back. */
+        if (d) { Object.defineProperty(Document.prototype, 'visibilityState', d); }
+        delete document.visibilityState; delete document.hidden;
+        document.dispatchEvent(new Event('visibilitychange'));
+        setTimeout(() => {
+          resolve({ whileHidden, afterVisible: st ? st.running : 'no-state', parts: st ? st.parts.length : null });
+        }, 120);
       }, 700);
     }));
     console.log('  ', JSON.stringify(r));
-    ok(r.paused !== false, 'the engine pauses when the tab is hidden', JSON.stringify(r));
+    /* The first version of this test read st.running before _state
+     * exposed it, got undefined, and passed unconditionally. Assert the
+     * REAL boolean, both ways, so a regression in either direction fails. */
+    ok(r.whileHidden === false, 'the engine pauses when the tab is hidden', `running=${r.whileHidden}`);
+    ok(r.afterVisible === true, 'and resumes when it is visible again', `running=${r.afterVisible}`);
   } finally { await ses.close(); }
 }
 

@@ -107,6 +107,22 @@ ok(abs($clamped2['subtle_intensity']) < 0.001, 'intensity is clamped to 0');
 $off = Settings::sanitize([]);
 ok($off['subtle'] === 0, 'an absent checkbox means off, as HTML forms require');
 
+echo "\n=== the stored map is OVERRIDES ONLY, even after a full-form save ===\n";
+/* The settings form posts a value for every one of the 27 themes on every
+ * save. Before 4.1.3 the sanitiser kept all of them, so one Save turned the
+ * stored map into a full copy that pinned every theme to that day's plugin
+ * default — and "an untouched theme keeps tracking the plugin" quietly
+ * became false. This reproduces a real save: all 27 as the plugin ships
+ * them, plus exactly one deliberate change. */
+$full = Themes::subtle_defaults();
+$full['halloween'] = 'snow';
+$saved = Settings::sanitize(['subtle_map' => $full]);
+ok(count($saved['subtle_map']) === 1, 'only the ONE changed theme is stored',
+    'stored ' . count($saved['subtle_map']) . ' entries: ' . implode(',', array_keys($saved['subtle_map'])));
+ok(($saved['subtle_map']['halloween'] ?? null) === 'snow', 'and it is the right one');
+$untouched = Settings::sanitize(['subtle_map' => Themes::subtle_defaults()]);
+ok($untouched['subtle_map'] === [], 'saving the form unchanged stores nothing at all');
+
 echo "\n=== effective map (defaults + overrides) ===\n";
 $eff = Settings::subtle_map(['subtle_map' => ['halloween' => 'snow']]);
 ok($eff['halloween'] === 'snow', 'the override wins');

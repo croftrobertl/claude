@@ -45,7 +45,7 @@ find mphb-availability-calendar -name '*.php' -print0 | xargs -0 -n1 php -l
 ( cd $(git rev-parse --show-toplevel) && zip -r mphb-availability-calendar.zip mphb-availability-calendar )
 ```
 
-There are no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. See `readme.txt` and the plan in `/root/.claude/plans/` for the manual smoke-test checklist.
+The Availability Calendar has no automated tests — runtime behavior can only be verified by installing the zip on a staging WordPress site. (DCC Seasons has a suite under `tools/`; see its section.) See `readme.txt` and the plan in `/root/.claude/plans/` for the manual smoke-test checklist.
 
 ## Architecture
 
@@ -338,9 +338,9 @@ bump so the tracked zip never lags the source.
   STAYING honestly too: `canTransfer()` says whether the covering element's
   background can move onto the canvas, in which case staying is worth full
   reach over the whole host. Keep 3.10.0's ordinary descend into the opaque
-  article working — `scratchpad/test-mount.js` asserts it — and check
+  article working — `tools/test-layering.js` covers the mount (the scratchpad mount suite did not survive) — and check
   `SCREEN REACH` in `?dcc_debug=1`, not just `CANVAS REACH`, before believing
-  the backdrop is fine. `scratchpad/test-host.js` holds the whole trade.
+  the backdrop is fine. The scratchpad host suite did not survive; `tools/test-layering.js` holds the reach half of the trade.
 - **A new theme does NOT reach an edited schedule by itself.** `migrate()`
   only replaces a stored schedule outright when it recognises it as the
   unmodified pre-3.7.0 default; anything the owner touched is converted row
@@ -356,10 +356,16 @@ bump so the tracked zip never lags the source.
   row, not a code path.** `Schedule::defaults()` ends with a Jan 1 - Dec 31
   row; because `active()` takes the NARROWEST containing range, the widest
   possible row loses to everything and wins only days nothing else claims.
-  Beware: 3.7.0's season rows already tile the year, so on the SHIPPED
-  defaults the base row wins zero days — it earns its keep on edited
-  schedules (on the live site it holds 87 summer days, because the owner
-  deleted summer_canal). `ambient.js` mirrors the key in `BASE_THEME` and
+  Until 4.0.0 the shipped rows tiled the year and the base row won ZERO
+  days; since 4.0.0 the DEFAULTS end spring_canal at 30 April and
+  summer_canal at 31 July, handing the base May and August (49-59 days a
+  year, `tools/test-schedule.js`). BUT A STORED SCHEDULE KEEPS ITS OLD
+  BOUNDS: `apply_new_themes()` only appends rows for absent themes and
+  `migrate()` only converts legacy Y-m-d rows, so nothing ever rewrites an
+  existing row's ends. The live site had all 26 rows in the new shape when
+  4.0.0 shipped, so the fix has never been active there — the owner must
+  re-set those two rows (or accept a one-click apply) for the base to win
+  anything. The 4.0.0 report failed to say this. `ambient.js` mirrors the key in `BASE_THEME` and
   falls back to it when no row matches.
 - **`enabled = 0` means NOTHING is printed — check it first.** `should_load()`
   returns at the master switch, so there is no config, no script tag and no
@@ -371,14 +377,14 @@ bump so the tracked zip never lags the source.
 - **Verify schedule coverage by walking real days, not against
   `Schedule::defaults()`.** The defaults always contain every theme, so a
   defaults-based test cannot see a stored schedule that is missing one.
-  `scratchpad/test-upgrade.php` walks 365 days, resolves every row for year-1
+  `tools/test-schedule.js` walks every day of 2024-2035, resolves every row for year-1
   and year, takes the narrowest containing range and asserts per-theme day
   counts.
 - **The schedule is rules, not dates** (`includes/class-schedule.php`). Rows are
   `{start:{on,off,m?,d?}, end:{…}, theme, label, year}`; `on` is `fixed` or a
   named anchor (`easter`, `thanksgiving`, `memorial_day`…). The SAME resolver
   exists in PHP (admin table) and in `ambient.js` (the visitor, from their local
-  date — cache-safe). `scratchpad/test-schedule.js` cross-checks them for every
+  date — cache-safe). `tools/test-schedule.js` cross-checks them for every
   anchor 2024–2035; keep both in step. Narrowest overlapping range wins its day.
   Pre-3.7.0 dated rows are migrated on read (`Schedule::migrate`).
 - **Tap counting is delegated** (one document listener, `closest()` against the
@@ -432,7 +438,7 @@ bump so the tracked zip never lags the source.
   themselves (`float`/`cruise`/`frogger` on the water line, `grow`/
   `berrycycle` below the fold, `fly`/`vee`/`toss`/`hop`/`waddle`/`chatter`
   entering off-screen) and the hero are exempt BY NOT BEING ROUTED THROUGH IT;
-  `scratchpad/test-spread.js` asserts their staging is still exact, so a new
+  the scratchpad spread suite asserted their staging and did not survive — rebuild it under `tools/` before touching `spreadPlace()`, so a new
   behaviour that wants deliberate placement must set its own x/y after the
   generic call, as they all do. Pass `y1 <= y0` for a fixed y and the pass
   spreads across x alone, against column totals — and note that pass counts
@@ -462,7 +468,7 @@ bump so the tracked zip never lags the source.
 - **The Schedule settings UI has two layouts and one markup.** Above 782px it
   is the six-column table the owner approved in 3.16.1 — treat that rendering
   as frozen and prove it with a pixel diff of the 1280px screenshot
-  (`scratchpad/render-sched6.php` + `scratchpad/shot-sched.js`) before shipping
+  (the scratchpad render/shot pair did not survive; rebuild under `tools/` first) before shipping
   any change to `class-settings.php` or `admin.css`. At 782px and below the
   same rows become cards, driven entirely by CSS plus the `data-dcc-label`
   attribute each cell carries (its own column heading, inert on the table).
@@ -485,10 +491,8 @@ bump so the tracked zip never lags the source.
   minus `textBoxes`, measured with RANGE rects over text nodes (glyph-tight
   horizontally, line-box tall) plus img/svg — never element block boxes. No
   footer means nothing renders; never fall back into the content, that is the
-  one outcome the setting exists to prevent. `scratchpad/test-footer.js` reads
-  the canvas's own pixels inside each text rect every frame, and
-  `scratchpad/gen-config.php` pins `placement: 'content'` so the older suites
-  keep testing the content backdrop they were written for. The footer selector
+  one outcome the setting exists to prevent. The scratchpad footer suite did not survive; `tools/gen-config.php` takes
+  `--placement=content|footer`, and `tools/test-layering.js` runs both. The footer selector
   lives in ONE place — the PHP config's `footerSel` — because the loader uses
   it to decide whether to fetch the engine at all and the engine uses it to
   mount; two copies could disagree. The loader's skip is suspended when
@@ -509,7 +513,8 @@ bump so the tracked zip never lags the source.
   engine is fetched by it on `requestIdleCallback`, +215ms AFTER the load
   event, and not at all under reduced motion, with the ambient layer off, or
   (since 3.18.1) under footer placement on a page with no footer. Re-measure
-  with `scratchpad/audit-load.js` before accepting any claim about what this
+  (the scratchpad audit-load script did not survive; rebuild it under `tools/`)
+  before accepting any claim about what this
   plugin costs a page.
 - **Coverage is NOT a load-time fact, and the stacking contexts are a red
   herring.** `fixCoverage()` runs at mount, at the 1200ms settled pass and on

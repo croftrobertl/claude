@@ -1614,7 +1614,13 @@
 			var map = SUBC.map || {};
 			subKey = map[themeKey] != null ? String(map[themeKey]) : (SUBTLE_FALLBACK[themeKey] || '');
 		}
-		var subEff = subKey && SUBTLE[subKey] ? SUBTLE[subKey] : null;
+		/* A slider at 0 must mean OFF. The alpha curve deliberately has a
+		 * floor (0.55x at intensity 0) so the layer stays visible across the
+		 * useful range, and the particle count is floored at 3 so a sparse
+		 * effect never reads as a glitch — but together those two floors meant
+		 * intensity 0 still drew three particles at over half strength, which
+		 * is not what anyone dragging a slider to zero is asking for. */
+		var subEff = (subIntensity > 0 && subKey && SUBTLE[subKey]) ? SUBTLE[subKey] : null;
 		var subParts = [], subShim = 0;
 
 		function subSeed(p, first) {
@@ -3874,6 +3880,11 @@
 				get sep() { return sepRun; },
 				get share() { return viewShare(); },
 				get placement() { return footMode ? 'footer' : 'content'; },
+				/* The frame loop's own flag, so a suite can prove the engine
+				 * actually pauses on a hidden tab rather than inferring it. The
+				 * first hidden-tab test read this before it existed, got
+				 * undefined, and passed unconditionally. */
+				get running() { return running; },
 				get subtle() {
 					/* Positions included so a suite can ask "did it move?"
 					 * deterministically. Reading that from canvas pixels is

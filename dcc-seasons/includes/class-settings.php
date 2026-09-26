@@ -554,8 +554,9 @@ class Settings {
          * shipped to every visitor. '' is kept — it means "no subtle layer
          * on this theme", which is a real choice. */
         $out['subtle_map'] = [];
-        $effects = self::subtle_effects();
-        $themes  = Themes::labels();
+        $effects  = self::subtle_effects();
+        $themes   = Themes::labels();
+        $plugin   = Themes::subtle_defaults();
         if (!empty($in['subtle_map']) && is_array($in['subtle_map'])) {
             foreach ($in['subtle_map'] as $theme => $eff) {
                 $theme = sanitize_key((string) $theme);
@@ -563,9 +564,20 @@ class Settings {
                 if (!isset($themes[$theme])) {
                     continue;
                 }
-                if ($eff === '' || isset($effects[$eff])) {
-                    $out['subtle_map'][$theme] = $eff;
+                if ($eff !== '' && !isset($effects[$eff])) {
+                    continue;
                 }
+                /* OVERRIDES ONLY — and this line is what makes that true.
+                 * The form posts a value for all 27 themes on every save,
+                 * so without this the stored map became a full copy after
+                 * the first save and silently pinned every theme to
+                 * whatever the plugin's default was THAT day. An untouched
+                 * theme is supposed to keep tracking the plugin; a value
+                 * equal to the plugin's own is therefore not stored. */
+                if (array_key_exists($theme, $plugin) && $plugin[$theme] === $eff) {
+                    continue;
+                }
+                $out['subtle_map'][$theme] = $eff;
             }
         }
         foreach (['fx_reflections', 'fx_vignettes', 'fx_pointer', 'fx_evening', 'fx_snow'] as $fx) {

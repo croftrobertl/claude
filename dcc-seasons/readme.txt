@@ -4,7 +4,7 @@ Tags: seasonal, particles, easter egg, matrix, canvas
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 4.1.2
+Stable tag: 4.1.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,6 +165,40 @@ the normal date-driven behavior. The settings page lists every valid key.
 * No console errors, no PHP notices, no layout shift, booking flow untouched.
 
 == Changelog ==
+
+= 4.1.3 =
+A self-audit release: three defects in 4.0.0-4.1.2 work, found by re-reading
+the code rather than the release notes, plus one finding that needs the
+owner's decision.
+
+* FIXED — the per-theme subtle-effect map was supposed to store OVERRIDES
+  ONLY, so an untouched theme keeps tracking the plugin's default. It did
+  not: the settings form posts a value for all 27 themes on every save, and
+  the sanitiser kept every valid one, so a single Save turned the stored
+  map into a full copy pinned to that day's defaults. A value equal to the
+  plugin's own is now not stored. Saving the form unchanged stores nothing.
+* FIXED — the subtle-layer intensity slider at 0 still drew three particles
+  at over half strength, because the alpha curve has a deliberate floor and
+  the particle count is floored at 3. Zero now means off.
+* FIXED (test) — the "engine pauses on a hidden tab" assertion read a flag
+  the debug state never exposed, got undefined, and passed unconditionally.
+  The flag is exposed and the test now asserts the real boolean in both
+  directions.
+* NEEDS A DECISION — the 4.0.0 calendar change has never been active on the
+  live site. It changed the DEFAULT rows (Spring on the Canal to 30 April,
+  Summer on the Canal to 31 July) so the year-round base wins May and
+  August. But a stored schedule keeps its own bounds: the upgrade path only
+  appends rows for absent themes and only converts pre-3.7.0 dated rows;
+  nothing rewrites an existing row's ends. The live site had all 26 rows
+  in the current shape, so Florida Keys still wins zero days there. The
+  4.0.0 notes claimed 49-59 without saying this. Two options, and it is
+  not the plugin's call: edit those two rows' ends in the schedule table,
+  or accept a one-click "apply the 4.0.0 canal bounds" on the settings
+  page. This release does NEITHER on its own — an upgrade that silently
+  rewrote the owner's rows would be worse than the omission.
+* Docs: nine references to test suites that lived in a session scratchpad
+  and did not survive are corrected; the Florida Keys entry now states the
+  stored-schedule caveat above.
 
 = 4.1.2 =
 * NEW — "Excluded page IDs", a free-text field beside the booking and Guest
