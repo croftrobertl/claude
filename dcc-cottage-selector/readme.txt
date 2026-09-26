@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.47.0
+Stable tag: 0.48.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,32 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.48.0 =
+* A widget now genuinely INHERITS the DCC > Cottage Selector settings page for
+  every key it holds. 0.44.0 claimed this and it was true for only three keys;
+  the 2026-09-26 audit found the other eight were masked by every widget because
+  Elementor hands the design snapshot a control default even for a control nobody
+  touched. The snapshot now emits a key ONLY when the widget deliberately set it.
+* The on/off controls — heading, review step, "pick 2" tip, availability check —
+  are three-way selects: Site default / On / Off. A switch cannot say "inherit".
+  Starting mode gains a "Site default" option; Enabled modes inherits when left
+  empty.
+* NEW per-placement controls, promised in 0.44.0 and not delivered until now:
+  Cottages to show, Badges per cottage, Match reasons per cottage. Empty = site
+  default.
+* NO STORED WIDGET DATA IS REWRITTEN, and no upgrade routine was needed. "Site
+  default" is stored as the distinct value `inherit`, so an empty value — what the
+  old switch stored for OFF — keeps meaning OFF. A heading someone deliberately
+  turned off stays off on the day a site default is set. Proved: the two live
+  placements' stored shape, plus the deliberately-off case, render byte-identical
+  before and after this release.
+* Availability inherits sub-key by sub-key: a widget can set "check availability"
+  while inheriting the calendar page, or the reverse. The endpoint, action and
+  night cap are never per-widget and now always come from the site — the snapshot
+  used to hard-code the night cap at 95, masking the setting.
+* Every key is tested both ways: a changed site default reaches an untouched
+  widget, and a deliberately set widget value still wins.
 
 = 0.47.0 =
 * Self-audit release. Two small fixes; safe to skip installing until the next one.

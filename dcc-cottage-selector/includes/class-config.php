@@ -266,14 +266,31 @@ final class Config
             // Availability lookup. Disabled unless it is turned on: the check
             // is the ONLY runtime request this plugin makes, and it depends on the
             // MPHB Availability Calendar plugin being active to answer it.
-            'availability'   => [
+            'availability'   => $site_avail = [
                 'enabled'     => (bool) $st['avail_enable'],
-                'ajaxUrl'     => '',
+                // The endpoint is computed HERE, not by the widget: a widget that
+                // inherits "enabled" must still get a URL to call.
+                'ajaxUrl'     => function_exists('admin_url') ? admin_url('admin-ajax.php') : '',
                 'action'      => $st['avail_action'],
                 'calendarUrl' => $st['avail_calendar_url'],
                 'maxNights'   => (int) $st['avail_max_nights'],
             ],
         ], $extra);
+
+        // A widget's availability override is PARTIAL (only the sub-keys it set), so
+        // merge it over the site block sub-key by sub-key rather than replacing it —
+        // array_merge above replaced the whole block.
+        if (isset($extra['availability']) && is_array($extra['availability'])) {
+            $config['availability'] = array_merge($site_avail, $extra['availability']);
+        }
+        // A widget may set an opening mode while inheriting the mode set (or the
+        // reverse); resolve the pair against what is EFFECTIVELY enabled.
+        if (!is_array($config['enabledModes']) || $config['enabledModes'] === []) {
+            $config['enabledModes'] = $st['enabled_modes'];
+        }
+        if (!in_array($config['startMode'], $config['enabledModes'], true)) {
+            $config['startMode'] = $config['enabledModes'][0];
+        }
 
         // 0.26.0 merged Heading_Marks::all() in here so the drawn cottage/heron
         // marks flanked the heading. 0.29.0 retired them — see the note at the top

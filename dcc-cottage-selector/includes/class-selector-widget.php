@@ -156,35 +156,40 @@ class Selector_Widget extends Widget_Base
 
         $this->preset_control('show_heading', [
             'label'        => __('Show heading', 'dcc-cottage-selector'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => 'yes',
-            'return_value' => 'yes',
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'inherit',
+            'options'      => self::tri_options(),
         ]);
 
         $this->preset_control('show_review', [
             'label'        => __('Show “Review your answers” step', 'dcc-cottage-selector'),
-            'description'  => __('Off by default: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). Turn on to add a review-and-confirm step before results.', 'dcc-cottage-selector'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => '',
-            'return_value' => 'yes',
+            'description'  => __('Site default is off: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). On adds a review-and-confirm step before results.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'inherit',
+            'options'      => self::tri_options(),
         ]);
 
         $this->preset_control('start_mode', [
             'label'   => __('Starting mode', 'dcc-cottage-selector'),
             'type'    => Controls_Manager::SELECT,
-            'default' => 'quick',
+            'default' => 'inherit',
             'options' => [
+                'inherit' => __('Site default', 'dcc-cottage-selector'),
                 'quick'   => __('Quick Pick', 'dcc-cottage-selector'),
                 'weights' => __('What Matters Most', 'dcc-cottage-selector'),
                 'compare' => __('Compare', 'dcc-cottage-selector'),
             ],
         ]);
 
+        // Empty means "site default". NOTE the preset stores quick+compare for this
+        // key (captured from live), so a NEW widget starts with that stored and
+        // does not inherit until it is cleared in the panel.
         $this->preset_control('enabled_modes', [
-            'label'    => __('Enabled modes', 'dcc-cottage-selector'),
-            'type'     => Controls_Manager::SELECT2,
-            'multiple' => true,
-            'default'  => ['quick', 'weights', 'compare'],
+            'label'       => __('Enabled modes', 'dcc-cottage-selector'),
+            'description' => __('Leave empty to use the site default.', 'dcc-cottage-selector'),
+            'type'        => Controls_Manager::SELECT2,
+            'multiple'    => true,
+            'default'     => [],
             'options'  => [
                 'quick'   => __('Quick Pick', 'dcc-cottage-selector'),
                 'weights' => __('What Matters Most', 'dcc-cottage-selector'),
@@ -192,7 +197,35 @@ class Selector_Widget extends Widget_Base
             ],
         ]);
 
+        // Per-placement overrides for the three counts the settings page holds.
+        // Empty = site default. No 'default' on purpose: Elementor would store it
+        // on the next save and the widget would stop inheriting (the 0.40.0 trap).
+        foreach ([
+            'results_count' => [__('Cottages to show', 'dcc-cottage-selector'), 1, 8],
+            'badges_max'    => [__('Badges per cottage', 'dcc-cottage-selector'), 1, 6],
+            'reasons_max'   => [__('Match reasons per cottage', 'dcc-cottage-selector'), 1, 6],
+        ] as $key => [$label, $min, $max]) {
+            $this->preset_control($key, [
+                'label'       => $label,
+                'description' => __('Leave empty to use the site default.', 'dcc-cottage-selector'),
+                'type'        => Controls_Manager::NUMBER,
+                'min'         => $min,
+                'max'         => $max,
+                'step'        => 1,
+            ]);
+        }
+
         $this->end_controls_section();
+    }
+
+    /** The three-way options shared by every on/off control that can inherit. */
+    private static function tri_options(): array
+    {
+        return [
+            'inherit' => __('Site default', 'dcc-cottage-selector'),
+            'yes'     => __('On', 'dcc-cottage-selector'),
+            'no'      => __('Off', 'dcc-cottage-selector'),
+        ];
     }
 
     /**
@@ -217,9 +250,9 @@ class Selector_Widget extends Widget_Base
         $this->preset_control('avail_enable', [
             'label'        => __('Check availability for the guest\'s dates', 'dcc-cottage-selector'),
             'description'  => __('Adds an optional dates step. Cottages booked for those dates are still shown, ranked below the free ones and clearly marked. Requires the MPHB Availability Calendar plugin to be active.', 'dcc-cottage-selector'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => '',
-            'return_value' => 'yes',
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'inherit',
+            'options'      => self::tri_options(),
         ]);
 
         $this->preset_control('avail_calendar_url', [
@@ -227,7 +260,7 @@ class Selector_Widget extends Widget_Base
             'description' => __('Optional. A cottage shown as booked links here so the guest can pick other dates.', 'dcc-cottage-selector'),
             'type'        => Controls_Manager::URL,
             'options'     => false,
-            'condition'   => ['avail_enable' => 'yes'],
+            'condition'   => ['avail_enable' => ['yes', 'inherit']],
         ]);
 
         $this->end_controls_section();
@@ -427,10 +460,10 @@ class Selector_Widget extends Widget_Base
         // instances placed before this control existed hide the tip automatically.
         $this->preset_control('show_compare_tip', [
             'label'        => __('Show “pick 2” tip', 'dcc-cottage-selector'),
-            'description'  => __('Off by default: the Compare subheader already says to pick 2+. Turn on to also show the tip under the Compare button while fewer than 2 cottages are checked.', 'dcc-cottage-selector'),
-            'type'         => Controls_Manager::SWITCHER,
-            'default'      => '',
-            'return_value' => 'yes',
+            'description'  => __('Site default is off: the Compare subheader already says to pick 2+. On also shows the tip under the Compare button while fewer than 2 cottages are checked.', 'dcc-cottage-selector'),
+            'type'         => Controls_Manager::SELECT,
+            'default'      => 'inherit',
+            'options'      => self::tri_options(),
         ]);
 
         $defaults = Config::strings();
@@ -1505,33 +1538,66 @@ class Selector_Widget extends Widget_Base
             }
         }
 
-        $enabled = $settings['enabled_modes'] ?? ['quick', 'weights', 'compare'];
-        if (!is_array($enabled) || empty($enabled)) {
-            $enabled = ['quick', 'weights', 'compare'];
-        }
-        $start = $settings['start_mode'] ?? 'quick';
-        if (!in_array($start, $enabled, true)) {
-            $start = $enabled[0];
-        }
+        // INHERITANCE (0.48.0). A key is emitted ONLY when the widget deliberately
+        // set it; anything left at "site default" is OMITTED, and Config::build()
+        // then supplies the settings-page value. Until 0.48.0 every key below was
+        // emitted unconditionally — Elementor hands this method the control
+        // DEFAULT even for an untouched control — so the site default was masked
+        // by every widget, always (found by the 2026-09-26 audit).
+        //
+        // On/off controls are three-way selects and 'inherit' is a DISTINCT value,
+        // so a legacy '' — the pre-0.48.0 SWITCHER's OFF — keeps its meaning. That
+        // is what makes this safe with no rewrite of stored widget data: a heading
+        // someone deliberately turned off stays off.
+        $tri = static function (string $key) use ($settings): ?bool {
+            $v = $settings[$key] ?? 'inherit';
+            if ($v === 'yes') { return true; }
+            if ($v === 'no' || $v === '') { return false; }   // '' = legacy switcher OFF
+            return null;                                       // inherit
+        };
+        $url = static function (string $key) use ($settings): ?string {
+            $u = esc_url_raw((string) ($settings[$key]['url'] ?? ''));
+            return $u !== '' ? $u : null;
+        };
+        $num = static function (string $key) use ($settings): ?int {
+            $v = $settings[$key] ?? '';
+            return (is_numeric($v) && (int) $v > 0) ? (int) $v : null;
+        };
 
-        return [
-            'string_overrides' => $string_overrides,
-            'startMode'        => (string) $start,
-            'enabledModes'     => array_values($enabled),
-            'showHeading'      => ($settings['show_heading'] ?? 'yes') === 'yes',
-            'showReview'       => ($settings['show_review'] ?? '') === 'yes',
-            'showCompareTip'   => ($settings['show_compare_tip'] ?? '') === 'yes',
-            'capacityFeeUrl'   => esc_url_raw((string) ($settings['capacity_fee_url']['url'] ?? '')),
-            'availability'     => [
-                'enabled'     => ($settings['avail_enable'] ?? '') === 'yes',
-                // admin_url() is the canonical endpoint; it is same-origin, so no
-                // CORS and no credentials needed for this read-only GET/POST.
-                'ajaxUrl'     => function_exists('admin_url') ? admin_url('admin-ajax.php') : '',
-                'action'      => 'mphbac_query',
-                'calendarUrl' => esc_url_raw((string) ($settings['avail_calendar_url']['url'] ?? '')),
-                'maxNights'   => 95,
-            ],
-            'petFeeUrl'        => esc_url_raw((string) ($settings['pet_fee_url']['url'] ?? '')),
+        $out = ['string_overrides' => $string_overrides];
+
+        $start = (string) ($settings['start_mode'] ?? 'inherit');
+        if ($start !== '' && $start !== 'inherit') {
+            $out['startMode'] = $start;          // validated against the effective modes in Config::build()
+        }
+        $enabled = $settings['enabled_modes'] ?? [];
+        if (is_array($enabled) && $enabled !== []) {
+            $out['enabledModes'] = array_values($enabled);
+        }
+        foreach (['show_heading' => 'showHeading', 'show_review' => 'showReview', 'show_compare_tip' => 'showCompareTip'] as $k => $cfg) {
+            $b = $tri($k);
+            if ($b !== null) { $out[$cfg] = $b; }
+        }
+        foreach (['capacity_fee_url' => 'capacityFeeUrl', 'pet_fee_url' => 'petFeeUrl'] as $k => $cfg) {
+            $u = $url($k);
+            if ($u !== null) { $out[$cfg] = $u; }
+        }
+        foreach (['results_count' => 'resultsCount', 'badges_max' => 'badgesMax', 'reasons_max' => 'reasonsMax'] as $k => $cfg) {
+            $n = $num($k);
+            if ($n !== null) { $out[$cfg] = $n; }
+        }
+        // Availability is emitted as a PARTIAL block — only the sub-keys set here —
+        // and Config::build() merges it over the site block sub-key by sub-key, so
+        // "check availability" and "calendar page" inherit independently. The
+        // endpoint URL, action and night cap are never per-widget.
+        $avail = [];
+        $ae = $tri('avail_enable');
+        if ($ae !== null) { $avail['enabled'] = $ae; }
+        $cu = $url('avail_calendar_url');
+        if ($cu !== null) { $avail['calendarUrl'] = $cu; }
+        if ($avail !== []) { $out['availability'] = $avail; }
+
+        return $out + [
             'icons'            => self::collect_icons($settings),
             'iconSides'        => self::collect_icon_sides($settings),
             'cssVars'          => self::collect_css_vars($settings),
@@ -1609,7 +1675,8 @@ class Selector_Widget extends Widget_Base
         // default before 0.44.0.
         $over = [];
         foreach (['startMode', 'enabledModes', 'showHeading', 'showReview', 'showCompareTip',
-                  'capacityFeeUrl', 'petFeeUrl', 'availability'] as $k) {
+                  'capacityFeeUrl', 'petFeeUrl', 'availability',
+                  'resultsCount', 'badgesMax', 'reasonsMax'] as $k) {
             if (array_key_exists($k, $snap)) {
                 $over[$k] = $snap[$k];
             }

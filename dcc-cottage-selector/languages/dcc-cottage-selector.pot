@@ -41,23 +41,23 @@ msgstr ""
 msgid "3-4"
 msgstr ""
 
-#: includes/class-selector-widget.php:253
+#: includes/class-selector-widget.php:286
 msgid "A short label Mini Entries pick from (e.g. \"Main\"). Save the page to publish it."
 msgstr ""
 
-#: includes/class-selector-widget.php:697
+#: includes/class-selector-widget.php:730
 msgid "Accent"
 msgstr ""
 
-#: includes/class-selector-widget.php:698
+#: includes/class-selector-widget.php:731
 msgid "Accent text"
 msgstr ""
 
-#: includes/class-selector-widget.php:1162
+#: includes/class-selector-widget.php:1195
 msgid "Action button color (Next / Back / Restart …)"
 msgstr ""
 
-#: includes/class-selector-widget.php:219
+#: includes/class-selector-widget.php:252
 msgid "Adds an optional dates step. Cottages booked for those dates are still shown, ranked below the free ones and clearly marked. Requires the MPHB Availability Calendar plugin to be active."
 msgstr ""
 
@@ -65,7 +65,7 @@ msgstr ""
 msgid "Advanced"
 msgstr ""
 
-#: includes/class-selector-widget.php:504
+#: includes/class-selector-widget.php:537
 msgid "All other labels are translatable with Loco Translate (text domain: dcc-cottage-selector)."
 msgstr ""
 
@@ -73,77 +73,77 @@ msgstr ""
 msgid "An extra screen listing the answers before the matches."
 msgstr ""
 
-#: includes/class-selector-widget.php:949
+#: includes/class-selector-widget.php:982
 msgid "Answer alignment"
 msgstr ""
 
-#: includes/class-selector-widget.php:974
+#: includes/class-selector-widget.php:1007
 msgid "Answer padding"
 msgstr ""
 
-#: includes/class-selector-widget.php:968
+#: includes/class-selector-widget.php:1001
 msgid "Answer radius"
 msgstr ""
 
-#: includes/class-selector-widget.php:556
+#: includes/class-selector-widget.php:589
 msgid "Answer: 1-2 guests"
 msgstr ""
 
-#: includes/class-selector-widget.php:393
-#: includes/class-selector-widget.php:553
+#: includes/class-selector-widget.php:426
+#: includes/class-selector-widget.php:586
 msgid "Answer: 1-bedroom"
 msgstr ""
 
-#: includes/class-selector-widget.php:557
+#: includes/class-selector-widget.php:590
 msgid "Answer: 3-4 guests"
 msgstr ""
 
-#: includes/class-selector-widget.php:398
-#: includes/class-selector-widget.php:560
+#: includes/class-selector-widget.php:431
+#: includes/class-selector-widget.php:593
 msgid "Answer: High"
 msgstr ""
 
-#: includes/class-selector-widget.php:396
-#: includes/class-selector-widget.php:558
+#: includes/class-selector-widget.php:429
+#: includes/class-selector-widget.php:591
 msgid "Answer: Low"
 msgstr ""
 
-#: includes/class-selector-widget.php:397
-#: includes/class-selector-widget.php:559
+#: includes/class-selector-widget.php:430
+#: includes/class-selector-widget.php:592
 msgid "Answer: Medium"
 msgstr ""
 
-#: includes/class-selector-widget.php:390
-#: includes/class-selector-widget.php:550
+#: includes/class-selector-widget.php:423
+#: includes/class-selector-widget.php:583
 msgid "Answer: No"
 msgstr ""
 
-#: includes/class-selector-widget.php:391
-#: includes/class-selector-widget.php:551
+#: includes/class-selector-widget.php:424
+#: includes/class-selector-widget.php:584
 msgid "Answer: No preference"
 msgstr ""
 
-#: includes/class-selector-widget.php:392
-#: includes/class-selector-widget.php:552
+#: includes/class-selector-widget.php:425
+#: includes/class-selector-widget.php:585
 msgid "Answer: Studio"
 msgstr ""
 
-#: includes/class-selector-widget.php:394
-#: includes/class-selector-widget.php:554
+#: includes/class-selector-widget.php:427
+#: includes/class-selector-widget.php:587
 msgid "Answer: Table for 2"
 msgstr ""
 
-#: includes/class-selector-widget.php:395
-#: includes/class-selector-widget.php:555
+#: includes/class-selector-widget.php:428
+#: includes/class-selector-widget.php:588
 msgid "Answer: Table for 4"
 msgstr ""
 
-#: includes/class-selector-widget.php:389
-#: includes/class-selector-widget.php:549
+#: includes/class-selector-widget.php:422
+#: includes/class-selector-widget.php:582
 msgid "Answer: Yes"
 msgstr ""
 
-#: includes/class-selector-widget.php:728
+#: includes/class-selector-widget.php:761
 msgid "Applies to every button and menu trigger. Individual buttons with their own Style section (View cottage, Edit answers) can still override this."
 msgstr ""
 
@@ -155,7 +155,7 @@ msgstr ""
 msgid "Ask for dates and check availability"
 msgstr ""
 
-#: includes/class-selector-widget.php:213
+#: includes/class-selector-widget.php:246
 #: includes/class-settings-page.php:132
 msgid "Availability"
 msgstr ""
@@ -164,7 +164,7 @@ msgstr ""
 msgid "Availability AJAX action"
 msgstr ""
 
-#: includes/class-selector-widget.php:226
+#: includes/class-selector-widget.php:259
 msgid "Availability calendar page"
 msgstr ""
 
@@ -181,79 +181,80 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
-#: includes/class-selector-widget.php:325
+#: includes/class-selector-widget.php:358
 msgid "Back button"
 msgstr ""
 
-#: includes/class-selector-widget.php:1207
+#: includes/class-selector-widget.php:1240
 msgid "Back link"
 msgstr ""
 
-#: includes/class-selector-widget.php:849
-#: includes/class-selector-widget.php:988
-#: includes/class-selector-widget.php:1003
-#: includes/class-selector-widget.php:1018
-#: includes/class-selector-widget.php:1101
-#: includes/class-selector-widget.php:1116
+#: includes/class-selector-widget.php:882
+#: includes/class-selector-widget.php:1021
+#: includes/class-selector-widget.php:1036
+#: includes/class-selector-widget.php:1051
+#: includes/class-selector-widget.php:1134
+#: includes/class-selector-widget.php:1149
 msgid "Background"
 msgstr ""
 
-#: includes/class-selector-widget.php:701
+#: includes/class-selector-widget.php:734
 msgid "Background for answer chips, the compare table and the pop-up. Result cards, buttons and menus have their own settings below."
 msgstr ""
 
-#: includes/class-selector-widget.php:717
+#: includes/class-selector-widget.php:750
 msgid "Background of the result cards on the matches screen."
 msgstr ""
 
-#: includes/class-selector-widget.php:1250
+#: includes/class-selector-widget.php:1283
 msgid "Badge background"
 msgstr ""
 
-#: includes/class-selector-widget.php:585
+#: includes/class-selector-widget.php:618
 msgid "Badge labels"
 msgstr ""
 
-#: includes/class-selector-widget.php:1265
+#: includes/class-selector-widget.php:1298
 msgid "Badge radius"
 msgstr ""
 
-#: includes/class-selector-widget.php:1256
+#: includes/class-selector-widget.php:1289
 msgid "Badge text"
 msgstr ""
 
-#: includes/class-selector-widget.php:591
+#: includes/class-selector-widget.php:624
 msgid "Badge: 1-Bedroom (largest)"
 msgstr ""
 
-#: includes/class-selector-widget.php:597
+#: includes/class-selector-widget.php:630
 msgid "Badge: 1-Bedroom suite"
 msgstr ""
 
-#: includes/class-selector-widget.php:595
+#: includes/class-selector-widget.php:628
 msgid "Badge: Ground floor"
 msgstr ""
 
-#: includes/class-selector-widget.php:594
+#: includes/class-selector-widget.php:627
 msgid "Badge: Pet-friendly"
 msgstr ""
 
-#: includes/class-selector-widget.php:598
+#: includes/class-selector-widget.php:631
 msgid "Badge: Screened porch"
 msgstr ""
 
-#: includes/class-selector-widget.php:593
+#: includes/class-selector-widget.php:626
 msgid "Badge: Studio layout"
 msgstr ""
 
-#: includes/class-selector-widget.php:596
+#: includes/class-selector-widget.php:629
 msgid "Badge: Upstairs"
 msgstr ""
 
-#: includes/class-selector-widget.php:592
+#: includes/class-selector-widget.php:625
 msgid "Badge: Work desk"
 msgstr ""
 
+#: includes/class-selector-widget.php:205
 #: includes/class-settings-page.php:144
 msgid "Badges per cottage"
 msgstr ""
@@ -266,39 +267,39 @@ msgstr ""
 msgid "Booked for your dates"
 msgstr ""
 
-#: includes/class-selector-widget.php:1023
+#: includes/class-selector-widget.php:1056
 msgid "Border"
 msgstr ""
 
-#: includes/class-selector-widget.php:706
+#: includes/class-selector-widget.php:739
 msgid "Borders"
 msgstr ""
 
-#: includes/class-selector-widget.php:727
+#: includes/class-selector-widget.php:760
 msgid "Button background"
 msgstr ""
 
-#: includes/class-selector-widget.php:730
+#: includes/class-selector-widget.php:763
 msgid "Button background (hover)"
 msgstr ""
 
-#: includes/class-selector-widget.php:317
+#: includes/class-selector-widget.php:350
 msgid "Button icons"
 msgstr ""
 
-#: includes/class-selector-widget.php:1178
+#: includes/class-selector-widget.php:1211
 msgid "Button padding"
 msgstr ""
 
-#: includes/class-selector-widget.php:1172
+#: includes/class-selector-widget.php:1205
 msgid "Button radius"
 msgstr ""
 
-#: includes/class-selector-widget.php:1155
+#: includes/class-selector-widget.php:1188
 msgid "Buttons"
 msgstr ""
 
-#: includes/class-selector-widget.php:723
+#: includes/class-selector-widget.php:756
 msgid "Buttons & menus"
 msgstr ""
 
@@ -306,7 +307,7 @@ msgstr ""
 msgid "Calendar page URL"
 msgstr ""
 
-#: includes/class-selector-widget.php:453
+#: includes/class-selector-widget.php:486
 msgid "Capacity note (party-size question)"
 msgstr ""
 
@@ -314,23 +315,23 @@ msgstr ""
 msgid "Capacity note link"
 msgstr ""
 
-#: includes/class-selector-widget.php:489
+#: includes/class-selector-widget.php:522
 msgid "Capacity note: fee-details link"
 msgstr ""
 
-#: includes/class-selector-widget.php:1303
+#: includes/class-selector-widget.php:1336
 msgid "Cell borders"
 msgstr ""
 
-#: includes/class-selector-widget.php:635
-#: includes/class-selector-widget.php:795
-#: includes/class-selector-widget.php:941
-#: includes/class-selector-widget.php:953
-#: includes/class-selector-widget.php:1087
+#: includes/class-selector-widget.php:668
+#: includes/class-selector-widget.php:828
+#: includes/class-selector-widget.php:974
+#: includes/class-selector-widget.php:986
+#: includes/class-selector-widget.php:1120
 msgid "Center"
 msgstr ""
 
-#: includes/class-selector-widget.php:218
+#: includes/class-selector-widget.php:251
 msgid "Check availability for the guest's dates"
 msgstr ""
 
@@ -350,7 +351,7 @@ msgstr ""
 msgid "Checking availability…"
 msgstr ""
 
-#: includes/class-selector-widget.php:1334
+#: includes/class-selector-widget.php:1367
 msgid "Checklist corner radius"
 msgstr ""
 
@@ -358,7 +359,7 @@ msgstr ""
 msgid "Choose an answer to continue"
 msgstr ""
 
-#: includes/class-selector-widget.php:273
+#: includes/class-selector-widget.php:306
 msgid "Click “Copy text code” to generate a code…"
 msgstr ""
 
@@ -366,14 +367,14 @@ msgstr ""
 msgid "Closest options shown at the end."
 msgstr ""
 
-#: includes/class-selector-widget.php:679
+#: includes/class-selector-widget.php:712
 msgid "Colors"
 msgstr ""
 
 #: includes/class-config.php:29
 #: includes/class-config.php:141
-#: includes/class-selector-widget.php:179
-#: includes/class-selector-widget.php:191
+#: includes/class-selector-widget.php:180
+#: includes/class-selector-widget.php:196
 #: includes/class-settings-page.php:171
 msgid "Compare"
 msgstr ""
@@ -382,39 +383,39 @@ msgstr ""
 msgid "Compare %d Cottages"
 msgstr ""
 
-#: includes/class-selector-widget.php:1149
+#: includes/class-selector-widget.php:1182
 msgid "Compare button"
 msgstr ""
 
-#: includes/class-selector-widget.php:327
+#: includes/class-selector-widget.php:360
 msgid "Compare chip (result card)"
 msgstr ""
 
-#: includes/class-selector-widget.php:1318
+#: includes/class-selector-widget.php:1351
 msgid "Compare picker"
 msgstr ""
 
-#: includes/class-selector-widget.php:449
+#: includes/class-selector-widget.php:482
 msgid "Compare subheader"
 msgstr ""
 
-#: includes/class-selector-widget.php:1279
+#: includes/class-selector-widget.php:1312
 msgid "Compare table"
 msgstr ""
 
-#: includes/class-selector-widget.php:708
+#: includes/class-selector-widget.php:741
 msgid "Compare “differs” highlight"
 msgstr ""
 
-#: includes/class-selector-widget.php:450
+#: includes/class-selector-widget.php:483
 msgid "Compare “pick 2” tip"
 msgstr ""
 
-#: includes/class-selector-widget.php:451
+#: includes/class-selector-widget.php:484
 msgid "Compare “scroll to see all” cue"
 msgstr ""
 
-#: includes/class-selector-widget.php:882
+#: includes/class-selector-widget.php:915
 msgid "Completed step color"
 msgstr ""
 
@@ -422,16 +423,16 @@ msgstr ""
 msgid "Content"
 msgstr ""
 
-#: includes/class-selector-widget.php:274
+#: includes/class-selector-widget.php:307
 msgid "Copies this Selector’s wording (headings, labels, buttons, questions, badges…) as a code. Paste it into a Mini Entry’s “Import text”."
 msgstr ""
 
-#: includes/class-selector-widget.php:272
+#: includes/class-selector-widget.php:305
 msgid "Copy text code"
 msgstr ""
 
-#: includes/class-selector-widget.php:657
-#: includes/class-selector-widget.php:1071
+#: includes/class-selector-widget.php:690
+#: includes/class-selector-widget.php:1104
 msgid "Corner radius"
 msgstr ""
 
@@ -444,6 +445,7 @@ msgstr ""
 msgid "Cottage Selector"
 msgstr ""
 
+#: includes/class-selector-widget.php:204
 #: includes/class-settings-page.php:89
 msgid "Cottages to show"
 msgstr ""
@@ -467,7 +469,7 @@ msgstr ""
 msgid "Dates"
 msgstr ""
 
-#: includes/class-selector-widget.php:1163
+#: includes/class-selector-widget.php:1196
 msgid "Default background for the navigation & action buttons, kept distinct from the answer buttons."
 msgstr ""
 
@@ -475,11 +477,11 @@ msgstr ""
 msgid "Defaults here reproduce the behaviour shipped before this page existed. Change them only with a reason."
 msgstr ""
 
-#: includes/class-selector-widget.php:252
+#: includes/class-selector-widget.php:285
 msgid "Design name"
 msgstr ""
 
-#: includes/class-selector-widget.php:239
+#: includes/class-selector-widget.php:272
 msgid "Design source"
 msgstr ""
 
@@ -519,7 +521,7 @@ msgstr ""
 msgid "Dora Canal Court"
 msgstr ""
 
-#: includes/class-selector-widget.php:734
+#: includes/class-selector-widget.php:767
 msgid "Drop-down menu items"
 msgstr ""
 
@@ -531,17 +533,17 @@ msgstr ""
 msgid "Edit answers"
 msgstr ""
 
-#: includes/class-selector-widget.php:328
-#: includes/class-selector-widget.php:446
-#: includes/class-selector-widget.php:1132
+#: includes/class-selector-widget.php:361
+#: includes/class-selector-widget.php:479
+#: includes/class-selector-widget.php:1165
 msgid "Edit answers button"
 msgstr ""
 
-#: includes/class-selector-widget.php:1401
+#: includes/class-selector-widget.php:1434
 msgid "Effects"
 msgstr ""
 
-#: includes/class-selector-widget.php:665
+#: includes/class-selector-widget.php:698
 msgid "Element spacing"
 msgstr ""
 
@@ -549,7 +551,7 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: includes/class-selector-widget.php:184
+#: includes/class-selector-widget.php:188
 msgid "Enabled modes"
 msgstr ""
 
@@ -557,7 +559,7 @@ msgstr ""
 msgid "Every cottage has a queen bed, and six sleep up to 4 with a pull-out couch. Answer a few quick questions and we will match you in seconds."
 msgstr ""
 
-#: includes/class-selector-widget.php:269
+#: includes/class-selector-widget.php:302
 msgid "Export text"
 msgstr ""
 
@@ -569,7 +571,7 @@ msgstr ""
 msgid "Fee links"
 msgstr ""
 
-#: includes/class-selector-widget.php:455
+#: includes/class-selector-widget.php:488
 msgid "Fee-details link text"
 msgstr ""
 
@@ -606,27 +608,27 @@ msgstr ""
 msgid "Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged a nightly fee."
 msgstr ""
 
-#: includes/class-selector-widget.php:1284
+#: includes/class-selector-widget.php:1317
 msgid "Header background"
 msgstr ""
 
-#: includes/class-selector-widget.php:1289
+#: includes/class-selector-widget.php:1322
 msgid "Header text"
 msgstr ""
 
-#: includes/class-selector-widget.php:438
+#: includes/class-selector-widget.php:471
 msgid "Heading"
 msgstr ""
 
-#: includes/class-selector-widget.php:756
+#: includes/class-selector-widget.php:789
 msgid "Heading & intro"
 msgstr ""
 
-#: includes/class-selector-widget.php:761
+#: includes/class-selector-widget.php:794
 msgid "Heading color"
 msgstr ""
 
-#: includes/class-selector-widget.php:695
+#: includes/class-selector-widget.php:728
 msgid "Hidden while “Match site theme colors” is on."
 msgstr ""
 
@@ -634,14 +636,14 @@ msgstr ""
 msgid "High"
 msgstr ""
 
-#: includes/class-selector-widget.php:824
-#: includes/class-selector-widget.php:993
-#: includes/class-selector-widget.php:1106
-#: includes/class-selector-widget.php:1194
+#: includes/class-selector-widget.php:857
+#: includes/class-selector-widget.php:1026
+#: includes/class-selector-widget.php:1139
+#: includes/class-selector-widget.php:1227
 msgid "Hover"
 msgstr ""
 
-#: includes/class-selector-widget.php:1411
+#: includes/class-selector-widget.php:1444
 msgid "Hover transition speed"
 msgstr ""
 
@@ -657,7 +659,7 @@ msgstr ""
 msgid "How much does %s matter?"
 msgstr ""
 
-#: includes/class-selector-widget.php:1044
+#: includes/class-selector-widget.php:1077
 msgid "Icon side"
 msgstr ""
 
@@ -665,47 +667,47 @@ msgstr ""
 msgid "Import text"
 msgstr ""
 
-#: includes/class-selector-widget.php:770
+#: includes/class-selector-widget.php:803
 msgid "Intro color"
 msgstr ""
 
-#: includes/class-selector-widget.php:439
+#: includes/class-selector-widget.php:472
 msgid "Intro text"
 msgstr ""
 
-#: includes/class-selector-widget.php:738
+#: includes/class-selector-widget.php:771
 msgid "Item background"
 msgstr ""
 
-#: includes/class-selector-widget.php:740
+#: includes/class-selector-widget.php:773
 msgid "Item background (hover)"
 msgstr ""
 
-#: includes/class-selector-widget.php:1383
+#: includes/class-selector-widget.php:1416
 msgid "Item corner radius"
 msgstr ""
 
-#: includes/class-selector-widget.php:1390
+#: includes/class-selector-widget.php:1423
 msgid "Item padding"
 msgstr ""
 
-#: includes/class-selector-widget.php:739
+#: includes/class-selector-widget.php:772
 msgid "Item text"
 msgstr ""
 
-#: includes/class-selector-widget.php:741
+#: includes/class-selector-widget.php:774
 msgid "Item text (hover)"
 msgstr ""
 
-#: includes/class-selector-widget.php:331
+#: includes/class-selector-widget.php:364
 msgid "Landing choice: Compare"
 msgstr ""
 
-#: includes/class-selector-widget.php:329
+#: includes/class-selector-widget.php:362
 msgid "Landing choice: Quick finder"
 msgstr ""
 
-#: includes/class-selector-widget.php:330
+#: includes/class-selector-widget.php:363
 msgid "Landing choice: Weigh priorities"
 msgstr ""
 
@@ -713,7 +715,7 @@ msgstr ""
 msgid "Layout"
 msgstr ""
 
-#: includes/class-selector-widget.php:626
+#: includes/class-selector-widget.php:659
 msgid "Layout & spacing"
 msgstr ""
 
@@ -725,7 +727,7 @@ msgstr ""
 msgid "Layout: Studio"
 msgstr ""
 
-#: includes/class-selector-widget.php:344
+#: includes/class-selector-widget.php:377
 msgid "Leave a picker empty for no icon. You can also type an emoji directly into a label under “Text & labels”."
 msgstr ""
 
@@ -733,15 +735,20 @@ msgstr ""
 msgid "Leave blank to open the selector in a pop-up on this page."
 msgstr ""
 
-#: includes/class-selector-widget.php:634
-#: includes/class-selector-widget.php:794
-#: includes/class-selector-widget.php:940
-#: includes/class-selector-widget.php:952
-#: includes/class-selector-widget.php:1086
+#: includes/class-selector-widget.php:189
+#: includes/class-selector-widget.php:210
+msgid "Leave empty to use the site default."
+msgstr ""
+
+#: includes/class-selector-widget.php:667
+#: includes/class-selector-widget.php:827
+#: includes/class-selector-widget.php:973
+#: includes/class-selector-widget.php:985
+#: includes/class-selector-widget.php:1119
 msgid "Left"
 msgstr ""
 
-#: includes/class-selector-widget.php:1048
+#: includes/class-selector-widget.php:1081
 msgid "Left of text"
 msgstr ""
 
@@ -765,23 +772,24 @@ msgstr ""
 msgid "Match a Cottage Selector that has \"Share this design\" turned on. Save that Selector first to populate this list. (Live + locked: this widget's own controls hide while mirroring.)"
 msgstr ""
 
+#: includes/class-selector-widget.php:206
 #: includes/class-settings-page.php:145
 msgid "Match reasons per cottage"
 msgstr ""
 
-#: includes/class-selector-widget.php:684
+#: includes/class-selector-widget.php:717
 msgid "Match site theme colors"
 msgstr ""
 
-#: includes/class-selector-widget.php:901
+#: includes/class-selector-widget.php:934
 msgid "Match-count background"
 msgstr ""
 
-#: includes/class-selector-widget.php:906
+#: includes/class-selector-widget.php:939
 msgid "Match-count text"
 msgstr ""
 
-#: includes/class-selector-widget.php:642
+#: includes/class-selector-widget.php:675
 msgid "Maximum width"
 msgstr ""
 
@@ -789,7 +797,7 @@ msgstr ""
 msgid "Medium"
 msgstr ""
 
-#: includes/class-selector-widget.php:1376
+#: includes/class-selector-widget.php:1409
 msgid "Menu panel corner radius"
 msgstr ""
 
@@ -801,19 +809,19 @@ msgstr ""
 msgid "Mirror design from"
 msgstr ""
 
-#: includes/class-selector-widget.php:442
+#: includes/class-selector-widget.php:475
 msgid "Mode label: Compare"
 msgstr ""
 
-#: includes/class-selector-widget.php:440
+#: includes/class-selector-widget.php:473
 msgid "Mode label: Quick finder"
 msgstr ""
 
-#: includes/class-selector-widget.php:441
+#: includes/class-selector-widget.php:474
 msgid "Mode label: Weigh priorities"
 msgstr ""
 
-#: includes/class-selector-widget.php:786
+#: includes/class-selector-widget.php:819
 msgid "Mode switcher"
 msgstr ""
 
@@ -825,7 +833,7 @@ msgstr ""
 msgid "More room"
 msgstr ""
 
-#: includes/class-selector-widget.php:705
+#: includes/class-selector-widget.php:738
 msgid "Muted text"
 msgstr ""
 
@@ -833,7 +841,7 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: includes/class-selector-widget.php:324
+#: includes/class-selector-widget.php:357
 msgid "Next button"
 msgstr ""
 
@@ -878,10 +886,10 @@ msgstr ""
 msgid "None of your matches are free for those dates. They are listed below so you can pick other dates."
 msgstr ""
 
-#: includes/class-selector-widget.php:808
-#: includes/class-selector-widget.php:981
-#: includes/class-selector-widget.php:1094
-#: includes/class-selector-widget.php:1187
+#: includes/class-selector-widget.php:841
+#: includes/class-selector-widget.php:1014
+#: includes/class-selector-widget.php:1127
+#: includes/class-selector-widget.php:1220
 msgid "Normal"
 msgstr ""
 
@@ -913,27 +921,27 @@ msgstr ""
 msgid "OFF by default. This is the only runtime request this plugin makes, and it needs the MPHB Availability Calendar plugin active to answer it. A failed lookup never blanks the results."
 msgstr ""
 
-#: includes/class-selector-widget.php:430
-msgid "Off by default: the Compare subheader already says to pick 2+. Turn on to also show the tip under the Compare button while fewer than 2 cottages are checked."
+#: includes/class-selector-widget.php:227
+msgid "Off"
 msgstr ""
 
 #: includes/class-settings-page.php:122
 msgid "Off by default: the Compare subheader already says to pick two or more."
 msgstr ""
 
-#: includes/class-selector-widget.php:166
-msgid "Off by default: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). Turn on to add a review-and-confirm step before results."
+#: includes/class-selector-widget.php:226
+msgid "On"
 msgstr ""
 
 #: includes/class-settings-page.php:111
 msgid "Opening mode"
 msgstr ""
 
-#: includes/class-selector-widget.php:791
+#: includes/class-selector-widget.php:824
 msgid "Option alignment"
 msgstr ""
 
-#: includes/class-selector-widget.php:227
+#: includes/class-selector-widget.php:260
 msgid "Optional. A cottage shown as booked links here so the guest can pick other dates."
 msgstr ""
 
@@ -945,21 +953,21 @@ msgstr ""
 msgid "Optional. Leave empty and the note renders as plain text with no link. Fee AMOUNTS never appear in this plugin."
 msgstr ""
 
-#: includes/class-selector-widget.php:490
+#: includes/class-selector-widget.php:523
 msgid "Optional. When set, the capacity note ends with a link to this URL. Leave empty to show no link."
 msgstr ""
 
-#: includes/class-selector-widget.php:497
+#: includes/class-selector-widget.php:530
 msgid "Optional. When set, the pet-policy note ends with a link to this URL. Leave empty to show no link."
 msgstr ""
 
-#: includes/class-selector-widget.php:700
+#: includes/class-selector-widget.php:733
 msgid "Other surfaces (chips, table & pop-ups)"
 msgstr ""
 
-#: includes/class-selector-widget.php:650
-#: includes/class-selector-widget.php:1077
-#: includes/class-selector-widget.php:1236
+#: includes/class-selector-widget.php:683
+#: includes/class-selector-widget.php:1110
+#: includes/class-selector-widget.php:1269
 msgid "Padding"
 msgstr ""
 
@@ -971,11 +979,11 @@ msgstr ""
 msgid "Pet note link"
 msgstr ""
 
-#: includes/class-selector-widget.php:496
+#: includes/class-selector-widget.php:529
 msgid "Pet note: fee-details link"
 msgstr ""
 
-#: includes/class-selector-widget.php:454
+#: includes/class-selector-widget.php:487
 msgid "Pet policy note (pet question)"
 msgstr ""
 
@@ -995,7 +1003,7 @@ msgstr ""
 msgid "Pets are welcome in Cottage 34 only and must be pre-approved."
 msgstr ""
 
-#: includes/class-selector-widget.php:707
+#: includes/class-selector-widget.php:740
 msgid "Positive highlight"
 msgstr ""
 
@@ -1003,51 +1011,51 @@ msgstr ""
 msgid "Previous cottages"
 msgstr ""
 
-#: includes/class-selector-widget.php:543
+#: includes/class-selector-widget.php:576
 msgid "Priority: 1-bedroom separation"
 msgstr ""
 
-#: includes/class-selector-widget.php:544
+#: includes/class-selector-widget.php:577
 msgid "Priority: Dining comfort"
 msgstr ""
 
-#: includes/class-selector-widget.php:540
+#: includes/class-selector-widget.php:573
 msgid "Priority: Fewer stairs"
 msgstr ""
 
-#: includes/class-selector-widget.php:539
+#: includes/class-selector-widget.php:572
 msgid "Priority: More room"
 msgstr ""
 
-#: includes/class-selector-widget.php:541
+#: includes/class-selector-widget.php:574
 msgid "Priority: Pet-friendly"
 msgstr ""
 
-#: includes/class-selector-widget.php:545
+#: includes/class-selector-widget.php:578
 msgid "Priority: Pull-out couch"
 msgstr ""
 
-#: includes/class-selector-widget.php:547
+#: includes/class-selector-widget.php:580
 msgid "Priority: Room for 3-4 guests"
 msgstr ""
 
-#: includes/class-selector-widget.php:546
+#: includes/class-selector-widget.php:579
 msgid "Priority: Screened-in porch"
 msgstr ""
 
-#: includes/class-selector-widget.php:542
+#: includes/class-selector-widget.php:575
 msgid "Priority: Studio simplicity"
 msgstr ""
 
-#: includes/class-selector-widget.php:538
+#: includes/class-selector-widget.php:571
 msgid "Priority: Workspace"
 msgstr ""
 
-#: includes/class-selector-widget.php:870
+#: includes/class-selector-widget.php:903
 msgid "Progress & steps"
 msgstr ""
 
-#: includes/class-selector-widget.php:896
+#: includes/class-selector-widget.php:929
 msgid "Progress label color"
 msgstr ""
 
@@ -1055,7 +1063,7 @@ msgstr ""
 msgid "Prompt text"
 msgstr ""
 
-#: includes/class-selector-widget.php:245
+#: includes/class-selector-widget.php:278
 msgid "Publish this widget's full design + text under a name so Mini Entry widgets can mirror it."
 msgstr ""
 
@@ -1071,75 +1079,75 @@ msgstr ""
 msgid "Queen"
 msgstr ""
 
-#: includes/class-selector-widget.php:374
+#: includes/class-selector-widget.php:407
 msgid "Question & answer icons"
 msgstr ""
 
-#: includes/class-selector-widget.php:937
+#: includes/class-selector-widget.php:970
 msgid "Question alignment"
 msgstr ""
 
-#: includes/class-selector-widget.php:932
+#: includes/class-selector-widget.php:965
 msgid "Question background"
 msgstr ""
 
-#: includes/class-selector-widget.php:927
+#: includes/class-selector-widget.php:960
 msgid "Question color"
 msgstr ""
 
-#: includes/class-selector-widget.php:386
+#: includes/class-selector-widget.php:419
 msgid "Question: Weigh priorities (all)"
 msgstr ""
 
-#: includes/class-selector-widget.php:379
-#: includes/class-selector-widget.php:529
+#: includes/class-selector-widget.php:412
+#: includes/class-selector-widget.php:562
 msgid "Question: desk"
 msgstr ""
 
-#: includes/class-selector-widget.php:382
-#: includes/class-selector-widget.php:532
+#: includes/class-selector-widget.php:415
+#: includes/class-selector-widget.php:565
 msgid "Question: dining"
 msgstr ""
 
-#: includes/class-selector-widget.php:384
-#: includes/class-selector-widget.php:534
+#: includes/class-selector-widget.php:417
+#: includes/class-selector-widget.php:567
 msgid "Question: ground floor"
 msgstr ""
 
-#: includes/class-selector-widget.php:381
-#: includes/class-selector-widget.php:531
+#: includes/class-selector-widget.php:414
+#: includes/class-selector-widget.php:564
 msgid "Question: layout"
 msgstr ""
 
-#: includes/class-selector-widget.php:527
+#: includes/class-selector-widget.php:560
 msgid "Question: party size"
 msgstr ""
 
-#: includes/class-selector-widget.php:383
-#: includes/class-selector-widget.php:533
+#: includes/class-selector-widget.php:416
+#: includes/class-selector-widget.php:566
 msgid "Question: pet-friendly"
 msgstr ""
 
-#: includes/class-selector-widget.php:380
-#: includes/class-selector-widget.php:530
+#: includes/class-selector-widget.php:413
+#: includes/class-selector-widget.php:563
 msgid "Question: pull-out couch"
 msgstr ""
 
-#: includes/class-selector-widget.php:385
-#: includes/class-selector-widget.php:535
+#: includes/class-selector-widget.php:418
+#: includes/class-selector-widget.php:568
 msgid "Question: screened porch"
 msgstr ""
 
-#: includes/class-selector-widget.php:918
+#: includes/class-selector-widget.php:951
 msgid "Questions & answers"
 msgstr ""
 
-#: includes/class-selector-widget.php:520
+#: includes/class-selector-widget.php:553
 msgid "Questions & answers text"
 msgstr ""
 
-#: includes/class-selector-widget.php:177
-#: includes/class-selector-widget.php:189
+#: includes/class-selector-widget.php:178
+#: includes/class-selector-widget.php:194
 msgid "Quick Pick"
 msgstr ""
 
@@ -1148,7 +1156,7 @@ msgstr ""
 msgid "Quick finder"
 msgstr ""
 
-#: includes/class-selector-widget.php:1230
+#: includes/class-selector-widget.php:1263
 msgid "Radius"
 msgstr ""
 
@@ -1156,7 +1164,7 @@ msgstr ""
 msgid "Ranked #%d for you"
 msgstr ""
 
-#: includes/class-selector-widget.php:445
+#: includes/class-selector-widget.php:478
 msgid "Reset button"
 msgstr ""
 
@@ -1164,28 +1172,28 @@ msgstr ""
 msgid "Restart"
 msgstr ""
 
-#: includes/class-selector-widget.php:323
+#: includes/class-selector-widget.php:356
 msgid "Restart button"
 msgstr ""
 
-#: includes/class-selector-widget.php:1220
+#: includes/class-selector-widget.php:1253
 msgid "Result cards"
 msgstr ""
 
-#: includes/class-selector-widget.php:712
+#: includes/class-selector-widget.php:745
 #: includes/class-settings-page.php:87
 msgid "Results"
 msgstr ""
 
-#: includes/class-selector-widget.php:716
+#: includes/class-selector-widget.php:749
 msgid "Results background"
 msgstr ""
 
-#: includes/class-selector-widget.php:443
+#: includes/class-selector-widget.php:476
 msgid "Results heading"
 msgstr ""
 
-#: includes/class-selector-widget.php:528
+#: includes/class-selector-widget.php:561
 msgid "Review label: party size"
 msgstr ""
 
@@ -1193,15 +1201,15 @@ msgstr ""
 msgid "Review your answers"
 msgstr ""
 
-#: includes/class-selector-widget.php:636
-#: includes/class-selector-widget.php:796
-#: includes/class-selector-widget.php:942
-#: includes/class-selector-widget.php:954
-#: includes/class-selector-widget.php:1088
+#: includes/class-selector-widget.php:669
+#: includes/class-selector-widget.php:829
+#: includes/class-selector-widget.php:975
+#: includes/class-selector-widget.php:987
+#: includes/class-selector-widget.php:1121
 msgid "Right"
 msgstr ""
 
-#: includes/class-selector-widget.php:1049
+#: includes/class-selector-widget.php:1082
 msgid "Right of text"
 msgstr ""
 
@@ -1209,7 +1217,7 @@ msgstr ""
 msgid "Room for 3-4 guests"
 msgstr ""
 
-#: includes/class-selector-widget.php:1341
+#: includes/class-selector-widget.php:1374
 msgid "Row padding"
 msgstr ""
 
@@ -1237,7 +1245,7 @@ msgstr ""
 msgid "Second Floor"
 msgstr ""
 
-#: includes/class-selector-widget.php:699
+#: includes/class-selector-widget.php:732
 msgid "Secondary accent"
 msgstr ""
 
@@ -1249,8 +1257,8 @@ msgstr ""
 msgid "Select 2 or more cottages to compare side by side."
 msgstr ""
 
-#: includes/class-selector-widget.php:842
-#: includes/class-selector-widget.php:1011
+#: includes/class-selector-widget.php:875
+#: includes/class-selector-widget.php:1044
 msgid "Selected"
 msgstr ""
 
@@ -1262,11 +1270,11 @@ msgstr ""
 msgid "Settings saved."
 msgstr ""
 
-#: includes/class-selector-widget.php:1364
+#: includes/class-selector-widget.php:1397
 msgid "Shape"
 msgstr ""
 
-#: includes/class-selector-widget.php:244
+#: includes/class-selector-widget.php:277
 msgid "Share this design"
 msgstr ""
 
@@ -1290,12 +1298,25 @@ msgstr ""
 msgid "Show “Review your answers” step"
 msgstr ""
 
-#: includes/class-selector-widget.php:429
+#: includes/class-selector-widget.php:462
 msgid "Show “pick 2” tip"
 msgstr ""
 
 #: includes/class-config.php:131
 msgid "Showing %1$d-%2$d of %3$d"
+msgstr ""
+
+#: includes/class-selector-widget.php:177
+#: includes/class-selector-widget.php:225
+msgid "Site default"
+msgstr ""
+
+#: includes/class-selector-widget.php:463
+msgid "Site default is off: the Compare subheader already says to pick 2+. On also shows the tip under the Compare button while fewer than 2 cottages are checked."
+msgstr ""
+
+#: includes/class-selector-widget.php:166
+msgid "Site default is off: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). On adds a review-and-confirm step before results."
 msgstr ""
 
 #: includes/class-settings-page.php:79
@@ -1322,7 +1343,7 @@ msgstr ""
 msgid "Step %1$d of %2$d"
 msgstr ""
 
-#: includes/class-selector-widget.php:875
+#: includes/class-selector-widget.php:908
 msgid "Step bar thickness"
 msgstr ""
 
@@ -1342,7 +1363,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: includes/class-selector-widget.php:322
+#: includes/class-selector-widget.php:355
 msgid "Submit button"
 msgstr ""
 
@@ -1358,24 +1379,24 @@ msgstr ""
 msgid "Table for two or four?"
 msgstr ""
 
-#: includes/class-selector-widget.php:704
-#: includes/class-selector-widget.php:844
-#: includes/class-selector-widget.php:983
-#: includes/class-selector-widget.php:995
-#: includes/class-selector-widget.php:1013
-#: includes/class-selector-widget.php:1096
-#: includes/class-selector-widget.php:1108
-#: includes/class-selector-widget.php:1189
-#: includes/class-selector-widget.php:1196
+#: includes/class-selector-widget.php:737
+#: includes/class-selector-widget.php:877
+#: includes/class-selector-widget.php:1016
+#: includes/class-selector-widget.php:1028
+#: includes/class-selector-widget.php:1046
+#: includes/class-selector-widget.php:1129
+#: includes/class-selector-widget.php:1141
+#: includes/class-selector-widget.php:1222
+#: includes/class-selector-widget.php:1229
 msgid "Text"
 msgstr ""
 
-#: includes/class-selector-widget.php:421
+#: includes/class-selector-widget.php:454
 msgid "Text & labels"
 msgstr ""
 
-#: includes/class-selector-widget.php:631
-#: includes/class-selector-widget.php:1083
+#: includes/class-selector-widget.php:664
+#: includes/class-selector-widget.php:1116
 msgid "Text alignment"
 msgstr ""
 
@@ -1395,7 +1416,7 @@ msgstr ""
 msgid "Tip: check at least 2 cottages, then tap “Compare”."
 msgstr ""
 
-#: includes/class-selector-widget.php:264
+#: includes/class-selector-widget.php:297
 msgid "To copy the LOOK: right-click this widget → Copy, then right-click a Mini Entry → Paste Style. To copy the TEXT: use the button below."
 msgstr ""
 
@@ -1403,17 +1424,17 @@ msgstr ""
 msgid "Top match: %s"
 msgstr ""
 
-#: includes/class-selector-widget.php:817
-#: includes/class-selector-widget.php:834
+#: includes/class-selector-widget.php:850
+#: includes/class-selector-widget.php:867
 msgid "Trigger background"
 msgstr ""
 
-#: includes/class-selector-widget.php:1369
+#: includes/class-selector-widget.php:1402
 msgid "Trigger corner radius"
 msgstr ""
 
-#: includes/class-selector-widget.php:810
-#: includes/class-selector-widget.php:826
+#: includes/class-selector-widget.php:843
+#: includes/class-selector-widget.php:859
 msgid "Trigger text"
 msgstr ""
 
@@ -1421,7 +1442,7 @@ msgstr ""
 msgid "Unticking every mode is not saved — the landing screen would have nothing to offer."
 msgstr ""
 
-#: includes/class-selector-widget.php:887
+#: includes/class-selector-widget.php:920
 msgid "Upcoming step color"
 msgstr ""
 
@@ -1430,7 +1451,7 @@ msgstr ""
 msgid "Upstairs"
 msgstr ""
 
-#: includes/class-selector-widget.php:685
+#: includes/class-selector-widget.php:718
 msgid "Use the theme's global colors instead of the built-in palette."
 msgstr ""
 
@@ -1438,13 +1459,13 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: includes/class-selector-widget.php:326
-#: includes/class-selector-widget.php:447
-#: includes/class-selector-widget.php:1138
+#: includes/class-selector-widget.php:359
+#: includes/class-selector-widget.php:480
+#: includes/class-selector-widget.php:1171
 msgid "View cottage button"
 msgstr ""
 
-#: includes/class-selector-widget.php:448
+#: includes/class-selector-widget.php:481
 msgid "View cottage button (narrow screens)"
 msgstr ""
 
@@ -1461,12 +1482,12 @@ msgstr ""
 msgid "Weigh priorities"
 msgstr ""
 
-#: includes/class-selector-widget.php:537
+#: includes/class-selector-widget.php:570
 msgid "Weigh priorities question (use %s)"
 msgstr ""
 
-#: includes/class-selector-widget.php:178
-#: includes/class-selector-widget.php:190
+#: includes/class-selector-widget.php:179
+#: includes/class-selector-widget.php:195
 msgid "What Matters Most"
 msgstr ""
 
@@ -1478,11 +1499,11 @@ msgstr ""
 msgid "Where a guest is sent to pick other dates when their choice is booked."
 msgstr ""
 
-#: includes/class-selector-widget.php:703
+#: includes/class-selector-widget.php:736
 msgid "Widget background"
 msgstr ""
 
-#: includes/class-selector-widget.php:444
+#: includes/class-selector-widget.php:477
 msgid "Wizard review heading"
 msgstr ""
 
@@ -1523,7 +1544,7 @@ msgstr ""
 msgid "Your top matches"
 msgstr ""
 
-#: includes/class-selector-widget.php:452
+#: includes/class-selector-widget.php:485
 msgid "Zero-match note"
 msgstr ""
 
@@ -1575,7 +1596,7 @@ msgstr ""
 msgid "— None —"
 msgstr ""
 
-#: includes/class-selector-widget.php:1298
+#: includes/class-selector-widget.php:1331
 msgid "“Differs” cell highlight"
 msgstr ""
 

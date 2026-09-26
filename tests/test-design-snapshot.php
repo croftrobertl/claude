@@ -189,17 +189,23 @@ namespace {
     // The "pick 2" tip switch: off by default, and a MISSING stored key (every
     // instance placed before 0.21.0) must read as off too.
     ok('compare tip is off by default on both paths', ($shortcodeCfg['showCompareTip'] ?? null) === false);
-    ok('snapshot maps a missing show_compare_tip to off',
-        Selector_Widget::design_snapshot([])['showCompareTip'] === false);
+    // 0.48.0: a missing key is INHERITED, not false — the snapshot omits it and the
+    // effective config carries the site default (off).
+    ok('snapshot omits show_compare_tip when nothing is stored (inherit)',
+        !array_key_exists('showCompareTip', Selector_Widget::design_snapshot([])));
+    ok('and the effective config still reads off',
+        Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['showCompareTip'] === false);
     ok('snapshot maps show_compare_tip=yes to on',
         Selector_Widget::design_snapshot(['show_compare_tip' => 'yes'])['showCompareTip'] === true);
 
     // Fee-details URLs (v0.22.0): DEFAULT EMPTY -> no link renders; a set URL
     // control carries through the snapshot to the JS config.
-    ok('capacity fee URL defaults empty',
-        Selector_Widget::design_snapshot([])['capacityFeeUrl'] === '');
-    ok('pet fee URL defaults empty',
-        Selector_Widget::design_snapshot([])['petFeeUrl'] === '');
+    ok('capacity fee URL is inherited (omitted) when unset, and effectively empty',
+        !array_key_exists('capacityFeeUrl', Selector_Widget::design_snapshot([]))
+        && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['capacityFeeUrl'] === '');
+    ok('pet fee URL is inherited (omitted) when unset, and effectively empty',
+        !array_key_exists('petFeeUrl', Selector_Widget::design_snapshot([]))
+        && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['petFeeUrl'] === '');
     ok('a set capacity fee URL flows through the snapshot',
         Selector_Widget::design_snapshot(['capacity_fee_url' => ['url' => '/extra-guest-fees/']])['capacityFeeUrl'] === '/extra-guest-fees/');
     ok('a set pet fee URL flows through the snapshot',
@@ -498,29 +504,106 @@ namespace {
     ok('the shipped stylesheet carries no comments', strpos($cssMin, '/*') === false);
     ok('while the source still does', strpos($cssFull, '/*') !== false);
 
-    // ---- AUDIT 2026-09-26: does a widget actually INHERIT the settings page? ----
-    // 0.44.0 claimed "a widget inherits anything its own control has not
-    // deliberately set". This measures that claim instead of repeating it: the
-    // owner stores site-wide values, a widget with NOTHING stored renders, and we
-    // read what reached the config.
-    $GLOBALS['__opts'][$sKey] = ['results_count' => 5, 'show_review' => true, 'start_mode' => 'compare'];
-    $snapEmpty = Selector_Widget::design_snapshot([]);
-    $cfgEmpty  = Selector_Widget::config_from_snapshot($snapEmpty);
+    // ---- 0.48.0: INHERITANCE, per key, both directions ---------------------------
+    // STANDING RULE (the same defect turned up in three other DCC plugins the same
+    // week): for every key the settings page holds, prove (a) a CHANGED site default
+    // reaches an untouched widget and (b) a deliberately set widget value still
+    // wins. The 2026-09-26 audit's three KNOWN GAP assertions are the red half of
+    // this block; they are now asserted the other way round.
+    if (!function_exists('admin_url')) { function admin_url($p = '') { return 'https://example.test/wp-admin/' . $p; } }
 
-    // The three keys design_snapshot() does NOT emit inherit correctly.
-    ok('INHERITS: results_count reaches a widget with nothing stored', $cfgEmpty['resultsCount'] === 5);
+    // Site defaults DIFFERENT from every control default, so inheriting is visible.
+    $site = [
+        'results_count' => 5, 'badges_max' => 2, 'reasons_max' => 2,
+        'start_mode' => 'compare', 'enabled_modes' => ['quick', 'compare'],
+        'show_heading' => false, 'show_review' => true, 'show_compare_tip' => true,
+        'capacity_fee_url' => 'https://site.test/cap', 'pet_fee_url' => 'https://site.test/pet',
+        'avail_enable' => true, 'avail_max_nights' => 30, 'avail_action' => 'mphbac_query',
+        'avail_calendar_url' => 'https://site.test/cal',
+    ];
+    $GLOBALS['__opts'][$sKey] = $site;
+    $eff = static fn(array $widget): array => Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot($widget));
 
-    // KNOWN GAP, pinned so it cannot be forgotten: design_snapshot() emits every
-    // behaviour key unconditionally — Elementor hands it a control DEFAULT even
-    // when nobody touched the control — so array_key_exists() in
-    // config_from_snapshot() is always true and the site default is MASKED. The
-    // fix needs an explicit inherit state on those controls; see the audit report.
-    ok('KNOWN GAP: design_snapshot emits showReview even with nothing stored',
-        array_key_exists('showReview', $snapEmpty));
-    ok('KNOWN GAP: site show_review=true is therefore MASKED by an untouched widget',
-        $cfgEmpty['showReview'] === false);
-    ok('KNOWN GAP: site start_mode=compare is MASKED by an untouched widget',
-        $cfgEmpty['startMode'] === 'quick');
+    // POSITIVE CONTROL for the whole block: an untouched widget's snapshot carries
+    // NONE of the inheritable keys. If it carried any, every "reaches an untouched
+    // widget" assertion below would be measuring a coincidence.
+    $snapUntouched = Selector_Widget::design_snapshot([]);
+    $inheritable = ['startMode', 'enabledModes', 'showHeading', 'showReview', 'showCompareTip',
+                    'capacityFeeUrl', 'petFeeUrl', 'availability', 'resultsCount', 'badgesMax', 'reasonsMax'];
+    ok('an untouched widget snapshot emits NONE of the eleven inheritable keys',
+        array_intersect(array_keys($snapUntouched), $inheritable) === []);
+    ok('(and it still emits the keys that are legitimately always present)',
+        isset($snapUntouched['string_overrides'], $snapUntouched['icons'], $snapUntouched['cssVars']));
+
+    $u = $eff([]);   // the untouched widget, effective config
+    // (a) a changed site default reaches an untouched widget — was MASKED before 0.48.0
+    ok('INHERITS start_mode',        $u['startMode'] === 'compare');
+    ok('INHERITS enabled_modes',     $u['enabledModes'] === ['quick', 'compare']);
+    ok('INHERITS show_heading',      $u['showHeading'] === false);
+    ok('INHERITS show_review',       $u['showReview'] === true);
+    ok('INHERITS show_compare_tip',  $u['showCompareTip'] === true);
+    ok('INHERITS capacity_fee_url',  $u['capacityFeeUrl'] === 'https://site.test/cap');
+    ok('INHERITS pet_fee_url',       $u['petFeeUrl'] === 'https://site.test/pet');
+    ok('INHERITS avail_enable',      $u['availability']['enabled'] === true);
+    ok('INHERITS avail_calendar_url',$u['availability']['calendarUrl'] === 'https://site.test/cal');
+    ok('INHERITS avail_max_nights (was hard-coded 95 in the snapshot)', $u['availability']['maxNights'] === 30);
+    ok('INHERITS results_count',     $u['resultsCount'] === 5);
+    ok('INHERITS badges_max',        $u['badgesMax'] === 2);
+    ok('INHERITS reasons_max',       $u['reasonsMax'] === 2);
+    // The catch found while building this: a widget that inherits "enabled" must
+    // still be handed an endpoint, or the lookup silently has nowhere to go.
+    ok('an inherited availability lookup still gets the ajax endpoint',
+        strpos((string) $u['availability']['ajaxUrl'], 'admin-ajax.php') !== false);
+
+    // (b) a deliberately set widget value still wins over the same site defaults
+    $w = $eff([
+        'start_mode' => 'quick', 'enabled_modes' => ['quick', 'weights'],
+        'show_heading' => 'yes', 'show_review' => 'no', 'show_compare_tip' => 'no',
+        'capacity_fee_url' => ['url' => 'https://widget.test/cap'], 'pet_fee_url' => ['url' => 'https://widget.test/pet'],
+        'avail_enable' => 'no', 'avail_calendar_url' => ['url' => 'https://widget.test/cal'],
+        'results_count' => '4', 'badges_max' => '1', 'reasons_max' => '1',
+    ]);
+    ok('WINS start_mode',        $w['startMode'] === 'quick');
+    ok('WINS enabled_modes',     $w['enabledModes'] === ['quick', 'weights']);
+    ok('WINS show_heading',      $w['showHeading'] === true);
+    ok('WINS show_review',       $w['showReview'] === false);
+    ok('WINS show_compare_tip',  $w['showCompareTip'] === false);
+    ok('WINS capacity_fee_url',  $w['capacityFeeUrl'] === 'https://widget.test/cap');
+    ok('WINS pet_fee_url',       $w['petFeeUrl'] === 'https://widget.test/pet');
+    ok('WINS avail_enable',      $w['availability']['enabled'] === false);
+    ok('WINS avail_calendar_url',$w['availability']['calendarUrl'] === 'https://widget.test/cal');
+    ok('WINS results_count',     $w['resultsCount'] === 4);
+    ok('WINS badges_max',        $w['badgesMax'] === 1);
+    ok('WINS reasons_max',       $w['reasonsMax'] === 1);
+    ok('while the never-per-widget sub-keys still come from the site',
+        $w['availability']['maxNights'] === 30 && $w['availability']['action'] === 'mphbac_query');
+
+    // Availability inherits SUB-KEY BY SUB-KEY, not as a block.
+    $half = $eff(['avail_enable' => 'no']);
+    ok('setting only avail_enable leaves the calendar URL inherited',
+        $half['availability']['enabled'] === false && $half['availability']['calendarUrl'] === 'https://site.test/cal');
+    $half2 = $eff(['avail_calendar_url' => ['url' => 'https://widget.test/cal']]);
+    ok('setting only the calendar URL leaves "enabled" inherited',
+        $half2['availability']['enabled'] === true && $half2['availability']['calendarUrl'] === 'https://widget.test/cal');
+
+    // A widget may set an opening mode the INHERITED mode set does not contain.
+    $odd = $eff(['start_mode' => 'weights']);   // site enabled_modes = quick+compare
+    ok('an opening mode outside the inherited mode set resolves to the first enabled mode',
+        $odd['startMode'] === 'quick' && $odd['enabledModes'] === ['quick', 'compare']);
+
+    // LEGACY: '' is what the pre-0.48.0 SWITCHER stored for OFF. It must keep
+    // meaning OFF — a deliberate choice — not become "inherit". This is the named
+    // risk (a heading someone turned off, on a site whose default is on), handled
+    // at read time with no rewrite of stored widget data.
+    $GLOBALS['__opts'][$sKey] = ['show_heading' => true, 'show_review' => true, 'show_compare_tip' => true, 'avail_enable' => true];
+    $legacy = $eff(['show_heading' => '', 'show_review' => '', 'show_compare_tip' => '', 'avail_enable' => '']);
+    ok('legacy \'\' on show_heading still means OFF, even with the site default on', $legacy['showHeading'] === false);
+    ok('legacy \'\' on show_review still means OFF',       $legacy['showReview'] === false);
+    ok('legacy \'\' on show_compare_tip still means OFF',  $legacy['showCompareTip'] === false);
+    ok('legacy \'\' on avail_enable still means OFF',      $legacy['availability']['enabled'] === false);
+    ok('and the explicit inherit value does inherit, so the two are distinct',
+        $eff(['show_heading' => 'inherit'])['showHeading'] === true);
+
     unset($GLOBALS['__opts'][$sKey]);
 
     // ---- Never override an Elementor `final` method ----------------------------
@@ -703,8 +786,9 @@ namespace {
     // a widget that has never stored it gets no dates step at all.
     ok('availability is off in a config built with no settings',
         (\DCCS\Config::build([], [])['availability']['enabled'] ?? null) === false);
-    ok('a widget that never saved avail_enable leaves it off',
-        (Selector_Widget::design_snapshot([])['availability']['enabled'] ?? null) === false);
+    ok('a widget that never saved avail_enable inherits, and the site default is off',
+        !array_key_exists('availability', Selector_Widget::design_snapshot([]))
+        && Selector_Widget::config_from_snapshot(Selector_Widget::design_snapshot([]))['availability']['enabled'] === false);
     ok('avail_enable is absent from the preset, so the default stands',
         !array_key_exists('avail_enable', \DCCS\Preset_Defaults::map()));
     ok('a widget that saved avail_enable=yes still turns it on',

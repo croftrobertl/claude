@@ -344,21 +344,38 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   the snapshot carries it. **Never reintroduce a literal fallback there**; the
   fallback belongs in `Settings::defaults()`.
 
-  **BUT — INHERITANCE ONLY WORKS TODAY FOR KEYS `design_snapshot()` DOES NOT
-  EMIT** (`results_count`, `badges_max`, `reasons_max`). The 0.44.0 claim that a
-  widget "inherits unless deliberately set" was WRONG for the other eight
-  (`start_mode`, `enabled_modes`, `show_heading`, `show_review`,
-  `show_compare_tip`, both fee URLs, `availability`): `design_snapshot()` emits
-  every one unconditionally, because Elementor hands it a control DEFAULT even
-  when nobody touched the control, so `array_key_exists()` is always true and the
-  site default is masked by every widget, always. Found by the 2026-09-26 audit and
-  pinned by three `KNOWN GAP` assertions in the PHP suite, measured rather than
-  restated. The fix is an explicit inherit state on those controls (a SELECT with
-  `''` = "site default", so `''` can be told apart from "no") and
-  `design_snapshot()` omitting the key when it sees it — with one question for the
-  owner first: a switcher stored as `''` means "off" today and would mean "inherit"
-  after, which changes what an existing widget does the day a site default is set.
-  **Do not describe this plugin as inheriting the settings page until that ships.**
+  **A widget INHERITS every settings-page key it has not deliberately set
+  (0.48.0).** `design_snapshot()` emits a key ONLY when the widget set it; anything
+  at "site default" is omitted and `Config::build()` supplies the page's value.
+  0.44.0 claimed this and it was true for three of eleven keys — Elementor hands
+  the snapshot a control DEFAULT even for an untouched control, so the other eight
+  were emitted unconditionally and masked the page. Found by the 2026-09-26 audit
+  (measured, not re-read), fixed in 0.48.0, and the same defect turned up in three
+  other DCC plugins the same week.
+
+  **"Site default" is the DISTINCT stored value `inherit`, never `''`.** That is
+  the whole reason no stored widget data had to be rewritten: `''` is what the
+  pre-0.48.0 SWITCHER stored for OFF, and it keeps meaning OFF (`$tri()` in
+  `design_snapshot()`: `'yes'` → on, `'no'` or `''` → off, `'inherit'`/absent →
+  omitted). A heading someone deliberately turned off therefore stays off the day
+  a site default is set — the risk the owner named, handled at read time. The
+  on/off controls are three-way SELECTs (a SWITCHER cannot express inherit) with
+  `default => 'inherit'`; storing that default on the next save is harmless,
+  unlike the `str_` notes' case, because `inherit` stored IS inherit.
+
+  **Availability inherits sub-key by sub-key.** The snapshot emits a PARTIAL block
+  and `Config::build()` merges it over the site block — `array_merge` at the top
+  level would replace the whole block. `ajaxUrl` is computed in `Config::build()`,
+  not the widget: a widget that inherits "enabled" must still be handed an
+  endpoint. `action` and `maxNights` are never per-widget; the old snapshot
+  hard-coded 95, masking the setting.
+
+  **The standing test rule, per key:** a changed site default reaches an untouched
+  widget, AND a deliberately set widget value still wins — with a positive control
+  that an untouched snapshot emits none of the eleven keys, or the "reaches"
+  half measures a coincidence. `enabled_modes` is PRESET-backed (quick+compare,
+  captured from live), so a NEW widget starts with it stored and does not inherit
+  it until cleared in the panel; that is the preset working as designed, not a gap.
 - **The settings option is a FLAT map, merged over the defaults on every read.**
   `array_merge(defaults(), stored)` IS the upgrade path: a key added by a later
   release is absent from an existing row and picks up its default on the next read,

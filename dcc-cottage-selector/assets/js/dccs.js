@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.47.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.48.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js

@@ -868,11 +868,16 @@ function configWith(overrides) {
 // ---- 31. Review step toggle (show_review / showReview) ----
 (function () {
   const sel = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'includes', 'class-selector-widget.php'), 'utf8');
-  ok('show_review SWITCHER control exists', /'show_review'[\s\S]{0,500}SWITCHER/.test(sel));
-  ok('show_review now defaults OFF (empty default)',
-    /'show_review'[\s\S]{0,500}'default'\s*=>\s*''/.test(sel));
-  ok('snapshot fallback for show_review is off',
-    /\$settings\['show_review'\]\s*\?\?\s*''/.test(sel));
+  // 0.48.0: show_review is a three-way SELECT whose default is the distinct value
+  // 'inherit', so it can express "site default" — a SWITCHER cannot. Behaviour
+  // (inherits / wins / legacy '' still off) is asserted in the PHP suite; this pins
+  // only the control SHAPE, which is what makes that behaviour possible.
+  const showReview = sel.slice(sel.indexOf("preset_control('show_review'"), sel.indexOf("preset_control('show_review'") + 700);
+  ok('show_review is a SELECT, not a SWITCHER', /Controls_Manager::SELECT\b/.test(showReview) && !/SWITCHER/.test(showReview));
+  ok('and its default is the distinct inherit value',
+    /'default'\s*=>\s*'inherit'/.test(showReview));
+  ok('the effective default is still OFF: dump-config reports showReview false',
+    JSON.parse(CONFIG).showReview === false);
 
   // showReview: true -> the forced review step appears after the last question.
   const w1 = freshDom();
