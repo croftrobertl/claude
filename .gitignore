@@ -1,2 +1,8 @@
 mphb-availability-calendar.zip
 .DS_Store
+dcc-custom-checkout.zip
+Custom Checkout *.zip
+
+# Test dependencies (installed locally, never committed)
+node_modules/
+
