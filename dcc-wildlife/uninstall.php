@@ -40,6 +40,7 @@ if ( ! is_array( $settings ) || empty( $settings['delete_on_uninstall'] ) ) {
 }
 
 delete_option( 'dcc_wl_water' );
+delete_option( 'dcc_wl_guide' );    // Guide display settings (1.32.0).
 delete_option( 'dcc_wl_settings' ); // Orphan from the sightings feature removed in 1.2.0.
 
 // The shared countdown toggle: only once the mu-plugin no longer exists.

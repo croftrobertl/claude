@@ -81,7 +81,10 @@ final class Plugin {
 	 * wakes up hourly to do nothing.
 	 */
 	public function maybe_schedule_warm(): void {
-		$wanted = Water_Data::map_possible();
+		// Two conditions, both necessary: there has to BE a map, and the owner
+		// has to want it kept warm. Turning either off removes the event rather
+		// than leaving a job that wakes up hourly to do nothing.
+		$wanted = Water_Data::map_possible() && Guide_Data::flag( 'map_warm' );
 		$booked = wp_next_scheduled( self::WARM_HOOK );
 
 		if ( $wanted && ! $booked ) {
@@ -128,8 +131,9 @@ final class Plugin {
 			delete_option( 'dcc_wl_settings' );
 		}
 
-		// Make the stored row describe what the site actually does.
+		// Make the stored rows describe what the site actually does.
 		Water_Data::persist_merged();
+		Guide_Data::persist_merged();
 
 		update_option( self::VERSION_OPTION, DCC_WL_VERSION, false );
 	}

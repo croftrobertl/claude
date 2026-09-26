@@ -195,6 +195,16 @@ final class Render {
 	 * }
 	 */
 	public static function render( array $opts ): string {
+		/*
+		 * Settings supply the DEFAULTS; an explicit argument still wins.
+		 *
+		 * That ordering matters both ways. The hub passes spotlight => false
+		 * because it month-filters the grid instead, and that is a structural
+		 * decision about the hub, not a preference — so it must not be
+		 * overridable by a setting. Everything the caller stays silent about
+		 * falls through to what the owner chose.
+		 */
+		$g    = Guide_Data::all();
 		$opts = wp_parse_args(
 			$opts,
 			[
@@ -217,7 +227,25 @@ final class Render {
 				'guide_prose'  => true,
 				// 1.18.0: the spotlight strip. The standalone widget keeps it; the
 				// hub turns it off and month-filters the guide grid instead.
-				'spotlight'    => true,
+				'spotlight'    => 1 === (int) $g['show_spotlight'],
+				// 1.32.0: the rest of the guide's furniture, each a setting.
+				'search'       => 1 === (int) $g['show_search'],
+				'jsonld'       => 1 === (int) $g['show_jsonld'],
+				/*
+				 * Per-placement values that reach the CLIENT.
+				 *
+				 * These ride the root element's own data attribute, not the
+				 * shared DCC_WL_CFG: that config is emitted ONCE per page by
+				 * design, so a value put in it could not differ between two
+				 * widgets on one page. Null means "this placement said
+				 * nothing", and the script falls back to the site-wide value.
+				 */
+				'view_override' => null,
+				'rows_override' => null,
+				// The sub-navigation's three parts. null inherits the setting.
+				'subnav'        => null,
+				'jump'          => null,
+				'compact_btn'   => null,
 			]
 		);
 
@@ -233,6 +261,19 @@ final class Render {
 			'browser'     => $show_browser,
 			'customTitle' => '' !== $title,
 		];
+
+		// Only what this placement actually overrode. An empty `set` keeps the
+		// attribute the same size it has always been on an untouched widget.
+		$per_root = [];
+		if ( null !== $opts['view_override'] && '' !== $opts['view_override'] ) {
+			$per_root['defaultView'] = Guide_Data::resolve_enum( $opts['view_override'], 'default_view' );
+		}
+		if ( null !== $opts['rows_override'] && '' !== $opts['rows_override'] ) {
+			$per_root['deckRows'] = Guide_Data::resolve_num( $opts['rows_override'], 'deck_rows' );
+		}
+		if ( $per_root ) {
+			$instance['set'] = $per_root;
+		}
 
 		ob_start();
 
@@ -314,6 +355,7 @@ final class Render {
 					         HTML — and it adds no text of its own to the crawlable
 					         prose below. Hidden until the script unhides it: with
 					         JavaScript off there is nothing here that could not work. */ ?>
+					<?php if ( $opts['search'] ) : ?>
 					<div class="dccwl-search" data-dccwl-search hidden>
 						<span class="dccwl-search-field">
 							<svg class="dccwl-search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="m13.5 13.5 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -330,6 +372,7 @@ final class Render {
 						</span>
 						<p class="dccwl-sr" role="status" aria-live="polite" data-dccwl-search-status></p>
 					</div>
+					<?php endif; ?>
 					<?php /* The one colour a tile can carry, explained where it is used
 					         (1.18.0). If a colour cannot earn a line here, it must not
 					         carry meaning. */ ?>
@@ -340,7 +383,7 @@ final class Render {
 							<span class="dccwl-legend-item"><?php echo Sprites::mark_html( $flag, $def[0] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static trusted markup. ?><span><b><?php echo esc_html( $def[0] ); ?></b> — <?php echo esc_html( $def[1] ); ?></span></span>
 						<?php endforeach; ?>
 					</p>
-					<?php self::render_guide_grids(); ?>
+					<?php self::render_guide_grids( [ 'subnav' => $opts['subnav'], 'jump' => $opts['jump'], 'compact_btn' => $opts['compact_btn'] ] ); ?>
 					<?php /* Month-filtered on the hub (canal.js): a species not likely
 					         this month is hidden, and this line says so when a whole
 					         category goes quiet. Filled client-side; empty in the HTML. */ ?>
@@ -354,7 +397,7 @@ final class Render {
 					         in a section is on the page now. */ ?>
 					<?php if ( $opts['guide_prose'] ) { self::render_guide_text(); } ?>
 				</section>
-				<?php self::render_species_jsonld(); ?>
+				<?php if ( $opts['jsonld'] ) { self::render_species_jsonld(); } ?>
 			<?php endif; ?>
 
 		</div>
@@ -374,7 +417,7 @@ final class Render {
 	 * JS wires the tabs. Chips are inert buttons until JS attaches the
 	 * shared detail panel.
 	 */
-	private static function render_guide_grids(): void {
+	private static function render_guide_grids( array $gates = [] ): void {
 		$dataset = Species::dataset();
 		$first   = true;
 
@@ -387,7 +430,7 @@ final class Render {
 			// and for their position line to be true. Stable, so order within a
 			// run is registry order still.
 			$group_species = Species::browse_order( $group_species );
-			self::render_browse_nav( $slug, $group_species, $first );
+			self::render_browse_nav( $slug, $group_species, $first, $gates );
 			?>
 			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
 				<?php foreach ( $group_species as $sp ) : ?>
@@ -428,7 +471,7 @@ final class Render {
 	 *
 	 * @param array<int,array<string,mixed>> $members
 	 */
-	private static function render_browse_nav( string $section, array $members, bool $visible ): void {
+	private static function render_browse_nav( string $section, array $members, bool $visible, array $gates = [] ): void {
 		$present = [];
 		foreach ( $members as $sp ) {
 			$b = (string) ( $sp['browse'] ?? '' );
@@ -440,6 +483,15 @@ final class Render {
 			return;
 		}
 
+		$chips   = Guide_Data::resolve( $gates['subnav'] ?? null, 'show_subnav' );
+		$jump    = Guide_Data::resolve( $gates['jump'] ?? null, 'show_jump' );
+		$compact = Guide_Data::resolve( $gates['compact_btn'] ?? null, 'show_compact' );
+		// All three off means there is no sub-navigation to draw. Emitting an
+		// empty container would leave a margin on the page for nothing.
+		if ( ! $chips && ! $jump && ! $compact ) {
+			return;
+		}
+
 		$groups = array_filter(
 			Species::browse_groups(),
 			static fn( string $slug ): bool => isset( $present[ $slug ] ),
@@ -447,14 +499,18 @@ final class Render {
 		);
 		?>
 		<div class="dccwl-subnav" data-dccwl-subnav="<?php echo esc_attr( $section ); ?>"<?php echo $visible ? '' : ' hidden'; ?>>
+			<?php if ( $chips ) : ?>
 			<div class="dccwl-subchips" role="group" aria-label="<?php esc_attr_e( 'Jump to a part of this section', 'dcc-wildlife' ); ?>" data-dccwl-subchips hidden>
 				<button type="button" class="dccwl-subchip" data-dccwl-browse="" aria-pressed="true"><?php esc_html_e( 'All', 'dcc-wildlife' ); ?></button>
 				<?php foreach ( $groups as $slug => $glabel ) : ?>
 					<button type="button" class="dccwl-subchip" data-dccwl-browse="<?php echo esc_attr( $slug ); ?>" aria-pressed="false"><?php echo esc_html( $glabel ); ?></button>
 				<?php endforeach; ?>
 			</div>
+			<?php endif; ?>
 
+			<?php if ( $jump || $compact ) : ?>
 			<div class="dccwl-subtools" data-dccwl-subtools hidden>
+				<?php if ( $jump ) : ?>
 				<label class="dccwl-jump">
 					<span class="dccwl-sr"><?php esc_html_e( 'Jump to a species', 'dcc-wildlife' ); ?></span>
 					<select class="dccwl-jump-select" data-dccwl-jump>
@@ -469,11 +525,15 @@ final class Render {
 						<?php endforeach; ?>
 					</select>
 				</label>
+				<?php endif; ?>
 
+				<?php if ( $compact ) : ?>
 				<button type="button" class="dccwl-viewtoggle" data-dccwl-view="deck" aria-pressed="false">
 					<?php esc_html_e( 'Compact', 'dcc-wildlife' ); ?>
 				</button>
+				<?php endif; ?>
 			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -854,6 +914,20 @@ final class Render {
 			 * 1.29.0, and shipping a dead path in every page's config invites
 			 * someone to use it. Removed.
 			 */
+			/*
+			 * Tunables the SCRIPTS read (1.32.0). Sent as numbers, not baked
+			 * into the JS, so changing one is a settings save rather than a
+			 * release. Each is also a default in Guide_Data, so a site with
+			 * nothing stored gets exactly the values that were hard-coded
+			 * before — which is what makes "defaults reproduce 1.31.0" true.
+			 */
+			'set'        => [
+				'spotlightMin' => Guide_Data::num( 'spotlight_min' ),
+				'peakScore'    => Guide_Data::num( 'peak_score' ),
+				'searchSquash' => Guide_Data::num( 'search_squash_min' ),
+				'deckRows'     => Guide_Data::num( 'deck_rows' ),
+				'defaultView'  => (string) Guide_Data::get( 'default_view' ),
+			],
 			'months'     => Species::month_abbrevs(),
 			'monthsFull' => Species::month_names(),
 			// Toggle state is baked into the cached page, matching the

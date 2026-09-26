@@ -451,7 +451,11 @@
  * columns a screen = six species a swipe. */
 .dccwl-app .dccwl-tiles.dccwl-deck {
 	grid-auto-columns: calc((100% - var(--dccwl-gap)) / 2);
-	grid-template-rows: repeat(3, auto);
+	/* Settable since 1.32.0. The fallback is the 3 that was hard-coded, so a
+	 * page whose script has not set the property looks exactly as it did. The
+	 * wider breakpoints below keep their own row counts: this setting is about
+	 * how tall a page of the deck is ON A PHONE, which is where it matters. */
+	grid-template-rows: repeat(var(--dccwl-deck-rows, 3), auto);
 }
 
 /* ---- the ragged deck (1.31.0) ---------------------------------------

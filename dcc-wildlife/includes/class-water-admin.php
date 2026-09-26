@@ -128,6 +128,19 @@ final class Water_Admin {
 			]
 		);
 
+		// The GUIDE option, in the same group: one form, one Save button, two
+		// stored rows. The group is a capability-and-nonce bucket, not a
+		// storage unit, so sharing it is exactly what it is for.
+		register_setting(
+			'dcc_wl_water',
+			Guide_Data::OPTION,
+			[
+				'type'              => 'array',
+				'sanitize_callback' => [ Guide_Data::class, 'sanitize' ],
+				'default'           => Guide_Data::defaults(),
+			]
+		);
+
 		register_setting(
 			'dcc_wl_water',
 			Water_Data::OPTION,
@@ -373,19 +386,28 @@ final class Water_Admin {
 			<form action="options.php" method="post">
 				<?php settings_fields( 'dcc_wl_water' ); ?>
 
-				<h2><?php esc_html_e( 'Field guide', 'dcc-wildlife' ); ?></h2>
-				<table class="form-table" role="presentation">
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Season countdown', 'dcc-wildlife' ); ?></th>
-						<td>
-							<label>
-								<input type="checkbox" name="<?php echo esc_attr( self::countdown_option() ); ?>" value="1" <?php checked( self::countdown_enabled(), true ); ?> />
-								<?php esc_html_e( 'Show the season countdown on the wildlife guide', 'dcc-wildlife' ); ?>
-							</label>
-							<p class="description"><?php esc_html_e( 'Moved here from the mu-plugin so this plugin has one settings page. Your existing setting was carried over, not reset.', 'dcc-wildlife' ); ?></p>
-						</td>
-					</tr>
-				</table>
+				<?php self::render_guide_settings(); ?>
+
+				<?php
+				/*
+				 * THE SEASON COUNTDOWN CHECKBOX WAS HERE, and it did nothing.
+				 *
+				 * countdown_possible() has returned false unconditionally since
+				 * 1.27.0, when the owner retired the feature — so ticking or
+				 * unticking this box changed no output whatsoever. It was the
+				 * same defect as the month widget's "Show season countdown"
+				 * switcher, which went in 1.31.0 for the same reason, and it
+				 * survived that round only because nobody looked at the page.
+				 *
+				 * The stored option is NOT deleted. It records a preference the
+				 * owner expressed, and reviving the countdown should restore
+				 * what he chose rather than start from a guess.
+				 */
+				?>
+				<h2><?php esc_html_e( 'Season countdown', 'dcc-wildlife' ); ?></h2>
+				<p class="description" style="max-width:46em">
+					<?php esc_html_e( 'Retired. The countdown card, its Elementor widget and the [dcc_wildlife_countdown] shortcode all render nothing, so an existing placement is harmless and can be deleted from the page whenever it suits you. Your old on/off preference is still stored, untouched, in case the card ever comes back.', 'dcc-wildlife' ); ?>
+				</p>
 
 				<h2><?php esc_html_e( 'Live conditions (optional)', 'dcc-wildlife' ); ?></h2>
 				<p class="description" style="max-width:46em">
@@ -715,6 +737,120 @@ final class Water_Admin {
 	 * a phone: a reinstall must never need a shell, or someone else.
 	 */
 	public const IMPORT_ACTION = 'dcc_wl_import_photos';
+
+	/**
+	 * One checkbox row. A helper because there are enough of them that
+	 * hand-writing each one is how an escaping call goes missing.
+	 */
+	private static function guide_check( string $key, string $label, string $help = '' ): void {
+		$o = Guide_Data::all();
+		?>
+		<tr>
+			<th scope="row"><?php echo esc_html( $label ); ?></th>
+			<td>
+				<label>
+					<input type="checkbox" name="<?php echo esc_attr( Guide_Data::OPTION ); ?>[<?php echo esc_attr( $key ); ?>]" value="1" <?php checked( (int) $o[ $key ], 1 ); ?> />
+					<?php esc_html_e( 'Show it', 'dcc-wildlife' ); ?>
+				</label>
+				<?php if ( '' !== $help ) : ?>
+					<p class="description"><?php echo esc_html( $help ); ?></p>
+				<?php endif; ?>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/** One number row, carrying its own schema bounds so the browser enforces them too. */
+	private static function guide_number( string $key, string $label, string $help = '', string $unit = '' ): void {
+		$o    = Guide_Data::all();
+		$rule = Guide_Data::schema()[ $key ] ?? [ 'min' => 0, 'max' => 999 ];
+		$id   = 'dccwl-g-' . $key;
+		?>
+		<tr>
+			<th scope="row"><label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label></th>
+			<td>
+				<input type="number" id="<?php echo esc_attr( $id ); ?>" class="small-text"
+					name="<?php echo esc_attr( Guide_Data::OPTION ); ?>[<?php echo esc_attr( $key ); ?>]"
+					value="<?php echo esc_attr( (string) $o[ $key ] ); ?>"
+					min="<?php echo esc_attr( (string) ( $rule['min'] ?? 0 ) ); ?>"
+					max="<?php echo esc_attr( (string) ( $rule['max'] ?? 999 ) ); ?>" step="1" />
+				<?php if ( '' !== $unit ) : ?>
+					<span class="description"><?php echo esc_html( $unit ); ?></span>
+				<?php endif; ?>
+				<?php if ( '' !== $help ) : ?>
+					<p class="description"><?php echo esc_html( $help ); ?></p>
+				<?php endif; ?>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * The guide's own settings: common first, advanced collapsed.
+	 *
+	 * Deliberately NOT eighty flat controls. Every row here changes something
+	 * you can see, and the ones that are missing are missing on purpose —
+	 * Guide_Data's header lists them and why. The advanced block is a native
+	 * <details>, so it needs no script and is still searchable in the page.
+	 */
+	private static function render_guide_settings(): void {
+		$o = Guide_Data::all();
+		?>
+		<h2><?php esc_html_e( 'The wildlife guide', 'dcc-wildlife' ); ?></h2>
+		<p class="description" style="max-width:46em">
+			<?php esc_html_e( 'These change the guide for every placement. A single widget can override any of them from the Elementor panel, which is the way to try something on one page before committing to it everywhere.', 'dcc-wildlife' ); ?>
+		</p>
+
+		<h3><?php esc_html_e( 'What guests see', 'dcc-wildlife' ); ?></h3>
+		<table class="form-table" role="presentation">
+			<?php
+			self::guide_check( 'show_spotlight', __( 'This month\'s spotlight', 'dcc-wildlife' ), __( 'The scrolling row of species worth looking for right now. The hub never shows it — it filters the whole list by month instead.', 'dcc-wildlife' ) );
+			self::guide_check( 'show_search', __( 'Search box', 'dcc-wildlife' ), __( 'Searches names, scientific names and field marks. Nothing is hidden when it is off; the tabs and chips still reach every species.', 'dcc-wildlife' ) );
+			self::guide_check( 'show_subnav', __( 'Group chips', 'dcc-wildlife' ), __( 'Reptiles, Mammals, Fish & snails, Wading birds, Waterfowl & swimmers, Raptors & others. They jump to a part of the Animals list; they never hide the rest of it.', 'dcc-wildlife' ) );
+			self::guide_check( 'show_jump', __( '"Jump to a species" list', 'dcc-wildlife' ), __( 'Every animal by name, in one drop-down.', 'dcc-wildlife' ) );
+			self::guide_check( 'show_compact', __( '"Compact" button', 'dcc-wildlife' ), __( 'Lets a guest swap the photo cards for short rows.', 'dcc-wildlife' ) );
+			self::guide_check( 'show_moon', __( '"Tonight on the canal" card', 'dcc-wildlife' ), __( 'The moon phase and golden hour, at the top of the water module. Worked out in the browser from the date — no network call, no API.', 'dcc-wildlife' ) );
+			?>
+			<tr>
+				<th scope="row"><label for="dccwl-g-view"><?php esc_html_e( 'The species list opens as', 'dcc-wildlife' ); ?></label></th>
+				<td>
+					<select id="dccwl-g-view" name="<?php echo esc_attr( Guide_Data::OPTION ); ?>[default_view]">
+						<option value="deck" <?php selected( (string) $o['default_view'], 'deck' ); ?>><?php esc_html_e( 'Photo cards', 'dcc-wildlife' ); ?></option>
+						<option value="compact" <?php selected( (string) $o['default_view'], 'compact' ); ?>><?php esc_html_e( 'Short rows', 'dcc-wildlife' ); ?></option>
+					</select>
+					<p class="description"><?php esc_html_e( 'Which view a guest lands on. They can still switch, as long as the Compact button above is on.', 'dcc-wildlife' ); ?></p>
+				</td>
+			</tr>
+		</table>
+
+		<h3><?php esc_html_e( 'How much it shows', 'dcc-wildlife' ); ?></h3>
+		<table class="form-table" role="presentation">
+			<?php
+			self::guide_number( 'spotlight_min', __( 'Spotlight threshold', 'dcc-wildlife' ), __( 'How likely a species must be, this month, to reach the spotlight. 1 includes the rare ones, 3 only those at their very best.', 'dcc-wildlife' ), __( '1 to 3', 'dcc-wildlife' ) );
+			self::guide_number( 'peak_score', __( 'Counts as "at peak"', 'dcc-wildlife' ), __( 'Drives the Peak badge, the "N at peak" counts, the Peak Now tab and the fullest-month line. Lowering it makes all of those say more.', 'dcc-wildlife' ), __( '1 to 3', 'dcc-wildlife' ) );
+			self::guide_number( 'hub_preview_max', __( 'Species named on the Wildlife tile', 'dcc-wildlife' ), __( 'The hub\'s preview line. 0 names none and shows the tile alone.', 'dcc-wildlife' ) );
+			self::guide_number( 'now_names_max', __( 'Species named in the "right now" line', 'dcc-wildlife' ), __( 'The one-line summary under the hub heading.', 'dcc-wildlife' ) );
+			self::guide_number( 'month_art_max', __( 'Species drawn on each month tile', 'dcc-wildlife' ), __( 'In the month picker. The count above the art carries the meaning, so 0 is a legitimate choice.', 'dcc-wildlife' ) );
+			?>
+		</table>
+
+		<details style="margin:16px 0;max-width:46em">
+			<summary style="cursor:pointer;font-weight:600;padding:6px 0">
+				<?php esc_html_e( 'Advanced — you should not need these', 'dcc-wildlife' ); ?>
+			</summary>
+			<table class="form-table" role="presentation">
+				<?php
+				self::guide_number( 'deck_rows', __( 'Rows per page of cards, on a phone', 'dcc-wildlife' ), __( 'Two columns times this many rows is how many species a swipe moves. Wider screens decide for themselves.', 'dcc-wildlife' ), __( '1 to 4', 'dcc-wildlife' ) );
+				self::guide_number( 'search_squash_min', __( 'Loose-match minimum', 'dcc-wildlife' ), __( 'How many letters before search ignores spaces and hyphens, so "blackcrowned" finds the black-crowned night heron. Below 3, four letters of a bird\'s name start matching unrelated species.', 'dcc-wildlife' ), __( 'letters', 'dcc-wildlife' ) );
+				self::guide_number( 'sticky_offset', __( 'Sticky header height', 'dcc-wildlife' ), __( 'Leave at 0 and the page measures your theme\'s header itself. Set a number only if the back bar sits under it.', 'dcc-wildlife' ), __( 'pixels', 'dcc-wildlife' ) );
+				self::guide_check( 'show_jsonld', __( 'Species data for search engines', 'dcc-wildlife' ), __( 'An invisible block naming each species and linking it to Wikipedia and Wikidata. Guests never see it; search engines and AI assistants read it.', 'dcc-wildlife' ) );
+				self::guide_number( 'map_cache_ttl', __( 'Chain map data kept for', 'dcc-wildlife' ), __( 'How long the assembled map is reused before it is rebuilt. Lower means fresher and slower.', 'dcc-wildlife' ), __( 'minutes', 'dcc-wildlife' ) );
+				self::guide_check( 'map_warm', __( 'Rebuild the map in the background', 'dcc-wildlife' ), __( 'Keeps it ready hourly so no guest waits for it. Switching this off means the first guest after it expires pays the wait.', 'dcc-wildlife' ) );
+				?>
+			</table>
+		</details>
+		<?php
+	}
 
 	private static function render_photo_import(): void {
 		$done  = Photo_Library::map();

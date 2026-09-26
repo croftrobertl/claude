@@ -51,8 +51,56 @@ final class Canal_Render {
 	/**
 	 * @param array<string,mixed> $opts
 	 */
+	/**
+	 * Only the hub values THIS placement overrode.
+	 *
+	 * They ride the root element rather than the shared DCC_WL_CANAL config,
+	 * for the same reason the month widget's do: the config is emitted once per
+	 * page, so anything in it cannot differ between two placements. An
+	 * untouched widget produces `{}` and the script falls back to the
+	 * site-wide value, which is what "an untouched control writes nothing"
+	 * means once it reaches the browser.
+	 *
+	 * @param array<string,mixed> $opts
+	 * @return array<string,int>
+	 */
+	private static function per_root( array $opts ): array {
+		$map = [
+			'hub_preview_max' => 'hubPreviewMax',
+			'now_names_max'   => 'nowNamesMax',
+			'month_art_max'   => 'monthArtMax',
+			'sticky_offset'   => 'stickyOffset',
+		];
+		$out = [];
+		foreach ( $map as $key => $js ) {
+			$raw = $opts[ $key ] ?? null;
+			if ( null === $raw || '' === $raw || ! is_numeric( $raw ) ) {
+				continue;
+			}
+			$out[ $js ] = Guide_Data::resolve_num( $raw, $key );
+		}
+		return $out;
+	}
+
 	public static function render( array $opts = [] ): string {
-		$opts  = wp_parse_args( $opts, [ 'title' => '' ] );
+		$opts = wp_parse_args(
+			$opts,
+			[
+				'title'           => '',
+				// Per-placement overrides; null means this placement said
+				// nothing and the site-wide setting stands.
+				'hub_preview_max' => null,
+				'now_names_max'   => null,
+				'month_art_max'   => null,
+				'sticky_offset'   => null,
+				'search'          => null,
+				'subnav'          => null,
+				'jump'            => null,
+				'compact_btn'     => null,
+				'view'            => null,
+				'deck_rows'       => null,
+			]
+		);
 		$title = sanitize_text_field( (string) $opts['title'] );
 
 		// The water module decides for itself whether it has anything to
@@ -80,6 +128,19 @@ final class Canal_Render {
 				// read as "too much at once". The grid is month-filtered instead
 				// (canal.js + annotateGuide), so one grid does the job.
 				'spotlight'    => false,
+
+				/*
+				 * The hub's guide gates, passed through rather than re-decided.
+				 * Composition, not a fork: Render still owns what these mean
+				 * and what they default to, and the hub only relays what its
+				 * own placement overrode. `null` relays nothing.
+				 */
+				'search'        => Guide_Data::resolve( $opts['search'], 'show_search' ),
+				'subnav'        => $opts['subnav'],
+				'jump'          => $opts['jump'],
+				'compact_btn'   => $opts['compact_btn'],
+				'view_override' => $opts['view'],
+				'rows_override' => $opts['deck_rows'],
 			]
 		);
 
@@ -87,7 +148,12 @@ final class Canal_Render {
 
 		ob_start();
 		?>
-		<div class="dccwl-canal <?php echo esc_attr( Render::app_classes() ); ?>" data-dccwl-canal>
+		<div class="dccwl-canal <?php echo esc_attr( Render::app_classes() ); ?>" data-dccwl-canal="<?php
+			// Cast to object so an empty result encodes as {} rather than [] —
+			// the script reads named keys off it, and a JSON array would be a
+			// lie about the shape even though JSON.parse tolerates it.
+			echo esc_attr( (string) wp_json_encode( (object) self::per_root( $opts ) ) );
+		?>">
 
 			<div class="dccwl-stage" data-dccwl-stage>
 
@@ -254,6 +320,22 @@ final class Canal_Render {
 			'dcc-wildlife-canal',
 			'window.DCC_WL_CANAL = ' . wp_json_encode(
 				[
+					/*
+					 * The hub's own tunables (1.32.0). Kept here rather than in
+					 * the guide's config because these three only mean anything
+					 * on the hub: how many species the Wildlife tile names, how
+					 * many the "right now" line names, and how many are drawn
+					 * on a month tile.
+					 */
+					'set'  => [
+						'hubPreviewMax' => Guide_Data::num( 'hub_preview_max' ),
+						'nowNamesMax'   => Guide_Data::num( 'now_names_max' ),
+						'monthArtMax'   => Guide_Data::num( 'month_art_max' ),
+						// The level bar's top offset. It belongs here, not in
+						// the guide's config: the bar is the hub's, and canal.js
+						// is the only reader.
+						'stickyOffset'  => Guide_Data::num( 'sticky_offset' ),
+					],
 					'i18n' => [
 						'now'        => __( 'now', 'dcc-wildlife' ),
 

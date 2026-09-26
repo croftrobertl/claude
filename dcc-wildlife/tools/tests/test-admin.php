@@ -129,6 +129,48 @@ check_lacks( $page, '"><script', 'nor open a script tag' );
 check_contains( $page, '&lt;script&gt;', 'it appears entity-encoded instead, so the value stays editable' );
 check_contains( $page, '&quot;&gt;&lt;img', 'the img payload is encoded in place rather than stripped' );
 
+dcc_section( 'the new guide inputs are escaped too' );
+
+// A stored option is never trustworthy, and 1.32.0 added eighteen more places
+// one is printed. Same test, new surface.
+dccwl_test_reset();
+$GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = [
+	'default_view'  => '"><script>alert(1)</script>',
+	'deck_rows'     => '"><img src=x onerror=alert(1)>',
+	'map_cache_ttl' => '3"><b>x</b>',
+];
+ob_start();
+Water_Admin::render_page();
+$page = (string) ob_get_clean();
+check_lacks( $page, '"><script', 'a stored guide value cannot open a script tag' );
+check_lacks( $page, '"><img', 'nor an image tag' );
+check_lacks( $page, '"><b>', 'nor any tag at all' );
+check_contains( $page, 'dcc_wl_guide[deck_rows]', 'the field is still rendered' );
+
+// Every guide input must be inside the one form, or Save would miss it.
+$form_start = strpos( $page, '<form action="options.php"' );
+$form_end   = strpos( $page, '</form>', (int) $form_start );
+$inside     = substr( $page, (int) $form_start, (int) $form_end - (int) $form_start );
+check_same(
+	preg_match_all( '/name="dcc_wl_guide\[/', $page ),
+	preg_match_all( '/name="dcc_wl_guide\[/', $inside ),
+	'every guide input sits inside the form, so one Save covers them all'
+);
+
+// Both options must be registered in the SAME group, or options.php rejects one.
+dccwl_test_reset();
+Water_Admin::register();
+$groups = [];
+foreach ( $GLOBALS['dccwl_test']['settings'] as [ $group, $name, $args ] ) {
+	$groups[ $name ] = $group;
+}
+check_same( 'dcc_wl_water', $groups['dcc_wl_guide'] ?? null, 'the guide option is registered in the page\'s own group' );
+check_same( 'dcc_wl_water', $groups['dcc_wl_water'] ?? null, 'alongside the water option' );
+check(
+	is_callable( $GLOBALS['dccwl_test']['settings'][0][2]['sanitize_callback'] ?? null ),
+	'and each one registers a sanitiser'
+);
+
 dcc_section( 'REST permissions' );
 
 dccwl_test_reset();

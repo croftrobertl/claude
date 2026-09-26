@@ -118,6 +118,51 @@ check_same(
 	'so it is cached for five minutes, not three hours'
 );
 
+dcc_section( 'the cache life is settable, and defaults to what it was' );
+
+dccwl_test_reset();
+dcc_enable_map();
+dcc_stub_atlas();
+Water_Live::map_payload();
+check_same( 10800, $GLOBALS['dccwl_test']['ttl'][ MAP_KEY ] ?? 0, 'with nothing stored it is the 3h constant' );
+
+dccwl_test_reset();
+dcc_enable_map();
+dcc_stub_atlas();
+$GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = [ 'map_cache_ttl' => 30 ];
+Water_Live::map_payload();
+check_same( 1800, $GLOBALS['dccwl_test']['ttl'][ MAP_KEY ] ?? 0, 'thirty minutes in the settings means 1800 seconds' );
+
+// Clamped either side: this is easy to get wrong invisibly.
+dccwl_test_reset();
+dcc_enable_map();
+dcc_stub_atlas();
+$GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = [ 'map_cache_ttl' => 1 ];
+Water_Live::map_payload();
+check_same( 300, $GLOBALS['dccwl_test']['ttl'][ MAP_KEY ] ?? 0, 'an absurdly short life is floored at five minutes' );
+
+// And the parse path is STILL untouched with a setting in play — the assertion
+// the brief asks for whenever anything near this file moves.
+$still = Water_Live::map_payload();
+$reading = null;
+foreach ( (array) $still['waters'] as $w ) {
+	if ( ! empty( $w['clarity'] ) ) { $reading = $w['clarity']; break; }
+}
+check( is_array( $reading ), 'a real Atlas reading still parses with a custom cache life set' );
+check_same( 1.2, $reading['value'] ?? null, 'and its value is intact' );
+
+dcc_section( 'the warmer follows its setting' );
+
+dccwl_test_reset();
+dcc_enable_map();
+$plugin2 = ( new \ReflectionClass( Plugin::class ) )->newInstanceWithoutConstructor();
+$plugin2->maybe_schedule_warm();
+check( false !== wp_next_scheduled( Plugin::WARM_HOOK ), 'scheduled when the map is on and warming is wanted' );
+
+$GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = [ 'map_warm' => 0 ];
+$plugin2->maybe_schedule_warm();
+check_same( false, wp_next_scheduled( Plugin::WARM_HOOK ), 'switching warming off removes the event' );
+
 dcc_section( 'two requests do not both build it' );
 
 dccwl_test_reset();

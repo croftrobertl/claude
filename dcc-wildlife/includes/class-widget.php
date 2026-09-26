@@ -95,7 +95,64 @@ class Widget extends \Elementor\Widget_Base {
 		 */
 
 		$this->end_controls_section();
+
+		$this->start_controls_section(
+			'section_overrides',
+			[
+				'label' => __( 'Override for this placement', 'dcc-wildlife' ),
+				'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
+			]
+		);
+
+		$this->add_control(
+			'ov_note',
+			[
+				'type' => \Elementor\Controls_Manager::RAW_HTML,
+				'raw'  => '<p style="margin:0">' . esc_html__( 'Everything here is set once in DCC → Wildlife. Change something below only to make THIS widget differ. "Use the setting" means follow the settings page, so leaving these alone stores nothing and this widget keeps tracking whatever you change there later.', 'dcc-wildlife' ) . '</p>',
+			]
+		);
+
+		foreach ( self::override_switches() as $id => $label ) {
+			$this->add_control( $id, Guide_Data::three_way( $label ) );
+		}
+
+		$this->add_control(
+			'ov_view',
+			[
+				'label'   => __( 'Species list opens as', 'dcc-wildlife' ),
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'default' => '',
+				'options' => [
+					''        => __( 'Use the setting', 'dcc-wildlife' ),
+					'deck'    => __( 'Photo cards', 'dcc-wildlife' ),
+					'compact' => __( 'Short rows', 'dcc-wildlife' ),
+				],
+			]
+		);
+
+		$this->add_control(
+			'ov_deck_rows',
+			Guide_Data::number_control( __( 'Rows per page of cards, on a phone', 'dcc-wildlife' ), 'deck_rows' )
+		);
+
+		$this->end_controls_section();
 	}
+
+	/**
+	 * The gates a placement may flip either way, and their labels.
+	 *
+	 * @return array<string,string>
+	 */
+	private static function override_switches(): array {
+		return [
+			'ov_spotlight'   => __( "This month's spotlight", 'dcc-wildlife' ),
+			'ov_search'      => __( 'Search box', 'dcc-wildlife' ),
+			'ov_subnav'      => __( 'Group chips', 'dcc-wildlife' ),
+			'ov_jump'        => __( '"Jump to a species" list', 'dcc-wildlife' ),
+			'ov_compact_btn' => __( '"Compact" button', 'dcc-wildlife' ),
+		];
+	}
+
 
 	protected function render(): void {
 		$settings = $this->get_settings_for_display();
@@ -110,6 +167,21 @@ class Widget extends \Elementor\Widget_Base {
 				// Missing on widgets saved before 1.8.1 — default to 'yes' so
 				// the 1.8.0 auto-append behaviour carries over unchanged.
 				'countdown'    => 'yes' === ( $settings['show_countdown'] ?? 'yes' ),
+
+				/*
+				 * Per-placement overrides. '' is "use the setting", so an
+				 * untouched control resolves to whatever DCC → Wildlife says —
+				 * today and after the owner changes it. Resolution lives in
+				 * Guide_Data, not here, so the month widget, the hub and the
+				 * water widget cannot drift apart on what 'on' means.
+				 */
+				'spotlight'     => Guide_Data::resolve( $settings['ov_spotlight'] ?? '', 'show_spotlight' ),
+				'search'        => Guide_Data::resolve( $settings['ov_search'] ?? '', 'show_search' ),
+				'subnav'        => $settings['ov_subnav'] ?? null,
+				'jump'          => $settings['ov_jump'] ?? null,
+				'compact_btn'   => $settings['ov_compact_btn'] ?? null,
+				'view_override' => $settings['ov_view'] ?? null,
+				'rows_override' => $settings['ov_deck_rows'] ?? null,
 			]
 		);
 	}

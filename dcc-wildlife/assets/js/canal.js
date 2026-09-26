@@ -24,6 +24,24 @@
 	var CFG = window.DCC_WL_CANAL || {};
 	var I18N = CFG.i18n || {};
 
+	/* Hub tunables (1.32.0). Every fallback is the number that was hard-coded
+	 * before, so a cached page served during an upgrade behaves as it did. A
+	 * cap of 0 is legitimate — "name none of them" is a real choice — so only a
+	 * missing or non-numeric value falls back. */
+	var SET = CFG.set || {};
+
+	function cap(key, fallback) {
+		var v = parseInt(SET[key], 10);
+		return isNaN(v) || v < 0 ? fallback : v;
+	}
+
+	/* Site-wide values. A single placement can override any of them on its own
+	 * root element, which initCanal reads below — the shared config cannot carry
+	 * a per-placement value because it is emitted once per page. */
+	var MONTH_ART_MAX_SITE = cap('monthArtMax', 3);
+	var HUB_PREVIEW_MAX_SITE = cap('hubPreviewMax', 5);
+	var NOW_NAMES_MAX_SITE = cap('nowNamesMax', 2);
+
 	function el(tag, cls, text) {
 		var n = document.createElement(tag);
 		if (cls) { n.className = cls; }
@@ -92,6 +110,19 @@
 	function initCanal(root) {
 		if (root.getAttribute('data-dccwl-canal-init')) { return; }
 		root.setAttribute('data-dccwl-canal-init', '1');
+
+		// This placement's own overrides, if it set any.
+		var own = {};
+		try { own = JSON.parse(root.getAttribute('data-dccwl-canal') || '{}') || {}; } catch (e) { own = {}; }
+
+		function ownCap(key, site) {
+			var v = parseInt(own[key], 10);
+			return isNaN(v) || v < 0 ? site : v;
+		}
+
+		var MONTH_ART_MAX = ownCap('monthArtMax', MONTH_ART_MAX_SITE);
+		var HUB_PREVIEW_MAX = ownCap('hubPreviewMax', HUB_PREVIEW_MAX_SITE);
+		var NOW_NAMES_MAX = ownCap('nowNamesMax', NOW_NAMES_MAX_SITE);
 
 		var panels = {};
 		root.querySelectorAll('[data-dccwl-panel]').forEach(function (p) {
@@ -225,7 +256,7 @@
 				if (window.DCCWL_Widget) {
 					var art = el('span', 'dccwl-month-art');
 					art.setAttribute('aria-hidden', 'true');
-					window.DCCWL_Widget.peakFor(m).slice(0, 3).forEach(function (sp) {
+					window.DCCWL_Widget.peakFor(m).slice(0, MONTH_ART_MAX).forEach(function (sp) {
 						if (!sp.sprite) { return; }
 						art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-month-sprite'));
 					});
@@ -305,7 +336,7 @@
 			var art = root.querySelector('[data-dccwl-hub-art="wildlife"]');
 			if (!art || !window.DCCWL_Widget) { return; }
 			art.textContent = '';
-			var peak = window.DCCWL_Widget.peakFor(m).slice(0, 5);
+			var peak = window.DCCWL_Widget.peakFor(m).slice(0, HUB_PREVIEW_MAX);
 			peak.forEach(function (sp) {
 				if (!sp.sprite) { return; }
 				art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-hub-sprite'));
@@ -336,7 +367,7 @@
 				}
 				return;
 			}
-			var shown = usable.slice(0, 2);
+			var shown = usable.slice(0, NOW_NAMES_MAX);
 			node.textContent = shown.map(function (f) { return f.value; }).join(' · ');
 
 			// Provenance at a glance, exactly as the water cards do it: the
@@ -406,7 +437,21 @@
 		 * edge of the viewport — a theme header, the WP admin bar — and push
 		 * the bar down below it. A theme that sets --dccwl-sticky-offset
 		 * itself keeps its value: this only runs while the token is 0. */
-		var stickyAuto = (function () {
+		/* A NUMBER IN THE SETTINGS WINS OUTRIGHT (1.32.0).
+		 *
+		 * The automatic probe is good but it is a guess about someone else's
+		 * theme, and a guess needs an override. A non-zero setting is written
+		 * straight onto the root and the probe never runs; zero means "work it
+		 * out", which is what it has always done. */
+		var stickyFixed = (function () {
+			var v = parseInt(own.stickyOffset !== undefined ? own.stickyOffset : SET.stickyOffset, 10);
+			return isNaN(v) || v <= 0 ? 0 : v;
+		})();
+		if (stickyFixed) {
+			root.style.setProperty('--dccwl-sticky-offset', stickyFixed + 'px');
+		}
+
+		var stickyAuto = !stickyFixed && (function () {
 			var v = '';
 			try { v = String(getComputedStyle(root).getPropertyValue('--dccwl-sticky-offset') || ''); } catch (e) { return false; }
 			return '' === v.trim() || parseFloat(v) === 0;

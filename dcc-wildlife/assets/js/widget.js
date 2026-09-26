@@ -10,6 +10,28 @@
 	'use strict';
 
 	var CFG = window.DCC_WL_CFG;
+
+	/*
+	 * Tunables from the settings page (1.32.0).
+	 *
+	 * Each fallback is the value that was hard-coded before, so a page whose
+	 * config predates this — a cached page served during an upgrade, say —
+	 * behaves exactly as it did. `num()` also refuses a nonsensical value
+	 * rather than letting a bad setting make the guide look empty: 0 is
+	 * legitimate for a cap but never for a threshold.
+	 */
+	var SET = (CFG && CFG.set) || {};
+
+	function setNum(key, fallback, min) {
+		var v = parseInt(SET[key], 10);
+		if (isNaN(v)) { return fallback; }
+		if (typeof min === 'number' && v < min) { return fallback; }
+		return v;
+	}
+
+	var SPOTLIGHT_MIN = setNum('spotlightMin', 2, 1);
+	var PEAK_SCORE = setNum('peakScore', 3, 1);
+	var SEARCH_SQUASH = setNum('searchSquash', 3, 1);
 	if (!CFG || !Array.isArray(CFG.species)) {
 		return;
 	}
@@ -193,7 +215,7 @@
 				return { s: s, v: (s.months && s.months[month]) || 0, i: i };
 			})
 			.filter(function (x) {
-				return x.v >= 2 && isSpotting(x.s);
+				return x.v >= SPOTLIGHT_MIN && isSpotting(x.s);
 			})
 			.sort(function (a, b) {
 				if (b.v !== a.v) {
@@ -782,7 +804,7 @@
 			// Every word somewhere, in any order: "heron blue" finds the great blue.
 			if (toks.length > 1 && toks.every(function (t) { return sp.$hay.indexOf(t) !== -1; })) { return true; }
 			var squashed = q.replace(/[^a-z0-9]+/g, '');
-			return squashed.length >= 3 && sp.$squash.indexOf(squashed) !== -1;
+			return squashed.length >= SEARCH_SQUASH && sp.$squash.indexOf(squashed) !== -1;
 		}
 
 		function refreshGuide() {
@@ -842,7 +864,7 @@
 							 * explicit request to see that month, and still
 							 * filters.
 							 */
-							keep = 'safety' === group || v >= 2;
+							keep = 'safety' === group || v >= SPOTLIGHT_MIN;
 						}
 					}
 					if (isCanal && v >= 3) {
@@ -1062,26 +1084,41 @@
 					});
 				}
 
-				if (toggle) {
-					toggle.addEventListener('click', function () {
-						var compact = 'compact' !== toggle.getAttribute('data-dccwl-view');
+				/* One function for the view, so the toggle and the owner's
+				 * chosen default cannot drift apart. A default of 'compact'
+				 * that only the button knew how to apply would be a setting
+				 * that works for the second visitor and not the first. */
+				function applyView(compact) {
+					if (toggle) {
 						toggle.setAttribute('data-dccwl-view', compact ? 'compact' : 'deck');
 						toggle.setAttribute('aria-pressed', compact ? 'true' : 'false');
 						toggle.textContent = compact
 							? (CFG.i18n.viewPhotos || 'Photos')
 							: (CFG.i18n.viewCompact || 'Compact');
-						grid.classList.toggle('dccwl-compact-list', compact);
-						// The deck's controls are meaningless in a vertical list,
-						// and its position line would describe a deck that is no
-						// longer there.
-						var deckNav = grid.nextElementSibling;
-						if (deckNav && deckNav.classList.contains('dccwl-deck-nav')) {
-							deckNav.hidden = compact;
-						}
-						if (chipWrap) { chipWrap.hidden = compact; }
-						if (window.DCCWL_Deck && !compact) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
+					}
+					grid.classList.toggle('dccwl-compact-list', compact);
+					// The deck's controls are meaningless in a vertical list, and
+					// its position line would describe a deck that is no longer
+					// there.
+					var deckNav = grid.nextElementSibling;
+					if (deckNav && deckNav.classList.contains('dccwl-deck-nav')) {
+						deckNav.hidden = compact;
+					}
+					if (chipWrap) { chipWrap.hidden = compact; }
+					if (window.DCCWL_Deck && !compact) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
+				}
+
+				if (toggle) {
+					toggle.addEventListener('click', function () {
+						applyView('compact' !== toggle.getAttribute('data-dccwl-view'));
 					});
 				}
+
+				// The owner's chosen opening view. Applied even when the toggle
+				// is switched off, so "open compact, no way back" is a coherent
+				// configuration rather than an accident.
+				var ownView = (instance && instance.set && instance.set.defaultView) || SET.defaultView;
+				if ('compact' === ownView) { applyView(true); }
 			});
 		}
 
@@ -1091,6 +1128,16 @@
 				return;
 			}
 			section.querySelectorAll('.dccwl-tile').forEach(wireTile);
+
+			/* Rows per deck page, from the settings. Written as a property
+			 * rather than an inline row count so the CSS keeps its own
+			 * breakpoints — a wider screen still decides for itself. */
+			var own = (instance && instance.set) || {};
+			var rowsRaw = (own.deckRows !== undefined) ? own.deckRows : SET.deckRows;
+			var rows = parseInt(rowsRaw, 10);
+			if (isNaN(rows) || rows < 1) { rows = 3; }
+			if (3 !== rows) { root.style.setProperty('--dccwl-deck-rows', String(rows)); }
+
 			initBrowseNav(section);
 			// One deck per group grid (1.23.0). Attaching per grid rather than
 			// once for the section means the visible group is the one being
@@ -1193,7 +1240,7 @@
 	 * species at peak all year (the heron) never rises and is skipped rather
 	 * than reported as 0 days out. */
 	function nextRise(scores, today) {
-		var PEAK = 3, DAY = 86400000, cur = today.getMonth();
+		var PEAK = PEAK_SCORE, DAY = 86400000, cur = today.getMonth();
 		for (var off = 0; off <= 12; off++) {
 			var m = (cur + off) % 12;
 			var prev = (m + 11) % 12;
@@ -1210,7 +1257,7 @@
 	 * (0 = this month) and the last month of the run. null when it is not at
 	 * peak now, or is at peak all year (a resident, not a season). */
 	function peakRun(scores, cur) {
-		var PEAK = 3;
+		var PEAK = PEAK_SCORE;
 		if (scores[cur] !== PEAK) { return null; }
 		var since = 0, m = cur;
 		while (since < 12 && scores[(m + 11) % 12] === PEAK) { m = (m + 11) % 12; since++; }

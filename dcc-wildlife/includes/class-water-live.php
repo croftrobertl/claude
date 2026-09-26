@@ -62,6 +62,23 @@ final class Water_Live {
 	private const MAP_LOCK = 'dcc_wl_water_map_lock';
 	private const TTL_MAP  = 10800; // 3 h — half of TTL_ATLAS on purpose.
 
+	/**
+	 * The map payload's cache life, in seconds.
+	 *
+	 * Settable since 1.32.0, and the CONSTANT above is still the default — so a
+	 * site with nothing stored caches for exactly the three hours 1.31.0 did.
+	 * Clamped either side because this one is easy to get wrong in a way that
+	 * is invisible: too short and a guest pays for the assembly again, too long
+	 * and a reading can be hours stale behind a page that claims to be current.
+	 */
+	private static function map_ttl_seconds(): int {
+		$minutes = Guide_Data::num( 'map_cache_ttl' );
+		if ( $minutes <= 0 ) {
+			return self::TTL_MAP;
+		}
+		return max( 300, min( 86400, $minutes * 60 ) );
+	}
+
 	/** Cron hook that keeps the map payload warm. */
 	public const WARM_HOOK = 'dcc_wl_warm_map';
 
@@ -431,11 +448,11 @@ final class Water_Live {
 	 */
 	private static function map_ttl( array $payload ): int {
 		if ( ! empty( $payload['ramps'] ) ) {
-			return self::TTL_MAP;
+			return self::map_ttl_seconds();
 		}
 		foreach ( (array) ( $payload['waters'] ?? [] ) as $w ) {
 			if ( ! empty( $w['clarity'] ) || ! empty( $w['level'] ) || ! empty( $w['depthMap'] ) ) {
-				return self::TTL_MAP;
+				return self::map_ttl_seconds();
 			}
 		}
 		return Water_Data::TTL_FAIL;

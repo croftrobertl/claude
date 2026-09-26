@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.31.0
+Stable tag: 1.32.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,24 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.32.0 =
+* **A settings page worth using.** DCC → Wildlife now has the guide's own
+  settings at the top: what guests see, how much it shows, and an "Advanced"
+  section you can leave shut. Everything on it changes something you can see.
+* **Nothing changes until you change it.** Every default is exactly what 1.31.0
+  did, so installing this alters nothing on the page.
+* **Any single widget can differ.** Each Elementor widget has an "Override for
+  this placement" section. Leave a control on "Use the setting" and that widget
+  keeps following the settings page — including when you change it later.
+* Two controls that did nothing are gone: the sitewide "Season countdown"
+  checkbox and the countdown widget's description both claimed the feature was
+  switchable. It was retired in 1.27.0. Your old preference is still stored in
+  case it ever comes back, and the page now says so plainly.
+* The fishing almanac and the chain map can be hidden on one placement but not
+  forced on, because both depend on there being something to show.
+* How long the chain map's data is kept, and whether it is rebuilt in the
+  background, are now settings rather than fixed numbers.
 
 = 1.31.0 =
 * **The chain map opens on the Harris Chain again.** It had been opening zoomed

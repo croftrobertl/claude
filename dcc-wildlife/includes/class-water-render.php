@@ -53,7 +53,29 @@ final class Water_Render {
 	 * @param array<string,mixed> $opts
 	 */
 	public static function render( array $opts ): string {
-		$opts  = wp_parse_args( $opts, [ 'title' => '' ] );
+		$opts = wp_parse_args(
+			$opts,
+			[
+				'title'      => '',
+				/*
+				 * Per-placement overrides (1.32.0).
+				 *
+				 * `moon` is a full three-way: the moon card is client-side
+				 * astronomy with no network cost, so a placement may switch it
+				 * either way against the site-wide setting.
+				 *
+				 * `fishing` and `map_button` are HIDE-ONLY. Both are gated by
+				 * CAPABILITY — whether the almanac has sourced rows, whether
+				 * the map is configured — so a placement that could force them
+				 * on would be promising a section the site may have nothing to
+				 * fill. 'off' hides; anything else leaves the existing gate to
+				 * decide.
+				 */
+				'moon'       => null,
+				'fishing'    => null,
+				'map_button' => null,
+			]
+		);
 		$title = sanitize_text_field( (string) $opts['title'] );
 		if ( '' === $title ) {
 			$title = __( 'Fishing & water conditions', 'dcc-wildlife' );
@@ -79,7 +101,9 @@ final class Water_Render {
 		?>
 		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
+			<?php if ( Guide_Data::resolve( $opts['moon'], 'show_moon' ) ) : ?>
 			<div class="dccwl-moon" data-dccwl-moon hidden></div>
+			<?php endif; ?>
 
 			<?php if ( $live ) : ?>
 				<?php /* Shell only — filled client-side so page caching cannot serve a stale reading. */ ?>
@@ -98,13 +122,13 @@ final class Water_Render {
 				</div>
 			<?php endif; ?>
 
-			<?php if ( null !== $fishing ) : ?>
+			<?php if ( null !== $fishing && Guide_Data::resolve_hide( $opts['fishing'], true ) ) : ?>
 				<?php self::render_fishing( $fishing ); ?>
 			<?php endif; ?>
 
 			<?php self::render_almanac( $almanac ); ?>
 
-			<?php if ( Water_Data::map_possible() ) : ?>
+			<?php if ( Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ) ) : ?>
 				<?php /* Nothing external — no Leaflet, no tiles, no map data —
 				         loads until a guest presses this button. A guest who
 				         never opens the map pays nothing for it. */ ?>

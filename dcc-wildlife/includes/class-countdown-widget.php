@@ -45,14 +45,24 @@ class Countdown_Widget extends \Elementor\Widget_Base {
 			]
 		);
 
-		// No per-widget options: the line's content comes from the species
-		// calendar and the on/off switch is sitewide, so placing the widget
-		// IS the configuration.
+		/*
+		 * NO CONTROLS, and that is the honest answer rather than a gap.
+		 *
+		 * The countdown was retired in 1.27.0: countdown_possible() returns
+		 * false, so this widget renders nothing by any path. Giving it
+		 * overrides would be giving controls to a widget with no output — the
+		 * exact defect that removed the month widget's countdown switcher in
+		 * 1.31.0 and the sitewide checkbox in 1.32.0. The registration stays so
+		 * that a page already placing this widget does not error.
+		 *
+		 * What it gets instead is an accurate note, because an editor looking
+		 * at an empty widget deserves to be told why.
+		 */
 		$this->add_control(
 			'countdown_note',
 			[
 				'type' => \Elementor\Controls_Manager::RAW_HTML,
-				'raw'  => esc_html__( 'Shows "…season starts in N days", computed in the visitor\'s browser from the species calendar (in canal time). The sitewide on/off switch lives in DCC → Wildlife.', 'dcc-wildlife' ),
+				'raw'  => '<p style="margin:0">' . esc_html__( 'This widget is retired and renders nothing. The season countdown card was removed in 1.27.0. You can delete this widget from the page — it is harmless either way, and it has no settings because there is nothing left for them to change.', 'dcc-wildlife' ) . '</p>',
 			]
 		);
 

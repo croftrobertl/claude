@@ -1489,3 +1489,96 @@ water-map.js grew 948 bytes gz and is still fully deferred to the map opening.
 NOTE: the wire bytes the site actually serves are NOT measurable from this
 container — no live egress — so re-measure against doracanalcourt.com before
 treating any of it as what a phone pays.
+
+## 1.32.0 — settings, and the rules that shaped which ones exist
+
+**EVERY SETTING CHANGES SOMETHING, OR IT IS NOT A SETTING.** A control that
+invites a decision and then ignores it is worse than a missing one. This round
+removed two that had become exactly that: the sitewide "Season countdown"
+checkbox and the countdown widget's note, both of which still described a
+feature `countdown_possible()` has hard-refused since 1.27.0. The month widget's
+version went in 1.31.0 for the same reason. `dcc_wl_countdown_enabled` is NOT
+deleted — it records a preference the owner expressed, and reviving the card
+should restore his choice rather than guess.
+
+**`Guide_Data` (`dcc_wl_guide`) IS A SECOND OPTION ON PURPOSE.** `dcc_wl_water`
+is 24 keys with its own sanitiser and a per-row merge for the chain, the almanac
+and the link lists. Putting display settings in it would mean one sanitiser
+reasoning about two unrelated shapes, where a mistake in the guide half could
+reach the water module's stored rows. They share the settings PAGE and the
+settings GROUP — one form, one Save — and only the storage is separate.
+
+**WHAT IS DELIBERATELY NOT SETTABLE.** "Everything plausibly tunable" is not
+"everything", and Guide_Data's header carries the list. The ones worth
+remembering:
+
+- **The photo credits panel and the modification notice.** Licence obligations;
+  four photographs carry a real CC BY requirement.
+- **The footnote row.** It CONTAINS the prose guide and the credits, so a switch
+  on it is a switch on both under another name — and it is the hub's only door
+  to the month picker.
+- **The flag key.** The 1.18.0 rule is that a colour carrying meaning has a key
+  beside it, so the key cannot be hidden while the marks remain; the reverse
+  would take the danger mark off four venomous snakes.
+- **The crawlable prose guide.** Hiding content that exists for crawlers is a
+  guidelines problem, not a preference.
+- **The Atlas fetch budget and the map fetch ceiling.** Too low does not fail —
+  it draws a map with waters silently missing.
+- **The photo drop folder.** Changing it orphans an import that already ran.
+
+**AN UNCHECKED CHECKBOX POSTS NOTHING.** `Guide_Data::sanitize()` therefore
+walks the SCHEMA, not the input: an absent boolean becomes 0, never its old
+value. Iterating the input's keys instead would make a box impossible to untick —
+it would save as "unchanged" every time. An empty NUMBER field, by contrast,
+falls back to the default rather than to zero, because zero is a real value for
+several of these caps.
+
+**A PER-PLACEMENT OVERRIDE IS A SELECT, NEVER A SWITCHER.** A switcher has two
+states and no third, so it cannot say "leave this to the settings page": every
+placement would be forced to assert a value, and a widget saved today would
+freeze today's default for ever. `Guide_Data::three_way()` is the one definition
+of that control and it lives beside `resolve()`, which consumes it, so the
+option keys and the resolver cannot drift.
+
+**DISPLAY MAY BE OVERRIDDEN EITHER WAY; CAPABILITY MAY ONLY BE HIDDEN.** A
+setting that is off for taste can be turned back on for one placement. A section
+gated by CAPABILITY — the live layer, the chain map, the fishing almanac, all of
+which govern network calls or data that may not exist — gets
+`resolve_hide()` and a two-option control with no "Show", because a widget that
+could force one on would promise a section the site has nothing to fill.
+
+**PER-PLACEMENT VALUES RIDE THE ROOT ELEMENT, NOT THE SHARED CONFIG.**
+`DCC_WL_CFG` and `DCC_WL_CANAL` are emitted ONCE PER PAGE — the static guard
+that stops two widgets shipping 54KB of identical JSON twice — so anything in
+them cannot differ between placements. Overrides therefore go in `data-dccwl`
+(the month root, which widget.js already parses per root) and
+`data-dccwl-canal` (cast to an object so an empty result is `{}`, not `[]`).
+An untouched widget emits an empty object and the script falls back to the
+site-wide value: that is what "an untouched control writes nothing" means once
+it reaches the browser.
+
+**THREE THINGS ARE SITE-WIDE ONLY, AND THAT IS NOT AN OVERSIGHT.** The spotlight
+threshold, the peak score and the loose-match minimum are read by MODULE-LEVEL
+helpers (`peakFor`, `nextRise`, the search matcher) that every root on the page
+shares by design — `peakFor` is public API that canal.js calls. Making them
+per-root would mean threading state through that API or duplicating the config,
+both worse than the setting being site-wide.
+
+**DEFAULTS REPRODUCE 1.31.0, MEASURED.** Rendered against 1.31.0 with nothing
+stored, the ONLY non-whitespace change to any of the three renderers' HTML is
+five bytes: `data-dccwl-canal` gaining `="{}"`. The configs differ only by the
+added `set` objects — which carry exactly the numbers that were hard-coded — and
+by the version string. test-guide-settings.php pins the empty `{}` so a future
+change that starts writing into it is a visible decision.
+
+**TEST GUARDS BY REFLECTION, NOT BY LIST.** `dcc_reset_once_guards()` clears
+every static bool on the renderers. A hand-kept list is why this suite first
+claimed that switching the search off also removed the structured-data block: it
+had not, the JSON-LD guard simply had not been reset, and the list did not know
+that guard existed.
+
+**THE WATER MODULE, AGAIN UNDISTURBED.** This round removed exactly TWO lines
+from class-water-live.php, both `return self::TTL_MAP;`, replaced by a settable
+`map_ttl_seconds()` that returns the same constant when nothing is stored. No
+parser was touched, and test-map-cache.php asserts a stubbed Atlas reading still
+arrives parsed with a custom cache life in play.
