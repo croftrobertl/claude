@@ -247,7 +247,10 @@
     if (p.get('dates') === 'skip') { state.dates = { from: '', to: '', mode: 'skip' }; }
     if (p.has('in') && p.has('out')) {
       var din = String(p.get('in')), dout = String(p.get('out'));
-      if (DCCS.availability && DCCS.availability.validRange(din, dout, cfgNum(config, 'availMaxNights', (config.availability && config.availability.maxNights) || 95))) {
+      // Same cap the dates step uses (config.availability.maxNights); 95 is the
+      // pre-0.44.0 literal, kept as the fallback for a cached data-config.
+      var maxN = cfgNum(config.availability || {}, 'maxNights', 95);
+      if (DCCS.availability && DCCS.availability.validRange(din, dout, maxN)) {
         state.dates = { from: din, to: dout, mode: 'set' };
       }
     }

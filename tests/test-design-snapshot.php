@@ -498,6 +498,31 @@ namespace {
     ok('the shipped stylesheet carries no comments', strpos($cssMin, '/*') === false);
     ok('while the source still does', strpos($cssFull, '/*') !== false);
 
+    // ---- AUDIT 2026-09-26: does a widget actually INHERIT the settings page? ----
+    // 0.44.0 claimed "a widget inherits anything its own control has not
+    // deliberately set". This measures that claim instead of repeating it: the
+    // owner stores site-wide values, a widget with NOTHING stored renders, and we
+    // read what reached the config.
+    $GLOBALS['__opts'][$sKey] = ['results_count' => 5, 'show_review' => true, 'start_mode' => 'compare'];
+    $snapEmpty = Selector_Widget::design_snapshot([]);
+    $cfgEmpty  = Selector_Widget::config_from_snapshot($snapEmpty);
+
+    // The three keys design_snapshot() does NOT emit inherit correctly.
+    ok('INHERITS: results_count reaches a widget with nothing stored', $cfgEmpty['resultsCount'] === 5);
+
+    // KNOWN GAP, pinned so it cannot be forgotten: design_snapshot() emits every
+    // behaviour key unconditionally — Elementor hands it a control DEFAULT even
+    // when nobody touched the control — so array_key_exists() in
+    // config_from_snapshot() is always true and the site default is MASKED. The
+    // fix needs an explicit inherit state on those controls; see the audit report.
+    ok('KNOWN GAP: design_snapshot emits showReview even with nothing stored',
+        array_key_exists('showReview', $snapEmpty));
+    ok('KNOWN GAP: site show_review=true is therefore MASKED by an untouched widget',
+        $cfgEmpty['showReview'] === false);
+    ok('KNOWN GAP: site start_mode=compare is MASKED by an untouched widget',
+        $cfgEmpty['startMode'] === 'quick');
+    unset($GLOBALS['__opts'][$sKey]);
+
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
     // final; declaring them in a subclass is a fatal error at class-declaration time,

@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.46.0
+Stable tag: 0.47.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,22 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.47.0 =
+* Self-audit release. Two small fixes; safe to skip installing until the next one.
+* FIXED: uninstalling the plugin now removes the dccs_settings option added in
+  0.44.0. It was left behind before. dcc_guest34_enabled is deliberately NOT
+  removed — DCC Custom Checkout writes it and this plugin only reads it.
+* Tidied: the deep-link date validator read a config key that does not exist and
+  relied on its own fallback; it now reads availability.maxNights, the same value
+  the dates step uses. No behaviour change — the fallback resolved correctly.
+* RECORDED, NOT FIXED — a real gap found by the audit: the 0.44.0 claim that a
+  widget inherits the settings page "unless deliberately set" is true only for
+  results_count, badges_max and reasons_max. For the other eight behaviour keys
+  the widget's design snapshot always carries a value (Elementor supplies the
+  control default even when untouched), so the site default is masked by every
+  widget. Three KNOWN GAP assertions now pin this in the suite; the fix needs an
+  explicit inherit state on those controls and one decision from the owner first.
 
 = 0.46.0 =
 * The front end now loads assets/js/dccs.min.js — the same bundle with comments

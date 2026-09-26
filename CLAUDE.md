@@ -337,16 +337,28 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   when a widget enables availability, and the party step only while the 3-4 guest
   switch is on. Eight render by default, seven with the switch off.
   `wizardTrack()` is the single place that knows.
-- **Site-wide choices live in `Settings`, per-placement choices in the widget —
-  and the widget INHERITS unless it was deliberately set.** `Settings::defaults()`
-  is the canonical map and every value in it reproduces 0.43.0 exactly (proved by
-  rebuilding that release's config from git and diffing: no shared key changed).
-  `Config::build()` reads it; `config_from_snapshot()` passes a key to
-  `Config::build()` ONLY when the snapshot actually carries it, so an unset widget
-  control leaves the site default standing. Before 0.44.0 it passed a literal
-  fallback for every key, which meant every widget masked a default that did not
-  yet exist — the exact "stored values mask defaults" trap. **Never reintroduce a
-  literal fallback there**; the fallback belongs in `Settings::defaults()`.
+- **Site-wide choices live in `Settings`; `Settings::defaults()` is the canonical
+  map** and every value in it reproduces 0.43.0 exactly (proved by rebuilding that
+  release's config from git and diffing: no shared key changed). `Config::build()`
+  reads it; `config_from_snapshot()` passes a key to `Config::build()` only when
+  the snapshot carries it. **Never reintroduce a literal fallback there**; the
+  fallback belongs in `Settings::defaults()`.
+
+  **BUT — INHERITANCE ONLY WORKS TODAY FOR KEYS `design_snapshot()` DOES NOT
+  EMIT** (`results_count`, `badges_max`, `reasons_max`). The 0.44.0 claim that a
+  widget "inherits unless deliberately set" was WRONG for the other eight
+  (`start_mode`, `enabled_modes`, `show_heading`, `show_review`,
+  `show_compare_tip`, both fee URLs, `availability`): `design_snapshot()` emits
+  every one unconditionally, because Elementor hands it a control DEFAULT even
+  when nobody touched the control, so `array_key_exists()` is always true and the
+  site default is masked by every widget, always. Found by the 2026-09-26 audit and
+  pinned by three `KNOWN GAP` assertions in the PHP suite, measured rather than
+  restated. The fix is an explicit inherit state on those controls (a SELECT with
+  `''` = "site default", so `''` can be told apart from "no") and
+  `design_snapshot()` omitting the key when it sees it — with one question for the
+  owner first: a switcher stored as `''` means "off" today and would mean "inherit"
+  after, which changes what an existing widget does the day a site default is set.
+  **Do not describe this plugin as inheriting the settings page until that ships.**
 - **The settings option is a FLAT map, merged over the defaults on every read.**
   `array_merge(defaults(), stored)` IS the upgrade path: a key added by a later
   release is absent from an existing row and picks up its default on the next read,
