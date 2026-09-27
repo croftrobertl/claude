@@ -23,8 +23,9 @@ A single WordPress plugin — **DCC Cottage Selector** — a mobile-first decisi
 that helps guests choose among the eight Dora Canal Court cottages by focusing only
 on their real differences. It lives at `dcc-cottage-selector/` and provides two
 Elementor widgets (the full Selector and a compact Mini Entry) plus a
-`[dcc_selector_entry]` shortcode. Static data, fully client-rendered. The repo has
-no build step.
+`[dcc_selector_entry]` shortcode. Static data, fully client-rendered. There IS a
+build step (since 0.45.0/0.46.0): `npm run build` regenerates the bundle, the
+minified bundle and the minified stylesheet, and `npm test` fails if any is stale.
 
 **One runtime request, and only when asked for.** Since 0.24.0 the widget can
 check availability for guest-supplied dates. It is OFF by default; when a widget
@@ -116,13 +117,18 @@ includes/class-data.php              # Read layer over data/cottages.json
 includes/class-preset-defaults.php   # Site preset: control defaults a NEW widget starts from
 includes/class-control-design-io.php # Custom Elementor control for the text export/import
 data/cottages.json                   # SINGLE SOURCE OF TRUTH for cottage attributes
-assets/js/dccs.js                    # GENERATED bundle (the only script that ships)
+includes/class-settings.php          # Site-wide defaults (option dccs_settings): the DCC > Cottage Selector page's model
+includes/class-settings-page.php     # That page: render + save (capability, nonce, sanitise, PRG)
+includes/class-menu.php              # Our submenu under the mu-plugin-owned `dcc` parent, priority 45
+assets/js/dccs.js                    # GENERATED bundle (SCRIPT_DEBUG serves it)
+assets/js/dccs.min.js                # GENERATED from dccs.js — what the front end loads
 assets/js/availability.js            # The only runtime request: date-range availability
 assets/js/score.js                   # Two-phase scoring engine (hard filters, then weights)
 assets/js/labels.js                  # Badge + "why this fits" key allocation
 assets/js/selector.js                # Front-end controller; renders every mode
 assets/js/editor-io.js               # Editor-only: the dccs_design_io control view
-assets/css/selector.css              # CSS custom-property driven
+assets/css/selector.css              # CSS custom-property driven (SCRIPT_DEBUG serves it)
+assets/css/selector.min.css          # GENERATED, comments stripped — what the front end loads
 ```
 
 Request flow: `Selector_Widget::render()` emits only a shell with the full config
@@ -405,12 +411,14 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   30 Guest Guide, 35 Features & Amenities, 40 Seasons, **45 this plugin**,
   50 Custom Checkout, 55 Availability Calendar, 63 Wildlife. Never renumber or
   remove another plugin's entry.
-- **The dates step is governed by the `avail_enable` control, not by code.** It is a
-  switcher defaulting to off and deliberately absent from the preset, so a widget
-  that never stored it shows no check-in/check-out question at all. There is no
-  second switch — adding one would create exactly the two-copies-must-agree hazard
-  the preset notes warn about. A widget that HAS saved `avail_enable=yes` can only
-  be turned off in its own Elementor panel.
+- **The dates step has TWO switches now, by design: the site-wide "Ask for dates"
+  on the settings page, and each widget's `avail_enable` tri-select (Site default
+  / On / Off).** The pre-0.44.0 rule "there is no second switch" is retired: the
+  site default is the first switch and a widget either inherits it or overrides
+  it. Both default to OFF, so a widget nobody touched still shows no dates step.
+  A legacy `''` stored by the old SWITCHER means Off and still displays as Off
+  (0.49.0 — `''` is the Off option's value; 0.48.0 used `'no'` and legacy widgets
+  showed a BLANK dropdown).
 - **Colours come from the site's existing palette.** The owner keeps a list of the
   hexes already in use and prefers an existing one over a new one, so the site stays
   visually consistent. It is a starting guide, not a permitted-colours list: if a

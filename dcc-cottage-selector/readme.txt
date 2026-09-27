@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.48.0
+Stable tag: 0.49.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,16 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.49.0 =
+* Self-audit release. One fix a guest never sees; the owner will.
+* FIXED: in the Elementor panel, the Review step, "pick 2" tip and availability
+  dropdowns showed BLANK on widgets saved before 0.48.0. Those widgets store an
+  empty value (the old on/off switch's "off"), and 0.48.0's dropdowns offered
+  "Off" as a different value, so nothing matched. Off is now stored as the empty
+  value itself, so those widgets display "Off" — which is what they do. Behaviour
+  is unchanged for everyone; 0.48.0's value for off is still read as off.
+* Removed an unused constant.
 
 = 0.48.0 =
 * A widget now genuinely INHERITS the DCC > Cottage Selector settings page for

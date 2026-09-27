@@ -26,9 +26,6 @@ final class Settings
     /** Stored option name. Changing this strands the owner's saved values. */
     public const OPTION = 'dccs_settings';
 
-    /** Bumped when a release adds keys; recorded so the admin page can show it. */
-    public const SCHEMA = 1;
-
     /**
      * Canonical defaults. EVERY VALUE HERE REPRODUCES 0.43.0 BEHAVIOUR EXACTLY —
      * a fresh install with no stored option must render byte-identically to the

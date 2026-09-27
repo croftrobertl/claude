@@ -218,13 +218,22 @@ class Selector_Widget extends Widget_Base
         $this->end_controls_section();
     }
 
-    /** The three-way options shared by every on/off control that can inherit. */
+    /**
+     * The three-way options shared by every on/off control that can inherit.
+     *
+     * OFF IS STORED AS '' — the value the pre-0.48.0 SWITCHER stored for off — so a
+     * widget saved before 0.48.0 DISPLAYS as "Off" in the panel. 0.48.0 used 'no'
+     * here, which left every legacy '' matching no option: a native select shows
+     * that as BLANK (selectedIndex -1, measured in Chromium), so the owner saw empty
+     * dropdowns whose effect was Off. 'no' is still READ as off by design_snapshot(),
+     * for anything saved during 0.48.0.
+     */
     private static function tri_options(): array
     {
         return [
             'inherit' => __('Site default', 'dcc-cottage-selector'),
             'yes'     => __('On', 'dcc-cottage-selector'),
-            'no'      => __('Off', 'dcc-cottage-selector'),
+            ''        => __('Off', 'dcc-cottage-selector'),
         ];
     }
 

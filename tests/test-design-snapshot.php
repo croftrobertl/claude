@@ -606,6 +606,17 @@ namespace {
 
     unset($GLOBALS['__opts'][$sKey]);
 
+    // 0.49.0 (Opus audit): every value design_snapshot() treats as a DELIBERATE
+    // choice must be offerable by the control, or the panel cannot display what is
+    // stored. A native select shows a value that matches no option as BLANK.
+    $triOpts = array_keys((function () { return self::tri_options(); })->bindTo(null, Selector_Widget::class)());
+    ok('the tri-select offers the site-default value', in_array('inherit', $triOpts, true));
+    ok('the tri-select offers the legacy OFF value \'\' — so a pre-0.48.0 widget displays as Off, not blank',
+        in_array('', $triOpts, true));
+    ok('and it still offers On', in_array('yes', $triOpts, true));
+    ok('\'no\' saved during 0.48.0 is still READ as off',
+        $eff(['show_heading' => 'no'])['showHeading'] === false);
+
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
     // final; declaring them in a subclass is a fatal error at class-declaration time,
