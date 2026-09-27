@@ -293,6 +293,21 @@ echo "\n-- accessibility --\n";
     $_GET = [];
 }
 
+echo "\n-- F1: the screen renders real characters, not \\u escapes --\n";
+{
+    /* 0.42.0 wrote \u2019 and \u2014 inside SINGLE-quoted PHP strings, where
+       PHP does not interpret them, so the settings screen printed
+       "cottage\u2019s". Asserted on the RENDERED page, not the source. */
+    $GLOBALS['t_can'] = true; $_POST = []; $_GET = [];
+    $GLOBALS['t_options'] = []; Settings::flush();
+    $html = render_page();
+    check('no backslash-u sequence anywhere on the rendered screen',
+        !preg_match('/\\\\u[0-9a-fA-F]{4}/', $html),
+        (preg_match('/.{0,30}\\\\u[0-9a-fA-F]{4}.{0,10}/', $html, $m) ? $m[0] : ''));
+    check('the apostrophe and the dash render as themselves',
+        str_contains($html, 'cottage’s info panel') && str_contains($html, 'opens one — measured'));
+}
+
 echo "\n-- reset --\n";
 {
     $GLOBALS['t_can'] = true;

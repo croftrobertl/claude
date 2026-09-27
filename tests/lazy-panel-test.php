@@ -35,15 +35,27 @@ require __DIR__ . '/bootstrap.php';
 $ROOT = dirname(__DIR__) . '/mphb-availability-calendar';
 
 $GLOBALS['t_options'] = [];
-function get_transient($k) { return false; }
-function set_transient($k, $v, $t) { return true; }
+function get_transient($k) { return $GLOBALS['t_transients'][$k] ?? false; }
+function set_transient($k, $v, $t) { $GLOBALS['t_transients'][$k] = $v; return true; }
 function delete_transient($k) { return true; }
+$GLOBALS['t_transients'] = [];
+$GLOBALS['t_producer_runs'] = 0;
+function wp_hash($d) { return hash_hmac('md5', $d, 'test-salt'); }
+class T_Json extends \Exception { public $payload; public $code_; }
+function wp_send_json_success($d = null) { $e = new T_Json('ok'); $e->payload = $d; throw $e; }
+function wp_send_json_error($d = null, $code = 200) { $e = new T_Json('err'); $e->payload = $d; $e->code_ = $code; throw $e; }
+function wp_unslash($v) { return $v; }
 
 require $ROOT . '/includes/class-cache.php';
 require $ROOT . '/includes/class-data-provider.php';
 require $ROOT . '/includes/class-staff.php';
 require $ROOT . '/includes/class-ajax.php';
 require $ROOT . '/includes/class-settings.php';
+require __DIR__ . '/elementor-stub.php';
+require $ROOT . '/includes/class-widget.php';
+if (!defined('MPHBAC_VERSION')) { define('MPHBAC_VERSION', 'test'); }
+use MPHBAC\Widget;
+use MPHBAC\Ajax;
 
 use MPHBAC\Settings;
 
@@ -80,7 +92,7 @@ echo "\n-- the fragment carries its own CSS, because an enqueue cannot reach the
     check('...and puts it in the fragment as a <style>, not as an enqueue',
         preg_match("/'<style>' \. \\\$css \. '<\/style>'/", $widget) === 1);
     check('it does not rely on wp_enqueue_style, which would reach nothing in an AJAX request',
-        !preg_match('/render_info_fragment[\s\S]{0,900}wp_enqueue_style/', $widget));
+        !preg_match('/render_info_fragment[\s\S]{0,1600}wp_enqueue_style/', $widget));
     check('the with-css render form is still used for the markup itself',
         str_contains($widget, 'get_builder_content_for_display($template_id, true)'));
     check('a template with no CSS still returns its markup rather than an empty fragment',
@@ -89,18 +101,18 @@ echo "\n-- the fragment carries its own CSS, because an enqueue cannot reach the
 
 echo "\n-- the endpoint renders first-party content ONLY --\n";
 {
-    check('the reference is shape-checked before any lookup happens',
-        preg_match("#preg_match\('/\^\(\?:tpl\|acc\):\[1-9\]#", $ajax) === 1);
+    check('the reference is verified — shape AND signature — before any lookup happens',
+        preg_match('/\$src = Widget::verify_info_src\(\$signed\);\s*if \(\$src === \'\'\)/', $ajax) === 1);
     /* THE REFERENCE COMES FROM THE PAGE, SO IT COMES FROM THE VISITOR. Without
        a post-type and status gate this endpoint would render any post through
        Elementor — a draft, a private page, another plugin's content. */
     check('a template must be a PUBLISHED elementor_library post',
-        preg_match("/post_type !== 'elementor_library' \|\| \\\$post->post_status !== 'publish'/", $widget) === 1);
+        preg_match("/post_type === 'elementor_library' && \\\$post->post_status === 'publish'/", $widget) === 1);
     check('an accommodation goes through the existing published-room-type gate',
         preg_match("/post_type !== 'mphb_room_type' && \\\$post->post_status !== 'publish'/", $widget) === 1
         || preg_match("/post_type !== 'mphb_room_type' \|\| \\\$post->post_status !== 'publish'/", $widget) === 1);
-    check('anything else returns empty rather than guessing',
-        preg_match("/return '';\s*\}\s*\/\*\*\s*\n\s*\* THE TEMPLATE|return '';\n    \}/", $widget) === 1);
+    check('anything else is not renderable at all',
+        preg_match('/function info_source_exists[\s\S]{0,600}return false;\s*\}/', $widget) === 1);
     check('a miss is one shape — no probing difference between kinds of miss',
         substr_count($ajax, "__('Panel not found.', 'mphb-availability-calendar')") === 1);
     check('no guest or booking data is reachable from this handler',
@@ -112,10 +124,10 @@ echo "\n-- text panels are never deferred --\n";
     /* The weight is the templates. A custom-text panel is a few hundred bytes
        and fetching one would cost a round-trip to save nothing. */
     check('the lazy branch covers the template source',
-        str_contains($widget, "\$info_src[\$cid]  = 'tpl:' . \$tpl_id;"));
-    check('and the accommodation source', str_contains($widget, "'acc:' . \$cid"));
+        str_contains($widget, "self::sign_info_src('tpl:' . \$tpl_id)"));
+    check('and the accommodation source', str_contains($widget, "self::sign_info_src('acc:' . \$cid)"));
     check('but the text branch has no lazy path at all',
-        !preg_match("/\\\$text = \(string\) \(\\\$row\['ci_text'\][\s\S]{0,300}lazy_panels/", $widget));
+        !preg_match("/\\\$text = \(string\) \(\\\$row\['ci_text'\][\s\S]{0,300}lazy/", $widget));
 }
 
 echo "\n-- the placeholder keeps every existing path working --\n";
@@ -144,14 +156,25 @@ echo "\n-- fetched once, kept, and Elementor re-bound --\n";
         preg_match('/catch\(function \(e\) \{[\s\S]{0,300}delete infoFetches\[src\]/', $js) === 1);
     /* THE OTHER HALF OF THE v0.6.0 FAILURE. Elementor binds its widgets once,
        at page load; injected markup has no handlers. */
-    check('Elementor\'s own per-element ready trigger is re-run on the injected markup',
-        str_contains($js, 'elementsHandler.runReadyTrigger'));
-    check('...per element, not a page-wide re-init that would disturb what already works',
-        preg_match('/querySelectorAll\(\'\.elementor-element\'\)[\s\S]{0,200}runReadyTrigger/', $js) === 1);
-    check('...and a template with no JS widgets still opens if that call throws',
-        preg_match('/runReadyTrigger[\s\S]{0,200}catch \(e\) \{ \/\* a template with no JS/', $js) === 1);
-    check('the hover/touch prefetch fetches the panel, not just its images',
+    /* ONE re-bind implementation, not two (0.42.1). 0.42.0 added a duplicate
+       of reinitElementorWidgets() next to the fetch; the existing one is
+       jQuery-wrapped, guarded against double binding, and run from the open
+       path's settle sequence. A lazy fill now runs that same sequence. */
+    check('the duplicate re-bind is gone', !str_contains($js, 'initElementorIn'));
+    check('Elementor\'s ready trigger is run by the ONE existing function, jQuery-wrapped',
+        preg_match('/function reinitElementorWidgets[\s\S]{0,600}runReadyTrigger\(window\.jQuery \? window\.jQuery\(el\) : el\)/', $js) === 1);
+    check('a lazy fill runs the same settle sequence the open path runs (F5)',
+        preg_match('/fetchInfoPanel\(config, content\)\s*\.then\(function \(\) \{[\s\S]{0,500}settleBody\(\);\s*watchBodyImages\(\);/', $js) === 1);
+    check('...but only while THAT panel is still on screen',
+        preg_match('/if \(movedContent === content && sheet\.classList\.contains\(\'is-open\'\)\) \{\s*settleBody/', $js) === 1);
+    check('and settle() itself now delegates to it, so there is one sequence',
+        preg_match('/settled = true;\s*settleBody\(\);/', $js) === 1);
+    check('the hover prefetch fetches the panel, not just its images',
         preg_match("/data-info-src'\)\) \{[\s\S]{0,300}fetchInfoPanel/", $js) === 1);
+    /* F3b. touchstart fires for a scrolling finger as readily as a tap, and
+       a lazy warm is a WordPress boot per touch. */
+    check('but a TOUCH never prefetches a lazy panel — the tap that opens it is the fetch',
+        preg_match("/root\.addEventListener\('touchstart'[\s\S]{0,1600}if \(content && content\.getAttribute\('data-info-src'\)\) return;\s*warmInfoPopup/", $js) === 1);
     check('a failed prefetch clears the warmed flag so the tap can retry',
         preg_match('/catch\(function \(\) \{ warmedInfoIds\[typeId\] = false; \}\)/', $js) === 1);
 }
@@ -160,14 +183,92 @@ echo "\n-- the visitor is never left looking at an empty popup --\n";
 {
     check('the popup opens immediately and shows a loading state while it waits',
         str_contains($js, "bodyEl.classList.add('is-loading')"));
+    // Asserted INSIDE the .catch, not by counting occurrences: openInfo()
+    // clears it too, so a count of "at least two" survived the failure-path
+    // clear being deleted.
     check('the loading state is cleared on success AND on failure',
-        substr_count($js, "bodyEl.classList.remove('is-loading')") === 2);
+        preg_match('/\.then\(function \(\) \{\s*bodyEl\.classList\.remove\(\'is-loading\'\);/', $js) === 1
+        && preg_match('/\.catch\(function \(\) \{\s*bodyEl\.classList\.remove\(\'is-loading\'\);/', $js) === 1);
+    check('settleBody() is where the re-bind happens, so a lazy fill gets it',
+        preg_match('/function settleBody\(\) \{[\s\S]{0,600}reinitElementorWidgets\(bodyEl\);/', $js) === 1);
+    /* F6. A cold open's dimmed state must not outlive that open. */
+    check('...and by openInfo(), so it cannot leak onto another cottage (closeInfo\'s copy was unobservable and is gone)',
+        preg_match('/function openInfo\([^)]*\) \{[\s\S]{0,500}bodyEl\.classList\.remove\(\'is-loading\'\)/', $js) === 1
+        && !preg_match('/function closeInfo\(\) \{\s*bodyEl\.classList\.remove/', $js));
+    check('F7: the suggestion\'s rooms are set on EVERY render path, not only the embedded one',
+        preg_match('/state\.availability = availability;[\s\S]{0,400}state\.rooms = rooms;/', $js) === 1);
     check('a failure says so, through the existing text domain rather than a hardcoded string',
         str_contains($js, 'config.strings.infoFailed')
         && str_contains($widget, "'str_info_failed'"));
     check('the loading state animates nothing, so there is nothing for reduced-motion to honour',
         !preg_match('/\.mphbac-info-body\.is-loading \{[^}]*(animation|transition)/',
             file_get_contents($ROOT . '/assets/css/widget.css')));
+}
+
+echo "\n-- F8: the endpoint renders only references a page on this site emitted --\n";
+{
+    t_post(501, 'elementor_library', 'publish', 'Panel');
+    t_post(502, 'elementor_library', 'draft',   'Draft panel');
+    $signed = Widget::sign_info_src('tpl:501');
+    check('a signed reference has the shape tpl:<id>:<20 hex>',
+        preg_match('/^tpl:501:[0-9a-f]{20}$/', $signed) === 1, $signed);
+    check('it verifies back to the bare reference', Widget::verify_info_src($signed) === 'tpl:501');
+    $tampered = substr($signed, 0, -1) . (substr($signed, -1) === 'a' ? 'b' : 'a');
+    check('one changed hex digit and it is refused', Widget::verify_info_src($tampered) === '', $tampered);
+    check('an UNSIGNED reference — what 0.42.0 accepted — is refused', Widget::verify_info_src('tpl:501') === '');
+    check('a signature lifted from one id does not open another',
+        Widget::verify_info_src('tpl:502:' . substr($signed, -20)) === '');
+    $ask = static function (string $src): array {
+        $_REQUEST = ['src' => $src];
+        try { Ajax::handle_info(); } catch (T_Json $e) { return [$e->getMessage(), $e->code_, $e->payload]; }
+        return ['none', 0, null];
+    };
+    check('the endpoint answers a forged reference with 400 and one fixed message',
+        (static fn($r) => $r[0] === 'err' && $r[1] === 400 && $r[2]['message'] === 'Invalid panel.')($ask('tpl:501')));
+    check('...and a well-signed reference to a DRAFT with 404 — the status gate still holds behind the signature',
+        (static fn($r) => $r[0] === 'err' && $r[1] === 404)($ask(Widget::sign_info_src('tpl:502'))));
+    $_REQUEST = [];
+}
+
+echo "\n-- F3a: a fragment is rendered once per TTL, not once per visitor --\n";
+{
+    $GLOBALS['t_transients'] = [];
+    $GLOBALS['t_options'] = [];
+    MPHBAC\Settings::flush();
+    // With no Elementor in this harness the render is empty, which is fine:
+    // what is under test is that the SECOND call does not run the producer.
+    $before = count($GLOBALS['t_transients']);
+    Widget::render_info_fragment('tpl:501');
+    $stored = count($GLOBALS['t_transients']) - $before;
+    Widget::render_info_fragment('tpl:501');
+    $stored2 = count($GLOBALS['t_transients']) - $before;
+    check('the first call stores the fragment', $stored === 1, $stored);
+    check('the second call adds nothing — it was served from the store', $stored2 === 1, $stored2);
+    // The flush hooks are asserted at RUNTIME in consumer-test.php, on the
+    // hook table Plugin::boot() builds — a source search here matched the
+    // line even after a mutation commented it out.
+    check('the endpoint is on the SpeedyCache exclusion list like its siblings (F10)',
+        str_contains(file_get_contents($ROOT . '/includes/class-cache-integration.php'), "MPHBAC_INFO_ACTION"));
+}
+
+echo "\n-- F12: no placeholder for a panel that could never load --\n";
+{
+    $rm = new ReflectionMethod(Widget::class, 'info_row');
+    $rm->setAccessible(true);
+    $missing = $rm->invoke(null, ['ci_source' => 'template', 'ci_template' => 999], 22, true);
+    $draft   = $rm->invoke(null, ['ci_source' => 'template', 'ci_template' => 502], 22, true);
+    $live    = $rm->invoke(null, ['ci_source' => 'template', 'ci_template' => 501], 22, true);
+    check('a deleted template gets no placeholder — the row has no popup, as before', $missing === null);
+    check('a draft template gets none either', $draft === null);
+    check('a published one does', is_array($live) && $live['src'] !== '');
+}
+
+echo "\n-- F1: real characters, not backslash-u --\n";
+{
+    check('the failure message default contains a real apostrophe and no \\u escape',
+        str_contains($widget, 'cottage’s details') && !str_contains($widget, '\u2019'));
+    $settings_src = file_get_contents($ROOT . '/includes/class-settings.php');
+    check('the setting help text likewise', str_contains($settings_src, 'cottage’s info panel') && !preg_match('/\\\\u20[0-9a-f]{2}/', $settings_src));
 }
 
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");

@@ -64,6 +64,49 @@ echo "\n-- it is a comment strip, NOT a minifier --\n";
         str_contains((string) $min, '!important'));
 }
 
+echo "\n-- F9: the stripper refuses what it cannot be sure of --\n";
+{
+    /* Driven as a BLACK BOX through --strip, with the exit code as the
+       verdict. The 0.42.0 stripper tracked quoted strings only, so a `/*`
+       inside an UNQUOTED url() would have been cut as a comment — and the
+       regex cross-check would have agreed, because it makes the same
+       mistake. Nothing in widget.css does this; the point is that it cannot
+       start doing it silently. */
+    $tmp = sys_get_temp_dir() . '/mphbac-strip-' . getmypid();
+    $run = static function (string $css) use ($tmp, $TOOLS): array {
+        file_put_contents($tmp, $css);
+        $out = []; $code = 0;
+        exec('php ' . escapeshellarg($TOOLS . '/build-css.php') . ' --strip ' . escapeshellarg($tmp) . ' 2>&1', $out, $code);
+        return [$code, implode("\n", $out)];
+    };
+    [$c, $o] = $run("a{background:url(data:image/svg+xml,<svg>/*x*/</svg>)}\nb{color:red}/* gone */\n");
+    check('a /* inside an UNQUOTED url() is REFUSED, exit 1', $c === 1, [$c, substr($o, 0, 80)]);
+    check('...and says why', str_contains($o, "inside an unquoted url()"), $o);
+    /* THE CONTRACT IS "REFUSE ANYTHING AMBIGUOUS", not "be clever". A `/*`
+       inside a QUOTED value is one the string-aware strip handles correctly
+       — and the build still refuses it, because its cross-check against a
+       plain regex strip sees the two disagree and stops rather than trusting
+       either. That is deliberate: widget.css has no such value, and the day
+       one appears is a day a human should look. The first version of this
+       test expected the quoted cases to be KEPT; the tool's actual, safer
+       contract is that they are refused too. F9's addition is the UNQUOTED
+       case above, where the two strippers used to agree on the wrong answer
+       and nothing refused anything. */
+    [$c, $o] = $run("a{background:url(\"data:image/svg+xml,<svg>/*x*/</svg>\")}\nb{color:red}/* gone */\n");
+    check('inside a QUOTED url() it is refused too, by the cross-check, not silently cut',
+        $c === 1 && str_contains($o, 'disagree'), [$c, substr($o, 0, 120)]);
+    [$c, $o] = $run("a{content:'/* not a comment */'}\n/* real */\nb{color:red}\n");
+    check('a comment-like sequence inside a string: refused for the same reason',
+        $c === 1 && str_contains($o, 'disagree'), [$c, substr($o, 0, 120)]);
+    [$c, $o] = $run("a{color:red}\n/* plain */\nb{color:blue}\n");
+    check('and an ordinary stylesheet strips cleanly, exit 0',
+        $c === 0 && !str_contains($o, 'plain') && str_contains($o, 'b{color:blue}'), [$c, $o]);
+    [$c, $o] = $run("a{color:red}/*! licence */\n/* plain */\n");
+    check('a /*! bang comment survives, a plain one does not',
+        $c === 0 && str_contains($o, '/*! licence */') && !str_contains($o, 'plain'), [$c, $o]);
+    @unlink($tmp);
+}
+
 echo "\n-- the saving is real, measured the way a phone pays for it --\n";
 {
     $g = static fn(string $s): int => strlen(gzencode($s, 9));

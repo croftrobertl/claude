@@ -1923,6 +1923,62 @@ Third time this family of fault has appeared. **Anchor a mutation on the
 selector that makes it unique**, not on a run of declarations that could open
 any rule.
 
+## The 0.42.0 self-audit, and what it found (0.42.1)
+
+Asked to audit my own three releases with fresh eyes. Twelve findings; the
+ones worth carrying forward:
+
+**A setting whose default equals the constant can still govern nothing.**
+`cache_ttl` shipped in 0.40.0 with a `defaults-test` proving its default was
+`Cache::DEFAULT_TTL` — and the availability cache passed `Cache::DEFAULT_TTL`
+explicitly, so the setting never reached it. Green for two releases. The
+same defect turned up in three other DCC plugins the same week. **Standing
+rule now: every engine setting has a "setting reaches its consumer" test —
+set a value that is NOT the default, drive the real consumer, read the
+outcome from the far side** (the TTL handed to `set_transient`, the date span
+a scan walked, the `to` an endpoint answered with). `consumer-test.php`.
+
+**`\u2019` in a single-quoted PHP string is five characters.** PHP interprets
+`\u{…}` in double quotes only. Written through a Python heredoc, never
+rendered. The settings screen printed `cottage\u2019s`. Asserted now on the
+RENDERED page, and a mutation puts the escape back.
+
+**I built a feature that turned cached bytes into uncached PHP boots.**
+Deferring the cottage panels replaced 413 KB of page-cached HTML with an
+admin-ajax POST — a full WordPress boot — per panel per visitor, and the
+existing `touchstart` prefetch meant a scrolling finger on a phone could fire
+several. And I reported "the common case opens with no wait", which was true
+on desktop hover and false on the device that matters. Fixed with a
+per-fragment transient (rendered once per TTL, flushed on template save) and
+no touch prefetch for lazy panels; the claim is corrected in the record.
+
+**I duplicated a function that already existed.** `initElementorIn()` did
+what `reinitElementorWidgets()` — jQuery-wrapped, guarded, already run from
+the open path's `settle()` — had done for months, twenty lines up. I had
+not read that part. The lazy fill now runs the same settle sequence, which
+also fixed the stale scrollbar (F5). **Read the file you are adding to.**
+
+**"Where the two strippers disagree" cannot catch the case where both are
+wrong the same way.** The build's regex cross-check is blind to a `/*` inside
+an UNQUOTED `url()`, because the naive regex and the string-aware stripper
+both cut it. The stripper now tracks `url(` and refuses. The contract is
+"refuse anything ambiguous", and `build-test` drives the tool as a black box
+through `--strip` with the exit code as the verdict — my first expectation
+(that quoted cases were KEPT) was wrong about the tool's own, safer contract.
+
+**Three mutations were faults in the mutation, again.** One left invalid PHP
+(NO RUN, not red); one quoted a comment line inexactly (STALE); one
+commented out an `add_action` line and the assertion matched the substring
+behind the slashes (SURVIVED — the documentation-not-code fault, now asserted
+on the hook table `Plugin::boot()` builds). And `closeInfo()`'s loading-state
+clear survived its mutation because `openInfo()` also clears and the body is
+hidden in between: decoration, deleted.
+
+**The staging path is close-then-open.** My first F6 browser test tried to
+open cottage B while A's popup was open — Playwright could not tap the row
+because A's overlay covered it, exactly as it covers it for a guest. A test
+that cannot be reached through the UI is testing a path nobody takes.
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

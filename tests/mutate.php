@@ -19,7 +19,11 @@
 $root  = dirname(__DIR__);
 $base = $root . '/mphb-availability-calendar/';
 /** includes/ is implied for a bare class file; assets/ paths are given in full. */
-$resolve = static function (string $file) use ($base): string {
+$resolve = static function (string $file) use ($base, $root): string {
+    // tools/ is repository-level, beside the plugin folder, not inside it.
+    if (str_starts_with($file, 'tools/')) {
+        return $root . '/' . $file;
+    }
     return str_contains($file, '/') ? $base . $file : $base . 'includes/' . $file;
 };
 
@@ -770,20 +774,19 @@ $mutations = [
      "            return \$html;",
      'lazy-panel-test.php'],
     ["lazy: any post may be rendered through the endpoint, not just a published template", 'class-widget.php',
-     "            if (!\$post || \$post->post_type !== 'elementor_library' || \$post->post_status !== 'publish') {",
-     "            if (!\$post) {",
+     "            return \$post && \$post->post_type === 'elementor_library' && \$post->post_status === 'publish';",
+     "            return \$post !== null;",
      'lazy-panel-test.php'],
-    ["lazy: the reference is looked up before its shape is checked", 'class-ajax.php',
-     "        if (!preg_match('/^(?:tpl|acc):[1-9][0-9]{0,9}\$/', \$src)) {",
-     "        if (false) {",
-     'lazy-panel-test.php'],
+    // DELETED in 0.42.1, not retargeted: the shape check moved into
+    // Widget::verify_info_src() alongside the signature, and "F8: the endpoint
+    // accepts an unsigned reference again" is that mutation now.
     ["lazy: the setting ships switched ON, changing the two heaviest pages on install", 'class-settings.php',
      "'lazy_cottage_panels' => \$bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), false,",
      "'lazy_cottage_panels' => \$bool('engine', __('Load cottage info panels only when opened', 'mphb-availability-calendar'), true,",
      'lazy-panel-test.php'],
     ["lazy: Elementor is never re-bound to the injected markup, so carousels do not move", 'assets/js/widget.js',
-     "                ef.elementsHandler.runReadyTrigger(els[i]);",
-     "                void els[i];",
+     "            // whatever is on screen actually has handlers attached.\n            reinitElementorWidgets(bodyEl);",
+     "            // whatever is on screen actually has handlers attached.\n            void bodyEl;",
      'lazy-panel-test.php'],
     ["lazy: the panel is re-fetched on every open instead of being kept", 'assets/js/widget.js',
      "            content.removeAttribute('data-info-src');",
@@ -794,13 +797,90 @@ $mutations = [
      "            void src;",
      'lazy-panel-test.php'],
     ["lazy: text panels start being deferred too, a round-trip to save nothing", 'class-widget.php',
-     "                if (trim(wp_strip_all_tags(\$text)) !== '') {",
-     "                if (\$lazy_panels) { \$info_src[\$cid] = 'txt:' . \$cid; \$info_html[\$cid] = ''; } elseif (trim(wp_strip_all_tags(\$text)) !== '') {",
-     'lazy-panel-test.php'],
+     "        return ['html' => wpautop(wp_kses_post(\$text)), 'src' => ''];",
+     "        return ['html' => '', 'src' => self::sign_info_src('txt:' . \$cid)];",
+     'consumer-test.php'],
     ["lazy: the loading state is never cleared when the fetch fails", 'assets/js/widget.js',
      "                .catch(function () {\n                    bodyEl.classList.remove('is-loading');",
      "                .catch(function () {",
      'lazy-panel-test.php'],
+
+    // --- 0.42.1: the audit fixes ----------------------------------------
+    ["consumer: the availability cache passes the constant again, and cache_ttl is decorative", 'class-data-provider.php',
+     "                static fn(): array => self::query_availability_checked(\$room_type_ids, \$from, \$to),\n                null,",
+     "                static fn(): array => self::query_availability_checked(\$room_type_ids, \$from, \$to),\n                Cache::DEFAULT_TTL,",
+     'consumer-test.php'],
+    ["consumer: forward_scan_days is read but the constant is used", 'class-data-provider.php',
+     "        \$max_days ??= (int) Settings::get('forward_scan_days');",
+     "        \$max_days ??= self::FORWARD_SCAN_MAX_DAYS;",
+     'consumer-test.php'],
+    ["consumer: max_range_days stops reaching the endpoint", 'class-ajax.php',
+     "    private static function max_range_days(): int\n    {\n        return (int) Settings::get('max_range_days');",
+     "    private static function max_range_days(): int\n    {\n        return self::MAX_RANGE_DAYS;",
+     'consumer-test.php'],
+    ["consumer: keep_assets_unoptimized is ignored and the filters are always hooked", 'class-plugin.php',
+     "        if (Settings::get('keep_assets_unoptimized')) {",
+     "        if (true) {",
+     'consumer-test.php'],
+    ["consumer: lazy_cottage_panels is ignored by the row decision", 'class-widget.php',
+     "        \$lazy  ??= (bool) Settings::get('lazy_cottage_panels');",
+     "        \$lazy  ??= false;",
+     'consumer-test.php'],
+    ["consumer: staff_page_id stops reaching the gate", 'class-staff.php',
+     "        \$from_settings = (int) Settings::get('staff_page_id');",
+     "        \$from_settings = 0;",
+     'consumer-test.php'],
+    ["F8: the endpoint accepts an unsigned reference again", 'class-widget.php',
+     "        if (!preg_match('/^((?:tpl|acc):[1-9][0-9]{0,9}):([0-9a-f]{20})\$/', \$signed, \$m)) {\n            return '';\n        }\n        \$expected = substr(wp_hash('mphbac-info|' . \$m[1]), 0, 20);\n        return hash_equals(\$expected, \$m[2]) ? \$m[1] : '';",
+     "        if (preg_match('/^((?:tpl|acc):[1-9][0-9]{0,9})(?::[0-9a-f]{20})?\$/', \$signed, \$m)) {\n            return \$m[1];\n        }\n        return '';",
+     'lazy-panel-test.php'],
+    ["F8: the signature is compared but never checked", 'class-widget.php',
+     "        return hash_equals(\$expected, \$m[2]) ? \$m[1] : '';",
+     "        return \$m[1];",
+     'lazy-panel-test.php'],
+    // The first version of this mutation turned the get_or_set() call into an
+    // IIFE but left the closing `}, null);` — a parse error, so the suite
+    // crashed (NO RUN) instead of failing. A mutation must be valid code.
+    ["F3a: the fragment is rendered on every request again", 'class-widget.php',
+     "        \$key = Cache::key(['info-fragment', \$src, MPHBAC_VERSION]);",
+     "        \$key = Cache::key(['info-fragment', \$src, MPHBAC_VERSION, microtime(true)]);",
+     'lazy-panel-test.php'],
+    ["F3a: saving a template no longer flushes the fragment", 'class-plugin.php',
+     "        add_action('save_post_elementor_library', ['\\\\MPHBAC\\\\Cache', 'flush_all']);",
+     "        // add_action('save_post_elementor_library', ['\\\\MPHBAC\\\\Cache', 'flush_all']);",
+     'consumer-test.php'],
+    ["F12: a placeholder is emitted for a template that does not exist", 'class-widget.php',
+     "                return self::info_source_exists('tpl:' . \$tpl_id)\n                    ? ['html' => '', 'src' => self::sign_info_src('tpl:' . \$tpl_id)]\n                    : null;",
+     "                return ['html' => '', 'src' => self::sign_info_src('tpl:' . \$tpl_id)];",
+     'lazy-panel-test.php'],
+    ["F3b: a touch prefetches a lazy panel again — a WordPress boot per scroll", 'assets/js/widget.js',
+     "            if (content && content.getAttribute('data-info-src')) return;\n            warmInfoPopup(root, typeId);",
+     "            warmInfoPopup(root, typeId);",
+     'lazy-panel-test.js'],
+    ["F5: a lazy fill no longer re-sizes the scrollbar", 'assets/js/widget.js',
+     "                    if (movedContent === content && sheet.classList.contains('is-open')) {\n                        settleBody();\n                        watchBodyImages();\n                    }",
+     "",
+     'lazy-panel-test.js'],
+    // RETARGETED. closeInfo()'s clear SURVIVED: openInfo() also clears, and
+    // between a close and the next open the body is hidden, so the close-
+    // path line changed nothing observable. It is deleted; this is the one
+    // that the close-A-open-B case in lazy-panel-test.js actually depends on.
+    ["F6: openInfo stops clearing the loading state, so B inherits A's dimming", 'assets/js/widget.js',
+     "            // of this line — lazy-panel-test.js drives exactly that.\n            bodyEl.classList.remove('is-loading');",
+     "            // of this line — lazy-panel-test.js drives exactly that.",
+     'lazy-panel-test.js'],
+    ["F7: the rooms are set on the embedded path only again", 'assets/js/widget.js',
+     "            state.rooms = rooms;",
+     "            void rooms;",
+     'lazy-panel-test.php'],
+    ["F1: a \\u escape creeps back into a single-quoted string", 'class-settings.php',
+     "cottage’s info panel into the page",
+     "cottage\\u2019s info panel into the page",
+     'admin-test.php'],
+    ["F9: the stripper stops tracking unquoted url()", 'tools/build-css.php',
+     "            if (\$i < \$len && \$css[\$i] !== '\"' && \$css[\$i] !== \"'\") { \$inUrl = true; }",
+     "            if (false) { \$inUrl = true; }",
+     'build-test.php'],
 ];
 
 $originals = [];
