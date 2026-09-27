@@ -197,10 +197,16 @@ final class Data_Provider
         ]);
 
         try {
+            // null, NOT Cache::DEFAULT_TTL: null means "the setting", the
+            // constant means "the shipped value forever". 0.40.0 shipped the
+            // constant here, so the "Remember availability for" setting
+            // governed nothing and "0 disables caching" was false — found by
+            // the 0.42.0 audit, and now guarded by a test that changes the
+            // setting and watches this call site change with it.
             return Cache::get_or_set(
                 $cache_key,
                 static fn(): array => self::query_availability_checked($room_type_ids, $from, $to),
-                Cache::DEFAULT_TTL,
+                null,
                 $age,
                 $hit
             );
