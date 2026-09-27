@@ -2505,6 +2505,167 @@ async function run() {
         check('no JS errors', errors.length === 0, errors[0]);
     }
 
+
+    // ---- Scenario X: settings reach the front end, and a reveal survives the water (v0.23.0)
+    {
+        console.log('\nX. Front-end settings change outcomes; remembered reveals work offline');
+        const errors = [];
+        const mk = (cfgOver) => {
+            const cfg = Object.assign({ ajaxUrl: 'https://dccgg.test/wp-admin/admin-ajax.php', nonce: 'n1',
+                postId: 4645, widgetId: 'abc123', revealMode: 'stage', strings: { copied: 'Copied!' } }, cfgOver);
+            return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head>
+              <body><div class="dccgg-root" data-config='${JSON.stringify(cfg).replace(/'/g, '&#39;')}'>
+              <div class="dccgg-wrapper"><div class="dccgg-stage-container">
+              <div class="dccgg-menu"><div class="dccgg-tile-wrap" data-section-key="wifi">
+              <button class="dccgg-tile" data-key="wifi">Internet</button></div></div>
+              <div class="dccgg-stage"><div class="dccgg-detail" data-key="wifi" hidden>
+              <span class="dccgg-shrink-sentinel"></span>
+              <div class="dccgg-detail-header"><div class="dccgg-detail-header-actions">
+              <button type="button" class="dccgg-btn dccgg-back">Back</button></div></div>
+              <div class="dccgg-detail-layout"><div class="dccgg-detail-items"><article class="dccgg-item">
+              <div class="dccgg-item-utils">
+              <span class="dccgg-secret"><span class="dccgg-secret-label">Password:</span>
+              <span class="dccgg-secret-value" data-secret-ref="id:a1b2c3"></span>
+              <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
+                      data-label-show="Show" data-label-hide="Hide">Show</button></span>
+              <button type="button" class="dccgg-btn dccgg-copy" data-copy="plain-value">Copy</button>
+              </div></article></div></div></div></div></div>
+              <div class="dccgg-detail-overlay" hidden></div></div></div><script>${JS}</script></body></html>`;
+        };
+        // setContent leaves the page on about:blank, where storage throws. A
+        // routed real origin gives the page a proper storage area.
+        const openAt = async (browser, html, opts = {}) => {
+            const ctx = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            await routeReveal(page, opts);
+            await page.route('https://dccgg.test/guest/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: html }));
+            await page.goto('https://dccgg.test/guest/', { waitUntil: 'load' });
+            await page.click('.dccgg-tile[data-key="wifi"]');
+            await page.waitForTimeout(400);
+            return { ctx, page };
+        };
+        const revealed = (page) => page.$eval('.dccgg-secret-value', (v) => v.textContent);
+
+        // copy_confirm_ms: a 600ms tick has gone by 1000ms; a 3000ms tick has not.
+        for (const [ms, expectStill] of [[600, false], [3000, true]]) {
+            const { ctx, page } = await openAt(browser, mk({ copyConfirmMs: ms }));
+            await page.click('.dccgg-copy');
+            await page.waitForTimeout(1000);
+            const still = await page.$eval('.dccgg-copy', (b) => !!b.querySelector('.dccgg-sr-only'));
+            check(`copy_confirm_ms=${ms}: confirmation ${expectStill ? 'still showing' : 'gone'} after 1s`,
+                still === expectStill);
+            await ctx.close();
+        }
+
+        // auto_hide_secrets: off leaves the value showing across a close.
+        for (const [flag, expectText] of [[true, ''], [false, 'DCC32586']]) {
+            const { ctx, page } = await openAt(browser, mk({ autoHideSecrets: flag }));
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(300);
+            await page.click('.dccgg-back'); await page.waitForTimeout(600);
+            check(`auto_hide_secrets=${flag}: value is ${expectText ? 'still showing' : 'masked'} after closing`,
+                (await revealed(page)) === expectText);
+            await ctx.close();
+        }
+
+        // log_search_misses=false: no request leaves the page for a miss.
+        {
+            const calls = [];
+            const ctx = await browser.newContext({ viewport: PHONE });
+            const page = await ctx.newPage();
+            await page.route('**/admin-ajax.php', (r) => { calls.push(r.request().postData() || ''); r.fulfill({ status: 200, body: '{"success":true}' }); });
+            const cfg = { ajaxUrl: 'https://dccgg.test/wp-admin/admin-ajax.php', nonce: 'n1', enableSearch: true, logMisses: false,
+                searchIndex: [{ section: 'wifi', item_idx: 0, title: 'Wifi', text: 'network' }], strings: {} };
+            await page.route('https://dccgg.test/guest/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body:
+                `<!DOCTYPE html><html><head><style>${CSS}</style></head><body><div class="dccgg-root" data-config='${JSON.stringify(cfg)}'>
+                 <div class="dccgg-search"><input type="search" class="dccgg-search-input"><div class="dccgg-search-results" role="group" hidden></div></div>
+                 </div><script>${JS}</script></body></html>` }));
+            await page.goto('https://dccgg.test/guest/', { waitUntil: 'load' });
+            await page.fill('.dccgg-search-input', 'zzqxv nothing');
+            await page.waitForTimeout(1500);
+            check('log_search_misses=false: the miss is never sent',
+                !calls.some((c) => c.includes('dccgg_search_miss')), `${calls.length} calls`);
+            await ctx.close();
+        }
+
+        // #3 remember: one reveal online, then the network is cut, the page is
+        // reloaded, and Show still works. Then Forget wipes it and the offline
+        // toast says why nothing can be shown.
+        {
+            const calls = [];
+            const { ctx, page } = await openAt(browser, mk({ revealMemoryHours: 24 }), { calls });
+            check('nothing is remembered before the guest reveals anything',
+                await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('dccgg:secret:')).length === 0));
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(350);
+            check('one online reveal works', (await revealed(page)) === 'DCC32586' && calls.length === 1);
+            check('and is remembered in localStorage with an expiry (24h asked for)',
+                await page.evaluate(() => { const k = Object.keys(localStorage).find((x) => x.startsWith('dccgg:secret:'));
+                    if (!k) return false; const o = JSON.parse(localStorage.getItem(k)); return o.v === 'DCC32586' && o.exp > Date.now() + 23 * 3600000; }));
+            check('a Forget control appeared beside the row', !!(await page.$('.dccgg-secret-forget')));
+
+            // Cut the network: every reveal request now fails, and the page
+            // reports offline.
+            await ctx.setOffline(true);
+            await page.reload({ waitUntil: 'load' }).catch(() => {});
+            // The document itself is routed, so it still loads offline; the
+            // endpoint is not, which is the point.
+            await page.click('.dccgg-tile[data-key="wifi"]'); await page.waitForTimeout(400);
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(350);
+            check('OFFLINE: Show still reveals the remembered value',
+                (await revealed(page)) === 'DCC32586' && calls.length === 1, `calls=${calls.length}`);
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(150);   // hide
+            check('Hide still re-masks it', (await revealed(page)) === '');
+            await page.click('.dccgg-secret-forget'); await page.waitForTimeout(150);
+            check('Forget wipes the memory',
+                await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('dccgg:secret:')).length === 0));
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(400);
+            const toast = await page.evaluate(() => { const t = document.querySelector('.dccgg-toast'); return t ? t.textContent : ''; });
+            check('offline with nothing remembered: the toast says it needs a connection',
+                (await revealed(page)) === '' && /connection/i.test(toast), `"${toast}"`);
+            await ctx.setOffline(false);
+            await ctx.close();
+        }
+
+        // revealMemoryHours = 0 keeps it for the session only: sessionStorage,
+        // and nothing in localStorage.
+        {
+            const { ctx, page } = await openAt(browser, mk({ revealMemoryHours: 0 }));
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(350);
+            const where = await page.evaluate(() => ({
+                local: Object.keys(localStorage).filter((k) => k.startsWith('dccgg:secret:')).length,
+                session: Object.keys(sessionStorage).filter((k) => k.startsWith('dccgg:secret:')).length }));
+            check('reveal_memory_hours=0: remembered for the session only',
+                where.local === 0 && where.session === 1, JSON.stringify(where));
+            await ctx.close();
+        }
+
+        // #2 a page the service worker served from cache carries a stale nonce:
+        // the first reveal is refused with 403, the helper refreshes and retries.
+        {
+            const calls = [];
+            const ctx = await browser.newContext({ viewport: PHONE });
+            const page = await ctx.newPage();
+            page.on('pageerror', (e) => errors.push(String(e)));
+            let refreshed = false;
+            await page.route('**/admin-ajax.php', (r) => {
+                const body = r.request().postData() || '';
+                calls.push(body);
+                if (body.includes('dccgg_refresh_nonce')) { refreshed = true; return r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"data":{"nonce":"fresh9"}}' }); }
+                if (!body.includes('nonce=fresh9')) return r.fulfill({ status: 403, body: '-1' });
+                return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { value: SECRET_VALUE } }) });
+            });
+            await page.route('https://dccgg.test/guest/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: mk({ nonce: 'stale1' }) }));
+            await page.goto('https://dccgg.test/guest/', { waitUntil: 'load' });
+            await page.click('.dccgg-tile[data-key="wifi"]'); await page.waitForTimeout(400);
+            await page.click('.dccgg-secret-toggle'); await page.waitForTimeout(500);
+            check('#2 a stale nonce is refreshed and the reveal retried, transparently',
+                refreshed && (await revealed(page)) === 'DCC32586',
+                `refreshed=${refreshed} calls=${calls.length}`);
+            await ctx.close();
+        }
+        check('no JS errors', errors.length === 0, errors[0]);
+    }
+
     await browser.close();
 
     console.log(`\n${passed} passed, ${failed} failed`);

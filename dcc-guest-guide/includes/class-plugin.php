@@ -308,9 +308,23 @@ final class Plugin
      * Show, and therefore can call this. Gating the page is the only thing
      * that would change that.
      */
+    /** Reveals allowed per IP per 15 minutes. */
+    public const REVEAL_RATE_LIMIT = 60;
+
     public function handle_reveal_secret(): void
     {
         check_ajax_referer('dccgg_nonce', 'nonce');
+
+        // v0.23.0: per-IP ceiling. Parity with the page means anyone who can
+        // open it can reveal a value, but nobody needs sixty in a quarter hour
+        // — that is a scraper walking the references, not a guest.
+        $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
+        $rl_key  = 'dccgg_reveal_rl_' . $ip_hash;
+        $count   = (int) get_transient($rl_key);
+        if ($count >= self::REVEAL_RATE_LIMIT) {
+            wp_send_json_error(['message' => 'Not found.'], 429);
+        }
+        set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
 
         $post_id   = isset($_POST['post_id'])   ? (int) $_POST['post_id'] : 0;
         $widget_id = isset($_POST['widget_id']) ? sanitize_text_field(wp_unslash((string) $_POST['widget_id'])) : '';
@@ -883,7 +897,7 @@ final class Plugin
         $ip_hash = substr(sha1((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')), 0, 12);
         $rl_key  = 'dccgg_report_rl_' . $ip_hash;
         $count   = (int) get_transient($rl_key);
-        if ($count >= 3) {
+        if ($count >= (int) Settings::get('report_rate_limit')) {
             wp_send_json_error(['message' => __('Too many reports in a short window — please try again in a few minutes.', 'dcc-guest-guide')], 429);
         }
 
@@ -1031,6 +1045,11 @@ final class Plugin
         if ($pagenow !== 'options-general.php') { return; }
         if (($_GET['page'] ?? '') !== 'dccgg-settings') { return; }
         if (!current_user_can('manage_options')) { return; }
+        // v0.23.0: when the shared parent is absent the settings page LIVES at
+        // this URL (register_settings_fallback), so redirecting away from it
+        // would send the admin to a page that does not exist.
+        global $admin_page_hooks;
+        if (!isset($admin_page_hooks['dcc'])) { return; }
         wp_safe_redirect(admin_url('admin.php?page=dccgg-settings'));
         exit;
     }
@@ -1049,6 +1068,11 @@ final class Plugin
      */
     public function register_settings_page(): void
     {
+        // v0.23.0: a submenu with no parent is an orphan WordPress hides. Skip
+        // it and let register_settings_fallback() (priority 990) place the page
+        // under Settings instead.
+        global $admin_page_hooks;
+        if (!isset($admin_page_hooks['dcc'])) { return; }
         $this->settings_hook = add_submenu_page(
             'dcc',
             __('DCC Guest Guide', 'dcc-guest-guide'),
@@ -1626,14 +1650,28 @@ final class Plugin
         exit;
     }
 
+    /**
+     * What the service worker precaches on install: the start page, the
+     * core bundle, the script, and — v0.23.0, when the split is on — the
+     * guest-only bundle, so an offline open of the full guide styles its
+     * dialogs and popovers from the first paint.
+     */
+    public function sw_precache_list(string $start): array
+    {
+        $ver = DCCGG_VERSION;
+        $css = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/css/widget.min.css') ? 'assets/css/widget.min.css' : 'assets/css/widget.css') . '?ver=' . $ver;
+        $js  = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js')  . '?ver=' . $ver;
+        $guest = (Settings::get('split_guest_css') && file_exists(DCCGG_DIR . 'assets/css/widget-guest.min.css'))
+            ? DCCGG_URL . 'assets/css/widget-guest.min.css?ver=' . $ver : '';
+        return array_values(array_filter([$start, $css, $js, $guest]));
+    }
+
     private function serve_service_worker(): void
     {
         $ver   = DCCGG_VERSION;
         $start = $this->guide_start_url();
         $scope = (string) (wp_parse_url($start, PHP_URL_PATH) ?: '/');
-        $css   = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/css/widget.min.css') ? 'assets/css/widget.min.css' : 'assets/css/widget.css') . '?ver=' . $ver;
-        $js    = DCCGG_URL . (file_exists(DCCGG_DIR . 'assets/js/widget.min.js')   ? 'assets/js/widget.min.js'   : 'assets/js/widget.js')  . '?ver=' . $ver;
-        $precache = wp_json_encode(array_values(array_filter([$start, $css, $js])));
+        $precache = wp_json_encode($this->sw_precache_list($start));
 
         header('Content-Type: application/javascript; charset=utf-8');
         header('Service-Worker-Allowed: ' . $scope);
@@ -1786,6 +1824,11 @@ SWJS;
         }
         set_transient($rl_key, $count + 1, 15 * MINUTE_IN_SECONDS);
 
+        // v0.23.0: switchable, and the cap is the host's, not a constant.
+        if (!Settings::get('log_search_misses')) {
+            wp_send_json_success(['stored' => false]);
+        }
+        $keep   = max(5, (int) Settings::get('search_miss_keep'));
         $misses = get_option('dccgg_search_misses', []);
         if (!is_array($misses)) { $misses = []; }
         $key = mb_strtolower($q);
@@ -1798,13 +1841,13 @@ SWJS;
         // Cap at 200 distinct queries; when full, drop the least useful —
         // fewest hits first, then oldest — so a one-off typo is evicted
         // before a repeatedly-missed real question.
-        if (count($misses) > 200) {
+        if (count($misses) > $keep) {
             uasort($misses, static function ($a, $b) {
                 $an = (int) ($a['n'] ?? 0); $bn = (int) ($b['n'] ?? 0);
                 if ($an !== $bn) { return $an <=> $bn; }
                 return ((int) ($a['t'] ?? 0)) <=> ((int) ($b['t'] ?? 0));
             });
-            $misses = array_slice($misses, count($misses) - 200, 200, true);
+            $misses = array_slice($misses, count($misses) - $keep, $keep, true);
         }
         update_option('dccgg_search_misses', $misses, false);
         wp_send_json_success(['stored' => true]);

@@ -37,6 +37,12 @@ function wp_unique_id($p = '') { static $i = 0; return $p . (++$i); }
 function absint($n) { return abs((int) $n); }
 
 require __DIR__ . '/_elementor-stub.php';
+// v0.23.0: the renderer and the handlers read plugin settings.
+if (!function_exists('get_option'))    { function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; } }
+if (!function_exists('update_option')) { function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; } }
+if (!function_exists('did_action'))    { function did_action($h) { return 0; } }
+require __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
+
 require __DIR__ . '/../dcc-guest-guide/includes/class-widget.php';
 
 $pass = 0; $fail = 0; $failures = [];
@@ -685,7 +691,7 @@ preg_match_all('/:is\(([^)]*)\)/', $srcCss, $mm);
 $spanning = [];
 foreach (array_unique($mm[1]) as $grp) {
     $parts = array_map('trim', explode(',', $grp));
-    $g = array_filter($parts, static fn($x) => (bool) preg_match('/\.dccgg-(report|review|ai-|sos|emergency|more|btn-send|btn-cancel)/', $x));
+    $g = array_filter($parts, static fn($x) => (bool) preg_match('/\.dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel)/', $x));
     if ($g && count($g) !== count($parts)) { $spanning[] = $grp; }
 }
 check('no :is() list spans both audiences any more', empty($spanning), implode(' | ', $spanning));
@@ -708,6 +714,83 @@ check('the settings page falls back to Settings when the dcc parent is absent',
     && strpos($plugin, 'add_options_page(') !== false);
 check('and it never registers the shared parent itself',
     strpos($plugin, 'add_menu_page(') === false);
+
+
+echo "\nV. v0.23.0 — settings reach the render, and the emergency strip is core\n";
+// #4 red-then-green: a `both`/`public` Emergency section renders on the public
+// page, so its strip and phone-tile styling must come with the CORE bundle.
+// (Before this round the split pattern matched `emergency` and moved it to
+// the guest-only file, which the public page never loads.)
+check('#4 emergency strip styling ships in the core bundle',
+    strpos($core, '.dccgg-emergency') !== false);
+check('#4 and nothing emergency-named is left in the guest-only bundle',
+    strpos($guest, 'dccgg-emergency') === false);
+check('#4 the build pattern no longer names emergency (sos stays)',
+    preg_match('/GUEST\s*=\s*re\.compile\(r\'([^\']*)\'/', (string) file_get_contents(__DIR__ . '/../build-min.sh'), $gm) === 1
+    && strpos($gm[1], 'emergency') === false && strpos($gm[1], 'sos') !== false, $gm[1] ?? '');
+
+$setOpt = function (array $over) {
+    $GLOBALS['options'][\DCCGG\Settings::OPTION] = $over;
+    \DCCGG\Settings::flush();
+};
+
+// secret_reveal: the default 'fetch' keeps the value out of the markup; 'inline'
+// (the pre-0.19 behaviour, for a host who prefers it) puts it back in the
+// attributes — and ONLY the attributes.
+$setOpt([]);
+$outFetch = $render($maskedWifi, $strs);
+$setOpt(['secret_reveal' => 'inline']);
+$outInline = $render($maskedWifi, $strs);
+check('secret_reveal=fetch (default): no value in the markup', strpos($outFetch, 'DCC32586') === false);
+check('secret_reveal=inline: value is in data-secret-value / data-copy',
+    strpos($outInline, 'data-secret-value="DCC32586"') !== false
+    && strpos($outInline, 'data-copy="DCC32586"') !== false, $outInline);
+check('secret_reveal=inline: still never in the visible text',
+    strpos($visibleText($outInline), 'DCC32586') === false);
+// The ref stays: widget.js keys the row on it and short-circuits to the
+// inline value before any network call (fetchSecret, source 'inline').
+check('secret_reveal=inline: the ref is still there for the JS to key on',
+    substr_count($outInline, 'data-secret-ref="') === 2);
+$setOpt([]);
+
+// public CTA fallback: an empty widget field takes the plugin setting; a set
+// widget field wins; a changed setting changes the fallback.
+$setOpt(['public_cta_label' => 'Book direct', 'public_cta_url' => 'https://example.test/book']);
+$cta = \DCCGG\Widget::public_cta([]);
+check('CTA: empty widget fields fall back to the settings',
+    $cta['text'] === 'Book direct' && $cta['url'] === 'https://example.test/book', json_encode($cta));
+$cta = \DCCGG\Widget::public_cta(['public_cta_text' => 'Reserve', 'public_cta_url' => ['url' => 'https://x.test/']]);
+check('CTA: a widget value wins over the setting', $cta['text'] === 'Reserve' && $cta['url'] === 'https://x.test/');
+$setOpt(['public_cta_label' => 'Check dates', 'public_cta_url' => 'https://example.test/dates']);
+$cta = \DCCGG\Widget::public_cta(['public_cta_url' => 'https://str.test/']);
+check('CTA: changing the setting changes the fallback (and a string URL still works)',
+    $cta['text'] === 'Check dates' && $cta['url'] === 'https://str.test/', json_encode($cta));
+$setOpt([]);
+check('CTA: with nothing set anywhere, nothing renders',
+    \DCCGG\Widget::public_cta([])['text'] === '' && \DCCGG\Widget::public_cta([])['url'] === '');
+
+// inline_search_index: on keeps the index in data-config, off drops it.
+$cfgIn = ['searchIndex' => [['t' => 'x']], 'other' => 1];
+$setOpt([]);
+check('inline_search_index default (on): index stays inlined',
+    isset(\DCCGG\Widget::apply_index_setting($cfgIn, true)['searchIndex']));
+$setOpt(['inline_search_index' => false]);
+check('inline_search_index=false: index is dropped from data-config',
+    !isset(\DCCGG\Widget::apply_index_setting($cfgIn, true)['searchIndex']));
+$setOpt([]);
+check('search disabled: index dropped regardless',
+    !isset(\DCCGG\Widget::apply_index_setting($cfgIn, false)['searchIndex']));
+
+// settings_config(): every front-end key changes with its setting.
+$setOpt([]);
+$d = \DCCGG\Widget::settings_config();
+$setOpt(['copy_confirm_ms' => 3000, 'auto_hide_secrets' => false, 'reveal_memory_hours' => 24, 'log_search_misses' => false]);
+$c = \DCCGG\Widget::settings_config();
+check('settings_config: copy_confirm_ms reaches the page', $d['copyConfirmMs'] !== 3000 && $c['copyConfirmMs'] === 3000);
+check('settings_config: auto_hide_secrets reaches the page', $d['autoHideSecrets'] === true && $c['autoHideSecrets'] === false);
+check('settings_config: reveal_memory_hours reaches the page', $d['revealMemoryHours'] === 0 && $c['revealMemoryHours'] === 24);
+check('settings_config: log_search_misses reaches the page', $d['logMisses'] === true && $c['logMisses'] === false);
+$setOpt([]);
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

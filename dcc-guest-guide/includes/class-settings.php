@@ -68,7 +68,11 @@ final class Settings
                     ],
                     'search_miss_keep' => [
                         'type'    => 'int',
-                        'default' => 50,
+                        // 200 is what the store has always capped at; the admin
+                        // panel shows the top 50 of them. v0.21.0 shipped 50 here
+                        // by mistake — a default that did NOT reproduce behaviour,
+                        // and a test that compared against the same wrong number.
+                        'default' => 200,
                         'min'     => 5,
                         'max'     => 500,
                         'label'   => __('How many of those to keep', 'dcc-guest-guide'),
@@ -118,6 +122,14 @@ final class Settings
                         'max'     => 20,
                         'label'   => __('Support requests allowed per 15 minutes', 'dcc-guest-guide'),
                         'help'    => __('Per visitor. Stops a stuck button from mailing the host repeatedly.', 'dcc-guest-guide'),
+                    ],
+                    'reveal_memory_hours' => [
+                        'type'    => 'int',
+                        'default' => 0,
+                        'min'     => 0,
+                        'max'     => 336,
+                        'label'   => __('Remember a revealed password on the phone for (hours)', 'dcc-guest-guide'),
+                        'help'    => __('After a guest taps Show, keep that value in their browser so it still works with no signal. 0 keeps it only until the browser closes; up to 14 days. Only values the guest has actually revealed are kept, and they can be forgotten from the row.', 'dcc-guest-guide'),
                     ],
                     'secret_reveal' => [
                         'type'    => 'select',

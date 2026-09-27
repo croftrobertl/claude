@@ -46,6 +46,56 @@ final class Widget extends Widget_Base
         }
     }
 
+    /**
+     * The plugin-level settings the front end needs, as data-config keys.
+     * One place, so a setting cannot be exposed on the admin page and never
+     * reach the code that should read it — which is exactly what v0.21.0
+     * shipped for nine of ten keys.
+     */
+    public static function settings_config(): array
+    {
+        return [
+            'copyConfirmMs'     => (int) Settings::get('copy_confirm_ms'),
+            'autoHideSecrets'   => (bool) Settings::get('auto_hide_secrets'),
+            'revealMemoryHours' => (int) Settings::get('reveal_memory_hours'),
+            'logMisses'         => (bool) Settings::get('log_search_misses'),
+        ];
+    }
+
+    /**
+     * v0.23.0: the public CTA, with the plugin setting as the fallback for an
+     * empty widget field. Static and pure so the fallback can be tested with a
+     * changed setting, not just read off the source.
+     *
+     * @return array{text:string,url:string,raw:array}
+     */
+    public static function public_cta(array $s): array
+    {
+        $text = trim((string) ($s['public_cta_text'] ?? ''));
+        if ($text === '') { $text = trim((string) Settings::get('public_cta_label')); }
+        // Normalise the URL control to an array up front. Elementor hands back
+        // ['url','is_external','nofollow'], but a guide imported from JSON (or
+        // an older save) can carry a plain string — and reading ['nofollow']
+        // off a string raises a PHP warning on render.
+        $raw = $s['public_cta_url'] ?? [];
+        if (!is_array($raw)) { $raw = ['url' => (string) $raw]; }
+        $url = trim((string) ($raw['url'] ?? ''));
+        if ($url === '') { $url = trim((string) Settings::get('public_cta_url')); }
+        return ['text' => $text, 'url' => $url, 'raw' => $raw];
+    }
+
+    /**
+     * v0.23.0: drop the inlined search index when search is off or the
+     * inline_search_index setting is off (the JS then fetches it on demand).
+     */
+    public static function apply_index_setting(array $config, bool $enable_search): array
+    {
+        if (!$enable_search || !Settings::get('inline_search_index')) {
+            unset($config['searchIndex']);
+        }
+        return $config;
+    }
+
     public static function register_assets(): void
     {
         // Depend on Elementor's Font Awesome bundles so the hardcoded
@@ -117,6 +167,9 @@ final class Widget extends Widget_Base
         }
         wp_enqueue_style('dccgg-widget');
         wp_enqueue_script('dccgg-widget');
+        // v0.23.0: the editor previews the FULL guide, whose dialogs and
+        // popovers are styled by the guest-only bundle.
+        self::enqueue_guest_css();
     }
 
     /**
@@ -1536,6 +1589,8 @@ final class Widget extends Widget_Base
             'str_report_problem'  => [__('Report a problem button', 'dcc-guest-guide'),        __('Report a problem', 'dcc-guest-guide')],
             'str_report_title'    => [__('Report dialog title', 'dcc-guest-guide'),            __('Report a problem', 'dcc-guest-guide')],
             'str_secret_error'    => [__('Reveal-failed toast', 'dcc-guest-guide'), __('Could not load that just now. Please try again.', 'dcc-guest-guide')],
+            'str_secret_offline'  => [__('Reveal-needs-connection toast', 'dcc-guest-guide'), __('Showing this needs a connection.', 'dcc-guest-guide')],
+            'str_secret_forget'   => [__('Forget remembered password button', 'dcc-guest-guide'), __('Forget', 'dcc-guest-guide')],
             'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
             // v0.18.0: the category <option> used to reuse the LABEL string, so
             // whatever the host typed appeared twice — once as the label and
@@ -3320,6 +3375,8 @@ final class Widget extends Widget_Base
             'strings'          => [
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'secretError' => (string) ($s['str_secret_error'] ?? __('Could not load that just now. Please try again.', 'dcc-guest-guide')),
+                'secretOffline' => (string) ($s['str_secret_offline'] ?? __('Showing this needs a connection.', 'dcc-guest-guide')),
+                'secretForget'  => (string) ($s['str_secret_forget'] ?? __('Forget', 'dcc-guest-guide')),
                 'noResults'   => (string) ($s['search_no_results'] ?? __('No matches.', 'dcc-guest-guide')),
                 'didYouMean'  => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),
@@ -3332,9 +3389,11 @@ final class Widget extends Widget_Base
         ];
         // v0.9.7.20: only emit searchIndex when search is enabled. wireSearch
         // is gated on enableSearch anyway, so an empty array is pure payload.
-        if (!$enable_search) {
-            unset($config['searchIndex']);
-        }
+        // v0.23.0: lazy index on request. The AJAX path (handle_search_index)
+        // has been there since v0.9.7.14 and the JS already falls back to it
+        // when the key is absent.
+        $config = self::apply_index_setting($config, $enable_search);
+        $config = array_merge($config, self::settings_config());
 
         $root_class = 'dccgg-root';
         // v0.9: emergency tile position is driven by a root-level class.
@@ -3446,15 +3505,9 @@ final class Widget extends Widget_Base
                 // real href so it works for keyboard, screen readers and
                 // middle-click alike.
                 if (self::is_public_mode($s)) :
-                    $cta_text = trim((string) ($s['public_cta_text'] ?? ''));
-                    // Normalise the URL control to an array up front. Elementor
-                    // hands back ['url','is_external','nofollow'], but a guide
-                    // imported from JSON (or an older save) can carry a plain
-                    // string — and reading ['nofollow'] off a string raises a
-                    // PHP warning on render, which this plugin does not ship.
-                    $cta_raw  = $s['public_cta_url'] ?? [];
-                    if (!is_array($cta_raw)) { $cta_raw = ['url' => (string) $cta_raw]; }
-                    $cta_url  = trim((string) ($cta_raw['url'] ?? ''));
+                    // v0.23.0: an empty widget field falls back to the plugin setting,
+                    // so one value serves every public placement until it is overridden.
+                    ['text' => $cta_text, 'url' => $cta_url, 'raw' => $cta_raw] = self::public_cta($s);
                     if ($cta_text !== '' && $cta_url !== '') :
                         $cta_rel = [];
                         if (!empty($cta_raw['nofollow']))    { $cta_rel[] = 'nofollow'; }
@@ -4117,6 +4170,17 @@ final class Widget extends Widget_Base
             // Gated on the mask being ON, so switching it on is what moves an
             // item to the structured pair — nothing changes until then.
             $secret_ref = self::secret_ref($item, $section_key, $item_idx);
+        // v0.23.0: 'inline' is the pre-0.19.0 behaviour, chosen explicitly by the
+        // host: the value ships in the markup and no fetch is needed. The JS
+        // reads data-secret-value / data-copy first and only fetches when they
+        // are absent, so both modes share one code path.
+        $secret_inline = (Settings::get('secret_reveal') === 'inline');
+        $secret_attrs  = $secret_inline
+            ? 'data-secret-ref="' . esc_attr($secret_ref) . '" data-secret-value="' . esc_attr($copy_val) . '"'
+            : 'data-secret-ref="' . esc_attr($secret_ref) . '"';
+        $copy_attrs    = $secret_inline
+            ? 'data-secret-ref="' . esc_attr($secret_ref) . '" data-copy="' . esc_attr($copy_val) . '"'
+            : 'data-secret-ref="' . esc_attr($secret_ref) . '"';
         $wifi_creds = $wifi_on && $mask_on && ($wifi_ssid !== '' || $copy_val !== '');
             if ($wifi_creds) : ?>
                 <dl class="dccgg-wifi-creds">
@@ -4137,7 +4201,7 @@ final class Widget extends Widget_Base
                             <dt><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</dt>
                             <dd>
                                 <span class="dccgg-secret">
-                                    <span class="dccgg-secret-value" data-secret-ref="<?php echo esc_attr($secret_ref); ?>"></span>
+                                    <span class="dccgg-secret-value" <?php echo $secret_attrs; // phpcs:ignore WordPress.Security.EscapeOutput ?>></span>
                                     <?php // v0.13.0: .dccgg-btn so the reveal toggle and the Copy
                                     // button beside it are the same control, visually. They do
                                     // equivalent jobs on the same value; the toggle used to be a
@@ -4155,7 +4219,7 @@ final class Widget extends Widget_Base
                                 // the two buttons wildly different widths. Deliberately a
                                 // separate string from the general Copy label, which the host
                                 // may want to keep verbose elsewhere. ?>
-                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" data-secret-ref="<?php echo esc_attr($secret_ref); ?>">
+                                <button type="button" class="dccgg-btn dccgg-copy dccgg-copy--inline" <?php echo $copy_attrs; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
                                     <i class="fas fa-copy" aria-hidden="true"></i> <?php echo esc_html($strings['str_copy_short'] ?? __('Copy', 'dcc-guest-guide')); ?>
                                 </button>
                             </dd>
@@ -4191,7 +4255,7 @@ final class Widget extends Widget_Base
                         // structured pair, for items that mask a value without WiFi mode on. ?>
                         <span class="dccgg-secret">
                             <span class="dccgg-secret-label"><?php echo esc_html($strings['str_wifi_password'] ?? __('Password', 'dcc-guest-guide')); ?>:</span>
-                            <span class="dccgg-secret-value" data-secret-ref="<?php echo esc_attr($secret_ref); ?>"></span>
+                            <span class="dccgg-secret-value" <?php echo $secret_attrs; // phpcs:ignore WordPress.Security.EscapeOutput ?>></span>
                             <button type="button" class="dccgg-btn dccgg-secret-toggle" aria-expanded="false"
                                     aria-label="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
                                     data-label-show="<?php echo esc_attr($strings['str_secret_show'] ?? __('Show', 'dcc-guest-guide')); ?>"
@@ -4205,7 +4269,7 @@ final class Widget extends Widget_Base
                         // ordinary content and still rides in data-copy. ?>
                         <button type="button" class="dccgg-btn dccgg-copy" <?php
                             echo $mask_on
-                                ? 'data-secret-ref="' . esc_attr($secret_ref) . '"'
+                                ? $copy_attrs
                                 : 'data-copy="' . esc_attr($copy_val) . '"'; ?>>
                             <i class="fas fa-copy" aria-hidden="true"></i> <?php
                             // Beside a masked value the row already reads "Password:", so use

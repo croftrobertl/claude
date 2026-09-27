@@ -6,7 +6,7 @@
  *   php tests/settings.test.php
  */
 define('ABSPATH', '/tmp/');
-define('DCCGG_VERSION', '0.22.0');
+define('DCCGG_VERSION', '0.23.0');
 
 $GLOBALS['options'] = [];
 $GLOBALS['did']     = ['init' => 1];
@@ -41,12 +41,13 @@ $expected = [
     'auto_hide_secrets'   => true,    // v0.13.0 re-mask on close / section change
     'copy_confirm_ms'     => 1500,    // flashCopied() timeout
     'log_search_misses'   => true,    // v0.12.1 failed-search log
-    'search_miss_keep'    => 50,      // the panel slices 50
+    'search_miss_keep'    => 200,     // the STORE cap; the panel shows the top 50 of them
     'public_cta_label'    => '',      // widget default wins when empty
     'public_cta_url'      => '',
-    'split_guest_css'     => true,    // v0.22.0 — guest-only CSS off the public page
+    'split_guest_css'     => true,    // v0.23.0 — guest-only CSS off the public page
     'inline_search_index' => true,    // v0.9.7.16 inlined the index
     'report_rate_limit'   => 3,       // handle_report_problem: 3 per 15 min
+    'reveal_memory_hours' => 0,       // v0.23.0 — this browser session only
     'secret_reveal'       => 'fetch', // v0.19.0
 ];
 foreach ($expected as $k => $v) {
@@ -65,9 +66,9 @@ check('a key the stored row has never heard of takes its default',
 check('and the value the owner did set survives untouched',
     $all['copy_confirm_ms'] === 900);
 check('the row is re-saved so the database describes current behaviour too',
-    (string) ($GLOBALS['options'][\DCCGG\Settings::OPTION]['_version'] ?? '') === '0.22.0');
+    (string) ($GLOBALS['options'][\DCCGG\Settings::OPTION]['_version'] ?? '') === '0.23.0');
 // Reading must not invent keys that are not in the schema.
-$reset(['_version' => '0.22.0', 'bogus_key' => 'x']);
+$reset(['_version' => '0.23.0', 'bogus_key' => 'x']);
 check('a stale key is dropped rather than carried forever',
     !array_key_exists('bogus_key', \DCCGG\Settings::all()));
 
@@ -100,7 +101,7 @@ check('a url field rejects a non-url',
     && \DCCGG\Settings::sanitize(['public_cta_url' => 'https://x.test/a'])['public_cta_url'] === 'https://x.test/a');
 check('a text field is stripped of markup',
     \DCCGG\Settings::sanitize(['public_cta_label' => '<script>x</script>Book'])['public_cta_label'] === 'xBook');
-check('every save stamps the version', \DCCGG\Settings::sanitize([])['_version'] === '0.22.0');
+check('every save stamps the version', \DCCGG\Settings::sanitize([])['_version'] === '0.23.0');
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

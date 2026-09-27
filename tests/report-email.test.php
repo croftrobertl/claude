@@ -34,7 +34,13 @@ function is_email($s) { return (bool) filter_var((string) $s, FILTER_VALIDATE_EM
 function get_bloginfo($k) { return $k === 'name' ? 'Dora Canal Court' : ''; }
 function home_url($p = '/') { return 'https://doracanalcourt.com' . $p; }
 function current_time($t) { return '2026-09-12 09:14:00'; }
-function get_option($k, $d = '') { return $k === 'admin_email' ? 'admin@doracanalcourt.com' : $d; }
+function get_option($k, $d = '') {
+    if (array_key_exists($k, $GLOBALS['options'] ?? [])) { return $GLOBALS['options'][$k]; }
+    return $k === 'admin_email' ? 'admin@doracanalcourt.com' : $d;
+}
+function get_post($id) { return in_array((int) $id, [4645], true) ? (object) ['ID' => (int) $id, 'post_status' => 'publish'] : null; }
+function post_password_required($p) { return false; }
+function nocache_headers() {}
 function get_transient($k) { return $GLOBALS['transients'][$k] ?? false; }
 function set_transient($k, $v, $t) { $GLOBALS['transients'][$k] = $v; return true; }
 function add_action(...$a) {}
@@ -56,6 +62,12 @@ function wp_send_json_error($p = null, $c = 0) { $e = new DCCGG_Halt('error'); $
 function wp_send_json_success($p = null, $c = 0) { $e = new DCCGG_Halt('success'); $e->payload = $p; $e->code_ = $c; throw $e; }
 
 require __DIR__ . '/_elementor-stub.php';
+// v0.23.0: the renderer and the handlers read plugin settings.
+if (!function_exists('get_option'))    { function get_option($k, $d = false) { return $GLOBALS['options'][$k] ?? $d; } }
+if (!function_exists('update_option')) { function update_option($k, $v, $a = null) { $GLOBALS['options'][$k] = $v; return true; } }
+if (!function_exists('did_action'))    { function did_action($h) { return 0; } }
+require __DIR__ . '/../dcc-guest-guide/includes/class-settings.php';
+
 require __DIR__ . '/../dcc-guest-guide/includes/class-plugin.php';
 
 $pass = 0; $fail = 0; $failures = [];
@@ -182,6 +194,113 @@ for ($i = 0; $i < 5; $i++) {
     $sentCount += count($GLOBALS['sent']);
 }
 check('at most 3 reports per IP per 15 minutes', $sentCount === 3, "sent $sentCount");
+
+
+echo "\nF. Every setting changes an outcome (v0.23.0) — server side\n";
+// The standing rule after v0.21.0: a test that proves the default EQUALS
+// current behaviour proves nothing about whether the code READS the setting.
+// Each of these flips a setting and watches the handler do something else.
+if (!defined('DCCGG_DIR')) { define('DCCGG_DIR', __DIR__ . '/../dcc-guest-guide/'); }
+if (!defined('DCCGG_URL')) { define('DCCGG_URL', 'https://doracanalcourt.com/wp-content/plugins/dcc-guest-guide/'); }
+$setSettings = static function (array $over) {
+    $GLOBALS['options'][\DCCGG\Settings::OPTION] = array_merge(\DCCGG\Settings::defaults(), $over, ['_version' => DCCGG_VERSION]);
+    \DCCGG\Settings::flush();
+};
+
+// report_rate_limit: with 1, the second report is refused.
+$countSent = static function (int $limit) use ($INTENDED): int {
+    $GLOBALS['transients'] = [];
+    $GLOBALS['meta'] = [4645 => ['_elementor_data' => elementor_tree($INTENDED)]];
+    $n = 0;
+    for ($i = 0; $i < 4; $i++) {
+        $GLOBALS['sent'] = [];
+        $_POST = ['description' => 'x', 'section' => 'A', 'item' => 'B', 'post_id' => 4645, 'widget_id' => 'abc123'];
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.9';
+        try { \DCCGG\Plugin::instance()->handle_report_problem(); } catch (DCCGG_Halt $e) {}
+        $n += count($GLOBALS['sent']);
+    }
+    return $n;
+};
+$setSettings(['report_rate_limit' => 1]);
+$one = $countSent(1);
+$setSettings(['report_rate_limit' => 3]);
+$three = $countSent(3);
+check('report_rate_limit: 1 allows one report, 3 allows three', $one === 1 && $three === 3, "$one / $three");
+
+// log_search_misses + search_miss_keep, through the real handler.
+function _miss(string $q): void {
+    $_POST = ['q' => $q, 'nonce' => 'n'];
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.' . random_int(1, 250);
+    try { \DCCGG\Plugin::instance()->handle_search_miss(); } catch (DCCGG_Halt $e) {}
+}
+$GLOBALS['options']['dccgg_search_misses'] = [];
+$GLOBALS['transients'] = [];
+$setSettings(['log_search_misses' => false]);
+_miss('hot tub cover');
+check('log_search_misses=false stores nothing', empty($GLOBALS['options']['dccgg_search_misses']));
+$setSettings(['log_search_misses' => true, 'search_miss_keep' => 5]);
+$GLOBALS['transients'] = [];
+foreach (['a1','b2','c3','d4','e5','f6','g7','h8'] as $q) { _miss($q . ' query'); }
+check('search_miss_keep=5 caps the stored list at 5',
+    count($GLOBALS['options']['dccgg_search_misses']) === 5, (string) count($GLOBALS['options']['dccgg_search_misses']));
+$setSettings(['log_search_misses' => true, 'search_miss_keep' => 200]);
+$GLOBALS['transients'] = []; $GLOBALS['options']['dccgg_search_misses'] = [];
+foreach (['a1','b2','c3','d4','e5','f6','g7','h8'] as $q) { _miss($q . ' query'); }
+check('and the default keeps all eight', count($GLOBALS['options']['dccgg_search_misses']) === 8);
+
+// #9 reveal rate limit: the 61st reveal from one IP in a window is refused.
+$GLOBALS['transients'] = [];
+$GLOBALS['meta'] = [4645 => ['_elementor_data' => elementor_tree(['guide_items' => [
+    ['_id' => 'r1', 'item_section' => 'internet', 'item_title' => 'Wifi', 'item_copy' => 'yes',
+     'item_copy_value' => 'DCC32586', 'item_mask_value' => 'yes'],
+]])]];
+$codes = [];
+for ($i = 0; $i < 62; $i++) {
+    $_POST = ['post_id' => 4645, 'widget_id' => 'abc123', 'ref' => 'id:r1', 'nonce' => 'n'];
+    $_SERVER['REMOTE_ADDR'] = '203.0.113.77';
+    try { \DCCGG\Plugin::instance()->handle_reveal_secret(); $codes[] = 200; }
+    catch (DCCGG_Halt $e) { $codes[] = $e->getMessage() === 'success' ? 200 : (int) $e->code_; }
+}
+check('reveal: 60 succeed, the 61st is rate-limited',
+    count(array_filter($codes, static fn($c) => $c === 200)) === 60 && $codes[60] === 429 && $codes[61] === 429,
+    'codes ' . implode(',', array_slice($codes, 58, 4)));
+
+// #5 the legacy redirect must leave the fallback page alone.
+$redirected = [];
+if (!function_exists('wp_safe_redirect')) { function wp_safe_redirect($u) { $GLOBALS['redirected'][] = $u; throw new DCCGG_Halt('redirect'); } }
+if (!function_exists('admin_url')) { function admin_url($p = '') { return 'https://x/wp-admin/' . $p; } }
+if (!function_exists('current_user_can')) { function current_user_can($c, $id = 0) { return true; } }
+$GLOBALS['pagenow'] = 'options-general.php'; $_GET = ['page' => 'dccgg-settings'];
+$GLOBALS['admin_page_hooks'] = [];                                   // no dcc parent
+$GLOBALS['redirected'] = [];
+try { \DCCGG\Plugin::instance()->redirect_legacy_settings_url(); } catch (DCCGG_Halt $e) {}
+check('#5 with NO dcc parent the fallback URL is not redirected away', empty($GLOBALS['redirected']));
+$GLOBALS['admin_page_hooks'] = ['dcc' => 'toplevel_page_dcc'];     // parent present
+try { \DCCGG\Plugin::instance()->redirect_legacy_settings_url(); } catch (DCCGG_Halt $e) {}
+check('#5 with the parent present the old URL still forwards', count($GLOBALS['redirected']) === 1);
+
+// #8 the priority-30 submenu is skipped when there is no parent; the
+// 990 fallback then registers under Settings — and not the other way round.
+$GLOBALS['registered'] = [];
+if (!function_exists('add_submenu_page')) { function add_submenu_page(...$a) { $GLOBALS['registered'][] = 'submenu:' . $a[0]; return 'hook'; } }
+if (!function_exists('add_options_page')) { function add_options_page(...$a) { $GLOBALS['registered'][] = 'options'; return 'hook'; } }
+$GLOBALS['admin_page_hooks'] = [];
+\DCCGG\Plugin::instance()->register_settings_page();
+\DCCGG\Plugin::instance()->register_settings_fallback();
+check('#8 no parent: only the Settings fallback registers', $GLOBALS['registered'] === ['options'], implode(',', $GLOBALS['registered']));
+$GLOBALS['registered'] = []; $GLOBALS['admin_page_hooks'] = ['dcc' => 'x'];
+\DCCGG\Plugin::instance()->register_settings_page();
+\DCCGG\Plugin::instance()->register_settings_fallback();
+check('#8 parent present: only the dcc submenu registers', $GLOBALS['registered'] === ['submenu:dcc'], implode(',', $GLOBALS['registered']));
+
+// #6 the service worker precaches the guest bundle when the split is on.
+$setSettings(['split_guest_css' => true]);
+$on  = \DCCGG\Plugin::instance()->sw_precache_list('https://x/guest/');
+$setSettings(['split_guest_css' => false]);
+$off = \DCCGG\Plugin::instance()->sw_precache_list('https://x/guest/');
+$has = static fn(array $l) => (bool) array_filter($l, static fn($u) => strpos($u, 'widget-guest.min.css') !== false);
+check('#6 split on: widget-guest.min.css is precached', $has($on) && count($on) === 4, implode(' ', $on));
+check('#6 split off: it is not', !$has($off) && count($off) === 3);
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

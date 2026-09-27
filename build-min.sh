@@ -41,7 +41,10 @@ src = open(sys.argv[1]).read()
 # silently mis-assigns whole blocks.
 src = re.sub(r'/\*[\s\S]*?\*/', '', src)
 
-GUEST = re.compile(r'\.dccgg-(report|review|ai-|sos|emergency|more|btn-send|btn-cancel)[-a-z]*')
+# `emergency` is deliberately NOT here: public mode switches off the SOS FAB,
+# but an Emergency section whose audience is `both` still renders its contact
+# strip on the public guide, and that strip needs its CSS in core.
+GUEST = re.compile(r'\.dccgg-(report|review|ai-|sos|more|btn-send|btn-cancel)[-a-z]*')
 NESTED = re.compile(r'^@(media|supports|layer|container)\b', re.I)
 
 def split_top(css):

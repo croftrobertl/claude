@@ -2347,7 +2347,7 @@
         const handle = (btn, value, e) => {
             if (e) e.stopPropagation();
             copyText(value).then(() => {
-                flashCopied(btn, config.strings && config.strings.copied);
+                flashCopied(btn, config.strings && config.strings.copied, config.copyConfirmMs);
                 spawnCopyEffect(btn, config.copyEffect);
                 hapticPulse(root, [20, 40, 60]);
             }).catch(() => {});
@@ -2361,11 +2361,15 @@
                 if (btn.dataset.secretRef) {
                     e.stopPropagation();
                     btn.disabled = true;
+                    // The Copy button's own ref resolves through the same memory
+                    // as Show, so a remembered value copies with no signal too.
                     fetchSecret(root, config, btn)
-                        .then((value) => { forgetSecret(btn); handle(btn, value, null); })
-                        .catch(() => {
-                            showToast((config.strings && config.strings.secretError)
-                                || 'Could not load that just now. Please try again.');
+                        .then((res) => { forgetSecret(btn); handle(btn, res.value, null); })
+                        .catch((err) => {
+                            const offline = err && err.message === 'offline';
+                            showToast(offline
+                                ? ((config.strings && config.strings.secretOffline) || 'Copying this needs a connection.')
+                                : ((config.strings && config.strings.secretError) || 'Could not load that just now. Please try again.'));
                         })
                         .then(() => { btn.disabled = false; });
                     return;
@@ -2377,7 +2381,7 @@
             btn.addEventListener('click', (e) => handle(btn, btn.dataset.copy || '', e));
         });
     }
-    function flashCopied(btn, label) {
+    function flashCopied(btn, label, ms) {
         const orig = btn.innerHTML;
         // v0.16.0: confirm with the check icon alone. "Copied!" is ~18px wider
         // than "Copy", which was enough to wrap a credential row onto a second
@@ -2387,7 +2391,7 @@
         // is simply taken out of layout rather than deleted.
         btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>'
             + '<span class="dccgg-sr-only">' + escHtml(label || 'Copied!') + '</span>';
-        setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        setTimeout(() => { btn.innerHTML = orig; }, (ms | 0) > 0 ? (ms | 0) : 1500);
     }
 
     // v0.9.7.8: Copy-button effect dispatcher. Reads the host's choice from
@@ -3284,6 +3288,7 @@
         if (_missSent.has(key)) return;
         _missSent.add(key);
         if (!config || !config.ajaxUrl || !config.nonce) return;
+        if (config.logMisses === false) return;   // v0.23.0: switched off by the host
         try {
             const body = new URLSearchParams();
             body.set('action', 'dccgg_search_miss');
@@ -3301,29 +3306,88 @@
     // an attribute, and dropped again when the value is re-masked, so the DOM
     // never regains a copy the guest did not ask for.
     const SECRET_CACHE = new WeakMap();   // element -> value, cleared on re-mask
+    // v0.23.0: "remember it on that phone for the visit". After ONE successful
+    // Show, the value is kept in THIS browser so it still works with no signal
+    // on the water. Rules, from the owner: only values the guest has already
+    // revealed (Copy alone never stores); expire with the stay — the guide has
+    // no checkout date, so the window is the host's reveal_memory_hours, and 0
+    // means the browser session (sessionStorage dies with it, localStorage
+    // carries a timestamp); the service worker still never caches the
+    // endpoint; Hide still re-masks; Forget wipes it.
+    const SECRET_MEM = 'dccgg:secret:';
+    function memKey(config, ref) { return SECRET_MEM + (config.widgetId || '') + ':' + stayKey() + ':' + ref; }
+    // Merely READING window.localStorage throws on an opaque origin, in some
+    // private modes and in sandboxed frames — so the accessor is guarded, not
+    // just the calls on it. No storage means "not remembered", never an error.
+    function safeStorage(name) {
+        try { const st = window[name]; return st || null; } catch (_) { return null; }
+    }
+    function memStore(config) {
+        return safeStorage(((config.revealMemoryHours | 0) > 0) ? 'localStorage' : 'sessionStorage');
+    }
+    function rememberSecret(config, ref, value) {
+        try {
+            const st = memStore(config);
+            if (!st) return;
+            const hours = config.revealMemoryHours | 0;
+            const exp = hours > 0 ? Date.now() + hours * 3600000 : 0;
+            st.setItem(memKey(config, ref), JSON.stringify({ v: value, exp: exp }));
+        } catch (_) { /* quota: simply not remembered */ }
+    }
+    function recallSecret(config, ref) {
+        const key = memKey(config, ref);
+        for (const st of [safeStorage('localStorage'), safeStorage('sessionStorage')]) {
+            if (!st) continue;
+            try {
+                const raw = st.getItem(key);
+                if (!raw) continue;
+                const o = JSON.parse(raw);
+                if (o.exp && o.exp < Date.now()) { st.removeItem(key); continue; }
+                if (o.v) return String(o.v);
+            } catch (_) { /* unreadable: treat as absent */ }
+        }
+        return null;
+    }
+    function forgetRemembered(config, ref) {
+        const key = memKey(config, ref);
+        [safeStorage('localStorage'), safeStorage('sessionStorage')].forEach((st) => {
+            try { if (st) st.removeItem(key); } catch (_) {}
+        });
+    }
+
+    // Resolves to { value, source } where source is 'inline' | 'cache' |
+    // 'memory' | 'network'. Rejects with Error('offline') when there is
+    // nothing remembered and no connection — the toast reads differently.
     function fetchSecret(root, config, refEl) {
         const ref = refEl && refEl.dataset ? refEl.dataset.secretRef : '';
         if (!ref) return Promise.reject(new Error('no ref'));
+        // secret_reveal = inline: the value shipped in the markup (pre-0.19.0
+        // behaviour, chosen explicitly by the host). No round-trip.
+        const inline = refEl.dataset.secretValue || refEl.dataset.copy;
+        if (inline) return Promise.resolve({ value: inline, source: 'inline' });
         const hit = SECRET_CACHE.get(refEl);
-        if (hit !== undefined) return Promise.resolve(hit);
+        if (hit !== undefined) return Promise.resolve({ value: hit, source: 'cache' });
+        const remembered = recallSecret(config, ref);
+        if (remembered) { SECRET_CACHE.set(refEl, remembered); return Promise.resolve({ value: remembered, source: 'memory' }); }
         if (!config || !config.ajaxUrl || !config.nonce) return Promise.reject(new Error('no endpoint'));
+        if (navigator.onLine === false) return Promise.reject(new Error('offline'));
         const body = new URLSearchParams();
         body.set('action', 'dccgg_reveal_secret');
-        body.set('nonce', config.nonce);
         body.set('post_id', String(config.postId || 0));
         body.set('widget_id', String(config.widgetId || ''));
         body.set('ref', ref);
-        return fetch(config.ajaxUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            body: body.toString(),
-        }).then((r) => r.json()).then((j) => {
-            const value = j && j.success && j.data ? String(j.data.value || '') : '';
-            if (!value) throw new Error('empty');
-            SECRET_CACHE.set(refEl, value);
-            return value;
-        });
+        // dccggFetch, not fetch: a page the service worker served from its
+        // cache carries the nonce it was cached with, which can be older than a
+        // nonce lives. On a 403 the helper mints a fresh one bound to this
+        // session (dccgg_refresh_nonce) and retries once. v0.19.0 bypassed it.
+        return dccggFetch(config, body)
+            .then((r) => r.json(), () => { throw new Error(navigator.onLine === false ? 'offline' : 'network'); })
+            .then((j) => {
+                const value = j && j.success && j.data ? String(j.data.value || '') : '';
+                if (!value) throw new Error('empty');
+                SECRET_CACHE.set(refEl, value);
+                return { value: value, source: 'network' };
+            });
     }
     function forgetSecret(refEl) { if (refEl) SECRET_CACHE.delete(refEl); }
 
@@ -3368,10 +3432,39 @@
         // the label and aria-expanded in the same place, so the control can
         // never disagree with what it is showing.
         root.__dccggHideSecrets = () => {
+            // v0.23.0: the host can leave a revealed value showing until the
+            // guest taps Hide. Default is to re-mask, as since v0.13.0.
+            if (config && config.autoHideSecrets === false) return;
             scopes().forEach((scope) => {
                 scope.querySelectorAll('.dccgg-secret.is-revealed').forEach((wrap) => setRevealed(wrap, false));
             });
         };
+
+        const ensureForget = (wrap, valEl, cfg) => {
+            if (wrap.querySelector('.dccgg-secret-forget')) return;
+            const f = document.createElement('button');
+            f.type = 'button';
+            f.className = 'dccgg-btn-text dccgg-secret-forget';
+            f.textContent = (cfg.strings && cfg.strings.secretForget) || 'Forget';
+            f.setAttribute('aria-label', f.textContent + ' ' + ((cfg.strings && cfg.strings.secretForgetLabel) || 'the remembered password on this device'));
+            f.addEventListener('click', (e) => {
+                e.stopPropagation();
+                forgetRemembered(cfg, valEl.dataset.secretRef);
+                forgetSecret(valEl);
+                setRevealed(wrap, false);
+                f.remove();
+            });
+            wrap.appendChild(f);
+        };
+        // A value remembered from an earlier visit gets its Forget button on
+        // load, so the guest can see it is remembered before tapping anything.
+        root.querySelectorAll('.dccgg-secret').forEach((wrap) => {
+            const valEl = wrap.querySelector('.dccgg-secret-value');
+            if (valEl && valEl.dataset.secretRef && !valEl.dataset.secretValue
+                && recallSecret(config, valEl.dataset.secretRef)) {
+                ensureForget(wrap, valEl, config);
+            }
+        });
 
         root.querySelectorAll('.dccgg-secret-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -3389,14 +3482,24 @@
                 const valEl = wrap.querySelector('.dccgg-secret-value');
                 btn.disabled = true;
                 fetchSecret(root, config, valEl)
-                    .then((value) => { setRevealed(wrap, true, value); })
-                    .catch(() => {
+                    .then((res) => {
+                        setRevealed(wrap, true, res.value);
+                        // Remembered only on a reveal the guest performed, and
+                        // only when the value did not come from the page itself.
+                        if (res.source === 'network' || res.source === 'memory') {
+                            if (res.source === 'network') rememberSecret(config, valEl.dataset.secretRef, res.value);
+                            ensureForget(wrap, valEl, config);
+                        }
+                    })
+                    .catch((err) => {
                         // Fail closed and say nothing false: the row stays
                         // masked rather than showing an empty "revealed" state
                         // that reads as "the password is blank".
                         setRevealed(wrap, false);
-                        showToast((config.strings && config.strings.secretError)
-                            || 'Could not load that just now. Please try again.');
+                        const offline = err && err.message === 'offline';
+                        showToast(offline
+                            ? ((config.strings && config.strings.secretOffline) || 'Showing this needs a connection.')
+                            : ((config.strings && config.strings.secretError) || 'Could not load that just now. Please try again.'));
                     })
                     .then(() => { btn.disabled = false; });
             });

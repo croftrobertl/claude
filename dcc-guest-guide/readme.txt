@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.22.0
+Stable tag: 0.23.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,42 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.0 =
+
+**Fixed: every plugin setting now does what it says.** Nine of the settings
+added in 0.21.0 were saved but never read. Each one now changes behaviour, and
+each has a test that proves a changed value changes the outcome: copy
+confirmation time, report rate limit, search-miss log on/off and cap,
+auto-hide of passwords, inline search index, password reveal mode, and both
+public call-to-action fallbacks.
+
+**Added: a revealed password can be remembered on the guest's own phone.**
+Off by default. Once a guest has pressed Show and the password has been
+fetched, it is kept in that browser only, never fetched ahead of time, so a
+later Show works even with no signal. New setting "Remember a revealed
+password on the phone for (hours)": 0 keeps it for the browser session only
+(sessionStorage); a number of hours keeps it across visits (localStorage) and
+expires it after that many hours. A Forget button beside the row clears it.
+Hide still re-masks. If the guest is offline and nothing is remembered, the
+toast says the reveal needs a connection. The service worker still never
+caches admin-ajax.php.
+
+**Fixed: a reveal from a page the service worker served from cache no longer
+fails on a stale nonce.** The reveal call refreshes the nonce and retries, the
+same path the report form already used. The nonce check itself stays.
+
+**Changed: the Emergency section's styling ships in the core stylesheet.** A
+section marked public/both can render on the public page, so its strip and
+phone tiles must be styled there. The SOS floating button stays guest-only.
+
+**Fixed:** the legacy settings URL only redirects when the shared DCC menu
+exists; the DCC submenu registers only when its parent does; the guest-only
+stylesheet is precached by the service worker and loaded in the Elementor
+editor preview; the reveal endpoint is rate-limited per IP.
+
+**Note:** the search-miss cap default was recorded as 50 but the store keeps
+200 (the panel shows the top 50). The default now reads 200.
 
 = 0.22.0 =
 
