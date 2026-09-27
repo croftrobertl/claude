@@ -92,6 +92,31 @@ function dcc_boot_plugin(): string {
 	return $root;
 }
 
+/**
+ * Clear every once-per-page guard on every renderer.
+ *
+ * Discovered by reflection rather than listed by hand, and shared rather than
+ * copied, because both mistakes have already cost time here: a hand-kept list
+ * made one suite claim that switching the search off removed the structured
+ * data (it had not — the JSON-LD guard simply was not reset), and a suite that
+ * did not reset Water_Render's guard at all reported an empty config as a
+ * missing tile URL. A render that legitimately emits nothing the second time is
+ * indistinguishable from a render that emitted the wrong thing.
+ */
+function dcc_reset_once_guards(): void {
+	foreach ( [ 'DCC_WL\Render', 'DCC_WL\Canal_Render', 'DCC_WL\Water_Render' ] as $class ) {
+		if ( ! class_exists( $class ) ) {
+			continue;
+		}
+		foreach ( ( new \ReflectionClass( $class ) )->getProperties( \ReflectionProperty::IS_STATIC ) as $prop ) {
+			$prop->setAccessible( true );
+			if ( is_bool( $prop->getValue() ) ) {
+				$prop->setValue( null, false );
+			}
+		}
+	}
+}
+
 /** The version in the plugin header — the single source of truth. */
 function dcc_header_version(): string {
 	$root = dirname( __DIR__, 2 );

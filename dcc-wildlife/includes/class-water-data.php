@@ -231,6 +231,14 @@ final class Water_Data {
 	 * a future migration means adding a step here; the version bump triggers
 	 * it on every site automatically.
 	 */
+	/**
+	 * A tile template with its placeholders removed, the way esc_url_raw left
+	 * them. Used to RECOGNISE a damaged value, never to produce one.
+	 */
+	private static function debrace( string $template ): string {
+		return str_replace( [ '{', '}' ], '', $template );
+	}
+
 	public static function upgrade(): void {
 		$stored = get_option( self::OPTION, null );
 		if ( ! is_array( $stored ) ) {
@@ -265,6 +273,53 @@ final class Water_Data {
 		if ( array_key_exists( 'usgs_sites', $stored ) ) {
 			unset( $stored['usgs_sites'] );
 			$changed = true;
+		}
+
+		/*
+		 * 1.32.1: PUT THE BRACES BACK IN THE TILE TEMPLATES.
+		 *
+		 * Every site that ever saved the settings form has a stored tile
+		 * template with its {z}/{x}/{y} placeholders stripped, because the
+		 * sanitiser ran them through esc_url_raw() — see
+		 * Water_Admin::sanitize_tile_template() for the full account. Fixing
+		 * the sanitiser stops it happening again; it does nothing for the row
+		 * already in the database, which persist_merged() would then keep
+		 * re-persisting. So the row is repaired here.
+		 *
+		 * Two passes, narrowest first. If the value is exactly our own default
+		 * with the braces removed, restore the default verbatim — that is the
+		 * case on this site and the only one we can be certain about. Otherwise
+		 * try to re-brace a trailing /z/x/y or /z/y/x on a custom provider's
+		 * URL, which is the shape every XYZ tile service uses.
+		 *
+		 * A value we cannot recognise is LEFT ALONE. Guessing at someone's
+		 * custom endpoint would replace a broken map with a differently broken
+		 * one, and they can retype it now that saving works.
+		 */
+		$defaults = self::defaults();
+		foreach ( [ 'map_tile_url', 'map_sat_url' ] as $key ) {
+			$v = trim( (string) ( $stored[ $key ] ?? '' ) );
+			if ( '' === $v || false !== strpos( $v, '{' ) ) {
+				continue; // Absent, or already healthy.
+			}
+
+			$default = (string) ( $defaults[ $key ] ?? '' );
+			if ( '' !== $default && $v === self::debrace( $default ) ) {
+				$stored[ $key ] = $default;
+				$changed        = true;
+				continue;
+			}
+
+			$rebraced = preg_replace(
+				[ '#/z/x/y(?=$|\.)#', '#/z/y/x(?=$|\.)#' ],
+				[ '/{z}/{x}/{y}', '/{z}/{y}/{x}' ],
+				$v,
+				1
+			);
+			if ( is_string( $rebraced ) && $rebraced !== $v ) {
+				$stored[ $key ] = $rebraced;
+				$changed        = true;
+			}
 		}
 
 		if ( $changed ) {

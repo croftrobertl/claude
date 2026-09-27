@@ -59,8 +59,41 @@ function dccwl_test_reset(): void {
 function esc_html( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
 function esc_attr( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
 function esc_textarea( $t ) { return esc_html( $t ); }
-function esc_url( $u ) { return str_replace( [ '"', '<', '>' ], '', (string) $u ); }
-function esc_url_raw( $u ) { return (string) $u; }
+/**
+ * FAITHFUL to WordPress, because a lenient version of this stub hid a live bug.
+ *
+ * Through 1.32.0 this returned its argument unchanged. That made the harness
+ * blind to the defect that broke the chain map's basemap: WordPress's real
+ * esc_url() strips any character outside its allow-list, and `{` and `}` are
+ * NOT in it — so a tile template like
+ *
+ *     https://tile.openstreetmap.org/{z}/{x}/{y}.png
+ *
+ * came back as https://tile.openstreetmap.org/z/x/y.png, Leaflet asked for that
+ * one literal URL for every tile, and the map drew one stretched world image
+ * repeated in every slot. Every test passed throughout.
+ *
+ * The character class below is copied from wp-includes/formatting.php. A stub
+ * that is more permissive than the real thing is not a simplification; it is a
+ * test that agrees with you.
+ */
+function esc_url( $url, $protocols = null, $_context = 'display' ) {
+	$url = (string) $url;
+	if ( '' === $url ) {
+		return '';
+	}
+	$url = str_replace( ' ', '%20', ltrim( $url ) );
+	$url = (string) preg_replace( '|[^a-z0-9-~+_.?#=!&;,/:%@$\|*\'()\[\]\\x80-\\xff]|i', '', $url );
+	if ( '' === $url ) {
+		return '';
+	}
+	if ( 'display' === $_context ) {
+		$url = str_replace( '&amp;', '&', $url );
+		$url = str_replace( "'", '&#039;', $url );
+	}
+	return $url;
+}
+function esc_url_raw( $u, $protocols = null ) { return esc_url( $u, $protocols, 'db' ); }
 function esc_js( $t ) { return addslashes( (string) $t ); }
 /**
  * Not real kses — just enough of it that a test asserting "script tags do not

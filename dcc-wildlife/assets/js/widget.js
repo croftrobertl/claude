@@ -29,6 +29,18 @@
 		return v;
 	}
 
+	/*
+	 * 1.32.1: these are now read EVERYWHERE the number is meant, not just in
+	 * one or two places.
+	 *
+	 * 1.32.0 carried both into the config and then left six literal 3s and a
+	 * literal 2 in place, so the settings page described behaviour the code did
+	 * not have: PEAK_SCORE reached only nextRise() and peakRun(), both of which
+	 * belong to the retired countdown, and canal.js hard-coded its own 2 so the
+	 * hub tile and the panel header would have disagreed the moment anyone
+	 * changed the threshold. A setting that describes something it does not do
+	 * is the same defect as a control that does nothing.
+	 */
 	var SPOTLIGHT_MIN = setNum('spotlightMin', 2, 1);
 	var PEAK_SCORE = setNum('peakScore', 3, 1);
 	var SEARCH_SQUASH = setNum('searchSquash', 3, 1);
@@ -397,7 +409,7 @@
 			}
 
 			var badges = el('p', 'dccwl-detail-badges');
-			if ((sp.months[state.month] || 0) >= 3) {
+			if ((sp.months[state.month] || 0) >= PEAK_SCORE) {
 				badges.appendChild(el('span', 'dccwl-badge dccwl-badge-peak', CFG.i18n.peak));
 			}
 			// 1.19.0: the flags as badges (mark + name), then the odds.
@@ -581,7 +593,7 @@
 			// the species is at its best this month. The month-range label that
 			// used to sit here (and left the strip reading as busy, mismatched
 			// cards) now lives in the detail sheet, where there is room for it.
-			if (value >= 3) {
+			if (value >= PEAK_SCORE) {
 				tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
 			}
 			wireTile(tile);
@@ -843,7 +855,7 @@
 							// At peak means at peak, in every section including
 							// safety — a venomous snake at its most active is
 							// exactly what a guest should be shown, not spared.
-							keep = !!(sp.months && (sp.months[state.month] || 0) >= 3);
+							keep = !!(sp.months && (sp.months[state.month] || 0) >= PEAK_SCORE);
 						} else if (isCanal && sp.months && state.monthPicked) {
 							/*
 							 * ONLY WHEN A MONTH WAS EXPLICITLY CHOSEN (1.28.0).
@@ -867,7 +879,7 @@
 							keep = 'safety' === group || v >= SPOTLIGHT_MIN;
 						}
 					}
-					if (isCanal && v >= 3) {
+					if (isCanal && v >= PEAK_SCORE) {
 						tile.appendChild(el('span', 'dccwl-tile-sub dccwl-tile-peak', CFG.i18n.peakShort));
 					}
 					rows.push({ li: tile.closest('li'), grid: g, keep: keep, rank: isCanal ? v : 0, i: i++, show: false });
@@ -1325,7 +1337,7 @@
 		/* One <use> builder for the whole plugin — see spriteUse(). */
 		sprite: function (id, cls) { return spriteUse(id, cls); },
 		peakFor: function (m) {
-			return speciesForMonth(m).filter(function (x) { return x.v >= 3; })
+			return speciesForMonth(m).filter(function (x) { return x.v >= PEAK_SCORE; })
 				.map(function (x) { return x.s; });
 		},
 		setMonth: function (root, m, explicit) {

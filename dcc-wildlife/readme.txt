@@ -4,7 +4,7 @@ Tags: wildlife, fishing, elementor, shortcode, nature
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.32.0
+Stable tag: 1.32.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,17 @@ The wildlife guide and the water almanac are 100% WordPress-native: no external 
 Developers can filter the species registry with `dcc_wl_species`, the monthly likelihood table with `dcc_wl_calendar`, and almanac rows with `dcc_wl_water_almanac` (rows added through that filter are subject to the same attribution gate).
 
 == Changelog ==
+
+= 1.32.1 =
+* **The chain map has a real map under it again.** The basemap was showing the
+  same stretched picture of the world in every tile. Saving the settings had
+  been quietly removing three characters from the tile addresses, and they
+  cannot be typed back in — this release repairs what is stored as well as
+  stopping it happening again.
+* The "Spotlight threshold" and "Counts as at peak" settings now do what the
+  page says they do. They were being sent to the browser and then ignored.
+* Your old season-countdown preference is no longer wiped the next time you
+  press Save. The 1.32.0 page said it was kept; it was being set to off.
 
 = 1.32.0 =
 * **A settings page worth using.** DCC → Wildlife now has the guide's own

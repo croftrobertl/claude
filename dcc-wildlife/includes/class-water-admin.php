@@ -117,16 +117,71 @@ final class Water_Admin {
 		return false;
 	}
 
+	/**
+	 * A Leaflet tile TEMPLATE, which is not a URL and must not be treated as one.
+	 *
+	 * THE BUG THIS EXISTS TO FIX. These two values went through esc_url_raw(),
+	 * whose allow-list in wp-includes/formatting.php does not include `{` or
+	 * `}`. So the default
+	 *
+	 *     https://tile.openstreetmap.org/{z}/{x}/{y}.png
+	 *
+	 * was stored as https://tile.openstreetmap.org/z/x/y.png. Leaflet passes the
+	 * string to L.tileLayer verbatim, so every tile in the grid requested that
+	 * one literal URL, the provider answered with one image, and the map drew
+	 * the same picture of the whole world in every slot. The fit was correct;
+	 * the basemap under it was one repeated tile.
+	 *
+	 * It could not be fixed from the settings form either: the form redisplayed
+	 * the stripped value and re-saved it, and persist_merged() wrote it back on
+	 * every upgrade.
+	 *
+	 * VALIDATE, DO NOT REWRITE. The value is checked against the RFC 3986 URI
+	 * character set PLUS braces, and returned untouched or rejected whole.
+	 * Rejecting is better than repairing here: a half-cleaned template is a map
+	 * that draws wrongly, which is harder to notice than a map that does not
+	 * draw. An earlier draft masked the placeholders, escaped, and unmasked
+	 * them; that works but it can only ever approximate the round trip, and it
+	 * leaves a token that a real URL could in principle contain.
+	 *
+	 * Safe to return unescaped because of where it goes: wp_json_encode() into
+	 * a script for the client, esc_attr() into the form for redisplay. The
+	 * character set below admits neither `<` nor `"` in any case, and only an
+	 * administrator can set it.
+	 */
+	private static function sanitize_tile_template( string $raw ): string {
+		$v = trim( $raw );
+		if ( '' === $v ) {
+			return '';
+		}
+		if ( ! preg_match( '#^https://#i', $v ) ) {
+			return '';
+		}
+		// RFC 3986 unreserved + reserved + percent, plus { and } for Leaflet's
+		// {z}/{x}/{y}/{s}/{r} placeholders.
+		if ( ! preg_match( '#^https://[A-Za-z0-9\-._~:/?\#\[\]@!$&\'()*+,;=%{}]+$#', $v ) ) {
+			return '';
+		}
+		return $v;
+	}
+
 	public static function register(): void {
-		// Separate option so the mu-plugin's saved value survives the move.
-		register_setting(
-			'dcc_wl_water',
-			self::countdown_option(),
-			[
-				'type'              => 'boolean',
-				'sanitize_callback' => static fn( $v ): int => empty( $v ) ? 0 : 1,
-			]
-		);
+		/*
+		 * dcc_wl_countdown_enabled IS DELIBERATELY NOT REGISTERED.
+		 *
+		 * It was, until 1.32.1, and that quietly destroyed the very preference
+		 * 1.32.0's page claims to preserve. wp-admin/options.php walks every
+		 * option registered in the group and calls update_option($name, null)
+		 * for any that is absent from POST. The field was removed in 1.32.0
+		 * when the countdown was declared retired, so the option was absent
+		 * from every Save — and the sanitiser (`empty($v) ? 0 : 1`) turned that
+		 * null into 0 and wrote it.
+		 *
+		 * An option this page no longer edits must not be registered to it.
+		 * Now nothing writes it: countdown_enabled() still reads it, defaulting
+		 * to 1, so whatever the owner last chose survives untouched — which is
+		 * what the page says happens.
+		 */
 
 		// The GUIDE option, in the same group: one form, one Save button, two
 		// stored rows. The group is a capability-and-nonce bucket, not a
@@ -246,9 +301,16 @@ final class Water_Admin {
 		$out['map_ramps']   = empty( $input['map_ramps'] ) ? 0 : 1;
 		$out['map_default_layer'] = 'streets' === ( $input['map_default_layer'] ?? '' ) ? 'streets' : 'satellite';
 		$out['map_sat_attrib']    = wp_kses_post( trim( (string) ( $input['map_sat_attrib'] ?? '' ) ) );
-		foreach ( [ 'map_leaflet_js', 'map_leaflet_css', 'map_tile_url', 'map_sat_url' ] as $k ) {
+		// Real URLs: esc_url_raw is exactly right for these.
+		foreach ( [ 'map_leaflet_js', 'map_leaflet_css' ] as $k ) {
 			$v         = trim( (string) ( $input[ $k ] ?? '' ) );
 			$out[ $k ] = preg_match( '#^https://#i', $v ) ? esc_url_raw( $v ) : '';
+		}
+
+		// TILE TEMPLATES ARE NOT URLS, and running them through esc_url_raw is
+		// what broke the basemap. See sanitize_tile_template().
+		foreach ( [ 'map_tile_url', 'map_sat_url' ] as $k ) {
+			$out[ $k ] = self::sanitize_tile_template( (string) ( $input[ $k ] ?? '' ) );
 		}
 		$out['map_tile_attrib'] = wp_kses_post( trim( (string) ( $input['map_tile_attrib'] ?? '' ) ) );
 

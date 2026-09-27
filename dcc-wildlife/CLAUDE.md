@@ -1582,3 +1582,64 @@ from class-water-live.php, both `return self::TTL_MAP;`, replaced by a settable
 `map_ttl_seconds()` that returns the same constant when nothing is stored. No
 parser was touched, and test-map-cache.php asserts a stubbed Atlas reading still
 arrives parsed with a custom cache life in play.
+
+## 1.32.1 — the stub that hid a live bug, and two settings that lied
+
+**A TEST STUB MORE PERMISSIVE THAN THE REAL THING IS A TEST THAT AGREES WITH
+YOU.** `esc_url_raw` was stubbed as `return (string) $u;` from the harness's
+first commit. WordPress's real `esc_url()` strips every character outside an
+allow-list in wp-includes/formatting.php, and `{` and `}` are not in it — so the
+chain map's tile templates were stored with their placeholders removed:
+
+    https://tile.openstreetmap.org/{z}/{x}/{y}.png
+    -> https://tile.openstreetmap.org/z/x/y.png
+
+Leaflet passes the string to `L.tileLayer` verbatim, so every tile in the grid
+requested that one literal URL, the provider answered with one image of the
+whole world, and it repeated in every slot. The 1.31.0 `fitBounds` fix was
+working correctly throughout — zoom 8, every marker in view, over a basemap that
+was one tile. Fourteen suites passed the whole time.
+
+`wp-stubs.php` now carries WordPress's actual character class, and
+test-tile-templates.php asserts FIRST that the stub still strips braces, because
+the moment it stops every other assertion in that file becomes worthless. When
+you add a stub here, copy the real behaviour or leave the function out.
+
+**A TILE TEMPLATE IS NOT A URL.** `Water_Admin::sanitize_tile_template()`
+validates against the RFC 3986 character set plus braces and returns the value
+untouched or rejects it whole. It does not repair: a half-cleaned template is a
+map that draws wrongly, which is harder to notice than a map that does not draw.
+`map_leaflet_js` and `map_leaflet_css` are real URLs and keep `esc_url_raw`.
+
+**FIXING A SANITISER DOES NOTHING FOR THE ROW ALREADY STORED.** Every site that
+had ever saved the form held a damaged value, and `persist_merged()` re-wrote it
+on every upgrade. `Water_Data::upgrade()` now repairs it: exact match against the
+brace-stripped default restores the default, otherwise a trailing `/z/x/y` or
+`/z/y/x` is re-braced, and anything else is LEFT ALONE. Guessing at a custom
+endpoint would replace a broken map with a differently broken one.
+
+**A SETTING THAT DESCRIBES BEHAVIOUR IT DOES NOT HAVE IS THE SAME DEFECT AS A
+CONTROL THAT DOES NOTHING.** 1.32.0 sent `spotlight_min` and `peak_score` to the
+browser and then left six literal `3`s and a literal `2` in place. `PEAK_SCORE`
+reached only `nextRise()` and `peakRun()`, both belonging to the retired
+countdown, and canal.js hard-coded its own `2`, so the hub tile and the panel
+header it opens would have disagreed the moment anyone changed the threshold.
+Both are wired everywhere now, canal.js reads the GUIDE's config for them
+(`window.DCC_WL_CFG.set`, not the hub's) so those two surfaces cannot diverge,
+and a source lint fails any comparison against a bare 2 or 3.
+
+**DO NOT REGISTER A SETTING THE PAGE NO LONGER EDITS.** wp-admin/options.php
+walks every option registered to the group and calls `update_option($name, null)`
+for any absent from POST. `dcc_wl_countdown_enabled` stayed registered after its
+field was removed, so every Save ran null through `empty($v) ? 0 : 1` and wrote
+0 — destroying the preference the page promises to keep. The registration is
+gone; `countdown_enabled()` still reads the option, defaulting to 1.
+
+**THE SEPTEMBER COUNTS ARE THREE DEFINITIONS, NOT A BUG.** Reproduced from the
+dataset and from real screenshots at 390px: hub tile 36 (`>= 2`, wildlife only),
+month strip 15 (`>= 3`, wildlife only), Peak Now 24 tiles (`>= 3`, safety
+included, the alligator drawn twice — 23 distinct species), search 51, deck 52.
+Rob has not chosen a rule, so NOTHING here was changed. Note for whoever picks
+one up: the hub's `subSpot` string reads "%d at their best in %s" for the `>= 2`
+count while the month strip says "at peak" for `>= 3`, and those two phrases read
+as synonyms — the wording is part of the problem, not just the arithmetic.

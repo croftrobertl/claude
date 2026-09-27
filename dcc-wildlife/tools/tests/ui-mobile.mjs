@@ -197,5 +197,45 @@ for (const [w, inflate, required] of TAB_CASES) {
   await page.close();
 }
 
+/* ------------------------------------------------- the peak threshold */
+section('changing the peak threshold changes what the page counts');
+
+/*
+ * 1.32.0 sent this number to the browser and then compared against a literal 3
+ * in six places, so the settings page described behaviour the code did not have.
+ * A source lint catches a literal coming back; this catches the number failing
+ * to arrive somewhere that matters, which a lint cannot see.
+ */
+async function peakCount(peakScore) {
+  const extra = peakScore === null ? [] : [`guide:peak_score=${peakScore}`];
+  const { page: pg } = await widgetPage(browser, 'month', { width: 390, height: 900 }, ...extra);
+  const n = await pg.evaluate(() => {
+    // Open Peak Now and count what it shows.
+    const tab = Array.from(document.querySelectorAll('.dccwl-tab'))
+      .find((t) => t.getAttribute('data-dccwl-group') === '__peak');
+    tab.click();
+    return new Promise((resolve) => setTimeout(() => {
+      const grids = Array.from(document.querySelectorAll('.dccwl-guide-grid'));
+      let n = 0;
+      for (const g of grids) {
+        if (g.hidden) continue;
+        n += Array.from(g.children).filter((li) => !li.hidden).length;
+      }
+      resolve(n);
+    }, 250));
+  });
+  await pg.close();
+  return n;
+}
+
+const atThree = await peakCount(null);
+const atTwo = await peakCount(2);
+const atOne = await peakCount(1);
+note(`Peak Now tiles at threshold 3: ${atThree}, at 2: ${atTwo}, at 1: ${atOne}`);
+
+checkAtLeast(1, atThree, 'Peak Now shows something at the default threshold');
+check(atTwo > atThree, 'lowering the threshold to 2 shows MORE species', `${atTwo} vs ${atThree}`);
+check(atOne >= atTwo, 'and lowering it to 1 shows at least as many again', `${atOne} vs ${atTwo}`);
+
 await browser.close();
 done();

@@ -26,25 +26,6 @@ use DCC_WL\Canal_Render;
 use DCC_WL\Water_Render;
 use DCC_WL\Plugin;
 
-/**
- * Clear every once-per-page guard on the renderers.
- *
- * Discovered by reflection rather than listed by hand: a hand-kept list is how
- * this suite first reported that switching the search off also removed the
- * structured-data block. It had not — the JSON-LD guard simply had not been
- * reset between renders, and the list did not know about it.
- */
-function dcc_reset_once_guards(): void {
-	foreach ( [ Render::class, Canal_Render::class ] as $class ) {
-		foreach ( ( new \ReflectionClass( $class ) )->getProperties( \ReflectionProperty::IS_STATIC ) as $prop ) {
-			$prop->setAccessible( true );
-			if ( is_bool( $prop->getValue() ) ) {
-				$prop->setValue( null, false );
-			}
-		}
-	}
-}
-
 /** Render the month widget fresh, returning HTML plus the inline config. */
 function dcc_month( array $opts = [], array $stored = [] ): array {
 	dccwl_test_reset();
@@ -196,6 +177,69 @@ check_same( 1, Guide_Data::resolve_num( -5, 'deck_rows' ), 'and to the minimum' 
 check_same( 0, Guide_Data::resolve_num( 0, 'hub_preview_max' ), 'zero is a real value, not an absence' );
 check_same( 'deck', Guide_Data::resolve_enum( 'nonsense', 'default_view' ), 'an unknown enum falls back to the setting' );
 check_same( 'compact', Guide_Data::resolve_enum( 'compact', 'default_view' ), 'a known one is used' );
+
+dcc_section( 'the thresholds are wired, not merely carried' );
+
+/*
+ * 1.32.0 sent spotlight_min and peak_score to the browser and then left the
+ * literals in place, so the settings page described behaviour the code did not
+ * have. A source lint is the right shape of test for that: the numbers are
+ * compared against a threshold in several places, and any ONE of them left
+ * behind reintroduces the contradiction.
+ */
+$js_files = [ 'widget.js', 'canal.js' ];
+$literals = [];
+foreach ( $js_files as $file ) {
+	$src = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/' . $file );
+	foreach ( explode( "\n", $src ) as $n => $line ) {
+		// A bare comparison against 2 or 3 in a likelihood context. `length >=`
+		// is the search's own minimum and is a different number entirely.
+		if ( 1 === preg_match( '/>=\s*[23]\b/', $line ) && 1 !== preg_match( '/length\s*>=/', $line ) ) {
+			$literals[] = $file . ':' . ( $n + 1 ) . ' ' . trim( $line );
+		}
+	}
+}
+check_same( [], $literals, 'no script compares a likelihood against a hard-coded 2 or 3', implode( ' | ', array_slice( $literals, 0, 4 ) ) );
+
+// And the constants are actually consulted where the counting happens.
+$widget = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/widget.js' );
+check( substr_count( $widget, 'PEAK_SCORE' ) >= 6, 'PEAK_SCORE is read in at least six places', 'found ' . substr_count( $widget, 'PEAK_SCORE' ) );
+check( substr_count( $widget, 'SPOTLIGHT_MIN' ) >= 2, 'SPOTLIGHT_MIN is read where the spotlight is chosen' );
+
+$canal = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/js/canal.js' );
+check_contains( $canal, 'set.spotlightMin', 'the hub reads the spotlight threshold from the config' );
+check_contains( $canal, 'set.peakScore', 'and the peak score, so its tile cannot disagree with the panel it opens' );
+
+dcc_section( 'the retired countdown preference is not destroyed on save' );
+
+/*
+ * wp-admin/options.php walks every option REGISTERED to the group and calls
+ * update_option($name, null) for any absent from POST. 1.32.0 still registered
+ * dcc_wl_countdown_enabled after removing its field, so every Save ran null
+ * through a sanitiser that returns 0 for empty — zeroing the very preference
+ * the page promises to keep. This simulates that walk.
+ */
+dccwl_test_reset();
+\DCC_WL\Water_Admin::register();
+$registered = [];
+foreach ( $GLOBALS['dccwl_test']['settings'] as [ $group, $name, $args ] ) {
+	$registered[ $name ] = $args;
+}
+check( ! isset( $registered['dcc_wl_countdown_enabled'] ), 'the countdown option is no longer registered to the settings group' );
+check_same( [ 'dcc_wl_guide', 'dcc_wl_water' ], array_values( array_diff( array_keys( $registered ), [] ) ), 'exactly two options are registered, and both have a field on the page' );
+
+// Now the walk itself, over whatever IS registered, with an empty POST.
+$GLOBALS['dccwl_test']['options']['dcc_wl_countdown_enabled'] = 1;
+foreach ( $registered as $name => $args ) {
+	$cb    = $args['sanitize_callback'] ?? null;
+	$value = is_callable( $cb ) ? $cb( null ) : null;
+	update_option( $name, $value );
+}
+check_same( 1, get_option( 'dcc_wl_countdown_enabled' ), 'a Save with nothing posted leaves the stored preference at 1' );
+
+// Belt and braces: had it still been registered, this is what would have happened.
+$doomed = static fn( $v ): int => empty( $v ) ? 0 : 1;
+check_same( 0, $doomed( null ), 'because the old sanitiser really did turn an absent value into 0' );
 
 dcc_section( 'the water module gates' );
 

@@ -191,8 +191,8 @@ export function rendered(which = 'month', ...flags) {
  * A page holding a real widget, its real stylesheets and its real scripts,
  * with the inline config emitted before them exactly as WordPress does.
  */
-export async function widgetPage(browser, which = 'month', opts = {}) {
-  const fixture = rendered(which);
+export async function widgetPage(browser, which = 'month', opts = {}, ...fixtureFlags) {
+  const fixture = rendered(which, ...fixtureFlags);
   const page = await buildPage(browser, {
     css: opts.css || ['assets/css/app.css', 'assets/css/widget.css'],
     js: [],

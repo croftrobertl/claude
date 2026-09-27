@@ -76,12 +76,24 @@
 	function monthCounts(m) {
 		var w = window.DCC_WL_CFG;
 		if (!w || !Array.isArray(w.species)) { return null; }
+
+		/* The thresholds come from the GUIDE's config, not the hub's, because
+		 * widget.js counts with the same two numbers and the hub's tile must
+		 * agree with the panel header it leads to. 1.32.0 hard-coded 2 and 3
+		 * here while widget.js read the settings, so changing either setting
+		 * would have made those two surfaces disagree on the same page. */
+		var set = w.set || {};
+		var spotMin = parseInt(set.spotlightMin, 10);
+		var peakMin = parseInt(set.peakScore, 10);
+		if (isNaN(spotMin) || spotMin < 1) { spotMin = 2; }
+		if (isNaN(peakMin) || peakMin < 1) { peakMin = 3; }
+
 		var peak = 0, spot = 0;
 		w.species.forEach(function (s) {
 			if (s.group === 'safety') { return; }   // a warning list, not a count (1.19.0)
 			var v = (s.months && s.months[m]) || 0;
-			if (v >= 2) { spot += 1; }
-			if (v >= 3) { peak += 1; }
+			if (v >= spotMin) { spot += 1; }
+			if (v >= peakMin) { peak += 1; }
 		});
 		return { peak: peak, spot: spot };
 	}

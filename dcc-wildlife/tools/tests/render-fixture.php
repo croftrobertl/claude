@@ -23,6 +23,26 @@ dccwl_test_reset();
 // The water module ships OFF: switching it on makes network calls, so that
 // stays a deliberate act by the owner. A suite that needs the map has to say
 // so explicitly, which is what --enable is for.
+/*
+ * --guide key=value, repeatable. Lets a browser suite render the SAME page with
+ * one setting changed, which is the only way to prove a setting reaches the
+ * thing it claims to control.
+ */
+$guide = [];
+foreach ( $flags as $flag ) {
+	if ( 0 !== strpos( $flag, 'guide:' ) ) {
+		continue;
+	}
+	[ $k, $v ] = array_pad( explode( '=', substr( $flag, 6 ), 2 ), 2, '' );
+	$guide[ $k ] = is_numeric( $v ) ? (int) $v : $v;
+}
+if ( $guide ) {
+	$GLOBALS['dccwl_test']['options'][ \DCC_WL\Guide_Data::OPTION ] = array_merge(
+		\DCC_WL\Guide_Data::defaults(),
+		$guide
+	);
+}
+
 if ( in_array( '--enable', $flags, true ) ) {
 	$GLOBALS['dccwl_test']['options'][ \DCC_WL\Water_Data::OPTION ] = array_merge(
 		\DCC_WL\Water_Data::defaults(),
