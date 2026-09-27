@@ -792,5 +792,32 @@ check('settings_config: reveal_memory_hours reaches the page', $d['revealMemoryH
 check('settings_config: log_search_misses reaches the page', $d['logMisses'] === true && $c['logMisses'] === false);
 $setOpt([]);
 
+
+echo "\nW. v0.23.1 — Forget removed, Copy has its own offline wording\n";
+$wsrc = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/includes/class-widget.php');
+$jsrc = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/js/widget.js');
+$csrc = (string) file_get_contents(__DIR__ . '/../dcc-guest-guide/assets/css/widget.css');
+check('no Forget string control and no Forget config string',
+    strpos($wsrc, 'str_secret_forget') === false && strpos($wsrc, 'secretForget') === false);
+check('no Forget control in the script or the stylesheet',
+    strpos($jsrc, 'dccgg-secret-forget') === false && strpos($jsrc, 'ensureForget') === false
+    && strpos($csrc, 'secret-forget') === false);
+check('Copy has its own editable offline string, distinct from Show\'s',
+    preg_match("/'str_secret_copy_offline'\s*=>\s*\[[^\]]*'Copying this needs a connection\.'/", $wsrc) === 1
+    && strpos($wsrc, "'secretCopyOffline' => (string) (\$s['str_secret_copy_offline']") !== false);
+check('and the Copy handler reads it (not secretOffline)',
+    preg_match('/strings\.secretCopyOffline\)\s*\|\|\s*\'Copying this needs a connection\.\'/', $jsrc) === 1);
+$help = [];
+foreach (\DCCGG\Settings::schema() as $g) { foreach ($g['fields'] as $k => $f) { $help[$k] = (string) ($f['help'] ?? ''); } }
+check('inline_search_index help says on-demand loading cannot work offline',
+    stripos($help['inline_search_index'], 'offline') !== false && stripos($help['inline_search_index'], 'on') !== false);
+check('search_miss_keep help says lowering it permanently deletes stored misses',
+    stripos($help['search_miss_keep'], 'permanently deletes') !== false);
+check('reveal_memory_hours help no longer promises a Forget control',
+    stripos($help['reveal_memory_hours'], 'forgotten from the row') === false
+    && stripos($help['reveal_memory_hours'], 'always fetched') !== false);
+check('split_guest_css help no longer claims the emergency strip is guest-only',
+    stripos($help['split_guest_css'], 'emergency strip or') === false);
+
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }

@@ -1590,7 +1590,8 @@ final class Widget extends Widget_Base
             'str_report_title'    => [__('Report dialog title', 'dcc-guest-guide'),            __('Report a problem', 'dcc-guest-guide')],
             'str_secret_error'    => [__('Reveal-failed toast', 'dcc-guest-guide'), __('Could not load that just now. Please try again.', 'dcc-guest-guide')],
             'str_secret_offline'  => [__('Reveal-needs-connection toast', 'dcc-guest-guide'), __('Showing this needs a connection.', 'dcc-guest-guide')],
-            'str_secret_forget'   => [__('Forget remembered password button', 'dcc-guest-guide'), __('Forget', 'dcc-guest-guide')],
+            // v0.23.1: Copy has its own wording — "Showing" is wrong on a Copy button.
+            'str_secret_copy_offline' => [__('Copy-needs-connection toast', 'dcc-guest-guide'), __('Copying this needs a connection.', 'dcc-guest-guide')],
             'str_report_category' => [__('Report dialog category label', 'dcc-guest-guide'),   __('What\'s the issue?', 'dcc-guest-guide')],
             // v0.18.0: the category <option> used to reuse the LABEL string, so
             // whatever the host typed appeared twice — once as the label and
@@ -3376,7 +3377,7 @@ final class Widget extends Widget_Base
                 'copied'      => (string) ($s['str_copied'] ?? 'Copied!'),
                 'secretError' => (string) ($s['str_secret_error'] ?? __('Could not load that just now. Please try again.', 'dcc-guest-guide')),
                 'secretOffline' => (string) ($s['str_secret_offline'] ?? __('Showing this needs a connection.', 'dcc-guest-guide')),
-                'secretForget'  => (string) ($s['str_secret_forget'] ?? __('Forget', 'dcc-guest-guide')),
+                'secretCopyOffline' => (string) ($s['str_secret_copy_offline'] ?? __('Copying this needs a connection.', 'dcc-guest-guide')),
                 'noResults'   => (string) ($s['search_no_results'] ?? __('No matches.', 'dcc-guest-guide')),
                 'didYouMean'  => (string) ($s['search_did_you_mean'] ?? __('Did you mean:', 'dcc-guest-guide')),
                 'stillStuckCta' => (string) ($s['search_still_stuck_cta'] ?? __('Still stuck? Tell the host →', 'dcc-guest-guide')),

@@ -4,7 +4,7 @@ Tags: elementor, guest, guide, hotel, hospitality, faq, info
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.23.0
+Stable tag: 0.23.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,34 @@ After upload + activation:
    tiles, FAB, etc).
 
 == Changelog ==
+
+= 0.23.1 =
+
+**Changed: a revealed password is always fetched fresh when the phone has a
+connection.** The copy kept on the phone is now used only when the site
+cannot be reached: no signal, a request that has not answered after 8
+seconds, or a Wi-Fi sign-in page answering instead of the site. So an edited
+password or lockbox code never shows stale to a phone with signal. Every
+successful Show refreshes the kept copy and its expiry. A Copy refreshes a
+kept copy but never creates one. If the site answers that the value no longer
+exists, the kept copy is deleted.
+
+**Removed: the Forget button.** Kept copies now clear themselves when they
+expire. Expired copies are deleted when the guide loads, and setting the
+window to 0 removes any longer-lived copy.
+
+**Fixed: Copy's no-connection message has its own wording** ("Copying this
+needs a connection."), editable separately from Show's.
+
+**Changed: the compact credential-row size now belongs to the inline Copy
+button itself.** It no longer depends on the button's position in the row.
+Nothing changes on the plugin's own Wi-Fi markup.
+
+**Changed: setting help text.** The search-index setting now says turning it
+off stops search working offline. The search-miss cap says lowering it
+deletes stored searches. The reveal-memory setting describes the new
+behaviour. The guest-styling setting no longer lists the emergency strip as
+guest-only.
 
 = 0.23.0 =
 

@@ -2364,11 +2364,20 @@
                     // The Copy button's own ref resolves through the same memory
                     // as Show, so a remembered value copies with no signal too.
                     fetchSecret(root, config, btn)
-                        .then((res) => { forgetSecret(btn); handle(btn, res.value, null); })
+                        .then((res) => {
+                            forgetSecret(btn);
+                            // Copy never creates a remembered copy (only a Show
+                            // does), but it does refresh one that exists, so
+                            // the stored value tracks the current one.
+                            if (res.source === 'network' && hasRemembered(config, btn.dataset.secretRef)) {
+                                rememberSecret(config, btn.dataset.secretRef, res.value);
+                            }
+                            handle(btn, res.value, null);
+                        })
                         .catch((err) => {
                             const offline = err && err.message === 'offline';
                             showToast(offline
-                                ? ((config.strings && config.strings.secretOffline) || 'Copying this needs a connection.')
+                                ? ((config.strings && config.strings.secretCopyOffline) || 'Copying this needs a connection.')
                                 : ((config.strings && config.strings.secretError) || 'Could not load that just now. Please try again.'));
                         })
                         .then(() => { btn.disabled = false; });
@@ -3308,12 +3317,17 @@
     const SECRET_CACHE = new WeakMap();   // element -> value, cleared on re-mask
     // v0.23.0: "remember it on that phone for the visit". After ONE successful
     // Show, the value is kept in THIS browser so it still works with no signal
-    // on the water. Rules, from the owner: only values the guest has already
-    // revealed (Copy alone never stores); expire with the stay — the guide has
-    // no checkout date, so the window is the host's reveal_memory_hours, and 0
-    // means the browser session (sessionStorage dies with it, localStorage
-    // carries a timestamp); the service worker still never caches the
-    // endpoint; Hide still re-masks; Forget wipes it.
+    // on the water. v0.23.1 (owner's decision): NETWORK FIRST. With a
+    // connection the current value is always fetched, so an edited password or
+    // lockbox code can never show stale to a phone with signal; the remembered
+    // copy is used only when the fetch cannot complete (offline, timeout, or a
+    // reply that is not from this endpoint, e.g. a captive portal). Every
+    // successful fetch refreshes the stored copy and its expiry. Rules kept
+    // from v0.23.0: only values the guest has revealed are stored (Copy only
+    // refreshes one that already exists); reveal_memory_hours sets the window,
+    // 0 meaning the browser session; expired copies are swept on load; the
+    // service worker never caches the endpoint; Hide still re-masks. No
+    // Forget control: expiry clears it (v0.23.1, owner's decision).
     const SECRET_MEM = 'dccgg:secret:';
     function memKey(config, ref) { return SECRET_MEM + (config.widgetId || '') + ':' + stayKey() + ':' + ref; }
     // Merely READING window.localStorage throws on an opaque origin, in some
@@ -3354,10 +3368,42 @@
             try { if (st) st.removeItem(key); } catch (_) {}
         });
     }
+    function hasRemembered(config, ref) { return recallSecret(config, ref) !== null; }
+    // On load: drop every expired copy, not just the ones a guest happens to
+    // tap again — an unrecalled entry would otherwise sit in storage for good.
+    // With the window set to 0 ("this browser session") nothing may outlive
+    // the session, so any copy an earlier, longer window left behind goes too.
+    function sweepRemembered(config) {
+        const now = Date.now();
+        const keepLocal = (config.revealMemoryHours | 0) > 0;
+        [['localStorage', keepLocal], ['sessionStorage', true]].forEach(([name, keep]) => {
+            const st = safeStorage(name);
+            if (!st) return;
+            try {
+                const dead = [];
+                for (let i = 0; i < st.length; i++) {
+                    const k = st.key(i);
+                    if (!k || k.indexOf(SECRET_MEM) !== 0) continue;
+                    let o = null;
+                    try { o = JSON.parse(st.getItem(k) || 'null'); } catch (_) { o = null; }
+                    if (!keep || !o || !o.v || (o.exp && o.exp < now)) dead.push(k);
+                }
+                dead.forEach((k) => st.removeItem(k));
+            } catch (_) { /* storage unavailable: nothing to sweep */ }
+        });
+    }
 
-    // Resolves to { value, source } where source is 'inline' | 'cache' |
-    // 'memory' | 'network'. Rejects with Error('offline') when there is
-    // nothing remembered and no connection — the toast reads differently.
+    // How long a reveal waits before it counts as "no connection" and falls
+    // back to a remembered copy. Cell signal at the dock can leave a request
+    // hanging far longer than a guest will wait at a locked door.
+    const REVEAL_TIMEOUT_MS = 8000;
+
+    // Resolves to { value, source }: source is 'inline' | 'cache' | 'network' |
+    // 'memory'. 'memory' happens ONLY when the fetch could not complete. A
+    // definite answer from the server is never overridden by a remembered
+    // copy, and a 404 (the reference no longer resolves: item deleted or
+    // unmasked) also deletes that copy. Rejects with Error('offline') when the
+    // fetch could not complete and nothing is remembered.
     function fetchSecret(root, config, refEl) {
         const ref = refEl && refEl.dataset ? refEl.dataset.secretRef : '';
         if (!ref) return Promise.reject(new Error('no ref'));
@@ -3365,12 +3411,19 @@
         // behaviour, chosen explicitly by the host). No round-trip.
         const inline = refEl.dataset.secretValue || refEl.dataset.copy;
         if (inline) return Promise.resolve({ value: inline, source: 'inline' });
+        // In-page only: set by the fetch that revealed it, dropped on re-mask
+        // and after each copy, so it never outlives the reveal it came from.
         const hit = SECRET_CACHE.get(refEl);
         if (hit !== undefined) return Promise.resolve({ value: hit, source: 'cache' });
-        const remembered = recallSecret(config, ref);
-        if (remembered) { SECRET_CACHE.set(refEl, remembered); return Promise.resolve({ value: remembered, source: 'memory' }); }
+        const fallback = () => {
+            const remembered = recallSecret(config, ref);
+            if (remembered) return { value: remembered, source: 'memory' };
+            throw new Error('offline');
+        };
         if (!config || !config.ajaxUrl || !config.nonce) return Promise.reject(new Error('no endpoint'));
-        if (navigator.onLine === false) return Promise.reject(new Error('offline'));
+        if (navigator.onLine === false) {
+            try { return Promise.resolve(fallback()); } catch (e) { return Promise.reject(e); }
+        }
         const body = new URLSearchParams();
         body.set('action', 'dccgg_reveal_secret');
         body.set('post_id', String(config.postId || 0));
@@ -3379,15 +3432,26 @@
         // dccggFetch, not fetch: a page the service worker served from its
         // cache carries the nonce it was cached with, which can be older than a
         // nonce lives. On a 403 the helper mints a fresh one bound to this
-        // session (dccgg_refresh_nonce) and retries once. v0.19.0 bypassed it.
-        return dccggFetch(config, body)
-            .then((r) => r.json(), () => { throw new Error(navigator.onLine === false ? 'offline' : 'network'); })
-            .then((j) => {
-                const value = j && j.success && j.data ? String(j.data.value || '') : '';
-                if (!value) throw new Error('empty');
-                SECRET_CACHE.set(refEl, value);
-                return { value: value, source: 'network' };
-            });
+        // session (dccgg_refresh_nonce) and retries once.
+        const TRANSPORT = {};
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(TRANSPORT), REVEAL_TIMEOUT_MS));
+        const request = dccggFetch(config, body)
+            .then((r) => r.json().then(
+                (j) => ({ status: r.status, j: j }),
+                () => { throw TRANSPORT; }))            // not JSON: not our endpoint answering
+            .catch(() => { throw TRANSPORT; });           // no response at all
+        return Promise.race([request, timeout]).then(({ status, j }) => {
+            const value = j && j.success && j.data ? String(j.data.value || '') : '';
+            if (!value) {
+                if (status === 404) forgetRemembered(config, ref);
+                throw new Error('server');
+            }
+            SECRET_CACHE.set(refEl, value);
+            return { value: value, source: 'network' };
+        }, (err) => {
+            if (err === TRANSPORT) return fallback();
+            throw err;
+        });
     }
     function forgetSecret(refEl) { if (refEl) SECRET_CACHE.delete(refEl); }
 
@@ -3440,31 +3504,7 @@
             });
         };
 
-        const ensureForget = (wrap, valEl, cfg) => {
-            if (wrap.querySelector('.dccgg-secret-forget')) return;
-            const f = document.createElement('button');
-            f.type = 'button';
-            f.className = 'dccgg-btn-text dccgg-secret-forget';
-            f.textContent = (cfg.strings && cfg.strings.secretForget) || 'Forget';
-            f.setAttribute('aria-label', f.textContent + ' ' + ((cfg.strings && cfg.strings.secretForgetLabel) || 'the remembered password on this device'));
-            f.addEventListener('click', (e) => {
-                e.stopPropagation();
-                forgetRemembered(cfg, valEl.dataset.secretRef);
-                forgetSecret(valEl);
-                setRevealed(wrap, false);
-                f.remove();
-            });
-            wrap.appendChild(f);
-        };
-        // A value remembered from an earlier visit gets its Forget button on
-        // load, so the guest can see it is remembered before tapping anything.
-        root.querySelectorAll('.dccgg-secret').forEach((wrap) => {
-            const valEl = wrap.querySelector('.dccgg-secret-value');
-            if (valEl && valEl.dataset.secretRef && !valEl.dataset.secretValue
-                && recallSecret(config, valEl.dataset.secretRef)) {
-                ensureForget(wrap, valEl, config);
-            }
-        });
+        sweepRemembered(config || {});
 
         root.querySelectorAll('.dccgg-secret-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -3484,12 +3524,10 @@
                 fetchSecret(root, config, valEl)
                     .then((res) => {
                         setRevealed(wrap, true, res.value);
-                        // Remembered only on a reveal the guest performed, and
-                        // only when the value did not come from the page itself.
-                        if (res.source === 'network' || res.source === 'memory') {
-                            if (res.source === 'network') rememberSecret(config, valEl.dataset.secretRef, res.value);
-                            ensureForget(wrap, valEl, config);
-                        }
+                        // Every successful fetch refreshes the stored copy and
+                        // its expiry. A value that came from the page itself
+                        // (inline mode) or from memory is not re-stored.
+                        if (res.source === 'network') rememberSecret(config, valEl.dataset.secretRef, res.value);
                     })
                     .catch((err) => {
                         // Fail closed and say nothing false: the row stays

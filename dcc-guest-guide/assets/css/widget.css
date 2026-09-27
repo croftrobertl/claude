@@ -2194,8 +2194,14 @@ dialog.dccgg-wrapper::backdrop {
    checklist Reset in a 16.2px one, which is a 3px height difference from
    identical rules. em-based padding and font-size keep each one sized by the
    context it is actually in. */
-.dccgg-root.dccgg-root :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy),
-.dccgg-stage.dccgg-stage :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy) {
+/* v0.23.1: .dccgg-copy--inline is listed in its own right. Before, a Copy was
+   compact only when it sat IMMEDIATELY after a .dccgg-secret, so any credential
+   Copy placed anywhere else in a row rendered at the full 50px spec size. The
+   modifier now carries the size itself; the sibling form stays for the utils
+   row's masked Copy, which has no modifier. Specificity is unchanged: :is()
+   takes its widest argument, still the (0,2,0) compound. */
+.dccgg-root.dccgg-root :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy, .dccgg-copy--inline):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy, .dccgg-copy--inline),
+.dccgg-stage.dccgg-stage :is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy, .dccgg-copy--inline):is(.dccgg-secret-toggle, .dccgg-secret + .dccgg-copy, .dccgg-copy--inline) {
     padding: 8px 10px;
     font-size: 0.8em;
     line-height: 1.5;
@@ -2277,12 +2283,14 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root .dccgg-checklist-reset,
 .dccgg-root .dccgg-secret-toggle,
 .dccgg-root .dccgg-secret + .dccgg-copy,
+.dccgg-root .dccgg-copy--inline,
 .dccgg-stage .dccgg-item-check,
 .dccgg-stage .dccgg-item-tts,
 .dccgg-stage .dccgg-item-report,
 .dccgg-stage .dccgg-checklist-reset,
 .dccgg-stage .dccgg-secret-toggle,
-.dccgg-stage .dccgg-secret + .dccgg-copy {
+.dccgg-stage .dccgg-secret + .dccgg-copy,
+.dccgg-stage .dccgg-copy--inline {
     position: relative;
 }
 .dccgg-root .dccgg-item-check::after,
@@ -2291,12 +2299,14 @@ dialog.dccgg-wrapper::backdrop {
 .dccgg-root .dccgg-checklist-reset::after,
 .dccgg-root .dccgg-secret-toggle::after,
 .dccgg-root .dccgg-secret + .dccgg-copy::after,
+.dccgg-root .dccgg-copy--inline::after,
 .dccgg-stage .dccgg-item-check::after,
 .dccgg-stage .dccgg-item-tts::after,
 .dccgg-stage .dccgg-item-report::after,
 .dccgg-stage .dccgg-checklist-reset::after,
 .dccgg-stage .dccgg-secret-toggle::after,
-.dccgg-stage .dccgg-secret + .dccgg-copy::after {
+.dccgg-stage .dccgg-secret + .dccgg-copy::after,
+.dccgg-stage .dccgg-copy--inline::after {
     content: "";
     position: absolute;
     top: 50%;

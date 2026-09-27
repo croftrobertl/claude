@@ -272,12 +272,20 @@ if (!function_exists('admin_url')) { function admin_url($p = '') { return 'https
 if (!function_exists('current_user_can')) { function current_user_can($c, $id = 0) { return true; } }
 $GLOBALS['pagenow'] = 'options-general.php'; $_GET = ['page' => 'dccgg-settings'];
 $GLOBALS['admin_page_hooks'] = [];                                   // no dcc parent
-$GLOBALS['redirected'] = [];
-try { \DCCGG\Plugin::instance()->redirect_legacy_settings_url(); } catch (DCCGG_Halt $e) {}
-check('#5 with NO dcc parent the fallback URL is not redirected away', empty($GLOBALS['redirected']));
-$GLOBALS['admin_page_hooks'] = ['dcc' => 'toplevel_page_dcc'];     // parent present
-try { \DCCGG\Plugin::instance()->redirect_legacy_settings_url(); } catch (DCCGG_Halt $e) {}
-check('#5 with the parent present the old URL still forwards', count($GLOBALS['redirected']) === 1);
+// v0.23.1: each call is counted on its own. The second check used to count
+// both calls together, so on v0.22.0 (which always redirected) it saw TWO and
+// failed for the wrong reason.
+$redirectsFor = static function (array $hooks): array {
+    $GLOBALS['admin_page_hooks'] = $hooks;
+    $GLOBALS['redirected'] = [];
+    try { \DCCGG\Plugin::instance()->redirect_legacy_settings_url(); } catch (DCCGG_Halt $e) {}
+    return $GLOBALS['redirected'];
+};
+$none = $redirectsFor([]);                                          // no dcc parent
+check('#5 with NO dcc parent the fallback URL is not redirected away', $none === [], implode(',', $none));
+$with = $redirectsFor(['dcc' => 'toplevel_page_dcc']);              // parent present
+check('#5 with the parent present the old URL forwards, once, to the dcc page',
+    $with === ['https://x/wp-admin/admin.php?page=dccgg-settings'], implode(',', $with));
 
 // #8 the priority-30 submenu is skipped when there is no parent; the
 // 990 fallback then registers under Settings — and not the other way round.

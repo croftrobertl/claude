@@ -6,7 +6,7 @@
  *   php tests/settings.test.php
  */
 define('ABSPATH', '/tmp/');
-define('DCCGG_VERSION', '0.23.0');
+define('DCCGG_VERSION', '0.23.1');
 
 $GLOBALS['options'] = [];
 $GLOBALS['did']     = ['init' => 1];
@@ -66,9 +66,9 @@ check('a key the stored row has never heard of takes its default',
 check('and the value the owner did set survives untouched',
     $all['copy_confirm_ms'] === 900);
 check('the row is re-saved so the database describes current behaviour too',
-    (string) ($GLOBALS['options'][\DCCGG\Settings::OPTION]['_version'] ?? '') === '0.23.0');
+    (string) ($GLOBALS['options'][\DCCGG\Settings::OPTION]['_version'] ?? '') === '0.23.1');
 // Reading must not invent keys that are not in the schema.
-$reset(['_version' => '0.23.0', 'bogus_key' => 'x']);
+$reset(['_version' => '0.23.1', 'bogus_key' => 'x']);
 check('a stale key is dropped rather than carried forever',
     !array_key_exists('bogus_key', \DCCGG\Settings::all()));
 
@@ -101,7 +101,7 @@ check('a url field rejects a non-url',
     && \DCCGG\Settings::sanitize(['public_cta_url' => 'https://x.test/a'])['public_cta_url'] === 'https://x.test/a');
 check('a text field is stripped of markup',
     \DCCGG\Settings::sanitize(['public_cta_label' => '<script>x</script>Book'])['public_cta_label'] === 'xBook');
-check('every save stamps the version', \DCCGG\Settings::sanitize([])['_version'] === '0.23.0');
+check('every save stamps the version', \DCCGG\Settings::sanitize([])['_version'] === '0.23.1');
 
 echo "\n$pass passed, $fail failed\n";
 if ($fail) { echo "Failures:\n"; foreach ($failures as $f) { echo "  - $f\n"; } exit(1); }
