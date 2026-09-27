@@ -45,6 +45,8 @@ class T_Json extends \Exception { public $payload; public $code_; }
 function wp_send_json_success($d = null) { $e = new T_Json('ok'); $e->payload = $d; throw $e; }
 function wp_send_json_error($d = null, $code = 200) { $e = new T_Json('err'); $e->payload = $d; $e->code_ = $code; throw $e; }
 function wp_unslash($v) { return $v; }
+function wp_enqueue_script($h, $s = '', $d = [], $v = false, $f = false) { $GLOBALS['t_enq_scripts'][] = $h; }
+function wp_enqueue_style($h, $s = '', $d = [], $v = false, $m = 'all') { $GLOBALS['t_enq_styles'][] = $h; }
 
 require $ROOT . '/includes/class-cache.php';
 require $ROOT . '/includes/class-data-provider.php';
@@ -249,6 +251,69 @@ echo "\n-- F3a: a fragment is rendered once per TTL, not once per visitor --\n";
     // line even after a mutation commented it out.
     check('the endpoint is on the SpeedyCache exclusion list like its siblings (F10)',
         str_contains(file_get_contents($ROOT . '/includes/class-cache-integration.php'), "MPHBAC_INFO_ACTION"));
+}
+
+echo "\n-- F4: a deferred template's widget assets are enqueued at page render --\n";
+{
+    /* MEASURED ON STAGING by the Website Director: in lazy mode the Angie
+       snippets for pricing_table and fb_video_optimized were never loaded,
+       so the pricing switcher did nothing on the inserted markup. Their
+       handlers register inside an 'elementor/frontend/init' listener, so
+       loading them WITH the fragment would be too late — they have to be on
+       the page at render time. This drives the walk through a modelled
+       Elementor with a nested template, a global widget, a widget type that
+       is no longer registered, and a template that includes itself. */
+    $GLOBALS['t_enq_scripts'] = []; $GLOBALS['t_enq_styles'] = [];
+    Elementor\Plugin::$t_trees = [
+        601 => [   // the cottage template: a container holding two widgets and a nested template
+            ['elType' => 'container', 'elements' => [
+                ['elType' => 'widget', 'widgetType' => 'pricing_table_d77343d4', 'settings' => []],
+                ['elType' => 'widget', 'widgetType' => 'template', 'settings' => ['template_id' => 602]],
+                ['elType' => 'widget', 'widgetType' => 'global', 'templateID' => 603],
+                ['elType' => 'widget', 'widgetType' => 'gone_from_the_site', 'settings' => []],
+            ]],
+        ],
+        602 => [['elType' => 'widget', 'widgetType' => 'fb_video_optimized_3322dc11', 'settings' => []],
+                ['elType' => 'widget', 'widgetType' => 'template', 'settings' => ['template_id' => 601]]],  // cycle
+        603 => [['elType' => 'widget', 'widgetType' => 'dcc_faq_db764d8c', 'settings' => []]],
+    ];
+    Elementor\Plugin::$t_widgets = [
+        'pricing_table_d77343d4'      => new Elementor\Stub_Asset_Widget(['angie-snippet-11057'], ['angie-snippet-11057-style']),
+        'fb_video_optimized_3322dc11' => new Elementor\Stub_Asset_Widget(['angie-snippet-11679'], ['angie-snippet-11679-style']),
+        'dcc_faq_db764d8c'            => new Elementor\Stub_Asset_Widget(['angie-snippet-11984'], ['angie-snippet-11984-style']),
+    ];
+    t_post(601, 'elementor_library', 'publish', 'Cottage template');
+    $GLOBALS['t_transients'] = [];
+    $rm = new ReflectionMethod(Widget::class, 'enqueue_deferred_panel_assets');
+    $rm->setAccessible(true);
+    $settings = ['cottage_info' => [['ci_cottage' => 22, 'ci_source' => 'template', 'ci_template' => 601]]];
+    $rm->invoke(null, [22], $settings);
+    sort($GLOBALS['t_enq_scripts']); sort($GLOBALS['t_enq_styles']);
+    check('the pricing-table SCRIPT is enqueued on the page — the F4 handle itself',
+        in_array('angie-snippet-11057', $GLOBALS['t_enq_scripts'], true), $GLOBALS['t_enq_scripts']);
+    check('...and its STYLE, not just the script',
+        in_array('angie-snippet-11057-style', $GLOBALS['t_enq_styles'], true), $GLOBALS['t_enq_styles']);
+    check('a widget inside a NESTED template is found (the Tour Video, the second known one)',
+        in_array('angie-snippet-11679', $GLOBALS['t_enq_scripts'], true));
+    check('a GLOBAL widget is found', in_array('angie-snippet-11984', $GLOBALS['t_enq_scripts'], true));
+    check('a widget type no longer registered is skipped, not fatal',
+        count($GLOBALS['t_enq_scripts']) === 3, $GLOBALS['t_enq_scripts']);
+    check('a template that includes itself terminates',
+        count(array_unique(Elementor\Plugin::$t_doc_gets)) === 3, Elementor\Plugin::$t_doc_gets);
+
+    // Cached with the fragment's key generation: the second render walks nothing.
+    $gets = count(Elementor\Plugin::$t_doc_gets);
+    $rm->invoke(null, [22], $settings);
+    check('the per-template type list is cached — a second page render reads no document',
+        count(Elementor\Plugin::$t_doc_gets) === $gets, [$gets, count(Elementor\Plugin::$t_doc_gets)]);
+    check('...but still enqueues, because enqueueing has to happen on every page',
+        count($GLOBALS['t_enq_scripts']) === 6);
+
+    // Not a per-type allowlist: nothing in the source names a snippet.
+    check('the walk names no widget type and no Angie handle — whatever a widget declares, it gets',
+        !preg_match('/snippet-1\d{4}|pricing_table|fb_video/', preg_replace('#/\*.*?\*/#s', '', $widget)));
+    check('render() calls it only when the setting is on and something was deferred',
+        preg_match('/if \(\$lazy_panels && \$info_src\) \{\s*self::enqueue_deferred_panel_assets\(array_keys\(\$info_src\), \$settings\);/', $widget) === 1);
 }
 
 echo "\n-- F12: no placeholder for a panel that could never load --\n";

@@ -104,3 +104,56 @@ abstract class Widget_Base
         );
     }
 }
+
+/**
+ * Plugin::instance()->documents->get($id)->get_elements_data() and
+ * ->widgets_manager->get_widget_types($type), for the deferred-panel asset
+ * walk (0.42.2). Both record what they were asked, and both are fed by the
+ * suite: $t_trees maps a post id to its element tree, $t_widgets maps a
+ * widget type to a stub widget whose enqueue_* methods call the recording
+ * wp_enqueue_script()/wp_enqueue_style() the suite defines.
+ */
+class Plugin
+{
+    public static ?Plugin $inst = null;
+    public static array $t_trees = [];      // post id => elements data
+    public static array $t_widgets = [];    // widget type => object
+    public static array $t_doc_gets = [];   // every documents->get() call
+    public $documents;
+    public $widgets_manager;
+
+    public static function instance(): self
+    {
+        if (!self::$inst) {
+            self::$inst = new self();
+            self::$inst->documents = new class {
+                public function get($id) {
+                    Plugin::$t_doc_gets[] = (int) $id;
+                    if (!isset(Plugin::$t_trees[(int) $id])) { return null; }
+                    $tree = Plugin::$t_trees[(int) $id];
+                    return new class($tree) {
+                        public function __construct(private array $tree) {}
+                        public function get_elements_data() { return $this->tree; }
+                    };
+                }
+            };
+            self::$inst->widgets_manager = new class {
+                public function get_widget_types($type = null) {
+                    return Plugin::$t_widgets[$type] ?? null;
+                }
+            };
+        }
+        return self::$inst;
+    }
+}
+
+/** A widget that declares assets the way Elementor's Widget_Base does. */
+class Stub_Asset_Widget
+{
+    public function __construct(private array $scripts, private array $styles) {}
+    public function get_script_depends() { return $this->scripts; }
+    public function get_style_depends()  { return $this->styles; }
+    public function enqueue_scripts() { foreach ($this->scripts as $h) { \wp_enqueue_script($h); } }
+    public function enqueue_styles()  { foreach ($this->styles  as $h) { \wp_enqueue_style($h); } }
+}
+

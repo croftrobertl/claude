@@ -1979,6 +1979,41 @@ open cottage B while A's popup was open — Playwright could not tap the row
 because A's overlay covered it, exactly as it covers it for a guest. A test
 that cannot be reached through the UI is testing a path nobody takes.
 
+## F4: a deferred widget's assets must be on the page at render time (0.42.2)
+
+The staging pass of the deferred panels passed every check but one: the
+pricing-table switcher did nothing inside a lazily loaded panel. The Website
+Director measured the cause rather than guessing it: live `/cottages/` loads
+`angie-snippets/prod/snippet-11057` (pricing_table) and `snippet-11679`
+(fb_video_optimized) because those widgets render on the page; in lazy mode
+neither is loaded. And those snippets bind their handlers via
+`elementorFrontend.hooks.addAction('frontend/element_ready/<type>')` inside
+an `'elementor/frontend/init'` listener — so shipping them with the fragment
+would be too late, init has already fired. **A third failure in the v0.6.0
+note's one sentence**: CSS (fixed 0.42.0), handler binding (0.42.0), and now
+the handler *scripts themselves* never being on the page.
+
+**The fix is not an allowlist.** At page render, for every deferred template,
+the element tree is walked (types only, nothing rendered; nested and global
+templates recursed, self-inclusion guarded) and each widget type is asked for
+its own dependencies through the same `enqueue_scripts()` / `enqueue_styles()`
+Elementor calls when it renders the widget. The suite asserts the source
+names no snippet and no widget type. The type list per template is cached on
+the fragment's key generation; the enqueue is not, because it has to happen
+on every page.
+
+**The test has two halves because the fault has two halves.** PHP: a modelled
+Elementor with a nested template, a global widget, an unregistered type and
+a cycle; assert the script AND the style handles. JS: a modelled
+`elementorFrontend` whose handler registers inside an init listener before
+any panel exists, then a tap; assert the handler ran on the injected markup,
+once, and changed it. Neither half alone would have caught this.
+
+**What I could not do:** enumerate the widget types in the eight real cottage
+templates. The mechanism covers all of them by construction; the list is the
+Director's to read off the fragment (`data-widget_type` on each
+`.elementor-widget`).
+
 ## Invariants that must hold
 
 These are deliberate decisions from the design conversation. Don't "fix" them without checking with the user.

@@ -197,6 +197,54 @@ function page(lazyIds, inlineIds, { infoDelayMs = 0, tall = false } = {}) {
     await ctx.close();
   }
 
+  console.log('\n-- F4 (JS half): a widget\'s element_ready handler runs on the lazily inserted markup --');
+  {
+    /* The PHP half puts the widget's script on the page at render time. This
+       models what that script does — register a handler for its type inside
+       an elementor/frontend/init listener, exactly as the Angie snippets do —
+       and asserts the plugin's re-bind reaches it: reinitElementorWidgets()
+       -> runReadyTrigger() -> hooks 'frontend/element_ready/<type>'. */
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    const p = await ctx.newPage();
+    p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
+    let html = page([22], [], { infoDelayMs: 0 })
+      .replace('<div class="elementor-widget" style="height:20px">Fetched panel</div>',
+               '<div class="elementor-widget elementor-widget-pricing" data-widget_type="pricing_table.default" data-id="p1">Fetched panel<span class="active">Daily</span></div>')
+      .replace('<script>\n      window.__calls', `<script>
+      // A minimal elementorFrontend: hooks + a runReadyTrigger that dispatches by widget type.
+      window.__bound = [];
+      window.elementorFrontend = {
+        hooks: { _h: {}, addAction: function (n, f) { (this._h[n] = this._h[n] || []).push(f); },
+                 doAction: function (n, a) { (this._h[n] || []).forEach(function (f) { f(a); }); } },
+        elementsHandler: { runReadyTrigger: function (scope) {
+          var el = scope && scope.nodeType ? scope : (scope && scope[0]);
+          if (!el) return;
+          window.elementorFrontend.hooks.doAction('frontend/element_ready/' + (el.dataset.widget_type || 'unknown'), el);
+        } },
+      };
+      // What the Angie pricing snippet does, at page load, BEFORE any panel exists:
+      window.addEventListener('elementor/frontend/init', function () {
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/pricing_table.default', function (el) {
+          window.__bound.push(el.dataset.id);
+          el.querySelector('.active').textContent = 'Weekly';
+        });
+      });
+      window.dispatchEvent(new Event('elementor/frontend/init'));
+      window.__calls`);
+    await p.setContent(html);
+    await p.waitForSelector('.mphbac-row-toggle', { timeout: 5000 });
+    check('(instrument check) the handler was registered before any panel was fetched',
+      await p.evaluate(() => Object.keys(window.elementorFrontend.hooks._h).includes('frontend/element_ready/pricing_table.default')));
+    await p.tap(toggle(22));
+    await p.waitForTimeout(700);     // fetch resolves, then the open settle at 380ms
+    const r = await p.evaluate(() => ({ bound: window.__bound,
+      text: (document.querySelector('.mphbac-info-body .active') || {}).textContent }));
+    check('the element_ready handler RAN on the lazily inserted widget', r.bound.includes('p1'), r);
+    check('...and did what a pricing switcher does — the markup changed', r.text === 'Weekly', r);
+    check('...exactly once, not once per settle', r.bound.length === 1, r.bound);
+    await ctx.close();
+  }
+
   await browser.close();
   done();
 })().catch(e => { console.error(e); process.exit(2); });
