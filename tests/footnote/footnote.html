@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>DCC Custom Checkout — footnote width harness</title>
+<!--
+  ITEM 4. The owner reported (with a screen recording) that opening the tax
+  footnote widens the whole checkout widget: the form fields grow to the width
+  of the footnote's one long line of text.
+
+  The footnote is a <p> inserted as a SIBLING of the price-breakdown table. It
+  only has that effect if the container is content-sized, so the container here
+  is `width: fit-content` — the condition under which the defect appears. A
+  container that was already a fixed width could never show it, and a harness
+  that used one would pass while the page stayed broken.
+-->
+<style>
+  html, body { margin: 0; padding: 0; }
+  /* The condition: a shrink-to-fit ancestor. */
+  .widget { width: fit-content; }
+  table { border-collapse: collapse; }
+  td { padding: 4px 8px; white-space: nowrap; }
+</style>
+<link rel="stylesheet" href="../../dcc-custom-checkout/assets/checkout.css">
+</head>
+<body>
+<form class="mphb_sc_checkout-form mphb_sc_checkout-form">
+  <div class="widget" id="widget">
+    <table class="dcc_checkout-breakdown">
+      <tr><td>Accommodation Total</td><td>$350.00</td></tr>
+      <tr class="dcc_checkout-breakdown-total"><td>Total</td><td>$588.50</td></tr>
+    </table>
+    <p class="dcc_checkout-tax-footnote dcc_checkout-section-hidden" id="note"
+       data-dcc-injected="1">* Taxes applied: Lake County Tourist Development
+       Tax 4%, Lake County Discretionary Sales Surtax 1%, Florida Sales and Use
+       Tax 6%.</p>
+  </div>
+</form>
+</body></html>
