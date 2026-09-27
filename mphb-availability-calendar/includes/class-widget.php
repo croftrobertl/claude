@@ -1585,6 +1585,16 @@ class Widget extends Widget_Base
                 }
             }
         }
+        // F4 (0.42.2). A deferred panel's widgets never render on this page,
+        // so Elementor never enqueues their scripts and styles — and the
+        // Angie snippets bind their handlers inside an 'elementor/frontend/
+        // init' listener, so loading them late would not bind them either.
+        // They have to be on the page at render time. This enqueues, for
+        // every deferred template, exactly what each of its widgets would
+        // have enqueued had it rendered.
+        if ($lazy_panels && $info_src) {
+            self::enqueue_deferred_panel_assets(array_keys($info_src), $settings);
+        }
         $info_has_any = !empty($info_html);
         $info_full_width = ($settings['info_popup_full_width'] ?? (Settings::get('info_popup_full_width') ? 'yes' : '')) === 'yes';
 
@@ -2148,6 +2158,143 @@ class Widget extends Widget_Base
             return null;
         }
         return ['html' => wpautop(wp_kses_post($text)), 'src' => ''];
+    }
+
+    /**
+     * THE F4 FIX (0.42.2): a deferred template's widget assets, enqueued at
+     * page-render time as if the widgets had rendered.
+     *
+     * MEASURED ON STAGING by the Website Director: live /cottages/ loads
+     * angie-snippets/prod/snippet-11057 (pricing_table) and snippet-11679
+     * (fb_video_optimized) because the panels render on the page; in lazy
+     * mode neither is loaded, so the pricing-table switcher did nothing on
+     * the lazily inserted markup. Those scripts register their handlers via
+     * elementorFrontend.hooks.addAction('frontend/element_ready/<type>')
+     * inside an 'elementor/frontend/init' listener — so fetching them with
+     * the fragment would be too late: init has already fired. They must be
+     * on the page before it does, which means enqueued during page render.
+     *
+     * NOT A PER-TYPE ALLOWLIST. Every widget type found in the template's
+     * element tree — recursing into nested and global templates — is asked
+     * for its own dependencies through the same enqueue_scripts() /
+     * enqueue_styles() Elementor calls when it renders the widget. Whatever
+     * a widget declares, it gets; a widget added to a template next year is
+     * covered without a code change here.
+     *
+     * The list of widget TYPES per template is cached with the same key
+     * generation as the fragment, so a template save flushes both. The
+     * enqueue itself is not cached — it has to happen on every page render,
+     * and it is cheap: a handle lookup per type, deduplicated across all
+     * deferred templates.
+     *
+     * @param string[]            $srcs     the bare or signed references being deferred
+     * @param array<string,mixed> $settings the widget settings, to map cid -> template
+     */
+    private static function enqueue_deferred_panel_assets(array $srcs, array $settings): void
+    {
+        if (!class_exists('\Elementor\Plugin')) {
+            return;
+        }
+        $post_ids = [];
+        // The srcs are keyed by cottage id in render(); resolve each to the
+        // post whose element tree holds the widgets: the template for a
+        // tpl: source, the room type itself for an acc: source built with
+        // Elementor. Signed or bare, the id is the digits after the colon.
+        foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
+            $cid = (int) ($row['ci_cottage'] ?? 0);
+            if ($cid <= 0 || !in_array($cid, $srcs, true)) {
+                continue;
+            }
+            $source = (string) ($row['ci_source'] ?? 'text');
+            if ($source === 'template') {
+                $post_ids[] = (int) ($row['ci_template'] ?? 0);
+            } elseif ($source === 'mphb_accommodation') {
+                $post_ids[] = $cid;
+            }
+        }
+        $types = [];
+        foreach (array_unique(array_filter($post_ids)) as $post_id) {
+            $key = Cache::key(['info-deps', $post_id, MPHBAC_VERSION]);
+            $found = Cache::get_or_set($key, static fn(): array => self::widget_types_in($post_id), null);
+            foreach ((array) $found as $t) {
+                $types[$t] = true;
+            }
+        }
+        if (!$types) {
+            return;
+        }
+        try {
+            $elementor = \Elementor\Plugin::instance();
+            if (!isset($elementor->widgets_manager) || !method_exists($elementor->widgets_manager, 'get_widget_types')) {
+                return;
+            }
+            foreach (array_keys($types) as $type) {
+                $widget = $elementor->widgets_manager->get_widget_types($type);
+                if (!is_object($widget)) {
+                    continue;            // a type no longer registered; nothing to enqueue
+                }
+                if (method_exists($widget, 'enqueue_scripts')) {
+                    $widget->enqueue_scripts();
+                }
+                if (method_exists($widget, 'enqueue_styles')) {
+                    $widget->enqueue_styles();
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: enqueue_deferred_panel_assets failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Every widget type in a post's Elementor element tree, recursing into
+     * nested template widgets and global widgets. Types only — nothing is
+     * rendered. $seen guards a template that includes itself.
+     *
+     * @param  array<int,bool> $seen
+     * @return string[]
+     */
+    private static function widget_types_in(int $post_id, array &$seen = []): array
+    {
+        if ($post_id <= 0 || isset($seen[$post_id])) {
+            return [];
+        }
+        $seen[$post_id] = true;
+        $types = [];
+        try {
+            $elementor = \Elementor\Plugin::instance();
+            if (!isset($elementor->documents) || !method_exists($elementor->documents, 'get')) {
+                return [];
+            }
+            $doc = $elementor->documents->get($post_id);
+            if (!is_object($doc) || !method_exists($doc, 'get_elements_data')) {
+                return [];
+            }
+            $walk = static function (array $elements) use (&$walk, &$types, &$seen): void {
+                foreach ($elements as $el) {
+                    if (!is_array($el)) {
+                        continue;
+                    }
+                    if (($el['elType'] ?? '') === 'widget' && !empty($el['widgetType'])) {
+                        $types[(string) $el['widgetType']] = true;
+                        // A template widget, or a global widget, pulls in
+                        // another post's tree: walk that one too.
+                        $nested = (int) ($el['templateID'] ?? ($el['settings']['template_id'] ?? 0));
+                        if ($nested > 0) {
+                            foreach (self::widget_types_in($nested, $seen) as $t) {
+                                $types[$t] = true;
+                            }
+                        }
+                    }
+                    if (!empty($el['elements']) && is_array($el['elements'])) {
+                        $walk($el['elements']);
+                    }
+                }
+            };
+            $walk((array) $doc->get_elements_data());
+        } catch (\Throwable $e) {
+            error_log('MPHBAC: widget_types_in failed for ' . $post_id . ': ' . $e->getMessage());
+        }
+        return array_keys($types);
     }
 
     /**
