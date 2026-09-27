@@ -358,7 +358,11 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   pre-0.48.0 SWITCHER stored for OFF, and it keeps meaning OFF (`$tri()` in
   `design_snapshot()`: `'yes'` → on, `'no'` or `''` → off, `'inherit'`/absent →
   omitted). A heading someone deliberately turned off therefore stays off the day
-  a site default is set — the risk the owner named, handled at read time. The
+  a site default is set — the risk the owner named, handled at read time.
+  Verified on the REAL pages, not only on live-like data: staging (0.47.0) vs
+  live (0.48.0) served data-config for both placements — d1ae1cf on the home
+  page, 5be94a3 on /cottages/ — identical at 9,508 characters each after
+  normalising only the URL prefix, version strings and nonces (2026-09-27). The
   on/off controls are three-way SELECTs (a SWITCHER cannot express inherit) with
   `default => 'inherit'`; storing that default on the next save is harmless,
   unlike the `str_` notes' case, because `inherit` stored IS inherit.
