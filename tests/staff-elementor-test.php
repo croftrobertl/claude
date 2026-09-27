@@ -106,5 +106,12 @@ echo "\n-- the stub would have caught an unmodelled Elementor call --\n";
 check('registration completed without reaching an API the stub does not model',
     count($w->t_sections) >= 1, count($w->t_sections));
 
+echo "\n-- A7: the staff widget is never element-cached --\n";
+// Served from the cache, the staff gate would not run for that request and
+// the baked nonce would outlive its lifetime.
+check('staff widget: is_dynamic_content() is public and true',
+    (new ReflectionMethod($w, 'is_dynamic_content'))->isPublic() && $w->is_dynamic_content() === true);
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);
+

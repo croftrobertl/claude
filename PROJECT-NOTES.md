@@ -2009,10 +2009,44 @@ a cycle; assert the script AND the style handles. JS: a modelled
 any panel exists, then a tap; assert the handler ran on the injected markup,
 once, and changed it. Neither half alone would have caught this.
 
-**What I could not do:** enumerate the widget types in the eight real cottage
-templates. The mechanism covers all of them by construction; the list is the
-Director's to read off the fragment (`data-widget_type` on each
-`.elementor-widget`).
+**Confirmed on live after 0.42.2 (the Director, 2026-09-27):** the switcher
+works in all 8 panels, and the Tour Video is present with its reel URL in 6.
+Lazy mode went ON on live that day; home 106,985 -> 67,168 bytes on the wire,
+/cottages/ 103,319 -> 63,559 (cached anonymous, host gzip).
+
+## The Opus audit of 0.42.2 — measured before built (0.42.3)
+
+A second self-audit, on the principle the F4 staging failure taught: anything
+Elementor does at page-render time is lost to a lazily loaded panel, and
+widget dependencies are only one such thing. It proposed four more gaps and
+asked for four one-line console checks, which the Director ran **on live** —
+where, contrary to the audit's premise, lazy mode had been on since
+2026-09-27. **Check your premise about what is live before writing "the live
+site is unaffected".**
+
+| | the gap | measured on live, 2026-09-28 | built? |
+|---|---|---|---|
+| A1 | a lazy panel's CONTAINERS are never bound (entrance animations would keep `elementor-invisible`) | 0 invisible in all 8 | **yes**, as hardening |
+| A2 | inline `<script>` in a fragment never runs (innerHTML) | 0 scripts in all 8 | **no** |
+| A3 | fonts / icon CSS enqueued at render, outside widget depends | only dialog + lightbox CSS absent up front, and Elementor loads both on the first photo tap (verified fully styled); template CSS arrives inline | **no** |
+| A7 | Element Caching skips `render()` | ACTIVE, 12-hour TTL; 11 pages cached, none holding calendar output | **yes** — `is_dynamic_content()` on every widget |
+
+A2 and A3 were not built because they are not happening — building for an
+unobserved failure adds code that every future reader must understand. The
+`render_template` comment claiming templates carry "inline scripts (image
+carousel bootstrap...)" is now marked historical. If a script ever returns
+to a template, lazy mode will not run it; that is recorded next to the code.
+
+**A7 mattered more for the staff board than for the calendar.** The staff
+widget's `render()` runs the gate and bakes a nonce. Element-cached, the gate
+would not run for that request and the nonce would outlive its lifetime.
+
+**A1 is selector-scoped, not flag-branched.** `.elementor-widget,
+[data-mphbac-lazy-filled] .elementor-element` — a selector list returns
+document order, so a container is bound before its widgets, as Elementor does
+at page load, and the inline path's selector match is unchanged. The fill sets
+the marker, so the desktop hover-prefetch route — where the fill happens with
+no popup open — is covered as well as the tap; the suite drives both.
 
 ## Invariants that must hold
 

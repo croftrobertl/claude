@@ -245,6 +245,78 @@ function page(lazyIds, inlineIds, { infoDelayMs = 0, tall = false } = {}) {
     await ctx.close();
   }
 
+  console.log('\n-- A1: a lazily loaded panel\'s CONTAINERS are bound; an inline panel\'s are left to Elementor --');
+  {
+    /* A modelled elementorFrontend whose runReadyTrigger fires the global
+       hook for every element, as Elementor's does. The global handler plays
+       the part of an entrance animation: it removes elementor-invisible.
+       Measured on live: 0 invisible containers in all 8 panels, so this is
+       hardening — which is exactly why it has to be proved here. */
+    const STRUCT = id => `<div class="elementor-element e-con elementor-invisible" data-element_type="container" data-id="c${id}">`
+      + `<div class="elementor-element elementor-widget" data-widget_type="text-editor.default" data-id="w${id}">Panel ${id}</div></div>`;
+    const MODEL = `<script>
+      window.__trig = [];
+      window.elementorFrontend = {
+        hooks: { _h: {}, addAction: function (n, f) { (this._h[n] = this._h[n] || []).push(f); },
+                 doAction: function (n, a) { (this._h[n] || []).forEach(function (f) { f(a); }); } },
+        elementsHandler: { runReadyTrigger: function (scope) {
+          var el = scope && scope.nodeType ? scope : (scope && scope[0]);
+          if (!el) return;
+          window.__trig.push(el.dataset.id);
+          window.elementorFrontend.hooks.doAction('frontend/element_ready/global', el);
+        } },
+      };
+      window.elementorFrontend.hooks.addAction('frontend/element_ready/global', function (el) {
+        el.classList.remove('elementor-invisible');
+      });
+      window.__calls`;
+    const build = (lazy, inline) => page(lazy, inline)
+      .replace('<div class="elementor-widget" style="height:20px">Fetched panel</div>', STRUCT(22))
+      .replace('<p>Inline panel 23</p>', STRUCT(23))
+      .replace('<script>\n      window.__calls', MODEL);
+    const trig = p => p.evaluate(() => window.__trig.slice());
+    const invisible = (p, id) => p.evaluate(i => !!document.querySelector('[data-id="c' + i + '"].elementor-invisible'), id);
+
+    // Phone, tap path.
+    let ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    let p = await ctx.newPage();
+    p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
+    await p.setContent(build([22], [23]));
+    await p.waitForSelector('.mphbac-row-toggle', { timeout: 5000 });
+    await p.tap(toggle(22));
+    await p.waitForTimeout(700);
+    let t = await trig(p);
+    check('TAP: the lazily loaded panel\'s container is bound', t.includes('c22'), t);
+    check('...before the widget inside it, as Elementor does at page load', t.indexOf('c22') < t.indexOf('w22'), t);
+    check('...once each, not once per settle', t.filter(x => x === 'c22').length === 1 && t.filter(x => x === 'w22').length === 1, t);
+    check('...and an entrance-animated container becomes visible', !(await invisible(p, 22)));
+    await p.evaluate(() => document.querySelector('.mphbac-info-close').click());
+    await p.waitForTimeout(400);
+    await p.tap(toggle(23));
+    await p.waitForTimeout(500);
+    t = await trig(p);
+    check('INLINE: the panel\'s widget is re-bound as before', t.includes('w23'), t);
+    check('...but its container is NOT touched — Elementor bound it at page load; lazy path only',
+      !t.includes('c23'), t);
+    await ctx.close();
+
+    // Desktop, hover-prefetch path: the fill happens with no popup open.
+    ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    p = await ctx.newPage();
+    p.on('pageerror', e => { console.log('PAGE ERROR', e.message); process.exitCode = 1; });
+    await p.setContent(build([22], []));
+    await p.waitForSelector('.mphbac-row-toggle', { timeout: 5000 });
+    await p.hover(toggle(22));
+    await p.waitForTimeout(300);
+    check('(instrument check) the hover prefetch filled the panel before any open',
+      await p.evaluate(() => document.querySelector('.mphbac-info-content[data-room-type-id="22"]').hasAttribute('data-mphbac-lazy-filled')));
+    await p.click(toggle(22));
+    await p.waitForTimeout(700);
+    t = await trig(p);
+    check('HOVER-PREFETCHED: the container is bound on the ordinary open too', t.includes('c22') && !(await invisible(p, 22)), t);
+    await ctx.close();
+  }
+
   await browser.close();
   done();
 })().catch(e => { console.error(e); process.exit(2); });

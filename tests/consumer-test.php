@@ -176,6 +176,10 @@ echo "\n-- keep_assets_unoptimized decides whether the opt-out filters are hooke
     check('saving an Elementor template flushes the fragment cache', $flushes('save_post_elementor_library'),
         array_keys($GLOBALS['t_hooks']['action'] ?? []));
     check('saving a MotoPress accommodation flushes it too', $flushes('save_post_mphb_room_type'));
+    // A4: Elementor's editor saves through its own AJAX; after_save is the
+    // hook that is certain to fire on every editor save.
+    check('an Elementor editor save flushes it (elementor/document/after_save)',
+        $flushes('elementor/document/after_save'));
 }
 
 echo "\n-- lazy_cottage_panels decides what a template row puts in the page --\n";

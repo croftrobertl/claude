@@ -164,7 +164,7 @@ echo "\n-- fetched once, kept, and Elementor re-bound --\n";
        path's settle sequence. A lazy fill now runs that same sequence. */
     check('the duplicate re-bind is gone', !str_contains($js, 'initElementorIn'));
     check('Elementor\'s ready trigger is run by the ONE existing function, jQuery-wrapped',
-        preg_match('/function reinitElementorWidgets[\s\S]{0,600}runReadyTrigger\(window\.jQuery \? window\.jQuery\(el\) : el\)/', $js) === 1);
+        preg_match('/function reinitElementorWidgets[\s\S]{0,2500}runReadyTrigger\(window\.jQuery \? window\.jQuery\(el\) : el\)/', $js) === 1);
     check('a lazy fill runs the same settle sequence the open path runs (F5)',
         preg_match('/fetchInfoPanel\(config, content\)\s*\.then\(function \(\) \{[\s\S]{0,500}settleBody\(\);\s*watchBodyImages\(\);/', $js) === 1);
     check('...but only while THAT panel is still on screen',

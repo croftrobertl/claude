@@ -109,5 +109,18 @@ check('registering controls touched no Elementor API the stub does not model',
     count($single->t_controls) > 20 && count($single->t_sections) > 3,
     ['controls' => count($single->t_controls), 'sections' => count($single->t_sections)]);
 
+echo "\n-- A7: neither calendar widget may be served from Elementor's element cache --\n";
+{
+    /* Element Caching is ON on live (12-hour TTL). For a cached widget it
+       serves stored HTML WITHOUT calling render(), which would freeze the
+       embedded availability and skip the deferred panels' asset enqueue. */
+    foreach (['full' => $full, 'single' => $single] as $label => $w) {
+        $m = new ReflectionMethod($w, 'is_dynamic_content');
+        check("$label widget: is_dynamic_content() is public and true",
+            $m->isPublic() && $w->is_dynamic_content() === true);
+    }
+}
+
 echo "\n" . ($fail ? "$fail FAILED\n" : "all passed\n");
 exit($fail ? 1 : 0);
+
