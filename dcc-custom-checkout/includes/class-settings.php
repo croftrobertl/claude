@@ -633,14 +633,37 @@ final class Settings
      * Exactly what a guest will read on a couch cottage, rendered from the
      * live settings. This is the money copy, so it is worth being able to
      * check it here rather than only on a real checkout.
+     *
+     * Two gates do the work, the same ones class-assets.php hands the checkout:
+     * guest_fee_active() (false whenever Guests 3 and 4 is off) and
+     * offered_couch_note() (empty unless included_guests is 2). Until 0.25.2 it
+     * read the ungated pair, so it showed labels and a note no guest would see.
+     * The ladder is read through offered_guest_fee_steps() to match
+     * class-assets.php, but behind the guest_fee_active() return it is
+     * IDENTICAL to guest_fee_steps() -- it gates nothing here, and the mutation
+     * swapping them is equivalent (tests/mutate/README.md). Asserted in
+     * tests/settings/.
      */
     private function render_guest_copy_preview(): void
     {
         $included = Config::included_guests();
-        $steps    = Config::guest_fee_steps(4);
 
         echo '<h3>' . esc_html__('What the guest sees', 'dcc-checkout') . '</h3>';
 
+        // Mirrors setupExtraGuestFlow(): not on sale -> every guest dropdown
+        // is capped at the included count, and nothing else is shown.
+        if (!Config::guest_fee_active()) {
+            echo '<p class="description" style="max-width:640px">'
+                . esc_html(sprintf(
+                    /* translators: %d: number of guests included in the base rate. */
+                    __('The extra-guest fee is not on sale right now: "Guests 3 and 4" is off, or Pull-out Couch Guests is off or has no service ID. Every guest-count dropdown is capped at %d, with a short note saying so. No fee label and no couch note appear.', 'dcc-checkout'),
+                    $included
+                ))
+                . '</p>';
+            return;
+        }
+
+        $steps = Config::offered_guest_fee_steps(4);
         if (empty($steps)) {
             echo '<p class="description" style="max-width:640px;color:#b32d2e">'
                 . esc_html__('⚠ The per-night amount could not be read, so guest-count options get no "(+$…)" label and the note is not shown. Enter the Extra Guest Fee service ID above (its price is the source), or set the fee amount explicitly.', 'dcc-checkout')
@@ -664,13 +687,24 @@ final class Settings
         }
         echo '</ul>';
 
-        echo '<p class="description" style="max-width:640px">' . esc_html__('Note under the dropdown:', 'dcc-checkout') . '</p>';
-        echo '<p style="max-width:640px;padding:10px 14px;background:#f6f7f7;border-left:4px solid #2271b1">'
-            // The SAME sentence the guest sees — read from Config, never a
-            // second copy. A preview that can drift from the live string is
-            // worse than no preview.
-            . esc_html(Config::couch_note_text())
-            . '</p>';
+        // The SAME sentence the guest sees, through the SAME gate -- never a
+        // second copy. A preview that can drift from the live string is worse
+        // than no preview.
+        $note = Config::offered_couch_note();
+        if ($note === '') {
+            echo '<p class="description" style="max-width:640px">'
+                . esc_html(sprintf(
+                    /* translators: %d: number of guests included in the base rate. */
+                    __('No couch note is shown: its fixed wording says guests 1-2 are included, and %d are included now.', 'dcc-checkout'),
+                    $included
+                ))
+                . '</p>';
+        } else {
+            echo '<p class="description" style="max-width:640px">' . esc_html__('Note under the dropdown:', 'dcc-checkout') . '</p>';
+            echo '<p style="max-width:640px;padding:10px 14px;background:#f6f7f7;border-left:4px solid #2271b1">'
+                . esc_html($note)
+                . '</p>';
+        }
         echo '<p class="description" style="max-width:640px">'
             . esc_html__('Neither the labels nor the note appear on a cottage that is not listed above — Cottages 33 and 34 show a plain 1 / 2 dropdown.', 'dcc-checkout')
             . '</p>';

@@ -251,6 +251,44 @@ function summary(doc) {
              .map(r => label(r.cells[0])), ['Levies Applied']);
 }
 
+/* --- 5b. Fee NOT for sale: the guest cannot choose what the server refuses.
+ *
+ * The server half of the Guest 3/4 switch is in tests/guest34 (it refuses a
+ * room over included_guests AND any attached extra-guest service). This is the
+ * guest-facing half, and until 2026-09-27 nothing tested it: a broken cap, or a
+ * pre-checked extra-guest box surviving inside the HIDDEN services section,
+ * means a guest completes the whole form and is refused at submit with no
+ * control on the page that could fix it. The fixture presets 4 guests and a
+ * CHECKED 18063 — the condition, constructed, not the happy path.
+ * ---------------------------------------------------------------------- */
+{
+    const { window, doc } = await render(F.sharedSection, {
+        guestFeeEnabled: '',
+        guestServiceIdList: [18063],
+        guestAccommodations: [1742],
+        includedGuests: 2,
+        i18n: { capNote: 'Up to %s guests.' }
+    });
+    const sel = doc.querySelector('select[name="mphb_room_details[0][adults]"]');
+    check('fee off: a preset 4 is brought down to the included count', sel.value, '2');
+    check('fee off: every option above the included count is disabled',
+        Array.from(sel.options).filter(o => o.disabled).map(o => o.value), ['3', '4']);
+    // The "we only DISABLE existing options — never inject any" claim, with
+    // the condition built: the fixture has a placeholder + 1..4, so a cap that
+    // added (or removed) an option would change this count.
+    check('fee off: the cap injects and removes no option (placeholder + 1..4)',
+        sel.options.length, 5);
+    check('fee off: options at or below the included count stay choosable',
+        Array.from(sel.options).filter(o => o.value && !o.disabled).map(o => o.value), ['1', '2']);
+    check('fee off: the cap is explained under the dropdown',
+        (doc.querySelector('.dcc_checkout-cap-note') || {}).textContent, 'Up to 2 guests.');
+    const fd = Array.from(new window.FormData(doc.querySelector('form')).entries());
+    check('fee off: the form submits the capped guest count',
+        fd.filter(([k]) => k === 'mphb_room_details[0][adults]').map(([, v]) => v), ['2']);
+    check('fee off: NO extra-guest service is submitted (the server would refuse it)',
+        fd.filter(([k, v]) => /\[services\]\[\d+\]\[id\]$/.test(k) && v === '18063').length, 0);
+}
+
 /* --- 6. Services removed; chooser kept; the fee still bills. ------------ */
 {
     const { doc } = await render(F.sharedSection, {

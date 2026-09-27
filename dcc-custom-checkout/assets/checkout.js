@@ -1517,6 +1517,14 @@
             // rejection at submit when MotoPress capacity still offers 3–4.
             // We only DISABLE existing options — never inject any.
             capAdultsSelects(root, includedCap);
+            // And no extra-guest service may ride along: the server's inactive
+            // branch refuses ANY attached one, and hideNativeServices() hides
+            // the only control that could clear it — so a preset-checked box
+            // is a refusal the guest cannot fix. The fee-on path's apply()
+            // already unchecks unwanted buckets; this is the same write for
+            // the case where no bucket is wanted. UNCHECK, never `disabled`:
+            // nothing here is being charged, but the services rule stands.
+            uncheckGuestServices(root);
             return;
         }
         var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) { return id > 0; });
@@ -2034,6 +2042,23 @@
             // already caps at `cap` needs no note.
             if (capped && I18N.capNote) {
                 setGuestNote(sel, 'dcc_checkout-cap-note', I18N.capNote.replace('%s', String(cap)));
+            }
+        });
+    }
+
+    // Fee not for sale: clear every extra-guest service checkbox. Init-only
+    // (called from setupExtraGuestFlow, never from the re-run pipeline), and
+    // `checked` is a property, not an attribute, so it records no mutation.
+    function uncheckGuestServices(root) {
+        var ids = (CFG.guestServiceIdList || []).map(Number).filter(function (id) { return id > 0; });
+        if (!ids.length) {
+            return;
+        }
+        var boxes = root.querySelectorAll('input[name*="[services]"][name$="[id]"]');
+        Array.prototype.forEach.call(boxes, function (box) {
+            if (box.checked && ids.indexOf(parseInt(box.value, 10)) !== -1) {
+                box.checked = false;
+                fireChange(box); // MotoPress recomputes the total natively
             }
         });
     }

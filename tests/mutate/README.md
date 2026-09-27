@@ -78,6 +78,17 @@ break it: **applying the filter last, so a snippet gets the final word.**
 Explaining that survivor away as "equivalent, no finding" would have left a false
 statement in the source and an untested guarantee beside it.
 
+**When a survivor really is equivalent, prove it from the code path and say so
+in the source, then remove it.** v0.25.2: `set-preview-ungated-ladder` swapped
+the settings preview's `offered_guest_fee_steps(4)` for `guest_fee_steps(4)` and
+survived. The two differ only when Guests 3/4 is off; `guest_fee_active()`
+returns false before its filter in exactly that case, and the preview returns
+early on it. So past that line they are the same function, and no test can
+tell them apart. The claim check still found something: the docblock presented
+the ladder call as a gate. It was corrected to say the call gates nothing there.
+Only then was the mutation deleted. A permanent `SURVIVED` that means nothing
+trains people to ignore the verdict that means something.
+
 ## Verdicts
 
 | | |

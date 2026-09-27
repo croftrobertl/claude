@@ -214,5 +214,58 @@ $GLOBALS['filters']['dcc_checkout_admin_guest_fallback'] = 9999;
 check('the fallback is clamped to the ceiling, not to its own bound',
     Config::admin_guest_fallback(), Config::admin_guest_max());
 
+/* ===================================================================== *
+ * 5. THE PREVIEW SHOWS WHAT A GUEST SEES — UNDER THE CURRENT SWITCHES.
+ *    It is headed "What the guest sees" and it is the owner's instrument for
+ *    checking money copy. Until 0.25.2 it read the UNGATED pair
+ *    (guest_fee_steps + couch_note_text), so with Guests 3/4 off, or
+ *    included_guests not 2, it showed "(+$50/night)" labels and a couch note
+ *    that no guest would ever see. Every case is constructed; the first one
+ *    is the guard on the guards — the labels and note DO render when they
+ *    should, so their absence below means something.
+ * ===================================================================== */
+function preview_html(): string {
+    $m = new ReflectionMethod(Settings::class, 'render_guest_copy_preview');
+    $m->setAccessible(true);
+    ob_start();
+    $m->invoke(new Settings());
+    return (string) ob_get_clean();
+}
+function fee_on_row(array $extra = []): array {
+    return array_merge([
+        'guest_fee_enabled' => 1, 'guest_fee_amount' => 50,
+        'guest_service_daily' => 18063, 'guest_service_weekly' => 18063,
+        'guest_service_monthly' => 18063,
+    ], $extra);
+}
+$literal = Config::couch_note_text();
+
+fresh();
+$GLOBALS['opt'][Config::OPTION] = fee_on_row();
+$h = preview_html();
+check('preview, fee on: the guard — "(+" labels DO render', strpos($h, '(+') !== false, true);
+check('preview, fee on: the guard — the couch note DOES render', strpos($h, $literal) !== false, true);
+
+fresh();
+$GLOBALS['opt'][Config::OPTION] = fee_on_row();
+$GLOBALS['opt'][Config::GUEST34_OPTION] = '';
+$h = preview_html();
+check('preview, Guests 3/4 OFF: no "(+" label is shown', strpos($h, '(+'), false);
+check('preview, Guests 3/4 OFF: no couch note is shown', strpos($h, $literal), false);
+check('preview, Guests 3/4 OFF: it says the dropdown is capped',
+    strpos($h, 'capped at 2') !== false, true);
+
+fresh();
+$GLOBALS['opt'][Config::OPTION] = fee_on_row(['guest_fee_enabled' => 0]);
+$h = preview_html();
+check('preview, fee setting OFF (switch on): no "(+" label is shown', strpos($h, '(+'), false);
+
+fresh();
+$GLOBALS['opt'][Config::OPTION] = fee_on_row(['included_guests' => 3]);
+$h = preview_html();
+check('preview, 3 included: the couch note (which says 1-2) is NOT shown', strpos($h, $literal), false);
+check('preview, 3 included: guest 3 carries no fee label', strpos($h, '<code>3 (+'), false);
+check('preview, 3 included: guest 4 carries the first step', strpos($h, '<code>4 (+') !== false, true);
+
 echo $failures ? "\n$failures failing\n" : "\nall passing\n";
 exit($failures ? 1 : 0);

@@ -564,8 +564,20 @@ yours to improvise.
     value reads as OFF because that is the direction that does not charge a guest
     for an offering whose switch state cannot be read.
   - `Config::guest34_enabled()` is the whole implementation and is deliberately
-    four lines, so the Selector's copy can match it character for character.
-    **Change one, change both.**
+    four lines, so the Selector's copy CAN match it character for character.
+    **IT DOES NOT, and this line used to say it did** (measured 2026-09-27 on the
+    Selector's branch at `a2ac0e6`, read-only). The Selector reads
+    `$v === null ? true : (bool) $v` and applies no filter, so `'no'`, `'off'`
+    and `'false'` read ON there and OFF here, and a `dcc_guest34_enabled` filter
+    reaches only this half. **Its CLAUDE.md also records the WRITER wrongly** —
+    "integer 1 or 0, like `guest_fee_enabled`" — and calls `''` out of contract,
+    when `''` is exactly what `sanitize_guest34()` stores for OFF.
+    **No live divergence**: the only values ever written, `'1'` and `''`, read
+    the same on both sides. It is the `_mphb_adults_confirmed` shape again
+    (0.23.2) — two readers of one value, agreeing only on what happens to be
+    stored. **Reported to the owner, NOT fixed from here**: the fix belongs in
+    the Selector (adopt the strict reader, correct its recorded writer). Until
+    it lands, "change one, change both" is a goal, not a fact.
   - **No `default` is registered** with `register_setting()`. Registering one
     would make `get_option()` return it on a site that never saved the setting,
     and "absent" is a meaningful third state.
@@ -611,6 +623,25 @@ yours to improvise.
   - `offered_guest_fee_steps()` honours the switch → every label on the checkout.
   - `guest_fee_steps()` ignores it → **Admin_Fields**, so wp-admin can still
     price a fee an existing booking really carries.
+  - **The settings page's "What the guest sees" preview is a GUEST-SIDE reader**
+    even though it renders in wp-admin (v0.25.2). It read `guest_fee_steps(4)`
+    and `couch_note_text()` — the ungated pair — so with the switch off, or
+    `included_guests` not 2, it showed the owner labels and a note no guest
+    would see. It now reads `guest_fee_active()`, `offered_guest_fee_steps()` and
+    `offered_couch_note()`, the same gates `class-assets.php` hands the checkout.
+    **Classify a reader by whose view it models, not by which screen it is on.**
+    Asserted in `tests/settings/` with the render-when-it-should guard first.
+  - **The switch-off checkout path clears any extra-guest service box**
+    (`uncheckGuestServices()`, v0.25.2). The server's inactive branch refuses ANY
+    attached one, and the services section is hidden, so a box arriving ticked
+    was a refusal the guest could not fix. The fee-on path's `apply()` always
+    unticked unwanted buckets; the fee-off path returned before doing the same.
+    Unticked, never `disabled`. Init-only, and `checked` is a property, so it
+    records no mutation — **the tap path is untouched**. Whether MotoPress ever
+    renders the box pre-ticked on a fresh checkout is NOT observed; the fixture
+    presets it, and the fix is correct either way because nothing it clears can
+    be charged while this path runs. `capAdultsSelects()`, the other half of
+    switch-off, had **no test at all** until the same round.
   **Getting either pair the wrong way round strips data off past bookings.** The
   first version of this change gated `guest_fee_steps()` itself and would have
   removed the price label from historical bookings in wp-admin; caught by
@@ -839,8 +870,10 @@ yours to improvise.
 - **THE MUTATION RUNNER IS THE INSTRUMENT FOR THE RULE ABOVE.**
   `python3 tests/mutate/run.py [suite|id]`, or `--preflight` for the baseline
   alone. It applies one textual mutation, runs the suites that claim to cover it,
-  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 50
-  mutations, 50 killed, 0 of everything else, exit 0.
+  and reports KILLED / SURVIVED / **STALE** / **HARNESS** / **INVALID**. 82
+  mutations, 82 killed, 0 of everything else, exit 0 (2026-09-27, v0.25.2; it
+  read 50 here through three rounds that took it to 75 — a count in prose is a
+  claim that goes stale silently).
   A suite's outcome is read from what it PRINTED: `FAIL` lines kill, no
   PASS-or-FAIL line is `NO RUN`, a missing script is `NO SUITE`, and both of
   those become **HARNESS** — not red, and they fail the exit code. A mutated file
@@ -970,11 +1003,15 @@ yours to improvise.
   behavioural guarantee in a comment with no test that constructs its condition:
   `checkout.js` — "at most ONE bucket checked per room" (:1510, money; latent
   because all three extra-guest buckets are the same service, per the entry
-  above, so a double-charge cannot currently arise); "we only DISABLE existing options —
-  never inject any" (:1518, :2002); "a re-render can never stack suffixes"
+  above, so a double-charge cannot currently arise); "a re-render can never stack suffixes"
   (:1637); "idempotent per (select, kind) so re-asserts never stack duplicates"
   (:2042); "a height-only resize can never change the answer" (:1867, and that
   one is mobile-behaviour-adjacent, so it matters more than it looks).
+  **Closed 2026-09-27:** "we only DISABLE existing options — never inject any"
+  (`capAdultsSelects()`) is now constructed in `tests/breakdown/` — option count
+  pinned, mutation `js-feeoff-cap-injects`. `class-settings.php` is no longer
+  suite-less: `tests/settings/` covers the sanitiser and the guest preview; the
+  rest of the page's rendering is still untested.
   Whole files with no suite at all: `admin-booking.js` (484 lines),
   `class-settings.php` (698), `class-assets.php` (418), `class-admin-fields.php`
   (302), `tap-debug.js` (450). The fail-open family — `class-config.php:493-495`

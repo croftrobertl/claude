@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.25.1
+Stable tag: 0.25.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -227,6 +227,24 @@ also filterable for snippet-level overrides:
   "Checkout Form" widget on /submit-booking/.
 
 == Changelog ==
+
+= 0.25.2 =
+* FIX (found by self-audit): with the extra-guest fee not on sale ("Guests 3
+  and 4" off, or Pull-out Couch Guests off), an extra-guest service that
+  arrived already ticked stayed ticked inside the hidden services section. The
+  server refuses any booking carrying that service while the fee is off, and the
+  guest had no control on the page to clear it. The checkout now clears it,
+  exactly as it already did when the fee is on. It is unticked, never disabled.
+  Whether MotoPress ever renders that box pre-ticked on a fresh checkout has not
+  been observed; the fix closes the case either way and cannot remove a charge,
+  because the server refuses that service whenever this path runs.
+* FIX: the settings page's "What the guest sees" preview now goes through the
+  same switches as the checkout. It used to show "(+$50/night)" labels and the
+  couch note even when "Guests 3 and 4" was off, or when "Guests included" was
+  not 2, although no guest would see either. Admin page only; nothing a guest
+  sees changed.
+* The switch-off guest-count cap on the checkout is now tested. It was the
+  guest-facing half of 0.24.0 and had no test at all.
 
 = 0.25.1 =
 * FIX (found by self-audit before 0.25.0 was installed anywhere): the new

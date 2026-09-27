@@ -827,5 +827,82 @@
   "find": "        return self::included_guests() === 2 ? self::couch_note_text() : '';",
   "replace": "        return self::couch_note_text();",
   "count": 1
+ },
+ {
+  "id": "js-feeoff-cap-inert",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "breakdown"
+  ],
+  "claim": "v0.24.0 fee off: options above the included count cannot be chosen",
+  "find": "                if (v > cap) {",
+  "replace": "                if (v > cap + 99) {",
+  "count": 1
+ },
+ {
+  "id": "js-feeoff-preset-kept",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "breakdown"
+  ],
+  "claim": "v0.24.0 fee off: a preset count above the cap is brought down to it",
+  "find": "            if ((parseInt(sel.value, 10) || 0) > cap) {",
+  "replace": "            if (false) {",
+  "count": 1
+ },
+ {
+  "id": "js-feeoff-service-rides-along",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "breakdown"
+  ],
+  "claim": "v0.25.2 fee off: no extra-guest service is submitted (server refuses any)",
+  "find": "            uncheckGuestServices(root);\n",
+  "replace": "",
+  "count": 1
+ },
+ {
+  "id": "js-feeoff-uncheck-wrong-ids",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "breakdown"
+  ],
+  "claim": "v0.25.2 fee off: the uncheck matches the configured guest service ids",
+  "find": "            if (box.checked && ids.indexOf(parseInt(box.value, 10)) !== -1) {",
+  "replace": "            if (box.checked && ids.indexOf(parseInt(box.value, 10)) === -1) {",
+  "count": 1
+ },
+ {
+  "id": "set-preview-ignores-active",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "v0.25.2 the preview shows no fee copy when the fee is not on sale",
+  "find": "        if (!Config::guest_fee_active()) {\n            echo '<p class=\"description\" style=\"max-width:640px\">'",
+  "replace": "        if (false) {\n            echo '<p class=\"description\" style=\"max-width:640px\">'",
+  "count": 1
+ },
+ {
+  "id": "set-preview-ungated-note",
+  "file": "dcc-custom-checkout/includes/class-settings.php",
+  "suites": [
+   "settings"
+  ],
+  "claim": "v0.25.2 the preview reads the GATED couch note",
+  "find": "        $note = Config::offered_couch_note();",
+  "replace": "        $note = Config::couch_note_text();",
+  "count": 1
+ },
+ {
+  "id": "js-feeoff-cap-injects",
+  "file": "dcc-custom-checkout/assets/checkout.js",
+  "suites": [
+   "breakdown"
+  ],
+  "claim": "capAdultsSelects only DISABLES existing options — never injects any",
+  "find": "            if (changed) {\n                fireChange(sel); // let MotoPress recompute for the corrected count",
+  "replace": "            sel.appendChild(new Option('1', '1'));\n            if (changed) {\n                fireChange(sel); // let MotoPress recompute for the corrected count",
+  "count": 1
  }
 ]
