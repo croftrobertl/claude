@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.42.0
+Stable tag: 0.42.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,11 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.42.1 =
+* **Fixes from a self-audit of 0.42.0.** Two were live: the “Remember availability for” setting was not actually reaching the availability cache (it now does, and “0 disables caching” is now true), and two lines of help text on the settings screen printed a literal `\u2019` instead of an apostrophe.
+* **The “load cottage info panels only when opened” option is now fit to test on staging** (it still ships OFF). A panel is rendered once and remembered rather than rebuilt for every visitor; touching a cottage while scrolling on a phone no longer fires a request; the popup’s scrollbar is sized once the panel arrives; closing one cottage and opening another no longer carries the first one’s dimmed loading state across; and the panel a page asks for is signed, so the server will only build panels a page on this site actually offered.
+* The “which cottage is free” suggestion now works on the fallback path where the calendar loads its first window over the network rather than from the page.
 
 = 0.42.0 =
 * **The calendar stylesheet is now about a fifth of its former weight on the wire.** It is loaded in the page head on the home page, /cottages/ and every cottage page, so it had to finish downloading before anything could be drawn. Its explanatory comments — roughly two thirds of the file, and nothing a browser reads — are now stripped when the plugin is built. The full, commented version stays in the source for whoever works on it next. Measured: 109 KB down to 37 KB, or 35.6 KB down to 6.8 KB once compressed.
