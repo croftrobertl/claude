@@ -47,8 +47,37 @@ function mphbac_strip_css_comments(string $css): string
     $len = strlen($css);
     $i = 0;
     $quote = '';          // '"' or "'" while inside a string
+    $inUrl = false;       // inside an UNQUOTED url( ... ) — see below
     while ($i < $len) {
         $c = $css[$i];
+        /* UNQUOTED url() IS A STRING TOO (0.42.1, the audit's F9). The
+           first version tracked only quoted strings, so `url(data:...)`
+           written without quotes and containing a `/*` would have been cut
+           as a comment — and the regex cross-check would have AGREED,
+           because it makes the same mistake. Nothing in widget.css does
+           this today (its SVG data URIs are quoted); the point is that it
+           cannot start doing it silently. A `/*` inside such a url() is
+           refused outright rather than guessed at. */
+        if ($inUrl) {
+            if ($c === '/' && $i + 1 < $len && $css[$i + 1] === '*') {
+                fwrite(STDERR, "build-css: '/*' inside an unquoted url() — refusing to guess\n");
+                exit(1);
+            }
+            $out .= $c;
+            if ($c === ')') { $inUrl = false; }
+            $i++;
+            continue;
+        }
+        if ($quote === '' && strncasecmp(substr($css, $i, 4), 'url(', 4) === 0) {
+            // Skip past `url(` and any whitespace; if the next char is not a
+            // quote, the argument is unquoted and we track it to the ')'.
+            $j = $i + 4;
+            while ($j < $len && ($css[$j] === ' ' || $css[$j] === "\t")) { $j++; }
+            $out .= substr($css, $i, $j - $i);
+            $i = $j;
+            if ($i < $len && $css[$i] !== '"' && $css[$i] !== "'") { $inUrl = true; }
+            continue;
+        }
         if ($quote !== '') {
             $out .= $c;
             if ($c === '\\' && $i + 1 < $len) {      // escaped char: copy both
@@ -133,6 +162,24 @@ function mphbac_sanity(string $src, string $out, string $path): void
 $root  = dirname(__DIR__);
 $check = in_array('--check', $argv, true);
 $fail  = 0;
+
+// --strip <file>: strip ONE arbitrary file to stdout, refusing the same way
+// the build would. Exists so build-test.php can drive the stripper as a
+// black box — hand it a hazard and assert the exit code — rather than
+// re-implementing it or trusting a comment that says it refuses.
+$stripAt = array_search('--strip', $argv, true);
+if ($stripAt !== false) {
+    $file = $argv[$stripAt + 1] ?? '';
+    $src  = $file !== '' ? @file_get_contents($file) : false;
+    if ($src === false) {
+        fwrite(STDERR, "build-css: cannot read " . $file . "\n");
+        exit(2);
+    }
+    $out = mphbac_strip_css_comments($src);
+    mphbac_sanity($src, $out, $file);
+    echo $out;
+    exit(0);
+}
 
 foreach (TARGETS as $from => $to) {
     $srcPath = $root . '/' . $from;
