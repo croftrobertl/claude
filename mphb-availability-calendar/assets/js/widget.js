@@ -185,6 +185,10 @@
             }
             content.innerHTML = json.data.html;
             content.removeAttribute('data-info-src');
+            // Marks the node for reinitElementorWidgets(): its containers
+            // have never been bound (A1). Set here, on the fill itself, so
+            // both routes — the tap and the desktop hover prefetch — get it.
+            content.setAttribute('data-mphbac-lazy-filled', '1');
             // NO handler binding here (0.42.1). 0.42.0 bound Elementor's
             // handlers at this point with a duplicate of
             // reinitElementorWidgets(), which the open path already runs from
@@ -947,7 +951,19 @@
         if (!container || !window.elementorFrontend) return;
         var handler = window.elementorFrontend.elementsHandler;
         if (!handler || !handler.runReadyTrigger) return;
-        container.querySelectorAll('.elementor-widget').forEach(function (el) {
+        // CONTAINERS TOO — BUT ONLY IN A LAZILY LOADED PANEL (0.42.3, A1).
+        // An inline panel was in the page when Elementor initialised, so
+        // its containers were bound then and only the moved widgets need
+        // re-binding. A lazily loaded panel was bound by NOTHING: its
+        // containers' handlers (entrance animations, background slideshow
+        // or video, sticky) never ran, and a container with an entrance
+        // animation would keep `elementor-invisible` for good. Measured on
+        // live 2026-09-28: 0 such containers in all 8 cottages — this is
+        // hardening, not a fix for an observed failure. A selector list
+        // returns document order, so each container is bound before the
+        // widgets inside it, as Elementor itself does at page load; the
+        // guard below stops anything being bound twice.
+        container.querySelectorAll('.elementor-widget, [data-mphbac-lazy-filled] .elementor-element').forEach(function (el) {
             if (el.dataset.mphbacRebound === '1') return;
             el.dataset.mphbacRebound = '1';
             try {

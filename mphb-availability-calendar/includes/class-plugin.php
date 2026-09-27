@@ -97,6 +97,13 @@ final class Plugin
         // behind. Saving a template is rare; a stale panel would not be.
         add_action('save_post_elementor_library', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('save_post_mphb_room_type', ['\\MPHBAC\\Cache', 'flush_all']);
+        // Elementor's editor saves through its own AJAX, and whether that
+        // fires save_post could not be confirmed from source (0.42.3, A4).
+        // after_save fires on every editor save, of any document — so any
+        // Elementor save now flushes this plugin's caches. That is a
+        // generation bump plus one DELETE, the same cost as an iCal sync;
+        // precision is not worth a post-type check that could be wrong.
+        add_action('elementor/document/after_save', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_booking_status_changed', ['\\MPHBAC\\Cache', 'flush_all']);
 
         add_action('admin_notices', ['\\MPHBAC\\Cache_Integration', 'admin_notice']);

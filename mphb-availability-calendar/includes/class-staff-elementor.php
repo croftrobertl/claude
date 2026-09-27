@@ -30,6 +30,19 @@ final class Staff_Elementor extends Widget_Base
         return 'dccac_staff';
     }
 
+    /**
+     * NEVER ELEMENT-CACHED (0.42.3, A7) — and here it is a correctness
+     * matter, not just freshness. render() runs the staff gate and bakes a
+     * nonce into the shell. Served from Elementor's element cache, the gate
+     * would not run for that request and the nonce would outlive its
+     * lifetime, leaving staff in a "reload the page" loop. Public for the
+     * reason given on Widget::is_dynamic_content().
+     */
+    public function is_dynamic_content(): bool
+    {
+        return true;
+    }
+
     public function get_title(): string
     {
         return __('DCC Staff Calendar', 'mphb-availability-calendar');

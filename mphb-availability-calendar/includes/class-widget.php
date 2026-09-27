@@ -84,6 +84,22 @@ class Widget extends Widget_Base
         return 'mphbac_calendar';
     }
 
+    /**
+     * NEVER ELEMENT-CACHED (0.42.3, A7). Elementor's Element Caching is on
+     * on live (12-hour TTL) and, for a cached widget, serves stored HTML
+     * WITHOUT calling render(). This widget's render() embeds today's
+     * availability and, with lazy panels on, enqueues the deferred
+     * templates' widget assets — both of which must happen on every page
+     * build. Measured: no calendar output in any element cache today, but
+     * nothing guaranteed that. Public, not protected: widening an
+     * inherited method's visibility is always legal, narrowing it is fatal,
+     * and the parent's declaration could not be read from here.
+     */
+    public function is_dynamic_content(): bool
+    {
+        return true;
+    }
+
     public function get_title(): string
     {
         return __('DCC Availability Calendar', 'mphb-availability-calendar');
@@ -2187,22 +2203,24 @@ class Widget extends Widget_Base
      * and it is cheap: a handle lookup per type, deduplicated across all
      * deferred templates.
      *
-     * @param string[]            $srcs     the bare or signed references being deferred
+     * @param int[]               $cottage_ids the cottages whose panel render() deferred
      * @param array<string,mixed> $settings the widget settings, to map cid -> template
      */
-    private static function enqueue_deferred_panel_assets(array $srcs, array $settings): void
+    private static function enqueue_deferred_panel_assets(array $cottage_ids, array $settings): void
     {
         if (!class_exists('\Elementor\Plugin')) {
             return;
         }
         $post_ids = [];
-        // The srcs are keyed by cottage id in render(); resolve each to the
-        // post whose element tree holds the widgets: the template for a
-        // tpl: source, the room type itself for an acc: source built with
-        // Elementor. Signed or bare, the id is the digits after the colon.
+        // Resolve each deferred cottage, through the same cottage_info rows
+        // render() read, to the post whose element tree holds the widgets:
+        // the template for a template row, the room type itself for an
+        // accommodation row built with Elementor. (The 0.42.2 comment here
+        // described parsing ids out of signed references; the code never
+        // did that — corrected in 0.42.3.)
         foreach ((array) ($settings['cottage_info'] ?? []) as $row) {
             $cid = (int) ($row['ci_cottage'] ?? 0);
-            if ($cid <= 0 || !in_array($cid, $srcs, true)) {
+            if ($cid <= 0 || !in_array($cid, $cottage_ids, true)) {
                 continue;
             }
             $source = (string) ($row['ci_source'] ?? 'text');
@@ -2398,6 +2416,12 @@ class Widget extends Widget_Base
                     // breaking the image carousel widget and the container
                     // template's centering / text-color styling. Trust
                     // boundary: only the site owner can publish templates.
+                    // MEASURED 2026-09-28: the eight live cottage panels carry
+                    // NO inline <script> at all. The scripts mentioned above
+                    // are historical. It matters because a lazily loaded
+                    // panel is inserted with innerHTML, which never runs a
+                    // script; if one ever returns to a template, lazy mode
+                    // will not execute it (the audit's A2, not built).
                     return (string) $elementor->frontend->get_builder_content_for_display($template_id, true);
                 }
             }
