@@ -155,27 +155,17 @@
      * Elementor binds its frontend widgets (Swiper carousels, accordions,
      * tabs) once, at page load, to the elements that were in the document
      * then. Markup inserted afterwards has no handlers at all — it renders,
-     * and nothing moves. runReadyTrigger() is Elementor's own entry point for
-     * exactly this, and it is called per element rather than re-initialising
-     * the page, so nothing already working is touched. The template's CSS
-     * travels inside the fragment (see Widget::template_css) because an
-     * enqueue during an AJAX request reaches nothing.
+     * and nothing moves. reinitElementorWidgets() above is the plugin's
+     * existing answer to that (runReadyTrigger, per element, jQuery-wrapped),
+     * and the open path's settle sequence runs it; a lazy fill runs the same
+     * sequence once the markup lands. The template's CSS travels inside the
+     * fragment (see Widget::template_css) because an enqueue during an AJAX
+     * request reaches nothing.
      *
      * Returns a promise so the open path can wait on an in-flight fetch that
      * the hover prefetch already started, rather than starting a second one.
      */
     var infoFetches = Object.create(null);
-
-    function initElementorIn(node) {
-        try {
-            var ef = window.elementorFrontend;
-            if (!ef || !ef.elementsHandler || !ef.elementsHandler.runReadyTrigger) return;
-            var els = node.querySelectorAll('.elementor-element');
-            for (var i = 0; i < els.length; i++) {
-                ef.elementsHandler.runReadyTrigger(els[i]);
-            }
-        } catch (e) { /* a template with no JS widgets must still open */ }
-    }
 
     function fetchInfoPanel(config, content) {
         var src = content && content.getAttribute('data-info-src');
@@ -195,7 +185,13 @@
             }
             content.innerHTML = json.data.html;
             content.removeAttribute('data-info-src');
-            initElementorIn(content);
+            // NO handler binding here (0.42.1). 0.42.0 bound Elementor's
+            // handlers at this point with a duplicate of
+            // reinitElementorWidgets(), which the open path already runs from
+            // settle() — jQuery-wrapped, guarded against double binding. The
+            // caller that has the popup open runs the same settle sequence
+            // once the markup lands; a prefetched panel is bound by the
+            // ordinary open. One implementation, not two.
             return content;
         }).catch(function (e) {
             // Let a later open try again rather than leaving the cottage
@@ -1154,7 +1150,16 @@
             openInfo(typeId, content, btn);
             bodyEl.classList.add('is-loading');
             fetchInfoPanel(config, content)
-                .then(function () { bodyEl.classList.remove('is-loading'); })
+                .then(function () {
+                    bodyEl.classList.remove('is-loading');
+                    // Only if THIS panel is still the one on screen: the
+                    // visitor may have closed it, or opened another cottage,
+                    // while the fetch was in flight.
+                    if (movedContent === content && sheet.classList.contains('is-open')) {
+                        settleBody();
+                        watchBodyImages();
+                    }
+                })
                 .catch(function () {
                     bodyEl.classList.remove('is-loading');
                     // Say so rather than leaving an empty popup. The cottage
@@ -1185,10 +1190,25 @@
             if (!btn) return;
             var row = btn.parentNode;
             var typeId = row ? row.getAttribute('data-room-type-id') : '';
-            if (typeId) warmInfoPopup(root, typeId);
+            if (!typeId) return;
+            // NOT FOR A LAZY PANEL (0.42.1). touchstart fires for a scrolling
+            // finger as readily as for a tap, and warming an inline panel is
+            // free — its images are already on the page. Warming a lazy one
+            // is a full WordPress boot per touch, so on a phone a scroll down
+            // /cottages/ could fire a request per row it brushed. A lazy panel
+            // is fetched by the tap that opens it and by nothing else on
+            // touch; the desktop hover prefetch above is unchanged.
+            var content = root.querySelector('.mphbac-info-content[data-room-type-id="' + typeId + '"]');
+            if (content && content.getAttribute('data-info-src')) return;
+            warmInfoPopup(root, typeId);
         }, { passive: true });
 
         function openInfo(typeId, content, trigger) {
+            // A previous cold open may still be fetching. Whatever is opening
+            // now is not it, so it must not inherit the dimmed state (F6).
+            // THIS is the guard: close A, open B, and B is undimmed because
+            // of this line — lazy-panel-test.js drives exactly that.
+            bodyEl.classList.remove('is-loading');
             openedViaKeyboard = lastInputWasKeyboard;
             // See .is-pointer-open in widget.css: suppresses the focus ring
             // and fill on the close button when the dialog was tapped open.
@@ -1324,18 +1344,7 @@
             var settle = function () {
                 if (settled) return;
                 settled = true;
-                refreshSwipers(bodyEl);
-                reinitSwipers(bodyEl);
-                // After the sliders are in their final geometry, make sure
-                // whatever is on screen actually has handlers attached.
-                reinitElementorWidgets(bodyEl);
-                // LAST, not before reinitElementorWidgets: re-running an
-                // Elementor handler can construct a fresh Swiper, which takes
-                // its own overflow verdict. Unlocking before that happened is
-                // why 0.23.9 did not stick.
-                unlockSwiperNav(bodyEl);
-                try { window.dispatchEvent(new Event('resize')); } catch (e) {}
-                updateScrollbar();
+                settleBody();
             };
             sheet.addEventListener('transitionend', function te(e) {
                 if (e.target === sheet && (e.propertyName === 'transform' || e.propertyName === 'opacity')) {
@@ -1344,10 +1353,39 @@
                 }
             });
             setTimeout(settle, 380);
-            // Images finishing load change the scroll height — keep the
-            // scrollbar in sync as they arrive.
+            watchBodyImages();
+            document.addEventListener('keydown', onKeydown);
+        }
+
+        /**
+         * EVERYTHING THAT HAS TO HAPPEN ONCE THE BODY'S CONTENT IS REAL,
+         * factored out in 0.42.1 so it runs in both places it is needed: when
+         * the popup finishes opening, and when a lazily-fetched panel lands
+         * in an ALREADY-open popup. 0.42.0 ran it only on open, so a lazy
+         * fill left the custom scrollbar sized for an empty body and its
+         * images unwatched (the audit's F5).
+         */
+        function settleBody() {
+            refreshSwipers(bodyEl);
+            reinitSwipers(bodyEl);
+            // After the sliders are in their final geometry, make sure
+            // whatever is on screen actually has handlers attached.
+            reinitElementorWidgets(bodyEl);
+            // LAST, not before reinitElementorWidgets: re-running an
+            // Elementor handler can construct a fresh Swiper, which takes
+            // its own overflow verdict. Unlocking before that happened is
+            // why 0.23.9 did not stick.
+            unlockSwiperNav(bodyEl);
+            try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+            updateScrollbar();
+        }
+
+        // Images finishing load change the scroll height — keep the
+        // scrollbar in sync as they arrive.
+        function watchBodyImages() {
             bodyEl.querySelectorAll('img').forEach(function (img) {
-                if (img.complete) return;
+                if (img.complete || img.dataset.mphbacWatched === '1') return;
+                img.dataset.mphbacWatched = '1';
                 // A late-loading image changes the slider's content width, so
                 // the overflow verdict has to be taken again, not just the
                 // scrollbar height.
@@ -1355,10 +1393,13 @@
                 img.addEventListener('load', onSettled, { once: true });
                 img.addEventListener('error', onSettled, { once: true });
             });
-            document.addEventListener('keydown', onKeydown);
         }
 
         function closeInfo() {
+            // No is-loading clear here, deliberately: openInfo() clears it,
+            // and between a close and the next open the body is hidden, so a
+            // clear on close has no observable effect — a mutation removing
+            // it survived every test. Decoration, not a guard.
             if (widthWatcher) {
                 try { widthWatcher.disconnect(); } catch (e) { /* ignore */ }
                 widthWatcher = null;
@@ -1685,6 +1726,10 @@
         // the same past/available/booked verdicts the grid does.
         if (state) {
             state.availability = availability;
+            // And the rooms (0.42.1): the free-cottage suggestion reads
+            // state.rooms, which only the embedded first paint used to set —
+            // so on the documented AJAX-only fallback it was silently off.
+            state.rooms = rooms;
         }
 
         var empty = root.querySelector('.mphbac-empty');

@@ -31,6 +31,7 @@ final class Cache_Integration
         $out = [
             self::ajax_exclusion_pattern(),
             '/wp-admin/admin-ajax.php?action=' . MPHBAC_PRICE_ACTION,
+            '/wp-admin/admin-ajax.php?action=' . MPHBAC_INFO_ACTION,
         ];
         // Staff endpoints serve guest PII and must never be cached at any
         // layer, by anyone, for any duration.

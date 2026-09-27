@@ -243,9 +243,13 @@ final class Ajax
      */
     public static function handle_info(): void
     {
-        $src = isset($_REQUEST['src']) ? sanitize_text_field((string) wp_unslash($_REQUEST['src'])) : '';
-        // Shape first, so a malformed reference never reaches a lookup.
-        if (!preg_match('/^(?:tpl|acc):[1-9][0-9]{0,9}$/', $src)) {
+        $signed = isset($_REQUEST['src']) ? sanitize_text_field((string) wp_unslash($_REQUEST['src'])) : '';
+        // SIGNATURE FIRST (0.42.1). verify_info_src() checks the shape and
+        // the wp_hash() signature in one step and returns the bare reference
+        // only if a page on this site emitted it. A forged or malformed
+        // reference never reaches a lookup, let alone a render.
+        $src = Widget::verify_info_src($signed);
+        if ($src === '') {
             wp_send_json_error(['message' => __('Invalid panel.', 'mphb-availability-calendar')], 400);
         }
         $html = Widget::render_info_fragment($src);

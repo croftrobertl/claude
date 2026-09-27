@@ -902,7 +902,7 @@ class Widget extends Widget_Base
             // switch the suggestion off without touching any code.
             'str_alt_cottage'    => [__('Booking popup: another cottage is free ({cottage} replaced)', 'mphb-availability-calendar'), __('{cottage} is free for these dates.', 'mphb-availability-calendar')],
             // Only ever seen if a lazily-fetched info panel fails to arrive.
-            'str_info_failed'    => [__('Cottage popup: panel failed to load', 'mphb-availability-calendar'), __('Sorry — this cottage\u2019s details could not be loaded. Please try again, or use the link above.', 'mphb-availability-calendar')],
+            'str_info_failed'    => [__('Cottage popup: panel failed to load', 'mphb-availability-calendar'), __('Sorry — this cottage’s details could not be loaded. Please try again, or use the link above.', 'mphb-availability-calendar')],
         ];
 
         foreach ($strings as $key => [$label, $default]) {
@@ -1577,41 +1577,11 @@ class Widget extends Widget_Base
                     $info_title_urls[$cid] = esc_url($permalink);
                 }
             }
-            $source = (string) ($row['ci_source'] ?? 'text');
-            if ($source === 'template') {
-                $tpl_id = (int) ($row['ci_template'] ?? 0);
-                if ($tpl_id > 0) {
-                    if ($lazy_panels) {
-                        // Placeholder only. The panel is fetched on first open
-                        // — or on the hover/touch prefetch, which usually gets
-                        // there first — and then KEPT in the DOM, so a re-open
-                        // is as instant as it was when the panel shipped in
-                        // the page.
-                        $info_src[$cid]  = 'tpl:' . $tpl_id;
-                        $info_html[$cid] = '';
-                    } else {
-                        $html = self::render_template($tpl_id);
-                        if ($html !== '') {
-                            $info_html[$cid] = $html;
-                        }
-                    }
-                }
-            } elseif ($source === 'mphb_accommodation') {
-                // The cottage IS the mphb_room_type post, so $cid is also the
-                // accommodation post ID — no extra select control needed.
-                if ($lazy_panels) {
-                    $info_src[$cid]  = 'acc:' . $cid;
-                    $info_html[$cid] = '';
-                } else {
-                    $html = self::render_motopress_accommodation($cid);
-                    if ($html !== '') {
-                        $info_html[$cid] = $html;
-                    }
-                }
-            } else {
-                $text = (string) ($row['ci_text'] ?? '');
-                if (trim(wp_strip_all_tags($text)) !== '') {
-                    $info_html[$cid] = wpautop(wp_kses_post($text));
+            $plan = self::info_row($row, $cid, $lazy_panels);
+            if ($plan !== null) {
+                $info_html[$cid] = $plan['html'];
+                if ($plan['src'] !== '') {
+                    $info_src[$cid] = $plan['src'];
                 }
             }
         }
@@ -2119,37 +2089,148 @@ class Widget extends Widget_Base
     }
 
     /**
+     * ONE cottage_info ROW'S PANEL — what goes in the page for it, and
+     * whether it is deferred. Returns null when the row yields nothing.
+     *
+     * A method rather than a loop body (0.42.1) so that the lazy setting has a
+     * consumer a test can drive: change the setting, call this, and the
+     * outcome changes from rendered markup to a signed placeholder. $lazy is
+     * a parameter only so render() can pass the value it already read; left
+     * null, the setting is consulted here.
+     *
+     * @param  array<string,mixed> $row  one repeater row
+     * @return array{html:string, src:string}|null
+     */
+    private static function info_row(array $row, int $cid, ?bool $lazy = null): ?array
+    {
+        $lazy  ??= (bool) Settings::get('lazy_cottage_panels');
+        $source = (string) ($row['ci_source'] ?? 'text');
+
+        if ($source === 'template') {
+            $tpl_id = (int) ($row['ci_template'] ?? 0);
+            if ($tpl_id <= 0) {
+                return null;
+            }
+            if ($lazy) {
+                // Placeholder only, and only for a template that exists and is
+                // published — otherwise no popup, as before. The panel is
+                // fetched on first open, or on the desktop hover prefetch,
+                // then KEPT in the DOM so a re-open is as instant as when it
+                // shipped in the page. On a phone there is no hover, so the
+                // first open waits for the fetch; the server-side fragment
+                // cache keeps that wait to one round-trip, not one template
+                // render.
+                return self::info_source_exists('tpl:' . $tpl_id)
+                    ? ['html' => '', 'src' => self::sign_info_src('tpl:' . $tpl_id)]
+                    : null;
+            }
+            $html = self::render_template($tpl_id);
+            return $html !== '' ? ['html' => $html, 'src' => ''] : null;
+        }
+
+        if ($source === 'mphb_accommodation') {
+            // The cottage IS the mphb_room_type post, so $cid is also the
+            // accommodation post ID — no extra select control needed.
+            if ($lazy) {
+                return self::info_source_exists('acc:' . $cid)
+                    ? ['html' => '', 'src' => self::sign_info_src('acc:' . $cid)]
+                    : null;
+            }
+            $html = self::render_motopress_accommodation($cid);
+            return $html !== '' ? ['html' => $html, 'src' => ''] : null;
+        }
+
+        // TEXT PANELS ARE NEVER LAZY. The weight the setting exists to move is
+        // the Elementor templates; a custom-text panel is a few hundred bytes,
+        // and fetching one would cost a round-trip to save nothing.
+        $text = (string) ($row['ci_text'] ?? '');
+        if (trim(wp_strip_all_tags($text)) === '') {
+            return null;
+        }
+        return ['html' => wpautop(wp_kses_post($text)), 'src' => ''];
+    }
+
+    /**
+     * Is this reference something the page may legitimately defer? The SAME
+     * gate the endpoint applies, run at page-render time, so a cottage_info
+     * row pointing at a deleted or unpublished template gets no placeholder —
+     * the row simply has no popup, exactly as it had none before lazy panels
+     * existed (0.42.0 emitted the placeholder blind and the visitor got a
+     * "could not be loaded" popup instead).
+     */
+    private static function info_source_exists(string $src): bool
+    {
+        if (preg_match('/^tpl:(\d+)$/', $src, $m)) {
+            $post = get_post((int) $m[1]);
+            return $post && $post->post_type === 'elementor_library' && $post->post_status === 'publish';
+        }
+        if (preg_match('/^acc:(\d+)$/', $src, $m)) {
+            $post = get_post((int) $m[1]);
+            return $post && $post->post_type === 'mphb_room_type' && $post->post_status === 'publish';
+        }
+        return false;
+    }
+
+    /**
+     * THE PLACEHOLDER'S REFERENCE, SIGNED (0.42.1). "tpl:123:<20 hex>". The
+     * hash is wp_hash() over the reference, so it is keyed with this site's
+     * salts and cannot be produced without them. The endpoint recomputes it
+     * and compares in constant time, which means it will render exactly the
+     * references a page on this site emitted and nothing else — not "any
+     * published template", which is what 0.42.0 allowed. Twenty hex digits
+     * is 80 bits; the attribute stays short enough that eight of them cost
+     * less than a kilobyte.
+     */
+    public static function sign_info_src(string $src): string
+    {
+        return $src . ':' . substr(wp_hash('mphbac-info|' . $src), 0, 20);
+    }
+
+    /** The bare reference if the signature is genuine, or '' if it is not. */
+    public static function verify_info_src(string $signed): string
+    {
+        if (!preg_match('/^((?:tpl|acc):[1-9][0-9]{0,9}):([0-9a-f]{20})$/', $signed, $m)) {
+            return '';
+        }
+        $expected = substr(wp_hash('mphbac-info|' . $m[1]), 0, 20);
+        return hash_equals($expected, $m[2]) ? $m[1] : '';
+    }
+
+    /**
      * One cottage's info panel, built to stand on its own in a fragment.
-     * `$src` is the opaque reference the placeholder carries: "tpl:<id>" for
-     * an Elementor library template, "acc:<id>" for a MotoPress accommodation.
+     * `$src` is the BARE reference ("tpl:<id>" / "acc:<id>") — the endpoint
+     * has already verified the signature before calling this.
+     *
+     * CACHED PER FRAGMENT (0.42.1). Without this, deferring the panels traded
+     * 413 KB of page-cached HTML for one full WordPress boot per visitor per
+     * panel — the 0.42.0 audit's F3. Rendering an Elementor template is the
+     * expensive part and its result depends only on the template, so it is
+     * rendered once per TTL and served from a transient after that; saving
+     * the template or the accommodation flushes it (see Plugin::boot). The
+     * TTL is the availability TTL rather than a longer one only so there is
+     * a single knob; the flush is what actually keeps it correct.
      */
     public static function render_info_fragment(string $src): string
     {
-        if (preg_match('/^tpl:(\d+)$/', $src, $m)) {
-            $id = (int) $m[1];
-            // ONLY A PUBLISHED LIBRARY TEMPLATE. The reference comes from the
-            // page, so it comes from the visitor, so it is not trusted: this
-            // endpoint must not be a way to render an arbitrary post — a
-            // draft, a private page, another plugin's post type — through
-            // Elementor. Published elementor_library posts are first-party
-            // content the owner authored to be displayed.
-            $post = get_post($id);
-            if (!$post || $post->post_type !== 'elementor_library' || $post->post_status !== 'publish') {
-                return '';
-            }
-            $html = self::render_template($id);
-            if ($html === '') {
-                return '';
-            }
-            $css = self::template_css($id);
-            return ($css !== '' ? '<style>' . $css . '</style>' : '') . $html;
+        if (!self::info_source_exists($src)) {
+            return '';
         }
-        if (preg_match('/^acc:(\d+)$/', $src, $m)) {
-            // render_motopress_accommodation() does its own post-type and
-            // status check; this is the same gate, stated twice on purpose.
-            return self::render_motopress_accommodation((int) $m[1]);
-        }
-        return '';
+        $key = Cache::key(['info-fragment', $src, MPHBAC_VERSION]);
+        return (string) Cache::get_or_set($key, static function () use ($src): string {
+            if (preg_match('/^tpl:(\d+)$/', $src, $m)) {
+                $id   = (int) $m[1];
+                $html = self::render_template($id);
+                if ($html === '') {
+                    return '';
+                }
+                $css = self::template_css($id);
+                return ($css !== '' ? '<style>' . $css . '</style>' : '') . $html;
+            }
+            if (preg_match('/^acc:(\d+)$/', $src, $m)) {
+                return self::render_motopress_accommodation((int) $m[1]);
+            }
+            return '';
+        }, null);
     }
 
     private static function render_template(int $template_id): string

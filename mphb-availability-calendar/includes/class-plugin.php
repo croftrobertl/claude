@@ -90,6 +90,13 @@ final class Plugin
         add_action('mphb_after_sync_ical', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_ical_sync_finished', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_after_create_booking', ['\\MPHBAC\\Cache', 'flush_all']);
+        // The cottage info FRAGMENTS are cached too (0.42.1), and they change
+        // when their template or accommodation is edited, not when a booking
+        // lands. flush_all() is O(1) — it bumps a generation counter — so
+        // reusing it here costs nothing and cannot leave a stale fragment
+        // behind. Saving a template is rare; a stale panel would not be.
+        add_action('save_post_elementor_library', ['\\MPHBAC\\Cache', 'flush_all']);
+        add_action('save_post_mphb_room_type', ['\\MPHBAC\\Cache', 'flush_all']);
         add_action('mphb_booking_status_changed', ['\\MPHBAC\\Cache', 'flush_all']);
 
         add_action('admin_notices', ['\\MPHBAC\\Cache_Integration', 'admin_notice']);
