@@ -905,7 +905,7 @@ msgstr ""
 msgid "Not pet-friendly"
 msgstr ""
 
-#: includes/class-mini-entry-widget.php:214
+#: includes/class-mini-entry-widget.php:220
 msgid "Not sure this layout fits you best? Open our 30-Second Selector."
 msgstr ""
 

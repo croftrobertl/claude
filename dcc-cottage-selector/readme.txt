@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.49.0
+Stable tag: 0.50.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -230,6 +230,22 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.50.0 =
+* The 3-4 guest switch is now read EXACTLY as DCC Custom Checkout reads it: on
+  only when the option is absent, '1' or 1; anything else is off. Previously
+  'yes', 'no', 'false' and 'off' read as on here and off in Checkout. No live
+  value changes — Checkout stores '1' or '' and both read the same before and
+  after. No filter hook, on either side.
+* The Mini Entry pop-up always opening on Quick Pick, whatever the site-wide
+  Opening mode, is now documented and tested as a deliberate exception (owner's
+  decision). Everything else in the pop-up still follows the settings page.
+* Mirrored pop-ups: no upgrade routine. The source Selector republishes its
+  design on its next uncached page view, which a cache purge after install
+  triggers; see the release notes for why a rebuild routine was judged riskier
+  than the gap it closes.
+* Verified: the two Selector placements and all eight cottage pop-ups produce
+  byte-identical config before and after, under every stored state of the switch.
 
 = 0.49.0 =
 * Self-audit release. One fix a guest never sees; the owner will.

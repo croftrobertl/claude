@@ -150,6 +150,9 @@ class Mini_Entry_Widget extends Selector_Widget
                 // Mirror: build the pop-up config from the source's published snapshot and
                 // point the pop-up at the source's Elementor scope so its own generated CSS
                 // styles it. Enqueue that page's Elementor CSS so the rules are present here.
+                // DELIBERATE EXCEPTION (owner, 2026-09-27): the Mini Entry pop-up ALWAYS opens on
+                // Quick Pick, whatever the site-wide Opening mode. It is the one intended hard-coded
+                // override of a site default in this plugin — see CLAUDE.md. Pinned by a PHP test.
                 $modal_config = Selector_Widget::config_from_snapshot(
                     (array) $src['overrides'],
                     ['highlight' => $current, 'startMode' => 'quick']
@@ -160,6 +163,9 @@ class Mini_Entry_Widget extends Selector_Widget
                 }
             } else {
                 // Same-page modal with this widget's own full config (styling/copy).
+                // DELIBERATE EXCEPTION (owner, 2026-09-27): the Mini Entry pop-up ALWAYS opens on
+                // Quick Pick, whatever the site-wide Opening mode. It is the one intended hard-coded
+                // override of a site default in this plugin — see CLAUDE.md. Pinned by a PHP test.
                 $modal_config = $this->build_config(['highlight' => $current, 'startMode' => 'quick']);
             }
         }
@@ -246,6 +252,9 @@ class Mini_Entry_Widget extends Selector_Widget
         if ($selector_url === '') {
             // Same-page modal: embed the full selector config (opened on the landing
             // screen, highlighting this cottage once results are reached).
+            // DELIBERATE EXCEPTION (owner, 2026-09-27): the Mini Entry pop-up ALWAYS opens on
+            // Quick Pick, whatever the site-wide Opening mode. It is the one intended hard-coded
+            // override of a site default in this plugin — see CLAUDE.md. Pinned by a PHP test.
             $entry['modalConfig'] = $modal_config ?? Config::build([], [
                 'highlight' => $current,
                 'startMode' => 'quick',

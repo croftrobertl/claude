@@ -33,6 +33,9 @@ namespace {
     // In-memory options store so publish_design()/get_option() can round-trip.
     $GLOBALS['__opts'] = [];
     function get_option($k, $default = false) { return $GLOBALS['__opts'][$k] ?? $default; }
+    // Passthrough, so a guest34 reader that grows a filter hook still RUNS here and
+    // is caught by the no-hook assertion, rather than a fatal hiding which check bit.
+    function apply_filters($hook, $value) { return $value; }
     function update_option($k, $v, $autoload = null) { $GLOBALS['__opts'][$k] = $v; return true; }
 }
 
@@ -298,34 +301,27 @@ namespace {
     ok('an empty stored value => OFF', \DCCS\Config::guest34_enabled() === false);
     ok('and that reaches the config payload', \DCCS\Config::build([], [])['guest34'] === false);
 
-    // THE CONTRACT (see CLAUDE.md): dcc_guest34_enabled is 1 (enabled) or 0
-    // (disabled), written as an INTEGER by DCC Custom Checkout's settings
-    // sanitiser; absent means ENABLED. get_option hands an integer back as the
-    // string '0' / '1' after a DB round-trip, so both shapes are in contract.
-    // This half of the contract is all this repo can execute — the WRITER is the
-    // other half and lives in Custom Checkout, so a change there that started
-    // storing 'no' would not fail here. Same division as _mphb_adults_confirmed
-    // with the Calendar: each side asserts its own half, the contract is written
-    // down once, and the seam is named so nobody assumes it is covered.
-    foreach ([[0, false], ['0', false], [1, true], ['1', true]] as $case) {
+    // THE CONTRACT, as DCC Custom Checkout 0.25.2 actually implements it (read
+    // from its source, not from notes): it WRITES '1' for on and '' for off, and
+    // READS ON only for absent, '1' or 1 — everything else is OFF. Checkout's
+    // reader comment says this plugin's copy "must agree character for
+    // character", so this matrix is Checkout's own tests/guest34 matrix plus the
+    // strings the 0.43.0 reader got wrong.
+    foreach ([['1', true], [1, true], ['', false], ['0', false], [0, false],
+              ['yes', false], ['true', false], ['no', false], ['false', false], ['off', false],
+              [true, false], [false, false]] as $case) {
         list($stored, $expect) = $case;
         $GLOBALS['__opts'][$optKey] = $stored;
-        ok('CONTRACT: stored ' . var_export($stored, true) . ' => ' . ($expect ? 'ON' : 'OFF'),
+        ok('guest34: stored ' . var_export($stored, true) . ' reads ' . ($expect ? 'ON' : 'OFF') . ', as Checkout reads it',
             \DCCS\Config::guest34_enabled() === $expect);
     }
-
-    // OUTSIDE the contract. These are not values the writer may store; the
-    // assertions record what the reader does with them so that a future change to
-    // either side is visible rather than silent. Note the hazard they document:
-    // 'no' and 'false' are TRUTHY in PHP and would read as ENABLED — which is why
-    // the contract pins integers instead of leaving "truthy" to interpretation.
-    foreach ([['', false], ['no', true], ['false', true], ['off', true]] as $case) {
-        list($stored, $reads) = $case;
-        $GLOBALS['__opts'][$optKey] = $stored;
-        ok('out of contract: ' . var_export($stored, true) . ' currently reads as '
-            . ($reads ? 'ON' : 'OFF') . ' (contract violation by the writer if it ever appears)',
-            \DCCS\Config::guest34_enabled() === $reads);
-    }
+    // Checkout is dropping its filter hook (owner's decision); this plugin must not
+    // grow one either, or the two readers can disagree through a third party.
+    $cfgSrc = (string) file_get_contents(DCCS_DIR . 'includes/class-config.php');
+    $fnStart = strpos($cfgSrc, 'function guest34_enabled');
+    $fnBody  = substr($cfgSrc, $fnStart, strpos($cfgSrc, "\n    }", $fnStart) - $fnStart);
+    ok('the reader was found', $fnStart !== false && strlen($fnBody) > 40);
+    ok('the reader exposes no filter hook', strpos($fnBody, 'apply_filters') === false);
 
     // The switch is site-wide and read afresh every render, so it must NOT be
     // frozen into a published design snapshot the way per-widget settings are.
@@ -616,6 +612,59 @@ namespace {
     ok('and it still offers On', in_array('yes', $triOpts, true));
     ok('\'no\' saved during 0.48.0 is still READ as off',
         $eff(['show_heading' => 'no'])['showHeading'] === false);
+
+    // ---- 0.50.0: the Mini Entry pop-up always opens on Quick Pick --------------
+    // Owner's decision (2026-09-27): the ONE intended exception to "no hard-coded
+    // override of a site default". Tested through the REAL shortcode path, not a
+    // literal restated here.
+    foreach (['wp_style_is' => true, 'wp_script_is' => true] as $fn => $ret) {
+        if (!function_exists($fn)) { eval("function $fn(...\$a) { return " . var_export($ret, true) . "; }"); }
+    }
+    if (!function_exists('shortcode_atts')) {
+        function shortcode_atts($pairs, $atts) { $atts = (array) $atts; $out = [];
+            foreach ($pairs as $k => $v) { $out[$k] = array_key_exists($k, $atts) ? $atts[$k] : $v; } return $out; }
+    }
+    foreach (['wp_enqueue_style', 'wp_enqueue_script', 'wp_register_style', 'wp_register_script'] as $fn) {
+        if (!function_exists($fn)) { eval("function $fn(...\$a) { return null; }"); }
+    }
+    $sKey = \DCCS\Settings::OPTION;
+    $GLOBALS['__opts'][$sKey] = ['start_mode' => 'compare', 'enabled_modes' => ['quick', 'compare'], 'show_review' => true];
+    $html = (string) \DCCS\Mini_Entry_Widget::shortcode(['current' => '22', 'url' => '']);
+    $cfgJson = null;
+    // The harness's esc_attr() stub does not escape quotes, so slice between the
+    // attribute's fixed delimiters rather than regex-matching a quoted value.
+    $p0 = strpos($html, 'data-entry="'); $p1 = strpos($html, '"><button');
+    if ($p0 !== false && $p1 !== false) {
+        $raw = substr($html, $p0 + 12, $p1 - $p0 - 12);
+        $entryData = json_decode(html_entity_decode($raw, ENT_QUOTES), true);
+        $cfgJson = $entryData['modalConfig'] ?? null;
+    }
+    ok('the real shortcode renders a pop-up config the test can read', is_array($cfgJson));
+    ok('EXCEPTION PINNED: the pop-up opens on Quick Pick even with the site set to Compare',
+        ($cfgJson['startMode'] ?? null) === 'quick');
+    ok('...and it is ONLY the opening mode: the same pop-up still inherits the site review step',
+        ($cfgJson['showReview'] ?? null) === true);
+
+    // ---- 0.50.0: a MIRRORED pop-up follows the settings page once its source
+    // Selector has published under 0.48.0+ rules. render() republishes from merged
+    // settings on any non-editor view, so this is the path live takes after a cache
+    // purge. Site defaults differ from control defaults so inheriting is visible.
+    $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION] = [];
+    Selector_Widget::publish_design('Primary', 1005, 'abc123', ['share_design' => 'yes', 'design_name' => 'Primary']);
+    $reg = $GLOBALS['__opts'][Selector_Widget::DESIGN_OPTION]['Primary']['overrides'] ?? null;
+    ok('the source published into the registry', is_array($reg));
+    ok('a snapshot published under 0.48.0+ rules omits the inheritable keys',
+        is_array($reg) && !array_key_exists('showReview', $reg) && !array_key_exists('startMode', $reg));
+    $mirrored = Selector_Widget::config_from_snapshot((array) $reg, ['highlight' => '22', 'startMode' => 'quick']);
+    ok('a CHANGED site default reaches the mirrored pop-up', $mirrored['showReview'] === true);
+    // RED CONTROL: the stale shape a <=0.47.0 publish left behind still masks it —
+    // proves the assertion above can tell the two apart.
+    $stale = ['string_overrides' => [], 'startMode' => 'quick', 'enabledModes' => ['quick', 'compare'],
+              'showHeading' => true, 'showReview' => false, 'showCompareTip' => false,
+              'capacityFeeUrl' => '', 'petFeeUrl' => '', 'icons' => [], 'iconSides' => [], 'cssVars' => []];
+    ok('(control) a <=0.47.0 registry snapshot still masks it, so the check can see the difference',
+        Selector_Widget::config_from_snapshot($stale, ['startMode' => 'quick'])['showReview'] === false);
+    unset($GLOBALS['__opts'][$sKey]);
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)

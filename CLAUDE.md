@@ -299,25 +299,18 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   read directly.** DCC Custom Checkout renders the checkbox; this plugin only reads
   the option, so it must never depend on that plugin being installed or active.
 
-  **THE CONTRACT:** `dcc_guest34_enabled` is **1 (enabled) or 0 (disabled), written
-  as an integer**. **Absent means ENABLED.** Any other value is a contract
-  violation by the writer. (`get_option` returns an integer as the string `'0'` /
-  `'1'` after a DB round-trip, so both shapes are in contract.) Custom Checkout's
-  sanitiser writes it the way it writes its two siblings —
-  `$out['guest_fee_enabled'] = empty($input[...]) ? 0 : 1;` — so an unticked box
-  stores `0`.
-
-  The reader is `(bool)`, which is correct FOR THIS CONTRACT but not for a looser
-  one: `'no'`, `'false'` and `'off'` are truthy in PHP and would read as ENABLED,
-  the worst possible failure for a switch whose job is to withdraw an offer. That
-  the hazard cannot arise today is a property of the writer's style, not of the
-  reader — which is exactly why the shape is pinned here rather than left as
-  "truthy". **We can only execute our half.** A PHP test asserts the reader against
-  the contract values and records what it does with out-of-contract ones; nothing
-  in this repo can catch the day the checkbox handler starts storing `'no'`. That
-  is the writer's half, the same division settled with the Calendar over
-  `_mphb_adults_confirmed`: write the contract down once, assert your own side, and
-  name the seam so nobody assumes it is covered.
+  **THE CONTRACT — as DCC Custom Checkout 0.25.2 implements it, read from its
+  source:** Checkout WRITES `'1'` for on and `''` for off (not `0`: an earlier
+  version of this note said `0`, taken from Checkout's sibling switches rather
+  than this one). It READS ON only when the option is **absent, `'1'` or `1`**;
+  everything else is OFF. **This plugin's reader is a character-for-character
+  copy of Checkout's** — `($raw === null) || ($raw === '1') || ($raw === 1)` —
+  and Checkout's own comment says the two must agree. 0.43.0–0.49.0 used
+  `(bool)`, which read `'yes'`/`'no'`/`'false'`/`'off'` as ON; no live value was
+  affected, but two readers of one switch that disagree on any input are a latent
+  bug. **No filter hook** on either side (owner's decision): a hook would let a
+  third party make them disagree. A PHP test runs Checkout's own tests/guest34
+  matrix against this reader.
   When OFF the party question leaves the wizard ENTIRELY and the "Room for 3-4
   guests" priority leaves Weigh priorities (owner's decision, 0.43.0): a question
   whose only real answers are "2" and "No preference" asks nothing, and a priority
@@ -338,6 +331,25 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   `score.run`, not on the cards. (2) A shared `?party=34` / `?w_party=3` link still
   sets the answer, so the gate has to neutralise stored state, not just hide the
   question.
+- **THE ONE INTENDED EXCEPTION to "no hard-coded override of a site default":
+  the Mini Entry pop-up ALWAYS opens on Quick Pick** (owner, 2026-09-27), whatever
+  the settings page's Opening mode. `'startMode' => 'quick'` is passed at all
+  three config sites in `class-mini-entry-widget.php` (mirrored, own-config and
+  shortcode), each commented as the exception. It overrides ONLY the opening
+  mode — everything else in the pop-up still inherits the site. A PHP test runs
+  the real shortcode with the site set to Compare and pins both halves. Any OTHER
+  literal fallback over a site default is still a defect.
+- **Mirrored pop-ups follow the settings page once their source has published
+  under 0.48.0+ rules, and `render()` republishes on every non-editor view.**
+  All eight cottage templates on live carry a Mini Entry mirroring `Primary`. A
+  registry entry published by ≤0.47.0 carries every key and masks the page; the
+  first uncached front-end render of the `Primary` Selector after 0.48.0
+  republishes it (publish_design dedupes by hash, and the shape changed), so a
+  cache purge after install heals it. Considered and REJECTED in 0.50.0: an
+  upgrade routine rebuilding the registry from `_elementor_data`. Raw stored
+  settings lack Elementor's control/preset defaults, so a faithful rebuild needs
+  Elementor widget instances outside a render, inside an upgrade hook — the area
+  of the 0.19.5 fatal — to fix something the next page view already fixes.
 - **The wizard's question count is not fixed — never reason from the length of
   `WIZARD_QUESTIONS`.** Nine entries live in the array; the dates step renders only
   when a widget enables availability, and the party step only while the 3-4 guest

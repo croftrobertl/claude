@@ -202,25 +202,29 @@ final class Config
      * @return array<string,mixed>
      */
     /**
-     * The site-wide 3-4 guest switch. The DCC Custom Checkout plugin renders the
-     * checkbox; this plugin only READS the option, directly, so it does not depend
-     * on that plugin being installed or active.
+     * The site-wide 3-4 guest switch (option dcc_guest34_enabled). DCC Custom
+     * Checkout WRITES it — '1' for on, '' for off — and this plugin only READS it,
+     * directly, so it never depends on Checkout being active.
      *
-     * ABSENT or TRUTHY means ON — today's behaviour. Only a stored falsy value
-     * turns it off, so a site that has never written the option, or has no WP at
-     * all (the test harness, WP-CLI before load), is unaffected.
+     * THIS READER MUST AGREE WITH CHECKOUT'S CHARACTER FOR CHARACTER (Checkout's
+     * Config::guest34_enabled() says so too). ON only when the option is ABSENT,
+     * '1' or 1; everything else — '', '0', 0, 'yes', 'no', true — is OFF.
+     * 0.43.0-0.49.0 used (bool), which read 'yes'/'no'/'false'/'off' as ON; no
+     * live value was affected ('1' and '' read the same either way), but two
+     * readers of one switch that disagree on any input are a bug waiting for a
+     * writer to change. No filter hook: Checkout is dropping its own, and a hook
+     * here would let a third party make the two disagree.
      *
-     * Deliberately NOT part of the design snapshot: it is a site-wide setting read
-     * afresh on every render, not a per-widget one that could be frozen into a
-     * published design.
+     * Deliberately NOT part of the design snapshot: site-wide, read afresh on
+     * every render, never frozen into a published design.
      */
     public static function guest34_enabled(): bool
     {
         if (!function_exists('get_option')) {
             return true;
         }
-        $v = get_option('dcc_guest34_enabled', null);
-        return $v === null ? true : (bool) $v;
+        $raw = get_option('dcc_guest34_enabled', null);
+        return ($raw === null) || ($raw === '1') || ($raw === 1);
     }
 
     public static function build(array $string_overrides = [], array $extra = []): array
