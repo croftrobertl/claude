@@ -4,7 +4,7 @@ Tags: elementor, motopress, hotel-booking, availability, calendar
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.42.1
+Stable tag: 0.42.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,9 @@ As of 0.10.6 the plugin tags its own script and stylesheet with the standard opt
 Then clear the SpeedyCache cache once. The calendar will render normally on every load without needing further cache clears.
 
 == Changelog ==
+
+= 0.42.2 =
+* **Fix for the one failure in the staging pass of the “load cottage info panels only when opened” option** (still OFF by default): the pricing-table switcher and the tour video did nothing inside a lazily-loaded panel, because the scripts those widgets need are only loaded when the widget is on the page — and in lazy mode it isn’t. The plugin now looks through each deferred panel’s template at page load and loads whatever its widgets need, exactly as if they had been on the page. It is not a list of known widgets: anything a widget declares, it gets.
 
 = 0.42.1 =
 * **Fixes from a self-audit of 0.42.0.** Two were live: the “Remember availability for” setting was not actually reaching the availability cache (it now does, and “0 disables caching” is now true), and two lines of help text on the settings screen printed a literal `\u2019` instead of an apostrophe.
