@@ -578,6 +578,34 @@ yours to improvise.
     stored. **Reported to the owner, NOT fixed from here**: the fix belongs in
     the Selector (adopt the strict reader, correct its recorded writer). Until
     it lands, "change one, change both" is a goal, not a fact.
+    **Owner's answer (2026-09-27): the Selector adopts THIS plugin's reading and
+    corrects its notes in its 0.50.0.** When that ships, compare the two readers
+    on its branch yourself (read-only fetch into a scratch ref, as before) —
+    "they said they would" is not "they match".
+  - **PENDING FOR THE NEXT RELEASE — owner decision 2026-09-27, NOT a release
+    on its own** ("quality over rapid turnover"): **drop the
+    `dcc_guest34_enabled` filter hook, and render the settings checkbox from the
+    STORED value.** Nothing uses the hook (owner; no in-repo caller either). Why
+    both: the hook reached only this half of the system, and the checkbox showed
+    the FILTERED value, so an override would have been written into storage by
+    the next unrelated save. Deliberately NOT committed ahead of a release: an
+    unbumped behaviour change leaves a branch that says 0.25.2 and is not the
+    0.25.2 on live. The work, in full:
+    1. `Config::guest34_enabled()` loses its `apply_filters` line — which also
+       makes it the character-for-character twin the Selector's 0.50.0 will
+       copy. Leave `dcc_checkout_guest_fee_enabled` alone; it is a different
+       hook and not part of the decision.
+    2. The checkbox at `class-settings.php` ("Guests 3 and 4") then reads the
+       stored value through that reader — assert it in `tests/settings/` by
+       storing `''` and requiring the box unchecked, and storing `'1'` checked.
+    3. `tests/guest34/run.php` — the block titled "the switch itself is
+       filterable" asserts the OPPOSITE of the decision. Invert it: store `'1'`,
+       set the filter to false, require ON. Its comment says the Selector's tests
+       drive the switch through the hook; they do not (they set the option), so
+       the comment goes too.
+    4. Mutation: re-add the `apply_filters` to the reader; it must go red.
+    5. Changelog: say a public hook was removed, and on whose word nothing uses
+       it.
   - **No `default` is registered** with `register_setting()`. Registering one
     would make `get_option()` return it on a site that never saved the setting,
     and "absent" is a meaningful third state.
@@ -1104,6 +1132,9 @@ yours to improvise.
   guest-facing path is the one the setting produced, and add a mutation that
   makes the setting inert — it must go red. Mutations
   `cfg-offered-ignores-setting` and `ag-ceiling-raisable` are the two pins.
+  **v0.25.2 is installed and verified on live (2026-09-27)** — version, checkout
+  loads, no console errors; a booking cannot be placed to test further. Both
+  fixes accepted.
   **v0.25.1 is installed and accepted on live (2026-09-26)**: the floor of 1
   in both the sanitiser and `Config::included_guests()`, and the couch-note
   gate. Keep `min_daily` unexposed. First-tap behaviour on the owner's iPhone
