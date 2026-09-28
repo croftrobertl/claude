@@ -172,6 +172,57 @@ check_same( [], $GLOBALS['dccwl_test']['enqueued'], 'nothing is enqueued before 
 dcc_render( 'month' );
 check( in_array( 'dcc-wildlife', $GLOBALS['dccwl_test']['enqueued'], true ), 'rendering enqueues the widget bundle' );
 
+dcc_section( 'the hub says it is working while it waits (1.33.0, item 3)' );
+
+/*
+ * "Checking the canal…" is SERVER-RENDERED, on purpose: the readings come from
+ * a fetch, and a card that shows its name over an empty line until that lands
+ * reads as a card with nothing in it rather than one still thinking. If this
+ * moved into JavaScript it would appear a frame late, which is the moment it
+ * exists to cover.
+ */
+dccwl_test_reset();
+dcc_reset_once_guards();
+$hub = dcc_render( 'canal' )['html'];
+check_contains( $hub, 'Checking the canal', 'the water card says it is checking, before any script runs' );
+check_matches(
+	$hub,
+	'/data-dccwl-preview="water" data-dccwl-loading="1"/',
+	'and carries the marker the script clears and the CSS reads'
+);
+/* The Wildlife card is filled from data already on the page, so it has nothing
+ * to wait for and must not claim to be waiting. */
+check_matches(
+	$hub,
+	'/data-dccwl-preview="wildlife"><\/span>/',
+	'the wildlife card, which waits for nothing, carries no loading line'
+);
+
+dcc_section( 'a long body can be closed from its foot (1.33.0, item 4f)' );
+
+/*
+ * Rendered HIDDEN. Without JavaScript a <details> answers only to its own
+ * <summary>, so an always-visible button here would be a dead control — and
+ * this prose exists precisely for the guest with no JavaScript and one bar.
+ */
+check_matches(
+	$hub,
+	'/<button type="button" class="dccwl-fullguide-close" data-dccwl-fullguide-close hidden>/',
+	'the close control is rendered hidden, for the script to unhide'
+);
+check_same(
+	2,
+	substr_count( $hub, 'data-dccwl-fullguide-close' ),
+	'one at the foot of the field guide and one at the foot of the credits'
+);
+/* It has to be INSIDE the panel it closes, or the script cannot find the
+ * <details> to close and the button does nothing. */
+check_matches(
+	$hub,
+	'/data-dccwl-fullguide-close.*?<\/button>\s*<\/div>\s*<\/details>/s',
+	'each one sits at the END of its panel body, inside the panel'
+);
+
 dcc_section( 'escaping' );
 
 // A stored title must not be able to open a tag. This is the one place a

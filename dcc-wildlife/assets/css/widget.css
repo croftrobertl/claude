@@ -130,6 +130,67 @@
 	margin: 2px 0 0;
 	min-height: 1.3em;
 	font-weight: var(--dccwl-fw-body);
+	/* It sits under a centred title; it was the only part of the heading
+	 * hard against the left edge (1.33.0). */
+	text-align: center;
+}
+
+/* ======================================================================
+ * CENTRED AND COMPACT (1.33.0, owner's decision)
+ *
+ * Content is centred, and anything that does not need the full width is
+ * held to --dccwl-measure and centred in it. At 1280px the month strip ran
+ * the whole column with twelve pills adrift in it, the chip row and the
+ * jump select did the same, and the tabs sat hard left because `margin:
+ * 0 auto` does nothing for an inline-flex box.
+ *
+ * WHAT IS DELIBERATELY NOT LISTED: .dccwl-tiles and .dccwl-deck. The tile
+ * grid is the one thing that wants the width.
+ * ================================================================== */
+/*
+ * ONLY BLOCK-LEVEL BOXES GO IN THIS LIST.
+ *
+ * `margin-inline: auto` does two different things depending on what the box
+ * is. On a block it centres it. On a FLEX ITEM it makes the item shrink to
+ * its content first and then centre — and .dccwl-subchips is a flex item
+ * inside .dccwl-subnav's column, so capping it here sized it to all seven
+ * chips laid end to end and pushed the whole PAGE to 768px on a 390px phone.
+ * The chip row is a horizontal scroller; its content is meant to be wider
+ * than its box, and telling it to fit its content defeats the scroller.
+ *
+ * .dccwl-subchips and .dccwl-subtools are therefore NOT here. They sit inside
+ * .dccwl-subnav, which is capped, so they are already held to the measure.
+ */
+.dccwl-root .dccwl-timeline,
+.dccwl-root .dccwl-legend,
+.dccwl-root .dccwl-subnav,
+.dccwl-root .dccwl-footnotes,
+.dccwl-root .dccwl-deck-nav {
+	margin-inline: auto;
+	max-width: var(--dccwl-measure);
+}
+
+/* The tab row is an inline-flex box, so it centres from its PARENT. Giving
+ * it `margin: 0 auto` (which it has had since 1.18.0) never did anything. */
+.dccwl-root .dccwl-tabs-wrap,
+.dccwl-root .dccwl-guide > .dccwl-tabs,
+.dccwl-root > .dccwl-tabs {
+	margin-inline: auto;
+}
+/*
+ * ABOVE THE PHONE BREAKPOINT ONLY. The 480px rule further up gives the row
+ * `display: flex; width: 100%` so four tabs share the whole narrow screen —
+ * which is what buys "Peak Now" its single line. Shrinking the row to its
+ * content there takes that space straight back and the label wraps again.
+ * This rule came later in the file and did exactly that until it was scoped.
+ */
+@media (min-width: 481px) {
+	.dccwl-root .dccwl-tabs {
+		display: flex;
+		justify-content: center;
+		max-width: var(--dccwl-measure);
+		width: fit-content;
+	}
 }
 
 /* =====================================================================
@@ -675,6 +736,9 @@
 }
 .dccwl-sheet .dccwl-safe .dccwl-detail-h { margin-top: 0; }
 .dccwl-sheet .dccwl-safe .dccwl-detail-p { margin-bottom: 0; }
+/* The safety panel centres with everything else, but keeps its coloured
+ * left rule: that stripe is what marks it as the what-to-do block. */
+.dccwl-sheet .dccwl-safe { text-align: center; }
 .dccwl-sheet .dccwl-safe-danger    { border-left-color: var(--dccwl-flag-danger); }
 .dccwl-sheet .dccwl-safe-invasive  { border-left-color: var(--dccwl-flag-invasive); }
 .dccwl-sheet .dccwl-safe-protected { border-left-color: var(--dccwl-flag-protected); }
@@ -812,10 +876,20 @@
 	.dccwl-sheet .dccwl-medallion.dccwl-medallion-photo { height: 210px; }
 }
 
+/* ======================================================================
+ * THE SPECIES SHEET IS CENTRED, ALL OF IT (1.33.0, owner's decision).
+ *
+ * Not just the headings — the text under each one ("mid-morning, behind the
+ * mowers", "pastures, roadsides and freshly cut lawns"), the badges, the
+ * chips, and every animal, icon and caption in "Easily confused with". The
+ * sheet used to centre its headings over left-aligned content, which reads as
+ * two different layouts arguing.
+ * ================================================================== */
 .dccwl-sheet .dccwl-detail-badges {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
+	justify-content: center;
 	margin: 0 0 var(--dccwl-gap);
 }
 
@@ -823,6 +897,7 @@
 	color: var(--dccwl-text);
 	margin: 0 0 var(--dccwl-gap-lg);
 	font-weight: var(--dccwl-fw-body);
+	text-align: center;
 }
 
 /* 1.27.0, at the owner's request. This WAS a small uppercase muted label
@@ -849,13 +924,14 @@
 	 * and every paragraph in every sheet rendered bold. */
 	font-weight: var(--dccwl-fw-body);
 	margin: 0;
-	text-align: start;
+	text-align: center;
 }
 
 .dccwl-sheet .dccwl-detail-chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
+	justify-content: center;
 	margin: 8px 0 0;
 }
 
@@ -866,17 +942,24 @@
 .dccwl-sheet .dccwl-lookalikes {
 	display: grid;
 	gap: var(--dccwl-gap-lg);
+	justify-items: center;
 	list-style: none;
 	margin: var(--dccwl-gap) 0 0;
 	padding: 0;
 }
 
+/* Icon ABOVE the name and the mark, all three centred, rather than a
+ * left-aligned row with the icon beside them (1.33.0). A centred column also
+ * happens to give the mark its full width back on a phone, where the 40px
+ * icon plus its gap was taking 50px off every line of it. */
 .dccwl-sheet .dccwl-lookalike {
-	align-items: flex-start;
+	align-items: center;
 	display: flex;
-	gap: var(--dccwl-gap-lg);
+	flex-direction: column;
+	gap: 6px;
 	margin: 0;
-	text-align: left;
+	max-width: 32em;
+	text-align: center;
 }
 
 .dccwl-sheet .dccwl-lookalike-icon {
@@ -890,7 +973,7 @@
 	width: 40px;
 }
 
-.dccwl-sheet .dccwl-lookalike-text { min-width: 0; }
+.dccwl-sheet .dccwl-lookalike-text { min-width: 0; text-align: center; }
 
 .dccwl-sheet .dccwl-lookalike-name {
 	color: var(--dccwl-text);
@@ -1327,6 +1410,41 @@
 .dccwl-app .dccwl-footnote-link.dccwl-footnote-link:hover { color: var(--dccwl-primary); }
 .dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:focus-visible,
 .dccwl-app .dccwl-footnote-link.dccwl-footnote-link:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
+
+/* The close control at the foot of a long body (1.33.0). It is a button, so
+ * it takes the same shape every other button in the plugin takes — and it is
+ * centred, because it ends a block rather than starting one. */
+.dccwl-app .dccwl-fullguide-close.dccwl-fullguide-close {
+	align-items: center;
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	gap: 6px;
+	justify-content: center;
+	margin: var(--dccwl-gap-lg) auto 0;
+	min-height: 44px;
+	padding: 10px 20px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
+}
+.dccwl-app .dccwl-fullguide-close.dccwl-fullguide-close:hover,
+.dccwl-app .dccwl-fullguide-close.dccwl-fullguide-close:focus-visible {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
+.dccwl-app .dccwl-fullguide-close.dccwl-fullguide-close:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+.dccwl-fullguide-close[hidden] { display: none; }
+/* The body is a block, so the button needs a row of its own to centre in. */
+.dccwl-fullguide-body { display: flow-root; }
+.dccwl-fullguide-body > .dccwl-fullguide-close { display: flex; width: fit-content; }
 
 /* The meta line ("44 species, in words") is detail for an open panel, not
  * part of the link, so it only shows once the panel is open. */

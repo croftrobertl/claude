@@ -665,8 +665,34 @@ final class Render {
 					?>"><?php esc_html_e( 'source', 'dcc-wildlife' ); ?></a>)<?php endif; ?></li>
 					<?php endforeach; ?>
 				</ul>
+				<?php self::fullguide_close(); ?>
 			</div>
 		</details>
+		<?php
+	}
+
+	/**
+	 * A CLOSE CONTROL AT THE FOOT OF A LONG BODY (1.33.0, owner's request).
+	 *
+	 * The field guide runs to every species in the registry and the credits to
+	 * every photograph; opened, either one scrolls for a long way, and the
+	 * only way back out was the summary at the very top. This is the same
+	 * control, repeated where a reader actually finishes.
+	 *
+	 * Rendered HIDDEN. Without JavaScript a <details> can only be toggled by
+	 * its own <summary>, so a button here would be a dead control — and the
+	 * whole point of rendering this prose server-side is that it works for a
+	 * guest with no JavaScript and one bar of signal. widget.js unhides it and
+	 * wires it, which is also what returns focus to the summary afterwards:
+	 * collapsing a panel while focus is inside it strands a keyboard user on a
+	 * node that no longer exists.
+	 */
+	private static function fullguide_close(): void {
+		?>
+		<button type="button" class="dccwl-fullguide-close" data-dccwl-fullguide-close hidden>
+			<span class="dccwl-fullguide-close-chev" aria-hidden="true"><svg viewBox="0 0 20 20" width="18" height="18" focusable="false"><path d="M5 12.5 10 7.5l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+			<?php esc_html_e( 'Close', 'dcc-wildlife' ); ?>
+		</button>
 		<?php
 	}
 
@@ -788,6 +814,7 @@ final class Render {
 						</article>
 					<?php endforeach; ?>
 				<?php endforeach; ?>
+				<?php self::fullguide_close(); ?>
 			</div>
 		</details>
 		<?php

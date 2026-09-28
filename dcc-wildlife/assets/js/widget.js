@@ -1403,8 +1403,37 @@
 		}
 	};
 
+	/*
+	 * The close control at the foot of the field guide and the credits
+	 * (1.33.0). Server-rendered hidden, because without JavaScript a <details>
+	 * only answers to its own <summary> and a button here would do nothing;
+	 * unhidden and wired here.
+	 *
+	 * Closing a panel with focus inside it leaves focus on a node that is no
+	 * longer rendered, so focus goes back to the summary — which is also where
+	 * the reader now is on screen.
+	 */
+	function initFullguideClose(scope) {
+		(scope || document).querySelectorAll('[data-dccwl-fullguide-close]').forEach(function (btn) {
+			if (btn.getAttribute('data-dccwl-close-init')) { return; }
+			btn.setAttribute('data-dccwl-close-init', '1');
+			var panel = btn.closest('details.dccwl-fullguide');
+			if (!panel) { return; }
+			btn.hidden = false;
+			btn.addEventListener('click', function () {
+				panel.open = false;
+				var summary = panel.querySelector('summary');
+				if (summary) {
+					summary.focus();
+					summary.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+				}
+			});
+		});
+	}
+
 	function initAll() {
 		document.querySelectorAll('.dccwl-root').forEach(initRoot);
+		initFullguideClose(document);
 		initCountdown();
 	}
 
@@ -1423,6 +1452,7 @@
 					var scope = $scope && $scope[0] ? $scope[0] : $scope;
 					if (scope && scope.querySelectorAll) {
 						scope.querySelectorAll('.dccwl-root').forEach(initRoot);
+						initFullguideClose(scope);
 						initCountdown();
 					}
 				}

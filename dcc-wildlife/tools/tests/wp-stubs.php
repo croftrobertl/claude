@@ -32,6 +32,10 @@ $GLOBALS['dccwl_test'] = [
 	'routes'     => [],   // register_rest_route calls
 	'enqueued'   => [],
 	'registered' => [],
+	'reg_styles'   => [],
+	'reg_scripts'  => [],
+	'served'       => [],
+	'unregistered' => [],
 	'inline'     => [],
 	'posts'      => [],   // get_posts() result, seeded per test
 	'attach_url' => [],   // id => url
@@ -45,7 +49,7 @@ $GLOBALS['dccwl_test'] = [
 ];
 
 function dccwl_test_reset(): void {
-	foreach ( [ 'options', 'transients', 'actions', 'filters', 'shortcodes', 'settings', 'routes', 'enqueued', 'registered', 'inline', 'posts', 'attach_url', 'http', 'menu' ] as $k ) {
+	foreach ( [ 'options', 'transients', 'actions', 'filters', 'shortcodes', 'settings', 'routes', 'enqueued', 'registered', 'reg_styles', 'reg_scripts', 'served', 'unregistered', 'inline', 'posts', 'attach_url', 'http', 'menu' ] as $k ) {
 		$GLOBALS['dccwl_test'][ $k ] = [];
 	}
 	$GLOBALS['dccwl_test']['ttl']      = [];
@@ -256,10 +260,51 @@ function wp_parse_args( $args, $defaults = [] ) {
 function wp_json_encode( $d, $f = 0, $depth = 512 ) { return json_encode( $d, (int) $f, (int) $depth ); }
 
 /* ---- assets --------------------------------------------------------- */
-function wp_register_style( $h, $src = '', $deps = [], $v = false, $m = 'all' ) { $GLOBALS['dccwl_test']['registered'][ $h ] = [ 'src' => $src, 'deps' => $deps ]; return true; }
-function wp_register_script( $h, $src = '', $deps = [], $v = false, $footer = false ) { $GLOBALS['dccwl_test']['registered'][ $h ] = [ 'src' => $src, 'deps' => $deps ]; return true; }
-function wp_enqueue_style( $h, ...$rest ) { $GLOBALS['dccwl_test']['enqueued'][] = $h; }
-function wp_enqueue_script( $h, ...$rest ) { $GLOBALS['dccwl_test']['enqueued'][] = $h; }
+/*
+ * Registration is per KIND, and it is idempotent, both as WordPress does it.
+ * WP_Dependencies::add() returns false for a handle it already holds, which is
+ * what makes registering the same assets from three different hooks safe.
+ */
+function wp_register_style( $h, $src = '', $deps = [], $v = false, $m = 'all' ) {
+	$GLOBALS['dccwl_test']['registered'][ $h ] = [ 'src' => $src, 'deps' => $deps ];
+	if ( isset( $GLOBALS['dccwl_test']['reg_styles'][ $h ] ) ) { return false; }
+	$GLOBALS['dccwl_test']['reg_styles'][ $h ] = [ 'src' => $src, 'deps' => $deps ];
+	return true;
+}
+function wp_register_script( $h, $src = '', $deps = [], $v = false, $footer = false ) {
+	$GLOBALS['dccwl_test']['registered'][ $h ] = [ 'src' => $src, 'deps' => $deps ];
+	if ( isset( $GLOBALS['dccwl_test']['reg_scripts'][ $h ] ) ) { return false; }
+	$GLOBALS['dccwl_test']['reg_scripts'][ $h ] = [ 'src' => $src, 'deps' => $deps ];
+	return true;
+}
+/*
+ * ENQUEUING AN UNREGISTERED HANDLE IS A SILENT NO-OP IN WORDPRESS, and this
+ * stub used to record it as though it had worked. That is precisely the bug
+ * the 1.33.0 editor-preview round was chasing: registration happened only on
+ * `wp_enqueue_scripts`, so in Elementor's AJAX re-render the handles did not
+ * exist and wp_enqueue_style() did nothing at all, without complaint.
+ *
+ * `enqueued` is kept as-is so existing suites still read what was ASKED FOR.
+ * `served` holds only what would really have been printed, and `unregistered`
+ * names the asks that went nowhere — which is the list a suite should assert
+ * is empty.
+ */
+function wp_enqueue_style( $h, ...$rest ) {
+	$GLOBALS['dccwl_test']['enqueued'][] = $h;
+	if ( isset( $GLOBALS['dccwl_test']['reg_styles'][ $h ] ) || ( $rest[0] ?? '' ) ) {
+		$GLOBALS['dccwl_test']['served'][] = $h;
+	} else {
+		$GLOBALS['dccwl_test']['unregistered'][] = [ 'style', $h ];
+	}
+}
+function wp_enqueue_script( $h, ...$rest ) {
+	$GLOBALS['dccwl_test']['enqueued'][] = $h;
+	if ( isset( $GLOBALS['dccwl_test']['reg_scripts'][ $h ] ) || ( $rest[0] ?? '' ) ) {
+		$GLOBALS['dccwl_test']['served'][] = $h;
+	} else {
+		$GLOBALS['dccwl_test']['unregistered'][] = [ 'script', $h ];
+	}
+}
 function wp_add_inline_script( $h, $data, $pos = 'after' ) { $GLOBALS['dccwl_test']['inline'][] = [ $h, $data ]; return true; }
 function wp_style_is( $h, $list = 'enqueued' ) { return in_array( $h, $GLOBALS['dccwl_test']['enqueued'], true ); }
 function wp_script_is( $h, $list = 'enqueued' ) { return in_array( $h, $GLOBALS['dccwl_test']['enqueued'], true ); }

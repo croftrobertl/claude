@@ -18,6 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Water_Widget extends \Elementor\Widget_Base {
 
+	/**
+	 * NEVER CACHE THIS ELEMENT (1.33.0). See Widget::is_dynamic_content().
+	 *
+	 * This one is not a judgement call: the panel renders live USGS and NWS
+	 * readings and the age of each, server-side. A cached water panel is a
+	 * cached river level, which is the one thing this module exists not to be.
+	 */
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
+
 	public function get_name(): string {
 		return 'dccwl_water';
 	}
@@ -32,6 +43,15 @@ class Water_Widget extends \Elementor\Widget_Base {
 
 	public function get_categories(): array {
 		return [ 'dcc-widgets' ];
+	}
+
+	/** See Widget::get_style_depends() — the editor preview needs telling. */
+	public function get_style_depends(): array {
+		return [ 'dcc-wildlife-water' ];
+	}
+
+	public function get_script_depends(): array {
+		return [ 'dcc-wildlife-water' ];
 	}
 
 	public function get_keywords(): array {

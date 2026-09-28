@@ -28,6 +28,27 @@ final class Plugin {
 		add_action( 'init', [ $this, 'register_shortcode' ] );
 		add_action( 'init', [ $this, 'maybe_upgrade' ], 5 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'register_assets' ] );
+		/*
+		 * 1.33.0 — THE ELEMENTOR EDITOR PREVIEW IS A THIRD CONTEXT, AND IT
+		 * WAS GETTING NEITHER STYLESHEET NOR SCRIPT.
+		 *
+		 * On /explore/ the editor showed the hub as a bulleted list of
+		 * unstyled buttons in the host kit's button face: the right markup
+		 * with none of the plugin's CSS or JS. Registering only on
+		 * `wp_enqueue_scripts` is not enough, because Elementor asks a widget
+		 * for its asset handles from its own pass — and re-renders a widget
+		 * over AJAX when you edit it, where `wp_enqueue_scripts` never fires
+		 * at all and an unregistered handle makes wp_enqueue_style() a
+		 * silent no-op.
+		 *
+		 * Registration is idempotent (WP_Dependencies::add returns false for
+		 * a handle it already holds), so hooking it three times is safe and
+		 * means the handles exist whenever anyone asks. The widgets name them
+		 * in get_style_depends()/get_script_depends(), which is what Elementor
+		 * actually reads.
+		 */
+		add_action( 'elementor/frontend/after_register_styles', [ $this, 'register_assets' ] );
+		add_action( 'elementor/frontend/after_register_scripts', [ $this, 'register_assets' ] );
 
 		// Keep the chain map's payload warm on a schedule, so the cost of
 		// assembling it lands on cron rather than on the first guest to tap

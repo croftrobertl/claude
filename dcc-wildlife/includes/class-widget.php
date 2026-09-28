@@ -13,6 +13,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Widget extends \Elementor\Widget_Base {
 
+	/**
+	 * NEVER CACHE THIS ELEMENT (1.33.0).
+	 *
+	 * Elementor's Element Caching is ACTIVE on live (`elementor_element_cache_ttl`
+	 * = 12). Elementor's own default for a third-party widget is already
+	 * "dynamic", so this declaration changes nothing today — it is insurance,
+	 * and it is here because the cost of that default changing under us is a
+	 * guest served a stale page for twelve hours with no way to tell.
+	 *
+	 * This widget's HTML carries no date: the month is chosen in the browser,
+	 * in canal time, which is the whole reason for that rule. It is still
+	 * dynamic, for a reason that is easy to miss — IT EMITS THE SHARED INLINE
+	 * CONFIG, ONCE PER PAGE, through Render::$config_added. Whether a given
+	 * placement's HTML contains that config depends on which widget rendered
+	 * first. Cache one placement's output and replay it in a different order
+	 * and the config can go missing from the page entirely, leaving every
+	 * Wildlife widget on it inert. The same applies to the prose guide and the
+	 * JSON-LD block, which have their own once-per-page guards.
+	 *
+	 * Its photo URLs also come from the media library, so a photo import would
+	 * not reach a cached element until the TTL expired.
+	 */
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
+
 	public function get_name(): string {
 		return 'dccwl_month';
 	}
@@ -27,6 +53,29 @@ class Widget extends \Elementor\Widget_Base {
 
 	public function get_categories(): array {
 		return [ 'dcc-widgets' ];
+	}
+
+	/**
+	 * The handles Elementor must enqueue for this widget (1.33.0).
+	 *
+	 * This is the mechanism Elementor actually reads, and the reason the
+	 * editor preview now matches live. Render::enqueue_assets() still calls
+	 * wp_enqueue_style/script at render time — that is what keeps the assets
+	 * off pages with no widget on them, which a shortcode placement also
+	 * relies on — but in the editor Elementor wants to be told, and an
+	 * unregistered or unrequested handle is a silent no-op there.
+	 *
+	 * Dependencies resolve themselves: `dcc-wildlife` pulls in
+	 * `dcc-wildlife-app`, `dcc-wildlife-sheet` and `dcc-wildlife-deck`. Naming
+	 * only the top of each chain keeps one source of truth in
+	 * Plugin::register_assets().
+	 */
+	public function get_style_depends(): array {
+		return [ 'dcc-wildlife' ];
+	}
+
+	public function get_script_depends(): array {
+		return [ 'dcc-wildlife' ];
 	}
 
 	public function get_keywords(): array {

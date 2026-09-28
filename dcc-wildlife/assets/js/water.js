@@ -311,6 +311,12 @@
 
 		var btn = wrap.querySelector('[data-dccwl-map-open]');
 		if (!btn) { return; }
+		/* One listener per button, ever. initMap() queries the whole document,
+		 * so an Elementor re-render of ONE widget would otherwise re-bind the
+		 * map buttons of every other widget on the page — two listeners, two
+		 * sheets, two REST calls. (1.33.0) */
+		if (btn.getAttribute('data-dccwl-map-init')) { return; }
+		btn.setAttribute('data-dccwl-map-init', '1');
 
 		// A live-only section is emitted hidden and normally revealed when
 		// readings arrive — but the map is served independently of the
@@ -553,4 +559,23 @@
 	} else {
 		boot();
 	}
+
+	/* Elementor's editor re-renders a widget after page load when you edit it,
+	 * so DOMContentLoaded has long gone by the time the new markup exists.
+	 * widget.js and canal.js have had this hook since the editor preview was
+	 * first wired up; the water panel never did, which is why an edited water
+	 * widget sat inert in the editor until the page was reloaded. (1.33.0)
+	 *
+	 * boot() queries the whole document rather than the re-rendered scope, so
+	 * the one part that attaches a listener — the map button — carries a
+	 * per-node guard. initMoon() rebuilds its card from scratch each time and
+	 * init() refills whatever live roots exist, both of which are safe to
+	 * repeat; only the listener was not. */
+	window.addEventListener('elementor/frontend/init', function () {
+		if (!window.elementorFrontend || !window.elementorFrontend.hooks) { return; }
+		window.elementorFrontend.hooks.addAction(
+			'frontend/element_ready/dccwl_water.default',
+			function () { boot(); }
+		);
+	});
 })();

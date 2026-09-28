@@ -202,15 +202,42 @@ export function rendered(which = 'month', ...flags) {
  * A page holding a real widget, its real stylesheets and its real scripts,
  * with the inline config emitted before them exactly as WordPress does.
  */
+/*
+ * The assets WordPress would actually serve for each widget, mirroring
+ * Plugin::register_assets()'s dependency chains.
+ *
+ * This used to be one hard-coded pair — app.css + widget.css — for every
+ * `which`, so `widgetPage(browser, 'canal')` rendered the hub with NO
+ * canal.css. Nothing failed; the measurements were simply of a different
+ * page than the one live serves, and a hub tile came back 77px tall with a
+ * computed min-height of 0 where the stylesheet asks for 168. A harness that
+ * quietly measures the wrong thing is worse than one that refuses to.
+ */
+const ASSETS = {
+  month: {
+    css: ['assets/css/app.css', 'assets/css/widget.css'],
+    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js'],
+  },
+  canal: {
+    css: ['assets/css/app.css', 'assets/css/widget.css', 'assets/css/water.css', 'assets/css/canal.css'],
+    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js', 'assets/js/water.js', 'assets/js/canal.js'],
+  },
+  water: {
+    css: ['assets/css/app.css', 'assets/css/water.css'],
+    js: ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'],
+  },
+};
+
 export async function widgetPage(browser, which = 'month', opts = {}, ...fixtureFlags) {
   const fixture = rendered(which, ...fixtureFlags);
+  const bundle = ASSETS[which] || ASSETS.month;
   const page = await buildPage(browser, {
-    css: opts.css || ['assets/css/app.css', 'assets/css/widget.css'],
+    css: opts.css || bundle.css,
     js: [],
     body: fixture.html + `<script>${fixture.config}</script>`,
     ...opts,
   });
-  for (const f of opts.js || ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/widget.js']) {
+  for (const f of opts.js || bundle.js) {
     await page.addScriptTag({ content: asset(f) });
   }
   // The deck measures itself; give layout and its rAF a chance to settle.

@@ -16,6 +16,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Canal_Widget extends \Elementor\Widget_Base {
 
+	/**
+	 * NEVER CACHE THIS ELEMENT (1.33.0). See Widget::is_dynamic_content().
+	 *
+	 * The hub bakes a measured AGE into its HTML — the "32d" chip on a water
+	 * fact, from Water_Render::age(), which reads time(). Twelve hours of
+	 * cache makes that chip wrong by twelve hours, silently. It also carries
+	 * the live water facts and the same once-per-page config guard.
+	 */
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
+
 	public function get_name(): string {
 		return 'dccwl_canal';
 	}
@@ -30,6 +42,15 @@ class Canal_Widget extends \Elementor\Widget_Base {
 
 	public function get_categories(): array {
 		return [ 'dcc-widgets' ];
+	}
+
+	/** See Widget::get_style_depends() — the editor preview needs telling. */
+	public function get_style_depends(): array {
+		return [ 'dcc-wildlife-canal' ];
+	}
+
+	public function get_script_depends(): array {
+		return [ 'dcc-wildlife-canal' ];
 	}
 
 	public function get_keywords(): array {

@@ -25,7 +25,13 @@ const browser = await launch();
 /* ---- 0. the stand-in must still bite -------------------------------- */
 section('the site-kit stand-in is doing its job');
 
-const { page } = await widgetPage(browser, 'month', { width: 390, sitekit: true });
+/* A TALL viewport on purpose. The hover assertions below move a real mouse
+ * to an element's centre, and on an 844px phone viewport Playwright has to
+ * scroll first — after which the point it computed can land on whatever
+ * scrolled into its place. Measured with elementFromPoint: there is no
+ * overlap, the short viewport was the whole story. Nothing here depends on
+ * viewport HEIGHT; the widths that matter are asserted at 320/360/390. */
+const { page } = await widgetPage(browser, 'month', { width: 390, height: 2400, sitekit: true });
 
 const kitProof = await page.evaluate(() => {
   // A bare input, outside the plugin, inside the kit's scope.
@@ -121,6 +127,45 @@ for (const [sel, what] of [['.dccwl-month', 'month pill'], ['.dccwl-subchip', 'b
     `no unselected ${what} is marked in gold`);
 }
 
+/* ---- 2b. "Peak Now" stays on ONE LINE ------------------------------- */
+section('"Peak Now" is one line at every phone width, with the same words');
+
+/*
+ * The owner's item 4b, and a regression that has now happened twice: once in
+ * 1.32.1 (the tab borders ate the row) and once while building 1.33.0, when a
+ * desktop `width: fit-content` rule leaked below the phone breakpoint and took
+ * the space straight back. Measuring SPILL is not enough — the label wraps
+ * long before it spills. This counts line boxes.
+ *
+ * The font is inflated 21% to stand in for Raleway, which this sandbox does
+ * not have and which measures about that much wider. Without the inflation
+ * the sandbox says "fine" and live wraps, which is what happened in 1.32.1.
+ */
+for (const width of [320, 360, 390]) {
+  const p2 = await widgetPage(browser, 'month', {
+    width, height: 2400, sitekit: true,
+    head: '<style>.dccwl-root{--dccwl-fs-xs:0.9438rem}</style>',   // 0.78 x 1.21
+  });
+  const lines = await p2.page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.dccwl-tab').forEach((b) => {
+      const t = [...b.childNodes].find((n) => 3 === n.nodeType && n.textContent.trim());
+      let n = 1;
+      if (t) {
+        const r = document.createRange();
+        r.selectNodeContents(t);
+        n = new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size || 1;
+      }
+      out.push({ label: b.textContent.trim(), lines: n });
+    });
+    return out;
+  });
+  const wrapped = lines.filter((l) => l.lines > 1).map((l) => l.label);
+  note(`${width}px (Raleway stand-in): ${lines.map((l) => `${l.label}=${l.lines}`).join(' ')}`);
+  checkSame([], wrapped, `${width}px: no tab label wraps, "Peak Now" included`);
+  await p2.page.close();
+}
+
 /* ---- 3. hover is coral, on a button and on a toggle ------------------ */
 section('hover is coral with white text');
 
@@ -157,7 +202,7 @@ await page.close();
 /* ---- 5. the footnote row: three labels, one look --------------------- */
 section('By month matches Field guide and Credits');
 
-const hub = await widgetPage(browser, 'canal', { width: 390, sitekit: true },);
+const hub = await widgetPage(browser, 'canal', { width: 390, height: 2400, sitekit: true });
 const links = await hub.page.evaluate(() => {
   const row = document.querySelector('.dccwl-footnotes');
   if (!row) { return null; }

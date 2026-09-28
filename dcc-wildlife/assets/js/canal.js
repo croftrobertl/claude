@@ -368,6 +368,11 @@
 			var node = root.querySelector('[data-dccwl-preview="water"]');
 			var tile = root.querySelector('[data-dccwl-water-tile]');
 			if (!node) { return; }
+			/* "Checking the canal…" has served its purpose the moment an answer
+			 * arrives — including the answer "nothing". The attribute goes with
+			 * the text, because the CSS reserves the line's height from it and
+			 * a reserved line under real content is a gap. (1.33.0) */
+			node.removeAttribute('data-dccwl-loading');
 
 			var usable = (facts || []).filter(function (f) {
 				return f && f.label && f.value && f.sourceName && f.group !== 'chain';
@@ -434,6 +439,21 @@
 		// never calls the REST route itself.
 		waterListeners.push(fillWaterPreview);
 		if (lastWaterFacts) { fillWaterPreview(lastWaterFacts); }
+		/*
+		 * A PROMISE WITH A DEADLINE (1.33.0).
+		 *
+		 * "Checking the canal…" is only honest while something is actually
+		 * checking. The water module announces its facts whether the fetch
+		 * succeeds or fails, so the normal paths both clear it — but if the
+		 * module is switched off after this tile was cached, or its script
+		 * never loads at all, nothing would ever announce and the card would
+		 * promise a check that is not happening. Twelve seconds, then it says
+		 * what an empty answer says.
+		 */
+		setTimeout(function () {
+			var node = root.querySelector('[data-dccwl-preview="water"]');
+			if (node && node.getAttribute('data-dccwl-loading')) { fillWaterPreview([]); }
+		}, 12000);
 
 		/* ---------- wiring ---------- */
 

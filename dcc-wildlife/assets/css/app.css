@@ -139,6 +139,16 @@
 	--dccwl-detail-pad-x: calc(20px * var(--dccwl-density));  /* --dccgg-detail-pad-x */
 	--dccwl-detail-pad-y: calc(16px * var(--dccwl-density));  /* derived */
 	--dccwl-tile-min: 132px;             /* --dccgg-tile-min (Guide: 120–140) */
+	/* 1.33.0 — THE MEASURE. The width a row of controls or a line of prose is
+	 * allowed to reach before it stops being readable and starts being a
+	 * stretch mark. On a phone nothing reaches it, so this rule costs mobile
+	 * nothing; on a 1280px desktop it is the difference between a centred app
+	 * and a month strip 1200px wide with twelve pills lost in it.
+	 *
+	 * THE TILE GRID AND THE DECK ARE EXEMPT ON PURPOSE (owner's instruction):
+	 * they are the one thing that genuinely wants the width, and capping them
+	 * would make the guide cramped on the screen it has most room on. */
+	--dccwl-measure: 760px;
 
 	/* --- type -------------------------------------------------------- */
 	--dccwl-font: inherit;               /* never load a webfont */

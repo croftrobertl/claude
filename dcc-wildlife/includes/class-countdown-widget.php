@@ -16,6 +16,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Countdown_Widget extends \Elementor\Widget_Base {
 
+	/**
+	 * NEVER CACHE THIS ELEMENT (1.33.0). See Widget::is_dynamic_content().
+	 *
+	 * A countdown is a number of days from today. Caching it is caching today.
+	 */
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
+
 	public function get_name(): string {
 		return 'dccwl_countdown';
 	}
@@ -30,6 +39,15 @@ class Countdown_Widget extends \Elementor\Widget_Base {
 
 	public function get_categories(): array {
 		return [ 'dcc-widgets' ];
+	}
+
+	/** See Widget::get_style_depends() — the editor preview needs telling. */
+	public function get_style_depends(): array {
+		return [ 'dcc-wildlife' ];
+	}
+
+	public function get_script_depends(): array {
+		return [ 'dcc-wildlife' ];
 	}
 
 	public function get_keywords(): array {

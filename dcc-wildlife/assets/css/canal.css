@@ -77,6 +77,12 @@
  * share their treatment. Colours measured on this ground: primary text
  * 4.74:1, muted text 4.81:1. */
 .dccwl-canal .dccwl-levelbar {
+	/* Compact and centred on desktop (1.33.0): the "< Back | Wildlife" bar
+	 * stretched the whole 1280px column for the sake of one button and one
+	 * word. It still spans the full width on a phone, where the measure is
+	 * wider than the screen. */
+	margin-inline: auto;
+	max-width: var(--dccwl-measure);
 	align-items: center;
 	/* The tint over an opaque white, so scrolled content cannot show
 	 * through while the bar is stuck. */

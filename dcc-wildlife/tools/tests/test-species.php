@@ -133,7 +133,41 @@ check_same( 51, count( $photos ), 'photos() names a file for all 51 species' );
 
 $on_disk = glob( $root . '/assets/photos/*.jpg' );
 $base    = array_values( array_filter( $on_disk, static fn( $p ): bool => 1 !== preg_match( '/-(320|600)\.jpg$/', $p ) ) );
-check_same( 51, count( $base ), '51 base photographs are present in the provenance directory' );
+
+/*
+ * THE INVARIANT IS "NO BROKEN SET", NOT "NO SPARE PHOTOGRAPH" (1.33.0).
+ *
+ * This used to assert that the directory held EXACTLY one base photo per
+ * registered species, and it went red the moment photo batch 6 landed —
+ * twelve turtles whose entries had not been written yet. A pack arriving
+ * before its entries is the normal middle of a multi-batch expansion, not a
+ * defect, and a suite that fails on it just trains people to ignore it.
+ *
+ * What IS a defect is a HALF-COPIED pack: a base photo whose -600 or -320
+ * never arrived. That shows up as an empty well or a 404 on a retina screen
+ * and nowhere else, so it is the thing worth asserting. The pair of checks
+ * below cover both directions — every species has its files (further down),
+ * and every file on disk is a complete set.
+ */
+$incomplete = [];
+foreach ( $base as $p ) {
+	$stem = preg_replace( '/\.jpg$/', '', $p );
+	foreach ( [ '-600.jpg', '-320.jpg' ] as $suffix ) {
+		if ( ! is_file( $stem . $suffix ) ) {
+			$incomplete[] = basename( $stem ) . $suffix;
+		}
+	}
+}
+check_same( [], $incomplete, 'every base photograph has all three renditions', implode( ', ', $incomplete ) );
+
+$named   = array_map( static fn( string $f ): string => basename( $f, '.jpg' ), array_values( $photos ) );
+$pending = array_values( array_diff( array_map( static fn( $p ): string => basename( $p, '.jpg' ), $base ), $named ) );
+sort( $pending );
+echo '       base photographs on disk: ' . count( $base ) . ', wired to a species: ' . count( $photos ) . "\n";
+if ( $pending ) {
+	echo '       waiting for their entries (' . count( $pending ) . '): ' . implode( ', ', $pending ) . "\n";
+}
+check( count( $base ) >= count( $photos ), 'there is a photograph on disk for every species that claims one' );
 
 $absent = [];
 foreach ( $photos as $id => $file ) {

@@ -47,6 +47,21 @@ class Widget_Base {
 
 	public function __construct( $data = [], $args = null ) {}
 
+	/*
+	 * Declared exactly as Elementor declares it, and defaulting as Elementor
+	 * defaults — `true`, i.e. "dynamic, do not cache". Its presence here is a
+	 * SIGNATURE CHECK: a widget that narrowed the visibility to private, or
+	 * changed the return type, would fatal in the harness instead of on live.
+	 */
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
+
+	/** Test-only reader: the method is protected on both sides, as it should be. */
+	public function dcc_test_is_dynamic_content(): bool {
+		return $this->is_dynamic_content();
+	}
+
 	public function start_controls_section( $id, $args = [] ): void {
 		$this->current_section = (string) $id;
 		$this->recorded_sections[] = [ 'id' => (string) $id ] + (array) $args;

@@ -201,7 +201,22 @@ final class Canal_Render {
 									         fetch or a stale-gated reading leaves this
 									         empty and the tile shows its name alone —
 									         the same rule the module itself follows. */ ?>
-									<span class="dccwl-hub-preview" data-dccwl-preview="water"></span>
+									<?php
+									/*
+									 * 1.33.0, owner's request: the card SAYS it is
+									 * working. The readings come from a fetch, so
+									 * until it lands this tile used to show its name
+									 * over an empty line, which reads as a card with
+									 * nothing in it rather than one still thinking.
+									 *
+									 * Server-rendered, so it is there before any
+									 * script runs. `data-dccwl-loading` is what
+									 * canal.js clears — the SAME attribute tells the
+									 * CSS to hold the line's height, so the readings
+									 * replacing it does not move the tile.
+									 */
+									?>
+									<span class="dccwl-hub-preview" data-dccwl-preview="water" data-dccwl-loading="1"><?php esc_html_e( 'Checking the canal…', 'dcc-wildlife' ); ?></span>
 									<?php /* Source + age chips for the very facts above —
 									         the same provenance the cards carry. */ ?>
 									<span class="dccwl-hub-art" data-dccwl-hub-art="water"></span>
