@@ -151,6 +151,34 @@ export async function buildPage(browser, opts = {}) {
     isMobile: true,
   });
 
+  /*
+   * SERVE THE PHOTOGRAPHS.
+   *
+   * dcc_boot_plugin() gives the plugin a made-up site URL, so every photo the
+   * dataset carries points at https://example.test/… and would 404. Until
+   * 1.33.0 that did not show, because the harness defined the wrong constant
+   * and no photo resolved at all; now that they do, a fixture rendered
+   * without this shows broken images where live shows the animal.
+   *
+   * Fulfilled from assets/photos on disk, which is the same directory
+   * Photo_Library falls back to on a real site before the media import has
+   * run. Anything else under that host is aborted rather than left to hang.
+   */
+  await page.route('**/wp-content/plugins/dcc-wildlife/assets/**', async (route) => {
+    const url = new URL(route.request().url());
+    const rel = url.pathname.replace(/^.*\/dcc-wildlife\/assets\//, '');
+    const file = join(PLUGIN, 'assets', rel);
+    try {
+      const body = readFileSync(file);
+      const ext = rel.split('.').pop().toLowerCase();
+      const type = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+        svg: 'image/svg+xml', css: 'text/css', js: 'text/javascript' }[ext] || 'application/octet-stream';
+      await route.fulfill({ status: 200, contentType: type, body });
+    } catch {
+      await route.fulfill({ status: 404, body: '' });
+    }
+  });
+
   const styles = css.map((f) => `<style data-src="${f}">\n${asset(f)}\n</style>`).join('\n');
   const hostileCss = hostile
     ? '<style data-src="theme-trap">html{font-size:20px;font-weight:700;font-family:Raleway,sans-serif}</style>'
