@@ -127,6 +127,28 @@ dcc_section( 'the hazard flag actually reaches the client' );
 check_matches( $config, '/"haz":1/', 'at least one species ships haz:1' );
 check_matches( $config, '/"haz":0/', 'and at least one ships haz:0' );
 
+dcc_section( 'the one species behind 36 -> 35, named' );
+
+/*
+ * The owner's Director asked which species the hub lost between the old rule
+ * and the new one, and was right to: "the count went down by one" is not an
+ * explanation. Computed rather than asserted, so the answer cannot drift as
+ * the dataset grows.
+ */
+$old_rule = [];
+$new_rule = [];
+foreach ( $dataset as $sp ) {
+	$v = (int) ( $sp['months'][ SEPT ] ?? 0 );
+	if ( $v >= SPOT && 'safety' !== $sp['group'] ) { $old_rule[ $sp['id'] ] = $sp['name']; }
+	if ( $v >= SPOT && empty( $sp['haz'] ) )       { $new_rule[ $sp['id'] ] = $sp['name']; }
+}
+$dropped = array_diff_key( $old_rule, $new_rule );
+printf( "       hub count, September: %d under the 1.32.1 rule, %d under this one\n", count( $old_rule ), count( $new_rule ) );
+printf( "       dropped: %s\n", implode( ', ', $dropped ) ?: '(nothing)' );
+check_same( 1, count( $dropped ), 'exactly one species leaves the hub count' );
+check_same( [ 'alligator' => 'Alligator' ], $dropped,
+	'and it is the alligator — group critters, flagged danger, which is why a group test missed it' );
+
 dcc_section( 'the September figures, pinned' );
 
 $figures = [
