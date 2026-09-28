@@ -473,6 +473,19 @@ Deliberate decisions. Don't "fix" them without checking with the user.
   breakpoint rather than invented. `view_cottage_short` is deliberately absent
   from the preset — the control default carries it, and a preset copy would be
   the two-copies-must-agree hazard.
+- **Every View link opens in a new tab, and says so only to assistive tech
+  (0.51.0, owner).** `buildCard()` is the ONE place a cottage link is rendered —
+  Matching Quiz, Weigh Priorities and the highlighted extra all go through it;
+  Compare renders no View link. It carries `target="_blank" rel="noopener"`, and
+  `opens_new_tab` is appended INSIDE the `aria-label`. Not a visually hidden span:
+  an explicit `aria-label` replaces the link's content as its accessible name, so
+  a span inside the link would never be announced. No visible change.
+- **Results heading and feature chips are centred; the View button is not
+  (0.51.0, owner).** `.dccs-results-h` has its own `text-align: center` (the
+  results head stacks and stretches below 480px, so the flex centring alone does
+  not reach the text) and `.dccs-badges` has `justify-content: center`.
+  `.dccs-card-actions` is deliberately untouched — dom-smoke test 93 fails if it
+  gets centred along with them.
 - **The result tile's action row is bottom-aligned, not centred.** The CTA is 50px
   tall (its line-height) and the Compare toggle 44px (its tap target), so `center`
   left their bottom edges 3px apart. It also carries a `margin-top` that must
