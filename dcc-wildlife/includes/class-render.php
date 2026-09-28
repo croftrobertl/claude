@@ -944,15 +944,32 @@ final class Render {
 		}
 		self::$config_added = true;
 
-		// Species with a bespoke sprite get flagged; the JS falls back to the
-		// emoji for any filter-added species without one.
-		$species = array_map(
-			static fn( array $sp ): array => $sp + [ 'sprite' => Sprites::has( $sp['id'] ) ],
-			Species::dataset()
-		);
+		/*
+		 * THE INDEX ONLY (1.33.0). The sheet-only half of every species now
+		 * travels on demand — see Species::WIRE_INDEX for what stays and why,
+		 * and Guide_Rest for what fetches the rest. At four hundred species
+		 * this is the difference between 8.9 KB and 103 KB gzipped, on every
+		 * page view, for a guest who may never open a sheet.
+		 *
+		 * Species with a bespoke drawing get flagged here; speciesArt() reads
+		 * it as the middle rung between the photograph and the group glyph.
+		 */
+		$species = [];
+		foreach ( Species::dataset() as $sp ) {
+			$sp['sprite'] = Sprites::has( (string) $sp['id'] );
+			[ $index ]    = Species::wire_split( $sp );
+			$species[]    = $index;
+		}
 
 		$config = [
 			'species'    => $species,
+			/*
+			 * Where the rest of each species lives. Version-stamped, so the
+			 * browser may cache it for a year and a release still reaches
+			 * everyone. Absent if REST is unavailable, and the client treats
+			 * that as "the sheet shows what the index has".
+			 */
+			'detailUrl'  => function_exists( 'rest_url' ) ? Guide_Rest::url() : '',
 			/*
 			 * 1.29.0: real URLs, resolved per species, NOT a base the client
 			 * sticks a filename onto. The old scheme built the srcset by

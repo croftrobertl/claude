@@ -54,6 +54,22 @@ if ( in_array( '--enable', $flags, true ) ) {
 		]
 	);
 }
+/*
+ * The sheet-only half, as the REST route serves it. The browser suites route
+ * the plugin's detailUrl to this, so a fixture exercises the SAME sheet a
+ * guest sees. Without it every suite would be testing the degraded sheet —
+ * which is worth testing, but not instead of the real one.
+ */
+if ( 'detail' === $which ) {
+	echo wp_json_encode(
+		[
+			'version' => DCC_WL_VERSION,
+			'species' => \DCC_WL\Species::wire_detail(),
+		]
+	);
+	exit;
+}
+
 ob_start();
 switch ( $which ) {
 	case 'canal':

@@ -59,6 +59,7 @@ final class Plugin {
 		add_action( 'init', [ $this, 'maybe_schedule_warm' ], 20 );
 
 		Water_Rest::register_hooks();
+		Guide_Rest::register_hooks();
 		if ( is_admin() ) {
 			Water_Admin::register_hooks();
 		}

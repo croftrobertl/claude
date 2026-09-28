@@ -1620,6 +1620,78 @@ final class Species {
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
+	/**
+	 * THE WIRE SPLIT (1.33.0) — what the FIRST VIEW needs, and nothing else.
+	 *
+	 * Through 1.32.1 every field of every species was inlined into the page.
+	 * At fifty-one species that was 16 KB gzipped and nobody noticed. Measured
+	 * against a synthetic four-hundred-species registry with the longer prose
+	 * this release calls for, it becomes 103 KB gzipped — on every page view,
+	 * for a guest who may never open a single sheet.
+	 *
+	 * These are the fields the client reads BEFORE a sheet opens, arrived at
+	 * by reading the scripts rather than by guessing:
+	 *   months, haz        the counts, the spotlight, Peak Now, the strip
+	 *   name, sci, mark    the search haystack — all three, exactly as today
+	 *   flags, group       the tile marks and the glyph fallback
+	 *   src, sprite, id    the tile face and the hub's preview art
+	 * `mark` and `name` are also what a look-alike row shows, so the ID helper
+	 * still works from the index alone.
+	 *
+	 * Everything else — the fact, the what-to-do line, where and when, the
+	 * sound, the place, the look-alike GROUPING, the photo credit and its note
+	 * — is sheet-only and travels on demand. Measured at four hundred species:
+	 * 8.9 KB inline, 78 KB fetched once by a guest who opens a sheet.
+	 *
+	 * FOUR FIELDS LEFT THE WIRE ENTIRELY, because no line of client code has
+	 * ever read them: `thumb`, `photoW`, `odds` and `emoji`. `odds` stopped
+	 * being rendered in 1.27.0 and `emoji` when the sprites arrived; both kept
+	 * riding along.
+	 */
+	public const WIRE_INDEX = [
+		'id', 'name', 'sci', 'mark', 'months', 'flags', 'haz', 'group', 'src', 'sprite',
+	];
+
+	/** Fields that never reach the browser at all. */
+	public const WIRE_NEVER = [ 'thumb', 'photoW', 'odds', 'emoji' ];
+
+	/**
+	 * Split one dataset row into [ index, detail ].
+	 *
+	 * @param array<string,mixed> $sp
+	 * @return array{0:array<string,mixed>,1:array<string,mixed>}
+	 */
+	public static function wire_split( array $sp ): array {
+		$index  = [];
+		$detail = [];
+		foreach ( $sp as $k => $v ) {
+			if ( in_array( $k, self::WIRE_NEVER, true ) ) {
+				continue;
+			}
+			if ( in_array( $k, self::WIRE_INDEX, true ) ) {
+				$index[ $k ] = $v;
+			} else {
+				$detail[ $k ] = $v;
+			}
+		}
+		return [ $index, $detail ];
+	}
+
+	/**
+	 * The sheet-only half of every species, keyed by id.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function wire_detail(): array {
+		$out = [];
+		foreach ( self::dataset() as $sp ) {
+			$sp['sprite']          = Sprites::has( (string) $sp['id'] );
+			[ , $detail ]          = self::wire_split( $sp );
+			$out[ (string) $sp['id'] ] = $detail;
+		}
+		return $out;
+	}
+
 	public static function dataset(): array {
 		$calendar = self::calendar();
 		$photos   = self::photos();

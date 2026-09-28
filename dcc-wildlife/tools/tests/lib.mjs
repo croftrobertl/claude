@@ -164,6 +164,26 @@ export async function buildPage(browser, opts = {}) {
    * Photo_Library falls back to on a real site before the media import has
    * run. Anything else under that host is aborted rather than left to hang.
    */
+  /*
+   * The species-detail route. The page's inline config points the client at
+   * a REST URL on a site that does not exist, so without this every browser
+   * suite would exercise only the DEGRADED sheet — the one a guest gets when
+   * the fetch fails. That path is worth testing; it is not worth testing
+   * instead of the real one.
+   *
+   * Served from the same PHP the route serves, so a fixture and a guest see
+   * the same sheet.
+   */
+  await page.route('**/wp-json/dcc-wildlife/v1/species*', async (route) => {
+    try {
+      const body = execFileSync(process.env.PHP_BIN || 'php',
+        [join(HERE, 'render-fixture.php'), 'detail'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+      await route.fulfill({ status: 200, contentType: 'application/json', body });
+    } catch {
+      await route.fulfill({ status: 500, body: '{}' });
+    }
+  });
+
   await page.route('**/wp-content/plugins/dcc-wildlife/assets/**', async (route) => {
     const url = new URL(route.request().url());
     const rel = url.pathname.replace(/^.*\/dcc-wildlife\/assets\//, '');

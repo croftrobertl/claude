@@ -55,6 +55,67 @@
 		speciesById[s.id] = s;
 	});
 
+	/* ------------------------------------------------------------------
+	 * THE SHEET-ONLY HALF, FETCHED ONCE (1.33.0)
+	 *
+	 * The page carries an index — see Species::WIRE_INDEX for what is in it
+	 * and why. Everything a sheet shows and nothing else shows travels on
+	 * demand: at four hundred species that is 78 KB nobody pays for until
+	 * they open a species, against 103 KB every guest used to pay on every
+	 * page view.
+	 *
+	 * Same origin, no third party, no key, and the payload is a constant
+	 * baked into the plugin's own PHP — this is the site talking to itself,
+	 * not a broadening of the "no external services" rule.
+	 *
+	 * IT IS ALSO ALLOWED TO FAIL. A guest offline, or behind something that
+	 * eats REST, still gets a sheet: the index carries the name, the
+	 * scientific name, the photograph, the field mark and the twelve-month
+	 * strip. What is missing is missing, and nothing renders an error where a
+	 * fact should be.
+	 * ------------------------------------------------------------------ */
+	var detail = { state: 'idle', promise: null };
+
+	function mergeDetail(map) {
+		Object.keys(map || {}).forEach(function (id) {
+			var sp = speciesById[id];
+			if (!sp) { return; }
+			var d = map[id];
+			Object.keys(d).forEach(function (k) { sp[k] = d[k]; });
+		});
+	}
+
+	function ensureDetail() {
+		if (detail.promise) { return detail.promise; }
+		if (!CFG.detailUrl || !window.fetch) {
+			detail.state = 'unavailable';
+			detail.promise = Promise.resolve(false);
+			return detail.promise;
+		}
+		detail.state = 'loading';
+		detail.promise = window.fetch(CFG.detailUrl, { credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				if (!data || !data.species) { throw new Error('no species'); }
+				mergeDetail(data.species);
+				detail.state = 'ready';
+				return true;
+			})
+			.catch(function () {
+				// Deliberately silent. The sheet degrades; it does not shout.
+				detail.state = 'failed';
+				return false;
+			});
+		return detail.promise;
+	}
+
+	/* Warm it on the first sign of interest rather than on load, so it never
+	 * competes with the first paint. Any of these means a guest is using the
+	 * guide, and a sheet is usually the next tap. */
+	function warmDetail() {
+		ensureDetail();
+	}
+
 	/* Static, trusted SVG scene vignettes — one per group, reused across
 	 * species. Flat-illustration style in the site's deep teals. */
 	var SCENES = {
@@ -571,7 +632,24 @@
 				appClasses: root.className.replace('dccwl-root', '').trim(),
 				closeLabel: CFG.i18n.close,
 				opener: tile,
-				build: function (body) { buildDetail(body, sp); },
+				build: function (body) {
+					buildDetail(body, sp);
+					/*
+					 * Built twice only when it has to be. Warmed on the first
+					 * interaction, the detail is almost always here already
+					 * and 'ready' short-circuits this. When it is not, the
+					 * sheet opens NOW with what the index has — name,
+					 * photograph, field mark, the twelve-month strip — and
+					 * fills in when the rest lands, provided the guest is
+					 * still looking at the same species.
+					 */
+					if ('ready' === detail.state) { return; }
+					ensureDetail().then(function (ok) {
+						if (!ok || state.openId !== id) { return; }
+						body.textContent = '';
+						buildDetail(body, sp);
+					});
+				},
 				onClose: function () {
 					state.openId = null;
 					markOpen(null);
@@ -583,6 +661,10 @@
 			tile.addEventListener('click', function () {
 				openDetail(tile);
 			});
+			/* Warm on the first hover or touch of any tile: by the time the
+			 * tap completes the sheet's half is usually already here. */
+			tile.addEventListener('pointerenter', warmDetail, { once: true });
+			tile.addEventListener('touchstart', warmDetail, { once: true, passive: true });
 		}
 
 		/* ---------- headline + subline ---------- */
@@ -1468,6 +1550,16 @@
 		document.querySelectorAll('.dccwl-root').forEach(initRoot);
 		initFullguideClose(document);
 		initCountdown();
+		/* The other routes in: a tab, a chip, the search box, a month. Any of
+		 * them means the guide is being used and a sheet is likely next.
+		 * `once` on each, and ensureDetail() is idempotent, so this costs one
+		 * listener per control and at most one request. */
+		document.querySelectorAll(
+			'.dccwl-root .dccwl-tab, .dccwl-root .dccwl-subchip, .dccwl-root .dccwl-month, .dccwl-root .dccwl-search-input'
+		).forEach(function (el) {
+			el.addEventListener('focus', warmDetail, { once: true });
+			el.addEventListener('click', warmDetail, { once: true });
+		});
 	}
 
 	if (document.readyState === 'loading') {

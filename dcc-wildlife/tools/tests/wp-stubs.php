@@ -237,9 +237,28 @@ function add_menu_page( $pt, $mt, $cap, $slug, $cb = null, ...$rest ) {
 function is_admin() { return (bool) ( $GLOBALS['dccwl_test']['is_admin'] ?? false ); }
 function admin_url( $p = '' ) { return 'https://example.test/wp-admin/' . ltrim( (string) $p, '/' ); }
 function wp_safe_redirect( $u, $s = 302 ) { $GLOBALS['dccwl_test']['redirect'] = $u; return true; }
-function add_query_arg( $args, $url = '' ) {
-	$q = is_array( $args ) ? http_build_query( $args ) : (string) $args;
-	return $url . ( false === strpos( (string) $url, '?' ) ? '?' : '&' ) . $q;
+/**
+ * Both of WordPress's calling conventions, because the plugin uses both.
+ *
+ * This took ( $args, $url ) only, so the three-argument form —
+ * add_query_arg( 'v', $version, $url ) — produced the string "1.32.1?v", a
+ * URL that is not a URL, silently. Guide_Rest::url() uses that form, and the
+ * browser suites would have been fetching nonsense while the assertions
+ * about the degraded path passed for the wrong reason.
+ */
+function add_query_arg( ...$a ) {
+	if ( is_array( $a[0] ) ) {
+		$args = $a[0];
+		$url  = (string) ( $a[1] ?? '' );
+	} else {
+		$args = [ (string) $a[0] => $a[1] ?? '' ];
+		$url  = (string) ( $a[2] ?? '' );
+	}
+	$q = http_build_query( $args );
+	if ( '' === $q ) {
+		return $url;
+	}
+	return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . $q;
 }
 function get_current_screen() { return null; }
 
