@@ -187,6 +187,62 @@
 		return li;
 	}
 
+	/* ------------------------------------------------------------------
+	 * FOLD THE SOURCE LINE INTO THE CHIP (1.33.0, owner's request)
+	 *
+	 * Every fact card carried its source twice: a chip summarising it, and a
+	 * two-to-three-line attribution under the value. On a phone that is most
+	 * of the panel's height, repeated for every reading.
+	 *
+	 * The chip becomes the control and the attribution becomes its panel. Done
+	 * HERE rather than in the markup, and to server-rendered and client-built
+	 * cards alike, so there is one implementation and the two cannot drift —
+	 * and so that with no JavaScript the card still prints its full
+	 * attribution in plain sight, which is what the fact gate requires. A
+	 * folded source must never be a missing one.
+	 * ------------------------------------------------------------------ */
+	var srcSeq = 0;
+
+	function foldSources(scope) {
+		(scope || document).querySelectorAll('.dccwl-card').forEach(function (card) {
+			if (card.getAttribute('data-dccwl-src-folded')) { return; }
+			var chip = card.querySelector('.dccwl-card-src');
+			var attr = card.querySelector('.dccwl-water-attr');
+			if (!chip || !attr || 'BUTTON' === chip.tagName) { return; }
+			card.setAttribute('data-dccwl-src-folded', '1');
+
+			var i18n = CFG.i18n || {};
+			srcSeq += 1;
+			var id = 'dccwl-src-' + srcSeq;
+			attr.id = id;
+			attr.hidden = true;
+
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = chip.className + ' dccwl-card-src-toggle';
+			btn.setAttribute('aria-controls', id);
+			btn.setAttribute('aria-expanded', 'false');
+			// The chip already reads as "USGS · 3d"; the accessible name says
+			// what pressing it does, which the visible text does not.
+			var chipWords = chip.textContent.replace(/\s+/g, ' ').trim();
+			btn.setAttribute('aria-label',
+				String(i18n.srcToggle || 'Source: %s — show where this reading came from')
+					.replace('%s', chipWords));
+			while (chip.firstChild) { btn.appendChild(chip.firstChild); }
+			var caret = el('span', 'dccwl-card-src-caret');
+			caret.setAttribute('aria-hidden', 'true');
+			caret.textContent = '\u25be';
+			btn.appendChild(caret);
+			chip.parentNode.replaceChild(btn, chip);
+
+			btn.addEventListener('click', function () {
+				var open = 'true' === btn.getAttribute('aria-expanded');
+				btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+				attr.hidden = open;
+			});
+		});
+	}
+
 	function fill(root, facts) {
 		var list = root.querySelector('[data-dccwl-water-facts]');
 		if (!list) { return; }
@@ -262,7 +318,7 @@
 				// order to stay silent.
 				announce(facts);
 				if (!facts.length) { return; }
-				roots.forEach(function (root) { fill(root, facts); });
+				roots.forEach(function (root) { fill(root, facts); foldSources(root); });
 			})
 			.catch(function () {
 				announce([]);   // guests see the almanac; never an error
@@ -548,10 +604,75 @@
 		if (section) { section.hidden = false; }
 	}
 
+	/* ------------------------------------------------------------------
+	 * NOW / FISHING / ABOUT (1.33.0, owner's decision)
+	 *
+	 * The control is server-rendered HIDDEN and unhidden here, and the panels
+	 * are all visible until this runs. With no JavaScript the guest gets the
+	 * whole panel in one scroll, exactly as before — never two thirds of it
+	 * behind buttons that do nothing.
+	 *
+	 * THE PANEL OPENS ON NOW EVERY TIME, not just the first: the hub fires
+	 * `dccwl:panel-shown` whenever it reveals a panel, and that resets the
+	 * choice. A guest who went Water → About → back → Water was otherwise
+	 * returned to About, which is not where a water panel should start.
+	 * ------------------------------------------------------------------ */
+	function initWaterTabs(scope) {
+		(scope || document).querySelectorAll('[data-dccwl-water-tabs]').forEach(function (bar) {
+			var root = bar.closest('[data-dccwl-water-root]') || document;
+			var btns = [].slice.call(bar.querySelectorAll('[data-dccwl-water-tab-btn]'));
+			var panes = [].slice.call(root.querySelectorAll('[data-dccwl-water-tab]'));
+			if (!btns.length || !panes.length) { return; }
+
+			function select(slug) {
+				var known = btns.some(function (b) { return b.getAttribute('data-dccwl-water-tab-btn') === slug; });
+				if (!known) { slug = btns[0].getAttribute('data-dccwl-water-tab-btn'); }
+				btns.forEach(function (b) {
+					b.setAttribute('aria-pressed',
+						b.getAttribute('data-dccwl-water-tab-btn') === slug ? 'true' : 'false');
+				});
+				panes.forEach(function (p) {
+					p.hidden = p.getAttribute('data-dccwl-water-tab') !== slug;
+				});
+				/* The deck inside a pane measured zero while the pane was
+				 * hidden and decided it had nothing to page through. Tell it
+				 * to look again now that it has a size. */
+				if (window.DCCWL_Deck) {
+					panes.forEach(function (p) {
+						if (p.hidden) { return; }
+						p.querySelectorAll('[data-dccwl-deck-init]').forEach(function (d) {
+							window.DCCWL_Deck.refreshSoon(d, (CFG.i18n || {}));
+						});
+					});
+				}
+			}
+
+			if (bar.getAttribute('data-dccwl-tabs-init')) { return; }
+			bar.setAttribute('data-dccwl-tabs-init', '1');
+			bar.hidden = false;
+			btns.forEach(function (b) {
+				b.addEventListener('click', function () {
+					select(b.getAttribute('data-dccwl-water-tab-btn'));
+				});
+			});
+			select('now');
+
+			// Re-opened from the hub: back to Now, every time.
+			var panel = bar.closest('.dccwl-panel') || root;
+			if (panel && panel.addEventListener) {
+				panel.addEventListener('dccwl:panel-shown', function () { select('now'); });
+			}
+		});
+	}
+
 	function boot() {
 		initMoon();
 		init();
 		initMap();
+		// Server-rendered cards (the almanac, "About the water") are here from
+		// the first paint; the live ones fold as they are built, in fill().
+		foldSources(document);
+		initWaterTabs(document);
 	}
 
 	if (document.readyState === 'loading') {

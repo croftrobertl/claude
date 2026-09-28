@@ -708,3 +708,84 @@
 	outline: 2px solid var(--dccwl-primary);
 	outline-offset: -2px;
 }
+
+
+/* ======================================================================
+ * NOW / FISHING / ABOUT (1.33.0, owner's decision)
+ *
+ * The control reuses .dccwl-tabs, so it IS the same segmented control the
+ * species guide uses — same colours, same gold mark on the chosen one, same
+ * coral hover. One idea of "a chosen control" across the plugin was the whole
+ * point of the theme round; a second, water-only design would undo it.
+ * ================================================================== */
+.dccwl-water-tabs[hidden] { display: none; }
+.dccwl-water .dccwl-tabs.dccwl-water-tabs {
+	display: flex;
+	margin-bottom: var(--dccwl-gap-lg);
+	width: 100%;
+}
+@media (min-width: 481px) {
+	.dccwl-water .dccwl-tabs.dccwl-water-tabs {
+		margin-inline: auto;
+		max-width: var(--dccwl-measure);
+		width: fit-content;
+	}
+}
+.dccwl-water-tab[hidden] { display: none; }
+/* The first block inside a pane should not carry the margin it had when it
+ * followed something; the pane is the top of the panel now. */
+.dccwl-water-tab > :first-child { margin-top: 0; }
+
+/* ---- the folded source chip ------------------------------------------
+ *
+ * The chip was a <span> and is a <button> now, which means the host kit's
+ * (0,3,1) button reset gets a vote. Measured: at (0,3,0) it won, and every
+ * source chip rendered as a solid blue pill — louder than the reading it was
+ * annotating, and on half the cards wide enough to take a line of its own.
+ * This selector is (0,4,0) and restates every property the kit sets, so the
+ * chip stays the quiet metachip it looks like.
+ *
+ * It is a thumb target now, so it takes the 44px floor — which it earns back
+ * many times over by folding two to three lines of attribution away.
+ * -------------------------------------------------------------------- */
+.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle {
+	align-items: center;
+	background: transparent;
+	border: 1px solid var(--dccwl-line);
+	border-radius: var(--dccwl-radius-pill);
+	color: var(--dccwl-text-muted);
+	cursor: pointer;
+	display: inline-flex;
+	font-family: inherit;
+	font-size: var(--dccwl-fs-xs);
+	font-weight: var(--dccwl-fw-label);
+	gap: 4px;
+	letter-spacing: 0;
+	min-height: 44px;
+	padding: 3px 10px;
+	text-transform: none;
+	white-space: nowrap;
+}
+.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle:hover {
+	background: var(--dccwl-btn-bg-hover);
+	border-color: transparent;
+	color: var(--dccwl-btn-txt-hover);
+}
+.dccwl-app .dccwl-card .dccwl-card-src-toggle.dccwl-card-src-toggle:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+/* The label and the chip share a row; the label yields first so the chip is
+ * never pushed onto a line of its own. */
+.dccwl-card .dccwl-card-head { align-items: center; }
+.dccwl-card .dccwl-card-label { min-width: 0; }
+.dccwl-card-src-caret {
+	display: inline-block;
+	font-size: 0.8em;
+	transition: transform var(--dccwl-t-fast) var(--dccwl-ease);
+}
+.dccwl-card-src-toggle[aria-expanded="true"] .dccwl-card-src-caret { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+	.dccwl-card-src-caret { transition: none; }
+}
+.dccwl-water-attr[hidden] { display: none; }

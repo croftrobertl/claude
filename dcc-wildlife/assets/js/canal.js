@@ -159,6 +159,18 @@
 			});
 			state.level = level;
 
+			/* Tell the panel it is on screen. The water panel resets to its
+			 * "Now" tab on this, because the owner's rule is that it opens on
+			 * Now EVERY time — not just the first. Dispatched rather than
+			 * called, so the hub does not have to know what water.js does with
+			 * it, and so a panel that does nothing with it costs nothing.
+			 * (1.33.0) */
+			try {
+				panels[level].dispatchEvent(new CustomEvent('dccwl:panel-shown', {
+					bubbles: true, detail: { level: level }
+				}));
+			} catch (err) { /* very old browsers: the panel just keeps its tab */ }
+
 			// The timeline cannot centre itself while its panel is hidden
 			// (offsetLeft is 0), so nudge it once it is on screen.
 			if (level === 'species' && speciesRoot && window.DCCWL_Widget) {

@@ -97,10 +97,60 @@ final class Water_Render {
 
 		self::enqueue_assets();
 
+		/*
+		 * THE THREE TABS (1.33.0, owner's decision).
+		 *
+		 * Now / Fishing / About, as a segmented control at the top. The panel
+		 * was one long scroll in which today's readings, next season's bag
+		 * limits and the lake's surface area all had equal billing.
+		 *
+		 * WHICH BLOCK GOES WHERE. Most are plain: the moon and the live
+		 * readings are Now; the seasons, the keep-limits and the local
+		 * charters are Fishing; the almanac and the reference facts are
+		 * About. Two were NOT plain and are flagged to the owner rather than
+		 * decided quietly — the chain map (boat ramps say Fishing, the
+		 * stations the readings come from say Now) and the official links
+		 * (FWC licences say Fishing, the gauges and the Water Atlas say
+		 * About). They sit where the note above each one says, and moving
+		 * either is a one-line change.
+		 *
+		 * Each tab is rendered ONLY if it has something in it, and the whole
+		 * control is rendered HIDDEN: with no JavaScript every block is
+		 * visible in one scroll, exactly as before, rather than two thirds of
+		 * the panel being unreachable behind dead buttons.
+		 */
+		$tabs = [
+			'now'     => Guide_Data::resolve( $opts['moon'], 'show_moon' ) || $live,
+			'fishing' => ( null !== $fishing && Guide_Data::resolve_hide( $opts['fishing'], true ) )
+				|| (bool) $reports
+				|| Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ),
+			'about'   => (bool) $almanac || (bool) $about || (bool) $links,
+		];
+		$tab_labels = [
+			'now'     => __( 'Now', 'dcc-wildlife' ),
+			'fishing' => __( 'Fishing', 'dcc-wildlife' ),
+			'about'   => __( 'About', 'dcc-wildlife' ),
+		];
+
 		ob_start();
 		?>
 		<section class="dccwl-water <?php echo esc_attr( Render::app_classes() ); ?>" aria-labelledby="dccwl-water-title" data-dccwl-water-root<?php echo $has_static ? '' : ' hidden'; ?>>
 			<h2 class="dccwl-water-title" id="dccwl-water-title"><?php echo esc_html( $title ); ?></h2>
+
+			<?php if ( count( array_filter( $tabs ) ) > 1 ) : ?>
+				<div class="dccwl-tabs dccwl-water-tabs" role="group" aria-label="<?php esc_attr_e( 'What to show', 'dcc-wildlife' ); ?>" data-dccwl-water-tabs hidden>
+					<?php $first_tab = true; ?>
+					<?php foreach ( $tabs as $slug => $on ) : ?>
+						<?php if ( ! $on ) { continue; } ?>
+						<button type="button" class="dccwl-tab" data-dccwl-water-tab-btn="<?php echo esc_attr( $slug ); ?>" aria-pressed="<?php echo $first_tab ? 'true' : 'false'; ?>">
+							<?php echo esc_html( $tab_labels[ $slug ] ); ?>
+						</button>
+						<?php $first_tab = false; ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<div class="dccwl-water-tab" data-dccwl-water-tab="now">
 			<?php if ( Guide_Data::resolve( $opts['moon'], 'show_moon' ) ) : ?>
 			<div class="dccwl-moon" data-dccwl-moon hidden></div>
 			<?php endif; ?>
@@ -121,13 +171,25 @@ final class Water_Render {
 					</div>
 				</div>
 			<?php endif; ?>
+			</div><?php /* /now */ ?>
 
+			<div class="dccwl-water-tab" data-dccwl-water-tab="fishing">
 			<?php if ( null !== $fishing && Guide_Data::resolve_hide( $opts['fishing'], true ) ) : ?>
 				<?php self::render_fishing( $fishing ); ?>
 			<?php endif; ?>
 
-			<?php self::render_almanac( $almanac ); ?>
-
+			<?php
+			/*
+			 * THE CHAIN MAP IS IN FISHING, AND IT IS ONE OF THE TWO THE OWNER
+			 * WAS ASKED ABOUT. It shows boat ramps, the waters of the chain
+			 * and the stations the readings come from. The ramps are the
+			 * reason a guest opens it, and a ramp is a fishing plan — so it
+			 * sits beside the seasons and the limits rather than under
+			 * today's readings. The provenance argument for Now is now
+			 * weaker anyway: since this release every reading's own source
+			 * folds out of its own chip.
+			 */
+			?>
 			<?php if ( Guide_Data::resolve_hide( $opts['map_button'], Water_Data::map_possible() ) ) : ?>
 				<?php /* Nothing external — no Leaflet, no tiles, no map data —
 				         loads until a guest presses this button. A guest who
@@ -146,6 +208,18 @@ final class Water_Render {
 				</div>
 			<?php endif; ?>
 
+			<?php self::render_links( __( 'Local reports & charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
+
+			<?php if ( $links || $reports ) : ?>
+				<p class="dccwl-water-disclaimer">
+					<?php esc_html_e( 'Licences, seasons and limits change — check the FWC before you fish.', 'dcc-wildlife' ); ?>
+				</p>
+			<?php endif; ?>
+			</div><?php /* /fishing */ ?>
+
+			<div class="dccwl-water-tab" data-dccwl-water-tab="about">
+			<?php self::render_almanac( $almanac ); ?>
+
 			<?php if ( $about ) : ?>
 				<?php /* Reference facts about the waterbody rather than today's
 				         conditions. Rendered below everything else, and never
@@ -162,14 +236,19 @@ final class Water_Render {
 				</div>
 			<?php endif; ?>
 
+			<?php
+			/*
+			 * THE OFFICIAL LINKS ARE IN ABOUT, AND THEY ARE THE OTHER ONE THE
+			 * OWNER WAS ASKED ABOUT. Five of the six are where the readings
+			 * come from — the Water Atlas page, the two USGS gauges, the NWS
+			 * and the water management district — which is reference, not a
+			 * plan. The sixth, FWC licences and regulations, argues for
+			 * Fishing on its own; the Fishing tab already carries its own FWC
+			 * licence link beside the keep-limits, so nothing is lost here.
+			 */
+			?>
 			<?php self::render_links( __( 'Official information', 'dcc-wildlife' ), $links, 'dccwl-water-links' ); ?>
-			<?php self::render_links( __( 'Local reports & charters', 'dcc-wildlife' ), $reports, 'dccwl-water-reports' ); ?>
-
-			<?php if ( $links || $reports ) : ?>
-				<p class="dccwl-water-disclaimer">
-					<?php esc_html_e( 'Licences, seasons and limits change — check the FWC before you fish.', 'dcc-wildlife' ); ?>
-				</p>
-			<?php endif; ?>
+			</div><?php /* /about */ ?>
 		</section>
 		<?php
 		return (string) ob_get_clean();
@@ -487,6 +566,16 @@ final class Water_Render {
 						'deckNext'    => __( 'Next readings', 'dcc-wildlife' ),
 						/* translators: 1: first item shown, 2: last item shown, 3: total. */
 						'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
+						/* translators: %s: the chip's own words, e.g. "USGS · 3d". */
+						/* The chip already reads "USGS · 3d" on screen; this is
+						   what a screen reader hears instead, because the
+						   visible words do not say what pressing it does. */
+						'srcToggle'   => __( 'Source: %s — show where this reading came from', 'dcc-wildlife' ),
+						/* translators: the three tabs at the top of the water panel. */
+						'tabNow'      => __( 'Now', 'dcc-wildlife' ),
+						'tabFishing'  => __( 'Fishing', 'dcc-wildlife' ),
+						'tabAbout'    => __( 'About', 'dcc-wildlife' ),
+						'tabsLabel'   => __( 'What to show', 'dcc-wildlife' ),
 						'moon' => [
 							'label' => __( 'Tonight on the canal', 'dcc-wildlife' ),
 							/* translators: 1: sunrise time, 2: sunset time. */

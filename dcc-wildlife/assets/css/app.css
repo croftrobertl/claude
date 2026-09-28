@@ -794,3 +794,142 @@
 .dccwl-app button {
 	font-weight: var(--dccwl-fw-label);
 }
+
+
+/* ======================================================================
+ * THE SEGMENTED CONTROL (moved here in 1.33.0)
+ *
+ * These rules were in widget.css, scoped to `.dccwl-root` — the species
+ * widget's own root. The water panel's Now / Fishing / About control is the
+ * SAME control, and the water bundle loads app.css but not widget.css, so
+ * standalone [dcc_water] rendered three tabs that the plugin had no opinion
+ * about at all. They looked passable only because the host kit paints every
+ * <button> blue, which is a coincidence of this site's palette, not styling.
+ *
+ * So they live in the shared layer now, scoped to `.dccwl-app`, which both
+ * the species root and the water section carry. The selectors are TRIPLED to
+ * (0,4,0): at (0,3,0) the kit's (0,3,1) button reset outranked them, and the
+ * only reason that was invisible is that the kit's blue happens to be the
+ * blue the owner chose.
+ * ================================================================== */
+/* 1.18.0: a segmented control — ONE bordered group on the same tinted
+ * ground as the month strip, so the three categories are visibly a single
+ * switch rather than three more cards among the tiles. */
+.dccwl-app .dccwl-tabs.dccwl-tabs {
+	background: var(--dccwl-primary-soft);
+	border: 1px solid var(--dccwl-line-strong);
+	border-radius: var(--dccwl-radius-pill);
+	display: inline-flex;
+	gap: 2px;
+	margin: 0 auto var(--dccwl-gap);
+	max-width: 100%;
+	padding: 3px;
+}
+
+/* ======================================================================
+ * TOGGLE STATES (1.33.0, owner's decision — every toggle, same rules)
+ *
+ * Applies to the section tabs, the month pills, the browse chips and the
+ * Compact toggle. Every one of them is solid #006BCF with white text at rest;
+ * the SELECTED one is marked with a 2px #F4DA62 gold border, drawn inside the
+ * 2px transparent border every state already carries so nothing moves when the
+ * selection changes; hover and focus are coral with white text.
+ *
+ * Before this, an unselected toggle was transparent with muted text and only
+ * the selected one was blue. The owner's objection: three plugins on one site,
+ * three different ideas of what a chosen control looks like.
+ * ================================================================== */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
+	background: var(--dccwl-btn-bg);
+	/* NO BORDER HERE, deliberately (1.33.0) — the gold mark is an inset
+	 * shadow instead, and it looks identical. A 2px border on each side of
+	 * four tabs costs 16px of a 320px row, and "Peak Now" had exactly 0%
+	 * headroom in its share of that row: it wrapped to two lines on live,
+	 * where Raleway measures about 21% wider than this sandbox's fallback
+	 * face. The other toggles keep their borders; they have the room. */
+	border: 0;
+	border-radius: var(--dccwl-radius-control);
+	flex: 1 1 0;
+	white-space: nowrap;
+	color: var(--dccwl-btn-txt);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--dccwl-fs-sm);
+	font-weight: 600;
+	min-height: 44px;
+	padding: 10px 14px;
+	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color),
+		color var(--dccwl-t-fast) var(--dccwl-ease-color);
+}
+/* Four segments since 1.19.0 ("Before you go" joined the three groups):
+ * on a phone they share the row at a smaller size rather than overflow. */
+@media (max-width: 480px) {
+	.dccwl-app .dccwl-tabs.dccwl-tabs { display: flex; width: 100%; }
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
+		font-size: var(--dccwl-fs-xs);
+		padding: 10px 6px;
+		font-weight: var(--dccwl-fw-body);
+		/* The base rule sets nowrap, which on a narrow phone does not shrink
+		 * the label — it spills it silently, with no ellipsis to show for it.
+		 * Measured here, "Peak Now" has 14% headroom inside its share of a
+		 * 320px row; Raleway runs about 21% wider than the face this sandbox
+		 * falls back to, which is exactly why live reports the row overflowing
+		 * below about 335px while it looks fine locally. Same lesson as the
+		 * 1.28.0 footnote row.
+		 *
+		 * So below 480px the label may wrap. A two-line "Peak Now" on a 320px
+		 * phone is a far smaller price than a row that spills off the screen,
+		 * and it cannot overflow however wide the real font turns out to be. */
+		white-space: normal;
+		hyphens: none;
+		line-height: 1.2;
+	}
+}
+
+/* Tighter still where every pixel counts, to put off wrapping as long as
+ * possible before it is needed. */
+/*
+ * Below 400px the row is genuinely tight: four tabs share 320px, which is
+ * 76.5px each. MEASURED, with the font inflated 21% to stand in for Raleway:
+ * "Peak Now" needs 54.6px of a 70.5px text box here — 29% headroom, where it
+ * had none at all in 1.32.1. The label keeps its words and its single line at
+ * both 320px and 390px, which is what the owner asked for.
+ *
+ * `white-space: normal` above stays as the last resort: a longer translation
+ * must still wrap rather than spill off the screen.
+ */
+@media (max-width: 400px) {
+	.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab {
+		font-size: 0.66rem;
+		padding: 10px 3px;
+	}
+}
+
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:hover {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
+
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"] {
+	background: var(--dccwl-btn-bg);
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
+	color: var(--dccwl-btn-txt);
+}
+/* The chosen tab stays chosen under the pointer: without this the gold mark
+ * is the only difference between hover and selected, and hover repaints the
+ * ground coral, which reads as "you have just changed section". */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:hover {
+	background: var(--dccwl-btn-bg-hover);
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
+	color: var(--dccwl-btn-txt-hover);
+}
+
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab:focus-visible {
+	box-shadow: var(--dccwl-ring);
+	outline: none;
+}
+/* box-shadow is one property, so the focus ring would otherwise wipe out the
+ * selected tab's gold mark. Both, in one declaration. */
+.dccwl-app .dccwl-tab.dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible {
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold), var(--dccwl-ring);
+}

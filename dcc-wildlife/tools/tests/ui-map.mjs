@@ -112,6 +112,22 @@ async function openMap(width, height) {
     check(false, 'the map button is present in the rendered water section');
     return { page, opened: false };
   }
+
+  /*
+   * Since 1.33.0 the panel opens on its Now tab and the chain map lives in
+   * Fishing, so the button starts hidden. That is the owner's decision, and
+   * the suite asserts it rather than working around it: a map button that was
+   * reachable without choosing a tab would mean the tabs were not doing
+   * anything.
+   */
+  const tabbed = await page.$('[data-dccwl-water-tab-btn="fishing"]');
+  if (tabbed) {
+    checkSame(false, await btn.isVisible(),
+      'the map button starts hidden, because the panel opens on Now');
+    await tabbed.click();
+    await page.waitForTimeout(250);
+    checkSame(true, await btn.isVisible(), 'and the Fishing tab reveals it');
+  }
   await btn.click();
 
   // Wait for a map instance to exist and for its container to have real size.
@@ -377,6 +393,9 @@ for (const f of ['assets/js/sheet.js', 'assets/js/deck.js', 'assets/js/water.js'
   await page.addScriptTag({ content: asset(f) });
 }
 await page.waitForTimeout(150);
+// The map lives in the Fishing tab since 1.33.0; the panel opens on Now.
+const fsTab = await page.$('[data-dccwl-water-tab-btn="fishing"]');
+if (fsTab) { await fsTab.click(); await page.waitForTimeout(250); }
 await (await page.$('[data-dccwl-map-open]')).click();
 await page.waitForTimeout(700);
 
