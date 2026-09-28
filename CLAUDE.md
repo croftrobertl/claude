@@ -259,6 +259,48 @@ rendered options. Recorded 2026-09-28 at his instruction.
 - **His stored density (16) is his.** Scaling for phones happens in the
   engine; the setting is never changed.
 
+### Rob's recorded picks (for 4.2.0, chosen 2026-09-27/28)
+
+Each was picked by Rob from rendered options. Do not revisit one without a new
+render round and his say.
+
+- **No snow anywhere.** Christmas keeps bokeh and gets the lit sabal palm
+  (weight 1, cap 9); Snowbird → warm winter-sun bokeh; MLK → gold & white
+  light; Mardi Gras → purple/green/gold confetti; Presidents → orange blossom.
+  Each colour variant is its own named choice in the dropdown. The Christmas
+  Matrix egg swaps '❄' for H and O ("HO HO HO").
+- **4/20:** the picnic basket goes; the hippie van (no badge) takes its
+  "grows up and stands" role.
+- **Christmas AFTER:** palm lights string by string, ornaments and holly on
+  longer threads lower down the page, the gift drop lands on the water line
+  with a ripple. On a phone (`mobile`, width < 768) Christmas shows AT LEAST 5
+  sprites, and never fewer than 4 while a scene has borrowed one — this floor
+  overrides the scaled cap for Christmas only.
+- **Scenes on a phone, all themes:** a scene borrows AT MOST 1 sprite from the
+  running set, so no scene empties the screen. Desktop keeps today's borrowing.
+- **Heroes:** eagle = two-frame wingbeat (July 4 and Patriot Day only; Memorial
+  and Veterans Day get the heron); witch = silhouette with her cat on the broom
+  tail; bass = the new largemouth drawn mid-leap. The unused `ducks` hero is
+  removed.
+- **No hero draws an emoji — with ONE exception Rob chose explicitly: the St.
+  Patrick's rainbow keeps the ☘ character in its clover strip.** Do not
+  "fix" it to the clover sprite; that option was rendered and declined.
+- **Summer on the Canal scenes:** all three — gator glide, flamingo pool float
+  with the flip-flop, mullet skip — rotating at the usual cadence.
+- **Florida Keys:** keeps its Keys feel (sun, palms, hibiscus, colours, name)
+  but its animals and plants are CENTRAL Florida, never sea life. Scene K3
+  (hibiscus bloom drops, floats, a fish nibbles) is approved; the pelican dive
+  and sea turtle were declined. No animal appears twice across the Keys hero,
+  sprites and scenes. Snowbird's flamingo V and arrival scene, and Summer's
+  inflatable flamingo, are NOT affected by the Keys flamingo swap.
+- **Calendar rules (both resolvers, identically):** a holiday's own day is
+  never given away; Easter beats April Fool's on 1 Apr 2029; a lone day of a
+  long theme goes to the theme that starts next, EXCEPT that a one-day holiday
+  (MLK, Presidents, April Fool's, 4/20) is never lengthened — then the lone day
+  stays with its own theme (so 15 Feb 2032 and 19 Apr 2033 stay put); where
+  two holiday lead-up windows overlap, the NEARER holiday's own day wins the
+  day (this replaced "the shorter window wins").
+
 ## DCC Seasons — things that bite
 
 - **Minified assets have a recorded build command.** Regenerate with exactly
