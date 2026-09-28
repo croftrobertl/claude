@@ -62,7 +62,7 @@ final class Config
             'wiz_back'          => __('Back', 'dcc-cottage-selector'),
             'wiz_next'          => __('Next', 'dcc-cottage-selector'),
             'next_hint'         => __('Choose an answer to continue', 'dcc-cottage-selector'),
-            'review_heading'    => __('Review your answers', 'dcc-cottage-selector'),
+            'review_heading'    => __('Review Your Answers', 'dcc-cottage-selector'),
             'edit'              => __('Edit', 'dcc-cottage-selector'),
             'edit_answers'      => __('Edit answers', 'dcc-cottage-selector'),
             // Title Case is carried by the STRING now, not by a text-transform:
@@ -133,11 +133,16 @@ final class Config
             'cmp_next'          => __('Next cottages', 'dcc-cottage-selector'),
 
             // Results
-            'results_heading'   => __('Your top matches', 'dcc-cottage-selector'),
+            'results_heading'   => __('Your Top Matches', 'dcc-cottage-selector'),
             'view_cottage'      => __('View this cottage', 'dcc-cottage-selector'),
             /* The narrow-screen form of view_cottage. Both ship in the markup and CSS
                picks one, so a full-page cache can serve the same HTML to every device. */
             'view_cottage_short' => __('View', 'dcc-cottage-selector'),
+            /* Appended to every View link's aria-label: the link opens in a new tab
+               (0.51.0) and says so to a screen reader. It is NOT visible text — the
+               explicit aria-label replaces the link's content as its accessible name,
+               so a visually hidden span inside the link would never be announced. */
+            'opens_new_tab'     => __('(opens in a new tab)', 'dcc-cottage-selector'),
             'add_compare'       => __('Compare', 'dcc-cottage-selector'),
             'reset'             => __('Restart', 'dcc-cottage-selector'),
             'see_matches'       => __('Submit', 'dcc-cottage-selector'),
@@ -175,7 +180,7 @@ final class Config
             // Informational notes under the party-size / pet questions. No fee
             // amounts anywhere in this plugin (single source of truth elsewhere).
             'capacity_note'     => __('Guests 1-2 are included in the nightly rate and will have a queen bed. Guests 3-4 will have a pull-out couch and be charged a nightly fee.', 'dcc-cottage-selector'),
-            'pet_note'          => __('Pets are welcome in Cottage 34 only and must be pre-approved.', 'dcc-cottage-selector'),
+            'pet_note'          => __('Pets are only allowed in Cottage 34 and must be pre-approved.', 'dcc-cottage-selector'),
             'fee_link'          => __('Fee details', 'dcc-cottage-selector'),
 
             // Availability, when the guest supplied dates (see assets/js/availability.js)

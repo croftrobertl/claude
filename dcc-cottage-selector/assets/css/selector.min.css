@@ -241,7 +241,7 @@
   background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent);
 }
 .dccs-root.dccs-root .dccs-results-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
 }
 .dccs-root.dccs-root .dccs-open-compare {
   cursor: pointer; white-space: nowrap;
@@ -361,14 +361,14 @@
 .dccs-root.dccs-root .dccs-matrix thead th.dccs-corner { left: 0; z-index: 3; background: var(--dccs-accent); }
 .dccs-root.dccs-root .dccs-matrix td.is-diff { background: var(--dccs-diff); font-weight: 600; }
 .dccs-root.dccs-root .dccs-results { margin-top: 18px; }
-.dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; }
+.dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; text-align: center; }
 .dccs-root.dccs-root .dccs-card {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border);
   border-radius: var(--dccs-radius); padding: 14px; margin-bottom: 12px;
 }
 .dccs-root.dccs-root .dccs-card.is-highlight { border-color: var(--dccs-accent); box-shadow: 0 0 0 2px rgba(15,109,191,0.18); }
 .dccs-root.dccs-root .dccs-card-head h4 { margin: 0 0 8px; font-size: 1.05rem; }
-.dccs-root.dccs-root .dccs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dccs-root.dccs-root .dccs-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
 .dccs-root.dccs-root .dccs-badge {
   background: rgba(15,109,191,0.1); color: var(--dccs-accent);
   border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600;

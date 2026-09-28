@@ -1,5 +1,5 @@
 /*
- * DCC Cottage Selector 0.50.0 — generated bundle. DO NOT EDIT.
+ * DCC Cottage Selector 0.51.0 — generated bundle. DO NOT EDIT.
  *
  * Built by tools/build-bundle.php from, in order:
  *   assets/js/score.js
@@ -1381,7 +1381,11 @@
         (st.compareIds.indexOf(String(c.id)) !== -1 ? ' checked' : '') + '> ' + ico(config, 'compare') + esc(S.add_compare) + '</label>'
       : '';
     html += '<div class="dccs-card-actions">' +
-      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" aria-label="' + esc(S.view_cottage + ': ' + nameLabel) + '">' +
+      // Opens in a new tab (0.51.0) so the guest keeps their results. The notice
+      // lives in the aria-label because an explicit aria-label replaces the link's
+      // content as its accessible name; the visible label is unchanged.
+      '<a class="dccs-view" href="' + esc(safeUrl(c.pageUrl)) + '" target="_blank" rel="noopener"' +
+        ' aria-label="' + esc(S.view_cottage + ': ' + nameLabel + ' ' + S.opens_new_tab) + '">' +
         withIcon(config, 'view', 'view', viewLabel(S)) + '</a>' +
       cmpToggle +
       '</div></div>';

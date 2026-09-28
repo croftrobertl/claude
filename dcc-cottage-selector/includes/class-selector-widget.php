@@ -162,7 +162,7 @@ class Selector_Widget extends Widget_Base
         ]);
 
         $this->preset_control('show_review', [
-            'label'        => __('Show “Review your answers” step', 'dcc-cottage-selector'),
+            'label'        => __('Show “Review Your Answers” step', 'dcc-cottage-selector'),
             'description'  => __('Site default is off: the quiz jumps straight to the matches after the last question (the results still have an “Edit answers” button). On adds a review-and-confirm step before results.', 'dcc-cottage-selector'),
             'type'         => Controls_Manager::SELECT,
             'default'      => 'inherit',

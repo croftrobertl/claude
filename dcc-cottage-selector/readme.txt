@@ -3,7 +3,7 @@ Contributors: doracanalcourt
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.50.0
+Stable tag: 0.51.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,7 +21,7 @@ elegant decision tool:
   screen (how many guests? desk? pull-out couch? studio or 1-bedroom? table for
   2 or 4? pet-friendly? ground floor? screened porch?), then straight to the
   top matches.
-  An optional "Review your answers" step can be switched on in the editor.
+  An optional "Review Your Answers" step can be switched on in the editor.
 * **Weigh priorities** (in the mode menu) — a step-by-step wizard that asks how
   much each thing matters (Low / Medium / High); no sliders, no drag-and-drop.
 * **Compare** (mode menu, or tick cottages on the results) — choose from a
@@ -142,7 +142,7 @@ stepper ("Step 3 of 8") and a live "N cottages match" count; nothing is
 pre-selected — the guest taps an answer (including "No preference") and presses
 **Next**, so a mis-tap never skips ahead. A low-key **Back** link and the stepper
 both edit earlier answers. After the last question the guest goes straight to the
-**Top 3** (an optional **Review your answers** step can be enabled in the editor to
+**Top 3** (an optional **Review Your Answers** step can be enabled in the editor to
 add a confirm-first screen). The **Edit answers** button on the results always opens
 that review screen on demand, so answers can be changed even when the forced step is
 off. Answers are never remembered — every page load starts fresh.
@@ -230,6 +230,19 @@ names, or features. Visitor-facing copy is translatable with Loco Translate
 * Disable JavaScript: all eight cottages still render as links.
 
 == Changelog ==
+
+= 0.51.0 =
+* Results: the "Your Top Matches" heading and each card's feature chips are now
+  centred. The View Cottage button stays at the card's left edge. Weigh
+  Priorities shares the same results markup and follows.
+* Headings now default to Title Case: "Your Top Matches" and "Review Your
+  Answers". Plugin defaults only — no upgrade routine, nothing edits stored
+  Elementor data.
+* Every View Cottage / View button opens the cottage page in a new tab
+  (target="_blank" rel="noopener"). Screen readers hear "(opens in a new tab)"
+  as part of the link's name; nothing visible changes. New translatable string.
+* Pet note default: "Pets are only allowed in Cottage 34 and must be
+  pre-approved."
 
 = 0.50.0 =
 * The 3-4 guest switch is now read EXACTLY as DCC Custom Checkout reads it: on

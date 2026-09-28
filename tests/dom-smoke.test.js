@@ -1287,10 +1287,11 @@ function configWith(overrides) {
   answerNext(root, 'either'); answerNext(root, 'either'); answerNext(root, 'either'); // pullout/layout/dining
   answerNext(root, 'either');                                                          // -> pet (step 6)
   const pnote = root.querySelector('.dccs-q-note');
-  ok('pet step notes Cottage 34 only and that approval is required',
-    !!pnote && /Cottage 34 only/.test(pnote.textContent) && /pre-approved/.test(pnote.textContent));
-  ok('the pet note is the current wording, not the superseded one',
-    !/only, by pre-approval/.test(cfgNotes.pet_note));
+  ok('pet step names Cottage 34 and that approval is required',
+    !!pnote && /Cottage 34\b/.test(pnote.textContent) && /pre-approved/.test(pnote.textContent));
+  ok('the pet note renders the Config string exactly', !!pnote && pnote.textContent === cfgNotes.pet_note);
+  ok('the pet note is the current wording, not a superseded one',
+    !/only, by pre-approval/.test(cfgNotes.pet_note) && !/welcome in Cottage 34 only/.test(cfgNotes.pet_note));
   ok('pet note carries no fee amount either', pnote.textContent.indexOf('$') === -1);
   ok('pet note has no link while unset', !pnote.querySelector('a'));
 
@@ -3016,6 +3017,64 @@ defer(async function () {
   const a = renderWith(SOURCE_FILES, 'https://example.com/?seed=3', null);
   const b = renderWith(SOURCE_FILES, 'https://example.com/?seed=3&mode=compare', null);
   ok('the comparator reports a difference when the render really differs', a !== b);
+})();
+
+// ---- 92. 0.51.0: every View button opens a new tab, and says so ----------------
+// There is exactly ONE place that renders a link to a cottage page — buildCard(),
+// shared by the Matching Quiz results, the Weigh Priorities results and the
+// pop-ups. Compare mode renders NO cottage links. So the test drives both wizard
+// modes plus a deep-linked highlight card (the pop-up's arrangement), and first
+// proves it found View buttons at all.
+(function () {
+  const S = JSON.parse(CONFIG).strings;
+  const views = (cfgStr, url, mode) => {
+    const w = freshDom(url);
+    const root = mountSelector(w, cfgStr);
+    if (mode) { enter(root, mode); stepThrough(root, mode === 'weights' ? '2' : 'either'); seeMatches(root); }
+    return Array.prototype.slice.call(root.querySelectorAll('a.dccs-view'));
+  };
+  const withModes = (() => { const c = JSON.parse(CONFIG); c.enabledModes = ['quick', 'weights', 'compare']; return JSON.stringify(c); })();
+  const sets = {
+    'Matching Quiz results': views(withModes, 'https://example.com/', 'quick'),
+    'Weigh Priorities results': views(withModes, 'https://example.com/', 'weights'),
+    'deep-linked pop-up style card': views(CONFIG, 'https://example.com/?highlight=35&mode=quick', null),
+  };
+  Object.keys(sets).forEach(name => {
+    const vs = sets[name];
+    ok(name + ': View buttons were found at all', vs.length > 0);
+    ok(name + ': every View button opens a new tab', vs.every(a => a.getAttribute('target') === '_blank'));
+    ok(name + ': every one carries rel="noopener"', vs.every(a => /\bnoopener\b/.test(a.getAttribute('rel') || '')));
+    // The <a> has an explicit aria-label (it names the cottage), which OVERRIDES
+    // its contents for assistive tech — so the new-tab notice must be IN the
+    // label; a visually hidden span inside the link would never be announced.
+    ok(name + ': the accessible name announces the new tab',
+      vs.every(a => (a.getAttribute('aria-label') || '').indexOf(S.opens_new_tab) !== -1));
+    ok(name + ': and still starts with the full visible label (WCAG 2.5.3)',
+      vs.every(a => (a.getAttribute('aria-label') || '').indexOf(S.view_cottage) === 0));
+    ok(name + ': no visible change — the painted text is still only the label spans',
+      vs.every(a => a.textContent === S.view_cottage + S.view_cottage_short));
+  });
+  // Compare mode: nothing to open.
+  const w = freshDom(); const r = mountSelector(w, CONFIG); enter(r, 'compare');
+  ok('Compare mode renders no cottage links (so there is nothing to retarget)',
+    r.querySelectorAll('a[href]').length === 0 || !r.querySelector('a.dccs-view'));
+})();
+
+// ---- 93. 0.51.0: results alignment -------------------------------------------
+// jsdom has no layout: this pins the DECLARATIONS; the geometry is measured in
+// Chromium for the report's screenshots.
+(function () {
+  const css = fs.readFileSync(path.join(ROOT, 'dcc-cottage-selector', 'assets', 'css', 'selector.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (sel) => { const i = css.indexOf(sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)); };
+  const head = rule('.dccs-root.dccs-root .dccs-results-head');
+  const h = rule('.dccs-root.dccs-root .dccs-results-h');
+  const badges = rule('.dccs-root.dccs-root .dccs-badges');
+  const actions = rule('.dccs-root.dccs-root .dccs-card-actions');
+  ok('the four rules were found', head && h && badges && actions);
+  ok('the results heading is centred', /text-align:\s*center/.test(h) && /justify-content:\s*center/.test(head));
+  ok('the feature chips are centred', /justify-content:\s*center/.test(badges));
+  ok('the View button row is NOT centred — Rob kept it left', !/justify-content:\s*center/.test(actions));
 })();
 
 (async function runDeferred() {

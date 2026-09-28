@@ -410,9 +410,10 @@
   background: var(--dccs-btn-bg, var(--dccs-surface)); color: var(--dccs-accent);
 }
 
-/* Results head + open-compare button */
+/* Results head. Centred (0.51.0, owner): the heading sits over the cards on its
+   own axis rather than inheriting whatever the page's text-align happens to be. */
 .dccs-root.dccs-root .dccs-results-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
 }
 /* Main compare CTA: full 48px like the wizard's primary buttons (it deliberately
    does NOT share the shrunken tail-button sizing — it's a primary action). */
@@ -596,14 +597,16 @@
 
 /* Results */
 .dccs-root.dccs-root .dccs-results { margin-top: 18px; }
-.dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; }
+.dccs-root.dccs-root .dccs-results-h { margin: 0 0 10px; font-size: 1.15rem; text-align: center; }
 .dccs-root.dccs-root .dccs-card {
   background: var(--dccs-results-bg, var(--dccs-surface)); border: 1px solid var(--dccs-border);
   border-radius: var(--dccs-radius); padding: 14px; margin-bottom: 12px;
 }
 .dccs-root.dccs-root .dccs-card.is-highlight { border-color: var(--dccs-accent); box-shadow: 0 0 0 2px rgba(15,109,191,0.18); }
 .dccs-root.dccs-root .dccs-card-head h4 { margin: 0 0 8px; font-size: 1.05rem; }
-.dccs-root.dccs-root .dccs-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+/* Chips centred (0.51.0, owner). The action row below is deliberately NOT: the
+   View button stays at the card's left edge. */
+.dccs-root.dccs-root .dccs-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
 .dccs-root.dccs-root .dccs-badge {
   background: rgba(15,109,191,0.1); color: var(--dccs-accent);
   border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 600;

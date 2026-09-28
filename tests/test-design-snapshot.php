@@ -232,7 +232,7 @@ namespace {
     // straight to guests, so a change here should be a decision, not a tidy-up.
     $CAPACITY = 'Guests 1-2 are included in the nightly rate and will have a queen bed. '
         . 'Guests 3-4 will have a pull-out couch and be charged a nightly fee.';
-    $PET = 'Pets are welcome in Cottage 34 only and must be pre-approved.';
+    $PET = 'Pets are only allowed in Cottage 34 and must be pre-approved.';
 
     ok('capacity note falls back to the Config default (live wording)',
         ($fallbackCfg['strings']['capacity_note'] ?? null) === $CAPACITY);
@@ -665,6 +665,21 @@ namespace {
     ok('(control) a <=0.47.0 registry snapshot still masks it, so the check can see the difference',
         Selector_Widget::config_from_snapshot($stale, ['startMode' => 'quick'])['showReview'] === false);
     unset($GLOBALS['__opts'][$sKey]);
+
+    // ---- 0.51.0: Rob's copy, baked in as plugin defaults --------------------------
+    $str51 = \DCCS\Config::strings();
+    $pre51 = \DCCS\Preset_Defaults::map();
+    ok('results heading default is Title Case', $str51['results_heading'] === 'Your Top Matches');
+    ok('review heading default is Title Case',  $str51['review_heading'] === 'Review Your Answers');
+    // The preset seeds NEW widgets; it must agree with Config or a new widget
+    // would store the old wording.
+    ok('the preset seeds new widgets with the Title Case results heading',
+        ($pre51['str_results_heading'] ?? null) === 'Your Top Matches');
+    ok('the preset seeds new widgets with the Title Case review heading',
+        ($pre51['str_review_heading'] ?? null) === 'Review Your Answers');
+    ok('pet note is the owner\'s new wording',
+        $str51['pet_note'] === 'Pets are only allowed in Cottage 34 and must be pre-approved.');
+    ok('and the new-tab notice exists as a translatable string', ($str51['opens_new_tab'] ?? '') !== '');
 
     // ---- Never override an Elementor `final` method ----------------------------
     // Controls_Stack marks add_group_control()/add_responsive_control() (and others)
