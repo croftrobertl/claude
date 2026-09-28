@@ -237,6 +237,28 @@ The repo keeps one tracked build artifact at `dcc-seasons.zip` so a version-name
 copy isn't accumulated per release; rebuild it in the same commit as the version
 bump so the tracked zip never lags the source.
 
+## DCC Seasons — Rob designs it by choosing, never by default
+
+Every design decision in DCC Seasons is Rob's, made by multiple choice from
+rendered options. Recorded 2026-09-28 at his instruction.
+
+- **Any design choice not already decided — stop, render the options, ask.**
+  Which sprite, which colour, which effect, which layer, how many on screen,
+  which story a scene tells: render 2–3 options (390px phone, his live
+  settings, guest view + close-up — the sheet format of the 4.1.3 snow
+  proposal) and send them. Do not pick one and ship it, and do not ship a
+  "sensible default" to be corrected later. Pure engineering choices (code
+  structure, tests, tooling) stay with the developer.
+- **His picks live in the plugin's CODE DEFAULTS, never in stored settings.**
+  `Themes::themes()`, `Themes::subtle_defaults()` and the engine's
+  `SUBTLE_FALLBACK` carry them, kept in step. Live stores `subtle_map = []`,
+  so defaults reach guests. Never write a pick into his options row, and never
+  rewrite his stored schedule or settings to deliver one — calendar behaviour
+  goes in the RESOLVER (`Schedule::active()` and `activeRow()` in ambient.js,
+  changed identically), not in edited default rows.
+- **His stored density (16) is his.** Scaling for phones happens in the
+  engine; the setting is never changed.
+
 ## DCC Seasons — things that bite
 
 - **Minified assets have a recorded build command.** Regenerate with exactly
