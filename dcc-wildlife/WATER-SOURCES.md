@@ -483,3 +483,48 @@ recorded in tools/entities-batch2.csv. Two notes worth keeping: the
 double-crested cormorant's live entity is Q117254648 (*Nannopterum auritum*) —
 Q725289 (*Phalacrocorax auritus*) is a stale duplicate with no sitelink — and
 the cattle egret has had no English Wikipedia sitelink since the 2023 split.
+
+## Phase 2 — the 1.33.0 expansion: the four odds the owner flagged
+
+He named four species in the brief and asked for their odds to be set from
+evidence rather than from the master list. Checked 2026-09-28; each is
+recorded with what the evidence actually said, including where it disagreed
+with the premise of the question.
+
+**Barn swallow — HE WAS RIGHT, AND THE LIST WAS WRONG.** The master list has
+it "Certain". Cornell: barn swallows BREED in northern Florida and pass
+through the rest of the state on migration. Lake County is in the rest of the
+state. So it is a spring and autumn bird here, not a summer resident, and its
+calendar has to be migration-shaped — up in April–May and again in
+August–September, down in midsummer and winter. Odds: **Likely on passage**,
+not Certain.
+
+**American bullfrog — HE WAS RIGHT AGAIN.** USGS: the native range reaches
+*central Florida* and no further; south Florida populations are introductions.
+Lake County is at that southern edge. It is present but not a frog a guest
+will reliably meet, so **Occasional**, not Likely. And the useful thing for
+the entry: the deep call a guest hears at night on this canal is almost
+certainly a PIG FROG, which is common here. Two frogs, one voice, and the
+guide should say which one you are actually hearing.
+
+**Sunshine bass — CONFIRMED STOCKED.** FWC stocks largemouth and sunshine
+bass into lakes of the Harris Chain; Lake Harris took 219,243 hybrid
+striped-bass fingerlings. They are a real fish of this chain, not a hopeful
+entry. They school in open water rather than in a shaded canal, which is what
+the entry should say. Odds: **Likely**, as the list has it, now on evidence.
+
+**Channel catfish — THE PREMISE OF THE QUESTION WAS OFF, AND THAT IS WORTH
+SAYING.** He asked whether it is "really Certain in the canal" given it is
+"largely stocked in peninsular Florida". USGS NAS has *Ictalurus punctatus*
+as NATIVE to peninsular Florida (and probably introduced in Georgia, of all
+places); it is also stocked very widely, so both things are true. FWC's own
+Harris Chain forecast lists it. The honest odds problem is not nativity but
+BEHAVIOUR: it feeds on the bottom, after dark. An angler fishing a bottom
+bait at night will catch one; a guest walking the dock will never see one.
+**Likely**, with the entry saying plainly what it takes.
+
+**The rule this sets for the remaining 348.** Where the evidence contradicts
+the master list, the evidence wins and the owner is told — never a silent
+change. Where it contradicts the PREMISE of a question rather than its
+answer, say so too: "it is native, and also stocked" is more useful than
+picking one.
