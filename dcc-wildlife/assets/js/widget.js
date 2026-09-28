@@ -207,12 +207,41 @@
 
 	/* Species art: bespoke sprite when the registry has one, emoji fallback
 	 * for filter-added species without a sprite. */
+	/*
+	 * A SPECIES' OWN PICTURE, in the plugin's documented order: the vetted
+	 * PHOTOGRAPH first, then its own drawing, then the group glyph.
+	 *
+	 * 1.33.0 — the photograph rung was missing here, and only here. The tile
+	 * face has always followed all three; this function, which draws the
+	 * icons in "Easily confused with" and the hub's preview art, went
+	 * straight from sprite to glyph. Twenty-seven of fifty-one species have a
+	 * photograph and no drawing, so the ID helper showed a PAW PRINT beside
+	 * the Brown Watersnake and the Florida Green Watersnake — next to the one
+	 * field mark that is supposed to tell them apart. Seventeen of the
+	 * twenty-seven are in a look-alike group.
+	 *
+	 * The thumb rendition is the 320px face, hand-cropped onto the animal, so
+	 * it is the right rung for a 40px well.
+	 */
 	function speciesArt(sp, spriteCls) {
+		var thumb = sp.src && sp.src.thumb;
+		if (thumb) {
+			var img = document.createElement('img');
+			img.className = 'dccwl-art-photo ' + (spriteCls || '');
+			img.src = thumb;
+			img.alt = '';
+			img.setAttribute('aria-hidden', 'true');
+			img.loading = 'lazy';
+			img.decoding = 'async';
+			img.width = 320;
+			img.height = 240;
+			return img;
+		}
 		if (sp.sprite) {
 			return spriteUse(sp.id, spriteCls);
 		}
-		// 1.19.0: no sprite → the group glyph. Never an emoji, never a
-		// drawing that might be the wrong animal.
+		// 1.19.0: no photograph and no drawing → the group glyph. Never an
+		// emoji, never a drawing that might be the wrong animal.
 		return glyphUse(sp.group, spriteCls);
 	}
 
@@ -1385,6 +1414,10 @@
 	window.DCCWL_Widget = {
 		/* One <use> builder for the whole plugin — see spriteUse(). */
 		sprite: function (id, cls) { return spriteUse(id, cls); },
+		/* A species' own picture, all three rungs. The hub's preview art used
+		 * sprite() directly and SKIPPED every species without a drawing, so
+		 * the art showed a subset of what the line beside it was counting. */
+		art: function (sp, cls) { return speciesArt(sp, cls); },
 		peakFor: function (m) {
 			return speciesForMonth(m).filter(function (x) { return x.v >= PEAK_SCORE; })
 				.map(function (x) { return x.s; });

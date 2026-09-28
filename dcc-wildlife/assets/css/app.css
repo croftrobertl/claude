@@ -326,7 +326,9 @@
 .dccwl-app .dccwl-tile-media {
 	align-items: center;
 	aspect-ratio: 4 / 3;
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). The art well behind every photo
+	 * and every sprite. */
+	background: #ffffff;
 	border-radius: var(--dccwl-radius-sm);
 	display: flex;
 	justify-content: center;
@@ -466,15 +468,32 @@
 .dccwl-app .dccwl-deck-btn.dccwl-deck-btn:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
 /* Disabled, not removed: the control keeps its place so the row does not
  * reflow at either end of the deck. */
-/* 1.33.0: fade the WHOLE control, not the glyph. The glyph used to be tinted
- * to --dccwl-line-strong, a translucent blue, which was legible on the old
- * white button and invisible on the solid blue one — a button that reads as a
- * blank blue disc. Opacity keeps the shape and still says "not now". */
-.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:disabled {
-	background: var(--dccwl-btn-bg);
-	color: var(--dccwl-btn-txt);
-	cursor: default;
-	opacity: 0.38;
+/* ======================================================================
+ * A NAVIGATION CONTROL THAT CANNOT BE USED IS HIDDEN, NOT FADED
+ * (1.33.0, owner's decision — and it applies to every one of them.)
+ *
+ * The first attempt this release faded the disabled deck arrow to 38%. The
+ * owner's ruling: no pale-blue and no grey disabled look anywhere. A control
+ * with nowhere to go GOES, and its space stays, so nothing on the row shifts
+ * when it comes back.
+ *
+ * `visibility: hidden` does all three jobs in one property: the box keeps its
+ * size, the control leaves the tab order, and it leaves the accessibility
+ * tree. `display: none` would collapse the row; `opacity: 0` would leave a
+ * focusable, screen-reader-visible control a guest cannot see.
+ *
+ * THE DISTINCTION THIS DRAWS. It is for controls disabled because there is
+ * nowhere to go. A control disabled because it is BUSY — the map button,
+ * which reads "Loading…" while Leaflet arrives — stays visible: hiding it
+ * mid-tap would look like it vanished, and would take its own progress
+ * message with it.
+ *
+ * Add a new navigation control? Add it to this selector.
+ * ================================================================== */
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:disabled,
+.dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:disabled,
+.dccwl-app .dccwl-sheet-nav.dccwl-sheet-nav:disabled {
+	visibility: hidden;
 }
 .dccwl-deck-status {
 	color: var(--dccwl-text-muted);
@@ -488,7 +507,11 @@
 /* --- badges + chips ------------------------------------------------- */
 
 .dccwl-app .dccwl-badge {
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision), with a 1px border in the pill's OWN
+	 * text colour — a white pill on a white sheet has no shape otherwise. The
+	 * solid red Danger badge is untouched; it is a meaning colour. */
+	background: #ffffff;
+	border: 1px solid currentColor;
 	border-radius: var(--dccwl-radius-pill);
 	color: var(--dccwl-primary);
 	display: inline-block;
@@ -816,7 +839,8 @@
  * ground as the month strip, so the three categories are visibly a single
  * switch rather than three more cards among the tiles. */
 .dccwl-app .dccwl-tabs.dccwl-tabs {
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). */
+	background: #ffffff;
 	border: 1px solid var(--dccwl-line-strong);
 	border-radius: var(--dccwl-radius-pill);
 	display: inline-flex;

@@ -82,7 +82,19 @@ function dcc_boot_plugin(): string {
 		$header = (string) file_get_contents( $root . '/dcc-wildlife.php' );
 		preg_match( "/define\(\s*'DCC_WL_VERSION',\s*'([^']+)'/", $header, $m );
 		define( 'DCC_WL_VERSION', $m[1] ?? '0' );
-		define( 'DCC_WL_PATH', $root . '/' );
+		/*
+		 * DCC_WL_DIR, which is what the plugin actually defines.
+		 *
+		 * This said DCC_WL_PATH — a constant no line of the plugin has ever
+		 * read. The cost was invisible and large: Photo_Library::sources()
+		 * gates the bundled directory on DCC_WL_DIR, so with it undefined
+		 * NO PHOTOGRAPH RESOLVED IN ANY SUITE, ever. Every rendered fixture
+		 * fell through to the sprite or the group glyph, every screenshot
+		 * showed a page the site does not serve, and the whole documented
+		 * fallback chain — media library, source folder, drawing, glyph —
+		 * was untestable below its first rung.
+		 */
+		define( 'DCC_WL_DIR', $root . '/' );
 		define( 'DCC_WL_URL', 'https://example.test/wp-content/plugins/dcc-wildlife/' );
 		define( 'DCC_WL_FILE', $root . '/dcc-wildlife.php' );
 	}

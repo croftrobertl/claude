@@ -208,7 +208,9 @@
  * this ground: muted 4.81:1, primary 4.74:1; the selected pill is solid
  * primary with white (5.30:1). */
 .dccwl-timeline {
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). With every month pill solid blue the
+	 * tinted band underneath was doing no work. */
+	background: #ffffff;
 	border-radius: var(--dccwl-radius-pill);
 	padding: 4px;
 	--dccwl-strip-fade: 48px;
@@ -611,7 +613,9 @@
 /* "What to do" — the plain instruction, set apart on the tinted ground with
  * the flag's colour as a rule down the left. Text stays --dccwl-text. */
 .dccwl-sheet .dccwl-safe {
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). It keeps its coloured left rule,
+	 * which is what marks it as the what-to-do block. */
+	background: #ffffff;
 	border-left: 4px solid var(--dccwl-primary);
 	border-radius: 0 var(--dccwl-radius-sm) var(--dccwl-radius-sm) 0;
 	margin: var(--dccwl-gap) 0;
@@ -845,9 +849,21 @@
 	text-align: center;
 }
 
+/* A photograph standing in for a drawing (1.33.0). It fills the same well the
+ * sprite and the glyph do, cropped rather than squashed — the 320 rendition is
+ * 4:3 and the well is square. */
+.dccwl-app .dccwl-art-photo {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+.dccwl-sheet .dccwl-lookalike-icon { overflow: hidden; }
+
 .dccwl-sheet .dccwl-lookalike-icon {
 	align-items: center;
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). */
+	background: #ffffff;
 	border-radius: var(--dccwl-radius-sm);
 	display: flex;
 	flex: none;
@@ -1354,7 +1370,8 @@
  * spotlight strip uses to say so. */
 .dccwl-subchips {
 	-ms-overflow-style: none;
-	background: var(--dccwl-primary-soft);
+	/* WHITE (1.33.0, owner's decision). */
+	background: #ffffff;
 	border: 1px solid var(--dccwl-line-strong);
 	border-radius: var(--dccwl-radius-pill);
 	display: flex;

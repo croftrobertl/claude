@@ -364,10 +364,14 @@
 			var art = root.querySelector('[data-dccwl-hub-art="wildlife"]');
 			if (!art || !window.DCCWL_Widget) { return; }
 			art.textContent = '';
+			/* All three rungs, and no species skipped: this used to call
+			 * sprite() and drop anything without a drawing, so the art showed
+			 * a subset of what the line above it was counting. (1.33.0) */
 			var peak = window.DCCWL_Widget.peakFor(m).slice(0, HUB_PREVIEW_MAX);
 			peak.forEach(function (sp) {
-				if (!sp.sprite) { return; }
-				art.appendChild(window.DCCWL_Widget.sprite(sp.id, 'dccwl-hub-sprite'));
+				art.appendChild(window.DCCWL_Widget.art
+					? window.DCCWL_Widget.art(sp, 'dccwl-hub-sprite')
+					: window.DCCWL_Widget.sprite(sp.id, 'dccwl-hub-sprite'));
 			});
 		}
 

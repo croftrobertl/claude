@@ -200,7 +200,37 @@ if (legend) { checkSame(INK, legend.color, 'a muted-role element is now black');
 await page.close();
 
 /* ---- 5. the footnote row: three labels, one look --------------------- */
-section('By month matches Field guide and Credits');
+section('By month matches Field guide and Credits — at every width');
+
+/*
+ * AT 320, 390 AND 1280. The first version of this check asked at 390 only,
+ * and the owner's Director was right to ask for all three: the row carries
+ * media-query rules of its own, and "the same at one width" is not the claim
+ * item 8 makes. The properties are the four the brief names — size, weight,
+ * colour, underline — plus family, which is what the host kit was winning.
+ */
+for (const w of [320, 390, 1280]) {
+  const h = await widgetPage(browser, 'canal', { width: w, height: 2400, sitekit: true });
+  const rows = await h.page.evaluate(() => {
+    const row = document.querySelector('.dccwl-footnotes');
+    if (!row) { return null; }
+    return Array.from(row.querySelectorAll('.dccwl-fullguide-h, .dccwl-footnote-link')).map((n) => {
+      const cs = getComputedStyle(n);
+      return { text: n.textContent.trim(), fontSize: cs.fontSize, fontWeight: cs.fontWeight,
+               color: cs.color, decoration: cs.textDecorationLine, fontFamily: cs.fontFamily };
+    });
+  });
+  check(!!rows && 3 === rows.length, `${w}px: all three labels are in the row`,
+    rows ? rows.map((r) => r.text).join(' | ') : 'row missing');
+  if (rows && 3 === rows.length) {
+    note(`${w}px  ` + rows.map((r) => `${r.text}: ${r.fontSize}/${r.fontWeight} ${r.color} ${r.decoration}`).join('   '));
+    for (const key of ['fontSize', 'fontWeight', 'color', 'decoration', 'fontFamily']) {
+      const values = [...new Set(rows.map((r) => r[key]))];
+      checkSame(1, values.length, `${w}px: all three share one ${key}`, JSON.stringify(values));
+    }
+  }
+  await h.page.close();
+}
 
 const hub = await widgetPage(browser, 'canal', { width: 390, height: 2400, sitekit: true });
 const links = await hub.page.evaluate(() => {
@@ -235,6 +265,181 @@ if (links && links.length >= 3) {
   }
 }
 await hub.page.close();
+
+/* ---- 6. NO SPECIES EVER SHOWS THE GENERIC FALLBACK ICON --------------- */
+section('every species shows its own picture, never the group glyph');
+
+/*
+ * The Director found a PAW PRINT beside the Brown Watersnake and the Florida
+ * Green Watersnake in "Easily confused with" — next to the one field mark
+ * that is supposed to tell them apart. speciesArt() went straight from the
+ * species' own drawing to the group glyph and never looked at the
+ * photograph, and twenty-seven of fifty-one species have a photograph and no
+ * drawing.
+ *
+ * Two checks, because one would not have caught it: the DATA must give every
+ * species something of its own, and the RENDERER must use it.
+ */
+const art = await widgetPage(browser, 'month', { width: 390, height: 2400, sitekit: true });
+
+const data = await art.page.evaluate(() => {
+  const cfg = window.DCC_WL_CFG || {};
+  const bare = (cfg.species || []).filter(
+    (s) => !(s.src && s.src.thumb) && !s.sprite
+  ).map((s) => s.id);
+  return { total: (cfg.species || []).length, bare };
+});
+checkAtLeast(1, data.total, 'the config carries species');
+checkSame([], data.bare,
+  'every species has a photograph or a drawing of its own', JSON.stringify(data.bare));
+
+// And the renderer uses it: open a sheet whose look-alike list is all
+// photograph-only species, and assert not one glyph is drawn.
+await art.page.evaluate(() => {
+  const t = document.querySelector('.dccwl-tile[data-dccwl-species="cottonmouth"]');
+  (t || document.querySelector('.dccwl-tile')).click();
+});
+await art.page.waitForTimeout(450);
+const icons = await art.page.evaluate(() => Array.from(
+  document.querySelectorAll('.dccwl-lookalike-icon')
+).map((w) => {
+  const kid = w.firstElementChild;
+  return {
+    name: (w.parentElement.querySelector('.dccwl-lookalike-name') || {}).textContent,
+    tag: kid ? kid.tagName.toLowerCase() : null,
+    cls: kid ? String(kid.getAttribute('class') || '') : '',
+  };
+}));
+checkAtLeast(2, icons.length, 'the cottonmouth sheet lists look-alikes');
+note(icons.map((i) => `${i.name}=${i.tag}.${i.cls.split(' ')[0]}`).join('  '));
+const glyphs = icons.filter((i) => i.cls.includes('dccwl-glyph')).map((i) => i.name);
+checkSame([], glyphs,
+  'not one look-alike falls back to the group glyph — no paw prints on snakes',
+  JSON.stringify(glyphs));
+check(icons.every((i) => 'img' === i.tag || i.cls.includes('dccwl-sprite') || 'svg' === i.tag),
+  'each shows a photograph or its own drawing');
+await art.page.close();
+
+/* ---- 7. a disabled navigation control is hidden, and keeps its space --- */
+section('a control that cannot be used goes, and its space stays');
+
+const dis = await widgetPage(browser, 'month', { width: 390, height: 2400, sitekit: true });
+const nav = await dis.page.evaluate(() => {
+  const prev = document.querySelector('.dccwl-deck-prev');
+  const next = document.querySelector('.dccwl-deck-next');
+  const row = document.querySelector('.dccwl-deck-nav');
+  if (!prev || !row) { return null; }
+  const cs = getComputedStyle(prev);
+  const r = prev.getBoundingClientRect();
+  return {
+    disabled: prev.disabled,
+    visibility: cs.visibility,
+    opacity: cs.opacity,
+    bg: cs.backgroundColor,
+    w: Math.round(r.width), h: Math.round(r.height),
+    rowH: Math.round(row.getBoundingClientRect().height),
+    nextVisible: getComputedStyle(next).visibility,
+  };
+});
+check(!!nav, 'the deck has a nav row with a Previous control');
+if (nav) {
+  note(JSON.stringify(nav));
+  checkSame(true, nav.disabled, 'at the start of a deck, Previous is disabled');
+  checkSame('hidden', nav.visibility, 'so it is HIDDEN — no pale or grey disabled look');
+  checkAtLeast(44, nav.w, 'and it keeps its width, so the row does not shift');
+  checkAtLeast(44, nav.h, 'and its height');
+  checkSame('visible', nav.nextVisible, 'while Next, which can be used, is visible');
+  // visibility:hidden is the one property that also takes it out of the tab
+  // order and the accessibility tree; assert the behaviour, not the property.
+  const focusable = await dis.page.evaluate(() => {
+    const prev = document.querySelector('.dccwl-deck-prev');
+    prev.focus();
+    return document.activeElement === prev;
+  });
+  checkSame(false, focusable, 'a hidden control cannot take focus');
+}
+
+/* ---- 8. the surfaces the owner turned white ------------------------- */
+section('the light-blue surfaces the owner named are white');
+
+const surfaces = await dis.page.evaluate(() => {
+  const g = (sel) => {
+    const el = document.querySelector(sel);
+    return el ? getComputedStyle(el).backgroundColor : null;
+  };
+  return {
+    'A .dccwl-tile-media': g('.dccwl-tile-media'),
+    'B .dccwl-tabs': g('.dccwl-tabs'),
+    'C .dccwl-timeline': g('.dccwl-timeline'),
+    'D .dccwl-subchips': g('.dccwl-subchips'),
+  };
+});
+note(JSON.stringify(surfaces));
+for (const [name, bg] of Object.entries(surfaces)) {
+  if (null === bg) { continue; }
+  checkSame('rgb(255, 255, 255)', bg, `${name} is white`);
+}
+await dis.page.close();
+
+const sheetW = await widgetPage(browser, 'month', { width: 390, height: 2400, sitekit: true });
+await sheetW.page.evaluate(() => {
+  const t = document.querySelector('.dccwl-tile[data-dccwl-species="cottonmouth"]');
+  (t || document.querySelector('.dccwl-tile')).click();
+});
+await sheetW.page.waitForTimeout(450);
+const inSheet = await sheetW.page.evaluate(() => {
+  const g = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).backgroundColor : null; };
+  const danger = document.querySelector('.dccwl-badge-flag-danger');
+  const peak = document.querySelector('.dccwl-badge-peak');
+  return {
+    'E .dccwl-safe': g('.dccwl-safe'),
+    'F .dccwl-lookalike-icon': g('.dccwl-lookalike-icon'),
+    peakBg: peak ? getComputedStyle(peak).backgroundColor : null,
+    peakColor: peak ? getComputedStyle(peak).color : null,
+    dangerBg: danger ? getComputedStyle(danger).backgroundColor : null,
+    // The BASE badge, with no meaning colour of its own. Every badge the
+    // sheet actually renders carries a variant, so the base rule can only be
+    // measured on a bare one — and the base rule is what the owner turned
+    // white.
+    bare: (function () {
+      const host = document.querySelector('.dccwl-detail-badges') || document.querySelector('.dccwl-sheet-body');
+      const b = document.createElement('span');
+      b.className = 'dccwl-badge';
+      b.textContent = 'x';
+      host.appendChild(b);
+      const cs = getComputedStyle(b);
+      const out = { bg: cs.backgroundColor, border: cs.borderTopColor, color: cs.color };
+      b.remove();
+      return out;
+    }()),
+  };
+});
+note(JSON.stringify(inSheet));
+for (const key of ['E .dccwl-safe', 'F .dccwl-lookalike-icon']) {
+  if (null === inSheet[key]) { continue; }
+  checkSame('rgb(255, 255, 255)', inSheet[key], `${key} is white`);
+}
+checkSame('rgb(255, 255, 255)', inSheet.bare.bg, 'G the base badge pill is white');
+// A white pill on a white sheet has no shape, so it takes a border in its OWN
+// text colour — the owner's instruction, and the reason it is not a hairline.
+checkSame(inSheet.bare.color, inSheet.bare.border,
+  'and is outlined in its own text colour, so it keeps a shape');
+
+/*
+ * THE TWO MEANING COLOURS ARE UNTOUCHED, and the owner said both outright:
+ * the solid red Danger badge stays as it is (answer 5G), and the "Peak
+ * season" badge keeps its coral text (answer 7) — and with it the coral wash
+ * it sits on, which is the same colour family, not the light blue that was
+ * being replaced.
+ */
+check(inSheet.dangerBg && 'rgb(255, 255, 255)' !== inSheet.dangerBg,
+  'the Danger badge keeps its solid fill', String(inSheet.dangerBg));
+checkSame('rgb(191, 64, 64)', inSheet.peakColor,
+  'the "Peak season" badge keeps its coral text');
+check(inSheet.peakBg && inSheet.peakBg.includes('240, 128, 128'),
+  'and its coral wash, which was never one of the light-blue surfaces',
+  String(inSheet.peakBg));
+await sheetW.page.close();
 
 await browser.close();
 done();

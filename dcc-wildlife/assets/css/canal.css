@@ -269,6 +269,16 @@
 	min-height: 34px;
 }
 
+/* A photograph in the hub's art row sits in the same 32px slot a drawing
+ * does, cropped to a circle so a 4:3 frame does not sit oddly beside the
+ * round sprites. (1.33.0) */
+.dccwl-canal .dccwl-hub-sprite.dccwl-art-photo {
+	border-radius: 50%;
+	height: 32px;
+	object-fit: cover;
+	width: 32px;
+}
+
 .dccwl-hub-sprite {
 	fill: none;
 	height: 32px;
@@ -521,11 +531,15 @@
 .dccwl-canal .dccwl-hub-tile .dccwl-hub-name    { grid-area: name; }
 .dccwl-canal .dccwl-hub-tile .dccwl-hub-preview { grid-area: preview; }
 .dccwl-canal .dccwl-hub-tile .dccwl-hub-art     { grid-area: art; justify-content: flex-start; }
+/* A BUTTON LIKE EVERY OTHER (1.33.0, owner's decision): a solid #006BCF
+ * disc with a white chevron, coral on hover. It was a light-blue well with a
+ * blue chevron that only turned solid when the tile was hovered — a control
+ * that looked like a control only once you were already on it. */
 .dccwl-canal .dccwl-hub-go {
 	align-items: center;
-	background: var(--dccwl-primary-soft);
+	background: var(--dccwl-btn-bg);
 	border-radius: 50%;
-	color: var(--dccwl-primary);
+	color: var(--dccwl-btn-txt);
 	display: inline-flex;
 	grid-area: go;
 	height: 36px;
@@ -533,7 +547,11 @@
 	margin-left: var(--dccwl-gap-lg);
 	width: 36px;
 }
-.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover .dccwl-hub-go { background: var(--dccwl-btn-bg); color: var(--dccwl-btn-txt); }
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:hover .dccwl-hub-go,
+.dccwl-canal .dccwl-hub-tile.dccwl-hub-tile:focus-visible .dccwl-hub-go {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
 /* A door with nothing to preview (the water module before its first facts,
  * or with the live layer off) collapses to its name and its chevron rather
  * than holding empty rows open. */

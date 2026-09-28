@@ -1700,3 +1700,69 @@ hazard still lives there, every month.
 The nine hazards dropped from Peak Now are the four venomous snakes, the fire
 ant, the poison ivy, the mosquitoes, the lovebugs and the alligator. All nine
 are still in Safety, and the alligator is still browsable under Animals.
+
+### 3. Rob's answers to the style sheet (2026-09-28). Also his, also dated.
+
+1. **The gold selected-ring is fine as it is.** No options wanted.
+2. **CORAL HOVER STAYS AT 2.59:1.** White on `#F08080` measures **2.59:1**,
+   which does not meet WCAG AA at any size. Rob chose it anyway, for one
+   reason: it is what the kit's buttons, the Guest Guide's `.dccgg-btn` and
+   the Selector already do, and three plugins on one site disagreeing about
+   hover is worse than the number. **If contrast is ever raised it changes
+   SITE-WIDE, in one place, never in Wildlife alone.** Do not "fix" this here.
+3. **The deck's blank cells stay.** Each browse group starts its own column;
+   the gap at the foot of the previous group's last column is the price of
+   "press Mammals, see a mammal" and Rob accepts it.
+4. **A DISABLED NAVIGATION CONTROL IS HIDDEN, NOT FADED, AND KEEPS ITS SPACE.**
+   No pale-blue and no grey disabled look anywhere in Wildlife. It is out of
+   the tab order and out of the accessibility tree while hidden.
+   `visibility: hidden` does all three in one property — `display: none`
+   collapses the row, `opacity: 0` leaves a focusable ghost. Applies to every
+   such control: the deck's Previous/Next, the month-strip arrows, any sheet
+   Previous/Next.
+   **The one distinction, and it is deliberate:** this is for a control that
+   cannot be used because there is nowhere to go. A control disabled because
+   it is BUSY — the map button, which reads "Loading…" while Leaflet arrives
+   — stays visible. Hiding it mid-tap would look like it vanished and would
+   take its own progress message with it.
+5. **These light-blue surfaces are WHITE now**: the tile's art well
+   (`.dccwl-tile-media`), the three toggle-row grounds (`.dccwl-tabs`,
+   `.dccwl-timeline`, `.dccwl-subchips`), the "What to do" panel
+   (`.dccwl-safe`, which keeps its coloured left rule), the look-alike icon
+   wells (`.dccwl-lookalike-icon`), and the base badge pill (`.dccwl-badge`),
+   which takes a 1px border in its own text colour so a white pill on a white
+   sheet still has a shape.
+   **Untouched, because they are meaning colours, and Rob said so:** the solid
+   red Danger badge, and the "Peak season" badge's coral text and the coral
+   wash it sits on. That wash was never one of the light-blue surfaces.
+6. **The hub's round chevron (`.dccwl-hub-go`) is a button like every other**:
+   a solid `#006BCF` disc with a white chevron, coral on hover.
+7. Four uses of `--dccwl-primary-soft` as a BACKGROUND remain, and **none of
+   them may change without asking Rob**: the hub's sticky level bar
+   (`.dccwl-canal .dccwl-levelbar`), the current-month tile's wash
+   (`.dccwl-month-tile-on`), the fishing keep-limits block
+   (`.dccwl-fishing-regs`), and the Field guide / Credits panel summary bar
+   (`.dccwl-fullguide-summary`).
+
+### 4. Two bugs his Director found in the 1.33.0 screenshots
+
+**PAW PRINTS ON SNAKES, and it was live.** `speciesArt()` — which draws the
+icons in "Easily confused with" and the hub's preview art — went straight
+from a species' own drawing to the GROUP GLYPH and never looked at the
+photograph. Twenty-seven of fifty-one species have a photograph and no
+drawing, seventeen of them in a look-alike group, so the ID helper showed a
+paw print beside the Brown Watersnake and the Florida Green Watersnake —
+next to the one field mark that is supposed to tell them apart. The function
+now follows the same three rungs the tile face always has: **vetted
+photograph → the species' own drawing → the group glyph.** `ui-theme.mjs`
+asserts both halves: that every species HAS something of its own, and that
+no look-alike renders the glyph.
+
+**AND THE HARNESS COULD NEVER HAVE CAUGHT IT, because it defined the wrong
+constant.** `dcc_boot_plugin()` defined `DCC_WL_PATH`; no line of the plugin
+has ever read that name. The plugin defines `DCC_WL_DIR`, and
+`Photo_Library::sources()` gates the bundled photo directory on it — so with
+it undefined **NO PHOTOGRAPH RESOLVED IN ANY SUITE, EVER**. Every fixture
+fell through to the drawing or the glyph, every screenshot showed a page the
+site does not serve, and the documented fallback chain was untestable below
+its first rung. One line; a whole subsystem.
