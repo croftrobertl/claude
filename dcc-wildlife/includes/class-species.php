@@ -178,6 +178,35 @@ final class Species {
 	 * @param array<int,array<string,mixed>> $dataset
 	 * @return array<int,array<string,mixed>>
 	 */
+	/**
+	 * Is this species a HAZARD — something the Safety section exists for?
+	 *
+	 * One definition, used by every surface that has to agree about it: the
+	 * Safety section's membership, the "at peak" and "worth looking for"
+	 * counts, the Peak Now tab, the spotlight and the hub tile's preview art.
+	 *
+	 * 1.33.0, AND IT REVERSES A DECISION — THE OWNER'S, DATED 2026-09-28.
+	 * From 1.27.0 to 1.32.1, Peak Now showed a venomous snake at its most
+	 * active on the grounds that a guest should be shown it rather than
+	 * spared it. The owner's ruling now is the opposite: hazards belong in
+	 * Safety, which is a destination a guest chooses, and Peak Now is a list
+	 * of things worth going to look for. Nobody goes looking for a
+	 * cottonmouth. Do not restore the old rule without asking him.
+	 *
+	 * It takes a registry row or a dataset row — both carry `group` and
+	 * `flags` — so there is no second, drifting copy for the client.
+	 *
+	 * @param array<string,mixed> $sp
+	 */
+	public static function is_hazard( array $sp ): bool {
+		if ( 'safety' === self::section_of( (string) ( $sp['group'] ?? '' ) ) ) {
+			return true;
+		}
+		// The alligator: group `critters`, flag `danger`, and shown in Safety
+		// too. Flagged danger IS a hazard wherever the species is filed.
+		return in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true );
+	}
+
 	public static function section_members( array $dataset, string $section, bool $include_flagged = true ): array {
 		return array_values( array_filter( $dataset, static function ( array $sp ) use ( $section, $include_flagged ): bool {
 			if ( self::section_of( (string) ( $sp['group'] ?? '' ) ) === $section ) {
@@ -202,7 +231,7 @@ final class Species {
 			 * prose has always listed each species exactly once and must keep
 			 * doing so.
 			 */
-			return 'safety' === $section && in_array( 'danger', (array) ( $sp['flags'] ?? [] ), true );
+			return 'safety' === $section && self::is_hazard( $sp );
 		} ) );
 	}
 
@@ -1660,6 +1689,15 @@ final class Species {
 				// but the fish crow today.
 				'photoNote' => self::photo_note( (string) $id ),
 				'group'     => (string) ( $sp['group'] ?? 'critters' ),
+				/*
+				 * Hazard, decided server-side (1.33.0). The client used to ask
+				 * `group !== 'safety'`, which is not the same question — it
+				 * missed the alligator, whose group is `critters`. Both JS
+				 * files now read this one flag, so widget.js's Peak Now tab
+				 * and canal.js's hub tile cannot disagree about which species
+				 * a count includes.
+				 */
+				'haz'       => self::is_hazard( $sp ) ? 1 : 0,
 				// 1.19.0 data model: flags the legend encodes, how likely a
 				// meeting is, where to drive for it (empty = here), and the
 				// plain what-to-do line for anything flagged.

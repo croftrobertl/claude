@@ -205,9 +205,11 @@
 	font-weight: var(--dccwl-fw-body);
 }
 
-.dccwl-water .dccwl-water-linklist a:hover {
-	background: var(--dccwl-primary-soft);
-	border-color: var(--dccwl-line-strong);
+.dccwl-water .dccwl-water-linklist a:hover,
+.dccwl-water .dccwl-water-linklist a:focus-visible {
+	background: var(--dccwl-btn-bg-hover);
+	border-color: transparent;
+	color: var(--dccwl-btn-txt-hover);
 }
 
 .dccwl-water .dccwl-water-disclaimer {
@@ -302,10 +304,10 @@
 /* Doubled classes to beat Bravada's (0,3,1) button reset. */
 .dccwl-seg-btn.dccwl-seg-btn,
 .dccwl-drop-btn.dccwl-drop-btn {
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
@@ -317,12 +319,18 @@
 }
 
 .dccwl-seg-btn.dccwl-seg-btn:hover,
-.dccwl-drop-btn.dccwl-drop-btn:hover { background: var(--dccwl-primary-soft); }
+.dccwl-drop-btn.dccwl-drop-btn:hover {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
 
 .dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"] {
 	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
+}
+.dccwl-seg-btn.dccwl-seg-btn[aria-pressed="true"]:hover {
+	border-color: var(--dccwl-gold);
 }
 
 .dccwl-seg-btn.dccwl-seg-btn:focus-visible,

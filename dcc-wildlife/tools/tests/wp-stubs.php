@@ -143,8 +143,42 @@ function add_action( $h, $cb, $p = 10, $args = 1 ) { $GLOBALS['dccwl_test']['act
 function add_filter( $h, $cb, $p = 10, $args = 1 ) { $GLOBALS['dccwl_test']['filters'][] = [ $h, $cb, $p ]; return true; }
 function remove_filter( $h, $cb, $p = 10 ) { return true; }
 function remove_action( $h, $cb, $p = 10 ) { return true; }
-function apply_filters( $h, $v, ...$rest ) { return $v; }
-function do_action( $h, ...$a ) {}
+/**
+ * Run the registered callbacks, in priority order, like WordPress does.
+ *
+ * This WAS a pass-through, and a pass-through cannot fail: the plugin
+ * advertises `dcc_wl_species` and `dcc_wl_calendar` as its extension points
+ * and no suite could reach them, so a registry that quietly stopped applying
+ * either filter would have stayed green. Same lesson as the `esc_url_raw`
+ * stub that hid the brace-stripping bug in 1.32.1 — a stub that is kinder
+ * than WordPress hides exactly the bugs it is there to catch.
+ */
+function apply_filters( $h, $v, ...$rest ) {
+	$hooked = [];
+	foreach ( $GLOBALS['dccwl_test']['filters'] as $i => [ $hook, $cb, $prio ] ) {
+		if ( $hook === $h ) {
+			$hooked[] = [ $prio, $i, $cb ];
+		}
+	}
+	// Priority first, registration order second — a stable sort by both.
+	usort( $hooked, static fn( $a, $b ) => ( $a[0] <=> $b[0] ) ?: ( $a[1] <=> $b[1] ) );
+	foreach ( $hooked as [ , , $cb ] ) {
+		$v = $cb( $v, ...$rest );
+	}
+	return $v;
+}
+function do_action( $h, ...$a ) {
+	$hooked = [];
+	foreach ( $GLOBALS['dccwl_test']['actions'] as $i => [ $hook, $cb, $prio ] ) {
+		if ( $hook === $h ) {
+			$hooked[] = [ $prio, $i, $cb ];
+		}
+	}
+	usort( $hooked, static fn( $x, $y ) => ( $x[0] <=> $y[0] ) ?: ( $x[1] <=> $y[1] ) );
+	foreach ( $hooked as [ , , $cb ] ) {
+		$cb( ...$a );
+	}
+}
 function has_action( $h, $cb = false ) { foreach ( $GLOBALS['dccwl_test']['actions'] as $a ) { if ( $a[0] === $h ) { return $a[2]; } } return false; }
 function add_shortcode( $t, $cb ) { $GLOBALS['dccwl_test']['shortcodes'][ $t ] = $cb; }
 function shortcode_atts( $pairs, $atts, $shortcode = '' ) {

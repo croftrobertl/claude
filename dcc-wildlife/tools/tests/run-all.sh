@@ -73,7 +73,7 @@ unclassified=0
 for f in *; do
 	case "$f" in
 		test-*.php|ui-*.mjs) ;;
-		run-all.sh|lib.php|lib.mjs|wp-stubs.php|elementor-stubs.php|render-fixture.php) ;;
+		run-all.sh|lib.php|lib.mjs|wp-stubs.php|elementor-stubs.php|render-fixture.php|sitekit.css) ;;
 		README.md|.gitignore|fixtures|node_modules|package.json|package-lock.json) ;;
 		*) echo "  unclassified: $f"; unclassified=$((unclassified + 1)) ;;
 	esac

@@ -433,8 +433,33 @@ final class Render {
 			self::render_browse_nav( $slug, $group_species, $first, $gates );
 			?>
 			<ul class="dccwl-tiles dccwl-guide-grid" data-dccwl-group="<?php echo esc_attr( $slug ); ?>"<?php echo $first ? '' : ' hidden'; ?> aria-label="<?php echo esc_attr( $label ); ?>">
+				<?php
+				/*
+				 * 1.33.0 — MARK EACH SUB-GROUP'S FIRST MEMBER.
+				 *
+				 * The deck is a three-row column grid, so aligning a tile's
+				 * left edge aligns its COLUMN, and a group whose first member
+				 * sits in row 2 or 3 opened on the previous group's tiles:
+				 * pressing "Mammals" showed a watersnake at the top left. The
+				 * owner's requirement is that Mammals opens on a mammal.
+				 *
+				 * The marker lets the CSS put that tile in row 1, which makes
+				 * the auto-placement algorithm start a new column for it. The
+				 * cost is a blank cell at the foot of the previous group's
+				 * last column — deliberate, and the only way the guarantee
+				 * holds without hiding tiles or reordering them.
+				 */
+				$seen_browse = [];
+				?>
 				<?php foreach ( $group_species as $sp ) : ?>
-					<li<?php echo '' !== (string) ( $sp['browse'] ?? '' ) ? ' data-dccwl-browse="' . esc_attr( (string) $sp['browse'] ) . '"' : ''; ?>>
+					<?php
+					$browse = (string) ( $sp['browse'] ?? '' );
+					$starts = '' !== $browse && ! isset( $seen_browse[ $browse ] );
+					if ( '' !== $browse ) {
+						$seen_browse[ $browse ] = true;
+					}
+					?>
+					<li<?php echo '' !== $browse ? ' data-dccwl-browse="' . esc_attr( $browse ) . '"' : ''; ?><?php echo $starts ? ' data-dccwl-browse-first=""' : ''; ?>>
 						<button type="button" class="dccwl-tile" data-dccwl-species="<?php echo esc_attr( $sp['id'] ); ?>" aria-haspopup="dialog" aria-expanded="false">
 							<?php echo self::tile_media( $sp ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside. ?>
 							<span class="dccwl-tile-name"><?php echo esc_html( $sp['name'] ); ?></span>
@@ -951,7 +976,22 @@ final class Render {
 				 * a claim about the month, which is what it always measured,
 				 * rather than a claim about the size of the guide.
 				 */
-				'subSpot'     => __( '%1$d at their best in %2$s', 'dcc-wildlife' ),
+				/*
+				 * 1.33.0, owner's decision of 2026-09-28: "worth looking for",
+				 * NOT "at their best".
+				 *
+				 * This number counts every species scoring at or above the
+				 * spotlight threshold (2 by default) — a wider set than the
+				 * peak count. Calling it "at their best" made it read as the
+				 * peak number, so two surfaces on one screen appeared to
+				 * disagree about the same phrase. THE PHRASE "AT PEAK" NOW
+				 * MEANS ONE NUMBER EVERYWHERE, and this is not it.
+				 *
+				 * One string, two surfaces: the guide's own subtitle and the
+				 * hub's Wildlife tile. They count the same thing and must not
+				 * word it differently.
+				 */
+				'subSpot'     => __( '%1$d worth looking for in %2$s', 'dcc-wildlife' ),
 				/* translators: 1: month name, 2: species-count phrase. */
 				/* monthSub wrapped the subline in "September: …". Since 1.29.0
 				   subSpot names the month itself, so nothing reads this. */
@@ -982,6 +1022,10 @@ final class Render {
 				'deckPos'     => __( '%1$s–%2$s of %3$s', 'dcc-wildlife' ),
 				/* translators: 1: a sub-group name like "Wading birds", 2: the page within it, 3: how many pages it has. */
 				'subPos'      => __( '%1$s · %2$d/%3$d', 'dcc-wildlife' ),
+				/* translators: %d: how many species are in the compact list. */
+				/* The compact list has no window to describe — every species
+				 * is on the page — so the line counts instead of paging. */
+				'deckCount'   => __( '%d species', 'dcc-wildlife' ),
 				/* translators: button that switches the species list to short rows. */
 				'viewCompact' => __( 'Compact', 'dcc-wildlife' ),
 				/* translators: button that switches the species list back to photo cards. */

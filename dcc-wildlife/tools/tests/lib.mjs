@@ -141,6 +141,7 @@ export async function buildPage(browser, opts = {}) {
     head = '',
     globals = {},
     hostile = false,
+    sitekit = false,
   } = opts;
 
   const page = await browser.newPage({
@@ -154,6 +155,14 @@ export async function buildPage(browser, opts = {}) {
   const hostileCss = hostile
     ? '<style data-src="theme-trap">html{font-size:20px;font-weight:700;font-family:Raleway,sans-serif}</style>'
     : '';
+  /* The full site kit, not just its root font. `hostile` answers "does the
+   * plugin's type survive a 20px/700 root"; `sitekit` answers the harder
+   * question — "does the plugin's rule WIN against the kit's (0,3,1) reset".
+   * A suite that asks the second must also wrap its body (see wrap below),
+   * or none of the kit's selectors match and it proves nothing. */
+  const sitekitCss = sitekit
+    ? `<style data-src="sitekit">\n${readFileSync(join(HERE, 'sitekit.css'), 'utf8')}\n</style>`
+    : '';
   const globalScript = Object.keys(globals).length
     ? `<script>${Object.entries(globals)
         .map(([k, v]) => `window[${JSON.stringify(k)}] = ${JSON.stringify(v)};`)
@@ -163,7 +172,9 @@ export async function buildPage(browser, opts = {}) {
   await page.setContent(
     `<!doctype html><html><head><meta charset="utf-8">` +
       `<meta name="viewport" content="width=device-width, initial-scale=1">` +
-      `${hostileCss}${styles}${head}</head><body>${body}${globalScript}</body></html>`,
+      `${hostileCss}${sitekitCss}${styles}${head}</head><body>` +
+      (sitekit ? `<div class="site"><div class="entry-content">${body}</div></div>` : body) +
+      `${globalScript}</body></html>`,
     { waitUntil: 'load' }
   );
 
@@ -225,13 +236,34 @@ export async function boxesOf(page, selector) {
   }), selector);
 }
 
+/**
+ * Computed style for one selector.
+ *
+ * `getPropertyValue` takes KEBAB-CASE and returns an empty string for anything
+ * else — including every camelCase name — so `getPropertyValue('backgroundColor')`
+ * silently yielded ''. An assertion comparing a colour against '' is not a
+ * failing test, it is a test that cannot pass, and it had been quietly
+ * unfalsifiable. Names are normalised now, the CSSOM property is read directly
+ * as a second route, and a name neither route knows THROWS rather than
+ * returning a blank that would compare equal to another blank.
+ */
 export async function styleOf(page, selector, props) {
   return page.evaluate(([sel, list]) => {
     const el = document.querySelector(sel);
     if (!el) return null;
     const cs = getComputedStyle(el);
     const out = {};
-    for (const p of list) out[p] = cs.getPropertyValue(p);
+    for (const p of list) {
+      const kebab = p.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
+      let v = cs.getPropertyValue(kebab);
+      if ('' === v && p in cs) { v = cs[p]; }
+      if ('' === v && kebab in cs) { v = cs[kebab]; }
+      if (undefined === v || null === v) { v = ''; }
+      if ('' === v && !(p in cs) && !(kebab in cs)) {
+        throw new Error(`styleOf: no such CSS property "${p}"`);
+      }
+      out[p] = String(v);
+    }
     return out;
   }, [selector, props]);
 }

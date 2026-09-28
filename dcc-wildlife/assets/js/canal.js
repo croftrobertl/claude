@@ -90,7 +90,11 @@
 
 		var peak = 0, spot = 0;
 		w.species.forEach(function (s) {
-			if (s.group === 'safety') { return; }   // a warning list, not a count (1.19.0)
+			// A warning list, not a count (1.19.0) — and since 1.33.0 the
+			// question is `haz`, resolved server-side, not the group. The
+			// group test counted the alligator, so the hub's number could
+			// exceed the number of tiles Peak Now then showed.
+			if (s.haz) { return; }
 			var v = (s.months && s.months[m]) || 0;
 			if (v >= spotMin) { spot += 1; }
 			if (v >= peakMin) { peak += 1; }

@@ -1,0 +1,54 @@
+/*
+ * A STAND-IN FOR THE LIVE SITE KIT. Not shipped — tools/ is excluded from the
+ * plugin zip.
+ *
+ * Bravada's Elementor kit is what makes several of this plugin's bugs visible,
+ * and a suite that renders without it cannot see them. The 1.33.0 search box
+ * is the worked example: the double pill exists only because the kit paints a
+ * gold border on the <input> INSIDE the plugin's own wrapper, so a screenshot
+ * with no kit shows one tidy pill and nothing to fix.
+ *
+ * Reproduced from what the owner measured on live, 2026-09-28:
+ *   - a 20px root at weight 700, in Raleway
+ *   - inputs reset at (0,3,1) with a 2px #F4DA62 border and a 30px radius
+ *   - buttons #006BCF with white text and a 30px radius, coral on hover
+ *
+ * The SPECIFICITY is the point. (0,3,1) is the figure the sibling Availability
+ * Calendar plugin measured on the same kit, and it is why this plugin's
+ * control rules need doubled or tripled classes. A friendlier stand-in would
+ * let a losing rule look like a winning one.
+ *
+ * The markup a suite wraps its fixture in must be <div class="site"><div
+ * class="entry-content">…, or none of this matches.
+ */
+html { font-size: 20px; font-weight: 700; font-family: Raleway, "Helvetica Neue", sans-serif; }
+body { font-weight: 400; }
+
+body .site .entry-content input[type="search"],
+body .site .entry-content input[type="text"],
+body .site .entry-content select,
+body .site .entry-content textarea {
+	background: #ffffff;
+	border: 2px solid #F4DA62;
+	border-radius: 30px;
+	color: #111111;
+	font-family: inherit;
+	font-size: 1rem;
+	font-weight: 400;
+	padding: 12px 20px;
+}
+
+body .site .entry-content button,
+body .site .entry-content input[type="submit"] {
+	background: #006BCF;
+	border: 0;
+	border-radius: 30px;
+	color: #ffffff;
+	font-family: inherit;
+	font-size: 1rem;
+	font-weight: 700;
+	letter-spacing: .02em;
+	padding: 14px 28px;
+	text-transform: none;
+}
+body .site .entry-content button:hover { background: #F08080; color: #ffffff; }

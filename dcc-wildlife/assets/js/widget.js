@@ -119,7 +119,11 @@
 
 	/* The safety group is a warning list, not a spotting list (1.19.0): it
 	 * never drives the countdown, the counts, the spotlight or the art. */
-	function isSpotting(s) { return s.group !== 'safety'; }
+	/* Spottable = not a hazard. `haz` is decided once, server-side, by
+	 * Species::is_hazard(); asking `group !== 'safety'` here was the same
+	 * question asked worse, and it missed the alligator. See the note on that
+	 * method for the 2026-09-28 reversal this implements. */
+	function isSpotting(s) { return !s.haz; }
 
 	/* A neutral GROUP glyph — what a tile shows with no vetted photo. */
 	function glyphUse(group, cls) {
@@ -852,10 +856,21 @@
 							// a species out of season still deserves to find it.
 							keep = speciesMatches(sp, q);
 						} else if (peaking) {
-							// At peak means at peak, in every section including
-							// safety — a venomous snake at its most active is
-							// exactly what a guest should be shown, not spared.
-							keep = !!(sp.months && (sp.months[state.month] || 0) >= PEAK_SCORE);
+							/*
+							 * HAZARDS ONLY IN SAFETY (1.33.0, owner's decision
+							 * of 2026-09-28, reversing 1.27.0's rule that a
+							 * venomous snake at its most active should be
+							 * shown here rather than spared).
+							 *
+							 * Peak Now is a list of things worth going to
+							 * look for. The Safety section, which a guest
+							 * chooses deliberately, is where the cottonmouth
+							 * belongs — and it still shows there whatever the
+							 * month. Same predicate as the counts, so the
+							 * header's number and the tiles under it match.
+							 */
+							keep = isSpotting(sp)
+								&& !!(sp.months && (sp.months[state.month] || 0) >= PEAK_SCORE);
 						} else if (isCanal && sp.months && state.monthPicked) {
 							/*
 							 * ONLY WHEN A MONTH WAS EXPLICITLY CHOSEN (1.28.0).
@@ -1023,11 +1038,41 @@
 					});
 				}
 
+				/* Bring a chip into view inside its own scroller — never with
+				 * scrollIntoView(), which also scrolls the PAGE and would yank
+				 * the guide around under a guest who only tapped a chip. The
+				 * arithmetic is on the scroller's own scrollLeft, so nothing
+				 * outside the row moves. (1.33.0) */
+				function revealChip(c) {
+					if (!c || !chipWrap) { return; }
+					var wrap = chipWrap.scrollWidth > chipWrap.clientWidth ? chipWrap : null;
+					if (!wrap) { return; }
+					var pad = 12;   // clear of the row's own edge fade
+					var left = c.offsetLeft - wrap.offsetLeft;
+					var right = left + c.offsetWidth;
+					var target = null;
+					if (left - pad < wrap.scrollLeft) {
+						target = Math.max(0, left - pad);
+					} else if (right + pad > wrap.scrollLeft + wrap.clientWidth) {
+						target = right + pad - wrap.clientWidth;
+					}
+					if (null === target) { return; }
+					if (wrap.scrollTo) {
+						wrap.scrollTo({ left: target, behavior: reducedMotion ? 'auto' : 'smooth' });
+					} else {
+						wrap.scrollLeft = target;
+					}
+				}
+
 				function press(sub) {
 					active = sub;
+					var pressed = null;
 					chips.forEach(function (c) {
-						c.setAttribute('aria-pressed', c.getAttribute('data-dccwl-browse') === sub ? 'true' : 'false');
+						var on = c.getAttribute('data-dccwl-browse') === sub;
+						c.setAttribute('aria-pressed', on ? 'true' : 'false');
+						if (on) { pressed = c; }
 					});
+					revealChip(pressed);
 				}
 
 				/* The position line for a sub-group: "Wading birds · 2/3".
@@ -1109,15 +1154,19 @@
 							: (CFG.i18n.viewCompact || 'Compact');
 					}
 					grid.classList.toggle('dccwl-compact-list', compact);
-					// The deck's controls are meaningless in a vertical list, and
-					// its position line would describe a deck that is no longer
-					// there.
-					var deckNav = grid.nextElementSibling;
-					if (deckNav && deckNav.classList.contains('dccwl-deck-nav')) {
-						deckNav.hidden = compact;
+					/* The deck owns its own control row; this says which mode
+					 * it is in and lets refresh() decide, so the two cannot
+					 * end up disagreeing. Setting deckNav.hidden from here was
+					 * exactly that disagreement: the next scroll or resize ran
+					 * refresh(), which unhid the row again and left a stale
+					 * "1-6 of 38" under a vertical list. (1.33.0) */
+					if (compact) {
+						grid.setAttribute('data-dccwl-compact', '1');
+					} else {
+						grid.removeAttribute('data-dccwl-compact');
 					}
 					if (chipWrap) { chipWrap.hidden = compact; }
-					if (window.DCCWL_Deck && !compact) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
+					if (window.DCCWL_Deck) { window.DCCWL_Deck.refreshSoon(grid, CFG.i18n); }
 				}
 
 				if (toggle) {

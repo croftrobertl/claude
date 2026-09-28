@@ -161,10 +161,10 @@
 
 .dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow {
 	align-items: center;
-	background: var(--dccwl-tile-bg);
-	border: 1px solid var(--dccwl-line);
-	border-radius: 50%;
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	display: inline-flex;
 	flex: none;
@@ -176,8 +176,8 @@
 }
 
 .dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:hover {
-	background: var(--dccwl-primary-soft);
-	border-color: var(--dccwl-line-strong);
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
 }
 
 .dccwl-root .dccwl-timeline-arrow.dccwl-timeline-arrow:focus-visible {
@@ -203,10 +203,10 @@
 .dccwl-timeline-track::-webkit-scrollbar { display: none; }
 
 .dccwl-root .dccwl-month.dccwl-month {
-	background: transparent;
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text-muted);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	flex: none;
 	font: inherit;
@@ -222,15 +222,20 @@
 }
 
 .dccwl-root .dccwl-month.dccwl-month:hover {
-	background: var(--dccwl-primary-soft);
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
 }
 
 /* The month in view: the anchor of the whole strip. */
 .dccwl-root .dccwl-month.dccwl-month-on {
 	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
+}
+.dccwl-root .dccwl-month.dccwl-month-on:hover {
+	background: var(--dccwl-btn-bg-hover);
+	border-color: var(--dccwl-gold);
+	color: var(--dccwl-btn-txt-hover);
 }
 
 .dccwl-root .dccwl-month.dccwl-month:focus-visible {
@@ -241,8 +246,8 @@
 /* A tapped month pill must not keep looking chosen (touch :hover). */
 @media (hover: none) {
 	.dccwl-root .dccwl-month.dccwl-month:hover {
-		background: transparent;
-		color: var(--dccwl-text-muted);
+		background: var(--dccwl-btn-bg);
+		color: var(--dccwl-btn-txt);
 	}
 
 	.dccwl-root .dccwl-month.dccwl-month-on:hover {
@@ -383,13 +388,32 @@
 	padding: 3px;
 }
 
+/* ======================================================================
+ * TOGGLE STATES (1.33.0, owner's decision — every toggle, same rules)
+ *
+ * Applies to the section tabs, the month pills, the browse chips and the
+ * Compact toggle. Every one of them is solid #006BCF with white text at rest;
+ * the SELECTED one is marked with a 2px #F4DA62 gold border, drawn inside the
+ * 2px transparent border every state already carries so nothing moves when the
+ * selection changes; hover and focus are coral with white text.
+ *
+ * Before this, an unselected toggle was transparent with muted text and only
+ * the selected one was blue. The owner's objection: three plugins on one site,
+ * three different ideas of what a chosen control looks like.
+ * ================================================================== */
 .dccwl-root .dccwl-tab.dccwl-tab {
-	background: transparent;
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
+	background: var(--dccwl-btn-bg);
+	/* NO BORDER HERE, deliberately (1.33.0) — the gold mark is an inset
+	 * shadow instead, and it looks identical. A 2px border on each side of
+	 * four tabs costs 16px of a 320px row, and "Peak Now" had exactly 0%
+	 * headroom in its share of that row: it wrapped to two lines on live,
+	 * where Raleway measures about 21% wider than this sandbox's fallback
+	 * face. The other toggles keep their borders; they have the room. */
+	border: 0;
+	border-radius: var(--dccwl-radius-control);
 	flex: 1 1 0;
 	white-space: nowrap;
-	color: var(--dccwl-text-muted);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	font: inherit;
 	font-size: var(--dccwl-fs-sm);
@@ -426,24 +450,50 @@
 
 /* Tighter still where every pixel counts, to put off wrapping as long as
  * possible before it is needed. */
-@media (max-width: 360px) {
-	.dccwl-root .dccwl-tab.dccwl-tab { padding: 10px 4px; }
+/*
+ * Below 400px the row is genuinely tight: four tabs share 320px, which is
+ * 76.5px each. MEASURED, with the font inflated 21% to stand in for Raleway:
+ * "Peak Now" needs 54.6px of a 70.5px text box here — 29% headroom, where it
+ * had none at all in 1.32.1. The label keeps its words and its single line at
+ * both 320px and 390px, which is what the owner asked for.
+ *
+ * `white-space: normal` above stays as the last resort: a longer translation
+ * must still wrap rather than spill off the screen.
+ */
+@media (max-width: 400px) {
+	.dccwl-root .dccwl-tab.dccwl-tab {
+		font-size: 0.66rem;
+		padding: 10px 3px;
+	}
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab:hover {
-	background: var(--dccwl-primary-soft);
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"] {
 	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-btn-bg);
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
+}
+/* The chosen tab stays chosen under the pointer: without this the gold mark
+ * is the only difference between hover and selected, and hover repaints the
+ * ground coral, which reads as "you have just changed section". */
+.dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"]:hover {
+	background: var(--dccwl-btn-bg-hover);
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold);
+	color: var(--dccwl-btn-txt-hover);
 }
 
 .dccwl-root .dccwl-tab.dccwl-tab:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
+}
+/* box-shadow is one property, so the focus ring would otherwise wipe out the
+ * selected tab's gold mark. Both, in one declaration. */
+.dccwl-root .dccwl-tab.dccwl-tab[aria-pressed="true"]:focus-visible {
+	box-shadow: inset 0 0 0 var(--dccwl-gold-w) var(--dccwl-gold), var(--dccwl-ring);
 }
 
 /* The species deck's own shape (1.23.0): the mechanics live in app.css,
@@ -505,18 +555,32 @@
  * it, so with JS off there is no dead input on the page. */
 .dccwl-search { margin: 0 auto var(--dccwl-gap); max-width: 420px; width: 100%; }
 .dccwl-search[hidden] { display: none; }
+/* 1.33.0 — ONE PILL, NOT TWO.
+ *
+ * The site kit gives every input a 2px #F4DA62 border at a 30px radius. This
+ * wrapper carried a second, light-blue pill of its own, so the search box read
+ * as a gold capsule floating inside a blue one. The gold pill is now the
+ * wrapper — the magnifier and the clear x sit INSIDE it, which is the whole
+ * reason the wrapper exists — and the input inside is stripped bare below.
+ *
+ * The gold is declared here rather than inherited from the kit, so the control
+ * looks the same in the Elementor editor preview and anywhere the kit does not
+ * reach. Do not put a border back on .dccwl-search-input. */
 .dccwl-search-field {
 	align-items: center;
 	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-pill);
+	border: var(--dccwl-gold-w) solid var(--dccwl-gold);
+	border-radius: var(--dccwl-radius-control);
 	display: flex;
 	gap: 8px;
 	padding: 0 4px 0 14px;
 }
-.dccwl-search-field:focus-within { border-color: var(--dccwl-primary); box-shadow: var(--dccwl-ring); }
-.dccwl-search-icon { color: var(--dccwl-text-muted); flex: none; height: 18px; width: 18px; }
-.dccwl-root .dccwl-search-input.dccwl-search-input {
+.dccwl-search-field:focus-within { box-shadow: var(--dccwl-ring); }
+.dccwl-search-icon { color: var(--dccwl-text); flex: none; height: 18px; width: 18px; }
+/* Tripled class = (0,4,0). Bravada's Elementor kit resets inputs at (0,3,1);
+ * at (0,3,0) this rule lost and the kit's own border and radius reappeared
+ * inside the pill above. Same trap, same fix, as the Availability Calendar. */
+.dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input {
 	background: transparent;
 	border: 0;
 	border-radius: 0;
@@ -539,7 +603,7 @@
 	 * fields and would otherwise decide it. */
 	text-align: center;
 }
-.dccwl-root .dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; }
+.dccwl-root .dccwl-search-input.dccwl-search-input.dccwl-search-input::placeholder { color: var(--dccwl-text-muted); font-weight: var(--dccwl-fw-body); opacity: 1; text-align: center; }
 /* Ours is a 44px target and always in the same place; the platform's is not. */
 .dccwl-search-input::-webkit-search-cancel-button,
 .dccwl-search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
@@ -548,7 +612,7 @@
 	background: transparent;
 	border: 0;
 	border-radius: 50%;
-	color: var(--dccwl-text-muted);
+	color: var(--dccwl-text);
 	cursor: pointer;
 	display: inline-flex;
 	flex: none;
@@ -557,7 +621,7 @@
 	padding: 0;
 	width: 40px;
 }
-.dccwl-root .dccwl-search-clear.dccwl-search-clear:hover { background: var(--dccwl-primary-soft); color: var(--dccwl-text); }
+.dccwl-root .dccwl-search-clear.dccwl-search-clear:hover { background: var(--dccwl-btn-bg-hover); color: var(--dccwl-btn-txt-hover); }
 .dccwl-root .dccwl-search-clear.dccwl-search-clear:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
 .dccwl-search-clear svg { height: 20px; width: 20px; }
 .dccwl-search-clear[hidden] { display: none; }
@@ -1184,6 +1248,12 @@
 	background: none;
 	gap: 4px;
 	min-height: 44px;   /* still a 44px touch target, just not a 60px card */
+	/* ...and 44px WIDE too (1.33.0). Footnote-sizing the labels took the
+	 * narrowest summary down to 39px across, which is a 39x44 tap target —
+	 * under the floor the 1.15.1 audit set, and the mobile suite caught it.
+	 * A minimum width costs the row 5px and nothing else. */
+	min-width: 44px;
+	justify-content: center;
 	padding: 0;
 }
 /* No chevron in the row. Three labels plus two chevrons came to 366px inside
@@ -1194,12 +1264,44 @@
 .dccwl-footnotes .dccwl-fullguide-text { display: inline; }
 
 /* A footnote link, not a heading: the same size and colour as the meta line
- * it used to sit above. */
+ * it used to sit above.
+ *
+ * 1.33.0 — SPECIFICITY, not styling, was why "By month" did not match.
+ * "Field guide" and "Credits" are <span>s; "By month" is a <button>, and the
+ * host kit resets buttons at (0,3,1). At (0,1,0) this rule lost every
+ * property the kit sets — family, weight, size, letter-spacing — so one of
+ * the three labels in the row rendered in the kit's heavy button face. The
+ * selector below is (0,4,0) for the button and (0,2,0) for the spans, which
+ * is enough for both, and every property the kit could touch is declared
+ * here rather than left to inherit. */
+/*
+ * 1.33.0 — THE ROW'S OWN RULE HAD TO OUTRANK THE PANEL'S.
+ *
+ * `.dccwl-app .dccwl-fullguide-h.dccwl-fullguide-h` above is the PANEL
+ * heading — 1.0625rem at 700 — and at (0,3,0) it beat this rule's (0,2,0),
+ * so "Field guide" and "Credits" rendered at panel size inside the footnote
+ * row while "By month", a <button> the host kit owned, rendered at a third
+ * size in a fourth weight. The comment below has claimed since 1.28.0 that
+ * these are footnote-sized; it was never true.
+ *
+ * MEASURED, with the font inflated 21% to stand in for Raleway: three labels
+ * at panel size come to 362px, which does not fit a 304px row at 320px and
+ * wraps. At footnote size they come to 271px and fit with 11% to spare. So
+ * all three are footnote-sized, which is both what this rule always intended
+ * and the only option that holds the row to one line on the narrowest phone.
+ */
+.dccwl-app .dccwl-footnotes .dccwl-fullguide-h.dccwl-fullguide-h,
 .dccwl-footnotes .dccwl-fullguide-h,
-.dccwl-footnote-link {
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link.dccwl-footnote-link,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link.dccwl-footnote-link {
 	background: none;
 	border: 0;
+	box-shadow: none;
 	color: var(--dccwl-text-muted);
+	font-family: inherit;
+	font-style: normal;
+	line-height: inherit;
+	text-shadow: none;
 	/* Footnote-sized, so three of them fit on one row at 393px — the width
 	 * the owner measured. --fs-sm did not: two labels alone came to 398px
 	 * inside a 361px row and wrapped. */
@@ -1214,17 +1316,17 @@
 	text-underline-offset: 2px;
 }
 
-.dccwl-footnote-link {
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link.dccwl-footnote-link,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link.dccwl-footnote-link {
 	cursor: pointer;
-	font: inherit;
-	font-size: var(--dccwl-fs-xs);
-	font-weight: var(--dccwl-fw-label);
 	min-height: 44px;
 }
 
 .dccwl-footnotes .dccwl-fullguide-h:hover,
-.dccwl-footnote-link:hover { color: var(--dccwl-primary); }
-.dccwl-footnote-link:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:hover,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link:hover { color: var(--dccwl-primary); }
+.dccwl-footnotes .dccwl-footnote-link.dccwl-footnote-link:focus-visible,
+.dccwl-app .dccwl-footnote-link.dccwl-footnote-link:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
 
 /* The meta line ("44 species, in words") is detail for an open panel, not
  * part of the link, so it only shows once the panel is open. */
@@ -1273,10 +1375,10 @@
 }
 
 .dccwl-root .dccwl-subchip.dccwl-subchip {
-	background: transparent;
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
-	color: var(--dccwl-text-muted);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	flex: none;
 	font: inherit;
@@ -1292,8 +1394,15 @@
 
 .dccwl-root .dccwl-subchip.dccwl-subchip[aria-pressed="true"] {
 	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
+}
+.dccwl-root .dccwl-subchip.dccwl-subchip:hover {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
+.dccwl-root .dccwl-subchip.dccwl-subchip[aria-pressed="true"]:hover {
+	border-color: var(--dccwl-gold);
 }
 
 .dccwl-root .dccwl-subchip.dccwl-subchip:focus-visible {
@@ -1312,10 +1421,12 @@
 
 .dccwl-jump { flex: 1 1 auto; min-width: 0; }
 
-.dccwl-root .dccwl-jump-select.dccwl-jump-select {
+/* An input, so it gets the same gold pill as the search box (1.33.0).
+ * Tripled class for the same (0,3,1) kit reset the search input names. */
+.dccwl-root .dccwl-jump-select.dccwl-jump-select.dccwl-jump-select {
 	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-sm);
+	border: var(--dccwl-gold-w) solid var(--dccwl-gold);
+	border-radius: var(--dccwl-radius-control);
 	color: var(--dccwl-text);
 	font: inherit;
 	/*
@@ -1335,17 +1446,16 @@
 	width: 100%;
 }
 
-.dccwl-root .dccwl-jump-select.dccwl-jump-select:focus-visible {
-	border-color: var(--dccwl-primary);
+.dccwl-root .dccwl-jump-select.dccwl-jump-select.dccwl-jump-select:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
 
 .dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle {
-	background: var(--dccwl-primary-soft);
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: var(--dccwl-radius-sm);
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	flex: none;
 	font: inherit;
@@ -1359,8 +1469,15 @@
 
 .dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"] {
 	background: var(--dccwl-btn-bg);
-	border-color: var(--dccwl-btn-bg);
+	border-color: var(--dccwl-gold);
 	color: var(--dccwl-btn-txt);
+}
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle:hover {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
+.dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle[aria-pressed="true"]:hover {
+	border-color: var(--dccwl-gold);
 }
 
 .dccwl-root .dccwl-viewtoggle.dccwl-viewtoggle:focus-visible {

@@ -280,6 +280,9 @@ const compact = await page.evaluate(() => {
     count: lis.length,
     focusable: lis.filter((li) => li.querySelector('button')).length,
     deckNavHidden: nav && nav.classList.contains('dccwl-deck-nav') ? nav.hidden : null,
+    pagerHidden: nav ? ['.dccwl-deck-prev', '.dccwl-deck-next']
+      .map((s) => { const b = nav.querySelector(s); return b ? b.hidden : null; }) : null,
+    status: nav ? (nav.querySelector('.dccwl-deck-status') || {}).textContent : null,
     minTileHeight: Math.round(Math.min(...tiles.map((b) => b.height))),
     columns: new Set(boxes.map((b) => Math.round(b.left))).size,
     overflowX: grid.scrollWidth - grid.clientWidth,
@@ -293,7 +296,17 @@ check(compact.isCompact, 'the grid switches to the compact list');
 checkSame(38, compact.count, 'all 38 species are still there');
 checkSame(38, compact.focusable, 'and every one is still a button');
 checkSame(1, compact.columns, 'they are laid out in a single column');
-checkSame(true, compact.deckNavHidden, 'the deck controls are withdrawn, since there is no deck to page');
+/*
+ * 1.33.0 changed this contract on the owner's instruction: the line must report
+ * what is ACTUALLY SHOWN. There is no window in a vertical list, so "1-6 of 38"
+ * was false twice — it named a six-tile window that does not exist and implied
+ * the other 32 were elsewhere. The PAGING buttons go; the line stays and counts.
+ */
+checkSame([true, true], compact.pagerHidden, 'the paging buttons are withdrawn, since there is no deck to page');
+checkSame(false, compact.deckNavHidden, 'but the status line stays, because it still has something true to say');
+checkSame('38 species', compact.status, 'and it counts rather than describing a window that is not there');
+check(!/of 38/.test(String(compact.status)),
+  'no "N-M of 38" in compact mode — the exact line the owner reported');
 checkAtLeast(44, compact.minTileHeight, 'every row is at least 44px tall');
 checkAtMost(1, compact.overflowX, 'the list does not scroll sideways');
 checkSame('Photos', compact.toggleLabel, 'the toggle now offers the way back');

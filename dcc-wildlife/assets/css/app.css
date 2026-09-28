@@ -46,12 +46,31 @@
 	 * WCAG asks 3:1 there: 3.50:1 on white, 3.04:1 on the wash. This is the
 	 * closest colour to the brand that is legal; do NOT use it under 24px. */
 	--dccwl-accent-display: #eb5656;                  /* derived */
-	--dccwl-primary: #0f6dbf;            /* --dccgg-primary */
-	--dccwl-primary-soft: rgba(15, 109, 191, 0.08);   /* derived */
+	/* 1.33.0 — the site's measured blue. The Guest Guide and the Selector
+	 * both use #006BCF; Wildlife's #0f6dbf was a near-miss that read as a
+	 * different brand beside them. Owner's decision, 2026-09-28. */
+	--dccwl-primary: #006bcf;            /* measured from /guest/ and the Selector */
+	--dccwl-primary-soft: rgba(0, 107, 207, 0.08);    /* derived */
 
-	--dccwl-btn-bg: #0f6dbf;             /* --dccgg-btn-bg (= primary) */
+	--dccwl-btn-bg: #006bcf;             /* --dccgg-btn-bg (= primary) */
 	--dccwl-btn-txt: #ffffff;            /* --dccgg-btn-txt */
-	--dccwl-btn-bg-hover: #0c5a9e;                    /* derived */
+	/* HOVER IS CORAL, NOT A DARKER BLUE (1.33.0, owner's decision).
+	 * This is what .dccgg-btn and the Selector's buttons do on live, and the
+	 * three plugins now agree. Measured: white on #f08080 is 2.59:1, which
+	 * does not meet WCAG AA — the same limitation the --dccwl-accent comment
+	 * above records for the resting state. It is a deliberate, site-wide
+	 * choice, reported with the number, not an oversight. Every control that
+	 * used a light-blue hover uses these two tokens now. */
+	--dccwl-btn-bg-hover: #f08080;       /* --dccgg accent, measured */
+	--dccwl-btn-txt-hover: #ffffff;
+
+	/* The site kit's control shape: a 30px radius and, on inputs, a 2px gold
+	 * border. Wildlife declares both itself rather than inheriting them, so a
+	 * Wildlife control looks the same in the Elementor editor preview, in a
+	 * page the kit does not reach, and on live. */
+	--dccwl-gold: #f4da62;
+	--dccwl-gold-w: 2px;
+	--dccwl-radius-control: 30px;
 
 	/* Surfaces are near-opaque WHITE on purpose — this is how the Guide
 	 * stays legible under any host or OS theme without ever recolouring.
@@ -69,13 +88,16 @@
 	 * 4.00 on the coral wash, 4.28 on the page background. #546d85 passes on
 	 * ALL of them (5.38 white / 4.81 blue / 4.68 coral / 5.00 page), so muted
 	 * text is now surface-independent. Don't lighten it back to match /guest/. */
-	--dccwl-text-muted: #546d85;         /* --dccgg-muted, darkened */
+	/* 1.33.0: BLACK, not grey. The owner's decision — body text on every
+	 * Wildlife surface is the site's text colour. The token is kept (rather
+	 * than the ~90 uses being rewritten) so a later decision is one line. */
+	--dccwl-text-muted: #111111;         /* --dccgg-text */
 	/* DECORATION ONLY — never for text. Measured 2.7:1 on the white card
 	 * surfaces this plugin uses, which fails WCAG AA at every size here. Use
 	 * --dccwl-text-muted (≥4.68:1 everywhere) for any text a guest is meant to read. */
 	--dccwl-text-faint: #8ba0b3;                      /* derived from muted */
-	--dccwl-line: rgba(15, 109, 191, 0.15);           /* --dccgg-tile-border */
-	--dccwl-line-strong: rgba(15, 109, 191, 0.32);    /* derived */
+	--dccwl-line: rgba(0, 107, 207, 0.15);            /* --dccgg-tile-border */
+	--dccwl-line-strong: rgba(0, 107, 207, 0.32);     /* derived */
 
 	--dccwl-emergency: #c0392b;          /* --dccgg-color-emergency */
 	--dccwl-ok: #2e7d5b;                              /* derived */
@@ -96,7 +118,7 @@
 	--dccwl-shadow-tile: 0 1px 2px rgba(15, 60, 100, 0.06), 0 2px 8px rgba(15, 60, 100, 0.05);
 	--dccwl-shadow-raised: 0 2px 6px rgba(15, 60, 100, 0.10), 0 12px 28px rgba(15, 60, 100, 0.13);
 	--dccwl-shadow-sheet: 0 -2px 10px rgba(15, 60, 100, 0.10), 0 -18px 48px rgba(15, 60, 100, 0.18);
-	--dccwl-ring: 0 0 0 3px rgba(15, 109, 191, 0.38);
+	--dccwl-ring: 0 0 0 3px rgba(0, 107, 207, 0.38);
 	/* 1.18.0: the sticky level bar's top offset. 0 by default; set it in the
 	 * theme's CSS to the height of a sticky site header so the bar tucks under
 	 * it instead of behind it. */
@@ -106,7 +128,7 @@
 	 * keeps one hue. Never used as text colour. */
 	--dccwl-flag-danger: #bf4040;
 	--dccwl-flag-invasive: #8e652f;
-	--dccwl-flag-protected: #0f6dbf;
+	--dccwl-flag-protected: #006bcf;
 	--dccwl-flag-nuisance: #546d85;
 
 	/* --- density — the Guide's cozy spacing --------------------------- */
@@ -386,6 +408,23 @@
 .dccwl-app .dccwl-deck::-webkit-scrollbar { display: none; }
 .dccwl-app .dccwl-deck > li { scroll-snap-align: start; }
 
+/* 1.33.0 — A SUB-GROUP STARTS A COLUMN.
+ *
+ * The one placement rule that makes "press Mammals, see a mammal" true. A
+ * definite row on an otherwise auto-placed item makes the sparse column
+ * auto-placement algorithm skip to row 1 of the next free column, so the
+ * group's first tile is always top-left of its own column and jumpTo() —
+ * which aligns a column — lands on it.
+ *
+ * It leaves a blank cell or two at the foot of the previous group's last
+ * column. That is the price of the guarantee and it is paid on purpose; the
+ * alternative is hiding tiles or reordering them, and both were rejected.
+ *
+ * Only inside a deck: the compact list is a single column and a definite row
+ * there would stack two species on top of each other. */
+.dccwl-app .dccwl-deck > li[data-dccwl-browse-first] { grid-row: 1; }
+.dccwl-app .dccwl-compact-list > li[data-dccwl-browse-first] { grid-row: auto; }
+
 /* The controls. Visible, 44px, and never the only way through — a swipe is an
  * addition to these, not a replacement for them. */
 .dccwl-deck-nav {
@@ -397,10 +436,10 @@
 }
 .dccwl-app .dccwl-deck-btn.dccwl-deck-btn {
 	align-items: center;
-	background: #ffffff;
-	border: 1px solid var(--dccwl-line-strong);
-	border-radius: 50%;
-	color: var(--dccwl-primary);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	display: inline-flex;
 	flex: none;
@@ -409,11 +448,24 @@
 	padding: 0;
 	width: 44px;
 }
-.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:hover:not(:disabled) { background: var(--dccwl-primary-soft); }
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:hover:not(:disabled),
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:focus-visible:not(:disabled) {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
 .dccwl-app .dccwl-deck-btn.dccwl-deck-btn:focus-visible { box-shadow: var(--dccwl-ring); outline: none; }
 /* Disabled, not removed: the control keeps its place so the row does not
  * reflow at either end of the deck. */
-.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:disabled { color: var(--dccwl-line-strong); cursor: default; }
+/* 1.33.0: fade the WHOLE control, not the glyph. The glyph used to be tinted
+ * to --dccwl-line-strong, a translucent blue, which was legible on the old
+ * white button and invisible on the solid blue one — a button that reads as a
+ * blank blue disc. Opacity keeps the shape and still says "not now". */
+.dccwl-app .dccwl-deck-btn.dccwl-deck-btn:disabled {
+	background: var(--dccwl-btn-bg);
+	color: var(--dccwl-btn-txt);
+	cursor: default;
+	opacity: 0.38;
+}
 .dccwl-deck-status {
 	color: var(--dccwl-text-muted);
 	font-size: var(--dccwl-fs-xs);
@@ -462,8 +514,8 @@
 .dccwl-app .dccwl-btn.dccwl-btn {
 	align-items: center;
 	background: var(--dccwl-btn-bg);
-	border: 1px solid transparent;
-	border-radius: var(--dccwl-radius-pill);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
 	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	display: inline-flex;
@@ -476,22 +528,31 @@
 	transition: background var(--dccwl-t-fast) var(--dccwl-ease-color);
 }
 
-.dccwl-app .dccwl-btn.dccwl-btn:hover { background: var(--dccwl-btn-bg-hover); }
+.dccwl-app .dccwl-btn.dccwl-btn:hover,
+.dccwl-app .dccwl-btn.dccwl-btn:focus-visible {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
 
 .dccwl-app .dccwl-btn.dccwl-btn:focus-visible {
 	box-shadow: var(--dccwl-ring);
 	outline: none;
 }
 
+/* 1.33.0: "quiet" no longer means a different colour. Every button on every
+ * Wildlife surface is #006BCF with white text and goes coral on hover; quiet
+ * keeps only its smaller size and lighter weight. */
 .dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet {
-	background: transparent;
-	border-color: var(--dccwl-line);
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg);
+	border-color: transparent;
+	color: var(--dccwl-btn-txt);
 }
 
-.dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet:hover {
-	background: var(--dccwl-primary-soft);
-	border-color: var(--dccwl-line-strong);
+.dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet:hover,
+.dccwl-app .dccwl-btn-quiet.dccwl-btn-quiet:focus-visible {
+	background: var(--dccwl-btn-bg-hover);
+	border-color: transparent;
+	color: var(--dccwl-btn-txt-hover);
 }
 
 /* No lingering hover state on touch — see the note in canal.css. */
@@ -586,10 +647,10 @@
 .dccwl-app .dccwl-sheet-back.dccwl-sheet-back,
 .dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back {
 	align-items: center;
-	background: transparent;
-	border: 1px solid var(--dccwl-line);
-	border-radius: 50%;
-	color: var(--dccwl-text);
+	background: var(--dccwl-btn-bg);
+	border: var(--dccwl-gold-w) solid transparent;
+	border-radius: var(--dccwl-radius-control);
+	color: var(--dccwl-btn-txt);
 	cursor: pointer;
 	display: inline-flex;
 	flex: none;
@@ -600,7 +661,11 @@
 	width: 44px;
 }
 
-.dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back:hover { background: var(--dccwl-primary-soft); }
+.dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back:hover,
+.dccwl-app .dccwl-sheet-back.dccwl-sheet-back:hover {
+	background: var(--dccwl-btn-bg-hover);
+	color: var(--dccwl-btn-txt-hover);
+}
 
 .dccwl-sheet .dccwl-sheet-back.dccwl-sheet-back:focus-visible {
 	box-shadow: var(--dccwl-ring);

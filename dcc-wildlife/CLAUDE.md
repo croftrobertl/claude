@@ -1643,3 +1643,60 @@ Rob has not chosen a rule, so NOTHING here was changed. Note for whoever picks
 one up: the hub's `subSpot` string reads "%d at their best in %s" for the `>= 2`
 count while the month strip says "at peak" for `>= 3`, and those two phrases read
 as synonyms — the wording is part of the problem, not just the arithmetic.
+
+## 1.33.0 — the decisions Rob made himself, dated. Do not undo these.
+
+Every item in this section was chosen by the owner by multiple choice on
+**2026-09-28**, not proposed by a session. Where one reverses an earlier
+decision, that is said outright, with the date, so nobody restores the old rule
+as a "fix". Two of them do.
+
+**EVERYTHING HERE IS A PLUGIN DEFAULT.** Rob's standing rule: site choices live
+in the plugin's own CSS/JS/PHP defaults, never in per-widget Elementor overrides
+and never in a stored setting. The Wildlife widget on /explore/ (post 18119,
+`dccwl_canal`) was checked live on 2026-09-28 and stores NO settings, so a new
+default reaches guests. If a change needs a new Elementor control, the control's
+DEFAULT must be Rob's decision — a placement that has never been touched must
+render his answer.
+
+**THE STANDING RULE FOR UNSETTLED CHOICES.** A design choice this document does
+not settle — layout, wording, which card goes in which tab, a colour, a size, a
+new group chip — is not a session's to make. Render the options at phone width
+and ask. Engineering choices (structure, tests, how data loads) stay the
+session's, as they always were.
+
+### 1. Hazards belong in Safety, and nowhere else (REVERSES 1.27.0)
+
+From 1.27.0 to 1.32.1 the rule was "at peak means at peak, in every section
+including safety — a venomous snake at its most active is exactly what a guest
+should be shown, not spared". **Rob's ruling is the opposite.** Peak Now is a
+list of things worth going out to look for, and nobody goes looking for a
+cottonmouth. The Safety section is a destination a guest chooses, and every
+hazard still lives there, every month.
+
+- `Species::is_hazard()` is the ONE definition: group `safety`, **or** flagged
+  `danger`. That second clause is the alligator, whose group is `critters`.
+- It rides the wire as `haz`, so `widget.js` and `canal.js` cannot drift. The
+  client used to ask `group !== 'safety'`, which is a different question and
+  missed the alligator — that was the double count.
+- **"At peak" now means ONE number on every surface that says it.** In
+  September: the month strip and the Peak Now tab both read 14. Before, the
+  strip said 15 and Peak Now showed 24 tile faces over 23 species.
+- The hub tile and the guide subtitle keep the wider `>= 2` count but no longer
+  call it "at their best": the string is **"%1$d worth looking for in %2$s"**.
+  36 → 35 in September, the difference being the alligator.
+
+### 2. September, measured, before and after (51 species)
+
+| surface | 1.32.1 | 1.33.0 |
+|---|---|---|
+| hub tile / guide subtitle | 36 "at their best" | 35 "worth looking for" |
+| month strip | 15 "at peak" | 14 "at peak" |
+| Peak Now tab | 23 species / 24 tile faces | 14 |
+| Safety section | 9 | 9 |
+| search placeholder | 51 | 51 |
+| deck, Animals | 38 | 38 |
+
+The nine hazards dropped from Peak Now are the four venomous snakes, the fire
+ant, the poison ivy, the mosquitoes, the lovebugs and the alligator. All nine
+are still in Safety, and the alligator is still browsable under Animals.

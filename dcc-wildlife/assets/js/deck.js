@@ -177,13 +177,39 @@
 		var nav = list.nextElementSibling;
 		if (!nav || !nav.classList.contains('dccwl-deck-nav')) { return; }
 		var tiles = visibleTiles(list).length;
+		var prev = nav.querySelector('.dccwl-deck-prev');
+		var next = nav.querySelector('.dccwl-deck-next');
+
+		/*
+		 * COMPACT MODE HAS NO WINDOW, SO IT MUST NOT DESCRIBE ONE (1.33.0).
+		 *
+		 * The list is vertical here and every species is on the page, so
+		 * "1-6 of 38" is false twice over — it names a six-tile window that
+		 * does not exist and implies the other 32 are somewhere else. The
+		 * paging buttons go, and the line says the only thing that is true:
+		 * how many species are in front of you.
+		 *
+		 * Driven by an attribute the view toggle sets, not by measuring
+		 * overflow, because a compact row wide enough to overflow would have
+		 * brought the deck's controls back with a stale measurement — which
+		 * is how the wrong line was reachable at all.
+		 */
+		if (list.getAttribute('data-dccwl-compact')) {
+			nav.hidden = 0 === tiles;
+			prev.hidden = true;
+			next.hidden = true;
+			nav.querySelector('.dccwl-deck-status').textContent =
+				0 === tiles ? '' : fmt(i18n.deckCount || '%d species', tiles);
+			return;
+		}
+		prev.hidden = false;
+		next.hidden = false;
+
 		// Nothing to page through: the controls would be furniture.
 		var overflows = list.scrollWidth > list.clientWidth + 4;
 		nav.hidden = !overflows || tiles === 0;
 		if (nav.hidden) { return; }
 
-		var prev = nav.querySelector('.dccwl-deck-prev');
-		var next = nav.querySelector('.dccwl-deck-next');
 		prev.disabled = atStart(list);
 		next.disabled = atEnd(list);
 
