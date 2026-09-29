@@ -909,3 +909,46 @@ Four, each for a different reason, by the rule that a photograph is a claim:
 
 The mosquito's existing note lost its "no-see-ums are not shown" clause: they
 have their own entry now, so it described a gap that no longer exists.
+
+## Batch 9 (1.33.0): the amphibians — sources for 19 species
+
+| species | claims made | source |
+|---|---|---|
+| Green Tree Frog | white lateral stripe; the "rain frog" — calls ahead of a shower; nasal "queenk" chorus | Virginia DWR Frog Friday; Tennessee WRA; Herps of NC |
+| Squirrel Tree Frog | changes colour green↔brown within minutes; plain and unmarked; scolding squirrel-like rain call given away from water | Animal Diversity Web; Florida Museum frog calls; UF/IFAS WEC |
+| Barking Treefrog | **the largest treefrog native to the United States**; dark round spots on green; granular skin; barking/"doonk" call from trees and while floating | USGS NAS; NC Wildlife; Virginia Herpetological Society |
+| Pinewoods Treefrog | call described as Morse code; hidden orange-yellow spots on the rear of the thigh | Florida Museum frog calls; Virginia DWR; NC Wildlife |
+| Cuban Tree Frog | invasive; eats **at least five** native treefrog species; tadpoles compete with natives; gets into plumbing and electrical switches; **skin secretion irritates skin and mucous membranes for up to an hour** | UF/IFAS Wildlife (ufwildlife.ifas.ufl.edu); Florida Museum; USGS |
+| Pig Frog | grunts like a pig; pointed snout; **webbing reaches the tip of the longest hind toe**, which the bullfrog's does not; Florida's frog-leg frog | Animal Diversity Web; Outdoor Alabama; Wild South Florida |
+| American Bullfrog | largest North American frog; **native range reaches central Florida and no further**, so Lake County is the edge; no dorsolateral ridges; webbing stops short of the longest toe | USGS NAS (verified in the 1.33.0 odds pass); Missouri Dept of Conservation |
+| Southern Leopard Frog | dark spots, pale dorsolateral ridges, pointed snout, pale spot in the eardrum; chuckling call likened to rubbing an inflated balloon | NC Wildlife; Virginia DWR; Herps of NC |
+| Gopher Frog | **shelters in gopher tortoise burrows**, which is the name; snoring call; declining with the tortoise; IUCN near-threatened | FWC gopher frog profile; Gopher Tortoise Council; Animal Diversity Web; FNAI |
+| Southern Toad | **two cranial ridges ending in pronounced knobs, and a small oval parotoid gland** — the cane toad has neither, with a smooth interocular space and a large triangular gland; high musical trill | FWC cane toad profile; UF/IFAS WEC387; comparison guides |
+| Oak Toad | **smallest toad in North America**, 19–33 mm; pale mid-dorsal stripe; day-active; chick-like peeping chorus | NC Wildlife; Virginia DWR; Herps of NC |
+| Eastern Narrow-mouthed Toad | ant specialist; **fold of skin behind the head drawn forward over the eyes**; no visible eardrum; bleating lamb-like call | Animal Diversity Web; Missouri Dept of Conservation; Virginia DWR |
+| Eastern Spadefoot | **vertically elliptical pupils**; a sickle-shaped black "spade" on each hind foot; fossorial; explosive breeder after heavy rain | Missouri Dept of Conservation; Virginia DWR; Penn State Extension |
+| Florida Cricket Frog | tiny and warty; clicking call likened to two pebbles tapped together; calls much of the year | Tampa Bay Water Atlas (FLN); Animal Diversity Web |
+| Little Grass Frog | **the smallest frog in North America**, to 18 mm; dark line through the eye continuing along the flank; very high insect-like call | NC Wildlife; Virginia Herpetological Society; Herps of NC |
+| Greenhouse Frog | introduced from Cuba/Bahamas in potted plants; **direct development — no free-living tadpole stage**, froglets hatch from terrestrial eggs; lives in leaf litter away from water | UF/IFAS WEC469/UW527; USGS NAS; USFWS risk screening |
+| Greater Siren | eel-shaped, to ~3 ft; **external gills for life, two front legs and no hind limbs or pelvic girdle**; aestivates in a cocoon of dried skin, for years if needed | Virginia Herpetological Society; Animal Diversity Web; Herps of NC |
+| Two-toed Amphiuma | four vestigial legs with two toes each; powerful bite that readily becomes infected; the eastern mud snake's principal prey | Animal Diversity Web; Virginia Herpetological Society; the batch-8 mud snake sources |
+| Peninsula Newt | the Florida subspecies: **darker than its northern relatives and with NO red spots**, heavily black-speckled over a deep orange belly | Herpedia; eastern newt accounts |
+
+### Photograph notes added with this batch
+
+Four photographs are the right species taken outside Florida, and the pack
+manifest says so; the rule is that the page says so too. Two of the four are
+INVASIVES photographed in their native range, which is worth stating plainly
+rather than leaving a reader to wonder why a Cuban treefrog was photographed in
+the Bahamas: green treefrog and southern leopard frog (both Virginia), Cuban
+treefrog (Bahamas, native range) and greenhouse frog (Caribbean, native range).
+
+### One correction to the manifest, from measuring the files
+
+The pack note says the greater siren's original is 1170 px wide and that its
+full rendition is therefore 1170 rather than 1100. **The file that arrived is
+1100.** `PHOTO_W` records 1100, because the srcset width descriptor has to
+describe the FILE — a descriptor that disagrees with the image is a wrong
+rendition chosen on a retina screen, silently. Every other rendition in the pack
+measured exactly as the manifest describes it, the greenhouse frog's 1024
+included.

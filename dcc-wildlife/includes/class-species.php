@@ -501,6 +501,7 @@ final class Species {
 				'odds'  => 'occasional',
 				'fact'  => __( 'A South American toad brought in to eat cane beetles, which it did not, and which now turns up on Florida lawns at night the size of a dinner plate. Behind each eye is a large triangular gland, and the milky venom it releases is what makes this a dog problem rather than a frog: a dog that mouths one can be in serious trouble within minutes.', 'dcc-wildlife' ),
 				'safe'  => __( 'Keep dogs away from toads at night, and off the lawn after rain. If your dog mouths one, wipe the gums and tongue with a cloth, rinse the mouth with a hose pointed downwards and out for several minutes so it does not swallow, and ring a vet straight away.', 'dcc-wildlife' ),
+				'sound' => __( 'A low, slow, rattling trill that runs on and on — more like a distant tractor idling than a frog. The native southern toad’s trill is higher, shorter and musical.', 'dcc-wildlife' ),
 				'best'  => __( 'warm wet nights, on lit lawns', 'dcc-wildlife' ),
 				'where' => __( 'lawns, driveways and anywhere a light draws insects after dark', 'dcc-wildlife' ),
 				'mark'  => __( 'very large, with a big triangular gland behind each eye and no ridges across the crown; native southern toads are far smaller', 'dcc-wildlife' ),
@@ -875,6 +876,312 @@ final class Species {
 				'best'  => __( 'spring mornings, on logs in the quieter ponds', 'dcc-wildlife' ),
 				'where' => __( 'weedy ponds, ditches and marsh edges away from the main channel', 'dcc-wildlife' ),
 				'mark'  => __( 'an extraordinarily long neck, a net of fine yellow lines on the shell, and vertically striped hind legs', 'dcc-wildlife' ),
+			],
+			// ---- BATCH 9 (1.33.0): the amphibians ---------------------------
+			// Nineteen, and the reason the Animals chip says "Reptiles &
+			// amphibians" with a straight face. The cane toad flipped that label
+			// in batch 7 by being the only amphibian in the registry; this is the
+			// batch that makes it TRUE rather than merely correct.
+			//
+			// EVERY ONE CARRIES A `sound` LINE but the newt, which is the point of
+			// this group: a guest on the dock after dark hears far more amphibians
+			// than they will ever see, and the call is the identification. The
+			// 1.14.0 rule still holds — a sound line only where a distinctive,
+			// guest-recognisable voice could be verified — and frogs are simply
+			// the case where that is true almost every time. The peninsula newt
+			// has none because newts do not call.
+			//
+			// Three cross-links this batch closes, each written from both ends:
+			//   gopher frog  <-> gopher tortoise (batch 6) — it lives in the burrow
+			//   amphiuma     <-> eastern mud snake (batch 8) — which eats it
+			//   southern toad <-> cane toad (batch 7) — the safety comparison, and
+			//                   the reason the southern toad's mark leads on the
+			//                   ridges and knobs between the eyes
+			'greentreefrog'   => [
+				'emoji' => '🐸',
+				'name'  => __( 'Green Tree Frog', 'dcc-wildlife' ),
+				'sci'   => 'Hyla cinerea',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'treefrogs',
+				'odds'  => 'certain',
+				'fact'  => __( 'The frog on the window at night, drawn there by the insects the light brings. Bright leaf-green with a crisp white stripe down each side, long-legged and about two inches of it. It is also called the rain frog, because it starts calling when it feels a shower coming — often hours before anything falls.', 'dcc-wildlife' ),
+				'sound' => __( 'A loud nasal “queenk, queenk, queenk” repeated all evening, hundreds at once from the marsh edge.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, especially warm humid nights', 'dcc-wildlife' ),
+				'where' => __( 'window screens, porch walls, lily pads and reed stems', 'dcc-wildlife' ),
+				'mark'  => __( 'bright green with a clean white stripe along each side; the squirrel treefrog has no stripe, or a broken one', 'dcc-wildlife' ),
+			],
+			'squirreltreefrog' => [
+				'emoji' => '🐸',
+				'name'  => __( 'Squirrel Tree Frog', 'dcc-wildlife' ),
+				'sci'   => 'Hyla squirella',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'treefrogs',
+				'odds'  => 'certain',
+				'fact'  => __( 'The chameleon of the porch: it shifts from bright green to yellow-brown to plain brown within minutes, which is why nobody can agree what colour it is. Small, smooth and entirely unremarkable in markings, and that blankness is how you name it.', 'dcc-wildlife' ),
+				'sound' => __( 'A scolding, raspy chatter that really does sound like a squirrel telling you off — given away from water, usually just before rain.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, and before rain at any hour', 'dcc-wildlife' ),
+				'where' => __( 'porch walls, plant pots, gutters and low foliage', 'dcc-wildlife' ),
+				'mark'  => __( 'small and plain — no clean white side-stripe and no crisp markings; and it changes colour', 'dcc-wildlife' ),
+			],
+			'barkingtreefrog' => [
+				'emoji' => '🐸',
+				'name'  => __( 'Barking Treefrog', 'dcc-wildlife' ),
+				'sci'   => 'Hyla gratiosa',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'treefrogs',
+				'odds'  => 'likely',
+				'fact'  => __( 'The largest treefrog native to the United States, and built like one: stout, granular-skinned, and marked with dark round spots on green. It calls from high in a tree or while floating in the water, and the name is the noise — a hollow, doglike bark carrying across a pond at night.', 'dcc-wildlife' ),
+				'sound' => __( 'A single deep “doonk” repeated, or a harsher barking from up a tree; carried a long way on a still night.', 'dcc-wildlife' ),
+				'best'  => __( 'warm nights in the breeding season', 'dcc-wildlife' ),
+				'where' => __( 'high in trees near ponds, and floating in the shallows when calling', 'dcc-wildlife' ),
+				'mark'  => __( 'big and stout with dark round spots on a green back, and noticeably bumpy skin', 'dcc-wildlife' ),
+			],
+			'pinewoodstreefrog' => [
+				'emoji' => '🐸',
+				'name'  => __( 'Pinewoods Treefrog', 'dcc-wildlife' ),
+				'sci'   => 'Hyla femoralis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'treefrogs',
+				'odds'  => 'likely',
+				'fact'  => __( 'Grey-brown and easy to overlook, and then it opens its mouth and gives itself away completely: the call is a dry irregular rattle that everyone who has heard it describes the same way, as Morse code being tapped out from the pines. Its own field mark is hidden — orange-yellow spots on the hidden surface of the thigh.', 'dcc-wildlife' ),
+				'sound' => __( 'A dry, uneven series of clicks — dots and dashes, tapped out from the pine canopy after rain.', 'dcc-wildlife' ),
+				'best'  => __( 'warm wet nights, from the pines', 'dcc-wildlife' ),
+				'where' => __( 'pine flatwoods and trees near temporary ponds', 'dcc-wildlife' ),
+				'mark'  => __( 'grey-brown and blotched, with hidden orange-yellow spots on the back of the thigh', 'dcc-wildlife' ),
+			],
+			'cubantreefrog'   => [
+				'emoji' => '🐸',
+				'name'  => __( 'Cuban Tree Frog', 'dcc-wildlife' ),
+				'sci'   => 'Osteopilus septentrionalis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'treefrogs',
+				'flags' => [ 'invasive', 'danger' ],
+				'odds'  => 'certain',
+				'safe'  => __( 'Don’t pick one up bare-handed — the skin secretion burns and itches for up to an hour, and it is worse in eyes or a mouth. Handled one by accident? Wash your hands before touching your face, and keep pets off it.', 'dcc-wildlife' ),
+				'fact'  => __( 'Much the biggest treefrog you will see here, warty-skinned, with toe pads the size of its eyes — and it should not be here at all. It eats at least five of Florida’s native treefrogs, its tadpoles crowd theirs out, and it gets into plumbing and electrical boxes. Where it settles, the green and squirrel treefrogs thin out.', 'dcc-wildlife' ),
+				'sound' => __( 'A grating, squelching squawk — less musical than any native, often from a downpipe or a wall.', 'dcc-wildlife' ),
+				'best'  => __( 'warm nights, on lit walls', 'dcc-wildlife' ),
+				'where' => __( 'walls, downpipes, birdbaths and anywhere damp near a building', 'dcc-wildlife' ),
+				'mark'  => __( 'very large for a treefrog, warty, with huge toe pads and skin that looks loose over the head', 'dcc-wildlife' ),
+			],
+			'pigfrog'         => [
+				'emoji' => '🐸',
+				'name'  => __( 'Pig Frog', 'dcc-wildlife' ),
+				'sci'   => 'Lithobates grylio',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'truefrogs',
+				'odds'  => 'certain',
+				'fact'  => __( 'The grunt you hear across the water at night is almost certainly this, not a bullfrog. It is a big green-grey frog with a sharply pointed nose and fully webbed hind feet — the webbing runs right to the tip of the longest toe, which the bullfrog’s does not. Florida’s frog-leg frog, and much the commoner of the two here.', 'dcc-wildlife' ),
+				'sound' => __( 'A deep, grunting croak exactly like a pig, given from among the lily pads after dark.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, from spring into autumn', 'dcc-wildlife' ),
+				'where' => __( 'floating among lilies and duckweed with just the head showing', 'dcc-wildlife' ),
+				'mark'  => __( 'pointed snout, huge eardrum, and webbing reaching the tip of the longest hind toe', 'dcc-wildlife' ),
+			],
+			'bullfrog'        => [
+				'emoji' => '🐸',
+				'name'  => __( 'American Bullfrog', 'dcc-wildlife' ),
+				'sci'   => 'Lithobates catesbeianus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'truefrogs',
+				'odds'  => 'occasional',
+				'fact'  => __( 'The largest frog in North America, and here it is at the very edge of its range — its native limit runs through central Florida, so Lake County is about as far south as it gets. Which matters for a simple reason: the deep voice across the canal at night is far more likely to be a pig frog. If you do meet one, the webbing stops short of the longest toe.', 'dcc-wildlife' ),
+				'sound' => __( 'A low “jug-o-rum” that carries a long way — but hear a grunt rather than a bellow and you have a pig frog.', 'dcc-wildlife' ),
+				'best'  => __( 'warm nights, in the quieter backwaters', 'dcc-wildlife' ),
+				'where' => __( 'weedy shallows and pond edges rather than open canal', 'dcc-wildlife' ),
+				'mark'  => __( 'no ridges down the back, and hind webbing that stops short of the longest toe — the pig frog’s reaches the tip', 'dcc-wildlife' ),
+			],
+			'leopardfrog'     => [
+				'emoji' => '🐸',
+				'name'  => __( 'Southern Leopard Frog', 'dcc-wildlife' ),
+				'sci'   => 'Lithobates sphenocephalus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'truefrogs',
+				'odds'  => 'certain',
+				'fact'  => __( 'Slim, long-legged and scattered with dark spots on green or brown, with a pale ridge running down each side of the back. It is the frog that leaps out from underfoot at the water’s edge and lands three feet away, and it is out in cooler weather than most of the others.', 'dcc-wildlife' ),
+				'sound' => __( 'A low chuckling trill, widely described as the sound of rubbing a wet hand on an inflated balloon.', 'dcc-wildlife' ),
+				'best'  => __( 'evenings and mild nights, much of the year', 'dcc-wildlife' ),
+				'where' => __( 'wet grass and the margins of ditches, ponds and the canal', 'dcc-wildlife' ),
+				'mark'  => __( 'dark spots on a pale ridge-lined back, a pointed snout, and a pale spot in the centre of the eardrum', 'dcc-wildlife' ),
+			],
+			'gopherfrog'      => [
+				'emoji' => '🐸',
+				'name'  => __( 'Gopher Frog', 'dcc-wildlife' ),
+				'sci'   => 'Lithobates capito',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'truefrogs',
+				'odds'  => 'rare',
+				'fact'  => __( 'A stocky, warty, heavily spotted frog that lives underground in somebody else’s house: it shelters in gopher tortoise burrows, which is where the name comes from and why its fortunes follow the tortoise’s. Both are in decline for the same reason, and losing the burrows takes the frog with them.', 'dcc-wildlife' ),
+				'sound' => __( 'A deep snore, like someone asleep in the next room, from a temporary pond on a rainy night.', 'dcc-wildlife' ),
+				'best'  => __( 'rainy nights in the breeding season', 'dcc-wildlife' ),
+				'where' => __( 'gopher tortoise burrows in dry sandhills, and the temporary ponds nearby', 'dcc-wildlife' ),
+				'mark'  => __( 'stocky and warty with heavy dark spotting and prominent ridges down the back; it sits low and looks squat', 'dcc-wildlife' ),
+			],
+			'southerntoad'    => [
+				'emoji' => '🐸',
+				'name'  => __( 'Southern Toad', 'dcc-wildlife' ),
+				'sci'   => 'Anaxyrus terrestris',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'toads',
+				'odds'  => 'certain',
+				'fact'  => __( 'The toad under the porch light, and the one to be able to name, because the other toad here is dangerous. Look between the eyes: this one has two raised ridges running back to a pair of pronounced knobs. The cane toad has neither — the space between its eyes is smooth, and its poison gland is a big triangle rather than a small oval.', 'dcc-wildlife' ),
+				'sound' => __( 'A high, musical trill lasting several seconds, from puddles and ditches after rain.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, under any outside light', 'dcc-wildlife' ),
+				'where' => __( 'lawns, paths and porches, anywhere a light draws insects', 'dcc-wildlife' ),
+				'mark'  => __( 'two ridges between the eyes ending in raised KNOBS, and a small oval gland behind the eye', 'dcc-wildlife' ),
+			],
+			'oaktoad'         => [
+				'emoji' => '🐸',
+				'name'  => __( 'Oak Toad', 'dcc-wildlife' ),
+				'sci'   => 'Anaxyrus quercicus',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'toads',
+				'odds'  => 'likely',
+				'fact'  => __( 'The smallest toad in North America — an adult sits comfortably on a thumbnail, at most an inch and a bit — with a pale stripe down the middle of the back. It is active in the day as well as at night, which no other toad here really is, and a chorus of them sounds nothing like toads at all.', 'dcc-wildlife' ),
+				'sound' => __( 'A high, piping “peep” repeated over and over — a pondful sounds like a box of day-old chicks.', 'dcc-wildlife' ),
+				'best'  => __( 'warm days and nights after summer rain', 'dcc-wildlife' ),
+				'where' => __( 'sandy pine and oak ground, and the puddles in it', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny, with a clear pale stripe down the spine — nothing else here is this small and striped', 'dcc-wildlife' ),
+			],
+			'narrowmouthtoad' => [
+				'emoji' => '🐸',
+				'name'  => __( 'Eastern Narrow-mouthed Toad', 'dcc-wildlife' ),
+				'sci'   => 'Gastrophryne carolinensis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'toads',
+				'odds'  => 'likely',
+				'fact'  => __( 'Not really a toad, and shaped like nothing else here: a smooth plump teardrop with a tiny pointed head and a fold of loose skin across the back of it. The head is narrow because it eats ants, and the fold is a wiper — it draws it forward over the eyes to clear off the ones that fight back.', 'dcc-wildlife' ),
+				'sound' => __( 'A flat, nasal bleat like a lamb, or a buzzer held down for a second or two, from wet grass after rain.', 'dcc-wildlife' ),
+				'best'  => __( 'after heavy rain, usually at night', 'dcc-wildlife' ),
+				'where' => __( 'under boards, leaf litter and wet grass near shallow water', 'dcc-wildlife' ),
+				'mark'  => __( 'a smooth pointed teardrop with a fold of skin behind the head, and no visible eardrum', 'dcc-wildlife' ),
+			],
+			'spadefoot'       => [
+				'emoji' => '🐸',
+				'name'  => __( 'Eastern Spadefoot', 'dcc-wildlife' ),
+				'sci'   => 'Scaphiopus holbrookii',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'toads',
+				'odds'  => 'occasional',
+				'fact'  => __( 'Most of the year it is underground and there is nothing to see. Each hind foot carries a hard black sickle — the spade — and it digs backwards out of sight and waits, sometimes for months. Then a heavy summer storm brings the whole population up at once, and the ditches fill overnight with a frog nobody knew was there.', 'dcc-wildlife' ),
+				'sound' => __( 'A low grating groan, like a young crow, in an explosive chorus the night a big storm breaks.', 'dcc-wildlife' ),
+				'best'  => __( 'the night of a heavy summer downpour, and seldom otherwise', 'dcc-wildlife' ),
+				'where' => __( 'sandy ground; the temporary pools that appear after a storm', 'dcc-wildlife' ),
+				'mark'  => __( 'vertical cat-like pupils, a hard black spade on each hind foot, and smoother skin than a true toad', 'dcc-wildlife' ),
+			],
+			'cricketfrog'     => [
+				'emoji' => '🐸',
+				'name'  => __( 'Florida Cricket Frog', 'dcc-wildlife' ),
+				'sci'   => 'Acris gryllus dorsalis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'tinyfrogs',
+				'odds'  => 'certain',
+				'fact'  => __( 'Barely an inch long, warty, and impossible to catch: disturb one at the edge and it goes across the water in a series of skipping jumps and vanishes. The sound is the giveaway and it is everywhere along the canal, all year — once you can place it you will realise you have been hearing it the whole time.', 'dcc-wildlife' ),
+				'sound' => __( 'A dry metallic “click-click-click” exactly like two pebbles tapped together, speeding up as it goes.', 'dcc-wildlife' ),
+				'best'  => __( 'all day and all year, at the water’s edge', 'dcc-wildlife' ),
+				'where' => __( 'mud and matted vegetation right at the waterline', 'dcc-wildlife' ),
+				'mark'  => __( 'tiny and warty with a dark triangle between the eyes, and a stripe down the back in our Florida form', 'dcc-wildlife' ),
+			],
+			'littlegrassfrog' => [
+				'emoji' => '🐸',
+				'name'  => __( 'Little Grass Frog', 'dcc-wildlife' ),
+				'sci'   => 'Pseudacris ocularis',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'tinyfrogs',
+				'odds'  => 'likely',
+				'fact'  => __( 'The smallest frog in North America. A big one is eighteen millimetres, which is two-thirds of an inch, and it is a slender pinkish-tan thing with a dark stripe running through the eye and along the side. You will hear it long before you ever see one, and most people never do.', 'dcc-wildlife' ),
+				'sound' => __( 'A thin, insect-like “tink” repeated quickly — so high that many adults cannot hear it at all.', 'dcc-wildlife' ),
+				'best'  => __( 'day and night, most of the year', 'dcc-wildlife' ),
+				'where' => __( 'damp grass and sedge at the edges of shallow water', 'dcc-wildlife' ),
+				'mark'  => __( 'minute and slender, with a dark line through the eye continuing down the flank', 'dcc-wildlife' ),
+			],
+			'greenhousefrog'  => [
+				'emoji' => '🐸',
+				'name'  => __( 'Greenhouse Frog', 'dcc-wildlife' ),
+				'sci'   => 'Eleutherodactylus planirostris',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'tinyfrogs',
+				'flags' => [ 'invasive' ],
+				'odds'  => 'certain',
+				'fact'  => __( 'A small brown frog from Cuba and the Bahamas that arrived in potted plants and now lives in every flowerbed in Florida. It has given up water entirely: there is no tadpole, no pond, no chorus at the edge — the eggs are laid in damp leaf litter and tiny fully formed froglets hatch straight out of them.', 'dcc-wildlife' ),
+				'sound' => __( 'A soft, birdlike chirping from the flowerbed after dark or after rain — easily mistaken for an insect.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark and after rain', 'dcc-wildlife' ),
+				'where' => __( 'leaf litter, mulch, flowerbeds and under pots', 'dcc-wildlife' ),
+				'mark'  => __( 'small, brown, and either mottled or with two pale back stripes; found in dry leaf litter well away from water', 'dcc-wildlife' ),
+			],
+			'greatersiren'    => [
+				'emoji' => '🦎',
+				'name'  => __( 'Greater Siren', 'dcc-wildlife' ),
+				'sci'   => 'Siren lacertina',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'eels',
+				'odds'  => 'occasional',
+				'fact'  => __( 'An eel that is a salamander. It reaches three feet, keeps feathery external gills its whole life, has two small front legs and NO back ones at all, and lives in the mud of the canal. When the water goes, it burrows down and seals itself in a cocoon of its own dried skin — and can wait there, years if it has to, for the rain.', 'dcc-wildlife' ),
+				'sound' => __( 'Mostly silent; a surprising yelp or a clicking if one is handled.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, in shallow weedy water', 'dcc-wildlife' ),
+				'where' => __( 'the mud and weed of the canal bottom — genuinely there, rarely seen', 'dcc-wildlife' ),
+				'mark'  => __( 'eel-shaped with feathery gills behind the head, two tiny front legs and no hind legs whatsoever', 'dcc-wildlife' ),
+			],
+			'amphiuma'        => [
+				'emoji' => '🦎',
+				'name'  => __( 'Two-toed Amphiuma', 'dcc-wildlife' ),
+				'sci'   => 'Amphiuma means',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'idgroup' => 'eels',
+				'odds'  => 'occasional',
+				'fact'  => __( 'A salamander three feet long with four legs so reduced you have to look for them — each is about a centimetre, with two toes on the end. It hunts the canal mud at night, and it is the eastern mud snake’s whole reason for living: that snake specialises in eating this animal. Left alone it wants nothing to do with you; handled, it bites hard and the wound goes bad.', 'dcc-wildlife' ),
+				'sound' => __( 'Generally silent; a faint whistle or click when disturbed.', 'dcc-wildlife' ),
+				'best'  => __( 'after dark, in the shallows', 'dcc-wildlife' ),
+				'where' => __( 'soft mud and weed beds; sometimes crossing wet ground on a rainy night', 'dcc-wildlife' ),
+				'mark'  => __( 'eel-like and slate grey-brown with NO gills showing, and four minute legs with two toes each', 'dcc-wildlife' ),
+			],
+			'peninsulanewt'   => [
+				'emoji' => '🐸',
+				'name'  => __( 'Peninsula Newt', 'dcc-wildlife' ),
+				'sci'   => 'Notophthalmus viridescens piaropicola',
+				'group' => 'critters',
+				'browse' => 'reptiles',
+				'class' => 'amphibian',
+				'odds'  => 'likely',
+				'fact'  => __( 'Florida’s own dark newt, and a departure from its northern relatives: where those wear bright red spots, this one has none at all — greenish-brown to nearly black, heavily peppered with fine black speckles over a deep orange belly. It swims in weedy ponds and ditches with a flattened tail, and it does not hurry.', 'dcc-wildlife' ),
+				'best'  => __( 'any month, in still weedy water', 'dcc-wildlife' ),
+				'where' => __( 'weedy ponds, ditches and quiet backwaters among the plants', 'dcc-wildlife' ),
+				'mark'  => __( 'a small dark speckled newt with a flattened swimming tail and a deep orange underside; no red spots', 'dcc-wildlife' ),
 			],
 			// ---- BATCH 8 (1.33.0): the snakes and lizards on dry land -------
 			// Nine snakes and eight lizards. The guide had four venomous snakes
@@ -1728,6 +2035,25 @@ final class Species {
 			'racerunner'      => [ 0, 1, 2, 3, 3, 3, 3, 3, 2, 2, 1, 0 ], // A hot-weather lizard; out in full midday sun.
 			'glasslizard'     => [ 1, 1, 2, 3, 3, 3, 2, 2, 2, 2, 1, 1 ], // Most often found in spring, and after rain.
 			'housegecko'      => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // On lit walls every warm night.
+			'greentreefrog'   => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Calling from spring into autumn; quiet in the cool months.
+			'squirreltreefrog' => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // As the green treefrog; rain calls extend the window.
+			'barkingtreefrog' => [ 0, 1, 2, 3, 3, 3, 3, 3, 2, 2, 1, 0 ], // Breeding chorus spring into summer.
+			'pinewoodstreefrog' => [ 0, 1, 2, 2, 3, 3, 3, 3, 2, 2, 1, 0 ], // Calls after rain, late spring into summer.
+			'cubantreefrog'   => [ 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // Active nearly year-round on warm walls.
+			'pigfrog'         => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Grunting from the lilies through the warm months.
+			'bullfrog'        => [ 0, 1, 2, 2, 3, 3, 3, 2, 2, 1, 1, 0 ], // At its southern range edge here; a summer voice at best.
+			'leopardfrog'     => [ 2, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2 ], // Active in cooler weather than most — a spring and autumn frog.
+			'gopherfrog'      => [ 1, 2, 3, 2, 2, 2, 3, 3, 2, 1, 1, 1 ], // Breeds after heavy rain; otherwise underground.
+			'southerntoad'    => [ 1, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // Under lights every warm night.
+			'oaktoad'         => [ 0, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 0 ], // Summer rains bring the choruses.
+			'narrowmouthtoad' => [ 0, 1, 2, 2, 3, 3, 3, 3, 3, 2, 1, 0 ], // Calls after heavy rain, late spring into autumn.
+			'spadefoot'       => [ 0, 0, 1, 1, 2, 3, 3, 3, 3, 2, 1, 0 ], // Only after a big storm — unpredictable, and summer-weighted.
+			'cricketfrog'     => [ 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2 ], // Clicking at the waterline all year.
+			'littlegrassfrog' => [ 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2 ], // Calls nearly year-round in the peninsula.
+			'greenhousefrog'  => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 1 ], // Chirping from flowerbeds whenever it is warm and damp.
+			'greatersiren'    => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // In the mud all year; most active in warm water.
+			'amphiuma'        => [ 1, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1 ], // As the siren — nocturnal, warm months.
+			'peninsulanewt'   => [ 2, 3, 3, 3, 3, 2, 2, 2, 3, 3, 3, 2 ], // In weedy water all year; easiest to see in cool clear months.
 			'alligator'  => [ 1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 1, 1 ], // Most conspicuous Apr–Sep; spring courtship & bellowing.
 			'manatee'    => [ 0, 0, 0, 1, 1, 1, 3, 3, 1, 1, 0, 0 ], // RARE, and warm-months-only — never a winter regular here.
 			'otter'      => [ 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3 ], // Year-round; dawn & dusk.
@@ -1842,6 +2168,10 @@ final class Species {
 		'noseeums' => 1100, 'canetoad' => 1100, 'blackwidow' => 1100, 'brownwidow' => 1100, 'pusscaterpillar' => 1100, 'saddleback' => 1100, 'paperwasps' => 1100, 'yellowjacket' => 1024, 'lonestartick' => 1100, 'chiggers' => 1100, 'yellowfly' => 1100, 'treadsoftly' => 1100, 'brazilianpepper' => 1100, 'velvetant' => 1100,
 		// Batch 8 (1.33.0).
 		'blackracer' => 1100, 'yellowratsnake' => 1100, 'cornsnake' => 1100, 'gartersnake' => 1100, 'ribbonsnake' => 1100, 'ringnecksnake' => 1100, 'roughgreensnake' => 1100, 'mudsnake' => 1100, 'indigosnake' => 1100, 'greenanole' => 1100, 'brownanole' => 1100, 'fivelinedskink' => 1100, 'broadheadskink' => 1100, 'groundskink' => 1100, 'racerunner' => 1100, 'glasslizard' => 1100, 'housegecko' => 1100,
+		// Batch 9 (1.33.0). MEASURED, not taken from the manifest: the pack
+		// note says the greater siren's original is 1170, and the file that
+		// arrived is 1100. The srcset descriptor has to match the FILE.
+		'greentreefrog' => 1100, 'squirreltreefrog' => 1100, 'barkingtreefrog' => 1100, 'pinewoodstreefrog' => 1100, 'cubantreefrog' => 1100, 'pigfrog' => 1100, 'bullfrog' => 1100, 'leopardfrog' => 1100, 'gopherfrog' => 1100, 'southerntoad' => 1100, 'oaktoad' => 1100, 'narrowmouthtoad' => 1100, 'spadefoot' => 1100, 'cricketfrog' => 1100, 'littlegrassfrog' => 1100, 'greenhousefrog' => 1024, 'greatersiren' => 1100, 'amphiuma' => 1100, 'peninsulanewt' => 1100,
 		// Batch 6 (1.33.0) — every turtle rendition is 1100 wide.
 		'peninsulacooter' => 1100, 'redbelliedcooter' => 1100, 'redearedslider' => 1100, 'softshell' => 1100, 'snappingturtle' => 1100, 'gophertortoise' => 1100, 'boxturtle' => 1100, 'muskturtle' => 1100, 'loggerheadmusk' => 1100, 'stripedmudturtle' => 1100, 'floridamudturtle' => 1100, 'chickenturtle' => 1100,
 	];
@@ -1876,6 +2206,105 @@ final class Species {
 	 * one.
 	 */
 	private const PHOTO_SOURCES = [
+		// Batch 9 (1.33.0): the amphibians. Four CC0 photographs are credited
+		// to their observers anyway — CC0 waives the requirement, not the
+		// courtesy. One of those observers gives no name, so the login is
+		// credited, which is the most the source offers.
+		'greentreefrog'       => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Eastern_Green_Tree_Frog_-_Hyla_cineria,_Julie_Metz_Wetlands,_Woodbridge,_Virginia_-_8129389441.jpg',
+		],
+		'squirreltreefrog'    => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Squirrel_Tree_Frog_-_Hyla_squirella,_Okaloacoochee_Slough_Wildlife_Management_Area,_Immokalee,_Florida_-_8262962608.jpg',
+		],
+		'pigfrog'             => [
+			'Anthony Batista / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/251596501',
+		],
+		'leopardfrog'         => [
+			'Judy Gallagher / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Southern_Leopard_Frog_-_Lithobates_sphenocephalus,_Occoquan_Bay_National_Wildlife_Refuge,_Woodbridge,_Virginia_(39430233694).jpg',
+		],
+		'bullfrog'            => [
+			'Donald Hobern / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Lithobates_catesbeianus_(30201807087).jpg',
+		],
+		'southerntoad'        => [
+			'Alex Abair / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://commons.wikimedia.org/wiki/File:Anaxyrus_terrestris_270405587.jpg',
+		],
+		'oaktoad'             => [
+			'Valerie Anderson / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/31050567',
+		],
+		'cubantreefrog'       => [
+			'Thomas Brown / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Cuban_Tree_Frog_(Osteopilus_septentrionalis)_(6161208727).jpg',
+		],
+		'greatersiren'        => [
+			'Nick Tobler / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/281882723',
+		],
+		'amphiuma'            => [
+			'Daniel Estabrooks / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/13556194',
+		],
+		'barkingtreefrog'     => [
+			'David Cox / U.S. Fish and Wildlife Service',
+			'Public domain (work of the U.S. Fish and Wildlife Service)',
+			'https://commons.wikimedia.org/wiki/File:Barking_Tree_Frog.jpg',
+		],
+		'pinewoodstreefrog'   => [
+			'Étienne Léveillé-Bourret / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/124195911',
+		],
+		'cricketfrog'         => [
+			'Laura Gaudette / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/21195943',
+		],
+		'littlegrassfrog'     => [
+			'Lyn Roueche / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/78431604',
+		],
+		'narrowmouthtoad'     => [
+			'iNaturalist user lightbed / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/121363668',
+		],
+		'spadefoot'           => [
+			'iNaturalist user lukexl / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/73071406',
+		],
+		'greenhousefrog'      => [
+			'Thomas Brown / CC BY 2.0',
+			'Creative Commons Attribution 2.0 Generic',
+			'https://commons.wikimedia.org/wiki/File:Greenhouse_Frog_(Eleutherodactylus_planirostris)_(8572426524).jpg',
+		],
+		'gopherfrog'          => [
+			'Lyn Roueche / CC0',
+			'CC0 1.0 Universal public domain dedication',
+			'https://www.inaturalist.org/observations/99151758',
+		],
+		'peninsulanewt'       => [
+			'Melissa Meadows / CC BY 4.0',
+			'Creative Commons Attribution 4.0 International',
+			'https://www.inaturalist.org/observations/335133683',
+		],
 		// Batch 7 (1.33.0): the rest of Know before you go.
 		'noseeums'          => [
 			'CSIRO / CC BY 3.0',
@@ -2293,6 +2722,15 @@ final class Species {
 	 * it never rescues a doubtful one.
 	 */
 	private const PHOTO_NOTES = [
+		// Batch 9 (1.33.0). Four photographs are the right species photographed
+		// outside Florida, which the rule says to declare. Two of the four are
+		// invasives shown in their NATIVE range, which is worth saying plainly
+		// rather than leaving a reader to wonder why a Cuban treefrog was
+		// photographed in the Bahamas.
+		'greentreefrog' => 'Photographed in Virginia, not Florida. The same species, chosen for the clearest view of the white side-stripe that names it — the Florida images available were either a blue colour variant or a frog behind mesh.',
+		'leopardfrog' => 'Photographed in Virginia, not Florida. The same species; the Florida images available were frogs in birdbaths and fountains rather than at a wild water’s edge.',
+		'cubantreefrog' => 'Photographed in the Bahamas, inside this frog’s NATIVE range — it is an invader here, not there. Chosen for the close view of the oversized toe pads and warty skin; the Florida images available were night shots on walls.',
+		'greenhousefrog' => 'Photographed in its native Caribbean range rather than Florida, where it is an introduction. It is in leaf litter, which is the habit that matters: this frog has no tadpole stage and is found well away from water.',
 		// Batch 7 (1.33.0).
 		'pusscaterpillar' => 'Photographed in Virginia, not Florida — most open-licence images of this species show the adult moth or the cocoon, and the caterpillar is the stage that stings. The same species lives here.',
 		'paperwasps' => 'A Guinea paper wasp on its nest, photographed in Virginia. The species occurs in Florida, and the open umbrella of comb covered in wasps is the thing to recognise whichever Polistes built it.',
@@ -2396,6 +2834,12 @@ final class Species {
 
 	public static function photos(): array {
 		$ids = [
+			// Batch 9 (1.33.0): the amphibians.
+			'greentreefrog', 'squirreltreefrog', 'barkingtreefrog', 'pinewoodstreefrog',
+			'cubantreefrog', 'pigfrog', 'bullfrog', 'leopardfrog', 'gopherfrog',
+			'southerntoad', 'oaktoad', 'narrowmouthtoad', 'spadefoot',
+			'cricketfrog', 'littlegrassfrog', 'greenhousefrog',
+			'greatersiren', 'amphiuma', 'peninsulanewt',
 			// Batch 8 (1.33.0): the snakes and lizards on dry land.
 			'blackracer', 'yellowratsnake', 'cornsnake', 'gartersnake', 'ribbonsnake',
 			'ringnecksnake', 'roughgreensnake', 'mudsnake', 'indigosnake',

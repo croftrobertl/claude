@@ -1986,3 +1986,41 @@ substituting for it. That is the whole of the licence. **Any OTHER piece of
 wording that would rewrite itself from content — a heading, a count phrase, a
 button, a section name — is a design choice under the standing rule: render the
 options and ask.** Do not generalise `has_amphibian()` into a pattern.
+
+### 12. Batch 9 (1.33.0): the amphibians, and the contract catching a real miss
+
+Nineteen species, and the batch that makes "Reptiles & amphibians" true rather
+than merely correct — the cane toad flipped that label in batch 7 by being the
+only amphibian in the registry.
+
+**EIGHTEEN OF THE NINETEEN CARRY A `sound` LINE**, and that is the point of this
+group rather than a relaxation of the 1.14.0 rule. That rule is *a sound line
+only where a distinctive, guest-recognisable voice could be verified*, and frogs
+are simply the case where that is true nearly every time: a guest on the dock
+after dark hears far more amphibians than they will ever see. The peninsula newt
+has none because newts do not call. The cane toad gained one with this batch, so
+the southern-toad comparison works by ear as well as by eye — its trill is low
+and tractor-like where the native's is high and musical.
+
+**THE SAFETY CONTRACT CAUGHT A REAL MISS, WHICH IS WHY IT EXISTS.** The Cuban
+treefrog is flagged `danger` — its skin secretion burns and itches for up to an
+hour and is worse in eyes or a mouth — and it went in without a what-to-do line.
+`test-narration.php` failed on it immediately, because a `danger` flag puts a
+species in the safety list whatever its group. It is now the third animal to
+reach Safety that way, after the alligator and the cane toad.
+
+**THREE CROSS-LINKS CLOSED, EACH WRITTEN FROM BOTH ENDS.** The gopher frog lives
+in the gopher tortoise's burrow (batch 6); the amphiuma is what the eastern mud
+snake specialises in eating (batch 8); the southern toad is the toad a guest
+must be able to tell from the cane toad (batch 7), so its `mark` leads on the
+ridges and knobs between the eyes. When a batch lands, check whether it answers
+a question an earlier batch left open — these three were all already half-told.
+
+**MEASURE THE FILES, DO NOT TRUST THE MANIFEST'S WIDTHS.** The pack note said
+the greater siren's rendition is 1170 px; the file that arrived is 1100.
+`PHOTO_W` is a srcset width descriptor, so a value that disagrees with the image
+makes a browser pick the wrong rendition on a retina screen, silently and
+invisibly to every test that does not open the file. Widths come from
+`getimagesize()` on the landed files, every batch.
+
+**Weight at 112 species:** inline index 9.4 KB gzip, fetched detail 28.0 KB.

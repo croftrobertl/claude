@@ -75,6 +75,15 @@ const SAFETY_FACTS = [
 		'the bare winter vine too'      => 'winter vine',
 		'wash inside fifteen minutes'   => 'fifteen minutes',
 	],
+	// Batch 9 (1.33.0). The Cuban treefrog is the third animal to reach this
+	// list through its danger flag rather than its group, and the suite caught
+	// it arriving without a what-to-do line — which is exactly the hole this
+	// contract exists to close.
+	'cubantreefrog' => [
+		'do not pick it up bare-handed' => 'bare-handed',
+		'the secretion burns'           => 'burns and itches',
+		'wash before touching your face' => 'before touching your face',
+	],
 	// The alligator is an ANIMAL that reaches this list through its danger
 	// flag, and it has carried a what-to-do line since 1.19.0. It belongs to
 	// the contract for the same reason as everything else here.
